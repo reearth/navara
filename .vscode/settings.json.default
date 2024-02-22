@@ -10,5 +10,9 @@
   },
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
+  },,
+  "[rust]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false,
+  }
 }

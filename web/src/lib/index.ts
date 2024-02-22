@@ -1,7 +1,10 @@
-import initCore, { type InitOutput } from "map-engine-prototype";
+import initCore, { Core } from "map-engine-prototype";
 import Stats from "stats.js";
-import { AxesHelper, PerspectiveCamera, Scene, WebGLRenderer, type Renderer } from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer } from "three";
 
+import { processEvent } from "./event";
+import { initScene } from "./example";
+import { registerInputEvents } from "./input";
 import { isWorker } from "./utils";
 
 export type Options = {
@@ -26,9 +29,10 @@ export default class ThreeView {
   camera: PerspectiveCamera;
   renderer: Renderer;
 
+  _core: Core | undefined;
   _options: Options;
-  _core: InitOutput | undefined;
   _stats: Stats | undefined;
+  _eventDisposer: (() => void) | undefined;
   _disposed = false;
   _events: {
     [K in keyof Events]?: Events[K][];
@@ -46,7 +50,7 @@ export default class ThreeView {
     } else {
       const renderer = new WebGLRenderer({
         antialias: true,
-        alpha: true,
+        // alpha: true,
         canvas: options.canvas,
       });
       this.renderer = renderer;
@@ -70,9 +74,8 @@ export default class ThreeView {
     if (options.scene) {
       this.scene = options.scene;
     } else {
-      const axes = new AxesHelper();
       const scene = new Scene();
-      scene.add(axes);
+      initScene(scene);
       this.scene = scene;
     }
 
@@ -86,8 +89,6 @@ export default class ThreeView {
       }
 
       const camera = new PerspectiveCamera(50, width / height);
-      camera.position.set(1, 1, 1);
-      camera.lookAt(this.scene.position);
       this.camera = camera;
     }
 
@@ -107,15 +108,23 @@ export default class ThreeView {
   async init() {
     if (this._core) return;
 
-    const core = await initCore();
-    this._core = core;
+    await initCore();
 
+    this._core = new Core(newId());
+    this._core.start();
+    if (!isWorker()) {
+      this._eventDisposer = registerInputEvents(this._core, this.renderer.domElement);
+    }
     this._startMainLoop();
   }
 
   dispose() {
     this._disposed = true;
     if (!isWorker()) window.removeEventListener("resize", this._resize);
+    if (this._eventDisposer) {
+      this._eventDisposer();
+      this._eventDisposer = undefined;
+    }
     if ("dispose" in this.renderer && typeof this.renderer.dispose === "function") {
       this.renderer.dispose();
     }
@@ -140,6 +149,13 @@ export default class ThreeView {
 
   /** Returns true if the scene was updated and needs to be rendered. */
   update(): boolean {
+    this._core?.update();
+
+    const events = this._core?.readEvents();
+    if (events) {
+      processEvent(this.scene, this.camera, events);
+    }
+
     return true;
   }
 
@@ -196,4 +212,8 @@ export default class ThreeView {
     const pixelRatio = isWorker() ? undefined : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };
+}
+
+function newId() {
+  return Math.random().toString(36).slice(2);
 }

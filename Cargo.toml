@@ -4,5 +4,6 @@ resolver = "2"
 
 members = [
     "map_engine_core",
+    "map_engine_ecs",
     "map_engine_wasm"
 ]

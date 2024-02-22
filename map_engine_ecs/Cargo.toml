@@ -1,0 +1,15 @@
+[package]
+name = "map_engine_ecs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
+
+[dependencies]
+bevy_app = "0.12.1"
+bevy_ecs = "0.12.1"
+bevy_input = "0.12.1"
+bevy_log = "0.12.1"
+bevy_math = "0.12.1"
+bevy_time = "0.12.1"
+bevy_transform = "0.12.1"
+map_engine_core = { path = "../map_engine_core" }
