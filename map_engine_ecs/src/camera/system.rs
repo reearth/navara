@@ -62,8 +62,9 @@ pub fn example2(
         }
 
         if mb.pressed(MouseButton::Left) {
-            orbit.phi += delta.x * 3.0;
-            orbit.theta -= delta.y * 3.0;
+            let ratio = orbit.r / 300.0;
+            orbit.phi += (delta.x * ratio / 300.0).atan() * 100.0;
+            orbit.theta -= (delta.y * ratio / 300.0).atan() * 100.0;
         } else if mb.pressed(MouseButton::Middle) {
             let d = delta.y * 1000.0;
             // avoid to get camera inside the earth
