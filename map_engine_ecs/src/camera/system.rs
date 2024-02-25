@@ -51,18 +51,28 @@ pub fn example2(
     for (mut transform, mut orbit, _) in query.iter_mut() {
         let mut delta = Vec3::ZERO;
 
-        if mb.pressed(MouseButton::Left) {
+        if mb.pressed(MouseButton::Left) || mb.pressed(MouseButton::Middle) {
             for ev in mm.read() {
                 delta += Vec3::new(ev.delta.x, ev.delta.y, 0.0);
             }
-        }
+        } 
 
         if delta != Vec3::ZERO {
             info!("delta: {:?}", delta);
         }
 
-        orbit.phi += delta.x * 3.0;
-        orbit.theta -= delta.y * 3.0;
+        if mb.pressed(MouseButton::Left) {
+            orbit.phi += delta.x * 3.0;
+            orbit.theta -= delta.y * 3.0;
+        } else if mb.pressed(MouseButton::Middle) {
+            let d = delta.y * 1000.0;
+            // avoid to get camera inside the earth
+            orbit.r = if orbit.r + d < 301.0 {
+                301.0
+            } else {
+                orbit.r + d
+            };
+        };
 
         transform.translation = orbit.to_vec3();
         transform.look_at(Vec3::ZERO, Vec3::Y);
