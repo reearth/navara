@@ -14,6 +14,7 @@
 ```console
 cargo install cargo-make
 cargo install cargo-watch
+cargo install wasm-pack
 ```
 
 ### Run with hot-reload
