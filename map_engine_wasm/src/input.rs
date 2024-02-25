@@ -42,18 +42,26 @@ impl Input {
             // InputType::KeyUp => Some(map_engine_ecs::Input::Keyboard(
             //     map_engine_ecs::KeyboardInput {},
             // )),
-            InputType::MouseDown => Some(map_engine_ecs::Input::MouseButton(
-                map_engine_ecs::MouseButtonInput {
-                    button: map_engine_ecs::MouseButton::Left, // TODO
-                    state: map_engine_ecs::ButtonState::Pressed,
-                },
-            )),
-            InputType::MouseUp => Some(map_engine_ecs::Input::MouseButton(
-                map_engine_ecs::MouseButtonInput {
-                    button: map_engine_ecs::MouseButton::Left, // TODO
-                    state: map_engine_ecs::ButtonState::Released,
-                },
-            )),
+            InputType::MouseDown => match self.get_button() {
+                Some(button) =>
+                    Some(map_engine_ecs::Input::MouseButton(
+                    map_engine_ecs::MouseButtonInput {
+                        button,
+                        state: map_engine_ecs::ButtonState::Pressed,
+                    },
+                )),
+                None => None,
+            },
+            InputType::MouseUp => match self.get_button() {
+                Some(button) =>
+                    Some(map_engine_ecs::Input::MouseButton(
+                    map_engine_ecs::MouseButtonInput {
+                        button,
+                        state: map_engine_ecs::ButtonState::Released,
+                    },
+                )),
+                None => None,
+            },
             InputType::MouseMove => Some(map_engine_ecs::Input::MouseMove(
                 map_engine_ecs::MouseMoveInput {
                     x: self.x.unwrap_or(0.0),
@@ -70,4 +78,14 @@ impl Input {
             _ => None,
         }
     }
+
+    fn get_button(self) -> Option<map_engine_ecs::MouseButton> {
+        match self.button {
+            Some (0) => Some(map_engine_ecs::MouseButton::Left),
+            Some (1) => Some(map_engine_ecs::MouseButton::Middle),
+            Some (2) => Some(map_engine_ecs::MouseButton::Right),
+            _ => None,
+        }
+    }
 }
+

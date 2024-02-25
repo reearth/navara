@@ -9,6 +9,7 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
   };
 
   const mouseup = (event: MouseEvent) => {
+    console.log(event);
     core.input({
       type: "mouseup",
       button: event.button,
