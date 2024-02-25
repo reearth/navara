@@ -4,7 +4,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res},
 };
 use bevy_input::{
-    mouse::{MouseButton, MouseMotion},
+    mouse::{MouseButton, MouseMotion, MouseWheel},
     Input,
 };
 use bevy_log::info;
@@ -46,34 +46,43 @@ pub fn example2(
     mut query: Query<(&mut Transform, &mut Orbit, &CameraMarker)>,
     mb: Res<Input<MouseButton>>,
     mut mm: EventReader<MouseMotion>,
-    // mut mw: EventReader<MouseWheel>,
+    mut mw: EventReader<MouseWheel>,
 ) {
     for (mut transform, mut orbit, _) in query.iter_mut() {
-        let mut delta = Vec3::ZERO;
+        let mut pan_delta = Vec3::ZERO;
+        let mut dolly_delta = Vec3::ZERO;
 
-        if mb.pressed(MouseButton::Left) || mb.pressed(MouseButton::Middle) {
+        if mb.pressed(MouseButton::Left) {
             for ev in mm.read() {
-                delta += Vec3::new(ev.delta.x, ev.delta.y, 0.0);
+                pan_delta += Vec3::new(ev.delta.x, ev.delta.y, 0.0);
             }
         } 
-
-        if delta != Vec3::ZERO {
-            info!("delta: {:?}", delta);
+        
+        {
+            for ev in mw.read() {
+                dolly_delta += Vec3::new(ev.x, ev.y, 0.0);
+            }
+        }
+        
+        if pan_delta != Vec3::ZERO {
+            info!("pan_delta: {:?}", pan_delta);
         }
 
         if mb.pressed(MouseButton::Left) {
             let ratio = orbit.r / 300.0;
-            orbit.phi += (delta.x * ratio / 300.0).atan() * 100.0;
-            orbit.theta -= (delta.y * ratio / 300.0).atan() * 100.0;
-        } else if mb.pressed(MouseButton::Middle) {
-            let d = delta.y * 1000.0;
+            orbit.phi += (pan_delta.x * ratio / 300.0).atan() * 200.0;
+            orbit.theta -= (pan_delta.y * ratio / 300.0).atan() * 200.0;
+        }
+
+        {
+            let d = dolly_delta.y;
             // avoid to get camera inside the earth
             orbit.r = if orbit.r + d < 301.0 {
                 301.0
             } else {
                 orbit.r + d
             };
-        };
+        }
 
         transform.translation = orbit.to_vec3();
         transform.look_at(Vec3::ZERO, Vec3::Y);
