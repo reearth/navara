@@ -9,7 +9,6 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
   };
 
   const mouseup = (event: MouseEvent) => {
-    console.log(event);
     core.input({
       type: "mouseup",
       button: event.button,
@@ -34,15 +33,35 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
     });
   };
 
+  const keydown = (event: KeyboardEvent) => {
+    core.input({
+      type: "keydown",
+      key_code: event.code,
+      key: event.key,
+    });
+  }
+
+  const keyup = (event: KeyboardEvent) => {
+    core.input({
+      type: "keyup",
+      key_code: event.code,
+      key: event.key,
+    });
+  }
+
   element.addEventListener("mousedown", mousedown);
   element.addEventListener("mouseup", mouseup);
   element.addEventListener("mousemove", mousemove);
   element.addEventListener("wheel", wheel);
+  document.addEventListener("keydown", keydown);
+  document.addEventListener("keyup", keyup);
 
   return () => {
     element.removeEventListener("mousedown", mousedown);
     element.removeEventListener("mouseup", mouseup);
     element.removeEventListener("mousemove", mousemove);
     element.removeEventListener("wheel", wheel);
+    document.removeEventListener("keydown", keydown);
+    document.removeEventListener("keyup", keyup);
   };
 }

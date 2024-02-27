@@ -1,3 +1,4 @@
+use map_engine_ecs::{ButtonState, KeyCode};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -35,13 +36,6 @@ impl Input {
 
     pub fn into_ecs_input(self) -> Option<map_engine_ecs::Input> {
         match self.r#type {
-            // TODO
-            // InputType::KeyDown => Some(map_engine_ecs::Input::Keyboard(
-            //     map_engine_ecs::KeyboardInput {},
-            // )),
-            // InputType::KeyUp => Some(map_engine_ecs::Input::Keyboard(
-            //     map_engine_ecs::KeyboardInput {},
-            // )),
             InputType::MouseDown => match self.get_button() {
                 Some(button) =>
                     Some(map_engine_ecs::Input::MouseButton(
@@ -75,7 +69,34 @@ impl Input {
                     y: self.y.unwrap_or(0.0),
                 },
             )),
-            _ => None,
+            InputType::KeyDown => match self.key_code {
+                Some(k) => {
+                    Some(map_engine_ecs::Input::Keyboard(map_engine_ecs::KeyboardInput {
+                        scan_code: 0, // ignore it because keyCode in JS is deprecated
+                        key_code: match &*k {
+                            "ControlLeft" => Some(KeyCode::ControlLeft),
+                            "ControlRight" => Some(KeyCode::ControlRight),
+                            _ => None,
+                        },
+                        state: ButtonState::Pressed,
+                    }))
+                },
+                _ => None,
+            },
+            InputType::KeyUp=> match self.key_code {
+                Some(k) => {
+                    Some(map_engine_ecs::Input::Keyboard(map_engine_ecs::KeyboardInput {
+                        scan_code: 0, // ignore it because keyCode in JS is deprecated
+                        key_code: match &*k {
+                            "ControlLeft" => Some(KeyCode::ControlLeft),
+                            "ControlRight" => Some(KeyCode::ControlRight),
+                            _ => None,
+                        },
+                        state: ButtonState::Released,
+                    }))
+                },
+                _ => None,
+            },
         }
     }
 
