@@ -19,6 +19,11 @@ extern "C" {
     fn log(s: &str);
 }
 
+#[wasm_bindgen(module = "/../web/src/lib/ports.ts")]
+extern "C" {
+    fn test();
+}
+
 #[wasm_bindgen(getter_with_clone)]
 pub struct Core {
     pub id: String,
@@ -57,6 +62,7 @@ pub fn start() {
 }
 
 pub fn init(id: String) {
+    test();
     app(id, |a| {
         // debug
         a.trigger_event(map_engine_ecs::Input::Keyboard(

@@ -5,7 +5,7 @@ function App() {
 
   return (
     <div className="logo">
-      nyaan
+      <button>nyaan</button>
     </div>
   )
 }
