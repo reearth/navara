@@ -4,10 +4,11 @@ use bevy_ecs::{
     system::{Commands, Query, Res},
 };
 use bevy_input::{
-    keyboard::KeyboardInput, mouse::{MouseButton, MouseMotion, MouseWheel}, Input
+    keyboard::KeyCode,
+    mouse::{MouseButton, MouseMotion, MouseWheel},
+    Input,
 };
-use bevy_math::{Vec3, Vec2, Quat};
-use bevy_time::Time;
+use bevy_math::{Quat, Vec2, Vec3};
 
 use crate::Transform;
 
@@ -24,44 +25,19 @@ pub fn startup(mut commands: Commands) {
             tilt: 0.0,
         },
         Transform::from_translation(translation),
-        Ctrl{ pressed: 0 },
     ));
 }
 
-pub fn example(_time: Res<Time>, mut _query: Query<(&mut Transform, &CameraMarker)>) {
-    // let (mut transform, _) = query.single_mut();
-
-    // let sec = 10.0;
-    // let radian = time.elapsed_seconds() % sec / sec * std::f32::consts::PI * 2.0;
-    // let radius = transform.translation.length();
-    // let x = radian.cos() * radius;
-    // let z = radian.sin() * radius;
-
-    // transform.translation.x = x;
-    // transform.translation.z = z;
-    // transform.look_at(Vec3::ZERO, Vec3::Y);
-}
-
-pub fn example2(
-    mut query: Query<(&mut Transform, &mut Orbit, &CameraMarker, &mut Ctrl)>,
+pub fn update(
+    mut query: Query<(&mut Transform, &mut Orbit, &CameraMarker)>,
     mb: Res<Input<MouseButton>>,
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
     mut mp: EventReader<MouseMoveInput>,
-    mut kb: EventReader<KeyboardInput>,
+    keys: Res<Input<KeyCode>>,
 ) {
-    for (mut transform, mut orbit, _, mut ctrl) in query.iter_mut() {
-        // throttled keys
-        use bevy_input::keyboard::KeyCode::{*};
-        ctrl.pressed = kb.read().fold(ctrl.pressed, |x, ev| {
-            match (ev.key_code, ev.state) {
-                (Some(ControlLeft | ControlRight), bevy_input::ButtonState::Pressed) => x + 1,
-                (Some(ControlLeft | ControlRight), bevy_input::ButtonState::Released) => -1,
-                _ => x - 1,
-            }
-        });
-        let is_ctrl = ctrl.pressed > 0;
-        ctrl.pressed = if is_ctrl { if ctrl.pressed > 100 {100} else {ctrl.pressed} } else {0};
+    for (mut transform, mut orbit, _) in query.iter_mut() {
+        let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
 
         // arc
         if mb.pressed(MouseButton::Left) && !is_ctrl {
@@ -76,8 +52,8 @@ pub fn example2(
                 (screen_delta.x * ratio / 300.0).atan() * 200.0,
                 (screen_delta.y * ratio / 300.0).atan() * 200.0,
             );
-            orbit.quat = orbit.quat * Quat::from_rotation_z(pan_delta.y);
-            orbit.quat = orbit.quat * Quat::from_rotation_x(pan_delta.x);
+            orbit.quat *= Quat::from_rotation_z(pan_delta.y);
+            orbit.quat *= Quat::from_rotation_x(pan_delta.x);
         }
 
         // dolly
@@ -96,7 +72,7 @@ pub fn example2(
         }
 
         // rotation
-        if mb.pressed(MouseButton::Middle) {
+        if mb.pressed(MouseButton::Right) {
             let mut rot_pos = Vec2::ZERO;
             for ev in mp.read() {
                 rot_pos = Vec2::new(ev.x, ev.y);
@@ -114,9 +90,7 @@ pub fn example2(
         // tilt
         if is_ctrl && mb.pressed(MouseButton::Left) {
             // fetch amount of cursor movement
-            let screen_delta = mm.read().fold(0.0, |x, ev| {
-                x + ev.delta.y
-            });
+            let screen_delta = mm.read().fold(0.0, |x, ev| x + ev.delta.y);
             orbit.tilt += screen_delta * 200.0;
         }
 
@@ -137,9 +111,4 @@ impl Orbit {
     fn to_vec3(self) -> Vec3 {
         self.quat * Vec3::new(0.0, self.r, 0.0)
     }
-}
-
-#[derive(Debug, Clone, Copy, Component)]
-pub struct Ctrl{
-    pressed: i32,
 }
