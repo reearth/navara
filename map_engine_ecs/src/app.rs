@@ -12,6 +12,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(TimePlugin);
 
         // custom plugins
+        app.add_plugins(super::buffer::BufferStorePlugin);
         app.add_plugins(super::input::InputPlugin);
         app.add_plugins(super::event::EventPlugin);
         app.add_plugins(super::object::ObjectPlugin);

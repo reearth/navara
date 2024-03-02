@@ -120,6 +120,12 @@ export default class ThreeView {
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(this._core, this.renderer.domElement);
     }
+
+    // test buffer
+    this._core.setBufferU8(32, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    const buf = this._core.getBufferU8(32);
+    console.log(buf);
+
     this._startMainLoop();
   }
 

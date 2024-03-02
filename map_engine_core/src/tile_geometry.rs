@@ -15,9 +15,10 @@ pub fn tile_triangles<F: Fn(usize, usize) -> f32>(
 ) -> Geometry {
     let segments = if segments == 0 { 1 } else { segments };
 
-    let mut vertices = Vec::new();
-    let mut uvs = Vec::new();
-    let mut indices = Vec::new();
+    let verties_count = (segments + 1) * (segments + 1);
+    let mut vertices = Vec::with_capacity(verties_count);
+    let mut uvs = Vec::with_capacity(verties_count);
+    let mut indices = Vec::with_capacity(segments * segments * 6);
 
     let dlat = (extent.east - extent.west) / segments as f32;
     let dlng = (extent.north - extent.south) / segments as f32;

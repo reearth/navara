@@ -44,9 +44,28 @@ impl Core {
         read_events(self.id.clone())
     }
 
-    #[wasm_bindgen]
     pub fn input(&self, i: JsValue) {
         input(self.id.clone(), i);
+    }
+
+    #[wasm_bindgen(js_name = getBufferU8)]
+    pub fn get_buffer_u8(&self, handle: i32) -> Option<js_sys::Uint8Array> {
+        get_buffer_u8(self.id.clone(), handle)
+    }
+
+    #[wasm_bindgen(js_name = getBufferU32)]
+    pub fn get_buffer_u32(&self, handle: i32) -> Option<js_sys::Uint32Array> {
+        get_buffer_u32(self.id.clone(), handle)
+    }
+
+    #[wasm_bindgen(js_name = getBufferF32)]
+    pub fn get_buffer_f32(&self, handle: i32) -> Option<js_sys::Float32Array> {
+        get_buffer_f32(self.id.clone(), handle)
+    }
+
+    #[wasm_bindgen(js_name = setBufferU8)]
+    pub fn set_buffer_u8(&self, handle: i32, data: &[u8]) {
+        set_buffer_u8(self.id.clone(), handle, data);
     }
 }
 
@@ -88,6 +107,45 @@ pub fn input(id: String, input: JsValue) {
         };
 
         a.trigger_event(input);
+    });
+}
+
+pub fn get_buffer_u8(id: String, handle: i32) -> Option<js_sys::Uint8Array> {
+    app(id, |a| {
+        let Some(buf) = a.get_buffer_u8(handle) else {
+            return None;
+        };
+
+        Some(js_sys::Uint8Array::from(buf))
+        // unsafe { Some(js_sys::Uint8Array::view(buf)) } // zero copy
+    })
+}
+
+pub fn get_buffer_u32(id: String, handle: i32) -> Option<js_sys::Uint32Array> {
+    app(id, |a| {
+        let Some(buf) = a.get_buffer_u32(handle) else {
+            return None;
+        };
+
+        Some(js_sys::Uint32Array::from(buf))
+        // unsafe { Some(js_sys::Uint32Array::view(buf)) } // zero copy
+    })
+}
+
+pub fn get_buffer_f32(id: String, handle: i32) -> Option<js_sys::Float32Array> {
+    app(id, |a| {
+        let Some(buf) = a.get_buffer_f32(handle) else {
+            return None;
+        };
+
+        Some(js_sys::Float32Array::from(buf))
+        // unsafe { Some(js_sys::Float32Array::view(buf)) } // zero copy
+    })
+}
+
+pub fn set_buffer_u8(id: String, handle: i32, buf: &[u8]) {
+    app(id, |a| {
+        a.set_buffer(handle, buf.to_vec());
     });
 }
 

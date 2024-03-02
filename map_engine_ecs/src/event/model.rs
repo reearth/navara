@@ -6,7 +6,14 @@ use crate::Transform;
 pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub object_transform_updated: Vec<ComponentEvent<'a, Transform>>,
+    pub object_added: Vec<EntityEvent>,
     pub object_removed: Vec<EntityEvent>,
+}
+
+#[derive(Debug)]
+pub struct EntityEvent {
+    pub ind: u32,
+    pub gen: u32,
 }
 
 #[derive(Debug)]
@@ -14,12 +21,6 @@ pub struct ComponentEvent<'a, T = ()> {
     pub ind: u32,
     pub gen: u32,
     pub comp: &'a T,
-}
-
-#[derive(Debug)]
-pub struct EntityEvent {
-    pub ind: u32,
-    pub gen: u32,
 }
 
 impl From<Entity> for EntityEvent {
