@@ -36,26 +36,18 @@ impl Input {
 
     pub fn into_ecs_input(self) -> Option<map_engine_ecs::Input> {
         match self.r#type {
-            InputType::MouseDown => match self.get_button() {
-                Some(button) =>
-                    Some(map_engine_ecs::Input::MouseButton(
-                    map_engine_ecs::MouseButtonInput {
-                        button,
-                        state: map_engine_ecs::ButtonState::Pressed,
-                    },
-                )),
-                None => None,
-            },
-            InputType::MouseUp => match self.get_button() {
-                Some(button) =>
-                    Some(map_engine_ecs::Input::MouseButton(
-                    map_engine_ecs::MouseButtonInput {
-                        button,
-                        state: map_engine_ecs::ButtonState::Released,
-                    },
-                )),
-                None => None,
-            },
+            InputType::MouseDown => self.get_button().map(|button| {
+                map_engine_ecs::Input::MouseButton(map_engine_ecs::MouseButtonInput {
+                    button,
+                    state: map_engine_ecs::ButtonState::Pressed,
+                })
+            }),
+            InputType::MouseUp => self.get_button().map(|button| {
+                map_engine_ecs::Input::MouseButton(map_engine_ecs::MouseButtonInput {
+                    button,
+                    state: map_engine_ecs::ButtonState::Released,
+                })
+            }),
             InputType::MouseMove => Some(map_engine_ecs::Input::MouseMove(
                 map_engine_ecs::MouseMoveInput {
                     x: self.x.unwrap_or(0.0),
@@ -69,44 +61,37 @@ impl Input {
                     y: self.y.unwrap_or(0.0),
                 },
             )),
-            InputType::KeyDown => match self.key_code {
-                Some(k) => {
-                    Some(map_engine_ecs::Input::Keyboard(map_engine_ecs::KeyboardInput {
-                        scan_code: 0, // ignore it because keyCode in JS is deprecated
-                        key_code: match &*k {
-                            "ControlLeft" => Some(KeyCode::ControlLeft),
-                            "ControlRight" => Some(KeyCode::ControlRight),
-                            _ => None,
-                        },
-                        state: ButtonState::Pressed,
-                    }))
-                },
-                _ => None,
-            },
-            InputType::KeyUp=> match self.key_code {
-                Some(k) => {
-                    Some(map_engine_ecs::Input::Keyboard(map_engine_ecs::KeyboardInput {
-                        scan_code: 0, // ignore it because keyCode in JS is deprecated
-                        key_code: match &*k {
-                            "ControlLeft" => Some(KeyCode::ControlLeft),
-                            "ControlRight" => Some(KeyCode::ControlRight),
-                            _ => None,
-                        },
-                        state: ButtonState::Released,
-                    }))
-                },
-                _ => None,
-            },
+            InputType::KeyDown => self.key_code.map(|k| {
+                map_engine_ecs::Input::Keyboard(map_engine_ecs::KeyboardInput {
+                    scan_code: 0, // ignore it because keyCode in JS is deprecated
+                    key_code: match &*k {
+                        "ControlLeft" => Some(KeyCode::ControlLeft),
+                        "ControlRight" => Some(KeyCode::ControlRight),
+                        _ => None,
+                    },
+                    state: ButtonState::Pressed,
+                })
+            }),
+            InputType::KeyUp => self.key_code.map(|k| {
+                map_engine_ecs::Input::Keyboard(map_engine_ecs::KeyboardInput {
+                    scan_code: 0, // ignore it because keyCode in JS is deprecated
+                    key_code: match &*k {
+                        "ControlLeft" => Some(KeyCode::ControlLeft),
+                        "ControlRight" => Some(KeyCode::ControlRight),
+                        _ => None,
+                    },
+                    state: ButtonState::Released,
+                })
+            }),
         }
     }
 
     fn get_button(self) -> Option<map_engine_ecs::MouseButton> {
         match self.button {
-            Some (0) => Some(map_engine_ecs::MouseButton::Left),
-            Some (1) => Some(map_engine_ecs::MouseButton::Middle),
-            Some (2) => Some(map_engine_ecs::MouseButton::Right),
+            Some(0) => Some(map_engine_ecs::MouseButton::Left),
+            Some(1) => Some(map_engine_ecs::MouseButton::Middle),
+            Some(2) => Some(map_engine_ecs::MouseButton::Right),
             _ => None,
         }
     }
 }
-

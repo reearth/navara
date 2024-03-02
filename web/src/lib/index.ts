@@ -45,6 +45,11 @@ export default class ThreeView {
 
     this._options = options;
 
+    // disable right-click
+    options.canvas?.addEventListener("contextmenu", e => {
+      e.preventDefault();
+    });
+
     if (options.renderer) {
       this.renderer = options.renderer;
     } else {
