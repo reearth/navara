@@ -7,6 +7,50 @@ pub struct Geometry {
     pub indices: Vec<u32>,
 }
 
+pub fn tile_triangles_flat(
+    ellipsoid: Ellipsoid<f32>,
+    extent: Extent<f32, Radians>,
+    segments: usize,
+    height: f32,
+) -> Geometry {
+    tile_triangles(ellipsoid, extent, segments, |_, _| height)
+}
+
+pub fn tile_triangles_with_terrain(
+    ellipsoid: Ellipsoid<f32>,
+    extent: Extent<f32, Radians>,
+    segments: usize,
+    geoid_height: f32,
+    terrain: &[u8],
+    terrain_w: usize,
+    terrain_h: usize,
+) -> Geometry {
+    let height = |x: usize, y: usize| -> f32 {
+        let image_x = (x / segments) * (terrain_w - 1);
+        let image_y = (1 - y / segments) * (terrain_h - 1);
+
+        let i = image_y * terrain_w + image_x;
+        let r = terrain[i * 4] as f32;
+        let g = terrain[i * 4 + 1] as f32;
+        let b = terrain[i * 4 + 2] as f32;
+
+        // https://maps.gsi.go.jp/development/demtile.html
+        let h = if r != 128.0 || g != 0.0 || b != 0.0 {
+            if r >= 128.0 {
+                r * 655.36 + g * 2.56 + b * 0.01 - 167772.16
+            } else {
+                r * 655.36 + g * 2.56 + b * 0.01
+            }
+        } else {
+            0.0
+        };
+
+        h + geoid_height
+    };
+
+    tile_triangles(ellipsoid, extent, segments, height)
+}
+
 pub fn tile_triangles<F: Fn(usize, usize) -> f32>(
     ellipsoid: Ellipsoid<f32>,
     extent: Extent<f32, Radians>,
