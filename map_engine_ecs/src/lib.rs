@@ -3,13 +3,12 @@ mod buffer;
 mod camera;
 mod event;
 mod input;
-mod mesh;
+mod map;
 mod object;
 mod transform;
 
 pub use buffer::*;
 pub use event::{ComponentEvent, EntityEvent, Events};
-pub use mesh::*;
 pub use object::*;
 pub use transform::*;
 

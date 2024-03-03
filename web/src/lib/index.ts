@@ -1,8 +1,8 @@
 import initCore, { Core } from "map-engine-prototype";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer } from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer, Mesh } from "three";
 
-import { processEvent } from "./event";
+import { processEvent, type BufferLoader } from "./event";
 import { initScene } from "./example";
 import { registerInputEvents } from "./input";
 import { isWorker } from "./utils";
@@ -37,6 +37,22 @@ export default class ThreeView {
   _events: {
     [K in keyof Events]?: Events[K][];
   } = {};
+
+  _meshes: Map<string, Mesh> = new Map();
+  _buf: BufferLoader = {
+    u8: handle => {
+      const b = this._core?.getBufferU8(handle);
+      return b ?? null;
+    },
+    f32: handle => {
+      const b = this._core?.getBufferF32(handle);
+      return b ?? null;
+    },
+    u32: handle => {
+      const b = this._core?.getBufferU32(handle);
+      return b ?? null;
+    },
+  };
 
   constructor(options: Options) {
     if (!options.container && !options.canvas && !options.renderer) {
@@ -164,7 +180,7 @@ export default class ThreeView {
 
     const events = this._core?.readEvents();
     if (events) {
-      processEvent(this.scene, this.camera, events);
+      processEvent(this.scene, this.camera, this._meshes, this._buf, events);
     }
 
     return true;
@@ -181,6 +197,10 @@ export default class ThreeView {
 
   off<K extends keyof Events>(event: K, callback: Events[K]) {
     this._events[event] = this._events[event]?.filter(c => c !== callback);
+  }
+
+  setBuffer(handle: number, data: Uint8Array) {
+    this._core?.setBufferU8(handle, data);
   }
 
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {
