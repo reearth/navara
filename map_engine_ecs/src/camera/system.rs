@@ -8,9 +8,10 @@ use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     Input,
 };
+use bevy_log::info;
 use bevy_math::{Quat, Vec2, Vec3};
 
-use crate::Transform;
+use crate::{LocatePosition, Transform};
 
 use super::CameraMarker;
 use crate::MouseMoveInput;
@@ -34,11 +35,12 @@ pub fn update(
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
     mut mp: EventReader<MouseMoveInput>,
+    mut lp: EventReader<LocatePosition>,
     keys: Res<Input<KeyCode>>,
 ) {
     for (mut transform, mut orbit, _) in query.iter_mut() {
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
-
+        
         // arc
         if mb.pressed(MouseButton::Left) && !is_ctrl {
             // fetch amount of cursor movement
@@ -92,6 +94,13 @@ pub fn update(
             // fetch amount of cursor movement
             let screen_delta = mm.read().fold(0.0, |x, ev| x + ev.delta.y);
             orbit.tilt += screen_delta * 200.0;
+        }
+
+        // locate position
+        for ev in lp.read() {
+            orbit.r = ev.r;
+            orbit.quat = Quat::from_xyzw(ev.x, ev.y, ev.z, ev.w);
+            orbit.tilt = ev.tilt;
         }
 
         transform.translation = orbit.to_vec3();

@@ -8,6 +8,9 @@ pub struct Input {
     pub x: Option<f32>,
     pub y: Option<f32>,
     pub z: Option<f32>,
+    pub w: Option<f32>,
+    pub r: Option<f32>,
+    pub tilt: Option<f32>,
     pub button: Option<u32>,
     pub key_code: Option<String>,
     pub key: Option<String>,
@@ -27,6 +30,8 @@ pub enum InputType {
     MouseMove,
     #[serde(rename = "wheel")]
     Wheel,
+    #[serde(rename = "locateposition")]
+    Locate,
 }
 
 impl Input {
@@ -83,6 +88,19 @@ impl Input {
                     state: ButtonState::Released,
                 })
             }),
+            // temporal implementation
+            InputType::Locate => Some(
+                map_engine_ecs::Input::Locate(
+                    map_engine_ecs::LocatePosition {
+                        r: self.r.unwrap_or(0.0),
+                        x: self.x.unwrap_or(0.0),
+                        y: self.y.unwrap_or(0.0),
+                        z: self.z.unwrap_or(0.0),
+                        w: self.w.unwrap_or(0.0),
+                        tilt: self.tilt.unwrap_or(0.0),
+                    }
+                )
+            ),
         }
     }
 

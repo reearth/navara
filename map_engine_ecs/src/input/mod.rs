@@ -1,5 +1,5 @@
 use bevy_app::{App, Plugin, PreUpdate};
-use bevy_ecs::{entity::Entity, world::World};
+use bevy_ecs::{entity::Entity, event::Event, world::World};
 
 mod keyboard;
 mod mouse;
@@ -13,6 +13,7 @@ pub enum Input {
     MouseButton(MouseButtonInput),
     MouseMove(MouseMoveInput),
     MouseScroll(MouseScrollInput),
+    Locate(LocatePosition),
 }
 
 pub struct InputPlugin;
@@ -32,5 +33,17 @@ pub fn trigger_event(world: &mut World, win: Entity, ev: Input) {
         Input::MouseButton(ev) => world.send_event(ev.into_event(win)),
         Input::MouseMove(ev) => world.send_event(ev),
         Input::MouseScroll(ev) => world.send_event(ev.into_event(win)),
+        Input::Locate(ev) => world.send_event(ev),
     }
+}
+
+// temporal implementation
+#[derive(Debug, Clone, Copy, PartialEq, Event)]
+pub struct LocatePosition {
+    pub r: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+    pub tilt: f32,
 }

@@ -17,9 +17,13 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(super::object::ObjectPlugin);
         app.add_plugins(super::camera::CameraPlugin);
 
+        // custom events
+        app.add_event::<super::LocatePosition>();
+        
         // custom systems
         app.add_systems(Startup, startup);
         app.add_systems(Update, update);
+
     }
 }
 

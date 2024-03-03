@@ -49,12 +49,25 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
     });
   }
 
+  const locate = (event: any) => {
+    console.log(event);
+    core.input({
+      type: "locateposition",
+      r: event.detail.r,
+      x: event.detail.x,
+      y: event.detail.y,
+      z: event.detail.z,
+      w: event.detail.w,
+      tilt: event.detail.tilt,
+    });
+  }
   element.addEventListener("mousedown", mousedown);
   element.addEventListener("mouseup", mouseup);
   element.addEventListener("mousemove", mousemove);
   element.addEventListener("wheel", wheel);
   document.addEventListener("keydown", keydown);
   document.addEventListener("keyup", keyup);
+  document.addEventListener('locateposition', locate);
 
   return () => {
     element.removeEventListener("mousedown", mousedown);
@@ -63,5 +76,6 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
     element.removeEventListener("wheel", wheel);
     document.removeEventListener("keydown", keydown);
     document.removeEventListener("keyup", keyup);
+    document.removeEventListener('locateposition', locate);
   };
 }

@@ -62,7 +62,6 @@ pub fn start() {
 }
 
 pub fn init(id: String) {
-    test();
     app(id, |a| {
         // debug
         a.trigger_event(map_engine_ecs::Input::Keyboard(
