@@ -1,8 +1,9 @@
 import initCore, { Core } from "map-engine-prototype";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer, Mesh, TextureLoader } from "three";
-import { OrbitControls } from "three/examples/jsm/Addons.js";
+import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3 } from "three";
+import { MapControls } from "three-stdlib";
 
+import { C3TilesManager } from "./C3Tiles";
 import { processEvent, type BufferLoader } from "./event";
 import { registerInputEvents } from "./input";
 import { isWorker } from "./utils";
@@ -17,7 +18,7 @@ export type Options = {
   debug?: boolean;
   scene?: Scene;
   camera?: PerspectiveCamera;
-  renderer?: Renderer;
+  renderer?: WebGLRenderer;
 };
 
 export type Events = {
@@ -27,7 +28,7 @@ export type Events = {
 export default class ThreeView {
   scene: Scene;
   camera: PerspectiveCamera;
-  renderer: Renderer;
+  renderer: WebGLRenderer;
 
   _core: Core | undefined;
   _options: Options;
@@ -55,7 +56,7 @@ export default class ThreeView {
     },
   };
 
-  _control?: { update: () => void };
+  control?: { update: () => void; get target(): Vector3 | undefined };
 
   constructor(options: Options) {
     if (!options.container && !options.canvas && !options.renderer) {
@@ -134,9 +135,10 @@ export default class ThreeView {
     }
 
     // orbit
-    const orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-    orbitControls.update();
-    this._control = orbitControls;
+    this.control = new MapControls(this.camera, this.renderer.domElement);
+
+    // c3tiles
+    this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);
 
     this.resize();
   }
@@ -198,8 +200,9 @@ export default class ThreeView {
       processEvent(this.scene, this.camera, this._meshes, this._buf, this._tex, events);
     }
 
-    this._control?.update();
+    this.control?.update();
     this.camera.updateMatrixWorld();
+    this._c3tiles.update();
 
     return true;
   }
@@ -219,6 +222,12 @@ export default class ThreeView {
 
   setBuffer(handle: number, data: Uint8Array) {
     this._core?.setBufferU8(handle, data);
+  }
+
+  _c3tiles: C3TilesManager;
+
+  addLayer(l: { type: "3dtiles"; url: string }) {
+    this._c3tiles.add(l.url, this._c3tiles.length() == 0);
   }
 
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {

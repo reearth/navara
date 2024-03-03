@@ -21,4 +21,11 @@ const directionalLight = new DirectionalLight(0xffffff);
 directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
+const c3tilesUrl =
+  "https://plateau.geospatial.jp/main/data/3d-tiles/bldg/13100_tokyo/13101_chiyoda-ku/notexture/tileset.json";
+view.addLayer({
+  type: "3dtiles",
+  url: c3tilesUrl,
+});
+
 await view.init();
