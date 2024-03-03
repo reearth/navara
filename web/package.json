@@ -15,7 +15,7 @@
   "dependencies": {
     "map-engine-prototype": "file:../map_engine_wasm/pkg",
     "stats.js": "^0.17.0",
-    "three": "^0.158.0"
+    "three": "^0.162.0"
   },
   "devDependencies": {
     "@types/three": "^0.158.2",
