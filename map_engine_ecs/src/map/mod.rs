@@ -1,6 +1,7 @@
 use bevy_app::{App, Plugin, Update};
 use bevy_ecs::{
     component::Component,
+    event::{Event, EventReader},
     query::Added,
     system::{Commands, Query, ResMut},
 };
@@ -14,7 +15,54 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, update);
+        app.add_systems(Update, (process_events, update_tiles))
+            .add_event::<AddLayerEvent>();
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Event)]
+pub struct AddLayerEvent(pub LayerDescription);
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LayerDescription {
+    Tiles {
+        tile_url: String,
+        terrain_url: Option<String>,
+        z: usize,
+        segments: usize,
+        height: f32,
+        extent: Option<Extent<f32, Radians>>,
+        color: u32,
+        wireframe: bool,
+    },
+}
+
+fn process_events(mut commands: Commands, mut events: EventReader<AddLayerEvent>) {
+    for ev in events.read() {
+        let AddLayerEvent(desc) = ev;
+        match desc {
+            LayerDescription::Tiles {
+                tile_url,
+                terrain_url,
+                z,
+                segments,
+                height,
+                extent,
+                color,
+                wireframe,
+            } => {
+                commands.spawn(Tiles {
+                    tile_url: Some(tile_url.clone()),
+                    terrain_url: terrain_url.clone(),
+                    z: *z,
+                    segments: *segments,
+                    height: *height,
+                    extent: *extent,
+                    color: *color,
+                    wireframe: *wireframe,
+                });
+            }
+        }
     }
 }
 
@@ -30,7 +78,7 @@ pub struct Tiles {
     pub wireframe: bool,
 }
 
-fn update(
+fn update_tiles(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     tiles: Query<&Tiles, Added<Tiles>>,

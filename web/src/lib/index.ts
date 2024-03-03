@@ -1,4 +1,4 @@
-import initCore, { Core } from "map-engine-prototype";
+import initCore, { Core, LayerDescription } from "map-engine-prototype";
 import Stats from "stats.js";
 import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3 } from "three";
 import { MapControls } from "three-stdlib";
@@ -226,8 +226,14 @@ export default class ThreeView {
 
   _c3tiles: C3TilesManager;
 
-  addLayer(l: { type: "3dtiles"; url: string }) {
-    this._c3tiles.add(l.url, this._c3tiles.length() == 0);
+  addLayer(
+    l: { type: "3dtiles"; url: string } | ({ type: "tiles" } & Omit<LayerDescription, "free">),
+  ) {
+    if (l.type === "3dtiles") {
+      this._c3tiles.add(l.url, this._c3tiles.length() == 0);
+    } else {
+      this._core?.addLayer(l);
+    }
   }
 
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {

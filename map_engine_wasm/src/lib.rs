@@ -1,5 +1,6 @@
 mod event;
 mod input;
+mod types;
 mod utils;
 
 use std::{
@@ -12,6 +13,7 @@ use wasm_bindgen::prelude::*;
 
 pub use event::*;
 pub use input::*;
+pub use types::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -66,6 +68,11 @@ impl Core {
     #[wasm_bindgen(js_name = setBufferU8)]
     pub fn set_buffer_u8(&self, handle: i32, data: &[u8]) {
         set_buffer_u8(self.id.clone(), handle, data);
+    }
+
+    #[wasm_bindgen(js_name = addLayer)]
+    pub fn add_layer(&self, layer: JsValue) {
+        add_layer(self.id.clone(), layer);
     }
 }
 
@@ -146,6 +153,16 @@ pub fn get_buffer_f32(id: String, handle: i32) -> Option<js_sys::Float32Array> {
 pub fn set_buffer_u8(id: String, handle: i32, buf: &[u8]) {
     app(id, |a| {
         a.set_buffer(handle, buf.to_vec());
+    });
+}
+
+pub fn add_layer(id: String, layer: JsValue) {
+    app(id, |a| {
+        if let Some(ld) = LayerDescription::from(layer) {
+            if let Some(l) = ld.to() {
+                a.add_layer(l);
+            }
+        }
     });
 }
 

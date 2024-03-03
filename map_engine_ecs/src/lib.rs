@@ -3,7 +3,7 @@ mod buffer;
 mod camera;
 mod event;
 mod input;
-mod map;
+pub mod map;
 mod object;
 mod transform;
 
@@ -67,6 +67,10 @@ impl App {
             handle,
             ty: buffer::BufferType::U8,
         });
+    }
+
+    pub fn add_layer(&mut self, desc: map::LayerDescription) {
+        self.app.world.send_event(map::AddLayerEvent(desc));
     }
 }
 

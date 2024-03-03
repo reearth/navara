@@ -29,3 +29,55 @@ view.addLayer({
 });
 
 await view.init();
+
+const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
+const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
+
+const chiyodaExtent = {
+  west: 139.712,
+  south: 35.6544,
+  north: 35.71,
+  east: 139.782,
+};
+
+const fujiExtent = {
+  west: 138.558,
+  south: 35.244,
+  north: 35.496,
+  east: 138.866,
+};
+
+view.addLayer({
+  type: "tiles",
+  color: 0xffffff,
+  segments: 10,
+  height: 0,
+  tile_url: tileUrl,
+  z: 4,
+  wireframe: false,
+});
+
+// chiyoda-ku
+view.addLayer({
+  type: "tiles",
+  color: 0xffffff,
+  segments: 10,
+  height: 36.6,
+  tile_url: tileUrl,
+  z: 12,
+  wireframe: false,
+  extent: chiyodaExtent,
+});
+
+// fuji
+view.addLayer({
+  type: "tiles",
+  color: 0xffffff,
+  segments: 256,
+  height: 42.0698,
+  tile_url: tileUrl,
+  z: 10,
+  wireframe: false,
+  extent: fujiExtent,
+  terrain_url: terrainUrl,
+});
