@@ -108,12 +108,13 @@ impl<F: Float + One<F>> XYZ<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Deg;
 
     #[test]
     fn test_ellipsoid() {
         let e = WGS84_64;
-        assert_eq!(e.semi_major_axis(), 6378137.0);
-        assert_eq!(e.semi_minor_axis(), 6356752.314245);
+        assert_eq!(e.semi_major_axis(), WGS84_A_64);
+        assert_eq!(e.semi_minor_axis(), WGS84_B_64);
 
         let lle = LLE {
             lat: Rad::new(0.0),
@@ -129,5 +130,15 @@ mod tests {
         assert_eq!(lle.lat, Rad::new(0.0));
         assert_eq!(lle.lng, Rad::new(0.0));
         assert_eq!(lle.height, Meters::new(0.0));
+
+        let lle = LLE {
+            lat: Deg::new(34.00000048),
+            lng: Deg::new(-117.3335693),
+            height: Meters::new(251.702),
+        };
+        let xyz = lle.rad().to_xyz(e);
+        assert!((-2430601.8 - xyz.x.val()).abs() < 0.1, "x: {}", xyz.x.val());
+        assert!((-4702442.7 - xyz.y.val()).abs() < 0.1, "y: {}", xyz.y.val());
+        assert!((3546587.4 - xyz.z.val()).abs() < 0.1, "z: {}", xyz.z.val());
     }
 }

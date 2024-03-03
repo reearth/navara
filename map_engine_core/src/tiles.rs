@@ -1,6 +1,4 @@
-use std::f64::consts::PI;
-
-use crate::{Extent, LngLat, Rad, Radians};
+use crate::{Extent, Float, LngLat, Rad, Radians, Two};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TileXY {
@@ -38,13 +36,13 @@ impl TileXYZ {
     }
 
     /// Returns the normalized world position of the north-west corner of the tile.
-    pub fn north_west_world_pos(self) -> (f64, f64) {
-        let n = self.n() as f64;
-        (self.x as f64 / n, self.y as f64 / n)
+    pub fn north_west_world_pos(self) -> (f32, f32) {
+        let n = self.n() as f32;
+        (self.x as f32 / n, self.y as f32 / n)
     }
 
     /// Returns the normalized world position of the north-east corner of the tile.
-    pub fn extent(self) -> Extent<f64, Radians> {
+    pub fn extent(self) -> Extent<f32, Radians> {
         let e1 = self.north_west_world_pos();
         let e2 = (TileXYZ {
             x: self.x + 1,
@@ -52,6 +50,7 @@ impl TileXYZ {
             z: self.z,
         })
         .north_west_world_pos();
+
         let p1 = web_mercator_world_pos_to_lnglat(e1.0, e1.1);
         let p2 = web_mercator_world_pos_to_lnglat(e2.0, e2.1);
         Extent::from_points(p1, p2)
@@ -59,10 +58,11 @@ impl TileXYZ {
 }
 
 /// Converts a normalized world position in Web mercator to a longitude and latitude.
-pub fn web_mercator_world_pos_to_lnglat(x: f64, y: f64) -> LngLat<f64, Radians> {
-    let lng = x * (2.0 * PI) - PI;
-    let phi = PI - 2.0 * PI * y; // y=0 -> PI, y=1 -> -PI
-    let lat = 2.0 * (phi.exp().atan() - PI / 4.0);
+pub fn web_mercator_world_pos_to_lnglat<F: Float + Two<F>>(x: F, y: F) -> LngLat<F, Radians> {
+    let pi_4 = F::PI / (F::two() * F::two());
+    let lng = x * (F::two() * F::PI) - F::PI;
+    let phi = F::PI - F::two() * F::PI * y; // y=0 -> PI, y=1 -> -PI
+    let lat = F::two() * (phi.exp().atan() - pi_4);
     LngLat {
         lng: Rad::new(lng),
         lat: Rad::new(lat),
@@ -117,8 +117,9 @@ mod tests {
 
     #[test]
     fn test_tile_extent() {
-        let max_lat: f64 = 2.0 * (((PI - 2.0 * PI * 0.0).exp().atan()) - PI / 4.0);
-        let min_lat: f64 = 2.0 * (((PI - 2.0 * PI * 1.0).exp().atan()) - PI / 4.0);
+        const PI: f32 = std::f32::consts::PI;
+        let max_lat = 2.0 * (((PI - 2.0 * PI * 0.0).exp().atan()) - PI / 4.0);
+        let min_lat = 2.0 * (((PI - 2.0 * PI * 1.0).exp().atan()) - PI / 4.0);
 
         let xyz = TileXYZ { x: 0, y: 0, z: 0 };
         let extent = xyz.extent();

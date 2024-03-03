@@ -1,10 +1,22 @@
 // pub use radians::*;
 use crate::unit::{Angle, Degrees, Float, Meters, Radians, Unit};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct LngLat<F: Float, U: Unit<F>> {
     pub lat: Angle<F, U>,
     pub lng: Angle<F, U>,
+}
+
+impl<F: Float + std::fmt::Debug, U: Unit<F>> std::fmt::Debug for LngLat<F, U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LngLat({:?}, {:?})", self.lng, self.lat)
+    }
+}
+
+impl<F: Float + std::fmt::Display, U: Unit<F>> std::fmt::Display for LngLat<F, U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LngLat({}, {})", self.lng, self.lat)
+    }
 }
 
 impl<F: Float, U: Unit<F>> LngLat<F, U> {
@@ -44,11 +56,23 @@ impl<F: Float> LngLat<F, Degrees> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Copy, Clone, PartialEq, Default)]
 pub struct LLE<F: Float, U: Unit<F>> {
     pub lat: Angle<F, U>,
     pub lng: Angle<F, U>,
     pub height: Meters<F>,
+}
+
+impl<F: Float + std::fmt::Debug, U: Unit<F>> std::fmt::Debug for LLE<F, U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LLE({:?}, {:?}, {:?})", self.lng, self.lat, self.height)
+    }
+}
+
+impl<F: Float + std::fmt::Display, U: Unit<F>> std::fmt::Display for LLE<F, U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LLE({}, {}, {})", self.lng, self.lat, self.height)
+    }
 }
 
 impl<F: Float, U: Unit<F>> From<LngLat<F, U>> for LLE<F, U> {

@@ -64,14 +64,14 @@ pub fn tile_triangles<F: Fn(usize, usize) -> f32>(
     let mut uvs = Vec::with_capacity(verties_count);
     let mut indices = Vec::with_capacity(segments * segments * 6);
 
-    let dlat = (extent.east - extent.west) / segments as f32;
-    let dlng = (extent.north - extent.south) / segments as f32;
+    let dlng = (extent.east - extent.west) / segments as f32;
+    let dlat = (extent.north - extent.south) / segments as f32;
 
     for i in 0..=segments {
         for j in 0..=segments {
             let lle = LLE {
-                lng: extent.west + dlat * i as f32,
-                lat: extent.south + dlng * j as f32,
+                lng: extent.west + dlng * i as f32,
+                lat: extent.south + dlat * j as f32,
                 height: Meters::new(height(i, j)),
             };
             let xyz = lle.to_xyz(ellipsoid);
