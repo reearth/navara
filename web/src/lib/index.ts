@@ -1,9 +1,9 @@
 import initCore, { Core } from "map-engine-prototype";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer, Mesh } from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer, Mesh, TextureLoader } from "three";
+import { OrbitControls } from "three/examples/jsm/Addons.js";
 
 import { processEvent, type BufferLoader } from "./event";
-import { initScene } from "./example";
 import { registerInputEvents } from "./input";
 import { isWorker } from "./utils";
 
@@ -39,6 +39,7 @@ export default class ThreeView {
   } = {};
 
   _meshes: Map<string, Mesh> = new Map();
+  _tex = new TextureLoader();
   _buf: BufferLoader = {
     u8: handle => {
       const b = this._core?.getBufferU8(handle);
@@ -53,6 +54,8 @@ export default class ThreeView {
       return b ?? null;
     },
   };
+
+  _control?: { update: () => void };
 
   constructor(options: Options) {
     if (!options.container && !options.canvas && !options.renderer) {
@@ -71,7 +74,7 @@ export default class ThreeView {
     } else {
       const renderer = new WebGLRenderer({
         antialias: true,
-        // alpha: true,
+        logarithmicDepthBuffer: true,
         canvas: options.canvas,
       });
       this.renderer = renderer;
@@ -96,7 +99,6 @@ export default class ThreeView {
       this.scene = options.scene;
     } else {
       const scene = new Scene();
-      initScene(scene);
       this.scene = scene;
     }
 
@@ -110,6 +112,12 @@ export default class ThreeView {
       }
 
       const camera = new PerspectiveCamera(50, width / height);
+      camera.far = 1e8; // 100,000 km
+      camera.near = 0.1;
+      const earthRadius = 6371000;
+      camera.position.set(0, 0, earthRadius * 3);
+      camera.up.set(0, 0, 1);
+      camera.lookAt(0, 0, 0);
       this.camera = camera;
     }
 
@@ -124,6 +132,13 @@ export default class ThreeView {
         t.appendChild(this._stats.dom);
       }
     }
+
+    // orbit
+    const orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+    orbitControls.update();
+    this._control = orbitControls;
+
+    this.resize();
   }
 
   async init() {
@@ -136,11 +151,6 @@ export default class ThreeView {
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(this._core, this.renderer.domElement);
     }
-
-    // test buffer
-    this._core.setBufferU8(32, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]));
-    const buf = this._core.getBufferU8(32);
-    console.log(buf);
 
     this._startMainLoop();
   }
@@ -157,12 +167,17 @@ export default class ThreeView {
     }
   }
 
-  resize = (width: number, height: number, pixelRatio?: number) => {
+  resize = (width?: number, height?: number, pixelRatio?: number) => {
     if (this._disposed) return;
 
-    this.camera.aspect = width / height;
+    const canvas = this._getCanvasSize();
+    const w = typeof width === "number" ? width : canvas?.width;
+    const h = typeof height === "number" ? height : canvas?.height;
+    if (typeof w !== "number" || typeof h !== "number") return;
+
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height, !isWorker());
+    this.renderer.setSize(w, h, !isWorker());
     if (
       typeof pixelRatio === "number" &&
       "setPixelRatio" in this.renderer &&
@@ -180,8 +195,11 @@ export default class ThreeView {
 
     const events = this._core?.readEvents();
     if (events) {
-      processEvent(this.scene, this.camera, this._meshes, this._buf, events);
+      processEvent(this.scene, this.camera, this._meshes, this._buf, this._tex, events);
     }
+
+    this._control?.update();
+    this.camera.updateMatrixWorld();
 
     return true;
   }

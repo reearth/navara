@@ -1,3 +1,5 @@
+import { AmbientLight, AxesHelper, DirectionalLight } from "three";
+
 import ThreeView from "./lib";
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -7,5 +9,16 @@ const view = new ThreeView({
   canvas,
   debug: true,
 });
+
+const axesHelper = new AxesHelper(5);
+axesHelper.scale.multiplyScalar(1e9);
+view.scene.add(axesHelper);
+
+const ambientLight = new AmbientLight(0xffffff, 0.2);
+view.scene.add(ambientLight);
+
+const directionalLight = new DirectionalLight(0xffffff);
+directionalLight.position.set(1, 1, 1);
+view.scene.add(directionalLight);
 
 await view.init();

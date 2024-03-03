@@ -75,6 +75,8 @@ pub struct Mesh {
 pub struct MeshMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub map_url: Option<String>,
+    pub color: u32,
+    pub wireframe: bool,
 }
 
 impl<'a> From<map_engine_ecs::Events<'a>> for Events {
@@ -186,6 +188,8 @@ impl From<map_engine_ecs::Material> for MeshMaterial {
     fn from(m: map_engine_ecs::Material) -> Self {
         Self {
             map_url: m.map_url.clone(),
+            color: m.color,
+            wireframe: m.wireframe,
         }
     }
 }

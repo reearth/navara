@@ -9,7 +9,7 @@ use bevy_ecs::{
     system::{Query, ResMut},
 };
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
 pub struct ObjectMarker;
 
 #[derive(Bundle, Debug)]
@@ -29,6 +29,8 @@ pub struct Mesh {
 pub struct Material {
     // for tile
     pub map_url: Option<String>,
+    pub color: u32,
+    pub wireframe: bool,
 }
 
 #[derive(Bundle, Debug)]

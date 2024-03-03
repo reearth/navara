@@ -11,10 +11,13 @@ import type {
 import {
   BufferAttribute,
   BufferGeometry,
-  MeshStandardMaterial,
+  // MeshStandardMaterial,
   type Camera,
   Mesh,
   type Object3D,
+  MeshBasicMaterial,
+  Material,
+  TextureLoader,
 } from "three";
 
 export type BufferLoader = {
@@ -28,6 +31,7 @@ export function processEvent(
   camera: Camera,
   meshes: Map<string, Mesh>,
   buf: BufferLoader,
+  tex: TextureLoader,
   event: Events,
 ) {
   if (event.camera_transform_updated) {
@@ -35,12 +39,12 @@ export function processEvent(
   }
   event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
   event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
-  event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf));
-  event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf));
+  event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, tex));
+  event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, tex));
 }
 
-export function processCameraTransformUpdated(camera: Camera, transform: Transform) {
-  setTransform(camera, transform);
+export function processCameraTransformUpdated(_camera: Camera, _transform: Transform) {
+  // setTransform(camera, transform);
 }
 
 export function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTransformEvent) {
@@ -56,11 +60,13 @@ export function processMeshAdded(
   meshes: Map<string, Mesh>,
   mesh: MeshAdded,
   buf: BufferLoader,
+  tex: TextureLoader,
 ) {
   createMesh(
     parent,
     meshes,
     buf,
+    tex,
     `${mesh.ind}_${mesh.gen}`,
     mesh.mesh,
     mesh.material,
@@ -73,6 +79,7 @@ export function processMeshChanged(
   meshes: Map<string, Mesh>,
   mesh: MeshChanged,
   buf: BufferLoader,
+  tex: TextureLoader,
 ) {
   const id = `${mesh.ind}_${mesh.gen}`;
   const m = meshes.get(id);
@@ -81,7 +88,7 @@ export function processMeshChanged(
   meshes.delete(id);
   parent.remove(m);
 
-  const newm = createMesh(parent, meshes, buf, id, mesh.mesh, mesh.material);
+  const newm = createMesh(parent, meshes, buf, tex, id, mesh.mesh, mesh.material);
   if (!newm) return;
 
   newm.position.copy(m.position);
@@ -106,9 +113,10 @@ export function createMesh(
   parent: Object3D,
   meshes: Map<string, Mesh>,
   buf: BufferLoader,
+  tex: TextureLoader,
   id: string,
   mesh: EventMesh,
-  _mat: EventMaterial,
+  mat: EventMaterial,
   tranform?: Transform,
 ) {
   const position = buf.f32(mesh.vertices);
@@ -124,7 +132,8 @@ export function createMesh(
   geometry.setIndex(new BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
 
-  const material = new MeshStandardMaterial({ color: 0x00ff00 });
+  // const material = new MeshStandardMaterial({ color: 0x00ff00 });
+  const material = toMaterial(mat, tex);
   const m = new Mesh(geometry, material);
   m.name = id;
   if (tranform) setTransform(m, tranform);
@@ -139,4 +148,18 @@ function setTransform(obj: Object3D, transform: Transform) {
   obj.position.set(tx, ty, tz);
   obj.quaternion.set(qx, qy, qz, qw);
   obj.scale.set(sx, sy, sz);
+}
+
+function toMaterial(mat: EventMaterial, tex: TextureLoader): Material {
+  if (mat.wireframe) {
+    return new MeshBasicMaterial({ color: mat.color, wireframe: true });
+  }
+
+  const m = new MeshBasicMaterial({ color: mat.color });
+  if (mat.map_url) {
+    const t = tex.load(mat.map_url);
+    m.map = t;
+  }
+
+  return m;
 }

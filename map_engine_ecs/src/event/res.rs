@@ -18,6 +18,8 @@ impl EventStore {
         self.camera_transform_updated = None;
         self.object_transform_updated.clear();
         self.object_removed.clear();
+        self.mesh_added.clear();
+        self.mesh_updated.clear();
     }
 
     pub fn events<'a>(&self, world: &'a World) -> Events<'a> {
