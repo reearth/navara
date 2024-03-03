@@ -13,12 +13,13 @@
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {
+    "3d-tiles-renderer": "^0.3.26",
     "map-engine-prototype": "file:../map_engine_wasm/pkg",
     "stats.js": "^0.17.0",
-    "three": "^0.158.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-
+    "react-dom": "^18.2.0",
+    "three": "^0.162.0",
+    "three-stdlib": "^2.29.4"
   },
   "devDependencies": {
     "@types/three": "^0.158.2",

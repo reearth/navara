@@ -1,9 +1,10 @@
-import initCore, { Core } from "map-engine-prototype";
+import initCore, { Core, LayerDescription } from "map-engine-prototype";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, type Renderer } from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3 } from "three";
+import { MapControls } from "three-stdlib";
 
-import { processEvent } from "./event";
-import { initScene } from "./example";
+import { C3TilesManager } from "./C3Tiles";
+import { processEvent, type BufferLoader } from "./event";
 import { registerInputEvents } from "./input";
 import { isWorker } from "./utils";
 
@@ -17,7 +18,7 @@ export type Options = {
   debug?: boolean;
   scene?: Scene;
   camera?: PerspectiveCamera;
-  renderer?: Renderer;
+  renderer?: WebGLRenderer;
 };
 
 export type Events = {
@@ -27,7 +28,7 @@ export type Events = {
 export default class ThreeView {
   scene: Scene;
   camera: PerspectiveCamera;
-  renderer: Renderer;
+  renderer: WebGLRenderer;
 
   _core: Core | undefined;
   _options: Options;
@@ -37,6 +38,25 @@ export default class ThreeView {
   _events: {
     [K in keyof Events]?: Events[K][];
   } = {};
+
+  _meshes: Map<string, Mesh> = new Map();
+  _tex = new TextureLoader();
+  _buf: BufferLoader = {
+    u8: handle => {
+      const b = this._core?.getBufferU8(handle);
+      return b ?? null;
+    },
+    f32: handle => {
+      const b = this._core?.getBufferF32(handle);
+      return b ?? null;
+    },
+    u32: handle => {
+      const b = this._core?.getBufferU32(handle);
+      return b ?? null;
+    },
+  };
+
+  control?: { update: () => void; get target(): Vector3 | undefined };
 
   constructor(options: Options) {
     if (!options.container && !options.canvas && !options.renderer) {
@@ -55,7 +75,7 @@ export default class ThreeView {
     } else {
       const renderer = new WebGLRenderer({
         antialias: true,
-        // alpha: true,
+        logarithmicDepthBuffer: true,
         canvas: options.canvas,
       });
       this.renderer = renderer;
@@ -80,7 +100,6 @@ export default class ThreeView {
       this.scene = options.scene;
     } else {
       const scene = new Scene();
-      initScene(scene);
       this.scene = scene;
     }
 
@@ -94,6 +113,12 @@ export default class ThreeView {
       }
 
       const camera = new PerspectiveCamera(50, width / height);
+      camera.far = 1e8; // 100,000 km
+      camera.near = 0.1;
+      const earthRadius = 6371000;
+      camera.position.set(0, 0, earthRadius * 3);
+      camera.up.set(0, 0, 1);
+      camera.lookAt(0, 0, 0);
       this.camera = camera;
     }
 
@@ -108,6 +133,14 @@ export default class ThreeView {
         t.appendChild(this._stats.dom);
       }
     }
+
+    // orbit
+    this.control = new MapControls(this.camera, this.renderer.domElement);
+
+    // c3tiles
+    this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);
+
+    this.resize();
   }
 
   async init() {
@@ -120,6 +153,7 @@ export default class ThreeView {
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(this._core, this.renderer.domElement);
     }
+
     this._startMainLoop();
   }
 
@@ -135,12 +169,17 @@ export default class ThreeView {
     }
   }
 
-  resize = (width: number, height: number, pixelRatio?: number) => {
+  resize = (width?: number, height?: number, pixelRatio?: number) => {
     if (this._disposed) return;
 
-    this.camera.aspect = width / height;
+    const canvas = this._getCanvasSize();
+    const w = typeof width === "number" ? width : canvas?.width;
+    const h = typeof height === "number" ? height : canvas?.height;
+    if (typeof w !== "number" || typeof h !== "number") return;
+
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height, !isWorker());
+    this.renderer.setSize(w, h, !isWorker());
     if (
       typeof pixelRatio === "number" &&
       "setPixelRatio" in this.renderer &&
@@ -158,8 +197,12 @@ export default class ThreeView {
 
     const events = this._core?.readEvents();
     if (events) {
-      processEvent(this.scene, this.camera, events);
+      processEvent(this.scene, this.camera, this._meshes, this._buf, this._tex, events);
     }
+
+    this.control?.update();
+    this.camera.updateMatrixWorld();
+    this._c3tiles.update();
 
     return true;
   }
@@ -175,6 +218,22 @@ export default class ThreeView {
 
   off<K extends keyof Events>(event: K, callback: Events[K]) {
     this._events[event] = this._events[event]?.filter(c => c !== callback);
+  }
+
+  setBuffer(handle: number, data: Uint8Array) {
+    this._core?.setBufferU8(handle, data);
+  }
+
+  _c3tiles: C3TilesManager;
+
+  addLayer(
+    l: { type: "3dtiles"; url: string } | ({ type: "tiles" } & Omit<LayerDescription, "free">),
+  ) {
+    if (l.type === "3dtiles") {
+      this._c3tiles.add(l.url, this._c3tiles.length() == 0);
+    } else {
+      this._core?.addLayer(l);
+    }
   }
 
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {

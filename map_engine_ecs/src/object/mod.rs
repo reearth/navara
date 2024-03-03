@@ -1,22 +1,43 @@
+use crate::{event::EventStore, Handle, Transform};
 use bevy_app::PostUpdate;
 use bevy_ecs::{
     bundle::Bundle,
     component::Component,
     entity::Entity,
-    query::Changed,
+    query::{Added, Changed},
     removal_detection::RemovedComponents,
     system::{Query, ResMut},
 };
 
-use crate::{event::EventStore, Transform};
-
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
 pub struct ObjectMarker;
 
 #[derive(Bundle, Debug)]
 pub struct ObjectBundle {
     pub transform: Transform,
     pub marker: ObjectMarker,
+}
+
+#[derive(Debug, Clone, Component, PartialEq)]
+pub struct Mesh {
+    pub vertices: Handle,
+    pub uvs: Handle,
+    pub indices: Handle,
+}
+
+#[derive(Debug, Clone, Component, PartialEq)]
+pub struct Material {
+    // for tile
+    pub map_url: Option<String>,
+    pub color: u32,
+    pub wireframe: bool,
+}
+
+#[derive(Bundle, Debug)]
+pub struct MeshBundle {
+    pub mesh: Mesh,
+    pub material: Material,
+    pub object: ObjectBundle,
 }
 
 pub struct ObjectPlugin;
@@ -30,13 +51,32 @@ impl bevy_app::Plugin for ObjectPlugin {
 fn commit_events(
     mut events: ResMut<EventStore>,
     mut removed: RemovedComponents<ObjectMarker>,
-    mut changed: Query<(Entity, &ObjectMarker), Changed<Transform>>,
+    t_changed: Query<(Entity, &ObjectMarker), Changed<Transform>>,
+    mesh_added: Query<(Entity, &ObjectMarker, &Mesh), Added<Mesh>>,
+    mesh_changed: Query<(Entity, &ObjectMarker, &Mesh), Changed<Mesh>>,
+    mat_changed: Query<(Entity, &ObjectMarker, &Material), Changed<Material>>,
 ) {
     for e in removed.read() {
         events.object_removed.push(e);
     }
 
-    for (e, _) in changed.iter_mut() {
+    for (e, _) in t_changed.iter() {
         events.object_transform_updated.push(e);
+    }
+
+    for (e, _, _) in mesh_added.iter() {
+        events.mesh_added.push(e);
+    }
+
+    for (e, _, _) in mesh_changed.iter() {
+        if mesh_added.get(e).is_err() {
+            events.mesh_updated.push(e);
+        }
+    }
+
+    for (e, _, _) in mat_changed.iter() {
+        if mesh_added.get(e).is_err() && mesh_changed.get(e).is_err() {
+            events.mesh_updated.push(e);
+        }
     }
 }
