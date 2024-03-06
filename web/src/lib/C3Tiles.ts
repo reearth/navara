@@ -76,11 +76,8 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
       this.dispatchEvent({ type: "load", center });
     };
 
-    tilesRenderer.onLoadModel = scene => {
-      scene.traverse(object => {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      });
+    tilesRenderer.onLoadModel = _scene => {
+      // TODO
     };
   }
 

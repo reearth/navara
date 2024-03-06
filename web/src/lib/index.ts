@@ -1,4 +1,4 @@
-import initCore, { Core, LayerDescription } from "map-engine-prototype";
+import initCore, { Core } from "map-engine-prototype";
 import Stats from "stats.js";
 import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3 } from "three";
 import { MapControls } from "three-stdlib";
@@ -6,6 +6,8 @@ import { MapControls } from "three-stdlib";
 import { C3TilesManager } from "./C3Tiles";
 import { processEvent, type BufferLoader } from "./event";
 import { registerInputEvents } from "./input";
+import MVT from "./MVT";
+import { type LayerDescription } from "./type";
 import { isWorker } from "./utils";
 
 export type Options = {
@@ -225,14 +227,26 @@ export default class ThreeView {
   }
 
   _c3tiles: C3TilesManager;
+  _mvts: MVT[] = [];
 
-  addLayer(
-    l: { type: "3dtiles"; url: string } | ({ type: "tiles" } & Omit<LayerDescription, "free">),
-  ) {
-    if (l.type === "3dtiles") {
-      this._c3tiles.add(l.url, this._c3tiles.length() == 0);
-    } else {
-      this._core?.addLayer(l);
+  addLayer(l: LayerDescription) {
+    switch (l.type) {
+      case "3dtiles":
+        this._c3tiles.add(l.url, this._c3tiles.length() == 0);
+        this._c3tiles.update();
+        break;
+      case "mvt": {
+        const mvt = new MVT({
+          layers: l.layers ?? [],
+          ...l,
+        });
+        this.scene.add(mvt.node);
+        this._mvts.push(mvt);
+        break;
+      }
+      case "tiles":
+        this._core?.addLayer(l);
+        break;
     }
   }
 
