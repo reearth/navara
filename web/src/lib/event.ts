@@ -7,6 +7,7 @@ import type {
   Mesh as EventMesh,
   MeshMaterial as EventMaterial,
   ObjectTransformEvent,
+  DataRequestEvent,
 } from "map-engine-prototype";
 import {
   BufferAttribute,
@@ -41,13 +42,14 @@ export function processEvent(
   event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
   event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, tex));
   event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, tex));
+  event.data_requested?.forEach(req => processRequestedData(req, buf));
 }
 
-export function processCameraTransformUpdated(_camera: Camera, _transform: Transform) {
-  // setTransform(camera, transform);
+function processCameraTransformUpdated(_camera: Camera, _transform: Transform) {
+  // setTransform(camera, transform); // disable temporarily
 }
 
-export function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTransformEvent) {
+function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTransformEvent) {
   const id = `${e.ind}_${e.gen}`;
   const m = meshes.get(id);
   if (!m) return;
@@ -55,7 +57,7 @@ export function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: Obje
   setTransform(m, e.transform);
 }
 
-export function processMeshAdded(
+function processMeshAdded(
   parent: Object3D,
   meshes: Map<string, Mesh>,
   mesh: MeshAdded,
@@ -74,7 +76,7 @@ export function processMeshAdded(
   );
 }
 
-export function processMeshChanged(
+function processMeshChanged(
   parent: Object3D,
   meshes: Map<string, Mesh>,
   mesh: MeshChanged,
@@ -96,11 +98,7 @@ export function processMeshChanged(
   newm.scale.copy(m.scale);
 }
 
-export function processObjectRemoved(
-  parent: Object3D,
-  meshes: Map<string, Mesh>,
-  obj: ObjectEvent,
-) {
+function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: ObjectEvent) {
   const id = `${obj.ind}_${obj.gen}`;
   const m = meshes.get(id);
   if (!m) return;
@@ -109,7 +107,12 @@ export function processObjectRemoved(
   parent.remove(m);
 }
 
-export function createMesh(
+function processRequestedData(req: DataRequestEvent, _buf: BufferLoader) {
+  console.log("Requested data", req.handle, req.url);
+  // TODO
+}
+
+function createMesh(
   parent: Object3D,
   meshes: Map<string, Mesh>,
   buf: BufferLoader,

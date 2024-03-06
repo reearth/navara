@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity, world::World};
 
-use crate::{Material, Mesh, Transform};
+use crate::{DataRequester, Material, Mesh, Transform};
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
@@ -9,6 +9,7 @@ pub struct Events<'a> {
     pub object_removed: Vec<EntityEvent>,
     pub mesh_added: Vec<ComponentEvent<(&'a Mesh, &'a Material, &'a Transform)>>,
     pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a Material)>>,
+    pub data_requested: Vec<&'a DataRequester>,
 }
 
 #[derive(Debug)]

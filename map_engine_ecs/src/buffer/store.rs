@@ -117,7 +117,7 @@ impl BufferStore {
         self.buffers.contains_key(handle)
     }
 
-    fn new_handle(&mut self) -> Handle {
+    pub fn new_handle(&mut self) -> Handle {
         self.counter += 1;
         self.counter
     }

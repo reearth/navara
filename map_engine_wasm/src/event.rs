@@ -9,6 +9,7 @@ pub struct Events {
     pub object_removed: Vec<ObjectEvent>,
     pub mesh_added: Vec<MeshAdded>,
     pub mesh_updated: Vec<MeshChanged>,
+    pub data_requested: Vec<DataRequestEvent>,
 }
 
 #[wasm_bindgen]
@@ -79,6 +80,14 @@ pub struct MeshMaterial {
     pub wireframe: bool,
 }
 
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct DataRequestEvent {
+    pub handle: i32, // handle
+    #[wasm_bindgen(getter_with_clone)]
+    pub url: String,
+}
+
 impl<'a> From<map_engine_ecs::Events<'a>> for Events {
     fn from(ev: map_engine_ecs::Events) -> Self {
         Self {
@@ -91,6 +100,11 @@ impl<'a> From<map_engine_ecs::Events<'a>> for Events {
             object_removed: ev.object_removed.into_iter().map(|ev| ev.into()).collect(),
             mesh_added: ev.mesh_added.into_iter().map(|ev| ev.into()).collect(),
             mesh_updated: ev.mesh_updated.into_iter().map(|ev| ev.into()).collect(),
+            data_requested: ev
+                .data_requested
+                .into_iter()
+                .map(|ev| ev.clone().into())
+                .collect(),
         }
     }
 }
@@ -190,6 +204,15 @@ impl From<map_engine_ecs::Material> for MeshMaterial {
             map_url: m.map_url.clone(),
             color: m.color,
             wireframe: m.wireframe,
+        }
+    }
+}
+
+impl From<map_engine_ecs::DataRequester> for DataRequestEvent {
+    fn from(ev: map_engine_ecs::DataRequester) -> Self {
+        Self {
+            handle: ev.handle,
+            url: ev.url,
         }
     }
 }

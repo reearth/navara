@@ -1,6 +1,6 @@
 mod store;
 
-use bevy_ecs::event::Event;
+use bevy_ecs::{component::Component, event::Event};
 pub use store::*;
 
 pub struct BufferStorePlugin;
@@ -16,4 +16,25 @@ impl bevy_app::Plugin for BufferStorePlugin {
 pub struct BufferStoreEvent {
     pub handle: Handle,
     pub ty: BufferType,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Component)]
+pub struct DataRequester {
+    pub handle: Handle,
+    pub url: String,
+    pub loaded: bool,
+}
+
+impl DataRequester {
+    pub fn new(handle: Handle, url: String) -> Self {
+        Self {
+            handle,
+            url,
+            loaded: false,
+        }
+    }
+
+    pub fn from_store(url: String, buf: &mut BufferStore) -> Self {
+        Self::new(buf.new_handle(), url)
+    }
 }
