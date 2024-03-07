@@ -4,6 +4,7 @@ use crate::{DataRequester, Transform};
 
 use super::{ComponentEvent, Events};
 
+
 #[derive(Debug, Default, Resource)]
 pub struct EventStore {
     pub camera_transform_updated: Option<Entity>,

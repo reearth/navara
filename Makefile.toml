@@ -38,7 +38,7 @@ run_task = { name = ["watch", "dev-web"], parallel = true }
 script = ['''
 #!/usr/bin/env bash -eux
 cd map_engine_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web"
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
 ''']
 
 [tasks.dev-web]
