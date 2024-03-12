@@ -1,6 +1,6 @@
 # map-engine-prototype
 
-3D globe map engine prototype built on Rust + WebAssembly (WIP)
+3D globe map engine prototype built on Rust + WebAssembly + Three.js
 
 ## Development
 
@@ -23,14 +23,16 @@ cargo install wasm-pack
 cargo make dev
 ```
 
+An error is displayed in the Web browser, but this is because the compilation of WASM has not been completed. Wait a little and when the compilation of WASM is completed, reload the page and it will be displayed correctly.
+
 ## License
 
 Licensed under either of
 
 - Apache License, Version 2.0
-   ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+  ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 - MIT license
-   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+  ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
 
