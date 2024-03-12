@@ -9,11 +9,18 @@ impl bevy_app::Plugin for BufferStorePlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.init_resource::<BufferStore>();
         app.add_event::<BufferStoreEvent>();
+        app.add_event::<BufferStoreCompletedEvent>();
     }
 }
 
 #[derive(Debug, Event)]
 pub struct BufferStoreEvent {
+    pub handle: Handle,
+    pub ty: BufferType,
+}
+
+#[derive(Debug, Event)]
+pub struct BufferStoreCompletedEvent {
     pub handle: Handle,
     pub ty: BufferType,
 }

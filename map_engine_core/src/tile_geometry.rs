@@ -26,8 +26,8 @@ pub fn tile_triangles_with_terrain(
     terrain_h: usize,
 ) -> Geometry {
     let height = |x: usize, y: usize| -> f32 {
-        let image_x = (x / segments) * (terrain_w - 1);
-        let image_y = (1 - y / segments) * (terrain_h - 1);
+        let image_x = x * (terrain_w - 1) / segments;
+        let image_y = (terrain_h - 1) - y * (terrain_h - 1) / segments;
 
         let i = image_y * terrain_w + image_x;
         let r = terrain[i * 4] as f32;

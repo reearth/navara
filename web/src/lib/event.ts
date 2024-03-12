@@ -120,6 +120,8 @@ function processRequestedData
     req.url,
     (img) => {
       const canvas = document.createElement('canvas');
+      canvas.height = img.height
+      canvas.width = img.width
       const context = canvas.getContext('2d');
       if(context === null) {
         throw new Error('failed to get context of canvas');
