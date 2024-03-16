@@ -95,7 +95,6 @@ pub fn load_tiles(
             size,
             size,
         );
-        info!("{:?}", triangles);
         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
         let ihandle = buf.new_u32(triangles.indices);
         let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());

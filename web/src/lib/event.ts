@@ -21,6 +21,7 @@ import {
   Material,
   TextureLoader,
   ImageLoader,
+  MeshLambertMaterial,
 } from "three";
 
 export type BufferLoader = {
@@ -184,7 +185,7 @@ function toMaterial(mat: EventMaterial, tex: TextureLoader): Material {
     return new MeshBasicMaterial({ color: mat.color, wireframe: true });
   }
 
-  const m = new MeshBasicMaterial({ color: mat.color });
+  const m = new MeshLambertMaterial({ color: mat.color });
   if (mat.map_url) {
     const t = tex.load(mat.map_url);
     m.map = t;
