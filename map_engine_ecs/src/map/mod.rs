@@ -18,6 +18,7 @@ impl Plugin for MapPlugin {
                 set_data_requester_loaded,
                 process_add_events,
                 update_tiles,
+                load_tiles,
                 send_data_requst_events,
             ),
         )

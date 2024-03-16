@@ -1,13 +1,14 @@
-import type {
-  Events,
-  Transform,
-  MeshAdded,
-  MeshChanged,
-  ObjectEvent,
-  Mesh as EventMesh,
-  MeshMaterial as EventMaterial,
-  ObjectTransformEvent,
-  DataRequestEvent,
+import {
+  type Events,
+  type Transform,
+  type MeshAdded,
+  type MeshChanged,
+  type ObjectEvent,
+  type Mesh as EventMesh,
+  type MeshMaterial as EventMaterial,
+  type ObjectTransformEvent,
+  type DataRequestEvent,
+  Core,
 } from "map-engine-prototype";
 import {
   BufferAttribute,
@@ -19,12 +20,15 @@ import {
   MeshBasicMaterial,
   Material,
   TextureLoader,
+  ImageLoader,
+  MeshLambertMaterial,
 } from "three";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
+  setU8: (handle: number, bytes: Uint8Array) => void;
 };
 
 export function processEvent(
@@ -107,9 +111,32 @@ function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: 
   parent.remove(m);
 }
 
-function processRequestedData(req: DataRequestEvent, _buf: BufferLoader) {
+function processRequestedData
+  ( req: DataRequestEvent,
+    buf: BufferLoader,
+  ){
   console.log("Requested data", req.handle, req.url);
-  // TODO
+  const loader = new ImageLoader();
+  loader.load(
+    req.url,
+    (img) => {
+      const canvas = document.createElement('canvas');
+      canvas.height = img.height
+      canvas.width = img.width
+      const context = canvas.getContext('2d');
+      if(context === null) {
+        throw new Error('failed to get context of canvas');
+      }else{
+        context.drawImage(img, 0, 0);
+      }
+      const data = context.getImageData(0, 0, img.height, img.width).data;
+      if(data === undefined){
+        throw new Error('failed to convert array');
+      }else{
+        buf.setU8(req.handle, new Uint8Array(data));
+      }
+    }
+  )
 }
 
 function createMesh(
@@ -158,7 +185,7 @@ function toMaterial(mat: EventMaterial, tex: TextureLoader): Material {
     return new MeshBasicMaterial({ color: mat.color, wireframe: true });
   }
 
-  const m = new MeshBasicMaterial({ color: mat.color });
+  const m = new MeshLambertMaterial({ color: mat.color });
   if (mat.map_url) {
     const t = tex.load(mat.map_url);
     m.map = t;

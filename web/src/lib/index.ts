@@ -56,6 +56,9 @@ export default class ThreeView {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
+    setU8: (handle: number, b: Uint8Array) => {
+      this._core?.setBufferU8(handle, b);
+    },
   };
 
   control?: { update: () => void; get target(): Vector3 | undefined };
@@ -198,8 +201,14 @@ export default class ThreeView {
     this._core?.update();
 
     const events = this._core?.readEvents();
-    if (events) {
-      processEvent(this.scene, this.camera, this._meshes, this._buf, this._tex, events);
+    if (events && this._core) {
+      processEvent
+        ( this.scene,
+          this.camera,
+          this._meshes,
+          this._buf,
+          this._tex,
+          events);
     }
 
     this.control?.update();
