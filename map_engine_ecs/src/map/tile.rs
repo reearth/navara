@@ -27,11 +27,10 @@ pub fn update_tiles(
     for tiles in tiles.iter() {
         for xyz in iter_tiles(tiles.z) {
             let extent = xyz.extent();
-
             if let Some(ref tiles_extent) = tiles.extent {
                 if !tiles_extent.intersects(extent) {
                     continue;
-                }
+                } 
             }
 
             let triangles = tile_triangles_flat(WGS84_32, extent, tiles.segments, tiles.height);
@@ -60,7 +59,7 @@ pub fn update_tiles(
             });
 
             if let Some(tu) = terrain_url {
-                e.insert(DataRequester::from_store(tu, &mut buf));
+                e.insert(DataRequester::from_store(tu, &mut buf, Some(extent)));
             }
         }
     }
@@ -76,19 +75,19 @@ pub fn load_tiles(
         let ts = tiles
             .iter()
             .filter(|t| iter_tiles(t.z)
-                .filter(|xyz| t
+                .any(|xyz| t
                     .terrain_url
                     .as_ref()
                     .map(|s| tile_url(s, &xyz))
                     == Some(req.url.clone())
-                ).collect::<Vec<_>>().len() != 0
+                )
             ).next().unwrap();
         info!("{:?}", ts);
         let bytes = buf.get_u8(&req.handle).unwrap();
         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
         let triangles = tile_triangles_with_terrain(
             WGS84_32,
-            ts.extent.unwrap(),
+            req.extent.unwrap(),
             ts.segments,
             ts.height,
             bytes,

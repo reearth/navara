@@ -1,6 +1,7 @@
 mod store;
 
 use bevy_ecs::{component::Component, event::Event};
+use map_engine_core::{Extent, Radians};
 pub use store::*;
 
 pub struct BufferStorePlugin;
@@ -30,18 +31,20 @@ pub struct DataRequester {
     pub handle: Handle,
     pub url: String,
     pub loaded: bool,
+    pub extent: Option<Extent<f32, Radians>>,
 }
 
 impl DataRequester {
-    pub fn new(handle: Handle, url: String) -> Self {
+    pub fn new(handle: Handle, url: String, extent: Option<Extent<f32, Radians>>) -> Self {
         Self {
             handle,
             url,
             loaded: false,
+            extent,
         }
     }
 
-    pub fn from_store(url: String, buf: &mut BufferStore) -> Self {
-        Self::new(buf.new_handle(), url)
+    pub fn from_store(url: String, buf: &mut BufferStore, extent: Option<Extent<f32, Radians>>) -> Self {
+        Self::new(buf.new_handle(), url, extent)
     }
 }
