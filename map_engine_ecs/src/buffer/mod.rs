@@ -32,19 +32,21 @@ pub struct DataRequester {
     pub url: String,
     pub loaded: bool,
     pub extent: Option<Extent<f32, Radians>>,
+    pub map_url: Option<String>,
 }
 
 impl DataRequester {
-    pub fn new(handle: Handle, url: String, extent: Option<Extent<f32, Radians>>) -> Self {
+    pub fn new(handle: Handle, url: String, extent: Option<Extent<f32, Radians>>, map_url: Option<String>) -> Self {
         Self {
             handle,
             url,
             loaded: false,
             extent,
+            map_url,
         }
     }
 
-    pub fn from_store(url: String, buf: &mut BufferStore, extent: Option<Extent<f32, Radians>>) -> Self {
-        Self::new(buf.new_handle(), url, extent)
+    pub fn from_store(url: String, buf: &mut BufferStore, extent: Option<Extent<f32, Radians>>, map_url: Option<String>) -> Self {
+        Self::new(buf.new_handle(), url, extent, map_url)
     }
 }

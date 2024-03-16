@@ -49,7 +49,7 @@ pub fn update_tiles(
                 },
                 material: Material {
                     color: tiles.color,
-                    map_url,
+                    map_url: map_url.clone(),
                     wireframe: tiles.wireframe,
                 },
                 object: ObjectBundle {
@@ -59,7 +59,7 @@ pub fn update_tiles(
             });
 
             if let Some(tu) = terrain_url {
-                e.insert(DataRequester::from_store(tu, &mut buf, Some(extent)));
+                e.insert(DataRequester::from_store(tu, &mut buf, Some(extent), map_url.clone()));
             }
         }
     }
@@ -106,7 +106,7 @@ pub fn load_tiles(
             },
             material: Material {
                 color: ts.color,
-                map_url: None,
+                map_url: req.map_url.clone(),
                 wireframe: ts.wireframe,
             },
             object: ObjectBundle {
