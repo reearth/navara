@@ -30,22 +30,22 @@ pub fn tile_triangles_with_terrain(
         let image_y = (terrain_h - 1) - y * (terrain_h - 1) / segments;
 
         let i = image_y * terrain_w + image_x;
-        let r = terrain[i * 4] as f32;
-        let g = terrain[i * 4 + 1] as f32;
-        let b = terrain[i * 4 + 2] as f32;
+        let r = terrain[i * 4] as i64;
+        let g = terrain[i * 4 + 1] as i64;
+        let b = terrain[i * 4 + 2] as i64;
 
         // https://maps.gsi.go.jp/development/demtile.html
-        let h = if r != 128.0 || g != 0.0 || b != 0.0 {
-            if r >= 128.0 {
-                r * 655.36 + g * 2.56 + b * 0.01 - 167772.16
+        let h = if r != 128 || g != 0 || b != 0 {
+            if r >= 128 {
+                r * 65536 + g * 256 + b - 16777216
             } else {
-                r * 655.36 + g * 2.56 + b * 0.01
+                r * 65536 + g * 256 + b 
             }
         } else {
-            0.0
+            0
         };
 
-        h + geoid_height
+        h as f32 * 0.01 + geoid_height
     };
 
     tile_triangles(ellipsoid, extent, segments, height)
