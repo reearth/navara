@@ -15,12 +15,16 @@ use crate::Transform;
 use super::CameraMarker;
 use crate::MouseMoveInput;
 
+// TODO: Move this variable to the correct place.
+const EARTH_RADIUS_F32: f32 = 6371000.;
+
 pub fn startup(mut commands: Commands) {
+    let earth_radius = EARTH_RADIUS_F32;
     let translation = Vec3::ZERO;
     commands.spawn((
         CameraMarker,
         Orbit {
-            r: 1000.0,
+            r: earth_radius * 3.,
             quat: Quat::from_axis_angle(Vec3::Y, 0.0),
             tilt: 0.0,
         },
@@ -47,10 +51,11 @@ pub fn update(
                 screen_delta += Vec3::new(ev.delta.x, ev.delta.y, 0.0);
             }
             // correct amount of pan by radius of the orbit
-            let ratio = orbit.r / 300.0;
+            let ratio = orbit.r / EARTH_RADIUS_F32;
+            let distance = orbit.r - EARTH_RADIUS_F32;
             let pan_delta = Vec2::new(
-                (screen_delta.x * ratio / 300.0).atan() * 200.0,
-                (screen_delta.y * ratio / 300.0).atan() * 200.0,
+                (screen_delta.x * ratio / EARTH_RADIUS_F32).atan() * distance,
+                (screen_delta.y * ratio / EARTH_RADIUS_F32).atan() * distance,
             );
             orbit.quat *= Quat::from_rotation_z(pan_delta.y);
             orbit.quat *= Quat::from_rotation_x(pan_delta.x);
@@ -62,10 +67,14 @@ pub fn update(
             for ev in mw.read() {
                 dolly_delta += Vec3::new(ev.x, ev.y, 0.0);
             }
-            let d = dolly_delta.y;
+
+            let speed = 100.;
+
+            let ratio = orbit.r / EARTH_RADIUS_F32;
+            let d = dolly_delta.y * (speed * ratio);
             // avoid to get camera inside the earth
-            orbit.r = if orbit.r + d < 301.0 {
-                301.0
+            orbit.r = if orbit.r + d < (EARTH_RADIUS_F32 + 1.) {
+                EARTH_RADIUS_F32 + 1.
             } else {
                 orbit.r + d
             };
@@ -91,7 +100,7 @@ pub fn update(
         if is_ctrl && mb.pressed(MouseButton::Left) {
             // fetch amount of cursor movement
             let screen_delta = mm.read().fold(0.0, |x, ev| x + ev.delta.y);
-            orbit.tilt += screen_delta * 200.0;
+            orbit.tilt += screen_delta * EARTH_RADIUS_F32;
         }
 
         transform.translation = orbit.to_vec3();

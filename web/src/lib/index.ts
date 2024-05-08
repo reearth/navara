@@ -1,7 +1,6 @@
 import initCore, { Core } from "map-engine-prototype";
 import Stats from "stats.js";
 import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3 } from "three";
-import { MapControls } from "three-stdlib";
 
 import { C3TilesManager } from "./C3Tiles";
 import { processEvent, type BufferLoader } from "./event";
@@ -140,7 +139,7 @@ export default class ThreeView {
     }
 
     // orbit
-    this.control = new MapControls(this.camera, this.renderer.domElement);
+    // this.control = new MapControls(this.camera, this.renderer.domElement);
 
     // c3tiles
     this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);

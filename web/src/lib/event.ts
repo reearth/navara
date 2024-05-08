@@ -8,7 +8,6 @@ import {
   type MeshMaterial as EventMaterial,
   type ObjectTransformEvent,
   type DataRequestEvent,
-  Core,
 } from "map-engine-prototype";
 import {
   BufferAttribute,
@@ -49,8 +48,8 @@ export function processEvent(
   event.data_requested?.forEach(req => processRequestedData(req, buf));
 }
 
-function processCameraTransformUpdated(_camera: Camera, _transform: Transform) {
-  // setTransform(camera, transform); // disable temporarily
+function processCameraTransformUpdated(camera: Camera, transform: Transform) {
+  setTransform(camera, transform); // disable temporarily
 }
 
 function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTransformEvent) {
