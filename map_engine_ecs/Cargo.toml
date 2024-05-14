@@ -13,3 +13,4 @@ bevy_math = "0.12.1"
 bevy_time = "0.12.1"
 bevy_transform = "0.12.1"
 map_engine_core = { path = "../map_engine_core" }
+map_engine_quadtree = { path = "../map_engine_quadtree", features = ["bevy"] }

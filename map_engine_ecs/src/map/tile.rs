@@ -1,11 +1,17 @@
 use bevy_ecs::prelude::*;
 use map_engine_core::{
-    iter_tiles, tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain}, Extent, Radians, TileXYZ, WGS84_32,
+    iter_tiles,
+    tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain},
+    Extent, Radians, TileXYZ, WGS84_32,
 };
 
 use bevy_log::info;
+use map_engine_quadtree::{Coords, Quadtree};
 
-use crate::{BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle};
+use crate::{
+    camera::CameraMarker, BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle,
+    Transform,
+};
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct Tiles {
@@ -19,18 +25,34 @@ pub struct Tiles {
     pub wireframe: bool,
 }
 
+#[derive(Debug)]
+pub struct Tile {
+    pub(super) coords: Coords<u32>,
+}
+
 pub fn update_tiles(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut qt: ResMut<Quadtree<u32, Tile>>,
     tiles: Query<&Tiles, Added<Tiles>>,
+    camera_transform: Query<(Entity, &CameraMarker), Changed<Transform>>,
 ) {
+    info!(
+        "HEY {:?}",
+        qt.qt
+            .children((0, 0, 0))
+            .unwrap()
+            .iter()
+            .map(|v| qt.qt.get(v.handle()).unwrap())
+            .collect::<Vec<&Tile>>()
+    );
     for tiles in tiles.iter() {
         for xyz in iter_tiles(tiles.z) {
             let extent = xyz.extent();
             if let Some(ref tiles_extent) = tiles.extent {
                 if !tiles_extent.intersects(extent) {
                     continue;
-                } 
+                }
             }
 
             let triangles = tile_triangles_flat(WGS84_32, extent, tiles.segments, tiles.height);
@@ -59,7 +81,12 @@ pub fn update_tiles(
             });
 
             if let Some(tu) = terrain_url {
-                e.insert(DataRequester::from_store(tu, &mut buf, Some(extent), map_url.clone()));
+                e.insert(DataRequester::from_store(
+                    tu,
+                    &mut buf,
+                    Some(extent),
+                    map_url.clone(),
+                ));
             }
         }
     }
@@ -71,17 +98,20 @@ pub fn load_tiles(
     requests: Query<&DataRequester, Changed<DataRequester>>,
     tiles: Query<&Tiles>,
 ) {
-    for req in requests.iter().filter(|r| r.loaded) {
+    for req in requests.iter() {
+        if !req.loaded {
+            continue;
+        };
+
         let ts = tiles
             .iter()
-            .filter(|t| iter_tiles(t.z)
-                .any(|xyz| t
-                    .terrain_url
-                    .as_ref()
-                    .map(|s| tile_url(s, &xyz))
-                    == Some(req.url.clone())
-                )
-            ).next().unwrap();
+            .filter(|t| {
+                iter_tiles(t.z).any(|xyz| {
+                    t.terrain_url.as_ref().map(|s| tile_url(s, &xyz)) == Some(req.url.clone())
+                })
+            })
+            .next()
+            .unwrap();
         info!("{:?}", ts);
         let bytes = buf.get_u8(&req.handle).unwrap();
         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
@@ -97,7 +127,7 @@ pub fn load_tiles(
         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
         let ihandle = buf.new_u32(triangles.indices);
         let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
-        
+
         commands.spawn(MeshBundle {
             mesh: Mesh {
                 vertices: vhandle,
