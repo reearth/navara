@@ -5,14 +5,17 @@ mod event;
 mod input;
 pub mod map;
 mod object;
+mod texture_fragment;
 mod transform;
 
+use bevy_ecs::entity::Entity;
 pub use buffer::*;
-pub use event::{ComponentEvent, EntityEvent, Events};
+pub use event::{ComponentEvent, EntityEvent, Events, ReconstructableComponentEvent};
 pub use object::*;
 pub use transform::*;
 
 pub use input::*;
+pub use texture_fragment::*;
 
 pub struct App {
     app: bevy_app::App,
@@ -67,6 +70,13 @@ impl App {
             handle,
             ty: buffer::BufferType::U8,
         });
+    }
+
+    pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
+        self.app.world.send_event(TextureFragmentLoadedEvent {
+            id: Entity::from_bits(bits),
+            status,
+        })
     }
 
     pub fn add_layer(&mut self, desc: map::LayerDescription) {

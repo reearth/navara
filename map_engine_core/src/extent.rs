@@ -76,10 +76,22 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
     }
 
     pub fn intersects(&self, other: Self) -> bool {
-        self.west < other.east
-            && self.east > other.west
-            && self.south < other.north
-            && self.north > other.south
+        (self.west <= other.west
+            && self.south <= other.south
+            && self.east >= other.west
+            && self.north >= other.south)
+            || (other.west <= self.west
+                && other.south <= self.south
+                && other.east >= self.west
+                && other.north >= self.south)
+            || (self.east >= other.east
+                && self.north >= other.north
+                && self.west <= other.east
+                && self.south <= other.north)
+            || (other.east >= self.east
+                && other.north >= self.north
+                && other.west <= self.east
+                && other.south <= self.north)
     }
 
     pub fn intersection(&self, other: Self) -> Option<Self> {

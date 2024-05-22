@@ -12,6 +12,7 @@ impl bevy_app::Plugin for Plugin {
 
         // custom plugins
         app.add_plugins(super::buffer::BufferStorePlugin);
+        app.add_plugins(super::texture_fragment::TextureFragmentPlugin);
         app.add_plugins(super::input::InputPlugin);
         app.add_plugins(super::event::EventPlugin);
         app.add_plugins(super::object::ObjectPlugin);

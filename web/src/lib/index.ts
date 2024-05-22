@@ -1,9 +1,9 @@
-import initCore, { Core } from "map-engine-prototype";
+import initCore, { Core, TextureFragmentStatus } from "map-engine-prototype";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3 } from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3, Texture } from "three";
 
 import { C3TilesManager } from "./C3Tiles";
-import { processEvent, type BufferLoader } from "./event";
+import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
 import { registerInputEvents } from "./input";
 import MVT from "./MVT";
 import { type LayerDescription } from "./type";
@@ -41,6 +41,7 @@ export default class ThreeView {
   } = {};
 
   _meshes: Map<string, Mesh> = new Map();
+  _loadedTexs: Map<string, Texture> = new Map();
   _tex = new TextureLoader();
   _buf: BufferLoader = {
     u8: handle => {
@@ -57,6 +58,11 @@ export default class ThreeView {
     },
     setU8: (handle: number, b: Uint8Array) => {
       this._core?.setBufferU8(handle, b);
+    },
+  };
+  _texFragment: TextureFragmentHandler = {
+    triggerTextureFragmentLoaded: (bits: bigint, status: TextureFragmentStatus) => {
+      this._core?.triggerTextureFragmentLoaded(bits, status);
     },
   };
 
@@ -206,6 +212,8 @@ export default class ThreeView {
           this.camera,
           this._meshes,
           this._buf,
+          this._texFragment,
+          this._loadedTexs,
           this._tex,
           events);
     }

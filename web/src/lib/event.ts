@@ -8,6 +8,9 @@ import {
   type MeshMaterial as EventMaterial,
   type ObjectTransformEvent,
   type DataRequestEvent,
+  TextureFragmentRequestedEvent,
+  TextureFragmentStatus,
+  TextureFragmentRemovedEvent,
 } from "map-engine-prototype";
 import {
   BufferAttribute,
@@ -21,6 +24,7 @@ import {
   TextureLoader,
   ImageLoader,
   MeshLambertMaterial,
+  Texture,
 } from "three";
 
 export type BufferLoader = {
@@ -30,11 +34,17 @@ export type BufferLoader = {
   setU8: (handle: number, bytes: Uint8Array) => void;
 };
 
+export type TextureFragmentHandler = {
+  triggerTextureFragmentLoaded: (bits: bigint, status: TextureFragmentStatus) => void;
+};
+
 export function processEvent(
   scene: Object3D,
   camera: Camera,
   meshes: Map<string, Mesh>,
   buf: BufferLoader,
+  texFragment: TextureFragmentHandler,
+  loadedTexs: Map<string, Texture>,
   tex: TextureLoader,
   event: Events,
 ) {
@@ -43,9 +53,11 @@ export function processEvent(
   }
   event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
   event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
-  event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, tex));
-  event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, tex));
+  event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, loadedTexs));
+  event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, loadedTexs));
   event.data_requested?.forEach(req => processRequestedData(req, buf));
+  event.texture_fragment_requested?.forEach(req => processTextureFragmentRequested(req, texFragment, tex, loadedTexs));
+  event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
 }
 
 function processCameraTransformUpdated(camera: Camera, transform: Transform) {
@@ -65,13 +77,13 @@ function processMeshAdded(
   meshes: Map<string, Mesh>,
   mesh: MeshAdded,
   buf: BufferLoader,
-  tex: TextureLoader,
+  loadedTexes: Map<string, Texture>
 ) {
   createMesh(
     parent,
     meshes,
     buf,
-    tex,
+    loadedTexes,
     `${mesh.ind}_${mesh.gen}`,
     mesh.mesh,
     mesh.material,
@@ -84,7 +96,7 @@ function processMeshChanged(
   meshes: Map<string, Mesh>,
   mesh: MeshChanged,
   buf: BufferLoader,
-  tex: TextureLoader,
+  loadedTexes: Map<string, Texture>
 ) {
   const id = `${mesh.ind}_${mesh.gen}`;
   const m = meshes.get(id);
@@ -93,7 +105,7 @@ function processMeshChanged(
   meshes.delete(id);
   parent.remove(m);
 
-  const newm = createMesh(parent, meshes, buf, tex, id, mesh.mesh, mesh.material);
+  const newm = createMesh(parent, meshes, buf, loadedTexes, id, mesh.mesh, mesh.material);
   if (!newm) return;
 
   newm.position.copy(m.position);
@@ -138,11 +150,41 @@ function processRequestedData
   )
 }
 
+function makeTextureFragmentId(ind: number, gen: number) {
+  return `${ind}_${gen}`;
+}
+
+function processTextureFragmentRequested
+  ( req: TextureFragmentRequestedEvent,
+    handler: TextureFragmentHandler,
+    tex: TextureLoader,
+    loadedTexes: Map<string, Texture>,
+  ){
+  const id = makeTextureFragmentId(req.ind, req.gen);
+  if(loadedTexes.has(id)) return;
+
+  tex.loadAsync(req.url).then((t) => {
+    loadedTexes.set(id, t);
+    handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Sucess);
+  }).catch(() => {
+    handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);
+  });
+}
+
+function processTextureFragmentRemoved
+  ( req: TextureFragmentRemovedEvent,
+    loadedTexes: Map<string, Texture>,
+  ){
+  const id = makeTextureFragmentId(req.ind, req.gen);
+  loadedTexes.get(id)?.dispose();
+  loadedTexes.delete(id);
+}
+
 function createMesh(
   parent: Object3D,
   meshes: Map<string, Mesh>,
   buf: BufferLoader,
-  tex: TextureLoader,
+  loadedTexes: Map<string, Texture>,
   id: string,
   mesh: EventMesh,
   mat: EventMaterial,
@@ -162,7 +204,7 @@ function createMesh(
   geometry.computeVertexNormals();
 
   // const material = new MeshStandardMaterial({ color: 0x00ff00 });
-  const material = toMaterial(mat, tex);
+  const material = toMaterial(mat, loadedTexes);
   const m = new Mesh(geometry, material);
   m.name = id;
   if (tranform) setTransform(m, tranform);
@@ -179,15 +221,18 @@ function setTransform(obj: Object3D, transform: Transform) {
   obj.scale.set(sx, sy, sz);
 }
 
-function toMaterial(mat: EventMaterial, tex: TextureLoader): Material {
+function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Material {
   if (mat.wireframe) {
     return new MeshBasicMaterial({ color: mat.color, wireframe: true });
   }
 
   const m = new MeshLambertMaterial({ color: mat.color });
-  if (mat.map_url) {
-    const t = tex.load(mat.map_url);
-    m.map = t;
+  if (mat.map_url && mat.texture_fragment) {
+    const textureFragmentId = makeTextureFragmentId(mat.texture_fragment.ind, mat.texture_fragment.gen);
+    const t = loadedTexes.get(textureFragmentId);
+    if(t) {
+      m.map = t;
+    }
   }
 
   return m;

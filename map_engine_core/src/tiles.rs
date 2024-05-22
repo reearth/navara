@@ -22,7 +22,7 @@ impl TileXY {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct TileXYZ {
     pub x: usize,
     pub y: usize,

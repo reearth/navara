@@ -9,14 +9,12 @@ use bevy_input::{
     Input,
 };
 use bevy_math::{Quat, Vec2, Vec3};
+use map_engine_core::EARTH_RADIUS_F32;
 
 use crate::Transform;
 
 use super::CameraMarker;
 use crate::MouseMoveInput;
-
-// TODO: Move this variable to the correct place.
-const EARTH_RADIUS_F32: f32 = 6371000.;
 
 pub fn startup(mut commands: Commands) {
     let earth_radius = EARTH_RADIUS_F32;
