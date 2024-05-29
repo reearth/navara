@@ -1,6 +1,6 @@
 use bevy_ecs::{
-    component::Component,
     event::EventReader,
+    query::{Changed, Or},
     system::{Commands, Query, Res},
 };
 use bevy_input::{
@@ -13,12 +13,13 @@ use map_engine_core::EARTH_RADIUS_F32;
 
 use crate::Transform;
 
-use super::CameraMarker;
+use super::{CameraFrustum, CameraMarker, Orbit};
 use crate::MouseMoveInput;
 
 pub fn startup(mut commands: Commands) {
     let earth_radius = EARTH_RADIUS_F32;
     let translation = Vec3::ZERO;
+    let transform = Transform::from_translation(translation);
     commands.spawn((
         CameraMarker,
         Orbit {
@@ -26,7 +27,9 @@ pub fn startup(mut commands: Commands) {
             quat: Quat::from_axis_angle(Vec3::Y, 0.0),
             tilt: 0.0,
         },
-        Transform::from_translation(translation),
+        transform,
+        // FIXME! The fov should be radian, not degree
+        CameraFrustum::new(&transform, 0.1, 1e8, 50., 1.),
     ));
 }
 
@@ -107,15 +110,14 @@ pub fn update(
     }
 }
 
-#[derive(Debug, Clone, Copy, Component)]
-pub struct Orbit {
-    pub r: f32,
-    pub quat: Quat,
-    pub tilt: f32,
-}
-
-impl Orbit {
-    fn to_vec3(self) -> Vec3 {
-        self.quat * Vec3::new(0.0, self.r, 0.0)
+pub(super) fn update_frustum(
+    mut camera: Query<
+        (&CameraMarker, &mut CameraFrustum, &mut Transform),
+        Or<(Changed<CameraFrustum>, Changed<Transform>)>,
+    >,
+) {
+    for (_, mut frustum, transform) in &mut camera {
+        frustum.update_sse_denominator();
+        frustum.update_planes(&transform);
     }
 }

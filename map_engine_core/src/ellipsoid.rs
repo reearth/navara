@@ -94,6 +94,23 @@ impl<F: Float + One<F>> Ellipsoid<F> {
             height: Meters::new(h),
         }
     }
+
+    // Ref: https://github.com/CesiumGS/cesium/blob/11dd728dfee6c10657f8e1197776fc5a9237ef85/packages/engine/Source/Core/Ellipsoid.js#L333
+    pub fn geodetic_surface_normal_from_lle(&self, lle: LLE<F, Radians>) -> XYZ<F> {
+        let lng = lle.lng;
+        let lat = lle.lat;
+        let cos_latitude = lat.cos();
+
+        let x = cos_latitude * lng.cos();
+        let y = cos_latitude * lng.sin();
+        let z = lat.sin();
+
+        XYZ {
+            x: Meters::new(x),
+            y: Meters::new(y),
+            z: Meters::new(z),
+        }
+    }
 }
 
 impl<F: Float + One<F>> LLE<F, Radians> {

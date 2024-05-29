@@ -1,6 +1,6 @@
 import initCore, { Core, TextureFragmentStatus } from "map-engine-prototype";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3, Texture } from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3, Texture, Vector2 } from "three";
 
 import { C3TilesManager } from "./C3Tiles";
 import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
@@ -149,8 +149,6 @@ export default class ThreeView {
 
     // c3tiles
     this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);
-
-    this.resize();
   }
 
   async init() {
@@ -165,6 +163,10 @@ export default class ThreeView {
     }
 
     this._startMainLoop();
+
+    const size = new Vector2();
+    this.renderer.getSize(size);
+    this.resize(size.width, size.height, this.renderer.pixelRatio);
   }
 
   dispose() {
@@ -197,6 +199,8 @@ export default class ThreeView {
     ) {
       this.renderer.setPixelRatio(pixelRatio);
     }
+
+    this._core?.resize(w, h, pixelRatio ?? 1);
 
     this._emit("resize");
   };

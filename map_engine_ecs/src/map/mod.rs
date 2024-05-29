@@ -8,6 +8,7 @@ use event::*;
 mod layer;
 pub use layer::LayerDescription;
 mod tile;
+mod tile_bounding_region;
 use tile::*;
 
 use self::tile_cache_manager::TileCacheManager;

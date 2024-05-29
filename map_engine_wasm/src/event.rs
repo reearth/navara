@@ -75,7 +75,7 @@ pub struct Mesh {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
-struct TextureFragment {
+pub struct TextureFragment {
     pub ind: u32,
     pub gen: u32,
 }

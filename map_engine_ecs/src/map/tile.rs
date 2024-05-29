@@ -4,19 +4,31 @@ use bevy_time::{Real, Time};
 use instant::{Duration, Instant};
 use map_engine_core::{
     iter_tiles,
+    terrain::{
+        get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
+        get_level_maximum_geometric_error_f32,
+    },
     tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain},
-    Extent, Meters, Radians, TileXYZ, EARTH_RADIUS_F32, WGS84_32, XYZ,
+    Ellipsoid, Extent, LngLat, Radians, TileXYZ, LLE, WGS84_32,
 };
 
 use bevy_log::info;
 use map_engine_quadtree::{GeoSpacialQuadLeaf, Quadtree};
 
 use crate::{
-    camera::CameraMarker, texture_fragment::TextureFragmentStatus, BufferStore, DataRequester,
-    Material, Mesh, MeshBundle, ObjectBundle, TextureFragment, Transform,
+    camera::{CameraFrustum, CameraMarker},
+    primitives::Aabb,
+    texture_fragment::TextureFragmentStatus,
+    utils::coord::vec3_to_xyz,
+    window::Window,
+    BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment,
+    Transform,
 };
 
-use super::tile_cache_manager::{TileCache, TileCacheManager};
+use super::{
+    tile_bounding_region::TileBoundingReagion,
+    tile_cache_manager::{TileCache, TileCacheManager},
+};
 
 pub(super) type TileHandle = u64;
 
@@ -35,7 +47,8 @@ pub struct Tiles {
 #[derive(Debug, Default)]
 pub struct Tile {
     pub coords: TileXYZ,
-    pub loaded: bool,
+    pub aabb: Aabb,
+    pub bounding_reagion: Option<TileBoundingReagion<f32>>,
     pub(super) rendered_at: Option<Instant>,
     pub(super) data_requester_entity_id: Option<Entity>,
     pub(super) texture_fragment_entity_id: Option<Entity>,
@@ -44,8 +57,20 @@ pub struct Tile {
 
 impl Tile {
     pub(super) fn new(coords: TileXYZ) -> Self {
+        let extent = coords.extent();
         Self {
             coords,
+            aabb: Aabb::from_lle_f32(
+                LLE::from(LngLat {
+                    lng: extent.west,
+                    lat: extent.south,
+                }),
+                LLE::from(LngLat {
+                    lng: extent.east,
+                    lat: extent.north,
+                }),
+            ),
+            bounding_reagion: Some(TileBoundingReagion::from_extent_f32(extent, WGS84_32)),
             ..Default::default()
         }
     }
@@ -108,67 +133,93 @@ fn request_texture_fragment(
     }
 }
 
-// Extent { west: Rad(-2.9702272), south: Rad(-0.8851175), east: Rad(2.8828528), north: Rad(-0.68291295) }
-
 // FIXME: This is the calculation just to make it work. We need to use the frutsum.
-fn intersect_with_camera(camera: &Transform, t: &Tile) -> bool {
-    let ellipsoid = WGS84_32;
-    let position = camera.transform_point(Vec3::ZERO);
-    let forward = camera.forward();
-    let up = camera.up();
-    let right = forward.cross(up);
-    let right = right.normalize();
-    let up = up.normalize();
+// fn intersect_with_camera(camera: &Transform, t: &Tile) -> bool {
+//     // TODO: Get this from parameter
+//     let ellipsoid = WGS84_32;
+//     let position = camera.transform_point(Vec3::ZERO);
+//     let forward = camera.forward();
+//     let up = camera.up();
+//     let right = forward.cross(up);
+//     let right = right.normalize();
+//     let up = up.normalize();
 
-    let camera_rect_size = 10000.;
+//     let camera_rect_size = 10000.;
 
-    let camera_rect_min = (position - (camera_rect_size * right)) - (camera_rect_size * up);
-    let camera_rect_max = (position + (camera_rect_size * right)) + (camera_rect_size * up);
-    let camera_rect_min_lle = ellipsoid.xyz_to_lle(XYZ {
-        x: Meters::new(camera_rect_min.x),
-        y: Meters::new(camera_rect_min.y),
-        z: Meters::new(camera_rect_min.z),
-    });
-    let camera_rect_max_lle = ellipsoid.xyz_to_lle(XYZ {
-        x: Meters::new(camera_rect_max.x),
-        y: Meters::new(camera_rect_max.y),
-        z: Meters::new(camera_rect_max.z),
-    });
+//     let camera_rect_min = (position - (camera_rect_size * right)) - (camera_rect_size * up);
+//     let camera_rect_max = (position + (camera_rect_size * right)) + (camera_rect_size * up);
+//     let camera_rect_min_lle = ellipsoid.xyz_to_lle(XYZ {
+//         x: Meters::new(camera_rect_min.x),
+//         y: Meters::new(camera_rect_min.y),
+//         z: Meters::new(camera_rect_min.z),
+//     });
+//     let camera_rect_max_lle = ellipsoid.xyz_to_lle(XYZ {
+//         x: Meters::new(camera_rect_max.x),
+//         y: Meters::new(camera_rect_max.y),
+//         z: Meters::new(camera_rect_max.z),
+//     });
 
-    let camera_extent: Extent<f32, Radians> =
-        Extent::from_points(camera_rect_min_lle.into(), camera_rect_max_lle.into());
+//     let camera_extent: Extent<f32, Radians> =
+//         Extent::from_points(camera_rect_min_lle.into(), camera_rect_max_lle.into());
 
-    // info!(
-    //     "CAMERA: {:?} {:?} {:?} {:?}",
-    //     camera_extent,
-    //     t.coords.extent(),
-    //     up,
-    //     right
-    // );
-    camera_extent.intersects(t.coords.extent())
+//     camera_extent.intersects(t.coords.extent())
+// }
+
+fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
+    if t.coords.x == 0 && t.coords.y == 0 && t.coords.z == 0 {
+        return true;
+    }
+
+    frustum.interseciton_with_aabb(&t.aabb)
 }
 
 // FIXME: This is the calculation just to make it work. We should make correct calculation by SSE or something.
-fn check_visibility(camera: &Transform, t: &Tile, max_z: usize) -> bool {
-    let position = camera.transform_point(Vec3::ZERO);
+// fn next_z(camera: &Transform, t: &Tile, max_z: usize) -> usize {
+//     let position = camera.transform_point(Vec3::ZERO);
 
-    let scale = 100.;
-    let r = EARTH_RADIUS_F32;
-    let scaled_r = r + scale;
+//     let scale = 100.;
+//     let r: f32 = EARTH_RADIUS_F32;
+//     let scaled_r = r + scale;
 
-    let distance_from_center = position.distance(Vec3::ZERO) * 2.;
+//     let camera_distance_from_center = position.distance(Vec3::ZERO);
 
-    let z = (((max_z as f32) * (scaled_r / distance_from_center)).floor() - 3.)
-        .max(0.)
-        .min(max_z as f32) as usize;
+//     let tile_distance_from_camera = position.distance(t.aabb.center);
 
-    info!("VISIBILITY: {}", z);
+//     let z = (((max_z as f32) * (scaled_r / camera_distance_from_center)).floor() - 7.)
+//         .max(0.)
+//         .min(max_z as f32) as usize;
 
-    t.coords.z == z
-}
+//     // info!("ZOOM LEVEL: {}", z);
 
-fn calc_sse(t: &Box<dyn GeoSpacialQuadLeaf<usize>>) -> f32 {
-    1.0
+//     z
+// }
+
+fn calc_sse(
+    camera: &Transform,
+    frustum: &CameraFrustum,
+    t: &Tile,
+    window: &Window,
+    ellipsoid: Ellipsoid<f32>,
+) -> f32 {
+    let max_geometric_error = get_level_maximum_geometric_error_f32(
+        t.coords.z,
+        // TODO: Store the result of the level zero maximum geometric error to avoid too many caclulation.
+        get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32(ellipsoid),
+    );
+
+    let camera_pos = camera.transform_point(Vec3::ZERO);
+    let distance_from_camera = t
+        .bounding_reagion
+        .as_ref()
+        .unwrap()
+        .distance_to_camera(camera_pos, ellipsoid.xyz_to_lle(vec3_to_xyz(camera_pos)));
+
+    // TODO: Support fog culling
+    let error = (max_geometric_error * window.height)
+        / (distance_from_camera * frustum.sse_denominator)
+        / window.pixel_ratio;
+
+    error
 }
 
 // This process works in the following steps.
@@ -186,7 +237,10 @@ fn traverse_tile(
     tc: &mut TileCacheManager,
     qt: &mut TileQuadtree,
     camera: &Transform,
+    frustum: &CameraFrustum,
     texture_fragment: &Query<&TextureFragment>,
+    window: &Window,
+    ellipsoid: Ellipsoid<f32>,
     is_ancestor_renderable: bool,
 ) -> TraversalResult {
     let tile = match qt.qt.get(t.handle()) {
@@ -202,17 +256,17 @@ fn traverse_tile(
     let is_texture_loaded =
         texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Sucess)));
 
-    // TODO: Support SSE
-    // let max_sse = 1.0;
-    // let sse = calc_sse(t);
+    let is_camera_intersection_tile = intersect_with_camera_frustum(camera, frustum, &tile);
+    if !is_camera_intersection_tile && !is_ancestor_renderable {
+        return TraversalResult::NotFound;
+    }
 
-    let is_visible_tile = check_visibility(camera, &tile, 21);
-    let is_camera_intersection_tile = intersect_with_camera(camera, &tile);
+    let max_sse = 2.0;
+    let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
 
-    let is_renderable = is_camera_intersection_tile;
+    let is_renderable = sse <= max_sse;
 
-    // if sse <= max_sse {
-    if is_visible_tile && is_camera_intersection_tile {
+    if is_renderable {
         if is_texture_loaded {
             return TraversalResult::TileRendered;
         }
@@ -221,14 +275,8 @@ fn traverse_tile(
         }
         return TraversalResult::NotFound;
     }
-    // }
 
-    // info!(
-    //     "TILE: {:?} {} {}",
-    //     tile.coords, is_camera_intersection_tile, is_ancestor_renderable
-    // );
-
-    if is_renderable || is_ancestor_renderable {
+    if is_ancestor_renderable {
         if tile.texture_fragment_entity_id.is_none() {
             request_texture_fragment(command, qt, tiles, t.handle());
         }
@@ -258,7 +306,10 @@ fn traverse_tile(
                 tc,
                 qt,
                 camera,
+                frustum,
                 texture_fragment,
+                window,
+                ellipsoid,
                 is_renderable,
             ),
             TraversalResult::TileRendered
@@ -301,13 +352,14 @@ pub(super) fn update_tiles(
     mut qt: ResMut<TileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
     time: Res<Time<Real>>,
+    window: Res<Window>,
     tiles: Query<&Tiles>,
-    camera_transform: Query<(&CameraMarker, &Transform), Changed<Transform>>,
+    camera: Query<(&CameraMarker, &Transform, &CameraFrustum), Changed<Transform>>,
     texture_fragment: Query<&TextureFragment>,
 ) {
     // TODO: Support multiple tiles
     for tiles in &tiles {
-        for (_, camera) in &camera_transform {
+        for (_, camera, frustum) in &camera {
             let zero_tile = match qt.qt.zero() {
                 Some(z) => z,
                 None => {
@@ -326,7 +378,10 @@ pub(super) fn update_tiles(
                 &mut tc,
                 &mut qt,
                 camera,
+                frustum,
                 &texture_fragment,
+                &window,
+                WGS84_32,
                 false,
             ) {
                 TraversalResult::TileRendered => {
@@ -606,36 +661,4 @@ fn tile_url(s: &str, xyz: &TileXYZ) -> String {
     s.replace("{x}", &xyz.x.to_string())
         .replace("{y}", &xyz.y.to_string())
         .replace("{z}", &xyz.z.to_string())
-}
-
-#[cfg(test)]
-mod test {
-    use bevy_transform::components::Transform;
-    use map_engine_core::{TileXYZ, EARTH_RADIUS_F32};
-
-    use crate::map::{tile::intersect_with_camera, Tile};
-
-    #[test]
-    fn tile_visibility_by_camera() {
-        debug_assert!(intersect_with_camera(
-            &Transform::from_xyz(0., EARTH_RADIUS_F32 * 3., 0.),
-            &Tile::new(TileXYZ { x: 0, y: 0, z: 0 }),
-        ));
-        debug_assert!(!intersect_with_camera(
-            &Transform::from_xyz(0., EARTH_RADIUS_F32 * 3., 0.),
-            &Tile::new(TileXYZ { x: 0, y: 0, z: 1 }),
-        ));
-        debug_assert!(!intersect_with_camera(
-            &Transform::from_xyz(0., EARTH_RADIUS_F32 * 3., 0.),
-            &Tile::new(TileXYZ { x: 1, y: 0, z: 1 }),
-        ));
-        debug_assert!(intersect_with_camera(
-            &Transform::from_xyz(0., EARTH_RADIUS_F32 * 3., 0.),
-            &Tile::new(TileXYZ { x: 0, y: 1, z: 1 }),
-        ));
-        debug_assert!(intersect_with_camera(
-            &Transform::from_xyz(0., EARTH_RADIUS_F32 * 3., 0.),
-            &Tile::new(TileXYZ { x: 1, y: 1, z: 1 }),
-        ));
-    }
 }

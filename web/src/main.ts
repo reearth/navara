@@ -46,6 +46,15 @@ const fujiExtent = {
   east: 138.866,
 };
 
+// view.addLayer({
+//   type: "tiles",
+//   color: 0xffffff,
+//   segments: 10,
+//   height: 0,
+//   tile_url: "http://localhost:8888/{z}/{x}/{y}.png",
+//   z: 4,
+//   wireframe: false,
+// });
 view.addLayer({
   type: "tiles",
   color: 0xffffff,
