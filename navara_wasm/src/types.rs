@@ -32,9 +32,9 @@ impl LayerDescription {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
-    pub fn to(self) -> Option<map_engine_ecs::map::LayerDescription> {
+    pub fn to(self) -> Option<navara_ecs::map::LayerDescription> {
         match self.r#type.as_str() {
-            "tiles" => Some(map_engine_ecs::map::LayerDescription::Tiles {
+            "tiles" => Some(navara_ecs::map::LayerDescription::Tiles {
                 tile_url: self.tile_url,
                 terrain_url: self.terrain_url,
                 z: self.z,
@@ -49,13 +49,13 @@ impl LayerDescription {
     }
 }
 
-impl From<Extent> for map_engine_core::Extent<f32, map_engine_core::Radians> {
+impl From<Extent> for navara_core::Extent<f32, navara_core::Radians> {
     fn from(ext: Extent) -> Self {
-        map_engine_core::Extent {
-            west: map_engine_core::Deg::new(ext.west),
-            south: map_engine_core::Deg::new(ext.south),
-            east: map_engine_core::Deg::new(ext.east),
-            north: map_engine_core::Deg::new(ext.north),
+        navara_core::Extent {
+            west: navara_core::Deg::new(ext.west),
+            south: navara_core::Deg::new(ext.south),
+            east: navara_core::Deg::new(ext.east),
+            north: navara_core::Deg::new(ext.north),
         }
         .into()
     }

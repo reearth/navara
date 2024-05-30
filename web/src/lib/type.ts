@@ -1,4 +1,4 @@
-import type { LayerDescription as LD } from "map-engine-prototype";
+import type { LayerDescription as LD } from "navara";
 
 import type { Extent } from "./utils";
 

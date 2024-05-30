@@ -8,7 +8,7 @@ import {
   type MeshMaterial as EventMaterial,
   type ObjectTransformEvent,
   type DataRequestEvent,
-} from "map-engine-prototype";
+} from "navara";
 import {
   BufferAttribute,
   BufferGeometry,

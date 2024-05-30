@@ -1,4 +1,4 @@
-import type { Core } from "map-engine-prototype";
+import type { Core } from "navara";
 
 export function registerInputEvents(core: Core, element: HTMLElement): () => void {
   const mousedown = (event: MouseEvent) => {

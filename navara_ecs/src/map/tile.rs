@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use map_engine_core::{
+use navara_core::{
     iter_tiles, tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain}, Extent, Radians, TileXYZ, WGS84_32,
 };
 

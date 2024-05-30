@@ -1,4 +1,4 @@
-# map-engine-prototype
+# Navara
 
 3D globe map engine prototype built on Rust + WebAssembly + Three.js
 

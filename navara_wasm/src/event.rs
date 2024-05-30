@@ -88,8 +88,8 @@ pub struct DataRequestEvent {
     pub url: String,
 }
 
-impl<'a> From<map_engine_ecs::Events<'a>> for Events {
-    fn from(ev: map_engine_ecs::Events) -> Self {
+impl<'a> From<navara_ecs::Events<'a>> for Events {
+    fn from(ev: navara_ecs::Events) -> Self {
         Self {
             camera_transform_updated: ev.camera_transform_updated.map(|ev| (*ev).into()),
             object_transform_updated: ev
@@ -109,8 +109,8 @@ impl<'a> From<map_engine_ecs::Events<'a>> for Events {
     }
 }
 
-impl From<map_engine_ecs::EntityEvent> for ObjectEvent {
-    fn from(ev: map_engine_ecs::EntityEvent) -> Self {
+impl From<navara_ecs::EntityEvent> for ObjectEvent {
+    fn from(ev: navara_ecs::EntityEvent) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -118,10 +118,8 @@ impl From<map_engine_ecs::EntityEvent> for ObjectEvent {
     }
 }
 
-impl<'a> From<map_engine_ecs::ComponentEvent<&'a map_engine_ecs::Transform>>
-    for ObjectTransformEvent
-{
-    fn from(ev: map_engine_ecs::ComponentEvent<&'a map_engine_ecs::Transform>) -> Self {
+impl<'a> From<navara_ecs::ComponentEvent<&'a navara_ecs::Transform>> for ObjectTransformEvent {
+    fn from(ev: navara_ecs::ComponentEvent<&'a navara_ecs::Transform>) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -130,8 +128,8 @@ impl<'a> From<map_engine_ecs::ComponentEvent<&'a map_engine_ecs::Transform>>
     }
 }
 
-impl From<map_engine_ecs::Transform> for Transform {
-    fn from(t: map_engine_ecs::Transform) -> Self {
+impl From<navara_ecs::Transform> for Transform {
+    fn from(t: navara_ecs::Transform) -> Self {
         Self {
             tx: t.translation.x,
             ty: t.translation.y,
@@ -149,18 +147,18 @@ impl From<map_engine_ecs::Transform> for Transform {
 
 impl
     From<
-        map_engine_ecs::ComponentEvent<(
-            &map_engine_ecs::Mesh,
-            &map_engine_ecs::Material,
-            &map_engine_ecs::Transform,
+        navara_ecs::ComponentEvent<(
+            &navara_ecs::Mesh,
+            &navara_ecs::Material,
+            &navara_ecs::Transform,
         )>,
     > for MeshAdded
 {
     fn from(
-        ev: map_engine_ecs::ComponentEvent<(
-            &map_engine_ecs::Mesh,
-            &map_engine_ecs::Material,
-            &map_engine_ecs::Transform,
+        ev: navara_ecs::ComponentEvent<(
+            &navara_ecs::Mesh,
+            &navara_ecs::Material,
+            &navara_ecs::Transform,
         )>,
     ) -> Self {
         Self {
@@ -173,12 +171,8 @@ impl
     }
 }
 
-impl From<map_engine_ecs::ComponentEvent<(&map_engine_ecs::Mesh, &map_engine_ecs::Material)>>
-    for MeshChanged
-{
-    fn from(
-        ev: map_engine_ecs::ComponentEvent<(&map_engine_ecs::Mesh, &map_engine_ecs::Material)>,
-    ) -> Self {
+impl From<navara_ecs::ComponentEvent<(&navara_ecs::Mesh, &navara_ecs::Material)>> for MeshChanged {
+    fn from(ev: navara_ecs::ComponentEvent<(&navara_ecs::Mesh, &navara_ecs::Material)>) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -188,8 +182,8 @@ impl From<map_engine_ecs::ComponentEvent<(&map_engine_ecs::Mesh, &map_engine_ecs
     }
 }
 
-impl From<map_engine_ecs::Mesh> for Mesh {
-    fn from(m: map_engine_ecs::Mesh) -> Self {
+impl From<navara_ecs::Mesh> for Mesh {
+    fn from(m: navara_ecs::Mesh) -> Self {
         Self {
             vertices: m.vertices,
             uvs: m.uvs,
@@ -198,8 +192,8 @@ impl From<map_engine_ecs::Mesh> for Mesh {
     }
 }
 
-impl From<map_engine_ecs::Material> for MeshMaterial {
-    fn from(m: map_engine_ecs::Material) -> Self {
+impl From<navara_ecs::Material> for MeshMaterial {
+    fn from(m: navara_ecs::Material) -> Self {
         Self {
             map_url: m.map_url.clone(),
             color: m.color,
@@ -208,8 +202,8 @@ impl From<map_engine_ecs::Material> for MeshMaterial {
     }
 }
 
-impl From<map_engine_ecs::DataRequester> for DataRequestEvent {
-    fn from(ev: map_engine_ecs::DataRequester) -> Self {
+impl From<navara_ecs::DataRequester> for DataRequestEvent {
+    fn from(ev: navara_ecs::DataRequester) -> Self {
         Self {
             handle: ev.handle,
             url: ev.url,
