@@ -1,4 +1,4 @@
-import initCore, { Core, TextureFragmentStatus } from "map-engine-prototype";
+import initCore, { Core, TextureFragmentStatus } from "navara";
 import Stats from "stats.js";
 import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3, Texture, Vector2 } from "three";
 

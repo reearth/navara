@@ -1,5 +1,5 @@
 [package]
-name = "map_engine_core"
+name = "navara_core"
 version = "0.1.0"
 edition = "2021"
 license = "MIT/Apache-2.0"

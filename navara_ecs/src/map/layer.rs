@@ -1,4 +1,4 @@
-use map_engine_core::{Extent, Radians};
+use navara_core::{Extent, Radians};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LayerDescription {

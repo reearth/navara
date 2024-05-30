@@ -9,7 +9,7 @@ use bevy_input::{
     Input,
 };
 use bevy_math::{Quat, Vec2, Vec3};
-use map_engine_core::{Angle, EARTH_RADIUS_F32};
+use navara_core::{Angle, EARTH_RADIUS_F32};
 
 use crate::Transform;
 

@@ -3,7 +3,7 @@ skip_core_tasks = true
 default_to_workspace = false
 
 [env]
-PROJ_NAME = "map-engine-prototype"
+PROJ_NAME = "navara"
 
 [tasks.format]
 script = ['''
@@ -20,15 +20,15 @@ cargo clippy --workspace --all-targets --all-features
 [tasks.build]
 script = ['''
 #!/usr/bin/env bash -eux
-cd map_engine_wasm
-wasm-pack build map_engine_wasm --target web
+cd navara_wasm
+wasm-pack build navara_wasm --target web
 ''']
 
 [tasks.build-dev]
 script = ['''
 #!/usr/bin/env bash -eux
-cd map_engine_wasm
-wasm-pack build map_engine_wasm --target web --dev
+cd navara_wasm
+wasm-pack build navara_wasm --target web --dev
 ''']
 
 [tasks.dev]
@@ -37,7 +37,7 @@ run_task = { name = ["watch", "dev-web"], parallel = true }
 [tasks.watch]
 script = ['''
 #!/usr/bin/env bash -eux
-cd map_engine_wasm
+cd navara_wasm
 cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
 ''']
 

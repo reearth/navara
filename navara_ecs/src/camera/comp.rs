@@ -121,7 +121,7 @@ impl Orbit {
 #[cfg(test)]
 mod test {
     use bevy_math::Vec3;
-    use map_engine_core::Angle;
+    use navara_core::Angle;
 
     use crate::{
         primitives::{Aabb, Plane},

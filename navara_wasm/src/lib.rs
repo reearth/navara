@@ -8,7 +8,7 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
-use map_engine_ecs::App;
+use navara_ecs::App;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -88,17 +88,17 @@ impl Core {
 #[wasm_bindgen(start)]
 pub fn start() {
     utils::set_panic_hook();
-    log("init map_engine_wasm");
+    log("init navara_wasm");
 }
 
 pub fn init(id: String) {
     app(id, |a| {
         // debug
-        a.trigger_event(map_engine_ecs::Input::Keyboard(
-            map_engine_ecs::KeyboardInput {
+        a.trigger_event(navara_ecs::Input::Keyboard(
+            navara_ecs::KeyboardInput {
                 scan_code: 0,
-                key_code: Some(map_engine_ecs::KeyCode::A),
-                state: map_engine_ecs::ButtonState::Pressed,
+                key_code: Some(navara_ecs::KeyCode::A),
+                state: navara_ecs::ButtonState::Pressed,
             },
         ));
     });

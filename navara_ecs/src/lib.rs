@@ -12,7 +12,6 @@ mod utils;
 mod window;
 
 use bevy_ecs::entity::Entity;
-use bevy_log::info;
 pub use buffer::*;
 pub use event::{ComponentEvent, EntityEvent, Events, ReconstructableComponentEvent};
 pub use object::*;

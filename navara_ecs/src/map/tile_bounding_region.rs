@@ -1,5 +1,5 @@
 use bevy_math::Vec3;
-use map_engine_core::{
+use navara_core::{
     ellipsoid, Angle, Ellipsoid, Extent, Float, Meters, One, Radians, Two, LLE, XYZ,
 };
 
@@ -143,7 +143,7 @@ impl TileBoundingReagion<f32> {
 mod test {
     use bevy_math::{Quat, Vec3, Vec3Swizzles};
     use bevy_transform::components::Transform;
-    use map_engine_core::{
+    use navara_core::{
         ellipsoid, Meters, Radians, TileXYZ, EARTH_RADIUS_F32, LLE, WGS84_32, XYZ,
     };
 

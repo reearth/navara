@@ -1,6 +1,6 @@
 use bevy_ecs::component::Component;
 use bevy_math::Vec3;
-use map_engine_core::{Angle, Meters, Radians, LLE, WGS84_32};
+use navara_core::{Angle, Meters, Radians, LLE, WGS84_32};
 
 use super::Plane;
 

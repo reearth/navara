@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
 use bevy_time::{Real, Time};
 use instant::{Duration, Instant};
-use map_engine_core::{
+use navara_core::{
     iter_tiles,
     terrain::{
         get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
@@ -13,7 +13,7 @@ use map_engine_core::{
 };
 
 use bevy_log::info;
-use map_engine_quadtree::{GeoSpacialQuadLeaf, Quadtree};
+use navara_quadtree::{GeoSpacialQuadLeaf, Quadtree};
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},

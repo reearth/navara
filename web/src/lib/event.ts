@@ -11,7 +11,7 @@ import {
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
   TextureFragmentRemovedEvent,
-} from "map-engine-prototype";
+} from "navara";
 import {
   BufferAttribute,
   BufferGeometry,

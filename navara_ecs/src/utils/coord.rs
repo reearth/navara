@@ -1,5 +1,5 @@
 use bevy_math::Vec3;
-use map_engine_core::{Meters, XYZ};
+use navara_core::{Meters, XYZ};
 
 pub(crate) fn xyz_to_vec3(xyz: XYZ<f32>) -> Vec3 {
     Vec3::new(xyz.x.val(), xyz.y.val(), xyz.z.val())

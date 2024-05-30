@@ -1,7 +1,7 @@
 mod store;
 
 use bevy_ecs::{component::Component, event::Event};
-use map_engine_core::{Extent, Radians};
+use navara_core::{Extent, Radians};
 pub use store::*;
 
 pub struct BufferStorePlugin;
