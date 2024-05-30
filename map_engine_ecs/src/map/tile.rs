@@ -134,63 +134,11 @@ fn request_texture_fragment(
     }
 }
 
-// FIXME: This is the calculation just to make it work. We need to use the frutsum.
-// fn intersect_with_camera(camera: &Transform, t: &Tile) -> bool {
-//     // TODO: Get this from parameter
-//     let ellipsoid = WGS84_32;
-//     let position = camera.transform_point(Vec3::ZERO);
-//     let forward = camera.forward();
-//     let up = camera.up();
-//     let right = forward.cross(up);
-//     let right = right.normalize();
-//     let up = up.normalize();
-
-//     let camera_rect_size = 10000.;
-
-//     let camera_rect_min = (position - (camera_rect_size * right)) - (camera_rect_size * up);
-//     let camera_rect_max = (position + (camera_rect_size * right)) + (camera_rect_size * up);
-//     let camera_rect_min_lle = ellipsoid.xyz_to_lle(XYZ {
-//         x: Meters::new(camera_rect_min.x),
-//         y: Meters::new(camera_rect_min.y),
-//         z: Meters::new(camera_rect_min.z),
-//     });
-//     let camera_rect_max_lle = ellipsoid.xyz_to_lle(XYZ {
-//         x: Meters::new(camera_rect_max.x),
-//         y: Meters::new(camera_rect_max.y),
-//         z: Meters::new(camera_rect_max.z),
-//     });
-
-//     let camera_extent: Extent<f32, Radians> =
-//         Extent::from_points(camera_rect_min_lle.into(), camera_rect_max_lle.into());
-
-//     camera_extent.intersects(t.coords.extent())
-// }
-
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
     frustum.interseciton_with_aabb(&t.aabb)
 }
 
-// FIXME: This is the calculation just to make it work. We should make correct calculation by SSE or something.
-// fn next_z(camera: &Transform, t: &Tile, max_z: usize) -> usize {
-//     let position = camera.transform_point(Vec3::ZERO);
-
-//     let scale = 100.;
-//     let r: f32 = EARTH_RADIUS_F32;
-//     let scaled_r = r + scale;
-
-//     let camera_distance_from_center = position.distance(Vec3::ZERO);
-
-//     let tile_distance_from_camera = position.distance(t.aabb.center);
-
-//     let z = (((max_z as f32) * (scaled_r / camera_distance_from_center)).floor() - 7.)
-//         .max(0.)
-//         .min(max_z as f32) as usize;
-
-//     // info!("ZOOM LEVEL: {}", z);
-
-//     z
-// }
-
+// Ref: https://github.com/CesiumGS/cesium/blob/3b393448d7e976165c0260fab9ea90843583c3a7/packages/engine/Source/Scene/QuadtreePrimitive.js#L1245
 fn calc_sse(
     camera: &Transform,
     frustum: &CameraFrustum,
