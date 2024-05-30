@@ -121,6 +121,7 @@ impl Orbit {
 #[cfg(test)]
 mod test {
     use bevy_math::Vec3;
+    use map_engine_core::Angle;
 
     use crate::{
         primitives::{Aabb, Plane},
@@ -139,7 +140,7 @@ mod test {
             Plane::from_point_normal(Vec3::new(0., 0., -10.), Vec3::new(-1., 0., -0.00013352642)),
         );
 
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., 50., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
         debug_assert_eq!(
             frustum.planes[0],
             Plane::from_point_normal(Vec3::new(0., 0., -9.9), Vec3::new(0., 0., 1.))
@@ -150,19 +151,31 @@ mod test {
         );
         debug_assert_eq!(
             frustum.planes[2],
-            Plane::from_point_normal(Vec3::new(0., 0., -10.), Vec3::new(-1., 0., -0.00013352642))
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(-0.99999994, 0., 0.00046630763)
+            )
         );
         debug_assert_eq!(
             frustum.planes[3],
-            Plane::from_point_normal(Vec3::new(0., 0., -10.), Vec3::new(1., 0., -0.00013352642))
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(0.99999994, 0., 0.00046630763)
+            )
         );
         debug_assert_eq!(
             frustum.planes[4],
-            Plane::from_point_normal(Vec3::new(0., 0., -10.), Vec3::new(0., 1., -0.00013352642))
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(0., 0.99999994, 0.00046630763)
+            )
         );
         debug_assert_eq!(
             frustum.planes[5],
-            Plane::from_point_normal(Vec3::new(0., 0., -10.), Vec3::new(0., -1., -0.00013352642))
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(0., -0.99999994, 0.00046630763)
+            )
         );
     }
 
@@ -171,7 +184,7 @@ mod test {
         let camera = Transform::from_xyz(0., 0., -10.);
         let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
 
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., 50., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
         let aabb = Aabb::from_points(Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.));
         debug_assert!(frustum.interseciton_with_aabb(&aabb));

@@ -10,6 +10,7 @@ pub enum LayerDescription {
         height: f32,
         extent: Option<Extent<f32, Radians>>,
         color: u32,
+        max_sse: f32,
         wireframe: bool,
     },
 }

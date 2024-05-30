@@ -1,8 +1,6 @@
 use bevy_ecs::component::Component;
 use bevy_math::Vec3;
-use map_engine_core::{
-    Angle, Meters, Radians, LLE, WGS84_32,
-};
+use map_engine_core::{Angle, Meters, Radians, LLE, WGS84_32};
 
 use super::Plane;
 
@@ -42,16 +40,16 @@ impl Aabb {
         let c = ellipsoid.lle_to_xyz(LLE::<f32, Radians> {
             lng: Angle::new(center_lng),
             lat: Angle::new(center_lat),
-            height: Meters::new(1.),
+            height: Meters::new(0.),
         });
         let e = ellipsoid.lle_to_xyz(LLE::<f32, Radians> {
             lng: Angle::new(extents.0),
             lat: Angle::new(extents.1),
-            height: Meters::new(1.),
+            height: Meters::new(0.),
         });
 
         Self {
-            center: Vec3::new(c.x.val() as f32, c.y.val(), c.z.val()),
+            center: Vec3::new(c.x.val(), c.y.val(), c.z.val()),
             extents: Vec3::new(e.x.val(), e.y.val(), e.z.val()),
         }
     }
@@ -85,7 +83,7 @@ mod test {
 
         // Aabb is intersecting with the plane, and the direction of the plane is top
         let plane = Plane::from_point_normal(Vec3::new(0., 1., -1.), Vec3::new(0., 1., 0.));
-        let aabb = Aabb::from_points(Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.));
+        let aabb = Aabb::from_points(Vec3::new(-1., -1., -1.), Vec3::new(1., 1.1, 1.));
         debug_assert!(aabb.is_on_or_forward_plane(&plane));
 
         // Aabb is intersecting with the plane, and the direction of the plane is back

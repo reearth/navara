@@ -9,7 +9,7 @@ use bevy_input::{
     Input,
 };
 use bevy_math::{Quat, Vec2, Vec3};
-use map_engine_core::EARTH_RADIUS_F32;
+use map_engine_core::{Angle, EARTH_RADIUS_F32};
 
 use crate::Transform;
 
@@ -29,7 +29,7 @@ pub fn startup(mut commands: Commands) {
         },
         transform,
         // FIXME! The fov should be radian, not degree
-        CameraFrustum::new(&transform, 0.1, 1e8, 50., 1.),
+        CameraFrustum::new(&transform, 0.1, 1e8, Angle::new(50.).rad().val(), 1.),
     ));
 }
 

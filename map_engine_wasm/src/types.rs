@@ -15,6 +15,7 @@ pub struct LayerDescription {
     pub height: f32,
     pub extent: Option<Extent>,
     pub color: u32,
+    pub max_sse: Option<f32>,
     pub wireframe: bool,
 }
 
@@ -42,6 +43,7 @@ impl LayerDescription {
                 height: self.height,
                 extent: self.extent.map(|e| e.into()),
                 color: self.color,
+                max_sse: self.max_sse.unwrap_or(4.),
                 wireframe: self.wireframe,
             }),
             _ => None,

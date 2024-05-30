@@ -41,6 +41,7 @@ pub struct Tiles {
     pub height: f32,
     pub extent: Option<Extent<f32, Radians>>,
     pub color: u32,
+    pub max_sse: f32,
     pub wireframe: bool,
 }
 
@@ -166,10 +167,6 @@ fn request_texture_fragment(
 // }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
-    if t.coords.x == 0 && t.coords.y == 0 && t.coords.z == 0 {
-        return true;
-    }
-
     frustum.interseciton_with_aabb(&t.aabb)
 }
 
@@ -247,6 +244,7 @@ fn traverse_tile(
         Some(tile) => tile,
         None => return TraversalResult::NotFound,
     };
+    let is_level_zero_tile = tile.coords.x == 0 && tile.coords.y == 0 && tile.coords.z == 0;
 
     let texture_fragment_status = tile
         .texture_fragment_entity_id
@@ -256,17 +254,19 @@ fn traverse_tile(
     let is_texture_loaded =
         texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Sucess)));
 
-    let is_camera_intersection_tile = intersect_with_camera_frustum(camera, frustum, &tile);
+    let is_camera_intersection_tile =
+        is_level_zero_tile || intersect_with_camera_frustum(camera, frustum, &tile);
     if !is_camera_intersection_tile && !is_ancestor_renderable {
         return TraversalResult::NotFound;
     }
 
-    let max_sse = 2.0;
+    let max_sse = tiles.max_sse;
     let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
+    let meets_sse = sse <= max_sse;
 
-    let is_renderable = sse <= max_sse;
+    let is_renderable = is_camera_intersection_tile;
 
-    if is_renderable {
+    if meets_sse {
         if is_texture_loaded {
             return TraversalResult::TileRendered;
         }
@@ -276,7 +276,7 @@ fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    if is_ancestor_renderable {
+    if is_renderable || is_ancestor_renderable {
         if tile.texture_fragment_entity_id.is_none() {
             request_texture_fragment(command, qt, tiles, t.handle());
         }
