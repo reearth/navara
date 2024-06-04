@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 
 use crate::{event::EventStore, BufferStoreEvent, DataRequester};
 
-use super::{LayerDescription, Tiles};
+use super::{tile::Tiles, LayerDescription};
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);

@@ -135,11 +135,6 @@ mod test {
         let camera = Transform::from_xyz(0., 0., -10.);
         let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
 
-        println!(
-            "{:?}",
-            Plane::from_point_normal(Vec3::new(0., 0., -10.), Vec3::new(-1., 0., -0.00013352642)),
-        );
-
         let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
         debug_assert_eq!(
             frustum.planes[0],
@@ -190,6 +185,9 @@ mod test {
         debug_assert!(frustum.interseciton_with_aabb(&aabb));
 
         let aabb = Aabb::from_points(Vec3::new(-1., -0.1, -1.), Vec3::new(1., 0.1, 1.));
+        debug_assert!(frustum.interseciton_with_aabb(&aabb));
+
+        let aabb = Aabb::from_points(Vec3::new(-1000., -1000., -1000.), Vec3::new(1000., 1000., -9.8));
         debug_assert!(frustum.interseciton_with_aabb(&aabb));
 
         let aabb = Aabb::from_points(Vec3::new(-100., -0.1, 1.), Vec3::new(-90., 0.1, 5.));

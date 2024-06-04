@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
 use bevy_time::{Real, Time};
-use instant::{Duration, Instant};
+use instant::Duration;
 use navara_core::{
     iter_tiles,
     terrain::{
@@ -9,85 +9,32 @@ use navara_core::{
         get_level_maximum_geometric_error_f32,
     },
     tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain},
-    Ellipsoid, Extent, LngLat, Radians, TileXYZ, LLE, WGS84_32,
+    Ellipsoid, LngLat, TileXYZ, WGS84_32,
 };
 
-use bevy_log::info;
-use navara_quadtree::{GeoSpacialQuadLeaf, Quadtree};
+use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
-    primitives::Aabb,
+    occluder::{
+        self,
+        ellipsoidal_occluder::{self, EllipsoidalOccluder},
+    },
     texture_fragment::TextureFragmentStatus,
-    utils::coord::vec3_to_xyz,
+    utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
     BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment,
     Transform,
 };
 
 use super::{
-    tile_bounding_region::TileBoundingReagion,
     tile_cache_manager::{TileCache, TileCacheManager},
+    Tile, TileHandle, TileQuadtree, Tiles,
 };
 
-pub(super) type TileHandle = u64;
-
-#[derive(Debug, Clone, PartialEq, Default, Component)]
-pub struct Tiles {
-    pub tile_url: Option<String>,
-    pub terrain_url: Option<String>,
-    pub z: usize,
-    pub segments: usize,
-    pub height: f32,
-    pub extent: Option<Extent<f32, Radians>>,
-    pub color: u32,
-    pub max_sse: f32,
-    pub wireframe: bool,
-}
-
-#[derive(Debug, Default)]
-pub struct Tile {
-    pub coords: TileXYZ,
-    pub aabb: Aabb,
-    pub bounding_reagion: Option<TileBoundingReagion<f32>>,
-    pub(super) rendered_at: Option<Instant>,
-    pub(super) data_requester_entity_id: Option<Entity>,
-    pub(super) texture_fragment_entity_id: Option<Entity>,
-    pub(super) mesh_entity_id: Option<Entity>,
-}
-
-impl Tile {
-    pub(super) fn new(coords: TileXYZ) -> Self {
-        let extent = coords.extent();
-        Self {
-            coords,
-            aabb: Aabb::from_lle_f32(
-                LLE::from(LngLat {
-                    lng: extent.west,
-                    lat: extent.south,
-                }),
-                LLE::from(LngLat {
-                    lng: extent.east,
-                    lat: extent.north,
-                }),
-            ),
-            bounding_reagion: Some(TileBoundingReagion::from_extent_f32(extent, WGS84_32)),
-            ..Default::default()
-        }
-    }
-}
-
-pub type TileQuadtree = Quadtree<usize, Tile>;
-
 #[derive(Component)]
-pub(super) struct RenderedTile {
+pub struct RenderedTile {
     tile_handle: TileHandle,
-}
-
-pub(super) enum TraversalResult {
-    TileRendered,
-    ChildrenRendered,
-    NotFound,
 }
 
 // We should use entity to store the rendered tile, because the Bevy's entity is extensible.
@@ -126,7 +73,6 @@ fn request_texture_fragment(
     let tile = qt.qt.get_mut(handle).unwrap();
     match tiles.tile_url.as_ref().map(|s| tile_url(s, &tile.coords)) {
         Some(url) => {
-            info!("Texture fragment is requested: {}", &url);
             let entity = commands.spawn(TextureFragment::new(url));
             tile.texture_fragment_entity_id = Some(entity.id());
         }
@@ -144,7 +90,7 @@ fn calc_sse(
     frustum: &CameraFrustum,
     t: &Tile,
     window: &Window,
-    ellipsoid: Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<f32>,
 ) -> f32 {
     let max_geometric_error = get_level_maximum_geometric_error_f32(
         t.coords.z,
@@ -167,6 +113,74 @@ fn calc_sse(
     error
 }
 
+fn begine_traverse_tile(
+    ellipsoid: &Ellipsoid<f32>,
+    occluder: &EllipsoidalOccluder,
+    camera: &Transform,
+    tile: &mut Tile,
+) {
+    tile.aabb.update_by_transform(camera);
+    update_tile_occludee_point(ellipsoid, occluder, tile)
+}
+
+// TODO: Terrain support
+fn update_tile_occludee_point(
+    ellipsoid: &Ellipsoid<f32>,
+    occluder: &EllipsoidalOccluder,
+    tile: &mut Tile,
+) {
+    let extent = tile.coords.extent();
+    let center = tile.aabb.center;
+
+    let mut positions = vec![];
+
+    positions.push(xyz_to_vec3(
+        ellipsoid.lle_to_xyz(
+            LngLat {
+                lng: extent.west,
+                lat: extent.south,
+            }
+            .into(),
+        ),
+    ));
+    positions.push(xyz_to_vec3(
+        ellipsoid.lle_to_xyz(
+            LngLat {
+                lng: extent.east,
+                lat: extent.south,
+            }
+            .into(),
+        ),
+    ));
+    positions.push(xyz_to_vec3(
+        ellipsoid.lle_to_xyz(
+            LngLat {
+                lng: extent.west,
+                lat: extent.north,
+            }
+            .into(),
+        ),
+    ));
+    positions.push(xyz_to_vec3(
+        ellipsoid.lle_to_xyz(
+            LngLat {
+                lng: extent.east,
+                lat: extent.north,
+            }
+            .into(),
+        ),
+    ));
+
+    tile.occludee_point_in_scaled_space =
+        occluder.compute_horizontal_culling_point(ellipsoid, center, positions);
+}
+
+pub(super) enum TraversalResult {
+    TileRendered,
+    ChildrenRendered,
+    NotFound,
+}
+
 // This process works in the following steps.
 // 1. Check if a corner of camera's frustum is inside of the tile.
 // 2. Check SSE
@@ -185,14 +199,18 @@ fn traverse_tile(
     frustum: &CameraFrustum,
     texture_fragment: &Query<&TextureFragment>,
     window: &Window,
-    ellipsoid: Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<f32>,
+    occluder: &EllipsoidalOccluder,
     is_ancestor_renderable: bool,
 ) -> TraversalResult {
-    let tile = match qt.qt.get(t.handle()) {
+    let tile = match qt.qt.get_mut(t.handle()) {
         Some(tile) => tile,
         None => return TraversalResult::NotFound,
     };
-    let is_level_zero_tile = tile.coords.x == 0 && tile.coords.y == 0 && tile.coords.z == 0;
+
+    begine_traverse_tile(ellipsoid, occluder, camera, tile);
+
+    let is_level_zero_tile = tile.is_coords_zero();
 
     let texture_fragment_status = tile
         .texture_fragment_entity_id
@@ -202,9 +220,18 @@ fn traverse_tile(
     let is_texture_loaded =
         texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Sucess)));
 
-    let is_camera_intersection_tile =
+    let is_intersecting_with_frustum =
         is_level_zero_tile || intersect_with_camera_frustum(camera, frustum, &tile);
-    if !is_camera_intersection_tile && !is_ancestor_renderable {
+    if !is_intersecting_with_frustum && !is_ancestor_renderable {
+        return TraversalResult::NotFound;
+    }
+
+    let is_visible = is_level_zero_tile
+        || tile
+            .occludee_point_in_scaled_space
+            .map(|p| occluder.is_scaled_space_point_visible(p))
+            .unwrap_or(false);
+    if !is_visible && !is_ancestor_renderable {
         return TraversalResult::NotFound;
     }
 
@@ -212,7 +239,7 @@ fn traverse_tile(
     let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
     let meets_sse = sse <= max_sse;
 
-    let is_renderable = is_camera_intersection_tile;
+    let is_renderable = is_intersecting_with_frustum && is_visible;
 
     if meets_sse {
         if is_texture_loaded {
@@ -258,6 +285,7 @@ fn traverse_tile(
                 texture_fragment,
                 window,
                 ellipsoid,
+                occluder,
                 is_renderable,
             ),
             TraversalResult::TileRendered
@@ -295,7 +323,7 @@ fn traverse_tile(
 }
 
 // TODO: Support loading terrain dynamically
-pub(super) fn update_tiles(
+pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<TileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
@@ -304,7 +332,9 @@ pub(super) fn update_tiles(
     tiles: Query<&Tiles>,
     camera: Query<(&CameraMarker, &Transform, &CameraFrustum), Changed<Transform>>,
     texture_fragment: Query<&TextureFragment>,
+    occluder: Query<&EllipsoidalOccluder>,
 ) {
+    let occluder = occluder.iter().next().unwrap();
     // TODO: Support multiple tiles
     for tiles in &tiles {
         for (_, camera, frustum) in &camera {
@@ -329,7 +359,8 @@ pub(super) fn update_tiles(
                 frustum,
                 &texture_fragment,
                 &window,
-                WGS84_32,
+                &WGS84_32,
+                occluder,
                 false,
             ) {
                 TraversalResult::TileRendered => {
@@ -357,7 +388,7 @@ pub(super) fn update_tiles(
     }
 }
 
-pub(super) fn transfer_mesh(
+pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut tc: ResMut<TileCacheManager>,
@@ -418,8 +449,6 @@ pub(super) fn transfer_mesh(
             },
         });
 
-        info!("Rendered {:?}", tile.coords);
-
         if let Some(cache) = tc.caches.get_mut(&rendered_tile.tile_handle) {
             cache.mesh_entity = Some(e.id());
         };
@@ -436,7 +465,7 @@ pub(super) fn transfer_mesh(
     }
 }
 
-pub(super) fn end_update(
+pub fn end_update(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<TileQuadtree>,
@@ -569,7 +598,6 @@ pub fn load_tiles(
             })
             .next()
             .unwrap();
-        info!("{:?}", ts);
         let bytes = buf.get_u8(&req.handle).unwrap();
         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
         let triangles = tile_triangles_with_terrain(

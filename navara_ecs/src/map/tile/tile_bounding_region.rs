@@ -1,25 +1,23 @@
 use bevy_math::Vec3;
-use navara_core::{
-    ellipsoid, Angle, Ellipsoid, Extent, Float, Meters, One, Radians, Two, LLE, XYZ,
-};
+use navara_core::{Ellipsoid, Extent, Float, Meters, Radians, LLE, XYZ};
 
 use crate::utils::coord::{vec3_to_xyz, xyz_to_vec3};
 
 #[derive(Debug)]
-pub(super) struct TileBoundingReagion<F: Float> {
-    pub(super) extent: Extent<F, Radians>,
-    pub(super) southwest_corner: XYZ<F>,
-    pub(super) northeast_corner: XYZ<F>,
-    pub(super) west_normal: XYZ<F>,
-    pub(super) east_normal: XYZ<F>,
-    pub(super) south_normal: XYZ<F>,
-    pub(super) north_normal: XYZ<F>,
-    pub(super) maximum_height: F,
-    pub(super) minimum_height: F,
+pub struct TileBoundingReagion<F: Float> {
+    pub extent: Extent<F, Radians>,
+    pub southwest_corner: XYZ<F>,
+    pub northeast_corner: XYZ<F>,
+    pub west_normal: XYZ<F>,
+    pub east_normal: XYZ<F>,
+    pub south_normal: XYZ<F>,
+    pub north_normal: XYZ<F>,
+    pub maximum_height: F,
+    pub minimum_height: F,
 }
 
 impl TileBoundingReagion<f32> {
-    pub(super) fn from_extent_f32(e: Extent<f32, Radians>, ellipsoid: Ellipsoid<f32>) -> Self {
+    pub fn from_extent_f32(e: Extent<f32, Radians>, ellipsoid: Ellipsoid<f32>) -> Self {
         let southwest_corner_lle = LLE {
             lng: e.west,
             lat: e.south,
@@ -47,7 +45,8 @@ impl TileBoundingReagion<f32> {
 
         let western_midpoint = ellipsoid.lle_to_xyz(western_midpoint_lle);
         let western_midpoint = xyz_to_vec3(western_midpoint);
-        let west_normal = western_midpoint.cross(Vec3::Z).normalize();
+        let west_vector = western_midpoint.cross(Vec3::Z);
+        let west_normal = west_vector.normalize();
 
         let eastern_midpoint = ellipsoid.lle_to_xyz(eastern_midpoint_lle);
         let eastern_midpoint = xyz_to_vec3(eastern_midpoint);
@@ -55,7 +54,7 @@ impl TileBoundingReagion<f32> {
 
         let mut west_vec = western_midpoint - eastern_midpoint;
         if west_vec.length() == 0. {
-            west_vec = west_normal;
+            west_vec = west_vector;
         }
 
         let south_surface_normal = ellipsoid.geodetic_surface_normal_from_lle(LLE {
@@ -90,11 +89,7 @@ impl TileBoundingReagion<f32> {
         }
     }
 
-    pub(super) fn distance_to_camera(
-        &self,
-        camera_position: Vec3,
-        camera_lle: LLE<f32, Radians>,
-    ) -> f32 {
+    pub fn distance_to_camera(&self, camera_position: Vec3, camera_lle: LLE<f32, Radians>) -> f32 {
         let camera_height = camera_lle.height.val();
 
         let mut result = 0.;
@@ -141,13 +136,9 @@ impl TileBoundingReagion<f32> {
 
 #[cfg(test)]
 mod test {
-    use bevy_math::{Quat, Vec3, Vec3Swizzles};
-    use bevy_transform::components::Transform;
-    use navara_core::{
-        ellipsoid, Meters, Radians, TileXYZ, EARTH_RADIUS_F32, LLE, WGS84_32, XYZ,
-    };
+    use navara_core::{Meters, TileXYZ, EARTH_RADIUS_F32, WGS84_32, XYZ};
 
-    use crate::{camera::Orbit, utils::coord::vec3_to_xyz};
+    use crate::utils::camera::test::update_camera_transform;
 
     use super::TileBoundingReagion;
 
@@ -203,22 +194,6 @@ mod test {
                 z: Meters::new(0.),
             }
         );
-    }
-
-    fn update_camera_transform(r: f32) -> (Vec3, LLE<f32, Radians>) {
-        let orbit = Orbit {
-            r,
-            quat: Quat::from_axis_angle(Vec3::Y, 0.0),
-            tilt: 0.0,
-        };
-        let mut camera_transform = Transform::from_translation(Vec3::ZERO);
-        camera_transform.translation = orbit.to_vec3();
-        camera_transform = camera_transform.looking_at(Vec3::ZERO, Vec3::Y);
-
-        let camera_pos = camera_transform.transform_point(Vec3::ZERO);
-        let camera_lle = WGS84_32.xyz_to_lle(vec3_to_xyz(camera_pos));
-
-        (camera_pos, camera_lle)
     }
 
     #[test]

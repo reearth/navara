@@ -5,6 +5,7 @@ mod event;
 mod input;
 pub mod map;
 mod object;
+mod occluder;
 mod primitives;
 mod texture_fragment;
 mod transform;

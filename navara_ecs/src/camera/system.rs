@@ -111,10 +111,7 @@ pub fn update(
 }
 
 pub(super) fn update_frustum(
-    mut camera: Query<
-        (&CameraMarker, &mut CameraFrustum, &mut Transform),
-        Or<(Changed<CameraFrustum>, Changed<Transform>)>,
-    >,
+    mut camera: Query<(&CameraMarker, &mut CameraFrustum, &mut Transform), Changed<Transform>>,
 ) {
     for (_, mut frustum, transform) in &mut camera {
         frustum.update_sse_denominator();

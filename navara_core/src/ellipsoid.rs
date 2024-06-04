@@ -4,6 +4,8 @@ use crate::{Float, Meters, One, Rad, Radians, LLE, XYZ};
 pub struct Ellipsoid<F: Float> {
     pub a: F,
     pub b: F,
+    one_over_radii: [F; 3],
+    one_over_radii_squared: [F; 3],
 }
 
 // TODO: Move this variable to the correct place.
@@ -17,14 +19,32 @@ pub const WGS84_FE_32: f32 = 1.0 / 298.257223563;
 pub const WGS84_B_64: f64 = WGS84_A_64 * (1.0 - WGS84_FE_64);
 pub const WGS84_B_32: f32 = WGS84_A_32 * (1.0 - WGS84_FE_32);
 
+pub const ONE_OVER_RADII_64: [f64; 3] = [1. / WGS84_A_64, 1. / WGS84_A_64, 1. / WGS84_B_64];
+pub const ONE_OVER_RADII_32: [f32; 3] = [1. / WGS84_A_32, 1. / WGS84_A_32, 1. / WGS84_B_32];
+
+pub const ONE_OVER_RADII_SQUARED_64: [f64; 3] = [
+    1. / (WGS84_A_64 * WGS84_A_64),
+    1. / (WGS84_A_64 * WGS84_A_64),
+    1. / (WGS84_B_64 * WGS84_B_64),
+];
+pub const ONE_OVER_RADII_SQUARED_32: [f32; 3] = [
+    1. / (WGS84_A_32 * WGS84_A_32),
+    1. / (WGS84_A_32 * WGS84_A_32),
+    1. / (WGS84_B_32 * WGS84_B_32),
+];
+
 pub const WGS84_64: Ellipsoid<f64> = Ellipsoid {
     a: WGS84_A_64,
     b: WGS84_B_64,
+    one_over_radii: ONE_OVER_RADII_64,
+    one_over_radii_squared: ONE_OVER_RADII_SQUARED_64,
 };
 
 pub const WGS84_32: Ellipsoid<f32> = Ellipsoid {
     a: WGS84_A_32,
     b: WGS84_B_32,
+    one_over_radii: ONE_OVER_RADII_32,
+    one_over_radii_squared: ONE_OVER_RADII_SQUARED_32,
 };
 
 impl<F: Float + One<F>> Ellipsoid<F> {
@@ -110,6 +130,15 @@ impl<F: Float + One<F>> Ellipsoid<F> {
             y: Meters::new(y),
             z: Meters::new(z),
         }
+    }
+
+    // Ref: https://github.com/CesiumGS/cesium/blob/11dd728dfee6c10657f8e1197776fc5a9237ef85/packages/engine/Source/Core/Ellipsoid.js#L591
+    pub fn transform_position_to_scaled_space(&self, position: [F; 3]) -> [F; 3] {
+        [
+            position[0] * self.one_over_radii[0],
+            position[1] * self.one_over_radii[1],
+            position[2] * self.one_over_radii[2],
+        ]
     }
 }
 
