@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::*;
+use bevy_log::info;
 use bevy_math::Vec3;
 use bevy_time::{Real, Time};
 use instant::Duration;
@@ -16,10 +17,7 @@ use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
-    occluder::{
-        self,
-        ellipsoidal_occluder::{self, EllipsoidalOccluder},
-    },
+    occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     texture_fragment::TextureFragmentStatus,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
@@ -37,19 +35,22 @@ pub struct RenderedTile {
     tile_handle: TileHandle,
 }
 
+pub fn begine_update(mut tc: ResMut<TileCacheManager>) {
+    tc.rendered_frame += 1;
+}
+
 // We should use entity to store the rendered tile, because the Bevy's entity is extensible.
 fn spawn_tile_entity(
     commands: &mut Commands,
     tc: &mut TileCacheManager,
-    time: &Time<Real>,
     tile: &mut Tile,
     tile_handle: TileHandle,
 ) {
-    tile.rendered_at = time.last_update();
+    tile.rendered_at = tc.rendered_frame;
     tc.is_updated_in_this_frame = true;
 
     if let Some(cache) = tc.caches.get_mut(&tile_handle) {
-        cache.rendered_at = tile.rendered_at;
+        cache.rendered_at = tc.rendered_frame;
         return;
     }
 
@@ -59,7 +60,7 @@ fn spawn_tile_entity(
         TileCache {
             mesh_entity: None,
             tile_entity: entity.id(),
-            rendered_at: tile.rendered_at,
+            rendered_at: tc.rendered_frame,
         },
     );
 }
@@ -69,15 +70,19 @@ fn request_texture_fragment(
     qt: &mut TileQuadtree,
     tiles: &Tiles,
     handle: TileHandle,
-) {
+) -> bool {
     let tile = qt.qt.get_mut(handle).unwrap();
+    if tile.texture_fragment_entity_id.is_some() {
+        return false;
+    }
     match tiles.tile_url.as_ref().map(|s| tile_url(s, &tile.coords)) {
         Some(url) => {
             let entity = commands.spawn(TextureFragment::new(url));
             tile.texture_fragment_entity_id = Some(entity.id());
         }
-        None => {}
+        None => return false,
     }
+    return true;
 }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
@@ -116,10 +121,11 @@ fn calc_sse(
 fn begine_traverse_tile(
     ellipsoid: &Ellipsoid<f32>,
     occluder: &EllipsoidalOccluder,
-    camera: &Transform,
+    _camera: &Transform,
     tile: &mut Tile,
 ) {
-    tile.aabb.update_by_transform(camera);
+    // TODO: It might need to project AABB
+    // tile.aabb.update_by_transform(camera);
     update_tile_occludee_point(ellipsoid, occluder, tile)
 }
 
@@ -182,17 +188,17 @@ pub(super) enum TraversalResult {
 }
 
 // This process works in the following steps.
-// 1. Check if a corner of camera's frustum is inside of the tile.
-// 2. Check SSE
-// 3. If SSE works and the tile is loaded, the tile should be rendered.
-// 4. In the other hand, if SSE works but the tile is loaded, the tile should be requested, not rendered.
-// 5. If above steps aren't matched, traverse children.
-// 6. If children couldn't find, use this tile instead.
+// 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
+// 2. Check horizon culling because the frustum culling is enough.
+// 3. Check SSE is within max SSE.
+// 4. If SSE works and the tile is loaded, the tile should be rendered.
+// 5. On the other hand, if SSE works but the tile isn't loaded, the tile should be requested, not rendered.
+// 6. If above steps aren't matched, traverse children.
+// 7. If children couldn't find, use this tile instead.
 fn traverse_tile(
     command: &mut Commands,
     tiles: &Tiles,
     t: &Box<dyn GeoSpacialQuadLeaf<usize>>,
-    time: &Time<Real>,
     tc: &mut TileCacheManager,
     qt: &mut TileQuadtree,
     camera: &Transform,
@@ -205,8 +211,12 @@ fn traverse_tile(
 ) -> TraversalResult {
     let tile = match qt.qt.get_mut(t.handle()) {
         Some(tile) => tile,
-        None => return TraversalResult::NotFound,
+        None => unreachable!(),
     };
+
+    if tile.coords.z >= tiles.max_z {
+        return TraversalResult::NotFound;
+    }
 
     begine_traverse_tile(ellipsoid, occluder, camera, tile);
 
@@ -216,7 +226,6 @@ fn traverse_tile(
         .texture_fragment_entity_id
         .map(|e| texture_fragment.get(e).map(|t| &t.status));
 
-    // FIXME: Need to handle failded request
     let is_texture_loaded =
         texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Sucess)));
 
@@ -236,25 +245,22 @@ fn traverse_tile(
     }
 
     let max_sse = tiles.max_sse;
-    let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
-    let meets_sse = sse <= max_sse;
 
-    let is_renderable = is_intersecting_with_frustum && is_visible;
+    let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
+    let meets_sse = sse < max_sse;
+
+    let is_renderable = is_level_zero_tile || (is_intersecting_with_frustum && is_visible);
 
     if meets_sse {
         if is_texture_loaded {
             return TraversalResult::TileRendered;
         }
-        if tile.texture_fragment_entity_id.is_none() {
-            request_texture_fragment(command, qt, tiles, t.handle());
-        }
+        request_texture_fragment(command, qt, tiles, t.handle());
         return TraversalResult::NotFound;
     }
 
     if is_renderable || is_ancestor_renderable {
-        if tile.texture_fragment_entity_id.is_none() {
-            request_texture_fragment(command, qt, tiles, t.handle());
-        }
+        request_texture_fragment(command, qt, tiles, t.handle());
     }
 
     if !is_texture_loaded {
@@ -271,51 +277,48 @@ fn traverse_tile(
     };
 
     let mut are_children_rendered = true;
-    for child in &children {
-        if !matches!(
-            traverse_tile(
-                command,
-                tiles,
-                &child,
-                time,
-                tc,
-                qt,
-                camera,
-                frustum,
-                texture_fragment,
-                window,
-                ellipsoid,
-                occluder,
-                is_renderable,
-            ),
-            TraversalResult::TileRendered
-        ) {
+    let mut rendered_children_indices = vec![];
+    for (i, child) in children.iter().enumerate() {
+        let traversal_result = traverse_tile(
+            command,
+            tiles,
+            &child,
+            tc,
+            qt,
+            camera,
+            frustum,
+            texture_fragment,
+            window,
+            ellipsoid,
+            occluder,
+            is_renderable,
+        );
+        if matches!(traversal_result, TraversalResult::NotFound) {
             are_children_rendered = false;
+        }
+        if matches!(traversal_result, TraversalResult::ChildrenRendered) {
+            rendered_children_indices.push(i);
         }
     }
 
     if are_children_rendered {
-        for child in &children {
+        for (i, child) in children.iter().enumerate() {
+            if rendered_children_indices.contains(&i) {
+                continue;
+            }
+
             let handle = child.handle();
             let tile = match qt.qt.get_mut(handle) {
                 Some(t) => t,
-                None => {
-                    break;
-                }
+                None => unreachable!(),
             };
-            spawn_tile_entity(command, tc, time, tile, handle);
+            spawn_tile_entity(command, tc, tile, handle);
         }
 
         return TraversalResult::ChildrenRendered;
     }
 
-    let tile = match qt.qt.get(t.handle()) {
-        Some(tile) => tile,
-        None => return TraversalResult::NotFound,
-    };
-
-    if tile.texture_fragment_entity_id.is_none() {
-        request_texture_fragment(command, qt, tiles, t.handle());
+    if request_texture_fragment(command, qt, tiles, t.handle()) {
         return TraversalResult::NotFound;
     }
 
@@ -327,10 +330,9 @@ pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<TileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
-    time: Res<Time<Real>>,
     window: Res<Window>,
     tiles: Query<&Tiles>,
-    camera: Query<(&CameraMarker, &Transform, &CameraFrustum), Changed<Transform>>,
+    camera: Query<(&CameraMarker, &Transform, &CameraFrustum)>,
     texture_fragment: Query<&TextureFragment>,
     occluder: Query<&EllipsoidalOccluder>,
 ) {
@@ -352,7 +354,6 @@ pub fn update_tiles(
                 &mut commands,
                 tiles,
                 &zero_tile,
-                &time,
                 &mut tc,
                 &mut qt,
                 camera,
@@ -367,20 +368,12 @@ pub fn update_tiles(
                     spawn_tile_entity(
                         &mut commands,
                         &mut tc,
-                        &time,
                         qt.qt.get_mut(zero_tile.handle()).unwrap(),
                         zero_tile.handle(),
                     );
                 }
                 TraversalResult::NotFound => {
-                    let tile = match qt.qt.get(zero_tile.handle()) {
-                        Some(tile) => tile,
-                        None => continue,
-                    };
-
-                    if tile.texture_fragment_entity_id.is_none() {
-                        request_texture_fragment(&mut commands, &mut qt, tiles, zero_tile.handle());
-                    }
+                    request_texture_fragment(&mut commands, &mut qt, tiles, zero_tile.handle());
                 }
                 TraversalResult::ChildrenRendered => {}
             };
@@ -468,8 +461,7 @@ pub fn transfer_mesh(
 pub fn end_update(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
-    mut qt: ResMut<TileQuadtree>,
-    time: Res<Time<Real>>,
+    qt: ResMut<TileQuadtree>,
     rendered_tiles: Query<&RenderedTile>,
 ) {
     if !tc.is_updated_in_this_frame {
@@ -477,22 +469,23 @@ pub fn end_update(
     }
 
     for rendered_tile in &rendered_tiles {
-        let (rendered_at, _data_requester_entity_id, texture_fragment_entity_id) = {
+        let (rendered_at, _data_requester_entity_id, texture_fragment_entity_id, coords) = {
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
             (
                 tile.rendered_at,
                 tile.data_requester_entity_id,
                 tile.texture_fragment_entity_id,
+                tile.coords,
             )
         };
         match (
             rendered_at,
-            time.last_update(),
+            tc.rendered_frame,
             tc.caches.get(&rendered_tile.tile_handle),
         ) {
-            (Some(tile_rendered_at), Some(last_updated_at), Some(cache)) => {
+            (tile_rendered_at, rendered_frame, Some(cache)) => {
                 // Remove unused mesh.
-                if last_updated_at.duration_since(tile_rendered_at) >= Duration::from_millis(1) {
+                if rendered_frame != tile_rendered_at {
                     {
                         if let Some(mesh_entity) = cache.mesh_entity {
                             commands.entity(mesh_entity).remove::<MeshBundle>();
@@ -504,18 +497,18 @@ pub fn end_update(
 
                 // FIXME: This process deletes all cached textures by a second, but we should keep the cache until
                 // the cache overflowes the specified cache size
-                if last_updated_at.duration_since(tile_rendered_at) >= Duration::from_millis(1000) {
-                    {
-                        qt.qt
-                            .get_mut(rendered_tile.tile_handle)
-                            .map(|t| t.texture_fragment_entity_id = None);
-                        if let Some(fragment) = texture_fragment_entity_id {
-                            commands.entity(fragment).remove::<TextureFragment>();
-                        }
-                    }
+                // if last_updated_at.duration_since(tile_rendered_at) >= Duration::from_millis(1000) {
+                //     {
+                // qt.qt
+                //     .get_mut(rendered_tile.tile_handle)
+                //     .map(|t| t.texture_fragment_entity_id = None);
+                // if let Some(fragment) = texture_fragment_entity_id {
+                //     commands.entity(fragment).remove::<TextureFragment>();
+                // }
+                // }
 
-                    // TODO: Handle the data requester as well.
-                }
+                // TODO: Handle the data requester as well.
+                // }
             }
             _ => continue,
         }

@@ -5,7 +5,7 @@ use bevy_ecs::{
     event::{Event, EventReader},
     query::Added,
     removal_detection::RemovedComponents,
-    system::{Commands, Query, ResMut},
+    system::{Query, ResMut},
 };
 use bevy_log::info;
 
@@ -67,7 +67,6 @@ pub struct TextureFragmentLoadedEvent {
 }
 
 fn handle_loaded_event(
-    mut commands: Commands,
     mut loaded_ev: EventReader<TextureFragmentLoadedEvent>,
     mut t: Query<&mut TextureFragment>,
 ) {

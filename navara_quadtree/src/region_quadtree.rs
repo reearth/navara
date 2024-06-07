@@ -44,13 +44,14 @@ where
             return;
         }
 
-        if let Ok(area) = AreaBuilder::default()
+        match AreaBuilder::default()
             .anchor(Point { x, y })
             .dimensions((width, width))
             .build()
         {
-            self.qt.insert(area, init((x, y, z)));
-        }
+            Ok(area) => self.qt.insert(area, init((x, y, z))),
+            Err(e) => unreachable!("{}", e),
+        };
     }
 
     fn query_strict(&self, (x, y, z): Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
@@ -67,11 +68,17 @@ where
             Ok(area) => {
                 let child = self.qt.query_strict(area);
                 if let Some(child) = child.into_iter().next() {
+                    let area = child.area();
+                    let area_point = area.anchor();
+                    let area_width = area.width();
+                    if area_point.x != x || area_point.y != y || area_width != width {
+                        return None;
+                    }
                     return Some(Box::new(Entry::new(child, (x, y, z), self.depth)));
                 }
                 return None;
             }
-            Err(_) => return None,
+            Err(e) => unreachable!("{}", e),
         }
     }
 }
@@ -221,15 +228,15 @@ mod tests {
             qt.initialize_leaf((2, 2, 4), &|(x, y, z)| zxy_string((z, x, y)));
 
             debug_assert_eq!(
-                qt.get(qt.parent((5, 4, 4)).unwrap().handle()).unwrap(),
+                qt.get(qt.parent((4, 4, 5)).unwrap().handle()).unwrap(),
                 &zxy_string((4, 2, 2))
             );
             debug_assert_eq!(
-                qt.get(qt.parent((5, 5, 4)).unwrap().handle()).unwrap(),
+                qt.get(qt.parent((4, 5, 5)).unwrap().handle()).unwrap(),
                 &zxy_string((4, 2, 2))
             );
             debug_assert_eq!(
-                qt.get(qt.parent((5, 4, 4)).unwrap().handle()).unwrap(),
+                qt.get(qt.parent((5, 4, 5)).unwrap().handle()).unwrap(),
                 &zxy_string((4, 2, 2))
             );
             debug_assert_eq!(
@@ -251,6 +258,58 @@ mod tests {
                     &zxy_string((1, 1, 0)),
                     &zxy_string((1, 0, 1)),
                     &zxy_string((1, 1, 1))
+                ],
+            ));
+        }
+    }
+
+    #[test]
+    fn it_should_not_get_unxepected_children() {
+        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(RegionQuadtree::new(20));
+
+        {
+            let zero = qt.zero();
+            debug_assert!(zero.is_none());
+        }
+
+        {
+            qt.initialize_children((0, 5, 3), &|(x, y, z)| zxy_string((z, x, y)));
+
+            let children = qt.children((0, 5, 3));
+            debug_assert!(children.is_some());
+            debug_assert!(unordered_elements_are(
+                children
+                    .unwrap()
+                    .iter()
+                    .map(|v| qt.get(v.handle()).unwrap()),
+                vec![
+                    &zxy_string((4, 0, 10)),
+                    &zxy_string((4, 1, 10)),
+                    &zxy_string((4, 0, 11)),
+                    &zxy_string((4, 1, 11))
+                ],
+            ));
+        }
+
+        {
+            // It should not get children which isn't matched exactly.
+            let children = qt.children((0, 1, 1));
+            debug_assert!(children.is_none());
+
+            qt.initialize_children((0, 1, 1), &|(x, y, z)| zxy_string((z, x, y)));
+
+            let children = qt.children((0, 1, 1));
+            debug_assert!(children.is_some());
+            debug_assert!(unordered_elements_are(
+                children
+                    .unwrap()
+                    .iter()
+                    .map(|v| qt.get(v.handle()).unwrap()),
+                vec![
+                    &zxy_string((2, 0, 2)),
+                    &zxy_string((2, 1, 2)),
+                    &zxy_string((2, 0, 3)),
+                    &zxy_string((2, 1, 3))
                 ],
             ));
         }

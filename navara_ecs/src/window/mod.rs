@@ -23,6 +23,7 @@ fn handle_resize(
     for w in ev.read() {
         for (_, mut frustum) in &mut camera {
             frustum.aspect_ratio = w.width / w.height;
+            frustum.update_sse_denominator();
         }
     }
 }

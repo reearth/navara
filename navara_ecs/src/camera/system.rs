@@ -1,6 +1,6 @@
 use bevy_ecs::{
     event::EventReader,
-    query::{Changed, Or},
+    query::Changed,
     system::{Commands, Query, Res},
 };
 use bevy_input::{
@@ -28,7 +28,6 @@ pub fn startup(mut commands: Commands) {
             tilt: 0.0,
         },
         transform,
-        // FIXME! The fov should be radian, not degree
         CameraFrustum::new(&transform, 0.1, 1e8, Angle::new(50.).rad().val(), 1.),
     ));
 }

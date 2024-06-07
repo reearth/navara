@@ -20,6 +20,7 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
                 extent,
                 color,
                 max_sse,
+                max_z,
                 wireframe,
             } => {
                 commands.spawn(Tiles {
@@ -31,6 +32,7 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
                     extent: *extent,
                     color: *color,
                     max_sse: *max_sse,
+                    max_z: *max_z,
                     wireframe: *wireframe,
                 });
             }

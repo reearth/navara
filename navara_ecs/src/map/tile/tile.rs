@@ -1,6 +1,5 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use instant::Instant;
 use navara_core::{Extent, LngLat, Radians, TileXYZ, LLE, WGS84_32};
 
 use navara_quadtree::Quadtree;
@@ -21,6 +20,7 @@ pub struct Tiles {
     pub extent: Option<Extent<f32, Radians>>,
     pub color: u32,
     pub max_sse: f32,
+    pub max_z: usize,
     pub wireframe: bool,
 }
 
@@ -29,7 +29,7 @@ pub struct Tile {
     pub coords: TileXYZ,
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
-    pub(super) rendered_at: Option<Instant>,
+    pub(super) rendered_at: usize,
     pub(super) data_requester_entity_id: Option<Entity>,
     pub(super) texture_fragment_entity_id: Option<Entity>,
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,

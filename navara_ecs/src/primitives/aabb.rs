@@ -51,7 +51,7 @@ impl Aabb {
         let e = ellipsoid.lle_to_xyz(LLE::<f32, Radians> {
             lng: Angle::new(extents.0),
             lat: Angle::new(extents.1),
-            height: Meters::new(0.1),
+            height: Meters::new(0.),
         });
 
         let center = Vec3::new(c.x.val(), c.y.val(), c.z.val());

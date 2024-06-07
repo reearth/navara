@@ -58,8 +58,8 @@ where
         let mut children: Vec<Box<dyn GeoSpacialQuadLeaf<U>>> = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
-            let x = ((x << 1) + (i % (U::one() + U::one()))) as U;
-            let y = ((y << 1) + (i >> 1)) as U;
+            let x = (x << 1) + (i % (U::one() + U::one()));
+            let y = (y << 1) + (i >> 1);
             let z = z + U::one();
             match self.leaf((x, y, z)) {
                 Some(v) => children.push(v),
@@ -72,5 +72,4 @@ where
     fn get(&self, handle: u64) -> Option<&T>;
 
     fn get_mut(&mut self, handle: u64) -> Option<&mut T>;
-    // fn initialize_children(&self);
 }

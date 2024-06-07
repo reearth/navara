@@ -1,6 +1,6 @@
 use bevy_ecs::{entity::Entity, system::Resource, world::World};
 
-use crate::{texture_fragment::TextureFragment, DataRequester, Transform};
+use crate::{DataRequester, Transform};
 
 use super::{ComponentEvent, Events, ReconstructableComponentEvent};
 
