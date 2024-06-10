@@ -98,15 +98,15 @@ view.addLayer({
 //   wireframe: false,
 // });
 
-// view.addLayer({
-//   type: "3dtiles",
-//   url: "https://assets.cms.plateau.reearth.io/assets/71/f45927-eac8-48d3-9919-414605cf116a/14100_yokohama-shi_2022_3dtiles_2_op_veg/tileset.json",
-// });
+view.addLayer({
+  type: "3dtiles",
+  url: "https://assets.cms.plateau.reearth.io/assets/71/f45927-eac8-48d3-9919-414605cf116a/14100_yokohama-shi_2022_3dtiles_2_op_veg/tileset.json",
+});
 
-// view.addLayer({
-//   type: "3dtiles",
-//   url: "https://assets.cms.plateau.reearth.io/assets/6a/d55641-b65d-4c06-a517-56854aae77f7/14100_yokohama-shi_2022_3dtiles_2_op_bldg_14104_naka-ku_lod1/tileset.json",
-// });
+view.addLayer({
+  type: "3dtiles",
+  url: "https://assets.cms.plateau.reearth.io/assets/6a/d55641-b65d-4c06-a517-56854aae77f7/14100_yokohama-shi_2022_3dtiles_2_op_bldg_14104_naka-ku_lod1/tileset.json",
+});
 
 // view.addLayer({
 //   type: "mvt",
