@@ -1,4 +1,4 @@
-use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
+use bevy_app::{App, Plugin, PreUpdate, Update};
 
 mod event;
 use bevy_ecs::schedule::IntoSystemConfigs;
@@ -7,7 +7,7 @@ use event::*;
 mod layer;
 pub use layer::LayerDescription;
 mod tile;
-use tile::{system::begine_update, tile_cache_manager::TileCacheManager, TileQuadtree};
+use tile::{tile_cache_manager::TileCacheManager, TileQuadtree};
 
 pub struct MapPlugin;
 
@@ -15,7 +15,10 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
             .insert_resource(TileQuadtree::new_with_region_qt(30))
-            .add_systems(PreUpdate, begine_update)
+            .add_systems(
+                PreUpdate,
+                (tile::system::clear_caches, tile::system::begine_update).chain(),
+            )
             .add_systems(
                 Update,
                 (
@@ -26,7 +29,6 @@ impl Plugin for MapPlugin {
                     // send_data_requst_events,
                 ),
             )
-            .add_systems(PostUpdate, tile::system::end_update)
             .add_event::<AddLayerEvent>();
     }
 }

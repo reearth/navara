@@ -40,23 +40,10 @@ impl Tile {
         let extent = coords.extent();
         Self {
             coords,
-            aabb: Aabb::from_lle_f32(
-                LLE::from(LngLat {
-                    lng: extent.west,
-                    lat: extent.south,
-                }),
-                LLE::from(LngLat {
-                    lng: extent.east,
-                    lat: extent.north,
-                }),
-            ),
+            aabb: Aabb::from_extent_f32(extent),
             bounding_reagion: Some(TileBoundingReagion::from_extent_f32(extent, WGS84_32)),
             ..Default::default()
         }
-    }
-
-    pub(super) fn is_coords_zero(&self) -> bool {
-        self.coords.x == 0 && self.coords.y == 0 && self.coords.z == 0
     }
 }
 

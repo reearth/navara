@@ -69,21 +69,22 @@ impl<F: Float + One<F>> Ellipsoid<F> {
     }
 
     pub fn eccentricity_squared(&self) -> F {
-        let e = self.eccentricity();
-        e.powi(2)
+        let a = self.semi_major_axis();
+        let b = self.semi_minor_axis();
+        F::one() - (b.powi(2) / a.powi(2))
     }
 
     pub fn lle_to_xyz(&self, lle: LLE<F, Radians>) -> XYZ<F> {
         let a = self.semi_major_axis();
-        let e = self.eccentricity();
+        let e2 = self.eccentricity_squared();
         let h = lle.height.val();
         let lat = lle.lat;
         let lon = lle.lng;
 
-        let n = a / (F::one() - e.powi(2) * lat.sin().powi(2)).sqrt();
+        let n = a / (F::one() - e2 * lat.sin().powi(2)).sqrt();
         let x = (n + h) * lat.cos() * lon.cos();
         let y = (n + h) * lat.cos() * lon.sin();
-        let z = (n * (F::one() - e.powi(2)) + h) * lat.sin();
+        let z = (n * (F::one() - e2) + h) * lat.sin();
 
         XYZ {
             x: Meters::new(x),
@@ -94,19 +95,28 @@ impl<F: Float + One<F>> Ellipsoid<F> {
 
     pub fn xyz_to_lle(&self, xyz: XYZ<F>) -> LLE<F, Radians> {
         let a = self.semi_major_axis();
-        let e = self.eccentricity();
+        let b = self.semi_minor_axis();
+        let e2 = self.eccentricity_squared();
         let x = xyz.x.val();
         let y = xyz.y.val();
         let z = xyz.z.val();
 
         let p = (x.powi(2) + y.powi(2)).sqrt();
-        let theta = (z * a) / (p * e);
+        let theta = (z * a).atan2(p * b);
 
         let lon = y.atan2(x);
-        let lat = ((z + e.powi(2) * a * (theta.sin().powi(3)))
-            / (p - e.powi(2) * a * (theta.cos().powi(3))))
-        .atan();
-        let h = (p / lat.cos()) - (a / (F::one() - e.powi(2) * lat.sin().powi(2)).sqrt());
+        let lat = (z + e2 * a * (theta.sin().powi(3))).atan2(p - e2 * a * (theta.cos().powi(3)));
+
+        let n = a / (F::one() - e2 * lat.sin().powi(2)).sqrt();
+        let x_surface = n * lat.cos() * lon.cos();
+        let y_surface = n * lat.cos() * lon.sin();
+        let z_surface = (n * (F::one() - e2)) * lat.sin();
+
+        // Calculate the distance from the surface of ellipsoid as height
+        let dx = x - x_surface;
+        let dy = y - y_surface;
+        let dz = z - z_surface;
+        let h = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
 
         LLE {
             lat: Rad::new(lat),
@@ -156,8 +166,18 @@ impl<F: Float + One<F>> XYZ<F> {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Display;
+
     use super::*;
     use crate::Deg;
+
+    // TODO: Move this to correct place
+    fn assert_delta<F: Float + PartialOrd + Display>(a: F, b: F, d: F) {
+        if (a - b).abs() < d {
+        } else {
+            panic!("a: {}  b: {} d: {}", a, b, d);
+        }
+    }
 
     #[test]
     fn test_ellipsoid() {
@@ -189,5 +209,24 @@ mod tests {
         assert!((-2430601.8 - xyz.x.val()).abs() < 0.1, "x: {}", xyz.x.val());
         assert!((-4702442.7 - xyz.y.val()).abs() < 0.1, "y: {}", xyz.y.val());
         assert!((3546587.4 - xyz.z.val()).abs() < 0.1, "z: {}", xyz.z.val());
+    }
+
+    #[test]
+    fn test_height() {
+        let lle = WGS84_32.xyz_to_lle(XYZ {
+            x: Meters::new(-3959344.115631663),
+            y: Meters::new(3351691.3409433914),
+            z: Meters::new(3699403.2700240086),
+        });
+        let lng = lle.lng;
+        let lat = lle.lat;
+        let height = lle.height;
+
+        // Calculated by Cesium
+        let expected = (2.4391183557348084, 0.6226667543730222, 581.580);
+
+        assert_delta(lng.val(), expected.0, 0.0001);
+        assert_delta(lat.val(), expected.1, 0.0001);
+        assert_delta(height.val(), expected.2, 0.5);
     }
 }

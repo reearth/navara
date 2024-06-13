@@ -15,8 +15,12 @@ app.get('/:z/:x/:y', async (c) => {
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, size, size);
+
+  ctx.fillStyle = '#FFFFFF';
+  const border = 5;
+  ctx.fillRect(border, border, size - border, size - border);
 
   ctx.fillStyle = '#000000';
   ctx.font = '20px Arial';

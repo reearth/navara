@@ -1,7 +1,7 @@
 use bevy_ecs::component::Component;
 use bevy_math::Vec3;
 use bevy_transform::components::Transform;
-use navara_core::{Angle, Meters, Radians, LLE, WGS84_32};
+use navara_core::{Angle, Extent, LngLat, Radians, WGS84_32};
 
 use super::Plane;
 
@@ -30,32 +30,87 @@ impl Aabb {
         }
     }
 
-    pub fn from_lle_f32(p1: LLE<f32, Radians>, p2: LLE<f32, Radians>) -> Self {
+    pub fn from_extent_f32(extent: Extent<f32, Radians>) -> Self {
         let ellipsoid = WGS84_32;
-        let (max_lng, max_lat) = (
-            p1.lng.val().max(p2.lng.val()),
-            p1.lat.val().max(p2.lat.val()),
-        );
-        let (min_lng, min_lat) = (
-            p1.lng.val().min(p2.lng.val()),
-            p1.lat.val().min(p2.lat.val()),
-        );
-        let (center_lng, center_lat) = ((max_lng + min_lng) / 2., (max_lat + min_lat) / 2.);
-        let extents = (max_lng - center_lng, max_lat - center_lat);
 
-        let c = ellipsoid.lle_to_xyz(LLE::<f32, Radians> {
-            lng: Angle::new(center_lng),
-            lat: Angle::new(center_lat),
-            height: Meters::new(0.),
-        });
-        let e = ellipsoid.lle_to_xyz(LLE::<f32, Radians> {
-            lng: Angle::new(extents.0),
-            lat: Angle::new(extents.1),
-            height: Meters::new(0.),
-        });
+        let nw = LngLat {
+            lng: extent.west,
+            lat: extent.north,
+        };
+        let ne = LngLat {
+            lng: extent.east,
+            lat: extent.north,
+        };
+        let se = LngLat {
+            lng: extent.east,
+            lat: extent.south,
+        };
+        let sw = LngLat {
+            lng: extent.west,
+            lat: extent.south,
+        };
 
-        let center = Vec3::new(c.x.val(), c.y.val(), c.z.val());
-        let extents = Vec3::new(e.x.val(), e.y.val(), e.z.val());
+        let center = LngLat {
+            lng: Angle::new((sw.lng.val() + ne.lng.val()) / 2.),
+            lat: Angle::new((sw.lat.val() + ne.lat.val()) / 2.),
+        };
+
+        let p_nw = ellipsoid.lle_to_xyz(nw.into());
+        let p_ne = ellipsoid.lle_to_xyz(ne.into());
+        let p_se = ellipsoid.lle_to_xyz(se.into());
+        let p_sw = ellipsoid.lle_to_xyz(sw.into());
+
+        let p_center = ellipsoid.lle_to_xyz(center.into());
+
+        let max_x = p_nw
+            .x
+            .val()
+            .max(p_ne.x.val())
+            .max(p_se.x.val())
+            .max(p_sw.x.val())
+            .max(p_center.x.val());
+        let max_y = p_nw
+            .y
+            .val()
+            .max(p_ne.y.val())
+            .max(p_se.y.val())
+            .max(p_sw.y.val())
+            .max(p_center.y.val());
+        let max_z = p_nw
+            .z
+            .val()
+            .max(p_ne.z.val())
+            .max(p_se.z.val())
+            .max(p_sw.z.val())
+            .max(p_center.z.val());
+        let min_x = p_nw
+            .x
+            .val()
+            .min(p_ne.x.val())
+            .min(p_se.x.val())
+            .min(p_sw.x.val())
+            .min(p_center.x.val());
+        let min_y = p_nw
+            .y
+            .val()
+            .min(p_ne.y.val())
+            .min(p_se.y.val())
+            .min(p_sw.y.val())
+            .min(p_center.y.val());
+        let min_z = p_nw
+            .z
+            .val()
+            .min(p_ne.z.val())
+            .min(p_se.z.val())
+            .min(p_sw.z.val())
+            .min(p_center.z.val());
+
+        let center = Vec3::new(
+            (max_x + min_x) / 2.,
+            (max_y + min_y) / 2.,
+            (max_z + min_z) / 2.,
+        );
+        let extents = Vec3::new(max_x - center.x, max_y - center.y, max_z - center.z);
 
         Self {
             center,
@@ -92,6 +147,7 @@ impl Aabb {
 #[cfg(test)]
 mod test {
     use bevy_math::Vec3;
+    use navara_core::{TileXY, TileXYZ};
 
     use crate::primitives::{Aabb, Plane};
 

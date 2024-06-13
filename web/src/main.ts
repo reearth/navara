@@ -54,6 +54,7 @@ const fujiExtent = {
 //   tile_url: "http://localhost:8888/{z}/{x}/{y}.png",
 //   z: 4,
 //   max_z: 21,
+//   max_sse: 2,
 //   wireframe: false,
 // });
 view.addLayer({
@@ -63,8 +64,8 @@ view.addLayer({
   height: 0,
   tile_url: tileUrl,
   z: 4,
-  max_sse: 3,
-  max_z: 21,
+  max_sse: 2,
+  max_z: 23,
   wireframe: false,
 });
 

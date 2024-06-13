@@ -1,11 +1,6 @@
 use bevy_ecs::component::Component;
 use bevy_math::Vec3;
-use navara_core::{ellipsoid, Ellipsoid};
-
-// TODO: Steps to implement horizon occulusion
-// - [x] Calculate the camera position in scaled space every camera move.
-// - [] Calculate occludee point for each tiles
-// - [] Calculate the occlusion to select the renderable tile
+use navara_core::Ellipsoid;
 
 /// This is used to occlude a point by horizon occlusion.
 /// This is based on Cesium's implementation.
@@ -29,10 +24,8 @@ impl EllipsoidalOccluder {
         self.camera_position_in_scaled_space = Vec3::from_array(
             ellipsoid.transform_position_to_scaled_space(camera_position.to_array()),
         );
-        self.distance_to_ellipsoid_surface_squared = self
-            .camera_position_in_scaled_space
-            .dot(self.camera_position_in_scaled_space)
-            - 1.;
+        self.distance_to_ellipsoid_surface_squared =
+            self.camera_position_in_scaled_space.length_squared() - 1.;
     }
 
     /// Ref: https://github.com/CesiumGS/cesium/blob/16674c161b161755c9143c2940a062042cecaefa/packages/engine/Source/Core/EllipsoidalOccluder.js#L197
@@ -114,7 +107,7 @@ fn compute_magnitude(
 fn magnitude_to_point(scaled_space_direction_to_point: Vec3, max_mag: f32) -> Option<Vec3> {
     // The horizon culling point is undefined if there were no positions from which to compute it,
     // the directionToPoint is pointing opposite all of the positions,  or if we computed NaN or infinity.
-    if max_mag <= 0.0 || max_mag == (1.0 / 0.0) || max_mag != max_mag {
+    if max_mag <= 0.0 || max_mag.is_infinite() {
         return None;
     }
 

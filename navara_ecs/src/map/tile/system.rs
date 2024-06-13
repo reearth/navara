@@ -1,8 +1,5 @@
 use bevy_ecs::prelude::*;
-use bevy_log::info;
 use bevy_math::Vec3;
-use bevy_time::{Real, Time};
-use instant::Duration;
 use navara_core::{
     iter_tiles,
     terrain::{
@@ -138,44 +135,44 @@ fn update_tile_occludee_point(
     let extent = tile.coords.extent();
     let center = tile.aabb.center;
 
-    let mut positions = vec![];
-
-    positions.push(xyz_to_vec3(
-        ellipsoid.lle_to_xyz(
-            LngLat {
-                lng: extent.west,
-                lat: extent.south,
-            }
-            .into(),
+    let positions = vec![
+        xyz_to_vec3(
+            ellipsoid.lle_to_xyz(
+                LngLat {
+                    lng: extent.west,
+                    lat: extent.south,
+                }
+                .into(),
+            ),
         ),
-    ));
-    positions.push(xyz_to_vec3(
-        ellipsoid.lle_to_xyz(
-            LngLat {
-                lng: extent.east,
-                lat: extent.south,
-            }
-            .into(),
+        xyz_to_vec3(
+            ellipsoid.lle_to_xyz(
+                LngLat {
+                    lng: extent.east,
+                    lat: extent.south,
+                }
+                .into(),
+            ),
         ),
-    ));
-    positions.push(xyz_to_vec3(
-        ellipsoid.lle_to_xyz(
-            LngLat {
-                lng: extent.west,
-                lat: extent.north,
-            }
-            .into(),
+        xyz_to_vec3(
+            ellipsoid.lle_to_xyz(
+                LngLat {
+                    lng: extent.west,
+                    lat: extent.north,
+                }
+                .into(),
+            ),
         ),
-    ));
-    positions.push(xyz_to_vec3(
-        ellipsoid.lle_to_xyz(
-            LngLat {
-                lng: extent.east,
-                lat: extent.north,
-            }
-            .into(),
+        xyz_to_vec3(
+            ellipsoid.lle_to_xyz(
+                LngLat {
+                    lng: extent.east,
+                    lat: extent.north,
+                }
+                .into(),
+            ),
         ),
-    ));
+    ];
 
     tile.occludee_point_in_scaled_space =
         occluder.compute_horizontal_culling_point(ellipsoid, center, positions);
@@ -207,7 +204,6 @@ fn traverse_tile(
     window: &Window,
     ellipsoid: &Ellipsoid<f32>,
     occluder: &EllipsoidalOccluder,
-    is_ancestor_renderable: bool,
 ) -> TraversalResult {
     let tile = match qt.qt.get_mut(t.handle()) {
         Some(tile) => tile,
@@ -220,8 +216,6 @@ fn traverse_tile(
 
     begine_traverse_tile(ellipsoid, occluder, camera, tile);
 
-    let is_level_zero_tile = tile.is_coords_zero();
-
     let texture_fragment_status = tile
         .texture_fragment_entity_id
         .map(|e| texture_fragment.get(e).map(|t| &t.status));
@@ -229,18 +223,18 @@ fn traverse_tile(
     let is_texture_loaded =
         texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Sucess)));
 
-    let is_intersecting_with_frustum =
-        is_level_zero_tile || intersect_with_camera_frustum(camera, frustum, &tile);
-    if !is_intersecting_with_frustum && !is_ancestor_renderable {
+    let is_rendered_last_frame = tc.caches.get(&t.handle()).is_some();
+
+    let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, &tile);
+    if !is_intersecting_with_frustum {
         return TraversalResult::NotFound;
     }
 
-    let is_visible = is_level_zero_tile
-        || tile
-            .occludee_point_in_scaled_space
-            .map(|p| occluder.is_scaled_space_point_visible(p))
-            .unwrap_or(false);
-    if !is_visible && !is_ancestor_renderable {
+    let is_visible = tile
+        .occludee_point_in_scaled_space
+        .map(|p| occluder.is_scaled_space_point_visible(p))
+        .unwrap_or(true);
+    if !is_visible {
         return TraversalResult::NotFound;
     }
 
@@ -249,17 +243,14 @@ fn traverse_tile(
     let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
     let meets_sse = sse < max_sse;
 
-    let is_renderable = is_level_zero_tile || (is_intersecting_with_frustum && is_visible);
+    let is_renderable = is_rendered_last_frame || is_texture_loaded;
 
     if meets_sse {
-        if is_texture_loaded {
+        if is_renderable {
             return TraversalResult::TileRendered;
         }
         request_texture_fragment(command, qt, tiles, t.handle());
-        return TraversalResult::NotFound;
-    }
-
-    if is_renderable || is_ancestor_renderable {
+    } else {
         request_texture_fragment(command, qt, tiles, t.handle());
     }
 
@@ -276,7 +267,7 @@ fn traverse_tile(
         }
     };
 
-    let mut are_children_rendered = true;
+    let mut are_children_rendered = false;
     let mut rendered_children_indices = vec![];
     for (i, child) in children.iter().enumerate() {
         let traversal_result = traverse_tile(
@@ -291,16 +282,16 @@ fn traverse_tile(
             window,
             ellipsoid,
             occluder,
-            is_renderable,
         );
-        if matches!(traversal_result, TraversalResult::NotFound) {
-            are_children_rendered = false;
+        if !matches!(traversal_result, TraversalResult::NotFound) {
+            are_children_rendered = true;
         }
         if matches!(traversal_result, TraversalResult::ChildrenRendered) {
             rendered_children_indices.push(i);
         }
     }
 
+    // FIXME: Remove unnecessary spawned children if `are_children_rendered` is false.
     if are_children_rendered {
         for (i, child) in children.iter().enumerate() {
             if rendered_children_indices.contains(&i) {
@@ -362,7 +353,6 @@ pub fn update_tiles(
                 &window,
                 &WGS84_32,
                 occluder,
-                false,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
@@ -458,7 +448,7 @@ pub fn transfer_mesh(
     }
 }
 
-pub fn end_update(
+pub fn clear_caches(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
     qt: ResMut<TileQuadtree>,
@@ -468,7 +458,14 @@ pub fn end_update(
         return;
     }
 
+    // Prevent blocking the frame by this deletion process
+    let max_deletion = 10000;
+    let mut count = 0;
     for rendered_tile in &rendered_tiles {
+        if count >= max_deletion {
+            break;
+        }
+        count += 1;
         let (rendered_at, _data_requester_entity_id, texture_fragment_entity_id, coords) = {
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
             (
