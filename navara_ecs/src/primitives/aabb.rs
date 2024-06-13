@@ -18,7 +18,6 @@ impl Aabb {
         let max = Vec3::new(p1.x.max(p2.x), p1.y.max(p2.y), p1.z.max(p2.z));
         let min = Vec3::new(p1.x.min(p2.x), p1.y.min(p2.y), p1.z.min(p2.z));
 
-        // TODO: Calculte the center on the spherical surface.
         // It's just center between two points, not on the spherical surface.
         let center = (max + min) * 0.5;
         let extents = max - center;
