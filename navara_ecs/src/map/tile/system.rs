@@ -180,18 +180,20 @@ fn update_tile_occludee_point(
 
 pub(super) enum TraversalResult {
     TileRendered,
+    TileRenderedPartially,
     ChildrenRendered,
+    Culled,
     NotFound,
 }
 
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
-// 2. Check horizon culling because the frustum culling is enough.
+// 2. Check horizon culling because the frustum culling isn't enough.
 // 3. Check SSE is within max SSE.
 // 4. If SSE works and the tile is loaded, the tile should be rendered.
 // 5. On the other hand, if SSE works but the tile isn't loaded, the tile should be requested, not rendered.
 // 6. If above steps aren't matched, traverse children.
-// 7. If children couldn't find, use this tile instead.
+// 7. If children couldn't be rendered completely, use this tile instead.
 fn traverse_tile(
     command: &mut Commands,
     tiles: &Tiles,
@@ -227,7 +229,7 @@ fn traverse_tile(
 
     let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, &tile);
     if !is_intersecting_with_frustum {
-        return TraversalResult::NotFound;
+        return TraversalResult::Culled;
     }
 
     let is_visible = tile
@@ -235,7 +237,7 @@ fn traverse_tile(
         .map(|p| occluder.is_scaled_space_point_visible(p))
         .unwrap_or(true);
     if !is_visible {
-        return TraversalResult::NotFound;
+        return TraversalResult::Culled;
     }
 
     let max_sse = tiles.max_sse;
@@ -268,7 +270,9 @@ fn traverse_tile(
     };
 
     let mut are_children_rendered = false;
+    let mut are_all_children_rendered = true;
     let mut rendered_children_indices = vec![];
+    let mut hidden_children_indices = vec![];
     for (i, child) in children.iter().enumerate() {
         let traversal_result = traverse_tile(
             command,
@@ -283,18 +287,42 @@ fn traverse_tile(
             ellipsoid,
             occluder,
         );
-        if !matches!(traversal_result, TraversalResult::NotFound) {
+
+        if matches!(traversal_result, TraversalResult::NotFound) {
+            are_all_children_rendered = false;
+        }
+
+        if matches!(
+            traversal_result,
+            TraversalResult::NotFound | TraversalResult::Culled
+        ) {
+            hidden_children_indices.push(i);
+        }
+
+        // If there is one child at least, trigger the rendering children process.
+        if matches!(
+            traversal_result,
+            TraversalResult::TileRendered
+                | TraversalResult::TileRenderedPartially
+                | TraversalResult::ChildrenRendered
+        ) {
             are_children_rendered = true;
         }
+
+        // Skip rendering chilren in this tile.
         if matches!(traversal_result, TraversalResult::ChildrenRendered) {
             rendered_children_indices.push(i);
         }
     }
 
-    // FIXME: Remove unnecessary spawned children if `are_children_rendered` is false.
     if are_children_rendered {
         for (i, child) in children.iter().enumerate() {
+            // If this child's children are rendered, skip rendering this child.
             if rendered_children_indices.contains(&i) {
+                continue;
+            }
+            // If this child is not renderable, skip rendering this child.
+            if hidden_children_indices.contains(&i) {
                 continue;
             }
 
@@ -306,7 +334,13 @@ fn traverse_tile(
             spawn_tile_entity(command, tc, tile, handle);
         }
 
-        return TraversalResult::ChildrenRendered;
+        if are_all_children_rendered {
+            // This tile's children are rendered completely, so parent tile isn't rendered.
+            return TraversalResult::ChildrenRendered;
+        } else {
+            // This tile's children are not rendered completely, so render parent tile as well.
+            return TraversalResult::TileRenderedPartially;
+        }
     }
 
     if request_texture_fragment(command, qt, tiles, t.handle()) {
@@ -354,7 +388,7 @@ pub fn update_tiles(
                 &WGS84_32,
                 occluder,
             ) {
-                TraversalResult::TileRendered => {
+                TraversalResult::TileRendered | TraversalResult::TileRenderedPartially => {
                     spawn_tile_entity(
                         &mut commands,
                         &mut tc,
@@ -366,6 +400,7 @@ pub fn update_tiles(
                     request_texture_fragment(&mut commands, &mut qt, tiles, zero_tile.handle());
                 }
                 TraversalResult::ChildrenRendered => {}
+                TraversalResult::Culled => {}
             };
         }
     }
