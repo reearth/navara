@@ -23,7 +23,7 @@ directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
 const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
-const _terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
+// const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
 
 // const chiyodaExtent = {
 //   west: 139.712,
@@ -32,19 +32,19 @@ const _terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.pn
 //   east: 139.782,
 // };
 
-const _yokohamaExtent = {
-  west: 139.65357848599274,
-  north: 35.43935502975275,
-  east: 139.66734967157691,
-  south: 35.42795359647897,
-};
+// const yokohamaExtent = {
+//   west: 139.65357848599274,
+//   north: 35.43935502975275,
+//   east: 139.66734967157691,
+//   south: 35.42795359647897,
+// };
 
-const _fujiExtent = {
-  west: 138.558,
-  south: 35.244,
-  north: 35.496,
-  east: 138.866,
-};
+// const fujiExtent = {
+//   west: 138.558,
+//   south: 35.244,
+//   north: 35.496,
+//   east: 138.866,
+// };
 
 // view.addLayer({
 //   type: "tiles",
