@@ -48,12 +48,12 @@ impl Input {
                     state: navara_ecs::ButtonState::Released,
                 })
             }),
-            InputType::MouseMove => Some(navara_ecs::Input::MouseMove(
-                navara_ecs::MouseMoveInput {
+            InputType::MouseMove => {
+                Some(navara_ecs::Input::MouseMove(navara_ecs::MouseMoveInput {
                     x: self.x.unwrap_or(0.0),
                     y: self.y.unwrap_or(0.0),
-                },
-            )),
+                }))
+            }
             InputType::Wheel => Some(navara_ecs::Input::MouseScroll(
                 navara_ecs::MouseScrollInput {
                     unit: navara_ecs::MouseScrollUnit::Line,

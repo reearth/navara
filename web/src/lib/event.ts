@@ -41,6 +41,7 @@ export function processEvent(
   if (event.camera_transform_updated) {
     processCameraTransformUpdated(camera, event.camera_transform_updated);
   }
+
   event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
   event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
   event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, tex));
@@ -110,32 +111,26 @@ function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: 
   parent.remove(m);
 }
 
-function processRequestedData
-  ( req: DataRequestEvent,
-    buf: BufferLoader,
-  ){
+function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
   console.log("Requested data", req.handle, req.url);
   const loader = new ImageLoader();
-  loader.load(
-    req.url,
-    (img) => {
-      const canvas = document.createElement('canvas');
-      canvas.height = img.height
-      canvas.width = img.width
-      const context = canvas.getContext('2d');
-      if(context === null) {
-        throw new Error('failed to get context of canvas');
-      }else{
-        context.drawImage(img, 0, 0);
-      }
-      const data = context.getImageData(0, 0, img.height, img.width).data;
-      if(data === undefined){
-        throw new Error('failed to convert array');
-      }else{
-        buf.setU8(req.handle, new Uint8Array(data));
-      }
+  loader.load(req.url, img => {
+    const canvas = document.createElement("canvas");
+    canvas.height = img.height;
+    canvas.width = img.width;
+    const context = canvas.getContext("2d");
+    if (context === null) {
+      throw new Error("failed to get context of canvas");
+    } else {
+      context.drawImage(img, 0, 0);
     }
-  )
+    const data = context.getImageData(0, 0, img.height, img.width).data;
+    if (data === undefined) {
+      throw new Error("failed to convert array");
+    } else {
+      buf.setU8(req.handle, new Uint8Array(data));
+    }
+  });
 }
 
 function createMesh(

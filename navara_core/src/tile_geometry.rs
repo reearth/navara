@@ -39,7 +39,7 @@ pub fn tile_triangles_with_terrain(
             if r >= 128 {
                 r * 65536 + g * 256 + b - 16777216
             } else {
-                r * 65536 + g * 256 + b 
+                r * 65536 + g * 256 + b
             }
         } else {
             0
