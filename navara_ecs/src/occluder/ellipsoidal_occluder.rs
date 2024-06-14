@@ -56,11 +56,11 @@ fn compute_horizon_culling_point_from_positions(
     positions: Vec<Vec3>,
 ) -> Option<Vec3> {
     let scaled_space_direction_to_point =
-        compute_scaled_space_direction_to_point(&ellipsoid, direction_to_point);
+        compute_scaled_space_direction_to_point(ellipsoid, direction_to_point);
 
     let mut max_mag: f32 = 0.;
     for position in positions {
-        let mag = compute_magnitude(&ellipsoid, position, scaled_space_direction_to_point);
+        let mag = compute_magnitude(ellipsoid, position, scaled_space_direction_to_point);
         if mag < 0. {
             return None;
         }
@@ -132,7 +132,7 @@ fn is_scaled_space_point_visible(
         vt_dot_vc > vh_magnitude_squared
             && (vt_dot_vc * vt_dot_vc) / vt.length_squared() > vh_magnitude_squared
     };
-    return !is_occluded;
+    !is_occluded
 }
 
 #[cfg(test)]

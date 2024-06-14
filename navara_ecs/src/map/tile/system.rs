@@ -1,12 +1,11 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
 use navara_core::{
-    iter_tiles,
     terrain::{
         get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
         get_level_maximum_geometric_error_f32,
     },
-    tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain},
+    tile_geometry::tile_triangles_flat,
     Ellipsoid, LngLat, TileXYZ, WGS84_32,
 };
 
@@ -18,8 +17,7 @@ use crate::{
     texture_fragment::TextureFragmentStatus,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment,
-    Transform,
+    BufferStore, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment, Transform,
 };
 
 use super::{
@@ -79,7 +77,7 @@ fn request_texture_fragment(
         }
         None => return false,
     }
-    return true;
+    true
 }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
@@ -108,11 +106,10 @@ fn calc_sse(
         .distance_to_camera(camera_pos, ellipsoid.xyz_to_lle(vec3_to_xyz(camera_pos)));
 
     // TODO: Support fog culling
-    let error = (max_geometric_error * window.height)
-        / (distance_from_camera * frustum.sse_denominator)
-        / window.pixel_ratio;
 
-    error
+    (max_geometric_error * window.height)
+        / (distance_from_camera * frustum.sse_denominator)
+        / window.pixel_ratio
 }
 
 fn begine_traverse_tile(
@@ -121,8 +118,6 @@ fn begine_traverse_tile(
     _camera: &Transform,
     tile: &mut Tile,
 ) {
-    // TODO: It might need to project AABB
-    // tile.aabb.update_by_transform(camera);
     update_tile_occludee_point(ellipsoid, occluder, tile)
 }
 
@@ -194,10 +189,11 @@ pub(super) enum TraversalResult {
 // 5. On the other hand, if SSE works but the tile isn't loaded, the tile should be requested, not rendered.
 // 6. If above steps aren't matched, traverse children.
 // 7. If children couldn't be rendered completely, use this tile instead.
+#[allow(clippy::too_many_arguments)]
 fn traverse_tile(
     command: &mut Commands,
     tiles: &Tiles,
-    t: &Box<dyn GeoSpacialQuadLeaf<usize>>,
+    t: &dyn GeoSpacialQuadLeaf<usize>,
     tc: &mut TileCacheManager,
     qt: &mut TileQuadtree,
     camera: &Transform,
@@ -227,7 +223,7 @@ fn traverse_tile(
 
     let is_rendered_last_frame = tc.caches.get(&t.handle()).is_some();
 
-    let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, &tile);
+    let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, tile);
     if !is_intersecting_with_frustum {
         return TraversalResult::Culled;
     }
@@ -277,7 +273,7 @@ fn traverse_tile(
         let traversal_result = traverse_tile(
             command,
             tiles,
-            &child,
+            child.as_ref(),
             tc,
             qt,
             camera,
@@ -347,10 +343,11 @@ fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    return TraversalResult::TileRendered;
+    TraversalResult::TileRendered
 }
 
 // TODO: Support loading terrain dynamically
+#[allow(clippy::too_many_arguments)]
 pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<TileQuadtree>,
@@ -378,7 +375,7 @@ pub fn update_tiles(
             match traverse_tile(
                 &mut commands,
                 tiles,
-                &zero_tile,
+                zero_tile.as_ref(),
                 &mut tc,
                 &mut qt,
                 camera,
@@ -445,11 +442,11 @@ pub fn transfer_mesh(
             .tile_url
             .as_ref()
             .map(|s| tile_url(s, &tile.coords));
-        let terrain_url = tile_layer
+        let _terrain_url = tile_layer
             .terrain_url
             .as_ref()
             .map(|s| tile_url(s, &tile.coords));
-        let mut e = commands.spawn(MeshBundle {
+        let e = commands.spawn(MeshBundle {
             mesh: Mesh {
                 vertices: vhandle,
                 indices: ihandle,
@@ -495,13 +492,11 @@ pub fn clear_caches(
 
     // Prevent blocking the frame by this deletion process
     let max_deletion = 10000;
-    let mut count = 0;
-    for rendered_tile in &rendered_tiles {
-        if count >= max_deletion {
+    for (count, rendered_tile) in rendered_tiles.iter().enumerate() {
+        if count > max_deletion {
             break;
         }
-        count += 1;
-        let (rendered_at, _data_requester_entity_id, texture_fragment_entity_id, coords) = {
+        let (rendered_at, _data_requester_entity_id, _texture_fragment_entity_id, _coords) = {
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
             (
                 tile.rendered_at,
@@ -603,60 +598,60 @@ pub fn clear_caches(
 //     }
 // }
 
-pub fn load_tiles(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    requests: Query<&DataRequester, Changed<DataRequester>>,
-    tiles: Query<&Tiles>,
-) {
-    for req in requests.iter() {
-        if !req.loaded {
-            continue;
-        };
+// pub fn load_tiles(
+//     mut commands: Commands,
+//     mut buf: ResMut<BufferStore>,
+//     requests: Query<&DataRequester, Changed<DataRequester>>,
+//     tiles: Query<&Tiles>,
+// ) {
+//     for req in requests.iter() {
+//         if !req.loaded {
+//             continue;
+//         };
 
-        let ts: &Tiles = tiles
-            .iter()
-            .filter(|t| {
-                iter_tiles(t.z).any(|xyz| {
-                    t.terrain_url.as_ref().map(|s| tile_url(s, &xyz)) == Some(req.url.clone())
-                })
-            })
-            .next()
-            .unwrap();
-        let bytes = buf.get_u8(&req.handle).unwrap();
-        let size = ((bytes.len() / 4) as f64).sqrt() as usize;
-        let triangles = tile_triangles_with_terrain(
-            WGS84_32,
-            req.extent.unwrap(),
-            ts.segments,
-            ts.height,
-            bytes,
-            size,
-            size,
-        );
-        let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
-        let ihandle = buf.new_u32(triangles.indices);
-        let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
+//         let ts: &Tiles = tiles
+//             .iter()
+//             .filter(|t| {
+//                 iter_tiles(t.z).any(|xyz| {
+//                     t.terrain_url.as_ref().map(|s| tile_url(s, &xyz)) == Some(req.url.clone())
+//                 })
+//             })
+//             .next()
+//             .unwrap();
+//         let bytes = buf.get_u8(&req.handle).unwrap();
+//         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
+//         let triangles = tile_triangles_with_terrain(
+//             WGS84_32,
+//             req.extent.unwrap(),
+//             ts.segments,
+//             ts.height,
+//             bytes,
+//             size,
+//             size,
+//         );
+//         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
+//         let ihandle = buf.new_u32(triangles.indices);
+//         let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
 
-        commands.spawn(MeshBundle {
-            mesh: Mesh {
-                vertices: vhandle,
-                indices: ihandle,
-                uvs: uvshandle,
-            },
-            material: Material {
-                color: ts.color,
-                map_url: req.map_url.clone(),
-                wireframe: ts.wireframe,
-                texture_fragment: None,
-            },
-            object: ObjectBundle {
-                transform: Default::default(),
-                marker: Default::default(),
-            },
-        });
-    }
-}
+//         commands.spawn(MeshBundle {
+//             mesh: Mesh {
+//                 vertices: vhandle,
+//                 indices: ihandle,
+//                 uvs: uvshandle,
+//             },
+//             material: Material {
+//                 color: ts.color,
+//                 map_url: req.map_url.clone(),
+//                 wireframe: ts.wireframe,
+//                 texture_fragment: None,
+//             },
+//             object: ObjectBundle {
+//                 transform: Default::default(),
+//                 marker: Default::default(),
+//             },
+//         });
+//     }
+// }
 
 fn tile_url(s: &str, xyz: &TileXYZ) -> String {
     s.replace("{x}", &xyz.x.to_string())

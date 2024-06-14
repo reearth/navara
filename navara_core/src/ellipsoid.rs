@@ -215,15 +215,15 @@ mod tests {
     fn test_height() {
         let lle = WGS84_32.xyz_to_lle(XYZ {
             x: Meters::new(-3959344.115631663),
-            y: Meters::new(3351691.3409433914),
-            z: Meters::new(3699403.2700240086),
+            y: Meters::new(3_351_691.3),
+            z: Meters::new(3_699_403.3),
         });
         let lng = lle.lng;
         let lat = lle.lat;
         let height = lle.height;
 
         // Calculated by Cesium
-        let expected = (2.4391183557348084, 0.6226667543730222, 581.580);
+        let expected = (2.439_118_4, 0.622_666_8, 581.580);
 
         assert_delta(lng.val(), expected.0, 0.0001);
         assert_delta(lat.val(), expected.1, 0.0001);

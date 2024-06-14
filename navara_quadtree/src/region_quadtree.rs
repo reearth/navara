@@ -76,7 +76,7 @@ where
                     }
                     return Some(Box::new(Entry::new(child, (x, y, z), self.depth)));
                 }
-                return None;
+                None
             }
             Err(e) => unreachable!("{}", e),
         }
@@ -125,7 +125,7 @@ where
     fn new<V>(e: &quadtree_rs::entry::Entry<U, V>, (x, y, z): Coords<U>, max_depth: usize) -> Self {
         Self {
             handle: e.handle(),
-            area: e.area().clone(),
+            area: e.area(),
             x,
             y,
             z,

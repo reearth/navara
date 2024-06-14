@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 
-use crate::{event::EventStore, BufferStoreEvent, DataRequester};
+// use crate::{event::EventStore, BufferStoreEvent, DataRequester};
 
 use super::{tile::Tiles, LayerDescription};
 
@@ -40,27 +40,27 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
     }
 }
 
-pub fn set_data_requester_loaded(
-    mut events: EventReader<BufferStoreEvent>,
-    mut requests: Query<&mut DataRequester>,
-) {
-    for e in events.read() {
-        for mut d in &mut requests {
-            if d.handle == e.handle {
-                d.loaded = true;
-            }
-        }
-    }
-}
+// pub fn set_data_requester_loaded(
+//     mut events: EventReader<BufferStoreEvent>,
+//     mut requests: Query<&mut DataRequester>,
+// ) {
+//     for e in events.read() {
+//         for mut d in &mut requests {
+//             if d.handle == e.handle {
+//                 d.loaded = true;
+//             }
+//         }
+//     }
+// }
 
-pub fn send_data_requst_events(
-    mut events: ResMut<EventStore>,
-    requests: Query<(Entity, &DataRequester), Added<DataRequester>>,
-) {
-    for (e, d) in requests.iter() {
-        if d.loaded {
-            continue;
-        }
-        events.data_requested.push(e);
-    }
-}
+// pub fn send_data_requst_events(
+//     mut events: ResMut<EventStore>,
+//     requests: Query<(Entity, &DataRequester), Added<DataRequester>>,
+// ) {
+//     for (e, d) in requests.iter() {
+//         if d.loaded {
+//             continue;
+//         }
+//         events.data_requested.push(e);
+//     }
+// }

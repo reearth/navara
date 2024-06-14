@@ -25,6 +25,6 @@ pub fn get_estimated_level_zero_geometric_error_for_a_heightmap<F: Float + One<F
     number_of_tiles_at_level_zero: F,
     heightmap_terrain_quality: F,
 ) -> F {
-    return (ellipsoid.a * F::two() * F::PI * heightmap_terrain_quality)
-        / (tile_image_width * number_of_tiles_at_level_zero);
+    (ellipsoid.a * F::two() * F::PI * heightmap_terrain_quality)
+        / (tile_image_width * number_of_tiles_at_level_zero)
 }

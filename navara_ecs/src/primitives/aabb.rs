@@ -1,6 +1,5 @@
 use bevy_ecs::component::Component;
 use bevy_math::Vec3;
-use bevy_transform::components::Transform;
 use navara_core::{Angle, Extent, LngLat, Radians, WGS84_32};
 
 use super::Plane;
@@ -9,11 +8,10 @@ use super::Plane;
 pub struct Aabb {
     pub center: Vec3,
     pub extents: Vec3,
-    origin_center: Vec3,
-    origin_extents: Vec3,
 }
 
 impl Aabb {
+    #[allow(unused)]
     pub fn from_points(p1: Vec3, p2: Vec3) -> Self {
         let max = Vec3::new(p1.x.max(p2.x), p1.y.max(p2.y), p1.z.max(p2.z));
         let min = Vec3::new(p1.x.min(p2.x), p1.y.min(p2.y), p1.z.min(p2.z));
@@ -21,12 +19,7 @@ impl Aabb {
         // It's just center between two points, not on the spherical surface.
         let center = (max + min) * 0.5;
         let extents = max - center;
-        Self {
-            center,
-            extents,
-            origin_center: center,
-            origin_extents: extents,
-        }
+        Self { center, extents }
     }
 
     pub fn from_extent_f32(extent: Extent<f32, Radians>) -> Self {
@@ -111,12 +104,7 @@ impl Aabb {
         );
         let extents = Vec3::new(max_x - center.x, max_y - center.y, max_z - center.z);
 
-        Self {
-            center,
-            extents,
-            origin_center: center,
-            origin_extents: extents,
-        }
+        Self { center, extents }
     }
 
     pub fn is_on_or_forward_plane(&self, plane: &Plane) -> bool {
@@ -126,27 +114,11 @@ impl Aabb {
 
         plane.get_distance_to_point(self.center) > -r
     }
-
-    pub fn update_by_transform(&mut self, transform: &Transform) {
-        let center = transform.transform_point(self.origin_center);
-
-        let right = transform.right() * self.origin_extents.x;
-        let up = transform.up() * self.origin_extents.y;
-        let forward = transform.forward() * self.origin_extents.z;
-
-        let x = Vec3::X.dot(right).abs() + Vec3::X.dot(up).abs() + Vec3::X.dot(forward).abs();
-        let y = Vec3::Y.dot(right).abs() + Vec3::Y.dot(up).abs() + Vec3::Y.dot(forward).abs();
-        let z = Vec3::Z.dot(right).abs() + Vec3::Z.dot(up).abs() + Vec3::Z.dot(forward).abs();
-
-        self.center = center;
-        self.extents = Vec3::new(x, y, z);
-    }
 }
 
 #[cfg(test)]
 mod test {
     use bevy_math::Vec3;
-    use navara_core::{TileXY, TileXYZ};
 
     use crate::primitives::{Aabb, Plane};
 

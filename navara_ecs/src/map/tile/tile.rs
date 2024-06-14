@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{Extent, LngLat, Radians, TileXYZ, LLE, WGS84_32};
+use navara_core::{Extent, Radians, TileXYZ, WGS84_32};
 
 use navara_quadtree::Quadtree;
 
