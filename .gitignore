@@ -14,5 +14,3 @@ Cargo.lock
 *.pdb
 
 .vscode/settings.json
-
-dist

@@ -10,7 +10,7 @@
     "test": "vitest --passWithNoTests",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check --ignore-path .gitignore ."
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {
