@@ -39,7 +39,7 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
       key_code: event.code,
       key: event.key,
     });
-  }
+  };
 
   const keyup = (event: KeyboardEvent) => {
     core.input({
@@ -47,7 +47,7 @@ export function registerInputEvents(core: Core, element: HTMLElement): () => voi
       key_code: event.code,
       key: event.key,
     });
-  }
+  };
 
   element.addEventListener("mousedown", mousedown);
   element.addEventListener("mouseup", mouseup);

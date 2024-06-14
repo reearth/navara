@@ -51,12 +51,15 @@ export function processEvent(
   if (event.camera_transform_updated) {
     processCameraTransformUpdated(camera, event.camera_transform_updated);
   }
+
   event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
   event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
   event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, loadedTexs));
   event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, loadedTexs));
   event.data_requested?.forEach(req => processRequestedData(req, buf));
-  event.texture_fragment_requested?.forEach(req => processTextureFragmentRequested(req, texFragment, tex, loadedTexs));
+  event.texture_fragment_requested?.forEach(req =>
+    processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
+  );
   event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
 }
 
@@ -77,7 +80,7 @@ function processMeshAdded(
   meshes: Map<string, Mesh>,
   mesh: MeshAdded,
   buf: BufferLoader,
-  loadedTexes: Map<string, Texture>
+  loadedTexes: Map<string, Texture>,
 ) {
   createMesh(
     parent,
@@ -96,7 +99,7 @@ function processMeshChanged(
   meshes: Map<string, Mesh>,
   mesh: MeshChanged,
   buf: BufferLoader,
-  loadedTexes: Map<string, Texture>
+  loadedTexes: Map<string, Texture>,
 ) {
   const id = `${mesh.ind}_${mesh.gen}`;
   const m = meshes.get(id);
@@ -122,59 +125,56 @@ function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: 
   parent.remove(m);
 }
 
-function processRequestedData
-  ( req: DataRequestEvent,
-    buf: BufferLoader,
-  ){
+function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
   console.log("Requested data", req.handle, req.url);
   const loader = new ImageLoader();
-  loader.load(
-    req.url,
-    (img) => {
-      const canvas = document.createElement('canvas');
-      canvas.height = img.height
-      canvas.width = img.width
-      const context = canvas.getContext('2d');
-      if(context === null) {
-        throw new Error('failed to get context of canvas');
-      }else{
-        context.drawImage(img, 0, 0);
-      }
-      const data = context.getImageData(0, 0, img.height, img.width).data;
-      if(data === undefined){
-        throw new Error('failed to convert array');
-      }else{
-        buf.setU8(req.handle, new Uint8Array(data));
-      }
+  loader.load(req.url, img => {
+    const canvas = document.createElement("canvas");
+    canvas.height = img.height;
+    canvas.width = img.width;
+    const context = canvas.getContext("2d");
+    if (context === null) {
+      throw new Error("failed to get context of canvas");
+    } else {
+      context.drawImage(img, 0, 0);
     }
-  )
+    const data = context.getImageData(0, 0, img.height, img.width).data;
+    if (data === undefined) {
+      throw new Error("failed to convert array");
+    } else {
+      buf.setU8(req.handle, new Uint8Array(data));
+    }
+  });
 }
 
 function makeTextureFragmentId(ind: number, gen: number) {
   return `${ind}_${gen}`;
 }
 
-function processTextureFragmentRequested
-  ( req: TextureFragmentRequestedEvent,
-    handler: TextureFragmentHandler,
-    tex: TextureLoader,
-    loadedTexes: Map<string, Texture>,
-  ){
+function processTextureFragmentRequested(
+  req: TextureFragmentRequestedEvent,
+  handler: TextureFragmentHandler,
+  tex: TextureLoader,
+  loadedTexes: Map<string, Texture>,
+) {
   const id = makeTextureFragmentId(req.ind, req.gen);
-  if(loadedTexes.has(id)) return;
+  if (loadedTexes.has(id)) return;
 
-  tex.loadAsync(req.url).then((t) => {
-    loadedTexes.set(id, t);
-    handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Sucess);
-  }).catch(() => {
-    handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);
-  });
+  tex
+    .loadAsync(req.url)
+    .then(t => {
+      loadedTexes.set(id, t);
+      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Sucess);
+    })
+    .catch(() => {
+      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);
+    });
 }
 
-function processTextureFragmentRemoved
-  ( req: TextureFragmentRemovedEvent,
-    loadedTexes: Map<string, Texture>,
-  ){
+function processTextureFragmentRemoved(
+  req: TextureFragmentRemovedEvent,
+  loadedTexes: Map<string, Texture>,
+) {
   const id = makeTextureFragmentId(req.ind, req.gen);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
@@ -228,9 +228,12 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
 
   const m = new MeshLambertMaterial({ color: mat.color });
   if (mat.map_url && mat.texture_fragment) {
-    const textureFragmentId = makeTextureFragmentId(mat.texture_fragment.ind, mat.texture_fragment.gen);
+    const textureFragmentId = makeTextureFragmentId(
+      mat.texture_fragment.ind,
+      mat.texture_fragment.gen,
+    );
     const t = loadedTexes.get(textureFragmentId);
-    if(t) {
+    if (t) {
       m.map = t;
     }
   }

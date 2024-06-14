@@ -5,34 +5,52 @@ default_to_workspace = false
 [env]
 PROJ_NAME = "navara"
 
-[tasks.format]
+[tasks.format-rust]
 script = ['''
 #!/usr/bin/env bash -eux
 cargo fmt --all
 ''']
 
-[tasks.lint]
+[tasks.lint-rust]
 script = ['''
 #!/usr/bin/env bash -eux
 cargo clippy --workspace --all-targets --all-features
 ''']
 
-[tasks.build]
+[tasks.build-rust]
 script = ['''
 #!/usr/bin/env bash -eux
 cd navara_wasm
-wasm-pack build navara_wasm --target web
+wasm-pack build --target web
+''']
+
+[tasks.test-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo test --workspace --all-targets --all-features
 ''']
 
 [tasks.build-dev]
 script = ['''
 #!/usr/bin/env bash -eux
 cd navara_wasm
-wasm-pack build navara_wasm --target web --dev
+wasm-pack build --target web --dev
 ''']
 
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
+
+[tasks.test]
+run_task = { name = ["test-rust", "test-web"], parallel = true }
+
+[tasks.lint]
+run_task = { name = ["lint-rust", "lint-web"], parallel = true }
+
+[tasks.format]
+run_task = { name = ["format-rust", "format-check-web"], parallel = true }
+
+[tasks.build]
+run_task = { name = ["build-rust", "build-web"] }
 
 [tasks.watch]
 script = ['''
@@ -48,10 +66,39 @@ cd web
 npm i && npm run dev
 ''']
 
-[tasks.test]
+[tasks.build-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cargo test --workspace --all-targets --all-features
+cd web
+npm i && npm run build
+''']
+
+[tasks.lint-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web
+npm i && npm run lint
+''']
+
+[tasks.format-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web
+npm i && npm run format
+''']
+
+[tasks.format-check-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web
+npm i && npm run format:check
+''']
+
+[tasks.test-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web
+npm i && npm run test
 ''']
 
 [tasks.doc]

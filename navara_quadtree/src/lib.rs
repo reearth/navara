@@ -1,5 +1,5 @@
-mod region_quadtree;
 mod quadtree;
+mod region_quadtree;
 mod traits;
 mod utils;
 

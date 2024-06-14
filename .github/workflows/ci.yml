@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+      
+jobs:
+  # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nanasess/setup-chromedriver@master
+      - uses: actions/setup-node@v4
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-dependencies
+        with:
+          # Ref: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L31
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml') }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+      - name: Install deps for cargo
+        run: |
+          cargo install cargo-make
+          cargo install wasm-pack
+
+      - name: Run Build
+        run: cargo make build
+      - name: Run Test
+        run: cargo make test
+        env:
+          RUST_BACKTRACE: 1
+      - name: Cargo format
+        run: cargo make format
+      - name: Lint
+        run: cargo make lint

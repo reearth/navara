@@ -1,6 +1,15 @@
 import initCore, { Core, TextureFragmentStatus } from "navara";
 import Stats from "stats.js";
-import { PerspectiveCamera, Scene, WebGLRenderer, Mesh, TextureLoader, Vector3, Texture, Vector2 } from "three";
+import {
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+  Mesh,
+  TextureLoader,
+  Vector3,
+  Texture,
+  Vector2,
+} from "three";
 
 import { C3TilesManager } from "./C3Tiles";
 import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
@@ -211,15 +220,16 @@ export default class ThreeView {
 
     const events = this._core?.readEvents();
     if (events && this._core) {
-      processEvent
-        ( this.scene,
-          this.camera,
-          this._meshes,
-          this._buf,
-          this._texFragment,
-          this._loadedTexs,
-          this._tex,
-          events);
+      processEvent(
+        this.scene,
+        this.camera,
+        this._meshes,
+        this._buf,
+        this._texFragment,
+        this._loadedTexs,
+        this._tex,
+        events,
+      );
     }
 
     this.control?.update();
