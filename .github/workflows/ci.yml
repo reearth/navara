@@ -10,6 +10,7 @@ env:
   CARGO_TERM_COLOR: always
       
 jobs:
+  # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
   web:
     runs-on: ubuntu-latest
     steps:
