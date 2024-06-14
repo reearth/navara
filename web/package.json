@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest --passWithNoTests",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {

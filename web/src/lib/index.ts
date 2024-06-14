@@ -201,13 +201,7 @@ export default class ThreeView {
 
     const events = this._core?.readEvents();
     if (events && this._core) {
-      processEvent
-        ( this.scene,
-          this.camera,
-          this._meshes,
-          this._buf,
-          this._tex,
-          events);
+      processEvent(this.scene, this.camera, this._meshes, this._buf, this._tex, events);
     }
 
     this.control?.update();
