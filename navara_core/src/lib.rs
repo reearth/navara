@@ -1,6 +1,7 @@
 pub mod coord;
 pub mod ellipsoid;
 pub mod extent;
+pub mod terrain;
 pub mod tile_geometry;
 pub mod tiles;
 pub mod unit;

@@ -5,14 +5,22 @@ mod event;
 mod input;
 pub mod map;
 mod object;
+mod occluder;
+mod primitives;
+mod texture_fragment;
 mod transform;
+mod utils;
+mod window;
 
+use bevy_ecs::entity::Entity;
 pub use buffer::*;
-pub use event::{ComponentEvent, EntityEvent, Events};
+pub use event::{ComponentEvent, EntityEvent, Events, ReconstructableComponentEvent};
 pub use object::*;
 pub use transform::*;
+use window::{Window, WindowResizeEvent};
 
 pub use input::*;
+pub use texture_fragment::*;
 
 pub struct App {
     app: bevy_app::App,
@@ -67,6 +75,29 @@ impl App {
             handle,
             ty: buffer::BufferType::U8,
         });
+    }
+
+    pub fn resize(&mut self, width: f32, height: f32, pixel_ratio: f32) {
+        let Some(mut window_res) = self.app.world.get_resource_mut::<Window>() else {
+            return;
+        };
+
+        window_res.height = height;
+        window_res.width = width;
+        window_res.pixel_ratio = pixel_ratio;
+
+        self.app.world.send_event(WindowResizeEvent {
+            width,
+            height,
+            pixel_ratio,
+        });
+    }
+
+    pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
+        self.app.world.send_event(TextureFragmentLoadedEvent {
+            id: Entity::from_bits(bits),
+            status,
+        })
     }
 
     pub fn add_layer(&mut self, desc: map::LayerDescription) {

@@ -2,7 +2,7 @@ use bevy_ecs::{entity::Entity, system::Resource, world::World};
 
 use crate::{DataRequester, Transform};
 
-use super::{ComponentEvent, Events};
+use super::{ComponentEvent, Events, ReconstructableComponentEvent};
 
 #[derive(Debug, Default, Resource)]
 pub struct EventStore {
@@ -12,6 +12,8 @@ pub struct EventStore {
     pub mesh_added: Vec<Entity>,
     pub mesh_updated: Vec<Entity>,
     pub data_requested: Vec<Entity>,
+    pub texture_fragment_reqested: Vec<Entity>,
+    pub texture_fragment_removed: Vec<Entity>,
 }
 
 impl EventStore {
@@ -22,6 +24,8 @@ impl EventStore {
         self.mesh_added.clear();
         self.mesh_updated.clear();
         self.data_requested.clear();
+        self.texture_fragment_reqested.clear();
+        self.texture_fragment_removed.clear();
     }
 
     pub fn events<'a>(&self, world: &'a World) -> Events<'a> {
@@ -56,6 +60,16 @@ impl EventStore {
             if let Some(e) = world.get::<DataRequester>(*e) {
                 events.data_requested.push(e);
             }
+        }
+
+        for e in self.texture_fragment_reqested.iter() {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.texture_fragment_reqested.push(e);
+            }
+        }
+
+        for e in self.texture_fragment_removed.iter() {
+            events.texture_fragment_removed.push((*e).into());
         }
 
         events

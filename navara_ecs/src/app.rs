@@ -14,8 +14,11 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(super::buffer::BufferStorePlugin);
         app.add_plugins(super::input::InputPlugin);
         app.add_plugins(super::event::EventPlugin);
+        app.add_plugins(super::texture_fragment::TextureFragmentPlugin);
         app.add_plugins(super::object::ObjectPlugin);
+        app.add_plugins(super::window::WindowPlugin);
         app.add_plugins(super::camera::CameraPlugin);
+        app.add_plugins(super::occluder::OccluderPlugin);
         app.add_plugins(super::map::MapPlugin);
 
         // custom systems

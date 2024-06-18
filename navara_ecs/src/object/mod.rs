@@ -31,6 +31,7 @@ pub struct Material {
     pub map_url: Option<String>,
     pub color: u32,
     pub wireframe: bool,
+    pub texture_fragment: Option<Entity>,
 }
 
 #[derive(Bundle, Debug)]

@@ -7,6 +7,7 @@ use bevy_app::{PostUpdate, Startup, Update};
 use bevy_ecs::{
     entity::Entity,
     query::Changed,
+    schedule::IntoSystemConfigs,
     system::{Query, ResMut},
 };
 
@@ -16,7 +17,10 @@ pub struct CameraPlugin;
 impl bevy_app::Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.add_systems(Startup, super::system::startup)
-            .add_systems(Update, (super::system::update, super::system::update))
+            .add_systems(
+                Update,
+                (super::system::update, super::system::update_frustum).chain(),
+            )
             .add_systems(PostUpdate, commit);
     }
 }
