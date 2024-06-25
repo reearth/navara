@@ -66,14 +66,20 @@ impl App {
         store.get_f32(&handle)
     }
 
-    pub fn set_buffer(&mut self, handle: i32, data: Vec<u8>) {
+    pub fn set_buffer(&mut self, handle: i32, bits: u64, data: Vec<u8>) {
         let Some(mut store) = self.app.world.get_resource_mut::<BufferStore>() else {
             return;
         };
         store.set_u8(handle, data);
-        self.app.world.send_event(buffer::BufferStoreEvent {
-            handle,
+        self.app.world.send_event(buffer::BufferStoreLoadedEvent {
+            id: Entity::from_bits(bits),
             ty: buffer::BufferType::U8,
+        });
+    }
+
+    pub fn trigger_data_requester_failed(&mut self, bits: u64) {
+        self.app.world.send_event(buffer::BufferStoreFailedEvent {
+            id: Entity::from_bits(bits),
         });
     }
 

@@ -23,7 +23,7 @@ directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
 const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
-// const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
+const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
 
 // const chiyodaExtent = {
 //   west: 139.712,
@@ -67,6 +67,7 @@ view.addLayer({
   max_sse: 2,
   max_z: 23,
   wireframe: false,
+  terrain_url: terrainUrl,
 });
 
 // chiyoda-ku

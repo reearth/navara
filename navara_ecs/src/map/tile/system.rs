@@ -14,15 +14,16 @@ use navara_quadtree::GeoSpacialQuadLeaf;
 use crate::{
     camera::{CameraFrustum, CameraMarker},
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
-    texture_fragment::TextureFragmentStatus,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    BufferStore, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment, Transform,
+    BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment,
+    Transform,
 };
 
 use super::{
+    terrain::TerrainDataRequesterMarker,
     tile_cache_manager::{TileCache, TileCacheManager},
-    Tile, TileHandle, TileQuadtree, Tiles,
+    Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker, Tiles,
 };
 
 #[derive(Component)]
@@ -72,12 +73,54 @@ fn request_texture_fragment(
     }
     match tiles.tile_url.as_ref().map(|s| tile_url(s, &tile.coords)) {
         Some(url) => {
-            let entity = commands.spawn(TextureFragment::new(url));
+            let entity = commands.spawn((TileTextureFragmentMarker, TextureFragment::new(url)));
             tile.texture_fragment_entity_id = Some(entity.id());
         }
         None => return false,
     }
     true
+}
+
+fn request_terrain_data(
+    commands: &mut Commands,
+    qt: &mut TileQuadtree,
+    buf: &mut BufferStore,
+    tiles: &Tiles,
+    handle: TileHandle,
+) -> bool {
+    let tile = qt.qt.get_mut(handle).unwrap();
+    if tile.data_requester_entity_id.is_some() {
+        return false;
+    }
+    // FIXME: The terrain should be the layer, not part of the tile.
+    match tiles
+        .terrain_url
+        .as_ref()
+        .map(|s| tile_url(s, &tile.coords))
+    {
+        Some(url) => {
+            let entity = commands.spawn((
+                TerrainDataRequesterMarker,
+                DataRequester::from_store(url, buf),
+            ));
+            tile.data_requester_entity_id = Some(entity.id());
+        }
+        None => return false,
+    }
+    true
+}
+
+// Prepare some resource that is necessary to render the tile.
+// This returns whether the resource is requested or not.
+fn prepare_tile_resource(
+    commands: &mut Commands,
+    qt: &mut TileQuadtree,
+    buf: &mut BufferStore,
+    tiles: &Tiles,
+    handle: TileHandle,
+) -> bool {
+    request_terrain_data(commands, qt, buf, tiles, handle)
+        || request_texture_fragment(commands, qt, tiles, handle)
 }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
@@ -196,9 +239,11 @@ fn traverse_tile(
     t: &dyn GeoSpacialQuadLeaf<usize>,
     tc: &mut TileCacheManager,
     qt: &mut TileQuadtree,
+    buf: &mut BufferStore,
     camera: &Transform,
     frustum: &CameraFrustum,
-    texture_fragment: &Query<&TextureFragment>,
+    texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
+    terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     window: &Window,
     ellipsoid: &Ellipsoid<f32>,
     occluder: &EllipsoidalOccluder,
@@ -214,12 +259,7 @@ fn traverse_tile(
 
     begine_traverse_tile(ellipsoid, occluder, camera, tile);
 
-    let texture_fragment_status = tile
-        .texture_fragment_entity_id
-        .map(|e| texture_fragment.get(e).map(|t| &t.status));
-
-    let is_texture_loaded =
-        texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Sucess)));
+    let is_tile_ready = tile.is_ready(texture_fragment, terrain_data_requester);
 
     let is_rendered_last_frame = tc.caches.get(&t.handle()).is_some();
 
@@ -241,18 +281,18 @@ fn traverse_tile(
     let sse = calc_sse(camera, frustum, tile, window, ellipsoid);
     let meets_sse = sse < max_sse;
 
-    let is_renderable = is_rendered_last_frame || is_texture_loaded;
+    let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     if meets_sse {
         if is_renderable {
             return TraversalResult::TileRendered;
         }
-        request_texture_fragment(command, qt, tiles, t.handle());
+        prepare_tile_resource(command, qt, buf, tiles, t.handle());
     } else {
-        request_texture_fragment(command, qt, tiles, t.handle());
+        prepare_tile_resource(command, qt, buf, tiles, t.handle());
     }
 
-    if !is_texture_loaded {
+    if !is_tile_ready {
         return TraversalResult::NotFound;
     }
 
@@ -276,9 +316,11 @@ fn traverse_tile(
             child.as_ref(),
             tc,
             qt,
+            buf,
             camera,
             frustum,
             texture_fragment,
+            terrain_data_requester,
             window,
             ellipsoid,
             occluder,
@@ -339,7 +381,7 @@ fn traverse_tile(
         }
     }
 
-    if request_texture_fragment(command, qt, tiles, t.handle()) {
+    if prepare_tile_resource(command, qt, buf, tiles, t.handle()) {
         return TraversalResult::NotFound;
     }
 
@@ -352,10 +394,12 @@ pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<TileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
+    mut buf: ResMut<BufferStore>,
     window: Res<Window>,
     tiles: Query<&Tiles>,
     camera: Query<(&CameraMarker, &Transform, &CameraFrustum)>,
-    texture_fragment: Query<&TextureFragment>,
+    texture_fragment: Query<(&TileTextureFragmentMarker, &TextureFragment)>,
+    terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     occluder: Query<&EllipsoidalOccluder>,
 ) {
     let occluder = occluder.iter().next().unwrap();
@@ -378,9 +422,11 @@ pub fn update_tiles(
                 zero_tile.as_ref(),
                 &mut tc,
                 &mut qt,
+                &mut buf,
                 camera,
                 frustum,
                 &texture_fragment,
+                &terrain_data_requester,
                 &window,
                 &WGS84_32,
                 occluder,
@@ -394,7 +440,13 @@ pub fn update_tiles(
                     );
                 }
                 TraversalResult::NotFound => {
-                    request_texture_fragment(&mut commands, &mut qt, tiles, zero_tile.handle());
+                    prepare_tile_resource(
+                        &mut commands,
+                        &mut qt,
+                        &mut buf,
+                        tiles,
+                        zero_tile.handle(),
+                    );
                 }
                 TraversalResult::ChildrenRendered => {}
                 TraversalResult::Culled => {}

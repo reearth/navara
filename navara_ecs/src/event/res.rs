@@ -1,6 +1,6 @@
 use bevy_ecs::{entity::Entity, system::Resource, world::World};
 
-use crate::{DataRequester, Transform};
+use crate::Transform;
 
 use super::{ComponentEvent, Events, ReconstructableComponentEvent};
 
@@ -11,7 +11,7 @@ pub struct EventStore {
     pub object_removed: Vec<Entity>,
     pub mesh_added: Vec<Entity>,
     pub mesh_updated: Vec<Entity>,
-    pub data_requested: Vec<Entity>,
+    pub data_requested: Vec<Entity>, // FIXME: Make a data_removed event to remove unnecessary data
     pub texture_fragment_reqested: Vec<Entity>,
     pub texture_fragment_removed: Vec<Entity>,
 }
@@ -57,7 +57,7 @@ impl EventStore {
         }
 
         for e in self.data_requested.iter() {
-            if let Some(e) = world.get::<DataRequester>(*e) {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
                 events.data_requested.push(e);
             }
         }

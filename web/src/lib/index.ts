@@ -65,8 +65,11 @@ export default class ThreeView {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
-    setU8: (handle: number, b: Uint8Array) => {
-      this._core?.setBufferU8(handle, b);
+    setU8: (handle: number, bits: bigint, b: Uint8Array) => {
+      this._core?.setBufferU8(handle, bits, b);
+    },
+    triggerDataRequesterFailed: (bits: bigint) => {
+      this._core?.triggerDataRequesterFailed(bits);
     },
   };
   _texFragment: TextureFragmentHandler = {
@@ -250,10 +253,6 @@ export default class ThreeView {
 
   off<K extends keyof Events>(event: K, callback: Events[K]) {
     this._events[event] = this._events[event]?.filter(c => c !== callback);
-  }
-
-  setBuffer(handle: number, data: Uint8Array) {
-    this._core?.setBufferU8(handle, data);
   }
 
   _c3tiles: C3TilesManager;
