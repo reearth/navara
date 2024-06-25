@@ -274,6 +274,7 @@ export default class ThreeView {
         break;
       }
       case "tiles":
+      case "terrain":
         this._core?.addLayer(l);
         break;
     }

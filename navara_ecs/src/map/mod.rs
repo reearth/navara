@@ -1,6 +1,7 @@
 use bevy_app::{App, Plugin, PreUpdate, Update};
 
 mod event;
+mod terrain;
 use bevy_ecs::schedule::IntoSystemConfigs;
 pub use event::AddLayerEvent;
 use event::*;

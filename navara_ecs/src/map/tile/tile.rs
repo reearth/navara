@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{Extent, Radians, TileXYZ, WGS84_32};
+use navara_core::{TileXYZ, WGS84_32};
 
 use navara_quadtree::Quadtree;
 
@@ -14,20 +14,6 @@ pub(super) type TileHandle = u64;
 
 #[derive(Component)]
 pub(crate) struct TileTextureFragmentMarker;
-
-#[derive(Debug, Clone, PartialEq, Default, Component)]
-pub struct Tiles {
-    pub tile_url: Option<String>,
-    pub terrain_url: Option<String>,
-    pub z: usize,
-    pub segments: usize,
-    pub height: f32,
-    pub extent: Option<Extent<f32, Radians>>,
-    pub color: u32,
-    pub max_sse: f32,
-    pub max_z: usize,
-    pub wireframe: bool,
-}
 
 #[derive(Debug, Default)]
 pub struct Tile {
@@ -70,8 +56,12 @@ impl Tile {
         let terrain_data_requester_status = self
             .data_requester_entity_id
             .map(|e| terrain_data_requester.get(e).map(|d| &d.1.status));
-        let is_terrain_data_loaded = terrain_data_requester_status
-            .map_or(false, |s| matches!(s, Ok(DataRequesterStatus::Success) | Ok(DataRequesterStatus::Fail)));
+        let is_terrain_data_loaded = terrain_data_requester_status.map_or(false, |s| {
+            matches!(
+                s,
+                Ok(DataRequesterStatus::Success) | Ok(DataRequesterStatus::Fail)
+            )
+        });
 
         is_texture_loaded && is_terrain_data_loaded
     }

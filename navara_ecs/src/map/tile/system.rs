@@ -13,6 +13,7 @@ use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
+    map::terrain::layer::TerrainLayer,
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
@@ -21,9 +22,10 @@ use crate::{
 };
 
 use super::{
+    layer::TilesLayer,
     terrain::TerrainDataRequesterMarker,
     tile_cache_manager::{TileCache, TileCacheManager},
-    Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker, Tiles,
+    Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker,
 };
 
 #[derive(Component)]
@@ -64,20 +66,18 @@ fn spawn_tile_entity(
 fn request_texture_fragment(
     commands: &mut Commands,
     qt: &mut TileQuadtree,
-    tiles: &Tiles,
+    tiles: &TilesLayer,
     handle: TileHandle,
 ) -> bool {
     let tile = qt.qt.get_mut(handle).unwrap();
     if tile.texture_fragment_entity_id.is_some() {
         return false;
     }
-    match tiles.tile_url.as_ref().map(|s| tile_url(s, &tile.coords)) {
-        Some(url) => {
-            let entity = commands.spawn((TileTextureFragmentMarker, TextureFragment::new(url)));
-            tile.texture_fragment_entity_id = Some(entity.id());
-        }
-        None => return false,
-    }
+
+    let url = tile_url(&tiles.url, &tile.coords);
+    let entity = commands.spawn((TileTextureFragmentMarker, TextureFragment::new(url)));
+    tile.texture_fragment_entity_id = Some(entity.id());
+
     true
 }
 
@@ -85,7 +85,7 @@ fn request_terrain_data(
     commands: &mut Commands,
     qt: &mut TileQuadtree,
     buf: &mut BufferStore,
-    tiles: &Tiles,
+    terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
 ) -> bool {
     let tile = qt.qt.get_mut(handle).unwrap();
@@ -93,11 +93,7 @@ fn request_terrain_data(
         return false;
     }
     // FIXME: The terrain should be the layer, not part of the tile.
-    match tiles
-        .terrain_url
-        .as_ref()
-        .map(|s| tile_url(s, &tile.coords))
-    {
+    match terrain_layer.map(|t| tile_url(&t.url, &tile.coords)) {
         Some(url) => {
             let entity = commands.spawn((
                 TerrainDataRequesterMarker,
@@ -116,10 +112,11 @@ fn prepare_tile_resource(
     commands: &mut Commands,
     qt: &mut TileQuadtree,
     buf: &mut BufferStore,
-    tiles: &Tiles,
+    tiles: &TilesLayer,
+    terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
 ) -> bool {
-    request_terrain_data(commands, qt, buf, tiles, handle)
+    request_terrain_data(commands, qt, buf, terrain_layer, handle)
         || request_texture_fragment(commands, qt, tiles, handle)
 }
 
@@ -235,7 +232,8 @@ pub(super) enum TraversalResult {
 #[allow(clippy::too_many_arguments)]
 fn traverse_tile(
     command: &mut Commands,
-    tiles: &Tiles,
+    tiles: &TilesLayer,
+    terrain_layer: &Option<&TerrainLayer>,
     t: &dyn GeoSpacialQuadLeaf<usize>,
     tc: &mut TileCacheManager,
     qt: &mut TileQuadtree,
@@ -287,9 +285,9 @@ fn traverse_tile(
         if is_renderable {
             return TraversalResult::TileRendered;
         }
-        prepare_tile_resource(command, qt, buf, tiles, t.handle());
+        prepare_tile_resource(command, qt, buf, tiles, terrain_layer, t.handle());
     } else {
-        prepare_tile_resource(command, qt, buf, tiles, t.handle());
+        prepare_tile_resource(command, qt, buf, tiles, terrain_layer, t.handle());
     }
 
     if !is_tile_ready {
@@ -313,6 +311,7 @@ fn traverse_tile(
         let traversal_result = traverse_tile(
             command,
             tiles,
+            terrain_layer,
             child.as_ref(),
             tc,
             qt,
@@ -381,7 +380,7 @@ fn traverse_tile(
         }
     }
 
-    if prepare_tile_resource(command, qt, buf, tiles, t.handle()) {
+    if prepare_tile_resource(command, qt, buf, tiles, terrain_layer, t.handle()) {
         return TraversalResult::NotFound;
     }
 
@@ -396,12 +395,16 @@ pub fn update_tiles(
     mut tc: ResMut<TileCacheManager>,
     mut buf: ResMut<BufferStore>,
     window: Res<Window>,
-    tiles: Query<&Tiles>,
+    tiles: Query<&TilesLayer>,
+    terrain_layer: Query<&TerrainLayer>,
     camera: Query<(&CameraMarker, &Transform, &CameraFrustum)>,
     texture_fragment: Query<(&TileTextureFragmentMarker, &TextureFragment)>,
     terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     occluder: Query<&EllipsoidalOccluder>,
 ) {
+    // TODO: Think how to support multiple terrain layer.(Is it possible?)
+    let terrain_layer = terrain_layer.iter().next();
+
     let occluder = occluder.iter().next().unwrap();
     // TODO: Support multiple tiles
     for tiles in &tiles {
@@ -419,6 +422,7 @@ pub fn update_tiles(
             match traverse_tile(
                 &mut commands,
                 tiles,
+                &terrain_layer,
                 zero_tile.as_ref(),
                 &mut tc,
                 &mut qt,
@@ -445,6 +449,7 @@ pub fn update_tiles(
                         &mut qt,
                         &mut buf,
                         tiles,
+                        &terrain_layer,
                         zero_tile.handle(),
                     );
                 }
@@ -461,7 +466,8 @@ pub fn transfer_mesh(
     mut tc: ResMut<TileCacheManager>,
     qt: Res<TileQuadtree>,
     rendered_tiles: Query<&RenderedTile, Changed<RenderedTile>>,
-    tile_layers: Query<&Tiles>,
+    tile_layers: Query<&TilesLayer>,
+    terrain_layer: Query<&TerrainLayer>,
 ) {
     if !tc.is_updated_in_this_frame {
         return;
@@ -473,31 +479,22 @@ pub fn transfer_mesh(
         None => return,
     };
 
+    // TODO: Support mutiple terrain layers
+    let terrain_layer = terrain_layer.iter().next();
+
     for rendered_tile in &rendered_tiles {
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
 
         let extent = tile.coords.extent();
-        if let Some(ref tiles_extent) = tile_layer.extent {
-            if !tiles_extent.intersects(extent) {
-                continue;
-            }
-        }
 
-        let triangles =
-            tile_triangles_flat(WGS84_32, extent, tile_layer.segments, tile_layer.height);
+        let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
 
         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
         let ihandle = buf.new_u32(triangles.indices);
         let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
 
-        let map_url = tile_layer
-            .tile_url
-            .as_ref()
-            .map(|s| tile_url(s, &tile.coords));
-        let _terrain_url = tile_layer
-            .terrain_url
-            .as_ref()
-            .map(|s| tile_url(s, &tile.coords));
+        let map_url = tile_url(&tile_layer.url, &tile.coords);
+        let _terrain_url = terrain_layer.map(|t| tile_url(&t.url, &tile.coords));
         let e = commands.spawn(MeshBundle {
             mesh: Mesh {
                 vertices: vhandle,
@@ -506,7 +503,7 @@ pub fn transfer_mesh(
             },
             material: Material {
                 color: tile_layer.color,
-                map_url: map_url.clone(),
+                map_url: Some(map_url.clone()),
                 wireframe: tile_layer.wireframe,
                 texture_fragment: tile.texture_fragment_entity_id,
             },
@@ -601,7 +598,7 @@ pub fn clear_caches(
 //     mut buf: ResMut<BufferStore>,
 //     mut qt: ResMut<TileQuadtree>,
 //     time: Res<Time<Real>>,
-//     tiles: Query<&Tiles, Added<Tiles>>,
+//     tiles: Query<&TileLayer, Added<Tiles>>,
 //     camera_transform: Query<(&CameraMarker, &Transform), Changed<Transform>>,
 // ) {
 //     for tiles in tiles.iter() {
@@ -654,14 +651,14 @@ pub fn clear_caches(
 //     mut commands: Commands,
 //     mut buf: ResMut<BufferStore>,
 //     requests: Query<&DataRequester, Changed<DataRequester>>,
-//     tiles: Query<&Tiles>,
+//     tiles: Query<&TileLayer>,
 // ) {
 //     for req in requests.iter() {
 //         if !req.loaded {
 //             continue;
 //         };
 
-//         let ts: &Tiles = tiles
+//         let ts: &TileLayer = tiles
 //             .iter()
 //             .filter(|t| {
 //                 iter_tiles(t.z).any(|xyz| {

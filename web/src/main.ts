@@ -61,13 +61,19 @@ view.addLayer({
   type: "tiles",
   color: 0xffffff,
   segments: 10,
-  height: 0,
   tile_url: tileUrl,
-  z: 4,
   max_sse: 2,
   max_z: 23,
   wireframe: false,
+});
+view.addLayer({
+  type: "terrain",
+  color: 0xffffff,
+  segments: 10,
   terrain_url: terrainUrl,
+  max_sse: 2,
+  max_z: 23,
+  wireframe: false,
 });
 
 // chiyoda-ku
