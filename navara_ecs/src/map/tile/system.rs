@@ -5,7 +5,7 @@ use navara_core::{
         get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
         get_level_maximum_geometric_error_f32,
     },
-    tile_geometry::tile_triangles_flat,
+    tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain},
     Ellipsoid, LngLat, TileXYZ, WGS84_32,
 };
 
@@ -17,8 +17,8 @@ use crate::{
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    BufferStore, DataRequester, Material, Mesh, MeshBundle, ObjectBundle, TextureFragment,
-    Transform,
+    BufferStore, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle, ObjectBundle,
+    TextureFragment, Transform,
 };
 
 use super::{
@@ -89,7 +89,7 @@ fn request_terrain_data(
     handle: TileHandle,
 ) -> bool {
     let tile = qt.qt.get_mut(handle).unwrap();
-    if tile.data_requester_entity_id.is_some() {
+    if tile.terrain_data.data_requester_entity_id.is_some() {
         return false;
     }
     // FIXME: The terrain should be the layer, not part of the tile.
@@ -99,7 +99,7 @@ fn request_terrain_data(
                 TerrainDataRequesterMarker,
                 DataRequester::from_store(url, buf),
             ));
-            tile.data_requester_entity_id = Some(entity.id());
+            tile.terrain_data.data_requester_entity_id = Some(entity.id());
         }
         None => return false,
     }
@@ -246,18 +246,26 @@ fn traverse_tile(
     ellipsoid: &Ellipsoid<f32>,
     occluder: &EllipsoidalOccluder,
 ) -> TraversalResult {
-    let tile = match qt.qt.get_mut(t.handle()) {
+    match qt.qt.get(t.handle()) {
+        Some(tile) => {
+            if tile.coords.z >= tiles.max_z {
+                return TraversalResult::NotFound;
+            }
+        }
+        None => unreachable!(),
+    };
+
+    match qt.qt.get_mut(t.handle()) {
+        Some(tile) => begine_traverse_tile(ellipsoid, occluder, camera, tile),
+        None => unreachable!(),
+    };
+
+    let tile = match qt.qt.get(t.handle()) {
         Some(tile) => tile,
         None => unreachable!(),
     };
 
-    if tile.coords.z >= tiles.max_z {
-        return TraversalResult::NotFound;
-    }
-
-    begine_traverse_tile(ellipsoid, occluder, camera, tile);
-
-    let is_tile_ready = tile.is_ready(texture_fragment, terrain_data_requester);
+    let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester);
 
     let is_rendered_last_frame = tc.caches.get(&t.handle()).is_some();
 
@@ -466,6 +474,7 @@ pub fn transfer_mesh(
     mut tc: ResMut<TileCacheManager>,
     qt: Res<TileQuadtree>,
     rendered_tiles: Query<&RenderedTile, Changed<RenderedTile>>,
+    terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     tile_layers: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
 ) {
@@ -487,14 +496,67 @@ pub fn transfer_mesh(
 
         let extent = tile.coords.extent();
 
-        let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
+        let map_url = tile_url(&tile_layer.url, &tile.coords);
 
+        let terrain_req = tile
+            .terrain_data
+            .data_requester_entity_id
+            .map_or(None, |e| {
+                terrain_data_requester.get(e).map_or(None, |v| Some(v.1))
+            });
+
+        let should_render_terrain = terrain_layer.is_some()
+            && terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Success));
+
+        if !should_render_terrain {
+            let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
+
+            let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
+            let ihandle = buf.new_u32(triangles.indices);
+            let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
+
+            let e = commands.spawn(MeshBundle {
+                mesh: Mesh {
+                    vertices: vhandle,
+                    indices: ihandle,
+                    uvs: uvshandle,
+                },
+                material: Material {
+                    color: tile_layer.color,
+                    map_url: Some(map_url.clone()),
+                    wireframe: tile_layer.wireframe,
+                    texture_fragment: tile.texture_fragment_entity_id,
+                },
+                object: ObjectBundle {
+                    transform: Default::default(),
+                    marker: Default::default(),
+                },
+            });
+
+            if let Some(cache) = tc.caches.get_mut(&rendered_tile.tile_handle) {
+                cache.mesh_entity = Some(e.id());
+            };
+            continue;
+        }
+
+        let terrain_layer = terrain_layer.unwrap();
+        let terrain_req = terrain_req.unwrap();
+
+        let bytes = buf.get_u8(&terrain_req.handle).unwrap();
+        let size = ((bytes.len() / 4) as f64).sqrt() as usize;
+        let triangles = tile_triangles_with_terrain(
+            WGS84_32,
+            extent,
+            terrain_layer.segments,
+            0.,
+            bytes,
+            size,
+            size,
+        );
         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
         let ihandle = buf.new_u32(triangles.indices);
         let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
 
-        let map_url = tile_url(&tile_layer.url, &tile.coords);
-        let _terrain_url = terrain_layer.map(|t| tile_url(&t.url, &tile.coords));
         let e = commands.spawn(MeshBundle {
             mesh: Mesh {
                 vertices: vhandle,
@@ -502,9 +564,9 @@ pub fn transfer_mesh(
                 uvs: uvshandle,
             },
             material: Material {
-                color: tile_layer.color,
+                color: terrain_layer.color,
                 map_url: Some(map_url.clone()),
-                wireframe: tile_layer.wireframe,
+                wireframe: terrain_layer.wireframe,
                 texture_fragment: tile.texture_fragment_entity_id,
             },
             object: ObjectBundle {
@@ -512,20 +574,9 @@ pub fn transfer_mesh(
                 marker: Default::default(),
             },
         });
-
         if let Some(cache) = tc.caches.get_mut(&rendered_tile.tile_handle) {
             cache.mesh_entity = Some(e.id());
         };
-
-        // TODO: Support terrain
-        // if let Some(tu) = terrain_url {
-        //     e.insert(DataRequester::from_store(
-        //         tu,
-        //         &mut buf,
-        //         Some(extent),
-        //         map_url.clone(),
-        //     ));
-        // }
     }
 }
 
@@ -549,7 +600,7 @@ pub fn clear_caches(
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
             (
                 tile.rendered_at,
-                tile.data_requester_entity_id,
+                tile.terrain_data.data_requester_entity_id,
                 tile.texture_fragment_entity_id,
                 tile.coords,
             )

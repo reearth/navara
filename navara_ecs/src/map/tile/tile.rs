@@ -5,7 +5,8 @@ use navara_core::{TileXYZ, WGS84_32};
 use navara_quadtree::Quadtree;
 
 use crate::{
-    primitives::Aabb, DataRequester, DataRequesterStatus, TextureFragment, TextureFragmentStatus,
+    map::terrain::TerrainData, primitives::Aabb, DataRequester, DataRequesterStatus,
+    TextureFragment, TextureFragmentStatus,
 };
 
 use super::{terrain::TerrainDataRequesterMarker, tile_bounding_region::TileBoundingReagion};
@@ -21,7 +22,7 @@ pub struct Tile {
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
     pub(super) rendered_at: usize,
-    pub(super) data_requester_entity_id: Option<Entity>,
+    pub(super) terrain_data: TerrainData,
     pub(super) texture_fragment_entity_id: Option<Entity>,
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
 }
@@ -39,6 +40,7 @@ impl Tile {
 
     pub(super) fn is_ready(
         &self,
+        _qt: &TileQuadtree,
         texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
         terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     ) -> bool {
@@ -49,21 +51,31 @@ impl Tile {
             .map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Success)));
 
         // This means a terrain isn't used.
-        if self.texture_fragment_entity_id.is_some() && self.data_requester_entity_id.is_none() {
+        if self.texture_fragment_entity_id.is_some()
+            && self.terrain_data.data_requester_entity_id.is_none()
+        {
             return is_texture_loaded;
         }
 
-        let terrain_data_requester_status = self
-            .data_requester_entity_id
-            .map(|e| terrain_data_requester.get(e).map(|d| &d.1.status));
-        let is_terrain_data_loaded = terrain_data_requester_status.map_or(false, |s| {
-            matches!(
-                s,
-                Ok(DataRequesterStatus::Success) | Ok(DataRequesterStatus::Fail)
-            )
-        });
+        is_texture_loaded && self.is_terrain_ready(terrain_data_requester)
+    }
 
-        is_texture_loaded && is_terrain_data_loaded
+    pub(super) fn is_terrain_ready(
+        &self,
+        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+    ) -> bool {
+        let terrain_data_requester_status =
+            self.terrain_data
+                .data_requester_entity_id
+                .map_or(None, |e| {
+                    terrain_data_requester
+                        .get(e)
+                        .map_or(None, |d| Some(&d.1.status))
+                });
+        terrain_data_requester_status.map_or(false, |s| {
+            // If the status is failed and parent is succeeded, we need to upsample the terrain mesh.
+            matches!(s, DataRequesterStatus::Success | DataRequesterStatus::Fail)
+        })
     }
 }
 
