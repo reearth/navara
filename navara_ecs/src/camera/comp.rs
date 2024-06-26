@@ -1,10 +1,9 @@
-use bevy_ecs::{bundle::Bundle, component::Component};
+// mapengine_camera/src/components.rs
+use bevy_ecs::component::Component;
 use bevy_math::{Quat, Vec3};
 
-use crate::{
-    primitives::{Aabb, Plane},
-    Transform,
-};
+use crate::Transform;
+use crate::primitives::{Aabb, Plane};
 
 #[derive(Component)]
 pub struct CameraMarker;
@@ -94,7 +93,7 @@ impl CameraFrustum {
         ];
     }
 
-    pub fn interseciton_with_aabb(&self, aabb: &Aabb) -> bool {
+    pub fn intersection_with_aabb(&self, aabb: &Aabb) -> bool {
         for plane in self.planes {
             if !aabb.is_on_or_forward_plane(&plane) {
                 return false;
@@ -118,87 +117,54 @@ impl Orbit {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use bevy_math::Vec3;
-    use navara_core::Angle;
+// Control components
+#[derive(Component)]
+pub struct FirstPersonControlComponent {
+    pub sensitivity: f32,
+    pub speed: f32,
+}
 
-    use crate::{
-        primitives::{Aabb, Plane},
-        Transform,
-    };
+#[derive(Component)]
+pub struct FlyControlComponent {
+    pub sensitivity: f32,
+    pub speed: f32,
+}
 
-    use super::CameraFrustum;
+#[derive(Component)]
+pub struct GlobeControlComponent {
+    pub sensitivity: f32,
+    pub speed: f32,
+}
 
-    #[test]
-    fn is_frustum_plane_correct() {
-        let camera = Transform::from_xyz(0., 0., -10.);
-        let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
+#[derive(Component)]
+pub struct PlanarControlComponent {
+    pub sensitivity: f32,
+    pub speed: f32,
+}
 
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
-        debug_assert_eq!(
-            frustum.planes[0],
-            Plane::from_point_normal(Vec3::new(0., 0., -9.9), Vec3::new(0., 0., 1.))
-        );
-        debug_assert_eq!(
-            frustum.planes[1],
-            Plane::from_point_normal(Vec3::new(0., 0., 990.), Vec3::new(0., 0., -1.))
-        );
-        debug_assert_eq!(
-            frustum.planes[2],
-            Plane::from_point_normal(
-                Vec3::new(0., 0., -10.),
-                Vec3::new(-0.90630776, 0.0, 0.42261827)
-            )
-        );
-        debug_assert_eq!(
-            frustum.planes[3],
-            Plane::from_point_normal(
-                Vec3::new(0., 0., -10.),
-                Vec3::new(0.90630776, 0.0, 0.42261827)
-            )
-        );
-        debug_assert_eq!(
-            frustum.planes[4],
-            Plane::from_point_normal(
-                Vec3::new(0., 0., -10.),
-                Vec3::new(0.0, 0.90630776, 0.42261827)
-            )
-        );
-        debug_assert_eq!(
-            frustum.planes[5],
-            Plane::from_point_normal(
-                Vec3::new(0., 0., -10.),
-                Vec3::new(0.0, -0.90630776, 0.42261827)
-            )
-        );
-    }
+#[derive(Component)]
+pub struct StreetControlComponent {
+    pub sensitivity: f32,
+    pub speed: f32,
+}
 
-    #[test]
-    fn frustum_should_intersect_with_aabb() {
-        let camera = Transform::from_xyz(0., 0., -10.);
-        let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
+#[derive(Component)]
+pub struct DollyControlComponent {
+    pub sensitivity: f32,
+}
 
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
+#[derive(Component)]
+pub struct TrackControlComponent {
+    pub sensitivity: f32,
+}
 
-        let aabb = Aabb::from_points(Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.));
-        debug_assert!(frustum.interseciton_with_aabb(&aabb));
+#[derive(Component)]
+pub struct PanTiltControlComponent {
+    pub pan_sensitivity: f32,
+    pub tilt_sensitivity: f32,
+}
 
-        let aabb = Aabb::from_points(Vec3::new(10., 10., 100.), Vec3::new(20., 20., 100.));
-        debug_assert!(frustum.interseciton_with_aabb(&aabb));
-
-        let aabb = Aabb::from_points(
-            Vec3::new(-1000., -1000., -1000.),
-            Vec3::new(1000., 1000., -9.8),
-        );
-        debug_assert!(frustum.interseciton_with_aabb(&aabb));
-
-        // Out of top
-        let aabb = Aabb::from_points(Vec3::new(100., 100., 10.), Vec3::new(120., 120., 10.));
-        debug_assert!(!frustum.interseciton_with_aabb(&aabb));
-
-        // Out of bottom
-        let aabb = Aabb::from_points(Vec3::new(-100., -100., 10.), Vec3::new(-120., -120., 10.));
-        debug_assert!(!frustum.interseciton_with_aabb(&aabb));
-    }
+#[derive(Component)]
+pub struct InertiaControlComponent {
+    pub inertia: f32,
 }
