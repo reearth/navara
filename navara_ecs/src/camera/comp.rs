@@ -1,4 +1,3 @@
-// mapengine_camera/src/components.rs
 use bevy_ecs::component::Component;
 use bevy_math::{Quat, Vec3};
 
