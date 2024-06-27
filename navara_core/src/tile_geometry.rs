@@ -13,7 +13,7 @@ pub fn tile_triangles_flat(
     segments: usize,
     height: f32,
 ) -> Geometry {
-    tile_triangles(ellipsoid, extent, segments, |_, _| height)
+    tile_triangles(ellipsoid, extent, segments, &mut |_, _| height)
 }
 
 pub fn tile_triangles_with_terrain(
@@ -24,8 +24,9 @@ pub fn tile_triangles_with_terrain(
     terrain: &[u8],
     terrain_w: usize,
     terrain_h: usize,
-) -> Geometry {
-    let height = |x: usize, y: usize| -> f32 {
+) -> (Geometry, f32) {
+    let mut max_height = 0.0f32;
+    let mut height = |x: usize, y: usize| -> f32 {
         let image_x = x * (terrain_w - 1) / segments;
         let image_y = (terrain_h - 1) - y * (terrain_h - 1) / segments;
 
@@ -45,17 +46,21 @@ pub fn tile_triangles_with_terrain(
             0
         };
 
-        h as f32 * 0.01 + geoid_height
+        let height = h as f32 * 0.01 + geoid_height;
+
+        max_height = max_height.max(height);
+
+        height
     };
 
-    tile_triangles(ellipsoid, extent, segments, height)
+    (tile_triangles(ellipsoid, extent, segments, &mut height), max_height)
 }
 
-pub fn tile_triangles<F: Fn(usize, usize) -> f32>(
+pub fn tile_triangles<F: FnMut(usize, usize) -> f32>(
     ellipsoid: Ellipsoid<f32>,
     extent: Extent<f32, Radians>,
     segments: usize,
-    height: F,
+    height: &mut F,
 ) -> Geometry {
     let segments = if segments == 0 { 1 } else { segments };
 

@@ -69,7 +69,7 @@ view.addLayer({
 view.addLayer({
   type: "terrain",
   color: 0xffffff,
-  segments: 128,
+  segments: 64,
   terrain_url: terrainUrl,
   max_sse: 2,
   max_z: 23,

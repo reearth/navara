@@ -70,7 +70,6 @@ impl DataRequester {
     }
 }
 
-// FIXME: These for loop must be very slow, so we need to fix them like texture fragment does.
 pub fn set_data_requester_loaded(
     mut events: EventReader<BufferStoreLoadedEvent>,
     mut requests: Query<&mut DataRequester>,

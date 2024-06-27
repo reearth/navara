@@ -29,7 +29,7 @@ impl EllipsoidalOccluder {
     }
 
     /// Ref: https://github.com/CesiumGS/cesium/blob/16674c161b161755c9143c2940a062042cecaefa/packages/engine/Source/Core/EllipsoidalOccluder.js#L197
-    // TODO: Support the terrain under the tile.
+    // FIXME: Support the terrain under the tile.
     pub fn compute_horizontal_culling_point(
         &self,
         ellipsoid: &Ellipsoid<f32>,
