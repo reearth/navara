@@ -1,7 +1,9 @@
 use bevy_ecs::{entity::Entity, system::Query};
+use navara_core::tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem};
 
 use crate::{
     map::tile::{terrain::TerrainDataRequesterMarker, Tile, TileRegion},
+    utils::lerp::lerp,
     Buffer, BufferStore, DataRequester,
 };
 
@@ -72,21 +74,67 @@ impl TerrainData for RasterDEMData {
                             continue;
                         }
 
-                        let r = buf[i];
-                        let g = buf[i + 1];
-                        let b = buf[i + 2];
-                        let a = buf[i + 3];
+                        let src_r = buf[i];
+                        let src_g = buf[i + 1];
+                        let src_b = buf[i + 2];
+                        let src_a = buf[i + 3];
 
                         let new_x = (x - child_size * grid_index_x) * 2;
                         let new_y = (y - child_size * grid_index_y) * 2;
 
+                        // FIXME: Use custom encoding fomula.
+                        let src_height = decode_height_from_gsi_dem(
+                            src_r as i64,
+                            src_g as i64,
+                            src_b as i64,
+                            0.,
+                        );
+
                         for dy in 0..2 {
                             for dx in 0..2 {
                                 let ni = ((new_x + dx) + (new_y + dy) * parent_size) * 4;
-                                next[ni] = r;
-                                next[ni + 1] = g;
-                                next[ni + 2] = b;
-                                next[ni + 3] = a;
+                                if dx == 0 && dy == 0 {
+                                    next[ni] = src_r;
+                                    next[ni + 1] = src_g;
+                                    next[ni + 2] = src_b;
+                                    next[ni + 3] = src_a;
+                                    continue;
+                                }
+
+                                let dest_i = ((x as isize
+                                    + dx as isize * (1 - (grid_index_x as isize + 1)))
+                                    as usize
+                                    + (y as isize + dy as isize * (1 - (grid_index_y as isize + 1)))
+                                        as usize
+                                        * parent_size)
+                                    * 4;
+                                if buf.get(dest_i).is_none() {
+                                    next[ni] = src_r;
+                                    next[ni + 1] = src_g;
+                                    next[ni + 2] = src_b;
+                                    next[ni + 3] = src_a;
+                                    continue;
+                                }
+
+                                let dest_r = buf[dest_i];
+                                let dest_g = buf[dest_i + 1];
+                                let dest_b = buf[dest_i + 2];
+
+                                // FIXME: Use custom encoding formula.
+                                let dest_height = decode_height_from_gsi_dem(
+                                    dest_r as i64,
+                                    dest_g as i64,
+                                    dest_b as i64,
+                                    0.,
+                                );
+
+                                let next_height = lerp(src_height, dest_height, 0.5);
+                                let encoded_next_height = encode_height_to_gsi_dem(next_height, 0.);
+
+                                next[ni] = encoded_next_height.0 as u8;
+                                next[ni + 1] = encoded_next_height.1 as u8;
+                                next[ni + 2] = encoded_next_height.2 as u8;
+                                next[ni + 3] = src_a;
                             }
                         }
                     }

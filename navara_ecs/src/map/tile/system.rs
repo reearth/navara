@@ -532,7 +532,7 @@ pub fn transfer_mesh(
             upsampled_buf_handle
         };
 
-        {
+        if tile.upsampled_buf_handle.is_none() {
             qt.qt
                 .get_mut(rendered_tile.tile_handle)
                 .unwrap()
