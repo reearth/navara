@@ -13,12 +13,12 @@ use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
-    map::terrain::layer::TerrainLayer,
+    map::terrain::{layer::TerrainLayer, RasterDEMData, TerrainData, TerrainDataType},
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    BufferStore, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle, ObjectBundle,
-    TextureFragment, Transform,
+    Buffer, BufferStore, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle,
+    ObjectBundle, TextureFragment, Transform,
 };
 
 use super::{
@@ -89,16 +89,27 @@ fn request_terrain_data(
     handle: TileHandle,
 ) -> bool {
     let tile = qt.qt.get_mut(handle).unwrap();
-    if tile.terrain_data.data_requester_entity_id.is_some() {
+    let data_requester_entity_id = tile
+        .terrain_data
+        .as_ref()
+        .map_or(None, |t| t.data_requester_entity_id());
+    if data_requester_entity_id.is_some() {
         return false;
     }
-    match terrain_layer.map(|t| tile_url(&t.url, &tile.coords)) {
-        Some(url) => {
+    match terrain_layer.map(|t| (&t.terrain_type, tile_url(&t.url, &tile.coords))) {
+        Some((terrain_type, url)) => {
+            let mut terrain_data = match terrain_type {
+                TerrainDataType::RasterDEM => RasterDEMData::default(), // DEM
+                // TODO: Support quantized-mesh
+                TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
+                TerrainDataType::Unknown => return false,
+            };
             let entity = commands.spawn((
                 TerrainDataRequesterMarker,
                 DataRequester::from_store(url, buf),
             ));
-            tile.terrain_data.data_requester_entity_id = Some(entity.id());
+            terrain_data.set_data_requester_entity_id(entity.id());
+            tile.terrain_data = Some(Box::new(terrain_data));
         }
         None => return false,
     }
@@ -168,10 +179,12 @@ fn update_tile_occludee_point(
 ) {
     let extent = tile.coords.extent();
     let center = tile.aabb.center;
-    let max_height = tile
-        .terrain_data
-        .current_max_height
-        .map_or(Meters::new(0.), |h| Meters::new(h));
+    let max_height = match tile.terrain_data.as_ref() {
+        Some(t) => t
+            .current_max_height()
+            .map_or(Meters::new(0.), |h| Meters::new(h)),
+        None => Meters::new(0.),
+    };
 
     let positions = vec![
         xyz_to_vec3(ellipsoid.lle_to_xyz(LLE {
@@ -485,23 +498,53 @@ pub fn transfer_mesh(
     let terrain_layer = terrain_layer.iter().next();
 
     for rendered_tile in &rendered_tiles {
-        let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+        let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
 
         let extent = tile.coords.extent();
 
         let map_url = tile_url(&tile_layer.url, &tile.coords);
 
-        let terrain_req = tile
-            .terrain_data
-            .data_requester_entity_id
-            .map_or(None, |e| {
+        let terrain_req = match tile.terrain_data.as_ref() {
+            Some(t) => t.data_requester_entity_id().map_or(None, |e| {
                 terrain_data_requester.get(e).map_or(None, |v| Some(v.1))
-            });
+            }),
+            None => None,
+        };
 
         let should_render_terrain = terrain_layer.is_some()
             && terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Success));
 
-        if !should_render_terrain {
+        let is_terrain_failed =
+            terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail));
+
+        let texture_fragment_entity_id = tile.texture_fragment_entity_id;
+        let upsampled_buf_handle = tile.upsampled_buf_handle;
+
+        let upsampled_buf_handle = if is_terrain_failed && tile.upsampled_buf_handle.is_none() {
+            match tile.upsample(&qt, &terrain_data_requester, &buf) {
+                Some(upsampled) => Some(buf.new_u8(match upsampled {
+                    Buffer::U8(buf) => buf,
+                    _ => unimplemented!(),
+                })),
+                None => None,
+            }
+        } else {
+            upsampled_buf_handle
+        };
+
+        {
+            qt.qt
+                .get_mut(rendered_tile.tile_handle)
+                .unwrap()
+                .upsampled_buf_handle = upsampled_buf_handle;
+        }
+
+        let upsampled_buf = match upsampled_buf_handle {
+            Some(handle) => buf.get(&handle),
+            None => None,
+        };
+
+        if !should_render_terrain && upsampled_buf.is_none() {
             let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
 
             let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
@@ -518,7 +561,7 @@ pub fn transfer_mesh(
                     color: tile_layer.color,
                     map_url: Some(map_url.clone()),
                     wireframe: tile_layer.wireframe,
-                    texture_fragment: tile.texture_fragment_entity_id,
+                    texture_fragment: texture_fragment_entity_id,
                 },
                 object: ObjectBundle {
                     transform: Default::default(),
@@ -535,12 +578,15 @@ pub fn transfer_mesh(
         let terrain_layer = terrain_layer.unwrap();
         let terrain_req = terrain_req.unwrap();
 
-        let bytes = buf.get_u8(&terrain_req.handle).unwrap();
+        let bytes = match upsampled_buf {
+            Some(Buffer::U8(buf)) => buf.as_slice(),
+            _ => buf.get_u8(&terrain_req.handle).unwrap(),
+        };
         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
         let (triangles, max_height) = tile_triangles_with_terrain(
             WGS84_32,
             extent,
-            terrain_layer.segments,
+            terrain_layer.segments / if upsampled_buf.is_some() { 4 } else { 1 },
             0.,
             bytes,
             size,
@@ -560,7 +606,7 @@ pub fn transfer_mesh(
                 color: terrain_layer.color,
                 map_url: Some(map_url.clone()),
                 wireframe: terrain_layer.wireframe,
-                texture_fragment: tile.texture_fragment_entity_id,
+                texture_fragment: texture_fragment_entity_id,
             },
             object: ObjectBundle {
                 transform: Default::default(),
@@ -571,7 +617,11 @@ pub fn transfer_mesh(
             cache.mesh_entity = Some(e.id());
         };
 
-        tile.terrain_data.current_max_height = Some(max_height);
+        let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+        tile.terrain_data
+            .as_mut()
+            .expect("This line is invoked only in the tile has terrain")
+            .set_current_max_height(max_height);
     }
 }
 
@@ -595,7 +645,9 @@ pub fn clear_caches(
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
             (
                 tile.rendered_at,
-                tile.terrain_data.data_requester_entity_id,
+                tile.terrain_data
+                    .as_ref()
+                    .map_or(None, |t| t.data_requester_entity_id()),
                 tile.texture_fragment_entity_id,
                 tile.coords,
             )

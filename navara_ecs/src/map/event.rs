@@ -2,7 +2,11 @@ use bevy_ecs::prelude::*;
 
 // use crate::{event::EventStore, BufferStoreEvent, DataRequester};
 
-use super::{terrain::layer::TerrainLayer, tile::layer::TilesLayer, LayerDescription};
+use super::{
+    terrain::{layer::TerrainLayer, TerrainDataType},
+    tile::layer::TilesLayer,
+    LayerDescription,
+};
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -43,6 +47,11 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
                     max_sse: *max_sse,
                     max_z: *max_z,
                     wireframe: *wireframe,
+                    terrain_type: match url.split(".").last() {
+                        Some(s) if s == "png" => TerrainDataType::RasterDEM,
+                        Some(s) if s == "terrain" => TerrainDataType::QuantizedMesh,
+                        _ => TerrainDataType::Unknown,
+                    },
                 });
             }
         }
