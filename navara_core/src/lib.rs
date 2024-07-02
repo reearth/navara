@@ -5,6 +5,7 @@ pub mod terrain;
 pub mod tile_geometry;
 pub mod tiles;
 pub mod unit;
+pub mod utils;
 
 pub use coord::*;
 pub use ellipsoid::*;

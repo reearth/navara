@@ -1,9 +1,11 @@
 use bevy_ecs::{entity::Entity, system::Query};
-use navara_core::tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem};
+use navara_core::{
+    tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem},
+    utils::lerp,
+};
 
 use crate::{
     map::tile::{terrain::TerrainDataRequesterMarker, Tile, TileRegion},
-    utils::lerp::lerp,
     Buffer, BufferStore, DataRequester,
 };
 
@@ -92,7 +94,10 @@ impl TerrainData for RasterDEMData {
 
                         for dy in 0..2 {
                             for dx in 0..2 {
-                                let ni = ((new_x + dx) + (new_y + dy) * parent_size) * 4;
+                                let nx = (grid_index_x as isize - dx as isize).abs() as usize;
+                                let ny = (grid_index_y as isize - dy as isize).abs() as usize;
+
+                                let ni = ((new_x + nx) + (new_y + ny) * parent_size) * 4;
                                 if dx == 0 && dy == 0 {
                                     next[ni] = src_r;
                                     next[ni + 1] = src_g;
@@ -102,19 +107,20 @@ impl TerrainData for RasterDEMData {
                                 }
 
                                 let dest_i = ((x as isize
-                                    + dx as isize * (1 - (grid_index_x as isize + 1)))
-                                    as usize
-                                    + (y as isize + dy as isize * (1 - (grid_index_y as isize + 1)))
-                                        as usize
-                                        * parent_size)
+                                    + dx as isize * if grid_index_x == 0 { 1 } else { -1 })
+                                    + (y as isize
+                                        + dy as isize * if grid_index_y == 0 { 1 } else { -1 })
+                                        * parent_size as isize)
                                     * 4;
-                                if buf.get(dest_i).is_none() {
+                                if dest_i < 0 || buf.get(dest_i as usize).is_none() {
                                     next[ni] = src_r;
                                     next[ni + 1] = src_g;
                                     next[ni + 2] = src_b;
                                     next[ni + 3] = src_a;
                                     continue;
                                 }
+
+                                let dest_i = dest_i as usize;
 
                                 let dest_r = buf[dest_i];
                                 let dest_g = buf[dest_i + 1];
