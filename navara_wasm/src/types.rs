@@ -19,15 +19,21 @@ pub struct LayerDescription {
     pub max_sse: Option<f32>,
     pub max_z: usize,
     pub wireframe: bool,
+    /// This is required in `terrain layer`
+    pub elevation_decoder: Option<ElevationDecoder>,
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, PartialEq, Copy, Deserialize)]
-pub struct Extent {
-    west: f32,
-    south: f32,
-    east: f32,
-    north: f32,
+#[derive(Debug, Clone, PartialEq, Default, Copy, Deserialize)]
+pub struct ElevationDecoder {
+    pub r_scaler: f32,
+    pub g_scaler: f32,
+    pub b_scaler: f32,
+    pub offset: f32,
+    pub max_offset: f32,
+    pub min_offset: f32,
+    pub boundary: f32,
+    pub epsilon: f32,
 }
 
 impl LayerDescription {
@@ -52,19 +58,24 @@ impl LayerDescription {
                 max_sse: self.max_sse.unwrap_or(4.),
                 max_z: self.max_z,
                 wireframe: self.wireframe,
+                elevation_decoder: self.elevation_decoder.unwrap_or_default().into(),
             }),
             _ => None,
         }
     }
 }
 
-impl From<Extent> for navara_core::Extent<f32, navara_core::Radians> {
-    fn from(ext: Extent) -> Self {
-        navara_core::Extent {
-            west: navara_core::Deg::new(ext.west),
-            south: navara_core::Deg::new(ext.south),
-            east: navara_core::Deg::new(ext.east),
-            north: navara_core::Deg::new(ext.north),
+impl From<ElevationDecoder> for navara_core::terrain::ElevationDecoder {
+    fn from(d: ElevationDecoder) -> Self {
+        navara_core::terrain::ElevationDecoder {
+            r_scaler: d.r_scaler,
+            g_scaler: d.g_scaler,
+            b_scaler: d.b_scaler,
+            offset: d.offset,
+            max_offset: d.max_offset,
+            min_offset: d.min_offset,
+            boundary: d.boundary,
+            epsilon: d.epsilon,
         }
         .into()
     }

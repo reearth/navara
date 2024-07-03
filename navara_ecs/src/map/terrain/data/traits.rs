@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use bevy_ecs::{entity::Entity, system::Query};
+use navara_core::terrain::ElevationDecoder;
 
 use crate::{
     map::tile::{terrain::TerrainDataRequesterMarker, Tile, TileRegion},
@@ -10,6 +11,7 @@ use crate::{
 pub trait TerrainData: Debug + Sync + Send {
     fn upsample(
         &self,
+        decoder: &ElevationDecoder,
         region: &TileRegion,
         parent: &Tile,
         terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,

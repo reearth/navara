@@ -1,3 +1,5 @@
+use navara_core::terrain::ElevationDecoder;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum LayerDescription {
     Tiles {
@@ -15,5 +17,6 @@ pub enum LayerDescription {
         max_sse: f32,
         max_z: usize,
         wireframe: bool,
+        elevation_decoder: ElevationDecoder,
     },
 }

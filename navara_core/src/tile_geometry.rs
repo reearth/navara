@@ -1,4 +1,4 @@
-use crate::{Ellipsoid, Extent, Meters, Radians, LLE};
+use crate::{terrain::ElevationDecoder, Ellipsoid, Extent, Meters, Radians, LLE};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Geometry {
@@ -16,23 +16,32 @@ pub fn tile_triangles_flat(
     tile_triangles(ellipsoid, extent, segments, &mut |_, _| height)
 }
 
-// https://maps.gsi.go.jp/development/demtile.html
-pub fn decode_height_from_gsi_dem(r: i64, g: i64, b: i64, geoid_height: f32) -> f32 {
-    let h = if r != 128 || g != 0 || b != 0 {
-        if r >= 128 {
-            r * 65536 + g * 256 + b - 16777216
+pub fn decode_height_from_gsi_dem(
+    r: i64,
+    g: i64,
+    b: i64,
+    geoid_height: f32,
+    decoder: &ElevationDecoder,
+) -> f32 {
+    let x = r as f32 * decoder.r_scaler + g as f32 * decoder.g_scaler + b as f32 * decoder.b_scaler;
+    let h = if x != decoder.boundary {
+        if x > decoder.boundary {
+            x + decoder.max_offset
         } else {
-            r * 65536 + g * 256 + b
+            x + decoder.min_offset
         }
     } else {
-        0
-    } as f32;
-    h * 0.01 + geoid_height
+        0.
+    };
+    h * decoder.epsilon + decoder.offset + geoid_height
 }
 
-// https://www.jstage.jst.go.jp/article/geoinformatics/26/4/26_155/_pdf/-char/ja
-pub fn encode_height_to_gsi_dem(height: f32, geoid_height: f32) -> (i64, i64, i64) {
-    let h = ((height - geoid_height) / 0.01) as i64;
+pub fn encode_height_to_gsi_dem(
+    height: f32,
+    geoid_height: f32,
+    decoder: &ElevationDecoder,
+) -> (i64, i64, i64) {
+    let h = ((height - decoder.offset - geoid_height) / decoder.epsilon) as i64;
     let r = (h >> 16) & 255;
     let g = (h >> 8) & 255;
     let b = (h >> 0) & 255;
@@ -47,6 +56,7 @@ pub fn tile_triangles_with_terrain(
     terrain: &[u8],
     terrain_w: usize,
     terrain_h: usize,
+    decoder: &ElevationDecoder,
 ) -> (Geometry, f32) {
     let mut max_height = 0.0f32;
     let mut height = |x: usize, y: usize| -> f32 {
@@ -58,7 +68,7 @@ pub fn tile_triangles_with_terrain(
         let g = terrain[i * 4 + 1] as i64;
         let b = terrain[i * 4 + 2] as i64;
 
-        let height = decode_height_from_gsi_dem(r, g, b, geoid_height);
+        let height = decode_height_from_gsi_dem(r, g, b, geoid_height, decoder);
 
         max_height = max_height.max(height);
 
@@ -126,18 +136,59 @@ pub fn tile_triangles<F: FnMut(usize, usize) -> f32>(
 
 #[cfg(test)]
 mod test {
-    use crate::tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem};
+    use crate::{
+        terrain::ElevationDecoder,
+        tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem},
+    };
 
     #[test]
     fn test_gsi_raster_dem_conversion() {
+        // https://maps.gsi.go.jp/development/demtile.html
+        let decoder = ElevationDecoder {
+            r_scaler: 65536.,
+            g_scaler: 256.,
+            b_scaler: 1.,
+            offset: 0.,
+            max_offset: -16777216.,
+            min_offset: 0.,
+            boundary: 8388608.,
+            epsilon: 0.01,
+        };
         let geoid_height = 1.;
         let expected_height = 3747.95;
-        let decoded_rgba = encode_height_to_gsi_dem(expected_height, geoid_height);
+        let decoded_rgba = encode_height_to_gsi_dem(expected_height, geoid_height, &decoder);
         let encoded_height = decode_height_from_gsi_dem(
             decoded_rgba.0,
             decoded_rgba.1,
             decoded_rgba.2,
             geoid_height,
+            &decoder,
+        );
+        debug_assert_eq!(encoded_height, expected_height);
+    }
+
+    #[test]
+    fn test_mapbox_raster_dem_conversion() {
+        // https://docs.mapbox.com/data/tilesets/guides/access-elevation-data/#decode-data
+        let decoder = ElevationDecoder {
+            r_scaler: 65536.,
+            g_scaler: 256.,
+            b_scaler: 1.,
+            offset: -10000.,
+            max_offset: 0.,
+            min_offset: 0.,
+            boundary: 10000.,
+            epsilon: 0.1,
+        };
+        let geoid_height = 1.;
+        let expected_height = 407.2002;
+        let decoded_rgba = encode_height_to_gsi_dem(expected_height, geoid_height, &decoder);
+        let encoded_height = decode_height_from_gsi_dem(
+            decoded_rgba.0,
+            decoded_rgba.1,
+            decoded_rgba.2,
+            geoid_height,
+            &decoder,
         );
         debug_assert_eq!(encoded_height, expected_height);
     }

@@ -532,6 +532,7 @@ pub fn transfer_mesh(
                 &qt,
                 &terrain_data_requester,
                 &buf,
+                &terrain_layer.unwrap().elevation_decoder,
             ) {
                 Some(upsampled) => Some(buf.new_u8(match upsampled {
                     Buffer::U8(buf) => buf,
@@ -612,6 +613,7 @@ pub fn transfer_mesh(
             bytes,
             size,
             size,
+            &terrain_layer.elevation_decoder,
         );
         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
         let ihandle = buf.new_u32(triangles.indices);

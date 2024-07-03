@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{TileXYZ, WGS84_32};
+use navara_core::{terrain::ElevationDecoder, TileXYZ, WGS84_32};
 
 use navara_quadtree::Quadtree;
 
@@ -146,6 +146,7 @@ impl Tile {
         qt: &TileQuadtree,
         terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
         buf_store: &BufferStore,
+        decoder: &ElevationDecoder,
     ) -> Option<Buffer> {
         let parent = match self.get_parent_tile(qt) {
             Some(p) => p,
@@ -157,7 +158,7 @@ impl Tile {
         };
 
         self.terrain_data.as_ref().map_or(None, |t| {
-            t.upsample(&region, parent, terrain_data_requesters, buf_store)
+            t.upsample(decoder, &region, parent, terrain_data_requesters, buf_store)
         })
     }
 }

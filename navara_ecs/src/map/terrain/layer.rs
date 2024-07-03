@@ -1,4 +1,5 @@
 use bevy_ecs::component::Component;
+use navara_core::terrain::ElevationDecoder;
 
 use super::TerrainDataType;
 
@@ -10,5 +11,6 @@ pub struct TerrainLayer {
     pub max_sse: f32,
     pub max_z: usize,
     pub wireframe: bool,
+    pub elevation_decoder: ElevationDecoder,
     pub(crate) terrain_type: TerrainDataType,
 }

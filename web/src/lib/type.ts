@@ -18,7 +18,9 @@ export type MVTLayer = {
   color?: number;
 };
 
-type Layer<T = { type: string }> = T & Omit<LD, "free" | "extent"> & { extent?: Extent };
+type RemoveFreeRecursively<T> = T extends { free: any } ? Omit<{ [K in keyof T]: RemoveFreeRecursively<T[K]> }, "free"> : T;
+
+type Layer<T = { type: string }> = T & RemoveFreeRecursively<LD>;
 
 export type TilesLayer = Layer<{ type: "tiles" }>;
 export type TerrainLayer = Layer<{ type: "terrain" }>;
