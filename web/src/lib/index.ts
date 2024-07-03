@@ -178,7 +178,7 @@ export default class ThreeView {
 
     const size = new Vector2();
     this.renderer.getSize(size);
-    this.resize(size.width, size.height, this.renderer.pixelRatio);
+    this.resize(size.width, size.height, this.renderer.getPixelRatio());
   }
 
   dispose() {

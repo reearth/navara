@@ -88,8 +88,8 @@ impl App {
             return;
         };
 
-        window_res.height = height;
-        window_res.width = width;
+        window_res.height = height * pixel_ratio;
+        window_res.width = width * pixel_ratio;
         window_res.pixel_ratio = pixel_ratio;
 
         self.app.world.send_event(WindowResizeEvent {

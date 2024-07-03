@@ -3,6 +3,7 @@ use navara_core::{Ellipsoid, Extent, Float, Meters, Radians, LLE, XYZ};
 
 use crate::utils::coord::{vec3_to_xyz, xyz_to_vec3};
 
+// Ref: https://github.com/CesiumGS/cesium/blob/290f01d9091c381a0d3f21e3131c0e9f488c6937/packages/engine/Source/Scene/TileBoundingRegion.js
 #[derive(Debug)]
 pub struct TileBoundingReagion<F: Float> {
     pub extent: Extent<F, Radians>,
