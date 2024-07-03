@@ -6,7 +6,7 @@ use navara_core::{
 
 use crate::{
     map::tile::{terrain::TerrainDataRequesterMarker, Tile, TileRegion},
-    Buffer, BufferStore, DataRequester,
+    Buffer, BufferStore, DataRequester, Handle,
 };
 
 use super::TerrainData;
@@ -16,9 +16,17 @@ pub struct RasterDEMData {
     pub(crate) data_requester_entity_id: Option<Entity>,
     // Indicates the max height of the terrain from the globe surface.
     pub(crate) current_max_height: Option<f32>,
+    // TODO: Remove this property from BufferStore if unnecessary.
+    pub(crate) upsampled_buf_handle: Option<Handle>,
 }
 
 impl TerrainData for RasterDEMData {
+    fn upsampled_buf_handle(&self) -> Option<Handle> {
+        self.upsampled_buf_handle
+    }
+    fn set_upsampled_buf_handle(&mut self, handle: Option<Handle>) {
+        self.upsampled_buf_handle = handle;
+    }
     fn data_requester_entity_id(&self) -> Option<Entity> {
         self.data_requester_entity_id
     }
@@ -45,10 +53,9 @@ impl TerrainData for RasterDEMData {
             };
         let buf = match buf_store.get(&parent_terrain_data_requester.handle) {
             Some(b) => b,
-            None => match parent
-                .upsampled_buf_handle
-                .map_or(None, |h| buf_store.get(&h))
-            {
+            None => match parent.terrain_data.as_ref().map_or(None, |t| {
+                t.upsampled_buf_handle().map_or(None, |h| buf_store.get(&h))
+            }) {
                 Some(b) => b,
                 None => return None,
             },
@@ -135,7 +142,8 @@ impl TerrainData for RasterDEMData {
                                 );
 
                                 let next_height = lerp(src_height, dest_height, 0.5);
-                                let encoded_next_height = encode_height_to_gsi_dem(next_height, 0.);
+                                let encoded_next_height =
+                                    encode_height_to_gsi_dem(next_height, 0.);
 
                                 next[ni] = encoded_next_height.0 as u8;
                                 next[ni + 1] = encoded_next_height.1 as u8;

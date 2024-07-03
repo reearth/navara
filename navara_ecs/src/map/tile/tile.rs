@@ -6,7 +6,7 @@ use navara_quadtree::Quadtree;
 
 use crate::{
     map::terrain::TerrainData, primitives::Aabb, Buffer, BufferStore, DataRequester,
-    DataRequesterStatus, Handle, TextureFragment, TextureFragmentStatus,
+    DataRequesterStatus, TextureFragment, TextureFragmentStatus,
 };
 
 use super::{terrain::TerrainDataRequesterMarker, tile_bounding_region::TileBoundingReagion};
@@ -30,11 +30,9 @@ pub struct Tile {
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
     pub(super) rendered_at: usize,
-    pub(super) terrain_data: Option<Box<dyn TerrainData>>,
+    pub(crate) terrain_data: Option<Box<dyn TerrainData>>,
     pub(super) texture_fragment_entity_id: Option<Entity>,
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
-    // TODO: Remove this property from BufferStore if unnecessary.
-    pub(crate) upsampled_buf_handle: Option<Handle>,
 }
 
 impl Tile {

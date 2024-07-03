@@ -518,10 +518,21 @@ pub fn transfer_mesh(
             terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail));
 
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
-        let upsampled_buf_handle = tile.upsampled_buf_handle;
+        let terrain_data = &tile.terrain_data;
+        let upsampled_buf_handle = terrain_data
+            .as_ref()
+            .map_or(None, |t| t.upsampled_buf_handle());
 
-        let upsampled_buf_handle = if is_terrain_failed && tile.upsampled_buf_handle.is_none() {
-            match tile.upsample(&qt, &terrain_data_requester, &buf) {
+        let upsampled_buf_handle = if terrain_layer.is_some()
+            && terrain_data.is_some()
+            && is_terrain_failed
+            && upsampled_buf_handle.is_none()
+        {
+            match tile.upsample(
+                &qt,
+                &terrain_data_requester,
+                &buf,
+            ) {
                 Some(upsampled) => Some(buf.new_u8(match upsampled {
                     Buffer::U8(buf) => buf,
                     _ => unimplemented!(),
@@ -532,11 +543,21 @@ pub fn transfer_mesh(
             upsampled_buf_handle
         };
 
-        if tile.upsampled_buf_handle.is_none() {
+        if terrain_data.is_some()
+            && tile
+                .terrain_data
+                .as_ref()
+                .unwrap()
+                .upsampled_buf_handle()
+                .is_none()
+        {
             qt.qt
                 .get_mut(rendered_tile.tile_handle)
                 .unwrap()
-                .upsampled_buf_handle = upsampled_buf_handle;
+                .terrain_data
+                .as_mut()
+                .unwrap()
+                .set_upsampled_buf_handle(upsampled_buf_handle);
         }
 
         let upsampled_buf = match upsampled_buf_handle {
