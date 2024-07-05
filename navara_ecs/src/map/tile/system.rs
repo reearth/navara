@@ -266,8 +266,10 @@ fn traverse_tile(
     };
 
     let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester);
-    let was_children_rendered =
-        matches!(tile.previous_rendered_state, Some(RenderedState::Rendered));
+    let was_children_rendered = matches!(
+        tile.previous_rendered_state,
+        Some(RenderedState::RenderedChildren)
+    );
 
     let is_rendered_last_frame = tc.rendered_tile_caches.get(&t.handle()).is_some();
 
@@ -390,7 +392,8 @@ fn traverse_tile(
             spawn_tile_entity(command, tc, tile, handle);
         }
 
-        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = Some(RenderedState::Rendered);
+        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state =
+            Some(RenderedState::RenderedChildren);
         if are_all_children_rendered {
             // This tile's children are rendered completely, so parent tile isn't rendered.
             return TraversalResult::ChildrenRendered;

@@ -26,7 +26,7 @@ pub(crate) enum TileRegion {
 
 #[derive(Debug)]
 pub(crate) enum RenderedState {
-    Rendered,
+    RenderedChildren,
     Culled,
 }
 
