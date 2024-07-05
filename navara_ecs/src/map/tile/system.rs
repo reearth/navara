@@ -47,8 +47,7 @@ fn spawn_tile_entity(
     tile.rendered_at = tc.rendered_frame;
     tc.is_updated_in_this_frame = true;
 
-    if let Some(cache) = tc.rendered_tile_caches.get_mut(&tile_handle) {
-        cache.rendered_at = tc.rendered_frame;
+    if tc.rendered_tile_caches.get_mut(&tile_handle).is_some() {
         return;
     }
 
@@ -58,7 +57,6 @@ fn spawn_tile_entity(
         TileCache {
             mesh_entity: None,
             tile_entity: entity.id(),
-            rendered_at: tc.rendered_frame,
         },
     );
 }
