@@ -31,8 +31,8 @@ impl TerrainData for RasterDEMData {
     fn data_requester_entity_id(&self) -> Option<Entity> {
         self.data_requester_entity_id
     }
-    fn set_data_requester_entity_id(&mut self, e: Entity) {
-        self.data_requester_entity_id = Some(e);
+    fn set_data_requester_entity_id(&mut self, e: Option<Entity>) {
+        self.data_requester_entity_id = e;
     }
     fn current_max_height(&self) -> Option<f32> {
         self.current_max_height

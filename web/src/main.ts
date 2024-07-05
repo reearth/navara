@@ -22,7 +22,7 @@ const directionalLight = new DirectionalLight(0xffffff);
 directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
-const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
+const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
 const mapboxTerrainUrl= `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.png?access_token=${import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN}`;
 
@@ -69,7 +69,7 @@ view.addLayer({
   wireframe: false,
 });
 
-const terrainType: string = "gsi"; // mapbox | gsi
+const terrainType: string = "mapbox"; // mapbox | gsi
 const JAPAN_GSI_ELEVATION_DECODER = {
   r_scaler: 65536,
   g_scaler: 256,

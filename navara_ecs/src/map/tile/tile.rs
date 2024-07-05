@@ -24,15 +24,23 @@ pub(crate) enum TileRegion {
     SouthWest,
 }
 
+#[derive(Debug)]
+pub(crate) enum RenderedState {
+    Rendered,
+    Culled,
+}
+
 #[derive(Debug, Default)]
 pub struct Tile {
     pub coords: TileXYZ,
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
     pub(super) rendered_at: usize,
+    pub(super) visited_at: usize,
     pub(crate) terrain_data: Option<Box<dyn TerrainData>>,
     pub(super) texture_fragment_entity_id: Option<Entity>,
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
+    pub(crate) previous_rendered_state: Option<RenderedState>,
 }
 
 impl Tile {

@@ -123,6 +123,13 @@ function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: 
   if (!m) return;
 
   meshes.delete(id);
+  m.clear();
+  if (Array.isArray(m.material)) {
+    m.material.map(m => m.dispose());
+  } else {
+    m.material.dispose();
+  }
+  m.geometry.dispose();
   parent.remove(m);
 }
 
@@ -140,12 +147,19 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
       } else {
         context.drawImage(img, 0, 0);
       }
-      const data = context.getImageData(0, 0, img.height, img.width).data;
+      let data = context.getImageData(0, 0, img.height, img.width).data;
       if (data === undefined) {
         throw new Error("failed to convert array");
       } else {
-        buf.setU8(req.handle, req.bits, new Uint8Array(data));
+        let u8a = new Uint8Array(data)
+        buf.setU8(req.handle, req.bits, u8a);
+
+        // Prevent memory leak
+        u8a.set([]);
+        data.set([]);
       }
+      img.remove();
+      canvas.remove();
     })
     .catch(() => {
       buf.triggerDataRequesterFailed(req.bits);

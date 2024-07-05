@@ -25,7 +25,7 @@ use super::{
     layer::TilesLayer,
     terrain::TerrainDataRequesterMarker,
     tile_cache_manager::{TileCache, TileCacheManager},
-    Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker,
+    RenderedState, Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker,
 };
 
 #[derive(Component)]
@@ -47,13 +47,13 @@ fn spawn_tile_entity(
     tile.rendered_at = tc.rendered_frame;
     tc.is_updated_in_this_frame = true;
 
-    if let Some(cache) = tc.caches.get_mut(&tile_handle) {
+    if let Some(cache) = tc.rendered_tile_caches.get_mut(&tile_handle) {
         cache.rendered_at = tc.rendered_frame;
         return;
     }
 
     let entity = commands.spawn(RenderedTile { tile_handle });
-    tc.caches.insert(
+    tc.rendered_tile_caches.insert(
         tile_handle,
         TileCache {
             mesh_entity: None,
@@ -108,7 +108,7 @@ fn request_terrain_data(
                 TerrainDataRequesterMarker,
                 DataRequester::from_store(url, buf),
             ));
-            terrain_data.set_data_requester_entity_id(entity.id());
+            terrain_data.set_data_requester_entity_id(Some(entity.id()));
             tile.terrain_data = Some(Box::new(terrain_data));
         }
         None => return false,
@@ -266,11 +266,14 @@ fn traverse_tile(
     };
 
     let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester);
+    let was_children_rendered =
+        matches!(tile.previous_rendered_state, Some(RenderedState::Rendered));
 
-    let is_rendered_last_frame = tc.caches.get(&t.handle()).is_some();
+    let is_rendered_last_frame = tc.rendered_tile_caches.get(&t.handle()).is_some();
 
     let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, tile);
     if !is_intersecting_with_frustum {
+        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = Some(RenderedState::Culled);
         return TraversalResult::Culled;
     }
 
@@ -279,6 +282,7 @@ fn traverse_tile(
         .map(|p| occluder.is_scaled_space_point_visible(p))
         .unwrap_or(true);
     if !is_visible {
+        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = Some(RenderedState::Culled);
         return TraversalResult::Culled;
     }
 
@@ -296,7 +300,12 @@ fn traverse_tile(
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
+    {
+        qt.qt.get_mut(t.handle()).unwrap().visited_at = tc.rendered_frame;
+    }
+
     if meets_sse {
+        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = None;
         if is_renderable {
             return TraversalResult::TileRendered;
         }
@@ -305,18 +314,13 @@ fn traverse_tile(
         prepare_tile_resource(command, qt, buf, tiles, terrain_layer, t.handle());
     }
 
-    if !is_tile_ready {
+    if !is_tile_ready && !was_children_rendered {
         return TraversalResult::NotFound;
     }
 
-    let children = match qt.qt.children(t.coords()) {
-        Some(c) => c,
-        None => {
-            qt.qt
-                .initialize_children(t.coords(), &|(x, y, z)| Tile::new(TileXYZ { x, y, z }));
-            qt.qt.children(t.coords()).unwrap()
-        }
-    };
+    let children = qt
+        .qt
+        .get_or_create_children(t.coords(), &|(x, y, z)| Tile::new(TileXYZ { x, y, z }));
 
     let mut are_children_rendered = false;
     let mut are_all_children_rendered = true;
@@ -386,6 +390,7 @@ fn traverse_tile(
             spawn_tile_entity(command, tc, tile, handle);
         }
 
+        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = Some(RenderedState::Rendered);
         if are_all_children_rendered {
             // This tile's children are rendered completely, so parent tile isn't rendered.
             return TraversalResult::ChildrenRendered;
@@ -394,6 +399,8 @@ fn traverse_tile(
             return TraversalResult::TileRenderedPartially;
         }
     }
+
+    qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = None;
 
     if prepare_tile_resource(command, qt, buf, tiles, terrain_layer, t.handle()) {
         return TraversalResult::NotFound;
@@ -591,7 +598,7 @@ pub fn transfer_mesh(
                 },
             });
 
-            if let Some(cache) = tc.caches.get_mut(&rendered_tile.tile_handle) {
+            if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
                 cache.mesh_entity = Some(e.id());
             };
             continue;
@@ -636,7 +643,7 @@ pub fn transfer_mesh(
                 marker: Default::default(),
             },
         });
-        if let Some(cache) = tc.caches.get_mut(&rendered_tile.tile_handle) {
+        if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
             cache.mesh_entity = Some(e.id());
         };
 
@@ -651,63 +658,120 @@ pub fn transfer_mesh(
 pub fn clear_caches(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
-    qt: ResMut<TileQuadtree>,
-    rendered_tiles: Query<&RenderedTile>,
+    mut qt: ResMut<TileQuadtree>,
+    mut buf: ResMut<BufferStore>,
+    rendered_tiles: Query<(Entity, &RenderedTile)>,
+    meshes: Query<&Mesh>,
+    terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
 ) {
-    if !tc.is_updated_in_this_frame {
-        return;
+    // Prevent blocking the frame by this deletion process
+    for (rendered_tile_entity_id, rendered_tile) in rendered_tiles.iter() {
+        let rendered_at = {
+            let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
+            tile.rendered_at
+        };
+        let cache = tc.rendered_tile_caches.get(&rendered_tile.tile_handle);
+        // Remove unused mesh.
+        if tc.rendered_frame != rendered_at && cache.is_some() {
+            let cache = cache.unwrap();
+            {
+                if let Some(mesh_entity) = cache.mesh_entity {
+                    let mesh = meshes.get(mesh_entity).unwrap();
+                    buf.remove(&mesh.vertices);
+                    buf.remove(&mesh.indices);
+                    buf.remove(&mesh.uvs);
+
+                    commands.entity(mesh_entity).remove::<MeshBundle>();
+                }
+                commands
+                    .entity(rendered_tile_entity_id)
+                    .remove::<RenderedTile>();
+                tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
+
+                // To order the vector in oldest value first, the handle in last of the vector if it exists.
+                if !tc
+                    .cached_textures_tile_handles
+                    .insert(rendered_tile.tile_handle)
+                {
+                    tc.cached_textures_tile_handles
+                        .remove(&rendered_tile.tile_handle);
+                    tc.cached_textures_tile_handles
+                        .insert(rendered_tile.tile_handle);
+                }
+            }
+        }
     }
 
+    let mut removed_cached_tile_handler = vec![];
+
     // Prevent blocking the frame by this deletion process
-    let max_deletion = 10000;
-    for (count, rendered_tile) in rendered_tiles.iter().enumerate() {
-        if count > max_deletion {
-            break;
-        }
-        let (rendered_at, _data_requester_entity_id, _texture_fragment_entity_id, _coords) = {
-            let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
-            (
-                tile.rendered_at,
-                tile.terrain_data
-                    .as_ref()
-                    .map_or(None, |t| t.data_requester_entity_id()),
-                tile.texture_fragment_entity_id,
-                tile.coords,
-            )
-        };
-        match (
-            rendered_at,
-            tc.rendered_frame,
-            tc.caches.get(&rendered_tile.tile_handle),
-        ) {
-            (tile_rendered_at, rendered_frame, Some(cache)) => {
-                // Remove unused mesh.
-                if rendered_frame != tile_rendered_at {
-                    {
-                        if let Some(mesh_entity) = cache.mesh_entity {
-                            commands.entity(mesh_entity).remove::<MeshBundle>();
-                        }
-                        commands.entity(cache.tile_entity).remove::<RenderedTile>();
-                        tc.caches.remove(&rendered_tile.tile_handle);
-                    }
-                }
+    let max_deletion = 100;
+    let max_cache_size = 100;
 
-                // FIXME: This process deletes all cached textures by a second, but we should keep the cache until
-                // the cache overflowes the specified cache size
-                // if last_updated_at.duration_since(tile_rendered_at) >= Duration::from_millis(1000) {
-                //     {
-                // qt.qt
-                //     .get_mut(rendered_tile.tile_handle)
-                //     .map(|t| t.texture_fragment_entity_id = None);
-                // if let Some(fragment) = texture_fragment_entity_id {
-                //     commands.entity(fragment).remove::<TextureFragment>();
-                // }
-                // }
-
-                // TODO: Handle the data requester as well.
-                // }
+    // the cache overflowes the specified cache size
+    if max_cache_size < tc.cached_textures_tile_handles.len() {
+        for (i, tile_handle) in tc.cached_textures_tile_handles.iter().enumerate() {
+            if i > max_deletion {
+                break;
             }
-            _ => continue,
+            let (
+                visited_at,
+                data_requester_entity_id,
+                upsampled_buf_handle,
+                texture_fragment_entity_id,
+            ) = {
+                let tile = qt.qt.get(*tile_handle).unwrap();
+                (
+                    tile.visited_at,
+                    tile.terrain_data
+                        .as_ref()
+                        .map_or(None, |t| t.data_requester_entity_id()),
+                    tile.terrain_data
+                        .as_ref()
+                        .map_or(None, |t| t.upsampled_buf_handle()),
+                    tile.texture_fragment_entity_id,
+                )
+            };
+            // FIXME: Need to improve this clearing caches process.
+            // Each caches of texture are cleared in every 100 frame,
+            // but this is not suitable way, so need to think how to clear old cache.
+            if tc.rendered_frame <= visited_at + 100 {
+                continue;
+            }
+            if let Some(fragment) = texture_fragment_entity_id {
+                qt.qt
+                    .get_mut(*tile_handle)
+                    .map(|t| t.texture_fragment_entity_id = None);
+                commands
+                    .entity(fragment)
+                    .remove::<(TileTextureFragmentMarker, TextureFragment)>();
+            }
+            if let Some(e) = data_requester_entity_id {
+                let data_requester = terrain_data_requester.get(e).unwrap();
+                buf.remove(&data_requester.1.handle);
+                qt.qt.get_mut(*tile_handle).map(|t| {
+                    t.terrain_data.as_mut().map(|t| {
+                        t.set_data_requester_entity_id(None);
+                    });
+                });
+                commands
+                    .entity(e)
+                    .remove::<(TerrainDataRequesterMarker, DataRequester)>();
+            }
+            if let Some(h) = upsampled_buf_handle {
+                buf.remove(&h);
+                qt.qt.get_mut(*tile_handle).map(|t| {
+                    t.terrain_data.as_mut().map(|t| {
+                        t.set_upsampled_buf_handle(None);
+                    });
+                });
+            }
+            removed_cached_tile_handler.push(*tile_handle);
+            qt.qt.remove(*tile_handle);
+        }
+
+        for i in removed_cached_tile_handler {
+            tc.cached_textures_tile_handles.remove(&i);
         }
     }
 

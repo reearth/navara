@@ -89,7 +89,7 @@ where
     V: Sync + Send + 'static + Debug,
 {
     fn initialize_leaf(&mut self, (x, y, z): Coords<U>, init: &dyn Fn(Coords<U>) -> V) {
-        self.insert((x, y, z), init);
+        self.insert((x, y, z), init)
     }
 
     fn leaf(&self, c: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
@@ -102,6 +102,10 @@ where
 
     fn get_mut(&mut self, handle: u64) -> Option<&mut V> {
         self.qt.get_mut(handle).map(|e| e.value_mut())
+    }
+
+    fn remove(&mut self, handle: u64) -> bool {
+        self.qt.delete_by_handle(handle).is_some()
     }
 }
 
