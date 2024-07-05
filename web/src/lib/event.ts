@@ -147,11 +147,11 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
       } else {
         context.drawImage(img, 0, 0);
       }
-      let data = context.getImageData(0, 0, img.height, img.width).data;
+      const data = context.getImageData(0, 0, img.height, img.width).data;
       if (data === undefined) {
         throw new Error("failed to convert array");
       } else {
-        let u8a = new Uint8Array(data)
+        const u8a = new Uint8Array(data);
         buf.setU8(req.handle, req.bits, u8a);
 
         // Prevent memory leak
