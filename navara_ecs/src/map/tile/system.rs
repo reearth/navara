@@ -264,6 +264,9 @@ fn traverse_tile(
     };
 
     let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester);
+
+    // If this tile's children are rendered, we can skip the process
+    // to wait for the texture of this tile is loaded.
     let was_children_rendered = matches!(
         tile.previous_rendered_state,
         Some(RenderedState::RenderedChildren)
