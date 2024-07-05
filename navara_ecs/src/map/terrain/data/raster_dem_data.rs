@@ -93,7 +93,6 @@ impl TerrainData for RasterDEMData {
                         let new_x = (x - child_size * grid_index_x) * 2;
                         let new_y = (y - child_size * grid_index_y) * 2;
 
-                        // FIXME: Use custom encoding fomula.
                         let src_height = decode_height_from_gsi_dem(
                             src_r as i64,
                             src_g as i64,
@@ -136,7 +135,6 @@ impl TerrainData for RasterDEMData {
                                 let dest_g = buf[dest_i + 1];
                                 let dest_b = buf[dest_i + 2];
 
-                                // FIXME: Use custom encoding formula.
                                 let dest_height = decode_height_from_gsi_dem(
                                     dest_r as i64,
                                     dest_g as i64,

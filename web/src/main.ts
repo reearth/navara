@@ -67,6 +67,7 @@ view.addLayer({
   segments: 10,
   tile_url: tileUrl,
   max_sse: 2,
+  // FIXME: Currently upsampled terrain is noisy in high zoom level.
   max_z: 23,
   wireframe: false,
 });
