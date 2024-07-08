@@ -1,7 +1,7 @@
 use bevy_ecs::{entity::Entity, system::Query};
 use navara_core::{
     terrain::ElevationDecoder,
-    tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem},
+    tile_geometry::{decode_height_from_dem, encode_height_to_dem},
     utils::lerp,
 };
 
@@ -93,7 +93,7 @@ impl TerrainData for RasterDEMData {
                         let new_x = (x - child_size * grid_index_x) * 2;
                         let new_y = (y - child_size * grid_index_y) * 2;
 
-                        let src_height = decode_height_from_gsi_dem(
+                        let src_height = decode_height_from_dem(
                             src_r as i64,
                             src_g as i64,
                             src_b as i64,
@@ -135,7 +135,7 @@ impl TerrainData for RasterDEMData {
                                 let dest_g = buf[dest_i + 1];
                                 let dest_b = buf[dest_i + 2];
 
-                                let dest_height = decode_height_from_gsi_dem(
+                                let dest_height = decode_height_from_dem(
                                     dest_r as i64,
                                     dest_g as i64,
                                     dest_b as i64,
@@ -145,7 +145,7 @@ impl TerrainData for RasterDEMData {
 
                                 let next_height = lerp(src_height, dest_height, 0.5);
                                 let encoded_next_height =
-                                    encode_height_to_gsi_dem(next_height, 0., &decoder);
+                                    encode_height_to_dem(next_height, 0., &decoder);
 
                                 next[ni] = encoded_next_height.0 as u8;
                                 next[ni + 1] = encoded_next_height.1 as u8;

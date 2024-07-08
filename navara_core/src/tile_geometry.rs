@@ -16,7 +16,7 @@ pub fn tile_triangles_flat(
     tile_triangles(ellipsoid, extent, segments, &mut |_, _| height)
 }
 
-pub fn decode_height_from_gsi_dem(
+pub fn decode_height_from_dem(
     r: i64,
     g: i64,
     b: i64,
@@ -36,7 +36,7 @@ pub fn decode_height_from_gsi_dem(
     h * decoder.epsilon + decoder.offset + geoid_height
 }
 
-pub fn encode_height_to_gsi_dem(
+pub fn encode_height_to_dem(
     height: f32,
     geoid_height: f32,
     decoder: &ElevationDecoder,
@@ -68,7 +68,7 @@ pub fn tile_triangles_with_terrain(
         let g = terrain[i * 4 + 1] as i64;
         let b = terrain[i * 4 + 2] as i64;
 
-        let height = decode_height_from_gsi_dem(r, g, b, geoid_height, decoder);
+        let height = decode_height_from_dem(r, g, b, geoid_height, decoder);
 
         max_height = max_height.max(height);
 
@@ -136,7 +136,7 @@ pub fn tile_triangles<F: FnMut(usize, usize) -> f32>(
 mod test {
     use crate::{
         terrain::ElevationDecoder,
-        tile_geometry::{decode_height_from_gsi_dem, encode_height_to_gsi_dem},
+        tile_geometry::{decode_height_from_dem, encode_height_to_dem},
     };
 
     #[test]
@@ -154,8 +154,8 @@ mod test {
         };
         let geoid_height = 1.;
         let expected_height = 3747.95;
-        let decoded_rgba = encode_height_to_gsi_dem(expected_height, geoid_height, &decoder);
-        let encoded_height = decode_height_from_gsi_dem(
+        let decoded_rgba = encode_height_to_dem(expected_height, geoid_height, &decoder);
+        let encoded_height = decode_height_from_dem(
             decoded_rgba.0,
             decoded_rgba.1,
             decoded_rgba.2,
@@ -180,8 +180,8 @@ mod test {
         };
         let geoid_height = 1.;
         let expected_height = 407.2002;
-        let decoded_rgba = encode_height_to_gsi_dem(expected_height, geoid_height, &decoder);
-        let encoded_height = decode_height_from_gsi_dem(
+        let decoded_rgba = encode_height_to_dem(expected_height, geoid_height, &decoder);
+        let encoded_height = decode_height_from_dem(
             decoded_rgba.0,
             decoded_rgba.1,
             decoded_rgba.2,
