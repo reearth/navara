@@ -737,9 +737,9 @@ pub fn clear_caches(
                 )
             };
             // FIXME: Need to improve this clearing caches process.
-            // Each caches of texture are cleared in every 100 frame,
+            // Each caches of texture are cleared in every 1000 frame,
             // but this is not suitable way, so need to think how to clear old cache.
-            if tc.rendered_frame <= visited_at + 100 {
+            if tc.rendered_frame <= visited_at + 1000 {
                 continue;
             }
             if let Some(fragment) = texture_fragment_entity_id {

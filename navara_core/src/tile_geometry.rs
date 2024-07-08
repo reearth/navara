@@ -108,22 +108,20 @@ pub fn tile_triangles<F: FnMut(usize, usize) -> f32>(
 
             vertices.push([xyz.x.val(), xyz.y.val(), xyz.z.val()]);
             uvs.push([i as f32 / segments as f32, j as f32 / segments as f32]);
-        }
-    }
 
-    for i in 0..segments {
-        for j in 0..segments {
-            let a = i * (segments + 1) + j;
-            let b = (i + 1) * (segments + 1) + j;
-            let c = b + 1;
-            let d = a + 1;
+            if i != segments && j != segments {
+                let a = i * (segments + 1) + j;
+                let b = (i + 1) * (segments + 1) + j;
+                let c = b + 1;
+                let d = a + 1;
 
-            indices.push(a as u32);
-            indices.push(b as u32);
-            indices.push(d as u32);
-            indices.push(b as u32);
-            indices.push(c as u32);
-            indices.push(d as u32);
+                indices.push(a as u32);
+                indices.push(b as u32);
+                indices.push(d as u32);
+                indices.push(b as u32);
+                indices.push(c as u32);
+                indices.push(d as u32);
+            }
         }
     }
 
