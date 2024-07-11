@@ -18,7 +18,7 @@ use crate::{
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
     BufferStore, CachedMeshHandle, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle,
-    ObjectBundle, TextureFragment, Transform,
+    ObjectBundle, TextureFragment, TextureFragmentStatus, Transform,
 };
 
 use super::{
@@ -268,6 +268,14 @@ fn traverse_tile(
         terrain_layer,
     );
 
+    // If this tile is failed to load the texture, traverse children.
+    // But this tile won't be rendered even if this tile is selected.
+    let is_tile_failed = tile.texture_fragment_entity_id.map_or(false, |e| {
+        texture_fragment.get(e).map_or(false, |(_, t)| {
+            matches!(t.status, TextureFragmentStatus::Fail)
+        })
+    });
+
     // If this tile's children are rendered, we can skip the process
     // to wait for the texture of this tile is loaded.
     let was_children_rendered = matches!(
@@ -312,6 +320,11 @@ fn traverse_tile(
 
     if meets_sse {
         qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = None;
+
+        if is_tile_failed {
+            return TraversalResult::NotFound;
+        }
+
         if is_renderable {
             return TraversalResult::TileRendered;
         }
@@ -320,7 +333,7 @@ fn traverse_tile(
         prepare_tile_resource(command, qt, buf, tiles, terrain_layer, t.handle());
     }
 
-    if !is_tile_ready && !was_children_rendered {
+    if !is_tile_ready && !was_children_rendered && !is_tile_failed {
         return TraversalResult::NotFound;
     }
 

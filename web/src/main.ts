@@ -22,11 +22,18 @@ const directionalLight = new DirectionalLight(0xffffff);
 directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
-const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
-const mapboxTerrainUrl = `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
-  import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
-}`;
+const tileUrls = {
+  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+  gsiSeamlessphoto: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+};
+
+const terrainUrls = {
+  gsi: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  mapbox: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
+    import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
+  }`,
+};
 
 // const chiyodaExtent = {
 //   west: 139.712,
@@ -65,7 +72,7 @@ view.addLayer({
   type: "tiles",
   color: 0xffffff,
   segments: 10,
-  tile_url: tileUrl,
+  tile_url: tileUrls.openstreetmap,
   max_sse: 2,
   // FIXME: Currently upsampled terrain is noisy in high zoom level.
   max_z: 23,
@@ -98,7 +105,7 @@ view.addLayer({
   type: "terrain",
   color: 0xffffff,
   segments: 64,
-  terrain_url: terrainType === "mapbox" ? mapboxTerrainUrl : terrainUrl,
+  terrain_url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
   max_sse: 2,
   max_z: 15,
   wireframe: false,
