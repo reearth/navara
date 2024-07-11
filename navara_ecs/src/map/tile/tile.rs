@@ -1,11 +1,11 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{terrain::ElevationDecoder, TileXYZ, WGS84_32};
+use navara_core::{terrain::UpsampledTerrainMesh, Ellipsoid, TileRegion, TileXYZ, WGS84_32};
 
 use navara_quadtree::Quadtree;
 
 use crate::{
-    map::terrain::TerrainData, primitives::Aabb, Buffer, BufferStore, DataRequester,
+    map::terrain::TerrainData, primitives::Aabb, BufferStore, CachedMeshHandle, DataRequester,
     DataRequesterStatus, TextureFragment, TextureFragmentStatus,
 };
 
@@ -15,14 +15,6 @@ pub(super) type TileHandle = u64;
 
 #[derive(Component)]
 pub(crate) struct TileTextureFragmentMarker;
-
-#[derive(Debug)]
-pub(crate) enum TileRegion {
-    NorthWest,
-    NorthEast,
-    SouthEast,
-    SouthWest,
-}
 
 #[derive(Debug)]
 pub(crate) enum RenderedState {
@@ -41,6 +33,8 @@ pub struct Tile {
     pub(super) texture_fragment_entity_id: Option<Entity>,
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
     pub(crate) previous_rendered_state: Option<RenderedState>,
+    pub(crate) cached_mesh_handle: Option<CachedMeshHandle>,
+    pub(crate) upsampled: bool,
 }
 
 impl Tile {
@@ -69,7 +63,7 @@ impl Tile {
         let data_requester_entity_id = self
             .terrain_data
             .as_ref()
-            .map_or(None, |t| t.data_requester_entity_id());
+            .and_then(|t| t.data_requester_entity_id());
 
         // This means a terrain isn't used.
         if self.texture_fragment_entity_id.is_some() && data_requester_entity_id.is_none() {
@@ -86,8 +80,8 @@ impl Tile {
         let data_requester_entity_id = self
             .terrain_data
             .as_ref()
-            .map_or(None, |t| t.data_requester_entity_id());
-        data_requester_entity_id.map_or(None, |e| {
+            .and_then(|t| t.data_requester_entity_id());
+        data_requester_entity_id.and_then(|e| {
             terrain_data_requester
                 .get(e)
                 .map_or(None, |d| Some(d.1.clone()))
@@ -111,7 +105,7 @@ impl Tile {
     pub(super) fn get_parent_tile<'a>(&self, qt: &'a TileQuadtree) -> Option<&'a Self> {
         qt.qt
             .parent((self.coords.x, self.coords.y, self.coords.z))
-            .map_or(None, |p| qt.qt.get(p.handle()))
+            .and_then(|p| qt.qt.get(p.handle()))
     }
 
     fn get_region(&self, qt: &TileQuadtree) -> Option<TileRegion> {
@@ -151,11 +145,10 @@ impl Tile {
     // 4. Store the binary into the BufferStore, and store the handle in the tile.
     pub(super) fn upsample(
         &self,
+        ellipsoid: Ellipsoid<f32>,
         qt: &TileQuadtree,
-        terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
         buf_store: &BufferStore,
-        decoder: &ElevationDecoder,
-    ) -> Option<Buffer> {
+    ) -> Option<(Vec<f32>, Vec<f32>, UpsampledTerrainMesh)> {
         let parent = match self.get_parent_tile(qt) {
             Some(p) => p,
             None => return None,
@@ -165,9 +158,34 @@ impl Tile {
             None => return None,
         };
 
-        self.terrain_data.as_ref().map_or(None, |t| {
-            t.upsample(decoder, &region, parent, terrain_data_requesters, buf_store)
-        })
+        let cached_mesh_handle = match &parent.cached_mesh_handle {
+            Some(c) => c,
+            None => return None,
+        };
+
+        let (uvs, heights, indices) = match (
+            buf_store.get_f32(&cached_mesh_handle.uvs),
+            cached_mesh_handle
+                .heights
+                .and_then(|h| buf_store.get_f32(&h)),
+            buf_store.get_u32(&cached_mesh_handle.indices),
+        ) {
+            (Some(u), Some(h), Some(i)) => (u, h, i),
+            _ => return None,
+        };
+
+        let upsampled_mesh = match self
+            .terrain_data
+            .as_ref()
+            .and_then(|t| t.upsample(&region, uvs, heights, indices))
+        {
+            Some(u) => u,
+            None => return None,
+        };
+
+        let (vertices, uvs) = upsampled_mesh.construct_mesh(ellipsoid, &self.coords.extent());
+
+        Some((vertices, uvs, upsampled_mesh))
     }
 }
 

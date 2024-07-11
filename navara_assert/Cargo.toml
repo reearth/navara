@@ -1,10 +1,8 @@
 [package]
-name = "navara_core"
+name = "navara_assert"
 version = "0.1.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
 
 [dependencies]
 radians = "0.3.1"
-navara_assert = { path = "../navara_assert" }
-itertools = "0.13.0"

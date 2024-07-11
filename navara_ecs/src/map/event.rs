@@ -49,7 +49,7 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
                     max_z: *max_z,
                     wireframe: *wireframe,
                     elevation_decoder: elevation_decoder.clone(),
-                    terrain_type: match url.split("?").next() {
+                    terrain_type: match url.split('?').next() {
                         Some(s) if s.ends_with("png") => TerrainDataType::RasterDEM,
                         Some(s) if s.ends_with("terrain") => TerrainDataType::QuantizedMesh,
                         _ => TerrainDataType::Unknown,

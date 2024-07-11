@@ -17,7 +17,7 @@ use crate::{
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    Buffer, BufferStore, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle,
+    BufferStore, CachedMeshHandle, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle,
     ObjectBundle, TextureFragment, Transform,
 };
 
@@ -90,7 +90,7 @@ fn request_terrain_data(
     let data_requester_entity_id = tile
         .terrain_data
         .as_ref()
-        .map_or(None, |t| t.data_requester_entity_id());
+        .and_then(|t| t.data_requester_entity_id());
     if data_requester_entity_id.is_some() {
         return false;
     }
@@ -178,9 +178,7 @@ fn update_tile_occludee_point(
     let extent = tile.coords.extent();
     let center = tile.aabb.center;
     let max_height = match tile.terrain_data.as_ref() {
-        Some(t) => t
-            .current_max_height()
-            .map_or(Meters::new(0.), |h| Meters::new(h)),
+        Some(t) => t.current_max_height().map_or(Meters::new(0.), Meters::new),
         None => Meters::new(0.),
     };
 
@@ -485,6 +483,7 @@ pub fn update_tiles(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
@@ -511,78 +510,72 @@ pub fn transfer_mesh(
     for rendered_tile in &rendered_tiles {
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
 
+        let parent = tile.get_parent_tile(&qt);
+
         let extent = tile.coords.extent();
 
         let map_url = tile_url(&tile_layer.url, &tile.coords);
 
         let terrain_req = match tile.terrain_data.as_ref() {
-            Some(t) => t.data_requester_entity_id().map_or(None, |e| {
-                terrain_data_requester.get(e).map_or(None, |v| Some(v.1))
-            }),
+            Some(t) => t
+                .data_requester_entity_id()
+                .and_then(|e| terrain_data_requester.get(e).map_or(None, |v| Some(v.1))),
             None => None,
         };
 
         let should_render_terrain = terrain_layer.is_some()
             && terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Success));
 
-        let is_terrain_failed =
-            terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail));
-
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
-        let terrain_data = &tile.terrain_data;
-        let upsampled_buf_handle = terrain_data
-            .as_ref()
-            .map_or(None, |t| t.upsampled_buf_handle());
 
-        let upsampled_buf_handle = if terrain_layer.is_some()
-            && terrain_data.is_some()
-            && is_terrain_failed
-            && upsampled_buf_handle.is_none()
-        {
-            match tile.upsample(
-                &qt,
-                &terrain_data_requester,
-                &buf,
-                &terrain_layer.unwrap().elevation_decoder,
-            ) {
-                Some(upsampled) => Some(buf.new_u8(match upsampled {
-                    Buffer::U8(buf) => buf,
-                    _ => unimplemented!(),
-                })),
-                None => None,
-            }
-        } else {
-            upsampled_buf_handle
-        };
-
-        if terrain_data.is_some()
-            && tile
-                .terrain_data
-                .as_ref()
-                .unwrap()
-                .upsampled_buf_handle()
-                .is_none()
-        {
-            qt.qt
-                .get_mut(rendered_tile.tile_handle)
-                .unwrap()
-                .terrain_data
-                .as_mut()
-                .unwrap()
-                .set_upsampled_buf_handle(upsampled_buf_handle);
+        if let Some(cached_mesh_handle) = &tile.cached_mesh_handle {
+            let e = commands.spawn(MeshBundle {
+                mesh: Mesh {
+                    vertices: cached_mesh_handle.vertices,
+                    indices: cached_mesh_handle.indices,
+                    uvs: cached_mesh_handle.uvs,
+                },
+                material: Material {
+                    color: tile_layer.color,
+                    map_url: Some(map_url.clone()),
+                    wireframe: tile_layer.wireframe,
+                    texture_fragment: texture_fragment_entity_id,
+                },
+                object: ObjectBundle {
+                    transform: Default::default(),
+                    marker: Default::default(),
+                },
+            });
+            if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
+                cache.mesh_entity = Some(e.id());
+            };
+            continue;
         }
 
-        let upsampled_buf = match upsampled_buf_handle {
-            Some(handle) => buf.get(&handle),
-            None => None,
-        };
+        let should_upsample_terrain = terrain_layer.is_some()
+            && parent.map_or(false, |p| {
+                p.get_terrain_data_requester(&terrain_data_requester)
+                    .map_or(false, |t| matches!(t.status, DataRequesterStatus::Success))
+                    || p.upsampled
+            })
+            && terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail));
 
-        if !should_render_terrain && upsampled_buf.is_none() {
+        if !should_render_terrain && !should_upsample_terrain {
             let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
 
             let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
             let ihandle = buf.new_u32(triangles.indices);
             let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
+            {
+                if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
+                    t.cached_mesh_handle = Some(CachedMeshHandle {
+                        vertices: vhandle,
+                        indices: ihandle,
+                        uvs: uvshandle,
+                        heights: None,
+                    });
+                };
+            }
 
             let e = commands.spawn(MeshBundle {
                 mesh: Mesh {
@@ -609,26 +602,88 @@ pub fn transfer_mesh(
         }
 
         let terrain_layer = terrain_layer.unwrap();
+
+        if should_upsample_terrain {
+            if let Some((vertices, uvs, upsampled)) = tile.upsample(WGS84_32, &qt, &buf) {
+                let vhandle = buf.new_f32(vertices);
+                let ihandle = buf.new_u32(upsampled.indices);
+                let uvshandle = buf.new_f32(uvs);
+                let heights_handle = buf.new_f32(upsampled.heights);
+                {
+                    if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
+                        t.cached_mesh_handle = Some(CachedMeshHandle {
+                            vertices: vhandle,
+                            indices: ihandle,
+                            uvs: uvshandle,
+                            heights: Some(heights_handle),
+                        });
+                        t.upsampled = true;
+                    };
+                }
+
+                let e = commands.spawn(MeshBundle {
+                    mesh: Mesh {
+                        vertices: vhandle,
+                        indices: ihandle,
+                        uvs: uvshandle,
+                    },
+                    material: Material {
+                        color: terrain_layer.color,
+                        map_url: Some(map_url.clone()),
+                        wireframe: terrain_layer.wireframe,
+                        texture_fragment: texture_fragment_entity_id,
+                    },
+                    object: ObjectBundle {
+                        transform: Default::default(),
+                        marker: Default::default(),
+                    },
+                });
+
+                if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
+                    cache.mesh_entity = Some(e.id());
+                };
+                let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+                tile.terrain_data
+                    .as_mut()
+                    .expect("This line is invoked only in the tile has terrain")
+                    .set_current_max_height(upsampled.max_height);
+
+                continue;
+            };
+        }
+
         let terrain_req = terrain_req.unwrap();
 
-        let bytes = match upsampled_buf {
-            Some(Buffer::U8(buf)) => buf.as_slice(),
-            _ => buf.get_u8(&terrain_req.handle).unwrap(),
+        let bytes = match buf.get_u8(&terrain_req.handle) {
+            Some(data) => data,
+            None => unreachable!("This line should be invoked only when the terrain data is ready"),
         };
         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
-        let (triangles, max_height) = tile_triangles_with_terrain(
+        let (triangles, max_height, heights) = tile_triangles_with_terrain(
             WGS84_32,
             extent,
-            terrain_layer.segments / if upsampled_buf.is_some() { 4 } else { 1 },
+            terrain_layer.segments,
             0.,
             bytes,
             size,
             size,
             &terrain_layer.elevation_decoder,
         );
+
         let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
         let ihandle = buf.new_u32(triangles.indices);
         let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
+        let heights_handle = buf.new_f32(heights);
+        {
+            if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
+                t.cached_mesh_handle = Some(CachedMeshHandle {
+                    vertices: vhandle,
+                    indices: ihandle,
+                    uvs: uvshandle,
+                    heights: Some(heights_handle),
+                })
+            };
+        }
 
         let e = commands.spawn(MeshBundle {
             mesh: Mesh {
@@ -665,7 +720,6 @@ pub fn clear_caches(
     mut qt: ResMut<TileQuadtree>,
     mut buf: ResMut<BufferStore>,
     rendered_tiles: Query<(Entity, &RenderedTile)>,
-    meshes: Query<&Mesh>,
     terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
 ) {
     // Prevent blocking the frame by this deletion process
@@ -680,11 +734,6 @@ pub fn clear_caches(
             let cache = cache.unwrap();
             {
                 if let Some(mesh_entity) = cache.mesh_entity {
-                    let mesh = meshes.get(mesh_entity).unwrap();
-                    buf.remove(&mesh.vertices);
-                    buf.remove(&mesh.indices);
-                    buf.remove(&mesh.uvs);
-
                     commands.entity(mesh_entity).remove::<MeshBundle>();
                 }
                 commands
@@ -721,19 +770,17 @@ pub fn clear_caches(
             let (
                 visited_at,
                 data_requester_entity_id,
-                upsampled_buf_handle,
                 texture_fragment_entity_id,
+                cached_mesh_handle,
             ) = {
                 let tile = qt.qt.get(*tile_handle).unwrap();
                 (
                     tile.visited_at,
                     tile.terrain_data
                         .as_ref()
-                        .map_or(None, |t| t.data_requester_entity_id()),
-                    tile.terrain_data
-                        .as_ref()
-                        .map_or(None, |t| t.upsampled_buf_handle()),
+                        .and_then(|t| t.data_requester_entity_id()),
                     tile.texture_fragment_entity_id,
+                    &tile.cached_mesh_handle,
                 )
             };
             // FIXME: Need to improve this clearing caches process.
@@ -742,10 +789,13 @@ pub fn clear_caches(
             if tc.rendered_frame <= visited_at + 1000 {
                 continue;
             }
+
+            if let Some(cached_mesh) = cached_mesh_handle {
+                buf.remove(&cached_mesh.vertices);
+                buf.remove(&cached_mesh.indices);
+                buf.remove(&cached_mesh.uvs);
+            }
             if let Some(fragment) = texture_fragment_entity_id {
-                qt.qt
-                    .get_mut(*tile_handle)
-                    .map(|t| t.texture_fragment_entity_id = None);
                 commands
                     .entity(fragment)
                     .remove::<(TileTextureFragmentMarker, TextureFragment)>();
@@ -753,22 +803,9 @@ pub fn clear_caches(
             if let Some(e) = data_requester_entity_id {
                 let data_requester = terrain_data_requester.get(e).unwrap();
                 buf.remove(&data_requester.1.handle);
-                qt.qt.get_mut(*tile_handle).map(|t| {
-                    t.terrain_data.as_mut().map(|t| {
-                        t.set_data_requester_entity_id(None);
-                    });
-                });
                 commands
                     .entity(e)
                     .remove::<(TerrainDataRequesterMarker, DataRequester)>();
-            }
-            if let Some(h) = upsampled_buf_handle {
-                buf.remove(&h);
-                qt.qt.get_mut(*tile_handle).map(|t| {
-                    t.terrain_data.as_mut().map(|t| {
-                        t.set_upsampled_buf_handle(None);
-                    });
-                });
             }
             removed_cached_tile_handler.push(*tile_handle);
             qt.qt.remove(*tile_handle);

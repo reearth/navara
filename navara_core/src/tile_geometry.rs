@@ -44,10 +44,11 @@ pub fn encode_height_to_dem(
     let h = ((height - decoder.offset - geoid_height) / decoder.epsilon) as i64;
     let r = (h >> 16) & 255;
     let g = (h >> 8) & 255;
-    let b = (h >> 0) & 255;
+    let b = h & 255;
     (r, g, b)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn tile_triangles_with_terrain(
     ellipsoid: Ellipsoid<f32>,
     extent: Extent<f32, Radians>,
@@ -57,8 +58,9 @@ pub fn tile_triangles_with_terrain(
     terrain_w: usize,
     terrain_h: usize,
     decoder: &ElevationDecoder,
-) -> (Geometry, f32) {
+) -> (Geometry, f32, Vec<f32>) {
     let mut max_height = 0.0f32;
+    let mut heights = vec![];
     let mut height = |x: usize, y: usize| -> f32 {
         let image_x = x * (terrain_w - 1) / segments;
         let image_y = (terrain_h - 1) - y * (terrain_h - 1) / segments;
@@ -71,6 +73,7 @@ pub fn tile_triangles_with_terrain(
         let height = decode_height_from_dem(r, g, b, geoid_height, decoder);
 
         max_height = max_height.max(height);
+        heights.push(height);
 
         height
     };
@@ -78,6 +81,7 @@ pub fn tile_triangles_with_terrain(
     (
         tile_triangles(ellipsoid, extent, segments, &mut height),
         max_height,
+        heights,
     )
 }
 

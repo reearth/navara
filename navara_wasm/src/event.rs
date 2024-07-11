@@ -305,7 +305,7 @@ impl From<navara_ecs::TextureFragmentStatus> for TextureFragmentStatus {
     }
 }
 
-impl<'a> From<navara_ecs::EntityEvent> for TextureFragmentRemovedEvent {
+impl From<navara_ecs::EntityEvent> for TextureFragmentRemovedEvent {
     fn from(ev: navara_ecs::EntityEvent) -> Self {
         Self {
             ind: ev.ind,

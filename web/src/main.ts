@@ -72,7 +72,7 @@ view.addLayer({
   wireframe: false,
 });
 
-const terrainType: string = "mapbox"; // mapbox | gsi
+const terrainType: string = "gsi"; // mapbox | gsi
 const JAPAN_GSI_ELEVATION_DECODER = {
   r_scaler: 65536,
   g_scaler: 256,

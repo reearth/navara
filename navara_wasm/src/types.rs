@@ -77,6 +77,5 @@ impl From<ElevationDecoder> for navara_core::terrain::ElevationDecoder {
             boundary: d.boundary,
             epsilon: d.epsilon,
         }
-        .into()
     }
 }
