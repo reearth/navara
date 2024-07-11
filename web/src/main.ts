@@ -22,8 +22,11 @@ const directionalLight = new DirectionalLight(0xffffff);
 directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
-const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
-// const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
+const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
+const mapboxTerrainUrl = `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
+  import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
+}`;
 
 // const chiyodaExtent = {
 //   west: 139.712,
@@ -57,16 +60,50 @@ const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 //   max_sse: 2,
 //   wireframe: false,
 // });
+
 view.addLayer({
   type: "tiles",
   color: 0xffffff,
   segments: 10,
-  height: 0,
   tile_url: tileUrl,
-  z: 4,
   max_sse: 2,
+  // FIXME: Currently upsampled terrain is noisy in high zoom level.
   max_z: 23,
   wireframe: false,
+});
+
+const terrainType: string = "mapbox"; // mapbox | gsi
+const JAPAN_GSI_ELEVATION_DECODER = {
+  r_scaler: 65536,
+  g_scaler: 256,
+  b_scaler: 1,
+  offset: 0,
+  max_offset: -16777216,
+  min_offset: 0,
+  boundary: 8388608,
+  epsilon: 0.01,
+};
+const MAPBOX_ELEVATION_DECODER = {
+  r_scaler: 65536,
+  g_scaler: 256,
+  b_scaler: 1,
+  offset: -10000,
+  max_offset: 0,
+  min_offset: 0,
+  boundary: 10000,
+  epsilon: 0.1,
+};
+
+view.addLayer({
+  type: "terrain",
+  color: 0xffffff,
+  segments: 64,
+  terrain_url: terrainType === "mapbox" ? mapboxTerrainUrl : terrainUrl,
+  max_sse: 2,
+  max_z: 15,
+  wireframe: false,
+  elevation_decoder:
+    terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
 });
 
 // chiyoda-ku

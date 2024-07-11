@@ -94,6 +94,11 @@ pub struct MeshMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
 pub struct DataRequestEvent {
+    // Entity
+    pub ind: u32,
+    pub gen: u32,
+    pub bits: u64,
+
     pub handle: i32, // handle
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
@@ -102,7 +107,7 @@ pub struct DataRequestEvent {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
 pub enum TextureFragmentStatus {
-    Sucess,
+    Success,
     Fail,
     Pending,
 }
@@ -138,11 +143,7 @@ impl<'a> From<navara_ecs::Events<'a>> for Events {
             object_removed: ev.object_removed.into_iter().map(|ev| ev.into()).collect(),
             mesh_added: ev.mesh_added.into_iter().map(|ev| ev.into()).collect(),
             mesh_updated: ev.mesh_updated.into_iter().map(|ev| ev.into()).collect(),
-            data_requested: ev
-                .data_requested
-                .into_iter()
-                .map(|ev| ev.clone().into())
-                .collect(),
+            data_requested: ev.data_requested.into_iter().map(|ev| ev.into()).collect(),
             texture_fragment_requested: ev
                 .texture_fragment_reqested
                 .into_iter()
@@ -254,11 +255,16 @@ impl From<navara_ecs::Material> for MeshMaterial {
     }
 }
 
-impl From<navara_ecs::DataRequester> for DataRequestEvent {
-    fn from(ev: navara_ecs::DataRequester) -> Self {
+impl<'a> From<navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::DataRequester>>
+    for DataRequestEvent
+{
+    fn from(ev: navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::DataRequester>) -> Self {
         Self {
-            handle: ev.handle,
-            url: ev.url,
+            ind: ev.ind,
+            gen: ev.gen,
+            bits: ev.bits,
+            handle: ev.comp.handle,
+            url: ev.comp.url.clone(),
         }
     }
 }
@@ -282,7 +288,7 @@ impl<'a> From<navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::TextureF
 impl From<TextureFragmentStatus> for navara_ecs::TextureFragmentStatus {
     fn from(value: TextureFragmentStatus) -> Self {
         match value {
-            TextureFragmentStatus::Sucess => navara_ecs::TextureFragmentStatus::Sucess,
+            TextureFragmentStatus::Success => navara_ecs::TextureFragmentStatus::Success,
             TextureFragmentStatus::Fail => navara_ecs::TextureFragmentStatus::Fail,
             TextureFragmentStatus::Pending => navara_ecs::TextureFragmentStatus::Pending,
         }
@@ -292,14 +298,14 @@ impl From<TextureFragmentStatus> for navara_ecs::TextureFragmentStatus {
 impl From<navara_ecs::TextureFragmentStatus> for TextureFragmentStatus {
     fn from(value: navara_ecs::TextureFragmentStatus) -> Self {
         match value {
-            navara_ecs::TextureFragmentStatus::Sucess => TextureFragmentStatus::Sucess,
+            navara_ecs::TextureFragmentStatus::Success => TextureFragmentStatus::Success,
             navara_ecs::TextureFragmentStatus::Fail => TextureFragmentStatus::Fail,
             navara_ecs::TextureFragmentStatus::Pending => TextureFragmentStatus::Pending,
         }
     }
 }
 
-impl<'a> From<navara_ecs::EntityEvent> for TextureFragmentRemovedEvent {
+impl From<navara_ecs::EntityEvent> for TextureFragmentRemovedEvent {
     fn from(ev: navara_ecs::EntityEvent) -> Self {
         Self {
             ind: ev.ind,

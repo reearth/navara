@@ -31,7 +31,8 @@ export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
-  setU8: (handle: number, bytes: Uint8Array) => void;
+  setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
+  triggerDataRequesterFailed: (bits: bigint) => void;
 };
 
 export type TextureFragmentHandler = {
@@ -122,29 +123,47 @@ function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: 
   if (!m) return;
 
   meshes.delete(id);
+  m.clear();
+  if (Array.isArray(m.material)) {
+    m.material.map(m => m.dispose());
+  } else {
+    m.material.dispose();
+  }
+  m.geometry.dispose();
   parent.remove(m);
 }
 
 function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
-  console.log("Requested data", req.handle, req.url);
   const loader = new ImageLoader();
-  loader.load(req.url, img => {
-    const canvas = document.createElement("canvas");
-    canvas.height = img.height;
-    canvas.width = img.width;
-    const context = canvas.getContext("2d");
-    if (context === null) {
-      throw new Error("failed to get context of canvas");
-    } else {
-      context.drawImage(img, 0, 0);
-    }
-    const data = context.getImageData(0, 0, img.height, img.width).data;
-    if (data === undefined) {
-      throw new Error("failed to convert array");
-    } else {
-      buf.setU8(req.handle, new Uint8Array(data));
-    }
-  });
+  loader
+    .loadAsync(req.url)
+    .then(img => {
+      const canvas = document.createElement("canvas");
+      canvas.height = img.height;
+      canvas.width = img.width;
+      const context = canvas.getContext("2d");
+      if (context === null) {
+        throw new Error("failed to get context of canvas");
+      } else {
+        context.drawImage(img, 0, 0);
+      }
+      const data = context.getImageData(0, 0, img.height, img.width).data;
+      if (data === undefined) {
+        throw new Error("failed to convert array");
+      } else {
+        const u8a = new Uint8Array(data);
+        buf.setU8(req.handle, req.bits, u8a);
+
+        // Prevent memory leak
+        u8a.set([]);
+        data.set([]);
+      }
+      img.remove();
+      canvas.remove();
+    })
+    .catch(() => {
+      buf.triggerDataRequesterFailed(req.bits);
+    });
 }
 
 function makeTextureFragmentId(ind: number, gen: number) {
@@ -164,7 +183,7 @@ function processTextureFragmentRequested(
     .loadAsync(req.url)
     .then(t => {
       loadedTexes.set(id, t);
-      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Sucess);
+      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Success);
     })
     .catch(() => {
       handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);

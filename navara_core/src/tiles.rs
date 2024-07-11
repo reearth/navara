@@ -29,6 +29,14 @@ pub struct TileXYZ {
     pub z: usize,
 }
 
+#[derive(Debug)]
+pub enum TileRegion {
+    NorthWest,
+    NorthEast,
+    SouthEast,
+    SouthWest,
+}
+
 impl TileXYZ {
     /// Returns the number of tiles in the x and y direction at this zoom level.
     pub fn n(self) -> usize {

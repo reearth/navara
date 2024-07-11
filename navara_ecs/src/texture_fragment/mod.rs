@@ -7,7 +7,6 @@ use bevy_ecs::{
     removal_detection::RemovedComponents,
     system::{Query, ResMut},
 };
-use bevy_log::info;
 
 use crate::event::EventStore;
 
@@ -15,7 +14,7 @@ use crate::event::EventStore;
 pub enum TextureFragmentStatus {
     #[default]
     Pending,
-    Sucess,
+    Success,
     Fail,
 }
 
@@ -71,13 +70,8 @@ fn handle_loaded_event(
     mut t: Query<&mut TextureFragment>,
 ) {
     for e in loaded_ev.read() {
-        info!("Texture fragmet loaded event is received!");
         let _ = t.get_mut(e.id).map(|mut t| {
             t.status = e.status.clone();
-            info!(
-                "Texture fragmet's status is changed: {:?} {}",
-                e.status, t.url
-            );
         });
     }
 }

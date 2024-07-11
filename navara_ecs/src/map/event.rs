@@ -2,7 +2,11 @@ use bevy_ecs::prelude::*;
 
 // use crate::{event::EventStore, BufferStoreEvent, DataRequester};
 
-use super::{tile::Tiles, LayerDescription};
+use super::{
+    terrain::{layer::TerrainLayer, TerrainDataType},
+    tile::layer::TilesLayer,
+    LayerDescription,
+};
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -12,55 +16,50 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
         let AddLayerEvent(desc) = ev;
         match desc {
             LayerDescription::Tiles {
-                tile_url,
-                terrain_url,
-                z,
+                url,
                 segments,
-                height,
-                extent,
                 color,
                 max_sse,
                 max_z,
                 wireframe,
             } => {
-                commands.spawn(Tiles {
-                    tile_url: Some(tile_url.clone()),
-                    terrain_url: terrain_url.clone(),
-                    z: *z,
+                commands.spawn(TilesLayer {
+                    url: url.clone(),
                     segments: *segments,
-                    height: *height,
-                    extent: *extent,
                     color: *color,
                     max_sse: *max_sse,
                     max_z: *max_z,
                     wireframe: *wireframe,
                 });
             }
+            LayerDescription::Terrain {
+                url,
+                segments,
+                color,
+                max_sse,
+                max_z,
+                wireframe,
+                elevation_decoder,
+            } => {
+                commands.spawn(TerrainLayer {
+                    url: url.clone(),
+                    segments: *segments,
+                    color: *color,
+                    max_sse: *max_sse,
+                    max_z: *max_z,
+                    wireframe: *wireframe,
+                    elevation_decoder: elevation_decoder.clone(),
+                    terrain_type: match url.split('?').next() {
+                        Some(s) if ["png", "pngraw"].iter().any(|e| s.ends_with(e)) => {
+                            TerrainDataType::RasterDEM
+                        }
+                        Some(s) if ["terrain"].iter().any(|e| s.ends_with(e)) => {
+                            TerrainDataType::QuantizedMesh
+                        }
+                        _ => TerrainDataType::Unknown,
+                    },
+                });
+            }
         }
     }
 }
-
-// pub fn set_data_requester_loaded(
-//     mut events: EventReader<BufferStoreEvent>,
-//     mut requests: Query<&mut DataRequester>,
-// ) {
-//     for e in events.read() {
-//         for mut d in &mut requests {
-//             if d.handle == e.handle {
-//                 d.loaded = true;
-//             }
-//         }
-//     }
-// }
-
-// pub fn send_data_requst_events(
-//     mut events: ResMut<EventStore>,
-//     requests: Query<(Entity, &DataRequester), Added<DataRequester>>,
-// ) {
-//     for (e, d) in requests.iter() {
-//         if d.loaded {
-//             continue;
-//         }
-//         events.data_requested.push(e);
-//     }
-// }

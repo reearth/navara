@@ -1,6 +1,7 @@
 use bevy_app::{App, Plugin, PreUpdate, Update};
 
 mod event;
+mod terrain;
 use bevy_ecs::schedule::IntoSystemConfigs;
 pub use event::AddLayerEvent;
 use event::*;
@@ -22,11 +23,8 @@ impl Plugin for MapPlugin {
             .add_systems(
                 Update,
                 (
-                    // set_data_requester_loaded,
                     process_add_events,
                     (tile::system::update_tiles, tile::system::transfer_mesh).chain(),
-                    // tile::system::load_tiles,
-                    // send_data_requst_events,
                 ),
             )
             .add_event::<AddLayerEvent>();

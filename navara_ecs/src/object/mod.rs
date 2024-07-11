@@ -9,6 +9,9 @@ use bevy_ecs::{
     system::{Query, ResMut},
 };
 
+mod cache;
+pub use cache::*;
+
 #[derive(Component, Debug, Default)]
 pub struct ObjectMarker;
 

@@ -9,7 +9,7 @@ pub struct Events<'a> {
     pub object_removed: Vec<EntityEvent>,
     pub mesh_added: Vec<ComponentEvent<(&'a Mesh, &'a Material, &'a Transform)>>,
     pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a Material)>>,
-    pub data_requested: Vec<&'a DataRequester>,
+    pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
 }

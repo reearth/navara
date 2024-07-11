@@ -44,6 +44,31 @@ where
         }
     }
 
+    fn get_or_create_children(
+        &mut self,
+        (x, y, z): Coords<U>,
+        init: &dyn Fn(Coords<U>) -> T,
+    ) -> Vec<Box<dyn GeoSpacialQuadLeaf<U>>> {
+        let mut children: Vec<Box<dyn GeoSpacialQuadLeaf<U>>> = Vec::with_capacity(4);
+        for i in 0..4 {
+            let i = to_int::<usize, U>(i);
+            let x = (x << 1) + (i % (U::one() + U::one()));
+            let y = (y << 1) + (i >> 1);
+            let z = z + U::one();
+            if let Some(t) = self.leaf((x, y, z)) {
+                children.push(t);
+            } else {
+                self.initialize_leaf((x, y, z), init);
+                if let Some(t) = self.leaf((x, y, z)) {
+                    children.push(t);
+                } else {
+                    unreachable!();
+                }
+            }
+        }
+        children
+    }
+
     fn leaf(&self, coords: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>>;
 
     fn zero(&self) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
@@ -72,4 +97,5 @@ where
     fn get(&self, handle: u64) -> Option<&T>;
 
     fn get_mut(&mut self, handle: u64) -> Option<&mut T>;
+    fn remove(&mut self, handle: u64) -> bool;
 }

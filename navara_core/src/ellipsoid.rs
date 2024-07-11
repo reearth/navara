@@ -166,18 +166,10 @@ impl<F: Float + One<F>> XYZ<F> {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Display;
+    use navara_assert::float::assert_delta;
 
     use super::*;
     use crate::Deg;
-
-    // TODO: Move this to correct place
-    fn assert_delta<F: Float + PartialOrd + Display>(a: F, b: F, d: F) {
-        if (a - b).abs() < d {
-        } else {
-            panic!("a: {}  b: {} d: {}", a, b, d);
-        }
-    }
 
     #[test]
     fn test_ellipsoid() {
