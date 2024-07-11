@@ -5,8 +5,10 @@ use navara_core::{terrain::UpsampledTerrainMesh, Ellipsoid, TileRegion, TileXYZ,
 use navara_quadtree::Quadtree;
 
 use crate::{
-    map::terrain::TerrainData, primitives::Aabb, BufferStore, CachedMeshHandle, DataRequester,
-    DataRequesterStatus, TextureFragment, TextureFragmentStatus,
+    map::terrain::{layer::TerrainLayer, TerrainData},
+    primitives::Aabb,
+    BufferStore, CachedMeshHandle, DataRequester, DataRequesterStatus, TextureFragment,
+    TextureFragmentStatus,
 };
 
 use super::{terrain::TerrainDataRequesterMarker, tile_bounding_region::TileBoundingReagion};
@@ -50,9 +52,10 @@ impl Tile {
 
     pub(super) fn is_ready(
         &self,
-        _qt: &TileQuadtree,
+        z: usize,
         texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
         terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
         let texture_fragment_status = self
             .texture_fragment_entity_id
@@ -70,7 +73,9 @@ impl Tile {
             return is_texture_loaded;
         }
 
-        is_texture_loaded && self.is_terrain_ready(terrain_data_requester)
+        is_texture_loaded
+            && (self.is_terrain_ready(terrain_data_requester)
+                || terrain_layer.map_or(false, |l| z > l.max_z))
     }
 
     pub(crate) fn get_terrain_data_requester(

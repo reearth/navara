@@ -261,7 +261,12 @@ fn traverse_tile(
         None => unreachable!(),
     };
 
-    let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester);
+    let is_tile_ready = tile.is_ready(
+        tile.coords.z,
+        texture_fragment,
+        terrain_data_requester,
+        terrain_layer,
+    );
 
     // If this tile's children are rendered, we can skip the process
     // to wait for the texture of this tile is loaded.
@@ -558,7 +563,8 @@ pub fn transfer_mesh(
                     .map_or(false, |t| matches!(t.status, DataRequesterStatus::Success))
                     || p.upsampled
             })
-            && terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail));
+            && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
+                || terrain_layer.map_or(false, |l| tile.coords.z > l.max_z));
 
         if !should_render_terrain && !should_upsample_terrain {
             let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);

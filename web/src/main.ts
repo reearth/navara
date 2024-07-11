@@ -24,7 +24,7 @@ view.scene.add(directionalLight);
 
 const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
-const mapboxTerrainUrl = `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.png?access_token=${
+const mapboxTerrainUrl = `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
   import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
 }`;
 
@@ -72,7 +72,7 @@ view.addLayer({
   wireframe: false,
 });
 
-const terrainType: string = "gsi"; // mapbox | gsi
+const terrainType: string = "mapbox"; // mapbox | gsi
 const JAPAN_GSI_ELEVATION_DECODER = {
   r_scaler: 65536,
   g_scaler: 256,
@@ -100,7 +100,7 @@ view.addLayer({
   segments: 64,
   terrain_url: terrainType === "mapbox" ? mapboxTerrainUrl : terrainUrl,
   max_sse: 2,
-  max_z: 23,
+  max_z: 15,
   wireframe: false,
   elevation_decoder:
     terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,

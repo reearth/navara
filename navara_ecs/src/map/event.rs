@@ -50,8 +50,12 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
                     wireframe: *wireframe,
                     elevation_decoder: elevation_decoder.clone(),
                     terrain_type: match url.split('?').next() {
-                        Some(s) if s.ends_with("png") => TerrainDataType::RasterDEM,
-                        Some(s) if s.ends_with("terrain") => TerrainDataType::QuantizedMesh,
+                        Some(s) if ["png", "pngraw"].iter().any(|e| s.ends_with(e)) => {
+                            TerrainDataType::RasterDEM
+                        }
+                        Some(s) if ["terrain"].iter().any(|e| s.ends_with(e)) => {
+                            TerrainDataType::QuantizedMesh
+                        }
                         _ => TerrainDataType::Unknown,
                     },
                 });
