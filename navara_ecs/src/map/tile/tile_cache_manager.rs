@@ -9,7 +9,6 @@ use super::TileHandle;
 /// but accessing it is a little bit high cost.
 /// These values are removed and added frequently,so we should use this cache structure.
 pub struct TileCache {
-    pub tile_entity: Entity,
     pub mesh_entity: Option<Entity>,
 }
 
