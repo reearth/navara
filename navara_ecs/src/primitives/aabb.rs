@@ -1,6 +1,6 @@
 use bevy_ecs::component::Component;
 use bevy_math::Vec3;
-use navara_core::{Angle, Extent, LngLat, Radians, WGS84_32};
+use navara_core::{Angle, Extent, LngLat, Meters, Radians, LLE, WGS84_32};
 
 use super::Plane;
 
@@ -22,24 +22,28 @@ impl Aabb {
         Self { center, extents }
     }
 
-    pub fn from_extent_f32(extent: Extent<f32, Radians>) -> Self {
+    pub fn from_extent_f32(extent: Extent<f32, Radians>, max_height: f32) -> Self {
         let ellipsoid = WGS84_32;
 
-        let nw = LngLat {
+        let nw = LLE {
             lng: extent.west,
             lat: extent.north,
+            height: Meters::new(max_height),
         };
-        let ne = LngLat {
+        let ne = LLE {
             lng: extent.east,
             lat: extent.north,
+            height: Meters::new(max_height),
         };
-        let se = LngLat {
+        let se = LLE {
             lng: extent.east,
             lat: extent.south,
+            height: Meters::new(max_height),
         };
-        let sw = LngLat {
+        let sw = LLE {
             lng: extent.west,
             lat: extent.south,
+            height: Meters::new(max_height),
         };
 
         let center = LngLat {
@@ -47,10 +51,10 @@ impl Aabb {
             lat: Angle::new((sw.lat.val() + ne.lat.val()) / 2.),
         };
 
-        let p_nw = ellipsoid.lle_to_xyz(nw.into());
-        let p_ne = ellipsoid.lle_to_xyz(ne.into());
-        let p_se = ellipsoid.lle_to_xyz(se.into());
-        let p_sw = ellipsoid.lle_to_xyz(sw.into());
+        let p_nw = ellipsoid.lle_to_xyz(nw);
+        let p_ne = ellipsoid.lle_to_xyz(ne);
+        let p_se = ellipsoid.lle_to_xyz(se);
+        let p_sw = ellipsoid.lle_to_xyz(sw);
 
         let p_center = ellipsoid.lle_to_xyz(center.into());
 
@@ -107,12 +111,18 @@ impl Aabb {
         Self { center, extents }
     }
 
+    pub fn update(&mut self, extent: Extent<f32, Radians>, max_height: f32) {
+        let next = Self::from_extent_f32(extent, max_height);
+        self.center = next.center;
+        self.extents = next.extents;
+    }
+
     pub fn is_on_or_forward_plane(&self, plane: &Plane) -> bool {
         let r = (self.extents.x * plane.normal.x).abs()
             + (self.extents.y * plane.normal.y).abs()
             + (self.extents.z * plane.normal.z).abs();
 
-        plane.get_distance_to_point(self.center) > -r
+        plane.get_distance_to_point(self.center) >= -r
     }
 }
 

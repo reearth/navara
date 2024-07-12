@@ -1,6 +1,8 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{terrain::UpsampledTerrainMesh, Ellipsoid, TileRegion, TileXYZ, WGS84_32};
+use navara_core::{
+    terrain::UpsampledTerrainMesh, Ellipsoid, Extent, Radians, TileRegion, TileXYZ, WGS84_32,
+};
 
 use navara_quadtree::Quadtree;
 
@@ -24,9 +26,10 @@ pub(crate) enum RenderedState {
     Culled,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Tile {
     pub coords: TileXYZ,
+    pub extent: Extent<f32, Radians>,
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
     pub(super) rendered_at: usize,
@@ -40,13 +43,22 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub(super) fn new(coords: TileXYZ) -> Self {
+    pub(super) fn new(coords: TileXYZ, max_height: f32) -> Self {
         let extent = coords.extent();
+
         Self {
             coords,
-            aabb: Aabb::from_extent_f32(extent),
+            extent: coords.extent(),
+            aabb: Aabb::from_extent_f32(extent, max_height),
             bounding_reagion: Some(TileBoundingReagion::from_extent_f32(extent, WGS84_32)),
-            ..Default::default()
+            rendered_at: 0,
+            visited_at: 0,
+            terrain_data: None,
+            texture_fragment_entity_id: None,
+            occludee_point_in_scaled_space: None,
+            previous_rendered_state: None,
+            cached_mesh_handle: None,
+            upsampled: false,
         }
     }
 
@@ -205,7 +217,7 @@ impl Tile {
             None => return None,
         };
 
-        let (vertices, uvs) = upsampled_mesh.construct_mesh(ellipsoid, &self.coords.extent());
+        let (vertices, uvs) = upsampled_mesh.construct_mesh(ellipsoid, &self.extent);
 
         Some((vertices, uvs, upsampled_mesh))
     }

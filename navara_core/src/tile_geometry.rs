@@ -9,7 +9,7 @@ pub struct Geometry {
 
 pub fn tile_triangles_flat(
     ellipsoid: Ellipsoid<f32>,
-    extent: Extent<f32, Radians>,
+    extent: &Extent<f32, Radians>,
     segments: usize,
     height: f32,
 ) -> Geometry {
@@ -51,7 +51,7 @@ pub fn encode_height_to_dem(
 #[allow(clippy::too_many_arguments)]
 pub fn tile_triangles_with_terrain(
     ellipsoid: Ellipsoid<f32>,
-    extent: Extent<f32, Radians>,
+    extent: &Extent<f32, Radians>,
     segments: usize,
     geoid_height: f32,
     terrain: &[u8],
@@ -87,7 +87,7 @@ pub fn tile_triangles_with_terrain(
 
 pub fn tile_triangles<F: FnMut(usize, usize) -> f32>(
     ellipsoid: Ellipsoid<f32>,
-    extent: Extent<f32, Radians>,
+    extent: &Extent<f32, Radians>,
     segments: usize,
     height: &mut F,
 ) -> Geometry {

@@ -170,7 +170,7 @@ fn update_tile_occludee_point(
     occluder: &EllipsoidalOccluder,
     tile: &mut Tile,
 ) {
-    let extent = tile.coords.extent();
+    let extent = tile.extent;
     let center = tile.aabb.center;
     let max_height = match tile.terrain_data.as_ref() {
         Some(t) => t.current_max_height().map_or(Meters::new(0.), Meters::new),
@@ -327,9 +327,15 @@ fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    let children = qt
-        .qt
-        .get_or_create_children(t.coords(), &|(x, y, z)| Tile::new(TileXYZ { x, y, z }));
+    let parent = qt.qt.get(t.handle());
+    let parent_max_height = parent.map_or(0., |p| {
+        p.terrain_data
+            .as_ref()
+            .map_or(0., |t| t.current_max_height().unwrap_or(0.))
+    });
+    let children = qt.qt.get_or_create_children(t.coords(), &|(x, y, z)| {
+        Tile::new(TileXYZ { x, y, z }, parent_max_height)
+    });
 
     let mut are_children_rendered = false;
     let mut are_all_children_rendered = true;
@@ -444,7 +450,7 @@ pub fn update_tiles(
                 Some(z) => z,
                 None => {
                     qt.qt
-                        .initialize_zero(&|(x, y, z)| Tile::new(TileXYZ { x, y, z }));
+                        .initialize_zero(&|(x, y, z)| Tile::new(TileXYZ { x, y, z }, 0.));
                     qt.qt
                         .zero()
                         .expect("Failed to initialize a level zero tile unexpectedly")
@@ -518,7 +524,7 @@ pub fn transfer_mesh(
     for rendered_tile in &rendered_tiles {
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
 
-        let extent = tile.coords.extent();
+        let extent = tile.extent;
 
         let map_url = tile_url(&tile_layer.url, &tile.coords);
 
@@ -562,7 +568,7 @@ pub fn transfer_mesh(
             tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain && !should_upsample_terrain {
-            let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
+            let triangles = tile_triangles_flat(WGS84_32, &extent, tile_layer.segments, 0.);
 
             let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
             let ihandle = buf.new_u32(triangles.indices);
@@ -604,6 +610,14 @@ pub fn transfer_mesh(
 
         let terrain_layer = terrain_layer.unwrap();
 
+        fn postupdate_tile(tile: &mut Tile, max_height: f32) {
+            tile.terrain_data
+                .as_mut()
+                .expect("This line is invoked only in the tile has terrain")
+                .set_current_max_height(max_height);
+            tile.aabb.update(tile.extent, max_height)
+        }
+
         if should_upsample_terrain {
             if let Some((vertices, uvs, upsampled)) = tile.upsample(WGS84_32, &qt, &buf) {
                 let vhandle = buf.new_f32(vertices);
@@ -644,10 +658,7 @@ pub fn transfer_mesh(
                     cache.mesh_entity = Some(e.id());
                 };
                 let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-                tile.terrain_data
-                    .as_mut()
-                    .expect("This line is invoked only in the tile has terrain")
-                    .set_current_max_height(upsampled.max_height);
+                postupdate_tile(tile, upsampled.max_height);
 
                 continue;
             };
@@ -662,7 +673,7 @@ pub fn transfer_mesh(
         let size = ((bytes.len() / 4) as f64).sqrt() as usize;
         let (triangles, max_height, heights) = tile_triangles_with_terrain(
             WGS84_32,
-            extent,
+            &extent,
             terrain_layer.segments,
             0.,
             bytes,
@@ -708,10 +719,7 @@ pub fn transfer_mesh(
         };
 
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-        tile.terrain_data
-            .as_mut()
-            .expect("This line is invoked only in the tile has terrain")
-            .set_current_max_height(max_height);
+        postupdate_tile(tile, max_height);
     }
 }
 
