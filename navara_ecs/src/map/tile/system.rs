@@ -51,14 +51,9 @@ fn spawn_tile_entity(
         return;
     }
 
-    let entity = commands.spawn(RenderedTile { tile_handle });
-    tc.rendered_tile_caches.insert(
-        tile_handle,
-        TileCache {
-            mesh_entity: None,
-            tile_entity: entity.id(),
-        },
-    );
+    commands.spawn(RenderedTile { tile_handle });
+    tc.rendered_tile_caches
+        .insert(tile_handle, TileCache { mesh_entity: None });
 }
 
 fn request_texture_fragment(
@@ -278,7 +273,7 @@ fn traverse_tile(
         Some(RenderedState::RenderedChildren)
     );
 
-    let is_rendered_last_frame = tc.rendered_tile_caches.get(&t.handle()).is_some();
+    let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&t.handle());
 
     let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, tile);
     if !is_intersecting_with_frustum {
