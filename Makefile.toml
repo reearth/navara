@@ -11,10 +11,16 @@ script = ['''
 cargo fmt --all
 ''']
 
+[tasks.format-check-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo fmt --all --check
+''']
+
 [tasks.lint-rust]
 script = ['''
 #!/usr/bin/env bash -eux
-cargo clippy --workspace --all-targets --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 ''']
 
 [tasks.build-rust]
@@ -47,7 +53,10 @@ run_task = { name = ["test-rust", "test-web"], parallel = true }
 run_task = { name = ["lint-rust", "lint-web"], parallel = true }
 
 [tasks.format]
-run_task = { name = ["format-rust", "format-check-web"], parallel = true }
+run_task = { name = ["format-rust", "format-web"], parallel = true }
+
+[tasks.format-check]
+run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
 
 [tasks.build]
 run_task = { name = ["build-rust", "build-web"] }

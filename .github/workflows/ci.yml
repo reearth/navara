@@ -49,6 +49,6 @@ jobs:
         env:
           RUST_BACKTRACE: 1
       - name: Cargo format
-        run: cargo make format
+        run: cargo make format-check
       - name: Lint
         run: cargo make lint
