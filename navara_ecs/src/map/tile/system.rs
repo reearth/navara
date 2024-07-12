@@ -256,12 +256,7 @@ fn traverse_tile(
         None => unreachable!(),
     };
 
-    let is_tile_ready = tile.is_ready(
-        tile.coords.z,
-        texture_fragment,
-        terrain_data_requester,
-        terrain_layer,
-    );
+    let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester, terrain_layer);
 
     // If this tile is failed to load the texture, traverse children.
     // But this tile won't be rendered even if this tile is selected.
@@ -523,8 +518,6 @@ pub fn transfer_mesh(
     for rendered_tile in &rendered_tiles {
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
 
-        let parent = tile.get_parent_tile(&qt);
-
         let extent = tile.coords.extent();
 
         let map_url = tile_url(&tile_layer.url, &tile.coords);
@@ -565,14 +558,8 @@ pub fn transfer_mesh(
             continue;
         }
 
-        let should_upsample_terrain = terrain_layer.is_some()
-            && parent.map_or(false, |p| {
-                p.get_terrain_data_requester(&terrain_data_requester)
-                    .map_or(false, |t| matches!(t.status, DataRequesterStatus::Success))
-                    || p.upsampled
-            })
-            && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
-                || terrain_layer.map_or(false, |l| tile.coords.z > l.max_z));
+        let should_upsample_terrain =
+            tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain && !should_upsample_terrain {
             let triangles = tile_triangles_flat(WGS84_32, extent, tile_layer.segments, 0.);
