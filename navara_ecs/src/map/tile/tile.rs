@@ -52,7 +52,7 @@ impl Tile {
 
     pub(super) fn is_ready(
         &self,
-        z: usize,
+        qt: &TileQuadtree,
         texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
         terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
         terrain_layer: &Option<&TerrainLayer>,
@@ -74,8 +74,8 @@ impl Tile {
         }
 
         is_texture_loaded
-            && (self.is_terrain_ready(terrain_data_requester)
-                || terrain_layer.map_or(false, |l| z > l.max_z))
+            && (self.is_terrain_ready(qt, terrain_data_requester, terrain_layer)
+                || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
     }
 
     pub(crate) fn get_terrain_data_requester(
@@ -95,16 +95,33 @@ impl Tile {
 
     pub(super) fn is_terrain_ready(
         &self,
-        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        qt: &TileQuadtree,
+        terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
-        let terrain_data_requester = self.get_terrain_data_requester(terrain_data_requester);
+        let terrain_data_requester = self.get_terrain_data_requester(terrain_data_requesters);
         terrain_data_requester.map_or(false, |s| {
             // If the status is failed and parent is succeeded, we need to upsample the terrain mesh.
-            matches!(
-                s.status,
-                DataRequesterStatus::Success | DataRequesterStatus::Fail
-            )
-        })
+            matches!(s.status, DataRequesterStatus::Success)
+        }) || self.is_upsamplable(qt, terrain_data_requesters, terrain_layer)
+    }
+
+    pub(crate) fn is_upsamplable(
+        &self,
+        qt: &TileQuadtree,
+        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_layer: &Option<&TerrainLayer>,
+    ) -> bool {
+        let parent = self.get_parent_tile(qt);
+        let terrain_req = self.get_terrain_data_requester(terrain_data_requester);
+        terrain_layer.is_some()
+            && parent.map_or(false, |p| {
+                p.get_terrain_data_requester(terrain_data_requester)
+                    .map_or(false, |t| matches!(t.status, DataRequesterStatus::Success))
+                    || p.upsampled
+            })
+            && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
+                || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
     }
 
     pub(super) fn get_parent_tile<'a>(&self, qt: &'a TileQuadtree) -> Option<&'a Self> {
