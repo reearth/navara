@@ -81,7 +81,7 @@ fn request_texture_fragment(
 }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
-    frustum.interseciton_with_aabb(&t.aabb)
+    frustum.intersection_with_aabb(&t.aabb)
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/3b393448d7e976165c0260fab9ea90843583c3a7/packages/engine/Source/Scene/QuadtreePrimitive.js#L1245

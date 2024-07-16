@@ -1,7 +1,6 @@
-// mapengine_camera/src/plugin.rs
 use bevy_app::prelude::*;
-use bevy_ecs::schedule::SystemSet;
 use bevy_input::InputPlugin;
+use bevy_math::Vec3;
 use bevy_time::TimePlugin;
 use bevy_log::LogPlugin;
 use bevy_ecs::prelude::*;
@@ -19,20 +18,19 @@ impl Plugin for CameraPlugin {
         app.add_plugins(TimePlugin);
         app.add_plugins(InputPlugin);
 
-        app.add_startup_system(setup_camera.system());
-        app.add_system_set(
-            SystemSet::on_update(Update)
-                .with_system(first_person_control_system.system())
-                .with_system(fly_control_system.system())
-                .with_system(globe_control_system.system())
-                .with_system(planar_control_system.system())
-                .with_system(street_control_system.system())
-                .with_system(dolly_control_system.system())
-                .with_system(track_control_system.system())
-                .with_system(pan_tilt_control_system.system())
-                .with_system(inertia_control_system.system())
-                .with_system(update_frustum_system.system())
-        );
+        app.add_systems(Startup, setup_camera);
+        app.add_systems( Update, ((
+        (first_person_control_system),
+        (fly_control_system),
+        (globe_control_system),
+        (planar_control_system),
+        (street_control_system),
+        (dolly_control_system),
+        (track_control_system),
+        (pan_tilt_control_system),
+        (inertia_control_system), 
+        ), update_frustum_system).chain(),
+         );
     }
 }
 

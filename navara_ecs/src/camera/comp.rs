@@ -1,3 +1,4 @@
+use bevy_ecs::bundle::Bundle;
 use bevy_ecs::component::Component;
 use bevy_math::{Quat, Vec3};
 
@@ -166,4 +167,89 @@ pub struct PanTiltControlComponent {
 #[derive(Component)]
 pub struct InertiaControlComponent {
     pub inertia: f32,
+}
+
+#[cfg(test)]
+mod test {
+    use bevy_math::Vec3;
+    use navara_core::Angle;
+
+    use crate::{
+        primitives::{Aabb, Plane},
+        Transform,
+    };
+
+    use super::CameraFrustum;
+
+    #[test]
+    fn is_frustum_plane_correct() {
+        let camera = Transform::from_xyz(0., 0., -10.);
+        let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
+
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
+        debug_assert_eq!(
+            frustum.planes[0],
+            Plane::from_point_normal(Vec3::new(0., 0., -9.9), Vec3::new(0., 0., 1.))
+        );
+        debug_assert_eq!(
+            frustum.planes[1],
+            Plane::from_point_normal(Vec3::new(0., 0., 990.), Vec3::new(0., 0., -1.))
+        );
+        debug_assert_eq!(
+            frustum.planes[2],
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(-0.90630776, 0.0, 0.42261827)
+            )
+        );
+        debug_assert_eq!(
+            frustum.planes[3],
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(0.90630776, 0.0, 0.42261827)
+            )
+        );
+        debug_assert_eq!(
+            frustum.planes[4],
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(0.0, 0.90630776, 0.42261827)
+            )
+        );
+        debug_assert_eq!(
+            frustum.planes[5],
+            Plane::from_point_normal(
+                Vec3::new(0., 0., -10.),
+                Vec3::new(0.0, -0.90630776, 0.42261827)
+            )
+        );
+    }
+
+    #[test]
+    fn frustum_should_intersect_with_aabb() {
+        let camera = Transform::from_xyz(0., 0., -10.);
+        let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
+
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
+
+        let aabb = Aabb::from_points(Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.));
+        debug_assert!(frustum.intersection_with_aabb(&aabb));
+
+        let aabb = Aabb::from_points(Vec3::new(10., 10., 100.), Vec3::new(20., 20., 100.));
+        debug_assert!(frustum.intersection_with_aabb(&aabb));
+
+        let aabb = Aabb::from_points(
+            Vec3::new(-1000., -1000., -1000.),
+            Vec3::new(1000., 1000., -9.8),
+        );
+        debug_assert!(frustum.intersection_with_aabb(&aabb));
+
+        // Out of top
+        let aabb = Aabb::from_points(Vec3::new(100., 100., 10.), Vec3::new(120., 120., 10.));
+        debug_assert!(!frustum.intersection_with_aabb(&aabb));
+
+        // Out of bottom
+        let aabb = Aabb::from_points(Vec3::new(-100., -100., 10.), Vec3::new(-120., -120., 10.));
+        debug_assert!(!frustum.intersection_with_aabb(&aabb));
+    }
 }

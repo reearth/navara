@@ -1,24 +1,23 @@
 use bevy_ecs::system::{Query, Res};
+use bevy_ecs::event::EventReader;
 use bevy_input::Input;
 use bevy_math::{Quat, Vec3};
-use bevy_ecs::event::Events;
 use bevy_input::mouse::{MouseButton, MouseMotion, MouseWheel};
 use bevy_input::keyboard::KeyCode;
 use bevy_time::Time;
 use crate::Transform;
 
 use super::comp::*;
-
 use super::CameraFrustum;
 
 
 pub fn first_person_control_system(
     mut query: Query<(&mut Transform, &FirstPersonControlComponent)>,
     input: Res<Input<KeyCode>>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
 ) {
     for (mut transform, control) in query.iter_mut() {
-        for event in mouse_motion_events.iter() {
+        for event in mouse_motion_events.read() {
             let delta_yaw = event.delta.x * control.sensitivity;
             let delta_pitch = event.delta.y * control.sensitivity;
 
@@ -49,10 +48,10 @@ pub fn first_person_control_system(
 pub fn fly_control_system(
     mut query: Query<(&mut Transform, &FlyControlComponent)>,
     input: Res<Input<KeyCode>>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
 ) {
     for (mut transform, control) in query.iter_mut() {
-        for event in mouse_motion_events.iter() {
+        for event in mouse_motion_events.read() {
             let delta_yaw = event.delta.x * control.sensitivity;
             let delta_pitch = event.delta.y * control.sensitivity;
 
@@ -77,9 +76,9 @@ pub fn fly_control_system(
         if input.pressed(KeyCode::Space) {
             direction.y += 1.0;
         }
-        if input.pressed(KeyCode::LShift) {
-            direction.y -= 1.0;
-        }
+        // if input.pressed(KeyCode::LShift) {
+        //     direction.y -= 1.0;
+        // }
 
         direction = transform.rotation * direction * control.speed;
         transform.translation += direction;
@@ -88,14 +87,15 @@ pub fn fly_control_system(
 
 pub fn globe_control_system(
     mut query: Query<(&mut Transform, &GlobeControlComponent)>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
-    mouse_wheel_events: Res<Events<MouseWheel>>,
-    input: Res<Input<KeyCode>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_wheel_events: EventReader<MouseWheel>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mouse_input: Res<Input<MouseButton>>,
 ) {
     for (mut transform, control) in query.iter_mut() {
         // Handle track (left-right and up-down movement)
-        if input.pressed(MouseButton::Left) {
-            for event in mouse_motion_events.iter() {
+        if mouse_input.pressed(MouseButton::Left) {
+            for event in mouse_motion_events.read() {
                 let delta_x = event.delta.x * control.sensitivity;
                 let delta_y = event.delta.y * control.sensitivity;
 
@@ -106,7 +106,7 @@ pub fn globe_control_system(
         }
 
         // Handle dolly (zoom in and out)
-        for event in mouse_wheel_events.iter() {
+        for event in mouse_wheel_events.read() {
             let delta = event.y * control.sensitivity;
 
             // Adjust transform translation based on scroll wheel
@@ -114,8 +114,8 @@ pub fn globe_control_system(
         }
 
         // Handle rotation (left-right and up-down rotation)
-        if input.pressed(MouseButton::Right) {
-            for event in mouse_motion_events.iter() {
+        if mouse_input.pressed(MouseButton::Right) {
+            for event in mouse_motion_events.read() {
                 let delta_yaw = event.delta.x * control.sensitivity;
                 let delta_pitch = event.delta.y * control.sensitivity;
 
@@ -128,13 +128,14 @@ pub fn globe_control_system(
 
 pub fn planar_control_system(
     mut query: Query<(&mut Transform, &PlanarControlComponent)>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
-    input: Res<Input<KeyCode>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mouse_input: Res<Input<MouseButton>>,
 ) {
     for (mut transform, control) in query.iter_mut() {
         // Handle panning
-        if input.pressed(MouseButton::Left) {
-            for event in mouse_motion_events.iter() {
+        if mouse_input.pressed(MouseButton::Left) {
+            for event in mouse_motion_events.read() {
                 let delta_x = event.delta.x * control.sensitivity;
                 let delta_y = event.delta.y * control.sensitivity;
 
@@ -145,8 +146,8 @@ pub fn planar_control_system(
         }
 
         // Handle tilt (up-down rotation)
-        if input.pressed(KeyCode::ControlLeft) || input.pressed(KeyCode::ControlRight) {
-            for event in mouse_motion_events.iter() {
+        if keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::ControlRight) {
+            for event in mouse_motion_events.read() {
                 let delta_pitch = event.delta.y * control.sensitivity;
                 transform.rotation = transform.rotation * Quat::from_rotation_x(delta_pitch);
             }
@@ -156,11 +157,11 @@ pub fn planar_control_system(
 
 pub fn street_control_system(
     mut query: Query<(&mut Transform, &StreetControlComponent)>,
-    input: Res<Input<KeyCode>>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
 ) {
     for (mut transform, control) in query.iter_mut() {
-        for event in mouse_motion_events.iter() {
+        for event in mouse_motion_events.read() {
             let delta_yaw = event.delta.x * control.sensitivity;
             let delta_pitch = event.delta.y * control.sensitivity;
 
@@ -170,16 +171,16 @@ pub fn street_control_system(
 
         let mut direction = Vec3::ZERO;
 
-        if input.pressed(KeyCode::W) {
+        if keyboard_input.pressed(KeyCode::W) {
             direction.z -= 1.0;
         }
-        if input.pressed(KeyCode::S) {
+        if keyboard_input.pressed(KeyCode::S) {
             direction.z += 1.0;
         }
-        if input.pressed(KeyCode::A) {
+        if keyboard_input.pressed(KeyCode::A) {
             direction.x -= 1.0;
         }
-        if input.pressed(KeyCode::D) {
+        if keyboard_input.pressed(KeyCode::D) {
             direction.x += 1.0;
         }
 
@@ -190,10 +191,10 @@ pub fn street_control_system(
 
 pub fn dolly_control_system(
     mut query: Query<(&mut Transform, &DollyControlComponent)>,
-    mouse_wheel_events: Res<Events<MouseWheel>>,
+    mut mouse_wheel_events: EventReader<MouseWheel>,
 ) {
     for (mut transform, control) in query.iter_mut() {
-        for event in mouse_wheel_events.iter() {
+        for event in mouse_wheel_events.read() {
             let delta = event.y * control.sensitivity;
 
             // Adjust transform translation based on scroll wheel
@@ -204,12 +205,12 @@ pub fn dolly_control_system(
 
 pub fn track_control_system(
     mut query: Query<(&mut Transform, &TrackControlComponent)>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
-    input: Res<Input<MouseButton>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    mouse_input: Res<Input<MouseButton>>,
 ) {
     for (mut transform, control) in query.iter_mut() {
-        if input.pressed(MouseButton::Left) {
-            for event in mouse_motion_events.iter() {
+        if mouse_input.pressed(MouseButton::Left) {
+            for event in mouse_motion_events.read() {
                 let delta_x = event.delta.x * control.sensitivity;
                 let delta_y = event.delta.y * control.sensitivity;
 
@@ -222,12 +223,12 @@ pub fn track_control_system(
 
 pub fn pan_tilt_control_system(
     mut query: Query<(&mut Transform, &PanTiltControlComponent)>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
-    input: Res<Input<MouseButton>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    mouse_input: Res<Input<MouseButton>>,
 ) {
     for (mut transform, control) in query.iter_mut() {
-        if input.pressed(MouseButton::Right) {
-            for event in mouse_motion_events.iter() {
+        if mouse_input.pressed(MouseButton::Right) {
+            for event in mouse_motion_events.read() {
                 let delta_pan = event.delta.x * control.pan_sensitivity;
                 let delta_tilt = event.delta.y * control.tilt_sensitivity;
 
