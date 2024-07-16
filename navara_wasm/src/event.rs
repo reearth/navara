@@ -83,8 +83,6 @@ pub struct TextureFragment {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
 pub struct MeshMaterial {
-    #[wasm_bindgen(getter_with_clone)]
-    pub map_url: Option<String>,
     pub color: u32,
     pub wireframe: bool,
     #[wasm_bindgen(getter_with_clone)]
@@ -244,7 +242,6 @@ impl From<navara_ecs::Mesh> for Mesh {
 impl From<navara_ecs::Material> for MeshMaterial {
     fn from(m: navara_ecs::Material) -> Self {
         Self {
-            map_url: m.map_url.clone(),
             color: m.color,
             wireframe: m.wireframe,
             texture_fragment: m.texture_fragment.map(|t| TextureFragment {

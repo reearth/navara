@@ -30,10 +30,9 @@ pub struct Mesh {
 
 #[derive(Debug, Clone, Component, PartialEq)]
 pub struct Material {
-    // for tile
-    pub map_url: Option<String>,
     pub color: u32,
     pub wireframe: bool,
+    // for tile
     pub texture_fragment: Option<Entity>,
 }
 

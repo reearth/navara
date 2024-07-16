@@ -17,8 +17,8 @@ use crate::{
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    BufferStore, CachedMeshHandle, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle,
-    ObjectBundle, TextureFragment, TextureFragmentStatus, Transform,
+    BufferStore, CachedMeshHandle, DataRequester, Material, Mesh, MeshBundle, ObjectBundle,
+    TextureFragment, TextureFragmentStatus, Transform,
 };
 
 use super::{
@@ -526,17 +526,7 @@ pub fn transfer_mesh(
 
         let extent = tile.extent;
 
-        let map_url = tile_url(&tile_layer.url, &tile.coords);
-
-        let terrain_req = match tile.terrain_data.as_ref() {
-            Some(t) => t
-                .data_requester_entity_id()
-                .and_then(|e| terrain_data_requester.get(e).map_or(None, |v| Some(v.1))),
-            None => None,
-        };
-
-        let should_render_terrain = terrain_layer.is_some()
-            && terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Success));
+        let should_render_terrain = terrain_layer.is_some();
 
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
 
@@ -549,7 +539,6 @@ pub fn transfer_mesh(
                 },
                 material: Material {
                     color: tile_layer.color,
-                    map_url: Some(map_url.clone()),
                     wireframe: tile_layer.wireframe,
                     texture_fragment: texture_fragment_entity_id,
                 },
@@ -592,7 +581,6 @@ pub fn transfer_mesh(
                 },
                 material: Material {
                     color: tile_layer.color,
-                    map_url: Some(map_url.clone()),
                     wireframe: tile_layer.wireframe,
                     texture_fragment: texture_fragment_entity_id,
                 },
@@ -644,7 +632,6 @@ pub fn transfer_mesh(
                     },
                     material: Material {
                         color: terrain_layer.color,
-                        map_url: Some(map_url.clone()),
                         wireframe: terrain_layer.wireframe,
                         texture_fragment: texture_fragment_entity_id,
                     },
@@ -663,6 +650,13 @@ pub fn transfer_mesh(
                 continue;
             };
         }
+
+        let terrain_req = match tile.terrain_data.as_ref() {
+            Some(t) => t
+                .data_requester_entity_id()
+                .and_then(|e| terrain_data_requester.get(e).map_or(None, |v| Some(v.1))),
+            None => None,
+        };
 
         let terrain_req = terrain_req.unwrap();
 
@@ -705,7 +699,6 @@ pub fn transfer_mesh(
             },
             material: Material {
                 color: terrain_layer.color,
-                map_url: Some(map_url.clone()),
                 wireframe: terrain_layer.wireframe,
                 texture_fragment: texture_fragment_entity_id,
             },

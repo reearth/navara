@@ -246,7 +246,7 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
   }
 
   const m = new MeshLambertMaterial({ color: mat.color });
-  if (mat.map_url && mat.texture_fragment) {
+  if (mat.texture_fragment) {
     const textureFragmentId = makeTextureFragmentId(
       mat.texture_fragment.ind,
       mat.texture_fragment.gen,
