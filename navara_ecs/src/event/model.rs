@@ -1,10 +1,13 @@
 use bevy_ecs::{component::Component, entity::Entity, world::World};
+use bevy_input::keyboard::KeyCode;
+use bevy_math::{Quat, Vec2, Vec3};
 
 use crate::{texture_fragment::TextureFragment, DataRequester, Material, Mesh, Transform};
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
+    pub camera_control_event: Vec<CameraControlEvent>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
     pub object_removed: Vec<EntityEvent>,
     pub mesh_added: Vec<ComponentEvent<(&'a Mesh, &'a Material, &'a Transform)>>,
@@ -12,6 +15,7 @@ pub struct Events<'a> {
     pub data_requested: Vec<&'a DataRequester>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
+    pub debug_camera_state: Option<CameraDebugState>,
 }
 
 #[derive(Debug)]
@@ -119,4 +123,96 @@ impl<'a, T: Component, U: Component, V: Component>
 
         Some(Self::new(e, (a, b, c)))
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum CameraControlEvent {
+    FirstPerson(FirstPersonAction),
+    Fly(FlyAction),
+    Globe(GlobeAction),
+    Planar(PlanarAction),
+    Street(StreetAction),
+    Dolly(DollyAction),
+    Track(TrackAction),
+    PanTilt(PanTiltAction),
+    Inertia(InertiaAction),
+}
+
+#[derive(Debug, Clone)]
+pub enum FirstPersonAction {
+    Move(Vec3),
+    Rotate(Quat),
+}
+
+#[derive(Debug, Clone)]
+pub enum FlyAction {
+    Move(Vec3),
+    Rotate(Quat),
+}
+
+#[derive(Debug, Clone)]
+pub enum GlobeAction {
+    Track(Vec2),
+    Dolly(f32),
+    Rotate(Quat),
+}
+
+#[derive(Debug, Clone)]
+pub enum PlanarAction {
+    Pan(Vec2),
+    Tilt(f32),
+}
+
+#[derive(Debug, Clone)]
+pub enum StreetAction {
+    Move(Vec3),
+    Rotate(Quat),
+}
+
+#[derive(Debug, Clone)]
+pub enum DollyAction {
+    Move(f32),
+}
+
+#[derive(Debug, Clone)]
+pub enum TrackAction {
+    Move(Vec2),
+}
+
+#[derive(Debug, Clone)]
+pub enum PanTiltAction {
+    Pan(f32),
+    Tilt(f32),
+}
+
+#[derive(Debug, Clone)]
+pub enum InertiaAction {
+    Apply(f32),
+}
+
+#[derive(Debug, Clone)]
+pub struct CameraDebugState {
+    pub current_control_type: CameraControlType,
+    pub last_input: InputState,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CameraControlType {
+    FirstPerson,
+    Fly,
+    Globe,
+    Planar,
+    Street,
+    Dolly,
+    Track,
+    PanTilt,
+    Inertia,
+}
+
+#[derive(Debug, Clone)]
+pub struct InputState {
+    pub mouse_position: Vec2,
+    pub mouse_delta: Vec2,
+    pub scroll_delta: f32,
+    pub pressed_keys: Vec<KeyCode>,
 }

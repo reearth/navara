@@ -2,11 +2,12 @@ use bevy_ecs::{entity::Entity, system::Resource, world::World};
 
 use crate::{DataRequester, Transform};
 
-use super::{ComponentEvent, Events, ReconstructableComponentEvent};
+use super::{ComponentEvent, Events, ReconstructableComponentEvent, CameraControlEvent, CameraDebugState};
 
 #[derive(Debug, Default, Resource)]
 pub struct EventStore {
     pub camera_transform_updated: Option<Entity>,
+    pub camera_control_events: Vec<CameraControlEvent>,
     pub object_transform_updated: Vec<Entity>,
     pub object_removed: Vec<Entity>,
     pub mesh_added: Vec<Entity>,
@@ -14,11 +15,13 @@ pub struct EventStore {
     pub data_requested: Vec<Entity>,
     pub texture_fragment_reqested: Vec<Entity>,
     pub texture_fragment_removed: Vec<Entity>,
+    pub debug_camera_state: Option<CameraDebugState>,
 }
 
 impl EventStore {
     pub fn clear(&mut self) {
         self.camera_transform_updated = None;
+        self.camera_control_events.clear();
         self.object_transform_updated.clear();
         self.object_removed.clear();
         self.mesh_added.clear();
@@ -26,6 +29,7 @@ impl EventStore {
         self.data_requested.clear();
         self.texture_fragment_reqested.clear();
         self.texture_fragment_removed.clear();
+        self.debug_camera_state = None;
     }
 
     pub fn events<'a>(&self, world: &'a World) -> Events<'a> {
@@ -33,6 +37,8 @@ impl EventStore {
         if let Some(e) = self.camera_transform_updated {
             events.camera_transform_updated = world.get::<Transform>(e);
         }
+
+        events.camera_control_event = self.camera_control_events.clone();
 
         for e in self.object_transform_updated.iter() {
             if let Some(e) = ComponentEvent::from_world(*e, world) {
@@ -71,6 +77,8 @@ impl EventStore {
         for e in self.texture_fragment_removed.iter() {
             events.texture_fragment_removed.push((*e).into());
         }
+
+        events.debug_camera_state = self.debug_camera_state.clone();
 
         events
     }
