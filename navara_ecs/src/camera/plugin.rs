@@ -1,8 +1,5 @@
 use bevy_app::prelude::*;
-use bevy_input::InputPlugin;
 use bevy_math::Vec3;
-use bevy_time::TimePlugin;
-use bevy_log::LogPlugin;
 use bevy_ecs::prelude::*;
 
 use super::system::*;
@@ -14,9 +11,6 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(LogPlugin::default());
-        app.add_plugins(TimePlugin);
-        app.add_plugins(InputPlugin);
 
         app.add_systems(Startup, setup_camera);
         app.add_systems( Update, ((
