@@ -1,4 +1,3 @@
-//! Assertion library
-//! Basically this is for testing only. You should not use this module outside of your test.
+#![doc = include_str!("../README.md")]
 
 pub mod float;

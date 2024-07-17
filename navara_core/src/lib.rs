@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub mod coord;
 pub mod ellipsoid;
 pub mod extent;
