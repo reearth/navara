@@ -17,8 +17,8 @@ use crate::{
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
-    BufferStore, CachedMeshHandle, DataRequester, Material, Mesh, MeshBundle, ObjectBundle,
-    TextureFragment, TextureFragmentStatus, Transform,
+    BufferStore, CachedMeshHandle, DataRequester, DataRequesterStatus, Material, Mesh, MeshBundle,
+    ObjectBundle, TextureFragment, TextureFragmentStatus, Transform,
 };
 
 use super::{
@@ -256,7 +256,7 @@ fn traverse_tile(
         None => unreachable!(),
     };
 
-    let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester, terrain_layer);
+    let is_tile_ready = tile.is_ready(texture_fragment, terrain_data_requester, terrain_layer);
 
     // If this tile is failed to load the texture, traverse children.
     // But this tile won't be rendered even if this tile is selected.
@@ -553,10 +553,25 @@ pub fn transfer_mesh(
             continue;
         }
 
-        let should_upsample_terrain =
-            tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
+        let terrain_req = match tile.terrain_data.as_ref() {
+            Some(t) => t
+                .data_requester_entity_id()
+                .and_then(|e| terrain_data_requester.get(e).map_or(None, |v| Some(v.1))),
+            None => None,
+        };
+        let is_terrain_failed = matches!(
+            terrain_req.map(|t| &t.status),
+            Some(&DataRequesterStatus::Fail)
+        );
 
-        if !should_render_terrain && !should_upsample_terrain {
+        let should_upsample_terrain = tile.is_upsamplable(&terrain_data_requester, &terrain_layer)
+                && tile.get_parent_tile(&qt).map_or(false, |p| {
+                    p.is_terrain_ready(&terrain_data_requester) || p.upsampled
+                })
+                // In low zoom level, we don't need to upsample it.
+                && tile.coords.z > 1;
+
+        if !should_render_terrain || (!should_upsample_terrain && is_terrain_failed) {
             let triangles = tile_triangles_flat(WGS84_32, &extent, tile_layer.segments, 0.);
 
             let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
@@ -650,13 +665,6 @@ pub fn transfer_mesh(
                 continue;
             };
         }
-
-        let terrain_req = match tile.terrain_data.as_ref() {
-            Some(t) => t
-                .data_requester_entity_id()
-                .and_then(|e| terrain_data_requester.get(e).map_or(None, |v| Some(v.1))),
-            None => None,
-        };
 
         let terrain_req = terrain_req.unwrap();
 
