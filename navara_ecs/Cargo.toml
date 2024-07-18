@@ -14,4 +14,5 @@ bevy_time = "0.12.1"
 bevy_transform = "0.12.1"
 instant = "0.1.12"
 navara_core = { path = "../navara_core" }
+navara_geometry = { path = "../navara_geometry" }
 navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }

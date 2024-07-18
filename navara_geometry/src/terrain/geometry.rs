@@ -1,21 +1,8 @@
-use crate::{terrain::ElevationDecoder, Ellipsoid, Extent, Meters, Radians, LLE};
+use navara_core::{terrain::ElevationDecoder, Ellipsoid, Extent, Radians};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Geometry {
-    pub vertices: Vec<[f32; 3]>,
-    pub uvs: Vec<[f32; 2]>,
-    pub indices: Vec<u32>,
-}
+use crate::{tile_triangles, Geometry};
 
-pub fn tile_triangles_flat(
-    ellipsoid: Ellipsoid<f32>,
-    extent: &Extent<f32, Radians>,
-    segments: usize,
-    height: f32,
-) -> Geometry {
-    tile_triangles(ellipsoid, extent, segments, &mut |_, _| height)
-}
-
+/// Decode pixels to a terrain height.
 pub fn decode_height_from_dem(
     r: i64,
     g: i64,
@@ -36,6 +23,7 @@ pub fn decode_height_from_dem(
     h * decoder.epsilon + decoder.offset + geoid_height
 }
 
+/// Encode a terrain height to pixels.
 pub fn encode_height_to_dem(
     height: f32,
     geoid_height: f32,
@@ -48,6 +36,7 @@ pub fn encode_height_to_dem(
     (r, g, b)
 }
 
+/// Construct a terrain geometry.
 #[allow(clippy::too_many_arguments)]
 pub fn tile_triangles_with_terrain(
     ellipsoid: Ellipsoid<f32>,
@@ -85,63 +74,11 @@ pub fn tile_triangles_with_terrain(
     )
 }
 
-pub fn tile_triangles<F: FnMut(usize, usize) -> f32>(
-    ellipsoid: Ellipsoid<f32>,
-    extent: &Extent<f32, Radians>,
-    segments: usize,
-    height: &mut F,
-) -> Geometry {
-    let segments = if segments == 0 { 1 } else { segments };
-
-    let verties_count = (segments + 1) * (segments + 1);
-    let mut vertices = Vec::with_capacity(verties_count);
-    let mut uvs = Vec::with_capacity(verties_count);
-    let mut indices = Vec::with_capacity(segments * segments * 6);
-
-    let dlng = (extent.east - extent.west) / segments as f32;
-    let dlat = (extent.north - extent.south) / segments as f32;
-
-    for i in 0..=segments {
-        for j in 0..=segments {
-            let lle = LLE {
-                lng: extent.west + dlng * i as f32,
-                lat: extent.south + dlat * j as f32,
-                height: Meters::new(height(i, j)),
-            };
-            let xyz = lle.to_xyz(ellipsoid);
-
-            vertices.push([xyz.x.val(), xyz.y.val(), xyz.z.val()]);
-            uvs.push([i as f32 / segments as f32, j as f32 / segments as f32]);
-
-            if i != segments && j != segments {
-                let a = i * (segments + 1) + j;
-                let b = (i + 1) * (segments + 1) + j;
-                let c = b + 1;
-                let d = a + 1;
-
-                indices.push(a as u32);
-                indices.push(b as u32);
-                indices.push(d as u32);
-                indices.push(b as u32);
-                indices.push(c as u32);
-                indices.push(d as u32);
-            }
-        }
-    }
-
-    Geometry {
-        vertices,
-        uvs,
-        indices,
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use crate::{
-        terrain::ElevationDecoder,
-        tile_geometry::{decode_height_from_dem, encode_height_to_dem},
-    };
+    use navara_core::terrain::ElevationDecoder;
+
+    use crate::{decode_height_from_dem, encode_height_to_dem};
 
     #[test]
     fn test_gsi_raster_dem_conversion() {

@@ -1,8 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{
-    terrain::UpsampledTerrainMesh, Ellipsoid, Extent, Radians, TileRegion, TileXYZ, WGS84_32,
-};
+use navara_core::{Ellipsoid, Extent, Radians, TileRegion, TileXYZ, WGS84_32};
+use navara_geometry::Geometry;
 
 use navara_quadtree::Quadtree;
 
@@ -168,12 +167,12 @@ impl Tile {
     // 2. If the tile has already been upsampled, use it
     // 3. Find a grid that matches with tile's extent. And get a binary from the grid area of the height-map.
     // 4. Store the binary into the BufferStore, and store the handle in the tile.
-    pub(super) fn upsample(
+    pub fn upsample(
         &self,
         ellipsoid: Ellipsoid<f32>,
         qt: &TileQuadtree,
         buf_store: &BufferStore,
-    ) -> Option<(Vec<f32>, Vec<f32>, UpsampledTerrainMesh)> {
+    ) -> Option<(Geometry, Vec<f32>, f32)> {
         let parent = match self.get_parent_tile(qt) {
             Some(p) => p,
             None => return None,
@@ -199,7 +198,7 @@ impl Tile {
             _ => return None,
         };
 
-        let upsampled_mesh = match self
+        let mut upsampled_mesh = match self
             .terrain_data
             .as_ref()
             .and_then(|t| t.upsample(&region, uvs, heights, indices))
@@ -208,9 +207,9 @@ impl Tile {
             None => return None,
         };
 
-        let (vertices, uvs) = upsampled_mesh.construct_mesh(ellipsoid, &self.extent);
+        let (geometry, heights) = upsampled_mesh.construct_geometry(ellipsoid, &self.extent);
 
-        Some((vertices, uvs, upsampled_mesh))
+        Some((geometry, heights, upsampled_mesh.max_height))
     }
 }
 

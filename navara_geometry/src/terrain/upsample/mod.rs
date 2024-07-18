@@ -6,7 +6,9 @@ use clip::{clip_2d_triangle_at_threshold, ClippedIndex};
 use itertools::Itertools;
 use radians::{Angle, Radians};
 
-use crate::{utils::lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
+use navara_core::{utils::lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
+
+use crate::Geometry;
 
 /// Upsample a terrain mesh which is one of the four split child tiles.
 /// The upsampled mesh have to be same size.
@@ -14,19 +16,16 @@ use crate::{utils::lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
 /// ---------     =>       |   1   |
 /// | 3 | 4 |              |       |
 #[derive(Debug)]
-pub struct UpsampledTerrainMesh {
-    pub uvs: Vec<f32>,
-    pub heights: Vec<f32>,
-    pub indices: Vec<u32>,
+pub struct UpsampledTerrainGeometry {
+    pub uvs: Option<Vec<f32>>,
+    pub heights: Option<Vec<f32>>,
+    pub indices: Option<Vec<u32>>,
     pub max_height: f32,
     is_east: bool,
     is_north: bool,
 }
 
-// 次！
-// 同じ箇所でupsample&construct_vertexをやると重くなるので、別Systemでやって処理を分散する
-
-impl UpsampledTerrainMesh {
+impl UpsampledTerrainGeometry {
     pub fn new(uvs: &[f32], heights: &[f32], indices: &[u32], tile_region: &TileRegion) -> Self {
         let (is_east, is_north) = match tile_region {
             TileRegion::NorthEast => (true, true),
@@ -39,20 +38,21 @@ impl UpsampledTerrainMesh {
             clip(uvs, heights, indices, is_east, is_north);
 
         Self {
-            uvs: new_uvs,
-            heights: new_heights,
-            indices: new_indices,
+            uvs: Some(new_uvs),
+            heights: Some(new_heights),
+            indices: Some(new_indices),
             max_height,
             is_east,
             is_north,
         }
     }
 
-    pub fn construct_mesh(
-        &self,
+    /// You can run this function only once.
+    pub fn construct_geometry(
+        &mut self,
         ellipsoid: Ellipsoid<f32>,
         extent: &Extent<f32, Radians>,
-    ) -> (Vec<f32>, Vec<f32>) {
+    ) -> (Geometry, Vec<f32>) {
         let mut vertices = vec![];
         let mut uvs = vec![];
 
@@ -72,13 +72,15 @@ impl UpsampledTerrainMesh {
             v * 2. - offset
         }
 
-        for (i, uv) in self.uvs.chunks(2).enumerate() {
+        let heights = self.heights.take().unwrap();
+
+        for (i, uv) in self.uvs.take().unwrap().chunks(2).enumerate() {
             let u = clamp_uv(uv[0], min_u, max_u, offset_u);
             let v = clamp_uv(uv[1], min_v, max_v, offset_v);
             let lle = LLE {
                 lng: Angle::new(lerp(extent.west.val(), extent.east.val(), u)),
                 lat: Angle::new(lerp(extent.south.val(), extent.north.val(), v)),
-                height: Meters::new(self.heights[i]),
+                height: Meters::new(heights[i]),
             };
             let xyz = lle.to_xyz(ellipsoid);
             vertices.push(xyz.x.val());
@@ -89,7 +91,14 @@ impl UpsampledTerrainMesh {
             uvs.push(v);
         }
 
-        (vertices, uvs)
+        (
+            Geometry {
+                vertices,
+                uvs,
+                indices: self.indices.take().unwrap(),
+            },
+            heights,
+        )
     }
 }
 
@@ -321,13 +330,13 @@ impl ClippedCoordMap {
 
 #[cfg(test)]
 mod test {
-    use crate::TileRegion;
+    use navara_core::TileRegion;
 
-    use super::UpsampledTerrainMesh;
+    use super::UpsampledTerrainGeometry;
 
     #[test]
     fn it_should_construct_upsampled_coords() {
-        let mesh = UpsampledTerrainMesh::new(
+        let mesh = UpsampledTerrainGeometry::new(
             &[0.1, 0.8, 0.4, 0.2, 0.8, 0.9],
             &[0., 50., 100.],
             &[0, 1, 2],
@@ -335,13 +344,16 @@ mod test {
         );
 
         assert_eq!(
-            mesh.uvs,
+            mesh.uvs.unwrap(),
             [0.8, 0.9, 0.5, 0.85714287, 0.5, 0.5, 0.57142854, 0.5]
         );
-        assert_eq!(mesh.heights, [100.0, 57.14286, 61.111115, 71.42857]);
-        assert_eq!(mesh.indices, [0, 1, 2, 0, 2, 3]);
+        assert_eq!(
+            mesh.heights.unwrap(),
+            [100.0, 57.14286, 61.111115, 71.42857]
+        );
+        assert_eq!(mesh.indices.unwrap(), [0, 1, 2, 0, 2, 3]);
 
-        let mesh = UpsampledTerrainMesh::new(
+        let mesh = UpsampledTerrainGeometry::new(
             &[0., 1., 0., 0., 1., 0., 1., 1.],
             &[0., 50., 100., 50.],
             &[0, 1, 2, 0, 2, 3],
@@ -349,10 +361,10 @@ mod test {
         );
 
         assert_eq!(
-            mesh.uvs,
+            mesh.uvs.unwrap(),
             [0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 0.75, 0.5, 1.0, 0.5]
         );
-        assert_eq!(mesh.heights, [50.0, 50.0, 25.0, 62.5, 75.0]);
-        assert_eq!(mesh.indices, [1, 2, 3, 1, 3, 4, 2, 0, 3]);
+        assert_eq!(mesh.heights.unwrap(), [50.0, 50.0, 25.0, 62.5, 75.0]);
+        assert_eq!(mesh.indices.unwrap(), [1, 2, 3, 1, 3, 4, 2, 0, 3]);
     }
 }

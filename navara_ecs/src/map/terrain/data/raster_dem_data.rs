@@ -1,5 +1,6 @@
 use bevy_ecs::entity::Entity;
-use navara_core::{terrain::UpsampledTerrainMesh, TileRegion};
+use navara_core::TileRegion;
+use navara_geometry::UpsampledTerrainGeometry;
 
 use super::TerrainData;
 
@@ -29,7 +30,7 @@ impl TerrainData for RasterDEMData {
         uvs: &[f32],
         heights: &[f32],
         indices: &[u32],
-    ) -> Option<UpsampledTerrainMesh> {
-        Some(UpsampledTerrainMesh::new(uvs, heights, indices, region))
+    ) -> Option<UpsampledTerrainGeometry> {
+        Some(UpsampledTerrainGeometry::new(uvs, heights, indices, region))
     }
 }

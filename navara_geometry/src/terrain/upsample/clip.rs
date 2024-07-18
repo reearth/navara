@@ -1,4 +1,4 @@
-use crate::utils::lerp;
+use navara_core::utils::lerp;
 
 fn interpolate(start: f32, end: f32, threshold: f32) -> f32 {
     (threshold - start) / (end - start)
