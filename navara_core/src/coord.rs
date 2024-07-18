@@ -115,9 +115,11 @@ pub struct XYZ<F: Float> {
 /// Coordinate reference system
 #[derive(Default)]
 pub enum CRS {
+    /// EPSG:4326
     #[default]
-    Geographic, // EPSG:4326
-    Geocentric, // EPSG:4978
+    Geographic,
+    /// EPSG:4978
+    Geocentric,
     ESPG {
         code: String,
     },
