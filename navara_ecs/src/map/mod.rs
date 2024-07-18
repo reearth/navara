@@ -5,8 +5,6 @@ mod terrain;
 use bevy_ecs::schedule::IntoSystemConfigs;
 pub use event::AddLayerEvent;
 use event::*;
-mod layer;
-pub use layer::LayerDescription;
 mod tile;
 use tile::{tile_cache_manager::TileCacheManager, TileQuadtree};
 

@@ -41,9 +41,9 @@ impl LayerDescription {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
-    pub fn to(self) -> Option<navara_ecs::map::LayerDescription> {
+    pub fn to(self) -> Option<navara_layer::LayerDescription> {
         match self.r#type.as_str() {
-            "tiles" => Some(navara_ecs::map::LayerDescription::Tiles {
+            "tiles" => Some(navara_layer::LayerDescription::Tiles {
                 url: self.tile_url.unwrap(), // required
                 segments: self.segments,
                 color: self.color,
@@ -51,7 +51,7 @@ impl LayerDescription {
                 max_z: self.max_z,
                 wireframe: self.wireframe,
             }),
-            "terrain" => Some(navara_ecs::map::LayerDescription::Terrain {
+            "terrain" => Some(navara_layer::LayerDescription::Terrain {
                 url: self.terrain_url.unwrap(), // required
                 segments: self.segments,
                 color: self.color,

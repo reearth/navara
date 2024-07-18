@@ -9,4 +9,5 @@ members = [
     "navara_quadtree",
     "navara_assert",
     "navara_geometry",
+    "navara_layer",
 ]

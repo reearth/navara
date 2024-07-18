@@ -77,6 +77,12 @@ pub fn web_mercator_world_pos_to_lnglat<F: Float + Two<F>>(x: F, y: F) -> LngLat
     }
 }
 
+pub fn tile_url(s: &str, xyz: &TileXYZ) -> String {
+    s.replace("{x}", &xyz.x.to_string())
+        .replace("{y}", &xyz.y.to_string())
+        .replace("{z}", &xyz.z.to_string())
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TileXYZIterator {
     z: usize,

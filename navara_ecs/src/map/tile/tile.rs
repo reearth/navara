@@ -6,11 +6,11 @@ use navara_geometry::Geometry;
 use navara_quadtree::Quadtree;
 
 use crate::{
-    map::terrain::{layer::TerrainLayer, TerrainData},
-    primitives::Aabb,
-    BufferStore, CachedMeshHandle, DataRequester, DataRequesterStatus, TextureFragment,
-    TextureFragmentStatus,
+    map::terrain::TerrainData, primitives::Aabb, BufferStore, CachedMeshHandle, DataRequester,
+    DataRequesterStatus, TextureFragment, TextureFragmentStatus,
 };
+
+use navara_layer::TerrainLayer;
 
 use super::{terrain::TerrainDataRequesterMarker, tile_bounding_region::TileBoundingReagion};
 

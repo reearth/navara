@@ -5,7 +5,7 @@ use navara_core::{
         get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
         get_level_maximum_geometric_error_f32,
     },
-    Ellipsoid, Meters, TileXYZ, LLE, WGS84_32,
+    tile_url, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32,
 };
 use navara_geometry::{tile_triangles_flat, tile_triangles_with_terrain};
 
@@ -13,7 +13,7 @@ use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
-    map::terrain::{layer::TerrainLayer, RasterDEMData, TerrainData, TerrainDataType},
+    map::terrain::{RasterDEMData, TerrainData},
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
@@ -22,11 +22,12 @@ use crate::{
 };
 
 use super::{
-    layer::TilesLayer,
     terrain::TerrainDataRequesterMarker,
     tile_cache_manager::{TileCache, TileCacheManager},
     RenderedState, Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker,
 };
+
+use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
 
 #[derive(Component)]
 pub struct RenderedTile {
@@ -827,10 +828,4 @@ pub fn clear_caches(
     }
 
     tc.is_updated_in_this_frame = false;
-}
-
-fn tile_url(s: &str, xyz: &TileXYZ) -> String {
-    s.replace("{x}", &xyz.x.to_string())
-        .replace("{y}", &xyz.y.to_string())
-        .replace("{z}", &xyz.z.to_string())
 }
