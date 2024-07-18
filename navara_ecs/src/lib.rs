@@ -17,6 +17,7 @@ mod window;
 use bevy_ecs::entity::Entity;
 pub use buffer::*;
 pub use event::{ComponentEvent, EntityEvent, Events, ReconstructableComponentEvent};
+use navara_layer::LayerDescription;
 pub use object::*;
 pub use transform::*;
 use window::{Window, WindowResizeEvent};
@@ -108,7 +109,7 @@ impl App {
         })
     }
 
-    pub fn add_layer(&mut self, desc: map::LayerDescription) {
+    pub fn add_layer(&mut self, desc: LayerDescription) {
         self.app.world.send_event(map::AddLayerEvent(desc));
     }
 }
