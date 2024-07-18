@@ -622,11 +622,11 @@ pub fn transfer_mesh(
         }
 
         if should_upsample_terrain {
-            if let Some((vertices, uvs, upsampled)) = tile.upsample(WGS84_32, &qt, &buf) {
-                let vhandle = buf.new_f32(vertices);
-                let ihandle = buf.new_u32(upsampled.indices);
-                let uvshandle = buf.new_f32(uvs);
-                let heights_handle = buf.new_f32(upsampled.heights);
+            if let Some((geometry, heights, max_height)) = tile.upsample(WGS84_32, &qt, &buf) {
+                let vhandle = buf.new_f32(geometry.vertices);
+                let ihandle = buf.new_u32(geometry.indices);
+                let uvshandle = buf.new_f32(geometry.uvs);
+                let heights_handle = buf.new_f32(heights);
                 {
                     if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
                         t.cached_mesh_handle = Some(CachedMeshHandle {
@@ -660,7 +660,7 @@ pub fn transfer_mesh(
                     cache.mesh_entity = Some(e.id());
                 };
                 let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-                postupdate_tile(tile, upsampled.max_height);
+                postupdate_tile(tile, max_height);
 
                 continue;
             };
