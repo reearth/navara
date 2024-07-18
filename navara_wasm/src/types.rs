@@ -1,3 +1,4 @@
+use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -43,23 +44,24 @@ impl LayerDescription {
 
     pub fn to(self) -> Option<navara_layer::LayerDescription> {
         match self.r#type.as_str() {
-            "tiles" => Some(navara_layer::LayerDescription::Tiles {
+            "tiles" => Some(navara_layer::LayerDescription::Tiles(TilesLayer {
                 url: self.tile_url.unwrap(), // required
                 segments: self.segments,
                 color: self.color,
                 max_sse: self.max_sse.unwrap_or(4.),
                 max_z: self.max_z,
                 wireframe: self.wireframe,
-            }),
-            "terrain" => Some(navara_layer::LayerDescription::Terrain {
-                url: self.terrain_url.unwrap(), // required
+            })),
+            "terrain" => Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
+                url: self.terrain_url.as_ref().unwrap().clone(), // required
                 segments: self.segments,
                 color: self.color,
                 max_sse: self.max_sse.unwrap_or(4.),
                 max_z: self.max_z,
                 wireframe: self.wireframe,
                 elevation_decoder: self.elevation_decoder.unwrap_or_default().into(),
-            }),
+                terrain_type: TerrainDataType::from_url(self.terrain_url.as_ref().unwrap()),
+            })),
             _ => None,
         }
     }
