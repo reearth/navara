@@ -5,9 +5,9 @@ use navara_core::{
         get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
         get_level_maximum_geometric_error_f32,
     },
-    tile_geometry::{tile_triangles_flat, tile_triangles_with_terrain},
     Ellipsoid, Meters, TileXYZ, LLE, WGS84_32,
 };
+use navara_geometry::{tile_triangles_flat, tile_triangles_with_terrain};
 
 use navara_quadtree::GeoSpacialQuadLeaf;
 
@@ -574,9 +574,9 @@ pub fn transfer_mesh(
         if !should_render_terrain || (!should_upsample_terrain && is_terrain_failed) {
             let triangles = tile_triangles_flat(WGS84_32, &extent, tile_layer.segments, 0.);
 
-            let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
+            let vhandle = buf.new_f32(triangles.vertices);
             let ihandle = buf.new_u32(triangles.indices);
-            let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
+            let uvshandle = buf.new_f32(triangles.uvs);
             {
                 if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
                     t.cached_mesh_handle = Some(CachedMeshHandle {
@@ -684,9 +684,9 @@ pub fn transfer_mesh(
             &terrain_layer.elevation_decoder,
         );
 
-        let vhandle = buf.new_f32(triangles.vertices.into_iter().flatten().collect());
+        let vhandle = buf.new_f32(triangles.vertices);
         let ihandle = buf.new_u32(triangles.indices);
-        let uvshandle = buf.new_f32(triangles.uvs.into_iter().flatten().collect());
+        let uvshandle = buf.new_f32(triangles.uvs);
         let heights_handle = buf.new_f32(heights);
         {
             if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
