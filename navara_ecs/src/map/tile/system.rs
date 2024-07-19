@@ -647,7 +647,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                     },
                     material: Material {
-                        color: terrain_layer.color,
+                        color: tile_layer.color,
                         wireframe: terrain_layer.wireframe,
                         texture_fragment: texture_fragment_entity_id,
                     },
@@ -707,7 +707,7 @@ pub fn transfer_mesh(
                 uvs: uvshandle,
             },
             material: Material {
-                color: terrain_layer.color,
+                color: tile_layer.color,
                 wireframe: terrain_layer.wireframe,
                 texture_fragment: texture_fragment_entity_id,
             },

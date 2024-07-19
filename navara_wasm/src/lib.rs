@@ -184,8 +184,9 @@ pub fn trigger_texture_fragment_loaded(id: String, bits: u64, status: TextureFra
 
 pub fn add_layer(id: String, layer: JsValue) {
     app(id, |a| {
-        if let Some(ld) = LayerDescription::from(layer) {
-            if let Some(l) = ld.to() {
+        // TODO: Improve an undesirable cloning the layer.
+        if let Some(ld) = LayerDescription::from(layer.clone()) {
+            if let Some(l) = ld.to(layer) {
                 a.add_layer(l);
             }
         }
