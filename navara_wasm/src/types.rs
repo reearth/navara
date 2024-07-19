@@ -60,7 +60,7 @@ impl LayerDescription {
             "tiles" => {
                 let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
-                    url: layer.url, // required
+                    url: layer.url,
                     segments: layer.segments,
                     color: layer.color,
                     max_sse: layer.max_sse.unwrap_or(4.),
@@ -71,7 +71,7 @@ impl LayerDescription {
             "terrain" => {
                 let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
-                    url: layer.url.clone(), // required
+                    url: layer.url.clone(),
                     segments: layer.segments,
                     max_z: layer.max_z,
                     wireframe: layer.wireframe,
