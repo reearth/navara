@@ -72,9 +72,8 @@ view.addLayer({
   type: "tiles",
   color: 0xffffff,
   segments: 10,
-  tile_url: tileUrls.openstreetmap,
+  url: tileUrls.openstreetmap,
   max_sse: 2,
-  // FIXME: Currently upsampled terrain is noisy in high zoom level.
   max_z: 23,
   wireframe: false,
 });
@@ -103,10 +102,8 @@ const MAPBOX_ELEVATION_DECODER = {
 
 view.addLayer({
   type: "terrain",
-  color: 0xffffff,
   segments: 64,
-  terrain_url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
-  max_sse: 2,
+  url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
   max_z: 15,
   wireframe: false,
   elevation_decoder:
