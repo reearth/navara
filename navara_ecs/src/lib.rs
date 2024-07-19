@@ -21,7 +21,6 @@ use navara_layer::LayerDescription;
 pub use object::*;
 pub use transform::*;
 use window::{Window, WindowResizeEvent};
-
 pub use input::*;
 pub use texture_fragment::*;
 

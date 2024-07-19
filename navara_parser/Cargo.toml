@@ -1,5 +1,5 @@
 [package]
-name = "navara_layer"
+name = "navara_parser"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,4 @@ edition = "2021"
 [features]
 
 [dependencies]
-bevy_ecs = "0.12.1"
-bevy_math = "0.12.1"
-navara_core = { path = "../navara_core" }
-navara_parser = { path = "../navara_parser" }
+geojson_lib = { package = "geojson", version = "0.24.1"}

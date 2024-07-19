@@ -273,10 +273,8 @@ export default class ThreeView {
         this._mvts.push(mvt);
         break;
       }
-      case "tiles":
-      case "terrain":
+      default:
         this._core?.addLayer(l);
-        break;
     }
   }
 

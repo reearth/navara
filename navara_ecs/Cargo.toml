@@ -17,3 +17,4 @@ navara_core = { path = "../navara_core" }
 navara_geometry = { path = "../navara_geometry" }
 navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }
 navara_layer = { path = "../navara_layer" }
+navara_parser = { path = "../navara_parser" }

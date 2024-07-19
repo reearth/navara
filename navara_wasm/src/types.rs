@@ -1,6 +1,13 @@
-use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
+use gloo_utils::format::JsValueSerdeExt;
+use navara_core::CRS;
+use navara_layer::{Appearance, GeoJsonLayer, TerrainDataType, TerrainLayer, TilesLayer};
+use navara_parser::geojson::{Feature, GeoJson};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
+
+use crate::appearance::{
+    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
+};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
@@ -26,8 +33,78 @@ pub struct TerrainLayerDescription {
     pub segments: usize,
     pub max_z: usize,
     pub wireframe: bool,
-    /// This is required in `terrain layer`
     pub elevation_decoder: Option<ElevationDecoder>,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Deserialize)]
+pub struct GeoJsonLayerDescription {
+    #[wasm_bindgen(getter_with_clone)]
+    pub r#type: String,
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(with = "serde_wasm_bindgen::preserve")]
+    pub data: JsValue, // TODO: Improve any
+    pub wireframe: bool,
+    #[wasm_bindgen(getter_with_clone)]
+    pub crs: Option<String>,
+
+    // Appearances
+    #[wasm_bindgen(getter_with_clone)]
+    pub point: Option<PointMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub billboard: Option<BillboardMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub polyline: Option<PolylineMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub polygon: Option<PolygonMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub model: Option<ModelMaterial>,
+}
+
+impl GeoJsonLayerDescription {
+    pub fn data(&self) -> Option<(GeoJson, Vec<Feature>)> {
+        let geojson = GeoJson::from_json_object(self.data.into_serde().ok()?)
+            // TODO: Think how to handle unexpected error.
+            .expect("The format of your GeoJSON is wrong");
+        let features = match &geojson {
+            GeoJson::FeatureCollection(f) => f.features.clone(),
+            GeoJson::Feature(f) => vec![f.clone()],
+            _ => unimplemented!(),
+        };
+        Some((geojson, features))
+    }
+    pub fn appearances(&mut self) -> Vec<Appearance> {
+        let mut result = vec![];
+        if let Some(v) = self.point.take() {
+            result.push(Appearance::Point(v.into()));
+        }
+        if let Some(v) = self.billboard.take() {
+            result.push(Appearance::Billboard(v.into()));
+        }
+        if let Some(v) = self.polyline.take() {
+            result.push(Appearance::Polyline(v.into()));
+        }
+        if let Some(v) = self.polygon.take() {
+            result.push(Appearance::Polygon(v.into()));
+        }
+        if let Some(v) = self.model.take() {
+            result.push(Appearance::Model(v.into()));
+        }
+        result
+    }
+
+    pub fn crs(&self) -> Option<navara_core::CRS> {
+        if self.crs.is_none() {
+            return None;
+        }
+        Some(match self.crs.as_ref().unwrap().as_str() {
+            "EPSG:4326" => CRS::Geographic,
+            "EPSG:4978" => CRS::Geocentric,
+            _ => CRS::ESPG {
+                code: self.crs.clone().unwrap(),
+            },
+        })
+    }
 }
 
 #[wasm_bindgen]
@@ -77,6 +154,17 @@ impl LayerDescription {
                     wireframe: layer.wireframe,
                     elevation_decoder: layer.elevation_decoder.unwrap_or_default().into(),
                     terrain_type: TerrainDataType::from_url(&layer.url),
+                }))
+            }
+            "geojson" => {
+                let mut layer: GeoJsonLayerDescription =
+                    serde_wasm_bindgen::from_value(value).ok()?;
+                let (data, features) = layer.data()?;
+                Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
+                    data,
+                    appearances: layer.appearances(),
+                    crs: layer.crs(),
+                    features,
                 }))
             }
             _ => None,

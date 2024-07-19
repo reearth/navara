@@ -110,6 +110,41 @@ view.addLayer({
     terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
 });
 
+view.addLayer({
+  type: "geojson",
+  data: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [
+            139.70513431449842,
+            35.69279782617761
+          ],
+          type: "Point"
+        }
+      }
+    ]
+  },
+  billboard: {
+    show: true,
+    color: 0xffffff,
+    size: 0.1,
+    center: {
+      x: 0.5,
+      y: 0,
+    },
+    scale_by_distance: {
+      near: 0,
+      far: 1000,
+    },
+    url: "example.png",
+  },
+  wireframe: false,
+});
+
 // chiyoda-ku
 // view.addLayer({
 //   type: "tiles",

@@ -1,8 +1,9 @@
 #![doc = include_str!("../README.md")]
-
+mod appearance;
 mod event;
 mod input;
 mod types;
+mod unit;
 mod utils;
 
 use std::{
@@ -16,6 +17,7 @@ use wasm_bindgen::prelude::*;
 pub use event::*;
 pub use input::*;
 pub use types::*;
+pub use unit::*;
 
 #[wasm_bindgen]
 extern "C" {

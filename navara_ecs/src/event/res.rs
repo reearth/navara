@@ -14,6 +14,8 @@ pub struct EventStore {
     pub data_requested: Vec<Entity>, // FIXME: Make a data_removed event to remove unnecessary data
     pub texture_fragment_reqested: Vec<Entity>,
     pub texture_fragment_removed: Vec<Entity>,
+    pub renderable_feature_added: Vec<Entity>,
+    pub renderable_feature_removed: Vec<Entity>,
 }
 
 impl EventStore {
@@ -26,6 +28,8 @@ impl EventStore {
         self.data_requested.clear();
         self.texture_fragment_reqested.clear();
         self.texture_fragment_removed.clear();
+        self.renderable_feature_added.clear();
+        self.renderable_feature_removed.clear();
     }
 
     pub fn events<'a>(&self, world: &'a World) -> Events<'a> {
@@ -70,6 +74,16 @@ impl EventStore {
 
         for e in self.texture_fragment_removed.iter() {
             events.texture_fragment_removed.push((*e).into());
+        }
+
+        for e in self.renderable_feature_added.iter() {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.renderable_feature_added.push(e);
+            }
+        }
+
+        for e in self.renderable_feature_removed.iter() {
+            events.renderable_feature_removed.push((*e).into());
         }
 
         events
