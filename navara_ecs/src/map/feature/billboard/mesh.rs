@@ -20,7 +20,7 @@ pub fn construct_mesh(
     let lle: LLE<f32, Degrees> = LLE {
         lng: Angle::new(point[0] as f32),
         lat: Angle::new(point[1] as f32),
-        height: Meters::new(*point.get(2).unwrap_or(&0.) as f32),
+        height: Meters::new(*point.get(2).unwrap_or(&0.) as f32 + material.height),
     };
     let position = ellipsoid.lle_to_xyz(lle.rad());
     let position = Vec3::new(position.x.val(), position.y.val(), position.z.val());

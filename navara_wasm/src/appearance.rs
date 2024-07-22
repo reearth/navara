@@ -48,6 +48,7 @@ pub struct BillboardMaterial {
     pub size: f32,
     pub color: u32,
     pub center: Vec2,
+    pub height: f32,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
     #[wasm_bindgen(getter_with_clone)]
@@ -61,6 +62,7 @@ impl Into<navara_layer::BillboardMaterial> for BillboardMaterial {
             size: self.size,
             color: self.color,
             center: self.center.into(),
+            height: self.height,
             url: self.url,
             scale_by_distance: (self.scale_by_distance.near, self.scale_by_distance.far),
         }
@@ -73,6 +75,7 @@ impl<'a> From<&'a navara_layer::BillboardMaterial> for BillboardMaterial {
             size: value.size,
             color: value.color,
             center: value.center.into(),
+            height: value.height,
             url: value.url.clone(),
             scale_by_distance: NearFar {
                 near: value.scale_by_distance.0,

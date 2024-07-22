@@ -100,30 +100,74 @@ const MAPBOX_ELEVATION_DECODER = {
   epsilon: 0.1,
 };
 
-view.addLayer({
-  type: "terrain",
-  segments: 64,
-  url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
-  max_z: 15,
-  wireframe: false,
-  elevation_decoder:
-    terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
-});
+// view.addLayer({
+//   type: "terrain",
+//   segments: 64,
+//   url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
+//   max_z: 15,
+//   wireframe: false,
+//   elevation_decoder:
+//     terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
+// });
 
 view.addLayer({
   type: "geojson",
   data: {
-    type: "FeatureCollection",
-    features: [
+    "type": "FeatureCollection",
+    "features": [
       {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          coordinates: [
+        "type": "Feature",
+        "properties": {},
+        "geometry": {
+          "coordinates": [
             139.70513431449842,
             35.69279782617761
           ],
-          type: "Point"
+          "type": "Point"
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {
+          "coordinates": [
+            140.13033810546995,
+            35.60447056434825
+          ],
+          "type": "Point"
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {
+          "coordinates": [
+            139.64591330307843,
+            35.85950281451436
+          ],
+          "type": "Point"
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {
+          "coordinates": [
+            139.63564871528018,
+            35.44128807202607
+          ],
+          "type": "Point"
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {
+          "coordinates": [
+            139.28453080888477,
+            35.51560883529815
+          ],
+          "type": "Point"
         }
       }
     ]
@@ -131,7 +175,9 @@ view.addLayer({
   billboard: {
     show: true,
     color: 0xffffff,
-    size: 0.1,
+    size: 0.05,
+    height: 100,
+    // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
     center: {
       x: 0.5,
       y: 0,
@@ -140,7 +186,7 @@ view.addLayer({
       near: 0,
       far: 1000,
     },
-    url: "example.png",
+    url: "/example.png",
   },
   wireframe: false,
 });

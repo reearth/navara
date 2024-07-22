@@ -31,6 +31,7 @@ pub struct BillboardMaterial {
     pub size: f32,
     pub color: u32,
     pub center: Vec2,
+    pub height: f32,
     pub url: String,
     /// near, far
     pub scale_by_distance: (f32, f32),
