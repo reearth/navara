@@ -3,9 +3,9 @@ import type {
   TerrainLayerDescription,
   TileLayerDescription,
 } from "navara";
+import type { Mesh, Sprite } from "three";
 
 import type { Extent } from "./utils";
-import type { Mesh, Sprite } from "three";
 
 export type { Extent } from "./utils";
 

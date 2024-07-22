@@ -52,6 +52,9 @@ run_task = { name = ["test-rust", "test-web"], parallel = true }
 [tasks.lint]
 run_task = { name = ["lint-rust", "lint-web"], parallel = true }
 
+[tasks.lint-check]
+run_task = { name = ["lint-rust", "lint-check-web"], parallel = true }
+
 [tasks.format]
 run_task = { name = ["format-rust", "format-web"], parallel = true }
 
@@ -87,6 +90,13 @@ script = ['''
 #!/usr/bin/env bash -eux
 cd web
 npm i && npm run lint
+''']
+
+[tasks.lint-check-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web
+npm i && npm run lint:check
 ''']
 
 [tasks.format-web]

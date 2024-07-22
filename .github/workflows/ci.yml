@@ -51,7 +51,7 @@ jobs:
       - name: Cargo format
         run: cargo make format-check
       - name: Lint
-        run: cargo make lint
+        run: cargo make lint-check
   doc:
     runs-on: ubuntu-latest
     steps:

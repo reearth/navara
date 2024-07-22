@@ -15,15 +15,15 @@ pub struct PointMaterial {
     pub scale_by_distance: NearFar,
 }
 
-impl Into<navara_layer::PointMaterial> for PointMaterial {
-    fn into(self) -> navara_layer::PointMaterial {
+impl From<PointMaterial> for navara_layer::PointMaterial {
+    fn from(val: PointMaterial) -> Self {
         navara_layer::PointMaterial {
-            show: self.show,
-            size: self.size,
-            color: self.color,
-            center: self.center.into(),
-            height: self.height,
-            scale_by_distance: (self.scale_by_distance.near, self.scale_by_distance.far),
+            show: val.show,
+            size: val.size,
+            color: val.color,
+            center: val.center.into(),
+            height: val.height,
+            scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
         }
     }
 }
@@ -64,16 +64,16 @@ pub struct BillboardMaterial {
     pub scale_by_distance: NearFar,
 }
 
-impl Into<navara_layer::BillboardMaterial> for BillboardMaterial {
-    fn into(self) -> navara_layer::BillboardMaterial {
+impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
+    fn from(val: BillboardMaterial) -> Self {
         navara_layer::BillboardMaterial {
-            show: self.show,
-            size: self.size,
-            color: self.color,
-            center: self.center.into(),
-            height: self.height,
-            url: self.url,
-            scale_by_distance: (self.scale_by_distance.near, self.scale_by_distance.far),
+            show: val.show,
+            size: val.size,
+            color: val.color,
+            center: val.center.into(),
+            height: val.height,
+            url: val.url,
+            scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
         }
     }
 }
@@ -100,9 +100,9 @@ pub struct PolylineMaterial {
     pub show: bool,
 }
 
-impl Into<navara_layer::PolylineMaterial> for PolylineMaterial {
-    fn into(self) -> navara_layer::PolylineMaterial {
-        navara_layer::PolylineMaterial { show: self.show }
+impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
+    fn from(val: PolylineMaterial) -> Self {
+        navara_layer::PolylineMaterial { show: val.show }
     }
 }
 impl<'a> From<&'a navara_layer::PolylineMaterial> for PolylineMaterial {
@@ -117,9 +117,9 @@ pub struct PolygonMaterial {
     pub show: bool,
 }
 
-impl Into<navara_layer::PolygonMaterial> for PolygonMaterial {
-    fn into(self) -> navara_layer::PolygonMaterial {
-        navara_layer::PolygonMaterial { show: self.show }
+impl From<PolygonMaterial> for navara_layer::PolygonMaterial {
+    fn from(val: PolygonMaterial) -> Self {
+        navara_layer::PolygonMaterial { show: val.show }
     }
 }
 impl<'a> From<&'a navara_layer::PolygonMaterial> for PolygonMaterial {
@@ -136,11 +136,11 @@ pub struct ModelMaterial {
     pub url: String,
 }
 
-impl Into<navara_layer::ModelMaterial> for ModelMaterial {
-    fn into(self) -> navara_layer::ModelMaterial {
+impl From<ModelMaterial> for navara_layer::ModelMaterial {
+    fn from(val: ModelMaterial) -> Self {
         navara_layer::ModelMaterial {
-            show: self.show,
-            url: self.url,
+            show: val.show,
+            url: val.url,
         }
     }
 }

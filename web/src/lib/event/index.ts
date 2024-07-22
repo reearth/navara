@@ -26,8 +26,10 @@ import {
   MeshLambertMaterial,
   Texture,
 } from "three";
-import { renderFeature } from "./feature";
+
 import type { MeshCache } from "../type";
+
+import { renderFeature } from "./feature";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;

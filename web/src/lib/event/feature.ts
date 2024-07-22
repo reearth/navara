@@ -1,6 +1,6 @@
+import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import type { BillboardMesh, PointMesh, RenderableFeature } from "navara";
 import { Mesh, Sprite, SpriteMaterial, TextureLoader } from "three";
-import PointFragShader from "@shaders/glsl/point.frag.glsl";
 
 export function renderFeature(f: RenderableFeature): (Mesh | Sprite) | undefined {
   if (f.point) {
@@ -39,8 +39,6 @@ in vec2 sprite_uv;
 ${PointFragShader}
 `,
       )
-      // Construct a circle from a plane with antialiasing.
-      // The method of AA: https://stackoverflow.com/questions/12945277/drawing-antialiased-circle-using-shaders
       .replace(
         "#include <fog_fragment>",
         `

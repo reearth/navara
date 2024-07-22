@@ -11,6 +11,7 @@ use crate::{
     BufferStore,
 };
 
+#[allow(clippy::type_complexity)]
 pub fn update(
     mut commands: Commands,
     mut _buf: ResMut<BufferStore>,
@@ -29,11 +30,7 @@ pub fn update(
         for feature in features {
             for appearance in appearances {
                 match appearance {
-                    Appearance::Point(v) => match feature
-                        .geometry
-                        .as_ref()
-                        .map_or(None, |g| Some(&g.value))
-                    {
+                    Appearance::Point(v) => match feature.geometry.as_ref().map(|g| &g.value) {
                         Some(Value::Point(f)) => add_command(point::construct_mesh(
                             WGS84_32,
                             &[f[0] as f32, f[1] as f32, *f.get(2).unwrap_or(&0.) as f32],
@@ -50,11 +47,7 @@ pub fn update(
                         }
                         _ => {}
                     },
-                    Appearance::Billboard(v) => match feature
-                        .geometry
-                        .as_ref()
-                        .map_or(None, |g| Some(&g.value))
-                    {
+                    Appearance::Billboard(v) => match feature.geometry.as_ref().map(|g| &g.value) {
                         Some(Value::Point(f)) => add_command(billboard::construct_mesh(
                             WGS84_32,
                             &[f[0] as f32, f[1] as f32, *f.get(2).unwrap_or(&0.) as f32],
@@ -163,10 +156,12 @@ mod test {
 
         let mut iter = renderable_features.iter(&app.world);
 
-        let expects = vec![
+        let expects = [
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.75227193360223),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
                     height: Meters::new(0. + material.height),
                 }
@@ -175,7 +170,9 @@ mod test {
             ),
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.77250531915263),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
                     height: Meters::new(0. + material.height),
                 }
@@ -192,7 +189,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[0].clone())
+            Some(expects[0])
         );
         assert_eq!(
             match iter.next().unwrap() {
@@ -202,7 +199,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[1].clone())
+            Some(expects[1])
         );
     }
 
@@ -256,10 +253,12 @@ mod test {
 
         let mut iter = renderable_features.iter(&app.world);
 
-        let expects = vec![
+        let expects = [
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.75227193360223),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
                     height: Meters::new(0. + material.height),
                 }
@@ -268,7 +267,9 @@ mod test {
             ),
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.77250531915263),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
                     height: Meters::new(0. + material.height),
                 }
@@ -285,7 +286,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[0].clone())
+            Some(expects[0])
         );
         assert_eq!(
             match iter.next().unwrap() {
@@ -295,7 +296,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[1].clone())
+            Some(expects[1])
         );
     }
 
@@ -355,10 +356,12 @@ mod test {
 
         let mut iter = renderable_features.iter(&app.world);
 
-        let expects = vec![
+        let expects = [
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.75227193360223),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
                     height: Meters::new(0. + material.height),
                 }
@@ -367,7 +370,9 @@ mod test {
             ),
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.77250531915263),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
                     height: Meters::new(0. + material.height),
                 }
@@ -384,7 +389,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[0].clone())
+            Some(expects[0])
         );
         assert_eq!(
             match iter.next().unwrap() {
@@ -394,7 +399,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[1].clone())
+            Some(expects[1])
         );
     }
 
@@ -449,10 +454,12 @@ mod test {
 
         let mut iter = renderable_features.iter(&app.world);
 
-        let expects = vec![
+        let expects = [
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.75227193360223),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
                     height: Meters::new(0. + material.height),
                 }
@@ -461,7 +468,9 @@ mod test {
             ),
             xyz_to_vec3(
                 LLE {
+                    #[allow(clippy::excessive_precision)]
                     lng: Angle::new(139.77250531915263),
+                    #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
                     height: Meters::new(0. + material.height),
                 }
@@ -478,7 +487,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[0].clone())
+            Some(expects[0])
         );
         assert_eq!(
             match iter.next().unwrap() {
@@ -488,7 +497,7 @@ mod test {
                 } => Some(transform.translation),
                 _ => None,
             },
-            Some(expects[1].clone())
+            Some(expects[1])
         );
     }
 }

@@ -1,3 +1,5 @@
+// Clip out of a circle from a plane with antialiasing.
+// The method of AA: https://stackoverflow.com/questions/12945277/drawing-antialiased-circle-using-shaders
 float nvr_circle_alpha(vec2 uv) {
     float border = 0.01;
     float radius = 0.5;
