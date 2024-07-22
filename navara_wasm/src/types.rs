@@ -94,10 +94,7 @@ impl GeoJsonLayerDescription {
     }
 
     pub fn crs(&self) -> Option<navara_core::CRS> {
-        if self.crs.is_none() {
-            return None;
-        }
-        Some(match self.crs.as_ref().unwrap().as_str() {
+        Some(match self.crs.as_ref()?.as_str() {
             "EPSG:4326" => CRS::Geographic,
             "EPSG:4978" => CRS::Geocentric,
             _ => CRS::ESPG {
