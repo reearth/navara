@@ -20,7 +20,7 @@ pub struct PointMaterial {
 }
 
 // The actual mesh will be constructed in a rendering engine, so this geometry has a position.
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct BillboardGeometry {
     pub position: Vec3,
 }
@@ -55,7 +55,7 @@ pub struct PolygonMaterial {
 }
 
 // The actual mesh will be constructed in a rendering engine, so this geometry has a position.
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct ModelGeometry {
     pub position: Vec3,
 }

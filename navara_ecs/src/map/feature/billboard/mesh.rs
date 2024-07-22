@@ -1,29 +1,24 @@
 use bevy_math::Vec3;
 use bevy_transform::components::Transform;
-use navara_core::{Angle, Degrees, Ellipsoid, Meters, LLE};
+use navara_core::{Angle, Ellipsoid, Meters, LLE};
 use navara_layer::{BillboardGeometry, BillboardMaterial};
-use navara_parser::geojson::{Feature, Value};
 
-use crate::map::feature::render::RenderableFeature;
+use crate::{map::feature::render::RenderableFeature, utils::coord::xyz_to_vec3};
 
 pub fn construct_mesh(
     ellipsoid: Ellipsoid<f32>,
-    feature: &Feature,
+    point: &[f32; 3],
     material: &BillboardMaterial,
 ) -> Option<RenderableFeature> {
-    let point = match feature.geometry.as_ref().map_or(None, |g| Some(&g.value)) {
-        Some(Value::Point(v)) => v,
-        Some(Value::MultiPoint(_v)) => unimplemented!(), // TODO: Support MultiPoint
-        _ => return None,
-    };
-
-    let lle: LLE<f32, Degrees> = LLE {
-        lng: Angle::new(point[0] as f32),
-        lat: Angle::new(point[1] as f32),
-        height: Meters::new(*point.get(2).unwrap_or(&0.) as f32 + material.height),
-    };
-    let position = ellipsoid.lle_to_xyz(lle.rad());
-    let position = Vec3::new(position.x.val(), position.y.val(), position.z.val());
+    let position = xyz_to_vec3(
+        LLE {
+            lng: Angle::new(point[0]),
+            lat: Angle::new(point[1]),
+            height: Meters::new(point[2] + material.height),
+        }
+        .rad()
+        .to_xyz(ellipsoid),
+    );
 
     Some(RenderableFeature::Billboard {
         geometry: BillboardGeometry { position },

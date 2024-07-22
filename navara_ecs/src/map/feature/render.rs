@@ -7,7 +7,7 @@ use navara_layer::{
 
 use crate::Mesh;
 
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug, Default, PartialEq)]
 pub enum RenderableFeature {
     Point {
         material: PointMaterial,
