@@ -1,7 +1,7 @@
 use bevy_math::Vec3;
 use bevy_transform::components::Transform;
 use navara_core::{Angle, Ellipsoid, Meters, LLE};
-use navara_layer::{BillboardGeometry, BillboardMaterial};
+use navara_layer::BillboardMaterial;
 
 use crate::{map::feature::render::RenderableFeature, utils::coord::xyz_to_vec3};
 
@@ -21,7 +21,6 @@ pub fn construct_mesh(
     );
 
     Some(RenderableFeature::Billboard {
-        geometry: BillboardGeometry { position },
         material: material.clone(),
         transform: Transform::from_translation(position).with_scale(Vec3::new(
             material.size,

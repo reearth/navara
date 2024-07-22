@@ -1,7 +1,7 @@
 use bevy_ecs::component::Component;
 use bevy_transform::components::Transform;
 use navara_layer::{
-    BillboardGeometry, BillboardMaterial, ModelGeometry, ModelMaterial, PointMaterial,
+    BillboardMaterial, ModelMaterial, PointMaterial,
     PolygonMaterial, PolylineMaterial,
 };
 
@@ -15,7 +15,6 @@ pub enum RenderableFeature {
         transform: Transform,
     },
     Billboard {
-        geometry: BillboardGeometry,
         material: BillboardMaterial,
         transform: Transform,
     },
@@ -30,7 +29,6 @@ pub enum RenderableFeature {
         transform: Transform,
     },
     Model {
-        geometry: ModelGeometry,
         material: ModelMaterial,
         transform: Transform,
     },

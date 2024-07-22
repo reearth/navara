@@ -3,8 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     appearance::{
-        BillboardGeometry, BillboardMaterial, ModelGeometry, ModelMaterial, PointMaterial,
-        PolygonMaterial, PolylineMaterial,
+        BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
     },
     Mesh, Transform,
 };
@@ -21,8 +20,6 @@ pub struct PointMesh {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
 pub struct BillboardMesh {
-    #[wasm_bindgen(getter_with_clone)]
-    pub geometry: BillboardGeometry,
     #[wasm_bindgen(getter_with_clone)]
     pub material: BillboardMaterial,
     pub transform: Transform,
@@ -49,8 +46,6 @@ pub struct PolygonMesh {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
 pub struct ModelMesh {
-    #[wasm_bindgen(getter_with_clone)]
-    pub geometry: ModelGeometry,
     #[wasm_bindgen(getter_with_clone)]
     pub material: ModelMaterial,
     pub transform: Transform,
@@ -88,12 +83,10 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
             },
             navara_ecs::map::feature::render::RenderableFeature::Billboard {
                 material,
-                geometry,
                 transform,
             } => Self {
                 billboard: Some(BillboardMesh {
                     material: material.into(),
-                    geometry: geometry.into(),
                     transform: transform.into(),
                 }),
                 ..Default::default()
@@ -124,12 +117,10 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
             },
             navara_ecs::map::feature::render::RenderableFeature::Model {
                 material,
-                geometry,
                 transform,
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
-                    geometry: geometry.into(),
                     transform: transform.into(),
                 }),
                 ..Default::default()

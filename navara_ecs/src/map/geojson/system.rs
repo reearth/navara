@@ -165,7 +165,6 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
-                    geometry: _,
                     material: _,
                     transform,
                 } => Some(transform.translation),
@@ -176,7 +175,6 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
-                    geometry: _,
                     material: _,
                     transform,
                 } => Some(transform.translation),
@@ -260,7 +258,6 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
-                    geometry: _,
                     material: _,
                     transform,
                 } => Some(transform.translation),
@@ -271,7 +268,6 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
-                    geometry: _,
                     material: _,
                     transform,
                 } => Some(transform.translation),

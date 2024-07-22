@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{Vec2, Vec3};
+use crate::Vec2;
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,20 +17,6 @@ impl Into<navara_layer::PointMaterial> for PointMaterial {
 impl<'a> From<&'a navara_layer::PointMaterial> for PointMaterial {
     fn from(value: &'a navara_layer::PointMaterial) -> PointMaterial {
         PointMaterial { show: value.show }
-    }
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize)]
-pub struct BillboardGeometry {
-    pub position: Vec3,
-}
-
-impl<'a> From<&'a navara_layer::BillboardGeometry> for BillboardGeometry {
-    fn from(value: &'a navara_layer::BillboardGeometry) -> BillboardGeometry {
-        BillboardGeometry {
-            position: Vec3::from(value.position),
-        }
     }
 }
 
@@ -116,20 +102,6 @@ impl Into<navara_layer::PolygonMaterial> for PolygonMaterial {
 impl<'a> From<&'a navara_layer::PolygonMaterial> for PolygonMaterial {
     fn from(value: &'a navara_layer::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial { show: value.show }
-    }
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize)]
-pub struct ModelGeometry {
-    pub position: Vec3,
-}
-
-impl<'a> From<&'a navara_layer::ModelGeometry> for ModelGeometry {
-    fn from(value: &'a navara_layer::ModelGeometry) -> ModelGeometry {
-        ModelGeometry {
-            position: Vec3::from(value.position),
-        }
     }
 }
 
