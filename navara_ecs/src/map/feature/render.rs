@@ -1,8 +1,7 @@
 use bevy_ecs::component::Component;
 use bevy_transform::components::Transform;
 use navara_layer::{
-    BillboardMaterial, ModelMaterial, PointMaterial,
-    PolygonMaterial, PolylineMaterial,
+    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
 
 use crate::Mesh;
@@ -11,7 +10,6 @@ use crate::Mesh;
 pub enum RenderableFeature {
     Point {
         material: PointMaterial,
-        mesh: Mesh,
         transform: Transform,
     },
     Billboard {

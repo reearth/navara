@@ -194,10 +194,7 @@ function processTextureFragmentRequested(
     });
 }
 
-function processTextureFragmentRemoved(
-  req: EntityEvent,
-  loadedTexes: Map<string, Texture>,
-) {
+function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string, Texture>) {
   const id = makeTextureFragmentId(req.ind, req.gen);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
@@ -210,21 +207,15 @@ function processRenderableFeatureAdded(
 ) {
   const id = generate_id_from_entity(ev);
   const obj = renderFeature(ev.feature);
-  if(!obj) return;
+  if (!obj) return;
 
-  const {
-    point,
-    billboard,
-    polyline,
-    polygon,
-    model,
-  } = ev.feature;
+  const { point, billboard, polyline, polygon, model } = ev.feature;
 
   const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
   if (transform) {
     console.log(transform.tx, transform.ty, transform.tz);
     setTransform(obj, transform);
-  };
+  }
 
   parent.add(obj);
   meshes.set(id, obj);

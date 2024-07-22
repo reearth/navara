@@ -1,4 +1,8 @@
-import type { GeoJsonLayerDescription, TerrainLayerDescription, TileLayerDescription } from "navara";
+import type {
+  GeoJsonLayerDescription,
+  TerrainLayerDescription,
+  TileLayerDescription,
+} from "navara";
 
 import type { Extent } from "./utils";
 import type { Mesh, Sprite } from "three";

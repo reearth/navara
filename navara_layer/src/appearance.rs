@@ -13,6 +13,12 @@ pub enum Appearance {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PointMaterial {
     pub show: bool,
+    pub size: f32,
+    pub color: u32,
+    pub center: Vec2,
+    pub height: f32,
+    /// near, far
+    pub scale_by_distance: (f32, f32),
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

@@ -7,16 +7,39 @@ use crate::Vec2;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: bool,
+    pub size: f32,
+    pub color: u32,
+    pub center: Vec2,
+    pub height: f32,
+    #[wasm_bindgen(getter_with_clone)]
+    pub scale_by_distance: NearFar,
 }
 
 impl Into<navara_layer::PointMaterial> for PointMaterial {
     fn into(self) -> navara_layer::PointMaterial {
-        navara_layer::PointMaterial { show: self.show }
+        navara_layer::PointMaterial {
+            show: self.show,
+            size: self.size,
+            color: self.color,
+            center: self.center.into(),
+            height: self.height,
+            scale_by_distance: (self.scale_by_distance.near, self.scale_by_distance.far),
+        }
     }
 }
 impl<'a> From<&'a navara_layer::PointMaterial> for PointMaterial {
     fn from(value: &'a navara_layer::PointMaterial) -> PointMaterial {
-        PointMaterial { show: value.show }
+        PointMaterial {
+            show: value.show,
+            size: value.size,
+            color: value.color,
+            center: value.center.into(),
+            height: value.height,
+            scale_by_distance: NearFar {
+                near: value.scale_by_distance.0,
+                far: value.scale_by_distance.1,
+            },
+        }
     }
 }
 

@@ -13,7 +13,6 @@ use crate::{
 pub struct PointMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub material: PointMaterial,
-    pub mesh: Mesh,
     pub transform: Transform,
 }
 
@@ -71,12 +70,10 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
         match v {
             navara_ecs::map::feature::render::RenderableFeature::Point {
                 material,
-                mesh,
                 transform,
             } => Self {
                 point: Some(PointMesh {
                     material: material.into(),
-                    mesh: mesh.into(),
                     transform: transform.into(),
                 }),
                 ..Default::default()
