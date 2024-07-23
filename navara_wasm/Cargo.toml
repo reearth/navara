@@ -24,6 +24,8 @@ navara_ecs = { path = "../navara_ecs" }
 navara_layer = { path = "../navara_layer" }
 serde = { version = "1.0.193", features = ["derive"] }
 serde-wasm-bindgen = "0.6.3"
+navara_parser = { path = "../navara_parser" }
+gloo-utils = { version = "0.1", features = ["serde"] }
 
 [dependencies.web-sys]
 version = "0.3.65"

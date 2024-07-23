@@ -1,6 +1,9 @@
 use bevy_ecs::{component::Component, entity::Entity, world::World};
 
-use crate::{texture_fragment::TextureFragment, DataRequester, Material, Mesh, Transform};
+use crate::{
+    map::feature::render::RenderableFeature, texture_fragment::TextureFragment, DataRequester,
+    Material, Mesh, Transform,
+};
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
@@ -12,6 +15,8 @@ pub struct Events<'a> {
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
+    pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
+    pub renderable_feature_removed: Vec<EntityEvent>,
 }
 
 #[derive(Debug)]

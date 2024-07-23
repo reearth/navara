@@ -113,7 +113,7 @@ pub struct XYZ<F: Float> {
 }
 
 /// Coordinate reference system
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum CRS {
     /// EPSG:4326
     #[default]

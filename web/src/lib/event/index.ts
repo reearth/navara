@@ -3,14 +3,14 @@ import {
   type Transform,
   type MeshAdded,
   type MeshChanged,
-  type ObjectEvent,
+  type EntityEvent,
   type Mesh as EventMesh,
   type MeshMaterial as EventMaterial,
   type ObjectTransformEvent,
   type DataRequestEvent,
+  type RenderableFeatureAddedEvent,
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
-  TextureFragmentRemovedEvent,
 } from "navara";
 import {
   BufferAttribute,
@@ -27,6 +27,10 @@ import {
   Texture,
 } from "three";
 
+import type { MeshCache } from "../type";
+
+import { renderFeature } from "./feature";
+
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
@@ -42,7 +46,7 @@ export type TextureFragmentHandler = {
 export function processEvent(
   scene: Object3D,
   camera: Camera,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   buf: BufferLoader,
   texFragment: TextureFragmentHandler,
   loadedTexs: Map<string, Texture>,
@@ -62,14 +66,16 @@ export function processEvent(
     processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
   );
   event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
+  event.renderable_feature_added?.forEach(ev => processRenderableFeatureAdded(ev, scene, meshes));
+  event.renderable_feature_removed?.forEach(ev => processObjectRemoved(scene, meshes, ev));
 }
 
 function processCameraTransformUpdated(camera: Camera, transform: Transform) {
   setTransform(camera, transform); // disable temporarily
 }
 
-function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTransformEvent) {
-  const id = `${e.ind}_${e.gen}`;
+function processObjectTransformUpdated(meshes: MeshCache, e: ObjectTransformEvent) {
+  const id = generate_id_from_entity(e);
   const m = meshes.get(id);
   if (!m) return;
 
@@ -78,7 +84,7 @@ function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTrans
 
 function processMeshAdded(
   parent: Object3D,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   mesh: MeshAdded,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
@@ -97,12 +103,12 @@ function processMeshAdded(
 
 function processMeshChanged(
   parent: Object3D,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   mesh: MeshChanged,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
 ) {
-  const id = `${mesh.ind}_${mesh.gen}`;
+  const id = generate_id_from_entity(mesh);
   const m = meshes.get(id);
   if (!m) return;
 
@@ -117,8 +123,8 @@ function processMeshChanged(
   newm.scale.copy(m.scale);
 }
 
-function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: ObjectEvent) {
-  const id = `${obj.ind}_${obj.gen}`;
+function processObjectRemoved(parent: Object3D, meshes: MeshCache, obj: EntityEvent) {
+  const id = generate_id_from_entity(obj);
   const m = meshes.get(id);
   if (!m) return;
 
@@ -190,18 +196,36 @@ function processTextureFragmentRequested(
     });
 }
 
-function processTextureFragmentRemoved(
-  req: TextureFragmentRemovedEvent,
-  loadedTexes: Map<string, Texture>,
-) {
+function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string, Texture>) {
   const id = makeTextureFragmentId(req.ind, req.gen);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
 }
 
+function processRenderableFeatureAdded(
+  ev: RenderableFeatureAddedEvent,
+  parent: Object3D,
+  meshes: MeshCache,
+) {
+  const id = generate_id_from_entity(ev);
+  const obj = renderFeature(ev.feature);
+  if (!obj) return;
+
+  const { point, billboard, polyline, polygon, model } = ev.feature;
+
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  if (transform) {
+    console.log(transform.tx, transform.ty, transform.tz);
+    setTransform(obj, transform);
+  }
+
+  parent.add(obj);
+  meshes.set(id, obj);
+}
+
 function createMesh(
   parent: Object3D,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
   id: string,
@@ -258,4 +282,8 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
   }
 
   return m;
+}
+
+function generate_id_from_entity(entity: EntityEvent) {
+  return `${entity.ind}_${entity.gen}`;
 }

@@ -15,6 +15,9 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             LayerDescription::Terrain(t) => {
                 commands.spawn(t.clone());
             }
+            LayerDescription::GeoJson(t) => {
+                commands.spawn(t.clone());
+            }
         }
     }
 }

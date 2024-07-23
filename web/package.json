@@ -1,5 +1,6 @@
 {
   "name": "navara-examples-web",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +9,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest --passWithNoTests",
-    "lint": "eslint --ignore-path .gitignore .",
+    "lint": "eslint --ignore-path .gitignore . --fix",
+    "lint:check": "eslint --ignore-path .gitignore .",
     "format": "prettier --write .",
     "format:check": "prettier --check --ignore-path .gitignore ."
   },
@@ -35,6 +37,7 @@
     "prettier": "^3.1.0",
     "typescript": "^5.2.2",
     "vite": "^4.5.0",
+    "vite-plugin-glsl": "^1.3.0",
     "vite-plugin-top-level-await": "^1.3.1",
     "vite-plugin-wasm": "^3.2.2",
     "vitest": "^0.34.6"

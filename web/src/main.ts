@@ -110,6 +110,71 @@ view.addLayer({
     terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
 });
 
+view.addLayer({
+  type: "geojson",
+  data: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.70513431449842, 35.69279782617761],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [140.13033810546995, 35.60447056434825],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.64591330307843, 35.85950281451436],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.63564871528018, 35.44128807202607],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.28453080888477, 35.51560883529815],
+          type: "Point",
+        },
+      },
+    ],
+  },
+  point: {
+    show: true,
+    color: 0xffffff,
+    size: 0.1,
+    height: 100,
+    // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+    center: {
+      x: 0.5,
+      y: 0,
+    },
+    scale_by_distance: {
+      near: 0,
+      far: 1000,
+    },
+  },
+  wireframe: false,
+});
+
 // chiyoda-ku
 // view.addLayer({
 //   type: "tiles",
