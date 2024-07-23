@@ -3,14 +3,14 @@ import {
   type Transform,
   type MeshAdded,
   type MeshChanged,
-  type ObjectEvent,
+  type EntityEvent,
   type Mesh as EventMesh,
   type MeshMaterial as EventMaterial,
   type ObjectTransformEvent,
   type DataRequestEvent,
+  type RenderableFeatureAddedEvent,
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
-  TextureFragmentRemovedEvent,
 } from "navara";
 import {
   BufferAttribute,
@@ -27,11 +27,16 @@ import {
   Texture,
 } from "three";
 
+import type { MeshCache } from "../type";
+
+import { renderFeature } from "./feature";
+
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
-  setU8: (handle: number, bytes: Uint8Array) => void;
+  setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
+  triggerDataRequesterFailed: (bits: bigint) => void;
 };
 
 export type TextureFragmentHandler = {
@@ -41,7 +46,7 @@ export type TextureFragmentHandler = {
 export function processEvent(
   scene: Object3D,
   camera: Camera,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   buf: BufferLoader,
   texFragment: TextureFragmentHandler,
   loadedTexs: Map<string, Texture>,
@@ -61,14 +66,16 @@ export function processEvent(
     processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
   );
   event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
+  event.renderable_feature_added?.forEach(ev => processRenderableFeatureAdded(ev, scene, meshes));
+  event.renderable_feature_removed?.forEach(ev => processObjectRemoved(scene, meshes, ev));
 }
 
 function processCameraTransformUpdated(camera: Camera, transform: Transform) {
   setTransform(camera, transform); // disable temporarily
 }
 
-function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTransformEvent) {
-  const id = `${e.ind}_${e.gen}`;
+function processObjectTransformUpdated(meshes: MeshCache, e: ObjectTransformEvent) {
+  const id = generate_id_from_entity(e);
   const m = meshes.get(id);
   if (!m) return;
 
@@ -77,7 +84,7 @@ function processObjectTransformUpdated(meshes: Map<string, Mesh>, e: ObjectTrans
 
 function processMeshAdded(
   parent: Object3D,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   mesh: MeshAdded,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
@@ -96,12 +103,12 @@ function processMeshAdded(
 
 function processMeshChanged(
   parent: Object3D,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   mesh: MeshChanged,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
 ) {
-  const id = `${mesh.ind}_${mesh.gen}`;
+  const id = generate_id_from_entity(mesh);
   const m = meshes.get(id);
   if (!m) return;
 
@@ -116,35 +123,53 @@ function processMeshChanged(
   newm.scale.copy(m.scale);
 }
 
-function processObjectRemoved(parent: Object3D, meshes: Map<string, Mesh>, obj: ObjectEvent) {
-  const id = `${obj.ind}_${obj.gen}`;
+function processObjectRemoved(parent: Object3D, meshes: MeshCache, obj: EntityEvent) {
+  const id = generate_id_from_entity(obj);
   const m = meshes.get(id);
   if (!m) return;
 
   meshes.delete(id);
+  m.clear();
+  if (Array.isArray(m.material)) {
+    m.material.map(m => m.dispose());
+  } else {
+    m.material.dispose();
+  }
+  m.geometry.dispose();
   parent.remove(m);
 }
 
 function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
-  console.log("Requested data", req.handle, req.url);
   const loader = new ImageLoader();
-  loader.load(req.url, img => {
-    const canvas = document.createElement("canvas");
-    canvas.height = img.height;
-    canvas.width = img.width;
-    const context = canvas.getContext("2d");
-    if (context === null) {
-      throw new Error("failed to get context of canvas");
-    } else {
-      context.drawImage(img, 0, 0);
-    }
-    const data = context.getImageData(0, 0, img.height, img.width).data;
-    if (data === undefined) {
-      throw new Error("failed to convert array");
-    } else {
-      buf.setU8(req.handle, new Uint8Array(data));
-    }
-  });
+  loader
+    .loadAsync(req.url)
+    .then(img => {
+      const canvas = document.createElement("canvas");
+      canvas.height = img.height;
+      canvas.width = img.width;
+      const context = canvas.getContext("2d");
+      if (context === null) {
+        throw new Error("failed to get context of canvas");
+      } else {
+        context.drawImage(img, 0, 0);
+      }
+      const data = context.getImageData(0, 0, img.height, img.width).data;
+      if (data === undefined) {
+        throw new Error("failed to convert array");
+      } else {
+        const u8a = new Uint8Array(data);
+        buf.setU8(req.handle, req.bits, u8a);
+
+        // Prevent memory leak
+        u8a.set([]);
+        data.set([]);
+      }
+      img.remove();
+      canvas.remove();
+    })
+    .catch(() => {
+      buf.triggerDataRequesterFailed(req.bits);
+    });
 }
 
 function makeTextureFragmentId(ind: number, gen: number) {
@@ -164,25 +189,43 @@ function processTextureFragmentRequested(
     .loadAsync(req.url)
     .then(t => {
       loadedTexes.set(id, t);
-      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Sucess);
+      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Success);
     })
     .catch(() => {
       handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);
     });
 }
 
-function processTextureFragmentRemoved(
-  req: TextureFragmentRemovedEvent,
-  loadedTexes: Map<string, Texture>,
-) {
+function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string, Texture>) {
   const id = makeTextureFragmentId(req.ind, req.gen);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
 }
 
+function processRenderableFeatureAdded(
+  ev: RenderableFeatureAddedEvent,
+  parent: Object3D,
+  meshes: MeshCache,
+) {
+  const id = generate_id_from_entity(ev);
+  const obj = renderFeature(ev.feature);
+  if (!obj) return;
+
+  const { point, billboard, polyline, polygon, model } = ev.feature;
+
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  if (transform) {
+    console.log(transform.tx, transform.ty, transform.tz);
+    setTransform(obj, transform);
+  }
+
+  parent.add(obj);
+  meshes.set(id, obj);
+}
+
 function createMesh(
   parent: Object3D,
-  meshes: Map<string, Mesh>,
+  meshes: MeshCache,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
   id: string,
@@ -227,7 +270,7 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
   }
 
   const m = new MeshLambertMaterial({ color: mat.color });
-  if (mat.map_url && mat.texture_fragment) {
+  if (mat.texture_fragment) {
     const textureFragmentId = makeTextureFragmentId(
       mat.texture_fragment.ind,
       mat.texture_fragment.gen,
@@ -239,4 +282,8 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
   }
 
   return m;
+}
+
+function generate_id_from_entity(entity: EntityEvent) {
+  return `${entity.ind}_${entity.gen}`;
 }

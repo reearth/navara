@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-      
+
 jobs:
   # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
   web:
@@ -49,6 +49,15 @@ jobs:
         env:
           RUST_BACKTRACE: 1
       - name: Cargo format
-        run: cargo make format
+        run: cargo make format-check
       - name: Lint
-        run: cargo make lint
+        run: cargo make lint-check
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: cargo doc --all-features --release

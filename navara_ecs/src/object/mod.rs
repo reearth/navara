@@ -9,6 +9,9 @@ use bevy_ecs::{
     system::{Query, ResMut},
 };
 
+mod cache;
+pub use cache::*;
+
 #[derive(Component, Debug, Default)]
 pub struct ObjectMarker;
 
@@ -27,10 +30,9 @@ pub struct Mesh {
 
 #[derive(Debug, Clone, Component, PartialEq)]
 pub struct Material {
-    // for tile
-    pub map_url: Option<String>,
     pub color: u32,
     pub wireframe: bool,
+    // for tile
     pub texture_fragment: Option<Entity>,
 }
 

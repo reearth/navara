@@ -22,8 +22,18 @@ const directionalLight = new DirectionalLight(0xffffff);
 directionalLight.position.set(1, 1, 1);
 view.scene.add(directionalLight);
 
-const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
-// const terrainUrl = "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png";
+const tileUrls = {
+  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+  gsiSeamlessphoto: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+};
+
+const terrainUrls = {
+  gsi: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  mapbox: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
+    import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
+  }`,
+};
 
 // const chiyodaExtent = {
 //   west: 139.712,
@@ -57,15 +67,111 @@ const tileUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 //   max_sse: 2,
 //   wireframe: false,
 // });
+
 view.addLayer({
   type: "tiles",
   color: 0xffffff,
   segments: 10,
-  height: 0,
-  tile_url: tileUrl,
-  z: 4,
+  url: tileUrls.openstreetmap,
   max_sse: 2,
   max_z: 23,
+  wireframe: false,
+});
+
+const terrainType: string = "gsi"; // mapbox | gsi
+const JAPAN_GSI_ELEVATION_DECODER = {
+  r_scaler: 65536,
+  g_scaler: 256,
+  b_scaler: 1,
+  offset: 0,
+  max_offset: -16777216,
+  min_offset: 0,
+  boundary: 8388608,
+  epsilon: 0.01,
+};
+const MAPBOX_ELEVATION_DECODER = {
+  r_scaler: 65536,
+  g_scaler: 256,
+  b_scaler: 1,
+  offset: -10000,
+  max_offset: 0,
+  min_offset: 0,
+  boundary: 10000,
+  epsilon: 0.1,
+};
+
+view.addLayer({
+  type: "terrain",
+  segments: 64,
+  url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
+  max_z: 15,
+  wireframe: false,
+  elevation_decoder:
+    terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
+});
+
+view.addLayer({
+  type: "geojson",
+  data: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.70513431449842, 35.69279782617761],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [140.13033810546995, 35.60447056434825],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.64591330307843, 35.85950281451436],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.63564871528018, 35.44128807202607],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [139.28453080888477, 35.51560883529815],
+          type: "Point",
+        },
+      },
+    ],
+  },
+  point: {
+    show: true,
+    color: 0xffffff,
+    size: 0.1,
+    height: 100,
+    // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+    center: {
+      x: 0.5,
+      y: 0,
+    },
+    scale_by_distance: {
+      near: 0,
+      far: 1000,
+    },
+  },
   wireframe: false,
 });
 

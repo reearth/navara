@@ -2,20 +2,25 @@ use bevy_ecs::{component::Component, entity::Entity, world::World};
 use bevy_input::keyboard::KeyCode;
 use bevy_math::{Quat, Vec2, Vec3};
 
-use crate::{texture_fragment::TextureFragment, DataRequester, Material, Mesh, Transform};
+use crate::{
+    map::feature::render::RenderableFeature, texture_fragment::TextureFragment, DataRequester,
+    Material, Mesh, Transform,
+};
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub camera_control_event: Vec<CameraControlEvent>,
+    pub debug_camera_state: Option<CameraDebugState>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
     pub object_removed: Vec<EntityEvent>,
     pub mesh_added: Vec<ComponentEvent<(&'a Mesh, &'a Material, &'a Transform)>>,
     pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a Material)>>,
-    pub data_requested: Vec<&'a DataRequester>,
+    pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
-    pub debug_camera_state: Option<CameraDebugState>,
+    pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
+    pub renderable_feature_removed: Vec<EntityEvent>,
 }
 
 #[derive(Debug)]
