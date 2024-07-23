@@ -1,9 +1,9 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{Ellipsoid, Extent, Radians, TileRegion, TileXYZ, WGS84_32};
+use navara_core::{Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32};
 use navara_geometry::Geometry;
 
-use navara_quadtree::Quadtree;
+use navara_quadtree::{Coords, Quadtree};
 
 use crate::{
     map::terrain::TerrainData, primitives::Aabb, BufferStore, CachedMeshHandle, DataRequester,
@@ -63,6 +63,7 @@ impl Tile {
 
     pub(super) fn is_ready(
         &self,
+        qt: &TileQuadtree,
         texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
         terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
         terrain_layer: &Option<&TerrainLayer>,
@@ -79,13 +80,18 @@ impl Tile {
             .and_then(|t| t.data_requester_entity_id());
 
         // This means a terrain isn't used.
-        if self.texture_fragment_entity_id.is_some() && data_requester_entity_id.is_none() {
+        if terrain_layer.is_none()
+            && self.texture_fragment_entity_id.is_some()
+            && data_requester_entity_id.is_none()
+        {
             return is_texture_loaded;
         }
 
         is_texture_loaded
             && (self.is_terrain_ready(terrain_data_requester)
-                || self.is_upsamplable(terrain_data_requester, terrain_layer)
+                || ((self.should_upsampling() && self.is_upsamplable(qt, terrain_data_requester, terrain_layer))
+                    // This tile doesn't need to be upsampled, so pass it if the terrain has already been requested.
+                    || matches!(self.get_terrain_data_requester(terrain_data_requester).map(|t| t.status), Some(DataRequesterStatus::Fail)))
                 || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
     }
 
@@ -117,6 +123,7 @@ impl Tile {
 
     pub(crate) fn is_upsamplable(
         &self,
+        qt: &TileQuadtree,
         terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
@@ -124,6 +131,14 @@ impl Tile {
         terrain_layer.is_some()
             && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
                 || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
+            && self.get_parent_tile(qt).map_or(false, |p| {
+                p.is_terrain_ready(terrain_data_requester) || p.upsampled
+            })
+    }
+
+    pub(crate) fn should_upsampling(&self) -> bool {
+        // In low zoom level, we don't need to upsample it.
+        self.coords.z > 1
     }
 
     pub(super) fn get_parent_tile<'a>(&self, qt: &'a TileQuadtree) -> Option<&'a Self> {
@@ -214,3 +229,185 @@ impl Tile {
 }
 
 pub type TileQuadtree = Quadtree<usize, Tile>;
+#[derive(Component)]
+pub struct TileMeshMarker;
+
+/// Compute a terrain height at specified point.
+pub fn compute_terrain_height_at_point(
+    qt: &TileQuadtree,
+    buf: &BufferStore,
+    point: &LngLat<f32, Radians>,
+) -> Option<f32> {
+    let tile = find_contained_child(qt, &|t| {
+        t.extent.contains(point) && t.cached_mesh_handle.is_some()
+    })?;
+    let heights = buf.get_f32(&tile.cached_mesh_handle.as_ref()?.heights?)?;
+
+    compute_terrain_height_from_tile(tile, heights, point)
+}
+
+/// Compute a terrain height at specified point.
+/// Height is retrieved by a relative index of longitude and latitude to the specified point.
+fn compute_terrain_height_from_tile(
+    tile: &Tile,
+    heights: &[f32],
+    point: &LngLat<f32, Radians>,
+) -> Option<f32> {
+    let length = heights.len();
+    let width = (length as f32).sqrt() as usize;
+
+    let east = tile.extent.east;
+    let north = tile.extent.north;
+    let west = tile.extent.west;
+    let south = tile.extent.south;
+
+    let dist_ew = (east - west).val();
+    let dist_ns = (north - south).val();
+
+    let dist_wlng = (point.lng - west).val();
+    let dist_slat = (point.lat - south).val();
+
+    // In `navara_geoemetry::tile_triangles`, it constructs the mesh with an order as x is latitude and y is longitude.
+    // So we need to follow the order.
+    let x = ((dist_slat / dist_ns) * (width - 1) as f32).round() as usize;
+    let y = ((dist_wlng / dist_ew) * (width - 1) as f32).round() as usize;
+
+    heights.get((x + y * width).min(length - 1)).copied()
+}
+
+/// Find a child that the tile contains.
+fn find_contained_child<'a>(
+    qt: &'a TileQuadtree,
+    contain: &dyn Fn(&Tile) -> bool,
+) -> Option<&'a Tile> {
+    traverse_contained_child(qt, (0, 0, 0), contain)
+}
+
+fn traverse_contained_child<'a>(
+    qt: &'a TileQuadtree,
+    coords: Coords<usize>,
+    contain: &dyn Fn(&Tile) -> bool,
+) -> Option<&'a Tile> {
+    let v = qt.qt.get(qt.qt.leaf(coords)?.handle())?;
+    if !contain(v) {
+        return None;
+    }
+
+    let children = qt.qt.children(coords);
+    if let Some(children) = children {
+        for child in children {
+            if let Some(v) = traverse_contained_child(qt, child.coords(), contain) {
+                return Some(v);
+            }
+        }
+    }
+
+    if contain(v) {
+        return Some(v);
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod test {
+    use navara_core::{Angle, LngLat, TileXYZ};
+
+    use super::{compute_terrain_height_from_tile, find_contained_child, Tile, TileQuadtree};
+
+    #[test]
+    fn it_should_compute_terrain_height_from_tile() {
+        let tile = Tile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0.);
+        #[rustfmt::skip]
+        let heights = &[
+            0., 1., 2., 3.,
+            4., 5., 6., 7.,
+            8., 9., 10., 11.,
+            12., 13., 14., 15.,
+        ];
+        let result = compute_terrain_height_from_tile(
+            &tile,
+            heights,
+            &LngLat {
+                lng: Angle::new(2.5),
+                lat: Angle::new(0.5),
+            },
+        );
+
+        assert_eq!(result.unwrap(), 9.);
+    }
+
+    #[test]
+    fn it_should_find_contained_tile() {
+        let mut qt = TileQuadtree::new_with_region_qt(20);
+
+        qt.qt.initialize_zero(&|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+        qt.qt.initialize_children((0, 0, 0), &|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+        qt.qt.initialize_children((0, 0, 1), &|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+        qt.qt.initialize_children((1, 0, 1), &|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+        qt.qt.initialize_children((0, 1, 1), &|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+        qt.qt.initialize_children((1, 1, 1), &|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+
+        let child = find_contained_child(&qt, &|t| {
+            t.extent.contains(&LngLat {
+                lng: Angle::new(2.5),
+                lat: Angle::new(1.1),
+            })
+        });
+        assert_eq!(child.unwrap().coords, TileXYZ { x: 3, y: 1, z: 2 });
+    }
+}

@@ -13,7 +13,10 @@ use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
-    map::terrain::{RasterDEMData, TerrainData},
+    map::{
+        terrain::{RasterDEMData, TerrainData},
+        tile::TileMeshMarker,
+    },
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
     utils::coord::{vec3_to_xyz, xyz_to_vec3},
     window::Window,
@@ -257,7 +260,7 @@ fn traverse_tile(
         None => unreachable!(),
     };
 
-    let is_tile_ready = tile.is_ready(texture_fragment, terrain_data_requester, terrain_layer);
+    let is_tile_ready = tile.is_ready(qt, texture_fragment, terrain_data_requester, terrain_layer);
 
     // If this tile is failed to load the texture, traverse children.
     // But this tile won't be rendered even if this tile is selected.
@@ -532,22 +535,25 @@ pub fn transfer_mesh(
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
 
         if let Some(cached_mesh_handle) = &tile.cached_mesh_handle {
-            let e = commands.spawn(MeshBundle {
-                mesh: Mesh {
-                    vertices: cached_mesh_handle.vertices,
-                    indices: cached_mesh_handle.indices,
-                    uvs: cached_mesh_handle.uvs,
+            let e = commands.spawn((
+                TileMeshMarker,
+                MeshBundle {
+                    mesh: Mesh {
+                        vertices: cached_mesh_handle.vertices,
+                        indices: cached_mesh_handle.indices,
+                        uvs: cached_mesh_handle.uvs,
+                    },
+                    material: Material {
+                        color: tile_layer.color,
+                        wireframe: tile_layer.wireframe,
+                        texture_fragment: texture_fragment_entity_id,
+                    },
+                    object: ObjectBundle {
+                        transform: Default::default(),
+                        marker: Default::default(),
+                    },
                 },
-                material: Material {
-                    color: tile_layer.color,
-                    wireframe: tile_layer.wireframe,
-                    texture_fragment: texture_fragment_entity_id,
-                },
-                object: ObjectBundle {
-                    transform: Default::default(),
-                    marker: Default::default(),
-                },
-            });
+            ));
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
                 cache.mesh_entity = Some(e.id());
             };
@@ -565,12 +571,8 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = tile.is_upsamplable(&terrain_data_requester, &terrain_layer)
-                && tile.get_parent_tile(&qt).map_or(false, |p| {
-                    p.is_terrain_ready(&terrain_data_requester) || p.upsampled
-                })
-                // In low zoom level, we don't need to upsample it.
-                && tile.coords.z > 1;
+        let should_upsample_terrain = tile.should_upsampling()
+            && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain || (!should_upsample_terrain && is_terrain_failed) {
             let triangles = tile_triangles_flat(WGS84_32, &extent, tile_layer.segments, 0.);
@@ -589,22 +591,25 @@ pub fn transfer_mesh(
                 };
             }
 
-            let e = commands.spawn(MeshBundle {
-                mesh: Mesh {
-                    vertices: vhandle,
-                    indices: ihandle,
-                    uvs: uvshandle,
+            let e = commands.spawn((
+                TileMeshMarker,
+                MeshBundle {
+                    mesh: Mesh {
+                        vertices: vhandle,
+                        indices: ihandle,
+                        uvs: uvshandle,
+                    },
+                    material: Material {
+                        color: tile_layer.color,
+                        wireframe: tile_layer.wireframe,
+                        texture_fragment: texture_fragment_entity_id,
+                    },
+                    object: ObjectBundle {
+                        transform: Default::default(),
+                        marker: Default::default(),
+                    },
                 },
-                material: Material {
-                    color: tile_layer.color,
-                    wireframe: tile_layer.wireframe,
-                    texture_fragment: texture_fragment_entity_id,
-                },
-                object: ObjectBundle {
-                    transform: Default::default(),
-                    marker: Default::default(),
-                },
-            });
+            ));
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
                 cache.mesh_entity = Some(e.id());
@@ -640,22 +645,25 @@ pub fn transfer_mesh(
                     };
                 }
 
-                let e = commands.spawn(MeshBundle {
-                    mesh: Mesh {
-                        vertices: vhandle,
-                        indices: ihandle,
-                        uvs: uvshandle,
+                let e = commands.spawn((
+                    TileMeshMarker,
+                    MeshBundle {
+                        mesh: Mesh {
+                            vertices: vhandle,
+                            indices: ihandle,
+                            uvs: uvshandle,
+                        },
+                        material: Material {
+                            color: tile_layer.color,
+                            wireframe: terrain_layer.wireframe,
+                            texture_fragment: texture_fragment_entity_id,
+                        },
+                        object: ObjectBundle {
+                            transform: Default::default(),
+                            marker: Default::default(),
+                        },
                     },
-                    material: Material {
-                        color: tile_layer.color,
-                        wireframe: terrain_layer.wireframe,
-                        texture_fragment: texture_fragment_entity_id,
-                    },
-                    object: ObjectBundle {
-                        transform: Default::default(),
-                        marker: Default::default(),
-                    },
-                });
+                ));
 
                 if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
                     cache.mesh_entity = Some(e.id());
@@ -700,22 +708,25 @@ pub fn transfer_mesh(
             };
         }
 
-        let e = commands.spawn(MeshBundle {
-            mesh: Mesh {
-                vertices: vhandle,
-                indices: ihandle,
-                uvs: uvshandle,
+        let e = commands.spawn((
+            TileMeshMarker,
+            MeshBundle {
+                mesh: Mesh {
+                    vertices: vhandle,
+                    indices: ihandle,
+                    uvs: uvshandle,
+                },
+                material: Material {
+                    color: tile_layer.color,
+                    wireframe: terrain_layer.wireframe,
+                    texture_fragment: texture_fragment_entity_id,
+                },
+                object: ObjectBundle {
+                    transform: Default::default(),
+                    marker: Default::default(),
+                },
             },
-            material: Material {
-                color: tile_layer.color,
-                wireframe: terrain_layer.wireframe,
-                texture_fragment: texture_fragment_entity_id,
-            },
-            object: ObjectBundle {
-                transform: Default::default(),
-                marker: Default::default(),
-            },
-        });
+        ));
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
             cache.mesh_entity = Some(e.id());
         };

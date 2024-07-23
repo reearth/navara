@@ -2,7 +2,7 @@ import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import type { BillboardMesh, PointMesh, RenderableFeature } from "navara";
 import { Mesh, Sprite, SpriteMaterial, TextureLoader } from "three";
 
-export function renderFeature(f: RenderableFeature): (Mesh | Sprite) | undefined {
+export function renderFeature(f: RenderableFeature): Promise<Mesh | Sprite> | undefined {
   if (f.point) {
     return renderPoint(f.point);
   }
@@ -11,8 +11,12 @@ export function renderFeature(f: RenderableFeature): (Mesh | Sprite) | undefined
   }
 }
 
-function renderPoint(m: PointMesh) {
-  const material = new SpriteMaterial({ color: m.material.color, sizeAttenuation: false });
+async function renderPoint(m: PointMesh) {
+  const material = new SpriteMaterial({
+    color: m.material.color,
+    depthTest: m.material.depth_test,
+    sizeAttenuation: false,
+  });
   material.onBeforeCompile = shader => {
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -54,12 +58,14 @@ gl_FragColor.a = nvr_circle_alpha(sprite_uv);
   return sprite;
 }
 
-function renderBillboard(m: BillboardMesh) {
-  const map = new TextureLoader().load(m.material.url);
+async function renderBillboard(m: BillboardMesh) {
+  const map = await new TextureLoader().loadAsync(m.material.url);
+
   const material = new SpriteMaterial({
     map: map,
     color: m.material.color,
     sizeAttenuation: false,
+    depthTest: m.material.depth_test,
   });
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);

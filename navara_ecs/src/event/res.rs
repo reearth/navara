@@ -15,6 +15,7 @@ pub struct EventStore {
     pub texture_fragment_reqested: Vec<Entity>,
     pub texture_fragment_removed: Vec<Entity>,
     pub renderable_feature_added: Vec<Entity>,
+    pub renderable_feature_changed: Vec<Entity>,
     pub renderable_feature_removed: Vec<Entity>,
 }
 
@@ -29,6 +30,7 @@ impl EventStore {
         self.texture_fragment_reqested.clear();
         self.texture_fragment_removed.clear();
         self.renderable_feature_added.clear();
+        self.renderable_feature_changed.clear();
         self.renderable_feature_removed.clear();
     }
 
@@ -79,6 +81,12 @@ impl EventStore {
         for e in self.renderable_feature_added.iter() {
             if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
                 events.renderable_feature_added.push(e);
+            }
+        }
+
+        for e in self.renderable_feature_changed.iter() {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.renderable_feature_changed.push(e);
             }
         }
 

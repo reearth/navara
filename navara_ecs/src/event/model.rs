@@ -16,6 +16,7 @@ pub struct Events<'a> {
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
+    pub renderable_feature_changed: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
     pub renderable_feature_removed: Vec<EntityEvent>,
 }
 

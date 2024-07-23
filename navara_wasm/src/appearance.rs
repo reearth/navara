@@ -13,6 +13,8 @@ pub struct PointMaterial {
     pub height: f32,
     #[wasm_bindgen(getter_with_clone)]
     pub scale_by_distance: NearFar,
+    pub clamp_to_ground: bool,
+    pub depth_test: bool,
 }
 
 impl From<PointMaterial> for navara_layer::PointMaterial {
@@ -24,6 +26,8 @@ impl From<PointMaterial> for navara_layer::PointMaterial {
             center: val.center.into(),
             height: val.height,
             scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
+            clamp_to_ground: val.clamp_to_ground,
+            depth_test: val.depth_test,
         }
     }
 }
@@ -39,6 +43,8 @@ impl<'a> From<&'a navara_layer::PointMaterial> for PointMaterial {
                 near: value.scale_by_distance.0,
                 far: value.scale_by_distance.1,
             },
+            clamp_to_ground: value.clamp_to_ground,
+            depth_test: value.depth_test,
         }
     }
 }
@@ -62,6 +68,8 @@ pub struct BillboardMaterial {
     pub url: String,
     #[wasm_bindgen(getter_with_clone)]
     pub scale_by_distance: NearFar,
+    pub clamp_to_ground: bool,
+    pub depth_test: bool,
 }
 
 impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
@@ -74,6 +82,8 @@ impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
             height: val.height,
             url: val.url,
             scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
+            clamp_to_ground: val.clamp_to_ground,
+            depth_test: val.depth_test,
         }
     }
 }
@@ -90,6 +100,8 @@ impl<'a> From<&'a navara_layer::BillboardMaterial> for BillboardMaterial {
                 near: value.scale_by_distance.0,
                 far: value.scale_by_distance.1,
             },
+            clamp_to_ground: value.clamp_to_ground,
+            depth_test: value.depth_test,
         }
     }
 }

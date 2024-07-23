@@ -19,6 +19,8 @@ pub struct PointMaterial {
     pub height: f32,
     /// near, far
     pub scale_by_distance: (f32, f32),
+    pub clamp_to_ground: bool,
+    pub depth_test: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -31,6 +33,8 @@ pub struct BillboardMaterial {
     pub url: String,
     /// near, far
     pub scale_by_distance: (f32, f32),
+    pub clamp_to_ground: bool,
+    pub depth_test: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

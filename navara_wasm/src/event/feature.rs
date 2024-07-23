@@ -71,6 +71,8 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
             navara_ecs::map::feature::render::RenderableFeature::Point {
                 material,
                 transform,
+                coordinates: _,
+                render_info: _,
             } => Self {
                 point: Some(PointMesh {
                     material: material.into(),
@@ -81,6 +83,8 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
             navara_ecs::map::feature::render::RenderableFeature::Billboard {
                 material,
                 transform,
+                coordinates: _,
+                render_info: _,
             } => Self {
                 billboard: Some(BillboardMesh {
                     material: material.into(),
@@ -92,6 +96,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 material,
                 mesh,
                 transform,
+                render_info: _,
             } => Self {
                 polyline: Some(PolylineMesh {
                     material: material.into(),
@@ -104,6 +109,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 material,
                 mesh,
                 transform,
+                render_info: _,
             } => Self {
                 polygon: Some(PolygonMesh {
                     material: material.into(),
@@ -115,6 +121,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
             navara_ecs::map::feature::render::RenderableFeature::Model {
                 material,
                 transform,
+                render_info: _,
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),

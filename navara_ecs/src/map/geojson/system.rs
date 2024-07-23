@@ -1,20 +1,22 @@
 use bevy_ecs::{
     query::{Added, Changed, Or},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query, Res},
 };
 use navara_core::WGS84_32;
 use navara_layer::{Appearance, GeoJsonLayer};
 use navara_parser::geojson::Value;
 
 use crate::{
-    map::feature::{billboard, point, render::RenderableFeature},
+    map::{
+        feature::{billboard, point, render::RenderableFeature},
+        tile::{TileMeshMarker, TileQuadtree},
+    },
     BufferStore,
 };
 
 #[allow(clippy::type_complexity)]
-pub fn update(
+pub fn construct_feature(
     mut commands: Commands,
-    mut _buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
     let mut add_command = |renderable_feature: Option<RenderableFeature>| {
@@ -73,6 +75,54 @@ pub fn update(
     }
 }
 
+// This is used to update the height of feature depending on the terrain height.
+#[allow(clippy::type_complexity)]
+pub fn update_feature_by_tile_change(
+    qt: Res<TileQuadtree>,
+    buf: Res<BufferStore>,
+    mut features: Query<&mut RenderableFeature>,
+    tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
+) {
+    if tile_meshes.is_empty() {
+        return;
+    }
+
+    // FIXME: Need to think about how to render a ton of features. We should manage a feature in a spatial data structure.
+    for mut feature in &mut features {
+        match feature.as_mut() {
+            RenderableFeature::Point {
+                material,
+                transform,
+                coordinates,
+                render_info,
+            } => point::update_height_by_terrain(
+                &qt,
+                &buf,
+                WGS84_32,
+                material,
+                transform,
+                coordinates,
+                render_info,
+            ),
+            RenderableFeature::Billboard {
+                material,
+                transform,
+                coordinates,
+                render_info,
+            } => billboard::update_height_by_terrain(
+                &qt,
+                &buf,
+                WGS84_32,
+                material,
+                transform,
+                coordinates,
+                render_info,
+            ),
+            _ => unimplemented!(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use bevy_app::{App, Update};
@@ -84,7 +134,16 @@ mod test {
     use crate::utils::coord::xyz_to_vec3;
     use crate::{BufferStore, Vec2};
 
-    use super::update;
+    use super::construct_feature;
+
+    fn initialize_app() -> App {
+        let mut app = App::new();
+
+        app.init_resource::<BufferStore>();
+        app.add_systems(Update, construct_feature);
+
+        app
+    }
 
     fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
         let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
@@ -103,10 +162,7 @@ mod test {
 
     #[test]
     fn it_should_render_point_with_point() {
-        let mut app = App::new();
-
-        app.init_resource::<BufferStore>();
-        app.add_systems(Update, update);
+        let mut app = initialize_app();
 
         let material = PointMaterial {
             show: true,
@@ -115,6 +171,8 @@ mod test {
             center: Vec2::new(1., 1.),
             height: 1.,
             scale_by_distance: (0., 1000.),
+            clamp_to_ground: false,
+            depth_test: false,
         };
 
         app.world.spawn(construct_geojson_layer(
@@ -186,6 +244,8 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -196,6 +256,8 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -205,10 +267,7 @@ mod test {
 
     #[test]
     fn it_should_render_point_with_multipoint() {
-        let mut app = App::new();
-
-        app.init_resource::<BufferStore>();
-        app.add_systems(Update, update);
+        let mut app = initialize_app();
 
         let material = PointMaterial {
             show: true,
@@ -217,6 +276,8 @@ mod test {
             center: Vec2::new(1., 1.),
             height: 1.,
             scale_by_distance: (0., 1000.),
+            clamp_to_ground: false,
+            depth_test: false,
         };
 
         app.world.spawn(construct_geojson_layer(
@@ -283,6 +344,8 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -293,6 +356,8 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -302,10 +367,7 @@ mod test {
 
     #[test]
     fn it_should_render_billboard_with_point() {
-        let mut app = App::new();
-
-        app.init_resource::<BufferStore>();
-        app.add_systems(Update, update);
+        let mut app = initialize_app();
 
         let material = BillboardMaterial {
             show: true,
@@ -315,6 +377,8 @@ mod test {
             height: 1.,
             url: "https://example.com".to_string(),
             scale_by_distance: (0., 1000.),
+            clamp_to_ground: false,
+            depth_test: false,
         };
 
         app.world.spawn(construct_geojson_layer(
@@ -386,6 +450,8 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -396,6 +462,8 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -405,10 +473,7 @@ mod test {
 
     #[test]
     fn it_should_render_billboard_with_multipoint() {
-        let mut app = App::new();
-
-        app.init_resource::<BufferStore>();
-        app.add_systems(Update, update);
+        let mut app = initialize_app();
 
         let material = BillboardMaterial {
             show: true,
@@ -418,6 +483,8 @@ mod test {
             height: 1.,
             url: "https://example.com".to_string(),
             scale_by_distance: (0., 1000.),
+            clamp_to_ground: false,
+            depth_test: false,
         };
 
         app.world.spawn(construct_geojson_layer(
@@ -484,6 +551,8 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -494,6 +563,8 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
+                    coordinates: _,
+                    render_info: _,
                 } => Some(transform.translation),
                 _ => None,
             },

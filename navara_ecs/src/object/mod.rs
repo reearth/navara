@@ -59,10 +59,6 @@ fn commit_events(
     mesh_changed: Query<(Entity, &ObjectMarker, &Mesh), Changed<Mesh>>,
     mat_changed: Query<(Entity, &ObjectMarker, &Material), Changed<Material>>,
 ) {
-    for e in removed.read() {
-        events.object_removed.push(e);
-    }
-
     for (e, _) in t_changed.iter() {
         events.object_transform_updated.push(e);
     }
@@ -81,5 +77,9 @@ fn commit_events(
         if mesh_added.get(e).is_err() && mesh_changed.get(e).is_err() {
             events.mesh_updated.push(e);
         }
+    }
+
+    for e in removed.read() {
+        events.object_removed.push(e);
     }
 }

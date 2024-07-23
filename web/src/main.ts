@@ -161,7 +161,7 @@ view.addLayer({
     show: true,
     color: 0xffffff,
     size: 0.1,
-    height: 100,
+    height: 1,
     // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
     center: {
       x: 0.5,
@@ -171,6 +171,52 @@ view.addLayer({
       near: 0,
       far: 1000,
     },
+    clamp_to_ground: true,
+    depth_test: true,
+  },
+  wireframe: false,
+});
+
+view.addLayer({
+  type: "geojson",
+  data: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [138.73470764482283, 35.3627947204036],
+          type: "Point",
+        },
+      },
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          coordinates: [138.7311922738062, 35.359766379480206],
+          type: "Point",
+        },
+      },
+    ],
+  },
+  billboard: {
+    show: true,
+    color: 0xffffff,
+    size: 0.05,
+    height: 1,
+    // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+    center: {
+      x: 0.5,
+      y: 0,
+    },
+    scale_by_distance: {
+      near: 0,
+      far: 1000,
+    },
+    clamp_to_ground: true,
+    depth_test: true,
+    url: "/example.png",
   },
   wireframe: false,
 });
