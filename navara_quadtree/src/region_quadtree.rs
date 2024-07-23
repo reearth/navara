@@ -89,7 +89,7 @@ where
     V: Sync + Send + 'static + Debug,
 {
     fn initialize_leaf(&mut self, (x, y, z): Coords<U>, init: &dyn Fn(Coords<U>) -> V) {
-        self.insert((x, y, z), init);
+        self.insert((x, y, z), init)
     }
 
     fn leaf(&self, c: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
@@ -102,6 +102,10 @@ where
 
     fn get_mut(&mut self, handle: u64) -> Option<&mut V> {
         self.qt.get_mut(handle).map(|e| e.value_mut())
+    }
+
+    fn remove(&mut self, handle: u64) -> bool {
+        self.qt.delete_by_handle(handle).is_some()
     }
 }
 
@@ -331,5 +335,46 @@ mod tests {
 
         debug_assert!(leaf.contains((4, 4, 5)));
         debug_assert!(leaf.contains((5, 4, 5)));
+    }
+
+    #[test]
+    fn it_should_create_children_if_inexistence() {
+        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(RegionQuadtree::new(20));
+
+        let current_coords = (2, 2, 4);
+
+        let children =
+            qt.get_or_create_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
+
+        debug_assert!(unordered_elements_are(
+            children.iter().map(|v| qt.get(v.handle()).unwrap()),
+            vec![
+                &zxy_string((5, 4, 4)),
+                &zxy_string((5, 5, 4)),
+                &zxy_string((5, 4, 5)),
+                &zxy_string((5, 5, 5)),
+            ],
+        ));
+
+        let handle = children[1].handle();
+        let removed = qt.remove(handle);
+        assert!(removed);
+
+        let children = qt.children(current_coords);
+        // Because the number of children isn't four.
+        assert!(children.is_none());
+
+        let children =
+            qt.get_or_create_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
+
+        debug_assert!(unordered_elements_are(
+            children.iter().map(|v| qt.get(v.handle()).unwrap()),
+            vec![
+                &zxy_string((5, 4, 4)),
+                &zxy_string((5, 5, 4)),
+                &zxy_string((5, 4, 5)),
+                &zxy_string((5, 5, 5)),
+            ],
+        ));
     }
 }

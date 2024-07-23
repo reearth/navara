@@ -1,6 +1,9 @@
+#![doc = include_str!("../README.md")]
+mod appearance;
 mod event;
 mod input;
 mod types;
+mod unit;
 mod utils;
 
 use std::{
@@ -14,6 +17,7 @@ use wasm_bindgen::prelude::*;
 pub use event::*;
 pub use input::*;
 pub use types::*;
+pub use unit::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -66,8 +70,13 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = setBufferU8)]
-    pub fn set_buffer_u8(&self, handle: i32, data: &[u8]) {
-        set_buffer_u8(self.id.clone(), handle, data);
+    pub fn set_buffer_u8(&self, handle: i32, bits: u64, data: &[u8]) {
+        set_buffer_u8(self.id.clone(), handle, bits, data);
+    }
+
+    #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
+    pub fn trigger_data_requester_failed(&self, bits: u64) {
+        trigger_data_requester_failed(self.id.clone(), bits);
     }
 
     pub fn resize(&self, width: f32, height: f32, pixel_ratio: f32) {
@@ -126,9 +135,7 @@ pub fn input(id: String, input: JsValue) {
 
 pub fn get_buffer_u8(id: String, handle: i32) -> Option<js_sys::Uint8Array> {
     app(id, |a| {
-        let Some(buf) = a.get_buffer_u8(handle) else {
-            return None;
-        };
+        let buf = a.get_buffer_u8(handle)?;
 
         Some(js_sys::Uint8Array::from(buf))
         // unsafe { Some(js_sys::Uint8Array::view(buf)) } // zero copy
@@ -137,9 +144,7 @@ pub fn get_buffer_u8(id: String, handle: i32) -> Option<js_sys::Uint8Array> {
 
 pub fn get_buffer_u32(id: String, handle: i32) -> Option<js_sys::Uint32Array> {
     app(id, |a| {
-        let Some(buf) = a.get_buffer_u32(handle) else {
-            return None;
-        };
+        let buf = a.get_buffer_u32(handle)?;
 
         Some(js_sys::Uint32Array::from(buf))
         // unsafe { Some(js_sys::Uint32Array::view(buf)) } // zero copy
@@ -148,18 +153,22 @@ pub fn get_buffer_u32(id: String, handle: i32) -> Option<js_sys::Uint32Array> {
 
 pub fn get_buffer_f32(id: String, handle: i32) -> Option<js_sys::Float32Array> {
     app(id, |a| {
-        let Some(buf) = a.get_buffer_f32(handle) else {
-            return None;
-        };
+        let buf = a.get_buffer_f32(handle)?;
 
         Some(js_sys::Float32Array::from(buf))
         // unsafe { Some(js_sys::Float32Array::view(buf)) } // zero copy
     })
 }
 
-pub fn set_buffer_u8(id: String, handle: i32, buf: &[u8]) {
+pub fn set_buffer_u8(id: String, handle: i32, bits: u64, buf: &[u8]) {
     app(id, |a| {
-        a.set_buffer(handle, buf.to_vec());
+        a.set_buffer(handle, bits, buf.to_vec());
+    });
+}
+
+pub fn trigger_data_requester_failed(id: String, bits: u64) {
+    app(id, |a| {
+        a.trigger_data_requester_failed(bits);
     });
 }
 
@@ -177,8 +186,9 @@ pub fn trigger_texture_fragment_loaded(id: String, bits: u64, status: TextureFra
 
 pub fn add_layer(id: String, layer: JsValue) {
     app(id, |a| {
-        if let Some(ld) = LayerDescription::from(layer) {
-            if let Some(l) = ld.to() {
+        // TODO: Improve an undesirable cloning the layer.
+        if let Some(ld) = LayerDescription::from(layer.clone()) {
+            if let Some(l) = ld.to(layer) {
                 a.add_layer(l);
             }
         }

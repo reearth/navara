@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 mod app;
 mod buffer;
 mod camera;
@@ -15,12 +17,12 @@ mod window;
 use bevy_ecs::entity::Entity;
 pub use buffer::*;
 pub use event::{ComponentEvent, EntityEvent, Events, ReconstructableComponentEvent};
+pub use input::*;
+use navara_layer::LayerDescription;
 pub use object::*;
+pub use texture_fragment::*;
 pub use transform::*;
 use window::{Window, WindowResizeEvent};
-
-pub use input::*;
-pub use texture_fragment::*;
 
 pub struct App {
     app: bevy_app::App,
@@ -66,14 +68,20 @@ impl App {
         store.get_f32(&handle)
     }
 
-    pub fn set_buffer(&mut self, handle: i32, data: Vec<u8>) {
+    pub fn set_buffer(&mut self, handle: i32, bits: u64, data: Vec<u8>) {
         let Some(mut store) = self.app.world.get_resource_mut::<BufferStore>() else {
             return;
         };
         store.set_u8(handle, data);
-        self.app.world.send_event(buffer::BufferStoreEvent {
-            handle,
+        self.app.world.send_event(buffer::BufferStoreLoadedEvent {
+            id: Entity::from_bits(bits),
             ty: buffer::BufferType::U8,
+        });
+    }
+
+    pub fn trigger_data_requester_failed(&mut self, bits: u64) {
+        self.app.world.send_event(buffer::BufferStoreFailedEvent {
+            id: Entity::from_bits(bits),
         });
     }
 
@@ -82,8 +90,8 @@ impl App {
             return;
         };
 
-        window_res.height = height;
-        window_res.width = width;
+        window_res.height = height * pixel_ratio;
+        window_res.width = width * pixel_ratio;
         window_res.pixel_ratio = pixel_ratio;
 
         self.app.world.send_event(WindowResizeEvent {
@@ -100,7 +108,7 @@ impl App {
         })
     }
 
-    pub fn add_layer(&mut self, desc: map::LayerDescription) {
+    pub fn add_layer(&mut self, desc: LayerDescription) {
         self.app.world.send_event(map::AddLayerEvent(desc));
     }
 }

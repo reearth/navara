@@ -1,0 +1,11 @@
+[package]
+name = "navara_parser"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[dependencies]
+geojson_lib = { package = "geojson", version = "0.24.1"}

@@ -32,6 +32,7 @@ fn handle_resize(
 pub struct WindowResizeEvent {
     pub width: f32,
     pub height: f32,
+    #[allow(unused)]
     pub pixel_ratio: f32,
 }
 

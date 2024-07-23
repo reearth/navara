@@ -29,6 +29,14 @@ pub struct TileXYZ {
     pub z: usize,
 }
 
+#[derive(Debug)]
+pub enum TileRegion {
+    NorthWest,
+    NorthEast,
+    SouthEast,
+    SouthWest,
+}
+
 impl TileXYZ {
     /// Returns the number of tiles in the x and y direction at this zoom level.
     pub fn n(self) -> usize {
@@ -67,6 +75,12 @@ pub fn web_mercator_world_pos_to_lnglat<F: Float + Two<F>>(x: F, y: F) -> LngLat
         lng: Rad::new(lng),
         lat: Rad::new(lat),
     }
+}
+
+pub fn tile_url(s: &str, xyz: &TileXYZ) -> String {
+    s.replace("{x}", &xyz.x.to_string())
+        .replace("{y}", &xyz.y.to_string())
+        .replace("{z}", &xyz.z.to_string())
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
