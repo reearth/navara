@@ -2,7 +2,9 @@ use bevy_ecs::{entity::Entity, system::Resource, world::World};
 
 use crate::{DataRequester, Transform};
 
-use super::{ComponentEvent, Events, ReconstructableComponentEvent, CameraControlEvent, CameraDebugState};
+use super::{
+    CameraControlEvent, CameraDebugState, ComponentEvent, Events, ReconstructableComponentEvent,
+};
 
 #[derive(Debug, Default, Resource)]
 pub struct EventStore {
