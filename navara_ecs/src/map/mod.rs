@@ -26,7 +26,13 @@ impl Plugin for MapPlugin {
                 Update,
                 (tile::system::update_tiles, tile::system::transfer_mesh).chain(),
             )
-            .add_systems(Update, geojson::system::update)
+            .add_systems(
+                Update,
+                (
+                    geojson::system::construct_feature,
+                    geojson::system::update_feature_by_tile_change,
+                ),
+            )
             .add_systems(PostUpdate, feature::event::commit);
     }
 }

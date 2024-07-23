@@ -87,7 +87,7 @@ where
         self.leaf((x >> 1, y >> 1, z - U::one()))
     }
 
-    /// Get childre of specified coordinates.
+    /// Get children of specified coordinates.
     fn children(&self, (x, y, z): Coords<U>) -> Option<Vec<Box<dyn GeoSpacialQuadLeaf<U>>>> {
         let mut children: Vec<Box<dyn GeoSpacialQuadLeaf<U>>> = Vec::with_capacity(4);
         for i in 0..4 {

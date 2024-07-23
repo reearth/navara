@@ -68,7 +68,7 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
         }
     }
 
-    pub fn contains(&self, point: LngLat<F, U>) -> bool {
+    pub fn contains(&self, point: &LngLat<F, U>) -> bool {
         point.lng >= self.west
             && point.lng <= self.east
             && point.lat >= self.south

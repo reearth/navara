@@ -1,7 +1,7 @@
 mod feature;
 mod feature_event;
 
-use feature_event::RenderableFeatureAddedEvent;
+use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -17,6 +17,7 @@ pub struct Events {
     pub texture_fragment_requested: Vec<TextureFragmentRequestedEvent>,
     pub texture_fragment_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
+    pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
     pub renderable_feature_removed: Vec<EntityEvent>,
 }
 
@@ -153,6 +154,11 @@ impl<'a> From<navara_ecs::Events<'a>> for Events {
                 .collect(),
             renderable_feature_added: ev
                 .renderable_feature_added
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
+            renderable_feature_changed: ev
+                .renderable_feature_changed
                 .into_iter()
                 .map(|ev| ev.into())
                 .collect(),

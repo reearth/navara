@@ -11,6 +11,7 @@ import {
   type RenderableFeatureAddedEvent,
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
+  RenderableFeatureChangedEvent,
 } from "navara";
 import {
   BufferAttribute,
@@ -27,6 +28,7 @@ import {
   Texture,
 } from "three";
 
+import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
 
 import { renderFeature } from "./feature";
@@ -67,6 +69,7 @@ export function processEvent(
   );
   event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
   event.renderable_feature_added?.forEach(ev => processRenderableFeatureAdded(ev, scene, meshes));
+  event.renderable_feature_changed?.forEach(ev => processRenderableFeatureChanged(ev, meshes));
   event.renderable_feature_removed?.forEach(ev => processObjectRemoved(scene, meshes, ev));
 }
 
@@ -202,25 +205,42 @@ function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string
   loadedTexes.delete(id);
 }
 
-function processRenderableFeatureAdded(
+async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
   parent: Object3D,
   meshes: MeshCache,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = renderFeature(ev.feature);
+  const obj = await renderFeature(ev.feature);
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
   const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
   if (transform) {
-    console.log(transform.tx, transform.ty, transform.tz);
     setTransform(obj, transform);
   }
+  applyTextureAspect(obj);
 
   parent.add(obj);
   meshes.set(id, obj);
+}
+
+// TODO: Update material in this function.
+function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, meshes: MeshCache) {
+  const id = generate_id_from_entity(ev);
+  const obj = meshes.get(id);
+  if (!obj) return;
+
+  const { point, billboard, polyline, polygon, model } = ev.feature;
+
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  if (transform) {
+    setTransform(obj, transform);
+  }
+  applyTextureAspect(obj);
+
+  obj.updateMatrix();
 }
 
 function createMesh(

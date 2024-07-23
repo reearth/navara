@@ -94,7 +94,7 @@ impl TileBoundingReagion<f32> {
         let camera_height = camera_lle.height.val();
 
         let mut result = 0.;
-        if !self.extent.contains(camera_lle.into()) {
+        if !self.extent.contains(&camera_lle.into()) {
             let southwest_corner = xyz_to_vec3(self.southwest_corner);
             let northeast_corner = xyz_to_vec3(self.northeast_corner);
             let west_normal = xyz_to_vec3(self.west_normal);
