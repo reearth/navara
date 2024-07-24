@@ -147,6 +147,7 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
   loader
     .loadAsync(req.url)
     .then(img => {
+      // TODO: Get OffScreeCanvas from main thread in worker.
       const canvas = document.createElement("canvas");
       canvas.height = img.height;
       canvas.width = img.width;

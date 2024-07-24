@@ -315,7 +315,7 @@ export default class ThreeView {
     const { width, height } = this._getCanvasSize() ?? {};
     if (!width || !height) return;
 
-    const pixelRatio = isWorker() ? undefined : window.devicePixelRatio;
+    const pixelRatio = isWorker() ? this._options.initialPixelRatio ?? 1 : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };
 }
