@@ -4,7 +4,7 @@ use bevy_ecs::system::{Query, Res};
 use bevy_input::keyboard::KeyCode;
 use bevy_input::mouse::{MouseButton, MouseMotion, MouseWheel};
 use bevy_input::Input;
-use bevy_log::info;
+use bevy_log::{debug, warn, info};
 use bevy_math::{Quat, Vec3};
 use bevy_time::Time;
 
@@ -16,7 +16,22 @@ pub fn first_person_control_system(
     input: Res<Input<KeyCode>>,
     mut mouse_motion_events: EventReader<MouseMotion>,
 ) {
+    debug!("Entering first_person_control_system");
+    
+    let query_size = query.iter().count();
+    debug!("Number of entities with (Transform, FirstPersonControlComponent): {}", query_size);
+
+    if query_size == 0 {
+        warn!("No entities found with required components for first-person control");
+        return;
+    }
+
     for (mut transform, control) in query.iter_mut() {
+        debug!("Processing entity with FirstPersonControlComponent");
+        debug!("Initial transform: {:?}", transform);
+        debug!("Control settings: sensitivity: {}, speed: {}", control.sensitivity, control.speed);
+
+        let mut rotation_applied = false;
         for event in mouse_motion_events.read() {
             let delta_yaw = event.delta.x * control.sensitivity;
             let delta_pitch = event.delta.y * control.sensitivity;
@@ -28,31 +43,55 @@ pub fn first_person_control_system(
                 "First Person: Rotated camera. Yaw: {}, Pitch: {}",
                 delta_yaw, delta_pitch
             );
+            rotation_applied = true;
+        }
+
+        if !rotation_applied {
+            debug!("No mouse motion detected");
         }
 
         let mut direction = Vec3::ZERO;
 
         if input.pressed(KeyCode::W) {
             direction.z -= 1.0;
+            debug!("W key pressed");
         }
         if input.pressed(KeyCode::S) {
             direction.z += 1.0;
+            debug!("S key pressed");
         }
         if input.pressed(KeyCode::A) {
             direction.x -= 1.0;
+            debug!("A key pressed");
         }
         if input.pressed(KeyCode::D) {
             direction.x += 1.0;
+            debug!("D key pressed");
+        }
+
+        if direction == Vec3::ZERO {
+            debug!("No movement input detected");
+        } else {
+            debug!("Raw input direction: {:?}", direction);
         }
 
         direction = transform.rotation * direction * control.speed;
+        let old_position = transform.translation;
         transform.translation += direction;
 
-        info!(
-            "First Person: Moved camera. Direction: {:?}, New position: {:?}",
-            direction, transform.translation
-        );
+        if direction != Vec3::ZERO {
+            info!(
+                "First Person: Moved camera. Direction: {:?}, Old position: {:?}, New position: {:?}",
+                direction, old_position, transform.translation
+            );
+        } else {
+            debug!("No movement applied to camera");
+        }
+
+        debug!("Final transform: {:?}", transform);
     }
+
+    debug!("Exiting first_person_control_system");
 }
 
 pub fn fly_control_system(

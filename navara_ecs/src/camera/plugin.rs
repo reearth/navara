@@ -1,7 +1,9 @@
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::info;
+use bevy_math::Quat;
 use bevy_math::Vec3;
+use navara_core::Angle;
 
 use super::comp::*;
 use super::system::*;
@@ -19,14 +21,13 @@ impl Plugin for CameraPlugin {
             (
                 (
                     first_person_control_system,
-                    fly_control_system,
-                    globe_control_system,
-                    planar_control_system,
-                    street_control_system,
-                    dolly_control_system,
-                    track_control_system,
-                    pan_tilt_control_system,
-                    inertia_control_system,
+                    // fly_control_system,
+                    // globe_control_system,
+                    // planar_control_system,
+                    // street_control_system,
+                    // dolly_control_system,
+                    // track_control_system,
+                    // pan_tilt_control_system,
                 ),
                 update_frustum_system,
             )
@@ -37,10 +38,16 @@ impl Plugin for CameraPlugin {
 }
 
 fn setup_camera(mut commands: Commands) {
-    let _earth_radius = 6371000.0;
+    let earth_radius = 6371000.0;
     let translation = Vec3::ZERO;
+    let transform = Transform::from_translation(translation);
     commands.spawn((
         CameraMarker,
+        Orbit {
+            r: earth_radius * 3.,
+            quat: Quat::from_axis_angle(Vec3::Y, 0.0),
+            tilt: 0.0,
+        },
         GlobeControlComponent {
             sensitivity: 0.5,
             speed: 10.0,
@@ -51,15 +58,9 @@ fn setup_camera(mut commands: Commands) {
             pan_sensitivity: 0.1,
             tilt_sensitivity: 0.1,
         },
-        InertiaControlComponent { inertia: 0.9 },
-        CameraFrustum::new(
-            &Transform::from_translation(translation),
-            0.1,
-            1000.0,
-            45.0,
-            1.77,
-        ),
-        Transform::from_translation(translation),
+        CameraFrustum::new(&transform, 0.1, 1e8, Angle::new(50.).rad().val(), 1.)
+        ,
+        transform,
     ));
 }
 
