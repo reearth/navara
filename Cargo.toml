@@ -11,4 +11,5 @@ members = [
     "navara_geometry",
     "navara_layer",
     "navara_parser",
+    "martini",
 ]
