@@ -4,31 +4,31 @@ import ThreeView from "./lib";
 
 export const run = async (view: ThreeView) => {
   await view.init();
-  
+
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
   view.scene.add(axesHelper);
-  
+
   const ambientLight = new AmbientLight(0xffffff, 0.2);
   view.scene.add(ambientLight);
-  
+
   const directionalLight = new DirectionalLight(0xffffff);
   directionalLight.position.set(1, 1, 1);
   view.scene.add(directionalLight);
-  
+
   const tileUrls = {
     openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
     gsiSeamlessphoto: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
   };
-  
+
   const terrainUrls = {
     gsi: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
     mapbox: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
       import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
     }`,
   };
-  
+
   // For debug
   // view.addLayer({
   //   type: "tiles",
@@ -41,7 +41,7 @@ export const run = async (view: ThreeView) => {
   //   max_sse: 2,
   //   wireframe: false,
   // });
-  
+
   view.addLayer({
     type: "tiles",
     color: 0xffffff,
@@ -51,7 +51,7 @@ export const run = async (view: ThreeView) => {
     max_z: 23,
     wireframe: false,
   });
-  
+
   const terrainType: string = "gsi"; // mapbox | gsi
   const JAPAN_GSI_ELEVATION_DECODER = {
     r_scaler: 65536,
@@ -73,7 +73,7 @@ export const run = async (view: ThreeView) => {
     boundary: 10000,
     epsilon: 0.1,
   };
-  
+
   view.addLayer({
     type: "terrain",
     segments: 64,
@@ -83,7 +83,7 @@ export const run = async (view: ThreeView) => {
     elevation_decoder:
       terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
   });
-  
+
   view.addLayer({
     type: "geojson",
     data: {
@@ -150,7 +150,7 @@ export const run = async (view: ThreeView) => {
     },
     wireframe: false,
   });
-  
+
   view.addLayer({
     type: "geojson",
     data: {
@@ -194,7 +194,7 @@ export const run = async (view: ThreeView) => {
     },
     wireframe: false,
   });
-  
+
   // chiyoda-ku
   // view.addLayer({
   //   type: "tiles",
@@ -206,12 +206,12 @@ export const run = async (view: ThreeView) => {
   //   wireframe: false,
   //   extent: chiyodaExtent,
   // });
-  
+
   // view.addLayer({
   //   type: "3dtiles",
   //   url: "https://plateau.geospatial.jp/main/data/3d-tiles/bldg/13100_tokyo/13101_chiyoda-ku/notexture/tileset.json",
   // });
-  
+
   // yokohama
   // view.addLayer({
   //   type: "tiles",
@@ -224,17 +224,17 @@ export const run = async (view: ThreeView) => {
   //   max_z: 18,
   //   wireframe: false,
   // });
-  
+
   view.addLayer({
     type: "3dtiles",
     url: "https://assets.cms.plateau.reearth.io/assets/71/f45927-eac8-48d3-9919-414605cf116a/14100_yokohama-shi_2022_3dtiles_2_op_veg/tileset.json",
   });
-  
+
   view.addLayer({
     type: "3dtiles",
     url: "https://assets.cms.plateau.reearth.io/assets/6a/d55641-b65d-4c06-a517-56854aae77f7/14100_yokohama-shi_2022_3dtiles_2_op_bldg_14104_naka-ku_lod1/tileset.json",
   });
-  
+
   // view.addLayer({
   //   type: "mvt",
   //   layers: ["Road"],
@@ -244,7 +244,7 @@ export const run = async (view: ThreeView) => {
   //   height: 36.5 + 1,
   //   color: 0xffffff,
   // });
-  
+
   // fuji
   // view.addLayer({
   //   type: "tiles",
@@ -258,4 +258,4 @@ export const run = async (view: ThreeView) => {
   //   extent: fujiExtent,
   //   terrain_url: terrainUrl,
   // });
-}
+};
