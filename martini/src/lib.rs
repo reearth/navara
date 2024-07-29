@@ -177,30 +177,30 @@ impl Tile {
 
         let mut count_elements = |(ax, ay, bx, by, cx, cy)| {
             let mut default_index = || {
-                let v = num_vertices as usize;
+                let v = num_vertices;
                 num_vertices += 1;
                 Some(v)
             };
 
             let index = (ay * size + ax) as usize;
-            index_map[index] = index_map[index].map_or_else(|| default_index(), |v| Some(v));
+            index_map[index] = index_map[index].map_or_else(&mut default_index, Some);
             let index = (by * size + bx) as usize;
-            index_map[index] = index_map[index].map_or_else(|| default_index(), |v| Some(v));
+            index_map[index] = index_map[index].map_or_else(&mut default_index, Some);
             let index = (cy * size + cx) as usize;
-            index_map[index] = index_map[index].map_or_else(|| default_index(), |v| Some(v));
+            index_map[index] = index_map[index].map_or_else(default_index, Some);
             num_triangle += 1;
         };
         Self::process_errors(
             &mut count_elements,
             size,
-            &errors,
+            errors,
             &max_error,
             (0, 0, max, max, max, 0),
         );
         Self::process_errors(
             &mut count_elements,
             size,
-            &errors,
+            errors,
             &max_error,
             (max, max, 0, 0, 0, max),
         );
@@ -210,9 +210,9 @@ impl Tile {
 
         let mut process_triangle = |(ax, ay, bx, by, cx, cy)| {
             // add a triangle
-            let a = index_map[(ay * size + ax) as usize].unwrap() as usize;
-            let b = index_map[(by * size + bx) as usize].unwrap() as usize;
-            let c = index_map[(cy * size + cx) as usize].unwrap() as usize;
+            let a = index_map[(ay * size + ax) as usize].unwrap();
+            let b = index_map[(by * size + bx) as usize].unwrap();
+            let c = index_map[(cy * size + cx) as usize].unwrap();
 
             let (x, y, z) = transform(((ax as f32) / (size as f32), (ay as f32) / (size as f32)));
             let k = 3 * a;
@@ -240,14 +240,14 @@ impl Tile {
         Self::process_errors(
             &mut process_triangle,
             size,
-            &errors,
+            errors,
             &max_error,
             (0, 0, max, max, max, 0),
         );
         Self::process_errors(
             &mut process_triangle,
             size,
-            &errors,
+            errors,
             &max_error,
             (max, max, 0, 0, 0, max),
         );
@@ -262,7 +262,7 @@ impl Tile {
         max_error: &f32,
         (ax, ay, bx, by, cx, cy): (u32, u32, u32, u32, u32, u32),
     ) where
-        F: FnMut((u32, u32, u32, u32, u32, u32)) -> (),
+        F: FnMut((u32, u32, u32, u32, u32, u32)),
     {
         let mx = (ax + bx) >> 1;
         let my = (ay + by) >> 1;

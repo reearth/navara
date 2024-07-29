@@ -1,7 +1,7 @@
 use image::{self, load_from_memory};
 use martini::*;
 
-const IMAGE: &'static [u8] = include_bytes!("./fuji.png");
+const IMAGE: &[u8] = include_bytes!("./fuji.png");
 
 fn get_height_from_image(x: usize, y: usize, size: usize, img: &[u8]) -> f32 {
     let x = x.min(size - 2);
@@ -18,7 +18,7 @@ fn get_height_from_image(x: usize, y: usize, size: usize, img: &[u8]) -> f32 {
 // Same test with https://github.com/mapbox/martini/blob/f0d6dcaeb656b4d256c0da5bfe53de9262c4a8f1/test/test.js
 #[test]
 fn it_should_generate_mesh() {
-    let img = load_from_memory(&IMAGE).unwrap();
+    let img = load_from_memory(IMAGE).unwrap();
     let width = img.width();
     let img = img.as_bytes();
 
