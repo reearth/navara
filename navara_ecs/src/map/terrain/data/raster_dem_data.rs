@@ -3,7 +3,9 @@ use martini::Martini;
 use navara_core::{
     terrain::ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
 };
-use navara_geometry::{decode_height_from_dem, Geometry, UpsampledTerrainGeometry};
+use navara_geometry::{
+    decode_height_from_dem, tile_triangles_with_terrain, Geometry, UpsampledTerrainGeometry,
+};
 
 use crate::{map::tile::Tile, BufferStore};
 
@@ -104,11 +106,11 @@ impl TerrainData for RasterDEMData {
         // This is a trial and error value. We can update it if necessary, but...
         // 1. The raw geometric error is too large, so you need to adjust the value.
         // 2. If the error is still large when you are close to the tile, upsampling might not work well.
-        let max_error = (tile.get_level_maximum_geometric_error(&ellipsoid, 65.) / 2.).min(160.);
+        let max_error = (tile.get_level_maximum_geometric_error(&ellipsoid, 65.) / 2.).min(1024.);
 
         let mut martini_tile = martini.create_terrain(&read_height);
         let (vertices, indices, uvs) =
-            martini_tile.construct_mesh(martini, max_error, 2, &mut |(u, v)| {
+            martini_tile.construct_mesh(martini, max_error, &mut |(u, v)| {
                 let dlng = (extent.east - extent.west) * u;
                 let dlat = (extent.north - extent.south) * v;
 
@@ -129,6 +131,20 @@ impl TerrainData for RasterDEMData {
 
                 (x.val(), y.val(), z.val())
             });
+
+        // This is just a plane, so increase the number of vertices to make a smooth ellipsoidal surface.
+        if indices.len() <= 6 {
+            return tile_triangles_with_terrain(
+                ellipsoid,
+                extent,
+                16,
+                0.,
+                bytes,
+                martini_size - 1,
+                martini_size - 1,
+                &self.decoder,
+            );
+        }
 
         (
             Geometry {

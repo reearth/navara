@@ -157,7 +157,6 @@ impl Tile {
         &mut self,
         martini: &mut Martini,
         max_error: f32,
-        minimum_num_vertices: usize,
         transform: &mut F,
     ) -> (Vec<f32>, Vec<u32>, Vec<f32>)
     where
@@ -223,8 +222,6 @@ impl Tile {
             size,
             errors,
             &max_error,
-            &mut 0,
-            minimum_num_vertices,
             (0, 0, max, max, max, 0),
         );
         Self::process_errors(
@@ -232,8 +229,6 @@ impl Tile {
             size,
             errors,
             &max_error,
-            &mut 0,
-            minimum_num_vertices,
             (max, max, 0, 0, 0, max),
         );
 
@@ -245,8 +240,6 @@ impl Tile {
         size: u32,
         errors: &[f32],
         max_error: &f32,
-        num_vertices: &mut usize,
-        minimum_num_vertices: usize,
         (ax, ay, bx, by, cx, cy): (u32, u32, u32, u32, u32, u32),
     ) where
         F: FnMut((u32, u32, u32, u32, u32, u32)),
@@ -254,30 +247,12 @@ impl Tile {
         let mx = (ax + bx) >> 1;
         let my = (ay + by) >> 1;
 
-        if ((ax as i32 - cx as i32).abs() + (ay as i32 - cy as i32).abs() > 1
-            && &errors[(my * size + mx) as usize] > max_error)
-            || *num_vertices < minimum_num_vertices
+        if (ax as i32 - cx as i32).abs() + (ay as i32 - cy as i32).abs() > 1
+            && &errors[(my * size + mx) as usize] > max_error
         {
-            *num_vertices += 1;
             // triangle doesn't approximate the surface well enough; drill down further
-            Self::process_errors(
-                cb,
-                size,
-                errors,
-                max_error,
-                num_vertices,
-                minimum_num_vertices,
-                (cx, cy, ax, ay, mx, my),
-            );
-            Self::process_errors(
-                cb,
-                size,
-                errors,
-                max_error,
-                num_vertices,
-                minimum_num_vertices,
-                (bx, by, cx, cy, mx, my),
-            );
+            Self::process_errors(cb, size, errors, max_error, (cx, cy, ax, ay, mx, my));
+            Self::process_errors(cb, size, errors, max_error, (bx, by, cx, cy, mx, my));
         } else {
             cb((ax, ay, bx, by, cx, cy));
         }

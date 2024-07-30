@@ -25,7 +25,7 @@ fn it_should_generate_mesh() {
     let size = width + 1;
     let mut martini = Martini::new(size);
     let mut tile = martini.create_terrain(&|x, y| get_height_from_image(x, y, size as usize, img));
-    let (vertices, indices, _uvs) = tile.construct_mesh(&mut martini, 500., 3, &mut |(u, v)| {
+    let (vertices, indices, _uvs) = tile.construct_mesh(&mut martini, 500., &mut |(u, v)| {
         let size = size as f32;
         let h = get_height_from_image(
             (u * size) as usize,
