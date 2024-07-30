@@ -1,4 +1,4 @@
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Martini {
     size: u32,
     num_triangles: u32,
@@ -168,73 +168,65 @@ impl Tile {
 
         let errors = &self.errors;
 
-        let mut num_vertices = 0;
-        let mut num_triangle = 0;
-
         let max = size - 1;
 
         index_map.fill(None);
 
-        let mut count_elements = |(ax, ay, bx, by, cx, cy)| {
-            let mut default_index = || {
-                let v = num_vertices;
-                num_vertices += 1;
-                Some(v)
-            };
-
-            let index = (ay * size + ax) as usize;
-            index_map[index] = index_map[index].map_or_else(&mut default_index, Some);
-            let index = (by * size + bx) as usize;
-            index_map[index] = index_map[index].map_or_else(&mut default_index, Some);
-            let index = (cy * size + cx) as usize;
-            index_map[index] = index_map[index].map_or_else(default_index, Some);
-            num_triangle += 1;
-        };
-        Self::process_errors(
-            &mut count_elements,
-            size,
-            errors,
-            &max_error,
-            (0, 0, max, max, max, 0),
-        );
-        Self::process_errors(
-            &mut count_elements,
-            size,
-            errors,
-            &max_error,
-            (max, max, 0, 0, 0, max),
-        );
-
-        let mut vertices = vec![0.; num_vertices * 3];
+        let mut vertices = vec![];
         let mut indices = vec![];
 
+        let mut num_vertices = 0;
+        let mut new_index = || {
+            let v = num_vertices;
+            num_vertices += 1;
+            Some(v)
+        };
+
         let mut process_triangle = |(ax, ay, bx, by, cx, cy)| {
-            // add a triangle
-            let a = index_map[(ay * size + ax) as usize].unwrap();
-            let b = index_map[(by * size + bx) as usize].unwrap();
-            let c = index_map[(cy * size + cx) as usize].unwrap();
+            let ai = (ay * size + ax) as usize;
+            let bi = (by * size + bx) as usize;
+            let ci = (cy * size + cx) as usize;
 
-            let (x, y, z) = transform(((ax as f32) / (size as f32), (ay as f32) / (size as f32)));
-            let k = 3 * a;
-            vertices[k] = x;
-            vertices[k + 1] = y;
-            vertices[k + 2] = z;
+            let a = index_map[ai];
+            let b = index_map[bi];
+            let c = index_map[ci];
 
-            let (x, y, z) = transform(((bx as f32) / (size as f32), (by as f32) / (size as f32)));
-            let k = 3 * b;
-            vertices[k] = x;
-            vertices[k + 1] = y;
-            vertices[k + 2] = z;
+            if a.is_none() {
+                let (x, y, z) =
+                    transform(((ax as f32) / (size as f32), (ay as f32) / (size as f32)));
 
-            let (x, y, z) = transform(((cx as f32) / (size as f32), (cy as f32) / (size as f32)));
-            let k = 3 * c;
-            vertices[k] = x;
-            vertices[k + 1] = y;
-            vertices[k + 2] = z;
+                vertices.push(x);
+                vertices.push(y);
+                vertices.push(z);
 
-            indices.push(a as u32);
-            indices.push(b as u32);
-            indices.push(c as u32);
+                index_map[ai] = new_index();
+            }
+
+            if b.is_none() {
+                let (x, y, z) =
+                    transform(((bx as f32) / (size as f32), (by as f32) / (size as f32)));
+
+                vertices.push(x);
+                vertices.push(y);
+                vertices.push(z);
+
+                index_map[bi] = new_index();
+            }
+
+            if c.is_none() {
+                let (x, y, z) =
+                    transform(((cx as f32) / (size as f32), (cy as f32) / (size as f32)));
+
+                vertices.push(x);
+                vertices.push(y);
+                vertices.push(z);
+
+                index_map[ci] = new_index();
+            }
+
+            indices.push(index_map[ai].unwrap() as u32);
+            indices.push(index_map[bi].unwrap() as u32);
+            indices.push(index_map[ci].unwrap() as u32);
         };
 
         Self::process_errors(
