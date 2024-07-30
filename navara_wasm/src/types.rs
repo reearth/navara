@@ -32,8 +32,10 @@ pub struct TerrainLayerDescription {
     pub url: String,
     pub segments: usize,
     pub max_z: usize,
+    pub min_z: usize,
     pub wireframe: bool,
     pub elevation_decoder: Option<ElevationDecoder>,
+    pub tile_size: Option<u32>,
 }
 
 #[wasm_bindgen]
@@ -148,9 +150,11 @@ impl LayerDescription {
                     url: layer.url.clone(),
                     segments: layer.segments,
                     max_z: layer.max_z,
+                    min_z: layer.min_z,
                     wireframe: layer.wireframe,
                     elevation_decoder: layer.elevation_decoder.unwrap_or_default().into(),
                     terrain_type: TerrainDataType::from_url(&layer.url),
+                    tile_size: layer.tile_size.unwrap_or(256),
                 }))
             }
             "geojson" => {

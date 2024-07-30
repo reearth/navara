@@ -6,9 +6,11 @@ pub struct TerrainLayer {
     pub url: String,
     pub segments: usize,
     pub max_z: usize,
+    pub min_z: usize,
     pub wireframe: bool,
     pub elevation_decoder: ElevationDecoder,
     pub terrain_type: TerrainDataType,
+    pub tile_size: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

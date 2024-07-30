@@ -1,3 +1,4 @@
+use bevy_ecs::system::Query;
 use bevy_math::Vec3;
 use bevy_transform::components::Transform;
 use navara_core::{Angle, Ellipsoid, LngLat, Meters, LLE};
@@ -6,10 +7,12 @@ use navara_layer::PointMaterial;
 use crate::{
     map::{
         feature::render::{RenderInformation, RenderableFeature},
-        tile::{compute_terrain_height_at_point, TileQuadtree},
+        tile::{
+            compute_terrain_height_at_point, terrain::TerrainDataRequesterMarker, TileQuadtree,
+        },
     },
     utils::coord::xyz_to_vec3,
-    BufferStore,
+    BufferStore, DataRequester,
 };
 
 pub fn construct_mesh(
@@ -45,19 +48,22 @@ pub fn construct_mesh(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_height_by_terrain(
-    qt: &TileQuadtree,
+    qt: &mut TileQuadtree,
     buf: &BufferStore,
     ellipsoid: Ellipsoid<f32>,
     material: &mut PointMaterial,
     transform: &mut Transform,
     point: &Vec3,
     render_info: &mut RenderInformation,
+    terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
 ) {
     let terrain_height = if material.clamp_to_ground {
         compute_terrain_height_at_point(
             qt,
             buf,
+            terrain_data_requester,
             &LngLat {
                 lng: Angle::new(point.x).rad(),
                 lat: Angle::new(point.y).rad(),

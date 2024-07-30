@@ -1,6 +1,6 @@
 use bevy_ecs::{
     query::{Added, Changed, Or},
-    system::{Commands, Query, Res},
+    system::{Commands, Query, Res, ResMut},
 };
 use navara_core::WGS84_32;
 use navara_layer::{Appearance, GeoJsonLayer};
@@ -9,9 +9,9 @@ use navara_parser::geojson::Value;
 use crate::{
     map::{
         feature::{billboard, point, render::RenderableFeature},
-        tile::{TileMeshMarker, TileQuadtree},
+        tile::{terrain::TerrainDataRequesterMarker, TileMeshMarker, TileQuadtree},
     },
-    BufferStore,
+    BufferStore, DataRequester,
 };
 
 #[allow(clippy::type_complexity)]
@@ -78,10 +78,11 @@ pub fn construct_feature(
 // This is used to update the height of feature depending on the terrain height.
 #[allow(clippy::type_complexity)]
 pub fn update_feature_by_tile_change(
-    qt: Res<TileQuadtree>,
+    mut qt: ResMut<TileQuadtree>,
     buf: Res<BufferStore>,
     mut features: Query<&mut RenderableFeature>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
+    terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
 ) {
     if tile_meshes.is_empty() {
         return;
@@ -96,13 +97,14 @@ pub fn update_feature_by_tile_change(
                 coordinates,
                 render_info,
             } => point::update_height_by_terrain(
-                &qt,
+                &mut qt,
                 &buf,
                 WGS84_32,
                 material,
                 transform,
                 coordinates,
                 render_info,
+                &terrain_data_requester,
             ),
             RenderableFeature::Billboard {
                 material,
@@ -110,13 +112,14 @@ pub fn update_feature_by_tile_change(
                 coordinates,
                 render_info,
             } => billboard::update_height_by_terrain(
-                &qt,
+                &mut qt,
                 &buf,
                 WGS84_32,
                 material,
                 transform,
                 coordinates,
                 render_info,
+                &terrain_data_requester,
             ),
             _ => unimplemented!(),
         }

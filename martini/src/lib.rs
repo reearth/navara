@@ -1,6 +1,5 @@
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Martini {
-    size: u32,
+    pub size: u32,
     num_triangles: u32,
     num_parent_triangles: u32,
     coords: Vec<u32>,
@@ -158,8 +157,9 @@ impl Tile {
         &mut self,
         martini: &mut Martini,
         max_error: f32,
+        minimum_num_vertices: usize,
         transform: &mut F,
-    ) -> (Vec<f32>, Vec<u32>)
+    ) -> (Vec<f32>, Vec<u32>, Vec<f32>)
     where
         F: FnMut((f32, f32)) -> (f32, f32, f32),
     {
@@ -173,6 +173,7 @@ impl Tile {
         index_map.fill(None);
 
         let mut vertices = vec![];
+        let mut uvs = vec![];
         let mut indices = vec![];
 
         let mut num_vertices = 0;
@@ -182,51 +183,39 @@ impl Tile {
             Some(v)
         };
 
+        let mut add_vertex = |x: u32, y: u32, i: usize| {
+            let idx = index_map[i];
+            if idx.is_none() {
+                let u = (x as f32) / (max as f32);
+                let v = 1. - (y as f32) / (max as f32);
+
+                let (x, y, z) = transform((u, v));
+
+                vertices.push(x);
+                vertices.push(y);
+                vertices.push(z);
+
+                uvs.push(u);
+                uvs.push(v);
+
+                index_map[i] = new_index();
+            }
+
+            index_map[i].unwrap()
+        };
+
         let mut process_triangle = |(ax, ay, bx, by, cx, cy)| {
             let ai = (ay * size + ax) as usize;
             let bi = (by * size + bx) as usize;
             let ci = (cy * size + cx) as usize;
 
-            let a = index_map[ai];
-            let b = index_map[bi];
-            let c = index_map[ci];
+            let ai = add_vertex(ax, ay, ai);
+            let bi = add_vertex(bx, by, bi);
+            let ci = add_vertex(cx, cy, ci);
 
-            if a.is_none() {
-                let (x, y, z) =
-                    transform(((ax as f32) / (size as f32), (ay as f32) / (size as f32)));
-
-                vertices.push(x);
-                vertices.push(y);
-                vertices.push(z);
-
-                index_map[ai] = new_index();
-            }
-
-            if b.is_none() {
-                let (x, y, z) =
-                    transform(((bx as f32) / (size as f32), (by as f32) / (size as f32)));
-
-                vertices.push(x);
-                vertices.push(y);
-                vertices.push(z);
-
-                index_map[bi] = new_index();
-            }
-
-            if c.is_none() {
-                let (x, y, z) =
-                    transform(((cx as f32) / (size as f32), (cy as f32) / (size as f32)));
-
-                vertices.push(x);
-                vertices.push(y);
-                vertices.push(z);
-
-                index_map[ci] = new_index();
-            }
-
-            indices.push(index_map[ai].unwrap() as u32);
-            indices.push(index_map[bi].unwrap() as u32);
-            indices.push(index_map[ci].unwrap() as u32);
+            indices.push(ai as u32);
+            indices.push(bi as u32);
+            indices.push(ci as u32);
         };
 
         Self::process_errors(
@@ -234,6 +223,8 @@ impl Tile {
             size,
             errors,
             &max_error,
+            &mut 0,
+            minimum_num_vertices,
             (0, 0, max, max, max, 0),
         );
         Self::process_errors(
@@ -241,10 +232,12 @@ impl Tile {
             size,
             errors,
             &max_error,
+            &mut 0,
+            minimum_num_vertices,
             (max, max, 0, 0, 0, max),
         );
 
-        (vertices, indices)
+        (vertices, indices, uvs)
     }
 
     fn process_errors<F>(
@@ -252,6 +245,8 @@ impl Tile {
         size: u32,
         errors: &[f32],
         max_error: &f32,
+        num_vertices: &mut usize,
+        minimum_num_vertices: usize,
         (ax, ay, bx, by, cx, cy): (u32, u32, u32, u32, u32, u32),
     ) where
         F: FnMut((u32, u32, u32, u32, u32, u32)),
@@ -259,12 +254,30 @@ impl Tile {
         let mx = (ax + bx) >> 1;
         let my = (ay + by) >> 1;
 
-        if (ax as i32 - cx as i32).abs() + (ay as i32 - cy as i32).abs() > 1
-            && &errors[(my * size + mx) as usize] > max_error
+        if ((ax as i32 - cx as i32).abs() + (ay as i32 - cy as i32).abs() > 1
+            && &errors[(my * size + mx) as usize] > max_error)
+            || *num_vertices < minimum_num_vertices
         {
+            *num_vertices += 1;
             // triangle doesn't approximate the surface well enough; drill down further
-            Self::process_errors(cb, size, errors, max_error, (cx, cy, ax, ay, mx, my));
-            Self::process_errors(cb, size, errors, max_error, (bx, by, cx, cy, mx, my));
+            Self::process_errors(
+                cb,
+                size,
+                errors,
+                max_error,
+                num_vertices,
+                minimum_num_vertices,
+                (cx, cy, ax, ay, mx, my),
+            );
+            Self::process_errors(
+                cb,
+                size,
+                errors,
+                max_error,
+                num_vertices,
+                minimum_num_vertices,
+                (bx, by, cx, cy, mx, my),
+            );
         } else {
             cb((ax, ay, bx, by, cx, cy));
         }
