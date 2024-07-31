@@ -1,6 +1,6 @@
 use bevy_ecs::{
     query::{Added, Changed, Or},
-    system::{Commands, Query, Res, ResMut},
+    system::{Commands, Query, ResMut},
 };
 use navara_core::WGS84_32;
 use navara_layer::{Appearance, GeoJsonLayer};
@@ -79,7 +79,7 @@ pub fn construct_feature(
 #[allow(clippy::type_complexity)]
 pub fn update_feature_by_tile_change(
     mut qt: ResMut<TileQuadtree>,
-    buf: Res<BufferStore>,
+    mut buf: ResMut<BufferStore>,
     mut features: Query<&mut RenderableFeature>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
     terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
@@ -98,7 +98,7 @@ pub fn update_feature_by_tile_change(
                 render_info,
             } => point::update_height_by_terrain(
                 &mut qt,
-                &buf,
+                &mut buf,
                 WGS84_32,
                 material,
                 transform,
@@ -113,7 +113,7 @@ pub fn update_feature_by_tile_change(
                 render_info,
             } => billboard::update_height_by_terrain(
                 &mut qt,
-                &buf,
+                &mut buf,
                 WGS84_32,
                 material,
                 transform,

@@ -247,6 +247,35 @@ impl Tile {
             ),
         )
     }
+
+    // This function will be invoked before this tile is destroyed.
+    pub fn destroy(
+        &mut self,
+        commands: &mut Commands,
+        buf: &mut BufferStore,
+        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+    ) {
+        if let Some(cached_mesh) = &self.cached_mesh_handle {
+            buf.remove(&cached_mesh.vertices);
+            buf.remove(&cached_mesh.indices);
+            buf.remove(&cached_mesh.uvs);
+        }
+        if let Some(fragment) = self.texture_fragment_entity_id {
+            commands
+                .entity(fragment)
+                .remove::<(TileTextureFragmentMarker, TextureFragment)>();
+        }
+        if let Some(t) = &mut self.terrain_data {
+            if let Some(e) = t.data_requester_entity_id() {
+                let data_requester = terrain_data_requester.get(e).unwrap();
+                buf.remove(&data_requester.1.handle);
+                commands
+                    .entity(e)
+                    .remove::<(TerrainDataRequesterMarker, DataRequester)>();
+            }
+            t.destroy(buf);
+        }
+    }
 }
 
 pub type TileQuadtree = Quadtree<usize, Tile>;
@@ -256,7 +285,7 @@ pub struct TileMeshMarker;
 /// Compute a terrain height at specified point.
 pub fn compute_terrain_height_at_point(
     qt: &mut TileQuadtree,
-    buf: &BufferStore,
+    buf: &mut BufferStore,
     terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     point: &LngLat<f32, Radians>,
 ) -> Option<f32> {

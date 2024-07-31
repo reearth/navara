@@ -51,7 +51,7 @@ pub fn construct_mesh(
 #[allow(clippy::too_many_arguments)]
 pub fn update_height_by_terrain(
     qt: &mut TileQuadtree,
-    buf: &BufferStore,
+    buf: &mut BufferStore,
     ellipsoid: Ellipsoid<f32>,
     material: &mut PointMaterial,
     transform: &mut Transform,

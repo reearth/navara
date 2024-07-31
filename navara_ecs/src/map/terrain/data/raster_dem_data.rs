@@ -7,7 +7,7 @@ use navara_geometry::{
     decode_height_from_dem, tile_triangles_with_terrain, Geometry, UpsampledTerrainGeometry,
 };
 
-use crate::{map::tile::Tile, BufferStore};
+use crate::{map::tile::Tile, BufferStore, Handle};
 
 use super::TerrainData;
 
@@ -17,7 +17,7 @@ pub struct RasterDEMData {
     pub(crate) data_requester_entity_id: Option<Entity>,
     // Indicates the max height of the terrain from the globe surface.
     pub(crate) current_max_height: Option<f32>,
-    pub(crate) heights: Option<Vec<f32>>,
+    pub(crate) heights_handle: Option<Handle>,
 }
 
 impl TerrainData for RasterDEMData {
@@ -32,21 +32,21 @@ impl TerrainData for RasterDEMData {
     fn compute_height_at_point(
         &mut self,
         extent: &Extent<f32, Radians>,
-        buf: &BufferStore,
+        buf: &mut BufferStore,
         terrain_data_requesters: &bevy_ecs::system::Query<(
             &crate::map::tile::terrain::TerrainDataRequesterMarker,
             &crate::DataRequester,
         )>,
         point: &navara_core::LngLat<f32, navara_core::Radians>,
     ) -> Option<f32> {
-        let heights = if let Some(heights) = &self.heights {
-            &heights[..]
+        let heights = if let Some(handle) = &self.heights_handle {
+            buf.get_f32(handle)?
         } else {
             let (_, data_requester) = terrain_data_requesters
                 .get(self.data_requester_entity_id()?)
                 .ok()?;
-            let buf = buf.get_u8(&data_requester.handle)?;
-            let size = ((buf.len() / 4) as f64).sqrt() as usize;
+            let bytes = buf.get_u8(&data_requester.handle)?;
+            let size = ((bytes.len() / 4) as f64).sqrt() as usize;
 
             let mut result = vec![];
             for y in (0..size).rev() {
@@ -54,16 +54,16 @@ impl TerrainData for RasterDEMData {
                     let i = y * size + x;
 
                     let k = i * 4;
-                    let r = buf[k] as i64;
-                    let g = buf[k + 1] as i64;
-                    let b = buf[k + 2] as i64;
+                    let r = bytes[k] as i64;
+                    let g = bytes[k + 1] as i64;
+                    let b = bytes[k + 2] as i64;
 
                     result.push(decode_height_from_dem(r, g, b, 0., &self.decoder))
                 }
             }
 
-            self.heights = Some(result);
-            self.heights.as_ref().unwrap()
+            self.heights_handle = Some(buf.new_f32(result));
+            buf.get_f32(&self.heights_handle.unwrap())?
         };
 
         compute_terrain_height_from_tile(extent, heights, point)
@@ -165,6 +165,12 @@ impl TerrainData for RasterDEMData {
         indices: &[u32],
     ) -> Option<UpsampledTerrainGeometry> {
         Some(UpsampledTerrainGeometry::new(uvs, heights, indices, region))
+    }
+
+    fn destroy(&mut self, buf: &mut BufferStore) {
+        if let Some(handle) = self.heights_handle.take() {
+            buf.remove(&handle);
+        }
     }
 }
 

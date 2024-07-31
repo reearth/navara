@@ -788,22 +788,7 @@ pub fn clear_caches(
             if i > max_deletion {
                 break;
             }
-            let (
-                visited_at,
-                data_requester_entity_id,
-                texture_fragment_entity_id,
-                cached_mesh_handle,
-            ) = {
-                let tile = qt.qt.get(*tile_handle).unwrap();
-                (
-                    tile.visited_at,
-                    tile.terrain_data
-                        .as_ref()
-                        .and_then(|t| t.data_requester_entity_id()),
-                    tile.texture_fragment_entity_id,
-                    &tile.cached_mesh_handle,
-                )
-            };
+            let visited_at = qt.qt.get(*tile_handle).unwrap().visited_at;
             // FIXME: Need to improve this clearing caches process.
             // Each caches of texture are cleared in every 1000 frame,
             // but this is not suitable way, so need to think how to clear old cache.
@@ -811,23 +796,11 @@ pub fn clear_caches(
                 continue;
             }
 
-            if let Some(cached_mesh) = cached_mesh_handle {
-                buf.remove(&cached_mesh.vertices);
-                buf.remove(&cached_mesh.indices);
-                buf.remove(&cached_mesh.uvs);
-            }
-            if let Some(fragment) = texture_fragment_entity_id {
-                commands
-                    .entity(fragment)
-                    .remove::<(TileTextureFragmentMarker, TextureFragment)>();
-            }
-            if let Some(e) = data_requester_entity_id {
-                let data_requester = terrain_data_requester.get(e).unwrap();
-                buf.remove(&data_requester.1.handle);
-                commands
-                    .entity(e)
-                    .remove::<(TerrainDataRequesterMarker, DataRequester)>();
-            }
+            qt.qt.get_mut(*tile_handle).unwrap().destroy(
+                &mut commands,
+                &mut buf,
+                &terrain_data_requester,
+            );
             removed_cached_tile_handler.push(*tile_handle);
             qt.qt.remove(*tile_handle);
         }

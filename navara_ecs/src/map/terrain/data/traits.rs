@@ -32,11 +32,12 @@ pub trait TerrainData: Debug + Sync + Send {
     fn compute_height_at_point(
         &mut self,
         extent: &Extent<f32, Radians>,
-        buf: &BufferStore,
+        buf: &mut BufferStore,
         terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
         point: &LngLat<f32, Radians>,
     ) -> Option<f32>;
     // Indicates the max height of the terrain from the globe surface.
     fn current_max_height(&self) -> Option<f32>;
     fn set_current_max_height(&mut self, h: f32);
+    fn destroy(&mut self, buf: &mut BufferStore);
 }
