@@ -1,20 +1,14 @@
 use bevy_ecs::prelude::*;
 use bevy_math::Vec3;
-use navara_core::{
-    terrain::{
-        get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
-        get_level_maximum_geometric_error_f32,
-    },
-    tile_url, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32,
-};
-use navara_geometry::{tile_triangles_flat, tile_triangles_with_terrain};
+use navara_core::{tile_url, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
+use navara_geometry::tile_triangles_flat;
 
 use navara_quadtree::GeoSpacialQuadLeaf;
 
 use crate::{
     camera::{CameraFrustum, CameraMarker},
     map::{
-        terrain::{RasterDEMData, TerrainData},
+        terrain::{CachedMartini, MartiniComponent, RasterDEMData, TerrainData},
         tile::TileMeshMarker,
     },
     occluder::ellipsoidal_occluder::EllipsoidalOccluder,
@@ -93,10 +87,14 @@ fn request_terrain_data(
     if data_requester_entity_id.is_some() {
         return false;
     }
-    match terrain_layer.map(|t| (&t.terrain_type, tile_url(&t.url, &tile.coords))) {
-        Some((terrain_type, url)) => {
-            let mut terrain_data = match terrain_type {
-                TerrainDataType::RasterDEM => RasterDEMData::default(), // DEM
+    match terrain_layer {
+        Some(t) => {
+            let url = tile_url(&t.url, &tile.coords);
+            let mut terrain_data = match &t.terrain_type {
+                TerrainDataType::RasterDEM => RasterDEMData {
+                    decoder: t.elevation_decoder.clone(),
+                    ..Default::default()
+                }, // DEM
                 // TODO: Support quantized-mesh
                 TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
                 TerrainDataType::Unknown => return false,
@@ -140,11 +138,7 @@ fn calc_sse(
     ellipsoid: &Ellipsoid<f32>,
     height_map_width: f32,
 ) -> f32 {
-    let max_geometric_error = get_level_maximum_geometric_error_f32(
-        t.coords.z,
-        // TODO: Store the result of the level zero maximum geometric error to avoid too many caclulation.
-        get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32(ellipsoid, height_map_width),
-    );
+    let max_geometric_error = t.get_level_maximum_geometric_error(ellipsoid, height_map_width);
 
     let camera_pos = camera.transform_point(Vec3::ZERO);
     let distance_from_camera = t
@@ -507,10 +501,12 @@ pub fn transfer_mesh(
     mut buf: ResMut<BufferStore>,
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<TileQuadtree>,
+    cached_martini: Res<CachedMartini>,
     rendered_tiles: Query<&RenderedTile, Changed<RenderedTile>>,
     terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     tile_layers: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
+    mut martini_components: Query<&mut MartiniComponent>,
 ) {
     if !tc.is_updated_in_this_frame {
         return;
@@ -571,10 +567,13 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = tile.should_upsampling()
+        let should_upsample_terrain = tile.should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
             && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
-        if !should_render_terrain || (!should_upsample_terrain && is_terrain_failed) {
+        if !should_render_terrain
+            || (terrain_layer.map_or(false, |t| t.min_z >= tile.coords.z)
+                || (!should_upsample_terrain && is_terrain_failed))
+        {
             let triangles = tile_triangles_flat(WGS84_32, &extent, tile_layer.segments, 0.);
 
             let vhandle = buf.new_f32(triangles.vertices);
@@ -681,17 +680,17 @@ pub fn transfer_mesh(
             Some(data) => data,
             None => unreachable!("This line should be invoked only when the terrain data is ready"),
         };
-        let size = ((bytes.len() / 4) as f64).sqrt() as usize;
-        let (triangles, max_height, heights) = tile_triangles_with_terrain(
-            WGS84_32,
-            &extent,
-            terrain_layer.segments,
-            0.,
-            bytes,
-            size,
-            size,
-            &terrain_layer.elevation_decoder,
-        );
+
+        let martini_id = cached_martini
+            .get(&terrain_layer.tile_size)
+            .expect("It must be initialized when terrain layer is added");
+        let mut martini = martini_components.get_mut(*martini_id).unwrap();
+
+        let (triangles, max_height, heights) = tile
+            .terrain_data
+            .as_ref()
+            .unwrap()
+            .construct_terrain_mesh(WGS84_32, tile, bytes, 0., martini.get_mut());
 
         let vhandle = buf.new_f32(triangles.vertices);
         let ihandle = buf.new_u32(triangles.indices);
@@ -789,22 +788,7 @@ pub fn clear_caches(
             if i > max_deletion {
                 break;
             }
-            let (
-                visited_at,
-                data_requester_entity_id,
-                texture_fragment_entity_id,
-                cached_mesh_handle,
-            ) = {
-                let tile = qt.qt.get(*tile_handle).unwrap();
-                (
-                    tile.visited_at,
-                    tile.terrain_data
-                        .as_ref()
-                        .and_then(|t| t.data_requester_entity_id()),
-                    tile.texture_fragment_entity_id,
-                    &tile.cached_mesh_handle,
-                )
-            };
+            let visited_at = qt.qt.get(*tile_handle).unwrap().visited_at;
             // FIXME: Need to improve this clearing caches process.
             // Each caches of texture are cleared in every 1000 frame,
             // but this is not suitable way, so need to think how to clear old cache.
@@ -812,23 +796,11 @@ pub fn clear_caches(
                 continue;
             }
 
-            if let Some(cached_mesh) = cached_mesh_handle {
-                buf.remove(&cached_mesh.vertices);
-                buf.remove(&cached_mesh.indices);
-                buf.remove(&cached_mesh.uvs);
-            }
-            if let Some(fragment) = texture_fragment_entity_id {
-                commands
-                    .entity(fragment)
-                    .remove::<(TileTextureFragmentMarker, TextureFragment)>();
-            }
-            if let Some(e) = data_requester_entity_id {
-                let data_requester = terrain_data_requester.get(e).unwrap();
-                buf.remove(&data_requester.1.handle);
-                commands
-                    .entity(e)
-                    .remove::<(TerrainDataRequesterMarker, DataRequester)>();
-            }
+            qt.qt.get_mut(*tile_handle).unwrap().destroy(
+                &mut commands,
+                &mut buf,
+                &terrain_data_requester,
+            );
             removed_cached_tile_handler.push(*tile_handle);
             qt.qt.remove(*tile_handle);
         }

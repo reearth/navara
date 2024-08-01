@@ -8,6 +8,7 @@ use event::*;
 pub mod feature;
 mod geojson;
 mod tile;
+use terrain::CachedMartini;
 use tile::{tile_cache_manager::TileCacheManager, TileQuadtree};
 
 pub struct MapPlugin;
@@ -15,12 +16,14 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
+            .init_resource::<CachedMartini>()
             .insert_resource(TileQuadtree::new_with_region_qt(30))
             .add_event::<AddLayerEvent>()
             .add_systems(
                 PreUpdate,
                 (tile::system::clear_caches, tile::system::begine_update).chain(),
             )
+            .add_systems(PreUpdate, terrain::system::begine_terrain_layer)
             .add_systems(Update, process_add_events)
             .add_systems(
                 Update,

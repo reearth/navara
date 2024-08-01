@@ -79,6 +79,7 @@ export const run = async (view: ThreeView) => {
     segments: 64,
     url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
     max_z: 15,
+    min_z: 5,
     wireframe: false,
     elevation_decoder:
       terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
