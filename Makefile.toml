@@ -26,7 +26,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 [tasks.build-rust]
 script = ['''
 #!/usr/bin/env bash -eux
-cd navara_wasm
+cd crates/navara_wasm
 wasm-pack build --target web
 ''']
 
@@ -39,7 +39,7 @@ cargo test --workspace --all-targets --all-features
 [tasks.build-dev]
 script = ['''
 #!/usr/bin/env bash -eux
-cd navara_wasm
+cd crates/navara_wasm
 wasm-pack build --target web --dev
 ''']
 
@@ -67,7 +67,7 @@ run_task = { name = ["build-rust", "build-web"] }
 [tasks.watch]
 script = ['''
 #!/usr/bin/env bash -eux
-cd navara_wasm
+cd crates/navara_wasm
 cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
 ''']
 
