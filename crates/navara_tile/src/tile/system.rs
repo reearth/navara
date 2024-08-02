@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_core::{tile_url, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
@@ -23,33 +21,12 @@ use crate::{
 };
 
 use super::{
+    render::{RenderedTile, RenderedTileDistance},
     tile_cache_manager::{TileCache, TileCacheManager},
     RenderedState, Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker,
 };
 
 use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
-
-#[derive(Component)]
-pub struct RenderedTile {
-    tile_handle: TileHandle,
-}
-
-#[derive(Component, PartialEq, PartialOrd)]
-pub struct RenderedTileDistance(f32);
-
-impl Ord for RenderedTileDistance {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self.0 > other.0 {
-            return Ordering::Greater;
-        }
-        if self.0 < other.0 {
-            return Ordering::Less;
-        }
-        return Ordering::Equal;
-    }
-}
-
-impl Eq for RenderedTileDistance {}
 
 pub fn begine_update(mut tc: ResMut<TileCacheManager>) {
     tc.rendered_frame += 1;
