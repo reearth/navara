@@ -1,0 +1,14 @@
+[package]
+name = "navara_camera"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.12.1"
+bevy_ecs = "0.12.1"
+bevy_input = "0.12.1"
+bevy_log = "0.12.1"
+navara_core = { path = "../navara_core" }
+navara_math = { path = "../navara_math" }
+navara_event_store = { path = "../navara_event_store" }
+navara_input = { path = "../navara_input" }

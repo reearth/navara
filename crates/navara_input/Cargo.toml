@@ -1,0 +1,11 @@
+[package]
+name = "navara_input"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.12.1"
+bevy_ecs = "0.12.1"
+bevy_input = "0.12.1"
+bevy_log = "0.12.1"
+navara_math = { path = "../navara_math" }

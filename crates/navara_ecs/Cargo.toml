@@ -7,15 +7,19 @@ license = "MIT/Apache-2.0"
 [dependencies]
 bevy_app = "0.12.1"
 bevy_ecs = "0.12.1"
-bevy_input = "0.12.1"
 bevy_log = "0.12.1"
-bevy_math = "0.12.1"
 bevy_time = "0.12.1"
-bevy_transform = "0.12.1"
-instant = "0.1.12"
-navara_core = { path = "../navara_core" }
-navara_geometry = { path = "../navara_geometry" }
-navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }
+navara_buffer_store = { path = "../navara_buffer_store" }
+navara_camera = { path = "../navara_camera" }
+navara_data_requester = { path = "../navara_data_requester" }
+navara_event = { path = "../navara_event" }
+navara_event_store = { path = "../navara_event_store" }
+navara_feature = { path = "../navara_feature" }
+navara_geojson = { path = "../navara_geojson" }
+navara_input = { path = "../navara_input" }
 navara_layer = { path = "../navara_layer" }
-navara_parser = { path = "../navara_parser" }
-martini = { path = "../martini" }
+navara_mesh = { path = "../navara_mesh" }
+navara_occluder = { path = "../navara_occluder" }
+navara_texture_fragment = { path = "../navara_texture_fragment" }
+navara_tile = { path = "../navara_tile" }
+navara_window = { path = "../navara_window" }

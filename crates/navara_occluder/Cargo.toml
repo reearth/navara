@@ -1,0 +1,13 @@
+[package]
+name = "navara_occluder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.12.1"
+bevy_ecs = "0.12.1"
+bevy_log = "0.12.1"
+navara_core = { path = "../navara_core" }
+navara_camera = { path = "../navara_camera" }
+navara_math = { path = "../navara_math" }
+navara_mock = { path = "../navara_mock" }

@@ -1,28 +1,13 @@
 #![doc = include_str!("../README.md")]
 
-mod app;
-mod buffer;
-mod camera;
-mod event;
-mod input;
-pub mod map;
-mod object;
-mod occluder;
-mod primitives;
-mod texture_fragment;
-mod transform;
-mod utils;
-mod window;
-
 use bevy_ecs::entity::Entity;
-pub use buffer::*;
-pub use event::{ComponentEvent, EntityEvent, Events, ReconstructableComponentEvent};
-pub use input::*;
+use navara_buffer_store::BufferStore;
+use navara_event::Events;
 use navara_layer::LayerDescription;
-pub use object::*;
-pub use texture_fragment::*;
-pub use transform::*;
-use window::{Window, WindowResizeEvent};
+use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
+use navara_window::{Window, WindowResizeEvent};
+
+mod app;
 
 pub struct App {
     app: bevy_app::App,
@@ -44,13 +29,16 @@ impl App {
         self.app.update();
     }
 
-    pub fn trigger_event(&mut self, ev: input::Input) {
-        input::trigger_event(&mut self.app.world, self.win, ev);
+    pub fn trigger_event(&mut self, ev: navara_input::Input) {
+        navara_input::trigger_event(&mut self.app.world, self.win, ev);
     }
 
     pub fn read_events(&mut self) -> Option<Events> {
-        let ev = self.app.world.get_resource::<event::EventStore>()?;
-        Some(ev.events(&self.app.world))
+        let ev = self
+            .app
+            .world
+            .get_resource::<navara_event_store::EventStore>()?;
+        Some(Events::from_event_store(&self.app.world, ev))
     }
 
     pub fn get_buffer_u8(&self, handle: i32) -> Option<&[u8]> {
@@ -73,16 +61,20 @@ impl App {
             return;
         };
         store.set_u8(handle, data);
-        self.app.world.send_event(buffer::BufferStoreLoadedEvent {
-            id: Entity::from_bits(bits),
-            ty: buffer::BufferType::U8,
-        });
+        self.app
+            .world
+            .send_event(navara_buffer_store::BufferStoreLoadedEvent {
+                id: Entity::from_bits(bits),
+                ty: navara_buffer_store::BufferType::U8,
+            });
     }
 
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
-        self.app.world.send_event(buffer::BufferStoreFailedEvent {
-            id: Entity::from_bits(bits),
-        });
+        self.app
+            .world
+            .send_event(navara_buffer_store::BufferStoreFailedEvent {
+                id: Entity::from_bits(bits),
+            });
     }
 
     pub fn resize(&mut self, width: f32, height: f32, pixel_ratio: f32) {
@@ -109,7 +101,7 @@ impl App {
     }
 
     pub fn add_layer(&mut self, desc: LayerDescription) {
-        self.app.world.send_event(map::AddLayerEvent(desc));
+        self.app.world.send_event(navara_layer::AddLayerEvent(desc));
     }
 }
 

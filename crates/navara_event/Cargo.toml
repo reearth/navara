@@ -1,0 +1,14 @@
+[package]
+name = "navara_event"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.12.1"
+bevy_ecs = "0.12.1"
+navara_event_store = { path = "../navara_event_store" }
+navara_math = { path = "../navara_math" }
+navara_texture_fragment = { path = "../navara_texture_fragment" }
+navara_feature = { path = "../navara_feature" }
+navara_mesh = { path = "../navara_mesh" }
+navara_data_requester = { path = "../navara_data_requester" }

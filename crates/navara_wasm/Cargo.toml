@@ -19,13 +19,22 @@ wasm-bindgen = { version = "0.2.84" }
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
 js-sys = "0.3.65"
+serde = { version = "1.0.193", features = ["derive"] }
+serde-wasm-bindgen = "0.6.3"
+gloo-utils = { version = "0.1", features = ["serde"] }
+
 navara_core = { path = "../navara_core" }
 navara_ecs = { path = "../navara_ecs" }
 navara_layer = { path = "../navara_layer" }
-serde = { version = "1.0.193", features = ["derive"] }
-serde-wasm-bindgen = "0.6.3"
 navara_parser = { path = "../navara_parser" }
-gloo-utils = { version = "0.1", features = ["serde"] }
+navara_input = { path = "../navara_input" }
+navara_event = { path = "../navara_event" }
+navara_event_store = { path = "../navara_event_store" }
+navara_math = { path = "../navara_math" }
+navara_mesh = { path = "../navara_mesh" }
+navara_data_requester = { path = "../navara_data_requester" }
+navara_texture_fragment = { path = "../navara_texture_fragment" }
+navara_feature = { path = "../navara_feature" }
 
 [dependencies.web-sys]
 version = "0.3.65"
