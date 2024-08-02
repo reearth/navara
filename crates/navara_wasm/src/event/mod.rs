@@ -129,8 +129,8 @@ pub struct EntityEvent {
     pub gen: u32,
 }
 
-impl<'a> From<navara_ecs::Events<'a>> for Events {
-    fn from(ev: navara_ecs::Events) -> Self {
+impl<'a> From<navara_event::Events<'a>> for Events {
+    fn from(ev: navara_event::Events) -> Self {
         Self {
             camera_transform_updated: ev.camera_transform_updated.map(|ev| ev.into()),
             object_transform_updated: ev
@@ -171,8 +171,8 @@ impl<'a> From<navara_ecs::Events<'a>> for Events {
     }
 }
 
-impl From<navara_ecs::EntityEvent> for EntityEvent {
-    fn from(ev: navara_ecs::EntityEvent) -> Self {
+impl From<navara_event_store::EntityEvent> for EntityEvent {
+    fn from(ev: navara_event_store::EntityEvent) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -180,8 +180,10 @@ impl From<navara_ecs::EntityEvent> for EntityEvent {
     }
 }
 
-impl<'a> From<navara_ecs::ComponentEvent<&'a navara_ecs::Transform>> for ObjectTransformEvent {
-    fn from(ev: navara_ecs::ComponentEvent<&'a navara_ecs::Transform>) -> Self {
+impl<'a> From<navara_event_store::ComponentEvent<&'a navara_math::Transform>>
+    for ObjectTransformEvent
+{
+    fn from(ev: navara_event_store::ComponentEvent<&'a navara_math::Transform>) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -190,8 +192,8 @@ impl<'a> From<navara_ecs::ComponentEvent<&'a navara_ecs::Transform>> for ObjectT
     }
 }
 
-impl<'a> From<&'a navara_ecs::Transform> for Transform {
-    fn from(t: &'a navara_ecs::Transform) -> Self {
+impl<'a> From<&'a navara_math::Transform> for Transform {
+    fn from(t: &'a navara_math::Transform) -> Self {
         Self {
             tx: t.translation.x,
             ty: t.translation.y,
@@ -209,18 +211,18 @@ impl<'a> From<&'a navara_ecs::Transform> for Transform {
 
 impl
     From<
-        navara_ecs::ComponentEvent<(
-            &navara_ecs::Mesh,
-            &navara_ecs::Material,
-            &navara_ecs::Transform,
+        navara_event_store::ComponentEvent<(
+            &navara_mesh::Mesh,
+            &navara_mesh::Material,
+            &navara_math::Transform,
         )>,
     > for MeshAdded
 {
     fn from(
-        ev: navara_ecs::ComponentEvent<(
-            &navara_ecs::Mesh,
-            &navara_ecs::Material,
-            &navara_ecs::Transform,
+        ev: navara_event_store::ComponentEvent<(
+            &navara_mesh::Mesh,
+            &navara_mesh::Material,
+            &navara_math::Transform,
         )>,
     ) -> Self {
         Self {
@@ -233,8 +235,12 @@ impl
     }
 }
 
-impl From<navara_ecs::ComponentEvent<(&navara_ecs::Mesh, &navara_ecs::Material)>> for MeshChanged {
-    fn from(ev: navara_ecs::ComponentEvent<(&navara_ecs::Mesh, &navara_ecs::Material)>) -> Self {
+impl From<navara_event_store::ComponentEvent<(&navara_mesh::Mesh, &navara_mesh::Material)>>
+    for MeshChanged
+{
+    fn from(
+        ev: navara_event_store::ComponentEvent<(&navara_mesh::Mesh, &navara_mesh::Material)>,
+    ) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -244,8 +250,8 @@ impl From<navara_ecs::ComponentEvent<(&navara_ecs::Mesh, &navara_ecs::Material)>
     }
 }
 
-impl<'a> From<&'a navara_ecs::Mesh> for Mesh {
-    fn from(m: &'a navara_ecs::Mesh) -> Self {
+impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
+    fn from(m: &'a navara_mesh::Mesh) -> Self {
         Self {
             vertices: m.vertices,
             uvs: m.uvs,
@@ -254,8 +260,8 @@ impl<'a> From<&'a navara_ecs::Mesh> for Mesh {
     }
 }
 
-impl From<navara_ecs::Material> for MeshMaterial {
-    fn from(m: navara_ecs::Material) -> Self {
+impl From<navara_mesh::Material> for MeshMaterial {
+    fn from(m: navara_mesh::Material) -> Self {
         Self {
             color: m.color,
             wireframe: m.wireframe,
@@ -267,10 +273,16 @@ impl From<navara_ecs::Material> for MeshMaterial {
     }
 }
 
-impl<'a> From<navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::DataRequester>>
-    for DataRequestEvent
+impl<'a>
+    From<
+        navara_event_store::ReconstructableComponentEvent<&'a navara_data_requester::DataRequester>,
+    > for DataRequestEvent
 {
-    fn from(ev: navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::DataRequester>) -> Self {
+    fn from(
+        ev: navara_event_store::ReconstructableComponentEvent<
+            &'a navara_data_requester::DataRequester,
+        >,
+    ) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
@@ -281,11 +293,17 @@ impl<'a> From<navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::DataRequ
     }
 }
 
-impl<'a> From<navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::TextureFragment>>
-    for TextureFragmentRequestedEvent
+impl<'a>
+    From<
+        navara_event_store::ReconstructableComponentEvent<
+            &'a navara_texture_fragment::TextureFragment,
+        >,
+    > for TextureFragmentRequestedEvent
 {
     fn from(
-        ev: navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::TextureFragment>,
+        ev: navara_event_store::ReconstructableComponentEvent<
+            &'a navara_texture_fragment::TextureFragment,
+        >,
     ) -> Self {
         Self {
             ind: ev.ind,
@@ -297,22 +315,30 @@ impl<'a> From<navara_ecs::ReconstructableComponentEvent<&'a navara_ecs::TextureF
     }
 }
 
-impl From<TextureFragmentStatus> for navara_ecs::TextureFragmentStatus {
+impl From<TextureFragmentStatus> for navara_texture_fragment::TextureFragmentStatus {
     fn from(value: TextureFragmentStatus) -> Self {
         match value {
-            TextureFragmentStatus::Success => navara_ecs::TextureFragmentStatus::Success,
-            TextureFragmentStatus::Fail => navara_ecs::TextureFragmentStatus::Fail,
-            TextureFragmentStatus::Pending => navara_ecs::TextureFragmentStatus::Pending,
+            TextureFragmentStatus::Success => {
+                navara_texture_fragment::TextureFragmentStatus::Success
+            }
+            TextureFragmentStatus::Fail => navara_texture_fragment::TextureFragmentStatus::Fail,
+            TextureFragmentStatus::Pending => {
+                navara_texture_fragment::TextureFragmentStatus::Pending
+            }
         }
     }
 }
 
-impl From<navara_ecs::TextureFragmentStatus> for TextureFragmentStatus {
-    fn from(value: navara_ecs::TextureFragmentStatus) -> Self {
+impl From<navara_texture_fragment::TextureFragmentStatus> for TextureFragmentStatus {
+    fn from(value: navara_texture_fragment::TextureFragmentStatus) -> Self {
         match value {
-            navara_ecs::TextureFragmentStatus::Success => TextureFragmentStatus::Success,
-            navara_ecs::TextureFragmentStatus::Fail => TextureFragmentStatus::Fail,
-            navara_ecs::TextureFragmentStatus::Pending => TextureFragmentStatus::Pending,
+            navara_texture_fragment::TextureFragmentStatus::Success => {
+                TextureFragmentStatus::Success
+            }
+            navara_texture_fragment::TextureFragmentStatus::Fail => TextureFragmentStatus::Fail,
+            navara_texture_fragment::TextureFragmentStatus::Pending => {
+                TextureFragmentStatus::Pending
+            }
         }
     }
 }

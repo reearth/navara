@@ -8,13 +8,13 @@ pub struct Vec2 {
     pub y: f32,
 }
 
-impl From<navara_ecs::Vec2> for Vec2 {
-    fn from(v: navara_ecs::Vec2) -> Self {
+impl From<navara_math::Vec2> for Vec2 {
+    fn from(v: navara_math::Vec2) -> Self {
         Self { x: v.x, y: v.y }
     }
 }
 
-impl From<Vec2> for navara_ecs::Vec2 {
+impl From<Vec2> for navara_math::Vec2 {
     fn from(v: Vec2) -> Self {
         Self { x: v.x, y: v.y }
     }
@@ -28,8 +28,8 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-impl From<navara_ecs::Vec3> for Vec3 {
-    fn from(v: navara_ecs::Vec3) -> Self {
+impl From<navara_math::Vec3> for Vec3 {
+    fn from(v: navara_math::Vec3) -> Self {
         Self {
             x: v.x,
             y: v.y,

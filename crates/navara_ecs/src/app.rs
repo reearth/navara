@@ -1,6 +1,19 @@
 use bevy_app::prelude::*;
 use bevy_ecs::system::Commands;
 use bevy_time::TimePlugin;
+use navara_buffer_store::BufferStorePlugin;
+use navara_camera::CameraPlugin;
+use navara_data_requester::DataRequesterPlugin;
+use navara_event::EventPlugin;
+use navara_feature::FeaturePlugin;
+use navara_geojson::GeoJsonPlugin;
+use navara_input::InputPlugin;
+use navara_layer::LayerPlugin;
+use navara_mesh::MeshPlugin;
+use navara_occluder::OccluderPlugin;
+use navara_texture_fragment::TextureFragmentPlugin;
+use navara_tile::TilePlugin;
+use navara_window::WindowPlugin;
 
 pub struct Plugin;
 
@@ -11,15 +24,19 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(TimePlugin);
 
         // custom plugins
-        app.add_plugins(super::buffer::BufferStorePlugin);
-        app.add_plugins(super::input::InputPlugin);
-        app.add_plugins(super::event::EventPlugin);
-        app.add_plugins(super::texture_fragment::TextureFragmentPlugin);
-        app.add_plugins(super::object::ObjectPlugin);
-        app.add_plugins(super::window::WindowPlugin);
-        app.add_plugins(super::camera::CameraPlugin);
-        app.add_plugins(super::occluder::OccluderPlugin);
-        app.add_plugins(super::map::MapPlugin);
+        app.add_plugins(BufferStorePlugin);
+        app.add_plugins(InputPlugin);
+        app.add_plugins(EventPlugin);
+        app.add_plugins(TextureFragmentPlugin);
+        app.add_plugins(DataRequesterPlugin);
+        app.add_plugins(MeshPlugin);
+        app.add_plugins(WindowPlugin);
+        app.add_plugins(CameraPlugin);
+        app.add_plugins(OccluderPlugin);
+        app.add_plugins(LayerPlugin);
+        app.add_plugins(FeaturePlugin);
+        app.add_plugins(GeoJsonPlugin);
+        app.add_plugins(TilePlugin);
 
         // custom systems
         app.add_systems(Startup, startup);

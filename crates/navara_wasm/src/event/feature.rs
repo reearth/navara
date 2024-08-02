@@ -65,10 +65,10 @@ pub struct RenderableFeature {
     pub model: Option<ModelMesh>,
 }
 
-impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for RenderableFeature {
-    fn from(v: &'a navara_ecs::map::feature::render::RenderableFeature) -> Self {
+impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeature {
+    fn from(v: &'a navara_feature::render::RenderableFeature) -> Self {
         match v {
-            navara_ecs::map::feature::render::RenderableFeature::Point {
+            navara_feature::render::RenderableFeature::Point {
                 material,
                 transform,
                 coordinates: _,
@@ -80,7 +80,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 }),
                 ..Default::default()
             },
-            navara_ecs::map::feature::render::RenderableFeature::Billboard {
+            navara_feature::render::RenderableFeature::Billboard {
                 material,
                 transform,
                 coordinates: _,
@@ -92,7 +92,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 }),
                 ..Default::default()
             },
-            navara_ecs::map::feature::render::RenderableFeature::Polyline {
+            navara_feature::render::RenderableFeature::Polyline {
                 material,
                 mesh,
                 transform,
@@ -105,7 +105,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 }),
                 ..Default::default()
             },
-            navara_ecs::map::feature::render::RenderableFeature::Polygon {
+            navara_feature::render::RenderableFeature::Polygon {
                 material,
                 mesh,
                 transform,
@@ -118,7 +118,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 }),
                 ..Default::default()
             },
-            navara_ecs::map::feature::render::RenderableFeature::Model {
+            navara_feature::render::RenderableFeature::Model {
                 material,
                 transform,
                 render_info: _,
@@ -129,7 +129,7 @@ impl<'a> From<&'a navara_ecs::map::feature::render::RenderableFeature> for Rende
                 }),
                 ..Default::default()
             },
-            navara_ecs::map::feature::render::RenderableFeature::Unknown => unreachable!(),
+            navara_feature::render::RenderableFeature::Unknown => unreachable!(),
         }
     }
 }

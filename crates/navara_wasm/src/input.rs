@@ -1,4 +1,4 @@
-use navara_ecs::{ButtonState, KeyCode};
+use navara_input::{ButtonState, KeyCode};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -34,35 +34,35 @@ impl Input {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
-    pub fn into_ecs_input(self) -> Option<navara_ecs::Input> {
+    pub fn into_ecs_input(self) -> Option<navara_input::Input> {
         match self.r#type {
             InputType::MouseDown => self.get_button().map(|button| {
-                navara_ecs::Input::MouseButton(navara_ecs::MouseButtonInput {
+                navara_input::Input::MouseButton(navara_input::MouseButtonInput {
                     button,
-                    state: navara_ecs::ButtonState::Pressed,
+                    state: navara_input::ButtonState::Pressed,
                 })
             }),
             InputType::MouseUp => self.get_button().map(|button| {
-                navara_ecs::Input::MouseButton(navara_ecs::MouseButtonInput {
+                navara_input::Input::MouseButton(navara_input::MouseButtonInput {
                     button,
-                    state: navara_ecs::ButtonState::Released,
+                    state: navara_input::ButtonState::Released,
                 })
             }),
-            InputType::MouseMove => {
-                Some(navara_ecs::Input::MouseMove(navara_ecs::MouseMoveInput {
+            InputType::MouseMove => Some(navara_input::Input::MouseMove(
+                navara_input::MouseMoveInput {
                     x: self.x.unwrap_or(0.0),
                     y: self.y.unwrap_or(0.0),
-                }))
-            }
-            InputType::Wheel => Some(navara_ecs::Input::MouseScroll(
-                navara_ecs::MouseScrollInput {
-                    unit: navara_ecs::MouseScrollUnit::Line,
+                },
+            )),
+            InputType::Wheel => Some(navara_input::Input::MouseScroll(
+                navara_input::MouseScrollInput {
+                    unit: navara_input::MouseScrollUnit::Line,
                     x: self.x.unwrap_or(0.0),
                     y: self.y.unwrap_or(0.0),
                 },
             )),
             InputType::KeyDown => self.key_code.map(|k| {
-                navara_ecs::Input::Keyboard(navara_ecs::KeyboardInput {
+                navara_input::Input::Keyboard(navara_input::KeyboardInput {
                     scan_code: 0, // ignore it because keyCode in JS is deprecated
                     key_code: match &*k {
                         "ControlLeft" => Some(KeyCode::ControlLeft),
@@ -73,7 +73,7 @@ impl Input {
                 })
             }),
             InputType::KeyUp => self.key_code.map(|k| {
-                navara_ecs::Input::Keyboard(navara_ecs::KeyboardInput {
+                navara_input::Input::Keyboard(navara_input::KeyboardInput {
                     scan_code: 0, // ignore it because keyCode in JS is deprecated
                     key_code: match &*k {
                         "ControlLeft" => Some(KeyCode::ControlLeft),
@@ -86,11 +86,11 @@ impl Input {
         }
     }
 
-    fn get_button(self) -> Option<navara_ecs::MouseButton> {
+    fn get_button(self) -> Option<navara_input::MouseButton> {
         match self.button {
-            Some(0) => Some(navara_ecs::MouseButton::Left),
-            Some(1) => Some(navara_ecs::MouseButton::Middle),
-            Some(2) => Some(navara_ecs::MouseButton::Right),
+            Some(0) => Some(navara_input::MouseButton::Left),
+            Some(1) => Some(navara_input::MouseButton::Middle),
+            Some(2) => Some(navara_input::MouseButton::Right),
             _ => None,
         }
     }

@@ -1,0 +1,17 @@
+[package]
+name = "navara_geojson"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.12.1"
+bevy_ecs = "0.12.1"
+bevy_log = "0.12.1"
+navara_core = { path = "../navara_core" }
+navara_layer = { path = "../navara_layer" }
+navara_math = { path = "../navara_math" }
+navara_parser = { path = "../navara_parser" }
+navara_feature = { path = "../navara_feature" }
+navara_tile = { path = "../navara_tile" }
+navara_buffer_store = { path = "../navara_buffer_store" }
+navara_data_requester = { path = "../navara_data_requester" }

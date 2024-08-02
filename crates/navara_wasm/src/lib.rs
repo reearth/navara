@@ -103,10 +103,10 @@ pub fn start() {
 pub fn init(id: String) {
     app(id, |a| {
         // debug
-        a.trigger_event(navara_ecs::Input::Keyboard(navara_ecs::KeyboardInput {
+        a.trigger_event(navara_input::Input::Keyboard(navara_input::KeyboardInput {
             scan_code: 0,
-            key_code: Some(navara_ecs::KeyCode::A),
-            state: navara_ecs::ButtonState::Pressed,
+            key_code: Some(navara_input::KeyCode::A),
+            state: navara_input::ButtonState::Pressed,
         }));
     });
 }
