@@ -21,7 +21,7 @@
     "3d-tiles-renderer": "^0.3.26",
     "earcut": "^2.2.4",
     "geojson": "^0.5.0",
-    "navara": "file:../navara_wasm/pkg",
+    "navara": "file:../crates/navara_wasm/pkg",
     "pbf": "^3.2.1",
     "stats.js": "^0.17.0",
     "three": "^0.162.0",

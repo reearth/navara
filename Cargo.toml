@@ -3,13 +3,5 @@
 resolver = "2"
 
 members = [
-    "navara_core",
-    "navara_ecs",
-    "navara_wasm",
-    "navara_quadtree",
-    "navara_assert",
-    "navara_geometry",
-    "navara_layer",
-    "navara_parser",
-    "martini",
+    "crates/*",
 ]
