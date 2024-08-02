@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.12.1"
-bevy_ecs = "0.12.1"
-bevy_log = "0.12.1"
+bevy_app = "0.14.0"
+bevy_ecs = "0.14.0"
+bevy_log = "0.14.0"
 navara_core = { path = "../navara_core" }
 navara_camera = { path = "../navara_camera" }
 navara_math = { path = "../navara_math" }

@@ -176,7 +176,7 @@ mod test {
             depth_test: false,
         };
 
-        app.world.spawn(construct_geojson_layer(
+        app.world_mut().spawn(construct_geojson_layer(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -209,11 +209,11 @@ mod test {
 
         app.update();
 
-        let mut renderable_features = app.world.query::<&RenderableFeature>();
+        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
-        assert_eq!(renderable_features.iter(&app.world).count(), 2);
+        assert_eq!(renderable_features.iter(app.world()).count(), 2);
 
-        let mut iter = renderable_features.iter(&app.world);
+        let mut iter = renderable_features.iter(app.world());
 
         let expects = [
             xyz_to_vec3(
@@ -281,7 +281,7 @@ mod test {
             depth_test: false,
         };
 
-        app.world.spawn(construct_geojson_layer(
+        app.world_mut().spawn(construct_geojson_layer(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -309,11 +309,11 @@ mod test {
 
         app.update();
 
-        let mut renderable_features = app.world.query::<&RenderableFeature>();
+        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
-        assert_eq!(renderable_features.iter(&app.world).count(), 2);
+        assert_eq!(renderable_features.iter(app.world()).count(), 2);
 
-        let mut iter = renderable_features.iter(&app.world);
+        let mut iter = renderable_features.iter(app.world());
 
         let expects = [
             xyz_to_vec3(
@@ -382,7 +382,7 @@ mod test {
             depth_test: false,
         };
 
-        app.world.spawn(construct_geojson_layer(
+        app.world_mut().spawn(construct_geojson_layer(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -415,11 +415,11 @@ mod test {
 
         app.update();
 
-        let mut renderable_features = app.world.query::<&RenderableFeature>();
+        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
-        assert_eq!(renderable_features.iter(&app.world).count(), 2);
+        assert_eq!(renderable_features.iter(app.world()).count(), 2);
 
-        let mut iter = renderable_features.iter(&app.world);
+        let mut iter = renderable_features.iter(app.world());
 
         let expects = [
             xyz_to_vec3(
@@ -488,7 +488,7 @@ mod test {
             depth_test: false,
         };
 
-        app.world.spawn(construct_geojson_layer(
+        app.world_mut().spawn(construct_geojson_layer(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -516,11 +516,11 @@ mod test {
 
         app.update();
 
-        let mut renderable_features = app.world.query::<&RenderableFeature>();
+        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
-        assert_eq!(renderable_features.iter(&app.world).count(), 2);
+        assert_eq!(renderable_features.iter(app.world()).count(), 2);
 
-        let mut iter = renderable_features.iter(&app.world);
+        let mut iter = renderable_features.iter(app.world());
 
         let expects = [
             xyz_to_vec3(

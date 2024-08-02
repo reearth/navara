@@ -1,4 +1,4 @@
-use navara_input::{ButtonState, KeyCode};
+use navara_input::{ButtonState, Key, KeyCode};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -61,26 +61,32 @@ impl Input {
                     y: self.y.unwrap_or(0.0),
                 },
             )),
-            InputType::KeyDown => self.key_code.map(|k| {
-                navara_input::Input::Keyboard(navara_input::KeyboardInput {
-                    scan_code: 0, // ignore it because keyCode in JS is deprecated
-                    key_code: match &*k {
-                        "ControlLeft" => Some(KeyCode::ControlLeft),
-                        "ControlRight" => Some(KeyCode::ControlRight),
-                        _ => None,
-                    },
-                    state: ButtonState::Pressed,
+            InputType::KeyDown => self.key_code.and_then(|k| {
+                let key = match &*k {
+                    "ControlLeft" => Some((Key::Control, KeyCode::ControlLeft)),
+                    "ControlRight" => Some((Key::Control, KeyCode::ControlRight)),
+                    _ => None,
+                };
+                key.map(|(logical_key, key_code)| {
+                    navara_input::Input::Keyboard(navara_input::KeyboardInput {
+                        logical_key, // ignore it because keyCode in JS is deprecated
+                        key_code,
+                        state: ButtonState::Pressed,
+                    })
                 })
             }),
-            InputType::KeyUp => self.key_code.map(|k| {
-                navara_input::Input::Keyboard(navara_input::KeyboardInput {
-                    scan_code: 0, // ignore it because keyCode in JS is deprecated
-                    key_code: match &*k {
-                        "ControlLeft" => Some(KeyCode::ControlLeft),
-                        "ControlRight" => Some(KeyCode::ControlRight),
-                        _ => None,
-                    },
-                    state: ButtonState::Released,
+            InputType::KeyUp => self.key_code.and_then(|k| {
+                let key = match &*k {
+                    "ControlLeft" => Some((Key::Control, KeyCode::ControlLeft)),
+                    "ControlRight" => Some((Key::Control, KeyCode::ControlRight)),
+                    _ => None,
+                };
+                key.map(|(logical_key, key_code)| {
+                    navara_input::Input::Keyboard(navara_input::KeyboardInput {
+                        logical_key, // ignore it because keyCode in JS is deprecated
+                        key_code,
+                        state: ButtonState::Released,
+                    })
                 })
             }),
         }

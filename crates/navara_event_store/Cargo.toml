@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_ecs = "0.12.1"
+bevy_ecs = "0.14.0"
