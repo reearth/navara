@@ -64,13 +64,15 @@ impl CameraFrustum {
 
         self.planes = [
             // Near
-            Plane::from_point_normal(near_center, forward),
+            Plane::from_point_normal(near_center, forward.as_vec3()),
             // Far
-            Plane::from_point_normal(far_center, -forward),
+            Plane::from_point_normal(far_center, -forward.as_vec3()),
             // Right
             Plane::from_point_normal(
                 transform.translation,
-                (front_far - right * half_h_side).cross(up).normalize(),
+                (front_far - right * half_h_side)
+                    .cross(up.as_vec3())
+                    .normalize(),
             ),
             // Left
             Plane::from_point_normal(
@@ -85,7 +87,9 @@ impl CameraFrustum {
             // Bottom
             Plane::from_point_normal(
                 transform.translation,
-                (front_far + up * half_v_side).cross(right).normalize(),
+                (front_far + up * half_v_side)
+                    .cross(right.as_vec3())
+                    .normalize(),
             ),
         ];
     }

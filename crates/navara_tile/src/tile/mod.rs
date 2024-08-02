@@ -1,3 +1,4 @@
+mod render;
 pub(crate) mod system;
 #[allow(clippy::module_inception)]
 mod tile;

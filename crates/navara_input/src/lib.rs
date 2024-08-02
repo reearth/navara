@@ -6,10 +6,10 @@ use bevy_ecs::{entity::Entity, world::World};
 mod keyboard;
 mod mouse;
 
-pub use keyboard::{ButtonState, KeyCode, KeyboardInput};
+pub use keyboard::{ButtonState, Key, KeyCode, KeyboardInput};
 pub use mouse::{MouseButton, MouseButtonInput, MouseMoveInput, MouseScrollInput, MouseScrollUnit};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Input {
     Keyboard(KeyboardInput),
     MouseButton(MouseButtonInput),
@@ -30,9 +30,17 @@ impl Plugin for InputPlugin {
 
 pub fn trigger_event(world: &mut World, win: Entity, ev: Input) {
     match ev {
-        Input::Keyboard(ev) => world.send_event(ev.into_event(win)),
-        Input::MouseButton(ev) => world.send_event(ev.into_event(win)),
-        Input::MouseMove(ev) => world.send_event(ev),
-        Input::MouseScroll(ev) => world.send_event(ev.into_event(win)),
+        Input::Keyboard(ev) => {
+            world.send_event(ev.into_event(win));
+        }
+        Input::MouseButton(ev) => {
+            world.send_event(ev.into_event(win));
+        }
+        Input::MouseMove(ev) => {
+            world.send_event(ev);
+        }
+        Input::MouseScroll(ev) => {
+            world.send_event(ev.into_event(win));
+        }
     }
 }

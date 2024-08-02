@@ -6,12 +6,8 @@ mod types;
 mod unit;
 mod utils;
 
-use std::{
-    collections::HashMap,
-    sync::{Mutex, OnceLock},
-};
-
 use navara_ecs::App;
+use navara_input::Key;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -28,69 +24,102 @@ extern "C" {
 #[wasm_bindgen(getter_with_clone)]
 pub struct Core {
     pub id: String,
+    app: App,
 }
 
 #[wasm_bindgen]
 impl Core {
     #[wasm_bindgen(constructor)]
     pub fn new(id: String) -> Self {
-        Self { id }
+        Self {
+            id,
+            app: App::new(),
+        }
     }
 
-    pub fn start(&self) {
-        init(self.id.clone());
+    pub fn start(&mut self) {
+        // debug
+        self.app
+            .trigger_event(navara_input::Input::Keyboard(navara_input::KeyboardInput {
+                logical_key: Key::Character("a".into()),
+                key_code: navara_input::KeyCode::KeyA,
+                state: navara_input::ButtonState::Pressed,
+            }));
     }
 
-    pub fn update(&self) {
-        update(self.id.clone());
+    pub fn update(&mut self) {
+        self.app.update();
     }
 
     #[wasm_bindgen(js_name = readEvents)]
-    pub fn read_events(&self) -> Option<Events> {
-        read_events(self.id.clone())
+    pub fn read_events(&mut self) -> Option<Events> {
+        self.app.read_events().map(|ev| ev.into())
     }
 
-    pub fn input(&self, i: JsValue) {
-        input(self.id.clone(), i);
+    pub fn input(&mut self, input: JsValue) {
+        let Some(input) = Input::from(input) else {
+            return;
+        };
+
+        let Some(input) = input.into_ecs_input() else {
+            return;
+        };
+
+        self.app.trigger_event(input);
     }
 
     #[wasm_bindgen(js_name = getBufferU8)]
     pub fn get_buffer_u8(&self, handle: i32) -> Option<js_sys::Uint8Array> {
-        get_buffer_u8(self.id.clone(), handle)
+        let buf = self.app.get_buffer_u8(handle)?;
+
+        Some(js_sys::Uint8Array::from(buf))
+        // unsafe { Some(js_sys::Uint8Array::view(buf)) } // zero copy
     }
 
     #[wasm_bindgen(js_name = getBufferU32)]
     pub fn get_buffer_u32(&self, handle: i32) -> Option<js_sys::Uint32Array> {
-        get_buffer_u32(self.id.clone(), handle)
+        let buf = self.app.get_buffer_u32(handle)?;
+
+        Some(js_sys::Uint32Array::from(buf))
+        // unsafe { Some(js_sys::Uint32Array::view(buf)) } // zero copy
     }
 
     #[wasm_bindgen(js_name = getBufferF32)]
     pub fn get_buffer_f32(&self, handle: i32) -> Option<js_sys::Float32Array> {
-        get_buffer_f32(self.id.clone(), handle)
+        let buf = self.app.get_buffer_f32(handle)?;
+
+        Some(js_sys::Float32Array::from(buf))
+        // unsafe { Some(js_sys::Float32Array::view(buf)) } // zero copy
     }
 
     #[wasm_bindgen(js_name = setBufferU8)]
-    pub fn set_buffer_u8(&self, handle: i32, bits: u64, data: &[u8]) {
-        set_buffer_u8(self.id.clone(), handle, bits, data);
+    pub fn set_buffer_u8(&mut self, handle: i32, bits: u64, data: &[u8]) {
+        self.app.set_buffer(handle, bits, data.to_vec());
     }
 
     #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
-    pub fn trigger_data_requester_failed(&self, bits: u64) {
-        trigger_data_requester_failed(self.id.clone(), bits);
+    pub fn trigger_data_requester_failed(&mut self, bits: u64) {
+        self.app.trigger_data_requester_failed(bits);
     }
 
-    pub fn resize(&self, width: f32, height: f32, pixel_ratio: f32) {
-        resize(self.id.clone(), width, height, pixel_ratio);
+    pub fn resize(&mut self, width: f32, height: f32, pixel_ratio: f32) {
+        self.app.resize(width, height, pixel_ratio);
     }
 
     #[wasm_bindgen(js_name = addLayer)]
-    pub fn add_layer(&self, layer: JsValue) {
-        add_layer(self.id.clone(), layer);
+    pub fn add_layer(&mut self, layer: JsValue) {
+        // TODO: Improve an undesirable cloning the layer.
+        if let Some(ld) = LayerDescription::from(layer.clone()) {
+            if let Some(l) = ld.to(layer) {
+                self.app.add_layer(l);
+            }
+        }
     }
 
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]
-    pub fn trigger_texture_fragment_loaded(&self, bits: u64, status: TextureFragmentStatus) {
-        trigger_texture_fragment_loaded(self.id.clone(), bits, status);
+    pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
+        self.app
+            .trigger_texture_fragment_loaded(bits, status.into());
     }
 }
 
@@ -100,113 +129,18 @@ pub fn start() {
     log("init navara_wasm");
 }
 
-pub fn init(id: String) {
-    app(id, |a| {
-        // debug
-        a.trigger_event(navara_input::Input::Keyboard(navara_input::KeyboardInput {
-            scan_code: 0,
-            key_code: Some(navara_input::KeyCode::A),
-            state: navara_input::ButtonState::Pressed,
-        }));
-    });
-}
+// fn app<T>(id: String, f: impl FnOnce(&mut App) -> T) -> T {
+//     static APP: OnceLock<Mutex<HashMap<String, App>>> = OnceLock::new();
+//     let mut map = APP
+//         .get_or_init(|| Mutex::new(HashMap::new()))
+//         .lock()
+//         .unwrap();
 
-pub fn update(id: String) {
-    app(id, |a| a.update());
-}
+//     let app = map
+//         .entry(id.to_string())
+//         .or_insert_with(|| Mutex::new(App::new()))
+//         .get_mut()
+//         .unwrap();
 
-pub fn read_events(id: String) -> Option<Events> {
-    app(id, |a| a.read_events().map(|ev| ev.into()))
-}
-
-pub fn input(id: String, input: JsValue) {
-    app(id, |a| {
-        let Some(input) = Input::from(input) else {
-            return;
-        };
-
-        let Some(input) = input.into_ecs_input() else {
-            return;
-        };
-
-        a.trigger_event(input);
-    });
-}
-
-pub fn get_buffer_u8(id: String, handle: i32) -> Option<js_sys::Uint8Array> {
-    app(id, |a| {
-        let buf = a.get_buffer_u8(handle)?;
-
-        Some(js_sys::Uint8Array::from(buf))
-        // unsafe { Some(js_sys::Uint8Array::view(buf)) } // zero copy
-    })
-}
-
-pub fn get_buffer_u32(id: String, handle: i32) -> Option<js_sys::Uint32Array> {
-    app(id, |a| {
-        let buf = a.get_buffer_u32(handle)?;
-
-        Some(js_sys::Uint32Array::from(buf))
-        // unsafe { Some(js_sys::Uint32Array::view(buf)) } // zero copy
-    })
-}
-
-pub fn get_buffer_f32(id: String, handle: i32) -> Option<js_sys::Float32Array> {
-    app(id, |a| {
-        let buf = a.get_buffer_f32(handle)?;
-
-        Some(js_sys::Float32Array::from(buf))
-        // unsafe { Some(js_sys::Float32Array::view(buf)) } // zero copy
-    })
-}
-
-pub fn set_buffer_u8(id: String, handle: i32, bits: u64, buf: &[u8]) {
-    app(id, |a| {
-        a.set_buffer(handle, bits, buf.to_vec());
-    });
-}
-
-pub fn trigger_data_requester_failed(id: String, bits: u64) {
-    app(id, |a| {
-        a.trigger_data_requester_failed(bits);
-    });
-}
-
-pub fn resize(id: String, width: f32, height: f32, pixel_ratio: f32) {
-    app(id, |a| {
-        a.resize(width, height, pixel_ratio);
-    });
-}
-
-pub fn trigger_texture_fragment_loaded(id: String, bits: u64, status: TextureFragmentStatus) {
-    app(id, |a| {
-        a.trigger_texture_fragment_loaded(bits, status.into());
-    });
-}
-
-pub fn add_layer(id: String, layer: JsValue) {
-    app(id, |a| {
-        // TODO: Improve an undesirable cloning the layer.
-        if let Some(ld) = LayerDescription::from(layer.clone()) {
-            if let Some(l) = ld.to(layer) {
-                a.add_layer(l);
-            }
-        }
-    });
-}
-
-fn app<T>(id: String, f: impl FnOnce(&mut App) -> T) -> T {
-    static APP: OnceLock<Mutex<HashMap<String, Mutex<App>>>> = OnceLock::new();
-    let mut map = APP
-        .get_or_init(|| Mutex::new(HashMap::new()))
-        .lock()
-        .unwrap();
-
-    let app = map
-        .entry(id.to_string())
-        .or_insert_with(|| Mutex::new(App::new()))
-        .get_mut()
-        .unwrap();
-
-    f(app)
-}
+//     f(app)
+// }

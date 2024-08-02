@@ -6,7 +6,7 @@ use bevy_ecs::{
 use bevy_input::{
     keyboard::KeyCode,
     mouse::{MouseButton, MouseMotion, MouseWheel},
-    Input,
+    ButtonInput,
 };
 use navara_core::{Angle, EARTH_RADIUS_F32};
 use navara_math::{Quat, Transform, Vec2, Vec3};
@@ -32,11 +32,11 @@ pub fn startup(mut commands: Commands) {
 
 pub fn update(
     mut query: Query<(&mut Transform, &mut Orbit, &CameraMarker)>,
-    mb: Res<Input<MouseButton>>,
+    mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
     mut mp: EventReader<MouseMoveInput>,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
 ) {
     for (mut transform, mut orbit, _) in query.iter_mut() {
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);

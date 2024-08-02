@@ -21,16 +21,12 @@ use crate::{
 };
 
 use super::{
+    render::{RenderedTile, RenderedTileDistance},
     tile_cache_manager::{TileCache, TileCacheManager},
     RenderedState, Tile, TileHandle, TileQuadtree, TileTextureFragmentMarker,
 };
 
 use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
-
-#[derive(Component)]
-pub struct RenderedTile {
-    tile_handle: TileHandle,
-}
 
 pub fn begine_update(mut tc: ResMut<TileCacheManager>) {
     tc.rendered_frame += 1;
@@ -42,6 +38,7 @@ fn spawn_tile_entity(
     tc: &mut TileCacheManager,
     tile: &mut Tile,
     tile_handle: TileHandle,
+    distance_from_camera: f32,
 ) {
     tile.rendered_at = tc.rendered_frame;
     tc.is_updated_in_this_frame = true;
@@ -50,7 +47,10 @@ fn spawn_tile_entity(
         return;
     }
 
-    commands.spawn(RenderedTile { tile_handle });
+    commands.spawn((
+        RenderedTile { tile_handle },
+        RenderedTileDistance(distance_from_camera),
+    ));
     tc.rendered_tile_caches
         .insert(tile_handle, TileCache { mesh_entity: None });
 }
@@ -130,23 +130,24 @@ fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t
     frustum.interseciton_with_aabb(&t.aabb)
 }
 
+fn calc_distance_from_camera(camera: &Transform, t: &Tile, ellipsoid: &Ellipsoid<f32>) -> f32 {
+    let camera_pos = camera.transform_point(Vec3::ZERO);
+    t.bounding_reagion
+        .as_ref()
+        .unwrap()
+        .distance_to_camera(camera_pos, ellipsoid.xyz_to_lle(vec3_to_xyz(camera_pos)))
+}
+
 // Ref: https://github.com/CesiumGS/cesium/blob/3b393448d7e976165c0260fab9ea90843583c3a7/packages/engine/Source/Scene/QuadtreePrimitive.js#L1245
 fn calc_sse(
-    camera: &Transform,
     frustum: &CameraFrustum,
     t: &Tile,
     window: &Window,
     ellipsoid: &Ellipsoid<f32>,
     height_map_width: f32,
+    distance_from_camera: f32,
 ) -> f32 {
     let max_geometric_error = t.get_level_maximum_geometric_error(ellipsoid, height_map_width);
-
-    let camera_pos = camera.transform_point(Vec3::ZERO);
-    let distance_from_camera = t
-        .bounding_reagion
-        .as_ref()
-        .unwrap()
-        .distance_to_camera(camera_pos, ellipsoid.xyz_to_lle(vec3_to_xyz(camera_pos)));
 
     // TODO: Support fog culling
 
@@ -291,13 +292,15 @@ fn traverse_tile(
 
     let max_sse = tiles.max_sse;
 
+    let distance_from_camera = calc_distance_from_camera(camera, tile, ellipsoid);
+
     let sse = calc_sse(
-        camera,
         frustum,
         tile,
         window,
         ellipsoid,
         if terrain_layer.is_some() { 65. } else { 64. },
+        distance_from_camera,
     );
     let meets_sse = sse < max_sse;
 
@@ -401,7 +404,7 @@ fn traverse_tile(
                 Some(t) => t,
                 None => unreachable!(),
             };
-            spawn_tile_entity(command, tc, tile, handle);
+            spawn_tile_entity(command, tc, tile, handle, distance_from_camera);
         }
 
         qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state =
@@ -477,6 +480,7 @@ pub fn update_tiles(
                         &mut tc,
                         qt.qt.get_mut(zero_tile.handle()).unwrap(),
                         zero_tile.handle(),
+                        0.,
                     );
                 }
                 TraversalResult::NotFound => {
@@ -503,7 +507,7 @@ pub fn transfer_mesh(
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<TileQuadtree>,
     cached_martini: Res<CachedMartini>,
-    rendered_tiles: Query<&RenderedTile, Changed<RenderedTile>>,
+    rendered_tiles: Query<(&RenderedTile, &RenderedTileDistance), Added<RenderedTile>>,
     terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     tile_layers: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
@@ -522,7 +526,7 @@ pub fn transfer_mesh(
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
 
-    for rendered_tile in &rendered_tiles {
+    for (rendered_tile, _) in rendered_tiles.iter().sort::<&RenderedTileDistance>() {
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
 
         let extent = tile.extent;
