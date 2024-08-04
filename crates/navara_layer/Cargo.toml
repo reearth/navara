@@ -8,8 +8,8 @@ edition = "2021"
 [features]
 
 [dependencies]
-bevy_app = "0.14.0"
-bevy_ecs = "0.14.0"
-bevy_math = "0.14.0"
+bevy_app = "0.14.1"
+bevy_ecs = "0.14.1"
+bevy_math = "0.14.1"
 navara_core = { path = "../navara_core" }
 navara_parser = { path = "../navara_parser" }
