@@ -6,7 +6,79 @@ use navara_core::CRS;
 use navara_feature::{billboard::BillboardGeometry, point::PointGeometry};
 use navara_layer::{Appearance, GeoJsonLayer};
 use navara_math::Vec3;
-use navara_parser::geojson::Value;
+use navara_parser::geojson::{GeoJson, Geometry, Value};
+
+fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: &Geometry) {
+    for appearance in appearances {
+        match appearance {
+            Appearance::Point(v) => match &geometry.value {
+                Value::Point(f) => {
+                    commands.spawn((
+                        PointGeometry {
+                            coords: Vec3::new(
+                                f[0] as f32,
+                                f[1] as f32,
+                                *f.get(2).unwrap_or(&0.) as f32,
+                            ),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            PointGeometry {
+                                coords: Vec3::new(
+                                    f[0] as f32,
+                                    f[1] as f32,
+                                    *f.get(2).unwrap_or(&0.) as f32,
+                                ),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
+            Appearance::Billboard(v) => match &geometry.value {
+                Value::Point(f) => {
+                    commands.spawn((
+                        BillboardGeometry {
+                            coords: Vec3::new(
+                                f[0] as f32,
+                                f[1] as f32,
+                                *f.get(2).unwrap_or(&0.) as f32,
+                            ),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            BillboardGeometry {
+                                coords: Vec3::new(
+                                    f[0] as f32,
+                                    f[1] as f32,
+                                    *f.get(2).unwrap_or(&0.) as f32,
+                                ),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
+            Appearance::Polyline(_v) => unimplemented!(),
+            Appearance::Polygon(_v) => unimplemented!(),
+            Appearance::Model(_v) => unimplemented!(),
+        };
+    }
+}
 
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
@@ -14,77 +86,22 @@ pub fn construct_feature(
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
     for layer in &geojson_layers {
-        let features = &layer.features;
         let appearances = &layer.appearances;
-        for feature in features {
-            for appearance in appearances {
-                match appearance {
-                    Appearance::Point(v) => match feature.geometry.as_ref().map(|g| &g.value) {
-                        Some(Value::Point(f)) => {
-                            commands.spawn((
-                                PointGeometry {
-                                    coords: Vec3::new(
-                                        f[0] as f32,
-                                        f[1] as f32,
-                                        *f.get(2).unwrap_or(&0.) as f32,
-                                    ),
-                                    crs: CRS::Geographic,
-                                },
-                                v.clone(),
-                            ));
-                        }
-                        Some(Value::MultiPoint(fs)) => {
-                            for f in fs {
-                                commands.spawn((
-                                    PointGeometry {
-                                        coords: Vec3::new(
-                                            f[0] as f32,
-                                            f[1] as f32,
-                                            *f.get(2).unwrap_or(&0.) as f32,
-                                        ),
-                                        crs: CRS::Geographic,
-                                    },
-                                    v.clone(),
-                                ));
-                            }
-                        }
-                        _ => {}
-                    },
-                    Appearance::Billboard(v) => match feature.geometry.as_ref().map(|g| &g.value) {
-                        Some(Value::Point(f)) => {
-                            commands.spawn((
-                                BillboardGeometry {
-                                    coords: Vec3::new(
-                                        f[0] as f32,
-                                        f[1] as f32,
-                                        *f.get(2).unwrap_or(&0.) as f32,
-                                    ),
-                                    crs: CRS::Geographic,
-                                },
-                                v.clone(),
-                            ));
-                        }
-                        Some(Value::MultiPoint(fs)) => {
-                            for f in fs {
-                                commands.spawn((
-                                    BillboardGeometry {
-                                        coords: Vec3::new(
-                                            f[0] as f32,
-                                            f[1] as f32,
-                                            *f.get(2).unwrap_or(&0.) as f32,
-                                        ),
-                                        crs: CRS::Geographic,
-                                    },
-                                    v.clone(),
-                                ));
-                            }
-                        }
-                        _ => {}
-                    },
-                    Appearance::Polyline(_v) => unimplemented!(),
-                    Appearance::Polygon(_v) => unimplemented!(),
-                    Appearance::Model(_v) => unimplemented!(),
-                };
+        match &layer.data {
+            GeoJson::FeatureCollection(fs) => {
+                for f in fs {
+                    if let Some(g) = &f.geometry {
+                        spawn_feature(&mut commands, appearances, g);
+                    }
+                }
+            }
+            GeoJson::Feature(f) => {
+                if let Some(g) = &f.geometry {
+                    spawn_feature(&mut commands, appearances, g);
+                }
+            }
+            GeoJson::Geometry(g) => {
+                spawn_feature(&mut commands, appearances, g);
             }
         }
     }
@@ -118,13 +135,7 @@ mod test {
 
     fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
         let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
-        let features = match &geojson {
-            GeoJson::FeatureCollection(f) => f.features.clone(),
-            GeoJson::Feature(f) => vec![f.clone()],
-            _ => unimplemented!(),
-        };
         GeoJsonLayer {
-            features,
             data: geojson,
             crs: None,
             appearances,
