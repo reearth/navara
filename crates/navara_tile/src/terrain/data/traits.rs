@@ -7,7 +7,7 @@ use navara_core::{Ellipsoid, Extent, LngLat, Radians, TileRegion};
 use navara_data_requester::DataRequester;
 use navara_geometry::{Geometry, UpsampledTerrainGeometry};
 
-use crate::{terrain::TerrainDataRequesterMarker, tile::Tile};
+use crate::{data_requester::TerrainDataRequesterMarker, tile::Tile};
 
 pub trait TerrainData: Debug + Sync + Send {
     fn upsample(

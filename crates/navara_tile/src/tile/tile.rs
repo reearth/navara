@@ -15,16 +15,16 @@ use navara_mesh::CachedMeshHandle;
 use navara_quadtree::{Coords, Quadtree};
 use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 
-use crate::terrain::{TerrainData, TerrainDataRequesterMarker};
+use crate::{
+    data_requester::TerrainDataRequesterMarker, terrain::TerrainData,
+    texture_fragment::TileTextureFragmentMarker,
+};
 
 use navara_layer::TerrainLayer;
 
 use super::tile_bounding_region::TileBoundingReagion;
 
-pub(super) type TileHandle = u64;
-
-#[derive(Component)]
-pub(crate) struct TileTextureFragmentMarker;
+pub(crate) type TileHandle = u64;
 
 #[derive(Debug)]
 pub(crate) enum RenderedState {
@@ -38,10 +38,10 @@ pub struct Tile {
     pub extent: Extent<f32, Radians>,
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
-    pub(super) rendered_at: usize,
-    pub(super) visited_at: usize,
+    pub(crate) rendered_at: usize,
+    pub(crate) visited_at: usize,
     pub(crate) terrain_data: Option<Box<dyn TerrainData>>,
-    pub(super) texture_fragment_entity_id: Option<Entity>,
+    pub(crate) texture_fragment_entity_id: Option<Entity>,
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
     pub(crate) previous_rendered_state: Option<RenderedState>,
     pub(crate) cached_mesh_handle: Option<CachedMeshHandle>,

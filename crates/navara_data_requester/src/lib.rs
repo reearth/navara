@@ -79,12 +79,9 @@ pub fn set_data_requester_faled(
 
 pub fn send_data_requst_events(
     mut events: ResMut<EventStore>,
-    requests: Query<(Entity, &DataRequester), Added<DataRequester>>,
+    requests: Query<Entity, Added<DataRequester>>,
 ) {
-    for (e, d) in requests.iter() {
-        if !matches!(d.status, DataRequesterStatus::Pending) {
-            continue;
-        }
+    for e in requests.iter() {
         events.data_requested.push(e);
     }
 }

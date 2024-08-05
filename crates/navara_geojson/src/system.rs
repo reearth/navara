@@ -5,6 +5,7 @@ use bevy_ecs::{
 use navara_core::CRS;
 use navara_feature::{billboard::BillboardGeometry, point::PointGeometry};
 use navara_layer::{Appearance, GeoJsonLayer};
+
 use navara_math::Vec3;
 use navara_parser::geojson::{GeoJson, Geometry, Value};
 
