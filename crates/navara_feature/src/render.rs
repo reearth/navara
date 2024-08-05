@@ -10,6 +10,8 @@ pub struct RenderInformation {
     pub current_terrain_height: f32,
 }
 
+// From data oriented design perspective, this is too bad structure.
+// But this is necessary to communicate with WASM.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub enum RenderableFeature {
     Point {
