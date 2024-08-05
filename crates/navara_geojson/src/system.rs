@@ -9,7 +9,7 @@ use navara_feature::{billboard, point, render::RenderableFeature};
 use navara_layer::{Appearance, GeoJsonLayer};
 use navara_parser::geojson::Value;
 use navara_tile::{
-    terrain::TerrainDataRequesterMarker,
+    data_requester::TerrainDataRequesterMarker,
     tile::{TileMeshMarker, TileQuadtree},
 };
 

@@ -63,14 +63,15 @@ export function processEvent(
   event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
   event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, loadedTexs));
   event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, loadedTexs));
-  event.data_requested?.forEach(req => processRequestedData(req, buf));
-  event.texture_fragment_requested?.forEach(req =>
-    processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
-  );
-  event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
   event.renderable_feature_added?.forEach(ev => processRenderableFeatureAdded(ev, scene, meshes));
   event.renderable_feature_changed?.forEach(ev => processRenderableFeatureChanged(ev, meshes));
   event.renderable_feature_removed?.forEach(ev => processObjectRemoved(scene, meshes, ev));
+
+  event.texture_fragment_requested?.forEach(req =>
+    processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
+  );
+  event.data_requested?.forEach(req => processRequestedData(req, buf));
+  event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
 }
 
 function processCameraTransformUpdated(camera: Camera, transform: Transform) {

@@ -21,3 +21,4 @@ navara_occluder = { path = "../navara_occluder" }
 navara_mesh = { path = "../navara_mesh" }
 martini = { path = "../martini" }
 navara_mock = { path = "../navara_mock" }
+instant = { version = "0.1", features = [ "wasm-bindgen", "inaccurate" ] }

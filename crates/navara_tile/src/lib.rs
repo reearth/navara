@@ -1,5 +1,8 @@
 #![doc = include_str!("../README.md")]
 
+pub mod data_requester;
+pub mod texture_fragment;
+
 use bevy_app::{App, Plugin, PreUpdate, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
 use terrain::CachedMartini;
@@ -22,7 +25,13 @@ impl Plugin for TilePlugin {
             .add_systems(PreUpdate, terrain::system::begine_terrain_layer)
             .add_systems(
                 Update,
-                (tile::system::update_tiles, tile::system::transfer_mesh).chain(),
+                (
+                    tile::system::update_tiles,
+                    tile::system::transfer_mesh,
+                    texture_fragment::system::filter_requestable_texture_fragment,
+                    data_requester::system::filter_requestable_data_requester,
+                )
+                    .chain(),
             );
     }
 }

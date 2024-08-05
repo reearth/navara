@@ -10,15 +10,15 @@ pub struct RenderedTile {
 }
 
 #[derive(Component, PartialEq, Debug)]
-pub struct RenderedTileDistance(pub(crate) f32);
+pub struct TileOrderByDistance(pub(crate) f32);
 
-impl PartialOrd for RenderedTileDistance {
+impl PartialOrd for TileOrderByDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for RenderedTileDistance {
+impl Ord for TileOrderByDistance {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.0 > other.0 {
             return Ordering::Greater;
@@ -30,31 +30,31 @@ impl Ord for RenderedTileDistance {
     }
 }
 
-impl Eq for RenderedTileDistance {}
+impl Eq for TileOrderByDistance {}
 
 #[cfg(test)]
 mod test {
-    use super::RenderedTileDistance;
+    use super::TileOrderByDistance;
 
     #[test]
     fn it_should_sort_near_to_far_order() {
         let mut d = [
-            RenderedTileDistance(0.2),
-            RenderedTileDistance(0.5),
-            RenderedTileDistance(0.1),
-            RenderedTileDistance(0.),
-            RenderedTileDistance(0.4),
-            RenderedTileDistance(0.3),
+            TileOrderByDistance(0.2),
+            TileOrderByDistance(0.5),
+            TileOrderByDistance(0.1),
+            TileOrderByDistance(0.),
+            TileOrderByDistance(0.4),
+            TileOrderByDistance(0.3),
         ];
         d.sort();
 
         let expects = [
-            RenderedTileDistance(0.),
-            RenderedTileDistance(0.1),
-            RenderedTileDistance(0.2),
-            RenderedTileDistance(0.3),
-            RenderedTileDistance(0.4),
-            RenderedTileDistance(0.5),
+            TileOrderByDistance(0.),
+            TileOrderByDistance(0.1),
+            TileOrderByDistance(0.2),
+            TileOrderByDistance(0.3),
+            TileOrderByDistance(0.4),
+            TileOrderByDistance(0.5),
         ];
 
         for (i, result) in d.iter().enumerate() {

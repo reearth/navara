@@ -9,7 +9,7 @@ use navara_geometry::{
     decode_height_from_dem, tile_triangles_with_terrain, Geometry, UpsampledTerrainGeometry,
 };
 
-use crate::{terrain::TerrainDataRequesterMarker, tile::Tile};
+use crate::{data_requester::TerrainDataRequesterMarker, tile::Tile};
 
 use super::TerrainData;
 

@@ -5,7 +5,7 @@ use navara_data_requester::DataRequester;
 use navara_layer::BillboardMaterial;
 use navara_math::{xyz_to_vec3, Transform, Vec3};
 use navara_tile::{
-    terrain::TerrainDataRequesterMarker,
+    data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileQuadtree},
 };
 
