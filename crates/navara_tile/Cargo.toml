@@ -7,6 +7,7 @@ edition = "2021"
 bevy_app = "0.14.1"
 bevy_ecs = "0.14.1"
 bevy_log = "0.14.1"
+bevy_time = "0.14.1"
 navara_core = { path = "../navara_core" }
 navara_geometry = { path = "../navara_geometry" }
 navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }

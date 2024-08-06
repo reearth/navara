@@ -38,40 +38,41 @@ where
     }
 
     /// Initialize children of specified coordinates.
-    fn initialize_children(&mut self, (x, y, z): Coords<U>, init: &dyn Fn(Coords<U>) -> T) {
-        for i in 0..4 {
-            let i = to_int::<usize, U>(i);
-            let x = (x << 1) + (i % (U::one() + U::one()));
-            let y = (y << 1) + (i >> 1);
-            let z = z + U::one();
-            self.initialize_leaf((x, y, z), init);
-        }
-    }
-
-    /// Get children, or create children and return it if the number of children isn't four.
-    fn get_or_create_children(
+    fn initialize_children(
         &mut self,
         (x, y, z): Coords<U>,
         init: &dyn Fn(Coords<U>) -> T,
-    ) -> Vec<(u64, bool)> {
-        let mut children = Vec::with_capacity(4);
+    ) -> Vec<u64> {
+        let mut result = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
-            let x = (x << 1) + (i % (U::one() + U::one()));
-            let y = (y << 1) + (i >> 1);
-            let z = z + U::one();
-            if let Some(t) = self.leaf((x, y, z)) {
-                children.push((t.handle(), false));
-            } else if let Some(h) = self.initialize_leaf((x, y, z), init) {
-                children.push((h, true));
-            } else {
-                unreachable!();
-            }
+            result.push(self.initialize_child((x, y, z), i, init));
         }
-        children
+        result
+    }
+
+    /// Initialize a child of specified coordinates.
+    fn initialize_child(
+        &mut self,
+        (x, y, z): Coords<U>,
+        child_index: U,
+        init: &dyn Fn(Coords<U>) -> T,
+    ) -> u64 {
+        self.initialize_leaf(self.child_coords((x, y, z), child_index), init)
+            .unwrap()
+    }
+
+    /// Calculate child coords
+    fn child_coords(&self, (x, y, z): Coords<U>, child_index: U) -> Coords<U> {
+        let i = child_index;
+        let x = (x << 1) + (i % (U::one() + U::one()));
+        let y = (y << 1) + (i >> 1);
+        let z = z + U::one();
+        (x, y, z)
     }
 
     /// Get a leaf by specified coordinates.
+    /// Note that this is too heavy task, so you should avoid using this method as much as you can.
     fn leaf(&self, coords: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>>;
 
     /// Get a root leaf.
@@ -89,9 +90,7 @@ where
         let mut children: Vec<Box<dyn GeoSpacialQuadLeaf<U>>> = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
-            let x = (x << 1) + (i % (U::one() + U::one()));
-            let y = (y << 1) + (i >> 1);
-            let z = z + U::one();
+            let (x, y, z) = self.child_coords((x, y, z), i);
             match self.leaf((x, y, z)) {
                 Some(v) => children.push(v),
                 None => return None,

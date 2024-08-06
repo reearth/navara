@@ -21,5 +21,5 @@ Then you can create children. In this case, they're children of the root coordin
 ```rust
 let root = (0, 0, 0);
 let children =
-    qt.get_or_create_children(root, &|(x, y, z)| Tile { x, y, z });
+    qt.initialize_children(root, &|(x, y, z)| Tile { x, y, z });
 ```

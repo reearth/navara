@@ -12,7 +12,7 @@ use navara_geometry::Geometry;
 use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
-use navara_quadtree::{Coords, Quadtree};
+use navara_quadtree::Quadtree;
 use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 
 use crate::{
@@ -32,12 +32,16 @@ pub(crate) enum RenderedState {
     Culled,
 }
 
+// Note Tile have to keep light size for caching efficiently.
+// So if you want to store large data in this struct, use `BufferStore`.
+// And don't forget to destroy the stored data in [`Tile::detroy method`].
 #[derive(Debug)]
 pub struct Tile {
     pub coords: TileXYZ,
     pub extent: Extent<f32, Radians>,
     pub aabb: Aabb,
     pub bounding_reagion: Option<TileBoundingReagion<f32>>,
+    pub(crate) children: Vec<TileHandle>,
     pub(crate) rendered_at: usize,
     pub(crate) visited_at: usize,
     pub(crate) terrain_data: Option<Box<dyn TerrainData>>,
@@ -65,6 +69,7 @@ impl Tile {
             previous_rendered_state: None,
             cached_mesh_handle: None,
             upsampled: false,
+            children: Vec::with_capacity(4),
         }
     }
 
@@ -260,11 +265,13 @@ impl Tile {
             buf.remove(&cached_mesh.vertices);
             buf.remove(&cached_mesh.indices);
             buf.remove(&cached_mesh.uvs);
+            self.cached_mesh_handle = None;
         }
         if let Some(fragment) = self.texture_fragment_entity_id {
             commands
                 .entity(fragment)
                 .remove::<(TileTextureFragmentMarker, TextureFragment)>();
+            self.texture_fragment_entity_id = None;
         }
         if let Some(t) = &mut self.terrain_data {
             if let Some(e) = t.data_requester_entity_id() {
@@ -273,9 +280,12 @@ impl Tile {
                 commands
                     .entity(e)
                     .remove::<(TerrainDataRequesterMarker, DataRequester)>();
+                t.set_data_requester_entity_id(None);
             }
             t.destroy(buf);
         }
+        self.upsampled = false;
+        self.previous_rendered_state = None;
     }
 }
 
@@ -305,30 +315,30 @@ pub fn compute_terrain_height_at_point(
 
 /// Find a child that the tile contains.
 fn find_contained_child(qt: &TileQuadtree, contain: &dyn Fn(&Tile) -> bool) -> Option<TileHandle> {
-    traverse_contained_child(qt, (0, 0, 0), contain)
+    let handle = qt.qt.zero().map(|l| l.handle());
+    traverse_contained_child(qt, handle.and_then(|h| qt.qt.get(h)), handle, contain)
 }
 
 fn traverse_contained_child(
     qt: &TileQuadtree,
-    coords: Coords<usize>,
+    tile: Option<&Tile>,
+    handle: Option<TileHandle>,
     contain: &dyn Fn(&Tile) -> bool,
 ) -> Option<TileHandle> {
-    let h = qt.qt.leaf(coords)?.handle();
-    let v = qt.qt.get(h)?;
-    if !contain(v) {
+    let h = handle?;
+    let tile = tile?;
+
+    if !contain(tile) {
         return None;
     }
 
-    let children = qt.qt.children(coords);
-    if let Some(children) = children {
-        for child in children {
-            if let Some(v) = traverse_contained_child(qt, child.coords(), contain) {
-                return Some(v);
-            }
+    for child in &tile.children {
+        if let Some(v) = traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain) {
+            return Some(v);
         }
     }
 
-    if contain(v) {
+    if contain(tile) {
         return Some(h);
     }
 
@@ -338,10 +348,26 @@ fn traverse_contained_child(
 #[cfg(test)]
 mod test {
     use navara_core::{Angle, LngLat, TileXYZ};
+    use navara_quadtree::Coords;
 
     use super::TileQuadtree;
 
     use super::{find_contained_child, Tile};
+
+    fn setup_tile(qt: &mut TileQuadtree, coords: Coords<usize>) {
+        let children = qt.qt.initialize_children(coords, &|v| {
+            Tile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+            )
+        });
+        let tile = qt.qt.get_mut(qt.qt.leaf(coords).unwrap().handle()).unwrap();
+        tile.children = children;
+    }
 
     #[test]
     fn it_should_find_contained_tile() {
@@ -357,56 +383,11 @@ mod test {
                 0.,
             )
         });
-        qt.qt.initialize_children((0, 0, 0), &|v| {
-            Tile::new(
-                TileXYZ {
-                    x: v.0,
-                    y: v.1,
-                    z: v.2,
-                },
-                0.,
-            )
-        });
-        qt.qt.initialize_children((0, 0, 1), &|v| {
-            Tile::new(
-                TileXYZ {
-                    x: v.0,
-                    y: v.1,
-                    z: v.2,
-                },
-                0.,
-            )
-        });
-        qt.qt.initialize_children((1, 0, 1), &|v| {
-            Tile::new(
-                TileXYZ {
-                    x: v.0,
-                    y: v.1,
-                    z: v.2,
-                },
-                0.,
-            )
-        });
-        qt.qt.initialize_children((0, 1, 1), &|v| {
-            Tile::new(
-                TileXYZ {
-                    x: v.0,
-                    y: v.1,
-                    z: v.2,
-                },
-                0.,
-            )
-        });
-        qt.qt.initialize_children((1, 1, 1), &|v| {
-            Tile::new(
-                TileXYZ {
-                    x: v.0,
-                    y: v.1,
-                    z: v.2,
-                },
-                0.,
-            )
-        });
+        setup_tile(&mut qt, (0, 0, 0));
+        setup_tile(&mut qt, (0, 0, 1));
+        setup_tile(&mut qt, (1, 0, 1));
+        setup_tile(&mut qt, (0, 1, 1));
+        setup_tile(&mut qt, (1, 1, 1));
 
         let h = find_contained_child(&qt, &|t| {
             t.extent.contains(&LngLat {

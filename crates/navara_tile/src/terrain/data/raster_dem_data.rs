@@ -172,6 +172,7 @@ impl TerrainData for RasterDEMData {
     fn destroy(&mut self, buf: &mut BufferStore) {
         if let Some(handle) = self.heights_handle.take() {
             buf.remove(&handle);
+            self.heights_handle = None;
         }
     }
 }
