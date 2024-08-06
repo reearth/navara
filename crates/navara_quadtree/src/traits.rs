@@ -27,7 +27,7 @@ where
 {
     /// Initialize a leaf with specified coordinates.
     /// The value which is made by `init` is stored internally as a custom value.
-    fn initialize_leaf(&mut self, coords: Coords<U>, init: &dyn Fn(Coords<U>) -> T);
+    fn initialize_leaf(&mut self, coords: Coords<U>, init: &dyn Fn(Coords<U>) -> T) -> Option<u64>;
 
     /// Initialize a root leaf.
     fn initialize_zero(&mut self, init: &dyn Fn(Coords<U>) -> T) {
@@ -53,22 +53,19 @@ where
         &mut self,
         (x, y, z): Coords<U>,
         init: &dyn Fn(Coords<U>) -> T,
-    ) -> Vec<Box<dyn GeoSpacialQuadLeaf<U>>> {
-        let mut children: Vec<Box<dyn GeoSpacialQuadLeaf<U>>> = Vec::with_capacity(4);
+    ) -> Vec<(u64, bool)> {
+        let mut children = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
             let x = (x << 1) + (i % (U::one() + U::one()));
             let y = (y << 1) + (i >> 1);
             let z = z + U::one();
             if let Some(t) = self.leaf((x, y, z)) {
-                children.push(t);
+                children.push((t.handle(), false));
+            } else if let Some(h) = self.initialize_leaf((x, y, z), init) {
+                children.push((h, true));
             } else {
-                self.initialize_leaf((x, y, z), init);
-                if let Some(t) = self.leaf((x, y, z)) {
-                    children.push(t);
-                } else {
-                    unreachable!();
-                }
+                unreachable!();
             }
         }
         children
