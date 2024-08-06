@@ -158,6 +158,34 @@ pub(super) enum TraversalResult {
     NotFound,
 }
 
+fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Option<Vec<(TileHandle, bool)>> {
+    let tile = qt.qt.get(handle).unwrap();
+    let children = tile.children.clone();
+    let coords = (tile.coords.x, tile.coords.y, tile.coords.z);
+    let parent_max_height = tile
+        .terrain_data
+        .as_ref()
+        .map_or(0., |t| t.current_max_height().unwrap_or(0.));
+    let init = |(x, y, z)| Tile::new(TileXYZ { x, y, z }, parent_max_height);
+    if children.is_empty() {
+        let children = qt.qt.initialize_children(coords, &init);
+        let tile = qt.qt.get_mut(handle).unwrap();
+        tile.children = children;
+        return None;
+    }
+
+    let mut new_children = Vec::with_capacity(4);
+    for (i, c) in children.into_iter().enumerate() {
+        let is_tile_some = qt.qt.get(c).is_some();
+        if is_tile_some {
+            new_children.push((c, false));
+            continue;
+        }
+        new_children.push((qt.qt.initialize_child(coords, i, &init), true));
+    }
+    Some(new_children)
+}
+
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
 // 2. Check horizon culling because the frustum culling isn't enough.
@@ -291,100 +319,94 @@ fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    let parent = qt.qt.get(handle).unwrap();
-    let parent_max_height = parent
-        .terrain_data
-        .as_ref()
-        .map_or(0., |t| t.current_max_height().unwrap_or(0.));
-    let children = qt.qt.get_or_create_children(
-        (parent.coords.x, parent.coords.y, parent.coords.z),
-        &|(x, y, z)| Tile::new(TileXYZ { x, y, z }, parent_max_height),
-    );
+    let children = find_children(qt, handle);
 
-    let mut are_children_rendered = false;
-    let mut are_all_children_rendered = true;
-    let mut rendered_children_indices = vec![];
-    let mut hidden_children_indices = vec![];
-    for (i, (child, is_created)) in children.iter().enumerate() {
-        if *is_created {
-            continue;
-        }
-
-        let traversal_result = traverse_tile(
-            command,
-            tiles,
-            terrain_layer,
-            *child,
-            tc,
-            qt,
-            buf,
-            camera,
-            frustum,
-            texture_fragment,
-            terrain_data_requester,
-            window,
-            ellipsoid,
-            occluder,
-        );
-
-        if matches!(traversal_result, TraversalResult::NotFound) {
-            are_all_children_rendered = false;
-        }
-
-        if matches!(
-            traversal_result,
-            TraversalResult::NotFound | TraversalResult::Culled
-        ) {
-            hidden_children_indices.push(i);
-        }
-
-        // If there is one child at least, trigger the rendering children process.
-        if matches!(
-            traversal_result,
-            TraversalResult::TileRendered
-                | TraversalResult::TileRenderedPartially
-                | TraversalResult::ChildrenRendered
-        ) {
-            are_children_rendered = true;
-        }
-
-        // Skip rendering chilren in this tile.
-        if matches!(traversal_result, TraversalResult::ChildrenRendered) {
-            rendered_children_indices.push(i);
-        }
-    }
-
-    if are_children_rendered {
+    if let Some(children) = children {
+        let mut are_children_rendered = false;
+        let mut are_all_children_rendered = true;
+        let mut rendered_children_indices = vec![];
+        let mut hidden_children_indices = vec![];
         for (i, (child, is_created)) in children.iter().enumerate() {
             if *is_created {
                 continue;
             }
 
-            // If this child's children are rendered, skip rendering this child.
-            if rendered_children_indices.contains(&i) {
-                continue;
-            }
-            // If this child is not renderable, skip rendering this child.
-            if hidden_children_indices.contains(&i) {
-                continue;
+            let traversal_result = traverse_tile(
+                command,
+                tiles,
+                terrain_layer,
+                *child,
+                tc,
+                qt,
+                buf,
+                camera,
+                frustum,
+                texture_fragment,
+                terrain_data_requester,
+                window,
+                ellipsoid,
+                occluder,
+            );
+
+            if matches!(traversal_result, TraversalResult::NotFound) {
+                are_all_children_rendered = false;
             }
 
-            let handle = *child;
-            let tile = match qt.qt.get_mut(handle) {
-                Some(t) => t,
-                None => unreachable!(),
-            };
-            spawn_tile_entity(command, tc, tile, handle, distance_from_camera);
+            if matches!(
+                traversal_result,
+                TraversalResult::NotFound | TraversalResult::Culled
+            ) {
+                hidden_children_indices.push(i);
+            }
+
+            // If there is one child at least, trigger the rendering children process.
+            if matches!(
+                traversal_result,
+                TraversalResult::TileRendered
+                    | TraversalResult::TileRenderedPartially
+                    | TraversalResult::ChildrenRendered
+            ) {
+                are_children_rendered = true;
+            }
+
+            // Skip rendering chilren in this tile.
+            if matches!(traversal_result, TraversalResult::ChildrenRendered) {
+                rendered_children_indices.push(i);
+            }
         }
 
-        qt.qt.get_mut(handle).unwrap().previous_rendered_state =
-            Some(RenderedState::RenderedChildren);
-        if are_all_children_rendered {
-            // This tile's children are rendered completely, so parent tile isn't rendered.
-            return TraversalResult::ChildrenRendered;
-        } else {
-            // This tile's children are not rendered completely, so render parent tile as well.
-            return TraversalResult::TileRenderedPartially;
+        if are_children_rendered {
+            for (i, (child, is_created)) in children.iter().enumerate() {
+                if *is_created {
+                    continue;
+                }
+
+                // If this child's children are rendered, skip rendering this child.
+                if rendered_children_indices.contains(&i) {
+                    continue;
+                }
+                // If this child is not renderable, skip rendering this child.
+                if hidden_children_indices.contains(&i) {
+                    continue;
+                }
+
+                let handle = *child;
+                let tile = match qt.qt.get_mut(handle) {
+                    Some(t) => t,
+                    None => unreachable!(),
+                };
+                spawn_tile_entity(command, tc, tile, handle, distance_from_camera);
+            }
+
+            qt.qt.get_mut(handle).unwrap().previous_rendered_state =
+                Some(RenderedState::RenderedChildren);
+            if are_all_children_rendered {
+                // This tile's children are rendered completely, so parent tile isn't rendered.
+                return TraversalResult::ChildrenRendered;
+            } else {
+                // This tile's children are not rendered completely, so render parent tile as well.
+                return TraversalResult::TileRenderedPartially;
+            }
         }
     }
 
@@ -794,7 +816,6 @@ pub fn clear_caches(
             &terrain_data_requester,
         );
         removed_cached_tile_handler.push(*tile_handle);
-        qt.qt.remove(*tile_handle);
     }
 
     for i in removed_cached_tile_handler {

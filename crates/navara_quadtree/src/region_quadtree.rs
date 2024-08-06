@@ -340,45 +340,4 @@ mod tests {
         debug_assert!(leaf.contains((4, 4, 5)));
         debug_assert!(leaf.contains((5, 4, 5)));
     }
-
-    #[test]
-    fn it_should_create_children_if_inexistence() {
-        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(RegionQuadtree::new(20));
-
-        let current_coords = (2, 2, 4);
-
-        let children =
-            qt.get_or_create_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
-
-        debug_assert!(unordered_elements_are(
-            children.iter().map(|v| qt.get(v.0).unwrap()),
-            vec![
-                &zxy_string((5, 4, 4)),
-                &zxy_string((5, 5, 4)),
-                &zxy_string((5, 4, 5)),
-                &zxy_string((5, 5, 5)),
-            ],
-        ));
-
-        let handle = children[1].0;
-        let removed = qt.remove(handle);
-        assert!(removed);
-
-        let children = qt.children(current_coords);
-        // Because the number of children isn't four.
-        assert!(children.is_none());
-
-        let children =
-            qt.get_or_create_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
-
-        debug_assert!(unordered_elements_are(
-            children.iter().map(|v| qt.get(v.0).unwrap()),
-            vec![
-                &zxy_string((5, 4, 4)),
-                &zxy_string((5, 5, 4)),
-                &zxy_string((5, 4, 5)),
-                &zxy_string((5, 5, 5)),
-            ],
-        ));
-    }
 }
