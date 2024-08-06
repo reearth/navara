@@ -7,7 +7,6 @@ use navara_math::{vec3_to_xyz, xyz_to_vec3, Transform, Vec3};
 
 use navara_mesh::{CachedMeshHandle, Material, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
-use navara_quadtree::GeoSpacialQuadLeaf;
 use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 
 use navara_camera::{CameraFrustum, CameraMarker};
@@ -172,7 +171,7 @@ fn traverse_tile(
     command: &mut Commands,
     tiles: &TilesLayer,
     terrain_layer: &Option<&TerrainLayer>,
-    t: &dyn GeoSpacialQuadLeaf<usize>,
+    handle: TileHandle,
     tc: &mut TileCacheManager,
     qt: &mut TileQuadtree,
     buf: &mut BufferStore,
@@ -184,7 +183,7 @@ fn traverse_tile(
     ellipsoid: &Ellipsoid<f32>,
     occluder: &EllipsoidalOccluder,
 ) -> TraversalResult {
-    match qt.qt.get(t.handle()) {
+    match qt.qt.get(handle) {
         Some(tile) => {
             if tile.coords.z >= tiles.max_z {
                 return TraversalResult::NotFound;
@@ -193,12 +192,12 @@ fn traverse_tile(
         None => unreachable!(),
     };
 
-    match qt.qt.get_mut(t.handle()) {
+    match qt.qt.get_mut(handle) {
         Some(tile) => begine_traverse_tile(ellipsoid, occluder, camera, tile),
         None => unreachable!(),
     };
 
-    let tile = match qt.qt.get(t.handle()) {
+    let tile = match qt.qt.get(handle) {
         Some(tile) => tile,
         None => unreachable!(),
     };
@@ -220,11 +219,11 @@ fn traverse_tile(
         Some(RenderedState::RenderedChildren)
     );
 
-    let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&t.handle());
+    let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
     let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, tile);
     if !is_intersecting_with_frustum {
-        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = Some(RenderedState::Culled);
+        qt.qt.get_mut(handle).unwrap().previous_rendered_state = Some(RenderedState::Culled);
         return TraversalResult::Culled;
     }
 
@@ -233,7 +232,7 @@ fn traverse_tile(
         .map(|p| occluder.is_scaled_space_point_visible(p))
         .unwrap_or(true);
     if !is_visible {
-        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = Some(RenderedState::Culled);
+        qt.qt.get_mut(handle).unwrap().previous_rendered_state = Some(RenderedState::Culled);
         return TraversalResult::Culled;
     }
 
@@ -254,11 +253,11 @@ fn traverse_tile(
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     {
-        qt.qt.get_mut(t.handle()).unwrap().visited_at = tc.rendered_frame;
+        qt.qt.get_mut(handle).unwrap().visited_at = tc.rendered_frame;
     }
 
     if meets_sse {
-        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = None;
+        qt.qt.get_mut(handle).unwrap().previous_rendered_state = None;
 
         if is_tile_failed {
             return TraversalResult::NotFound;
@@ -273,7 +272,7 @@ fn traverse_tile(
             buf,
             tiles,
             terrain_layer,
-            t.handle(),
+            handle,
             distance_from_camera,
         );
     } else {
@@ -283,7 +282,7 @@ fn traverse_tile(
             buf,
             tiles,
             terrain_layer,
-            t.handle(),
+            handle,
             distance_from_camera,
         );
     }
@@ -292,26 +291,30 @@ fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    let parent = qt.qt.get(t.handle());
-    let parent_max_height = parent.map_or(0., |p| {
-        p.terrain_data
-            .as_ref()
-            .map_or(0., |t| t.current_max_height().unwrap_or(0.))
-    });
-    let children = qt.qt.get_or_create_children(t.coords(), &|(x, y, z)| {
-        Tile::new(TileXYZ { x, y, z }, parent_max_height)
-    });
+    let parent = qt.qt.get(handle).unwrap();
+    let parent_max_height = parent
+        .terrain_data
+        .as_ref()
+        .map_or(0., |t| t.current_max_height().unwrap_or(0.));
+    let children = qt.qt.get_or_create_children(
+        (parent.coords.x, parent.coords.y, parent.coords.z),
+        &|(x, y, z)| Tile::new(TileXYZ { x, y, z }, parent_max_height),
+    );
 
     let mut are_children_rendered = false;
     let mut are_all_children_rendered = true;
     let mut rendered_children_indices = vec![];
     let mut hidden_children_indices = vec![];
-    for (i, child) in children.iter().enumerate() {
+    for (i, (child, is_created)) in children.iter().enumerate() {
+        if *is_created {
+            continue;
+        }
+
         let traversal_result = traverse_tile(
             command,
             tiles,
             terrain_layer,
-            child.as_ref(),
+            *child,
             tc,
             qt,
             buf,
@@ -352,7 +355,11 @@ fn traverse_tile(
     }
 
     if are_children_rendered {
-        for (i, child) in children.iter().enumerate() {
+        for (i, (child, is_created)) in children.iter().enumerate() {
+            if *is_created {
+                continue;
+            }
+
             // If this child's children are rendered, skip rendering this child.
             if rendered_children_indices.contains(&i) {
                 continue;
@@ -362,7 +369,7 @@ fn traverse_tile(
                 continue;
             }
 
-            let handle = child.handle();
+            let handle = *child;
             let tile = match qt.qt.get_mut(handle) {
                 Some(t) => t,
                 None => unreachable!(),
@@ -370,7 +377,7 @@ fn traverse_tile(
             spawn_tile_entity(command, tc, tile, handle, distance_from_camera);
         }
 
-        qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state =
+        qt.qt.get_mut(handle).unwrap().previous_rendered_state =
             Some(RenderedState::RenderedChildren);
         if are_all_children_rendered {
             // This tile's children are rendered completely, so parent tile isn't rendered.
@@ -381,7 +388,7 @@ fn traverse_tile(
         }
     }
 
-    qt.qt.get_mut(t.handle()).unwrap().previous_rendered_state = None;
+    qt.qt.get_mut(handle).unwrap().previous_rendered_state = None;
 
     if prepare_tile_resource(
         command,
@@ -389,7 +396,7 @@ fn traverse_tile(
         buf,
         tiles,
         terrain_layer,
-        t.handle(),
+        handle,
         distance_from_camera,
     ) {
         return TraversalResult::NotFound;
@@ -433,7 +440,7 @@ pub fn update_tiles(
                 &mut commands,
                 tiles,
                 &terrain_layer,
-                zero_tile.as_ref(),
+                zero_tile.handle(),
                 &mut tc,
                 &mut qt,
                 &mut buf,

@@ -27,7 +27,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm
-wasm-pack build --target web
+wasm-pack build --target web --release
 ''']
 
 [tasks.test-rust]
@@ -40,7 +40,7 @@ cargo test --workspace --all-targets --all-features
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm
-wasm-pack build --target web --dev
+wasm-pack build --target web
 ''']
 
 [tasks.dev]

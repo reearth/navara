@@ -38,10 +38,10 @@ where
         }
     }
 
-    fn insert(&mut self, (x, y, z): Coords<U>, init: &dyn Fn((U, U, U)) -> V) {
+    fn insert(&mut self, (x, y, z): Coords<U>, init: &dyn Fn((U, U, U)) -> V) -> Option<u64> {
         let width = ((to_int::<usize, U>(self.depth) - z) as U).pow(2);
         if width.is_zero() {
-            return;
+            return None;
         }
 
         match AreaBuilder::default()
@@ -51,7 +51,7 @@ where
         {
             Ok(area) => self.qt.insert(area, init((x, y, z))),
             Err(e) => unreachable!("{}", e),
-        };
+        }
     }
 
     fn query_strict(&self, (x, y, z): Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
@@ -88,7 +88,11 @@ where
     U: PrimInt + Default + Sync + Send + 'static,
     V: Sync + Send + 'static + Debug,
 {
-    fn initialize_leaf(&mut self, (x, y, z): Coords<U>, init: &dyn Fn(Coords<U>) -> V) {
+    fn initialize_leaf(
+        &mut self,
+        (x, y, z): Coords<U>,
+        init: &dyn Fn(Coords<U>) -> V,
+    ) -> Option<u64> {
         self.insert((x, y, z), init)
     }
 
@@ -347,7 +351,7 @@ mod tests {
             qt.get_or_create_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
 
         debug_assert!(unordered_elements_are(
-            children.iter().map(|v| qt.get(v.handle()).unwrap()),
+            children.iter().map(|v| qt.get(v.0).unwrap()),
             vec![
                 &zxy_string((5, 4, 4)),
                 &zxy_string((5, 5, 4)),
@@ -356,7 +360,7 @@ mod tests {
             ],
         ));
 
-        let handle = children[1].handle();
+        let handle = children[1].0;
         let removed = qt.remove(handle);
         assert!(removed);
 
@@ -368,7 +372,7 @@ mod tests {
             qt.get_or_create_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
 
         debug_assert!(unordered_elements_are(
-            children.iter().map(|v| qt.get(v.handle()).unwrap()),
+            children.iter().map(|v| qt.get(v.0).unwrap()),
             vec![
                 &zxy_string((5, 4, 4)),
                 &zxy_string((5, 5, 4)),
