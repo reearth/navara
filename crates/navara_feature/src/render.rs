@@ -1,8 +1,8 @@
-use bevy_ecs::component::Component;
+use bevy_ecs::{component::Component, entity::Entity};
 use navara_layer::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
-use navara_math::{Transform, Vec3};
+use navara_math::Transform;
 use navara_mesh::Mesh;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -10,18 +10,20 @@ pub struct RenderInformation {
     pub current_terrain_height: f32,
 }
 
+// From data oriented design perspective, this is too bad structure.
+// But this is necessary to communicate with WASM.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub enum RenderableFeature {
     Point {
         material: PointMaterial,
         transform: Transform,
-        coordinates: Vec3, // lng, lat, height
+        feature_id: Entity,
         render_info: RenderInformation,
     },
     Billboard {
         material: BillboardMaterial,
         transform: Transform,
-        coordinates: Vec3, // lng, lat, height
+        feature_id: Entity,
         render_info: RenderInformation,
     },
     Polyline {

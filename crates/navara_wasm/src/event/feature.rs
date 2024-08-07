@@ -71,7 +71,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
             navara_feature::render::RenderableFeature::Point {
                 material,
                 transform,
-                coordinates: _,
+                feature_id: _,
                 render_info: _,
             } => Self {
                 point: Some(PointMesh {
@@ -83,7 +83,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
             navara_feature::render::RenderableFeature::Billboard {
                 material,
                 transform,
-                coordinates: _,
+                feature_id: _,
                 render_info: _,
             } => Self {
                 billboard: Some(BillboardMesh {

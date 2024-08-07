@@ -1,3 +1,4 @@
-mod mesh;
+mod component;
+pub mod system;
 
-pub use mesh::*;
+pub use component::*;

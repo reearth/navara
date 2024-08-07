@@ -1,126 +1,109 @@
 use bevy_ecs::{
     query::{Added, Changed, Or},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query},
 };
-use navara_buffer_store::BufferStore;
-use navara_core::WGS84_32;
-use navara_data_requester::DataRequester;
-use navara_feature::{billboard, point, render::RenderableFeature};
+use navara_core::CRS;
+use navara_feature::{billboard::BillboardGeometry, point::PointGeometry};
 use navara_layer::{Appearance, GeoJsonLayer};
-use navara_parser::geojson::Value;
-use navara_tile::{
-    data_requester::TerrainDataRequesterMarker,
-    tile::{TileMeshMarker, TileQuadtree},
-};
+
+use navara_math::Vec3;
+use navara_parser::geojson::{GeoJson, Geometry, Value};
+
+fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: &Geometry) {
+    for appearance in appearances {
+        match appearance {
+            Appearance::Point(v) => match &geometry.value {
+                Value::Point(f) => {
+                    commands.spawn((
+                        PointGeometry {
+                            coords: Vec3::new(
+                                f[0] as f32,
+                                f[1] as f32,
+                                *f.get(2).unwrap_or(&0.) as f32,
+                            ),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            PointGeometry {
+                                coords: Vec3::new(
+                                    f[0] as f32,
+                                    f[1] as f32,
+                                    *f.get(2).unwrap_or(&0.) as f32,
+                                ),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
+            Appearance::Billboard(v) => match &geometry.value {
+                Value::Point(f) => {
+                    commands.spawn((
+                        BillboardGeometry {
+                            coords: Vec3::new(
+                                f[0] as f32,
+                                f[1] as f32,
+                                *f.get(2).unwrap_or(&0.) as f32,
+                            ),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            BillboardGeometry {
+                                coords: Vec3::new(
+                                    f[0] as f32,
+                                    f[1] as f32,
+                                    *f.get(2).unwrap_or(&0.) as f32,
+                                ),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
+            Appearance::Polyline(_v) => unimplemented!(),
+            Appearance::Polygon(_v) => unimplemented!(),
+            Appearance::Model(_v) => unimplemented!(),
+        };
+    }
+}
 
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
-    let mut add_command = |renderable_feature: Option<RenderableFeature>| {
-        if let Some(renderable_feature) = renderable_feature {
-            // FIXME: Need to cache the entity to update the feature.
-            let _entity = commands.spawn(renderable_feature);
-        }
-    };
-
     for layer in &geojson_layers {
-        let features = &layer.features;
         let appearances = &layer.appearances;
-        for feature in features {
-            for appearance in appearances {
-                match appearance {
-                    Appearance::Point(v) => match feature.geometry.as_ref().map(|g| &g.value) {
-                        Some(Value::Point(f)) => add_command(point::construct_mesh(
-                            WGS84_32,
-                            &[f[0] as f32, f[1] as f32, *f.get(2).unwrap_or(&0.) as f32],
-                            v,
-                        )),
-                        Some(Value::MultiPoint(fs)) => {
-                            for f in fs {
-                                add_command(point::construct_mesh(
-                                    WGS84_32,
-                                    &[f[0] as f32, f[1] as f32, *f.get(2).unwrap_or(&0.) as f32],
-                                    v,
-                                ))
-                            }
-                        }
-                        _ => {}
-                    },
-                    Appearance::Billboard(v) => match feature.geometry.as_ref().map(|g| &g.value) {
-                        Some(Value::Point(f)) => add_command(billboard::construct_mesh(
-                            WGS84_32,
-                            &[f[0] as f32, f[1] as f32, *f.get(2).unwrap_or(&0.) as f32],
-                            v,
-                        )),
-                        Some(Value::MultiPoint(fs)) => {
-                            for f in fs {
-                                add_command(billboard::construct_mesh(
-                                    WGS84_32,
-                                    &[f[0] as f32, f[1] as f32, *f.get(2).unwrap_or(&0.) as f32],
-                                    v,
-                                ))
-                            }
-                        }
-                        _ => {}
-                    },
-                    Appearance::Polyline(_v) => unimplemented!(),
-                    Appearance::Polygon(_v) => unimplemented!(),
-                    Appearance::Model(_v) => unimplemented!(),
-                };
+        match &layer.data {
+            GeoJson::FeatureCollection(fs) => {
+                for f in fs {
+                    if let Some(g) = &f.geometry {
+                        spawn_feature(&mut commands, appearances, g);
+                    }
+                }
             }
-        }
-    }
-}
-
-// This is used to update the height of feature depending on the terrain height.
-#[allow(clippy::type_complexity)]
-pub fn update_feature_by_tile_change(
-    mut qt: ResMut<TileQuadtree>,
-    mut buf: ResMut<BufferStore>,
-    mut features: Query<&mut RenderableFeature>,
-    tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
-    terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
-) {
-    if tile_meshes.is_empty() {
-        return;
-    }
-
-    // FIXME: Need to think about how to render a ton of features. We should manage a feature in a spatial data structure.
-    for mut feature in &mut features {
-        match feature.as_mut() {
-            RenderableFeature::Point {
-                material,
-                transform,
-                coordinates,
-                render_info,
-            } => point::update_height_by_terrain(
-                &mut qt,
-                &mut buf,
-                WGS84_32,
-                material,
-                transform,
-                coordinates,
-                render_info,
-                &terrain_data_requester,
-            ),
-            RenderableFeature::Billboard {
-                material,
-                transform,
-                coordinates,
-                render_info,
-            } => billboard::update_height_by_terrain(
-                &mut qt,
-                &mut buf,
-                WGS84_32,
-                material,
-                transform,
-                coordinates,
-                render_info,
-                &terrain_data_requester,
-            ),
-            _ => unimplemented!(),
+            GeoJson::Feature(f) => {
+                if let Some(g) = &f.geometry {
+                    spawn_feature(&mut commands, appearances, g);
+                }
+            }
+            GeoJson::Geometry(g) => {
+                spawn_feature(&mut commands, appearances, g);
+            }
         }
     }
 }
@@ -130,10 +113,12 @@ mod test {
     use bevy_app::{App, Update};
     use navara_buffer_store::BufferStore;
     use navara_core::{Angle, Meters, LLE, WGS84_32};
-    use navara_feature::render::RenderableFeature;
+    use navara_event_store::EventStore;
+    use navara_feature::{render::RenderableFeature, FeaturePlugin};
     use navara_layer::{Appearance, BillboardMaterial, GeoJsonLayer, PointMaterial};
     use navara_math::{xyz_to_vec3, Vec2};
     use navara_parser::geojson::GeoJson;
+    use navara_tile::tile::TileQuadtree;
 
     use super::construct_feature;
 
@@ -141,6 +126,9 @@ mod test {
         let mut app = App::new();
 
         app.init_resource::<BufferStore>();
+        app.init_resource::<EventStore>();
+        app.insert_resource(TileQuadtree::new_with_region_qt(30));
+        app.add_plugins(FeaturePlugin);
         app.add_systems(Update, construct_feature);
 
         app
@@ -148,13 +136,7 @@ mod test {
 
     fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
         let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
-        let features = match &geojson {
-            GeoJson::FeatureCollection(f) => f.features.clone(),
-            GeoJson::Feature(f) => vec![f.clone()],
-            _ => unimplemented!(),
-        };
         GeoJsonLayer {
-            features,
             data: geojson,
             crs: None,
             appearances,
@@ -208,6 +190,7 @@ mod test {
         ));
 
         app.update();
+        app.update();
 
         let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
@@ -245,7 +228,7 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -257,7 +240,7 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -308,6 +291,7 @@ mod test {
         ));
 
         app.update();
+        app.update();
 
         let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
@@ -345,7 +329,7 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -357,7 +341,7 @@ mod test {
                 RenderableFeature::Point {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -414,6 +398,7 @@ mod test {
         ));
 
         app.update();
+        app.update();
 
         let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
@@ -451,7 +436,7 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -463,7 +448,7 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -515,6 +500,7 @@ mod test {
         ));
 
         app.update();
+        app.update();
 
         let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
 
@@ -552,7 +538,7 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,
@@ -564,7 +550,7 @@ mod test {
                 RenderableFeature::Billboard {
                     material: _,
                     transform,
-                    coordinates: _,
+                    feature_id: _,
                     render_info: _,
                 } => Some(transform.translation),
                 _ => None,

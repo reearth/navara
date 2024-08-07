@@ -1,7 +1,7 @@
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 use navara_layer::{Appearance, GeoJsonLayer, TerrainDataType, TerrainLayer, TilesLayer};
-use navara_parser::geojson::{Feature, GeoJson};
+use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -64,17 +64,6 @@ pub struct GeoJsonLayerDescription {
 }
 
 impl GeoJsonLayerDescription {
-    pub fn data(&self) -> Option<(GeoJson, Vec<Feature>)> {
-        let geojson = GeoJson::from_json_object(self.data.into_serde().ok()?)
-            // TODO: Think how to handle unexpected error.
-            .expect("The format of your GeoJSON is wrong");
-        let features = match &geojson {
-            GeoJson::FeatureCollection(f) => f.features.clone(),
-            GeoJson::Feature(f) => vec![f.clone()],
-            _ => unimplemented!(),
-        };
-        Some((geojson, features))
-    }
     pub fn appearances(&mut self) -> Vec<Appearance> {
         let mut result = vec![];
         if let Some(v) = self.point.take() {
@@ -160,12 +149,10 @@ impl LayerDescription {
             "geojson" => {
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
-                let (data, features) = layer.data()?;
                 Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
-                    data,
+                    data: GeoJson::from_json_object(layer.data.into_serde().ok()?).ok()?,
                     appearances: layer.appearances(),
                     crs: layer.crs(),
-                    features,
                 }))
             }
             _ => None,
