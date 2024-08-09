@@ -14,6 +14,7 @@ import {
 } from "three";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
+
 export type LoadEvent = {
   type: "load";
   center: Vector3;

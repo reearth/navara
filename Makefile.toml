@@ -61,8 +61,11 @@ run_task = { name = ["format-rust", "format-web"], parallel = true }
 [tasks.format-check]
 run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
 
+[tasks.build-example]
+run_task = { name = ["build-rust", "build-web-example"] }
+
 [tasks.build]
-run_task = { name = ["build-rust", "build-web"] }
+run_task = { name = ["build-rust", "build"] }
 
 [tasks.watch]
 script = ['''
@@ -74,49 +77,56 @@ cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
 [tasks.dev-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run dev
+''']
+
+[tasks.build-web-example]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm i && npm run build:example
 ''']
 
 [tasks.build-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run build
 ''']
 
 [tasks.lint-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run lint
 ''']
 
 [tasks.lint-check-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run lint:check
 ''']
 
 [tasks.format-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run format
 ''']
 
 [tasks.format-check-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run format:check
 ''']
 
 [tasks.test-web]
 script = ['''
 #!/usr/bin/env bash -eux
-cd web
+cd web/navara_three
 npm i && npm run test
 ''']
 
