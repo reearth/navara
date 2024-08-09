@@ -6,7 +6,6 @@ import Pbf from "pbf";
 import { BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial } from "three";
 import { BufferGeometryUtils } from "three/examples/jsm/Addons.js";
 
-
 import { type Extent, forEachTilesAsync, getTileUrl } from "./utils";
 
 export type MVTOptions = {

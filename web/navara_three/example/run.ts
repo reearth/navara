@@ -1,6 +1,6 @@
+import ThreeView from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 
-import ThreeView from "@navara/three";
 
 export const run = async (view: ThreeView) => {
   await view.init();
