@@ -65,7 +65,7 @@ run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
 run_task = { name = ["build-rust", "build-web-example"] }
 
 [tasks.build]
-run_task = { name = ["build-rust", "build"] }
+run_task = { name = ["build-rust", "build-web"] }
 
 [tasks.watch]
 script = ['''
