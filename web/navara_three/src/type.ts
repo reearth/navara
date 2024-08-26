@@ -5,9 +5,7 @@ import type {
 } from "navara";
 import type { Mesh, Sprite } from "three";
 
-import type { Extent } from "./utils";
-
-export type { Extent } from "./utils";
+import type { Extent } from "./temp/utils";
 
 export type LayerDescription = C3dtilesLayer | MVTLayer | TilesLayer | TerrainLayer | GeoJsonLayer;
 

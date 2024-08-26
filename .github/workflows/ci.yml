@@ -43,7 +43,7 @@ jobs:
           cargo install wasm-pack
 
       - name: Run Build
-        run: cargo make build
+        run: cargo make build-example
       - name: Run Test
         run: cargo make test
         env:

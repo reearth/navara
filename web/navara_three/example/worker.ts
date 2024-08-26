@@ -1,4 +1,5 @@
-import ThreeView from "./lib";
+import ThreeView from "@navara/three";
+
 import { run } from "./run";
 
 export type Message =

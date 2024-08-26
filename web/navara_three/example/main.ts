@@ -1,4 +1,5 @@
-import ThreeView from "./lib";
+import ThreeView from "@navara/three";
+
 import { run } from "./run";
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;

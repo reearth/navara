@@ -11,12 +11,12 @@ import {
   Vector2,
 } from "three";
 
-import { C3TilesManager } from "./C3Tiles";
 import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
 import { registerInputEvents } from "./input";
-import MVT from "./MVT";
+import { C3TilesManager } from "./temp/C3Tiles";
+import MVT from "./temp/MVT";
+import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
-import { isWorker } from "./utils";
 
 export type Options = {
   container?: HTMLElement;
