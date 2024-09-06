@@ -4,10 +4,10 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_core::{Angle, LngLat, Meters, CRS, LLE, WGS84_32};
+use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
 use navara_layer::PointMaterial;
-use navara_math::{xyz_to_vec3, Transform, Vec3};
+use navara_math::{Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},

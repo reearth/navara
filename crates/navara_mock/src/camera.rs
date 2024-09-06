@@ -1,6 +1,6 @@
 use navara_camera::Orbit;
-use navara_core::{Radians, LLE, WGS84_32};
-use navara_math::{vec3_to_xyz, Quat, Transform, Vec3};
+use navara_core::{vec3_to_xyz, Radians, LLE, WGS84_32};
+use navara_math::{Quat, Transform, Vec3};
 
 pub fn update_camera_transform(r: f32) -> (Vec3, LLE<f32, Radians>) {
     let orbit = Orbit {

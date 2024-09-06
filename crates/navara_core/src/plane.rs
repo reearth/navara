@@ -1,4 +1,4 @@
-use bevy_math::{Dir3, Vec3};
+use navara_math::{Dir3, RawVec3};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Plane {
@@ -7,22 +7,22 @@ pub struct Plane {
 }
 
 impl Plane {
-    pub fn from_point_normal(point: Vec3, normal: Vec3) -> Self {
+    pub fn from_point_normal(point: RawVec3, normal: RawVec3) -> Self {
         Self {
-            normal: Dir3::new_unchecked(normal),
+            normal: Dir3::new_unchecked(normal.into()),
             distance: normal.dot(point),
         }
     }
 
-    pub fn get_distance_to_point(&self, point: Vec3) -> f32 {
-        self.normal.dot(point) - self.distance
+    pub fn get_distance_to_point(&self, point: RawVec3) -> f32 {
+        self.normal.dot(point.into()) - self.distance
     }
 }
 
 impl Default for Plane {
     fn default() -> Self {
         Self {
-            normal: Dir3::new_unchecked(Vec3::ONE.normalize()),
+            normal: Dir3::new_unchecked(RawVec3::ONE.normalize().into()),
             distance: 0.,
         }
     }

@@ -1,5 +1,5 @@
 use crate::{Angle, Extent, LngLat, Meters, Radians, LLE, WGS84_32};
-use bevy_math::Vec3;
+use navara_math::Vec3;
 
 use super::Plane;
 
@@ -127,7 +127,7 @@ impl Aabb {
 
 #[cfg(test)]
 mod test {
-    use bevy_math::Vec3;
+    use navara_math::Vec3;
 
     use super::{Aabb, Plane};
 

@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 bevy_math = "0.14.1"
 bevy_transform = "0.14.1"
-navara_core = { path = "../navara_core" }
 cfg-if = "1.0.0"
 
 [features]

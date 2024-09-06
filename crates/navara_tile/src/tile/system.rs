@@ -1,9 +1,9 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_core::{Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
+use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::tile_triangles_flat;
-use navara_math::{vec3_to_xyz, xyz_to_vec3, Transform, Vec3};
+use navara_math::{Transform, Vec3};
 
 use navara_mesh::{CachedMeshHandle, Material, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
