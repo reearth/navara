@@ -11,15 +11,15 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-wasm-bindgen = { version = "0.2.92" }
+wasm-bindgen = { version = "0.2.93" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
-js-sys = "0.3.69"
-serde = { version = "1.0.204", features = ["derive"] }
+js-sys = "0.3.70"
+serde = { version = "1.0.209", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
 gloo-utils = { version = "0.2.0", features = ["serde"] }
 
@@ -37,11 +37,11 @@ navara_texture_fragment = { path = "../navara_texture_fragment" }
 navara_feature = { path = "../navara_feature" }
 
 [dependencies.web-sys]
-version = "0.3.69"
+version = "0.3.70"
 features = ["console"]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.42"
+wasm-bindgen-test = "0.3.43"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
