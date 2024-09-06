@@ -12,6 +12,6 @@ Also, we need to prepare for WebGPU because [WebGPU will support f64](https://gi
 For these issues, this crate provides `use_f32` and `use_f64` feature flags.
 
 ```rs
-let float: Float = 1.0;
+let float: FloatType = 1.0;
 let pi = std_float::consts::PI;
 ```
