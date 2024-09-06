@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use bevy_math::Vec2;
+use navara_math::Vec2;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {

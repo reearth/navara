@@ -112,11 +112,11 @@ pub fn construct_feature(
 mod test {
     use bevy_app::{App, Update};
     use navara_buffer_store::BufferStore;
-    use navara_core::{Angle, Meters, LLE, WGS84_32};
+    use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_32};
     use navara_event_store::EventStore;
     use navara_feature::{render::RenderableFeature, FeaturePlugin};
     use navara_layer::{Appearance, BillboardMaterial, GeoJsonLayer, PointMaterial};
-    use navara_math::{xyz_to_vec3, Vec2};
+    use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
     use navara_tile::tile::TileQuadtree;
 
