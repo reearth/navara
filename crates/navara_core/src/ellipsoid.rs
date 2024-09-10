@@ -1,5 +1,4 @@
 use crate::{Float, Meters, One, Rad, Radians, LLE, XYZ};
-use navara_math::FloatType;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Ellipsoid<F: Float> {
@@ -10,25 +9,25 @@ pub struct Ellipsoid<F: Float> {
 }
 
 // TODO: Move this variable to the correct place.
-pub const EARTH_RADIUS_F32: FloatType = 6371000.;
+pub const EARTH_RADIUS_F32: f32 = 6371000.;
 
 pub const WGS84_A_64: f64 = 6378137.0;
-pub const WGS84_A_32: FloatType = 6378137.0;
+pub const WGS84_A_32: f32 = 6378137.0;
 pub const WGS84_FE_64: f64 = 1.0 / 298.257223563;
 #[allow(clippy::excessive_precision)]
-pub const WGS84_FE_32: FloatType = 1.0 / 298.257223563;
+pub const WGS84_FE_32: f32 = 1.0 / 298.257223563;
 pub const WGS84_B_64: f64 = WGS84_A_64 * (1.0 - WGS84_FE_64);
-pub const WGS84_B_32: FloatType = WGS84_A_32 * (1.0 - WGS84_FE_32);
+pub const WGS84_B_32: f32 = WGS84_A_32 * (1.0 - WGS84_FE_32);
 
 pub const ONE_OVER_RADII_64: [f64; 3] = [1. / WGS84_A_64, 1. / WGS84_A_64, 1. / WGS84_B_64];
-pub const ONE_OVER_RADII_32: [FloatType; 3] = [1. / WGS84_A_32, 1. / WGS84_A_32, 1. / WGS84_B_32];
+pub const ONE_OVER_RADII_32: [f32; 3] = [1. / WGS84_A_32, 1. / WGS84_A_32, 1. / WGS84_B_32];
 
 pub const ONE_OVER_RADII_SQUARED_64: [f64; 3] = [
     1. / (WGS84_A_64 * WGS84_A_64),
     1. / (WGS84_A_64 * WGS84_A_64),
     1. / (WGS84_B_64 * WGS84_B_64),
 ];
-pub const ONE_OVER_RADII_SQUARED_32: [FloatType; 3] = [
+pub const ONE_OVER_RADII_SQUARED_32: [f32; 3] = [
     1. / (WGS84_A_32 * WGS84_A_32),
     1. / (WGS84_A_32 * WGS84_A_32),
     1. / (WGS84_B_32 * WGS84_B_32),
@@ -41,7 +40,7 @@ pub const WGS84_64: Ellipsoid<f64> = Ellipsoid {
     one_over_radii_squared: ONE_OVER_RADII_SQUARED_64,
 };
 
-pub const WGS84_32: Ellipsoid<FloatType> = Ellipsoid {
+pub const WGS84_32: Ellipsoid<f32> = Ellipsoid {
     a: WGS84_A_32,
     b: WGS84_B_32,
     one_over_radii: ONE_OVER_RADII_32,
