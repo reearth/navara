@@ -21,6 +21,7 @@ use crate::{
 };
 
 use navara_layer::TerrainLayer;
+use navara_math::FloatType;
 
 use super::tile_bounding_region::TileBoundingReagion;
 
@@ -38,9 +39,9 @@ pub(crate) enum RenderedState {
 #[derive(Debug)]
 pub struct Tile {
     pub coords: TileXYZ,
-    pub extent: Extent<f32, Radians>,
+    pub extent: Extent<FloatType, Radians>,
     pub aabb: Aabb,
-    pub bounding_reagion: Option<TileBoundingReagion<f32>>,
+    pub bounding_reagion: Option<TileBoundingReagion<FloatType>>,
     pub(crate) children: Vec<TileHandle>,
     pub(crate) rendered_at: usize,
     pub(crate) visited_at: usize,
@@ -53,7 +54,7 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub(crate) fn new(coords: TileXYZ, max_height: f32) -> Self {
+    pub(crate) fn new(coords: TileXYZ, max_height: FloatType) -> Self {
         let extent = coords.extent();
 
         Self {
@@ -196,10 +197,10 @@ impl Tile {
     // 4. Store the binary into the BufferStore, and store the handle in the tile.
     pub fn upsample(
         &self,
-        ellipsoid: Ellipsoid<f32>,
+        ellipsoid: Ellipsoid<FloatType>,
         qt: &TileQuadtree,
         buf_store: &BufferStore,
-    ) -> Option<(Geometry, Vec<f32>, f32)> {
+    ) -> Option<(Geometry, Vec<FloatType>, FloatType)> {
         let parent = match self.get_parent_tile(qt) {
             Some(p) => p,
             None => return None,
@@ -241,9 +242,9 @@ impl Tile {
 
     pub fn get_level_maximum_geometric_error(
         &self,
-        ellipsoid: &Ellipsoid<f32>,
-        height_map_width: f32,
-    ) -> f32 {
+        ellipsoid: &Ellipsoid<FloatType>,
+        height_map_width: FloatType,
+    ) -> FloatType {
         get_level_maximum_geometric_error_f32(
             self.coords.z,
             // TODO: Store the result of the level zero maximum geometric error to avoid too many caclulation.
@@ -298,8 +299,8 @@ pub fn compute_terrain_height_at_point(
     qt: &mut TileQuadtree,
     buf: &mut BufferStore,
     terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
-    point: &LngLat<f32, Radians>,
-) -> Option<f32> {
+    point: &LngLat<FloatType, Radians>,
+) -> Option<FloatType> {
     let tile_handle = find_contained_child(qt, &|t| {
         t.extent.contains(point) && t.cached_mesh_handle.is_some() && !t.upsampled
     })?;

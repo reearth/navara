@@ -1,5 +1,5 @@
 use crate::{Angle, Extent, LngLat, Meters, Radians, LLE, WGS84_32};
-use navara_math::Vec3;
+use navara_math::{FloatType, Vec3};
 
 use super::Plane;
 
@@ -21,7 +21,7 @@ impl Aabb {
         Self { center, extents }
     }
 
-    pub fn from_extent_f32(extent: Extent<f32, Radians>, max_height: f32) -> Self {
+    pub fn from_extent_f32(extent: Extent<FloatType, Radians>, max_height: FloatType) -> Self {
         let ellipsoid = WGS84_32;
 
         let nw = LLE {
@@ -110,7 +110,7 @@ impl Aabb {
         Self { center, extents }
     }
 
-    pub fn update(&mut self, extent: Extent<f32, Radians>, max_height: f32) {
+    pub fn update(&mut self, extent: Extent<FloatType, Radians>, max_height: FloatType) {
         let next = Self::from_extent_f32(extent, max_height);
         self.center = next.center;
         self.extents = next.extents;

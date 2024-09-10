@@ -2,12 +2,12 @@ use bevy_ecs::{component::Component, entity::Entity};
 use navara_layer::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
-use navara_math::Transform;
+use navara_math::{FloatType, Transform};
 use navara_mesh::Mesh;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
-    pub current_terrain_height: f32,
+    pub current_terrain_height: FloatType,
 }
 
 // From data oriented design perspective, this is too bad structure.

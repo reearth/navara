@@ -23,3 +23,4 @@ navara_occluder = { path = "../navara_occluder" }
 navara_texture_fragment = { path = "../navara_texture_fragment" }
 navara_tile = { path = "../navara_tile" }
 navara_window = { path = "../navara_window" }
+navara_math = { path = "../navara_math" }

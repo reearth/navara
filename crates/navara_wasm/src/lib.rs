@@ -8,6 +8,7 @@ mod utils;
 
 use navara_ecs::App;
 use navara_input::Key;
+use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -102,7 +103,7 @@ impl Core {
         self.app.trigger_data_requester_failed(bits);
     }
 
-    pub fn resize(&mut self, width: f32, height: f32, pixel_ratio: f32) {
+    pub fn resize(&mut self, width: FloatType, height: FloatType, pixel_ratio: FloatType) {
         self.app.resize(width, height, pixel_ratio);
     }
 

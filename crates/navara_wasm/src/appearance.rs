@@ -1,16 +1,16 @@
+use crate::Vec2;
+use navara_math::FloatType;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-
-use crate::Vec2;
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: bool,
-    pub size: f32,
+    pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
-    pub height: f32,
+    pub height: FloatType,
     #[wasm_bindgen(getter_with_clone)]
     pub scale_by_distance: NearFar,
     pub clamp_to_ground: bool,
@@ -52,18 +52,18 @@ impl<'a> From<&'a navara_layer::PointMaterial> for PointMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NearFar {
-    pub near: f32,
-    pub far: f32,
+    pub near: FloatType,
+    pub far: FloatType,
 }
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
     pub show: bool,
-    pub size: f32,
+    pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
-    pub height: f32,
+    pub height: FloatType,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
     #[wasm_bindgen(getter_with_clone)]

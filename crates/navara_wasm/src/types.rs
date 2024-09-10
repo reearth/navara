@@ -1,6 +1,7 @@
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 use navara_layer::{Appearance, GeoJsonLayer, TerrainDataType, TerrainLayer, TilesLayer};
+use navara_math::FloatType;
 use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
@@ -18,7 +19,7 @@ pub struct TileLayerDescription {
     pub url: String,
     pub segments: usize,
     pub color: u32,
-    pub max_sse: Option<f32>,
+    pub max_sse: Option<FloatType>,
     pub max_z: usize,
     pub wireframe: bool,
 }
@@ -105,14 +106,14 @@ pub struct LayerDescription {
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Copy, Deserialize)]
 pub struct ElevationDecoder {
-    pub r_scaler: f32,
-    pub g_scaler: f32,
-    pub b_scaler: f32,
-    pub offset: f32,
-    pub max_offset: f32,
-    pub min_offset: f32,
-    pub boundary: f32,
-    pub epsilon: f32,
+    pub r_scaler: FloatType,
+    pub g_scaler: FloatType,
+    pub b_scaler: FloatType,
+    pub offset: FloatType,
+    pub max_offset: FloatType,
+    pub min_offset: FloatType,
+    pub boundary: FloatType,
+    pub epsilon: FloatType,
 }
 
 impl LayerDescription {

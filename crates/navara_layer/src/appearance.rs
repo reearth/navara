@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_math::Vec2;
+use navara_math::{FloatType, Vec2};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
@@ -13,12 +13,12 @@ pub enum Appearance {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PointMaterial {
     pub show: bool,
-    pub size: f32,
+    pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
-    pub height: f32,
+    pub height: FloatType,
     /// near, far
-    pub scale_by_distance: (f32, f32),
+    pub scale_by_distance: (FloatType, FloatType),
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
@@ -26,13 +26,13 @@ pub struct PointMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct BillboardMaterial {
     pub show: bool,
-    pub size: f32,
+    pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
-    pub height: f32,
+    pub height: FloatType,
     pub url: String,
     /// near, far
-    pub scale_by_distance: (f32, f32),
+    pub scale_by_distance: (FloatType, FloatType),
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
