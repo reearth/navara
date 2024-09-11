@@ -1,5 +1,5 @@
 use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Extent, Float, Meters, Radians, LLE, XYZ};
-use navara_math::Vec3;
+use navara_math::{FloatType, Vec3};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/290f01d9091c381a0d3f21e3131c0e9f488c6937/packages/engine/Source/Scene/TileBoundingRegion.js
 #[derive(Debug)]
@@ -15,8 +15,8 @@ pub struct TileBoundingReagion<F: Float> {
     pub minimum_height: F,
 }
 
-impl TileBoundingReagion<f32> {
-    pub fn from_extent_f32(e: Extent<f32, Radians>, ellipsoid: Ellipsoid<f32>) -> Self {
+impl TileBoundingReagion<FloatType> {
+    pub fn from_extent_f32(e: Extent<FloatType, Radians>, ellipsoid: Ellipsoid<FloatType>) -> Self {
         let southwest_corner_lle = LLE {
             lng: e.west,
             lat: e.south,
@@ -88,7 +88,11 @@ impl TileBoundingReagion<f32> {
         }
     }
 
-    pub fn distance_to_camera(&self, camera_position: Vec3, camera_lle: LLE<f32, Radians>) -> f32 {
+    pub fn distance_to_camera(
+        &self,
+        camera_position: Vec3,
+        camera_lle: LLE<FloatType, Radians>,
+    ) -> FloatType {
         let camera_height = camera_lle.height.val();
 
         let mut result = 0.;

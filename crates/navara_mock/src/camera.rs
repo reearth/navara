@@ -1,8 +1,8 @@
 use navara_camera::Orbit;
 use navara_core::{vec3_to_xyz, Radians, LLE, WGS84_32};
-use navara_math::{Quat, Transform, Vec3};
+use navara_math::{FloatType, Quat, Transform, Vec3};
 
-pub fn update_camera_transform(r: f32) -> (Vec3, LLE<f32, Radians>) {
+pub fn update_camera_transform(r: FloatType) -> (Vec3, LLE<FloatType, Radians>) {
     let orbit = Orbit {
         r,
         quat: Quat::from_axis_angle(Vec3::Y, 0.0),

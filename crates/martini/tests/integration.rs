@@ -1,17 +1,18 @@
 use image::{self, load_from_memory};
 use martini::*;
+use navara_math::FloatType;
 
 const IMAGE: &[u8] = include_bytes!("./fuji.png");
 
-fn get_height_from_image(x: usize, y: usize, size: usize, img: &[u8]) -> f32 {
+fn get_height_from_image(x: usize, y: usize, size: usize, img: &[u8]) -> FloatType {
     let x = x.min(size - 2);
     let y = y.min(size - 2);
     let i = y * (size - 1) + x;
 
     let k = i * 4;
-    let r = img[k] as f32;
-    let g = img[k + 1] as f32;
-    let b = img[k + 2] as f32;
+    let r = img[k] as FloatType;
+    let g = img[k + 1] as FloatType;
+    let b = img[k + 2] as FloatType;
     (r * 256. * 256. + g * 256. + b) / 10. - 10000.
 }
 
@@ -26,7 +27,7 @@ fn it_should_generate_mesh() {
     let mut martini = Martini::new(size);
     let mut tile = martini.create_terrain(&|x, y| get_height_from_image(x, y, size as usize, img));
     let (vertices, indices, _uvs) = tile.construct_mesh(&mut martini, 500., &mut |(u, v)| {
-        let size = size as f32;
+        let size = size as FloatType;
         let h = get_height_from_image(
             (u * size) as usize,
             ((1. - v) * size) as usize,
@@ -72,7 +73,7 @@ fn it_should_generate_mesh() {
     );
 }
 
-pub(crate) fn assert_float_array(a: &[f32], b: &[f32]) {
+pub(crate) fn assert_float_array(a: &[FloatType], b: &[FloatType]) {
     for (i, v) in a.iter().enumerate() {
         if v != &b[i] {
             panic!("{} != {}", v, b[i]);

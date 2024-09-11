@@ -6,7 +6,7 @@ use navara_core::CRS;
 use navara_feature::{billboard::BillboardGeometry, point::PointGeometry};
 use navara_layer::{Appearance, GeoJsonLayer};
 
-use navara_math::Vec3;
+use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
 
 fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: &Geometry) {
@@ -17,9 +17,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                     commands.spawn((
                         PointGeometry {
                             coords: Vec3::new(
-                                f[0] as f32,
-                                f[1] as f32,
-                                *f.get(2).unwrap_or(&0.) as f32,
+                                f[0] as FloatType,
+                                f[1] as FloatType,
+                                *f.get(2).unwrap_or(&0.) as FloatType,
                             ),
                             crs: CRS::Geographic,
                         },
@@ -31,9 +31,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                         commands.spawn((
                             PointGeometry {
                                 coords: Vec3::new(
-                                    f[0] as f32,
-                                    f[1] as f32,
-                                    *f.get(2).unwrap_or(&0.) as f32,
+                                    f[0] as FloatType,
+                                    f[1] as FloatType,
+                                    *f.get(2).unwrap_or(&0.) as FloatType,
                                 ),
                                 crs: CRS::Geographic,
                             },
@@ -48,9 +48,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                     commands.spawn((
                         BillboardGeometry {
                             coords: Vec3::new(
-                                f[0] as f32,
-                                f[1] as f32,
-                                *f.get(2).unwrap_or(&0.) as f32,
+                                f[0] as FloatType,
+                                f[1] as FloatType,
+                                *f.get(2).unwrap_or(&0.) as FloatType,
                             ),
                             crs: CRS::Geographic,
                         },
@@ -62,9 +62,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                         commands.spawn((
                             BillboardGeometry {
                                 coords: Vec3::new(
-                                    f[0] as f32,
-                                    f[1] as f32,
-                                    *f.get(2).unwrap_or(&0.) as f32,
+                                    f[0] as FloatType,
+                                    f[1] as FloatType,
+                                    *f.get(2).unwrap_or(&0.) as FloatType,
                                 ),
                                 crs: CRS::Geographic,
                             },

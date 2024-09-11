@@ -1,21 +1,21 @@
-use navara_core::{Ellipsoid, Extent, Meters, Radians, LLE};
-
 use crate::Geometry;
+use navara_core::{Ellipsoid, Extent, Meters, Radians, LLE};
+use navara_math::FloatType;
 
 /// Construct a flat tile geometry.
 pub fn tile_triangles_flat(
-    ellipsoid: Ellipsoid<f32>,
-    extent: &Extent<f32, Radians>,
+    ellipsoid: Ellipsoid<FloatType>,
+    extent: &Extent<FloatType, Radians>,
     segments: usize,
-    height: f32,
+    height: FloatType,
 ) -> Geometry {
     tile_triangles(ellipsoid, extent, segments, &mut |_, _| height)
 }
 
 /// Calculate a tile geometry.
-pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> f32>(
-    ellipsoid: Ellipsoid<f32>,
-    extent: &Extent<f32, Radians>,
+pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
+    ellipsoid: Ellipsoid<FloatType>,
+    extent: &Extent<FloatType, Radians>,
     segments: usize,
     height: &mut F,
 ) -> Geometry {
@@ -26,14 +26,14 @@ pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> f32>(
     let mut uvs = Vec::with_capacity(verties_count);
     let mut indices = Vec::with_capacity(segments * segments * 6);
 
-    let dlng = (extent.east - extent.west) / segments as f32;
-    let dlat = (extent.north - extent.south) / segments as f32;
+    let dlng = (extent.east - extent.west) / segments as FloatType;
+    let dlat = (extent.north - extent.south) / segments as FloatType;
 
     for i in 0..=segments {
         for j in 0..=segments {
             let lle = LLE {
-                lng: extent.west + dlng * i as f32,
-                lat: extent.south + dlat * j as f32,
+                lng: extent.west + dlng * i as FloatType,
+                lat: extent.south + dlat * j as FloatType,
                 height: Meters::new(height(i, j)),
             };
             let xyz = lle.to_xyz(ellipsoid);
@@ -42,8 +42,8 @@ pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> f32>(
             vertices.push(xyz.y.val());
             vertices.push(xyz.z.val());
 
-            uvs.push(i as f32 / segments as f32);
-            uvs.push(j as f32 / segments as f32);
+            uvs.push(i as FloatType / segments as FloatType);
+            uvs.push(j as FloatType / segments as FloatType);
 
             if i != segments && j != segments {
                 let a = i * (segments + 1) + j;

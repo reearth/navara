@@ -1,19 +1,20 @@
 use navara_core::utils::lerp;
+use navara_math::FloatType;
 
-fn interpolate(start: f32, end: f32, threshold: f32) -> f32 {
+fn interpolate(start: FloatType, end: FloatType, threshold: FloatType) -> FloatType {
     (threshold - start) / (end - start)
 }
 
 /// This is Sutherland–Hodgman based polygon culling algorithm for 2D.
 /// Ref: https://github.com/CesiumGS/cesium/blob/7b93161da1cc03bdc796b204e7aa51fb7acebf04/packages/engine/Source/Core/Intersections2D.js#L40
 pub(super) fn clip_2d_triangle_at_threshold(
-    threshold: f32,
+    threshold: FloatType,
     keep_above: bool,
-    coords: &[f32; 3],
+    coords: &[FloatType; 3],
 ) -> Vec<ClippedIndex> {
     let mut result = vec![];
 
-    let is_behind = |v: f32| {
+    let is_behind = |v: FloatType| {
         if keep_above {
             v < threshold
         } else {
@@ -61,11 +62,11 @@ pub(super) fn clip_2d_triangle_at_threshold(
 }
 
 fn handle_single_vertex_behind(
-    coords: &[f32; 3],
+    coords: &[FloatType; 3],
     behind: usize,
     below1: usize,
     below2: usize,
-    threshold: f32,
+    threshold: FloatType,
     result: &mut Vec<ClippedIndex>,
 ) {
     let interpolated1 = interpolate(coords[behind], coords[below1], threshold);
@@ -87,11 +88,11 @@ fn handle_single_vertex_behind(
 }
 
 fn handle_two_vertices_behind(
-    coords: &[f32; 3],
+    coords: &[FloatType; 3],
     below: usize,
     behind1: usize,
     behind2: usize,
-    threshold: f32,
+    threshold: FloatType,
     result: &mut Vec<ClippedIndex>,
 ) {
     let interpolated1 = interpolate(coords[behind1], coords[below], threshold);
@@ -117,7 +118,7 @@ pub(super) enum ClippedIndex {
 }
 
 impl ClippedIndex {
-    pub(super) fn interpolate(&self, coords: &[f32; 3]) -> f32 {
+    pub(super) fn interpolate(&self, coords: &[FloatType; 3]) -> FloatType {
         match self {
             ClippedIndex::Idx(i) => coords[*i],
             ClippedIndex::Interpolated(i) => lerp(coords[i.idx1], coords[i.idx2], i.ratio),
@@ -130,7 +131,7 @@ impl ClippedIndex {
 pub(super) struct InterpolatedClippedIndex {
     idx1: usize,
     idx2: usize,
-    ratio: f32,
+    ratio: FloatType,
 }
 
 #[cfg(test)]
