@@ -7,6 +7,7 @@ use bevy_ecs::{
 };
 
 use navara_camera::{CameraFrustum, CameraMarker};
+use navara_math::FloatType;
 
 pub struct WindowPlugin;
 
@@ -32,15 +33,15 @@ fn handle_resize(
 
 #[derive(Debug, Event)]
 pub struct WindowResizeEvent {
-    pub width: f32,
-    pub height: f32,
+    pub width: FloatType,
+    pub height: FloatType,
     #[allow(unused)]
-    pub pixel_ratio: f32,
+    pub pixel_ratio: FloatType,
 }
 
 #[derive(Default, Resource)]
 pub struct Window {
-    pub width: f32,
-    pub height: f32,
-    pub pixel_ratio: f32,
+    pub width: FloatType,
+    pub height: FloatType,
+    pub pixel_ratio: FloatType,
 }

@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 
 use bevy_input::{mouse::MouseMotion, ButtonState};
-use navara_math::Vec2;
+use navara_math::{FloatType, Vec2};
 
 pub type MouseButton = bevy_input::mouse::MouseButton;
 
@@ -34,8 +34,8 @@ pub enum MouseScrollUnit {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MouseScrollInput {
     pub unit: MouseScrollUnit,
-    pub x: f32,
-    pub y: f32,
+    pub x: FloatType,
+    pub y: FloatType,
 }
 
 impl MouseScrollInput {
@@ -55,15 +55,15 @@ impl MouseScrollInput {
 #[derive(Debug, Clone, Copy, PartialEq, Event)]
 pub struct MouseMoveInput {
     /// 0.0 - 1.0
-    pub x: f32,
+    pub x: FloatType,
     /// 0.0 - 1.0
-    pub y: f32,
+    pub y: FloatType,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Resource)]
 pub struct MouseCursorPosition {
-    pub x: f32,
-    pub y: f32,
+    pub x: FloatType,
+    pub y: FloatType,
 }
 
 pub fn trigger_mouse_motion_event(

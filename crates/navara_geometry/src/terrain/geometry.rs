@@ -1,16 +1,18 @@
-use navara_core::{terrain::ElevationDecoder, Ellipsoid, Extent, Radians};
-
 use crate::{tile_triangles, Geometry};
+use navara_core::{terrain::ElevationDecoder, Ellipsoid, Extent, Radians};
+use navara_math::FloatType;
 
 /// Decode pixels to a terrain height.
 pub fn decode_height_from_dem(
     r: i64,
     g: i64,
     b: i64,
-    geoid_height: f32,
+    geoid_height: FloatType,
     decoder: &ElevationDecoder,
-) -> f32 {
-    let x = r as f32 * decoder.r_scaler + g as f32 * decoder.g_scaler + b as f32 * decoder.b_scaler;
+) -> FloatType {
+    let x = r as FloatType * decoder.r_scaler
+        + g as FloatType * decoder.g_scaler
+        + b as FloatType * decoder.b_scaler;
     let h = if x != decoder.boundary {
         if x > decoder.boundary {
             x + decoder.max_offset
@@ -25,8 +27,8 @@ pub fn decode_height_from_dem(
 
 /// Encode a terrain height to pixels.
 pub fn encode_height_to_dem(
-    height: f32,
-    geoid_height: f32,
+    height: FloatType,
+    geoid_height: FloatType,
     decoder: &ElevationDecoder,
 ) -> (i64, i64, i64) {
     let h = ((height - decoder.offset - geoid_height) / decoder.epsilon) as i64;
@@ -39,18 +41,18 @@ pub fn encode_height_to_dem(
 /// Construct a terrain geometry.
 #[allow(clippy::too_many_arguments)]
 pub fn tile_triangles_with_terrain(
-    ellipsoid: Ellipsoid<f32>,
-    extent: &Extent<f32, Radians>,
+    ellipsoid: Ellipsoid<FloatType>,
+    extent: &Extent<FloatType, Radians>,
     segments: usize,
-    geoid_height: f32,
+    geoid_height: FloatType,
     terrain: &[u8],
     terrain_w: usize,
     terrain_h: usize,
     decoder: &ElevationDecoder,
-) -> (Geometry, f32, Vec<f32>) {
+) -> (Geometry, FloatType, Vec<FloatType>) {
     let mut max_height = 0.0f32;
     let mut heights = vec![];
-    let mut height = |x: usize, y: usize| -> f32 {
+    let mut height = |x: usize, y: usize| -> FloatType {
         let image_x = x * (terrain_w - 1) / segments;
         let image_y = (terrain_h - 1) - y * (terrain_h - 1) / segments;
 

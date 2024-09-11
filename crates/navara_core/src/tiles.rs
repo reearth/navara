@@ -1,4 +1,5 @@
 use crate::{Extent, Float, LngLat, Rad, Radians, Two};
+use navara_math::FloatType;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TileXY {
@@ -44,13 +45,13 @@ impl TileXYZ {
     }
 
     /// Returns the normalized world position of the north-west corner of the tile.
-    pub fn north_west_world_pos(self) -> (f32, f32) {
-        let n = self.n() as f32;
-        (self.x as f32 / n, self.y as f32 / n)
+    pub fn north_west_world_pos(self) -> (FloatType, FloatType) {
+        let n = self.n() as FloatType;
+        (self.x as FloatType / n, self.y as FloatType / n)
     }
 
     /// Returns the normalized world position of the north-east corner of the tile.
-    pub fn extent(self) -> Extent<f32, Radians> {
+    pub fn extent(self) -> Extent<FloatType, Radians> {
         let e1 = self.north_west_world_pos();
         let e2 = (TileXYZ {
             x: self.x + 1,
@@ -131,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_tile_extent() {
-        const PI: f32 = std::f32::consts::PI;
+        const PI: FloatType = std::f32::consts::PI;
         let max_lat = 2.0 * (((PI - 2.0 * PI * 0.0).exp().atan()) - PI / 4.0);
         let min_lat = 2.0 * (((PI - 2.0 * PI * 1.0).exp().atan()) - PI / 4.0);
 

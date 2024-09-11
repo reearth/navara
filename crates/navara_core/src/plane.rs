@@ -1,9 +1,9 @@
-use navara_math::{Dir3, RawVec3};
+use navara_math::{Dir3, FloatType, RawVec3};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Plane {
     pub normal: Dir3,
-    pub distance: f32,
+    pub distance: FloatType,
 }
 
 impl Plane {
@@ -14,7 +14,7 @@ impl Plane {
         }
     }
 
-    pub fn get_distance_to_point(&self, point: RawVec3) -> f32 {
+    pub fn get_distance_to_point(&self, point: RawVec3) -> FloatType {
         self.normal.dot(point.into()) - self.distance
     }
 }
