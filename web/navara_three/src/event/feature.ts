@@ -16,6 +16,7 @@ async function renderPoint(m: PointMesh) {
     color: m.material.color,
     depthTest: m.material.depth_test,
     sizeAttenuation: false,
+    visible: m.material.show,
   });
   material.onBeforeCompile = shader => {
     shader.vertexShader = shader.vertexShader
@@ -66,6 +67,7 @@ async function renderBillboard(m: BillboardMesh) {
     color: m.material.color,
     sizeAttenuation: false,
     depthTest: m.material.depth_test,
+    visible: m.material.show,
   });
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
