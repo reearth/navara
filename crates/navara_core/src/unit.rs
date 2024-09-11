@@ -1,4 +1,3 @@
-use navara_math::FloatType;
 pub use radians::*;
 
 #[derive(Copy, Clone, PartialEq, Default)]
@@ -30,8 +29,8 @@ pub trait One<F: Float> {
     fn one() -> F;
 }
 
-impl One<FloatType> for FloatType {
-    fn one() -> FloatType {
+impl One<f32> for f32 {
+    fn one() -> f32 {
         1.0
     }
 }
@@ -46,8 +45,8 @@ pub trait Two<F: Float> {
     fn two() -> F;
 }
 
-impl Two<FloatType> for FloatType {
-    fn two() -> FloatType {
+impl Two<f32> for f32 {
+    fn two() -> f32 {
         2.0
     }
 }

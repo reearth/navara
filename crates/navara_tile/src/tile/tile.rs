@@ -2,8 +2,7 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_core::{
     terrain::{
-        get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32,
-        get_level_maximum_geometric_error_f32,
+        get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     },
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
 };
@@ -245,13 +244,10 @@ impl Tile {
         ellipsoid: &Ellipsoid<FloatType>,
         height_map_width: FloatType,
     ) -> FloatType {
-        get_level_maximum_geometric_error_f32(
+        get_level_maximum_geometric_error(
             self.coords.z,
             // TODO: Store the result of the level zero maximum geometric error to avoid too many caclulation.
-            get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32(
-                ellipsoid,
-                height_map_width,
-            ),
+            get_ellipsoid_terrain_level_zero_maximum_geometric_error(ellipsoid, height_map_width),
         )
     }
 

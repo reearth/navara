@@ -3,7 +3,7 @@ use navara_math::FloatType;
 use radians::Float;
 
 // Ref: https://github.com/CesiumGS/cesium/blob/58ea653fa90af13432e378892a303b7c7f9f4e47/packages/engine/Source/Core/EllipsoidTerrainProvider.js#L38
-pub fn get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32(
+pub fn get_ellipsoid_terrain_level_zero_maximum_geometric_error(
     ellipsoid: &Ellipsoid<FloatType>,
     height_map_width: FloatType,
 ) -> FloatType {
@@ -15,7 +15,7 @@ pub fn get_ellipsoid_terrain_level_zero_maximum_geometric_error_f32(
     )
 }
 
-pub fn get_level_maximum_geometric_error_f32(
+pub fn get_level_maximum_geometric_error(
     level: usize,
     maximum_geometric_error: FloatType,
 ) -> FloatType {
