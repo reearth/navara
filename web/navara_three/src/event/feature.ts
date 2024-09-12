@@ -1,6 +1,7 @@
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
-import type { BillboardMesh, PointMesh, RenderableFeature } from "navara";
+import type { BillboardMesh, PointMesh, ModelMesh, RenderableFeature } from "navara";
 import { Mesh, Sprite, SpriteMaterial, TextureLoader } from "three";
+import { GLTFLoader } from "three-stdlib";
 
 export function renderFeature(f: RenderableFeature): Promise<Mesh | Sprite> | undefined {
   if (f.point) {
@@ -8,6 +9,9 @@ export function renderFeature(f: RenderableFeature): Promise<Mesh | Sprite> | un
   }
   if (f.billboard) {
     return renderBillboard(f.billboard);
+  }
+  if (f.model) {
+    return renderModel(f.billboard);
   }
 }
 
@@ -73,4 +77,23 @@ async function renderBillboard(m: BillboardMesh) {
   sprite.center.set(m.material.center.x, m.material.center.y);
 
   return sprite;
+}
+
+async function renderModel(m: ModelMesh) {
+  const loader = new GLTFLoader();
+    
+  try {
+      const model = await new Promise((resolve, reject) => {
+          loader.load(
+              m.material.url,
+              (model) => resolve(model),
+              undefined,
+              (error) => reject(error)
+          );
+      });
+
+      return model;
+  } catch (error) {
+      throw error;
+  }
 }

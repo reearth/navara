@@ -9,6 +9,8 @@ use navara_layer::{Appearance, GeoJsonLayer};
 use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
 
+use bevy_log::info;
+
 fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: &Geometry) {
     for appearance in appearances {
         match appearance {
@@ -76,7 +78,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
             },
             Appearance::Polyline(_v) => unimplemented!(),
             Appearance::Polygon(_v) => unimplemented!(),
-            Appearance::Model(_v) => unimplemented!(),
+            Appearance::Model(_v) => {
+                info!("{:?}", geometry);
+            },
         };
     }
 }

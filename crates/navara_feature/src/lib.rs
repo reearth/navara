@@ -6,6 +6,7 @@ pub mod billboard;
 pub mod event;
 pub mod point;
 pub mod render;
+pub mod model;
 
 pub struct FeaturePlugin;
 
@@ -23,6 +24,13 @@ impl Plugin for FeaturePlugin {
             (
                 billboard::system::transfer_mesh,
                 billboard::system::update_height_by_terrain,
+            ),
+        )
+        .add_systems(
+            Update,
+            (
+                model::system::transfer_mesh,
+                model::system::update_height_by_terrain,
             ),
         )
         .add_systems(PostUpdate, event::commit);

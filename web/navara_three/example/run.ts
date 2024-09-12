@@ -195,6 +195,36 @@ export const run = async (view: ThreeView) => {
     wireframe: false,
   });
 
+  view.addLayer({
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [0, 0],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [100, 0],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    model: {
+      show: true,
+      url: "/box.gltf",
+    },
+    wireframe: false,
+  });
+
   // chiyoda-ku
   // view.addLayer({
   //   type: "tiles",
