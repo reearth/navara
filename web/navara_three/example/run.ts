@@ -204,7 +204,7 @@ export const run = async (view: ThreeView) => {
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [0, 0],
+            coordinates: [138.73470764482283, 35.3627947204036],
             type: "Point",
           },
         },
@@ -212,7 +212,7 @@ export const run = async (view: ThreeView) => {
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [100, 0],
+            coordinates: [138.7311922738062, 35.359766379480206],
             type: "Point",
           },
         },
@@ -220,6 +220,9 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
+      size: 1,
+      height: 1,
+      clamp_to_ground: true,
       url: "/box.gltf",
     },
     wireframe: false,

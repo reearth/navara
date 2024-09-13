@@ -121,6 +121,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
             navara_feature::render::RenderableFeature::Model {
                 material,
                 transform,
+                feature_id: _,
                 render_info: _,
             } => Self {
                 model: Some(ModelMesh {

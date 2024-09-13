@@ -32,7 +32,7 @@ pub fn transfer_mesh(
                     LLE {
                         lng: Angle::new(lng),
                         lat: Angle::new(lat),
-                        height: Meters::new(height),
+                        height: Meters::new(height + material.height),
                     }
                     .rad()
                     .to_xyz(WGS84_32),
@@ -51,6 +51,7 @@ pub fn transfer_mesh(
                     material.size,
                     material.size,
                 )),
+                feature_id: entity,
                 render_info: RenderInformation {
                     current_terrain_height: 0.,
                 },
