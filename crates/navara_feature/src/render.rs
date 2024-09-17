@@ -41,6 +41,7 @@ pub enum RenderableFeature {
     Model {
         material: ModelMaterial,
         transform: Transform,
+        feature_id: Entity,
         render_info: RenderInformation,
     },
     #[default]
