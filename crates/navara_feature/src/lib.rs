@@ -4,9 +4,9 @@ use bevy_app::{App, Plugin, PostUpdate, Update};
 
 pub mod billboard;
 pub mod event;
+pub mod model;
 pub mod point;
 pub mod render;
-pub mod model;
 
 pub struct FeaturePlugin;
 

@@ -84,5 +84,5 @@ async function renderModel(m: ModelMesh) {
 
   const model = await loader.loadAsync(m.material.url);
     
-  return model.scene.children[0];
+  return model.scene;
 }

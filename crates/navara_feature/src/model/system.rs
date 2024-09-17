@@ -7,7 +7,7 @@ use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
 use navara_layer::ModelMaterial;
-use navara_math::{Transform, Vec3};
+use navara_math::{Quat, Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
@@ -42,15 +42,19 @@ pub fn transfer_mesh(
             CRS::ESPG { code: _ } => unimplemented!(),
         };
 
+        let lng = geometry.coords.x.to_radians();
+        let lat = geometry.coords.y.to_radians();
+        let rotation_y = Quat::from_rotation_y(-lat);
+        let rotation_z = Quat::from_rotation_z(lng);
+        let rotation = rotation_z * rotation_y;
+
         commands.spawn((
             ModelMarker,
             RenderableFeature::Model {
                 material: material.clone(),
-                transform: Transform::from_translation(position).with_scale(Vec3::new(
-                    material.size,
-                    material.size,
-                    material.size,
-                )),
+                transform: Transform::from_translation(position)
+                    .with_rotation(rotation)
+                    .with_scale(Vec3::new(material.size, material.size, material.size)),
                 feature_id: entity,
                 render_info: RenderInformation {
                     current_terrain_height: 0.,

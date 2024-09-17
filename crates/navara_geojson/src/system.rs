@@ -3,7 +3,7 @@ use bevy_ecs::{
     system::{Commands, Query},
 };
 use navara_core::CRS;
-use navara_feature::{billboard::BillboardGeometry, point::PointGeometry, model::ModelGeometry};
+use navara_feature::{billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry};
 use navara_layer::{Appearance, GeoJsonLayer};
 
 use navara_math::{FloatType, Vec3};
