@@ -1,4 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
+use navara_buffer_store::Handle;
+use navara_geometry::TransferableFloatAttribute;
 use navara_layer::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
@@ -28,21 +30,35 @@ pub enum RenderableFeature {
     },
     Polyline {
         material: PolylineMaterial,
-        mesh: Mesh,
+        geometry: TransferablePolylineGeometry,
         transform: Transform,
+        feature_id: Entity,
         render_info: RenderInformation,
     },
     Polygon {
         material: PolygonMaterial,
         mesh: Mesh,
         transform: Transform,
+        feature_id: Entity,
         render_info: RenderInformation,
     },
     Model {
         material: ModelMaterial,
         transform: Transform,
+        feature_id: Entity,
         render_info: RenderInformation,
     },
     #[default]
     Unknown,
+}
+
+#[derive(Component, Clone, Debug, Default, PartialEq)]
+pub struct TransferablePolylineGeometry {
+    pub position: TransferableFloatAttribute,
+    pub start: TransferableFloatAttribute,
+    pub forward_offset: TransferableFloatAttribute,
+    pub start_normals: TransferableFloatAttribute,
+    pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
+    pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
+    pub indices: Handle,
 }

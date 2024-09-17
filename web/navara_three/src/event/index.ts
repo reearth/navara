@@ -30,6 +30,7 @@ import {
 
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
+import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
 
@@ -47,6 +48,7 @@ export type TextureFragmentHandler = {
 
 export function processEvent(
   scene: Object3D,
+  globeDepthScene: Object3D,
   camera: Camera,
   meshes: MeshCache,
   buf: BufferLoader,
@@ -54,16 +56,26 @@ export function processEvent(
   loadedTexs: Map<string, Texture>,
   tex: TextureLoader,
   event: Events,
+  uniforms: CommonUniforms,
 ) {
   if (event.camera_transform_updated) {
     processCameraTransformUpdated(camera, event.camera_transform_updated);
   }
 
   event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
-  event.object_removed?.forEach(obj => processObjectRemoved(scene, meshes, obj));
-  event.mesh_added?.forEach(mesh => processMeshAdded(scene, meshes, mesh, buf, loadedTexs));
-  event.mesh_updated?.forEach(mesh => processMeshChanged(scene, meshes, mesh, buf, loadedTexs));
-  event.renderable_feature_added?.forEach(ev => processRenderableFeatureAdded(ev, scene, meshes));
+  event.object_removed?.forEach(obj => {
+    processObjectRemoved(scene, meshes, obj);
+    processObjectRemoved(globeDepthScene, meshes, obj, true);
+  });
+  event.mesh_added?.forEach(mesh =>
+    processMeshAdded(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
+  );
+  event.mesh_updated?.forEach(mesh =>
+    processMeshChanged(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
+  );
+  event.renderable_feature_added?.forEach(ev =>
+    processRenderableFeatureAdded(ev, scene, meshes, buf, uniforms),
+  );
   event.renderable_feature_changed?.forEach(ev => processRenderableFeatureChanged(ev, meshes));
   event.renderable_feature_removed?.forEach(ev => processObjectRemoved(scene, meshes, ev));
 
@@ -81,13 +93,19 @@ function processCameraTransformUpdated(camera: Camera, transform: Transform) {
 function processObjectTransformUpdated(meshes: MeshCache, e: ObjectTransformEvent) {
   const id = generate_id_from_entity(e);
   const m = meshes.get(id);
-  if (!m) return;
+  const globeDepthMesh = meshes.get(to_globe_depth_id(id));
+  if (m) {
+    setTransform(m, e.transform);
+  }
 
-  setTransform(m, e.transform);
+  if (globeDepthMesh) {
+    setTransform(globeDepthMesh, e.transform);
+  }
 }
 
 function processMeshAdded(
   parent: Object3D,
+  globeDepthScene: Object3D,
   meshes: MeshCache,
   mesh: MeshAdded,
   buf: BufferLoader,
@@ -95,6 +113,7 @@ function processMeshAdded(
 ) {
   createMesh(
     parent,
+    globeDepthScene,
     meshes,
     buf,
     loadedTexes,
@@ -107,6 +126,7 @@ function processMeshAdded(
 
 function processMeshChanged(
   parent: Object3D,
+  globeDepthScene: Object3D,
   meshes: MeshCache,
   mesh: MeshChanged,
   buf: BufferLoader,
@@ -119,7 +139,23 @@ function processMeshChanged(
   meshes.delete(id);
   parent.remove(m);
 
-  const newm = createMesh(parent, meshes, buf, loadedTexes, id, mesh.mesh, mesh.material);
+  const globeDepthId = to_globe_depth_id(id);
+  const globeDepthMesh = meshes.get(globeDepthId);
+  if (globeDepthMesh) {
+    globeDepthScene.remove(globeDepthMesh);
+    meshes.delete(globeDepthId);
+  }
+
+  const newm = createMesh(
+    parent,
+    globeDepthScene,
+    meshes,
+    buf,
+    loadedTexes,
+    id,
+    mesh.mesh,
+    mesh.material,
+  );
   if (!newm) return;
 
   newm.position.copy(m.position);
@@ -127,8 +163,16 @@ function processMeshChanged(
   newm.scale.copy(m.scale);
 }
 
-function processObjectRemoved(parent: Object3D, meshes: MeshCache, obj: EntityEvent) {
-  const id = generate_id_from_entity(obj);
+function processObjectRemoved(
+  parent: Object3D,
+  meshes: MeshCache,
+  obj: EntityEvent,
+  isGlobeDepth?: boolean,
+) {
+  let id = generate_id_from_entity(obj);
+  if (isGlobeDepth) {
+    id = to_globe_depth_id(id);
+  }
   const m = meshes.get(id);
   if (!m) return;
 
@@ -211,9 +255,11 @@ async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
   parent: Object3D,
   meshes: MeshCache,
+  buf: BufferLoader,
+  uniforms: CommonUniforms,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(ev.feature);
+  const obj = await renderFeature(ev.feature, buf, uniforms);
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
@@ -223,6 +269,8 @@ async function processRenderableFeatureAdded(
     setTransform(obj, transform);
   }
   applyTextureAspect(obj);
+
+  obj.renderOrder = 1;
 
   parent.add(obj);
   meshes.set(id, obj);
@@ -247,6 +295,7 @@ function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, mesh
 
 function createMesh(
   parent: Object3D,
+  globeDepthScene: Object3D,
   meshes: MeshCache,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
@@ -275,7 +324,12 @@ function createMesh(
   if (tranform) setTransform(m, tranform);
 
   parent.add(m);
+
+  const clonedMesh = new Mesh(geometry, material);
+  globeDepthScene.add(clonedMesh);
+
   meshes.set(id, m);
+  meshes.set(to_globe_depth_id(id), clonedMesh);
   return m;
 }
 
@@ -308,4 +362,8 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
 
 function generate_id_from_entity(entity: EntityEvent) {
   return `${entity.ind}_${entity.gen}`;
+}
+
+function to_globe_depth_id(id: string) {
+  return `${id}_globe_depth`;
 }

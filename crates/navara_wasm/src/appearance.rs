@@ -110,16 +110,32 @@ impl<'a> From<&'a navara_layer::BillboardMaterial> for BillboardMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
     pub show: bool,
+    pub color: u32,
+    pub width: f32,
+    pub clamp_to_ground: bool,
+    pub height: f32,
 }
 
 impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
-        navara_layer::PolylineMaterial { show: val.show }
+        navara_layer::PolylineMaterial {
+            show: val.show,
+            color: val.color,
+            width: val.width,
+            clamp_to_ground: val.clamp_to_ground,
+            height: val.height,
+        }
     }
 }
 impl<'a> From<&'a navara_layer::PolylineMaterial> for PolylineMaterial {
     fn from(value: &'a navara_layer::PolylineMaterial) -> PolylineMaterial {
-        PolylineMaterial { show: value.show }
+        PolylineMaterial {
+            show: value.show,
+            color: value.color,
+            width: value.width,
+            clamp_to_ground: value.clamp_to_ground,
+            height: value.height,
+        }
     }
 }
 

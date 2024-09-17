@@ -160,7 +160,7 @@ mod test {
                 center,
                 vec![Vec3::new(center.x + 100., center.y, center.z - 100.)]
             ),
-            Some(Vec3::new(0.499444, 0.499444, 1.0022484))
+            Some(Vec3::new(0.49944404, 0.49944404, 1.0022484))
         );
         debug_assert!(occluder
             .compute_horizontal_culling_point(

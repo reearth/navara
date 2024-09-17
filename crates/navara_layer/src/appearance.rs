@@ -40,6 +40,10 @@ pub struct BillboardMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PolylineMaterial {
     pub show: bool,
+    pub color: u32,
+    pub width: f32,
+    pub clamp_to_ground: bool,
+    pub height: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

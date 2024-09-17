@@ -58,11 +58,21 @@ impl<F: Float> LngLat<F, Degrees> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Default)]
+#[derive(PartialEq, Default)]
 pub struct LLE<F: Float, U: Unit<F>> {
     pub lat: Angle<F, U>,
     pub lng: Angle<F, U>,
     pub height: Meters<F>,
+}
+
+impl<F: Float, U: Unit<F>> LLE<F, U> {
+    pub fn from_float(lng: F, lat: F, height: F) -> Self {
+        Self {
+            lng: Angle::new(lng),
+            lat: Angle::new(lat),
+            height: Meters::new(height),
+        }
+    }
 }
 
 impl<F: Float + std::fmt::Debug, U: Unit<F>> std::fmt::Debug for LLE<F, U> {
@@ -104,6 +114,20 @@ impl<F: Float> LLE<F, Radians> {
             lng: self.lng.deg(),
             height: self.height,
         }
+    }
+}
+
+impl<F: Float> Copy for LLE<F, Radians> {}
+impl<F: Float> Clone for LLE<F, Radians> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<F: Float> Copy for LLE<F, Degrees> {}
+impl<F: Float> Clone for LLE<F, Degrees> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 
