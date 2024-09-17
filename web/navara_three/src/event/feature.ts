@@ -83,6 +83,6 @@ async function renderModel(m: ModelMesh) {
   const loader = new GLTFLoader();
 
   const model = await loader.loadAsync(m.material.url);
-    
+
   return model.scene;
 }

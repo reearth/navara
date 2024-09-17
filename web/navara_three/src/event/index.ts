@@ -135,7 +135,7 @@ function processObjectRemoved(parent: Object3D, meshes: MeshCache, obj: EntityEv
   meshes.delete(id);
   m.clear();
 
-  if("material" in m) {
+  if ("material" in m) {
     if (Array.isArray(m.material)) {
       m.material.map(m => m.dispose());
     } else {
@@ -143,10 +143,10 @@ function processObjectRemoved(parent: Object3D, meshes: MeshCache, obj: EntityEv
     }
   }
 
-  if("geometry" in m) {
+  if ("geometry" in m) {
     m.geometry.dispose();
   }
-  
+
   parent.remove(m);
 }
 
