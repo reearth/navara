@@ -10,6 +10,8 @@ use navara_core::{utils::lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
 
 use crate::Geometry;
 
+use navara_math::FloatType;
+
 /// Upsample a terrain mesh which is one of the four split child tiles.
 /// The upsampled mesh have to be same size.
 /// | 1 | 2 |  upsample 1  |       |
@@ -17,16 +19,21 @@ use crate::Geometry;
 /// | 3 | 4 |              |       |
 #[derive(Debug)]
 pub struct UpsampledTerrainGeometry {
-    pub uvs: Option<Vec<f32>>,
-    pub heights: Option<Vec<f32>>,
+    pub uvs: Option<Vec<FloatType>>,
+    pub heights: Option<Vec<FloatType>>,
     pub indices: Option<Vec<u32>>,
-    pub max_height: f32,
+    pub max_height: FloatType,
     is_east: bool,
     is_north: bool,
 }
 
 impl UpsampledTerrainGeometry {
-    pub fn new(uvs: &[f32], heights: &[f32], indices: &[u32], tile_region: &TileRegion) -> Self {
+    pub fn new(
+        uvs: &[FloatType],
+        heights: &[FloatType],
+        indices: &[u32],
+        tile_region: &TileRegion,
+    ) -> Self {
         let (is_east, is_north) = match tile_region {
             TileRegion::NorthEast => (true, true),
             TileRegion::SouthEast => (true, false),
@@ -50,9 +57,9 @@ impl UpsampledTerrainGeometry {
     /// You can run this function only once.
     pub fn construct_geometry(
         &mut self,
-        ellipsoid: Ellipsoid<f32>,
-        extent: &Extent<f32, Radians>,
-    ) -> (Geometry, Vec<f32>) {
+        ellipsoid: Ellipsoid<FloatType>,
+        extent: &Extent<FloatType, Radians>,
+    ) -> (Geometry, Vec<FloatType>) {
         let mut vertices = vec![];
         let mut uvs = vec![];
 
@@ -62,7 +69,7 @@ impl UpsampledTerrainGeometry {
         let offset_u = if self.is_east { 1. } else { 0. };
         let offset_v = if self.is_north { 1. } else { 0. };
 
-        fn clamp_uv(v: f32, min: f32, max: f32, offset: f32) -> f32 {
+        fn clamp_uv(v: FloatType, min: FloatType, max: FloatType, offset: FloatType) -> FloatType {
             if v > max {
                 return max;
             }
@@ -104,12 +111,12 @@ impl UpsampledTerrainGeometry {
 
 // TODO: Execute this function in worker
 fn clip(
-    uvs: &[f32],
-    heights: &[f32],
+    uvs: &[FloatType],
+    heights: &[FloatType],
     indices: &[u32],
     is_east: bool,
     is_north: bool,
-) -> (Vec<f32>, Vec<f32>, Vec<u32>, f32) {
+) -> (Vec<FloatType>, Vec<FloatType>, Vec<u32>, FloatType) {
     let threashold = 0.5;
 
     let mut clipped_coord_map = ClippedCoordMap::new();
@@ -228,12 +235,12 @@ fn clip(
 
 fn construct_polygon(
     clipped_indices: &[ClippedIndex],
-    new_uvs: &mut Vec<f32>,
-    new_heights: &mut Vec<f32>,
+    new_uvs: &mut Vec<FloatType>,
+    new_heights: &mut Vec<FloatType>,
     new_indices: &mut Vec<u32>,
-    [interpolated_u_coords, interpolated_v_coords, interpolated_h_coords]: [[f32; 3]; 3],
+    [interpolated_u_coords, interpolated_v_coords, interpolated_h_coords]: [[FloatType; 3]; 3],
     clipped_coord_map: &mut ClippedCoordMap,
-    mut max_height: f32,
+    mut max_height: FloatType,
 ) {
     let mut new_polygon_indices = vec![];
     for i in clipped_indices {
@@ -304,18 +311,18 @@ fn construct_indices(idxs: [u32; 3]) -> Option<[u32; 3]> {
 struct ClippedCoordMap(HashMap<String, usize>);
 
 impl ClippedCoordMap {
-    const SCALE_U16: f32 = 32767.;
+    const SCALE_U16: FloatType = 32767.;
 
     fn new() -> Self {
         Self(HashMap::new())
     }
-    fn get(&mut self, u: f32, v: f32, h: f32) -> Option<&usize> {
+    fn get(&mut self, u: FloatType, v: FloatType, h: FloatType) -> Option<&usize> {
         self.0.get(&self.make_key(u, v, h))
     }
-    fn insert(&mut self, u: f32, v: f32, h: f32, idx: usize) {
+    fn insert(&mut self, u: FloatType, v: FloatType, h: FloatType, idx: usize) {
         self.0.insert(self.make_key(u, v, h), idx);
     }
-    fn make_key(&self, u: f32, v: f32, h: f32) -> String {
+    fn make_key(&self, u: FloatType, v: FloatType, h: FloatType) -> String {
         format!(
             "{}{}{}",
             self.quantize_float(u),
@@ -323,7 +330,7 @@ impl ClippedCoordMap {
             self.quantize_float(h)
         )
     }
-    fn quantize_float(&self, v: f32) -> u16 {
+    fn quantize_float(&self, v: FloatType) -> u16 {
         (v * Self::SCALE_U16) as u16
     }
 }

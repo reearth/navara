@@ -1,6 +1,6 @@
 use bevy_ecs::{bundle::Bundle, component::Component};
 use navara_core::{Aabb, Plane};
-use navara_math::{Quat, Transform, Vec3};
+use navara_math::{FloatType, Quat, Transform, Vec3};
 
 #[derive(Component)]
 pub struct CameraMarker;
@@ -13,17 +13,23 @@ pub struct CameraBundle {
 
 #[derive(Debug, Component)]
 pub struct CameraFrustum {
-    pub near: f32,
-    pub far: f32,
-    pub fov: f32,
-    pub fov_y: f32,
-    pub aspect_ratio: f32,
-    pub sse_denominator: f32,
+    pub near: FloatType,
+    pub far: FloatType,
+    pub fov: FloatType,
+    pub fov_y: FloatType,
+    pub aspect_ratio: FloatType,
+    pub sse_denominator: FloatType,
     pub planes: [Plane; 6],
 }
 
 impl CameraFrustum {
-    pub fn new(transform: &Transform, near: f32, far: f32, fov: f32, aspect_ratio: f32) -> Self {
+    pub fn new(
+        transform: &Transform,
+        near: FloatType,
+        far: FloatType,
+        fov: FloatType,
+        aspect_ratio: FloatType,
+    ) -> Self {
         let mut this = Self {
             near,
             far,
@@ -107,9 +113,9 @@ impl CameraFrustum {
 
 #[derive(Debug, Clone, Copy, Component)]
 pub struct Orbit {
-    pub r: f32,
+    pub r: FloatType,
     pub quat: Quat,
-    pub tilt: f32,
+    pub tilt: FloatType,
 }
 
 impl Orbit {

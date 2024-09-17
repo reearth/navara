@@ -1,6 +1,6 @@
 use bevy_ecs::component::Component;
 use navara_core::Ellipsoid;
-use navara_math::Vec3;
+use navara_math::{FloatType, Vec3};
 
 /// This is used to occlude a point by horizon occlusion.
 /// This is based on Cesium's implementation.
@@ -10,17 +10,17 @@ use navara_math::Vec3;
 #[derive(Default, Component)]
 pub struct EllipsoidalOccluder {
     pub camera_position_in_scaled_space: Vec3,
-    pub distance_to_ellipsoid_surface_squared: f32,
+    pub distance_to_ellipsoid_surface_squared: FloatType,
 }
 
 impl EllipsoidalOccluder {
-    pub fn new(camera_position: &Vec3, ellipsoid: Ellipsoid<f32>) -> Self {
+    pub fn new(camera_position: &Vec3, ellipsoid: Ellipsoid<FloatType>) -> Self {
         let mut this = Self::default();
         this.update(camera_position, ellipsoid);
         this
     }
 
-    pub fn update(&mut self, camera_position: &Vec3, ellipsoid: Ellipsoid<f32>) {
+    pub fn update(&mut self, camera_position: &Vec3, ellipsoid: Ellipsoid<FloatType>) {
         self.camera_position_in_scaled_space = Vec3::from_array(
             ellipsoid.transform_position_to_scaled_space(camera_position.to_array()),
         );
@@ -32,7 +32,7 @@ impl EllipsoidalOccluder {
     // FIXME: Support the terrain under the tile.
     pub fn compute_horizontal_culling_point(
         &self,
-        ellipsoid: &Ellipsoid<f32>,
+        ellipsoid: &Ellipsoid<FloatType>,
         direction_to_point: Vec3,
         positions: Vec<Vec3>,
     ) -> Option<Vec3> {
@@ -51,14 +51,14 @@ impl EllipsoidalOccluder {
 // The detils of this function is: https://cesium.com/blog/2013/05/09/computing-the-horizon-occlusion-point/
 // Ref: https://github.com/CesiumGS/cesium/blob/16674c161b161755c9143c2940a062042cecaefa/packages/engine/Source/Core/EllipsoidalOccluder.js#L383
 fn compute_horizon_culling_point_from_positions(
-    ellipsoid: &Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<FloatType>,
     direction_to_point: Vec3,
     positions: Vec<Vec3>,
 ) -> Option<Vec3> {
     let scaled_space_direction_to_point =
         compute_scaled_space_direction_to_point(ellipsoid, direction_to_point);
 
-    let mut max_mag: f32 = 0.;
+    let mut max_mag: FloatType = 0.;
     for position in positions {
         let mag = compute_magnitude(ellipsoid, position, scaled_space_direction_to_point);
         if mag < 0. {
@@ -71,7 +71,7 @@ fn compute_horizon_culling_point_from_positions(
 }
 
 fn compute_scaled_space_direction_to_point(
-    ellipsoid: &Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<FloatType>,
     direction_to_point: Vec3,
 ) -> Vec3 {
     if direction_to_point == Vec3::ZERO {
@@ -82,10 +82,10 @@ fn compute_scaled_space_direction_to_point(
 }
 
 fn compute_magnitude(
-    ellipsoid: &Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<FloatType>,
     position: Vec3,
     scaled_space_direction_to_point: Vec3,
-) -> f32 {
+) -> FloatType {
     let scaled_space_position =
         Vec3::from_array(ellipsoid.transform_position_to_scaled_space(position.to_array()));
     let mag_squared = scaled_space_position.length_squared();
@@ -104,7 +104,7 @@ fn compute_magnitude(
     1. / (cos_a * cos_b - sin_a * sin_b)
 }
 
-fn magnitude_to_point(scaled_space_direction_to_point: Vec3, max_mag: f32) -> Option<Vec3> {
+fn magnitude_to_point(scaled_space_direction_to_point: Vec3, max_mag: FloatType) -> Option<Vec3> {
     // The horizon culling point is undefined if there were no positions from which to compute it,
     // the directionToPoint is pointing opposite all of the positions,  or if we computed NaN or infinity.
     if max_mag <= 0.0 || max_mag.is_infinite() {
@@ -117,7 +117,7 @@ fn magnitude_to_point(scaled_space_direction_to_point: Vec3, max_mag: f32) -> Op
 fn is_scaled_space_point_visible(
     occludee_scaled_space_position: Vec3,
     camera_position_in_scaled_space: Vec3,
-    distance_to_ellipsoid_surface_squared: f32,
+    distance_to_ellipsoid_surface_squared: FloatType,
 ) -> bool {
     // See https://cesium.com/blog/2013/04/25/horizon-culling/
     let cv = camera_position_in_scaled_space;

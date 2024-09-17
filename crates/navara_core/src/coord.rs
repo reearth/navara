@@ -1,4 +1,4 @@
-use navara_math::Vec3;
+use navara_math::{FloatType, Vec3};
 
 // pub use radians::*;
 use crate::unit::{Angle, Degrees, Float, Meters, Radians, Unit};
@@ -138,11 +138,11 @@ pub struct XYZ<F: Float> {
     pub z: Meters<F>,
 }
 
-pub fn xyz_to_vec3(xyz: XYZ<f32>) -> Vec3 {
+pub fn xyz_to_vec3(xyz: XYZ<FloatType>) -> Vec3 {
     Vec3::new(xyz.x.val(), xyz.y.val(), xyz.z.val())
 }
 
-pub fn vec3_to_xyz(vec: Vec3) -> XYZ<f32> {
+pub fn vec3_to_xyz(vec: Vec3) -> XYZ<FloatType> {
     XYZ {
         x: Meters::new(vec.x),
         y: Meters::new(vec.y),

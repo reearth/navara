@@ -4,13 +4,15 @@ use bevy_ecs::component::Component;
 
 use super::TileHandle;
 
+use navara_math::FloatType;
+
 #[derive(Component)]
 pub struct RenderedTile {
     pub(crate) tile_handle: TileHandle,
 }
 
 #[derive(Component, PartialEq, Debug)]
-pub struct TileOrderByDistance(pub(crate) f32);
+pub struct TileOrderByDistance(pub(crate) FloatType);
 
 impl PartialOrd for TileOrderByDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {

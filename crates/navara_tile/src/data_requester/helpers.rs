@@ -1,10 +1,10 @@
+use crate::terrain::{RasterDEMData, TerrainData};
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_core::tile_url;
 use navara_data_requester::DataRequester;
 use navara_layer::{TerrainDataType, TerrainLayer};
-
-use crate::terrain::{RasterDEMData, TerrainData};
+use navara_math::FloatType;
 
 use crate::{tile::render::TileOrderByDistance, tile::TileHandle, TileQuadtree};
 
@@ -16,7 +16,7 @@ pub(crate) fn request_terrain_data(
     buf: &mut BufferStore,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
-    tile_distance: f32,
+    tile_distance: FloatType,
 ) -> bool {
     let tile = qt.qt.get_mut(handle).unwrap();
     let data_requester_entity_id = tile

@@ -1,13 +1,14 @@
 use navara_input::{ButtonState, Key, KeyCode};
+use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Input {
     pub r#type: InputType,
-    pub x: Option<f32>,
-    pub y: Option<f32>,
-    pub z: Option<f32>,
+    pub x: Option<FloatType>,
+    pub y: Option<FloatType>,
+    pub z: Option<FloatType>,
     pub button: Option<u32>,
     pub key_code: Option<String>,
     pub key: Option<String>,

@@ -8,6 +8,7 @@ use navara_data_requester::DataRequester;
 use navara_geometry::{
     decode_height_from_dem, tile_triangles_with_terrain, Geometry, UpsampledTerrainGeometry,
 };
+use navara_math::FloatType;
 
 use crate::{data_requester::TerrainDataRequesterMarker, tile::Tile};
 
@@ -18,7 +19,7 @@ pub struct RasterDEMData {
     pub decoder: ElevationDecoder,
     pub(crate) data_requester_entity_id: Option<Entity>,
     // Indicates the max height of the terrain from the globe surface.
-    pub(crate) current_max_height: Option<f32>,
+    pub(crate) current_max_height: Option<FloatType>,
     pub(crate) heights_handle: Option<Handle>,
 }
 
@@ -33,14 +34,14 @@ impl TerrainData for RasterDEMData {
 
     fn compute_height_at_point(
         &mut self,
-        extent: &Extent<f32, Radians>,
+        extent: &Extent<FloatType, Radians>,
         buf: &mut BufferStore,
         terrain_data_requesters: &bevy_ecs::system::Query<(
             &TerrainDataRequesterMarker,
             &DataRequester,
         )>,
-        point: &navara_core::LngLat<f32, navara_core::Radians>,
-    ) -> Option<f32> {
+        point: &navara_core::LngLat<FloatType, navara_core::Radians>,
+    ) -> Option<FloatType> {
         let heights = if let Some(handle) = &self.heights_handle {
             buf.get_f32(handle)?
         } else {
@@ -71,22 +72,22 @@ impl TerrainData for RasterDEMData {
         compute_terrain_height_from_tile(extent, heights, point)
     }
 
-    fn current_max_height(&self) -> Option<f32> {
+    fn current_max_height(&self) -> Option<FloatType> {
         self.current_max_height
     }
 
-    fn set_current_max_height(&mut self, h: f32) {
+    fn set_current_max_height(&mut self, h: FloatType) {
         self.current_max_height = Some(h);
     }
 
     fn construct_terrain_mesh(
         &self,
-        ellipsoid: Ellipsoid<f32>,
+        ellipsoid: Ellipsoid<FloatType>,
         tile: &Tile,
         bytes: &[u8],
-        geoid_height: f32,
+        geoid_height: FloatType,
         martini: &mut Martini,
-    ) -> (Geometry, f32, Vec<f32>) {
+    ) -> (Geometry, FloatType, Vec<FloatType>) {
         let extent = &tile.extent;
         let martini_size = martini.size as usize;
 
@@ -118,8 +119,8 @@ impl TerrainData for RasterDEMData {
 
                 let lng = extent.west + dlng;
                 let lat = extent.south + dlat;
-                let x = (u * martini_size as f32) as usize;
-                let y = ((1. - v) * martini_size as f32) as usize;
+                let x = (u * martini_size as FloatType) as usize;
+                let y = ((1. - v) * martini_size as FloatType) as usize;
                 let h = read_height(x, y);
 
                 let XYZ { x, y, z } = ellipsoid.lle_to_xyz(LLE {
@@ -162,8 +163,8 @@ impl TerrainData for RasterDEMData {
     fn upsample(
         &self,
         region: &TileRegion,
-        uvs: &[f32],
-        heights: &[f32],
+        uvs: &[FloatType],
+        heights: &[FloatType],
         indices: &[u32],
     ) -> Option<UpsampledTerrainGeometry> {
         Some(UpsampledTerrainGeometry::new(uvs, heights, indices, region))
@@ -180,12 +181,12 @@ impl TerrainData for RasterDEMData {
 /// Compute a terrain height at specified point.
 /// Height is retrieved by a relative index of longitude and latitude to the specified point.
 fn compute_terrain_height_from_tile(
-    extent: &Extent<f32, Radians>,
-    heights: &[f32],
-    point: &LngLat<f32, Radians>,
-) -> Option<f32> {
+    extent: &Extent<FloatType, Radians>,
+    heights: &[FloatType],
+    point: &LngLat<FloatType, Radians>,
+) -> Option<FloatType> {
     let length = heights.len();
-    let width = (length as f32).sqrt() as usize;
+    let width = (length as FloatType).sqrt() as usize;
 
     let east = extent.east;
     let north = extent.north;
@@ -198,8 +199,8 @@ fn compute_terrain_height_from_tile(
     let dist_wlng = (point.lng - west).val();
     let dist_slat = (point.lat - south).val();
 
-    let x = ((dist_wlng / dist_ew) * (width - 1) as f32).round() as usize;
-    let y = ((dist_slat / dist_ns) * (width - 1) as f32).round() as usize;
+    let x = ((dist_wlng / dist_ew) * (width - 1) as FloatType).round() as usize;
+    let y = ((dist_slat / dist_ns) * (width - 1) as FloatType).round() as usize;
 
     heights.get((x + y * width).min(length - 1)).copied()
 }

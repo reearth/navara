@@ -1,11 +1,12 @@
+use navara_math::FloatType;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Vec2 {
-    pub x: f32,
-    pub y: f32,
+    pub x: FloatType,
+    pub y: FloatType,
 }
 
 impl From<navara_math::Vec2> for Vec2 {
@@ -23,9 +24,9 @@ impl From<Vec2> for navara_math::Vec2 {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    pub x: FloatType,
+    pub y: FloatType,
+    pub z: FloatType,
 }
 
 impl From<navara_math::Vec3> for Vec3 {

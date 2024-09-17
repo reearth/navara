@@ -4,6 +4,7 @@ use bevy_ecs::entity::Entity;
 use navara_buffer_store::BufferStore;
 use navara_event::Events;
 use navara_layer::LayerDescription;
+use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_window::{Window, WindowResizeEvent};
 
@@ -51,7 +52,7 @@ impl App {
         store.get_u32(&handle)
     }
 
-    pub fn get_buffer_f32(&self, handle: i32) -> Option<&[f32]> {
+    pub fn get_buffer_f32(&self, handle: i32) -> Option<&[FloatType]> {
         let store = self.app.world().get_resource::<BufferStore>()?;
         store.get_f32(&handle)
     }
@@ -77,7 +78,7 @@ impl App {
             });
     }
 
-    pub fn resize(&mut self, width: f32, height: f32, pixel_ratio: f32) {
+    pub fn resize(&mut self, width: FloatType, height: FloatType, pixel_ratio: FloatType) {
         let Some(mut window_res) = self.app.world_mut().get_resource_mut::<Window>() else {
             return;
         };

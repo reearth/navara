@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
 use bevy_ecs::system::Resource;
+use navara_math::FloatType;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum BufferType {
@@ -13,7 +13,7 @@ pub enum BufferType {
 pub enum Buffer {
     U8(Vec<u8>),
     U32(Vec<u32>),
-    F32(Vec<f32>),
+    F32(Vec<FloatType>),
 }
 
 pub type Handle = i32;
@@ -43,7 +43,7 @@ impl BufferStore {
         }
     }
 
-    pub fn get_f32(&self, handle: &Handle) -> Option<&[f32]> {
+    pub fn get_f32(&self, handle: &Handle) -> Option<&[FloatType]> {
         match self.buffers.get(handle)? {
             Buffer::F32(b) => Some(b),
             _ => None,
@@ -64,7 +64,7 @@ impl BufferStore {
         }
     }
 
-    pub fn get_f32_mut(&mut self, handle: &Handle) -> Option<&mut Vec<f32>> {
+    pub fn get_f32_mut(&mut self, handle: &Handle) -> Option<&mut Vec<FloatType>> {
         match self.buffers.get_mut(handle)? {
             Buffer::F32(b) => Some(b),
             _ => None,
@@ -79,7 +79,7 @@ impl BufferStore {
         self.buffers.insert(handle, Buffer::U32(data));
     }
 
-    pub fn set_f32(&mut self, handle: Handle, data: Vec<f32>) {
+    pub fn set_f32(&mut self, handle: Handle, data: Vec<FloatType>) {
         self.buffers.insert(handle, Buffer::F32(data));
     }
 
@@ -95,7 +95,7 @@ impl BufferStore {
         handle
     }
 
-    pub fn new_f32(&mut self, data: Vec<f32>) -> Handle {
+    pub fn new_f32(&mut self, data: Vec<FloatType>) -> Handle {
         let handle = self.new_handle();
         self.set_f32(handle, data);
         handle

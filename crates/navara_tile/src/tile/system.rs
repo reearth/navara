@@ -3,7 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::tile_triangles_flat;
-use navara_math::{Transform, Vec3};
+use navara_math::{FloatType, Transform, Vec3};
 
 use navara_mesh::{CachedMeshHandle, Material, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -40,7 +40,7 @@ fn spawn_tile_entity(
     tc: &mut TileCacheManager,
     tile: &mut Tile,
     tile_handle: TileHandle,
-    distance_from_camera: f32,
+    distance_from_camera: FloatType,
 ) {
     tile.rendered_at = tc.rendered_frame;
     tc.is_updated_in_this_frame = true;
@@ -66,7 +66,7 @@ fn prepare_tile_resource(
     tiles: &TilesLayer,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
-    tile_distance: f32,
+    tile_distance: FloatType,
 ) -> bool {
     request_terrain_data(commands, qt, buf, terrain_layer, handle, tile_distance)
         || request_texture_fragment(commands, qt, tiles, handle, tile_distance)
@@ -76,7 +76,11 @@ fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t
     frustum.interseciton_with_aabb(&t.aabb)
 }
 
-fn calc_distance_from_camera(camera: &Transform, t: &Tile, ellipsoid: &Ellipsoid<f32>) -> f32 {
+fn calc_distance_from_camera(
+    camera: &Transform,
+    t: &Tile,
+    ellipsoid: &Ellipsoid<FloatType>,
+) -> FloatType {
     let camera_pos = camera.transform_point(Vec3::ZERO);
     t.bounding_reagion
         .as_ref()
@@ -89,10 +93,10 @@ fn calc_sse(
     frustum: &CameraFrustum,
     t: &Tile,
     window: &Window,
-    ellipsoid: &Ellipsoid<f32>,
-    height_map_width: f32,
-    distance_from_camera: f32,
-) -> f32 {
+    ellipsoid: &Ellipsoid<FloatType>,
+    height_map_width: FloatType,
+    distance_from_camera: FloatType,
+) -> FloatType {
     let max_geometric_error = t.get_level_maximum_geometric_error(ellipsoid, height_map_width);
 
     // TODO: Support fog culling
@@ -103,7 +107,7 @@ fn calc_sse(
 }
 
 fn begine_traverse_tile(
-    ellipsoid: &Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
     tile: &mut Tile,
@@ -112,7 +116,7 @@ fn begine_traverse_tile(
 }
 
 fn update_tile_occludee_point(
-    ellipsoid: &Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     tile: &mut Tile,
 ) {
@@ -208,7 +212,7 @@ fn traverse_tile(
     texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
     terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
     window: &Window,
-    ellipsoid: &Ellipsoid<f32>,
+    ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
 ) -> TraversalResult {
     match qt.qt.get(handle) {
@@ -624,7 +628,7 @@ pub fn transfer_mesh(
 
         let terrain_layer = terrain_layer.unwrap();
 
-        fn postupdate_tile(tile: &mut Tile, max_height: f32) {
+        fn postupdate_tile(tile: &mut Tile, max_height: FloatType) {
             tile.terrain_data
                 .as_mut()
                 .expect("This line is invoked only in the tile has terrain")

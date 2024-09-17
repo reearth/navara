@@ -1,3 +1,5 @@
+use navara_math::FloatType;
+
 pub struct Martini {
     pub size: u32,
     num_triangles: u32,
@@ -80,29 +82,29 @@ impl Martini {
 
     pub fn create_terrain<F>(&self, get_height: &F) -> Tile
     where
-        F: Fn(usize, usize) -> f32,
+        F: Fn(usize, usize) -> FloatType,
     {
         Tile::new(self, get_height)
     }
 }
 
 pub struct Tile {
-    errors: Vec<f32>,
+    errors: Vec<FloatType>,
 }
 
 impl Tile {
     fn new<F>(martini: &Martini, get_height: &F) -> Self
     where
-        F: Fn(usize, usize) -> f32,
+        F: Fn(usize, usize) -> FloatType,
     {
         Self {
             errors: Self::compute_errors(martini, get_height),
         }
     }
 
-    fn compute_errors<F>(martini: &Martini, get_height: &F) -> Vec<f32>
+    fn compute_errors<F>(martini: &Martini, get_height: &F) -> Vec<FloatType>
     where
-        F: Fn(usize, usize) -> f32,
+        F: Fn(usize, usize) -> FloatType,
     {
         let Martini {
             num_triangles,
@@ -112,7 +114,7 @@ impl Tile {
             index_map: _,
         } = martini;
         let size = *size as isize;
-        let mut errors: Vec<f32> = vec![0.; (size * size) as usize];
+        let mut errors: Vec<FloatType> = vec![0.; (size * size) as usize];
 
         // iterate over all possible triangles, starting from the smallest level
         for i in (0..(*num_triangles as usize)).rev() {
@@ -156,11 +158,11 @@ impl Tile {
     pub fn construct_mesh<F>(
         &mut self,
         martini: &mut Martini,
-        max_error: f32,
+        max_error: FloatType,
         transform: &mut F,
-    ) -> (Vec<f32>, Vec<u32>, Vec<f32>)
+    ) -> (Vec<FloatType>, Vec<u32>, Vec<FloatType>)
     where
-        F: FnMut((f32, f32)) -> (f32, f32, f32),
+        F: FnMut((FloatType, FloatType)) -> (FloatType, FloatType, FloatType),
     {
         let size = martini.size;
         let index_map = &mut martini.index_map;
@@ -185,8 +187,8 @@ impl Tile {
         let mut add_vertex = |x: u32, y: u32, i: usize| {
             let idx = index_map[i];
             if idx.is_none() {
-                let u = (x as f32) / (max as f32);
-                let v = 1. - (y as f32) / (max as f32);
+                let u = (x as FloatType) / (max as FloatType);
+                let v = 1. - (y as FloatType) / (max as FloatType);
 
                 let (x, y, z) = transform((u, v));
 
@@ -238,8 +240,8 @@ impl Tile {
     fn process_errors<F>(
         cb: &mut F,
         size: u32,
-        errors: &[f32],
-        max_error: &f32,
+        errors: &[FloatType],
+        max_error: &FloatType,
         (ax, ay, bx, by, cx, cy): (u32, u32, u32, u32, u32, u32),
     ) where
         F: FnMut((u32, u32, u32, u32, u32, u32)),

@@ -2,6 +2,7 @@ mod feature;
 mod feature_event;
 
 use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
+use navara_math::FloatType;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -32,16 +33,16 @@ pub struct ObjectTransformEvent {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct Transform {
-    pub tx: f32,
-    pub ty: f32,
-    pub tz: f32,
-    pub qx: f32,
-    pub qy: f32,
-    pub qz: f32,
-    pub qw: f32,
-    pub sx: f32,
-    pub sy: f32,
-    pub sz: f32,
+    pub tx: FloatType,
+    pub ty: FloatType,
+    pub tz: FloatType,
+    pub qx: FloatType,
+    pub qy: FloatType,
+    pub qz: FloatType,
+    pub qw: FloatType,
+    pub sx: FloatType,
+    pub sy: FloatType,
+    pub sz: FloatType,
 }
 
 #[wasm_bindgen]

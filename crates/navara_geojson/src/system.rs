@@ -19,9 +19,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                     commands.spawn((
                         PointGeometry {
                             coords: Vec3::new(
-                                f[0] as f32,
-                                f[1] as f32,
-                                *f.get(2).unwrap_or(&0.) as f32,
+                                f[0] as FloatType,
+                                f[1] as FloatType,
+                                *f.get(2).unwrap_or(&0.) as FloatType,
                             ),
                             crs: CRS::Geographic,
                         },
@@ -33,9 +33,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                         commands.spawn((
                             PointGeometry {
                                 coords: Vec3::new(
-                                    f[0] as f32,
-                                    f[1] as f32,
-                                    *f.get(2).unwrap_or(&0.) as f32,
+                                    f[0] as FloatType,
+                                    f[1] as FloatType,
+                                    *f.get(2).unwrap_or(&0.) as FloatType,
                                 ),
                                 crs: CRS::Geographic,
                             },
@@ -50,9 +50,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                     commands.spawn((
                         BillboardGeometry {
                             coords: Vec3::new(
-                                f[0] as f32,
-                                f[1] as f32,
-                                *f.get(2).unwrap_or(&0.) as f32,
+                                f[0] as FloatType,
+                                f[1] as FloatType,
+                                *f.get(2).unwrap_or(&0.) as FloatType,
                             ),
                             crs: CRS::Geographic,
                         },
@@ -64,9 +64,9 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                         commands.spawn((
                             BillboardGeometry {
                                 coords: Vec3::new(
-                                    f[0] as f32,
-                                    f[1] as f32,
-                                    *f.get(2).unwrap_or(&0.) as f32,
+                                    f[0] as FloatType,
+                                    f[1] as FloatType,
+                                    *f.get(2).unwrap_or(&0.) as FloatType,
                                 ),
                                 crs: CRS::Geographic,
                             },
