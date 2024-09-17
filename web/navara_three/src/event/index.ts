@@ -134,12 +134,19 @@ function processObjectRemoved(parent: Object3D, meshes: MeshCache, obj: EntityEv
 
   meshes.delete(id);
   m.clear();
-  if (Array.isArray(m.material)) {
-    m.material.map(m => m.dispose());
-  } else {
-    m.material.dispose();
+
+  if("material" in m) {
+    if (Array.isArray(m.material)) {
+      m.material.map(m => m.dispose());
+    } else {
+      m.material.dispose();
+    }
   }
-  m.geometry.dispose();
+
+  if("geometry" in m) {
+    m.geometry.dispose();
+  }
+  
   parent.remove(m);
 }
 
@@ -225,6 +232,7 @@ async function processRenderableFeatureAdded(
   applyTextureAspect(obj);
 
   parent.add(obj);
+
   meshes.set(id, obj);
 }
 
