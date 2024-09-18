@@ -15,8 +15,8 @@
  */
 float nvr_metersPerPixel(vec4 positionEC, vec3 viewportAndPixelRatio, vec2 frustumNearFar, vec4 frustumRatio)
 {
-    float width = viewportAndPixelRatio.x;
-    float height = viewportAndPixelRatio.y;
+    float width = viewportAndPixelRatio.x * viewportAndPixelRatio.z;
+    float height = viewportAndPixelRatio.y * viewportAndPixelRatio.z;
     float pixelWidth;
     float pixelHeight;
 

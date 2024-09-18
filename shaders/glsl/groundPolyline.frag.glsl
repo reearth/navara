@@ -27,7 +27,8 @@ float readDepth(sampler2D depthSampler, vec2 coord) {
 
 
 void main() {
-    float logDepthOrDepth = readDepth(tGlobeDepth, gl_FragCoord.xy / (viewportAndPixelRatio.xy * viewportAndPixelRatio.z));
+    vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
+    float logDepthOrDepth = readDepth(tGlobeDepth, gl_FragCoord.xy / viewport.xy);
 
     // Discard sky
     if (logDepthOrDepth == 1.0) {
@@ -44,7 +45,7 @@ void main() {
 
     // Transform to clip coordinates
     vec4 clipCoords = vec4(
-        (gl_FragCoord.xy / viewportAndPixelRatio.xy) * 2.0 - 1.0,
+        (gl_FragCoord.xy / viewport) * 2.0 - 1.0,
         z_ndc * 2.0 - 1.0,
         1.0
     );
