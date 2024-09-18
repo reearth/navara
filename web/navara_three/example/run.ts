@@ -241,6 +241,46 @@ export const run = async (view: ThreeView) => {
     },
     wireframe: false,
   });
+  view.addLayer({
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [0, 0],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [30, 40],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [60, 0],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    model: {
+      show: true,
+      size: 500000,
+      height: 300000,
+      clamp_to_ground: true,
+      url: "/box.gltf",
+    },
+    wireframe: false,
+  });
 
   // chiyoda-ku
   // view.addLayer({

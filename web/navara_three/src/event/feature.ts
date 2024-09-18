@@ -2,7 +2,7 @@ import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
-import type { BillboardMesh, PointMesh, PolylineMesh, RenderableFeature } from "navara";
+import type { BillboardMesh, PointMesh, ModelMesh, PolylineMesh, RenderableFeature } from "navara";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -12,7 +12,9 @@ import {
   Sprite,
   SpriteMaterial,
   TextureLoader,
+  Object3D,
 } from "three";
+import { GLTFLoader } from "three-stdlib";
 
 import type { CommonUniforms } from "../uniforms";
 
@@ -22,12 +24,15 @@ export function renderFeature(
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-): Promise<Mesh | Sprite | undefined> | undefined {
+): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point);
   }
   if (f.billboard) {
     return renderBillboard(f.billboard);
+  }
+  if (f.model) {
+    return renderModel(f.model);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
@@ -96,6 +101,14 @@ async function renderBillboard(m: BillboardMesh) {
   sprite.center.set(m.material.center.x, m.material.center.y);
 
   return sprite;
+}
+
+async function renderModel(m: ModelMesh) {
+  const loader = new GLTFLoader();
+
+  const model = await loader.loadAsync(m.material.url);
+
+  return model.scene;
 }
 
 async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: CommonUniforms) {

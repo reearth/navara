@@ -4,7 +4,8 @@ use bevy_ecs::{
 };
 use navara_core::CRS;
 use navara_feature::{
-    billboard::BillboardGeometry, point::PointGeometry, polyline::PolylineGeometry,
+    billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
+    polyline::PolylineGeometry,
 };
 use navara_layer::{Appearance, GeoJsonLayer};
 
@@ -118,7 +119,37 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 _ => {}
             },
             Appearance::Polygon(_v) => unimplemented!(),
-            Appearance::Model(_v) => unimplemented!(),
+            Appearance::Model(v) => match &geometry.value {
+                Value::Point(f) => {
+                    commands.spawn((
+                        ModelGeometry {
+                            coords: Vec3::new(
+                                f[0] as FloatType,
+                                f[1] as FloatType,
+                                *f.get(2).unwrap_or(&0.) as FloatType,
+                            ),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            ModelGeometry {
+                                coords: Vec3::new(
+                                    f[0] as FloatType,
+                                    f[1] as FloatType,
+                                    *f.get(2).unwrap_or(&0.) as FloatType,
+                                ),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
         };
     }
 }

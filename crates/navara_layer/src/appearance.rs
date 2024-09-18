@@ -55,4 +55,7 @@ pub struct PolygonMaterial {
 pub struct ModelMaterial {
     pub show: bool,
     pub url: String,
+    pub size: FloatType,
+    pub height: FloatType,
+    pub clamp_to_ground: bool,
 }

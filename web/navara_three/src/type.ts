@@ -3,7 +3,7 @@ import type {
   TerrainLayerDescription,
   TileLayerDescription,
 } from "navara";
-import type { Mesh, Sprite } from "three";
+import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Extent } from "./temp/utils";
 
@@ -31,4 +31,4 @@ export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
 export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
 export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
 
-export type MeshCache = Map<string, Mesh | Sprite>;
+export type MeshCache = Map<string, Mesh | Sprite | Object3D>;

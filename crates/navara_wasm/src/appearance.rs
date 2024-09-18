@@ -162,6 +162,9 @@ pub struct ModelMaterial {
     pub show: bool,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
+    pub size: f32,
+    pub height: f32,
+    pub clamp_to_ground: bool,
 }
 
 impl From<ModelMaterial> for navara_layer::ModelMaterial {
@@ -169,6 +172,9 @@ impl From<ModelMaterial> for navara_layer::ModelMaterial {
         navara_layer::ModelMaterial {
             show: val.show,
             url: val.url,
+            size: val.size,
+            height: val.height,
+            clamp_to_ground: val.clamp_to_ground,
         }
     }
 }
@@ -177,6 +183,9 @@ impl<'a> From<&'a navara_layer::ModelMaterial> for ModelMaterial {
         ModelMaterial {
             show: value.show,
             url: value.url.clone(),
+            size: value.size,
+            height: value.height,
+            clamp_to_ground: value.clamp_to_ground,
         }
     }
 }

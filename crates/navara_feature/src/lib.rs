@@ -4,6 +4,7 @@ use bevy_app::{App, Plugin, PostUpdate, Update};
 
 pub mod billboard;
 pub mod event;
+pub mod model;
 pub mod point;
 pub mod polyline;
 pub mod render;
@@ -24,6 +25,13 @@ impl Plugin for FeaturePlugin {
             (
                 billboard::system::transfer_mesh,
                 billboard::system::update_height_by_terrain,
+            ),
+        )
+        .add_systems(
+            Update,
+            (
+                model::system::transfer_mesh,
+                model::system::update_height_by_terrain,
             ),
         )
         .add_systems(Update, polyline::system::transfer_mesh)
