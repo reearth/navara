@@ -2,6 +2,7 @@ use bevy_ecs::component::Component;
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TilesLayer {
+    pub layer_id: String,
     pub url: String,
     pub segments: usize,
     pub color: u32,

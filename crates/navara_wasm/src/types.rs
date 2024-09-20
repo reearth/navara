@@ -121,11 +121,12 @@ impl LayerDescription {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
-    pub fn to(self, value: JsValue) -> Option<navara_layer::LayerDescription> {
+    pub fn to(self, layer_id: &String, value: JsValue) -> Option<navara_layer::LayerDescription> {
         match self.r#type.as_str() {
             "tiles" => {
                 let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
+                    layer_id: layer_id.clone(),
                     url: layer.url,
                     segments: layer.segments,
                     color: layer.color,
@@ -137,6 +138,7 @@ impl LayerDescription {
             "terrain" => {
                 let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
+                    layer_id: layer_id.clone(),
                     url: layer.url.clone(),
                     segments: layer.segments,
                     max_z: layer.max_z,
@@ -151,6 +153,7 @@ impl LayerDescription {
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
+                    layer_id: layer_id.clone(),
                     data: GeoJson::from_json_object(layer.data.into_serde().ok()?).ok()?,
                     appearances: layer.appearances(),
                     crs: layer.crs(),

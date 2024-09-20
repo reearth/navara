@@ -10,6 +10,8 @@ use navara_ecs::App;
 use navara_input::Key;
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
+use nanoid::nanoid;
+use bevy_log::info;
 
 pub use event::*;
 pub use input::*;
@@ -108,13 +110,21 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = addLayer)]
-    pub fn add_layer(&mut self, layer: JsValue) {
+    pub fn add_layer(&mut self, layer: JsValue) -> String {
+        let layer_id = nanoid!();
         // TODO: Improve an undesirable cloning the layer.
         if let Some(ld) = LayerDescription::from(layer.clone()) {
-            if let Some(l) = ld.to(layer) {
+            if let Some(l) = ld.to(&layer_id, layer) {
                 self.app.add_layer(l);
             }
         }
+
+        layer_id
+    }
+
+    #[wasm_bindgen(js_name = updateLayer)]
+    pub fn update_layer(&mut self) {
+        info!("update_layer!!!!!!!!!!");
     }
 
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]

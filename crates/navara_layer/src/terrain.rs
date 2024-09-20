@@ -3,6 +3,7 @@ use navara_core::terrain::ElevationDecoder;
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TerrainLayer {
+    pub layer_id: String,
     pub url: String,
     pub segments: usize,
     pub max_z: usize,
