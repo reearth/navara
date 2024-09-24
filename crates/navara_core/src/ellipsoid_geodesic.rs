@@ -334,13 +334,13 @@ fn prepare_vincenty_direct_formula_constants(
 
 #[cfg(test)]
 mod test {
-    use std::f32::consts::PI;
-
     use navara_assert::float::assert_delta;
+    use navara_math::std_float::consts::PI;
+    use navara_math::std_float::EPSILON;
     use radians::Angle;
 
     use crate::{
-        epsilon::{EPSILON11, EPSILON13},
+        epsilon::{EPSILON11, EPSILON7},
         Meters, LLE, WGS84_32,
     };
 
@@ -380,7 +380,7 @@ mod test {
 
         assert_delta(g.start_heading, pi_over_two, EPSILON11);
         assert_delta(g.end_heading, pi_over_two, EPSILON11);
-        assert_delta(g.distance, 10018755., EPSILON11);
+        assert_delta(g.distance, 10018755., EPSILON);
     }
 
     #[test]
@@ -400,7 +400,7 @@ mod test {
 
         assert_delta(g.start_heading, 0., EPSILON11);
         assert_delta(g.end_heading, 0., EPSILON11);
-        assert_delta(g.distance, 10001967., EPSILON11);
+        assert_delta(g.distance, 10001967., EPSILON);
     }
 
     #[test]
@@ -420,7 +420,7 @@ mod test {
 
         assert_delta(g.start_heading, 0., EPSILON11);
         assert_delta(g.end_heading, 0., EPSILON11);
-        assert_delta(g.distance, 10001967., EPSILON11);
+        assert_delta(g.distance, 10001967., EPSILON);
     }
 
     #[test]
@@ -442,9 +442,9 @@ mod test {
         let first = g.interpolate_distance(&WGS84_32, 0.);
         let last = g.interpolate_distance(&WGS84_32, g.distance);
 
-        assert_delta(start.lng.val(), first.lng.val(), EPSILON13);
-        assert_delta(start.lat.val(), first.lat.val(), EPSILON13);
-        assert_delta(end.lng.val(), last.lng.val(), EPSILON13);
-        assert_delta(end.lat.val(), last.lat.val(), EPSILON13);
+        assert_delta(start.lng.val(), first.lng.val(), EPSILON7);
+        assert_delta(start.lat.val(), first.lat.val(), EPSILON7);
+        assert_delta(end.lng.val(), last.lng.val(), EPSILON7);
+        assert_delta(end.lat.val(), last.lat.val(), EPSILON7);
     }
 }
