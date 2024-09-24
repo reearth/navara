@@ -6,7 +6,7 @@ use crate::Vec2;
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
-    pub show: bool,
+    pub show: Option<bool>,
     pub size: f32,
     pub color: u32,
     pub center: Vec2,
@@ -20,7 +20,7 @@ pub struct PointMaterial {
 impl From<PointMaterial> for navara_layer::PointMaterial {
     fn from(val: PointMaterial) -> Self {
         navara_layer::PointMaterial {
-            show: val.show,
+            show: val.show.unwrap_or(true),
             size: val.size,
             color: val.color,
             center: val.center.into(),
@@ -34,7 +34,7 @@ impl From<PointMaterial> for navara_layer::PointMaterial {
 impl<'a> From<&'a navara_layer::PointMaterial> for PointMaterial {
     fn from(value: &'a navara_layer::PointMaterial) -> PointMaterial {
         PointMaterial {
-            show: value.show,
+            show: Some(value.show),
             size: value.size,
             color: value.color,
             center: value.center.into(),
@@ -59,7 +59,7 @@ pub struct NearFar {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
-    pub show: bool,
+    pub show: Option<bool>,
     pub size: f32,
     pub color: u32,
     pub center: Vec2,
@@ -75,7 +75,7 @@ pub struct BillboardMaterial {
 impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
     fn from(val: BillboardMaterial) -> Self {
         navara_layer::BillboardMaterial {
-            show: val.show,
+            show: val.show.unwrap_or(true),
             size: val.size,
             color: val.color,
             center: val.center.into(),
@@ -90,7 +90,7 @@ impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
 impl<'a> From<&'a navara_layer::BillboardMaterial> for BillboardMaterial {
     fn from(value: &'a navara_layer::BillboardMaterial) -> BillboardMaterial {
         BillboardMaterial {
-            show: value.show,
+            show: Some(value.show),
             size: value.size,
             color: value.color,
             center: value.center.into(),
@@ -109,7 +109,7 @@ impl<'a> From<&'a navara_layer::BillboardMaterial> for BillboardMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
-    pub show: bool,
+    pub show: Option<bool>,
     pub color: u32,
     pub width: f32,
     pub clamp_to_ground: bool,
@@ -119,7 +119,7 @@ pub struct PolylineMaterial {
 impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
         navara_layer::PolylineMaterial {
-            show: val.show,
+            show: val.show.unwrap_or(true),
             color: val.color,
             width: val.width,
             clamp_to_ground: val.clamp_to_ground,
@@ -130,7 +130,7 @@ impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
 impl<'a> From<&'a navara_layer::PolylineMaterial> for PolylineMaterial {
     fn from(value: &'a navara_layer::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
-            show: value.show,
+            show: Some(value.show),
             color: value.color,
             width: value.width,
             clamp_to_ground: value.clamp_to_ground,
@@ -142,24 +142,28 @@ impl<'a> From<&'a navara_layer::PolylineMaterial> for PolylineMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonMaterial {
-    pub show: bool,
+    pub show: Option<bool>,
 }
 
 impl From<PolygonMaterial> for navara_layer::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
-        navara_layer::PolygonMaterial { show: val.show }
+        navara_layer::PolygonMaterial {
+            show: val.show.unwrap_or(true),
+        }
     }
 }
 impl<'a> From<&'a navara_layer::PolygonMaterial> for PolygonMaterial {
     fn from(value: &'a navara_layer::PolygonMaterial) -> PolygonMaterial {
-        PolygonMaterial { show: value.show }
+        PolygonMaterial {
+            show: Some(value.show),
+        }
     }
 }
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMaterial {
-    pub show: bool,
+    pub show: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
     pub size: f32,
@@ -170,7 +174,7 @@ pub struct ModelMaterial {
 impl From<ModelMaterial> for navara_layer::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
         navara_layer::ModelMaterial {
-            show: val.show,
+            show: val.show.unwrap_or(true),
             url: val.url,
             size: val.size,
             height: val.height,
@@ -181,7 +185,7 @@ impl From<ModelMaterial> for navara_layer::ModelMaterial {
 impl<'a> From<&'a navara_layer::ModelMaterial> for ModelMaterial {
     fn from(value: &'a navara_layer::ModelMaterial) -> ModelMaterial {
         ModelMaterial {
-            show: value.show,
+            show: Some(value.show),
             url: value.url.clone(),
             size: value.size,
             height: value.height,

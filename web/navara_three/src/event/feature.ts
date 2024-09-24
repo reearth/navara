@@ -174,6 +174,7 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
     fragmentShader: mesh.material.clamp_to_ground ? GroundPolylineFragShader : PolylineFragShader,
     depthTest: false,
     depthWrite: false,
+    visible: mesh.material.show,
   });
   const m = new Mesh(geometry, material);
 
