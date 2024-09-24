@@ -9,7 +9,12 @@ import {
   Vector3,
   Texture,
   Vector2,
+  WebGLRenderTarget,
+  DepthTexture,
+  DepthFormat,
+  FloatType,
 } from "three";
+import invariant from "tiny-invariant";
 
 import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
 import { registerInputEvents } from "./input";
@@ -17,6 +22,7 @@ import { C3TilesManager } from "./temp/C3Tiles";
 import MVT from "./temp/MVT";
 import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
+import type { CommonUniforms } from "./uniforms";
 
 export type Options = {
   container?: HTMLElement;
@@ -27,6 +33,7 @@ export type Options = {
   disableAutoResize?: boolean;
   debug?: boolean;
   scene?: Scene;
+  globeDepthScene?: Scene;
   camera?: PerspectiveCamera;
   renderer?: WebGLRenderer;
 };
@@ -37,8 +44,10 @@ export type Events = {
 
 export default class ThreeView {
   scene: Scene;
+  globeDepthScene: Scene;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
+  globeDepthRenderTarget: WebGLRenderTarget;
 
   _core: Core | undefined;
   _options: Options;
@@ -48,6 +57,7 @@ export default class ThreeView {
   _events: {
     [K in keyof Events]?: Events[K][];
   } = {};
+  _uniforms: CommonUniforms;
 
   _meshes: Map<string, Mesh> = new Map();
   _loadedTexs: Map<string, Texture> = new Map();
@@ -101,11 +111,10 @@ export default class ThreeView {
         canvas: options.canvas,
       });
       this.renderer = renderer;
+
       const { width = options.initialWidth, height = options.initialHeight } =
         this._getCanvasSize() ?? {};
-      if (typeof width !== "number" || typeof height !== "number") {
-        throw new Error("Must provide initialWidth and initialHeight");
-      }
+      invariant(width && height);
 
       if (typeof options?.initialPixelRatio === "number" || !isWorker()) {
         const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
@@ -118,11 +127,30 @@ export default class ThreeView {
       }
     }
 
+    // Setup RenderTarget for depth buffer
+    const { width = options.initialWidth, height = options.initialHeight } =
+      this._getCanvasSize() ?? {};
+    invariant(width && height);
+    const pixelRatio = this.renderer.getPixelRatio();
+    const scaledWidth = width * pixelRatio;
+    const scaledHeight = height * pixelRatio;
+    this.globeDepthRenderTarget = new WebGLRenderTarget(scaledWidth, scaledHeight);
+    this.globeDepthRenderTarget.depthTexture = new DepthTexture(scaledWidth, scaledHeight);
+    this.globeDepthRenderTarget.depthTexture.format = DepthFormat;
+    this.globeDepthRenderTarget.depthTexture.type = FloatType;
+
     if (options.scene) {
       this.scene = options.scene;
     } else {
       const scene = new Scene();
       this.scene = scene;
+    }
+
+    if (options.globeDepthScene) {
+      this.globeDepthScene = options.globeDepthScene;
+    } else {
+      const globeDepthScene = new Scene();
+      this.globeDepthScene = globeDepthScene;
     }
 
     if (options.camera) {
@@ -161,6 +189,13 @@ export default class ThreeView {
 
     // c3tiles
     this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);
+    this._uniforms = {
+      viewportAndPixelRatio: { value: null },
+      frustumNearFar: { value: null },
+      frustumRatio: { value: null },
+      tGlobeDepth: { value: null },
+      inverseProjectionMatrix: { value: null },
+    };
   }
 
   async init() {
@@ -188,6 +223,7 @@ export default class ThreeView {
       this._eventDisposer();
       this._eventDisposer = undefined;
     }
+    this.globeDepthRenderTarget.dispose();
     if ("dispose" in this.renderer && typeof this.renderer.dispose === "function") {
       this.renderer.dispose();
     }
@@ -204,6 +240,7 @@ export default class ThreeView {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
+    this.globeDepthRenderTarget.setSize(w * (pixelRatio ?? 1), h * (pixelRatio ?? 1));
     if (
       typeof pixelRatio === "number" &&
       "setPixelRatio" in this.renderer &&
@@ -217,14 +254,40 @@ export default class ThreeView {
     this._emit("resize");
   };
 
+  updateUniforms() {
+    const viewport = this._getCanvasSize();
+    const pixelRatio = this.renderer.getPixelRatio();
+
+    // Ref: https://github.com/CesiumGS/cesium/blob/2cf09cb06e4f7ea767da39befabcfc3444b02c49/packages/engine/Source/Core/PerspectiveFrustum.js#L208-L218
+    // TODO: Need to get this value from WASM side, and near, far as well.
+    // const fovY = 0.7245411;
+    const fovY = 1;
+    const top = this.camera.near * Math.tan(0.5 * fovY);
+    const bottom = -top;
+    const right = this.camera.aspect * top;
+    const left = -right;
+
+    this._uniforms.viewportAndPixelRatio.value = [
+      viewport?.width ?? 0,
+      viewport?.height ?? 0,
+      pixelRatio,
+    ];
+    this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
+    this._uniforms.frustumRatio.value = [top, bottom, right, left];
+    this._uniforms.tGlobeDepth.value = this.globeDepthRenderTarget.depthTexture;
+    this._uniforms.inverseProjectionMatrix.value = this.camera.projectionMatrixInverse;
+  }
+
   /** Returns true if the scene was updated and needs to be rendered. */
   update(): boolean {
     this._core?.update();
+    this.updateUniforms();
 
     const events = this._core?.readEvents();
     if (events && this._core) {
       processEvent(
         this.scene,
+        this.globeDepthScene,
         this.camera,
         this._meshes,
         this._buf,
@@ -232,6 +295,7 @@ export default class ThreeView {
         this._loadedTexs,
         this._tex,
         events,
+        this._uniforms,
       );
     }
 
@@ -243,6 +307,10 @@ export default class ThreeView {
   }
 
   render() {
+    this.renderer.setRenderTarget(this.globeDepthRenderTarget);
+    this.renderer.render(this.globeDepthScene, this.camera);
+
+    this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -290,9 +358,8 @@ export default class ThreeView {
       if (this.update()) this.render();
 
       this._stats?.end();
-      if (!this._disposed) requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    this.renderer.setAnimationLoop(loop);
   }
 
   _getCanvasSize(): { width: number; height: number } | undefined {

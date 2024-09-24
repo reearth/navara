@@ -159,9 +159,9 @@ mod test {
         debug_assert_eq!(
             tbr.southwest_corner,
             XYZ {
-                x: Meters::new(-552057.6),
-                y: Meters::new(0.04826241),
-                z: Meters::new(-6332896.0),
+                x: Meters::new(-552057.56),
+                y: Meters::new(0.048262406),
+                z: Meters::new(-6332896.0)
             }
         );
         debug_assert_eq!(

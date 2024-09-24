@@ -16,8 +16,8 @@ pub const WGS84_A_32: f32 = 6378137.0;
 pub const WGS84_FE_64: f64 = 1.0 / 298.257223563;
 #[allow(clippy::excessive_precision)]
 pub const WGS84_FE_32: f32 = 1.0 / 298.257223563;
-pub const WGS84_B_64: f64 = WGS84_A_64 * (1.0 - WGS84_FE_64);
-pub const WGS84_B_32: f32 = WGS84_A_32 * (1.0 - WGS84_FE_32);
+pub const WGS84_B_64: f64 = 6_356_752.314_245_179;
+pub const WGS84_B_32: f32 = 6_356_752.5;
 
 pub const ONE_OVER_RADII_64: [f64; 3] = [1. / WGS84_A_64, 1. / WGS84_A_64, 1. / WGS84_B_64];
 pub const ONE_OVER_RADII_32: [f32; 3] = [1. / WGS84_A_32, 1. / WGS84_A_32, 1. / WGS84_B_32];

@@ -7,7 +7,12 @@ use crate::{region_quadtree::RegionQuadtree, traits::GeoSpacialQuadtree};
 /// Entry point for each quadtree implementation.
 /// If you want to use `RegionQuadtree` which is based on [quadtree_rs], you can use it as below.
 /// ```
-/// let qt = Quadtree::new_with_region_qt(30);
+/// use navara_quadtree::Quadtree;
+///
+/// #[derive(Debug)]
+/// struct Tile { x: u32, y: u32, z: u32 }
+///
+/// let qt: Quadtree<u32, Tile> = Quadtree::new_with_region_qt(30);
 /// ```
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
 pub struct Quadtree<U, V>

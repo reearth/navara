@@ -60,4 +60,5 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - run: cargo test --doc
       - run: cargo doc --all-features --release

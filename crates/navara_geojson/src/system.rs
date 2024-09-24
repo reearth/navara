@@ -3,7 +3,10 @@ use bevy_ecs::{
     system::{Commands, Query},
 };
 use navara_core::CRS;
-use navara_feature::{billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry};
+use navara_feature::{
+    billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
+    polyline::PolylineGeometry,
+};
 use navara_layer::{Appearance, GeoJsonLayer};
 
 use navara_math::{FloatType, Vec3};
@@ -74,7 +77,47 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 }
                 _ => {}
             },
-            Appearance::Polyline(_v) => unimplemented!(),
+            Appearance::Polyline(v) => match &geometry.value {
+                Value::LineString(f) => {
+                    commands.spawn((
+                        PolylineGeometry {
+                            coords: f
+                                .iter()
+                                .map(|p| {
+                                    Vec3::new(
+                                        p[0] as FloatType,
+                                        p[1] as FloatType,
+                                        *p.get(2).unwrap_or(&0.) as FloatType,
+                                    )
+                                })
+                                .collect::<Vec<_>>(),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiLineString(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            PolylineGeometry {
+                                coords: f
+                                    .iter()
+                                    .map(|p| {
+                                        Vec3::new(
+                                            p[0] as FloatType,
+                                            p[1] as FloatType,
+                                            *p.get(2).unwrap_or(&0.) as FloatType,
+                                        )
+                                    })
+                                    .collect::<Vec<_>>(),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
             Appearance::Polygon(_v) => unimplemented!(),
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {

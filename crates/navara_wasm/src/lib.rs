@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.md")]
 mod appearance;
+mod attribute;
 mod event;
+mod geometry;
 mod input;
 mod types;
 mod unit;
