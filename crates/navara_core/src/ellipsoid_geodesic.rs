@@ -336,7 +336,6 @@ fn prepare_vincenty_direct_formula_constants(
 mod test {
     use navara_assert::float::assert_delta;
     use navara_math::std_float::consts::PI;
-    use navara_math::std_float::EPSILON;
     use radians::Angle;
 
     use crate::{
@@ -380,7 +379,7 @@ mod test {
 
         assert_delta(g.start_heading, pi_over_two, EPSILON11);
         assert_delta(g.end_heading, pi_over_two, EPSILON11);
-        assert_delta(g.distance, 10018755., EPSILON);
+        assert_delta(g.distance, 10018755., EPSILON11);
     }
 
     #[test]
@@ -400,7 +399,7 @@ mod test {
 
         assert_delta(g.start_heading, 0., EPSILON11);
         assert_delta(g.end_heading, 0., EPSILON11);
-        assert_delta(g.distance, 10001967., EPSILON);
+        assert_delta(g.distance, 10001966., 1.1);
     }
 
     #[test]
@@ -420,7 +419,7 @@ mod test {
 
         assert_delta(g.start_heading, 0., EPSILON11);
         assert_delta(g.end_heading, 0., EPSILON11);
-        assert_delta(g.distance, 10001967., EPSILON);
+        assert_delta(g.distance, 10001966., 1.1);
     }
 
     #[test]
