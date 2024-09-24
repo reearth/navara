@@ -20,7 +20,7 @@ pub struct PointMaterial {
 impl From<PointMaterial> for navara_layer::PointMaterial {
     fn from(val: PointMaterial) -> Self {
         navara_layer::PointMaterial {
-            show: val.show.unwrap_or_else(|| true),
+            show: val.show.unwrap_or(true),
             size: val.size,
             color: val.color,
             center: val.center.into(),
@@ -75,7 +75,7 @@ pub struct BillboardMaterial {
 impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
     fn from(val: BillboardMaterial) -> Self {
         navara_layer::BillboardMaterial {
-            show: val.show.unwrap_or_else(|| true),
+            show: val.show.unwrap_or(true),
             size: val.size,
             color: val.color,
             center: val.center.into(),
@@ -119,7 +119,7 @@ pub struct PolylineMaterial {
 impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
         navara_layer::PolylineMaterial {
-            show: val.show.unwrap_or_else(|| true),
+            show: val.show.unwrap_or(true),
             color: val.color,
             width: val.width,
             clamp_to_ground: val.clamp_to_ground,
@@ -148,7 +148,7 @@ pub struct PolygonMaterial {
 impl From<PolygonMaterial> for navara_layer::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
         navara_layer::PolygonMaterial {
-            show: val.show.unwrap_or_else(|| true),
+            show: val.show.unwrap_or(true),
         }
     }
 }
@@ -174,7 +174,7 @@ pub struct ModelMaterial {
 impl From<ModelMaterial> for navara_layer::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
         navara_layer::ModelMaterial {
-            show: val.show.unwrap_or_else(|| true),
+            show: val.show.unwrap_or(true),
             url: val.url,
             size: val.size,
             height: val.height,
