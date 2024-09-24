@@ -132,7 +132,6 @@ export const run = async (view: ThreeView) => {
       ],
     },
     point: {
-      show: true,
       color: 0xffffff,
       size: 0.1,
       height: 1,
@@ -175,7 +174,6 @@ export const run = async (view: ThreeView) => {
       ],
     },
     billboard: {
-      show: true,
       color: 0xffffff,
       size: 0.05,
       height: 1,
@@ -211,7 +209,6 @@ export const run = async (view: ThreeView) => {
       },
     },
     polyline: {
-      show: true,
       color: 0xff0000,
       width: 2,
       height: 1,
@@ -233,7 +230,6 @@ export const run = async (view: ThreeView) => {
       },
     },
     polyline: {
-      show: true,
       color: 0x00ff00,
       width: 5,
       height: 1,
@@ -273,7 +269,6 @@ export const run = async (view: ThreeView) => {
       ],
     },
     model: {
-      show: true,
       size: 500000,
       height: 300000,
       clamp_to_ground: true,
