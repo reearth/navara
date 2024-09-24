@@ -106,6 +106,12 @@ impl App {
             .world_mut()
             .send_event(navara_layer::AddLayerEvent(desc));
     }
+
+    pub fn update_layer(&mut self, desc: LayerDescription) {
+        self.app
+            .world_mut()
+            .send_event(navara_layer::AddLayerEvent(desc));
+    }
 }
 
 impl Default for App {

@@ -1,5 +1,6 @@
 import ThreeView from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
+import { string } from "three/webgpu";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -195,7 +196,8 @@ export const run = async (view: ThreeView) => {
     wireframe: false,
   });
 
-  view.addLayer({
+
+  let layerDef = {
     type: "geojson",
     data: {
       type: "FeatureCollection",
@@ -205,22 +207,6 @@ export const run = async (view: ThreeView) => {
           properties: {},
           geometry: {
             coordinates: [0, 0],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [30, 40],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [60, 0],
             type: "Point",
           },
         },
@@ -234,7 +220,20 @@ export const run = async (view: ThreeView) => {
       url: "/box.gltf",
     },
     wireframe: false,
-  });
+  };
+
+  let layerId = view.addLayer(layerDef);
+
+  if (typeof layerId === 'string') {
+    setInterval(() => {
+      layerDef.data.features[0].geometry.coordinates[0] += 10;
+      if(layerDef.data.features[0].geometry.coordinates[0] > 360){
+        layerDef.data.features[0].geometry.coordinates[0] = 0;
+      }
+      view.updateLayer(layerId, layerDef);
+    }, 1000);
+  }
+  
 
   // chiyoda-ku
   // view.addLayer({

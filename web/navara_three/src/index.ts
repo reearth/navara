@@ -296,6 +296,20 @@ export default class ThreeView {
       default:
         layerId = this._core?.addLayer(l);
     }
+
+    return layerId;
+  }
+
+  updateLayer(layerId: string, l: LayerDescription) {
+    switch (l.type) {
+      case "3dtiles":
+        break;
+      case "mvt":
+        break;
+      default:
+        this._core?.updateLayer(layerId, l);
+        break;
+    }
   }
 
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {

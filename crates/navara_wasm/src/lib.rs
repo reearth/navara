@@ -123,8 +123,12 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = updateLayer)]
-    pub fn update_layer(&mut self) {
-        info!("update_layer!!!!!!!!!!");
+    pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
+        if let Some(ld) = LayerDescription::from(layer.clone()) {
+            if let Some(l) = ld.to(&layer_id, layer) {
+                // self.app.add_layer(l);
+            }
+        }
     }
 
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]
