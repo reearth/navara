@@ -13,13 +13,24 @@ For example, rendering a lot of tile and terrain is heavy task, so you need to s
 You can initialize the quadtree as below.
 
 ```rust
-let qt = TileQuadtree::new_with_region_qt(30);
+use navara_quadtree::Quadtree;
+
+#[derive(Debug)]
+struct Tile { x: u32, y: u32, z: u32 }
+
+let qt: Quadtree<u32, Tile> = Quadtree::new_with_region_qt(30);
 ```
 
 Then you can create children. In this case, they're children of the root coordinates.
 
 ```rust
+use navara_quadtree::Quadtree;
+
+#[derive(Debug)]
+struct Tile { x: u32, y: u32, z: u32 }
+
+let mut qt: Quadtree<u32, Tile> = Quadtree::new_with_region_qt(30);
 let root = (0, 0, 0);
 let children =
-    qt.initialize_children(root, &|(x, y, z)| Tile { x, y, z });
+    qt.qt.initialize_children(root, &|(x, y, z)| Tile { x, y, z });
 ```

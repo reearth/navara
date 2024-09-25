@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.md")]
 mod appearance;
+mod attribute;
 mod event;
+mod geometry;
 mod input;
 mod types;
 mod unit;
@@ -127,6 +129,7 @@ impl Core {
         if let Some(ld) = LayerDescription::from(layer.clone()) {
             if let Some(l) = ld.to(&layer_id, layer) {
                 // self.app.add_layer(l);
+                info!("{:?}", l);
             }
         }
     }

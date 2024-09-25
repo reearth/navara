@@ -6,6 +6,7 @@ pub mod billboard;
 pub mod event;
 pub mod model;
 pub mod point;
+pub mod polyline;
 pub mod render;
 
 pub struct FeaturePlugin;
@@ -33,6 +34,7 @@ impl Plugin for FeaturePlugin {
                 model::system::update_height_by_terrain,
             ),
         )
+        .add_systems(Update, polyline::system::transfer_mesh)
         .add_systems(PostUpdate, event::commit);
     }
 }

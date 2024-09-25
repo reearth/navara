@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: nanasess/setup-chromedriver@master
       - uses: actions/setup-node@v4
 
       - name: Cache dependencies
@@ -60,4 +59,5 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - run: cargo test --doc
       - run: cargo doc --all-features --release
