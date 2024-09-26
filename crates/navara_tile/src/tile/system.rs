@@ -537,6 +537,8 @@ pub fn transfer_mesh(
         let extent = tile.extent;
 
         let should_render_terrain = terrain_layer.is_some();
+        let should_compute_normal_from_vertex =
+            terrain_layer.map_or(false, |t| t.should_compute_normal_from_vertex);
 
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
 
@@ -552,6 +554,7 @@ pub fn transfer_mesh(
                     material: Material {
                         color: tile_layer.color,
                         wireframe: tile_layer.wireframe,
+                        should_compute_normal_from_vertex,
                         texture_fragment: texture_fragment_entity_id,
                     },
                     object: ObjectBundle {
@@ -611,6 +614,7 @@ pub fn transfer_mesh(
                     material: Material {
                         color: tile_layer.color,
                         wireframe: tile_layer.wireframe,
+                        should_compute_normal_from_vertex,
                         texture_fragment: texture_fragment_entity_id,
                     },
                     object: ObjectBundle {
@@ -665,6 +669,8 @@ pub fn transfer_mesh(
                         material: Material {
                             color: tile_layer.color,
                             wireframe: terrain_layer.wireframe,
+                            should_compute_normal_from_vertex: terrain_layer
+                                .should_compute_normal_from_vertex,
                             texture_fragment: texture_fragment_entity_id,
                         },
                         object: ObjectBundle {
@@ -728,6 +734,8 @@ pub fn transfer_mesh(
                 material: Material {
                     color: tile_layer.color,
                     wireframe: terrain_layer.wireframe,
+                    should_compute_normal_from_vertex: terrain_layer
+                        .should_compute_normal_from_vertex,
                     texture_fragment: texture_fragment_entity_id,
                 },
                 object: ObjectBundle {

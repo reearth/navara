@@ -323,7 +323,9 @@ function createMesh(
     geometry.setAttribute("uv", new BufferAttribute(uv, 2));
   }
   geometry.setIndex(new BufferAttribute(indices, 1));
-  geometry.computeVertexNormals();
+  if (mat.should_compute_normal_from_vertex) {
+    geometry.computeVertexNormals();
+  }
 
   // const material = new MeshStandardMaterial({ color: 0x00ff00 });
   const material = toMaterial(mat, loadedTexes);

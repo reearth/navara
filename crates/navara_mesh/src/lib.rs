@@ -36,6 +36,7 @@ pub struct Mesh {
 pub struct Material {
     pub color: u32,
     pub wireframe: bool,
+    pub should_compute_normal_from_vertex: bool,
     // for tile
     pub texture_fragment: Option<Entity>,
 }
