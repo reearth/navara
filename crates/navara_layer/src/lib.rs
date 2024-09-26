@@ -8,6 +8,7 @@ mod terrain;
 mod tile;
 mod layer_id;
 mod layer_store;
+mod layer_desc_store;
 
 pub use appearance::*;
 use bevy_app::{App, Plugin, Update};
@@ -18,6 +19,7 @@ pub use terrain::*;
 pub use tile::*;
 pub use layer_id::*;
 pub use layer_store::*;
+pub use layer_desc_store::*;
 
 pub struct LayerPlugin;
 

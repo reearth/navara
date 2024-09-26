@@ -7,7 +7,7 @@ use crate::Appearance;
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct GeoJsonLayer {
     pub layer_id: String,
-    pub data: GeoJson,
+    pub data: Option<GeoJson>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }

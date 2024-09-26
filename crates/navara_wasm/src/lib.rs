@@ -117,7 +117,7 @@ impl Core {
         // TODO: Improve an undesirable cloning the layer.
         if let Some(ld) = LayerDescription::from(layer.clone()) {
             if let Some(l) = ld.to(&layer_id, layer) {
-                self.app.add_layer(l);
+                self.app.add_layer(&layer_id, l);
             }
         }
 
@@ -126,12 +126,8 @@ impl Core {
 
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
-        if let Some(ld) = LayerDescription::from(layer.clone()) {
-            if let Some(l) = ld.to(&layer_id, layer) {
-                // self.app.add_layer(l);
-                info!("{:?}", l);
-            }
-        }
+        let layer_type = self.app.get_layer_type(&layer_id);
+        info!("update_layer: {}", layer_type);
     }
 
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]

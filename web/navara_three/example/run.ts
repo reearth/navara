@@ -241,7 +241,7 @@ export const run = async (view: ThreeView) => {
     wireframe: false,
   });
   
-  view.addLayer({
+  let layerId = view.addLayer({
     type: "geojson",
     data: {
       type: "FeatureCollection",
@@ -250,7 +250,7 @@ export const run = async (view: ThreeView) => {
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [0, 0],
+            coordinates: [100, 30],
             type: "Point",
           },
         },
@@ -258,15 +258,7 @@ export const run = async (view: ThreeView) => {
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [30, 40],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [60, 0],
+            coordinates: [100, 60],
             type: "Point",
           },
         },
@@ -281,6 +273,20 @@ export const run = async (view: ThreeView) => {
     },
     wireframe: false,
   });
+
+  if(typeof(layerId) === "string"){
+    setTimeout(() => {
+      view.updateLayer(layerId, {
+        model: {
+          size: 500000,
+          height: 300000,
+          clamp_to_ground: true,
+          url: "/box.gltf",
+        },
+      });
+    }, 2000);
+  }
+  
   
   // chiyoda-ku
   // view.addLayer({

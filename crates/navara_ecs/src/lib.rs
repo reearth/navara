@@ -3,7 +3,7 @@
 use bevy_ecs::entity::Entity;
 use navara_buffer_store::BufferStore;
 use navara_event::Events;
-use navara_layer::LayerDescription;
+use navara_layer::{LayerDescription, LayerStore, LayerDescStore};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_window::{Window, WindowResizeEvent};
@@ -101,16 +101,29 @@ impl App {
         });
     }
 
-    pub fn add_layer(&mut self, desc: LayerDescription) {
+    pub fn add_layer(&mut self, layer_id: &String, desc: LayerDescription) {
+        if let Some(mut layer_desc_store) = self.app.world_mut().get_resource_mut::<LayerDescStore>() {
+            layer_desc_store.map.insert(layer_id.clone(), desc.clone());
+        }
+
         self.app
             .world_mut()
             .send_event(navara_layer::AddLayerEvent(desc));
     }
 
-    pub fn update_layer(&mut self, desc: LayerDescription) {
-        self.app
-            .world_mut()
-            .send_event(navara_layer::AddLayerEvent(desc));
+    pub fn get_layer_type(&mut self, layer_id: &String) -> &str{
+        let mut layer_type = "";
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
+            if let Some(desc) = layer_desc_store.map.get(layer_id) {
+                layer_type =  match desc {
+                    LayerDescription::Tiles(_) => "tiles",
+                    LayerDescription::Terrain(_) => "terrain",
+                    LayerDescription::GeoJson(_) => "geojson",
+                };
+            }
+        }
+
+        layer_type
     }
 }
 

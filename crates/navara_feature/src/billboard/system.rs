@@ -16,13 +16,12 @@ use navara_tile::{
 use crate::render::{RenderInformation, RenderableFeature};
 
 use super::{BillboardGeometry, BillboardMarker};
-use bevy_log::info;
+
 pub fn transfer_mesh(
     mut commands: Commands,
     billboards: Query<(Entity, &LayerId, &BillboardGeometry, &BillboardMaterial), Added<BillboardGeometry>>,
 ) {
     for (entity, layer_id, geometry, material) in &billboards {
-        info!("transfer_mesh: {:?}", layer_id);
         let position = match geometry.crs {
             CRS::Geographic => {
                 let lng = geometry.coords.x;

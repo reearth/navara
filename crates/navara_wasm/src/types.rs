@@ -40,14 +40,11 @@ pub struct TerrainLayerDescription {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub struct GeoJsonLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
-    #[wasm_bindgen(getter_with_clone)]
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    pub data: JsValue, // TODO: Improve any
-    pub wireframe: bool,
+    pub r#type: Option<String>,
+    pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
 
@@ -100,7 +97,15 @@ impl GeoJsonLayerDescription {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
+    pub r#type: Option<String>,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Deserialize)]
+pub struct GeoJsonLayerDescriptionData {
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(with = "serde_wasm_bindgen::preserve")]
+    pub data: JsValue,
 }
 
 #[wasm_bindgen]
@@ -122,44 +127,58 @@ impl LayerDescription {
     }
 
     pub fn to(self, layer_id: &String, value: JsValue) -> Option<navara_layer::LayerDescription> {
-        match self.r#type.as_str() {
-            "tiles" => {
-                let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
-                Some(navara_layer::LayerDescription::Tiles(TilesLayer {
-                    layer_id: layer_id.clone(),
-                    url: layer.url,
-                    segments: layer.segments,
-                    color: layer.color,
-                    max_sse: layer.max_sse.unwrap_or(4.),
-                    max_z: layer.max_z,
-                    wireframe: layer.wireframe,
-                }))
+        if let Some(str_type) = self.r#type {
+            match str_type.as_str() {
+                "tiles" => {
+                    let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                    Some(navara_layer::LayerDescription::Tiles(TilesLayer {
+                        layer_id: layer_id.clone(),
+                        url: layer.url,
+                        segments: layer.segments,
+                        color: layer.color,
+                        max_sse: layer.max_sse.unwrap_or(4.),
+                        max_z: layer.max_z,
+                        wireframe: layer.wireframe,
+                    }))
+                }
+                "terrain" => {
+                    let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                    Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
+                        layer_id: layer_id.clone(),
+                        url: layer.url.clone(),
+                        segments: layer.segments,
+                        max_z: layer.max_z,
+                        min_z: layer.min_z,
+                        wireframe: layer.wireframe,
+                        elevation_decoder: layer.elevation_decoder.unwrap_or_default().into(),
+                        terrain_type: TerrainDataType::from_url(&layer.url),
+                        tile_size: layer.tile_size.unwrap_or(256),
+                    }))
+                }
+                "geojson" => {
+                    let js_data: GeoJsonLayerDescriptionData = serde_wasm_bindgen::from_value(value.clone()).unwrap_or_else(|_e| {
+                        GeoJsonLayerDescriptionData { data: JsValue::NULL }
+                    });
+
+                    let mut geo_data: Option<GeoJson> = None;
+                    if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                        geo_data = GeoJson::from_json_object(js_data.data.into_serde().ok()?).ok();
+                    }
+
+                    let mut layer: GeoJsonLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+
+                    Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
+                        layer_id: layer_id.clone(),
+                        data: geo_data,
+                        appearances: layer.appearances(),
+                        crs: layer.crs(),
+                    }))
+                }
+                _ => None,
             }
-            "terrain" => {
-                let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
-                Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
-                    layer_id: layer_id.clone(),
-                    url: layer.url.clone(),
-                    segments: layer.segments,
-                    max_z: layer.max_z,
-                    min_z: layer.min_z,
-                    wireframe: layer.wireframe,
-                    elevation_decoder: layer.elevation_decoder.unwrap_or_default().into(),
-                    terrain_type: TerrainDataType::from_url(&layer.url),
-                    tile_size: layer.tile_size.unwrap_or(256),
-                }))
-            }
-            "geojson" => {
-                let mut layer: GeoJsonLayerDescription =
-                    serde_wasm_bindgen::from_value(value).ok()?;
-                Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
-                    layer_id: layer_id.clone(),
-                    data: GeoJson::from_json_object(layer.data.into_serde().ok()?).ok()?,
-                    appearances: layer.appearances(),
-                    crs: layer.crs(),
-                }))
-            }
-            _ => None,
+        }
+        else{
+            None
         }
     }
 }

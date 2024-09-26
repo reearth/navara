@@ -13,11 +13,8 @@ use navara_layer::{Appearance, GeoJsonLayer, LayerId, LayerStore};
 
 use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
-use bevy_log::info;
-
 
 fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: &Geometry, layer_id: &String, entities: &mut Vec<Entity>) {
-    info!("--- spawn_feature ---");
     for appearance in appearances {
         match appearance {
             Appearance::Point(v) => match &geometry.value {
@@ -191,35 +188,38 @@ pub fn construct_feature(
 ) {
     for layer in &geojson_layers {
         let appearances = &layer.appearances;
-        match &layer.data {
-            GeoJson::FeatureCollection(fs) => {
-                let mut entities: Vec<Entity> = Vec::new();
-                for f in fs {
-                    if let Some(g) = &f.geometry {
-                        spawn_feature(&mut commands, appearances, g, &layer.layer_id, &mut entities);
-                    }
-                }
 
-                if entities.len() > 0 {
-                    layer_store.map.insert(layer.layer_id.clone(), entities);
-                }
-            }
-            GeoJson::Feature(f) => {
-                if let Some(g) = &f.geometry {
+        if let Some(geo_data) = &layer.data {
+            match &geo_data {
+                GeoJson::FeatureCollection(fs) => {
                     let mut entities: Vec<Entity> = Vec::new();
-                    spawn_feature(&mut commands, appearances, g, &layer.layer_id, &mut entities);
-
+                    for f in fs {
+                        if let Some(g) = &f.geometry {
+                            spawn_feature(&mut commands, appearances, g, &layer.layer_id, &mut entities);
+                        }
+                    }
+    
                     if entities.len() > 0 {
                         layer_store.map.insert(layer.layer_id.clone(), entities);
                     }
                 }
-            }
-            GeoJson::Geometry(g) => {
-                let mut entities: Vec<Entity> = Vec::new();
-                spawn_feature(&mut commands, appearances, g, &layer.layer_id, &mut entities);
-
-                if entities.len() > 0 {
-                    layer_store.map.insert(layer.layer_id.clone(), entities);
+                GeoJson::Feature(f) => {
+                    if let Some(g) = &f.geometry {
+                        let mut entities: Vec<Entity> = Vec::new();
+                        spawn_feature(&mut commands, appearances, g, &layer.layer_id, &mut entities);
+    
+                        if entities.len() > 0 {
+                            layer_store.map.insert(layer.layer_id.clone(), entities);
+                        }
+                    }
+                }
+                GeoJson::Geometry(g) => {
+                    let mut entities: Vec<Entity> = Vec::new();
+                    spawn_feature(&mut commands, appearances, g, &layer.layer_id, &mut entities);
+    
+                    if entities.len() > 0 {
+                        layer_store.map.insert(layer.layer_id.clone(), entities);
+                    }
                 }
             }
         }
@@ -260,7 +260,7 @@ mod test {
         let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
         GeoJsonLayer {
             layer_id: nanoid!(),
-            data: geojson,
+            data: Some(geojson),
             crs: None,
             appearances,
         }
