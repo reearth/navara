@@ -1,5 +1,5 @@
 [package]
-name = "navara_layer_id"
+name = "navara_layer_event"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,4 +10,6 @@ edition = "2021"
 [dependencies]
 bevy_app = "0.14.1"
 bevy_ecs = "0.14.1"
-navara_core = { path = "../navara_core" }
+navara_layer = { path = "../navara_layer" }
+navara_feature = { path = "../navara_feature" }
+navara_material = { path = "../navara_material" }

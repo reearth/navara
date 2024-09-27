@@ -109,7 +109,7 @@ impl App {
 
         self.app
             .world_mut()
-            .send_event(navara_layer::AddLayerEvent(desc));
+            .send_event(navara_layer_event::AddLayerEvent(desc));
     }
 
     pub fn get_layer_type(&mut self, layer_id: &String) -> &str{

@@ -8,7 +8,7 @@ use navara_event::EventPlugin;
 use navara_feature::FeaturePlugin;
 use navara_geojson::GeoJsonPlugin;
 use navara_input::InputPlugin;
-use navara_layer::LayerPlugin;
+use navara_layer_event::LayerPlugin;
 use navara_mesh::MeshPlugin;
 use navara_occluder::OccluderPlugin;
 use navara_texture_fragment::TextureFragmentPlugin;

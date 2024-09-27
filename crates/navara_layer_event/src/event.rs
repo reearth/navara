@@ -1,8 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_feature::render::RenderableFeature;
+use navara_layer::{LayerDescription, LayerStore};
 use navara_material::Appearance;
-
-pub use crate::{LayerDescription, LayerStore};
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -30,12 +29,17 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
     }
 }
 
-pub fn process_update_events(mut commands: Commands, layer_store: Res<LayerStore>, mut events: EventReader<UpdateLayerEvent>, mut features: Query<&mut RenderableFeature>) {
+pub fn process_update_events(
+    mut commands: Commands,
+    layer_store: Res<LayerStore>,
+    mut events: EventReader<UpdateLayerEvent>,
+    mut features: Query<&mut RenderableFeature>,
+) {
     for ev in events.read() {
         let entities = layer_store.map.get(&ev.layer_id);
         for entity in entities {
-	        let mut feature = features.get_mut(entity);
-         feature.material = ev.appearance;
+            // let mut feature = features.get_mut(entity);
+            // feature.material = ev.appearance;
         }
     }
 }
