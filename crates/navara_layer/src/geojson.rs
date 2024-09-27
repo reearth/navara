@@ -2,7 +2,7 @@ use bevy_ecs::component::Component;
 use navara_core::CRS;
 use navara_parser::geojson::GeoJson;
 
-use crate::Appearance;
+use navara_material::Appearance;
 
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct GeoJsonLayer {

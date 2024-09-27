@@ -10,6 +10,8 @@ bevy_log = "0.14.1"
 nanoid = "0.4"
 navara_core = { path = "../navara_core" }
 navara_layer = { path = "../navara_layer" }
+navara_layer_id = { path = "../navara_layer_id" }
+navara_material = { path = "../navara_material" }
 navara_math = { path = "../navara_math" }
 navara_parser = { path = "../navara_parser" }
 navara_feature = { path = "../navara_feature" }

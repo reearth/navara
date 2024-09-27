@@ -6,7 +6,7 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
-use navara_layer::ModelMaterial;
+use navara_material::ModelMaterial;
 use navara_math::{Quat, Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,

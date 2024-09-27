@@ -1,0 +1,13 @@
+[package]
+name = "navara_layer_id"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[dependencies]
+bevy_app = "0.14.1"
+bevy_ecs = "0.14.1"
+navara_core = { path = "../navara_core" }

@@ -271,7 +271,7 @@ export const run = async (view: ThreeView) => {
       clamp_to_ground: true,
       url: "/box.gltf",
     },
-    wireframe: false,
+    // wireframe: false,
   });
 
   if(typeof(layerId) === "string"){
@@ -279,7 +279,7 @@ export const run = async (view: ThreeView) => {
       view.updateLayer(layerId, {
         model: {
           size: 500000,
-          height: 300000,
+          height: 500000,
           clamp_to_ground: true,
           url: "/box.gltf",
         },

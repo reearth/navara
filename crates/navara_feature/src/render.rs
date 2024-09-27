@@ -1,7 +1,7 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_buffer_store::Handle;
 use navara_geometry::TransferableFloatAttribute;
-use navara_layer::{
+use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
 use navara_math::{FloatType, Transform};

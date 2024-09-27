@@ -9,7 +9,9 @@ use navara_feature::{
     billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
     polyline::PolylineGeometry,
 };
-use navara_layer::{Appearance, GeoJsonLayer, LayerId, LayerStore};
+use navara_layer::{GeoJsonLayer, LayerStore};
+use navara_layer_id::LayerId;
+use navara_material::Appearance;
 
 use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
@@ -233,11 +235,11 @@ mod test {
     use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_32};
     use navara_event_store::EventStore;
     use navara_feature::{render::RenderableFeature, FeaturePlugin};
-    use navara_layer::{Appearance, BillboardMaterial, GeoJsonLayer, PointMaterial};
+    use navara_layer::{BillboardMaterial, GeoJsonLayer, PointMaterial, LayerStore};
     use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
     use navara_tile::tile::TileQuadtree;
-    use navara_layer::LayerStore;
+    use navara_material::Appearance;
     use std::collections::HashMap;
     use nanoid::nanoid;
 

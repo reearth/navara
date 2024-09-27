@@ -17,9 +17,9 @@ pub struct PointMaterial {
     pub depth_test: bool,
 }
 
-impl From<PointMaterial> for navara_layer::PointMaterial {
+impl From<PointMaterial> for navara_material::PointMaterial {
     fn from(val: PointMaterial) -> Self {
-        navara_layer::PointMaterial {
+        navara_material::PointMaterial {
             show: val.show.unwrap_or(true),
             size: val.size,
             color: val.color,
@@ -31,8 +31,8 @@ impl From<PointMaterial> for navara_layer::PointMaterial {
         }
     }
 }
-impl<'a> From<&'a navara_layer::PointMaterial> for PointMaterial {
-    fn from(value: &'a navara_layer::PointMaterial) -> PointMaterial {
+impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
+    fn from(value: &'a navara_material::PointMaterial) -> PointMaterial {
         PointMaterial {
             show: Some(value.show),
             size: value.size,
@@ -72,9 +72,9 @@ pub struct BillboardMaterial {
     pub depth_test: bool,
 }
 
-impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
+impl From<BillboardMaterial> for navara_material::BillboardMaterial {
     fn from(val: BillboardMaterial) -> Self {
-        navara_layer::BillboardMaterial {
+        navara_material::BillboardMaterial {
             show: val.show.unwrap_or(true),
             size: val.size,
             color: val.color,
@@ -87,8 +87,8 @@ impl From<BillboardMaterial> for navara_layer::BillboardMaterial {
         }
     }
 }
-impl<'a> From<&'a navara_layer::BillboardMaterial> for BillboardMaterial {
-    fn from(value: &'a navara_layer::BillboardMaterial) -> BillboardMaterial {
+impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
+    fn from(value: &'a navara_material::BillboardMaterial) -> BillboardMaterial {
         BillboardMaterial {
             show: Some(value.show),
             size: value.size,
@@ -116,9 +116,9 @@ pub struct PolylineMaterial {
     pub height: f32,
 }
 
-impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
+impl From<PolylineMaterial> for navara_material::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
-        navara_layer::PolylineMaterial {
+        navara_material::PolylineMaterial {
             show: val.show.unwrap_or(true),
             color: val.color,
             width: val.width,
@@ -127,8 +127,8 @@ impl From<PolylineMaterial> for navara_layer::PolylineMaterial {
         }
     }
 }
-impl<'a> From<&'a navara_layer::PolylineMaterial> for PolylineMaterial {
-    fn from(value: &'a navara_layer::PolylineMaterial) -> PolylineMaterial {
+impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
+    fn from(value: &'a navara_material::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
             show: Some(value.show),
             color: value.color,
@@ -145,15 +145,15 @@ pub struct PolygonMaterial {
     pub show: Option<bool>,
 }
 
-impl From<PolygonMaterial> for navara_layer::PolygonMaterial {
+impl From<PolygonMaterial> for navara_material::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
-        navara_layer::PolygonMaterial {
+        navara_material::PolygonMaterial {
             show: val.show.unwrap_or(true),
         }
     }
 }
-impl<'a> From<&'a navara_layer::PolygonMaterial> for PolygonMaterial {
-    fn from(value: &'a navara_layer::PolygonMaterial) -> PolygonMaterial {
+impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
+    fn from(value: &'a navara_material::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
             show: Some(value.show),
         }
@@ -171,9 +171,9 @@ pub struct ModelMaterial {
     pub clamp_to_ground: bool,
 }
 
-impl From<ModelMaterial> for navara_layer::ModelMaterial {
+impl From<ModelMaterial> for navara_material::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
-        navara_layer::ModelMaterial {
+        navara_material::ModelMaterial {
             show: val.show.unwrap_or(true),
             url: val.url,
             size: val.size,
@@ -182,8 +182,8 @@ impl From<ModelMaterial> for navara_layer::ModelMaterial {
         }
     }
 }
-impl<'a> From<&'a navara_layer::ModelMaterial> for ModelMaterial {
-    fn from(value: &'a navara_layer::ModelMaterial) -> ModelMaterial {
+impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
+    fn from(value: &'a navara_material::ModelMaterial) -> ModelMaterial {
         ModelMaterial {
             show: Some(value.show),
             url: value.url.clone(),

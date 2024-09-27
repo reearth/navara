@@ -6,7 +6,7 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
-use navara_layer::{BillboardMaterial, LayerId};
+use navara_material::BillboardMaterial;
 use navara_math::{Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
@@ -19,9 +19,9 @@ use super::{BillboardGeometry, BillboardMarker};
 
 pub fn transfer_mesh(
     mut commands: Commands,
-    billboards: Query<(Entity, &LayerId, &BillboardGeometry, &BillboardMaterial), Added<BillboardGeometry>>,
+    billboards: Query<(Entity, &BillboardGeometry, &BillboardMaterial), Added<BillboardGeometry>>,
 ) {
-    for (entity, layer_id, geometry, material) in &billboards {
+    for (entity, geometry, material) in &billboards {
         let position = match geometry.crs {
             CRS::Geographic => {
                 let lng = geometry.coords.x;

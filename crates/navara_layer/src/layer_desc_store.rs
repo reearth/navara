@@ -1,5 +1,5 @@
 use bevy_ecs::system::Resource;
-pub use crate::LayerDescription;
+use crate::LayerDescription;
 use std::collections::HashMap;
 
 #[derive(Resource)] 

@@ -8,7 +8,7 @@ use navara_core::{Angle, Meters, CRS, LLE, WGS84_32};
 use navara_geometry::{
     create_polyline_geometry, PolylineGeometryOptions, TransferableFloatAttribute,
 };
-use navara_layer::PolylineMaterial;
+use navara_material::PolylineMaterial;
 use navara_math::Transform;
 
 use crate::render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry};
