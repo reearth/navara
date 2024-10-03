@@ -377,6 +377,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -389,6 +391,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -478,6 +482,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -490,6 +496,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -585,6 +593,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -597,6 +607,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -687,6 +699,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -699,6 +713,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,

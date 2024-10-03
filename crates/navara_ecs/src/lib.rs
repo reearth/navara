@@ -4,11 +4,11 @@ use bevy_ecs::entity::Entity;
 use navara_buffer_store::BufferStore;
 use navara_event::Events;
 use navara_layer::LayerDescription;
-use navara_layer::{LayerStore, LayerDescStore};
+use navara_layer::LayerDescStore;
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_window::{Window, WindowResizeEvent};
-use bevy_log::info;
+
 mod app;
 
 pub struct App {
@@ -129,7 +129,12 @@ impl App {
 
     pub fn update_layer(&mut self, layer_id: &String, desc: LayerDescription) {
         if let LayerDescription::GeoJson(geo) = desc {
-            info!("{:?}", geo.appearances);
+            self.app
+                .world_mut()
+                .send_event(navara_layer_event::UpdateLayerEvent{
+                    layer_id:layer_id.clone(),
+                    appearance: geo.appearances[0].clone()
+                });
         }
     }
 }

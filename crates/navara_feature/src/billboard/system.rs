@@ -45,6 +45,8 @@ pub fn transfer_mesh(
         commands.spawn((
             BillboardMarker,
             RenderableFeature::Billboard {
+                coordinates: geometry.coords.clone(),
+                crs: geometry.crs.clone(),
                 material: material.clone(),
                 transform: Transform::from_translation(position).with_scale(Vec3::new(
                     material.size,
@@ -76,6 +78,8 @@ pub fn update_height_by_terrain(
     for (_, mut feature) in &mut renderable_features {
         match feature.as_mut() {
             RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id,

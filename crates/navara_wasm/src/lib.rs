@@ -13,7 +13,6 @@ use navara_input::Key;
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 use nanoid::nanoid;
-use bevy_log::info;
 
 pub use event::*;
 pub use input::*;

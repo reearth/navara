@@ -22,7 +22,6 @@ import { C3TilesManager } from "./temp/C3Tiles";
 import MVT from "./temp/MVT";
 import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
-import {Pane} from 'tweakpane';
 import type { CommonUniforms } from "./uniforms";
 
 export type Options = {
@@ -183,24 +182,6 @@ export default class ThreeView {
         this._stats = new Stats();
         t.appendChild(this._stats.dom);
       }
-
-      const pane = new Pane({
-        title: 'Parameters',
-        expanded: true,
-      });
-
-      const PARAMS = {
-        show: true,
-        size: 1.0,
-        height: 1.0,
-      };
-
-      // @ts-ignore
-      pane.addBinding(PARAMS, 'show');
-      // @ts-ignore
-      pane.addBinding(PARAMS, 'size');
-      // @ts-ignore
-      pane.addBinding(PARAMS, 'height');
     }
 
     // orbit

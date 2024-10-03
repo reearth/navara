@@ -9,7 +9,7 @@ use navara_geometry::{
     create_polyline_geometry, PolylineGeometryOptions, TransferableFloatAttribute,
 };
 use navara_material::PolylineMaterial;
-use navara_math::Transform;
+use navara_math::{Transform, Vec3};
 
 use crate::render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry};
 
@@ -111,6 +111,8 @@ pub fn transfer_mesh(
             commands.spawn((
                 PolylineMarker,
                 RenderableFeature::Polyline {
+                    coordinates: Vec3::new(0.,0.,0.),
+                    crs: CRS::Geocentric,
                     material: material.clone(),
                     geometry: to_transferable_geometry(&mut buf, geometry),
                     transform: Transform::default(),

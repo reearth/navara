@@ -47,10 +47,12 @@ pub fn transfer_mesh(
         let rotation_y = Quat::from_rotation_y(-lat);
         let rotation_z = Quat::from_rotation_z(lng);
         let rotation = rotation_z * rotation_y;
-
-        commands.spawn((
+        
+        let ett = commands.spawn((
             ModelMarker,
             RenderableFeature::Model {
+                coordinates: geometry.coords.clone(),
+                crs: geometry.crs.clone(),
                 material: material.clone(),
                 transform: Transform::from_translation(position)
                     .with_rotation(rotation)
@@ -80,6 +82,8 @@ pub fn update_height_by_terrain(
     for (_, mut feature) in &mut renderable_features {
         match feature.as_mut() {
             RenderableFeature::Model {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id,
