@@ -12,16 +12,17 @@ use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
-
+use navara_layer::{LayerStore, LayerId};
 use crate::render::{RenderInformation, RenderableFeature};
 
 use super::{ModelGeometry, ModelMarker};
 
 pub fn transfer_mesh(
     mut commands: Commands,
-    models: Query<(Entity, &ModelGeometry, &ModelMaterial), Added<ModelGeometry>>,
+    models: Query<(Entity, &LayerId, &ModelGeometry, &ModelMaterial), Added<ModelGeometry>>,
+    mut layer_store: ResMut<LayerStore>
 ) {
-    for (entity, geometry, material) in &models {
+    for (entity, layer_id, geometry, material) in &models {
         let position = match geometry.crs {
             CRS::Geographic => {
                 let lng = geometry.coords.x;
@@ -48,7 +49,7 @@ pub fn transfer_mesh(
         let rotation_z = Quat::from_rotation_z(lng);
         let rotation = rotation_z * rotation_y;
         
-        let ett = commands.spawn((
+        let entity = commands.spawn((
             ModelMarker,
             RenderableFeature::Model {
                 coordinates: geometry.coords.clone(),
@@ -63,6 +64,10 @@ pub fn transfer_mesh(
                 },
             },
         ));
+
+        layer_store.map.entry(layer_id.clone())
+                       .or_insert_with(Vec::new)
+                       .push(entity.id());
     }
 }
 

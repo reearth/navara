@@ -1,7 +1,6 @@
 use bevy_ecs::{
-    entity::Entity,
     query::{Added, Changed, Or},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query},
 };
 use navara_core::CRS;
 
@@ -9,7 +8,7 @@ use navara_feature::{
     billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
     polyline::PolylineGeometry,
 };
-use navara_layer::{GeoJsonLayer, LayerStore, LayerId};
+use navara_layer::{GeoJsonLayer, LayerId};
 use navara_material::Appearance;
 
 use navara_math::{FloatType, Vec3};
@@ -19,14 +18,13 @@ fn spawn_feature(
     commands: &mut Commands,
     appearances: &[Appearance],
     geometry: &Geometry,
-    layer_id: &String,
-    entities: &mut Vec<Entity>,
+    layer_id: &String
 ) {
     for appearance in appearances {
         match appearance {
             Appearance::Point(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let entity = commands.spawn((
+                    commands.spawn((
                         LayerId(layer_id.clone()),
                         PointGeometry {
                             coords: Vec3::new(
@@ -38,13 +36,10 @@ fn spawn_feature(
                         },
                         v.clone(),
                     ));
-
-                    let entity_id = entity.id();
-                    entities.push(entity_id);
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let entity = commands.spawn((
+                        commands.spawn((
                             LayerId(layer_id.clone()),
                             PointGeometry {
                                 coords: Vec3::new(
@@ -56,16 +51,13 @@ fn spawn_feature(
                             },
                             v.clone(),
                         ));
-
-                        let entity_id = entity.id();
-                        entities.push(entity_id);
                     }
                 }
                 _ => {}
             },
             Appearance::Billboard(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let entity = commands.spawn((
+                    commands.spawn((
                         LayerId(layer_id.clone()),
                         BillboardGeometry {
                             coords: Vec3::new(
@@ -77,13 +69,10 @@ fn spawn_feature(
                         },
                         v.clone(),
                     ));
-
-                    let entity_id = entity.id();
-                    entities.push(entity_id);
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let entity = commands.spawn((
+                        commands.spawn((
                             LayerId(layer_id.clone()),
                             BillboardGeometry {
                                 coords: Vec3::new(
@@ -95,9 +84,6 @@ fn spawn_feature(
                             },
                             v.clone(),
                         ));
-
-                        let entity_id = entity.id();
-                        entities.push(entity_id);
                     }
                 }
                 _ => {}
@@ -105,6 +91,7 @@ fn spawn_feature(
             Appearance::Polyline(v) => match &geometry.value {
                 Value::LineString(f) => {
                     commands.spawn((
+                        LayerId(layer_id.clone()),
                         PolylineGeometry {
                             coords: f
                                 .iter()
@@ -124,6 +111,7 @@ fn spawn_feature(
                 Value::MultiLineString(fs) => {
                     for f in fs {
                         commands.spawn((
+                            LayerId(layer_id.clone()),
                             PolylineGeometry {
                                 coords: f
                                     .iter()
@@ -146,7 +134,7 @@ fn spawn_feature(
             Appearance::Polygon(_v) => unimplemented!(),
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let entity = commands.spawn((
+                    commands.spawn((
                         LayerId(layer_id.clone()),
                         ModelGeometry {
                             coords: Vec3::new(
@@ -158,13 +146,10 @@ fn spawn_feature(
                         },
                         v.clone(),
                     ));
-
-                    let entity_id = entity.id();
-                    entities.push(entity_id);
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let entity = commands.spawn((
+                        commands.spawn((
                             LayerId(layer_id.clone()),
                             ModelGeometry {
                                 coords: Vec3::new(
@@ -176,9 +161,6 @@ fn spawn_feature(
                             },
                             v.clone(),
                         ));
-
-                        let entity_id = entity.id();
-                        entities.push(entity_id);
                     }
                 }
                 _ => {}
@@ -190,8 +172,7 @@ fn spawn_feature(
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
-    geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
-    mut layer_store: ResMut<LayerStore>,
+    geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>
 ) {
     for layer in &geojson_layers {
         let appearances = &layer.appearances;
@@ -199,52 +180,34 @@ pub fn construct_feature(
         if let Some(geo_data) = &layer.data {
             match &geo_data {
                 GeoJson::FeatureCollection(fs) => {
-                    let mut entities: Vec<Entity> = Vec::new();
                     for f in fs {
                         if let Some(g) = &f.geometry {
                             spawn_feature(
                                 &mut commands,
                                 appearances,
                                 g,
-                                &layer.layer_id,
-                                &mut entities,
+                                &layer.layer_id
                             );
                         }
-                    }
-
-                    if entities.len() > 0 {
-                        layer_store.map.insert(layer.layer_id.clone(), entities);
                     }
                 }
                 GeoJson::Feature(f) => {
                     if let Some(g) = &f.geometry {
-                        let mut entities: Vec<Entity> = Vec::new();
                         spawn_feature(
                             &mut commands,
                             appearances,
                             g,
-                            &layer.layer_id,
-                            &mut entities,
+                            &layer.layer_id
                         );
-
-                        if entities.len() > 0 {
-                            layer_store.map.insert(layer.layer_id.clone(), entities);
-                        }
                     }
                 }
                 GeoJson::Geometry(g) => {
-                    let mut entities: Vec<Entity> = Vec::new();
                     spawn_feature(
                         &mut commands,
                         appearances,
                         g,
-                        &layer.layer_id,
-                        &mut entities,
+                        &layer.layer_id
                     );
-
-                    if entities.len() > 0 {
-                        layer_store.map.insert(layer.layer_id.clone(), entities);
-                    }
                 }
             }
         }

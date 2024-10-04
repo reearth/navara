@@ -10,7 +10,7 @@ use navara_geometry::{
 };
 use navara_material::PolylineMaterial;
 use navara_math::{Transform, Vec3};
-
+use navara_layer::{LayerStore, LayerId};
 use crate::render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry};
 
 use super::{PolylineGeometry, PolylineMarker};
@@ -73,9 +73,10 @@ fn to_transferable_geometry(
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    polylines: Query<(Entity, &PolylineGeometry, &PolylineMaterial), Added<PolylineGeometry>>,
+    polylines: Query<(Entity, &LayerId, &PolylineGeometry, &PolylineMaterial), Added<PolylineGeometry>>,
+    mut layer_store: ResMut<LayerStore>
 ) {
-    for (entity, geometry, material) in &polylines {
+    for (entity, layer_id, geometry, material) in &polylines {
         let positions = match geometry.crs {
             CRS::Geographic => {
                 let mut positions = vec![];
@@ -108,7 +109,7 @@ pub fn transfer_mesh(
             },
         ) {
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
-            commands.spawn((
+            let entity = commands.spawn((
                 PolylineMarker,
                 RenderableFeature::Polyline {
                     coordinates: Vec3::new(0.,0.,0.),
@@ -122,6 +123,10 @@ pub fn transfer_mesh(
                     },
                 },
             ));
+
+            layer_store.map.entry(layer_id.clone())
+                       .or_insert_with(Vec::new)
+                       .push(entity.id());
         }
     }
 }

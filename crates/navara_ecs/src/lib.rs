@@ -3,8 +3,7 @@
 use bevy_ecs::entity::Entity;
 use navara_buffer_store::BufferStore;
 use navara_event::Events;
-use navara_layer::LayerDescription;
-use navara_layer::LayerDescStore;
+use navara_layer::{LayerDescription, LayerDescStore, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_window::{Window, WindowResizeEvent};
@@ -132,7 +131,7 @@ impl App {
             self.app
                 .world_mut()
                 .send_event(navara_layer_event::UpdateLayerEvent{
-                    layer_id:layer_id.clone(),
+                    layer_id: LayerId(layer_id.clone()),
                     appearance: geo.appearances[0].clone()
                 });
         }
