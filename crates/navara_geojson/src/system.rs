@@ -18,14 +18,14 @@ fn spawn_feature(
     commands: &mut Commands,
     appearances: &[Appearance],
     geometry: &Geometry,
-    layer_id: &String
+    layer_id: &str,
 ) {
     for appearance in appearances {
         match appearance {
             Appearance::Point(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
-                        LayerId(layer_id.clone()),
+                        LayerId(layer_id.to_owned()),
                         PointGeometry {
                             coords: Vec3::new(
                                 f[0] as FloatType,
@@ -40,7 +40,7 @@ fn spawn_feature(
                 Value::MultiPoint(fs) => {
                     for f in fs {
                         commands.spawn((
-                            LayerId(layer_id.clone()),
+                            LayerId(layer_id.to_owned()),
                             PointGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -58,7 +58,7 @@ fn spawn_feature(
             Appearance::Billboard(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
-                        LayerId(layer_id.clone()),
+                        LayerId(layer_id.to_owned()),
                         BillboardGeometry {
                             coords: Vec3::new(
                                 f[0] as FloatType,
@@ -73,7 +73,7 @@ fn spawn_feature(
                 Value::MultiPoint(fs) => {
                     for f in fs {
                         commands.spawn((
-                            LayerId(layer_id.clone()),
+                            LayerId(layer_id.to_owned()),
                             BillboardGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -91,7 +91,7 @@ fn spawn_feature(
             Appearance::Polyline(v) => match &geometry.value {
                 Value::LineString(f) => {
                     commands.spawn((
-                        LayerId(layer_id.clone()),
+                        LayerId(layer_id.to_owned()),
                         PolylineGeometry {
                             coords: f
                                 .iter()
@@ -111,7 +111,7 @@ fn spawn_feature(
                 Value::MultiLineString(fs) => {
                     for f in fs {
                         commands.spawn((
-                            LayerId(layer_id.clone()),
+                            LayerId(layer_id.to_owned()),
                             PolylineGeometry {
                                 coords: f
                                     .iter()
@@ -135,7 +135,7 @@ fn spawn_feature(
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
-                        LayerId(layer_id.clone()),
+                        LayerId(layer_id.to_owned()),
                         ModelGeometry {
                             coords: Vec3::new(
                                 f[0] as FloatType,
@@ -150,7 +150,7 @@ fn spawn_feature(
                 Value::MultiPoint(fs) => {
                     for f in fs {
                         commands.spawn((
-                            LayerId(layer_id.clone()),
+                            LayerId(layer_id.to_owned()),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -172,7 +172,7 @@ fn spawn_feature(
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
-    geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>
+    geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
     for layer in &geojson_layers {
         let appearances = &layer.appearances;
@@ -182,32 +182,17 @@ pub fn construct_feature(
                 GeoJson::FeatureCollection(fs) => {
                     for f in fs {
                         if let Some(g) = &f.geometry {
-                            spawn_feature(
-                                &mut commands,
-                                appearances,
-                                g,
-                                &layer.layer_id
-                            );
+                            spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
                         }
                     }
                 }
                 GeoJson::Feature(f) => {
                     if let Some(g) = &f.geometry {
-                        spawn_feature(
-                            &mut commands,
-                            appearances,
-                            g,
-                            &layer.layer_id
-                        );
+                        spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
                     }
                 }
                 GeoJson::Geometry(g) => {
-                    spawn_feature(
-                        &mut commands,
-                        appearances,
-                        g,
-                        &layer.layer_id
-                    );
+                    spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
                 }
             }
         }

@@ -1,9 +1,9 @@
 import ThreeView from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
-import { string } from "three/webgpu";
-import {Pane} from 'tweakpane';
+import { Pane } from "tweakpane";
+import { type GeoJsonLayer } from "../src/type";
 
-const geoLayersDef = [
+const geoLayersDef: GeoJsonLayer[] = [
   {
     type: "geojson",
     data: {
@@ -207,7 +207,7 @@ const geoLayersDef = [
       clamp_to_ground: true,
       depth_test: true,
     },
-  }
+  },
 ];
 
 export const run = async (view: ThreeView) => {
@@ -293,12 +293,14 @@ export const run = async (view: ThreeView) => {
       terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
   });
 
-  let geoLayerMap = {};
+  let geoLayerMap: { [key: string]: GeoJsonLayer } = {};
   geoLayersDef.forEach(layer => {
     let layerId = view.addLayer(layer);
-    geoLayerMap[layerId] = layer;
+    if (layerId) {
+      geoLayerMap[layerId] = layer;
+    }
   });
-  
+
   // chiyoda-ku
   // view.addLayer({
   //   type: "tiles",
@@ -363,51 +365,52 @@ export const run = async (view: ThreeView) => {
   //   terrain_url: terrainUrl,
   // });
 
-
   const pane = new Pane({
-    title: 'Parameters',
+    title: "Parameters",
     expanded: true,
   });
 
-
   let layerIds = Object.keys(geoLayerMap);
 
-  let layerIdOptions = {};
-  layerIds.forEach( (layerId, i) => {
-    layerIdOptions['layer'+(i+1)] = i;
-  });
+  let layerIdOptions: { [key: string]: number } = {};
+  for (let i = 0; i < layerIds.length; i++) {
+    layerIdOptions["layer" + (i + 1)] = i;
+  }
 
   const paneParams = {
-    layer : 0,
-    material : '',
+    layer: 0,
+    material: "",
 
     show: true,
     color: "#ffffff",
     size: 1,
     width: 1,
-    height: 1
-  }
+    height: 1,
+  };
 
   // @ts-ignore
-  pane.addBinding(
-    paneParams, 'layer', {options: layerIdOptions}
-  ).on('change', (ev) => {
+  pane.addBinding(paneParams, "layer", { options: layerIdOptions }).on("change", ev => {
     // @ts-ignore
     materialCtrl.dispose();
-    
-    if(paramCtrl){
+
+    if (paramCtrl) {
       // @ts-ignore
       paramCtrl.dispose();
     }
-    
+
     // @ts-ignore
     materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]]);
-    materialCtrl.on('change', (ev) => {
-      if(paramCtrl){
+    materialCtrl.on("change", () => {
+      if (paramCtrl) {
         // @ts-ignore
         paramCtrl.dispose();
       }
-      paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[paneParams.layer]], onParamChange);
+      paramCtrl = createParamCtrl(
+        pane,
+        paneParams,
+        geoLayerMap[layerIds[paneParams.layer]],
+        onParamChange,
+      );
     });
 
     paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]], onParamChange);
@@ -415,92 +418,102 @@ export const run = async (view: ThreeView) => {
 
   // @ts-ignore
   let materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[0]]);
-  materialCtrl.on('change', (ev) => {
-    if(paramCtrl){
+  materialCtrl.on("change", () => {
+    if (paramCtrl) {
       // @ts-ignore
       paramCtrl.dispose();
     }
-    paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[paneParams.layer]], onParamChange);
+    paramCtrl = createParamCtrl(
+      pane,
+      paneParams,
+      geoLayerMap[layerIds[paneParams.layer]],
+      onParamChange,
+    );
   });
 
   let paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[0]], onParamChange);
 
-  function onParamChange(){
+  function onParamChange() {
     let layerId = layerIds[paneParams.layer];
     let layer = geoLayerMap[layerId];
-    if(layer && layer[paneParams.material]){
-      let material = layer[paneParams.material];
+    if (layer && paneParams.material in layer) {
+      let material = layer[paneParams.material as keyof typeof layer];
 
       material.show = paneParams.show;
 
-      if('color' in material){
+      if ("color" in material) {
         material.color = parseInt(paneParams.color.replace("#", ""), 16);
       }
 
-      if('size' in material){
+      if ("size" in material) {
         material.size = paneParams.size;
       }
 
-      if('width' in material){
+      if ("width" in material) {
         material.width = paneParams.width;
       }
 
-      if('height' in material){
+      if ("height" in material) {
         material.height = paneParams.height;
       }
 
       view.updateLayer(layerId, {
-        [paneParams.material]: material
+        type: layer.type,
+        data: layer.data,
+        [paneParams.material]: material,
       });
     }
   }
 };
 
-function createParamCtrl(pane, paneParams, layer, changeFunc){
-  let material = layer[paneParams.material];
-  if(material){
-    // folder
+function createParamCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer, changeFunc: Function) {
+  let material = layer[paneParams.material as keyof typeof layer];
+  if (material) {
+    // @ts-ignore
     const f = pane.addFolder({
-      title: '',
+      title: "",
       expanded: true,
     });
 
     paneParams.show = material.show ?? true;
-    f.addBinding(paneParams, 'show').on('change', changeFunc);
+    f.addBinding(paneParams, "show").on("change", changeFunc);
 
-    if('color' in material){
-      paneParams.color = "#" + material.color.toString(16).padStart(6, '0');
-      f.addBinding(paneParams, 'color').on('change', (ev) => {
-        if(ev.last) { changeFunc(ev) }
+    if ("color" in material) {
+      paneParams.color = "#" + material.color.toString(16).padStart(6, "0");
+      // @ts-ignore
+      f.addBinding(paneParams, "color").on("change", ev => {
+        if (ev.last) {
+          changeFunc(ev);
+        }
       });
     }
 
-    if('size' in material){
+    if ("size" in material) {
       paneParams.size = material.size;
-      f.addBinding(paneParams, 'size').on('change', changeFunc);
+      f.addBinding(paneParams, "size").on("change", changeFunc);
     }
 
-    if('width' in material){
+    if ("width" in material) {
       paneParams.width = material.width;
-      f.addBinding(paneParams, 'width').on('change', changeFunc);
+      f.addBinding(paneParams, "width").on("change", changeFunc);
     }
 
-    if('height' in material){
+    if ("height" in material) {
       paneParams.height = material.height;
-      f.addBinding(paneParams, 'height').on('change', changeFunc);
+      f.addBinding(paneParams, "height").on("change", changeFunc);
     }
 
     return f;
   }
-  
+
   return null;
 }
 
-function createMaterialCtrl(pane, paneParams, layer){
+function createMaterialCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer) {
   let options = getMaterialOptions(layer);
-  let materialCtrl = pane.addBinding(
-    paneParams, 'material', {options: options}
-  );
+
+  // @ts-ignore
+  let materialCtrl = pane.addBinding(paneParams, "material", { options: options });
 
   const firstOptionKey = Object.keys(options)[0];
   paneParams.material = firstOptionKey;
@@ -508,23 +521,25 @@ function createMaterialCtrl(pane, paneParams, layer){
   return materialCtrl;
 }
 
-function getMaterialOptions(layer){
+function getMaterialOptions(layer: GeoJsonLayer) {
   let materials = [];
-  if('point' in layer){
-    materials.push('point');
+  if ("point" in layer) {
+    materials.push("point");
   }
-  if('billboard' in layer){
-    materials.push('billboard');
+  if ("billboard" in layer) {
+    materials.push("billboard");
   }
-  if('model' in layer){
-    materials.push('model');
+  if ("model" in layer) {
+    materials.push("model");
   }
-  if('polyline' in layer){
-    materials.push('polyline');
+  if ("polyline" in layer) {
+    materials.push("polyline");
   }
 
-  let ret = {};
-  materials.forEach( m => { ret[m] = m });
+  let ret: any = {};
+  materials.forEach(m => {
+    ret[m] = m;
+  });
 
   return ret;
 }

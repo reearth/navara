@@ -1,12 +1,12 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_buffer_store::Handle;
+use navara_core::CRS;
 use navara_geometry::TransferableFloatAttribute;
 use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
 use navara_math::{FloatType, Transform, Vec3};
 use navara_mesh::Mesh;
-use navara_core::CRS;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {

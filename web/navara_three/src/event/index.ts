@@ -26,7 +26,7 @@ import {
   ImageLoader,
   MeshLambertMaterial,
   Texture,
-  Sprite
+  Sprite,
 } from "three";
 
 import { applyTextureAspect } from "../texture";
@@ -301,12 +301,13 @@ function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, mesh
   const material = (point ?? billboard ?? polyline ?? polygon ?? model)?.material;
   if (material) {
     if (obj instanceof Sprite) {
-      obj.material.color.set(material.color);
-      obj.material.visible = material.show;
-    }
-    else if(Array.isArray(obj.children)){
+      if ("color" in material) {
+        obj.material.color.set(material.color);
+      }
+      obj.material.visible = material.show ?? true;
+    } else if (Array.isArray(obj.children)) {
       obj.children.forEach(child => {
-        child.visible = material.show;
+        child.visible = material.show ?? true;
       });
     }
   }

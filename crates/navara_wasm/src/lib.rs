@@ -8,11 +8,11 @@ mod types;
 mod unit;
 mod utils;
 
+use nanoid::nanoid;
 use navara_ecs::App;
 use navara_input::Key;
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
-use nanoid::nanoid;
 
 pub use event::*;
 pub use input::*;
@@ -117,7 +117,7 @@ impl Core {
         if let Some(ld) = LayerDescription::from(layer.clone()) {
             if let Some(layer_type) = ld.r#type {
                 if let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer) {
-                    self.app.add_layer(&layer_id, l);
+                    self.app.add_layer(layer_id.as_str(), l);
                 }
             }
         }
@@ -129,8 +129,8 @@ impl Core {
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
         let layer_type = self.app.get_layer_type(&layer_id);
         if layer_type == "geojson" {
-            if let Some(l) = LayerDescription::to(&layer_id, layer_type, layer) {
-                self.app.update_layer(&layer_id, l);
+            if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type, layer) {
+                self.app.update_layer(layer_id.as_str(), l);
             }
         }
     }

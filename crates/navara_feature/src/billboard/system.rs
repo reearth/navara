@@ -1,3 +1,4 @@
+use crate::render::{RenderInformation, RenderableFeature};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -6,21 +7,23 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
+use navara_layer::{LayerId, LayerStore};
 use navara_material::BillboardMaterial;
 use navara_math::{Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
-use navara_layer::{LayerStore, LayerId};
-use crate::render::{RenderInformation, RenderableFeature};
 
 use super::{BillboardGeometry, BillboardMarker};
 
 pub fn transfer_mesh(
     mut commands: Commands,
-    billboards: Query<(Entity, &LayerId, &BillboardGeometry, &BillboardMaterial), Added<BillboardGeometry>>,
-    mut layer_store: ResMut<LayerStore>
+    billboards: Query<
+        (Entity, &LayerId, &BillboardGeometry, &BillboardMaterial),
+        Added<BillboardGeometry>,
+    >,
+    mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, geometry, material) in &billboards {
         let position = match geometry.crs {
@@ -46,7 +49,7 @@ pub fn transfer_mesh(
         let entity = commands.spawn((
             BillboardMarker,
             RenderableFeature::Billboard {
-                coordinates: geometry.coords.clone(),
+                coordinates: geometry.coords,
                 crs: geometry.crs.clone(),
                 material: material.clone(),
                 transform: Transform::from_translation(position).with_scale(Vec3::new(
@@ -61,9 +64,11 @@ pub fn transfer_mesh(
             },
         ));
 
-        layer_store.map.entry(layer_id.clone())
-                       .or_insert_with(Vec::new)
-                       .push(entity.id());
+        layer_store
+            .map
+            .entry(layer_id.clone())
+            .or_default()
+            .push(entity.id());
     }
 }
 

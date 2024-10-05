@@ -1,10 +1,9 @@
 use bevy_ecs::prelude::*;
-use navara_feature::render::RenderableFeature;
-use navara_layer::{LayerDescription, LayerStore, LayerId};
-use navara_material::Appearance;
 use navara_core::{xyz_to_vec3, Angle, Meters, CRS, LLE, WGS84_32};
-use navara_math::{Transform, Vec3, Quat};
-use bevy_log::info;
+use navara_feature::render::RenderableFeature;
+use navara_layer::{LayerDescription, LayerId, LayerStore};
+use navara_material::Appearance;
+use navara_math::{Quat, Transform, Vec3};
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
 
@@ -41,24 +40,57 @@ pub fn process_update_events(
         let entities = layer_store.map.get(&ev.layer_id);
         if let Some(vec) = entities {
             for entity in vec {
-                if let Ok(mut feature) = features.get_mut(entity.clone()) {
+                if let Ok(mut feature) = features.get_mut(*entity) {
                     match &mut *feature {
-                        RenderableFeature::Billboard {coordinates, crs, material, transform, .. } => {
+                        RenderableFeature::Billboard {
+                            coordinates,
+                            crs,
+                            material,
+                            transform,
+                            ..
+                        } => {
                             if let Appearance::Billboard(mat) = &ev.appearance {
                                 *material = mat.clone();
-                                *transform = calc_transform(coordinates, crs, material.height, material.size);
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                );
                             }
                         }
-                        RenderableFeature::Point { coordinates, crs, material, transform, .. } => {
+                        RenderableFeature::Point {
+                            coordinates,
+                            crs,
+                            material,
+                            transform,
+                            ..
+                        } => {
                             if let Appearance::Point(mat) = &ev.appearance {
                                 *material = mat.clone();
-                                *transform = calc_transform(coordinates, crs, material.height, material.size);
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                );
                             }
                         }
-                        RenderableFeature::Model { coordinates, crs, material, transform, .. } => {
+                        RenderableFeature::Model {
+                            coordinates,
+                            crs,
+                            material,
+                            transform,
+                            ..
+                        } => {
                             if let Appearance::Model(mat) = &ev.appearance {
                                 *material = mat.clone();
-                                *transform = calc_transform(coordinates, crs, material.height, material.size);
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                );
                             }
                         }
                         _ => (),
@@ -96,7 +128,7 @@ fn calc_transform(coordinates: &Vec3, crs: &CRS, m_height: f32, m_size: f32) -> 
     let rotation_z = Quat::from_rotation_z(lng);
     let rotation = rotation_z * rotation_y;
 
-    Transform::from_translation(position).with_rotation(rotation).with_scale(Vec3::new(
-        m_size, m_size, m_size,
-    ))
+    Transform::from_translation(position)
+        .with_rotation(rotation)
+        .with_scale(Vec3::new(m_size, m_size, m_size))
 }

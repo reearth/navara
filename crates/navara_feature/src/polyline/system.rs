@@ -1,3 +1,4 @@
+use crate::render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -8,10 +9,9 @@ use navara_core::{Angle, Meters, CRS, LLE, WGS84_32};
 use navara_geometry::{
     create_polyline_geometry, PolylineGeometryOptions, TransferableFloatAttribute,
 };
+use navara_layer::{LayerId, LayerStore};
 use navara_material::PolylineMaterial;
 use navara_math::{Transform, Vec3};
-use navara_layer::{LayerStore, LayerId};
-use crate::render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry};
 
 use super::{PolylineGeometry, PolylineMarker};
 
@@ -73,8 +73,11 @@ fn to_transferable_geometry(
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    polylines: Query<(Entity, &LayerId, &PolylineGeometry, &PolylineMaterial), Added<PolylineGeometry>>,
-    mut layer_store: ResMut<LayerStore>
+    polylines: Query<
+        (Entity, &LayerId, &PolylineGeometry, &PolylineMaterial),
+        Added<PolylineGeometry>,
+    >,
+    mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, geometry, material) in &polylines {
         let positions = match geometry.crs {
@@ -112,7 +115,7 @@ pub fn transfer_mesh(
             let entity = commands.spawn((
                 PolylineMarker,
                 RenderableFeature::Polyline {
-                    coordinates: Vec3::new(0.,0.,0.),
+                    coordinates: Vec3::new(0., 0., 0.),
                     crs: CRS::Geocentric,
                     material: material.clone(),
                     geometry: to_transferable_geometry(&mut buf, geometry),
@@ -124,9 +127,11 @@ pub fn transfer_mesh(
                 },
             ));
 
-            layer_store.map.entry(layer_id.clone())
-                       .or_insert_with(Vec::new)
-                       .push(entity.id());
+            layer_store
+                .map
+                .entry(layer_id.clone())
+                .or_default()
+                .push(entity.id());
         }
     }
 }

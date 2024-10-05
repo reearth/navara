@@ -1,3 +1,4 @@
+use crate::render::{RenderInformation, RenderableFeature};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -6,21 +7,20 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
+use navara_layer::{LayerId, LayerStore};
 use navara_material::ModelMaterial;
 use navara_math::{Quat, Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
-use navara_layer::{LayerStore, LayerId};
-use crate::render::{RenderInformation, RenderableFeature};
 
 use super::{ModelGeometry, ModelMarker};
 
 pub fn transfer_mesh(
     mut commands: Commands,
     models: Query<(Entity, &LayerId, &ModelGeometry, &ModelMaterial), Added<ModelGeometry>>,
-    mut layer_store: ResMut<LayerStore>
+    mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, geometry, material) in &models {
         let position = match geometry.crs {
@@ -48,11 +48,11 @@ pub fn transfer_mesh(
         let rotation_y = Quat::from_rotation_y(-lat);
         let rotation_z = Quat::from_rotation_z(lng);
         let rotation = rotation_z * rotation_y;
-        
+
         let entity = commands.spawn((
             ModelMarker,
             RenderableFeature::Model {
-                coordinates: geometry.coords.clone(),
+                coordinates: geometry.coords,
                 crs: geometry.crs.clone(),
                 material: material.clone(),
                 transform: Transform::from_translation(position)
@@ -65,9 +65,11 @@ pub fn transfer_mesh(
             },
         ));
 
-        layer_store.map.entry(layer_id.clone())
-                       .or_insert_with(Vec::new)
-                       .push(entity.id());
+        layer_store
+            .map
+            .entry(layer_id.clone())
+            .or_default()
+            .push(entity.id());
     }
 }
 
