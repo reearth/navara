@@ -206,7 +206,10 @@ async function renderPolygon(mesh: PolygonMesh, buf: BufferLoader, _uniforms: Co
   }
   geometry.setIndex(new BufferAttribute(indices, 1));
 
-  const material = new MeshLambertMaterial({ color: mesh.material.color, wireframe: mesh.material.wireframe });
+  const material = new MeshLambertMaterial({
+    color: mesh.material.color,
+    wireframe: mesh.material.wireframe,
+  });
   const m = new Mesh(geometry, material);
 
   return m;

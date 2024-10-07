@@ -155,7 +155,10 @@ pub fn north_west_up_to_fixed_frame(origin: Vec3, ellipsoid: Ellipsoid<FloatType
 
 #[cfg(test)]
 mod test {
-    use navara_math::{Vec3, Vec4};
+    use approx::assert_abs_diff_eq;
+    use navara_math::{AbsDiffEqVec4, Vec3, Vec4, EPSILON5};
+
+    const EPSILON5_VEC4: Vec4 = Vec4::new(EPSILON5, EPSILON5, EPSILON5, EPSILON5);
 
     use crate::{
         transform::{
@@ -188,8 +191,16 @@ mod test {
 
         let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_32);
         assert_eq!(result.x_axis, Vec4::Y); // east
-        assert_eq!(result.y_axis, Vec4::new(-0.841471, 0.0, 0.0, 0.0)); // north
-        assert_eq!(result.z_axis, Vec4::new(0.0, 0.0, 0.841471, 0.0)); // up
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.y_axis),
+            AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // north
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.z_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, 0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
 
@@ -200,8 +211,16 @@ mod test {
 
         let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_32);
         assert_eq!(result.x_axis, Vec4::Y); // east
-        assert_eq!(result.y_axis, Vec4::new(0.841471, 0., 0., 0.)); // north
-        assert_eq!(result.z_axis, Vec4::new(0.0, 0.0, -0.841471, 0.0)); // up
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.y_axis),
+            AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
+            epsilon = EPSILON5_VEC4
+        ); // north
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.z_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, -0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
 
@@ -237,9 +256,17 @@ mod test {
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
         let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_32);
-        assert_eq!(result.x_axis, Vec4::new(-0.841471, 0.0, 0.0, 0.0)); // east
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.x_axis),
+            AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // east
         assert_eq!(result.y_axis, Vec4::Y); // north
-        assert_eq!(result.z_axis, Vec4::new(0.0, 0.0, -0.841471, 0.0)); // up
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.z_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, -0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
 
@@ -249,9 +276,17 @@ mod test {
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
         let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_32);
-        assert_eq!(result.x_axis, Vec4::new(0.841471, 0., 0., 0.)); // east
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.x_axis),
+            AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
+            epsilon = EPSILON5_VEC4
+        ); // east
         assert_eq!(result.y_axis, Vec4::Y); // north
-        assert_eq!(result.z_axis, Vec4::new(0.0, 0.0, 0.841471, 0.0)); // up
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.z_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, 0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
 
@@ -287,8 +322,16 @@ mod test {
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
         let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_32);
-        assert_eq!(result.x_axis, Vec4::new(-0.841471, 0.0, 0.0, 0.0)); // east
-        assert_eq!(result.y_axis, Vec4::new(0.0, 0.0, 0.841471, 0.0)); // north
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.x_axis),
+            AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // east
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.y_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, 0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // north
         assert_eq!(result.z_axis, Vec4::Y); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
@@ -299,8 +342,16 @@ mod test {
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
         let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_32);
-        assert_eq!(result.x_axis, Vec4::new(0.841471, 0., 0., 0.)); // east
-        assert_eq!(result.y_axis, Vec4::new(0.0, 0.0, -0.841471, 0.0)); // north
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.x_axis),
+            AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
+            epsilon = EPSILON5_VEC4
+        ); // east
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.y_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, -0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // north
         assert_eq!(result.z_axis, Vec4::Y); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
@@ -337,9 +388,17 @@ mod test {
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
         let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_32);
-        assert_eq!(result.x_axis, Vec4::new(-0.841471, 0.0, 0.0, 0.0)); // east
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.x_axis),
+            AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // east
         assert_eq!(result.y_axis, Vec4::NEG_Y); // north
-        assert_eq!(result.z_axis, Vec4::new(0.0, 0.0, 0.841471, 0.0)); // up
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.z_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, 0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
 
@@ -349,9 +408,17 @@ mod test {
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
         let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_32);
-        assert_eq!(result.x_axis, Vec4::new(0.841471, 0., 0., 0.)); // east
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.x_axis),
+            AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
+            epsilon = EPSILON5_VEC4
+        ); // east
         assert_eq!(result.y_axis, Vec4::NEG_Y); // north
-        assert_eq!(result.z_axis, Vec4::new(0.0, 0.0, -0.841471, 0.0)); // up
+        assert_abs_diff_eq!(
+            AbsDiffEqVec4(result.z_axis),
+            AbsDiffEqVec4(Vec4::new(0.0, 0.0, -0.841471, 0.0)),
+            epsilon = EPSILON5_VEC4
+        ); // up
         assert_eq!(result.w_axis, expected_translation); // translation
     }
 

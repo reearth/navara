@@ -1,3 +1,4 @@
+use approx::AbsDiffEq;
 use cfg_if::cfg_if;
 
 pub use bevy_math::{
@@ -7,7 +8,7 @@ pub use bevy_math::{
     Vec4 as RawVec4,
 };
 
-use crate::FloatType;
+use crate::{FloatType, EPSILON10};
 
 cfg_if! {
     if #[cfg(all(not(feature = "use_f32"), feature = "use_f64"))] {
@@ -53,5 +54,35 @@ impl EqualEpsilon<FloatType> for FloatType {
     }
     fn equal_diff_epsilon(&self, v: FloatType, f: FloatType) -> bool {
         (self - v).abs() <= f
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct AbsDiffEqVec3(pub Vec3);
+
+impl AbsDiffEq for AbsDiffEqVec3 {
+    type Epsilon = Vec3;
+    fn default_epsilon() -> Self::Epsilon {
+        Vec3::new(EPSILON10, EPSILON10, EPSILON10)
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        let diff = (self.0.abs() - other.0.abs()).abs();
+        diff.x <= epsilon.x && diff.y <= epsilon.y && diff.z <= epsilon.z
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct AbsDiffEqVec4(pub Vec4);
+
+impl AbsDiffEq for AbsDiffEqVec4 {
+    type Epsilon = Vec4;
+    fn default_epsilon() -> Self::Epsilon {
+        Vec4::new(EPSILON10, EPSILON10, EPSILON10, EPSILON10)
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        let diff = (self.0.abs() - other.0.abs()).abs();
+        diff.x <= epsilon.x && diff.y <= epsilon.y && diff.z <= epsilon.z && diff.w <= epsilon.w
     }
 }
