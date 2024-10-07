@@ -1,0 +1,18 @@
+[package]
+name = "navara_layer_event"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[dependencies]
+bevy_app = "0.14.1"
+bevy_ecs = "0.14.1"
+bevy_log = "0.14.1"
+navara_layer = { path = "../navara_layer" }
+navara_feature = { path = "../navara_feature" }
+navara_material = { path = "../navara_material" }
+navara_core = { path = "../navara_core" }
+navara_math = { path = "../navara_math" }

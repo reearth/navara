@@ -1,6 +1,7 @@
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
-use navara_layer::{Appearance, GeoJsonLayer, TerrainDataType, TerrainLayer, TilesLayer};
+use navara_layer::{GeoJsonLayer, TerrainDataType, TerrainLayer, TilesLayer};
+use navara_material::Appearance;
 use navara_math::FloatType;
 use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
@@ -42,16 +43,16 @@ pub struct TerrainLayerDescription {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub struct GeoJsonLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
-    #[wasm_bindgen(getter_with_clone)]
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    pub data: JsValue, // TODO: Improve any
-    pub wireframe: bool,
+    pub r#type: Option<String>,
+    pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(skip_deserializing)]
+    pub data: JsValue,
 
     // Appearances
     #[wasm_bindgen(getter_with_clone)]
@@ -102,7 +103,15 @@ impl GeoJsonLayerDescription {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
+    pub r#type: Option<String>,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Deserialize)]
+pub struct GeoJsonLayerDescriptionData {
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(with = "serde_wasm_bindgen::preserve")]
+    pub data: JsValue,
 }
 
 #[wasm_bindgen]
@@ -123,11 +132,16 @@ impl LayerDescription {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
-    pub fn to(self, value: JsValue) -> Option<navara_layer::LayerDescription> {
-        match self.r#type.as_str() {
+    pub fn to(
+        layer_id: &str,
+        layer_type: &str,
+        value: JsValue,
+    ) -> Option<navara_layer::LayerDescription> {
+        match layer_type {
             "tiles" => {
                 let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
+                    layer_id: layer_id.to_string(),
                     url: layer.url,
                     segments: layer.segments,
                     color: layer.color,
@@ -139,6 +153,7 @@ impl LayerDescription {
             "terrain" => {
                 let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
+                    layer_id: layer_id.to_string(),
                     url: layer.url.clone(),
                     segments: layer.segments,
                     max_z: layer.max_z,
@@ -153,10 +168,24 @@ impl LayerDescription {
                 }))
             }
             "geojson" => {
+                let js_data: GeoJsonLayerDescriptionData =
+                    serde_wasm_bindgen::from_value(value.clone()).unwrap_or_else(|_e| {
+                        GeoJsonLayerDescriptionData {
+                            data: JsValue::NULL,
+                        }
+                    });
+
+                let mut geo_data: Option<GeoJson> = None;
+                if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                    geo_data = GeoJson::from_json_object(js_data.data.into_serde().ok()?).ok();
+                }
+
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
+
                 Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
-                    data: GeoJson::from_json_object(layer.data.into_serde().ok()?).ok()?,
+                    layer_id: layer_id.to_string(),
+                    data: geo_data,
                     appearances: layer.appearances(),
                     crs: layer.crs(),
                 }))
