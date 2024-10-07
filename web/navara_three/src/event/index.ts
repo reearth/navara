@@ -305,10 +305,22 @@ function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, mesh
         obj.material.color.set(material.color);
       }
       obj.material.visible = material.show ?? true;
-    } else if (Array.isArray(obj.children)) {
+    }
+
+    if (Array.isArray(obj.children)) {
       obj.children.forEach(child => {
         child.visible = material.show ?? true;
       });
+    }
+
+    if (obj instanceof Mesh) {
+      if ("color" in material) {
+        obj.material.uniforms.color.value.set(material.color);
+      }
+      if ("width" in material) {
+        obj.material.uniforms.width.value = material.width;
+      }
+      obj.material.visible = material.show ?? true;
     }
   }
 

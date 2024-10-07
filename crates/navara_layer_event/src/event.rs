@@ -93,6 +93,11 @@ pub fn process_update_events(
                                 );
                             }
                         }
+                        RenderableFeature::Polyline { material, .. } => {
+                            if let Appearance::Polyline(mat) = &ev.appearance {
+                                *material = mat.clone();
+                            }
+                        }
                         _ => (),
                     };
                 }
