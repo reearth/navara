@@ -202,7 +202,6 @@ pub fn construct_feature(
 #[cfg(test)]
 mod test {
     use bevy_app::{App, Update};
-    use nanoid::nanoid;
     use navara_buffer_store::BufferStore;
     use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_32};
     use navara_event_store::EventStore;
@@ -235,7 +234,7 @@ mod test {
     fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
         let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
         GeoJsonLayer {
-            layer_id: nanoid!(),
+            layer_id: "123".to_string(),
             data: Some(geojson),
             crs: None,
             appearances,

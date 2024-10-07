@@ -175,11 +175,27 @@ const geoLayersDef: GeoJsonLayer[] = [
             type: "Point",
           },
         },
+      ],
+    },
+    model: {
+      show: true,
+      size: 500000,
+      height: 700000,
+      clamp_to_ground: true,
+      url: "/glTF/Suzanne/Suzanne.gltf",
+    },
+  },
+
+  {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
         {
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [100, 60],
+            coordinates: [100, 0],
             type: "Point",
           },
         },
@@ -187,26 +203,10 @@ const geoLayersDef: GeoJsonLayer[] = [
     },
     model: {
       show: true,
-      size: 500000,
-      height: 300000,
+      size: 3000,
+      height: 1100000,
       clamp_to_ground: true,
-      url: "/box.gltf",
-    },
-    point: {
-      color: 0xffffff,
-      size: 0.1,
-      height: 1,
-      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
-      center: {
-        x: 0.5,
-        y: 0,
-      },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
-      clamp_to_ground: true,
-      depth_test: true,
+      url: "/glTF/2CylinderEngine/2CylinderEngine.gltf",
     },
   },
 ];

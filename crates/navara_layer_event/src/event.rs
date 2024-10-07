@@ -4,6 +4,7 @@ use navara_feature::render::RenderableFeature;
 use navara_layer::{LayerDescription, LayerId, LayerStore};
 use navara_material::Appearance;
 use navara_math::{Quat, Transform, Vec3};
+
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
 
