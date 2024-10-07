@@ -84,114 +84,114 @@ export const run = async (view: ThreeView) => {
       terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
   });
 
-  view.addLayer({
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [139.70513431449842, 35.69279782617761],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [140.13033810546995, 35.60447056434825],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [139.64591330307843, 35.85950281451436],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [139.63564871528018, 35.44128807202607],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [139.28453080888477, 35.51560883529815],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    point: {
-      color: 0xffffff,
-      size: 0.1,
-      height: 1,
-      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
-      center: {
-        x: 0.5,
-        y: 0,
-      },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
-      clamp_to_ground: true,
-      depth_test: true,
-    },
-    wireframe: false,
-  });
+  // view.addLayer({
+  //   type: "geojson",
+  //   data: {
+  //     type: "FeatureCollection",
+  //     features: [
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [139.70513431449842, 35.69279782617761],
+  //           type: "Point",
+  //         },
+  //       },
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [140.13033810546995, 35.60447056434825],
+  //           type: "Point",
+  //         },
+  //       },
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [139.64591330307843, 35.85950281451436],
+  //           type: "Point",
+  //         },
+  //       },
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [139.63564871528018, 35.44128807202607],
+  //           type: "Point",
+  //         },
+  //       },
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [139.28453080888477, 35.51560883529815],
+  //           type: "Point",
+  //         },
+  //       },
+  //     ],
+  //   },
+  //   point: {
+  //     color: 0xffffff,
+  //     size: 0.1,
+  //     height: 1,
+  //     // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+  //     center: {
+  //       x: 0.5,
+  //       y: 0,
+  //     },
+  //     scale_by_distance: {
+  //       near: 0,
+  //       far: 1000,
+  //     },
+  //     clamp_to_ground: true,
+  //     depth_test: true,
+  //   },
+  //   wireframe: false,
+  // });
 
-  view.addLayer({
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [138.73470764482283, 35.3627947204036],
-            type: "Point",
-          },
-        },
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [138.7311922738062, 35.359766379480206],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    billboard: {
-      color: 0xffffff,
-      size: 0.05,
-      height: 1,
-      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
-      center: {
-        x: 0.5,
-        y: 0,
-      },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
-      clamp_to_ground: true,
-      depth_test: true,
-      url: "/example.png",
-    },
-    wireframe: false,
-  });
+  // view.addLayer({
+  //   type: "geojson",
+  //   data: {
+  //     type: "FeatureCollection",
+  //     features: [
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [138.73470764482283, 35.3627947204036],
+  //           type: "Point",
+  //         },
+  //       },
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [138.7311922738062, 35.359766379480206],
+  //           type: "Point",
+  //         },
+  //       },
+  //     ],
+  //   },
+  //   billboard: {
+  //     color: 0xffffff,
+  //     size: 0.05,
+  //     height: 1,
+  //     // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+  //     center: {
+  //       x: 0.5,
+  //       y: 0,
+  //     },
+  //     scale_by_distance: {
+  //       near: 0,
+  //       far: 1000,
+  //     },
+  //     clamp_to_ground: true,
+  //     depth_test: true,
+  //     url: "/example.png",
+  //   },
+  //   wireframe: false,
+  // });
 
   view.addLayer({
     type: "geojson",
@@ -216,6 +216,7 @@ export const run = async (view: ThreeView) => {
     },
     wireframe: false,
   });
+
   view.addLayer({
     type: "geojson",
     data: {
@@ -232,11 +233,48 @@ export const run = async (view: ThreeView) => {
     polyline: {
       color: 0x00ff00,
       width: 5,
-      height: 1,
+      height: 1000,
       clamp_to_ground: true,
     },
     wireframe: false,
   });
+
+  view.addLayer({
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        coordinates: [
+          [
+            [138.66861922558115, 35.46838056308519],
+            [138.6559918549957, 35.29164005065681],
+            [138.81174182884172, 35.279838616806046],
+            [138.8071009152797, 35.436389815907134],
+            [138.66861922558115, 35.46838056308519],
+          ],
+          // [
+          //   [31.72775849062026,
+          // 52.51516008351888],
+          // [99.72788480154168,
+          // -48.26315338939218],
+          // [204.13004176416695,
+          // 36.2117078118584],
+          // [31.72775849062026,
+          // 52.51516008351888]
+          // ]
+        ],
+        type: "Polygon",
+      },
+    },
+    polygon: {
+      color: 0x00aaff,
+      extruded_height: 5000,
+      clamp_to_ground: true,
+    },
+    wireframe: false,
+  });
+
   view.addLayer({
     type: "geojson",
     data: {

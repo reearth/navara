@@ -143,12 +143,22 @@ impl<'a> From<&'a navara_layer::PolylineMaterial> for PolylineMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonMaterial {
     pub show: Option<bool>,
+    pub color: u32,
+    pub clamp_to_ground: Option<bool>,
+    pub height: Option<f32>,
+    pub extruded_height: Option<f32>,
+    pub wireframe: Option<bool>,
 }
 
 impl From<PolygonMaterial> for navara_layer::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
         navara_layer::PolygonMaterial {
             show: val.show.unwrap_or(true),
+            color: val.color,
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(true),
+            height: val.height.unwrap_or(0.),
+            extruded_height: val.extruded_height,
+            wireframe: val.wireframe.unwrap_or(false),
         }
     }
 }
@@ -156,6 +166,11 @@ impl<'a> From<&'a navara_layer::PolygonMaterial> for PolygonMaterial {
     fn from(value: &'a navara_layer::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
             show: Some(value.show),
+            color: value.color,
+            clamp_to_ground: Some(value.clamp_to_ground),
+            height: Some(value.height),
+            extruded_height: value.extruded_height,
+            wireframe: Some(value.wireframe),
         }
     }
 }

@@ -182,24 +182,24 @@ mod test {
 
         let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
-        let aabb = Aabb::from_points(Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.));
+        let aabb = Aabb::from_points(&[Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.)]);
         debug_assert!(frustum.interseciton_with_aabb(&aabb));
 
-        let aabb = Aabb::from_points(Vec3::new(10., 10., 100.), Vec3::new(20., 20., 100.));
+        let aabb = Aabb::from_points(&[Vec3::new(10., 10., 100.), Vec3::new(20., 20., 100.)]);
         debug_assert!(frustum.interseciton_with_aabb(&aabb));
 
-        let aabb = Aabb::from_points(
+        let aabb = Aabb::from_points(&[
             Vec3::new(-1000., -1000., -1000.),
             Vec3::new(1000., 1000., -9.8),
-        );
+        ]);
         debug_assert!(frustum.interseciton_with_aabb(&aabb));
 
         // Out of top
-        let aabb = Aabb::from_points(Vec3::new(100., 100., 10.), Vec3::new(120., 120., 10.));
+        let aabb = Aabb::from_points(&[Vec3::new(100., 100., 10.), Vec3::new(120., 120., 10.)]);
         debug_assert!(!frustum.interseciton_with_aabb(&aabb));
 
         // Out of bottom
-        let aabb = Aabb::from_points(Vec3::new(-100., -100., 10.), Vec3::new(-120., -120., 10.));
+        let aabb = Aabb::from_points(&[Vec3::new(-100., -100., 10.), Vec3::new(-120., -120., 10.)]);
         debug_assert!(!frustum.interseciton_with_aabb(&aabb));
     }
 }

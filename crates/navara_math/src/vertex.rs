@@ -1,9 +1,13 @@
 use cfg_if::cfg_if;
 
 pub use bevy_math::{
-    DQuat as RawDQuat, DVec2 as RawDVec2, DVec3 as RawDVec3, DVec4 as RawDVec4, Dir2 as RawDir2,
-    Dir3A as RawDir3, Quat as RawQuat, Vec2 as RawVec2, Vec3 as RawVec3, Vec4 as RawVec4,
+    DMat2 as RawDMat2, DMat3 as RawDMat3, DMat4 as RawDMat4, DQuat as RawDQuat, DVec2 as RawDVec2,
+    DVec3 as RawDVec3, DVec4 as RawDVec4, Dir2 as RawDir2, Dir3A as RawDir3, Mat2 as RawMat2,
+    Mat3 as RawMat3, Mat4 as RawMat4, Quat as RawQuat, Vec2 as RawVec2, Vec3 as RawVec3,
+    Vec4 as RawVec4,
 };
+
+use crate::FloatType;
 
 cfg_if! {
     if #[cfg(all(not(feature = "use_f32"), feature = "use_f64"))] {
@@ -13,6 +17,9 @@ cfg_if! {
         pub type Quat = RawDQuat;
         pub type Dir2 = RawDir2;
         pub type Dir3 = RawDir3;
+        pub type Mat4 = RawDMat4;
+        pub type Mat3 = RawDMat3;
+        pub type Mat2 = RawDMat2;
     } else {
         pub type Vec4 = RawVec4;
         pub type Vec3 = RawVec3;
@@ -20,5 +27,31 @@ cfg_if! {
         pub type Quat = RawQuat;
         pub type Dir2 = RawDir2;
         pub type Dir3 = RawDir3;
+        pub type Mat4 = RawMat4;
+        pub type Mat3 = RawMat3;
+        pub type Mat2 = RawMat2;
+    }
+}
+
+pub trait EqualEpsilon<V> {
+    fn equal_epsilon(&self, f: FloatType) -> bool;
+    fn equal_diff_epsilon(&self, v: V, f: FloatType) -> bool;
+}
+
+impl EqualEpsilon<Vec3> for Vec3 {
+    fn equal_epsilon(&self, f: FloatType) -> bool {
+        self.x.abs() <= f && self.y.abs() <= f && self.z.abs() <= f
+    }
+    fn equal_diff_epsilon(&self, v: Vec3, f: FloatType) -> bool {
+        (self.x - v.x).abs() <= f && (self.y - v.y).abs() <= f && (self.z - v.z).abs() <= f
+    }
+}
+
+impl EqualEpsilon<FloatType> for FloatType {
+    fn equal_epsilon(&self, f: FloatType) -> bool {
+        self.abs() <= f
+    }
+    fn equal_diff_epsilon(&self, v: FloatType, f: FloatType) -> bool {
+        (self - v).abs() <= f
     }
 }

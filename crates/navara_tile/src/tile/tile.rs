@@ -1,9 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_core::{
-    terrain::{
-        get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
-    },
+    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};

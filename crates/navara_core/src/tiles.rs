@@ -1,5 +1,5 @@
-use crate::{Extent, Float, LngLat, Rad, Radians, Two};
-use navara_math::FloatType;
+use crate::{Extent, Float, LngLat, Rad, Radians};
+use navara_math::{FloatType, Two};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TileXY {

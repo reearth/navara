@@ -5,7 +5,6 @@ use navara_layer::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
 use navara_math::{FloatType, Transform};
-use navara_mesh::Mesh;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
@@ -37,7 +36,7 @@ pub enum RenderableFeature {
     },
     Polygon {
         material: PolygonMaterial,
-        mesh: Mesh,
+        geometry: TransferablePolygonGeometry,
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
@@ -60,5 +59,12 @@ pub struct TransferablePolylineGeometry {
     pub start_normals: TransferableFloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
+    pub indices: Handle,
+}
+
+#[derive(Component, Clone, Debug, Default, PartialEq)]
+pub struct TransferablePolygonGeometry {
+    pub position: TransferableFloatAttribute,
+    pub normal: Option<TransferableFloatAttribute>,
     pub indices: Handle,
 }

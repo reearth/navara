@@ -6,7 +6,7 @@ use clip::{clip_2d_triangle_at_threshold, ClippedIndex};
 use itertools::Itertools;
 use radians::{Angle, Radians};
 
-use navara_core::{utils::lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
+use navara_core::{lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
 
 use crate::Geometry;
 

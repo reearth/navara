@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::terrain::ElevationDecoder;
+use navara_core::ElevationDecoder;
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TerrainLayer {

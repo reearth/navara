@@ -1,6 +1,7 @@
+use navara_math::EPSILON12;
 use radians::{Angle, Radians};
 
-use crate::{epsilon::EPSILON12, Ellipsoid, Meters, LLE};
+use crate::{Ellipsoid, Meters, LLE};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/16696798115dbc7412453f3ea589f3f42a666315/packages/engine/Source/Core/EllipsoidGeodesic.js
 pub struct EllipsoidGeodesic {
@@ -334,14 +335,11 @@ fn prepare_vincenty_direct_formula_constants(
 
 #[cfg(test)]
 mod test {
-    use navara_assert::float::assert_delta;
-    use navara_math::std_float::consts::PI;
+    use approx::assert_abs_diff_eq;
+    use navara_math::{std_float::consts::PI, EPSILON11, EPSILON7};
     use radians::Angle;
 
-    use crate::{
-        epsilon::{EPSILON11, EPSILON7},
-        Meters, LLE, WGS84_32,
-    };
+    use crate::{Meters, LLE, WGS84_32};
 
     use super::EllipsoidGeodesic;
 
@@ -377,9 +375,9 @@ mod test {
         };
         let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
 
-        assert_delta(g.start_heading, pi_over_two, EPSILON11);
-        assert_delta(g.end_heading, pi_over_two, EPSILON11);
-        assert_delta(g.distance, 10018755., EPSILON11);
+        assert_abs_diff_eq!(g.start_heading, pi_over_two, epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.end_heading, pi_over_two, epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.distance, 10018755., epsilon = EPSILON11);
     }
 
     #[test]
@@ -397,9 +395,9 @@ mod test {
         };
         let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
 
-        assert_delta(g.start_heading, 0., EPSILON11);
-        assert_delta(g.end_heading, 0., EPSILON11);
-        assert_delta(g.distance, 10001966., 1.1);
+        assert_abs_diff_eq!(g.start_heading, 0., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.end_heading, 0., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.distance, 10001966., epsilon = 1.1);
     }
 
     #[test]
@@ -417,9 +415,9 @@ mod test {
         };
         let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
 
-        assert_delta(g.start_heading, 0., EPSILON11);
-        assert_delta(g.end_heading, 0., EPSILON11);
-        assert_delta(g.distance, 10001966., 1.1);
+        assert_abs_diff_eq!(g.start_heading, 0., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.end_heading, 0., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.distance, 10001966., epsilon = 1.1);
     }
 
     #[test]
@@ -441,9 +439,9 @@ mod test {
         let first = g.interpolate_distance(&WGS84_32, 0.);
         let last = g.interpolate_distance(&WGS84_32, g.distance);
 
-        assert_delta(start.lng.val(), first.lng.val(), EPSILON7);
-        assert_delta(start.lat.val(), first.lat.val(), EPSILON7);
-        assert_delta(end.lng.val(), last.lng.val(), EPSILON7);
-        assert_delta(end.lat.val(), last.lat.val(), EPSILON7);
+        assert_abs_diff_eq!(start.lng.val(), first.lng.val(), epsilon = EPSILON7);
+        assert_abs_diff_eq!(start.lat.val(), first.lat.val(), epsilon = EPSILON7);
+        assert_abs_diff_eq!(end.lng.val(), last.lng.val(), epsilon = EPSILON7);
+        assert_abs_diff_eq!(end.lat.val(), last.lat.val(), epsilon = EPSILON7);
     }
 }

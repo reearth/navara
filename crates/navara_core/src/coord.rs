@@ -1,4 +1,4 @@
-use navara_math::{FloatType, Vec3};
+use navara_math::{FloatType, RawDVec3, Vec3};
 
 // pub use radians::*;
 use crate::unit::{Angle, Degrees, Float, Meters, Radians, Unit};
@@ -138,11 +138,45 @@ pub struct XYZ<F: Float> {
     pub z: Meters<F>,
 }
 
-pub fn xyz_to_vec3(xyz: XYZ<FloatType>) -> Vec3 {
+impl From<XYZ<f32>> for Vec3 {
+    fn from(val: XYZ<FloatType>) -> Self {
+        xyz_to_vec3(val)
+    }
+}
+impl From<Vec3> for XYZ<f32> {
+    fn from(val: Vec3) -> Self {
+        vec3_to_xyz(val)
+    }
+}
+
+impl From<XYZ<f64>> for RawDVec3 {
+    fn from(val: XYZ<f64>) -> Self {
+        xyz_to_dvec3(val)
+    }
+}
+impl From<RawDVec3> for XYZ<f64> {
+    fn from(val: RawDVec3) -> Self {
+        dvec3_to_xyz(val)
+    }
+}
+
+pub fn xyz_to_vec3(xyz: XYZ<f32>) -> Vec3 {
     Vec3::new(xyz.x.val(), xyz.y.val(), xyz.z.val())
 }
 
-pub fn vec3_to_xyz(vec: Vec3) -> XYZ<FloatType> {
+pub fn vec3_to_xyz(vec: Vec3) -> XYZ<f32> {
+    XYZ {
+        x: Meters::new(vec.x),
+        y: Meters::new(vec.y),
+        z: Meters::new(vec.z),
+    }
+}
+
+pub fn xyz_to_dvec3(xyz: XYZ<f64>) -> RawDVec3 {
+    RawDVec3::new(xyz.x.val(), xyz.y.val(), xyz.z.val())
+}
+
+pub fn dvec3_to_xyz(vec: RawDVec3) -> XYZ<f64> {
     XYZ {
         x: Meters::new(vec.x),
         y: Meters::new(vec.y),

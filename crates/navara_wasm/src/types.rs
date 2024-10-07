@@ -166,9 +166,9 @@ impl LayerDescription {
     }
 }
 
-impl From<ElevationDecoder> for navara_core::terrain::ElevationDecoder {
+impl From<ElevationDecoder> for navara_core::ElevationDecoder {
     fn from(d: ElevationDecoder) -> Self {
-        navara_core::terrain::ElevationDecoder {
+        navara_core::ElevationDecoder {
             r_scaler: d.r_scaler,
             g_scaler: d.g_scaler,
             b_scaler: d.b_scaler,

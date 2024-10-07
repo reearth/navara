@@ -1,5 +1,5 @@
-use crate::{Ellipsoid, One, TileXYZ, Two};
-use navara_math::FloatType;
+use crate::{Ellipsoid, TileXYZ};
+use navara_math::{FloatType, One, Two};
 use radians::Float;
 
 // Ref: https://github.com/CesiumGS/cesium/blob/58ea653fa90af13432e378892a303b7c7f9f4e47/packages/engine/Source/Core/EllipsoidTerrainProvider.js#L38

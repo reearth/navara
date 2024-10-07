@@ -1,4 +1,4 @@
-use navara_core::utils::lerp;
+use navara_core::lerp;
 use navara_math::FloatType;
 
 fn interpolate(start: FloatType, end: FloatType, threshold: FloatType) -> FloatType {
@@ -136,7 +136,8 @@ pub(super) struct InterpolatedClippedIndex {
 
 #[cfg(test)]
 mod test {
-    use navara_assert::float::assert_delta;
+
+    use approx::assert_abs_diff_eq;
 
     use super::{clip_2d_triangle_at_threshold, ClippedIndex, InterpolatedClippedIndex};
 
@@ -152,7 +153,7 @@ mod test {
                     (ClippedIndex::Interpolated(result), ClippedIndex::Interpolated(expect)) => {
                         assert_eq!(result.idx1, expect.idx1);
                         assert_eq!(result.idx2, expect.idx2);
-                        assert_delta(result.ratio, expect.ratio, 0.01);
+                        assert_abs_diff_eq!(result.ratio, expect.ratio, epsilon = 0.01);
                     }
                     _ => {
                         unreachable!()
