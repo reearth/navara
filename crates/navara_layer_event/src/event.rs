@@ -57,6 +57,7 @@ pub fn process_update_events(
                                     crs,
                                     material.height,
                                     material.size,
+                                    false,
                                 );
                             }
                         }
@@ -74,6 +75,7 @@ pub fn process_update_events(
                                     crs,
                                     material.height,
                                     material.size,
+                                    false,
                                 );
                             }
                         }
@@ -91,6 +93,7 @@ pub fn process_update_events(
                                     crs,
                                     material.height,
                                     material.size,
+                                    true,
                                 );
                             }
                         }
@@ -107,7 +110,13 @@ pub fn process_update_events(
     }
 }
 
-fn calc_transform(coordinates: &Vec3, crs: &CRS, m_height: f32, m_size: f32) -> Transform {
+fn calc_transform(
+    coordinates: &Vec3,
+    crs: &CRS,
+    m_height: f32,
+    m_size: f32,
+    need_rotate: bool,
+) -> Transform {
     let position = match crs {
         CRS::Geographic => {
             let lng = coordinates.x;
@@ -128,13 +137,17 @@ fn calc_transform(coordinates: &Vec3, crs: &CRS, m_height: f32, m_size: f32) -> 
         CRS::ESPG { code: _ } => unimplemented!(),
     };
 
-    let lng = coordinates.x.to_radians();
-    let lat = coordinates.y.to_radians();
-    let rotation_y = Quat::from_rotation_y(-lat);
-    let rotation_z = Quat::from_rotation_z(lng);
-    let rotation = rotation_z * rotation_y;
+    let mut transform =
+        Transform::from_translation(position).with_scale(Vec3::new(m_size, m_size, m_size));
 
-    Transform::from_translation(position)
-        .with_rotation(rotation)
-        .with_scale(Vec3::new(m_size, m_size, m_size))
+    if need_rotate {
+        let lng = coordinates.x.to_radians();
+        let lat = coordinates.y.to_radians();
+        let rotation_y = Quat::from_rotation_y(-lat);
+        let rotation_z = Quat::from_rotation_z(lng);
+        let rotation = rotation_z * rotation_y;
+        transform = transform.with_rotation(rotation);
+    }
+
+    transform
 }
