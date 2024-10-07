@@ -36,6 +36,8 @@ pub struct TerrainLayerDescription {
     pub max_z: usize,
     pub min_z: usize,
     pub wireframe: bool,
+    /// Compute normals from vertices if the model doesn't have a normal.
+    pub should_compute_normal_from_vertex: Option<bool>,
     pub elevation_decoder: Option<ElevationDecoder>,
     pub tile_size: Option<u32>,
 }
@@ -157,6 +159,9 @@ impl LayerDescription {
                     max_z: layer.max_z,
                     min_z: layer.min_z,
                     wireframe: layer.wireframe,
+                    should_compute_normal_from_vertex: layer
+                        .should_compute_normal_from_vertex
+                        .unwrap_or(true),
                     elevation_decoder: layer.elevation_decoder.unwrap_or_default().into(),
                     terrain_type: TerrainDataType::from_url(&layer.url),
                     tile_size: layer.tile_size.unwrap_or(256),

@@ -9,6 +9,7 @@ pub struct TerrainLayer {
     pub max_z: usize,
     pub min_z: usize,
     pub wireframe: bool,
+    pub should_compute_normal_from_vertex: bool,
     pub elevation_decoder: ElevationDecoder,
     pub terrain_type: TerrainDataType,
     pub tile_size: u32,

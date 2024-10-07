@@ -86,6 +86,7 @@ pub struct TextureFragment {
 pub struct MeshMaterial {
     pub color: u32,
     pub wireframe: bool,
+    pub should_compute_normal_from_vertex: bool,
     #[wasm_bindgen(getter_with_clone)]
     pub texture_fragment: Option<TextureFragment>,
 }
@@ -266,6 +267,7 @@ impl From<navara_mesh::Material> for MeshMaterial {
         Self {
             color: m.color,
             wireframe: m.wireframe,
+            should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
             texture_fragment: m.texture_fragment.map(|t| TextureFragment {
                 ind: t.index(),
                 gen: t.generation(),
