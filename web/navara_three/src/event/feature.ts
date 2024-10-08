@@ -249,12 +249,6 @@ async function renderPolygon(
     if (material.userData.uClampToGround.value) {
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
-    // if (material.userData.uClampToGround.value) {
-    //   if(!shader.defines) {
-    //     shader.defines = {};
-    //   }
-    //   shader.defines.SHOULD_SHADE = !material.userData.uClampToGround.value;
-    // }
 
     shader.vertexShader = shader.vertexShader
       .replace(

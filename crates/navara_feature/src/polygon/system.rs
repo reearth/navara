@@ -171,10 +171,11 @@ pub fn update_polygon(
         let f = f.as_mut();
 
         if let RenderableFeature::Polygon {
-                material,
-                render_info,
-                ..
-            } = f {
+            material,
+            render_info,
+            ..
+        } = f
+        {
             let should_recalculate_height = material.clamp_to_ground
                 != updated.material.clamp_to_ground
                 || material.height != updated.material.height
