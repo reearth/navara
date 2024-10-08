@@ -20,6 +20,7 @@ pub struct RasterDEMData {
     pub(crate) data_requester_entity_id: Option<Entity>,
     // Indicates the max height of the terrain from the globe surface.
     pub(crate) current_max_height: Option<FloatType>,
+    pub(crate) current_min_height: Option<FloatType>,
     pub(crate) heights_handle: Option<Handle>,
 }
 
@@ -80,6 +81,14 @@ impl TerrainData for RasterDEMData {
         self.current_max_height = Some(h);
     }
 
+    fn current_min_height(&self) -> Option<FloatType> {
+        self.current_min_height
+    }
+
+    fn set_current_min_height(&mut self, h: FloatType) {
+        self.current_min_height = Some(h);
+    }
+
     fn construct_terrain_mesh(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
@@ -87,12 +96,13 @@ impl TerrainData for RasterDEMData {
         bytes: &[u8],
         geoid_height: FloatType,
         martini: &mut Martini,
-    ) -> (Geometry, FloatType, Vec<FloatType>) {
+    ) -> (Geometry, FloatType, FloatType, Vec<FloatType>) {
         let extent = &tile.extent;
         let martini_size = martini.size as usize;
 
         let mut heights = vec![];
         let mut max_height = 0.0f32;
+        let mut min_height = 9999.0f32;
 
         let read_height = |x: usize, y: usize| {
             let x = x.min(martini_size - 2);
@@ -131,6 +141,7 @@ impl TerrainData for RasterDEMData {
 
                 heights.push(h);
                 max_height = max_height.max(h);
+                min_height = min_height.min(h);
 
                 (x.val(), y.val(), z.val())
             });
@@ -156,6 +167,7 @@ impl TerrainData for RasterDEMData {
                 uvs,
             },
             max_height,
+            min_height,
             heights,
         )
     }

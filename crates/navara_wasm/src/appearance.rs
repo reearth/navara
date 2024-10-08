@@ -148,6 +148,8 @@ pub struct PolygonMaterial {
     pub height: Option<f32>,
     pub extruded_height: Option<f32>,
     pub wireframe: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub __internal__: Option<PolygonInternalMaterial>,
 }
 
 impl From<PolygonMaterial> for navara_material::PolygonMaterial {
@@ -159,6 +161,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             height: val.height.unwrap_or(0.),
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(false),
+            internal: val.__internal__.map(|v| v.into()),
         }
     }
 }
@@ -171,6 +174,29 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             height: Some(value.height),
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),
+            __internal__: value.internal.as_ref().map(|v| v.into()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolygonInternalMaterial {
+    #[wasm_bindgen(getter_with_clone)]
+    pub min_max_heights: Vec<f32>,
+}
+
+impl From<PolygonInternalMaterial> for navara_material::PolygonInternalMaterial {
+    fn from(val: PolygonInternalMaterial) -> Self {
+        navara_material::PolygonInternalMaterial {
+            min_max_heights: val.min_max_heights,
+        }
+    }
+}
+impl<'a> From<&'a navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
+    fn from(val: &navara_material::PolygonInternalMaterial) -> Self {
+        PolygonInternalMaterial {
+            min_max_heights: val.min_max_heights.clone(),
         }
     }
 }

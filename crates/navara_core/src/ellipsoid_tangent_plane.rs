@@ -14,7 +14,7 @@ pub struct EllipsoidTangentPlane {
 
 impl EllipsoidTangentPlane {
     pub fn from_points(points: &[Vec3], ellipsoid: Ellipsoid<FloatType>) -> Self {
-        let aabb = Aabb::from_points(points);
+        let aabb = Aabb::from_vec3(points);
         Self::new(aabb.center, ellipsoid)
     }
 

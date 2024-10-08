@@ -70,6 +70,8 @@ pub struct TransferablePolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub normal: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
+    pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
     pub indices: Handle,
 }
 
@@ -78,6 +80,7 @@ impl From<TransferablePolygonGeometry> for navara_feature::render::TransferableP
         navara_feature::render::TransferablePolygonGeometry {
             position: val.position.into(),
             normal: val.normal.map(|n| n.into()),
+            scale_normal_and_cap: val.scale_normal_and_cap.map(|n| n.into()),
             indices: val.indices,
         }
     }
@@ -91,6 +94,7 @@ impl<'a> From<&'a navara_feature::render::TransferablePolygonGeometry>
         TransferablePolygonGeometry {
             position: (&val.position).into(),
             normal: val.normal.as_ref().map(|n| n.into()),
+            scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|n| n.into()),
             indices: val.indices,
         }
     }

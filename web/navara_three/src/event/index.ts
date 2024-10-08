@@ -41,6 +41,7 @@ import type { MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
+import { generate_id_from_entity, to_globe_depth_id } from "./id";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -65,6 +66,7 @@ export function processEvent(
   tex: TextureLoader,
   event: Events,
   uniforms: CommonUniforms,
+  drapedFeatureMaterials: Map<string, Material>,
 ) {
   if (event.camera_transform_updated) {
     processCameraTransformUpdated(camera, event.camera_transform_updated);
@@ -82,10 +84,14 @@ export function processEvent(
     processMeshChanged(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
   );
   event.renderable_feature_added?.forEach(ev =>
-    processRenderableFeatureAdded(ev, scene, meshes, buf, uniforms),
+    processRenderableFeatureAdded(ev, scene, meshes, buf, uniforms, drapedFeatureMaterials),
   );
-  event.renderable_feature_changed?.forEach(ev => processRenderableFeatureChanged(ev, meshes));
-  event.renderable_feature_removed?.forEach(ev => processObjectRemoved(scene, meshes, ev));
+  event.renderable_feature_changed?.forEach(ev =>
+    processRenderableFeatureChanged(ev, meshes, drapedFeatureMaterials),
+  );
+  event.renderable_feature_removed?.forEach(ev =>
+    processObjectRemoved(scene, meshes, ev, undefined, drapedFeatureMaterials),
+  );
 
   event.texture_fragment_requested?.forEach(req =>
     processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
@@ -176,6 +182,7 @@ function processObjectRemoved(
   meshes: MeshCache,
   obj: EntityEvent,
   isGlobeDepth?: boolean,
+  drapedFeatureMaterials?: Map<string, Material>,
 ) {
   let id = generate_id_from_entity(obj);
   if (isGlobeDepth) {
@@ -185,6 +192,7 @@ function processObjectRemoved(
   if (!m) return;
 
   meshes.delete(id);
+  drapedFeatureMaterials?.delete(id);
   m.clear();
 
   if ("material" in m) {
@@ -272,9 +280,10 @@ async function processRenderableFeatureAdded(
   meshes: MeshCache,
   buf: BufferLoader,
   uniforms: CommonUniforms,
+  drapedFeatureMaterials: Map<string, Material>,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(ev.feature, buf, uniforms);
+  const obj = await renderFeature(id, ev.feature, buf, uniforms, drapedFeatureMaterials);
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
@@ -293,7 +302,11 @@ async function processRenderableFeatureAdded(
 }
 
 // TODO: Update material in this function.
-function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, meshes: MeshCache) {
+function processRenderableFeatureChanged(
+  ev: RenderableFeatureChangedEvent,
+  meshes: MeshCache,
+  drapedFeatureMaterials: Map<string, Material>,
+) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
   if (!obj) return;
@@ -320,7 +333,7 @@ function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, mesh
       processPolylineChanged(obj, material);
     }
     if (obj instanceof Mesh && material instanceof PolygonMaterial) {
-      processPolygonChanged(obj, material);
+      processPolygonChanged(id, obj, material, drapedFeatureMaterials);
     }
   }
 
@@ -353,11 +366,27 @@ function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
   }
 }
 
-function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
-  if (obj.material instanceof MeshLambertMaterial || obj.material instanceof MeshBasicMaterial) {
+function processPolygonChanged(
+  id: string,
+  obj: Mesh,
+  material: PolygonMaterial,
+  drapedFeatureMaterials: Map<string, Material>,
+) {
+  if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
     obj.material.visible = material.show ?? true;
-    // obj.material.uniforms.width.value = material.width;
+    obj.material.userData.uMinMaxHeight.value = material.__internal__?.min_max_heights;
+    if (obj.material.userData.uClampToGround.value !== material.clamp_to_ground) {
+      obj.material.userData.uClampToGround.value = material.clamp_to_ground;
+      // obj.material = obj.material.clone();
+    }
+    if (material.clamp_to_ground) {
+      obj.material.stencilWrite = true;
+      drapedFeatureMaterials.set(id, obj.material);
+    } else {
+      obj.material.stencilWrite = false;
+      drapedFeatureMaterials.delete(id);
+    }
   }
 }
 
@@ -412,10 +441,10 @@ function setTransform(obj: Object3D, transform: Transform) {
 
 function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Material {
   if (mat.wireframe) {
-    return new MeshBasicMaterial({ color: mat.color, wireframe: true });
+    return new MeshBasicMaterial({ color: mat.color, wireframe: true, stencilWrite: false });
   }
 
-  const m = new MeshLambertMaterial({ color: mat.color });
+  const m = new MeshLambertMaterial({ color: mat.color, stencilWrite: false });
   if (mat.texture_fragment) {
     const textureFragmentId = makeTextureFragmentId(
       mat.texture_fragment.ind,
@@ -428,12 +457,4 @@ function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Mate
   }
 
   return m;
-}
-
-function generate_id_from_entity(entity: EntityEvent) {
-  return `${entity.ind}_${entity.gen}`;
-}
-
-function to_globe_depth_id(id: string) {
-  return `${id}_globe_depth`;
 }

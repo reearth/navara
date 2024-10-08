@@ -23,6 +23,7 @@ pub struct UpsampledTerrainGeometry {
     pub heights: Option<Vec<FloatType>>,
     pub indices: Option<Vec<u32>>,
     pub max_height: FloatType,
+    pub min_height: FloatType,
     is_east: bool,
     is_north: bool,
 }
@@ -41,7 +42,7 @@ impl UpsampledTerrainGeometry {
             TileRegion::NorthWest => (false, true),
         };
 
-        let (new_uvs, new_heights, new_indices, max_height) =
+        let (new_uvs, new_heights, new_indices, max_height, min_height) =
             clip(uvs, heights, indices, is_east, is_north);
 
         Self {
@@ -49,6 +50,7 @@ impl UpsampledTerrainGeometry {
             heights: Some(new_heights),
             indices: Some(new_indices),
             max_height,
+            min_height,
             is_east,
             is_north,
         }
@@ -116,7 +118,13 @@ fn clip(
     indices: &[u32],
     is_east: bool,
     is_north: bool,
-) -> (Vec<FloatType>, Vec<FloatType>, Vec<u32>, FloatType) {
+) -> (
+    Vec<FloatType>,
+    Vec<FloatType>,
+    Vec<u32>,
+    FloatType,
+    FloatType,
+) {
     let threashold = 0.5;
 
     let mut clipped_coord_map = ClippedCoordMap::new();
@@ -126,6 +134,7 @@ fn clip(
     let mut new_indices = vec![];
 
     let max_height = 0.0f32;
+    let min_height = 99999.0f32;
 
     for polygon_indices in indices.chunks(3) {
         let [u0, v0] = [
@@ -188,7 +197,7 @@ fn clip(
                 interpolated_h_coords,
             ],
             &mut clipped_coord_map,
-            max_height,
+            (max_height, min_height),
         );
 
         if clipped_u_indices.len() == 4 {
@@ -225,12 +234,12 @@ fn clip(
                     interpolated_h_coords,
                 ],
                 &mut clipped_coord_map,
-                max_height,
+                (max_height, min_height),
             );
         }
     }
 
-    (new_uvs, new_heights, new_indices, max_height)
+    (new_uvs, new_heights, new_indices, max_height, min_height)
 }
 
 fn construct_polygon(
@@ -240,7 +249,7 @@ fn construct_polygon(
     new_indices: &mut Vec<u32>,
     [interpolated_u_coords, interpolated_v_coords, interpolated_h_coords]: [[FloatType; 3]; 3],
     clipped_coord_map: &mut ClippedCoordMap,
-    mut max_height: FloatType,
+    (mut max_height, mut min_height): (FloatType, FloatType),
 ) {
     let mut new_polygon_indices = vec![];
     for i in clipped_indices {
@@ -262,6 +271,7 @@ fn construct_polygon(
         };
 
         max_height = max_height.max(h);
+        min_height = min_height.min(h);
 
         new_polygon_indices.push(new_index as u32);
     }

@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_core::{xyz_to_vec3, Angle, Meters, CRS, LLE, WGS84_32};
-use navara_feature::render::RenderableFeature;
+use navara_feature::{polygon::UpdatePolygon, render::RenderableFeature};
 use navara_layer::{LayerDescription, LayerId, LayerStore};
 use navara_material::Appearance;
 use navara_math::{Quat, Transform, Vec3};
@@ -32,7 +32,7 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
 }
 
 pub fn process_update_events(
-    mut _commands: Commands,
+    mut commands: Commands,
     layer_store: Res<LayerStore>,
     mut events: EventReader<UpdateLayerEvent>,
     mut features: Query<&mut RenderableFeature>,
@@ -102,9 +102,16 @@ pub fn process_update_events(
                                 *material = mat.clone();
                             }
                         }
-                        RenderableFeature::Polygon { material, .. } => {
+                        RenderableFeature::Polygon { .. } => {
+                            // TODO
+                            // 1. ポリゴン更新用のシステムを作る
+                            // 2. clamp_to_groundが更新されたらmin_max_heightsも更新
+                            // 3. terrainの高さに応じてMax Heightを更新
                             if let Appearance::Polygon(mat) = &ev.appearance {
-                                *material = mat.clone();
+                                commands.spawn(UpdatePolygon {
+                                    material: mat.clone(),
+                                    feature_id: *entity,
+                                });
                             }
                         }
                         _ => (),

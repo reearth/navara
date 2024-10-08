@@ -3,10 +3,19 @@ use navara_math::{FloatType, RawDVec3, Vec3};
 // pub use radians::*;
 use crate::unit::{Angle, Degrees, Float, Meters, Radians, Unit};
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(PartialEq)]
 pub struct LngLat<F: Float, U: Unit<F>> {
     pub lat: Angle<F, U>,
     pub lng: Angle<F, U>,
+}
+
+impl<F: Float, U: Unit<F>> LngLat<F, U> {
+    pub fn new(lat: F, lng: F) -> Self {
+        Self {
+            lat: Angle::new(lat),
+            lng: Angle::new(lng),
+        }
+    }
 }
 
 impl<F: Float + std::fmt::Debug, U: Unit<F>> std::fmt::Debug for LngLat<F, U> {
@@ -21,12 +30,33 @@ impl<F: Float + std::fmt::Display, U: Unit<F>> std::fmt::Display for LngLat<F, U
     }
 }
 
+impl<F: Float, U: Unit<F>> Copy for LngLat<F, U> {}
+impl<F: Float, U: Unit<F>> Clone for LngLat<F, U> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 impl<F: Float, U: Unit<F>> LngLat<F, U> {
     pub fn with_elevation(&self, elevation: Meters<F>) -> LLE<F, U> {
         LLE {
             lat: self.lat,
             lng: self.lng,
             height: elevation,
+        }
+    }
+
+    pub fn max(&self, v: &Self) -> Self {
+        Self {
+            lng: self.lng.max(v.lng),
+            lat: self.lat.max(v.lat),
+        }
+    }
+
+    pub fn min(&self, v: &Self) -> Self {
+        Self {
+            lng: self.lng.min(v.lng),
+            lat: self.lat.min(v.lat),
         }
     }
 }
@@ -117,15 +147,8 @@ impl<F: Float> LLE<F, Radians> {
     }
 }
 
-impl<F: Float> Copy for LLE<F, Radians> {}
-impl<F: Float> Clone for LLE<F, Radians> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<F: Float> Copy for LLE<F, Degrees> {}
-impl<F: Float> Clone for LLE<F, Degrees> {
+impl<F: Float, U: Unit<F>> Copy for LLE<F, U> {}
+impl<F: Float, U: Unit<F>> Clone for LLE<F, U> {
     fn clone(&self) -> Self {
         *self
     }

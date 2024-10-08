@@ -62,7 +62,7 @@ impl TileXYZ {
 
         let p1 = web_mercator_world_pos_to_lnglat(e1.0, e1.1);
         let p2 = web_mercator_world_pos_to_lnglat(e2.0, e2.1);
-        Extent::from_points(p1, p2)
+        Extent::from_points(&[p1, p2])
     }
 }
 
