@@ -1,4 +1,6 @@
-use crate::{Float, Meters, One, Rad, Radians, LLE, XYZ};
+use navara_math::{FloatType, One, Vec3};
+
+use crate::{scale_to_geodetic_surface, Float, Meters, Rad, Radians, LLE, XYZ};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Ellipsoid<F: Float> {
@@ -6,6 +8,7 @@ pub struct Ellipsoid<F: Float> {
     pub b: F,
     one_over_radii: [F; 3],
     one_over_radii_squared: [F; 3],
+    center_tolerance_squared: F,
 }
 
 // TODO: Move this variable to the correct place.
@@ -38,6 +41,7 @@ pub const WGS84_64: Ellipsoid<f64> = Ellipsoid {
     b: WGS84_B_64,
     one_over_radii: ONE_OVER_RADII_64,
     one_over_radii_squared: ONE_OVER_RADII_SQUARED_64,
+    center_tolerance_squared: 0.1,
 };
 
 pub const WGS84_32: Ellipsoid<f32> = Ellipsoid {
@@ -45,6 +49,15 @@ pub const WGS84_32: Ellipsoid<f32> = Ellipsoid {
     b: WGS84_B_32,
     one_over_radii: ONE_OVER_RADII_32,
     one_over_radii_squared: ONE_OVER_RADII_SQUARED_32,
+    center_tolerance_squared: 0.1,
+};
+
+pub const UNIT_SPHERE_32: Ellipsoid<f32> = Ellipsoid {
+    a: 1.,
+    b: 1.,
+    one_over_radii: [1., 1., 1.],
+    one_over_radii_squared: [1., 1., 1.],
+    center_tolerance_squared: 0.1,
 };
 
 impl<F: Float + One<F>> Ellipsoid<F> {
@@ -142,6 +155,15 @@ impl<F: Float + One<F>> Ellipsoid<F> {
         }
     }
 
+    // Ref: https://github.com/CesiumGS/cesium/blob/11dd728dfee6c10657f8e1197776fc5a9237ef85/packages/engine/Source/Core/Ellipsoid.js#L333
+    pub fn geodetic_surface_normal_from_vec3(&self, xyz: XYZ<F>) -> XYZ<F> {
+        XYZ {
+            x: Meters::new(xyz.x.val() * self.one_over_radii_squared[0]),
+            y: Meters::new(xyz.y.val() * self.one_over_radii_squared[1]),
+            z: Meters::new(xyz.z.val() * self.one_over_radii_squared[2]),
+        }
+    }
+
     // Ref: https://github.com/CesiumGS/cesium/blob/11dd728dfee6c10657f8e1197776fc5a9237ef85/packages/engine/Source/Core/Ellipsoid.js#L591
     pub fn transform_position_to_scaled_space(&self, position: [F; 3]) -> [F; 3] {
         [
@@ -149,6 +171,18 @@ impl<F: Float + One<F>> Ellipsoid<F> {
             position[1] * self.one_over_radii[1],
             position[2] * self.one_over_radii[2],
         ]
+    }
+}
+
+impl Ellipsoid<FloatType> {
+    // Ref: https://github.com/CesiumGS/cesium/blob/11dd728dfee6c10657f8e1197776fc5a9237ef85/packages/engine/Source/Core/Ellipsoid.js#L538
+    pub fn scale_to_geodetic_surface(&self, p: Vec3) -> Option<Vec3> {
+        scale_to_geodetic_surface(
+            p,
+            &self.one_over_radii,
+            &self.one_over_radii_squared,
+            self.center_tolerance_squared as f64,
+        )
     }
 }
 
@@ -166,7 +200,7 @@ impl<F: Float + One<F>> XYZ<F> {
 
 #[cfg(test)]
 mod tests {
-    use navara_assert::float::assert_delta;
+    use approx::assert_abs_diff_eq;
 
     use super::*;
     use crate::Deg;
@@ -217,8 +251,40 @@ mod tests {
         // Calculated by Cesium
         let expected = (2.439_118_4, 0.622_666_8, 581.580);
 
-        assert_delta(lng.val(), expected.0, 0.0001);
-        assert_delta(lat.val(), expected.1, 0.0001);
-        assert_delta(height.val(), expected.2, 0.5);
+        assert_abs_diff_eq!(lng.val(), expected.0, epsilon = 0.0001);
+        assert_abs_diff_eq!(lat.val(), expected.1, epsilon = 0.0001);
+        assert_abs_diff_eq!(height.val(), expected.2, epsilon = 0.5);
+    }
+
+    #[test]
+    fn it_should_scale_coordinates_to_geodetic_surface() {
+        // X
+        let expected = Vec3::new(1.0, 0.0, 0.0);
+        let p = Vec3::new(9.0, 0.0, 0.0);
+        assert_eq!(
+            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
+            expected
+        );
+        // Y
+        let expected = Vec3::new(0.0, 1.0, 0.0);
+        let p = Vec3::new(0.0, 8.0, 0.0);
+        assert_eq!(
+            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
+            expected
+        );
+        // Z
+        let expected = Vec3::new(0.0, 0.0, 1.0);
+        let p = Vec3::new(0.0, 0.0, 8.0);
+        assert_eq!(
+            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
+            expected
+        );
+        // XYZ
+        let expected = Vec3::new(0.45584232, 0.5698029, 0.68376344);
+        let p = Vec3::new(4.0, 5.0, 6.0);
+        assert_eq!(
+            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
+            expected
+        );
     }
 }

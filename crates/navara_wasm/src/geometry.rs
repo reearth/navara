@@ -61,3 +61,37 @@ impl<'a> From<&'a navara_feature::render::TransferablePolylineGeometry>
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct TransferablePolygonGeometry {
+    #[wasm_bindgen(getter_with_clone)]
+    pub position: TransferableFloatAttribute,
+    #[wasm_bindgen(getter_with_clone)]
+    pub normal: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub indices: Handle,
+}
+
+impl From<TransferablePolygonGeometry> for navara_feature::render::TransferablePolygonGeometry {
+    fn from(val: TransferablePolygonGeometry) -> Self {
+        navara_feature::render::TransferablePolygonGeometry {
+            position: val.position.into(),
+            normal: val.normal.map(|n| n.into()),
+            indices: val.indices,
+        }
+    }
+}
+impl<'a> From<&'a navara_feature::render::TransferablePolygonGeometry>
+    for TransferablePolygonGeometry
+{
+    fn from(
+        val: &'a navara_feature::render::TransferablePolygonGeometry,
+    ) -> TransferablePolygonGeometry {
+        TransferablePolygonGeometry {
+            position: (&val.position).into(),
+            normal: val.normal.as_ref().map(|n| n.into()),
+            indices: val.indices,
+        }
+    }
+}

@@ -10,10 +10,19 @@ pub struct Aabb {
 }
 
 impl Aabb {
-    #[allow(unused)]
-    pub fn from_points(p1: Vec3, p2: Vec3) -> Self {
-        let max = Vec3::new(p1.x.max(p2.x), p1.y.max(p2.y), p1.z.max(p2.z));
-        let min = Vec3::new(p1.x.min(p2.x), p1.y.min(p2.y), p1.z.min(p2.z));
+    pub fn from_points(ps: &[Vec3]) -> Self {
+        let first_vec = *ps.first().unwrap();
+        let mut max = first_vec;
+        let mut min = first_vec;
+        for p in ps {
+            max.x = max.x.max(p.x);
+            max.y = max.y.max(p.y);
+            max.z = max.z.max(p.z);
+
+            min.x = min.x.min(p.x);
+            min.y = min.y.min(p.y);
+            min.z = min.z.min(p.z);
+        }
 
         // It's just center between two points, not on the spherical surface.
         let center = (max + min) * 0.5;
@@ -135,24 +144,24 @@ mod test {
     fn aabb_should_on_or_forward_plane() {
         // Aabb is under the plane, and the direction of the plane is bottom
         let plane = Plane::from_point_normal(Vec3::new(0., 2., -1.), Vec3::new(0., -1., 0.));
-        let aabb = Aabb::from_points(Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.));
+        let aabb = Aabb::from_points(&[Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.)]);
         debug_assert!(aabb.is_on_or_forward_plane(&plane));
 
         // Aabb is above the plane, and the direction of the plane is top
         let plane = Plane::from_point_normal(Vec3::new(0., 2., -1.), Vec3::new(0., 1., 0.));
-        let aabb = Aabb::from_points(Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.));
+        let aabb = Aabb::from_points(&[Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.)]);
         debug_assert!(!aabb.is_on_or_forward_plane(&plane));
 
         // Aabb is intersecting with the plane, and the direction of the plane is top
         let plane = Plane::from_point_normal(Vec3::new(0., 1., -1.), Vec3::new(0., 1., 0.));
-        let aabb = Aabb::from_points(Vec3::new(-1., -1., -1.), Vec3::new(1., 1.1, 1.));
+        let aabb = Aabb::from_points(&[Vec3::new(-1., -1., -1.), Vec3::new(1., 1.1, 1.)]);
         debug_assert!(aabb.is_on_or_forward_plane(&plane));
 
         // Aabb is intersecting with the plane, and the direction of the plane is back
         let plane = Plane::from_point_normal(Vec3::new(0., 0., -1.), Vec3::new(0., 0., 1.));
-        let aabb = Aabb::from_points(Vec3::new(0., 0., 0.), Vec3::new(0., 0., 0.));
+        let aabb = Aabb::from_points(&[Vec3::new(0., 0., 0.), Vec3::new(0., 0., 0.)]);
         debug_assert!(aabb.is_on_or_forward_plane(&plane));
-        let aabb = Aabb::from_points(Vec3::new(-1., 0., -1.), Vec3::new(1., 0., 1.));
+        let aabb = Aabb::from_points(&[Vec3::new(-1., 0., -1.), Vec3::new(1., 0., 1.)]);
         debug_assert!(aabb.is_on_or_forward_plane(&plane));
     }
 }

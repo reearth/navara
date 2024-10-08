@@ -1,5 +1,5 @@
 use crate::{tile_triangles, Geometry};
-use navara_core::{terrain::ElevationDecoder, Ellipsoid, Extent, Radians};
+use navara_core::{ElevationDecoder, Ellipsoid, Extent, Radians};
 use navara_math::FloatType;
 
 /// Decode pixels to a terrain height.
@@ -78,7 +78,7 @@ pub fn tile_triangles_with_terrain(
 
 #[cfg(test)]
 mod test {
-    use navara_core::terrain::ElevationDecoder;
+    use navara_core::ElevationDecoder;
 
     use crate::{decode_height_from_dem, encode_height_to_dem};
 

@@ -49,6 +49,11 @@ pub struct PolylineMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PolygonMaterial {
     pub show: bool,
+    pub color: u32,
+    pub clamp_to_ground: bool,
+    pub height: f32,
+    pub extruded_height: Option<f32>,
+    pub wireframe: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

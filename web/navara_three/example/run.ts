@@ -209,6 +209,38 @@ const geoLayersDef: GeoJsonLayer[] = [
       url: "/glTF/2CylinderEngine/2CylinderEngine.gltf",
     },
   },
+
+  {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        coordinates: [
+          // [
+          //   [138.66861922558115, 35.46838056308519],
+          //   [138.6559918549957, 35.29164005065681],
+          //   [138.81174182884172, 35.279838616806046],
+          //   [138.8071009152797, 35.436389815907134],
+          //   [138.66861922558115, 35.46838056308519],
+          // ],
+          [
+            [31.72775849062026, 52.51516008351888],
+            [99.72788480154168, -48.26315338939218],
+            [204.13004176416695, 36.2117078118584],
+            [31.72775849062026, 52.51516008351888],
+          ],
+        ],
+        type: "Polygon",
+      },
+    },
+    polygon: {
+      color: 0x00aaff,
+      extruded_height: 5000,
+      clamp_to_ground: true,
+    },
+    wireframe: false,
+  },
 ];
 
 export const run = async (view: ThreeView) => {
@@ -387,6 +419,7 @@ export const run = async (view: ThreeView) => {
     size: 1,
     width: 1,
     height: 1,
+    extrudedHeight: 1,
   };
 
   // @ts-expect-error : Missing Type Definitions ?
@@ -452,6 +485,10 @@ export const run = async (view: ThreeView) => {
         material.height = paneParams.height;
       }
 
+      if ("extruded_height" in material) {
+        material.extruded_height = paneParams.extrudedHeight;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -498,6 +535,11 @@ function createParamCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer, chang
       f.addBinding(paneParams, "height").on("change", changeFunc);
     }
 
+    if ("extruded_height" in material) {
+      paneParams.extrudedHeight = material.extruded_height;
+      f.addBinding(paneParams, "extrudedHeight").on("change", changeFunc);
+    }
+
     return f;
   }
 
@@ -529,6 +571,9 @@ function getMaterialOptions(layer: GeoJsonLayer) {
   }
   if ("polyline" in layer) {
     materials.push("polyline");
+  }
+  if ("polygon" in layer) {
+    materials.push("polygon");
   }
 
   const ret: any = {};

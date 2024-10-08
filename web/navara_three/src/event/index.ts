@@ -16,6 +16,7 @@ import {
   BillboardMaterial,
   ModelMaterial,
   PolylineMaterial,
+  PolygonMaterial,
 } from "navara";
 import {
   BufferAttribute,
@@ -318,6 +319,9 @@ function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, mesh
     if (obj instanceof Mesh && material instanceof PolylineMaterial) {
       processPolylineChanged(obj, material);
     }
+    if (obj instanceof Mesh && material instanceof PolygonMaterial) {
+      processPolygonChanged(obj, material);
+    }
   }
 
   applyTextureAspect(obj);
@@ -346,6 +350,14 @@ function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
     obj.material.uniforms.color.value.set(material.color);
     obj.material.uniforms.width.value = material.width;
     obj.material.visible = material.show ?? true;
+  }
+}
+
+function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
+  if (obj.material instanceof MeshLambertMaterial || obj.material instanceof MeshBasicMaterial) {
+    obj.material.color.set(material.color);
+    obj.material.visible = material.show ?? true;
+    // obj.material.uniforms.width.value = material.width;
   }
 }
 

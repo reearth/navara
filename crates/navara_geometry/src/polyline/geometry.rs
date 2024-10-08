@@ -2,7 +2,7 @@ use navara_core::{Ellipsoid, CRS, LLE};
 use navara_math::Vec3;
 use radians::Radians;
 
-use crate::helpers::vec::{append_flatten_vec3, get_position, unique_lle_with_delta_e};
+use crate::helpers::vec::{append_flatten_vec3, get_position, unique_with_delta_e};
 
 use super::{
     attributes::{generate_geometry_attributes, PolylineGeometryAttributes},
@@ -50,7 +50,7 @@ pub fn create_polyline_geometry(
         CRS::ESPG { code: _code } => unimplemented!(),
     };
 
-    let cartographics = unique_lle_with_delta_e(cartographics, 9);
+    let cartographics = unique_with_delta_e(cartographics, 9);
     let cartographics_length = cartographics.len();
 
     if cartographics_length < 2 {

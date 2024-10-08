@@ -115,6 +115,7 @@ pub fn transfer_mesh(
             let entity = commands.spawn((
                 PolylineMarker,
                 RenderableFeature::Polyline {
+                    // TODO: Calculate coordinate to update transform
                     coordinates: Vec3::new(0., 0., 0.),
                     crs: CRS::Geocentric,
                     material: material.clone(),

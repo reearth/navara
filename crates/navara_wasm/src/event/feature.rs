@@ -5,8 +5,8 @@ use crate::{
     appearance::{
         BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
     },
-    geometry::TransferablePolylineGeometry,
-    Mesh, Transform,
+    geometry::{TransferablePolygonGeometry, TransferablePolylineGeometry},
+    Transform,
 };
 
 #[wasm_bindgen]
@@ -40,7 +40,8 @@ pub struct PolylineMesh {
 pub struct PolygonMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub material: PolygonMaterial,
-    pub mesh: Mesh,
+    #[wasm_bindgen(getter_with_clone)]
+    pub geometry: TransferablePolygonGeometry,
     pub transform: Transform,
 }
 
@@ -118,14 +119,14 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 coordinates: _,
                 crs: _,
                 material,
-                mesh,
+                geometry,
                 transform,
                 feature_id: _,
                 render_info: _,
             } => Self {
                 polygon: Some(PolygonMesh {
                     material: material.into(),
-                    mesh: mesh.into(),
+                    geometry: geometry.into(),
                     transform: transform.into(),
                 }),
                 ..Default::default()

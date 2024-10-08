@@ -2,7 +2,7 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    terrain::ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
+    ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
 };
 use navara_data_requester::DataRequester;
 use navara_geometry::{

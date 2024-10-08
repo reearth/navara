@@ -102,6 +102,11 @@ pub fn process_update_events(
                                 *material = mat.clone();
                             }
                         }
+                        RenderableFeature::Polygon { material, .. } => {
+                            if let Appearance::Polygon(mat) = &ev.appearance {
+                                *material = mat.clone();
+                            }
+                        }
                         _ => (),
                     };
                 }

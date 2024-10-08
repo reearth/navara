@@ -1,4 +1,6 @@
-use crate::{Float, One};
+use navara_math::One;
+
+use crate::Float;
 
 pub fn lerp<F: Float + One<F>>(a: F, b: F, t: F) -> F {
     (F::one() - t) * a + t * b

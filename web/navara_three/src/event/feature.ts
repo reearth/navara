@@ -2,7 +2,14 @@ import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
-import type { BillboardMesh, PointMesh, ModelMesh, PolylineMesh, RenderableFeature } from "navara";
+import type {
+  BillboardMesh,
+  PointMesh,
+  ModelMesh,
+  PolylineMesh,
+  RenderableFeature,
+  PolygonMesh,
+} from "navara";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -13,6 +20,7 @@ import {
   SpriteMaterial,
   TextureLoader,
   Object3D,
+  MeshLambertMaterial,
 } from "three";
 import { GLTFLoader } from "three-stdlib";
 
@@ -36,6 +44,9 @@ export function renderFeature(
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
+  }
+  if (f.polygon) {
+    return renderPolygon(f.polygon, buf, uniforms);
   }
 }
 
@@ -175,6 +186,29 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
     depthTest: false,
     depthWrite: false,
     visible: mesh.material.show,
+  });
+  const m = new Mesh(geometry, material);
+
+  return m;
+}
+
+async function renderPolygon(mesh: PolygonMesh, buf: BufferLoader, _uniforms: CommonUniforms) {
+  const g = mesh.geometry;
+  const position = buf.f32(g.position.data);
+  const normal = g.normal ? buf.f32(g.normal.data) : undefined;
+  const indices = buf.u32(g.indices);
+  if (!position || !indices) return;
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(position, g.position.size));
+  if (g.normal && normal) {
+    geometry.setAttribute("normal", new BufferAttribute(normal, g.normal.size));
+  }
+  geometry.setIndex(new BufferAttribute(indices, 1));
+
+  const material = new MeshLambertMaterial({
+    color: mesh.material.color,
+    wireframe: mesh.material.wireframe,
   });
   const m = new Mesh(geometry, material);
 

@@ -6,13 +6,26 @@ use navara_core::CRS;
 
 use navara_feature::{
     billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
-    polyline::PolylineGeometry,
+    polygon::PolygonGeometry, polyline::PolylineGeometry,
 };
+use navara_geometry::Hierarchy;
 use navara_layer::{GeoJsonLayer, LayerId};
 use navara_material::Appearance;
 
 use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
+
+fn coords(f: &[f64]) -> Vec3 {
+    Vec3::new(
+        f[0] as FloatType,
+        f[1] as FloatType,
+        *f.get(2).unwrap_or(&0.) as FloatType,
+    )
+}
+
+fn multi_coords(f: &[Vec<f64>]) -> Vec<Vec3> {
+    f.iter().map(|p| coords(p)).collect::<Vec<_>>()
+}
 
 fn spawn_feature(
     commands: &mut Commands,
@@ -27,11 +40,7 @@ fn spawn_feature(
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         PointGeometry {
-                            coords: Vec3::new(
-                                f[0] as FloatType,
-                                f[1] as FloatType,
-                                *f.get(2).unwrap_or(&0.) as FloatType,
-                            ),
+                            coords: coords(f),
                             crs: CRS::Geographic,
                         },
                         v.clone(),
@@ -42,11 +51,7 @@ fn spawn_feature(
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             PointGeometry {
-                                coords: Vec3::new(
-                                    f[0] as FloatType,
-                                    f[1] as FloatType,
-                                    *f.get(2).unwrap_or(&0.) as FloatType,
-                                ),
+                                coords: coords(f),
                                 crs: CRS::Geographic,
                             },
                             v.clone(),
@@ -60,11 +65,7 @@ fn spawn_feature(
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         BillboardGeometry {
-                            coords: Vec3::new(
-                                f[0] as FloatType,
-                                f[1] as FloatType,
-                                *f.get(2).unwrap_or(&0.) as FloatType,
-                            ),
+                            coords: coords(f),
                             crs: CRS::Geographic,
                         },
                         v.clone(),
@@ -75,11 +76,7 @@ fn spawn_feature(
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             BillboardGeometry {
-                                coords: Vec3::new(
-                                    f[0] as FloatType,
-                                    f[1] as FloatType,
-                                    *f.get(2).unwrap_or(&0.) as FloatType,
-                                ),
+                                coords: coords(f),
                                 crs: CRS::Geographic,
                             },
                             v.clone(),
@@ -93,16 +90,7 @@ fn spawn_feature(
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         PolylineGeometry {
-                            coords: f
-                                .iter()
-                                .map(|p| {
-                                    Vec3::new(
-                                        p[0] as FloatType,
-                                        p[1] as FloatType,
-                                        *p.get(2).unwrap_or(&0.) as FloatType,
-                                    )
-                                })
-                                .collect::<Vec<_>>(),
+                            coords: multi_coords(f),
                             crs: CRS::Geographic,
                         },
                         v.clone(),
@@ -113,16 +101,7 @@ fn spawn_feature(
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             PolylineGeometry {
-                                coords: f
-                                    .iter()
-                                    .map(|p| {
-                                        Vec3::new(
-                                            p[0] as FloatType,
-                                            p[1] as FloatType,
-                                            *p.get(2).unwrap_or(&0.) as FloatType,
-                                        )
-                                    })
-                                    .collect::<Vec<_>>(),
+                                coords: multi_coords(f),
                                 crs: CRS::Geographic,
                             },
                             v.clone(),
@@ -131,17 +110,47 @@ fn spawn_feature(
                 }
                 _ => {}
             },
-            Appearance::Polygon(_v) => unimplemented!(),
+            Appearance::Polygon(v) => match &geometry.value {
+                Value::Polygon(f) => {
+                    commands.spawn((
+                        LayerId(layer_id.to_owned()),
+                        PolygonGeometry {
+                            hierarchy: Hierarchy {
+                                outer_ring: f
+                                    .first()
+                                    .map_or_else(std::vec::Vec::new, |v| multi_coords(v)),
+                                holes: f
+                                    .get(1)
+                                    .map_or_else(std::vec::Vec::new, |v| multi_coords(v)),
+                            },
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPolygon(fs) => {
+                    for f in fs {
+                        commands.spawn((
+                            LayerId(layer_id.to_owned()),
+                            PolygonGeometry {
+                                hierarchy: Hierarchy {
+                                    outer_ring: multi_coords(&f[0]),
+                                    holes: multi_coords(&f[1]),
+                                },
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         ModelGeometry {
-                            coords: Vec3::new(
-                                f[0] as FloatType,
-                                f[1] as FloatType,
-                                *f.get(2).unwrap_or(&0.) as FloatType,
-                            ),
+                            coords: coords(f),
                             crs: CRS::Geographic,
                         },
                         v.clone(),

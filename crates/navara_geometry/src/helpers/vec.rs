@@ -5,24 +5,75 @@ use navara_core::{xyz_to_vec3, Ellipsoid, Meters, LLE};
 use navara_math::Vec3;
 use radians::Radians;
 
-/// This is used to filter a duplicated LLE struct by delta of epsilon.
-pub fn unique_lle_with_delta_e(a: &[LLE<f32, Radians>], e: u32) -> Vec<LLE<f32, Radians>> {
-    #[derive(Eq, PartialEq, Hash)]
-    struct MultipliedLLE {
-        lng: i32,
-        lat: i32,
-        height: i32,
-    }
+#[derive(Eq, PartialEq, Hash)]
+pub struct SeparatedFloat {
+    v: i32,
+    f: i32,
+}
 
+pub trait UniqueWithDelta {
+    fn x(&self) -> f32;
+    fn y(&self) -> f32;
+    fn z(&self) -> f32;
+}
+
+impl UniqueWithDelta for LLE<f32, Radians> {
+    fn x(&self) -> f32 {
+        self.lng.val()
+    }
+    fn y(&self) -> f32 {
+        self.lat.val()
+    }
+    fn z(&self) -> f32 {
+        self.height.val()
+    }
+}
+
+impl UniqueWithDelta for Vec3 {
+    fn x(&self) -> f32 {
+        self.x
+    }
+    fn y(&self) -> f32 {
+        self.y
+    }
+    fn z(&self) -> f32 {
+        self.z
+    }
+}
+
+fn decimal(v: f32) -> f32 {
+    v.abs() - v.abs().floor()
+}
+
+/// This is used to filter a duplicated struct by delta of epsilon.
+pub fn unique_with_delta_e<V>(a: &[V], e: u32) -> Vec<V>
+where
+    V: UniqueWithDelta + Clone,
+{
+    #[derive(Eq, PartialEq, Hash)]
+    struct Multiplied {
+        x: SeparatedFloat,
+        y: SeparatedFloat,
+        z: SeparatedFloat,
+    }
     let e = 10u32.pow(e) as f32;
     a.iter()
-        .unique_by(|c| MultipliedLLE {
-            lng: (c.lng.val() * e) as i32,
-            lat: (c.lat.val() * e) as i32,
-            height: (c.height.val() * e) as i32,
+        .unique_by(|v| Multiplied {
+            x: SeparatedFloat {
+                v: v.x().floor() as i32,
+                f: (decimal(v.x()) * e).floor() as i32,
+            },
+            y: SeparatedFloat {
+                v: v.y().floor() as i32,
+                f: (decimal(v.y()) * e).floor() as i32,
+            },
+            z: SeparatedFloat {
+                v: v.z().floor() as i32,
+                f: (decimal(v.z()) * e).floor() as i32,
+            },
         })
         .cloned()
-        .collect::<Vec<LLE<f32, Radians>>>()
+        .collect::<Vec<V>>()
 }
 
 pub fn append_flatten_vec3(a: &mut Vec<f32>, b: &Vec3) {
@@ -55,20 +106,21 @@ pub fn tangent_direction(a: Vec3, b: Vec3, up: Vec3) -> Vec3 {
 
 #[cfg(test)]
 mod test {
-    use navara_assert::float::assert_delta;
-    use navara_core::{epsilon::EPSILON10, LLE};
+    use approx::assert_abs_diff_eq;
+    use navara_core::LLE;
+    use navara_math::EPSILON10;
     use radians::Radians;
 
-    use super::unique_lle_with_delta_e;
+    use super::unique_with_delta_e;
 
     #[test]
     fn it_should_unique_lle_vec() {
         fn assert_lle_vec(result: Vec<LLE<f32, Radians>>, expects: Vec<LLE<f32, Radians>>) {
             assert_eq!(result.len(), expects.len());
             for (i, r) in result.iter().enumerate() {
-                assert_delta(r.lng.val(), expects[i].lng.val(), EPSILON10);
-                assert_delta(r.lat.val(), expects[i].lat.val(), EPSILON10);
-                assert_delta(r.height.val(), expects[i].height.val(), EPSILON10);
+                assert_abs_diff_eq!(r.lng.val(), expects[i].lng.val(), epsilon = EPSILON10);
+                assert_abs_diff_eq!(r.lat.val(), expects[i].lat.val(), epsilon = EPSILON10);
+                assert_abs_diff_eq!(r.height.val(), expects[i].height.val(), epsilon = EPSILON10);
             }
         }
 
@@ -91,18 +143,7 @@ mod test {
             input_vec[5],
             input_vec[6],
         ];
-        let result = unique_lle_with_delta_e(&input_vec, 4);
-        assert_lle_vec(result, expects);
-
-        let expects: Vec<LLE<f32, Radians>> = vec![
-            input_vec[0],
-            input_vec[2],
-            input_vec[3],
-            input_vec[4],
-            input_vec[5],
-            input_vec[6],
-        ];
-        let result = unique_lle_with_delta_e(&input_vec, 3);
+        let result = unique_with_delta_e(&input_vec, 3);
         assert_lle_vec(result, expects);
 
         let expects: Vec<LLE<f32, Radians>> = vec![
@@ -112,7 +153,12 @@ mod test {
             input_vec[5],
             input_vec[6],
         ];
-        let result = unique_lle_with_delta_e(&input_vec, 2);
+        let result = unique_with_delta_e(&input_vec, 2);
+        assert_lle_vec(result, expects);
+
+        let expects: Vec<LLE<f32, Radians>> =
+            vec![input_vec[0], input_vec[2], input_vec[5], input_vec[6]];
+        let result = unique_with_delta_e(&input_vec, 1);
         assert_lle_vec(result, expects);
     }
 }

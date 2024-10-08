@@ -5,3 +5,6 @@ resolver = "2"
 members = [
     "crates/*",
 ]
+
+[workspace.dependencies]
+approx = "0.5.1"
