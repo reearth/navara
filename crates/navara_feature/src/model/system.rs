@@ -1,3 +1,4 @@
+use crate::render::{RenderInformation, RenderableFeature};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -6,22 +7,22 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
-use navara_layer::ModelMaterial;
+use navara_layer::{LayerId, LayerStore};
+use navara_material::ModelMaterial;
 use navara_math::{Quat, Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
 
-use crate::render::{RenderInformation, RenderableFeature};
-
 use super::{ModelGeometry, ModelMarker};
 
 pub fn transfer_mesh(
     mut commands: Commands,
-    models: Query<(Entity, &ModelGeometry, &ModelMaterial), Added<ModelGeometry>>,
+    models: Query<(Entity, &LayerId, &ModelGeometry, &ModelMaterial), Added<ModelGeometry>>,
+    mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, geometry, material) in &models {
+    for (entity, layer_id, geometry, material) in &models {
         let position = match geometry.crs {
             CRS::Geographic => {
                 let lng = geometry.coords.x;
@@ -48,9 +49,11 @@ pub fn transfer_mesh(
         let rotation_z = Quat::from_rotation_z(lng);
         let rotation = rotation_z * rotation_y;
 
-        commands.spawn((
+        let entity = commands.spawn((
             ModelMarker,
             RenderableFeature::Model {
+                coordinates: geometry.coords,
+                crs: geometry.crs.clone(),
                 material: material.clone(),
                 transform: Transform::from_translation(position)
                     .with_rotation(rotation)
@@ -61,6 +64,12 @@ pub fn transfer_mesh(
                 },
             },
         ));
+
+        layer_store
+            .map
+            .entry(layer_id.clone())
+            .or_default()
+            .push(entity.id());
     }
 }
 
@@ -80,6 +89,8 @@ pub fn update_height_by_terrain(
     for (_, mut feature) in &mut renderable_features {
         match feature.as_mut() {
             RenderableFeature::Model {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id,

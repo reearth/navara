@@ -72,6 +72,8 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
     fn from(v: &'a navara_feature::render::RenderableFeature) -> Self {
         match v {
             navara_feature::render::RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id: _,
@@ -84,6 +86,8 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 ..Default::default()
             },
             navara_feature::render::RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id: _,
@@ -96,6 +100,8 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 ..Default::default()
             },
             navara_feature::render::RenderableFeature::Polyline {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 geometry,
@@ -110,6 +116,8 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 ..Default::default()
             },
             navara_feature::render::RenderableFeature::Polygon {
+                coordinates: _,
+                crs: _,
                 material,
                 geometry,
                 transform,
@@ -124,6 +132,8 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 ..Default::default()
             },
             navara_feature::render::RenderableFeature::Model {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id: _,

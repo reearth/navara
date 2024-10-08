@@ -327,6 +327,7 @@ export default class ThreeView {
   _mvts: MVT[] = [];
 
   addLayer(l: LayerDescription) {
+    let layerId = null;
     switch (l.type) {
       case "3dtiles":
         this._c3tiles.add(l.url, this._c3tiles.length() == 0);
@@ -342,7 +343,21 @@ export default class ThreeView {
         break;
       }
       default:
-        this._core?.addLayer(l);
+        layerId = this._core?.addLayer(l);
+    }
+
+    return layerId;
+  }
+
+  updateLayer(layerId: string, l: LayerDescription) {
+    switch (l.type) {
+      case "3dtiles":
+        break;
+      case "mvt":
+        break;
+      default:
+        this._core?.updateLayer(layerId, l);
+        break;
     }
   }
 

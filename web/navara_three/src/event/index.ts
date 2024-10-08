@@ -12,6 +12,11 @@ import {
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
   RenderableFeatureChangedEvent,
+  PointMaterial,
+  BillboardMaterial,
+  ModelMaterial,
+  PolylineMaterial,
+  PolygonMaterial,
 } from "navara";
 import {
   BufferAttribute,
@@ -26,6 +31,9 @@ import {
   ImageLoader,
   MeshLambertMaterial,
   Texture,
+  Sprite,
+  Group,
+  ShaderMaterial,
 } from "three";
 
 import { applyTextureAspect } from "../texture";
@@ -296,9 +304,61 @@ function processRenderableFeatureChanged(ev: RenderableFeatureChangedEvent, mesh
   if (transform) {
     setTransform(obj, transform);
   }
+
+  const material = (point ?? billboard ?? polyline ?? polygon ?? model)?.material;
+  if (material) {
+    if (obj instanceof Sprite && material instanceof PointMaterial) {
+      processPointChanged(obj, material);
+    }
+    if (obj instanceof Sprite && material instanceof BillboardMaterial) {
+      processBillboardChanged(obj, material);
+    }
+    if (obj instanceof Group && material instanceof ModelMaterial) {
+      processModelChanged(obj, material);
+    }
+    if (obj instanceof Mesh && material instanceof PolylineMaterial) {
+      processPolylineChanged(obj, material);
+    }
+    if (obj instanceof Mesh && material instanceof PolygonMaterial) {
+      processPolygonChanged(obj, material);
+    }
+  }
+
   applyTextureAspect(obj);
 
   obj.updateMatrix();
+}
+
+function processPointChanged(obj: Sprite, material: PointMaterial) {
+  obj.material.color.set(material.color);
+  obj.material.visible = material.show ?? true;
+}
+
+function processBillboardChanged(obj: Sprite, material: BillboardMaterial) {
+  obj.material.color.set(material.color);
+  obj.material.visible = material.show ?? true;
+}
+
+function processModelChanged(obj: Group, material: ModelMaterial) {
+  obj.children.forEach(child => {
+    child.visible = material.show ?? true;
+  });
+}
+
+function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
+  if (obj.material instanceof ShaderMaterial) {
+    obj.material.uniforms.color.value.set(material.color);
+    obj.material.uniforms.width.value = material.width;
+    obj.material.visible = material.show ?? true;
+  }
+}
+
+function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
+  if (obj.material instanceof MeshLambertMaterial || obj.material instanceof MeshBasicMaterial) {
+    obj.material.color.set(material.color);
+    obj.material.visible = material.show ?? true;
+    // obj.material.uniforms.width.value = material.width;
+  }
 }
 
 function createMesh(

@@ -3,12 +3,14 @@ use bevy_ecs::{
     system::{Commands, Query},
 };
 use navara_core::CRS;
+
 use navara_feature::{
     billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
     polygon::PolygonGeometry, polyline::PolylineGeometry,
 };
 use navara_geometry::Hierarchy;
-use navara_layer::{Appearance, GeoJsonLayer};
+use navara_layer::{GeoJsonLayer, LayerId};
+use navara_material::Appearance;
 
 use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
@@ -25,12 +27,18 @@ fn multi_coords(f: &[Vec<f64>]) -> Vec<Vec3> {
     f.iter().map(|p| coords(p)).collect::<Vec<_>>()
 }
 
-fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: &Geometry) {
+fn spawn_feature(
+    commands: &mut Commands,
+    appearances: &[Appearance],
+    geometry: &Geometry,
+    layer_id: &str,
+) {
     for appearance in appearances {
         match appearance {
             Appearance::Point(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
+                        LayerId(layer_id.to_owned()),
                         PointGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -41,6 +49,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 Value::MultiPoint(fs) => {
                     for f in fs {
                         commands.spawn((
+                            LayerId(layer_id.to_owned()),
                             PointGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -54,6 +63,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
             Appearance::Billboard(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
+                        LayerId(layer_id.to_owned()),
                         BillboardGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -64,6 +74,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 Value::MultiPoint(fs) => {
                     for f in fs {
                         commands.spawn((
+                            LayerId(layer_id.to_owned()),
                             BillboardGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -77,6 +88,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
             Appearance::Polyline(v) => match &geometry.value {
                 Value::LineString(f) => {
                     commands.spawn((
+                        LayerId(layer_id.to_owned()),
                         PolylineGeometry {
                             coords: multi_coords(f),
                             crs: CRS::Geographic,
@@ -87,6 +99,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 Value::MultiLineString(fs) => {
                     for f in fs {
                         commands.spawn((
+                            LayerId(layer_id.to_owned()),
                             PolylineGeometry {
                                 coords: multi_coords(f),
                                 crs: CRS::Geographic,
@@ -100,6 +113,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
             Appearance::Polygon(v) => match &geometry.value {
                 Value::Polygon(f) => {
                     commands.spawn((
+                        LayerId(layer_id.to_owned()),
                         PolygonGeometry {
                             hierarchy: Hierarchy {
                                 outer_ring: f
@@ -117,6 +131,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 Value::MultiPolygon(fs) => {
                     for f in fs {
                         commands.spawn((
+                            LayerId(layer_id.to_owned()),
                             PolygonGeometry {
                                 hierarchy: Hierarchy {
                                     outer_ring: multi_coords(&f[0]),
@@ -133,6 +148,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
                     commands.spawn((
+                        LayerId(layer_id.to_owned()),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -143,6 +159,7 @@ fn spawn_feature(commands: &mut Commands, appearances: &[Appearance], geometry: 
                 Value::MultiPoint(fs) => {
                     for f in fs {
                         commands.spawn((
+                            LayerId(layer_id.to_owned()),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -168,21 +185,24 @@ pub fn construct_feature(
 ) {
     for layer in &geojson_layers {
         let appearances = &layer.appearances;
-        match &layer.data {
-            GeoJson::FeatureCollection(fs) => {
-                for f in fs {
-                    if let Some(g) = &f.geometry {
-                        spawn_feature(&mut commands, appearances, g);
+
+        if let Some(geo_data) = &layer.data {
+            match &geo_data {
+                GeoJson::FeatureCollection(fs) => {
+                    for f in fs {
+                        if let Some(g) = &f.geometry {
+                            spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
+                        }
                     }
                 }
-            }
-            GeoJson::Feature(f) => {
-                if let Some(g) = &f.geometry {
-                    spawn_feature(&mut commands, appearances, g);
+                GeoJson::Feature(f) => {
+                    if let Some(g) = &f.geometry {
+                        spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
+                    }
                 }
-            }
-            GeoJson::Geometry(g) => {
-                spawn_feature(&mut commands, appearances, g);
+                GeoJson::Geometry(g) => {
+                    spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
+                }
             }
         }
     }
@@ -195,10 +215,13 @@ mod test {
     use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_32};
     use navara_event_store::EventStore;
     use navara_feature::{render::RenderableFeature, FeaturePlugin};
-    use navara_layer::{Appearance, BillboardMaterial, GeoJsonLayer, PointMaterial};
+    use navara_layer::{GeoJsonLayer, LayerStore};
+    use navara_material::Appearance;
+    use navara_material::{BillboardMaterial, PointMaterial};
     use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
     use navara_tile::tile::TileQuadtree;
+    use std::collections::HashMap;
 
     use super::construct_feature;
 
@@ -208,6 +231,9 @@ mod test {
         app.init_resource::<BufferStore>();
         app.init_resource::<EventStore>();
         app.insert_resource(TileQuadtree::new_with_region_qt(30));
+        app.insert_resource(LayerStore {
+            map: HashMap::new(),
+        });
         app.add_plugins(FeaturePlugin);
         app.add_systems(Update, construct_feature);
 
@@ -217,7 +243,8 @@ mod test {
     fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
         let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
         GeoJsonLayer {
-            data: geojson,
+            layer_id: "123".to_string(),
+            data: Some(geojson),
             crs: None,
             appearances,
         }
@@ -306,6 +333,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -318,6 +347,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -407,6 +438,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -419,6 +452,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Point {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -514,6 +549,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -526,6 +563,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -616,6 +655,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,
@@ -628,6 +669,8 @@ mod test {
         assert_eq!(
             match iter.next().unwrap() {
                 RenderableFeature::Billboard {
+                    coordinates: _,
+                    crs: _,
                     material: _,
                     transform,
                     feature_id: _,

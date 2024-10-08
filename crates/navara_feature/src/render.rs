@@ -1,10 +1,11 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_buffer_store::Handle;
+use navara_core::CRS;
 use navara_geometry::TransferableFloatAttribute;
-use navara_layer::{
+use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
-use navara_math::{FloatType, Transform};
+use navara_math::{FloatType, Transform, Vec3};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
@@ -16,18 +17,24 @@ pub struct RenderInformation {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub enum RenderableFeature {
     Point {
+        coordinates: Vec3,
+        crs: CRS,
         material: PointMaterial,
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
     },
     Billboard {
+        coordinates: Vec3,
+        crs: CRS,
         material: BillboardMaterial,
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
     },
     Polyline {
+        coordinates: Vec3,
+        crs: CRS,
         material: PolylineMaterial,
         geometry: TransferablePolylineGeometry,
         transform: Transform,
@@ -35,6 +42,8 @@ pub enum RenderableFeature {
         render_info: RenderInformation,
     },
     Polygon {
+        coordinates: Vec3,
+        crs: CRS,
         material: PolygonMaterial,
         geometry: TransferablePolygonGeometry,
         transform: Transform,
@@ -42,6 +51,8 @@ pub enum RenderableFeature {
         render_info: RenderInformation,
     },
     Model {
+        coordinates: Vec3,
+        crs: CRS,
         material: ModelMaterial,
         transform: Transform,
         feature_id: Entity,

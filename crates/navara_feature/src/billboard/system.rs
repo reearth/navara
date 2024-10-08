@@ -1,3 +1,4 @@
+use crate::render::{RenderInformation, RenderableFeature};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -6,22 +7,25 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
-use navara_layer::BillboardMaterial;
+use navara_layer::{LayerId, LayerStore};
+use navara_material::BillboardMaterial;
 use navara_math::{Transform, Vec3};
 use navara_tile::{
     data_requester::TerrainDataRequesterMarker,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
 
-use crate::render::{RenderInformation, RenderableFeature};
-
 use super::{BillboardGeometry, BillboardMarker};
 
 pub fn transfer_mesh(
     mut commands: Commands,
-    billboards: Query<(Entity, &BillboardGeometry, &BillboardMaterial), Added<BillboardGeometry>>,
+    billboards: Query<
+        (Entity, &LayerId, &BillboardGeometry, &BillboardMaterial),
+        Added<BillboardGeometry>,
+    >,
+    mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, geometry, material) in &billboards {
+    for (entity, layer_id, geometry, material) in &billboards {
         let position = match geometry.crs {
             CRS::Geographic => {
                 let lng = geometry.coords.x;
@@ -42,9 +46,11 @@ pub fn transfer_mesh(
             CRS::ESPG { code: _ } => unimplemented!(),
         };
 
-        commands.spawn((
+        let entity = commands.spawn((
             BillboardMarker,
             RenderableFeature::Billboard {
+                coordinates: geometry.coords,
+                crs: geometry.crs.clone(),
                 material: material.clone(),
                 transform: Transform::from_translation(position).with_scale(Vec3::new(
                     material.size,
@@ -57,6 +63,12 @@ pub fn transfer_mesh(
                 },
             },
         ));
+
+        layer_store
+            .map
+            .entry(layer_id.clone())
+            .or_default()
+            .push(entity.id());
     }
 }
 
@@ -76,6 +88,8 @@ pub fn update_height_by_terrain(
     for (_, mut feature) in &mut renderable_features {
         match feature.as_mut() {
             RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
                 material,
                 transform,
                 feature_id,

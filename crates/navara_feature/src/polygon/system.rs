@@ -9,8 +9,9 @@ use navara_geometry::{
     create_polygon_geometry, Hierarchy, PolygonGeometryOptions, PolygonResource,
     TransferableFloatAttribute,
 };
-use navara_layer::PolygonMaterial;
-use navara_math::Transform;
+use navara_layer::{LayerId, LayerStore};
+use navara_material::PolygonMaterial;
+use navara_math::{Transform, Vec3};
 
 use crate::render::{RenderInformation, RenderableFeature, TransferablePolygonGeometry};
 
@@ -37,10 +38,11 @@ fn to_transferable_geometry(
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    polygon: Query<(Entity, &PolygonGeometry, &PolygonMaterial), Added<PolygonGeometry>>,
+    polygon: Query<(Entity, &LayerId, &PolygonGeometry, &PolygonMaterial), Added<PolygonGeometry>>,
     mut polygon_resource: ResMut<PolygonResource>,
+    mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, geometry, material) in &polygon {
+    for (entity, layer_id, geometry, material) in &polygon {
         let hierarchy = match geometry.crs {
             CRS::Geographic => {
                 let mut hierarchy = Hierarchy::default();
@@ -91,13 +93,16 @@ pub fn transfer_mesh(
             },
             &mut polygon_resource,
         ) {
-            // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
             let mut material = material.clone();
             // Disable clamping to ground when the extruded height is specified.
             material.clamp_to_ground = material.extruded_height.is_none();
-            commands.spawn((
+            // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
+            let entity = commands.spawn((
                 PolygonMarker,
                 RenderableFeature::Polygon {
+                    // TODO: Calculate coordinate to update transform
+                    coordinates: Vec3::new(0., 0., 0.),
+                    crs: CRS::Geocentric,
                     material: material.clone(),
                     geometry: to_transferable_geometry(&mut buf, geometry),
                     transform: Transform::default(),
@@ -107,6 +112,12 @@ pub fn transfer_mesh(
                     },
                 },
             ));
+
+            layer_store
+                .map
+                .entry(layer_id.clone())
+                .or_default()
+                .push(entity.id());
         }
     }
 }

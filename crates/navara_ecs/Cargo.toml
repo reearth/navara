@@ -18,6 +18,7 @@ navara_feature = { path = "../navara_feature" }
 navara_geojson = { path = "../navara_geojson" }
 navara_input = { path = "../navara_input" }
 navara_layer = { path = "../navara_layer" }
+navara_layer_event = { path = "../navara_layer_event" }
 navara_mesh = { path = "../navara_mesh" }
 navara_occluder = { path = "../navara_occluder" }
 navara_texture_fragment = { path = "../navara_texture_fragment" }
