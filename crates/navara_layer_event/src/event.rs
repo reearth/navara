@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::*;
-use bevy_log::info;
 use navara_core::{xyz_to_vec3, Angle, Meters, CRS, LLE, WGS84_32};
 use navara_feature::render::RenderableFeature;
 use navara_layer::{LayerDescription, LayerId, LayerStore};
