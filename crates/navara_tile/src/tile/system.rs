@@ -632,16 +632,20 @@ pub fn transfer_mesh(
 
         let terrain_layer = terrain_layer.unwrap();
 
-        fn postupdate_tile(tile: &mut Tile, max_height: FloatType) {
-            tile.terrain_data
+        fn postupdate_tile(tile: &mut Tile, max_height: FloatType, min_height: FloatType) {
+            let terrain_data = tile
+                .terrain_data
                 .as_mut()
-                .expect("This line is invoked only in the tile has terrain")
-                .set_current_max_height(max_height);
+                .expect("This line is invoked only in the tile has terrain");
+            terrain_data.set_current_max_height(max_height);
+            terrain_data.set_current_min_height(min_height);
             tile.aabb.update(tile.extent, max_height)
         }
 
         if should_upsample_terrain {
-            if let Some((geometry, heights, max_height)) = tile.upsample(WGS84_32, &qt, &buf) {
+            if let Some((geometry, heights, max_height, min_height)) =
+                tile.upsample(WGS84_32, &qt, &buf)
+            {
                 let vhandle = buf.new_f32(geometry.vertices);
                 let ihandle = buf.new_u32(geometry.indices);
                 let uvshandle = buf.new_f32(geometry.uvs);
@@ -684,7 +688,7 @@ pub fn transfer_mesh(
                     cache.mesh_entity = Some(e.id());
                 };
                 let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-                postupdate_tile(tile, max_height);
+                postupdate_tile(tile, max_height, min_height);
 
                 continue;
             };
@@ -702,7 +706,7 @@ pub fn transfer_mesh(
             .expect("It must be initialized when terrain layer is added");
         let mut martini = martini_components.get_mut(*martini_id).unwrap();
 
-        let (triangles, max_height, heights) = tile
+        let (triangles, max_height, min_height, heights) = tile
             .terrain_data
             .as_ref()
             .unwrap()
@@ -749,7 +753,7 @@ pub fn transfer_mesh(
         };
 
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-        postupdate_tile(tile, max_height);
+        postupdate_tile(tile, max_height, min_height);
     }
 }
 

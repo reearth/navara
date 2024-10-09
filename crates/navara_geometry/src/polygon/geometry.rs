@@ -43,11 +43,15 @@ impl Default for PolygonGeometryOptions {
     }
 }
 
+pub struct PolygonGeometryResult {
+    pub geometry: PolygonGeometry,
+}
+
 // Ref: https://github.com/CesiumGS/cesium/blob/baaabaa49058067c855ad050be73a9cdfe9b6ac7/packages/engine/Source/Core/PolygonGeometry.js#L1278
 pub fn create_polygon_geometry(
     options: PolygonGeometryOptions,
     polygon_resource: &mut PolygonResource,
-) -> Option<PolygonGeometry> {
+) -> Option<PolygonGeometryResult> {
     let granularity = options.granularity;
     let polygon_hierarchy = &options.hierarchy;
 
@@ -63,9 +67,6 @@ pub fn create_polygon_geometry(
         return None;
     }
 
-    let height = options.height;
-    let extruded_height = options.extruded_height;
-
     let mut geometries = vec![];
 
     let polygons_length = polygons.len();
@@ -77,22 +78,25 @@ pub fn create_polygon_geometry(
             granularity,
             &hierarchies[i],
         );
-        scale_to_geodetic_height_extruded(
+        let scale_normal_and_cap = scale_to_geodetic_height_extruded(
             &mut split_geometry.top_bottom_geometry.attributes.position.data,
             WGS84_32,
-            extruded_height,
-            height,
         );
+        split_geometry
+            .top_bottom_geometry
+            .attributes
+            .scale_normal_and_cap = Some(FloatAttribute::new(scale_normal_and_cap, 4));
+
         let top_bottom_normals =
             compute_extruded_normals(WGS84_32, &split_geometry.top_bottom_geometry, false);
 
         // TODO: Support wall for holes
-        scale_to_geodetic_height_extruded(
+        let scale_normal_and_cap = scale_to_geodetic_height_extruded(
             &mut split_geometry.wall_geometry.attributes.position.data,
             WGS84_32,
-            extruded_height,
-            height,
         );
+        split_geometry.wall_geometry.attributes.scale_normal_and_cap =
+            Some(FloatAttribute::new(scale_normal_and_cap, 4));
         let wall_normals = compute_extruded_normals(WGS84_32, &split_geometry.wall_geometry, true);
 
         split_geometry.top_bottom_geometry.attributes.normal =
@@ -106,6 +110,7 @@ pub fn create_polygon_geometry(
     let mut combined_attributes = PolygonGeometryAttributes {
         position: FloatAttribute::new(vec![], 3),
         normal: Some(FloatAttribute::new(vec![], 3)),
+        scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
     };
     let mut indices = vec![];
 
@@ -123,6 +128,12 @@ pub fn create_polygon_geometry(
             .unwrap()
             .data
             .append(&mut geometry.attributes.normal.unwrap().data);
+        combined_attributes
+            .scale_normal_and_cap
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut geometry.attributes.scale_normal_and_cap.unwrap().data);
 
         if index_offset == 0 {
             indices.append(&mut geometry.indices);
@@ -138,9 +149,11 @@ pub fn create_polygon_geometry(
         index_offset += position_length as u32;
     }
 
-    Some(PolygonGeometry {
-        attributes: combined_attributes,
-        indices,
+    Some(PolygonGeometryResult {
+        geometry: PolygonGeometry {
+            attributes: combined_attributes,
+            indices,
+        },
     })
 }
 
@@ -188,6 +201,7 @@ pub fn create_geometry_from_positions_extruded(
             attributes: PolygonGeometryAttributes {
                 position: FloatAttribute::new(top_bottom_positions, 3),
                 normal: None,
+                scale_normal_and_cap: None,
             },
             indices: top_bottom_indices,
         },
@@ -195,6 +209,7 @@ pub fn create_geometry_from_positions_extruded(
             attributes: PolygonGeometryAttributes {
                 position: FloatAttribute::new(wall_positions, 3),
                 normal: None,
+                scale_normal_and_cap: None,
             },
             indices: wall_indices,
         },

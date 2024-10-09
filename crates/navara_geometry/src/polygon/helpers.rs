@@ -83,14 +83,16 @@ pub fn create_geometry_from_positions(
 pub fn scale_to_geodetic_height_extruded(
     positions: &mut [f32],
     ellipsoid: Ellipsoid<FloatType>,
-    max_height: FloatType,
-    min_height: FloatType,
-) {
+) -> Vec<f32> {
     let length = positions.len() / 2;
 
+    let scale_normals_offset = length / 3 * 4;
+    let mut scale_normals_and_cap = vec![0.; scale_normals_offset * 2];
+
     for i in 0..(length / 3) {
-        let i = i * 3;
-        let p = unpack_flatten_vec3(positions, i);
+        let i3 = i * 3;
+        let i4 = i * 4;
+        let p = unpack_flatten_vec3(positions, i3);
 
         let n1 =
             Into::<Vec3>::into(ellipsoid.geodetic_surface_normal_from_vec3(p.into())).normalize();
@@ -99,16 +101,26 @@ pub fn scale_to_geodetic_height_extruded(
             None => unreachable!(),
         };
 
-        let n2 = p2 + n1 * min_height;
-        positions[i + length] = n2.x as f32;
-        positions[i + 1 + length] = n2.y as f32;
-        positions[i + 2 + length] = n2.z as f32;
+        positions[i3 + length] = p2.x as f32;
+        positions[i3 + 1 + length] = p2.y as f32;
+        positions[i3 + 2 + length] = p2.z as f32;
 
-        let n2 = p2 + n1 * max_height;
-        positions[i] = n2.x as f32;
-        positions[i + 1] = n2.y as f32;
-        positions[i + 2] = n2.z as f32;
+        positions[i3] = p2.x as f32;
+        positions[i3 + 1] = p2.y as f32;
+        positions[i3 + 2] = p2.z as f32;
+
+        scale_normals_and_cap[i4 + scale_normals_offset] = n1.x as f32;
+        scale_normals_and_cap[i4 + 1 + scale_normals_offset] = n1.y as f32;
+        scale_normals_and_cap[i4 + 2 + scale_normals_offset] = n1.z as f32;
+        scale_normals_and_cap[i4 + 3 + scale_normals_offset] = 0.;
+
+        scale_normals_and_cap[i4] = n1.x as f32;
+        scale_normals_and_cap[i4 + 1] = n1.y as f32;
+        scale_normals_and_cap[i4 + 2] = n1.z as f32;
+        scale_normals_and_cap[i4 + 3] = 1.;
     }
+
+    scale_normals_and_cap
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonPipeline.js#L102

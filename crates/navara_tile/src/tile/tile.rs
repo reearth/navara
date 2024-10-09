@@ -197,7 +197,7 @@ impl Tile {
         ellipsoid: Ellipsoid<FloatType>,
         qt: &TileQuadtree,
         buf_store: &BufferStore,
-    ) -> Option<(Geometry, Vec<FloatType>, FloatType)> {
+    ) -> Option<(Geometry, Vec<FloatType>, FloatType, FloatType)> {
         let parent = match self.get_parent_tile(qt) {
             Some(p) => p,
             None => return None,
@@ -234,7 +234,12 @@ impl Tile {
 
         let (geometry, heights) = upsampled_mesh.construct_geometry(ellipsoid, &self.extent);
 
-        Some((geometry, heights, upsampled_mesh.max_height))
+        Some((
+            geometry,
+            heights,
+            upsampled_mesh.max_height,
+            upsampled_mesh.min_height,
+        ))
     }
 
     pub fn get_level_maximum_geometric_error(
@@ -308,10 +313,64 @@ pub fn compute_terrain_height_at_point(
     )
 }
 
+/// Compute a terrain height at specified point.
+pub fn sample_terrain_height_within_extent(
+    qt: &mut TileQuadtree,
+    extent: Extent<f32, Radians>,
+) -> (FloatType, FloatType) {
+    let tiles = find_contained_children(qt, &|t| {
+        t.extent.intersects(extent)
+            && t.cached_mesh_handle.is_some()
+            && !t.upsampled
+            && t.terrain_data.is_some()
+    });
+
+    let mut max_height: FloatType = 0.;
+    let mut min_height: FloatType = 9999.;
+    let mut has_terrain_data = false;
+    for tile_handle in tiles {
+        let tile = qt.qt.get_mut(tile_handle);
+        let terrain_data = match tile.and_then(|t| t.terrain_data.as_ref()) {
+            Some(t) => t,
+            None => continue,
+        };
+        if let (Some(min_terrain_height), Some(max_terrain_height)) = (
+            terrain_data.current_min_height(),
+            terrain_data.current_max_height(),
+        ) {
+            has_terrain_data = true;
+            min_height = min_height.min(min_terrain_height);
+            max_height = max_height.max(max_terrain_height);
+        }
+    }
+
+    // Set default height if terrain_data isn't found.
+    if !has_terrain_data {
+        min_height = 0.0;
+        max_height = 5000.0;
+    }
+
+    (min_height, max_height)
+}
+
 /// Find a child that the tile contains.
 fn find_contained_child(qt: &TileQuadtree, contain: &dyn Fn(&Tile) -> bool) -> Option<TileHandle> {
     let handle = qt.qt.zero().map(|l| l.handle());
     traverse_contained_child(qt, handle.and_then(|h| qt.qt.get(h)), handle, contain)
+}
+
+/// Find a child that the tile contains.
+fn find_contained_children(qt: &TileQuadtree, contain: &dyn Fn(&Tile) -> bool) -> Vec<TileHandle> {
+    let mut result = vec![];
+    let handle = qt.qt.zero().map(|l| l.handle());
+    traverse_contained_children(
+        qt,
+        handle.and_then(|h| qt.qt.get(h)),
+        handle,
+        contain,
+        &mut result,
+    );
+    result
 }
 
 fn traverse_contained_child(
@@ -330,6 +389,35 @@ fn traverse_contained_child(
     for child in &tile.children {
         if let Some(v) = traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain) {
             return Some(v);
+        }
+    }
+
+    if contain(tile) {
+        return Some(h);
+    }
+
+    None
+}
+
+fn traverse_contained_children(
+    qt: &TileQuadtree,
+    tile: Option<&Tile>,
+    handle: Option<TileHandle>,
+    contain: &dyn Fn(&Tile) -> bool,
+    result: &mut Vec<TileHandle>,
+) -> Option<TileHandle> {
+    let h = handle?;
+    let tile = tile?;
+
+    if !contain(tile) {
+        return None;
+    }
+
+    for child in &tile.children {
+        if let Some(v) =
+            traverse_contained_children(qt, qt.qt.get(*child), Some(*child), contain, result)
+        {
+            result.push(v);
         }
     }
 

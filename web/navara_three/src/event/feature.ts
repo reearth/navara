@@ -1,3 +1,4 @@
+import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
@@ -21,6 +22,7 @@ import {
   TextureLoader,
   Object3D,
   MeshLambertMaterial,
+  Material,
 } from "three";
 import { GLTFLoader } from "three-stdlib";
 
@@ -29,9 +31,11 @@ import type { CommonUniforms } from "../uniforms";
 import type { BufferLoader } from ".";
 
 export function renderFeature(
+  id: string,
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
+  drapedFeatureMaterials: Map<string, Material>,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point);
@@ -46,7 +50,7 @@ export function renderFeature(
     return renderPolyline(f.polyline, buf, uniforms);
   }
   if (f.polygon) {
-    return renderPolygon(f.polygon, buf, uniforms);
+    return renderPolygon(id, f.polygon, buf, uniforms, drapedFeatureMaterials);
   }
 }
 
@@ -192,10 +196,19 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
   return m;
 }
 
-async function renderPolygon(mesh: PolygonMesh, buf: BufferLoader, _uniforms: CommonUniforms) {
+async function renderPolygon(
+  id: string,
+  mesh: PolygonMesh,
+  buf: BufferLoader,
+  _uniforms: CommonUniforms,
+  drapedFeatureMaterials: Map<string, Material>,
+) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
   const normal = g.normal ? buf.f32(g.normal.data) : undefined;
+  const scale_normal_and_cap = g.scale_normal_and_cap
+    ? buf.f32(g.scale_normal_and_cap.data)
+    : undefined;
   const indices = buf.u32(g.indices);
   if (!position || !indices) return;
 
@@ -204,12 +217,82 @@ async function renderPolygon(mesh: PolygonMesh, buf: BufferLoader, _uniforms: Co
   if (g.normal && normal) {
     geometry.setAttribute("normal", new BufferAttribute(normal, g.normal.size));
   }
+  if (g.scale_normal_and_cap && scale_normal_and_cap) {
+    geometry.setAttribute(
+      "scaleNormalAndCap",
+      new BufferAttribute(scale_normal_and_cap, g.scale_normal_and_cap.size),
+    );
+  }
   geometry.setIndex(new BufferAttribute(indices, 1));
 
+  const clampToGround = mesh.material.clamp_to_ground;
+  // TODO: Need to calculate a shadow for a draped polygon by using terrain's normal.
   const material = new MeshLambertMaterial({
     color: mesh.material.color,
     wireframe: mesh.material.wireframe,
+    stencilWrite: clampToGround,
   });
+
+  // TODO: Update this value depends on the terrain updates.
+  const uMinMaxHeights = mesh.material.__internal__?.min_max_heights;
+  material.userData.uMinMaxHeight = {
+    value: uMinMaxHeights,
+  };
+  material.userData.uClampToGround = {
+    value: clampToGround,
+  };
+
+  material.onBeforeCompile = shader => {
+    if (material.userData.uMinMaxHeight.value) {
+      shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
+    }
+    if (material.userData.uClampToGround.value) {
+      shader.uniforms.uClampToGround = material.userData.uClampToGround;
+    }
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `
+#include <common>
+in vec4 scaleNormalAndCap;
+
+uniform vec2 uMinMaxHeight;
+
+${BranchFreeTernary}
+`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `
+#include <begin_vertex>
+transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
+`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "uniform vec3 diffuse;",
+        `
+uniform vec3 diffuse;
+uniform bool uClampToGround;
+`,
+      )
+      .replace(
+        "#include <opaque_fragment>",
+        `
+if(uClampToGround) {
+  gl_FragColor = diffuseColor;
+} else {
+  #include <opaque_fragment>
+}
+`,
+      );
+  };
+
+  if (clampToGround) {
+    drapedFeatureMaterials.set(id, material);
+  }
+
   const m = new Mesh(geometry, material);
 
   return m;

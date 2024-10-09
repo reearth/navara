@@ -69,6 +69,9 @@ pub fn transfer_mesh(
     }
 }
 
+// TODO: This system is executed whenever a tile is added.
+//       This isn't efficient, so we need to update this system
+//       to execute only when the layer's bounding box is within the camera frustum.
 #[allow(clippy::too_many_arguments)]
 pub fn update_height_by_terrain(
     mut qt: ResMut<TileQuadtree>,

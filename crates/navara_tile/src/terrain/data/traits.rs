@@ -24,7 +24,7 @@ pub trait TerrainData: Debug + Sync + Send {
         bytes: &[u8],
         geoid_height: FloatType,
         martini: &mut Martini,
-    ) -> (Geometry, FloatType, Vec<FloatType>);
+    ) -> (Geometry, FloatType, FloatType, Vec<FloatType>);
     fn data_requester_entity_id(&self) -> Option<Entity>;
     fn set_data_requester_entity_id(&mut self, e: Option<Entity>);
     /// Compute a terrain height at specified point.
@@ -38,5 +38,7 @@ pub trait TerrainData: Debug + Sync + Send {
     // Indicates the max height of the terrain from the globe surface.
     fn current_max_height(&self) -> Option<FloatType>;
     fn set_current_max_height(&mut self, h: FloatType);
+    fn current_min_height(&self) -> Option<FloatType>;
+    fn set_current_min_height(&mut self, h: FloatType);
     fn destroy(&mut self, buf: &mut BufferStore);
 }
