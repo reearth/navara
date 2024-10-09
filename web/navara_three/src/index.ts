@@ -361,6 +361,10 @@ export default class ThreeView {
     }
   }
 
+  deleteLayer(layerId: string){
+    this._core?.deleteLayer(layerId);
+  }
+
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {
     this._events[event]?.forEach(c => (c as (...args: any[]) => any)(...args));
   }

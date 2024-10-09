@@ -4,6 +4,7 @@ use navara_feature::render::RenderableFeature;
 use navara_layer::{LayerDescription, LayerId, LayerStore};
 use navara_material::Appearance;
 use navara_math::{Quat, Transform, Vec3};
+use navara_buffer_store::BufferStore;
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -13,6 +14,9 @@ pub struct UpdateLayerEvent {
     pub layer_id: LayerId,
     pub appearance: Appearance,
 }
+
+#[derive(Debug, Clone, PartialEq, Event)]
+pub struct DeleteLayerEvent(pub LayerId);
 
 pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLayerEvent>) {
     for ev in events.read() {
@@ -156,4 +160,52 @@ fn calc_transform(
     }
 
     transform
+}
+
+pub fn process_delete_events(
+    mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
+    layer_store: Res<LayerStore>,
+    mut events: EventReader<DeleteLayerEvent>,
+    mut features: Query<&mut RenderableFeature>,
+    query: Query<(Entity, &LayerId)>) 
+{
+    for ev in events.read() {
+        let DeleteLayerEvent(layer_id) = ev;
+        let entities = layer_store.map.get(layer_id);
+        if let Some(vec) = entities {
+            for entity in vec {
+                if let Ok(mut feature) = features.get_mut(*entity) {
+                    match &mut *feature {
+                        RenderableFeature::Polyline { geometry, .. } => {
+                            buf.remove(&geometry.position.data);
+                            buf.remove(&geometry.start.data);
+                            buf.remove(&geometry.forward_offset.data);
+                            buf.remove(&geometry.start_normals.data);
+                            buf.remove(&geometry.end_normal_and_texture_coordinate_normalization_x.data);
+                            buf.remove(&geometry.right_normal_and_texture_coordinate_normalization_y.data);
+                            buf.remove(&geometry.indices);
+                        }
+                        RenderableFeature::Polygon { geometry, .. } => {
+                            buf.remove(&geometry.position.data);
+                            buf.remove(&geometry.indices);
+
+                            if let Some(normal) = &geometry.normal {
+                                buf.remove(&normal.data);
+                            }
+                        }
+                        _ => (),
+                    };
+                }
+
+                commands.entity(*entity).despawn();
+            }
+        }
+
+        for (entity, l_id) in query.iter() {
+            if l_id == layer_id {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
 }

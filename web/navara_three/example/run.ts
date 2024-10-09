@@ -171,31 +171,7 @@ const geoLayersDef: GeoJsonLayer[] = [
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [100, 30],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 500000,
-      height: 500000,
-      clamp_to_ground: true,
-      url: "/glTF/Suzanne/Suzanne.gltf",
-    },
-  },
-
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [70, 30],
+            coordinates: [30, 30],
             type: "Point",
           },
         },
@@ -444,6 +420,14 @@ export const run = async (view: ThreeView) => {
     });
 
     paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]], onParamChange);
+  });
+
+  // @ts-expect-error : Missing Type Definitions ?
+  pane.addButton({
+    title: 'Delete Layer',
+    label: ''
+  }).on('click', () => {
+    view.deleteLayer(layerIds[paneParams.layer]);
   });
 
   let materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[0]]);

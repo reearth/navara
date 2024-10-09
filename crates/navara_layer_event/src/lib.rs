@@ -3,8 +3,7 @@
 mod event;
 
 use bevy_app::{App, Plugin, Update};
-pub use event::AddLayerEvent;
-pub use event::UpdateLayerEvent;
+pub use event::{AddLayerEvent, UpdateLayerEvent, DeleteLayerEvent};
 
 pub struct LayerPlugin;
 
@@ -15,5 +14,8 @@ impl Plugin for LayerPlugin {
 
         app.add_event::<UpdateLayerEvent>()
             .add_systems(Update, event::process_update_events);
+
+            app.add_event::<DeleteLayerEvent>()
+            .add_systems(Update, event::process_delete_events);
     }
 }
