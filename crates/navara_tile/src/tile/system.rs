@@ -73,7 +73,7 @@ fn prepare_tile_resource(
 }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
-    frustum.interseciton_with_aabb(&t.aabb)
+    frustum.intersection_with_aabb(&t.aabb)
 }
 
 fn calc_distance_from_camera(

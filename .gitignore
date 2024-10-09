@@ -15,3 +15,5 @@ Cargo.lock
 
 .vscode/settings.json
 .env
+
+node_modules

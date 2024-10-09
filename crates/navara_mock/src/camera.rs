@@ -7,6 +7,7 @@ pub fn update_camera_transform(r: FloatType) -> (Vec3, LLE<FloatType, Radians>) 
         r,
         quat: Quat::from_axis_angle(Vec3::Y, 0.0),
         tilt: 0.0,
+        pivot: Vec3::ZERO,
     };
     let mut camera_transform = Transform::from_translation(Vec3::ZERO);
     camera_transform.translation = orbit.to_vec3();
