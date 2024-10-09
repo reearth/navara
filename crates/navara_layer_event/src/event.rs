@@ -150,7 +150,8 @@ fn calc_transform(
         let lat = coordinates.y.to_radians();
         let rotation_y = Quat::from_rotation_y(-lat);
         let rotation_z = Quat::from_rotation_z(lng);
-        let rotation = rotation_z * rotation_y;
+        let adjust_model = Quat::from_rotation_z( - std::f32::consts::PI / 2.0);
+        let rotation = rotation_z * rotation_y * adjust_model;
         transform = transform.with_rotation(rotation);
     }
 

@@ -180,7 +180,7 @@ const geoLayersDef: GeoJsonLayer[] = [
     model: {
       show: true,
       size: 500000,
-      height: 700000,
+      height: 500000,
       clamp_to_ground: true,
       url: "/glTF/Suzanne/Suzanne.gltf",
     },
@@ -195,7 +195,7 @@ const geoLayersDef: GeoJsonLayer[] = [
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [100, 0],
+            coordinates: [70, 30],
             type: "Point",
           },
         },
@@ -203,10 +203,10 @@ const geoLayersDef: GeoJsonLayer[] = [
     },
     model: {
       show: true,
-      size: 3000,
-      height: 1100000,
+      size: 300000,
+      height: -30000,
       clamp_to_ground: true,
-      url: "/glTF/2CylinderEngine/2CylinderEngine.gltf",
+      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
     },
   },
 
