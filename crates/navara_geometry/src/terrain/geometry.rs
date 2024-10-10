@@ -49,8 +49,9 @@ pub fn tile_triangles_with_terrain(
     terrain_w: usize,
     terrain_h: usize,
     decoder: &ElevationDecoder,
-) -> (Geometry, FloatType, Vec<FloatType>) {
+) -> (Geometry, FloatType, FloatType, Vec<FloatType>) {
     let mut max_height = 0.0f32;
+    let mut min_height = 9999.0f32;
     let mut heights = vec![];
     let mut height = |x: usize, y: usize| -> FloatType {
         let image_x = x * (terrain_w - 1) / segments;
@@ -64,6 +65,8 @@ pub fn tile_triangles_with_terrain(
         let height = decode_height_from_dem(r, g, b, geoid_height, decoder);
 
         max_height = max_height.max(height);
+        min_height = min_height.min(height);
+
         heights.push(height);
 
         height
@@ -72,6 +75,7 @@ pub fn tile_triangles_with_terrain(
     (
         tile_triangles(ellipsoid, extent, segments, &mut height),
         max_height,
+        min_height,
         heights,
     )
 }

@@ -54,6 +54,12 @@ pub struct PolygonMaterial {
     pub height: f32,
     pub extruded_height: Option<f32>,
     pub wireframe: bool,
+    pub internal: Option<PolygonInternalMaterial>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PolygonInternalMaterial {
+    pub min_max_heights: Vec<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

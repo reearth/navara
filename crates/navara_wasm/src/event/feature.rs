@@ -123,6 +123,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 transform,
                 feature_id: _,
                 render_info: _,
+                extent: _,
             } => Self {
                 polygon: Some(PolygonMesh {
                     material: material.into(),

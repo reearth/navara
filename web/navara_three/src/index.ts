@@ -13,6 +13,15 @@ import {
   DepthTexture,
   DepthFormat,
   FloatType,
+  Material,
+  AlwaysStencilFunc,
+  IncrementStencilOp,
+  KeepStencilOp,
+  FrontSide,
+  BackSide,
+  DecrementStencilOp,
+  NotEqualStencilFunc,
+  ZeroStencilOp,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -33,7 +42,7 @@ export type Options = {
   disableAutoResize?: boolean;
   debug?: boolean;
   scene?: Scene;
-  globeDepthScene?: Scene;
+  globeScene?: Scene;
   camera?: PerspectiveCamera;
   renderer?: WebGLRenderer;
 };
@@ -44,10 +53,14 @@ export type Events = {
 
 export default class ThreeView {
   scene: Scene;
-  globeDepthScene: Scene;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
-  globeDepthRenderTarget: WebGLRenderTarget;
+
+  _globeDepthRenderTarget: WebGLRenderTarget;
+  // Render only globe
+  _globeScene: Scene;
+  // Store draped feature's materials
+  _drapedFeatureMaterials: Map<string, Material> = new Map();
 
   _core: Core | undefined;
   _options: Options;
@@ -109,7 +122,9 @@ export default class ThreeView {
         antialias: true,
         logarithmicDepthBuffer: true,
         canvas: options.canvas,
+        stencil: true,
       });
+      renderer.autoClearStencil = false;
       this.renderer = renderer;
 
       const { width = options.initialWidth, height = options.initialHeight } =
@@ -134,10 +149,10 @@ export default class ThreeView {
     const pixelRatio = this.renderer.getPixelRatio();
     const scaledWidth = width * pixelRatio;
     const scaledHeight = height * pixelRatio;
-    this.globeDepthRenderTarget = new WebGLRenderTarget(scaledWidth, scaledHeight);
-    this.globeDepthRenderTarget.depthTexture = new DepthTexture(scaledWidth, scaledHeight);
-    this.globeDepthRenderTarget.depthTexture.format = DepthFormat;
-    this.globeDepthRenderTarget.depthTexture.type = FloatType;
+    this._globeDepthRenderTarget = new WebGLRenderTarget(scaledWidth, scaledHeight);
+    this._globeDepthRenderTarget.depthTexture = new DepthTexture(scaledWidth, scaledHeight);
+    this._globeDepthRenderTarget.depthTexture.format = DepthFormat;
+    this._globeDepthRenderTarget.depthTexture.type = FloatType;
 
     if (options.scene) {
       this.scene = options.scene;
@@ -146,11 +161,11 @@ export default class ThreeView {
       this.scene = scene;
     }
 
-    if (options.globeDepthScene) {
-      this.globeDepthScene = options.globeDepthScene;
+    if (options.globeScene) {
+      this._globeScene = options.globeScene;
     } else {
       const globeDepthScene = new Scene();
-      this.globeDepthScene = globeDepthScene;
+      this._globeScene = globeDepthScene;
     }
 
     if (options.camera) {
@@ -223,7 +238,7 @@ export default class ThreeView {
       this._eventDisposer();
       this._eventDisposer = undefined;
     }
-    this.globeDepthRenderTarget.dispose();
+    this._globeDepthRenderTarget.dispose();
     if ("dispose" in this.renderer && typeof this.renderer.dispose === "function") {
       this.renderer.dispose();
     }
@@ -240,7 +255,7 @@ export default class ThreeView {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
-    this.globeDepthRenderTarget.setSize(w * (pixelRatio ?? 1), h * (pixelRatio ?? 1));
+    this._globeDepthRenderTarget.setSize(w * (pixelRatio ?? 1), h * (pixelRatio ?? 1));
     if (
       typeof pixelRatio === "number" &&
       "setPixelRatio" in this.renderer &&
@@ -274,7 +289,7 @@ export default class ThreeView {
     ];
     this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
-    this._uniforms.tGlobeDepth.value = this.globeDepthRenderTarget.depthTexture;
+    this._uniforms.tGlobeDepth.value = this._globeDepthRenderTarget.depthTexture;
     this._uniforms.inverseProjectionMatrix.value = this.camera.projectionMatrixInverse;
   }
 
@@ -287,7 +302,7 @@ export default class ThreeView {
     if (events && this._core) {
       processEvent(
         this.scene,
-        this.globeDepthScene,
+        this._globeScene,
         this.camera,
         this._meshes,
         this._buf,
@@ -296,6 +311,7 @@ export default class ThreeView {
         this._tex,
         events,
         this._uniforms,
+        this._drapedFeatureMaterials,
       );
     }
 
@@ -307,11 +323,53 @@ export default class ThreeView {
   }
 
   render() {
-    this.renderer.setRenderTarget(this.globeDepthRenderTarget);
-    this.renderer.render(this.globeDepthScene, this.camera);
+    const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
+    this.renderer.setRenderTarget(this._globeDepthRenderTarget);
+    this.renderer.render(this._globeScene, this.camera);
     this.renderer.setRenderTarget(null);
+
+    if (shouldDrapeByStencilTest) {
+      this.renderDrapedMesh();
+    }
+
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // Drape a feature on the terrain by stencil test.
+  // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
+  renderDrapedMesh() {
+    // Render the terrain first
+    this.renderer.render(this._globeScene, this.camera);
+
+    this._drapedFeatureMaterials.forEach(m => {
+      m.stencilFunc = AlwaysStencilFunc;
+      m.stencilFail = KeepStencilOp;
+      m.stencilZFail = KeepStencilOp;
+      m.stencilZPass = IncrementStencilOp;
+      m.side = FrontSide;
+      m.colorWrite = false;
+      m.depthWrite = false;
+    });
+    this.renderer.render(this.scene, this.camera);
+
+    this._drapedFeatureMaterials.forEach(m => {
+      m.stencilZPass = DecrementStencilOp;
+      m.side = BackSide;
+    });
+    this.renderer.render(this.scene, this.camera);
+
+    // TODO: Near plane support
+
+    this._drapedFeatureMaterials.forEach(m => {
+      m.stencilFunc = NotEqualStencilFunc;
+      m.stencilFail = ZeroStencilOp;
+      m.stencilZFail = ZeroStencilOp;
+      m.stencilZPass = ZeroStencilOp;
+      m.side = FrontSide;
+      m.colorWrite = true;
+      m.depthWrite = true;
+    });
   }
 
   on<K extends keyof Events>(event: K, callback: Events[K]) {

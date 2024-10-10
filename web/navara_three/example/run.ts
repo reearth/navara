@@ -193,25 +193,60 @@ const geoLayersDef: GeoJsonLayer[] = [
       properties: {},
       geometry: {
         coordinates: [
-          // [
-          //   [138.66861922558115, 35.46838056308519],
-          //   [138.6559918549957, 35.29164005065681],
-          //   [138.81174182884172, 35.279838616806046],
-          //   [138.8071009152797, 35.436389815907134],
-          //   [138.66861922558115, 35.46838056308519],
-          // ],
           [
-            [31.72775849062026, 52.51516008351888],
-            [99.72788480154168, -48.26315338939218],
-            [204.13004176416695, 36.2117078118584],
-            [31.72775849062026, 52.51516008351888],
+            [138.66861922558115, 35.46838056308519],
+            [138.6559918549957, 35.29164005065681],
+            [138.81174182884172, 35.279838616806046],
+            [138.8071009152797, 35.436389815907134],
+            [138.66861922558115, 35.46838056308519],
           ],
+          // [
+          //   [31.72775849062026,
+          // 52.51516008351888],
+          // [99.72788480154168,
+          // -48.26315338939218],
+          // [204.13004176416695,
+          // 36.2117078118584],
+          // [31.72775849062026,
+          // 52.51516008351888]
+          // ]
+          // [
+          //   [
+          //     138.16153530723932,
+          //     35.49745160501608
+          //   ],
+          //   [
+          //     138.19227634675173,
+          //     35.384656761195004
+          //   ],
+          //   [
+          //     138.1164119320788,
+          //     35.266968102144645
+          //   ],
+          //   [
+          //     138.32324088134442,
+          //     35.27178582769753
+          //   ],
+          //   [
+          //     138.45178492439038,
+          //     35.31276482104383
+          //   ],
+          //   [
+          //     138.3980434749186,
+          //     35.428659522373536
+          //   ],
+          //   [
+          //     138.16153530723932,
+          //     35.49745160501608
+          //   ]
+          // ]
         ],
         type: "Polygon",
       },
     },
     polygon: {
       color: 0x00aaff,
+      height: 0,
       extruded_height: 5000,
       clamp_to_ground: true,
     },
@@ -396,6 +431,7 @@ export const run = async (view: ThreeView) => {
     width: 1,
     height: 1,
     extrudedHeight: 1,
+    clampToGround: false,
   };
 
   let layerCtrl = pane
@@ -502,6 +538,10 @@ export const run = async (view: ThreeView) => {
         material.extruded_height = paneParams.extrudedHeight;
       }
 
+      if ("clamp_to_ground" in material) {
+        material.clamp_to_ground = paneParams.clampToGround;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -551,6 +591,11 @@ function createParamCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer, chang
     if ("extruded_height" in material) {
       paneParams.extrudedHeight = material.extruded_height;
       f.addBinding(paneParams, "extrudedHeight").on("change", changeFunc);
+    }
+
+    if ("clamp_to_ground" in material) {
+      paneParams.clampToGround = material.clamp_to_ground;
+      f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
     }
 
     return f;

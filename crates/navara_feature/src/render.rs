@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_buffer_store::Handle;
-use navara_core::CRS;
+use navara_core::{Extent, Radians, CRS};
 use navara_geometry::TransferableFloatAttribute;
 use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
@@ -10,6 +10,12 @@ use navara_math::{FloatType, Transform, Vec3};
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
     pub current_terrain_height: FloatType,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PolygonRenderInformation {
+    pub should_recalculate_height: bool,
+    pub distance_to_center_from_ellipsoid_surface: FloatType,
 }
 
 // From data oriented design perspective, this is too bad structure.
@@ -48,7 +54,8 @@ pub enum RenderableFeature {
         geometry: TransferablePolygonGeometry,
         transform: Transform,
         feature_id: Entity,
-        render_info: RenderInformation,
+        render_info: PolygonRenderInformation,
+        extent: Extent<f32, Radians>,
     },
     Model {
         coordinates: Vec3,
@@ -77,5 +84,6 @@ pub struct TransferablePolylineGeometry {
 pub struct TransferablePolygonGeometry {
     pub position: TransferableFloatAttribute,
     pub normal: Option<TransferableFloatAttribute>,
+    pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub indices: Handle,
 }

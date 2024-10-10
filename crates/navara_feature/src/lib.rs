@@ -38,7 +38,14 @@ impl Plugin for FeaturePlugin {
                 ),
             )
             .add_systems(Update, polyline::system::transfer_mesh)
-            .add_systems(Update, polygon::system::transfer_mesh)
+            .add_systems(
+                Update,
+                (
+                    polygon::system::transfer_mesh,
+                    polygon::system::update_polygon,
+                    polygon::system::update_height_by_terrain,
+                ),
+            )
             .add_systems(PostUpdate, event::commit);
     }
 }

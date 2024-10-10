@@ -45,12 +45,19 @@ impl<F: Float + std::fmt::Display, U: Unit<F>> std::fmt::Display for Extent<F, U
 }
 
 impl<F: Float, U: Unit<F>> Extent<F, U> {
-    pub fn from_points(p1: LngLat<F, U>, p2: LngLat<F, U>) -> Self {
+    pub fn from_points(ps: &[LngLat<F, U>]) -> Self {
+        let first_p = ps.first().cloned().unwrap();
+        let mut max = first_p;
+        let mut min = first_p;
+        for p in ps {
+            max = max.max(p);
+            min = min.min(p);
+        }
         Self {
-            west: p1.lng.min(p2.lng),
-            south: p1.lat.min(p2.lat),
-            east: p1.lng.max(p2.lng),
-            north: p1.lat.max(p2.lat),
+            west: min.lng,
+            south: min.lat,
+            east: max.lng,
+            north: max.lat,
         }
     }
 
@@ -76,6 +83,7 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
     }
 
     pub fn intersects(&self, other: Self) -> bool {
+        // West-south point
         (self.west <= other.west
             && self.south <= other.south
             && self.east >= other.west
@@ -84,6 +92,7 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
                 && other.south <= self.south
                 && other.east >= self.west
                 && other.north >= self.south)
+            // East-north point
             || (self.east >= other.east
                 && self.north >= other.north
                 && self.west <= other.east
@@ -92,6 +101,24 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
                 && other.north >= self.north
                 && other.west <= self.east
                 && other.south <= self.north)
+            // West-north point
+            || (self.east >= other.west
+                && self.north >= other.north
+                && self.west <= other.west
+                && self.south <= other.north)
+            || (other.east >= self.west
+                && other.north >= self.north
+                && other.west <= self.west
+                && other.south <= self.north)
+            // East-south point
+            || (self.east >= other.east
+                && self.north >= other.south
+                && self.west <= other.east
+                && self.south <= other.south)
+            || (other.east >= self.east
+                && other.north >= self.south
+                && other.west <= self.east
+                && other.south <= self.south)
     }
 
     pub fn intersection(&self, other: Self) -> Option<Self> {
@@ -136,5 +163,40 @@ impl<F: Float> From<Extent<F, Degrees>> for Extent<F, Radians> {
             east: extent.east.rad(),
             north: extent.north.rad(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use radians::Degrees;
+
+    use crate::LngLat;
+
+    use super::Extent;
+
+    #[test]
+    fn it_should_intersect_with_another_extent() {
+        let e1: Extent<f32, Degrees> = Extent::from_points(&[
+            LngLat::new(2.678_923_1, 16.874_407),
+            LngLat::new(2.678_923_1, 1.488_755_1),
+            LngLat::new(25.424_458, 1.488_755_1),
+            LngLat::new(25.424_458, 16.874_407),
+        ]);
+        let e2: Extent<f32, Degrees> = Extent::from_points(&[
+            LngLat::new(19.560_308, 7.993_39),
+            LngLat::new(19.560_308, -3.537_225_2),
+            LngLat::new(31.584_736, -3.537_225_2),
+            LngLat::new(31.584_736, 7.993_39),
+        ]);
+        let e3: Extent<f32, Degrees> = Extent::from_points(&[
+            LngLat::new(5.352_913_4, 13.874_271),
+            LngLat::new(5.352_913_4, 10.050_75),
+            LngLat::new(10.621_843, 10.050_75),
+            LngLat::new(10.621_843, 13.874_271),
+        ]);
+
+        assert!(e1.intersects(e2));
+        assert!(e1.intersects(e3));
+        assert!(!e2.intersects(e3));
     }
 }
