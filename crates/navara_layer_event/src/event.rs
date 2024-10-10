@@ -1,10 +1,10 @@
 use bevy_ecs::prelude::*;
+use navara_buffer_store::BufferStore;
 use navara_core::{xyz_to_vec3, Angle, Meters, CRS, LLE, WGS84_32};
 use navara_feature::render::RenderableFeature;
 use navara_layer::{LayerDescription, LayerId, LayerStore};
 use navara_material::Appearance;
 use navara_math::{Quat, Transform, Vec3};
-use navara_buffer_store::BufferStore;
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -154,7 +154,7 @@ fn calc_transform(
         let lat = coordinates.y.to_radians();
         let rotation_y = Quat::from_rotation_y(-lat);
         let rotation_z = Quat::from_rotation_z(lng);
-        let adjust_model = Quat::from_rotation_z( - std::f32::consts::PI / 2.0);
+        let adjust_model = Quat::from_rotation_z(-std::f32::consts::PI / 2.0);
         let rotation = rotation_z * rotation_y * adjust_model;
         transform = transform.with_rotation(rotation);
     }
@@ -168,8 +168,8 @@ pub fn process_delete_events(
     layer_store: Res<LayerStore>,
     mut events: EventReader<DeleteLayerEvent>,
     mut features: Query<&mut RenderableFeature>,
-    query: Query<(Entity, &LayerId)>) 
-{
+    geos: Query<(Entity, &LayerId)>,
+) {
     for ev in events.read() {
         let DeleteLayerEvent(layer_id) = ev;
         let entities = layer_store.map.get(layer_id);
@@ -182,8 +182,16 @@ pub fn process_delete_events(
                             buf.remove(&geometry.start.data);
                             buf.remove(&geometry.forward_offset.data);
                             buf.remove(&geometry.start_normals.data);
-                            buf.remove(&geometry.end_normal_and_texture_coordinate_normalization_x.data);
-                            buf.remove(&geometry.right_normal_and_texture_coordinate_normalization_y.data);
+                            buf.remove(
+                                &geometry
+                                    .end_normal_and_texture_coordinate_normalization_x
+                                    .data,
+                            );
+                            buf.remove(
+                                &geometry
+                                    .right_normal_and_texture_coordinate_normalization_y
+                                    .data,
+                            );
                             buf.remove(&geometry.indices);
                         }
                         RenderableFeature::Polygon { geometry, .. } => {
@@ -202,7 +210,7 @@ pub fn process_delete_events(
             }
         }
 
-        for (entity, l_id) in query.iter() {
+        for (entity, l_id) in geos.iter() {
             if l_id == layer_id {
                 commands.entity(entity).despawn();
             }

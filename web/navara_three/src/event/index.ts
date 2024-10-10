@@ -24,12 +24,12 @@ import {
   // MeshStandardMaterial,
   type Camera,
   Mesh,
-  type Object3D,
   MeshBasicMaterial,
   Material,
   TextureLoader,
   ImageLoader,
   MeshLambertMaterial,
+  Object3D,
   Texture,
   Sprite,
   Group,
@@ -185,21 +185,58 @@ function processObjectRemoved(
   if (!m) return;
 
   meshes.delete(id);
+
+  // Sprite, Mesh, and Group are all subclasses of Object3D
+  if (m instanceof Object3D) {
+    disposeObject3D(m);
+  }
+
+  // clear should after dispose, otherwise model's children will not be disposed
   m.clear();
 
-  if ("material" in m) {
-    if (Array.isArray(m.material)) {
-      m.material.map(m => m.dispose());
-    } else {
-      m.material.dispose();
-    }
-  }
-
-  if ("geometry" in m) {
-    m.geometry.dispose();
-  }
-
   parent.remove(m);
+}
+
+function disposeObject3D(model: Object3D): void {
+  model.traverse((object: Object3D) => {
+    // model, polyline, polygon
+    if (object instanceof Mesh) {
+      const mesh = object as Mesh;
+
+      // Dispose geometry
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+
+      // Dispose material(s)
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(material => {
+            material.dispose();
+          });
+        } else {
+          const material = mesh.material;
+          material.dispose();
+        }
+      }
+    }
+    // point, billboard
+    else if (object instanceof Sprite) {
+      const sprite = object as Sprite;
+
+      // Dispose material
+      if (sprite.material) {
+        if (Array.isArray(sprite.material)) {
+          sprite.material.forEach(material => {
+            material.dispose();
+          });
+        } else {
+          const material = sprite.material;
+          material.dispose();
+        }
+      }
+    }
+  });
 }
 
 function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {

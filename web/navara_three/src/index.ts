@@ -361,7 +361,7 @@ export default class ThreeView {
     }
   }
 
-  deleteLayer(layerId: string){
+  deleteLayer(layerId: string) {
     this._core?.deleteLayer(layerId);
   }
 

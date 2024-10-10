@@ -144,7 +144,9 @@ impl App {
     pub fn delete_layer(&mut self, layer_id: &str) {
         self.app
             .world_mut()
-            .send_event(navara_layer_event::DeleteLayerEvent(LayerId(layer_id.to_owned())));
+            .send_event(navara_layer_event::DeleteLayerEvent(LayerId(
+                layer_id.to_owned(),
+            )));
     }
 }
 

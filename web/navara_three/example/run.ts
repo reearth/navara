@@ -398,37 +398,13 @@ export const run = async (view: ThreeView) => {
     extrudedHeight: 1,
   };
 
-  // @ts-expect-error : Missing Type Definitions ?
-  pane.addBinding(paneParams, "layer", { options: layerIdOptions }).on("change", ev => {
-    materialCtrl.dispose();
-
-    if (paramCtrl) {
-      paramCtrl.dispose();
-    }
-
-    materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]]);
-    materialCtrl.on("change", () => {
-      if (paramCtrl) {
-        paramCtrl.dispose();
-      }
-      paramCtrl = createParamCtrl(
-        pane,
-        paneParams,
-        geoLayerMap[layerIds[paneParams.layer]],
-        onParamChange,
-      );
-    });
-
-    paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]], onParamChange);
-  });
+  let layerCtrl = pane
+    // @ts-expect-error : Missing Type Definitions ?
+    .addBinding(paneParams, "layer", { options: layerIdOptions })
+    .on("change", onLayerChange);
 
   // @ts-expect-error : Missing Type Definitions ?
-  pane.addButton({
-    title: 'Delete Layer',
-    label: ''
-  }).on('click', () => {
-    view.deleteLayer(layerIds[paneParams.layer]);
-  });
+  let btnCtrl = pane.addButton({ title: "Delete Layer", label: "" }).on("click", onDeleteBtnClick);
 
   let materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[0]]);
   materialCtrl.on("change", () => {
@@ -444,6 +420,59 @@ export const run = async (view: ThreeView) => {
   });
 
   let paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[0]], onParamChange);
+
+  function onDeleteBtnClick() {
+    view.deleteLayer(layerIds[paneParams.layer]);
+
+    delete layerIdOptions["layer" + (paneParams.layer + 1)];
+    const keys = Object.keys(layerIdOptions);
+    if (keys.length > 0) {
+      paneParams.layer = layerIdOptions[keys[0]];
+
+      layerCtrl.dispose();
+      btnCtrl.dispose();
+
+      layerCtrl = pane
+        // @ts-expect-error : Missing Type Definitions ?
+        .addBinding(paneParams, "layer", { options: layerIdOptions })
+        .on("change", onLayerChange);
+
+      // @ts-expect-error : Missing Type Definitions ?
+      btnCtrl = pane.addButton({ title: "Delete Layer", label: "" }).on("click", onDeleteBtnClick);
+
+      onLayerChange();
+    } else {
+      pane.dispose();
+    }
+  }
+
+  function onLayerChange() {
+    materialCtrl.dispose();
+
+    if (paramCtrl) {
+      paramCtrl.dispose();
+    }
+
+    materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[paneParams.layer]]);
+    materialCtrl.on("change", () => {
+      if (paramCtrl) {
+        paramCtrl.dispose();
+      }
+      paramCtrl = createParamCtrl(
+        pane,
+        paneParams,
+        geoLayerMap[layerIds[paneParams.layer]],
+        onParamChange,
+      );
+    });
+
+    paramCtrl = createParamCtrl(
+      pane,
+      paneParams,
+      geoLayerMap[layerIds[paneParams.layer]],
+      onParamChange,
+    );
+  }
 
   function onParamChange() {
     const layerId = layerIds[paneParams.layer];
