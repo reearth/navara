@@ -12,7 +12,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { DRACOLoader, GLTFLoader } from "three-stdlib";
+import { DRACOLoader, GLTFLoader, type GLTFLoaderPlugin } from "three-stdlib";
 
 export type LoadEvent = {
   type: "load";
@@ -38,7 +38,7 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
     dracoLoader.setDecoderPath("https://unpkg.com/three@0.161.0/examples/jsm/libs/draco/gltf/");
     const gltfLoader = new GLTFLoader(tilesRenderer.manager);
 
-    gltfLoader.register(() => new GLTFCesiumRTCExtension());
+    gltfLoader.register(() => new GLTFCesiumRTCExtension() as GLTFLoaderPlugin);
     gltfLoader.setDRACOLoader(dracoLoader);
     tilesRenderer.manager.addHandler(/\.gltf$/, gltfLoader);
     tilesRenderer.manager.addHandler(/\.glb$/, gltfLoader);
@@ -48,7 +48,7 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
     tilesetGroup.add(tilesRenderer.group);
     scene.add(tilesetGroup);
 
-    tilesRenderer.onLoadTileSet = titleset => {
+    tilesRenderer.addEventListener("load-tile-set", titleset => {
       console.log("load tileset", titleset);
 
       const box = new Box3();
@@ -74,11 +74,7 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
       tilesetGroup.add(obbMesh);
 
       this.dispatchEvent({ type: "load", center });
-    };
-
-    tilesRenderer.onLoadModel = _scene => {
-      // TODO
-    };
+    });
   }
 
   update() {
