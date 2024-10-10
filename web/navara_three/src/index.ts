@@ -60,7 +60,7 @@ export default class ThreeView {
   // Render only globe
   _globeScene: Scene;
   // Store draped feature's materials
-  _drapedFeatureMaterials: Map<string, Material> = new Map();
+  _drapedFeatureMaterials = new Map<string, Material>();
 
   _core: Core | undefined;
   _options: Options;
@@ -72,8 +72,8 @@ export default class ThreeView {
   } = {};
   _uniforms: CommonUniforms;
 
-  _meshes: Map<string, Mesh> = new Map();
-  _loadedTexs: Map<string, Texture> = new Map();
+  _meshes = new Map<string, Mesh>();
+  _loadedTexs = new Map<string, Texture>();
   _tex = new TextureLoader();
   _buf: BufferLoader = {
     u8: handle => {

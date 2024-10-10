@@ -126,7 +126,7 @@ function getGeojsons(
 
 export function computeGeometry(
   feature: Feature,
-  height: number = 0,
+  height = 0,
   geometry = new BufferGeometry(),
 ): BufferGeometry | undefined {
   if (feature.geometry.type === "Polygon") {
