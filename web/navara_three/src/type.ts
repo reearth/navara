@@ -7,7 +7,12 @@ import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Extent } from "./temp/utils";
 
-export type LayerDescription = C3dtilesLayer | MVTLayer | TilesLayer | TerrainLayer | GeoJsonLayer;
+export type LayerDescription =
+  | C3dtilesLayer
+  | MVTLayer
+  | TilesLayer
+  | TerrainLayer
+  | GeoJsonLayer;
 
 export type C3dtilesLayer = { type: "3dtiles"; url: string };
 

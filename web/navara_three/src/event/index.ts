@@ -52,7 +52,10 @@ export type BufferLoader = {
 };
 
 export type TextureFragmentHandler = {
-  triggerTextureFragmentLoaded: (bits: bigint, status: TextureFragmentStatus) => void;
+  triggerTextureFragmentLoaded: (
+    bits: bigint,
+    status: TextureFragmentStatus,
+  ) => void;
 };
 
 export function processEvent(
@@ -72,39 +75,53 @@ export function processEvent(
     processCameraTransformUpdated(camera, event.camera_transform_updated);
   }
 
-  event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
-  event.object_removed?.forEach(obj => {
+  event.object_transform_updated?.forEach((obj) =>
+    processObjectTransformUpdated(meshes, obj),
+  );
+  event.object_removed?.forEach((obj) => {
     processObjectRemoved(scene, meshes, obj);
     processObjectRemoved(globeDepthScene, meshes, obj, true);
   });
-  event.mesh_added?.forEach(mesh =>
+  event.mesh_added?.forEach((mesh) =>
     processMeshAdded(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
   );
-  event.mesh_updated?.forEach(mesh =>
+  event.mesh_updated?.forEach((mesh) =>
     processMeshChanged(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
   );
-  event.renderable_feature_added?.forEach(ev =>
-    processRenderableFeatureAdded(ev, scene, meshes, buf, uniforms, drapedFeatureMaterials),
+  event.renderable_feature_added?.forEach((ev) =>
+    processRenderableFeatureAdded(
+      ev,
+      scene,
+      meshes,
+      buf,
+      uniforms,
+      drapedFeatureMaterials,
+    ),
   );
-  event.renderable_feature_changed?.forEach(ev =>
+  event.renderable_feature_changed?.forEach((ev) =>
     processRenderableFeatureChanged(ev, meshes, drapedFeatureMaterials),
   );
-  event.renderable_feature_removed?.forEach(ev =>
+  event.renderable_feature_removed?.forEach((ev) =>
     processObjectRemoved(scene, meshes, ev, undefined, drapedFeatureMaterials),
   );
 
-  event.texture_fragment_requested?.forEach(req =>
+  event.texture_fragment_requested?.forEach((req) =>
     processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
   );
-  event.data_requested?.forEach(req => processRequestedData(req, buf));
-  event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
+  event.data_requested?.forEach((req) => processRequestedData(req, buf));
+  event.texture_fragment_removed?.forEach((req) =>
+    processTextureFragmentRemoved(req, loadedTexs),
+  );
 }
 
 function processCameraTransformUpdated(camera: Camera, transform: Transform) {
   setTransform(camera, transform); // disable temporarily
 }
 
-function processObjectTransformUpdated(meshes: MeshCache, e: ObjectTransformEvent) {
+function processObjectTransformUpdated(
+  meshes: MeshCache,
+  e: ObjectTransformEvent,
+) {
   const id = generate_id_from_entity(e);
   const m = meshes.get(id);
   const globeDepthMesh = meshes.get(to_globe_depth_id(id));
@@ -197,7 +214,7 @@ function processObjectRemoved(
 
   if ("material" in m) {
     if (Array.isArray(m.material)) {
-      m.material.map(m => m.dispose());
+      m.material.map((m) => m.dispose());
     } else {
       m.material.dispose();
     }
@@ -214,7 +231,7 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
   const loader = new ImageLoader();
   loader
     .loadAsync(req.url)
-    .then(img => {
+    .then((img) => {
       // TODO: Get OffScreeCanvas from main thread in worker.
       const canvas = document.createElement("canvas");
       canvas.height = img.height;
@@ -259,16 +276,25 @@ function processTextureFragmentRequested(
 
   tex
     .loadAsync(req.url)
-    .then(t => {
+    .then((t) => {
       loadedTexes.set(id, t);
-      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Success);
+      handler.triggerTextureFragmentLoaded(
+        req.bits,
+        TextureFragmentStatus.Success,
+      );
     })
     .catch(() => {
-      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);
+      handler.triggerTextureFragmentLoaded(
+        req.bits,
+        TextureFragmentStatus.Fail,
+      );
     });
 }
 
-function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string, Texture>) {
+function processTextureFragmentRemoved(
+  req: EntityEvent,
+  loadedTexes: Map<string, Texture>,
+) {
   const id = makeTextureFragmentId(req.ind, req.gen);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
@@ -283,12 +309,19 @@ async function processRenderableFeatureAdded(
   drapedFeatureMaterials: Map<string, Material>,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(id, ev.feature, buf, uniforms, drapedFeatureMaterials);
+  const obj = await renderFeature(
+    id,
+    ev.feature,
+    buf,
+    uniforms,
+    drapedFeatureMaterials,
+  );
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
+    ?.transform;
   if (transform) {
     setTransform(obj, transform);
   }
@@ -313,12 +346,14 @@ function processRenderableFeatureChanged(
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
+    ?.transform;
   if (transform) {
     setTransform(obj, transform);
   }
 
-  const material = (point ?? billboard ?? polyline ?? polygon ?? model)?.material;
+  const material = (point ?? billboard ?? polyline ?? polygon ?? model)
+    ?.material;
   if (material) {
     if (obj instanceof Sprite && material instanceof PointMaterial) {
       processPointChanged(obj, material);
@@ -353,7 +388,7 @@ function processBillboardChanged(obj: Sprite, material: BillboardMaterial) {
 }
 
 function processModelChanged(obj: Group, material: ModelMaterial) {
-  obj.children.forEach(child => {
+  obj.children.forEach((child) => {
     child.visible = material.show ?? true;
   });
 }
@@ -375,8 +410,11 @@ function processPolygonChanged(
   if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
     obj.material.visible = material.show ?? true;
-    obj.material.userData.uMinMaxHeight.value = material.__internal__?.min_max_heights;
-    if (obj.material.userData.uClampToGround.value !== material.clamp_to_ground) {
+    obj.material.userData.uMinMaxHeight.value =
+      material.__internal__?.min_max_heights;
+    if (
+      obj.material.userData.uClampToGround.value !== material.clamp_to_ground
+    ) {
       obj.material.userData.uClampToGround.value = material.clamp_to_ground;
       // obj.material = obj.material.clone();
     }
@@ -439,9 +477,16 @@ function setTransform(obj: Object3D, transform: Transform) {
   obj.scale.set(sx, sy, sz);
 }
 
-function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Material {
+function toMaterial(
+  mat: EventMaterial,
+  loadedTexes: Map<string, Texture>,
+): Material {
   if (mat.wireframe) {
-    return new MeshBasicMaterial({ color: mat.color, wireframe: true, stencilWrite: false });
+    return new MeshBasicMaterial({
+      color: mat.color,
+      wireframe: true,
+      stencilWrite: false,
+    });
   }
 
   const m = new MeshLambertMaterial({ color: mat.color, stencilWrite: false });

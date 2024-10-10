@@ -61,7 +61,7 @@ async function renderPoint(m: PointMesh) {
     sizeAttenuation: false,
     visible: m.material.show,
   });
-  material.onBeforeCompile = shader => {
+  material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace(
         "uniform vec2 center;",
@@ -126,7 +126,11 @@ async function renderModel(m: ModelMesh) {
   return model.scene;
 }
 
-async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: CommonUniforms) {
+async function renderPolyline(
+  mesh: PolylineMesh,
+  buf: BufferLoader,
+  uniforms: CommonUniforms,
+) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
   const start = buf.f32(g.start.data);
@@ -151,13 +155,19 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
     return;
 
   const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(position, g.position.size));
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(position, g.position.size),
+  );
   geometry.setAttribute("start", new BufferAttribute(start, g.start.size));
   geometry.setAttribute(
     "forward_offset",
     new BufferAttribute(forward_offset, g.forward_offset.size),
   );
-  geometry.setAttribute("start_normal", new BufferAttribute(start_normals, g.start_normals.size));
+  geometry.setAttribute(
+    "start_normal",
+    new BufferAttribute(start_normals, g.start_normals.size),
+  );
   geometry.setAttribute(
     "end_normal_and_texture_coordinate_normalization_x",
     new BufferAttribute(
@@ -186,7 +196,9 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
     },
     vertexShader: PolylineVertShader,
-    fragmentShader: mesh.material.clamp_to_ground ? GroundPolylineFragShader : PolylineFragShader,
+    fragmentShader: mesh.material.clamp_to_ground
+      ? GroundPolylineFragShader
+      : PolylineFragShader,
     depthTest: false,
     depthWrite: false,
     visible: mesh.material.show,
@@ -213,7 +225,10 @@ async function renderPolygon(
   if (!position || !indices) return;
 
   const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(position, g.position.size));
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(position, g.position.size),
+  );
   if (g.normal && normal) {
     geometry.setAttribute("normal", new BufferAttribute(normal, g.normal.size));
   }
@@ -242,7 +257,7 @@ async function renderPolygon(
     value: clampToGround,
   };
 
-  material.onBeforeCompile = shader => {
+  material.onBeforeCompile = (shader) => {
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }

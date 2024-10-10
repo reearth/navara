@@ -3,7 +3,13 @@ import { Ellipsoid } from "@math.gl/geospatial";
 import earcut from "earcut";
 import { type Feature } from "geojson";
 import Pbf from "pbf";
-import { BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial } from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+} from "three";
 import { BufferGeometryUtils } from "three/examples/jsm/Addons.js";
 
 import { type Extent, forEachTilesAsync, getTileUrl } from "./utils";
@@ -50,13 +56,21 @@ export default class MVT {
   loadTile(url: string, x: number, y: number, z: number, layers: string[]) {
     const actualUrl = getTileUrl(url, x, y, z);
     fetch(actualUrl)
-      .then(response => {
+      .then((response) => {
         if (!response.ok) return;
         return response.arrayBuffer();
       })
-      .then(arrayBuffer => {
+      .then((arrayBuffer) => {
         if (!arrayBuffer) return;
-        const meshes = createMeshes(arrayBuffer, x, y, z, layers, this.material, this.height);
+        const meshes = createMeshes(
+          arrayBuffer,
+          x,
+          y,
+          z,
+          layers,
+          this.material,
+          this.height,
+        );
         for (const mesh of meshes) {
           this.node.add(mesh);
         }
@@ -126,12 +140,12 @@ function getGeojsons(
 
 export function computeGeometry(
   feature: Feature,
-  height: number = 0,
+  height = 0,
   geometry = new BufferGeometry(),
 ): BufferGeometry | undefined {
   if (feature.geometry.type === "Polygon") {
-    const coordinates = feature.geometry.coordinates.map(ring =>
-      ring.map(p => (p.length === 2 ? [...p, height] : p.slice(0, 3))),
+    const coordinates = feature.geometry.coordinates.map((ring) =>
+      ring.map((p) => (p.length === 2 ? [...p, height] : p.slice(0, 3))),
     );
     const data = earcut.flatten(coordinates);
     // data.dimensions should be always 3

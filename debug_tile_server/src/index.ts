@@ -34,7 +34,7 @@ app.get('/:z/:x/:y', async (c) => {
       r(buf);
   })).then((buf) => {
     c.header('Content-Type', 'image/png');
-    return c.body(buf);
+    return c.body(new Uint8Array(buf).buffer);
   });
 })
 
