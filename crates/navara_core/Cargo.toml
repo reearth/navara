@@ -6,6 +6,6 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 radians = "0.3.1"
-bevy_log = "0.14.1"
+bevy_log = "0.14.2"
 navara_math = { path = "../navara_math" }
 approx.workspace = true
