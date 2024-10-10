@@ -3,7 +3,6 @@ use bevy_ecs::{
     query::Added,
     system::{Commands, Query, ResMut},
 };
-use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_core::{Aabb, Angle, Extent, LngLat, Meters, CRS, LLE, WGS84_32};
 use navara_geometry::{
@@ -214,14 +213,15 @@ pub fn update_height_by_terrain(
                 render_info.should_recalculate_height = false;
 
                 let (min_height, max_height) = if material.clamp_to_ground {
-                    sample_terrain_height_within_extent(&mut qt, *extent)
+                    let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
+                    // TODO: Find a good way to approximate more detail.
+                    // Fix an issue the max height is off a bit.
+                    let e = max / 100.;
+                    (min, max + e)
                 } else {
                     (material.height, material.extruded_height.unwrap_or(0.))
                 };
-                info!(
-                    "INVOKE {} {} {}",
-                    min_height, max_height, material.clamp_to_ground
-                );
+
                 let internal = material.internal.as_mut().unwrap();
                 internal.min_max_heights = calc_min_max_height(
                     min_height,
