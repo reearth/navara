@@ -329,42 +329,47 @@ export default class ThreeView {
     this.renderer.render(this._globeScene, this.camera);
     this.renderer.setRenderTarget(null);
 
-    // Drape a feature on the terrain by stencil test.
-    // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
     if (shouldDrapeByStencilTest) {
-      // Render the terrain first
-      this.renderer.render(this._globeScene, this.camera);
-
-      this._drapedFeatureMaterials.forEach(m => {
-        m.stencilFunc = AlwaysStencilFunc;
-        m.stencilFail = KeepStencilOp;
-        m.stencilZFail = KeepStencilOp;
-        m.stencilZPass = IncrementStencilOp;
-        m.side = FrontSide;
-        m.colorWrite = false;
-        m.depthWrite = false;
-      });
-      this.renderer.render(this.scene, this.camera);
-
-      this._drapedFeatureMaterials.forEach(m => {
-        m.stencilZPass = DecrementStencilOp;
-        m.side = BackSide;
-      });
-      this.renderer.render(this.scene, this.camera);
-
-      // TODO: Near plane support
-
-      this._drapedFeatureMaterials.forEach(m => {
-        m.stencilFunc = NotEqualStencilFunc;
-        m.stencilFail = ZeroStencilOp;
-        m.stencilZFail = ZeroStencilOp;
-        m.stencilZPass = ZeroStencilOp;
-        m.side = FrontSide;
-        m.colorWrite = true;
-        m.depthWrite = true;
-      });
+      this.renderDrapedMesh();
     }
+
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // Drape a feature on the terrain by stencil test.
+  // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
+  renderDrapedMesh() {
+    // Render the terrain first
+    this.renderer.render(this._globeScene, this.camera);
+
+    this._drapedFeatureMaterials.forEach(m => {
+      m.stencilFunc = AlwaysStencilFunc;
+      m.stencilFail = KeepStencilOp;
+      m.stencilZFail = KeepStencilOp;
+      m.stencilZPass = IncrementStencilOp;
+      m.side = FrontSide;
+      m.colorWrite = false;
+      m.depthWrite = false;
+    });
+    this.renderer.render(this.scene, this.camera);
+
+    this._drapedFeatureMaterials.forEach(m => {
+      m.stencilZPass = DecrementStencilOp;
+      m.side = BackSide;
+    });
+    this.renderer.render(this.scene, this.camera);
+
+    // TODO: Near plane support
+
+    this._drapedFeatureMaterials.forEach(m => {
+      m.stencilFunc = NotEqualStencilFunc;
+      m.stencilFail = ZeroStencilOp;
+      m.stencilZFail = ZeroStencilOp;
+      m.stencilZPass = ZeroStencilOp;
+      m.side = FrontSide;
+      m.colorWrite = true;
+      m.depthWrite = true;
+    });
   }
 
   on<K extends keyof Events>(event: K, callback: Events[K]) {
