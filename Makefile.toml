@@ -74,61 +74,76 @@ cd crates/navara_wasm
 cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
 ''']
 
+[tasks.install-deps-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm i --legacy-peer-deps
+''']
+
 [tasks.dev-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run dev
+npm run dev
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.build-web-example]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run build:example
+npm run build:example
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.build-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run build
+npm run build
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.lint-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run lint
+npm run lint
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.lint-check-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run lint:check
+ npm run lint:check
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.format-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run format
+npm run format
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.format-check-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run format:check
+npm run format:check
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.test-web]
 script = ['''
 #!/usr/bin/env bash -eux
 cd web/navara_three
-npm i && npm run test
+npm run test
 ''']
+dependencies = ["install-deps-web"]
 
 [tasks.doc]
 script = ['''
