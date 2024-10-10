@@ -25,7 +25,11 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
+import {
+  processEvent,
+  type BufferLoader,
+  type TextureFragmentHandler,
+} from "./event";
 import { registerInputEvents } from "./input";
 import { C3TilesManager } from "./temp/C3Tiles";
 import MVT from "./temp/MVT";
@@ -76,15 +80,15 @@ export default class ThreeView {
   _loadedTexs = new Map<string, Texture>();
   _tex = new TextureLoader();
   _buf: BufferLoader = {
-    u8: handle => {
+    u8: (handle) => {
       const b = this._core?.getBufferU8(handle);
       return b ?? null;
     },
-    f32: handle => {
+    f32: (handle) => {
       const b = this._core?.getBufferF32(handle);
       return b ?? null;
     },
-    u32: handle => {
+    u32: (handle) => {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
@@ -96,7 +100,10 @@ export default class ThreeView {
     },
   };
   _texFragment: TextureFragmentHandler = {
-    triggerTextureFragmentLoaded: (bits: bigint, status: TextureFragmentStatus) => {
+    triggerTextureFragmentLoaded: (
+      bits: bigint,
+      status: TextureFragmentStatus,
+    ) => {
       this._core?.triggerTextureFragmentLoaded(bits, status);
     },
   };
@@ -111,7 +118,7 @@ export default class ThreeView {
     this._options = options;
 
     // disable right-click
-    options.canvas?.addEventListener("contextmenu", e => {
+    options.canvas?.addEventListener("contextmenu", (e) => {
       e.preventDefault();
     });
 
@@ -149,8 +156,14 @@ export default class ThreeView {
     const pixelRatio = this.renderer.getPixelRatio();
     const scaledWidth = width * pixelRatio;
     const scaledHeight = height * pixelRatio;
-    this._globeDepthRenderTarget = new WebGLRenderTarget(scaledWidth, scaledHeight);
-    this._globeDepthRenderTarget.depthTexture = new DepthTexture(scaledWidth, scaledHeight);
+    this._globeDepthRenderTarget = new WebGLRenderTarget(
+      scaledWidth,
+      scaledHeight,
+    );
+    this._globeDepthRenderTarget.depthTexture = new DepthTexture(
+      scaledWidth,
+      scaledHeight,
+    );
     this._globeDepthRenderTarget.depthTexture.format = DepthFormat;
     this._globeDepthRenderTarget.depthTexture.type = FloatType;
 
@@ -203,7 +216,12 @@ export default class ThreeView {
     // this.control = new MapControls(this.camera, this.renderer.domElement);
 
     // c3tiles
-    this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);
+    this._c3tiles = new C3TilesManager(
+      this.scene,
+      this.camera,
+      this.renderer,
+      this.control,
+    );
     this._uniforms = {
       viewportAndPixelRatio: { value: null },
       frustumNearFar: { value: null },
@@ -221,7 +239,10 @@ export default class ThreeView {
     this._core = new Core(newId());
     this._core.start();
     if (!isWorker()) {
-      this._eventDisposer = registerInputEvents(this._core, this.renderer.domElement);
+      this._eventDisposer = registerInputEvents(
+        this._core,
+        this.renderer.domElement,
+      );
     }
 
     this._startMainLoop();
@@ -239,7 +260,10 @@ export default class ThreeView {
       this._eventDisposer = undefined;
     }
     this._globeDepthRenderTarget.dispose();
-    if ("dispose" in this.renderer && typeof this.renderer.dispose === "function") {
+    if (
+      "dispose" in this.renderer &&
+      typeof this.renderer.dispose === "function"
+    ) {
       this.renderer.dispose();
     }
   }
@@ -255,7 +279,10 @@ export default class ThreeView {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
-    this._globeDepthRenderTarget.setSize(w * (pixelRatio ?? 1), h * (pixelRatio ?? 1));
+    this._globeDepthRenderTarget.setSize(
+      w * (pixelRatio ?? 1),
+      h * (pixelRatio ?? 1),
+    );
     if (
       typeof pixelRatio === "number" &&
       "setPixelRatio" in this.renderer &&
@@ -289,8 +316,10 @@ export default class ThreeView {
     ];
     this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
-    this._uniforms.tGlobeDepth.value = this._globeDepthRenderTarget.depthTexture;
-    this._uniforms.inverseProjectionMatrix.value = this.camera.projectionMatrixInverse;
+    this._uniforms.tGlobeDepth.value =
+      this._globeDepthRenderTarget.depthTexture;
+    this._uniforms.inverseProjectionMatrix.value =
+      this.camera.projectionMatrixInverse;
   }
 
   /** Returns true if the scene was updated and needs to be rendered. */
@@ -342,7 +371,7 @@ export default class ThreeView {
     // Render the terrain first
     this.renderer.render(this._globeScene, this.camera);
 
-    this._drapedFeatureMaterials.forEach(m => {
+    this._drapedFeatureMaterials.forEach((m) => {
       m.stencilFunc = AlwaysStencilFunc;
       m.stencilFail = KeepStencilOp;
       m.stencilZFail = KeepStencilOp;
@@ -353,7 +382,7 @@ export default class ThreeView {
     });
     this.renderer.render(this.scene, this.camera);
 
-    this._drapedFeatureMaterials.forEach(m => {
+    this._drapedFeatureMaterials.forEach((m) => {
       m.stencilZPass = DecrementStencilOp;
       m.side = BackSide;
     });
@@ -361,7 +390,7 @@ export default class ThreeView {
 
     // TODO: Near plane support
 
-    this._drapedFeatureMaterials.forEach(m => {
+    this._drapedFeatureMaterials.forEach((m) => {
       m.stencilFunc = NotEqualStencilFunc;
       m.stencilFail = ZeroStencilOp;
       m.stencilZFail = ZeroStencilOp;
@@ -378,7 +407,7 @@ export default class ThreeView {
   }
 
   off<K extends keyof Events>(event: K, callback: Events[K]) {
-    this._events[event] = this._events[event]?.filter(c => c !== callback);
+    this._events[event] = this._events[event]?.filter((c) => c !== callback);
   }
 
   _c3tiles: C3TilesManager;
@@ -420,7 +449,9 @@ export default class ThreeView {
   }
 
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {
-    this._events[event]?.forEach(c => (c as (...args: any[]) => any)(...args));
+    this._events[event]?.forEach((c) =>
+      (c as (...args: any[]) => any)(...args),
+    );
   }
 
   _startMainLoop() {

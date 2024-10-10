@@ -16,7 +16,9 @@ export type Extent = {
 };
 
 export function isExtentIntersected(a: Extent, b: Extent): boolean {
-  return a.west < b.east && a.east > b.west && a.south < b.north && a.north > b.south;
+  return (
+    a.west < b.east && a.east > b.west && a.south < b.north && a.north > b.south
+  );
 }
 
 // Extent is in degrees
@@ -35,7 +37,10 @@ export function tileExtent(x: number, y: number, z: number): Extent {
 
 // x and y shoud be normalized to the range [0, 1]
 // result is [lng, lat] in degrees
-export function webMercatorWorldToWestNorthLngLat([x, y]: number[]): [number, number] {
+export function webMercatorWorldToWestNorthLngLat([x, y]: number[]): [
+  number,
+  number,
+] {
   const lng = x * (2 * PI) - PI;
   const phi = PI - 2 * PI * y; // y=0 -> PI, y=1 -> -PI
   const lat = 2 * (Math.atan(Math.exp(phi)) - PI_4);
@@ -43,15 +48,24 @@ export function webMercatorWorldToWestNorthLngLat([x, y]: number[]): [number, nu
 }
 
 // result is normalized to the range [0, 1]
-export function tileXYZToWebMercatorWorld(x: number, y: number, z: number): [number, number] {
+export function tileXYZToWebMercatorWorld(
+  x: number,
+  y: number,
+  z: number,
+): [number, number] {
   const n = Math.pow(2, z);
   const x2 = x / n;
   const y2 = y / n;
   return [x2, y2];
 }
 
-export function getTileUrl(url: string, x: number, y: number, z: number): string {
-  return url.replace(/\{x\}|\{y\}|\{z\}/g, match => {
+export function getTileUrl(
+  url: string,
+  x: number,
+  y: number,
+  z: number,
+): string {
+  return url.replace(/\{x\}|\{y\}|\{z\}/g, (match) => {
     if (match === "{x}") return x.toString();
     if (match === "{y}") return y.toString();
     if (match === "{z}") return z.toString();

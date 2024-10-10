@@ -5,5 +5,5 @@ export default [
   ...reearthConfig("navara_three"),
   {
     ignores: ["dist"],
-  }
+  },
 ];
