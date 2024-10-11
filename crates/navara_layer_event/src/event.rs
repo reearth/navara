@@ -172,7 +172,7 @@ fn calc_transform(
 pub fn process_delete_events(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    layer_store: Res<LayerStore>,
+    mut layer_store: ResMut<LayerStore>,
     mut events: EventReader<DeleteLayerEvent>,
     mut features: Query<&mut RenderableFeature>,
     geos: Query<(Entity, &LayerId)>,
@@ -181,6 +181,7 @@ pub fn process_delete_events(
         let DeleteLayerEvent(layer_id) = ev;
         let entities = layer_store.map.get(layer_id);
         if let Some(vec) = entities {
+            // delete RenderableFeature and related Buffers
             for entity in vec {
                 if let Ok(mut feature) = features.get_mut(*entity) {
                     match &mut *feature {
@@ -217,10 +218,14 @@ pub fn process_delete_events(
             }
         }
 
+        // delete GeoJson components
         for (entity, l_id) in geos.iter() {
             if l_id == layer_id {
                 commands.entity(entity).despawn();
             }
         }
+
+        // delete stored layer id
+        layer_store.map.remove(layer_id);
     }
 }

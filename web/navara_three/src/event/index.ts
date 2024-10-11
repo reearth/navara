@@ -237,7 +237,7 @@ function disposeObject3D(model: Object3D): void {
       // Dispose material(s)
       if (mesh.material) {
         if (Array.isArray(mesh.material)) {
-          mesh.material.forEach(material => {
+          mesh.material.forEach((material) => {
             material.dispose();
           });
         } else {
@@ -253,7 +253,7 @@ function disposeObject3D(model: Object3D): void {
       // Dispose material
       if (sprite.material) {
         if (Array.isArray(sprite.material)) {
-          sprite.material.forEach(material => {
+          sprite.material.forEach((material) => {
             material.dispose();
           });
         } else {
