@@ -1,6 +1,6 @@
 {
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit"
   },
   "eslint.enable": true,
   "prettier.enable": true,
@@ -10,7 +10,7 @@
   },
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },,
+  },
   "[rust]": {
     "editor.tabSize": 4,
     "editor.insertSpaces": false,
