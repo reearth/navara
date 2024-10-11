@@ -135,6 +135,11 @@ impl Core {
         }
     }
 
+    #[wasm_bindgen(js_name = deleteLayer)]
+    pub fn delete_layer(&mut self, layer_id: String) {
+        self.app.delete_layer(layer_id.as_str());
+    }
+
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
         self.app

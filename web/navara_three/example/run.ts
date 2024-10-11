@@ -171,7 +171,7 @@ const geoLayersDef: GeoJsonLayer[] = [
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [100, 30],
+            coordinates: [30, 30],
             type: "Point",
           },
         },
@@ -179,34 +179,10 @@ const geoLayersDef: GeoJsonLayer[] = [
     },
     model: {
       show: true,
-      size: 500000,
-      height: 700000,
+      size: 300000,
+      height: -30000,
       clamp_to_ground: true,
-      url: "/glTF/Suzanne/Suzanne.gltf",
-    },
-  },
-
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [100, 0],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 3000,
-      height: 1100000,
-      clamp_to_ground: true,
-      url: "/glTF/2CylinderEngine/2CylinderEngine.gltf",
+      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
     },
   },
 
@@ -366,11 +342,11 @@ export const run = async (view: ThreeView) => {
         : JAPAN_GSI_ELEVATION_DECODER,
   });
 
-  const geoLayerMap: Record<string, GeoJsonLayer> = {};
+  const geoLayerMap = new Map<string, GeoJsonLayer>();
   geoLayersDef.forEach((layer) => {
     const layerId = view.addLayer(layer);
     if (layerId) {
-      geoLayerMap[layerId] = layer;
+      geoLayerMap.set(layerId, layer);
     }
   });
 
@@ -443,7 +419,7 @@ export const run = async (view: ThreeView) => {
     expanded: true,
   });
 
-  const layerIds = Object.keys(geoLayerMap);
+  const layerIds = Array.from(geoLayerMap.keys());
 
   const layerIdOptions: Record<string, number> = {};
   for (let i = 0; i < layerIds.length; i++) {
@@ -466,19 +442,78 @@ export const run = async (view: ThreeView) => {
   pane
     // @ts-expect-error : Missing Type Definitions ?
     .addBinding(paneParams, "layer", { options: layerIdOptions })
-    // @ts-expect-error : Missing Type Definitions ?
-    .on("change", (ev) => {
-      materialCtrl.dispose();
+    .on("change", onLayerChange);
 
+  const btnCtrl = pane
+    // @ts-expect-error : Missing Type Definitions ?
+    .addButton({ title: "Delete Layer", label: "" })
+    .on("click", onDeleteBtnClick);
+
+  let materialCtrl = createMaterialCtrl(
+    pane,
+    paneParams,
+    geoLayerMap.get(layerIds[0]),
+  );
+
+  if (materialCtrl) {
+    materialCtrl.on("change", () => {
       if (paramCtrl) {
         paramCtrl.dispose();
       }
-
-      materialCtrl = createMaterialCtrl(
+      paramCtrl = createParamCtrl(
         pane,
         paneParams,
-        geoLayerMap[layerIds[ev.value]],
+        geoLayerMap.get(layerIds[paneParams.layer]),
+        onParamChange,
       );
+    });
+  }
+
+  let paramCtrl = createParamCtrl(
+    pane,
+    paneParams,
+    geoLayerMap.get(layerIds[0]),
+    onParamChange,
+  );
+
+  function onDeleteBtnClick() {
+    if (btnCtrl.title == "Delete Layer") {
+      view.deleteLayer(layerIds[paneParams.layer]);
+
+      btnCtrl.title = "Add Layer";
+    } else {
+      const oldLayerId = layerIds[paneParams.layer];
+      const layerDef = geoLayerMap.get(oldLayerId);
+      if (layerDef) {
+        const newLayerId = view.addLayer(layerDef);
+        if (newLayerId) {
+          geoLayerMap.set(newLayerId, layerDef);
+          layerIds[paneParams.layer] = newLayerId;
+        }
+      }
+
+      geoLayerMap.delete(oldLayerId);
+
+      btnCtrl.title = "Delete Layer";
+    }
+  }
+
+  function onLayerChange() {
+    if (materialCtrl) {
+      materialCtrl.dispose();
+    }
+
+    if (paramCtrl) {
+      paramCtrl.dispose();
+    }
+
+    materialCtrl = createMaterialCtrl(
+      pane,
+      paneParams,
+      geoLayerMap.get(layerIds[paneParams.layer]),
+    );
+
+    if (materialCtrl) {
       materialCtrl.on("change", () => {
         if (paramCtrl) {
           paramCtrl.dispose();
@@ -486,46 +521,23 @@ export const run = async (view: ThreeView) => {
         paramCtrl = createParamCtrl(
           pane,
           paneParams,
-          geoLayerMap[layerIds[paneParams.layer]],
+          geoLayerMap.get(layerIds[paneParams.layer]),
           onParamChange,
         );
       });
-
-      paramCtrl = createParamCtrl(
-        pane,
-        paneParams,
-        geoLayerMap[layerIds[ev.value]],
-        onParamChange,
-      );
-    });
-
-  let materialCtrl = createMaterialCtrl(
-    pane,
-    paneParams,
-    geoLayerMap[layerIds[0]],
-  );
-  materialCtrl.on("change", () => {
-    if (paramCtrl) {
-      paramCtrl.dispose();
     }
+
     paramCtrl = createParamCtrl(
       pane,
       paneParams,
-      geoLayerMap[layerIds[paneParams.layer]],
+      geoLayerMap.get(layerIds[paneParams.layer]),
       onParamChange,
     );
-  });
-
-  let paramCtrl = createParamCtrl(
-    pane,
-    paneParams,
-    geoLayerMap[layerIds[0]],
-    onParamChange,
-  );
+  }
 
   function onParamChange() {
     const layerId = layerIds[paneParams.layer];
-    const layer = geoLayerMap[layerId];
+    const layer = geoLayerMap.get(layerId);
     if (layer && paneParams.material in layer) {
       const material = layer[paneParams.material as keyof typeof layer];
 
@@ -567,9 +579,13 @@ export const run = async (view: ThreeView) => {
 function createParamCtrl(
   pane: Pane,
   paneParams: any,
-  layer: GeoJsonLayer,
+  layer: GeoJsonLayer | undefined,
   changeFunc: () => void,
 ) {
+  if (!layer) {
+    return undefined;
+  }
+
   const material = layer[paneParams.material as keyof typeof layer];
   if (material) {
     // @ts-expect-error : Missing Type Definitions ?
@@ -619,21 +635,29 @@ function createParamCtrl(
     return f;
   }
 
-  return null;
+  return undefined;
 }
 
-function createMaterialCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer) {
-  const options = getMaterialOptions(layer);
+function createMaterialCtrl(
+  pane: Pane,
+  paneParams: any,
+  layer: GeoJsonLayer | undefined,
+) {
+  if (layer) {
+    const options = getMaterialOptions(layer);
 
-  // @ts-expect-error : Missing Type Definitions ?
-  const materialCtrl = pane.addBinding(paneParams, "material", {
-    options: options,
-  });
+    // @ts-expect-error : Missing Type Definitions ?
+    const materialCtrl = pane.addBinding(paneParams, "material", {
+      options: options,
+    });
 
-  const firstOptionKey = Object.keys(options)[0];
-  paneParams.material = firstOptionKey;
-  materialCtrl.refresh();
-  return materialCtrl;
+    const firstOptionKey = Object.keys(options)[0];
+    paneParams.material = firstOptionKey;
+    materialCtrl.refresh();
+    return materialCtrl;
+  } else {
+    return undefined;
+  }
 }
 
 function getMaterialOptions(layer: GeoJsonLayer) {
