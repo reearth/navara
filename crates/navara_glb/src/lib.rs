@@ -3,8 +3,18 @@
 extern crate alloc;
 
 use binrw::BinRead;
-use navara_bin::{parse_json_to_struct_from_reader, BinaryReader};
+pub use navara_bin::*;
 use serde_json::Value;
+
+#[derive(BinRead)]
+#[br(magic = b"glTF", little)]
+pub struct GlbWithMagic(pub GlbInner);
+impl BinaryReader<GlbWithMagic> for GlbWithMagic {}
+
+#[derive(BinRead)]
+#[br(little)]
+pub struct Glb(pub GlbInner);
+impl BinaryReader<Glb> for Glb {}
 
 #[derive(BinRead)]
 pub struct GlbHeader {
@@ -30,16 +40,6 @@ pub struct GlbInner {
     // #[br(count = header.length - chunk.chunk_length - 12)] // 12 is the size of the header
     // bin: Vec<u8>,
 }
-
-#[derive(BinRead)]
-#[br(magic = b"glTF", little)]
-pub struct GlbWithMagic(pub GlbInner);
-impl BinaryReader<GlbWithMagic> for GlbWithMagic {}
-
-#[derive(BinRead)]
-#[br(little)]
-pub struct Glb(pub GlbInner);
-impl BinaryReader<Glb> for Glb {}
 
 pub mod mock {
     pub fn create_mock_glb_data(header: bool) -> Vec<u8> {

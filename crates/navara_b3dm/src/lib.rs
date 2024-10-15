@@ -4,14 +4,26 @@ extern crate alloc;
 
 mod types;
 
-use alloc::boxed::Box;
+pub use navara_bin::*;
+
 use alloc::vec::Vec;
 use binrw::BinRead;
-use navara_bin::BinaryReader;
 use navara_glb::Glb;
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use types::{ComponentType, DataType};
+
+#[derive(BinRead)]
+pub struct B3dm {
+    pub header: B3dmHeader,
+    #[br(args(header.feature_table_json_byte_length, header.feature_table_binary_byte_length))]
+    pub feature_table: FeatureTable,
+    #[br(args(header.batch_table_json_byte_length, header.batch_table_binary_byte_length))]
+    pub batch_table: BatchTable,
+    pub glb: Glb,
+}
+
+impl BinaryReader<B3dm> for B3dm {}
 
 #[derive(BinRead)]
 #[br(magic = b"b3dm", little)]
@@ -166,49 +178,6 @@ impl BatchTable {
     }
 }
 
-#[binrw::parser(reader: reader)]
-fn parse_json_to_struct_from_reader<T: serde::de::DeserializeOwned>(
-    count: u32,
-) -> binrw::BinResult<T> {
-    let mut buf = alloc::vec![0u8; count as usize];
-    binrw::io::Read::read_exact(reader, &mut buf).map_err(|e| binrw::Error::Io(e))?;
-
-    // Trim padding
-    parse_json_to_struct(&buf).map_err(|e| {
-        let pos = reader.stream_position();
-        match pos {
-            Ok(p) => binrw::Error::Custom {
-                pos: p,
-                err: Box::new(e),
-            },
-            Err(e) => binrw::Error::Io(e),
-        }
-    })
-}
-
-fn parse_json_to_struct<T: serde::de::DeserializeOwned>(buf: &Vec<u8>) -> serde_json::Result<T> {
-    // Trim padding
-    let buf = buf
-        .iter()
-        .take_while(|&&b| b != 0)
-        .cloned()
-        .collect::<Vec<u8>>();
-
-    serde_json::from_slice(&buf)
-}
-
-#[derive(BinRead)]
-pub struct B3dm {
-    pub header: B3dmHeader,
-    #[br(args(header.feature_table_json_byte_length, header.feature_table_binary_byte_length))]
-    pub feature_table: FeatureTable,
-    #[br(args(header.batch_table_json_byte_length, header.batch_table_binary_byte_length))]
-    pub batch_table: BatchTable,
-    pub glb: Glb,
-}
-
-impl BinaryReader<B3dm> for B3dm {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -344,8 +313,10 @@ mod tests {
             ])
         );
 
+        type Expects<'a> = Vec<(&'a str, Vec<Value>, Box<dyn Fn(Vec<Value>, Vec<Value>)>)>;
+
         // Batch table binary
-        let expects: Vec<(&str, Vec<Value>, Box<dyn Fn(Vec<Value>, Vec<Value>)>)> = vec![
+        let expects: Expects = vec![
             (
                 "test_property_byte",
                 vec![

@@ -12,7 +12,7 @@ pub fn parse_json_to_struct_from_reader<T: serde::de::DeserializeOwned>(
     count: u32,
 ) -> binrw::BinResult<T> {
     let mut buf = alloc::vec![0u8; count as usize];
-    binrw::io::Read::read_exact(reader, &mut buf).map_err(|e| binrw::Error::Io(e))?;
+    binrw::io::Read::read_exact(reader, &mut buf).map_err(binrw::Error::Io)?;
 
     // Trim padding
     parse_json_to_struct(&buf).map_err(|e| {
@@ -27,9 +27,7 @@ pub fn parse_json_to_struct_from_reader<T: serde::de::DeserializeOwned>(
     })
 }
 
-pub fn parse_json_to_struct<T: serde::de::DeserializeOwned>(
-    buf: &Vec<u8>,
-) -> serde_json::Result<T> {
+pub fn parse_json_to_struct<T: serde::de::DeserializeOwned>(buf: &[u8]) -> serde_json::Result<T> {
     // Trim padding
     let buf = buf
         .iter()
