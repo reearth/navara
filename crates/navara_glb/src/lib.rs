@@ -6,6 +6,8 @@ use binrw::BinRead;
 pub use navara_bin::*;
 use serde_json::Value;
 
+pub const GLB_HEADER_SIZE: usize = 12;
+
 #[derive(BinRead)]
 #[br(magic = b"glTF", little)]
 pub struct GlbWithMagic(pub GlbInner);
@@ -42,6 +44,8 @@ pub struct GlbInner {
 }
 
 pub mod mock {
+    use crate::GLB_HEADER_SIZE;
+
     pub fn create_mock_glb_data(header: bool) -> Vec<u8> {
         // JSON chunk
         let json = r#"
@@ -90,8 +94,7 @@ pub mod mock {
         chunk_bin.extend_from_slice(&bin);
 
         // GLB header
-        let header_size = 12;
-        let length = header_size + chunk_json.len();
+        let length = GLB_HEADER_SIZE + chunk_json.len();
         let mut header_data = vec![];
         if header {
             header_data.extend_from_slice(b"glTF");
@@ -117,7 +120,7 @@ mod tests {
     #[test]
     fn it_should_parse_glb() {
         let data = create_mock_glb_data(false);
-        let glb = Glb::from_data(data).unwrap();
+        let glb = Glb::from_data(&data).unwrap();
 
         assert_eq!(glb.0.header.version, 2);
         assert_eq!(
@@ -140,7 +143,7 @@ mod tests {
     #[test]
     fn it_should_parse_glb_with_magic() {
         let data = create_mock_glb_data(true);
-        let glb = GlbWithMagic::from_data(data).unwrap();
+        let glb = GlbWithMagic::from_data(&data).unwrap();
 
         assert_eq!(glb.0.header.version, 2);
     }

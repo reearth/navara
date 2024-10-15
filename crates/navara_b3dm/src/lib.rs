@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use types::{ComponentType, DataType};
 
+pub const B3DM_HEADER_SIZE: usize = 28;
+
 #[derive(BinRead)]
 pub struct B3dm {
     pub header: B3dmHeader,
@@ -21,6 +23,24 @@ pub struct B3dm {
     #[br(args(header.batch_table_json_byte_length, header.batch_table_binary_byte_length))]
     pub batch_table: BatchTable,
     pub glb: Glb,
+}
+
+impl B3dm {
+    pub fn extract_glb(&self, original_data: &[u8]) -> Result<Vec<u8>, &'static str> {
+        let glb_start = B3DM_HEADER_SIZE
+            + self.header.feature_table_json_byte_length as usize
+            + self.header.feature_table_binary_byte_length as usize
+            + self.header.batch_table_json_byte_length as usize
+            + self.header.batch_table_binary_byte_length as usize;
+
+        if glb_start >= original_data.len() {
+            return Err("Invalid B3DM data: GLB data start position out of bounds");
+        }
+
+        let glb_data = &original_data[glb_start..];
+
+        Ok(glb_data.to_vec())
+    }
 }
 
 impl BinaryReader<B3dm> for B3dm {}
@@ -265,9 +285,7 @@ mod tests {
         header.extend_from_slice(b"b3dm");
         header.extend_from_slice(&1u32.to_le_bytes()); // version
 
-        let header_size = 28;
-
-        let total_byte_length = header_size
+        let total_byte_length = B3DM_HEADER_SIZE
             + feature_table_json_padded.len()
             + feature_table_binary.len()
             + batch_table_json_padded.len()
@@ -292,9 +310,9 @@ mod tests {
     }
 
     #[test]
-    fn test_b3dm_header_parsing() {
+    fn it_should_parse_b3dm() {
         let data = create_mock_b3dm_data();
-        let b3dm = B3dm::from_data(data).unwrap();
+        let b3dm = B3dm::from_data(&data).unwrap();
 
         let batch_length = b3dm.feature_table.json.batch_length.unwrap() as usize;
 
@@ -415,5 +433,15 @@ mod tests {
                 .unwrap();
             assert(property_value, expect);
         }
+    }
+
+    #[test]
+    fn it_should_extract_glb_from_b3dm() {
+        let data = create_mock_b3dm_data();
+        let b3dm = B3dm::from_data(&data).unwrap();
+
+        let glb = Glb::from_data(&b3dm.extract_glb(&data).unwrap()).unwrap();
+
+        assert_eq!(glb.0.header.version, 2);
     }
 }

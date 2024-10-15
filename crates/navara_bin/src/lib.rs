@@ -39,7 +39,7 @@ pub fn parse_json_to_struct<T: serde::de::DeserializeOwned>(buf: &[u8]) -> serde
 }
 
 pub trait BinaryReader<B: BinRead> {
-    fn from_data<'a>(data: Vec<u8>) -> Result<B, binrw::Error>
+    fn from_data<'a>(data: &[u8]) -> Result<B, binrw::Error>
     where
         B::Args<'a>: Default,
     {
