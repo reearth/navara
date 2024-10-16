@@ -1,7 +1,10 @@
 use navara_math::{FloatType, RawDVec3, Vec3};
 
 // pub use radians::*;
-use crate::unit::{Angle, Degrees, Float, Meters, Radians, Unit};
+use crate::{
+    unit::{Angle, Degrees, Float, Meters, Radians, Unit},
+    Ellipsoid,
+};
 
 #[derive(PartialEq)]
 pub struct LngLat<F: Float, U: Unit<F>> {
@@ -218,4 +221,97 @@ pub enum CRS {
     ESPG {
         code: String,
     },
+}
+
+impl CRS {
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(v: &str) -> Self {
+        match v {
+            "EPSG:4326" => CRS::Geographic,
+            "EPSG:4978" => CRS::Geocentric,
+            _ => CRS::ESPG {
+                code: v.to_string(),
+            },
+        }
+    }
+
+    pub fn to_vec3(&self, ellipsoid: Ellipsoid<f32>, coords: Vec3, height: f32) -> Vec3 {
+        match self {
+            CRS::Geographic => {
+                let lng = coords.x;
+                let lat = coords.y;
+                let alt = coords.z;
+
+                xyz_to_vec3(
+                    LLE {
+                        lng: Angle::new(lng),
+                        lat: Angle::new(lat),
+                        height: Meters::new(alt + height),
+                    }
+                    .rad()
+                    .to_xyz(ellipsoid),
+                )
+            }
+            CRS::Geocentric => {
+                if height == 0. {
+                    return coords;
+                }
+                let mut lle = vec3_to_xyz(coords).to_lle(ellipsoid);
+                lle.height = Meters::new(lle.height.val() + height);
+                lle.to_xyz(ellipsoid).into()
+            }
+            CRS::ESPG { code: _ } => unimplemented!(),
+        }
+    }
+
+    pub fn to_lle(
+        &self,
+        ellipsoid: Ellipsoid<f32>,
+        coords: Vec3,
+        height: f32,
+    ) -> LLE<f32, Radians> {
+        match self {
+            CRS::Geographic => {
+                let lng = coords.x;
+                let lat = coords.y;
+                let alt = coords.z;
+
+                LLE {
+                    lng: Angle::new(lng),
+                    lat: Angle::new(lat),
+                    height: Meters::new(alt + height),
+                }
+                .rad()
+            }
+            CRS::Geocentric => {
+                let mut lle = vec3_to_xyz(coords).to_lle(ellipsoid);
+                lle.height = Meters::new(lle.height.val() + height);
+                lle
+            }
+            CRS::ESPG { code: _ } => unimplemented!(),
+        }
+    }
+
+    pub fn to_lng_lat(&self, ellipsoid: Ellipsoid<f32>, coords: Vec3) -> LngLat<f32, Radians> {
+        match self {
+            CRS::Geographic => {
+                let lng = coords.x;
+                let lat = coords.y;
+
+                LngLat {
+                    lng: Angle::new(lng),
+                    lat: Angle::new(lat),
+                }
+                .rad()
+            }
+            CRS::Geocentric => {
+                let lle = vec3_to_xyz(coords).to_lle(ellipsoid);
+                LngLat {
+                    lng: lle.lng,
+                    lat: lle.lat,
+                }
+            }
+            CRS::ESPG { code: _ } => unimplemented!(),
+        }
+    }
 }

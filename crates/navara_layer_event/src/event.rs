@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_core::{xyz_to_vec3, Angle, Meters, CRS, LLE, WGS84_32};
+use navara_core::{CRS, WGS84_32};
 use navara_feature::{polygon::UpdatePolygon, render::RenderableFeature};
 use navara_layer::{LayerDescription, LayerId, LayerStore};
 use navara_material::Appearance;
@@ -31,6 +31,9 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             LayerDescription::GeoJson(t) => {
                 commands.spawn(t.clone());
             }
+            LayerDescription::B3dm(t) => {
+                commands.spawn(t.clone());
+            }
         }
     }
 }
@@ -55,14 +58,18 @@ pub fn process_update_events(
                             ..
                         } => {
                             if let Appearance::Billboard(mat) = &ev.appearance {
+                                let should_update_transform =
+                                    material.height != mat.height || material.size != mat.size;
                                 *material = mat.clone();
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
+                                if should_update_transform {
+                                    *transform = calc_transform(
+                                        coordinates,
+                                        crs,
+                                        material.height,
+                                        material.size,
+                                        false,
+                                    );
+                                }
                             }
                         }
                         RenderableFeature::Point {
@@ -73,14 +80,18 @@ pub fn process_update_events(
                             ..
                         } => {
                             if let Appearance::Point(mat) = &ev.appearance {
+                                let should_update_transform =
+                                    material.height != mat.height || material.size != mat.size;
                                 *material = mat.clone();
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
+                                if should_update_transform {
+                                    *transform = calc_transform(
+                                        coordinates,
+                                        crs,
+                                        material.height,
+                                        material.size,
+                                        false,
+                                    );
+                                }
                             }
                         }
                         RenderableFeature::Model {
@@ -91,14 +102,18 @@ pub fn process_update_events(
                             ..
                         } => {
                             if let Appearance::Model(mat) = &ev.appearance {
+                                let should_update_transform =
+                                    material.height != mat.height || material.size != mat.size;
                                 *material = mat.clone();
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    true,
-                                );
+                                if should_update_transform {
+                                    *transform = calc_transform(
+                                        coordinates,
+                                        crs,
+                                        material.height,
+                                        material.size,
+                                        true,
+                                    );
+                                }
                             }
                         }
                         RenderableFeature::Polyline { material, .. } => {
@@ -107,10 +122,6 @@ pub fn process_update_events(
                             }
                         }
                         RenderableFeature::Polygon { .. } => {
-                            // TODO
-                            // 1. ポリゴン更新用のシステムを作る
-                            // 2. clamp_to_groundが更新されたらmin_max_heightsも更新
-                            // 3. terrainの高さに応じてMax Heightを更新
                             if let Appearance::Polygon(mat) = &ev.appearance {
                                 commands.spawn(UpdatePolygon {
                                     material: mat.clone(),
@@ -133,25 +144,7 @@ fn calc_transform(
     m_size: f32,
     need_rotate: bool,
 ) -> Transform {
-    let position = match crs {
-        CRS::Geographic => {
-            let lng = coordinates.x;
-            let lat = coordinates.y;
-            let height = coordinates.z;
-
-            xyz_to_vec3(
-                LLE {
-                    lng: Angle::new(lng),
-                    lat: Angle::new(lat),
-                    height: Meters::new(height + m_height),
-                }
-                .rad()
-                .to_xyz(WGS84_32),
-            )
-        }
-        CRS::Geocentric => unimplemented!(),
-        CRS::ESPG { code: _ } => unimplemented!(),
-    };
+    let position = crs.to_vec3(WGS84_32, *coordinates, m_height);
 
     let mut transform =
         Transform::from_translation(position).with_scale(Vec3::new(m_size, m_size, m_size));

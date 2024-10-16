@@ -123,6 +123,7 @@ impl App {
                     LayerDescription::Tiles(_) => "tiles",
                     LayerDescription::Terrain(_) => "terrain",
                     LayerDescription::GeoJson(_) => "geojson",
+                    LayerDescription::B3dm(_) => "b3dm",
                 };
             }
         }
@@ -131,14 +132,18 @@ impl App {
     }
 
     pub fn update_layer(&mut self, layer_id: &str, desc: LayerDescription) {
-        if let LayerDescription::GeoJson(geo) = desc {
-            self.app
-                .world_mut()
-                .send_event(navara_layer_event::UpdateLayerEvent {
-                    layer_id: LayerId(layer_id.to_owned()),
-                    appearance: geo.appearances[0].clone(),
-                });
-        }
+        // TODO: Support multiple appearance
+        let appearance = match desc {
+            LayerDescription::GeoJson(layer) => layer.appearances[0].clone(),
+            LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
+            _ => return,
+        };
+        self.app
+            .world_mut()
+            .send_event(navara_layer_event::UpdateLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                appearance,
+            });
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {

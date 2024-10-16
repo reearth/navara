@@ -10,11 +10,6 @@ pub const GLB_HEADER_SIZE: usize = 12;
 
 #[derive(BinRead)]
 #[br(magic = b"glTF", little)]
-pub struct GlbWithMagic(pub GlbInner);
-impl BinaryReader<GlbWithMagic> for GlbWithMagic {}
-
-#[derive(BinRead)]
-#[br(little)]
 pub struct Glb(pub GlbInner);
 impl BinaryReader<Glb> for Glb {}
 
@@ -46,7 +41,7 @@ pub struct GlbInner {
 pub mod mock {
     use crate::GLB_HEADER_SIZE;
 
-    pub fn create_mock_glb_data(header: bool) -> Vec<u8> {
+    pub fn create_mock_glb_data() -> Vec<u8> {
         // JSON chunk
         let json = r#"
     {
@@ -96,9 +91,7 @@ pub mod mock {
         // GLB header
         let length = GLB_HEADER_SIZE + chunk_json.len();
         let mut header_data = vec![];
-        if header {
-            header_data.extend_from_slice(b"glTF");
-        }
+        header_data.extend_from_slice(b"glTF");
         header_data.extend_from_slice(&2u32.to_le_bytes()); // version
         header_data.extend_from_slice(&(length as u32).to_le_bytes());
 
@@ -119,7 +112,7 @@ mod tests {
 
     #[test]
     fn it_should_parse_glb() {
-        let data = create_mock_glb_data(false);
+        let data = create_mock_glb_data();
         let glb = Glb::from_data(&data).unwrap();
 
         assert_eq!(glb.0.header.version, 2);
@@ -138,13 +131,5 @@ mod tests {
                 Value::Number(Number::from_f64(3.0).unwrap()),
             ])
         )
-    }
-
-    #[test]
-    fn it_should_parse_glb_with_magic() {
-        let data = create_mock_glb_data(true);
-        let glb = GlbWithMagic::from_data(&data).unwrap();
-
-        assert_eq!(glb.0.header.version, 2);
     }
 }

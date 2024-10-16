@@ -24,7 +24,7 @@ import {
   MeshLambertMaterial,
   Material,
 } from "three";
-import { GLTFLoader } from "three-stdlib";
+import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import type { CommonUniforms } from "../uniforms";
 
@@ -44,7 +44,7 @@ export function renderFeature(
     return renderBillboard(f.billboard);
   }
   if (f.model) {
-    return renderModel(f.model);
+    return renderModel(f.model, buf);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
@@ -118,12 +118,38 @@ async function renderBillboard(m: BillboardMesh) {
   return sprite;
 }
 
-async function renderModel(m: ModelMesh) {
-  const loader = new GLTFLoader();
+const initializeGltfLoader = (() => {
+  let GLTF: GLTFLoader;
+  return () => {
+    if (GLTF) return GLTF;
+    GLTF = new GLTFLoader();
+    const draco = new DRACOLoader();
+    draco.setDecoderPath(
+      "https://unpkg.com/three@0.161.0/examples/jsm/libs/draco/gltf/",
+    );
+    GLTF.setDRACOLoader(draco);
+    return GLTF;
+  };
+})();
 
-  const model = await loader.loadAsync(m.material.url);
+async function renderModel(m: ModelMesh, buf: BufferLoader) {
+  const loader = initializeGltfLoader();
 
-  return model.scene;
+  if (m.bin) {
+    const bin = buf.u8(m.bin);
+    if (!bin) {
+      return;
+    }
+    // FIXME: Specify origin path
+    const model = await loader.parseAsync(bin.buffer, "");
+    return model.scene;
+  } else {
+    if (!m.material.url) {
+      return;
+    }
+    const model = await loader.loadAsync(m.material.url);
+    return model.scene;
+  }
 }
 
 async function renderPolyline(

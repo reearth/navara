@@ -101,6 +101,8 @@ pub struct DataRequestEvent {
 
     pub handle: i32, // handle
     #[wasm_bindgen(getter_with_clone)]
+    pub extension: String,
+    #[wasm_bindgen(getter_with_clone)]
     pub url: String,
 }
 
@@ -291,6 +293,7 @@ impl<'a>
             gen: ev.gen,
             bits: ev.bits,
             handle: ev.comp.handle,
+            extension: ev.comp.extension.to_string(),
             url: ev.comp.url.clone(),
         }
     }

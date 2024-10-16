@@ -1,3 +1,4 @@
+use navara_buffer_store::Handle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -51,6 +52,7 @@ pub struct ModelMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub material: ModelMaterial,
     pub transform: Transform,
+    pub bin: Option<Handle>,
 }
 
 #[wasm_bindgen]
@@ -139,10 +141,12 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 transform,
                 feature_id: _,
                 render_info: _,
+                bin,
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
                     transform: transform.into(),
+                    bin: bin.as_ref().map(|v| v.0),
                 }),
                 ..Default::default()
             },

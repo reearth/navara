@@ -279,7 +279,7 @@ mod tests {
         batch_table_binary.append(&mut 5.4f32.to_le_bytes().to_vec());
 
         // GLB Data (dummy)
-        let glb_data = create_mock_glb_data(false);
+        let glb_data = create_mock_glb_data();
 
         let mut header = Vec::new();
         header.extend_from_slice(b"b3dm");

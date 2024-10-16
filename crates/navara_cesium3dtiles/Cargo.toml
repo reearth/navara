@@ -1,0 +1,23 @@
+[package]
+name = "navara_cesium3dtiles"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[dependencies]
+bevy_app = "0.14.2"
+bevy_ecs = "0.14.2"
+bevy_log = "0.14.2"
+navara_core = { path = "../navara_core" }
+navara_layer = { path = "../navara_layer" }
+navara_material = { path = "../navara_material" }
+navara_math = { path = "../navara_math" }
+navara_parser = { path = "../navara_parser" }
+navara_feature = { path = "../navara_feature" }
+navara_buffer_store = { path = "../navara_buffer_store" }
+navara_data_requester = { path = "../navara_data_requester" }
+navara_event_store = { path = "../navara_event_store" }
+navara_geometry = { path = "../navara_geometry" }
