@@ -5,7 +5,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_core::{Angle, Meters, CRS, LLE, WGS84_32};
+use navara_core::{CRS, WGS84_32};
 use navara_geometry::{
     create_polyline_geometry, PolylineGeometryOptions, TransferableFloatAttribute,
 };
@@ -80,28 +80,10 @@ pub fn transfer_mesh(
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, geometry, material) in &polylines {
-        let positions = match geometry.crs {
-            CRS::Geographic => {
-                let mut positions = vec![];
-                for c in &geometry.coords {
-                    let lng = c.x;
-                    let lat = c.y;
-                    let height = c.z;
-
-                    positions.push(
-                        LLE {
-                            lng: Angle::new(lng),
-                            lat: Angle::new(lat),
-                            height: Meters::new(height + material.height),
-                        }
-                        .rad(),
-                    );
-                }
-                positions
-            }
-            CRS::Geocentric => unimplemented!(),
-            CRS::ESPG { code: _ } => unimplemented!(),
-        };
+        let mut positions = vec![];
+        for c in &geometry.coords {
+            positions.push(geometry.crs.to_lle(WGS84_32, *c, material.height));
+        }
 
         if let Some(geometry) = create_polyline_geometry(
             WGS84_32,
@@ -111,7 +93,6 @@ pub fn transfer_mesh(
                 ..Default::default()
             },
         ) {
-            // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
             let entity = commands.spawn((
                 PolylineMarker,
                 RenderableFeature::Polyline {

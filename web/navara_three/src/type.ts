@@ -1,4 +1,5 @@
 import type {
+  B3dmLayerDescription,
   GeoJsonLayerDescription,
   TerrainLayerDescription,
   TileLayerDescription,
@@ -12,7 +13,8 @@ export type LayerDescription =
   | MVTLayer
   | TilesLayer
   | TerrainLayer
-  | GeoJsonLayer;
+  | GeoJsonLayer
+  | B3dmLayer;
 
 export type C3dtilesLayer = { type: "3dtiles"; url: string };
 
@@ -35,5 +37,6 @@ type Layer<LD> = RemoveFreeRecursively<LD>;
 export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
 export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
 export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
+export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;

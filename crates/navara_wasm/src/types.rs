@@ -1,6 +1,6 @@
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
-use navara_layer::{GeoJsonLayer, TerrainDataType, TerrainLayer, TilesLayer};
+use navara_layer::{B3dmLayer, GeoJsonLayer, LayerData, TerrainDataType, TerrainLayer, TilesLayer};
 use navara_material::Appearance;
 use navara_math::FloatType;
 use navara_parser::geojson::GeoJson;
@@ -89,13 +89,39 @@ impl GeoJsonLayerDescription {
     }
 
     pub fn crs(&self) -> Option<navara_core::CRS> {
-        Some(match self.crs.as_ref()?.as_str() {
-            "EPSG:4326" => CRS::Geographic,
-            "EPSG:4978" => CRS::Geocentric,
-            _ => CRS::ESPG {
-                code: self.crs.clone().unwrap(),
-            },
-        })
+        Some(CRS::from_str(self.crs.as_ref()?.as_str()))
+    }
+}
+
+// This is used for debugging.
+#[wasm_bindgen]
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct B3dmLayerDescription {
+    #[wasm_bindgen(getter_with_clone)]
+    pub r#type: Option<String>,
+    pub wireframe: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub crs: Option<String>,
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(skip_deserializing)]
+    pub data: JsValue,
+
+    // Appearances
+    #[wasm_bindgen(getter_with_clone)]
+    pub model: Option<ModelMaterial>,
+}
+
+impl B3dmLayerDescription {
+    pub fn appearances(&mut self) -> Vec<Appearance> {
+        let mut result = vec![];
+        if let Some(v) = self.model.take() {
+            result.push(Appearance::Model(v.into()));
+        }
+        result
+    }
+
+    pub fn crs(&self) -> Option<navara_core::CRS> {
+        Some(CRS::from_str(self.crs.as_ref()?.as_str()))
     }
 }
 
@@ -108,10 +134,17 @@ pub struct LayerDescription {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
-pub struct GeoJsonLayerDescriptionData {
+pub struct LayerDescriptionData {
     #[wasm_bindgen(getter_with_clone)]
     #[serde(with = "serde_wasm_bindgen::preserve")]
     pub data: JsValue,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Deserialize)]
+pub struct LayerDescriptionUrl {
+    #[wasm_bindgen(getter_with_clone)]
+    pub url: String,
 }
 
 #[wasm_bindgen]
@@ -168,11 +201,9 @@ impl LayerDescription {
                 }))
             }
             "geojson" => {
-                let js_data: GeoJsonLayerDescriptionData =
-                    serde_wasm_bindgen::from_value(value.clone()).unwrap_or_else(|_e| {
-                        GeoJsonLayerDescriptionData {
-                            data: JsValue::NULL,
-                        }
+                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
+                    .unwrap_or_else(|_e| LayerDescriptionData {
+                        data: JsValue::NULL,
                     });
 
                 let mut geo_data: Option<GeoJson> = None;
@@ -186,6 +217,26 @@ impl LayerDescription {
                 Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
                     layer_id: layer_id.to_string(),
                     data: geo_data,
+                    appearances: layer.appearances(),
+                    crs: layer.crs(),
+                }))
+            }
+            "b3dm" => {
+                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
+                    .unwrap_or_else(|_e| LayerDescriptionData {
+                        data: JsValue::NULL,
+                    });
+
+                let mut data: Option<LayerDescriptionUrl> = None;
+                if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                }
+
+                let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+
+                Some(navara_layer::LayerDescription::B3dm(B3dmLayer {
+                    layer_id: layer_id.to_string(),
+                    data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(),
                     crs: layer.crs(),
                 }))

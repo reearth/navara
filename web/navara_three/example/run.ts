@@ -2,9 +2,11 @@ import ThreeView from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
 
-import { type GeoJsonLayer } from "../src/type";
+import { type B3dmLayer, type GeoJsonLayer } from "../src/type";
 
-const geoLayersDef: GeoJsonLayer[] = [
+type MaterialLayerDescription = GeoJsonLayer | B3dmLayer;
+
+const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "geojson",
     data: {
@@ -252,6 +254,24 @@ const geoLayersDef: GeoJsonLayer[] = [
     },
     wireframe: false,
   },
+  {
+    type: "b3dm",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/data/data457.b3dm",
+    },
+    model: {
+      show: true,
+    },
+  },
+  {
+    type: "b3dm",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
+    },
+    model: {
+      show: true,
+    },
+  },
 ];
 
 export const run = async (view: ThreeView) => {
@@ -342,7 +362,7 @@ export const run = async (view: ThreeView) => {
         : JAPAN_GSI_ELEVATION_DECODER,
   });
 
-  const geoLayerMap = new Map<string, GeoJsonLayer>();
+  const geoLayerMap = new Map<string, MaterialLayerDescription>();
   geoLayersDef.forEach((layer) => {
     const layerId = view.addLayer(layer);
     if (layerId) {
@@ -579,7 +599,7 @@ export const run = async (view: ThreeView) => {
 function createParamCtrl(
   pane: Pane,
   paneParams: any,
-  layer: GeoJsonLayer | undefined,
+  layer: MaterialLayerDescription | undefined,
   changeFunc: () => void,
 ) {
   if (!layer) {
@@ -641,7 +661,7 @@ function createParamCtrl(
 function createMaterialCtrl(
   pane: Pane,
   paneParams: any,
-  layer: GeoJsonLayer | undefined,
+  layer: MaterialLayerDescription | undefined,
 ) {
   if (layer) {
     const options = getMaterialOptions(layer);
@@ -660,7 +680,7 @@ function createMaterialCtrl(
   }
 }
 
-function getMaterialOptions(layer: GeoJsonLayer) {
+function getMaterialOptions(layer: MaterialLayerDescription) {
   const materials = [];
   if ("point" in layer) {
     materials.push("point");

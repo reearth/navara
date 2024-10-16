@@ -266,36 +266,49 @@ function disposeObject3D(model: Object3D): void {
 }
 
 function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
-  const loader = new ImageLoader();
-  loader
-    .loadAsync(req.url)
-    .then((img) => {
-      // TODO: Get OffScreeCanvas from main thread in worker.
-      const canvas = document.createElement("canvas");
-      canvas.height = img.height;
-      canvas.width = img.width;
-      const context = canvas.getContext("2d");
-      if (context === null) {
-        throw new Error("failed to get context of canvas");
-      } else {
-        context.drawImage(img, 0, 0);
-      }
-      const data = context.getImageData(0, 0, img.height, img.width).data;
-      if (data === undefined) {
-        throw new Error("failed to convert array");
-      } else {
-        const u8a = new Uint8Array(data);
-        buf.setU8(req.handle, req.bits, u8a);
+  if (req.extension === "png") {
+    const loader = new ImageLoader();
+    loader
+      .loadAsync(req.url)
+      .then((img) => {
+        // TODO: Get OffScreeCanvas from main thread in worker.
+        const canvas = document.createElement("canvas");
+        canvas.height = img.height;
+        canvas.width = img.width;
+        const context = canvas.getContext("2d");
+        if (context === null) {
+          throw new Error("failed to get context of canvas");
+        } else {
+          context.drawImage(img, 0, 0);
+        }
+        const data = context.getImageData(0, 0, img.height, img.width).data;
+        if (data === undefined) {
+          throw new Error("failed to convert array");
+        } else {
+          const u8a = new Uint8Array(data);
+          buf.setU8(req.handle, req.bits, u8a);
 
-        // Prevent memory leak
-        u8a.set([]);
-        data.set([]);
-      }
-      img.remove();
-      canvas.remove();
-    })
-    .catch(() => {
-      buf.triggerDataRequesterFailed(req.bits);
+          // Prevent memory leak
+          u8a.set([]);
+          data.set([]);
+        }
+        img.remove();
+        canvas.remove();
+      })
+      .catch(() => {
+        buf.triggerDataRequesterFailed(req.bits);
+      });
+    return;
+  }
+
+  fetch(req.url)
+    .then((res) => res.arrayBuffer())
+    .then((val) => {
+      const bytes = new Uint8Array(val);
+      buf.setU8(req.handle, req.bits, bytes);
+
+      // Prevent memory leak
+      bytes.set([]);
     });
 }
 
@@ -426,9 +439,7 @@ function processBillboardChanged(obj: Sprite, material: BillboardMaterial) {
 }
 
 function processModelChanged(obj: Group, material: ModelMaterial) {
-  obj.children.forEach((child) => {
-    child.visible = material.show ?? true;
-  });
+  obj.visible = material.show ?? true;
 }
 
 function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {

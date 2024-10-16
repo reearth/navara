@@ -2,7 +2,7 @@ use crate::terrain::{RasterDEMData, TerrainData};
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_core::tile_url;
-use navara_data_requester::DataRequester;
+use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_math::FloatType;
 
@@ -40,7 +40,7 @@ pub(crate) fn request_terrain_data(
             };
             let entity = commands.spawn((
                 TerrainDataRequesterMarker(handle),
-                DataRequester::from_store(url, buf),
+                DataRequester::from_store(url, buf, DataRequesterExtension::Png),
                 TileOrderByDistance(tile_distance),
             ));
             terrain_data.set_data_requester_entity_id(Some(entity.id()));
