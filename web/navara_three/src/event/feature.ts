@@ -118,27 +118,29 @@ async function renderBillboard(m: BillboardMesh) {
   return sprite;
 }
 
-const initializeDraco = (() => {
-  let DRACO: DRACOLoader;
+const initializeGltfLoader = (() => {
+  let GLTF: GLTFLoader;
   return () => {
-    if (DRACO) return DRACO;
-    DRACO = new DRACOLoader();
-    DRACO.setDecoderPath(
+    if (GLTF) return GLTF;
+    GLTF = new GLTFLoader();
+    const draco = new DRACOLoader();
+    draco.setDecoderPath(
       "https://unpkg.com/three@0.161.0/examples/jsm/libs/draco/gltf/",
     );
-    return DRACO;
+    GLTF.setDRACOLoader(draco);
+    return GLTF;
   };
 })();
 
 async function renderModel(m: ModelMesh, buf: BufferLoader) {
-  const loader = new GLTFLoader();
+  const loader = initializeGltfLoader();
+
   if (m.bin) {
     const bin = buf.u8(m.bin);
     if (!bin) {
       return;
     }
-    const draco = initializeDraco();
-    loader.setDRACOLoader(draco);
+    // FIXME: Specify origin path
     const model = await loader.parseAsync(bin.buffer, "");
     return model.scene;
   } else {
