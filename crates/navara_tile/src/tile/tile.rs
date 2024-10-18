@@ -287,6 +287,10 @@ impl Tile {
         self.upsampled = false;
         self.previous_rendered_state = None;
     }
+
+    pub fn is_root(&self) -> bool {
+        self.coords.x == 0 && self.coords.y == 0 && self.coords.z == 0
+    }
 }
 
 pub type TileQuadtree = Quadtree<usize, Tile>;
