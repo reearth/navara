@@ -1,0 +1,7 @@
+[package]
+name = "navara_mvt_parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+prost = "0.11"
