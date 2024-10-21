@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-prost = "0.11"
+mvt-reader = "1.5.0"
+geo-types = "0.7"
