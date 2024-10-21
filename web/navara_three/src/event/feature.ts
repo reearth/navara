@@ -22,7 +22,6 @@ import {
   TextureLoader,
   Object3D,
   MeshLambertMaterial,
-  Material,
 } from "three";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
@@ -31,11 +30,9 @@ import type { CommonUniforms } from "../uniforms";
 import type { BufferLoader } from ".";
 
 export function renderFeature(
-  id: string,
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point);
@@ -50,7 +47,7 @@ export function renderFeature(
     return renderPolyline(f.polyline, buf, uniforms);
   }
   if (f.polygon) {
-    return renderPolygon(id, f.polygon, buf, uniforms, drapedFeatureMaterials);
+    return renderPolygon(f.polygon, buf, uniforms);
   }
 }
 
@@ -235,11 +232,9 @@ async function renderPolyline(
 }
 
 async function renderPolygon(
-  id: string,
   mesh: PolygonMesh,
   buf: BufferLoader,
   _uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
 ) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
@@ -330,11 +325,8 @@ if(uClampToGround) {
       );
   };
 
-  if (clampToGround) {
-    drapedFeatureMaterials.set(id, material);
-  }
-
   const m = new Mesh(geometry, material);
+  m.userData.draped = clampToGround;
 
   return m;
 }
