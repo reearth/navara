@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mvt-reader = "1.5.0"
+mvt-reader = { git = "https://github.com/reearth/mvt-reader.git" }
 geo-types = "0.7"
 
 [dev-dependencies]
