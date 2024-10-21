@@ -8,23 +8,94 @@ pub fn from_data(data: Vec<u8>) -> Result<Reader, &'static str> {
 mod tests {
     use super::*;
     use geo_types::Geometry;
+    mod vector_tile;
+
+    use prost::Message;
+    use vector_tile::Tile;
+
+    fn create_mock_mvt_data() -> Vec<u8> {
+        let mut tile = Tile { layers: Vec::new() };
+
+        let layer = vector_tile::tile::Layer {
+            version: 2,
+            name: "test_layer_with_all_geom_types".to_string(),
+            features: vec![
+                // Point feature
+                vector_tile::tile::Feature {
+                    id: Some(1),
+                    tags: vec![0, 0], // keys[0] values[0]
+                    r#type: Some(vector_tile::tile::GeomType::Point as i32),
+                    geometry: vec![9, 50, 34],
+                },
+                // LineString feature
+                vector_tile::tile::Feature {
+                    id: Some(2),
+                    tags: vec![1, 1], // keys[1] values[1]
+                    r#type: Some(vector_tile::tile::GeomType::Linestring as i32),
+                    geometry: vec![18, 10, 20, 15, 25],
+                },
+                // Polygon feature
+                vector_tile::tile::Feature {
+                    id: Some(3),
+                    tags: vec![2, 2], // keys[2] values[2]
+                    r#type: Some(vector_tile::tile::GeomType::Polygon as i32),
+                    geometry: vec![
+                        9, 4, 4, // move to (4, 4)
+                        26, 0, 10, // line to (30, 14)
+                        0, 14, // line to (30, 28)
+                        15, 0, // line to (15, 28)
+                        15, 0, // line to (0, 28) closing the polygon
+                    ],
+                },
+            ],
+            keys: vec![
+                "name".to_string(),
+                "type".to_string(),
+                "description".to_string(),
+            ],
+            values: vec![
+                vector_tile::tile::Value {
+                    string_value: Some("example_point".to_string()),
+                    float_value: Some(321.0),
+                    double_value: Some(654.0),
+                    int_value: Some(456),
+                    uint_value: Some(789),
+                    sint_value: Some(-123),
+                    bool_value: Some(false),
+                },
+                vector_tile::tile::Value {
+                    string_value: Some("line".to_string()),
+                    float_value: Some(111.0),
+                    double_value: Some(222.0),
+                    int_value: Some(333),
+                    uint_value: Some(444),
+                    sint_value: Some(-555),
+                    bool_value: Some(true),
+                },
+                vector_tile::tile::Value {
+                    string_value: Some("polygon_example".to_string()),
+                    float_value: Some(987.0),
+                    double_value: Some(1234.0),
+                    int_value: Some(100),
+                    uint_value: Some(200),
+                    sint_value: Some(-50),
+                    bool_value: Some(true),
+                },
+            ],
+            extent: Some(4096),
+        };
+
+        tile.layers.push(layer);
+
+        let mut buffer = Vec::new();
+        tile.encode(&mut buffer).expect("Failed to encode Tile");
+
+        buffer
+    }
 
     #[test]
     fn it_should_parse_mvt() {
-        let buffer: Vec<u8> = vec![
-            26, 235, 1, 10, 30, 116, 101, 115, 116, 95, 108, 97, 121, 101, 114, 95, 119, 105, 116,
-            104, 95, 97, 108, 108, 95, 103, 101, 111, 109, 95, 116, 121, 112, 101, 115, 18, 13, 8,
-            1, 18, 2, 0, 0, 24, 1, 34, 3, 9, 50, 34, 18, 15, 8, 2, 18, 2, 1, 1, 24, 2, 34, 5, 18,
-            10, 20, 15, 25, 18, 22, 8, 3, 18, 2, 2, 2, 24, 3, 34, 12, 9, 4, 4, 26, 0, 10, 0, 14,
-            15, 0, 15, 0, 26, 4, 110, 97, 109, 101, 26, 4, 116, 121, 112, 101, 26, 11, 100, 101,
-            115, 99, 114, 105, 112, 116, 105, 111, 110, 34, 40, 10, 13, 101, 120, 97, 109, 112,
-            108, 101, 95, 112, 111, 105, 110, 116, 21, 0, 128, 160, 67, 25, 0, 0, 0, 0, 0, 112,
-            132, 64, 32, 200, 3, 40, 149, 6, 48, 245, 1, 56, 0, 34, 31, 10, 4, 108, 105, 110, 101,
-            21, 0, 0, 222, 66, 25, 0, 0, 0, 0, 0, 192, 107, 64, 32, 205, 2, 40, 188, 3, 48, 213, 8,
-            56, 1, 34, 40, 10, 15, 112, 111, 108, 121, 103, 111, 110, 95, 101, 120, 97, 109, 112,
-            108, 101, 21, 0, 192, 118, 68, 25, 0, 0, 0, 0, 0, 72, 147, 64, 32, 100, 40, 200, 1, 48,
-            99, 56, 1, 40, 128, 32, 120, 2,
-        ];
+        let buffer = create_mock_mvt_data();
 
         let result = from_data(buffer);
         assert!(result.is_ok(), "Parse mvt data error");
