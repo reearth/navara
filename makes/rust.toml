@@ -1,0 +1,51 @@
+[tasks.format-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo fmt --all
+''']
+
+[tasks.format-check-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo fmt --all --check
+''']
+
+[tasks.lint-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+''']
+
+[tasks.build-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cd crates/navara_wasm
+wasm-pack build --target web --release
+''']
+
+[tasks.test-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo test --workspace --all-targets --all-features
+''']
+
+[tasks.build-dev-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cd crates/navara_wasm
+wasm-pack build --target web
+''']
+
+[tasks.watch-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cd crates/navara_wasm
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
+''']
+
+[tasks.doc-rust]
+script = ['''
+#!/usr/bin/env bash -eux
+cargo clean --doc
+cargo doc --no-deps --all-features
+''']
