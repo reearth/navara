@@ -77,5 +77,11 @@ jobs:
         with:
           toolchain: stable
           override: true
+
+      - name: install protoc
+        uses: taiki-e/install-action@v2
+        with:
+          tool: protoc@${{ env.PROTOC_VERSION }}
+
       - run: cargo test --doc
       - run: cargo doc --all-features --release
