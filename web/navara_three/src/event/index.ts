@@ -36,12 +36,17 @@ import {
   ShaderMaterial,
 } from "three";
 
+import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
-import { generate_id_from_entity, to_globe_depth_id } from "./id";
+import {
+  generate_id_from_entity,
+  to_draped_feature_id,
+  to_globe_depth_id,
+} from "./id";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -59,8 +64,7 @@ export type TextureFragmentHandler = {
 };
 
 export function processEvent(
-  scene: Object3D,
-  globeDepthScene: Object3D,
+  scenes: Scenes,
   camera: Camera,
   meshes: MeshCache,
   buf: BufferLoader,
@@ -79,19 +83,26 @@ export function processEvent(
     processObjectTransformUpdated(meshes, obj),
   );
   event.object_removed?.forEach((obj) => {
-    processObjectRemoved(scene, meshes, obj);
-    processObjectRemoved(globeDepthScene, meshes, obj, true);
+    processObjectRemoved(scenes.main, meshes, obj);
+    processObjectRemoved(scenes.globe, meshes, obj, true);
   });
   event.mesh_added?.forEach((mesh) =>
-    processMeshAdded(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
+    processMeshAdded(scenes.main, scenes.globe, meshes, mesh, buf, loadedTexs),
   );
   event.mesh_updated?.forEach((mesh) =>
-    processMeshChanged(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
+    processMeshChanged(
+      scenes.main,
+      scenes.globe,
+      meshes,
+      mesh,
+      buf,
+      loadedTexs,
+    ),
   );
   event.renderable_feature_added?.forEach((ev) =>
     processRenderableFeatureAdded(
       ev,
-      scene,
+      scenes,
       meshes,
       buf,
       uniforms,
@@ -99,11 +110,18 @@ export function processEvent(
     ),
   );
   event.renderable_feature_changed?.forEach((ev) =>
-    processRenderableFeatureChanged(ev, meshes, drapedFeatureMaterials),
+    processRenderableFeatureChanged(scenes, ev, meshes, drapedFeatureMaterials),
   );
-  event.renderable_feature_removed?.forEach((ev) =>
-    processObjectRemoved(scene, meshes, ev, undefined, drapedFeatureMaterials),
-  );
+  event.renderable_feature_removed?.forEach((ev) => {
+    processObjectRemoved(scenes.main, meshes, ev);
+    processObjectRemoved(
+      scenes.drapedFeatures,
+      meshes,
+      ev,
+      undefined,
+      drapedFeatureMaterials,
+    );
+  });
 
   event.texture_fragment_requested?.forEach((req) =>
     processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
@@ -205,6 +223,10 @@ function processObjectRemoved(
   if (isGlobeDepth) {
     id = to_globe_depth_id(id);
   }
+  if (drapedFeatureMaterials) {
+    id = to_draped_feature_id(id);
+    drapedFeatureMaterials.delete(id);
+  }
   const m = meshes.get(id);
   if (!m) return;
 
@@ -214,8 +236,6 @@ function processObjectRemoved(
   if (m instanceof Object3D) {
     disposeObject3D(m);
   }
-
-  drapedFeatureMaterials?.delete(id);
 
   // clear should after dispose, otherwise model's children will not be disposed
   m.clear();
@@ -353,20 +373,14 @@ function processTextureFragmentRemoved(
 
 async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
-  parent: Object3D,
+  scenes: Scenes,
   meshes: MeshCache,
   buf: BufferLoader,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(
-    id,
-    ev.feature,
-    buf,
-    uniforms,
-    drapedFeatureMaterials,
-  );
+  const obj = await renderFeature(ev.feature, buf, uniforms);
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
@@ -380,13 +394,22 @@ async function processRenderableFeatureAdded(
 
   obj.renderOrder = 1;
 
-  parent.add(obj);
+  scenes.main.add(obj);
 
   meshes.set(id, obj);
+
+  if (obj.userData.draped && obj instanceof Mesh) {
+    const drapedId = to_draped_feature_id(id);
+    const m = new Mesh(obj.geometry, obj.material);
+    scenes.drapedFeatures.add(m);
+    drapedFeatureMaterials.set(drapedId, m.material as Material);
+    meshes.set(drapedId, m);
+  }
 }
 
 // TODO: Update material in this function.
 function processRenderableFeatureChanged(
+  scenes: Scenes,
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
@@ -419,7 +442,31 @@ function processRenderableFeatureChanged(
       processPolylineChanged(obj, material);
     }
     if (obj instanceof Mesh && material instanceof PolygonMaterial) {
-      processPolygonChanged(id, obj, material, drapedFeatureMaterials);
+      processPolygonChanged(obj, material);
+    }
+
+    // Handle a draped mesh
+    if (obj instanceof Mesh && obj.userData.draped != null) {
+      const drapedId = to_draped_feature_id(id);
+      if (obj.userData.draped) {
+        obj.material.stencilWrite = true;
+        drapedFeatureMaterials.set(drapedId, obj.material);
+        if (!meshes.has(drapedId)) {
+          const m = new Mesh(obj.geometry, obj.material);
+          scenes.drapedFeatures.add(m);
+          meshes.set(drapedId, m);
+        }
+      } else {
+        obj.material.stencilWrite = false;
+        drapedFeatureMaterials.delete(drapedId);
+        if (meshes.has(drapedId)) {
+          const m = meshes.get(drapedId);
+          if (m) {
+            scenes.drapedFeatures.remove(m);
+          }
+          meshes.delete(drapedId);
+        }
+      }
     }
   }
 
@@ -450,12 +497,7 @@ function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
   }
 }
 
-function processPolygonChanged(
-  id: string,
-  obj: Mesh,
-  material: PolygonMaterial,
-  drapedFeatureMaterials: Map<string, Material>,
-) {
+function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
   if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
     obj.material.visible = material.show ?? true;
@@ -467,13 +509,7 @@ function processPolygonChanged(
       obj.material.userData.uClampToGround.value = material.clamp_to_ground;
       // obj.material = obj.material.clone();
     }
-    if (material.clamp_to_ground) {
-      obj.material.stencilWrite = true;
-      drapedFeatureMaterials.set(id, obj.material);
-    } else {
-      obj.material.stencilWrite = false;
-      drapedFeatureMaterials.delete(id);
-    }
+    obj.userData.draped = material.clamp_to_ground;
   }
 }
 

@@ -1,0 +1,70 @@
+[tasks.install-deps-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm i --legacy-peer-deps
+''']
+
+[tasks.dev-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run dev
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.build-web-example]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run build:example
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.build-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run build
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.lint-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run lint
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.lint-check-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+ npm run lint:check
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.format-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run format
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.format-check-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run format:check
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.test-web]
+script = ['''
+#!/usr/bin/env bash -eux
+cd web/navara_three
+npm run test
+''']
+dependencies = ["install-deps-web"]

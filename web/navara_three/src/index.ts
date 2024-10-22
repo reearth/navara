@@ -1,5 +1,4 @@
 import initCore, { Core, TextureFragmentStatus } from "navara";
-import Stats from "stats.js";
 import {
   PerspectiveCamera,
   Scene,
@@ -31,6 +30,8 @@ import {
   type TextureFragmentHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
+import type { Scenes } from "./scene";
+import { RendererStats } from "./stats";
 import { C3TilesManager } from "./temp/C3Tiles";
 import MVT from "./temp/MVT";
 import { isWorker } from "./temp/utils";
@@ -56,19 +57,17 @@ export type Events = {
 };
 
 export default class ThreeView {
-  scene: Scene;
+  _scenes: Scenes;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
 
   _globeDepthRenderTarget: WebGLRenderTarget;
-  // Render only globe
-  _globeScene: Scene;
   // Store draped feature's materials
   _drapedFeatureMaterials = new Map<string, Material>();
 
   _core: Core | undefined;
   _options: Options;
-  _stats: Stats | undefined;
+  _stats: RendererStats | undefined;
   _eventDisposer: (() => void) | undefined;
   _disposed = false;
   _events: {
@@ -131,7 +130,9 @@ export default class ThreeView {
         canvas: options.canvas,
         stencil: true,
       });
+      renderer.info.autoReset = false;
       renderer.autoClearStencil = false;
+      renderer.autoClearDepth = false;
       this.renderer = renderer;
 
       const { width = options.initialWidth, height = options.initialHeight } =
@@ -167,19 +168,27 @@ export default class ThreeView {
     this._globeDepthRenderTarget.depthTexture.format = DepthFormat;
     this._globeDepthRenderTarget.depthTexture.type = FloatType;
 
+    let scene: Scene;
     if (options.scene) {
-      this.scene = options.scene;
+      scene = options.scene;
     } else {
-      const scene = new Scene();
-      this.scene = scene;
+      scene = new Scene();
     }
 
+    let globeScene: Scene;
     if (options.globeScene) {
-      this._globeScene = options.globeScene;
+      globeScene = options.globeScene;
     } else {
-      const globeDepthScene = new Scene();
-      this._globeScene = globeDepthScene;
+      globeScene = new Scene();
     }
+
+    const drapedFeaturesScene = new Scene();
+
+    this._scenes = {
+      main: scene,
+      globe: globeScene,
+      drapedFeatures: drapedFeaturesScene,
+    };
 
     if (options.camera) {
       this.camera = options.camera;
@@ -207,7 +216,10 @@ export default class ThreeView {
     if (options.debug) {
       const t = options.container || this.renderer.domElement.parentElement;
       if (t) {
-        this._stats = new Stats();
+        this._stats = new RendererStats({
+          beginDrawCalls: () => this.renderer.info.reset(),
+          endDrawCalls: () => this.renderer.info.render.calls,
+        });
         t.appendChild(this._stats.dom);
       }
     }
@@ -217,7 +229,7 @@ export default class ThreeView {
 
     // c3tiles
     this._c3tiles = new C3TilesManager(
-      this.scene,
+      this._scenes.main,
       this.camera,
       this.renderer,
       this.control,
@@ -229,6 +241,10 @@ export default class ThreeView {
       tGlobeDepth: { value: null },
       inverseProjectionMatrix: { value: null },
     };
+  }
+
+  get scene() {
+    return this._scenes.main;
   }
 
   async init() {
@@ -330,8 +346,7 @@ export default class ThreeView {
     const events = this._core?.readEvents();
     if (events && this._core) {
       processEvent(
-        this.scene,
-        this._globeScene,
+        this._scenes,
         this.camera,
         this._meshes,
         this._buf,
@@ -355,22 +370,26 @@ export default class ThreeView {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
     this.renderer.setRenderTarget(this._globeDepthRenderTarget);
-    this.renderer.render(this._globeScene, this.camera);
+    this.renderer.clearDepth();
+    this.renderer.render(this._scenes.globe, this.camera);
+
     this.renderer.setRenderTarget(null);
+    this.renderer.clearDepth();
 
     if (shouldDrapeByStencilTest) {
       this.renderDrapedMesh();
     }
 
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this._scenes.main, this.camera);
   }
 
   // Drape a feature on the terrain by stencil test.
   // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
   renderDrapedMesh() {
     // Render the terrain first
-    this.renderer.render(this._globeScene, this.camera);
+    this.renderer.render(this._scenes.globe, this.camera);
 
+    // TODO: Make drapedFeatureScene
     this._drapedFeatureMaterials.forEach((m) => {
       m.stencilFunc = AlwaysStencilFunc;
       m.stencilFail = KeepStencilOp;
@@ -380,13 +399,13 @@ export default class ThreeView {
       m.colorWrite = false;
       m.depthWrite = false;
     });
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this._scenes.drapedFeatures, this.camera);
 
     this._drapedFeatureMaterials.forEach((m) => {
       m.stencilZPass = DecrementStencilOp;
       m.side = BackSide;
     });
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this._scenes.drapedFeatures, this.camera);
 
     // TODO: Near plane support
 
@@ -399,6 +418,9 @@ export default class ThreeView {
       m.colorWrite = true;
       m.depthWrite = true;
     });
+
+    // TODO: Reuse depth buffer
+    this.renderer.clearDepth();
   }
 
   on<K extends keyof Events>(event: K, callback: Events[K]) {
@@ -425,7 +447,7 @@ export default class ThreeView {
           layers: l.layers ?? [],
           ...l,
         });
-        this.scene.add(mvt.node);
+        this._scenes.main.add(mvt.node);
         this._mvts.push(mvt);
         break;
       }
