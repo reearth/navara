@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  PROTOC_VERSION: '3.20.3'
 
 jobs:
   # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
@@ -54,9 +55,9 @@ jobs:
         run: cargo make install-deps-web
 
       - name: install protoc
-        uses: protocolbuffers/protobuf-action@v1.7.0
+        uses: taiki-e/install-action@v2
         with:
-          version: '3.20.1'
+          tool: protoc@${{ env.PROTOC_VERSION }}
 
       - name: Run Build
         run: cargo make build-example
