@@ -1,8 +1,4 @@
-use mvt_reader::Reader;
-
-pub fn from_data(data: Vec<u8>) -> Result<Reader, &'static str> {
-    Reader::new(data).map_err(|_| "Failed to decode mvt data")
-}
+pub use mvt_reader::{Reader as MvtReader, *};
 
 #[cfg(test)]
 mod tests {
@@ -94,7 +90,7 @@ mod tests {
     fn it_should_parse_mvt() {
         let buffer = create_mock_mvt_data();
 
-        let result = from_data(buffer);
+        let result = MvtReader::new(buffer);
         assert!(result.is_ok(), "Parse mvt data error");
 
         let reader = result.unwrap();
