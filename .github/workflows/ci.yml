@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  PROTOC_VERSION: '3.20.3'
 
 jobs:
   # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
@@ -53,6 +54,11 @@ jobs:
       - name: Install deps for node
         run: cargo make install-deps-web
 
+      - name: install protoc
+        uses: taiki-e/install-action@v2
+        with:
+          tool: protoc@${{ env.PROTOC_VERSION }}
+
       - name: Run Build
         run: cargo make build-example
       - name: Run Test
@@ -71,5 +77,11 @@ jobs:
         with:
           toolchain: stable
           override: true
+
+      - name: install protoc
+        uses: taiki-e/install-action@v2
+        with:
+          tool: protoc@${{ env.PROTOC_VERSION }}
+
       - run: cargo test --doc
       - run: cargo doc --all-features --release
