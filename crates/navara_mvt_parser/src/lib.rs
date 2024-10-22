@@ -8,37 +8,34 @@ pub fn from_data(data: Vec<u8>) -> Result<Reader, &'static str> {
 mod tests {
     use super::*;
     use geo_types::Geometry;
-    mod vector_tile;
-
-    use prost::Message;
-    use vector_tile::Tile;
+    use mvt_reader::{tile, Message, Tile};
 
     fn create_mock_mvt_data() -> Vec<u8> {
         let mut tile = Tile { layers: Vec::new() };
 
-        let layer = vector_tile::tile::Layer {
+        let layer = tile::Layer {
             version: 2,
             name: "test_layer_with_all_geom_types".to_string(),
             features: vec![
                 // Point feature
-                vector_tile::tile::Feature {
+                tile::Feature {
                     id: Some(1),
                     tags: vec![0, 0], // keys[0] values[0]
-                    r#type: Some(vector_tile::tile::GeomType::Point as i32),
+                    r#type: Some(tile::GeomType::Point as i32),
                     geometry: vec![9, 50, 34],
                 },
                 // LineString feature
-                vector_tile::tile::Feature {
+                tile::Feature {
                     id: Some(2),
                     tags: vec![1, 1], // keys[1] values[1]
-                    r#type: Some(vector_tile::tile::GeomType::Linestring as i32),
+                    r#type: Some(tile::GeomType::Linestring as i32),
                     geometry: vec![18, 10, 20, 15, 25],
                 },
                 // Polygon feature
-                vector_tile::tile::Feature {
+                tile::Feature {
                     id: Some(3),
                     tags: vec![2, 2], // keys[2] values[2]
-                    r#type: Some(vector_tile::tile::GeomType::Polygon as i32),
+                    r#type: Some(tile::GeomType::Polygon as i32),
                     geometry: vec![
                         9, 4, 4, // move to (4, 4)
                         26, 0, 10, // line to (30, 14)
@@ -54,7 +51,7 @@ mod tests {
                 "description".to_string(),
             ],
             values: vec![
-                vector_tile::tile::Value {
+                tile::Value {
                     string_value: Some("example_point".to_string()),
                     float_value: Some(321.0),
                     double_value: Some(654.0),
@@ -63,7 +60,7 @@ mod tests {
                     sint_value: Some(-123),
                     bool_value: Some(false),
                 },
-                vector_tile::tile::Value {
+                tile::Value {
                     string_value: Some("line".to_string()),
                     float_value: Some(111.0),
                     double_value: Some(222.0),
@@ -72,7 +69,7 @@ mod tests {
                     sint_value: Some(-555),
                     bool_value: Some(true),
                 },
-                vector_tile::tile::Value {
+                tile::Value {
                     string_value: Some("polygon_example".to_string()),
                     float_value: Some(987.0),
                     double_value: Some(1234.0),

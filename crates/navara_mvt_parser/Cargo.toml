@@ -9,6 +9,3 @@ geo-types = "0.7"
 
 [dev-dependencies]
 prost = "0.11"
-
-[build-dependencies]
-prost-build = "0.11"

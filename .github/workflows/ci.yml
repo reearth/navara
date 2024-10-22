@@ -54,9 +54,9 @@ jobs:
         run: cargo make install-deps-web
 
       - name: install protoc
-        uses: taiki-e/install-action@v2
+        uses: protocolbuffers/protobuf-action@v1.7.0
         with:
-          tool: protoc@${{ env.PROTOC_VERSION }}
+          version: '3.20.1'
 
       - name: Run Build
         run: cargo make build-example
