@@ -104,6 +104,76 @@ impl CameraFrustum {
     }
 }
 
+// CameraFrustum
+// pub enum CameraFrustum {
+//     Perspective(PerspectiveFrustum),
+//     Orthographic(OrthographicFrustum),
+// }
+
+// pub struct PerspectiveFrustum {
+//     pub fov: FloatType,
+//     pub aspect_ratio: FloatType,
+//     pub near: FloatType,
+//     pub far: FloatType,
+//     pub xoffset: FloatType,
+//     pub yoffset: FloatType,
+// }
+
+// pub struct OrthographicFrustum {
+//     pub width: FloatType,
+//     pub aspect_ratio: FloatType, 
+//     pub near: FloatType,
+//     pub far: FloatType,
+// }
+
+// impl CameraFrustum {
+//     pub fn compute_culling_volume(
+//         &self,
+//         position: Vec3,
+//         direction: Vec3,
+//         up: Vec3,
+//     ) -> CullingVolume {
+//         match self {
+//             CameraFrustum::Perspective(frustum) => {
+//                 frustum.compute_culling_volume(position, direction, up)
+//             }
+//             CameraFrustum::Orthographic(frustum) => {
+//                 frustum.compute_culling_volume(position, direction, up)
+//             }
+//         }
+//     }
+
+//     pub fn get_pixel_dimensions(
+//         &self,
+//         draw_width: u32,
+//         draw_height: u32,
+//         distance: FloatType,
+//         pixel_ratio: FloatType,
+//         result: Option<Vec2>,
+//     ) -> Vec2 {
+//         match self {
+//             CameraFrustum::Perspective(frustum) => {
+//                 frustum.get_pixel_dimensions(
+//                     draw_width,
+//                     draw_height,
+//                     distance,
+//                     pixel_ratio,
+//                     result,
+//                 )
+//             }
+//             CameraFrustum::Orthographic(frustum) => {
+//                 frustum.get_pixel_dimensions(
+//                     draw_width,
+//                     draw_height, 
+//                     distance,
+//                     pixel_ratio,
+//                     result,
+//                 )
+//             }
+//         }
+//     }
+// }
+
 #[derive(Component)]
 pub struct Camera {
     pub transform: Transform,
@@ -317,3 +387,4 @@ mod test {
         debug_assert!(!frustum.intersection_with_aabb(&aabb));
     }
 }
+
