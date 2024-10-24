@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::*;
+use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
@@ -309,19 +310,20 @@ fn traverse_tile(
             handle,
             distance_from_camera,
         );
-    } else {
-        prepare_tile_resource(
-            command,
-            qt,
-            buf,
-            tiles,
-            terrain_layer,
-            handle,
-            distance_from_camera,
-        );
     }
 
     if !is_tile_ready && !was_children_rendered && !is_tile_failed {
+        if !meets_sse {
+            prepare_tile_resource(
+                command,
+                qt,
+                buf,
+                tiles,
+                terrain_layer,
+                handle,
+                distance_from_camera,
+            );
+        }
         return TraversalResult::NotFound;
     }
 
@@ -641,7 +643,7 @@ pub fn transfer_mesh(
                 .expect("This line is invoked only in the tile has terrain");
             terrain_data.set_current_max_height(max_height);
             terrain_data.set_current_min_height(min_height);
-            tile.aabb.update(tile.extent, max_height)
+            tile.aabb.update(tile.extent, 0., max_height)
         }
 
         if should_upsample_terrain {
@@ -700,7 +702,10 @@ pub fn transfer_mesh(
 
         let bytes = match buf.get_u8(&terrain_req.handle) {
             Some(data) => data,
-            None => unreachable!("This line should be invoked only when the terrain data is ready"),
+            None => {
+                error!("This line should be invoked only when the terrain data is ready");
+                continue;
+            }
         };
 
         let martini_id = cached_martini

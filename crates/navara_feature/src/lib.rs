@@ -5,6 +5,7 @@ use navara_geometry::PolygonResource;
 
 pub mod billboard;
 pub mod event;
+pub mod id;
 pub mod model;
 pub mod point;
 pub mod polygon;

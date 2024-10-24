@@ -34,6 +34,9 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             LayerDescription::B3dm(t) => {
                 commands.spawn(t.clone());
             }
+            LayerDescription::Cesium3dTiles(t) => {
+                commands.spawn(t.clone());
+            }
         }
     }
 }

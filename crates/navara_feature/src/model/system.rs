@@ -1,4 +1,7 @@
-use crate::render::{RenderInformation, RenderableFeature};
+use crate::{
+    id::FeatureId,
+    render::{RenderInformation, RenderableFeature},
+};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -20,10 +23,11 @@ use super::{ModelBin, ModelGeometry, ModelMarker};
 #[allow(clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
-    models: Query<
+    mut models: Query<
         (
             Entity,
             &LayerId,
+            Option<&mut FeatureId>,
             &ModelGeometry,
             &ModelMaterial,
             // For GLB
@@ -36,7 +40,9 @@ pub fn transfer_mesh(
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, geometry, material, bin, adjustment_transform) in &models {
+    for (entity, layer_id, mut feature_id, geometry, material, bin, adjustment_transform) in
+        &mut models
+    {
         let position = geometry
             .crs
             .to_vec3(WGS84_32, geometry.coords, material.height);
@@ -75,6 +81,10 @@ pub fn transfer_mesh(
             },
         ));
 
+        if let Some(f) = feature_id.as_mut() {
+            f.0 = Some(entity.id());
+        }
+
         layer_store
             .map
             .entry(layer_id.clone())
@@ -111,7 +121,10 @@ pub fn update_height_by_terrain(
                     continue;
                 }
 
-                let geometry = geometries.get(*feature_id).unwrap();
+                let geometry = match geometries.get(*feature_id) {
+                    Ok(g) => g,
+                    Err(_) => continue,
+                };
                 let terrain_height = if material.clamp_to_ground {
                     compute_terrain_height_at_point(
                         &mut qt,

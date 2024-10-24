@@ -57,7 +57,7 @@ impl Tile {
         Self {
             coords,
             extent: coords.extent(),
-            aabb: Aabb::from_extent_f32(extent, max_height),
+            aabb: Aabb::from_extent_f32(extent, 0., max_height),
             bounding_reagion: Some(TileBoundingReagion::from_extent_f32(extent, WGS84_32)),
             rendered_at: 0,
             visited_at: 0,
@@ -140,7 +140,7 @@ impl Tile {
         let terrain_req = self.get_terrain_data_requester(terrain_data_requester);
         terrain_layer.is_some()
             && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
-                || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
+                || terrain_layer.map_or(false, |l| self.should_upsampling(l.max_z)))
             && self.get_parent_tile(qt).map_or(false, |p| {
                 p.is_terrain_ready(terrain_data_requester) || p.upsampled
             })
