@@ -1,8 +1,7 @@
 import ThreeView from "@navara/three";
+import { type B3dmLayer, type GeoJsonLayer } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
-
-import { type B3dmLayer, type GeoJsonLayer } from "../src/type";
 
 type MaterialLayerDescription = GeoJsonLayer | B3dmLayer;
 
