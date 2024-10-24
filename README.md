@@ -8,6 +8,15 @@
 
 - Rust (stable)
 - Node.js (LTS)
+- protoc
+
+MacOS
+
+```console
+brew install protobuf
+```
+
+For more information: https://grpc.io/docs/protoc-installation/
 
 ### Install prerequisites
 
