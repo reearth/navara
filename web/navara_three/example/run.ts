@@ -257,24 +257,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     wireframe: false,
   },
-  // {
-  //   type: "b3dm",
-  //   data: {
-  //     url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/data/data622.b3dm",
-  //   },
-  //   model: {
-  //     show: true,
-  //   },
-  // },
-  // {
-  //   type: "b3dm",
-  //   data: {
-  //     url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
-  //   },
-  //   model: {
-  //     show: true,
-  //   },
-  // },
   {
     type: "cesium3dtiles",
     data: {

@@ -1,5 +1,6 @@
 use bevy_ecs::system::Resource;
 
+/// This is used to prevent sending a lot of request.
 #[derive(Debug, Default, Resource)]
 pub struct DataRequesterManager {
     pub num_pending: u32,

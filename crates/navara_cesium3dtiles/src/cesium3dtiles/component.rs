@@ -156,28 +156,3 @@ pub struct RenderedCesium3dTileContent {
     pub data_requester_id: Entity,
     pub is_visible: bool,
 }
-
-// TODO
-// 1. Load layer and parse JSON
-// 2. Traverse tileset while loading metadata
-// 3. Spawn component if it's renderable
-// 4. Remove the component if it's stale
-//   - Need to count maximum rendered tiles.
-
-// fn traverse(
-//     tile: &mut Cesium3dTileContent,
-//     tile_meta: &navara_parser::cesium3dtiles::tileset::Tile,
-// ) {
-//     let children_meta = match &tile_meta.children {
-//         Some(c) => c,
-//         None => return,
-//     };
-//     for (i, child_meta) in children_meta.iter().enumerate() {
-//         let child = &mut tile.children.get_mut(i);
-//         let child = match child {
-//             Some(c) => c,
-//             None => {}
-//         };
-//         traverse(child, child_meta);
-//     }
-// }
