@@ -38,6 +38,8 @@ import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
 import type { CommonUniforms } from "./uniforms";
 
+export * from "./type";
+
 export type Options = {
   container?: HTMLElement;
   canvas?: HTMLCanvasElement | OffscreenCanvas;

@@ -1,8 +1,7 @@
 import ThreeView from "@navara/three";
+import { type LayerDescription } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
-
-import { type LayerDescription } from "../src/type";
 
 type MaterialLayerDescription = Exclude<
   LayerDescription,
