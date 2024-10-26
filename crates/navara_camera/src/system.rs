@@ -37,7 +37,13 @@ pub fn startup(mut commands: Commands) {
 }
 
 pub fn update(
-    mut query: Query<(&mut Camera, &mut Transform, &mut CameraController, &mut CameraInertia, &mut Orbit)>,
+    mut query: Query<(
+        &mut Camera,
+        &mut Transform,
+        &mut CameraController,
+        &mut CameraInertia,
+        &mut Orbit,
+    )>,
     mb: Res<ButtonInput<MouseButton>>,
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
@@ -48,7 +54,7 @@ pub fn update(
         if !controller.enabled {
             continue;
         }
-        
+
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
 
         // Arc rotation
@@ -74,10 +80,13 @@ pub fn update(
             for ev in mw.read() {
                 zoom += ev.y;
             }
-            let speed = controller.zoom_speed; 
+            let speed = controller.zoom_speed;
             let ratio = orbit.r / EARTH_RADIUS_F32;
             let d = zoom * (speed * ratio);
-            orbit.r = (orbit.r + d).clamp(controller.minimum_zoom_distance, controller.maximum_zoom_distance);
+            orbit.r = (orbit.r + d).clamp(
+                controller.minimum_zoom_distance,
+                controller.maximum_zoom_distance,
+            );
             inertia.zoom = d;
         }
 
@@ -102,16 +111,19 @@ pub fn update(
         if controller.enable_tilt && is_ctrl && mb.pressed(MouseButton::Left) {
             let screen_delta = mm.read().fold(0.0, |x, ev| x + ev.delta.y);
             orbit.tilt += screen_delta * controller.rotate_speed;
-            orbit.tilt = orbit.tilt.clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
+            orbit.tilt = orbit
+                .tilt
+                .clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
         }
-        
 
         // Apply inertia
         orbit.quat *= Quat::from_rotation_y(inertia.spin.x)
             * Quat::from_rotation_x(inertia.spin.y)
             * Quat::from_rotation_z(inertia.spin.z);
-        orbit.r = (orbit.r + inertia.zoom)
-            .clamp(controller.minimum_zoom_distance, controller.maximum_zoom_distance);
+        orbit.r = (orbit.r + inertia.zoom).clamp(
+            controller.minimum_zoom_distance,
+            controller.maximum_zoom_distance,
+        );
 
         // Decay inertia
         inertia.spin *= controller.inertia;

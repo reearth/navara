@@ -24,24 +24,29 @@ import {
   // MeshStandardMaterial,
   type Camera,
   Mesh,
-  type Object3D,
   MeshBasicMaterial,
   Material,
   TextureLoader,
   ImageLoader,
   MeshLambertMaterial,
+  Object3D,
   Texture,
   Sprite,
   Group,
   ShaderMaterial,
 } from "three";
 
+import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
-import { generate_id_from_entity, to_globe_depth_id } from "./id";
+import {
+  generate_id_from_entity,
+  to_draped_feature_id,
+  to_globe_depth_id,
+} from "./id";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -52,12 +57,14 @@ export type BufferLoader = {
 };
 
 export type TextureFragmentHandler = {
-  triggerTextureFragmentLoaded: (bits: bigint, status: TextureFragmentStatus) => void;
+  triggerTextureFragmentLoaded: (
+    bits: bigint,
+    status: TextureFragmentStatus,
+  ) => void;
 };
 
 export function processEvent(
-  scene: Object3D,
-  globeDepthScene: Object3D,
+  scenes: Scenes,
   camera: Camera,
   meshes: MeshCache,
   buf: BufferLoader,
@@ -72,39 +79,67 @@ export function processEvent(
     processCameraTransformUpdated(camera, event.camera_transform_updated);
   }
 
-  event.object_transform_updated?.forEach(obj => processObjectTransformUpdated(meshes, obj));
-  event.object_removed?.forEach(obj => {
-    processObjectRemoved(scene, meshes, obj);
-    processObjectRemoved(globeDepthScene, meshes, obj, true);
+  event.object_transform_updated?.forEach((obj) =>
+    processObjectTransformUpdated(meshes, obj),
+  );
+  event.object_removed?.forEach((obj) => {
+    processObjectRemoved(scenes.main, meshes, obj);
+    processObjectRemoved(scenes.globe, meshes, obj, true);
   });
-  event.mesh_added?.forEach(mesh =>
-    processMeshAdded(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
+  event.mesh_added?.forEach((mesh) =>
+    processMeshAdded(scenes.main, scenes.globe, meshes, mesh, buf, loadedTexs),
   );
-  event.mesh_updated?.forEach(mesh =>
-    processMeshChanged(scene, globeDepthScene, meshes, mesh, buf, loadedTexs),
+  event.mesh_updated?.forEach((mesh) =>
+    processMeshChanged(
+      scenes.main,
+      scenes.globe,
+      meshes,
+      mesh,
+      buf,
+      loadedTexs,
+    ),
   );
-  event.renderable_feature_added?.forEach(ev =>
-    processRenderableFeatureAdded(ev, scene, meshes, buf, uniforms, drapedFeatureMaterials),
+  event.renderable_feature_added?.forEach((ev) =>
+    processRenderableFeatureAdded(
+      ev,
+      scenes,
+      meshes,
+      buf,
+      uniforms,
+      drapedFeatureMaterials,
+    ),
   );
-  event.renderable_feature_changed?.forEach(ev =>
-    processRenderableFeatureChanged(ev, meshes, drapedFeatureMaterials),
+  event.renderable_feature_changed?.forEach((ev) =>
+    processRenderableFeatureChanged(scenes, ev, meshes, drapedFeatureMaterials),
   );
-  event.renderable_feature_removed?.forEach(ev =>
-    processObjectRemoved(scene, meshes, ev, undefined, drapedFeatureMaterials),
-  );
+  event.renderable_feature_removed?.forEach((ev) => {
+    processObjectRemoved(scenes.main, meshes, ev);
+    processObjectRemoved(
+      scenes.drapedFeatures,
+      meshes,
+      ev,
+      undefined,
+      drapedFeatureMaterials,
+    );
+  });
 
-  event.texture_fragment_requested?.forEach(req =>
+  event.texture_fragment_requested?.forEach((req) =>
     processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
   );
-  event.data_requested?.forEach(req => processRequestedData(req, buf));
-  event.texture_fragment_removed?.forEach(req => processTextureFragmentRemoved(req, loadedTexs));
+  event.data_requested?.forEach((req) => processRequestedData(req, buf));
+  event.texture_fragment_removed?.forEach((req) =>
+    processTextureFragmentRemoved(req, loadedTexs),
+  );
 }
 
 function processCameraTransformUpdated(camera: Camera, transform: Transform) {
   setTransform(camera, transform); // disable temporarily
 }
 
-function processObjectTransformUpdated(meshes: MeshCache, e: ObjectTransformEvent) {
+function processObjectTransformUpdated(
+  meshes: MeshCache,
+  e: ObjectTransformEvent,
+) {
   const id = generate_id_from_entity(e);
   const m = meshes.get(id);
   const globeDepthMesh = meshes.get(to_globe_depth_id(id));
@@ -188,59 +223,112 @@ function processObjectRemoved(
   if (isGlobeDepth) {
     id = to_globe_depth_id(id);
   }
+  if (drapedFeatureMaterials) {
+    id = to_draped_feature_id(id);
+    drapedFeatureMaterials.delete(id);
+  }
   const m = meshes.get(id);
   if (!m) return;
 
   meshes.delete(id);
-  drapedFeatureMaterials?.delete(id);
+
+  // Sprite, Mesh, and Group are all subclasses of Object3D
+  if (m instanceof Object3D) {
+    disposeObject3D(m);
+  }
+
+  // clear should after dispose, otherwise model's children will not be disposed
   m.clear();
-
-  if ("material" in m) {
-    if (Array.isArray(m.material)) {
-      m.material.map(m => m.dispose());
-    } else {
-      m.material.dispose();
-    }
-  }
-
-  if ("geometry" in m) {
-    m.geometry.dispose();
-  }
 
   parent.remove(m);
 }
 
-function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
-  const loader = new ImageLoader();
-  loader
-    .loadAsync(req.url)
-    .then(img => {
-      // TODO: Get OffScreeCanvas from main thread in worker.
-      const canvas = document.createElement("canvas");
-      canvas.height = img.height;
-      canvas.width = img.width;
-      const context = canvas.getContext("2d");
-      if (context === null) {
-        throw new Error("failed to get context of canvas");
-      } else {
-        context.drawImage(img, 0, 0);
-      }
-      const data = context.getImageData(0, 0, img.height, img.width).data;
-      if (data === undefined) {
-        throw new Error("failed to convert array");
-      } else {
-        const u8a = new Uint8Array(data);
-        buf.setU8(req.handle, req.bits, u8a);
+function disposeObject3D(model: Object3D): void {
+  model.traverse((object: Object3D) => {
+    // model, polyline, polygon
+    if (object instanceof Mesh) {
+      const mesh = object as Mesh;
 
-        // Prevent memory leak
-        u8a.set([]);
-        data.set([]);
+      // Dispose geometry
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
       }
-      img.remove();
-      canvas.remove();
-    })
-    .catch(() => {
-      buf.triggerDataRequesterFailed(req.bits);
+
+      // Dispose material(s)
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((material) => {
+            material.dispose();
+          });
+        } else {
+          const material = mesh.material;
+          material.dispose();
+        }
+      }
+    }
+    // point, billboard
+    else if (object instanceof Sprite) {
+      const sprite = object as Sprite;
+
+      // Dispose material
+      if (sprite.material) {
+        if (Array.isArray(sprite.material)) {
+          sprite.material.forEach((material) => {
+            material.dispose();
+          });
+        } else {
+          const material = sprite.material;
+          material.dispose();
+        }
+      }
+    }
+  });
+}
+
+function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
+  if (req.extension === "png") {
+    const loader = new ImageLoader();
+    loader
+      .loadAsync(req.url)
+      .then((img) => {
+        // TODO: Get OffScreeCanvas from main thread in worker.
+        const canvas = document.createElement("canvas");
+        canvas.height = img.height;
+        canvas.width = img.width;
+        const context = canvas.getContext("2d");
+        if (context === null) {
+          throw new Error("failed to get context of canvas");
+        } else {
+          context.drawImage(img, 0, 0);
+        }
+        const data = context.getImageData(0, 0, img.height, img.width).data;
+        if (data === undefined) {
+          throw new Error("failed to convert array");
+        } else {
+          const u8a = new Uint8Array(data);
+          buf.setU8(req.handle, req.bits, u8a);
+
+          // Prevent memory leak
+          u8a.set([]);
+          data.set([]);
+        }
+        img.remove();
+        canvas.remove();
+      })
+      .catch(() => {
+        buf.triggerDataRequesterFailed(req.bits);
+      });
+    return;
+  }
+
+  fetch(req.url)
+    .then((res) => res.arrayBuffer())
+    .then((val) => {
+      const bytes = new Uint8Array(val);
+      buf.setU8(req.handle, req.bits, bytes);
+
+      // Prevent memory leak
+      bytes.set([]);
     });
 }
 
@@ -259,16 +347,25 @@ function processTextureFragmentRequested(
 
   tex
     .loadAsync(req.url)
-    .then(t => {
+    .then((t) => {
       loadedTexes.set(id, t);
-      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Success);
+      handler.triggerTextureFragmentLoaded(
+        req.bits,
+        TextureFragmentStatus.Success,
+      );
     })
     .catch(() => {
-      handler.triggerTextureFragmentLoaded(req.bits, TextureFragmentStatus.Fail);
+      handler.triggerTextureFragmentLoaded(
+        req.bits,
+        TextureFragmentStatus.Fail,
+      );
     });
 }
 
-function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string, Texture>) {
+function processTextureFragmentRemoved(
+  req: EntityEvent,
+  loadedTexes: Map<string, Texture>,
+) {
   const id = makeTextureFragmentId(req.ind, req.gen);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
@@ -276,19 +373,20 @@ function processTextureFragmentRemoved(req: EntityEvent, loadedTexes: Map<string
 
 async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
-  parent: Object3D,
+  scenes: Scenes,
   meshes: MeshCache,
   buf: BufferLoader,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(id, ev.feature, buf, uniforms, drapedFeatureMaterials);
+  const obj = await renderFeature(ev.feature, buf, uniforms);
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
+    ?.transform;
   if (transform) {
     setTransform(obj, transform);
   }
@@ -296,13 +394,22 @@ async function processRenderableFeatureAdded(
 
   obj.renderOrder = 1;
 
-  parent.add(obj);
+  scenes.main.add(obj);
 
   meshes.set(id, obj);
+
+  if (obj.userData.draped && obj instanceof Mesh) {
+    const drapedId = to_draped_feature_id(id);
+    const m = new Mesh(obj.geometry, obj.material);
+    scenes.drapedFeatures.add(m);
+    drapedFeatureMaterials.set(drapedId, m.material as Material);
+    meshes.set(drapedId, m);
+  }
 }
 
 // TODO: Update material in this function.
 function processRenderableFeatureChanged(
+  scenes: Scenes,
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
@@ -313,12 +420,14 @@ function processRenderableFeatureChanged(
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)?.transform;
+  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
+    ?.transform;
   if (transform) {
     setTransform(obj, transform);
   }
 
-  const material = (point ?? billboard ?? polyline ?? polygon ?? model)?.material;
+  const material = (point ?? billboard ?? polyline ?? polygon ?? model)
+    ?.material;
   if (material) {
     if (obj instanceof Sprite && material instanceof PointMaterial) {
       processPointChanged(obj, material);
@@ -333,7 +442,31 @@ function processRenderableFeatureChanged(
       processPolylineChanged(obj, material);
     }
     if (obj instanceof Mesh && material instanceof PolygonMaterial) {
-      processPolygonChanged(id, obj, material, drapedFeatureMaterials);
+      processPolygonChanged(obj, material);
+    }
+
+    // Handle a draped mesh
+    if (obj instanceof Mesh && obj.userData.draped != null) {
+      const drapedId = to_draped_feature_id(id);
+      if (obj.userData.draped) {
+        obj.material.stencilWrite = true;
+        drapedFeatureMaterials.set(drapedId, obj.material);
+        if (!meshes.has(drapedId)) {
+          const m = new Mesh(obj.geometry, obj.material);
+          scenes.drapedFeatures.add(m);
+          meshes.set(drapedId, m);
+        }
+      } else {
+        obj.material.stencilWrite = false;
+        drapedFeatureMaterials.delete(drapedId);
+        if (meshes.has(drapedId)) {
+          const m = meshes.get(drapedId);
+          if (m) {
+            scenes.drapedFeatures.remove(m);
+          }
+          meshes.delete(drapedId);
+        }
+      }
     }
   }
 
@@ -353,9 +486,7 @@ function processBillboardChanged(obj: Sprite, material: BillboardMaterial) {
 }
 
 function processModelChanged(obj: Group, material: ModelMaterial) {
-  obj.children.forEach(child => {
-    child.visible = material.show ?? true;
-  });
+  obj.visible = material.show ?? true;
 }
 
 function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
@@ -366,27 +497,19 @@ function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
   }
 }
 
-function processPolygonChanged(
-  id: string,
-  obj: Mesh,
-  material: PolygonMaterial,
-  drapedFeatureMaterials: Map<string, Material>,
-) {
+function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
   if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
     obj.material.visible = material.show ?? true;
-    obj.material.userData.uMinMaxHeight.value = material.__internal__?.min_max_heights;
-    if (obj.material.userData.uClampToGround.value !== material.clamp_to_ground) {
+    obj.material.userData.uMinMaxHeight.value =
+      material.__internal__?.min_max_heights;
+    if (
+      obj.material.userData.uClampToGround.value !== material.clamp_to_ground
+    ) {
       obj.material.userData.uClampToGround.value = material.clamp_to_ground;
       // obj.material = obj.material.clone();
     }
-    if (material.clamp_to_ground) {
-      obj.material.stencilWrite = true;
-      drapedFeatureMaterials.set(id, obj.material);
-    } else {
-      obj.material.stencilWrite = false;
-      drapedFeatureMaterials.delete(id);
-    }
+    obj.userData.draped = material.clamp_to_ground;
   }
 }
 
@@ -439,9 +562,16 @@ function setTransform(obj: Object3D, transform: Transform) {
   obj.scale.set(sx, sy, sz);
 }
 
-function toMaterial(mat: EventMaterial, loadedTexes: Map<string, Texture>): Material {
+function toMaterial(
+  mat: EventMaterial,
+  loadedTexes: Map<string, Texture>,
+): Material {
   if (mat.wireframe) {
-    return new MeshBasicMaterial({ color: mat.color, wireframe: true, stencilWrite: false });
+    return new MeshBasicMaterial({
+      color: mat.color,
+      wireframe: true,
+      stencilWrite: false,
+    });
   }
 
   const m = new MeshLambertMaterial({ color: mat.color, stencilWrite: false });

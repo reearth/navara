@@ -1,10 +1,11 @@
 import ThreeView from "@navara/three";
+import { type B3dmLayer, type GeoJsonLayer } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
 
-import { type GeoJsonLayer } from "../src/type";
+type MaterialLayerDescription = GeoJsonLayer | B3dmLayer;
 
-const geoLayersDef: GeoJsonLayer[] = [
+const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "geojson",
     data: {
@@ -171,7 +172,7 @@ const geoLayersDef: GeoJsonLayer[] = [
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [100, 30],
+            coordinates: [30, 30],
             type: "Point",
           },
         },
@@ -179,34 +180,10 @@ const geoLayersDef: GeoJsonLayer[] = [
     },
     model: {
       show: true,
-      size: 500000,
-      height: 700000,
+      size: 300000,
+      height: -30000,
       clamp_to_ground: true,
-      url: "/glTF/Suzanne/Suzanne.gltf",
-    },
-  },
-
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [100, 0],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 3000,
-      height: 1100000,
-      clamp_to_ground: true,
-      url: "/glTF/2CylinderEngine/2CylinderEngine.gltf",
+      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
     },
   },
 
@@ -276,6 +253,24 @@ const geoLayersDef: GeoJsonLayer[] = [
     },
     wireframe: false,
   },
+  {
+    type: "b3dm",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/data/data457.b3dm",
+    },
+    model: {
+      show: true,
+    },
+  },
+  {
+    type: "b3dm",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
+    },
+    model: {
+      show: true,
+    },
+  },
 ];
 
 export const run = async (view: ThreeView) => {
@@ -295,7 +290,8 @@ export const run = async (view: ThreeView) => {
   const tileUrls = {
     openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-    gsiSeamlessphoto: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+    gsiSeamlessphoto:
+      "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
   };
 
   const terrainUrls = {
@@ -328,7 +324,7 @@ export const run = async (view: ThreeView) => {
     wireframe: false,
   });
 
-  const terrainType: string = "gsi"; // mapbox | gsi
+  const terrainType: "mapbox" | "gsi" = "gsi";
   const JAPAN_GSI_ELEVATION_DECODER = {
     r_scaler: 65536,
     g_scaler: 256,
@@ -353,19 +349,23 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     segments: 64,
+    // @ts-expect-error : Make switch button later
     url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
     max_z: 15,
     min_z: 5,
     wireframe: false,
     elevation_decoder:
-      terrainType === "mapbox" ? MAPBOX_ELEVATION_DECODER : JAPAN_GSI_ELEVATION_DECODER,
+      // @ts-expect-error : Make switch button later
+      terrainType === "mapbox"
+        ? MAPBOX_ELEVATION_DECODER
+        : JAPAN_GSI_ELEVATION_DECODER,
   });
 
-  const geoLayerMap: { [key: string]: GeoJsonLayer } = {};
-  geoLayersDef.forEach(layer => {
+  const geoLayerMap = new Map<string, MaterialLayerDescription>();
+  geoLayersDef.forEach((layer) => {
     const layerId = view.addLayer(layer);
     if (layerId) {
-      geoLayerMap[layerId] = layer;
+      geoLayerMap.set(layerId, layer);
     }
   });
 
@@ -438,9 +438,9 @@ export const run = async (view: ThreeView) => {
     expanded: true,
   });
 
-  const layerIds = Object.keys(geoLayerMap);
+  const layerIds = Array.from(geoLayerMap.keys());
 
-  const layerIdOptions: { [key: string]: number } = {};
+  const layerIdOptions: Record<string, number> = {};
   for (let i = 0; i < layerIds.length; i++) {
     layerIdOptions["layer" + (i + 1)] = i;
   }
@@ -458,15 +458,23 @@ export const run = async (view: ThreeView) => {
     clampToGround: false,
   };
 
-  // @ts-expect-error : Missing Type Definitions ?
-  pane.addBinding(paneParams, "layer", { options: layerIdOptions }).on("change", ev => {
-    materialCtrl.dispose();
+  pane
+    // @ts-expect-error : Missing Type Definitions ?
+    .addBinding(paneParams, "layer", { options: layerIdOptions })
+    .on("change", onLayerChange);
 
-    if (paramCtrl) {
-      paramCtrl.dispose();
-    }
+  const btnCtrl = pane
+    // @ts-expect-error : Missing Type Definitions ?
+    .addButton({ title: "Delete Layer", label: "" })
+    .on("click", onDeleteBtnClick);
 
-    materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]]);
+  let materialCtrl = createMaterialCtrl(
+    pane,
+    paneParams,
+    geoLayerMap.get(layerIds[0]),
+  );
+
+  if (materialCtrl) {
     materialCtrl.on("change", () => {
       if (paramCtrl) {
         paramCtrl.dispose();
@@ -474,32 +482,81 @@ export const run = async (view: ThreeView) => {
       paramCtrl = createParamCtrl(
         pane,
         paneParams,
-        geoLayerMap[layerIds[paneParams.layer]],
+        geoLayerMap.get(layerIds[paneParams.layer]),
         onParamChange,
       );
     });
+  }
 
-    paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[ev.value]], onParamChange);
-  });
+  let paramCtrl = createParamCtrl(
+    pane,
+    paneParams,
+    geoLayerMap.get(layerIds[0]),
+    onParamChange,
+  );
 
-  let materialCtrl = createMaterialCtrl(pane, paneParams, geoLayerMap[layerIds[0]]);
-  materialCtrl.on("change", () => {
+  function onDeleteBtnClick() {
+    if (btnCtrl.title == "Delete Layer") {
+      view.deleteLayer(layerIds[paneParams.layer]);
+
+      btnCtrl.title = "Add Layer";
+    } else {
+      const oldLayerId = layerIds[paneParams.layer];
+      const layerDef = geoLayerMap.get(oldLayerId);
+      if (layerDef) {
+        const newLayerId = view.addLayer(layerDef);
+        if (newLayerId) {
+          geoLayerMap.set(newLayerId, layerDef);
+          layerIds[paneParams.layer] = newLayerId;
+        }
+      }
+
+      geoLayerMap.delete(oldLayerId);
+
+      btnCtrl.title = "Delete Layer";
+    }
+  }
+
+  function onLayerChange() {
+    if (materialCtrl) {
+      materialCtrl.dispose();
+    }
+
     if (paramCtrl) {
       paramCtrl.dispose();
     }
+
+    materialCtrl = createMaterialCtrl(
+      pane,
+      paneParams,
+      geoLayerMap.get(layerIds[paneParams.layer]),
+    );
+
+    if (materialCtrl) {
+      materialCtrl.on("change", () => {
+        if (paramCtrl) {
+          paramCtrl.dispose();
+        }
+        paramCtrl = createParamCtrl(
+          pane,
+          paneParams,
+          geoLayerMap.get(layerIds[paneParams.layer]),
+          onParamChange,
+        );
+      });
+    }
+
     paramCtrl = createParamCtrl(
       pane,
       paneParams,
-      geoLayerMap[layerIds[paneParams.layer]],
+      geoLayerMap.get(layerIds[paneParams.layer]),
       onParamChange,
     );
-  });
-
-  let paramCtrl = createParamCtrl(pane, paneParams, geoLayerMap[layerIds[0]], onParamChange);
+  }
 
   function onParamChange() {
     const layerId = layerIds[paneParams.layer];
-    const layer = geoLayerMap[layerId];
+    const layer = geoLayerMap.get(layerId);
     if (layer && paneParams.material in layer) {
       const material = layer[paneParams.material as keyof typeof layer];
 
@@ -538,7 +595,16 @@ export const run = async (view: ThreeView) => {
   }
 };
 
-function createParamCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer, changeFunc: () => void) {
+function createParamCtrl(
+  pane: Pane,
+  paneParams: any,
+  layer: MaterialLayerDescription | undefined,
+  changeFunc: () => void,
+) {
+  if (!layer) {
+    return undefined;
+  }
+
   const material = layer[paneParams.material as keyof typeof layer];
   if (material) {
     // @ts-expect-error : Missing Type Definitions ?
@@ -553,7 +619,7 @@ function createParamCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer, chang
     if ("color" in material) {
       paneParams.color = "#" + material.color.toString(16).padStart(6, "0");
       // @ts-expect-error : Missing Type Definitions ?
-      f.addBinding(paneParams, "color").on("change", ev => {
+      f.addBinding(paneParams, "color").on("change", (ev) => {
         if (ev.last) {
           changeFunc();
         }
@@ -588,22 +654,32 @@ function createParamCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer, chang
     return f;
   }
 
-  return null;
+  return undefined;
 }
 
-function createMaterialCtrl(pane: Pane, paneParams: any, layer: GeoJsonLayer) {
-  const options = getMaterialOptions(layer);
+function createMaterialCtrl(
+  pane: Pane,
+  paneParams: any,
+  layer: MaterialLayerDescription | undefined,
+) {
+  if (layer) {
+    const options = getMaterialOptions(layer);
 
-  // @ts-expect-error : Missing Type Definitions ?
-  const materialCtrl = pane.addBinding(paneParams, "material", { options: options });
+    // @ts-expect-error : Missing Type Definitions ?
+    const materialCtrl = pane.addBinding(paneParams, "material", {
+      options: options,
+    });
 
-  const firstOptionKey = Object.keys(options)[0];
-  paneParams.material = firstOptionKey;
-  materialCtrl.refresh();
-  return materialCtrl;
+    const firstOptionKey = Object.keys(options)[0];
+    paneParams.material = firstOptionKey;
+    materialCtrl.refresh();
+    return materialCtrl;
+  } else {
+    return undefined;
+  }
 }
 
-function getMaterialOptions(layer: GeoJsonLayer) {
+function getMaterialOptions(layer: MaterialLayerDescription) {
   const materials = [];
   if ("point" in layer) {
     materials.push("point");
@@ -622,7 +698,7 @@ function getMaterialOptions(layer: GeoJsonLayer) {
   }
 
   const ret: any = {};
-  materials.forEach(m => {
+  materials.forEach((m) => {
     ret[m] = m;
   });
 

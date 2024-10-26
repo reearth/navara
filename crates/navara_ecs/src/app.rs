@@ -3,6 +3,7 @@ use bevy_ecs::system::Commands;
 use bevy_time::TimePlugin;
 use navara_buffer_store::BufferStorePlugin;
 use navara_camera::CameraPlugin;
+use navara_cesium3dtiles::Cesium3dTilesPlugin;
 use navara_data_requester::DataRequesterPlugin;
 use navara_event::EventPlugin;
 use navara_feature::FeaturePlugin;
@@ -36,6 +37,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(LayerPlugin);
         app.add_plugins(FeaturePlugin);
         app.add_plugins(GeoJsonPlugin);
+        app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(TilePlugin);
 
         // custom systems

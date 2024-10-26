@@ -1,5 +1,4 @@
 import initCore, { Core, TextureFragmentStatus } from "navara";
-import Stats from "stats.js";
 import {
   PerspectiveCamera,
   Scene,
@@ -25,13 +24,21 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { processEvent, type BufferLoader, type TextureFragmentHandler } from "./event";
+import {
+  processEvent,
+  type BufferLoader,
+  type TextureFragmentHandler,
+} from "./event";
 import { registerInputEvents } from "./input";
+import type { Scenes } from "./scene";
+import { RendererStats } from "./stats";
 import { C3TilesManager } from "./temp/C3Tiles";
 import MVT from "./temp/MVT";
 import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
 import type { CommonUniforms } from "./uniforms";
+
+export * from "./type";
 
 export type Options = {
   container?: HTMLElement;
@@ -52,19 +59,17 @@ export type Events = {
 };
 
 export default class ThreeView {
-  scene: Scene;
+  _scenes: Scenes;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
 
   _globeDepthRenderTarget: WebGLRenderTarget;
-  // Render only globe
-  _globeScene: Scene;
   // Store draped feature's materials
-  _drapedFeatureMaterials: Map<string, Material> = new Map();
+  _drapedFeatureMaterials = new Map<string, Material>();
 
   _core: Core | undefined;
   _options: Options;
-  _stats: Stats | undefined;
+  _stats: RendererStats | undefined;
   _eventDisposer: (() => void) | undefined;
   _disposed = false;
   _events: {
@@ -72,19 +77,19 @@ export default class ThreeView {
   } = {};
   _uniforms: CommonUniforms;
 
-  _meshes: Map<string, Mesh> = new Map();
-  _loadedTexs: Map<string, Texture> = new Map();
+  _meshes = new Map<string, Mesh>();
+  _loadedTexs = new Map<string, Texture>();
   _tex = new TextureLoader();
   _buf: BufferLoader = {
-    u8: handle => {
+    u8: (handle) => {
       const b = this._core?.getBufferU8(handle);
       return b ?? null;
     },
-    f32: handle => {
+    f32: (handle) => {
       const b = this._core?.getBufferF32(handle);
       return b ?? null;
     },
-    u32: handle => {
+    u32: (handle) => {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
@@ -96,7 +101,10 @@ export default class ThreeView {
     },
   };
   _texFragment: TextureFragmentHandler = {
-    triggerTextureFragmentLoaded: (bits: bigint, status: TextureFragmentStatus) => {
+    triggerTextureFragmentLoaded: (
+      bits: bigint,
+      status: TextureFragmentStatus,
+    ) => {
       this._core?.triggerTextureFragmentLoaded(bits, status);
     },
   };
@@ -111,7 +119,7 @@ export default class ThreeView {
     this._options = options;
 
     // disable right-click
-    options.canvas?.addEventListener("contextmenu", e => {
+    options.canvas?.addEventListener("contextmenu", (e) => {
       e.preventDefault();
     });
 
@@ -124,7 +132,9 @@ export default class ThreeView {
         canvas: options.canvas,
         stencil: true,
       });
+      renderer.info.autoReset = false;
       renderer.autoClearStencil = false;
+      renderer.autoClearDepth = false;
       this.renderer = renderer;
 
       const { width = options.initialWidth, height = options.initialHeight } =
@@ -149,24 +159,38 @@ export default class ThreeView {
     const pixelRatio = this.renderer.getPixelRatio();
     const scaledWidth = width * pixelRatio;
     const scaledHeight = height * pixelRatio;
-    this._globeDepthRenderTarget = new WebGLRenderTarget(scaledWidth, scaledHeight);
-    this._globeDepthRenderTarget.depthTexture = new DepthTexture(scaledWidth, scaledHeight);
+    this._globeDepthRenderTarget = new WebGLRenderTarget(
+      scaledWidth,
+      scaledHeight,
+    );
+    this._globeDepthRenderTarget.depthTexture = new DepthTexture(
+      scaledWidth,
+      scaledHeight,
+    );
     this._globeDepthRenderTarget.depthTexture.format = DepthFormat;
     this._globeDepthRenderTarget.depthTexture.type = FloatType;
 
+    let scene: Scene;
     if (options.scene) {
-      this.scene = options.scene;
+      scene = options.scene;
     } else {
-      const scene = new Scene();
-      this.scene = scene;
+      scene = new Scene();
     }
 
+    let globeScene: Scene;
     if (options.globeScene) {
-      this._globeScene = options.globeScene;
+      globeScene = options.globeScene;
     } else {
-      const globeDepthScene = new Scene();
-      this._globeScene = globeDepthScene;
+      globeScene = new Scene();
     }
+
+    const drapedFeaturesScene = new Scene();
+
+    this._scenes = {
+      main: scene,
+      globe: globeScene,
+      drapedFeatures: drapedFeaturesScene,
+    };
 
     if (options.camera) {
       this.camera = options.camera;
@@ -194,7 +218,10 @@ export default class ThreeView {
     if (options.debug) {
       const t = options.container || this.renderer.domElement.parentElement;
       if (t) {
-        this._stats = new Stats();
+        this._stats = new RendererStats({
+          beginDrawCalls: () => this.renderer.info.reset(),
+          endDrawCalls: () => this.renderer.info.render.calls,
+        });
         t.appendChild(this._stats.dom);
       }
     }
@@ -203,7 +230,12 @@ export default class ThreeView {
     // this.control = new MapControls(this.camera, this.renderer.domElement);
 
     // c3tiles
-    this._c3tiles = new C3TilesManager(this.scene, this.camera, this.renderer, this.control);
+    this._c3tiles = new C3TilesManager(
+      this._scenes.main,
+      this.camera,
+      this.renderer,
+      this.control,
+    );
     this._uniforms = {
       viewportAndPixelRatio: { value: null },
       frustumNearFar: { value: null },
@@ -211,6 +243,10 @@ export default class ThreeView {
       tGlobeDepth: { value: null },
       inverseProjectionMatrix: { value: null },
     };
+  }
+
+  get scene() {
+    return this._scenes.main;
   }
 
   async init() {
@@ -221,7 +257,10 @@ export default class ThreeView {
     this._core = new Core(newId());
     this._core.start();
     if (!isWorker()) {
-      this._eventDisposer = registerInputEvents(this._core, this.renderer.domElement);
+      this._eventDisposer = registerInputEvents(
+        this._core,
+        this.renderer.domElement,
+      );
     }
 
     this._startMainLoop();
@@ -239,7 +278,10 @@ export default class ThreeView {
       this._eventDisposer = undefined;
     }
     this._globeDepthRenderTarget.dispose();
-    if ("dispose" in this.renderer && typeof this.renderer.dispose === "function") {
+    if (
+      "dispose" in this.renderer &&
+      typeof this.renderer.dispose === "function"
+    ) {
       this.renderer.dispose();
     }
   }
@@ -255,7 +297,10 @@ export default class ThreeView {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
-    this._globeDepthRenderTarget.setSize(w * (pixelRatio ?? 1), h * (pixelRatio ?? 1));
+    this._globeDepthRenderTarget.setSize(
+      w * (pixelRatio ?? 1),
+      h * (pixelRatio ?? 1),
+    );
     if (
       typeof pixelRatio === "number" &&
       "setPixelRatio" in this.renderer &&
@@ -289,8 +334,10 @@ export default class ThreeView {
     ];
     this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
-    this._uniforms.tGlobeDepth.value = this._globeDepthRenderTarget.depthTexture;
-    this._uniforms.inverseProjectionMatrix.value = this.camera.projectionMatrixInverse;
+    this._uniforms.tGlobeDepth.value =
+      this._globeDepthRenderTarget.depthTexture;
+    this._uniforms.inverseProjectionMatrix.value =
+      this.camera.projectionMatrixInverse;
   }
 
   /** Returns true if the scene was updated and needs to be rendered. */
@@ -301,8 +348,7 @@ export default class ThreeView {
     const events = this._core?.readEvents();
     if (events && this._core) {
       processEvent(
-        this.scene,
-        this._globeScene,
+        this._scenes,
         this.camera,
         this._meshes,
         this._buf,
@@ -326,45 +372,57 @@ export default class ThreeView {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
     this.renderer.setRenderTarget(this._globeDepthRenderTarget);
-    this.renderer.render(this._globeScene, this.camera);
+    this.renderer.clearDepth();
+    this.renderer.render(this._scenes.globe, this.camera);
+
     this.renderer.setRenderTarget(null);
+    this.renderer.clearDepth();
 
-    // Drape a feature on the terrain by stencil test.
-    // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
     if (shouldDrapeByStencilTest) {
-      // Render the terrain first
-      this.renderer.render(this._globeScene, this.camera);
-
-      this._drapedFeatureMaterials.forEach(m => {
-        m.stencilFunc = AlwaysStencilFunc;
-        m.stencilFail = KeepStencilOp;
-        m.stencilZFail = KeepStencilOp;
-        m.stencilZPass = IncrementStencilOp;
-        m.side = FrontSide;
-        m.colorWrite = false;
-        m.depthWrite = false;
-      });
-      this.renderer.render(this.scene, this.camera);
-
-      this._drapedFeatureMaterials.forEach(m => {
-        m.stencilZPass = DecrementStencilOp;
-        m.side = BackSide;
-      });
-      this.renderer.render(this.scene, this.camera);
-
-      // TODO: Near plane support
-
-      this._drapedFeatureMaterials.forEach(m => {
-        m.stencilFunc = NotEqualStencilFunc;
-        m.stencilFail = ZeroStencilOp;
-        m.stencilZFail = ZeroStencilOp;
-        m.stencilZPass = ZeroStencilOp;
-        m.side = FrontSide;
-        m.colorWrite = true;
-        m.depthWrite = true;
-      });
+      this.renderDrapedMesh();
     }
-    this.renderer.render(this.scene, this.camera);
+
+    this.renderer.render(this._scenes.main, this.camera);
+  }
+
+  // Drape a feature on the terrain by stencil test.
+  // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
+  renderDrapedMesh() {
+    // Render the terrain first
+    this.renderer.render(this._scenes.globe, this.camera);
+
+    // TODO: Make drapedFeatureScene
+    this._drapedFeatureMaterials.forEach((m) => {
+      m.stencilFunc = AlwaysStencilFunc;
+      m.stencilFail = KeepStencilOp;
+      m.stencilZFail = KeepStencilOp;
+      m.stencilZPass = IncrementStencilOp;
+      m.side = FrontSide;
+      m.colorWrite = false;
+      m.depthWrite = false;
+    });
+    this.renderer.render(this._scenes.drapedFeatures, this.camera);
+
+    this._drapedFeatureMaterials.forEach((m) => {
+      m.stencilZPass = DecrementStencilOp;
+      m.side = BackSide;
+    });
+    this.renderer.render(this._scenes.drapedFeatures, this.camera);
+
+    // TODO: Near plane support
+
+    this._drapedFeatureMaterials.forEach((m) => {
+      m.stencilFunc = NotEqualStencilFunc;
+      m.stencilFail = ZeroStencilOp;
+      m.stencilZFail = ZeroStencilOp;
+      m.stencilZPass = ZeroStencilOp;
+      m.side = FrontSide;
+      m.colorWrite = true;
+      m.depthWrite = true;
+    });
+
+    // TODO: Reuse depth buffer
+    this.renderer.clearDepth();
   }
 
   on<K extends keyof Events>(event: K, callback: Events[K]) {
@@ -373,7 +431,7 @@ export default class ThreeView {
   }
 
   off<K extends keyof Events>(event: K, callback: Events[K]) {
-    this._events[event] = this._events[event]?.filter(c => c !== callback);
+    this._events[event] = this._events[event]?.filter((c) => c !== callback);
   }
 
   _c3tiles: C3TilesManager;
@@ -391,7 +449,7 @@ export default class ThreeView {
           layers: l.layers ?? [],
           ...l,
         });
-        this.scene.add(mvt.node);
+        this._scenes.main.add(mvt.node);
         this._mvts.push(mvt);
         break;
       }
@@ -414,8 +472,14 @@ export default class ThreeView {
     }
   }
 
+  deleteLayer(layerId: string) {
+    this._core?.deleteLayer(layerId);
+  }
+
   _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {
-    this._events[event]?.forEach(c => (c as (...args: any[]) => any)(...args));
+    this._events[event]?.forEach((c) =>
+      (c as (...args: any[]) => any)(...args),
+    );
   }
 
   _startMainLoop() {
@@ -450,7 +514,9 @@ export default class ThreeView {
     const { width, height } = this._getCanvasSize() ?? {};
     if (!width || !height) return;
 
-    const pixelRatio = isWorker() ? this._options.initialPixelRatio ?? 1 : window.devicePixelRatio;
+    const pixelRatio = isWorker()
+      ? (this._options.initialPixelRatio ?? 1)
+      : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };
 }

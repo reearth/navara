@@ -206,20 +206,22 @@ impl<'a> From<&'a navara_material::PolygonInternalMaterial> for PolygonInternalM
 pub struct ModelMaterial {
     pub show: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
-    pub url: String,
-    pub size: f32,
-    pub height: f32,
-    pub clamp_to_ground: bool,
+    pub url: Option<String>,
+    pub size: Option<f32>,
+    pub height: Option<f32>,
+    pub clamp_to_ground: Option<bool>,
+    pub should_rotate_in_default: Option<bool>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
         navara_material::ModelMaterial {
             show: val.show.unwrap_or(true),
-            url: val.url,
-            size: val.size,
-            height: val.height,
-            clamp_to_ground: val.clamp_to_ground,
+            url: val.url.unwrap_or("".to_string()),
+            size: val.size.unwrap_or(1.),
+            height: val.height.unwrap_or(0.),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(true),
+            should_rotate_in_default: val.should_rotate_in_default.unwrap_or(true),
         }
     }
 }
@@ -227,10 +229,11 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
     fn from(value: &'a navara_material::ModelMaterial) -> ModelMaterial {
         ModelMaterial {
             show: Some(value.show),
-            url: value.url.clone(),
-            size: value.size,
-            height: value.height,
-            clamp_to_ground: value.clamp_to_ground,
+            url: Some(value.url.clone()),
+            size: Some(value.size),
+            height: Some(value.height),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            should_rotate_in_default: Some(value.should_rotate_in_default),
         }
     }
 }

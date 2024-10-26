@@ -7,6 +7,8 @@ use navara_material::{
 };
 use navara_math::{FloatType, Transform, Vec3};
 
+use crate::model::ModelBin;
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
     pub current_terrain_height: FloatType,
@@ -64,6 +66,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
+        bin: Option<ModelBin>,
     },
     #[default]
     Unknown,

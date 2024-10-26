@@ -5,7 +5,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_core::{xyz_to_vec3, Angle, LngLat, Meters, CRS, LLE, WGS84_32};
+use navara_core::WGS84_32;
 use navara_data_requester::DataRequester;
 use navara_layer::{LayerId, LayerStore};
 use navara_material::ModelMaterial;
@@ -15,39 +15,50 @@ use navara_tile::{
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
 
-use super::{ModelGeometry, ModelMarker};
+use super::{ModelBin, ModelGeometry, ModelMarker};
 
+#[allow(clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
-    models: Query<(Entity, &LayerId, &ModelGeometry, &ModelMaterial), Added<ModelGeometry>>,
+    models: Query<
+        (
+            Entity,
+            &LayerId,
+            &ModelGeometry,
+            &ModelMaterial,
+            // For GLB
+            Option<&ModelBin>,
+            Option<&Transform>,
+            // For glTF
+            // Option<&ModelJson>,
+        ),
+        Added<ModelGeometry>,
+    >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, geometry, material) in &models {
-        let position = match geometry.crs {
-            CRS::Geographic => {
-                let lng = geometry.coords.x;
-                let lat = geometry.coords.y;
-                let height = geometry.coords.z;
+    for (entity, layer_id, geometry, material, bin, adjustment_transform) in &models {
+        let position = geometry
+            .crs
+            .to_vec3(WGS84_32, geometry.coords, material.height);
 
-                xyz_to_vec3(
-                    LLE {
-                        lng: Angle::new(lng),
-                        lat: Angle::new(lat),
-                        height: Meters::new(height + material.height),
-                    }
-                    .rad()
-                    .to_xyz(WGS84_32),
-                )
-            }
-            CRS::Geocentric => unimplemented!(),
-            CRS::ESPG { code: _ } => unimplemented!(),
+        let transform = if material.should_rotate_in_default {
+            let lnglat = geometry.crs.to_lng_lat(WGS84_32, geometry.coords);
+            let lng = lnglat.lng.val();
+            let lat = lnglat.lat.val();
+            let rotation_y = Quat::from_rotation_y(-lat);
+            let rotation_z = Quat::from_rotation_z(lng);
+            let adjust_model = Quat::from_rotation_z(-std::f32::consts::PI / 2.0);
+            let rotation = rotation_z * rotation_y * adjust_model;
+            Transform::from_translation(position)
+                .with_rotation(rotation)
+                .with_scale(Vec3::new(material.size, material.size, material.size))
+        } else {
+            Transform::from_translation(position)
         };
-
-        let lng = geometry.coords.x.to_radians();
-        let lat = geometry.coords.y.to_radians();
-        let rotation_y = Quat::from_rotation_y(-lat);
-        let rotation_z = Quat::from_rotation_z(lng);
-        let rotation = rotation_z * rotation_y;
+        let transform = match adjustment_transform {
+            Some(a) => transform.mul_transform(*a),
+            None => transform,
+        };
 
         let entity = commands.spawn((
             ModelMarker,
@@ -55,13 +66,12 @@ pub fn transfer_mesh(
                 coordinates: geometry.coords,
                 crs: geometry.crs.clone(),
                 material: material.clone(),
-                transform: Transform::from_translation(position)
-                    .with_rotation(rotation)
-                    .with_scale(Vec3::new(material.size, material.size, material.size)),
+                transform,
                 feature_id: entity,
                 render_info: RenderInformation {
                     current_terrain_height: 0.,
                 },
+                bin: bin.cloned(),
             },
         ));
 
@@ -95,17 +105,19 @@ pub fn update_height_by_terrain(
                 transform,
                 feature_id,
                 render_info,
+                bin: _,
             } => {
+                if !material.clamp_to_ground {
+                    continue;
+                }
+
                 let geometry = geometries.get(*feature_id).unwrap();
                 let terrain_height = if material.clamp_to_ground {
                     compute_terrain_height_at_point(
                         &mut qt,
                         &mut buf,
                         &terrain_data_requester,
-                        &LngLat {
-                            lng: Angle::new(geometry.coords.x).rad(),
-                            lat: Angle::new(geometry.coords.y).rad(),
-                        },
+                        &geometry.crs.to_lng_lat(WGS84_32, geometry.coords),
                     )
                     .unwrap_or(0.)
                 } else {
@@ -113,18 +125,10 @@ pub fn update_height_by_terrain(
                 };
                 render_info.current_terrain_height =
                     render_info.current_terrain_height.max(terrain_height);
-                let position = xyz_to_vec3(
-                    LLE {
-                        lng: Angle::new(geometry.coords.x),
-                        lat: Angle::new(geometry.coords.y),
-                        height: Meters::new(
-                            geometry.coords.z
-                                + material.height
-                                + render_info.current_terrain_height,
-                        ),
-                    }
-                    .rad()
-                    .to_xyz(WGS84_32),
+                let position = geometry.crs.to_vec3(
+                    WGS84_32,
+                    geometry.coords,
+                    material.height + render_info.current_terrain_height,
                 );
 
                 transform.translation = position;

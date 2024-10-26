@@ -12,7 +12,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { DRACOLoader, GLTFLoader } from "three-stdlib";
+import { DRACOLoader, GLTFLoader, type GLTFLoaderPlugin } from "three-stdlib";
 
 export type LoadEvent = {
   type: "load";
@@ -24,7 +24,12 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
   center: Vector3 | undefined;
   url: string;
 
-  constructor(scene: Scene, camera: Camera, renderer: WebGLRenderer, url: string) {
+  constructor(
+    scene: Scene,
+    camera: Camera,
+    renderer: WebGLRenderer,
+    url: string,
+  ) {
     super();
 
     this.url = url;
@@ -35,10 +40,12 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
     const tilesetGroup = new Group();
 
     const dracoLoader = new DRACOLoader(tilesRenderer.manager);
-    dracoLoader.setDecoderPath("https://unpkg.com/three@0.161.0/examples/jsm/libs/draco/gltf/");
+    dracoLoader.setDecoderPath(
+      "https://unpkg.com/three@0.161.0/examples/jsm/libs/draco/gltf/",
+    );
     const gltfLoader = new GLTFLoader(tilesRenderer.manager);
 
-    gltfLoader.register(() => new GLTFCesiumRTCExtension());
+    gltfLoader.register(() => new GLTFCesiumRTCExtension() as GLTFLoaderPlugin);
     gltfLoader.setDRACOLoader(dracoLoader);
     tilesRenderer.manager.addHandler(/\.gltf$/, gltfLoader);
     tilesRenderer.manager.addHandler(/\.glb$/, gltfLoader);
@@ -48,7 +55,7 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
     tilesetGroup.add(tilesRenderer.group);
     scene.add(tilesetGroup);
 
-    tilesRenderer.onLoadTileSet = titleset => {
+    tilesRenderer.addEventListener("load-tile-set", (titleset) => {
       console.log("load tileset", titleset);
 
       const box = new Box3();
@@ -68,17 +75,16 @@ export class C3Tiles extends EventDispatcher<{ load: LoadEvent }> {
         box.min.z - box.max.z,
       );
       obbGeometry.applyMatrix4(matrix);
-      const obbMaterial = new MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+      const obbMaterial = new MeshBasicMaterial({
+        color: 0xff0000,
+        wireframe: true,
+      });
       const obbMesh = new Mesh(obbGeometry, obbMaterial);
       obbMesh.position.copy(center);
       tilesetGroup.add(obbMesh);
 
       this.dispatchEvent({ type: "load", center });
-    };
-
-    tilesRenderer.onLoadModel = _scene => {
-      // TODO
-    };
+    });
   }
 
   update() {
@@ -102,7 +108,12 @@ export class C3TilesManager {
   renderer: WebGLRenderer;
   control?: Control;
 
-  constructor(scene: Scene, camera: Camera, renderer: WebGLRenderer, control?: Control) {
+  constructor(
+    scene: Scene,
+    camera: Camera,
+    renderer: WebGLRenderer,
+    control?: Control,
+  ) {
     this.scene = scene;
     this.camera = camera;
     this.renderer = renderer;
@@ -118,7 +129,7 @@ export class C3TilesManager {
   add(url: string, autoCameraFlyTo = true) {
     const layer = new C3Tiles(this.scene, this.camera, this.renderer, url);
     if (autoCameraFlyTo) {
-      layer.addEventListener("load", e => {
+      layer.addEventListener("load", (e) => {
         this.control?.target?.copy(e.center);
         this.camera.position.copy(e.center);
         this.camera.position.addScalar(50);
@@ -132,7 +143,7 @@ export class C3TilesManager {
   }
 
   remove(url: string) {
-    const index = this.layers.findIndex(layer => layer.url === url);
+    const index = this.layers.findIndex((layer) => layer.url === url);
     if (index !== -1) {
       const layer = this.layers[index];
       this.layers.splice(index, 1);

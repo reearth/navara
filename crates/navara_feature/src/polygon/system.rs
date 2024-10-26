@@ -3,9 +3,8 @@ use bevy_ecs::{
     query::Added,
     system::{Commands, Query, ResMut},
 };
-use bevy_log::info;
 use navara_buffer_store::BufferStore;
-use navara_core::{Aabb, Angle, Extent, LngLat, Meters, CRS, LLE, WGS84_32};
+use navara_core::{Aabb, Extent, CRS, WGS84_32};
 use navara_geometry::{
     create_polygon_geometry, Hierarchy, PolygonGeometryOptions, PolygonResource,
     TransferableFloatAttribute,
@@ -55,59 +54,24 @@ pub fn transfer_mesh(
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, geometry, material) in &polygon {
-        let hierarchy = match geometry.crs {
-            CRS::Geographic => {
-                let mut hierarchy = Hierarchy::default();
-                for c in &geometry.hierarchy.outer_ring {
-                    let lng = c.x;
-                    let lat = c.y;
-                    let height = c.z;
-
-                    hierarchy.outer_ring.push(
-                        LLE {
-                            lng: Angle::new(lng),
-                            lat: Angle::new(lat),
-                            height: Meters::new(height + material.height),
-                        }
-                        .rad()
-                        .to_xyz(WGS84_32)
-                        .into(),
-                    );
-                }
-                for c in &geometry.hierarchy.holes {
-                    let lng = c.x;
-                    let lat = c.y;
-                    let height = c.z;
-
-                    hierarchy.holes.push(
-                        LLE {
-                            lng: Angle::new(lng),
-                            lat: Angle::new(lat),
-                            height: Meters::new(height + material.height),
-                        }
-                        .rad()
-                        .to_xyz(WGS84_32)
-                        .into(),
-                    );
-                }
-                hierarchy
-            }
-            CRS::Geocentric => unimplemented!(),
-            CRS::ESPG { code: _ } => unimplemented!(),
-        };
+        let mut hierarchy = Hierarchy::default();
+        for c in &geometry.hierarchy.outer_ring {
+            hierarchy
+                .outer_ring
+                .push(geometry.crs.to_vec3(WGS84_32, *c, material.height));
+        }
+        for c in &geometry.hierarchy.holes {
+            hierarchy
+                .holes
+                .push(geometry.crs.to_vec3(WGS84_32, *c, material.height));
+        }
 
         let extent = Extent::from_points(
             &geometry
                 .hierarchy
                 .outer_ring
                 .iter()
-                .map(|o| {
-                    LngLat {
-                        lng: Angle::new(o.x),
-                        lat: Angle::new(o.y),
-                    }
-                    .rad()
-                })
+                .map(|o| geometry.crs.to_lng_lat(WGS84_32, *o))
                 .collect::<Vec<_>>(),
         );
         if let Some(result) = create_polygon_geometry(
@@ -214,14 +178,15 @@ pub fn update_height_by_terrain(
                 render_info.should_recalculate_height = false;
 
                 let (min_height, max_height) = if material.clamp_to_ground {
-                    sample_terrain_height_within_extent(&mut qt, *extent)
+                    let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
+                    // TODO: Find a good way to approximate more detail.
+                    // Fix an issue the max height is off a bit.
+                    let e = max / 100.;
+                    (min, max + e)
                 } else {
                     (material.height, material.extruded_height.unwrap_or(0.))
                 };
-                info!(
-                    "INVOKE {} {} {}",
-                    min_height, max_height, material.clamp_to_ground
-                );
+
                 let internal = material.internal.as_mut().unwrap();
                 internal.min_max_heights = calc_min_max_height(
                     min_height,

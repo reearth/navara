@@ -1,7 +1,10 @@
 import type { Core } from "navara";
 
 // TODO: Need to think about how to propagate these event to worker.
-export function registerInputEvents(core: Core, element: HTMLElement): () => void {
+export function registerInputEvents(
+  core: Core,
+  element: HTMLElement,
+): () => void {
   const mousedown = (event: MouseEvent) => {
     core.input({
       type: "mousedown",

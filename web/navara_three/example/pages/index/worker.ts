@@ -35,7 +35,7 @@ self.onmessage = async (event: MessageEvent<Message>) => {
         initialPixelRatio: event.data.pixelRatio,
         debug: true,
       });
-      await run(view).then(r => {
+      await run(view).then((r) => {
         self.postMessage({ type: "init" } satisfies Event);
         return r;
       });

@@ -1,47 +1,13 @@
+extend = [{ path = "makes/rust.toml" }, { path = "makes/web.toml" }]
+
 [config]
 skip_core_tasks = true
 default_to_workspace = false
 
 [env]
 PROJ_NAME = "navara"
-
-[tasks.format-rust]
-script = ['''
-#!/usr/bin/env bash -eux
-cargo fmt --all
-''']
-
-[tasks.format-check-rust]
-script = ['''
-#!/usr/bin/env bash -eux
-cargo fmt --all --check
-''']
-
-[tasks.lint-rust]
-script = ['''
-#!/usr/bin/env bash -eux
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-''']
-
-[tasks.build-rust]
-script = ['''
-#!/usr/bin/env bash -eux
-cd crates/navara_wasm
-wasm-pack build --target web --release
-''']
-
-[tasks.test-rust]
-script = ['''
-#!/usr/bin/env bash -eux
-cargo test --workspace --all-targets --all-features
-''']
-
 [tasks.build-dev]
-script = ['''
-#!/usr/bin/env bash -eux
-cd crates/navara_wasm
-wasm-pack build --target web
-''']
+run_task = { name = ["build-dev-rust"] }
 
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
@@ -68,74 +34,10 @@ run_task = { name = ["build-rust", "build-web-example"] }
 run_task = { name = ["build-rust", "build-web"] }
 
 [tasks.watch]
-script = ['''
-#!/usr/bin/env bash -eux
-cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
-''']
-
-[tasks.dev-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run dev
-''']
-
-[tasks.build-web-example]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run build:example
-''']
-
-[tasks.build-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run build
-''']
-
-[tasks.lint-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run lint
-''']
-
-[tasks.lint-check-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run lint:check
-''']
-
-[tasks.format-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run format
-''']
-
-[tasks.format-check-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run format:check
-''']
-
-[tasks.test-web]
-script = ['''
-#!/usr/bin/env bash -eux
-cd web/navara_three
-npm i && npm run test
-''']
+run_task = { name = ["watch-rust"] }
 
 [tasks.doc]
-script = ['''
-#!/usr/bin/env bash -eux
-cargo clean --doc
-cargo doc --no-deps --all-features
-''']
+run_task = { name = ["doc-rust"] }
 
 [tasks.coverage]
 script = ['''

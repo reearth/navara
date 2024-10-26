@@ -164,7 +164,6 @@ impl Camera {
         *self.transform.right()
     }
 
-
     pub fn view_matrix(transform: &Transform) -> Mat4 {
         transform.compute_matrix().inverse()
     }

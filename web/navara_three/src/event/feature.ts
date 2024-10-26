@@ -22,20 +22,17 @@ import {
   TextureLoader,
   Object3D,
   MeshLambertMaterial,
-  Material,
 } from "three";
-import { GLTFLoader } from "three-stdlib";
+import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import type { CommonUniforms } from "../uniforms";
 
 import type { BufferLoader } from ".";
 
 export function renderFeature(
-  id: string,
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point);
@@ -44,13 +41,13 @@ export function renderFeature(
     return renderBillboard(f.billboard);
   }
   if (f.model) {
-    return renderModel(f.model);
+    return renderModel(f.model, buf);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
   }
   if (f.polygon) {
-    return renderPolygon(id, f.polygon, buf, uniforms, drapedFeatureMaterials);
+    return renderPolygon(f.polygon, buf, uniforms);
   }
 }
 
@@ -61,7 +58,7 @@ async function renderPoint(m: PointMesh) {
     sizeAttenuation: false,
     visible: m.material.show,
   });
-  material.onBeforeCompile = shader => {
+  material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace(
         "uniform vec2 center;",
@@ -118,15 +115,45 @@ async function renderBillboard(m: BillboardMesh) {
   return sprite;
 }
 
-async function renderModel(m: ModelMesh) {
-  const loader = new GLTFLoader();
+const initializeGltfLoader = (() => {
+  let GLTF: GLTFLoader;
+  return () => {
+    if (GLTF) return GLTF;
+    GLTF = new GLTFLoader();
+    const draco = new DRACOLoader();
+    draco.setDecoderPath(
+      "https://unpkg.com/three@0.161.0/examples/jsm/libs/draco/gltf/",
+    );
+    GLTF.setDRACOLoader(draco);
+    return GLTF;
+  };
+})();
 
-  const model = await loader.loadAsync(m.material.url);
+async function renderModel(m: ModelMesh, buf: BufferLoader) {
+  const loader = initializeGltfLoader();
 
-  return model.scene;
+  if (m.bin) {
+    const bin = buf.u8(m.bin);
+    if (!bin) {
+      return;
+    }
+    // FIXME: Specify origin path
+    const model = await loader.parseAsync(bin.buffer, "");
+    return model.scene;
+  } else {
+    if (!m.material.url) {
+      return;
+    }
+    const model = await loader.loadAsync(m.material.url);
+    return model.scene;
+  }
 }
 
-async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: CommonUniforms) {
+async function renderPolyline(
+  mesh: PolylineMesh,
+  buf: BufferLoader,
+  uniforms: CommonUniforms,
+) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
   const start = buf.f32(g.start.data);
@@ -151,13 +178,19 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
     return;
 
   const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(position, g.position.size));
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(position, g.position.size),
+  );
   geometry.setAttribute("start", new BufferAttribute(start, g.start.size));
   geometry.setAttribute(
     "forward_offset",
     new BufferAttribute(forward_offset, g.forward_offset.size),
   );
-  geometry.setAttribute("start_normal", new BufferAttribute(start_normals, g.start_normals.size));
+  geometry.setAttribute(
+    "start_normal",
+    new BufferAttribute(start_normals, g.start_normals.size),
+  );
   geometry.setAttribute(
     "end_normal_and_texture_coordinate_normalization_x",
     new BufferAttribute(
@@ -186,7 +219,9 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
     },
     vertexShader: PolylineVertShader,
-    fragmentShader: mesh.material.clamp_to_ground ? GroundPolylineFragShader : PolylineFragShader,
+    fragmentShader: mesh.material.clamp_to_ground
+      ? GroundPolylineFragShader
+      : PolylineFragShader,
     depthTest: false,
     depthWrite: false,
     visible: mesh.material.show,
@@ -197,11 +232,9 @@ async function renderPolyline(mesh: PolylineMesh, buf: BufferLoader, uniforms: C
 }
 
 async function renderPolygon(
-  id: string,
   mesh: PolygonMesh,
   buf: BufferLoader,
   _uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
 ) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
@@ -213,7 +246,10 @@ async function renderPolygon(
   if (!position || !indices) return;
 
   const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(position, g.position.size));
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(position, g.position.size),
+  );
   if (g.normal && normal) {
     geometry.setAttribute("normal", new BufferAttribute(normal, g.normal.size));
   }
@@ -242,7 +278,7 @@ async function renderPolygon(
     value: clampToGround,
   };
 
-  material.onBeforeCompile = shader => {
+  material.onBeforeCompile = (shader) => {
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
@@ -289,11 +325,8 @@ if(uClampToGround) {
       );
   };
 
-  if (clampToGround) {
-    drapedFeatureMaterials.set(id, material);
-  }
-
   const m = new Mesh(geometry, material);
+  m.userData.draped = clampToGround;
 
   return m;
 }
