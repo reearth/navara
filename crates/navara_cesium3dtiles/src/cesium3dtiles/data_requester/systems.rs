@@ -35,11 +35,6 @@ pub fn filter_requestable_data_requester(
         .sort::<&TileOrderByDistance>()
         .skip(num_skip as usize)
     {
-        commands.entity(e).remove::<(
-            B3dmDataRequesterMarker,
-            Cesium3dTileContentDataRequesterMarker,
-            DataRequester,
-            TileOrderByDistance,
-        )>();
+        commands.entity(e).despawn();
     }
 }

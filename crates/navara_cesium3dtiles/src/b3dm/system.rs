@@ -1,7 +1,7 @@
 use bevy_ecs::{
     entity::Entity,
     query::{Added, Changed, With},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query, Res, ResMut},
 };
 use bevy_log::error;
 use navara_buffer_store::{BufferStore, Handle};
@@ -12,7 +12,10 @@ use navara_feature::{
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
 };
-use navara_layer::{B3dmLayer, Cesium3dTilesLayer, LayerId};
+use navara_layer::{
+    B3dmLayer, Cesium3dTilesLayer, DeleteB3dmLayerMarker, LayerId, LayerStore,
+    UpdateB3dmLayerMarker,
+};
 use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
 use navara_parser::{b3dm::B3dm, glb::BinaryReader};
@@ -50,15 +53,22 @@ pub fn request_model_by_b3dm_layer(
 pub fn construct_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    requesters: Query<(&B3dmLayerDataRequesterMarker, &DataRequester), Changed<DataRequester>>,
-    b3dm_layers: Query<(Entity, &B3dmLayer)>,
+    requesters: Query<
+        (Entity, &B3dmLayerDataRequesterMarker, &DataRequester),
+        Changed<DataRequester>,
+    >,
+    b3dm_layers: Query<&B3dmLayer>,
 ) {
-    for (marker, req) in &requesters {
+    for (e, marker, req) in &requesters {
+        if !matches!(req.status, DataRequesterStatus::Pending) {
+            commands.entity(e).despawn();
+        }
+
         // TODO: Handle fail
         if !matches!(req.status, DataRequesterStatus::Success) {
             continue;
         }
-        let (_, layer) = match b3dm_layers.get(marker.0) {
+        let layer = match b3dm_layers.get(marker.0) {
             Ok(l) => l,
             Err(_) => unreachable!(),
         };
@@ -90,6 +100,65 @@ pub fn construct_model_by_b3dm_layer(
     }
 }
 
+pub fn update_model_by_b3dm_layer(
+    mut commands: Commands,
+    layer_store: Res<LayerStore>,
+    updated: Query<(Entity, &UpdateB3dmLayerMarker)>,
+    mut features: Query<&mut RenderableFeature>,
+) {
+    for (e, u) in &updated {
+        let layer_id = u.layer_id.clone();
+        if let Some(ids) = layer_store.get(&layer_id) {
+            for id in ids {
+                let mut f = match features.get_mut(*id) {
+                    Ok(f) => f,
+                    Err(_) => continue,
+                };
+                if let RenderableFeature::Model { material, .. } = f.as_mut() {
+                    *material = u.material.clone();
+                }
+            }
+        }
+        commands.entity(e).despawn();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn delete_model_by_b3dm_layer(
+    mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
+    mut layer_store: ResMut<LayerStore>,
+    deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
+    b3dm_layers: Query<Entity, With<B3dmLayer>>,
+    features: Query<
+        &ModelBin,
+        (
+            With<LayerId>,
+            With<ModelGeometry>,
+            With<ModelMaterial>,
+            With<Transform>,
+        ),
+    >,
+) {
+    for (e, d) in &deleted {
+        let entities = match layer_store.get(&d.0.clone()) {
+            Some(e) => e,
+            None => continue,
+        };
+        for e in entities {
+            if let Ok(f) = features.get(*e) {
+                buf.remove(&f.0);
+            };
+            commands.entity(*e).despawn();
+        }
+        for e in &b3dm_layers {
+            commands.entity(e).despawn();
+        }
+        layer_store.remove(&d.0);
+        commands.entity(e).despawn();
+    }
+}
+
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
@@ -118,13 +187,14 @@ pub fn construct_model_by_cesium3dtiles_layer(
         }
         let (_, layer) = match layers.get(tile.layer_id) {
             Ok(l) => l,
-            Err(_) => unreachable!(),
+            Err(_) => continue,
         };
         let mut appearance = match &layer.appearances[0] {
             Appearance::Model(m) => m.clone(),
             _ => unimplemented!(),
         };
         appearance.should_rotate_in_default = false;
+        appearance.clamp_to_ground = false;
 
         let (center, glb_bin_handle) = match get_geometry_info_from_b3dm(&mut buf, &req.handle) {
             Some(r) => r,
@@ -209,45 +279,39 @@ pub fn remove_invisible_rendered_tiles(
             With<Transform>,
         ),
     >,
+    rendered_features: Query<(&ModelMarker, &RenderableFeature)>,
 ) {
-    for (entity, tile, _) in rendered_tiles.iter().sort::<&TileOrderByDistance>() {
+    for (entity, tile, _) in &rendered_tiles {
         if tile.is_visible {
+            continue;
+        }
+
+        if let Some(feature_id) = tile.feature_id {
+            // Remove feature
+            if let Ok((rendered_feature_id, model_bin)) = features.get(feature_id) {
+                if let Some(rendered_feature_id) = rendered_feature_id.0 {
+                    if !rendered_features.contains(rendered_feature_id) {
+                        continue;
+                    }
+                    buf.remove(&model_bin.0);
+                    commands.entity(feature_id).despawn();
+                    commands.entity(rendered_feature_id).despawn();
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        } else {
             continue;
         }
 
         // Remove data requester
         if let Ok(requester) = requesters.get(tile.data_requester_id) {
             buf.remove(&requester.handle);
-            commands.entity(tile.data_requester_id).remove::<(
-                Cesium3dTileContentDataRequesterMarker,
-                B3dmDataRequesterMarker,
-                DataRequester,
-            )>();
+            commands.entity(tile.data_requester_id).despawn();
         }
 
-        if let Some(feature_id) = tile.feature_id {
-            // Remove feature
-            if let Ok((rendered_feature_id, model_bin)) = features.get(feature_id) {
-                buf.remove(&model_bin.0);
-                if let Some(rendered_feature_id) = rendered_feature_id.0 {
-                    commands
-                        .entity(rendered_feature_id)
-                        .remove::<(ModelMarker, RenderableFeature)>();
-                }
-            }
-            commands.entity(feature_id).remove::<(
-                LayerId,
-                FeatureId,
-                ModelGeometry,
-                ModelMaterial,
-                ModelBin,
-                Transform,
-            )>();
-        }
-
-        commands.entity(entity).remove::<(
-            RenderedCesium3dTileContentB3dmMarker,
-            RenderedCesium3dTileContent,
-        )>();
+        commands.entity(entity).despawn();
     }
 }

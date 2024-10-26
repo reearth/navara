@@ -26,17 +26,16 @@ impl Cesium3dTilesTree {
     pub fn new(
         url: &str,
         layer_id: Entity,
-        layer: Option<&Cesium3dTilesLayer>,
+        layer: &Cesium3dTilesLayer,
         metadata: &navara_parser::cesium3dtiles::tileset::Tileset,
     ) -> Result<Self, ParseError> {
         let base_url = Url::parse(url)?;
         let root = Cesium3dTileContent::new(&metadata.root, None);
 
-        let appearance = layer.and_then(|l| {
-            l.appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Model(_)))
-        });
+        let appearance = layer
+            .appearances
+            .iter()
+            .find(|a| matches!(a, Appearance::Model(_)));
         let max_sse = match appearance {
             Some(Appearance::Model(m)) => m.max_sse,
             _ => 2.,

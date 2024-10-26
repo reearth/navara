@@ -96,7 +96,12 @@ fn mark_leaves(
     tile.state.sse = sse;
 
     let data_requester = match tile.data_requester_id {
-        Some(id) => requesters.get(id).ok().map(|d| d.1),
+        Some(id) => requesters.get(id).ok().map(
+            |d: (
+                &super::Cesium3dTileContentDataRequesterMarker,
+                &navara_data_requester::DataRequester,
+            )| d.1,
+        ),
         None => None,
     };
     let is_data_ready =
@@ -160,12 +165,6 @@ fn mark_leaves(
         }
         if any_children_rendered {
             for (i, child) in tile.children.as_mut().unwrap().iter_mut().enumerate() {
-                // Culled tile should be a leaf to prevent rendering it's children.
-                if culled_children.contains(&i) {
-                    child.state.leaf = true;
-                    continue;
-                }
-
                 let is_selected_child = selected_children.contains(&i);
 
                 if all_children_rendered && is_selected_child {
@@ -210,7 +209,7 @@ fn mark_rendered_tiles(
 
     // This tile has been invisible before this frame.
     if !state.touched && !touched_last_frame {
-        toggle_rendered_tile_visible(rendered_tiles, tile.rendered_tile_id, false);
+        toggle_rendered_tile_visible(rendered_tiles, tile, false);
         return;
     }
 
@@ -222,11 +221,13 @@ fn mark_rendered_tiles(
             if is_visible {
                 *rendered_tiles_count += 1;
             }
-        } else {
+        } else if state.is_visible {
             request_tile_content(commands, buf, base_url, tile, requesters);
+        } else {
+            toggle_rendered_tile_visible(rendered_tiles, tile, false);
         }
     } else {
-        toggle_rendered_tile_visible(rendered_tiles, tile.rendered_tile_id, false);
+        toggle_rendered_tile_visible(rendered_tiles, tile, false);
     }
 
     tile.state.touched = false;
@@ -250,12 +251,31 @@ fn mark_rendered_tiles(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn mark_rendered_tiles_invisible(
+    tile: &mut Cesium3dTileContent,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+) {
+    toggle_rendered_tile_visible(rendered_tiles, tile, false);
+
+    let children = match &mut tile.children {
+        Some(c) => c,
+        None => return,
+    };
+
+    for child_tile in children {
+        mark_rendered_tiles_invisible(child_tile, rendered_tiles);
+    }
+}
+
 fn toggle_rendered_tile_visible(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
-    id: Option<Entity>,
+    tile: &mut Cesium3dTileContent,
     visible: bool,
 ) -> bool {
-    let mut rendered_tile = id.and_then(|id| rendered_tiles.get_mut(id).ok());
+    let mut rendered_tile = tile
+        .rendered_tile_id
+        .and_then(|id| rendered_tiles.get_mut(id).ok());
     match &mut rendered_tile {
         Some(t) => {
             t.is_visible = visible;
@@ -272,7 +292,7 @@ fn update_or_spawn_rendered_tile(
     tile: &mut Cesium3dTileContent,
     visible: bool,
 ) {
-    if toggle_rendered_tile_visible(rendered_tiles, tile.rendered_tile_id, visible) {
+    if toggle_rendered_tile_visible(rendered_tiles, tile, visible) {
         return;
     }
 

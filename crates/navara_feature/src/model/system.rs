@@ -1,6 +1,7 @@
 use crate::{
     id::FeatureId,
     render::{RenderInformation, RenderableFeature},
+    DeletedFeatureMarker,
 };
 use bevy_ecs::{
     entity::Entity,
@@ -35,14 +36,27 @@ pub fn transfer_mesh(
             Option<&Transform>,
             // For glTF
             // Option<&ModelJson>,
+            Option<&DeletedFeatureMarker>,
         ),
         Added<ModelGeometry>,
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, mut feature_id, geometry, material, bin, adjustment_transform) in
-        &mut models
+    for (
+        entity,
+        layer_id,
+        mut feature_id,
+        geometry,
+        material,
+        bin,
+        adjustment_transform,
+        deleted_marker,
+    ) in &mut models
     {
+        if deleted_marker.is_some() {
+            continue;
+        }
+
         let position = geometry
             .crs
             .to_vec3(WGS84_32, geometry.coords, material.height);
@@ -85,11 +99,7 @@ pub fn transfer_mesh(
             f.0 = Some(entity.id());
         }
 
-        layer_store
-            .map
-            .entry(layer_id.clone())
-            .or_default()
-            .push(entity.id());
+        layer_store.add(layer_id.0.clone(), entity.id());
     }
 }
 

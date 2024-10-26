@@ -1,22 +1,31 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Changed},
+    query::{Added, Changed, With},
     system::{Commands, Query, Res, ResMut},
 };
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
-use navara_layer::Cesium3dTilesLayer;
+use navara_feature::{
+    model::{ModelBin, ModelGeometry},
+    render::RenderableFeature,
+};
+use navara_layer::{
+    Cesium3dTilesLayer, DeleteCesium3dTilesLayerMarker, LayerId, LayerStore,
+    UpdateCesium3dTilesLayerMarker,
+};
+use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Transform, Vec3};
 use navara_parser::cesium3dtiles;
 use navara_window::Window;
 
-use crate::RenderedCesium3dTileContent;
+use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
 
 use super::{
-    traversal::select_tiles, types::Cesium3dTileContentRequesterQuery, Cesium3dTilesMetadata,
-    Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
+    traversal::{mark_rendered_tiles_invisible, select_tiles},
+    types::Cesium3dTileContentRequesterQuery,
+    Cesium3dTilesMetadata, Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
 };
 
 pub fn request_metadata(
@@ -38,14 +47,18 @@ pub fn request_metadata(
 
 pub fn construct_cesium_3d_tiles_tree(
     mut commands: Commands,
-    buf: Res<BufferStore>,
+    mut buf: ResMut<BufferStore>,
     requesters: Query<
-        (&Cesium3dTilesMetadataDataRequesterMarker, &DataRequester),
+        (
+            Entity,
+            &Cesium3dTilesMetadataDataRequesterMarker,
+            &DataRequester,
+        ),
         Changed<DataRequester>,
     >,
     layers: Query<&Cesium3dTilesLayer>,
 ) {
-    for (marker, req) in &requesters {
+    for (e, marker, req) in &requesters {
         // TODO: Handle fail
         if !matches!(req.status, DataRequesterStatus::Success) {
             continue;
@@ -60,7 +73,13 @@ pub fn construct_cesium_3d_tiles_tree(
                 continue;
             }
         };
-        let layer = layers.get(marker.0).ok();
+        buf.remove(&req.handle);
+        commands.entity(e).despawn();
+
+        let layer = match layers.get(marker.0) {
+            Ok(l) => l,
+            Err(_) => continue,
+        };
         let metadata = Cesium3dTilesMetadata(tileset_json);
         let tree = match Cesium3dTilesTree::new(&req.url, marker.0, layer, &metadata.0) {
             Ok(t) => t,
@@ -70,7 +89,7 @@ pub fn construct_cesium_3d_tiles_tree(
             }
         };
 
-        commands.spawn((metadata, tree));
+        commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
     }
 }
 
@@ -101,5 +120,93 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &window,
             );
         }
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn update_cesium3dtiles_layer(
+    mut commands: Commands,
+    layer_store: Res<LayerStore>,
+    updated: Query<(Entity, &UpdateCesium3dTilesLayerMarker)>,
+    mut layers: Query<&mut Cesium3dTilesLayer>,
+    mut rendered_features: Query<&mut RenderableFeature>,
+    rendered_tiles: Query<
+        &RenderedCesium3dTileContent,
+        With<RenderedCesium3dTileContentB3dmMarker>,
+    >,
+    mut features: Query<
+        &mut ModelMaterial,
+        (
+            With<LayerId>,
+            With<ModelGeometry>,
+            With<ModelBin>,
+            With<ModelMaterial>,
+            With<Transform>,
+        ),
+    >,
+) {
+    for (e, u) in &updated {
+        let layer_id = u.layer_id.clone();
+        for mut l in &mut layers {
+            if l.layer_id != layer_id {
+                continue;
+            }
+            for a in &mut l.appearances {
+                if let Appearance::Model(mat) = a {
+                    *mat = u.material.clone();
+                }
+            }
+        }
+        if let Some(ids) = layer_store.get(&layer_id) {
+            for id in ids {
+                let mut f = match rendered_features.get_mut(*id) {
+                    Ok(f) => f,
+                    Err(_) => continue,
+                };
+                if let RenderableFeature::Model { material, .. } = f.as_mut() {
+                    *material = u.material.clone();
+                }
+            }
+        }
+        for rendered_tile in &rendered_tiles {
+            if !matches!(layers.get(rendered_tile.layer_id), Ok(l) if l.layer_id == layer_id) {
+                continue;
+            }
+            if let Some(mut mat) = rendered_tile
+                .feature_id
+                .and_then(|id| features.get_mut(id).ok())
+            {
+                *mat = u.material.clone();
+            }
+        }
+        commands.entity(e).despawn();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn delete_cesium3dtiles_layer(
+    mut commands: Commands,
+    mut layer_store: ResMut<LayerStore>,
+    deleted: Query<(Entity, &DeleteCesium3dTilesLayerMarker)>,
+    layers: Query<(Entity, &Cesium3dTilesLayer)>,
+    mut tiles: Query<(Entity, &LayerId, &mut Cesium3dTilesTree)>,
+    mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
+) {
+    for (e, d) in &deleted {
+        for (e, layer_id, mut tree) in &mut tiles {
+            if layer_id.0 != d.0 {
+                continue;
+            }
+            mark_rendered_tiles_invisible(&mut tree.root, &mut rendered_tiles);
+            commands.entity(e).despawn();
+            layer_store.remove(&layer_id.0);
+        }
+        for (e, l) in &layers {
+            if l.layer_id != d.0 {
+                continue;
+            }
+            commands.entity(e).despawn();
+        }
+        commands.entity(e).despawn();
     }
 }

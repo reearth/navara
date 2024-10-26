@@ -1,7 +1,7 @@
 use bevy_ecs::component::Component;
 use navara_core::CRS;
 
-use navara_material::Appearance;
+use navara_material::{Appearance, ModelMaterial};
 
 use crate::LayerData;
 
@@ -12,3 +12,12 @@ pub struct B3dmLayer {
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }
+
+#[derive(Debug, Component)]
+pub struct UpdateB3dmLayerMarker {
+    pub layer_id: String,
+    pub material: ModelMaterial,
+}
+
+#[derive(Debug, Component)]
+pub struct DeleteB3dmLayerMarker(pub String);

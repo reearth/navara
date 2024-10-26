@@ -6,11 +6,14 @@ use navara_geometry::PolygonResource;
 pub mod billboard;
 pub mod event;
 pub mod id;
+mod marker;
 pub mod model;
 pub mod point;
 pub mod polygon;
 pub mod polyline;
 pub mod render;
+
+pub use marker::*;
 
 pub struct FeaturePlugin;
 

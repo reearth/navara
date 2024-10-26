@@ -339,13 +339,13 @@ export default class ThreeView {
   }
 
   /** Returns true if the scene was updated and needs to be rendered. */
-  update(): boolean {
+  async update(): Promise<boolean> {
     this._core?.update();
     this.updateUniforms();
 
     const events = this._core?.readEvents();
     if (events && this._core) {
-      processEvent(
+      await processEvent(
         this._scenes,
         this.camera,
         this._meshes,
@@ -436,38 +436,13 @@ export default class ThreeView {
   _mvts: MVT[] = [];
 
   addLayer(l: LayerDescription) {
-    let layerId = null;
-    switch (l.type) {
-      case "3dtiles":
-        this._c3tiles.add(l.url, this._c3tiles.length() == 0);
-        this._c3tiles.update();
-        break;
-      case "mvt": {
-        const mvt = new MVT({
-          layers: l.layers ?? [],
-          ...l,
-        });
-        this._scenes.main.add(mvt.node);
-        this._mvts.push(mvt);
-        break;
-      }
-      default:
-        layerId = this._core?.addLayer(l);
-    }
+    const layerId = this._core?.addLayer(l);
 
     return layerId;
   }
 
   updateLayer(layerId: string, l: LayerDescription) {
-    switch (l.type) {
-      case "3dtiles":
-        break;
-      case "mvt":
-        break;
-      default:
-        this._core?.updateLayer(layerId, l);
-        break;
-    }
+    this._core?.updateLayer(layerId, l);
   }
 
   deleteLayer(layerId: string) {
@@ -481,15 +456,16 @@ export default class ThreeView {
   }
 
   _startMainLoop() {
-    const loop = () => {
+    const loop = async () => {
       if (this._disposed) return;
       this._stats?.begin();
 
-      if (this.update()) this.render();
+      if (await this.update()) this.render();
 
       this._stats?.end();
+      if (!this._disposed) requestAnimationFrame(loop);
     };
-    this.renderer.setAnimationLoop(loop);
+    requestAnimationFrame(loop);
   }
 
   _getCanvasSize(): { width: number; height: number } | undefined {
