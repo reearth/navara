@@ -48,6 +48,7 @@ pub enum DataRequesterExtension {
     Png,
     Json,
     B3dm,
+    Mvt
 }
 
 impl DataRequesterExtension {
@@ -57,6 +58,7 @@ impl DataRequesterExtension {
             "png" => Self::Png,
             "json" => Self::Json,
             "b3dm" => Self::B3dm,
+            "mvt" => Self::Mvt,
             _ => unimplemented!("{}", v),
         }
     }
@@ -67,6 +69,7 @@ impl DataRequesterExtension {
             Self::Png => "png".to_string(),
             Self::Json => "json".to_string(),
             Self::B3dm => "b3dm".to_string(),
+            Self::Mvt => "mvt".to_string(),
         }
     }
 }

@@ -1,9 +1,9 @@
 import ThreeView from "@navara/three";
-import { type B3dmLayer, type GeoJsonLayer } from "@navara/three";
+import { type B3dmLayer, type GeoJsonLayer, type MvtLayer } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
 
-type MaterialLayerDescription = GeoJsonLayer | B3dmLayer;
+type MaterialLayerDescription = GeoJsonLayer | B3dmLayer | MvtLayer;
 
 const geoLayersDef: MaterialLayerDescription[] = [
   {
@@ -269,6 +269,18 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     model: {
       show: true,
+    },
+  },
+  {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
+    },
+    polygon: {
+      color: 0x00aaff,
+      height: 1000,
+      extruded_height: 5000,
+      clamp_to_ground: true,
     },
   },
 ];

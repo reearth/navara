@@ -1,6 +1,6 @@
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
-use navara_layer::{B3dmLayer, GeoJsonLayer, LayerData, TerrainDataType, TerrainLayer, TilesLayer};
+use navara_layer::{B3dmLayer, GeoJsonLayer, LayerData, TerrainDataType, TerrainLayer, TilesLayer, MvtLayer};
 use navara_material::Appearance;
 use navara_math::FloatType;
 use navara_parser::geojson::GeoJson;
@@ -126,6 +126,47 @@ impl B3dmLayerDescription {
 }
 
 #[wasm_bindgen]
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct MvtLayerDescription {
+    #[wasm_bindgen(getter_with_clone)]
+    pub r#type: Option<String>,
+    pub wireframe: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub crs: Option<String>,
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(skip_deserializing)]
+    pub data: JsValue,
+
+    // Appearances
+    #[wasm_bindgen(getter_with_clone)]
+    pub point: Option<PointMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub polyline: Option<PolylineMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub polygon: Option<PolygonMaterial>,
+}
+
+impl MvtLayerDescription {
+    pub fn appearances(&mut self) -> Vec<Appearance> {
+        let mut result = vec![];
+        if let Some(v) = self.point.take() {
+            result.push(Appearance::Point(v.into()));
+        }
+        if let Some(v) = self.polyline.take() {
+            result.push(Appearance::Polyline(v.into()));
+        }
+        if let Some(v) = self.polygon.take() {
+            result.push(Appearance::Polygon(v.into()));
+        }
+        result
+    }
+
+    pub fn crs(&self) -> Option<navara_core::CRS> {
+        Some(CRS::from_str(self.crs.as_ref()?.as_str()))
+    }
+}
+
+#[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
 pub struct LayerDescription {
     #[wasm_bindgen(getter_with_clone)]
@@ -235,6 +276,26 @@ impl LayerDescription {
                 let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
                 Some(navara_layer::LayerDescription::B3dm(B3dmLayer {
+                    layer_id: layer_id.to_string(),
+                    data: data.map(|d| LayerData { url: d.url }),
+                    appearances: layer.appearances(),
+                    crs: layer.crs(),
+                }))
+            }
+            "mvt" => {
+                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
+                    .unwrap_or_else(|_e| LayerDescriptionData {
+                        data: JsValue::NULL,
+                    });
+
+                let mut data: Option<LayerDescriptionUrl> = None;
+                if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                }
+
+                let mut layer: MvtLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+
+                Some(navara_layer::LayerDescription::Mvt(MvtLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(),

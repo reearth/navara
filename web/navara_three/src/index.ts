@@ -444,15 +444,7 @@ export default class ThreeView {
         this._c3tiles.add(l.url, this._c3tiles.length() == 0);
         this._c3tiles.update();
         break;
-      case "mvt": {
-        const mvt = new MVT({
-          layers: l.layers ?? [],
-          ...l,
-        });
-        this._scenes.main.add(mvt.node);
-        this._mvts.push(mvt);
-        break;
-      }
+
       default:
         layerId = this._core?.addLayer(l);
     }

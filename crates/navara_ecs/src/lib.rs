@@ -124,6 +124,7 @@ impl App {
                     LayerDescription::Terrain(_) => "terrain",
                     LayerDescription::GeoJson(_) => "geojson",
                     LayerDescription::B3dm(_) => "b3dm",
+                    LayerDescription::Mvt(_) => "mvt",
                 };
             }
         }
