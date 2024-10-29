@@ -274,11 +274,46 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "mvt",
     data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/12/3587/1632.mvt",
+    },
+    point: {
+      color: 0xff0000,
+      size: 0.1,
+      height: 1,
+      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+      center: {
+        x: 0.5,
+        y: 0,
+      },
+      scale_by_distance: {
+        near: 0,
+        far: 1000,
+      },
+      clamp_to_ground: true,
+      depth_test: true,
+    },
+  },
+  {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/10/904/402.mvt",
+    },
+    polyline: {
+      show: true,
+      color: 0x00ff00,
+      width: 5,
+      height: 1,
+      clamp_to_ground: true,
+    },
+  },
+  {
+    type: "mvt",
+    data: {
       url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
     },
     polygon: {
       color: 0x00aaff,
-      height: 1000,
+      height: 0,
       extruded_height: 5000,
       clamp_to_ground: true,
     },
