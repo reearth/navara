@@ -21,3 +21,7 @@ navara_buffer_store = { path = "../navara_buffer_store" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_event_store = { path = "../navara_event_store" }
 navara_geometry = { path = "../navara_geometry" }
+navara_camera = { path = "../navara_camera" }
+navara_window = { path = "../navara_window" }
+url = "2.5.2"
+serde_json = { version = "1.0.128", default-features = false, features = ["alloc"] }

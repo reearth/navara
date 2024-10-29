@@ -89,7 +89,7 @@ pub fn transfer_mesh(
                 min_max_heights: vec![0., 0.],
             });
 
-            let aabb = Aabb::from_extent_f32(extent, 0.);
+            let aabb = Aabb::from_extent_f32(extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
@@ -113,11 +113,7 @@ pub fn transfer_mesh(
                 },
             ));
 
-            layer_store
-                .map
-                .entry(layer_id.clone())
-                .or_default()
-                .push(entity.id());
+            layer_store.add(layer_id.0.clone(), entity.id());
         }
     }
 }

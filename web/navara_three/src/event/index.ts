@@ -63,7 +63,7 @@ export type TextureFragmentHandler = {
   ) => void;
 };
 
-export function processEvent(
+export async function processEvent(
   scenes: Scenes,
   camera: Camera,
   meshes: MeshCache,
@@ -99,14 +99,16 @@ export function processEvent(
       loadedTexs,
     ),
   );
-  event.renderable_feature_added?.forEach((ev) =>
-    processRenderableFeatureAdded(
-      ev,
-      scenes,
-      meshes,
-      buf,
-      uniforms,
-      drapedFeatureMaterials,
+  await Promise.all(
+    event.renderable_feature_added?.map((ev) =>
+      processRenderableFeatureAdded(
+        ev,
+        scenes,
+        meshes,
+        buf,
+        uniforms,
+        drapedFeatureMaterials,
+      ),
     ),
   );
   event.renderable_feature_changed?.forEach((ev) =>

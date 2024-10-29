@@ -6,7 +6,7 @@ use navara_material::{Appearance, ModelMaterial};
 use crate::LayerData;
 
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct B3dmLayer {
+pub struct Cesium3dTilesLayer {
     pub layer_id: String,
     pub data: Option<LayerData>,
     pub appearances: Vec<Appearance>,
@@ -14,10 +14,10 @@ pub struct B3dmLayer {
 }
 
 #[derive(Debug, Component)]
-pub struct UpdateB3dmLayerMarker {
+pub struct UpdateCesium3dTilesLayerMarker {
     pub layer_id: String,
     pub material: ModelMaterial,
 }
 
 #[derive(Debug, Component)]
-pub struct DeleteB3dmLayerMarker(pub String);
+pub struct DeleteCesium3dTilesLayerMarker(pub String);

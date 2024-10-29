@@ -221,7 +221,6 @@ mod test {
     use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
     use navara_tile::tile::TileQuadtree;
-    use std::collections::HashMap;
 
     use super::construct_feature;
 
@@ -231,9 +230,7 @@ mod test {
         app.init_resource::<BufferStore>();
         app.init_resource::<EventStore>();
         app.insert_resource(TileQuadtree::new_with_region_qt(30));
-        app.insert_resource(LayerStore {
-            map: HashMap::new(),
-        });
+        app.insert_resource(LayerStore::new());
         app.add_plugins(FeaturePlugin);
         app.add_systems(Update, construct_feature);
 

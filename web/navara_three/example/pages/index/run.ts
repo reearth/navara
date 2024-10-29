@@ -1,9 +1,12 @@
 import ThreeView from "@navara/three";
-import { type B3dmLayer, type GeoJsonLayer } from "@navara/three";
+import { type LayerDescription } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
 
-type MaterialLayerDescription = GeoJsonLayer | B3dmLayer;
+type MaterialLayerDescription = Exclude<
+  LayerDescription,
+  { type: "tiles" } | { type: "terrain" }
+>;
 
 const geoLayersDef: MaterialLayerDescription[] = [
   {
@@ -256,16 +259,25 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "b3dm",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/data/data457.b3dm",
+      url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
     },
     model: {
       show: true,
     },
   },
   {
-    type: "b3dm",
+    type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
+      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+    },
+    model: {
+      show: true,
+    },
+  },
+  {
+    type: "cesium3dtiles",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
     },
     model: {
       show: true,
@@ -369,46 +381,6 @@ export const run = async (view: ThreeView) => {
     }
   });
 
-  // chiyoda-ku
-  // view.addLayer({
-  //   type: "tiles",
-  //   color: 0xffffff,
-  //   segments: 10,
-  //   height: 36.6,
-  //   tile_url: tileUrl,
-  //   z: 12,
-  //   wireframe: false,
-  //   extent: chiyodaExtent,
-  // });
-
-  // view.addLayer({
-  //   type: "3dtiles",
-  //   url: "https://plateau.geospatial.jp/main/data/3d-tiles/bldg/13100_tokyo/13101_chiyoda-ku/notexture/tileset.json",
-  // });
-
-  // yokohama
-  // view.addLayer({
-  //   type: "tiles",
-  //   tile_url: tileUrl,
-  //   z: 12,
-  //   segments: 1,
-  //   extent: yokohamaExtent,
-  //   height: 36.5,
-  //   color: 0xffffff,
-  //   max_z: 18,
-  //   wireframe: false,
-  // });
-
-  view.addLayer({
-    type: "3dtiles",
-    url: "https://assets.cms.plateau.reearth.io/assets/71/f45927-eac8-48d3-9919-414605cf116a/14100_yokohama-shi_2022_3dtiles_2_op_veg/tileset.json",
-  });
-
-  view.addLayer({
-    type: "3dtiles",
-    url: "https://assets.cms.plateau.reearth.io/assets/6a/d55641-b65d-4c06-a517-56854aae77f7/14100_yokohama-shi_2022_3dtiles_2_op_bldg_14104_naka-ku_lod1/tileset.json",
-  });
-
   // view.addLayer({
   //   type: "mvt",
   //   layers: ["Road"],
@@ -417,20 +389,6 @@ export const run = async (view: ThreeView) => {
   //   extent: yokohamaExtent,
   //   height: 36.5 + 1,
   //   color: 0xffffff,
-  // });
-
-  // fuji
-  // view.addLayer({
-  //   type: "tiles",
-  //   color: 0xffffff,
-  //   segments: 256,
-  //   height: 42.0698,
-  //   tile_url: tileUrl,
-  //   z: 10,
-  //   wireframe: false,
-  //   max_z: 18,
-  //   extent: fujiExtent,
-  //   terrain_url: terrainUrl,
   // });
 
   const pane = new Pane({

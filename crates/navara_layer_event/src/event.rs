@@ -2,7 +2,10 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_core::{CRS, WGS84_32};
 use navara_feature::{polygon::UpdatePolygon, render::RenderableFeature};
-use navara_layer::{LayerDescription, LayerId, LayerStore};
+use navara_layer::{
+    DeleteB3dmLayerMarker, DeleteCesium3dTilesLayerMarker, LayerDescStore, LayerDescription,
+    LayerId, LayerStore, UpdateB3dmLayerMarker, UpdateCesium3dTilesLayerMarker,
+};
 use navara_material::Appearance;
 use navara_math::{Quat, Transform, Vec3};
 
@@ -34,6 +37,9 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             LayerDescription::B3dm(t) => {
                 commands.spawn(t.clone());
             }
+            LayerDescription::Cesium3dTiles(t) => {
+                commands.spawn(t.clone());
+            }
         }
     }
 }
@@ -41,98 +47,124 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
 pub fn process_update_events(
     mut commands: Commands,
     layer_store: Res<LayerStore>,
+    layer_desc_store: ResMut<LayerDescStore>,
     mut events: EventReader<UpdateLayerEvent>,
     mut features: Query<&mut RenderableFeature>,
 ) {
     for ev in events.read() {
-        let entities = layer_store.map.get(&ev.layer_id);
-        if let Some(vec) = entities {
-            for entity in vec {
-                if let Ok(mut feature) = features.get_mut(*entity) {
-                    match &mut *feature {
-                        RenderableFeature::Billboard {
-                            coordinates,
-                            crs,
-                            material,
-                            transform,
-                            ..
-                        } => {
-                            if let Appearance::Billboard(mat) = &ev.appearance {
-                                let should_update_transform =
-                                    material.height != mat.height || material.size != mat.size;
-                                *material = mat.clone();
-                                if should_update_transform {
-                                    *transform = calc_transform(
-                                        coordinates,
-                                        crs,
-                                        material.height,
-                                        material.size,
-                                        false,
-                                    );
+        let layer_desc = match layer_desc_store.map.get(&ev.layer_id.0) {
+            Some(l) => l,
+            None => continue,
+        };
+        match layer_desc {
+            LayerDescription::GeoJson(_) => {
+                let entities = layer_store.get(&ev.layer_id.0);
+                if let Some(vec) = entities {
+                    for entity in vec {
+                        if let Ok(mut feature) = features.get_mut(*entity) {
+                            match &mut *feature {
+                                RenderableFeature::Billboard {
+                                    coordinates,
+                                    crs,
+                                    material,
+                                    transform,
+                                    ..
+                                } => {
+                                    if let Appearance::Billboard(mat) = &ev.appearance {
+                                        let should_update_transform = material.height != mat.height
+                                            || material.size != mat.size;
+                                        *material = mat.clone();
+                                        if should_update_transform {
+                                            *transform = calc_transform(
+                                                coordinates,
+                                                crs,
+                                                material.height,
+                                                material.size,
+                                                false,
+                                            );
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                        RenderableFeature::Point {
-                            coordinates,
-                            crs,
-                            material,
-                            transform,
-                            ..
-                        } => {
-                            if let Appearance::Point(mat) = &ev.appearance {
-                                let should_update_transform =
-                                    material.height != mat.height || material.size != mat.size;
-                                *material = mat.clone();
-                                if should_update_transform {
-                                    *transform = calc_transform(
-                                        coordinates,
-                                        crs,
-                                        material.height,
-                                        material.size,
-                                        false,
-                                    );
+                                RenderableFeature::Point {
+                                    coordinates,
+                                    crs,
+                                    material,
+                                    transform,
+                                    ..
+                                } => {
+                                    if let Appearance::Point(mat) = &ev.appearance {
+                                        let should_update_transform = material.height != mat.height
+                                            || material.size != mat.size;
+                                        *material = mat.clone();
+                                        if should_update_transform {
+                                            *transform = calc_transform(
+                                                coordinates,
+                                                crs,
+                                                material.height,
+                                                material.size,
+                                                false,
+                                            );
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                        RenderableFeature::Model {
-                            coordinates,
-                            crs,
-                            material,
-                            transform,
-                            ..
-                        } => {
-                            if let Appearance::Model(mat) = &ev.appearance {
-                                let should_update_transform =
-                                    material.height != mat.height || material.size != mat.size;
-                                *material = mat.clone();
-                                if should_update_transform {
-                                    *transform = calc_transform(
-                                        coordinates,
-                                        crs,
-                                        material.height,
-                                        material.size,
-                                        true,
-                                    );
+                                RenderableFeature::Model {
+                                    coordinates,
+                                    crs,
+                                    material,
+                                    transform,
+                                    ..
+                                } => {
+                                    if let Appearance::Model(mat) = &ev.appearance {
+                                        let should_update_transform = material.height != mat.height
+                                            || material.size != mat.size;
+                                        *material = mat.clone();
+                                        if should_update_transform {
+                                            *transform = calc_transform(
+                                                coordinates,
+                                                crs,
+                                                material.height,
+                                                material.size,
+                                                true,
+                                            );
+                                        }
+                                    }
                                 }
-                            }
+                                RenderableFeature::Polyline { material, .. } => {
+                                    if let Appearance::Polyline(mat) = &ev.appearance {
+                                        *material = mat.clone();
+                                    }
+                                }
+                                RenderableFeature::Polygon { .. } => {
+                                    if let Appearance::Polygon(mat) = &ev.appearance {
+                                        commands.spawn(UpdatePolygon {
+                                            material: mat.clone(),
+                                            feature_id: *entity,
+                                        });
+                                    }
+                                }
+                                _ => (),
+                            };
                         }
-                        RenderableFeature::Polyline { material, .. } => {
-                            if let Appearance::Polyline(mat) = &ev.appearance {
-                                *material = mat.clone();
-                            }
-                        }
-                        RenderableFeature::Polygon { .. } => {
-                            if let Appearance::Polygon(mat) = &ev.appearance {
-                                commands.spawn(UpdatePolygon {
-                                    material: mat.clone(),
-                                    feature_id: *entity,
-                                });
-                            }
-                        }
-                        _ => (),
-                    };
+                    }
                 }
             }
+            LayerDescription::B3dm(_) => {
+                if let Appearance::Model(mat) = &ev.appearance {
+                    commands.spawn(UpdateB3dmLayerMarker {
+                        material: mat.clone(),
+                        layer_id: ev.layer_id.0.clone(),
+                    });
+                }
+            }
+            LayerDescription::Cesium3dTiles(_) => {
+                if let Appearance::Model(mat) = &ev.appearance {
+                    commands.spawn(UpdateCesium3dTilesLayerMarker {
+                        material: mat.clone(),
+                        layer_id: ev.layer_id.0.clone(),
+                    });
+                }
+            }
+            _ => {}
         }
     }
 }
@@ -166,59 +198,77 @@ pub fn process_delete_events(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut layer_store: ResMut<LayerStore>,
+    mut layer_desc_store: ResMut<LayerDescStore>,
     mut events: EventReader<DeleteLayerEvent>,
     mut features: Query<&mut RenderableFeature>,
     geos: Query<(Entity, &LayerId)>,
 ) {
     for ev in events.read() {
         let DeleteLayerEvent(layer_id) = ev;
-        let entities = layer_store.map.get(layer_id);
-        if let Some(vec) = entities {
-            // delete RenderableFeature and related Buffers
-            for entity in vec {
-                if let Ok(mut feature) = features.get_mut(*entity) {
-                    match &mut *feature {
-                        RenderableFeature::Polyline { geometry, .. } => {
-                            buf.remove(&geometry.position.data);
-                            buf.remove(&geometry.start.data);
-                            buf.remove(&geometry.forward_offset.data);
-                            buf.remove(&geometry.start_normals.data);
-                            buf.remove(
-                                &geometry
-                                    .end_normal_and_texture_coordinate_normalization_x
-                                    .data,
-                            );
-                            buf.remove(
-                                &geometry
-                                    .right_normal_and_texture_coordinate_normalization_y
-                                    .data,
-                            );
-                            buf.remove(&geometry.indices);
-                        }
-                        RenderableFeature::Polygon { geometry, .. } => {
-                            buf.remove(&geometry.position.data);
-                            buf.remove(&geometry.indices);
+        let layer_desc = match layer_desc_store.map.get(&layer_id.0) {
+            Some(l) => l,
+            None => continue,
+        };
+        match layer_desc {
+            LayerDescription::GeoJson(_) => {
+                let entities = layer_store.get(&layer_id.0);
+                if let Some(vec) = entities {
+                    // delete RenderableFeature and related Buffers
+                    for entity in vec {
+                        if let Ok(mut feature) = features.get_mut(*entity) {
+                            match &mut *feature {
+                                RenderableFeature::Polyline { geometry, .. } => {
+                                    buf.remove(&geometry.position.data);
+                                    buf.remove(&geometry.start.data);
+                                    buf.remove(&geometry.forward_offset.data);
+                                    buf.remove(&geometry.start_normals.data);
+                                    buf.remove(
+                                        &geometry
+                                            .end_normal_and_texture_coordinate_normalization_x
+                                            .data,
+                                    );
+                                    buf.remove(
+                                        &geometry
+                                            .right_normal_and_texture_coordinate_normalization_y
+                                            .data,
+                                    );
+                                    buf.remove(&geometry.indices);
+                                }
+                                RenderableFeature::Polygon { geometry, .. } => {
+                                    buf.remove(&geometry.position.data);
+                                    buf.remove(&geometry.indices);
 
-                            if let Some(normal) = &geometry.normal {
-                                buf.remove(&normal.data);
-                            }
+                                    if let Some(normal) = &geometry.normal {
+                                        buf.remove(&normal.data);
+                                    }
+                                }
+                                _ => (),
+                            };
                         }
-                        _ => (),
-                    };
+
+                        commands.entity(*entity).despawn();
+                    }
                 }
 
-                commands.entity(*entity).despawn();
-            }
-        }
+                // delete GeoJson components
+                for (entity, l_id) in geos.iter() {
+                    if l_id == layer_id {
+                        commands.entity(entity).despawn();
+                    }
+                }
 
-        // delete GeoJson components
-        for (entity, l_id) in geos.iter() {
-            if l_id == layer_id {
-                commands.entity(entity).despawn();
+                // delete stored layer id
+                layer_store.remove(&layer_id.0);
             }
-        }
-
-        // delete stored layer id
-        layer_store.map.remove(layer_id);
+            LayerDescription::B3dm(_) => {
+                commands.spawn(DeleteB3dmLayerMarker(layer_id.0.clone()));
+            }
+            LayerDescription::Cesium3dTiles(_) => {
+                commands.spawn(DeleteCesium3dTilesLayerMarker(layer_id.0.clone()));
+            }
+            _ => {}
+        };
+        // delete stored value in LayerDescStore.
+        layer_desc_store.map.remove(&layer_id.0);
     }
 }
