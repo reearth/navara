@@ -48,11 +48,7 @@ pub fn transfer_mesh(
             },
         ));
 
-        layer_store
-            .map
-            .entry(layer_id.clone())
-            .or_default()
-            .push(entity.id());
+        layer_store.add(layer_id.0.clone(), entity.id());
     }
 }
 

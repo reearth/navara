@@ -1,12 +1,6 @@
-use bevy_app::{App, Plugin, Update};
-
+mod component;
 mod requester;
-mod system;
+pub mod system;
 
-pub struct B3dmPlugin;
-
-impl Plugin for B3dmPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Update, (system::request_model, system::construct_model));
-    }
-}
+pub use component::*;
+pub use requester::*;
