@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 mod b3dm;
+mod cesium3dtiles;
 mod data;
 mod descriptor;
 mod geojson;
@@ -11,6 +12,7 @@ mod terrain;
 mod tile;
 mod mvt;
 pub use b3dm::*;
+pub use cesium3dtiles::*;
 pub use data::*;
 pub use descriptor::*;
 pub use geojson::*;

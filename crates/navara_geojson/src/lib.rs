@@ -10,9 +10,7 @@ pub struct GeoJsonPlugin;
 
 impl Plugin for GeoJsonPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LayerStore {
-            map: HashMap::new(),
-        });
+        app.insert_resource(LayerStore::new());
         app.insert_resource(LayerDescStore {
             map: HashMap::new(),
         });

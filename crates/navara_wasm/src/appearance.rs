@@ -209,6 +209,7 @@ pub struct ModelMaterial {
     pub url: Option<String>,
     pub size: Option<f32>,
     pub height: Option<f32>,
+    pub max_sse: Option<f32>,
     pub clamp_to_ground: Option<bool>,
     pub should_rotate_in_default: Option<bool>,
 }
@@ -220,6 +221,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             url: val.url.unwrap_or("".to_string()),
             size: val.size.unwrap_or(1.),
             height: val.height.unwrap_or(0.),
+            max_sse: val.max_sse.unwrap_or(2.),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(true),
             should_rotate_in_default: val.should_rotate_in_default.unwrap_or(true),
         }
@@ -232,6 +234,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             url: Some(value.url.clone()),
             size: Some(value.size),
             height: Some(value.height),
+            max_sse: Some(value.max_sse),
             clamp_to_ground: Some(value.clamp_to_ground),
             should_rotate_in_default: Some(value.should_rotate_in_default),
         }

@@ -10,11 +10,16 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, BufferStoreFailedEvent, BufferStoreLoadedEvent, Handle};
 use navara_event_store::EventStore;
+use url::Url;
+mod manager;
+
+pub use manager::*;
 
 pub struct DataRequesterPlugin;
 
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
+        app.init_resource::<DataRequesterManager>();
         app.add_systems(
             PostUpdate,
             (
@@ -72,6 +77,15 @@ impl DataRequesterExtension {
             Self::Mvt => "mvt".to_string(),
         }
     }
+
+    pub fn from_url(url: &Url) -> Self {
+        match url.path() {
+            v if v.ends_with("json") => Self::Json,
+            v if v.ends_with("b3dm") => Self::B3dm,
+            v if v.ends_with("png") => Self::Png,
+            v => unimplemented!("The extension of {} isn't supported", v),
+        }
+    }
 }
 
 impl DataRequester {
@@ -94,32 +108,38 @@ impl DataRequester {
 }
 
 pub fn set_data_requester_loaded(
+    mut manager: ResMut<DataRequesterManager>,
     mut events: EventReader<BufferStoreLoadedEvent>,
     mut requests: Query<&mut DataRequester>,
 ) {
     for e in events.read() {
         if let Ok(mut d) = requests.get_mut(e.id) {
             d.status = DataRequesterStatus::Success;
+            manager.decrement_pending();
         }
     }
 }
 
 pub fn set_data_requester_faled(
+    mut manager: ResMut<DataRequesterManager>,
     mut events: EventReader<BufferStoreFailedEvent>,
     mut requests: Query<&mut DataRequester>,
 ) {
     for e in events.read() {
         if let Ok(mut d) = requests.get_mut(e.id) {
             d.status = DataRequesterStatus::Fail;
+            manager.decrement_pending();
         }
     }
 }
 
 pub fn send_data_requst_events(
+    mut manager: ResMut<DataRequesterManager>,
     mut events: ResMut<EventStore>,
     requests: Query<Entity, Added<DataRequester>>,
 ) {
     for e in requests.iter() {
         events.data_requested.push(e);
+        manager.increment_pending();
     }
 }

@@ -70,4 +70,5 @@ pub struct ModelMaterial {
     pub height: FloatType,
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
+    pub max_sse: f32,
 }

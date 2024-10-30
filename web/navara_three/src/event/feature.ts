@@ -132,21 +132,29 @@ const initializeGltfLoader = (() => {
 async function renderModel(m: ModelMesh, buf: BufferLoader) {
   const loader = initializeGltfLoader();
 
-  if (m.bin) {
-    const bin = buf.u8(m.bin);
-    if (!bin) {
-      return;
+  const scene = await (async () => {
+    if (m.bin) {
+      const bin = buf.u8(m.bin);
+      if (!bin) {
+        return;
+      }
+      // TODO: Avoid parsing here when the model is removed before it's completed.
+      const model = await loader.parseAsync(bin.buffer, "");
+      return model.scene;
+    } else {
+      if (!m.material.url) {
+        return;
+      }
+      const model = await loader.loadAsync(m.material.url);
+      return model.scene;
     }
-    // FIXME: Specify origin path
-    const model = await loader.parseAsync(bin.buffer, "");
-    return model.scene;
-  } else {
-    if (!m.material.url) {
-      return;
-    }
-    const model = await loader.loadAsync(m.material.url);
-    return model.scene;
+  })();
+
+  if (!scene) {
+    return;
   }
+  scene.visible = m.material.show ?? true;
+  return scene;
 }
 
 async function renderPolyline(
