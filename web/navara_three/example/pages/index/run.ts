@@ -278,7 +278,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: 0xff0000,
-      size: 0.1,
+      size: 0.01,
       height: 1,
       // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
       center: {
@@ -301,7 +301,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     polyline: {
       show: true,
       color: 0x00ff00,
-      width: 5,
+      width: 2,
       height: 1,
       clamp_to_ground: true,
     },
@@ -313,9 +313,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     polygon: {
       color: 0x00aaff,
-      height: 0,
-      extruded_height: 5000,
-      clamp_to_ground: true,
+      height: 10,
+      extruded_height: 0,
+      clamp_to_ground: false,
     },
   },
 ];
