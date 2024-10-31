@@ -526,10 +526,9 @@ export const run = async (view: ThreeView) => {
   }
 
   function onLayerChange() {
-    if(layerDeleted[paneParams.layer]){
+    if (layerDeleted[paneParams.layer]) {
       btnCtrl.title = "Add Layer";
-    }
-    else{
+    } else {
       btnCtrl.title = "Delete Layer";
     }
 
