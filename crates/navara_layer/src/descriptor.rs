@@ -1,5 +1,6 @@
-
-use crate::{b3dm::B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, TerrainLayer, TilesLayer, MvtLayer};
+use crate::{
+    b3dm::B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, MvtLayer, TerrainLayer, TilesLayer,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LayerDescription {

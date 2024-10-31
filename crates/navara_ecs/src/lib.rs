@@ -139,6 +139,7 @@ impl App {
             LayerDescription::GeoJson(layer) => layer.appearances[0].clone(),
             LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
             LayerDescription::Cesium3dTiles(layer) => layer.appearances[0].clone(),
+            LayerDescription::Mvt(layer) => layer.appearances[0].clone(),
             _ => return,
         };
         self.app

@@ -445,6 +445,7 @@ export const run = async (view: ThreeView) => {
   });
 
   const layerIds = Array.from(geoLayerMap.keys());
+  const layerDeleted = layerIds.map(() => 0);
 
   const layerIdOptions: Record<string, number> = {};
   for (let i = 0; i < layerIds.length; i++) {
@@ -504,7 +505,7 @@ export const run = async (view: ThreeView) => {
   function onDeleteBtnClick() {
     if (btnCtrl.title == "Delete Layer") {
       view.deleteLayer(layerIds[paneParams.layer]);
-
+      layerDeleted[paneParams.layer] = 1;
       btnCtrl.title = "Add Layer";
     } else {
       const oldLayerId = layerIds[paneParams.layer];
@@ -514,6 +515,7 @@ export const run = async (view: ThreeView) => {
         if (newLayerId) {
           geoLayerMap.set(newLayerId, layerDef);
           layerIds[paneParams.layer] = newLayerId;
+          layerDeleted[paneParams.layer] = 0;
         }
       }
 
@@ -524,6 +526,13 @@ export const run = async (view: ThreeView) => {
   }
 
   function onLayerChange() {
+    if(layerDeleted[paneParams.layer]){
+      btnCtrl.title = "Add Layer";
+    }
+    else{
+      btnCtrl.title = "Delete Layer";
+    }
+
     if (materialCtrl) {
       materialCtrl.dispose();
     }

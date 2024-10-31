@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use bevy_app::{App, Plugin, Update};
+use bevy_ecs::schedule::IntoSystemConfigs;
 use navara_layer::{LayerDescStore, LayerStore};
 use std::collections::HashMap;
 
@@ -14,6 +15,14 @@ impl Plugin for GeoJsonPlugin {
         app.insert_resource(LayerDescStore {
             map: HashMap::new(),
         });
-        app.add_systems(Update, system::construct_feature);
+        app.add_systems(
+            Update,
+            (
+                system::construct_feature,
+                system::update_geo_json_layer,
+                system::delete_geo_json_layer,
+            )
+                .chain(),
+        );
     }
 }

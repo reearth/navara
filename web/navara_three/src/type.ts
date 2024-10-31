@@ -10,7 +10,12 @@ import type { Mesh, Sprite, Object3D } from "three";
 
 export type LayerDescription =
   // | MVTLayer
-  TilesLayer | TerrainLayer | GeoJsonLayer | B3dmLayer | Cesium3dTilesLayer | MvtLayer;
+  | TilesLayer
+  | TerrainLayer
+  | GeoJsonLayer
+  | B3dmLayer
+  | Cesium3dTilesLayer
+  | MvtLayer;
 
 // export type MVTLayer = {
 //   type: "mvt";

@@ -1,9 +1,9 @@
-use navara_math::{FloatType, RawDVec3, Vec3};
+use navara_math::{FloatType, Quat, RawDVec3, Transform, Vec3};
 
 // pub use radians::*;
 use crate::{
     unit::{Angle, Degrees, Float, Meters, Radians, Unit},
-    Ellipsoid,
+    Ellipsoid, WGS84_32,
 };
 
 #[derive(PartialEq)]
@@ -314,4 +314,29 @@ impl CRS {
             CRS::ESPG { code: _ } => unimplemented!(),
         }
     }
+}
+
+pub fn calc_transform(
+    coordinates: &Vec3,
+    crs: &CRS,
+    m_height: f32,
+    m_size: f32,
+    need_rotate: bool,
+) -> Transform {
+    let position = crs.to_vec3(WGS84_32, *coordinates, m_height);
+
+    let mut transform =
+        Transform::from_translation(position).with_scale(Vec3::new(m_size, m_size, m_size));
+
+    if need_rotate {
+        let lng = coordinates.x.to_radians();
+        let lat = coordinates.y.to_radians();
+        let rotation_y = Quat::from_rotation_y(-lat);
+        let rotation_z = Quat::from_rotation_z(lng);
+        let adjust_model = Quat::from_rotation_z(-std::f32::consts::PI / 2.0);
+        let rotation = rotation_z * rotation_y * adjust_model;
+        transform = transform.with_rotation(rotation);
+    }
+
+    transform
 }

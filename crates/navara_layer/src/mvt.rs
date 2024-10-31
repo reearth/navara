@@ -12,3 +12,12 @@ pub struct MvtLayer {
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }
+
+#[derive(Debug, Component)]
+pub struct UpdateMvtLayerMarker {
+    pub layer_id: String,
+    pub appearance: Appearance,
+}
+
+#[derive(Debug, Component)]
+pub struct DeleteMvtLayerMarker(pub String);

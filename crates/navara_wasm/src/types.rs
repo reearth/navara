@@ -2,8 +2,8 @@ use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 
 use navara_layer::{
-    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, LayerData, TerrainDataType, TerrainLayer,
-    TilesLayer, MvtLayer
+    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, LayerData, MvtLayer, TerrainDataType,
+    TerrainLayer, TilesLayer,
 };
 
 use navara_material::Appearance;

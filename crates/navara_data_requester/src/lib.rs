@@ -53,7 +53,7 @@ pub enum DataRequesterExtension {
     Png,
     Json,
     B3dm,
-    Mvt
+    Mvt,
 }
 
 impl DataRequesterExtension {

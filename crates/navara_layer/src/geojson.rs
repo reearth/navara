@@ -11,3 +11,12 @@ pub struct GeoJsonLayer {
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }
+
+#[derive(Debug, Component)]
+pub struct UpdateGeoJsonLayerMarker {
+    pub layer_id: String,
+    pub appearance: Appearance,
+}
+
+#[derive(Debug, Component)]
+pub struct DeleteGeoJsonLayerMarker(pub String);
