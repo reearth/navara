@@ -11,6 +11,8 @@ pub struct PosConverter {
     scale_y: f32,
 }
 
+// The conversion method refers to:
+// https://github.com/mapbox/vector-tile-js/blob/main/index.js#L135 (toGeoJSON(x, y, z) )
 impl PosConverter {
     pub fn new(url: &str, extent: u32) -> Self {
         let mut converter = Self {
@@ -55,6 +57,9 @@ impl PosConverter {
         self.size
     }
 
+    // Ref: https://github.com/mapbox/vector-tile-spec/tree/master/2.1#3-projection-and-bounds
+    // The function get_tile_pos_from_url is designed to parse the values of x, y, and z
+    // from the end of a URL in the format .../z/x/y.mvt
     fn get_tile_pos_from_url(&self, url: &str) -> Option<(u32, u32, u32)> {
         // Define a regular expression to match the three numbers in the URL
         let re = Regex::new(r"/(\d+)/(\d+)/(\d+)\.mvt$").unwrap();
