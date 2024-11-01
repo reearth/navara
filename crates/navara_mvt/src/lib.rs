@@ -5,9 +5,9 @@ use bevy_ecs::schedule::IntoSystemConfigs;
 
 mod mvt;
 
-pub struct MvtTilesPlugin;
+pub struct MvtPlugin;
 
-impl Plugin for MvtTilesPlugin {
+impl Plugin for MvtPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,

@@ -1,5 +1,5 @@
 [package]
-name = "navara_mvt_tiles"
+name = "navara_mvt"
 version = "0.1.0"
 edition = "2021"
 

@@ -4,7 +4,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
 };
 
-use geo_types::{Coord, Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point};
+use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point};
 use navara_buffer_store::BufferStore;
 use navara_core::{calc_transform, CRS};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
@@ -15,78 +15,11 @@ use navara_feature::{
 use navara_geometry::Hierarchy;
 use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMvtLayerMarker};
 use navara_material::Appearance;
-use navara_math::{std_float::consts::PI, FloatType, Vec3};
+use navara_math::Vec3;
 use navara_parser::mvt;
-use regex::Regex;
 
+use super::pos_converter::PosConverter;
 use super::requester::MvtDataRequesterMarker;
-
-#[derive(Debug)]
-struct PosConverter {
-    x0: f32,
-    y0: f32,
-    size: f32,
-    scale_x: f32,
-    scale_y: f32,
-}
-
-impl PosConverter {
-    pub fn new(url: &str, extent: u32) -> Self {
-        let mut converter = Self {
-            x0: 0.0,
-            y0: 0.0,
-            size: 0.0,
-            scale_x: 0.0,
-            scale_y: 0.0,
-        };
-
-        if let Some((x, y, z)) = converter.get_tile_pos_from_url(url) {
-            converter.x0 = (extent as f32) * (x as f32);
-            converter.y0 = (extent as f32) * (y as f32);
-            converter.size = (extent as f32) * (2_u64.pow(z) as f32);
-            converter.scale_x = 360.0 / converter.size;
-            converter.scale_y = 2.0 / converter.size;
-        }
-
-        converter
-    }
-
-    pub fn project_point(&mut self, pt: &Coord<f32>) -> (f32, f32) {
-        let x = (pt.x + self.x0) * self.scale_x - 180.0;
-        let exp_value = f32::exp((1.0 - (pt.y + self.y0) * self.scale_y) * PI);
-        let y = 360.0 / PI * (f32::atan(exp_value)) - 90.0;
-
-        (x, y)
-    }
-
-    pub fn project_points(&mut self, points: &Vec<Coord<f32>>) -> Vec<Vec3> {
-        let mut ret = Vec::new();
-
-        for pt in points {
-            let (x, y) = self.project_point(pt);
-            ret.push(Vec3::new(x as FloatType, y as FloatType, 0.0 as FloatType));
-        }
-
-        ret
-    }
-
-    fn get_tile_pos_from_url(&self, url: &str) -> Option<(u32, u32, u32)> {
-        // Define a regular expression to match the three numbers in the URL
-        let re = Regex::new(r"/(\d+)/(\d+)/(\d+)\.mvt$").unwrap();
-
-        if let Some(captures) = re.captures(url) {
-            // Parse and assign the three values to z, x, and y respectively
-            let z: u32 = captures[1].parse().ok()?;
-            let x: u32 = captures[2].parse().ok()?;
-            let y: u32 = captures[3].parse().ok()?;
-
-            // Return (x, y, z)
-            Some((x, y, z))
-        } else {
-            None
-        }
-    }
-}
 
 pub fn request_mvt(
     mut commands: Commands,
@@ -130,7 +63,7 @@ pub fn construct_mvt(
                         let extent = reader.get_extent(index);
                         let mut converter =
                             PosConverter::new(layer.data.as_ref().unwrap().url.as_str(), extent);
-                        if converter.size == 0.0 {
+                        if converter.get_size() == 0.0 {
                             continue;
                         }
                         if let Ok(features) = reader.get_features(index) {
@@ -140,74 +73,80 @@ pub fn construct_mvt(
                                     Geometry::MultiPolygon(v) => {
                                         let MultiPolygon(plgs) = v;
 
-                                        if let Appearance::Polygon(appearance) =
-                                            &layer.appearances[0]
-                                        {
-                                            for polygon in plgs {
-                                                let LineString(outer) = polygon.exterior();
-                                                let outer_vec = converter.project_points(outer);
-                                                // TODO: holes are not support yet
-                                                // let holes = polygon.interiors();
-                                                // info!("holes.len {}", holes.len());
+                                        for one_appr in &layer.appearances {
+                                            if let Appearance::Polygon(appearance) = one_appr {
+                                                // TODO: Merge these geometries into one
+                                                for polygon in plgs {
+                                                    let LineString(outer) = polygon.exterior();
+                                                    let outer_vec = converter.project_points(outer);
+                                                    // TODO: holes are not support yet
+                                                    // let holes = polygon.interiors();
+                                                    // info!("holes.len {}", holes.len());
 
-                                                if outer_vec.len() < 50 {
-                                                    // A large number of polygons can cause the webpage to slow down,
-                                                    // so for now, only draw some of the larger polygons.
-                                                    continue;
-                                                }
+                                                    if outer_vec.len() < 50 {
+                                                        // A large number of polygons can cause the webpage to slow down,
+                                                        // so for now, only draw some of the larger polygons.
+                                                        continue;
+                                                    }
 
-                                                commands.spawn((
-                                                    LayerId(layer.layer_id.to_owned()),
-                                                    PolygonGeometry {
-                                                        hierarchy: Hierarchy {
-                                                            outer_ring: outer_vec,
-                                                            holes: std::vec::Vec::new(),
+                                                    commands.spawn((
+                                                        LayerId(layer.layer_id.to_owned()),
+                                                        PolygonGeometry {
+                                                            hierarchy: Hierarchy {
+                                                                outer_ring: outer_vec,
+                                                                holes: std::vec::Vec::new(),
+                                                            },
+                                                            crs: CRS::Geographic,
                                                         },
-                                                        crs: CRS::Geographic,
-                                                    },
-                                                    appearance.clone(),
-                                                ));
+                                                        appearance.clone(),
+                                                    ));
+                                                }
+                                                break;
                                             }
                                         }
                                     }
                                     Geometry::MultiPoint(v) => {
                                         let MultiPoint(points) = v;
 
-                                        if let Appearance::Point(appearance) = &layer.appearances[0]
-                                        {
-                                            for point in points {
-                                                let Point(pt) = point;
-                                                let (x, y) = converter.project_point(pt);
+                                        for one_appr in &layer.appearances {
+                                            if let Appearance::Point(appearance) = one_appr {
+                                                for point in points {
+                                                    let Point(pt) = point;
+                                                    let (x, y) = converter.project_point(pt);
 
-                                                commands.spawn((
-                                                    LayerId(layer.layer_id.to_owned()),
-                                                    PointGeometry {
-                                                        coords: Vec3::new(x, y, 0.0),
-                                                        crs: CRS::Geographic,
-                                                    },
-                                                    appearance.clone(),
-                                                ));
+                                                    commands.spawn((
+                                                        LayerId(layer.layer_id.to_owned()),
+                                                        PointGeometry {
+                                                            coords: Vec3::new(x, y, 0.0),
+                                                            crs: CRS::Geographic,
+                                                        },
+                                                        appearance.clone(),
+                                                    ));
+                                                }
+                                                break;
                                             }
                                         }
                                     }
                                     Geometry::MultiLineString(v) => {
                                         let MultiLineString(lines) = v;
 
-                                        if let Appearance::Polyline(appearance) =
-                                            &layer.appearances[0]
-                                        {
-                                            for line in lines {
-                                                let LineString(points) = line;
-                                                let geo_points = converter.project_points(points);
+                                        for one_appr in &layer.appearances {
+                                            if let Appearance::Polyline(appearance) = one_appr {
+                                                for line in lines {
+                                                    let LineString(points) = line;
+                                                    let geo_points =
+                                                        converter.project_points(points);
 
-                                                commands.spawn((
-                                                    LayerId(layer.layer_id.to_owned()),
-                                                    PolylineGeometry {
-                                                        coords: geo_points,
-                                                        crs: CRS::Geographic,
-                                                    },
-                                                    appearance.clone(),
-                                                ));
+                                                    commands.spawn((
+                                                        LayerId(layer.layer_id.to_owned()),
+                                                        PolylineGeometry {
+                                                            coords: geo_points,
+                                                            crs: CRS::Geographic,
+                                                        },
+                                                        appearance.clone(),
+                                                    ));
+                                                }
+                                                break;
                                             }
                                         }
                                     }
