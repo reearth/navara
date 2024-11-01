@@ -1,15 +1,22 @@
 use bevy_ecs::{
+    entity::Entity,
     query::{Added, Changed, Or},
-    system::{Commands, Query},
+    system::{Commands, Query, Res, ResMut},
 };
-use navara_core::CRS;
+use navara_core::{calc_transform, CRS};
 
 use navara_feature::{
     billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
-    polygon::PolygonGeometry, polyline::PolylineGeometry,
+    polygon::PolygonGeometry, polygon::UpdatePolygon, polyline::PolylineGeometry,
+    render::RenderableFeature,
 };
+
+use navara_buffer_store::BufferStore;
+
 use navara_geometry::Hierarchy;
-use navara_layer::{GeoJsonLayer, LayerId};
+use navara_layer::{
+    DeleteGeoJsonLayerMarker, GeoJsonLayer, LayerId, LayerStore, UpdateGeoJsonLayerMarker,
+};
 use navara_material::Appearance;
 
 use navara_math::{FloatType, Vec3};
@@ -205,6 +212,161 @@ pub fn construct_feature(
                 }
             }
         }
+    }
+}
+
+pub fn update_geo_json_layer(
+    mut commands: Commands,
+    layer_store: Res<LayerStore>,
+    updated: Query<(Entity, &UpdateGeoJsonLayerMarker)>,
+    mut features: Query<&mut RenderableFeature>,
+) {
+    for (e, u) in &updated {
+        let layer_id = u.layer_id.clone();
+        if let Some(ids) = layer_store.get(&layer_id) {
+            for id in ids {
+                let mut f = match features.get_mut(*id) {
+                    Ok(f) => f,
+                    Err(_) => continue,
+                };
+
+                match &mut *f {
+                    RenderableFeature::Billboard {
+                        coordinates,
+                        crs,
+                        material,
+                        transform,
+                        ..
+                    } => {
+                        if let Appearance::Billboard(mat) = &u.appearance {
+                            let should_update_transform =
+                                material.height != mat.height || material.size != mat.size;
+                            *material = mat.clone();
+                            if should_update_transform {
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                    false,
+                                );
+                            }
+                        }
+                    }
+                    RenderableFeature::Point {
+                        coordinates,
+                        crs,
+                        material,
+                        transform,
+                        ..
+                    } => {
+                        if let Appearance::Point(mat) = &u.appearance {
+                            let should_update_transform =
+                                material.height != mat.height || material.size != mat.size;
+                            *material = mat.clone();
+                            if should_update_transform {
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                    false,
+                                );
+                            }
+                        }
+                    }
+                    RenderableFeature::Model {
+                        coordinates,
+                        crs,
+                        material,
+                        transform,
+                        ..
+                    } => {
+                        if let Appearance::Model(mat) = &u.appearance {
+                            let should_update_transform =
+                                material.height != mat.height || material.size != mat.size;
+                            *material = mat.clone();
+                            if should_update_transform {
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                    true,
+                                );
+                            }
+                        }
+                    }
+                    RenderableFeature::Polyline { material, .. } => {
+                        if let Appearance::Polyline(mat) = &u.appearance {
+                            *material = mat.clone();
+                        }
+                    }
+                    RenderableFeature::Polygon { .. } => {
+                        if let Appearance::Polygon(mat) = &u.appearance {
+                            commands.spawn(UpdatePolygon {
+                                material: mat.clone(),
+                                feature_id: *id,
+                            });
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+        commands.entity(e).despawn();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn delete_geo_json_layer(
+    mut commands: Commands,
+    mut layer_store: ResMut<LayerStore>,
+    deleted: Query<(Entity, &DeleteGeoJsonLayerMarker)>,
+    layers: Query<(Entity, &GeoJsonLayer)>,
+    mut features: Query<&mut RenderableFeature>,
+    mut buf: ResMut<BufferStore>,
+    entities_with_layerid: Query<(Entity, &LayerId)>,
+) {
+    for (e, d) in &deleted {
+        let entities = layer_store.get(&d.0);
+        if let Some(vec) = entities {
+            // delete RenderableFeature and related Buffers
+            for entity in vec {
+                if let Ok(mut feature) = features.get_mut(*entity) {
+                    match &mut *feature {
+                        RenderableFeature::Polyline { geometry, .. } => {
+                            geometry.remove_from_buf(&mut buf);
+                        }
+                        RenderableFeature::Polygon { geometry, .. } => {
+                            geometry.remove_from_buf(&mut buf);
+                        }
+                        _ => (),
+                    }
+                }
+
+                commands.entity(*entity).despawn();
+            }
+        }
+
+        // delete all entities with this layer id
+        for (entity, l_id) in entities_with_layerid.iter() {
+            if l_id.0 == d.0 {
+                commands.entity(entity).despawn();
+            }
+        }
+
+        // delete stored layer id
+        layer_store.remove(&d.0);
+
+        for (e, l) in &layers {
+            if l.layer_id != d.0 {
+                continue;
+            }
+            commands.entity(e).despawn();
+        }
+
+        commands.entity(e).despawn();
     }
 }
 

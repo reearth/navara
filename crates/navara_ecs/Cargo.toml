@@ -26,3 +26,4 @@ navara_tile = { path = "../navara_tile" }
 navara_window = { path = "../navara_window" }
 navara_math = { path = "../navara_math" }
 navara_cesium3dtiles = { path = "../navara_cesium3dtiles" }
+navara_mvt = { path = "../navara_mvt" }

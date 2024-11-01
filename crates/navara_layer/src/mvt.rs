@@ -1,22 +1,23 @@
 use bevy_ecs::component::Component;
 use navara_core::CRS;
-use navara_parser::geojson::GeoJson;
 
 use navara_material::Appearance;
 
+use crate::LayerData;
+
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct GeoJsonLayer {
+pub struct MvtLayer {
     pub layer_id: String,
-    pub data: Option<GeoJson>,
+    pub data: Option<LayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }
 
 #[derive(Debug, Component)]
-pub struct UpdateGeoJsonLayerMarker {
+pub struct UpdateMvtLayerMarker {
     pub layer_id: String,
     pub appearance: Appearance,
 }
 
 #[derive(Debug, Component)]
-pub struct DeleteGeoJsonLayerMarker(pub String);
+pub struct DeleteMvtLayerMarker(pub String);
