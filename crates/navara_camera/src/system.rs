@@ -8,7 +8,7 @@ use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
 };
-use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Angle, WGS84_32};
+use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Intersection, WGS84_32};
 use navara_math::{Mat3, Quat, Transform, Vec2, Vec3};
 use navara_window::Window;
 
@@ -201,10 +201,10 @@ fn handle_tilt(
 
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
+    // TODO: Support movement underground.
     let intersection = match ray_ellipsoid(&ray, ellipsoid) {
-        Some(i) => i,
-        // TODO: Calculate an intersection point even if the ray isn't intersected with the ellipsoidal surface.
-        None => return,
+        Some(i) if i.start != 0. => i,
+        _ => Intersection { start: 1., end: 1. },
     };
     let center = ray.get_point(intersection.start);
     let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
@@ -246,7 +246,7 @@ fn set_quat(
 
     orbit.local_up = inverse * transform.up().as_vec3();
     orbit.local_forward = if tilt {
-        inverse * -direction.normalize()
+        inverse * -direction.normalize_or_zero()
     } else {
         inverse * transform.forward().as_vec3()
     };

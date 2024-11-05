@@ -3,6 +3,7 @@ use navara_math::{EqualEpsilon, FloatType, Vec3, EPSILON15};
 use crate::{Ellipsoid, Plane, Ray};
 
 /// Intersection by Ray.
+#[derive(Debug)]
 pub struct Intersection {
     /// A distance for first intersected point.
     pub start: FloatType,
