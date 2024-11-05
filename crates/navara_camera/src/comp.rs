@@ -178,7 +178,7 @@ impl Orbit {
         }
     }
 
-    pub fn set_orbit(
+    pub fn set_quat(
         &mut self,
         transform: &Transform,
         world: Quat,
@@ -199,7 +199,7 @@ impl Orbit {
 
         self.local_up = inverse * transform.up().as_vec3();
         self.local_forward = if tilt {
-            inverse * -direction.normalize()
+            inverse * -direction.normalize_or_zero()
         } else {
             inverse * transform.forward().as_vec3()
         };

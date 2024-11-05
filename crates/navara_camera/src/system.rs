@@ -162,7 +162,7 @@ fn handle_orbit_spin(
     controller.reset_mode();
 
     let world = orbit.get_default_world_quat();
-    set_quat(orbit, transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
 
     inertia.spin = rotate(
         mm,
@@ -213,8 +213,7 @@ fn handle_tilt(
         orbit.default_world_quat = Some(orbit.world_quat);
     }
 
-    set_quat(
-        orbit,
+    orbit.set_quat(
         transform,
         Quat::from_mat4(&enu_transform),
         center,
@@ -223,45 +222,6 @@ fn handle_tilt(
     );
 
     inertia.spin = rotate(mm, controller, 1.);
-}
-
-fn set_quat(
-    orbit: &mut Orbit,
-    transform: &Transform,
-    world: Quat,
-    center: Vec3,
-    tilt: bool,
-    fixed_horizon_axis: Option<Vec3>,
-) {
-    orbit.quat = Quat::IDENTITY;
-    orbit.world_quat = world;
-
-    orbit.pivot = center;
-
-    let position = transform.transform_point(Vec3::ZERO);
-
-    let inverse = orbit.world_quat.inverse();
-
-    let direction = position - center;
-
-    orbit.local_up = inverse * transform.up().as_vec3();
-    orbit.local_forward = if tilt {
-        inverse * -direction.normalize_or_zero()
-    } else {
-        inverse * transform.forward().as_vec3()
-    };
-    orbit.local_position = inverse * direction;
-
-    orbit.vertical_axis = inverse * transform.right().as_vec3();
-
-    match fixed_horizon_axis {
-        Some(a) => {
-            orbit.horizontal_axis = a;
-        }
-        None => {
-            orbit.horizontal_axis = orbit.local_up;
-        }
-    }
 }
 
 fn rotate(mm: &mut EventReader<MouseMotion>, controller: &CameraController, ratio: f32) -> Vec3 {
@@ -294,7 +254,7 @@ fn handle_zoom(
     }
 
     let world = orbit.get_default_world_quat();
-    set_quat(orbit, transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
 
     let length = orbit.local_position.length();
 
