@@ -1,10 +1,12 @@
 use bevy_ecs::component::Component;
-use navara_core::{Aabb, Angle, Plane, EARTH_RADIUS_F32};
-use navara_math::{FloatType, Mat4, Quat, Transform, Vec3};
+use navara_core::{Aabb, Plane, EARTH_RADIUS_F32};
+use navara_math::{FloatType, Quat, Transform, Vec3};
 
 #[derive(Component)]
 pub struct CameraMarker;
 
+// TODO: Support orthogonal camera.
+/// Frustum for perspective camera.
 #[derive(Component)]
 pub struct CameraFrustum {
     pub near: FloatType,
@@ -104,146 +106,10 @@ impl CameraFrustum {
     }
 }
 
-// CameraFrustum
-// pub enum CameraFrustum {
-//     Perspective(PerspectiveFrustum),
-//     Orthographic(OrthographicFrustum),
-// }
-
-// pub struct PerspectiveFrustum {
-//     pub fov: FloatType,
-//     pub aspect_ratio: FloatType,
-//     pub near: FloatType,
-//     pub far: FloatType,
-//     pub xoffset: FloatType,
-//     pub yoffset: FloatType,
-// }
-
-// pub struct OrthographicFrustum {
-//     pub width: FloatType,
-//     pub aspect_ratio: FloatType, 
-//     pub near: FloatType,
-//     pub far: FloatType,
-// }
-
-// impl CameraFrustum {
-//     pub fn compute_culling_volume(
-//         &self,
-//         position: Vec3,
-//         direction: Vec3,
-//         up: Vec3,
-//     ) -> CullingVolume {
-//         match self {
-//             CameraFrustum::Perspective(frustum) => {
-//                 frustum.compute_culling_volume(position, direction, up)
-//             }
-//             CameraFrustum::Orthographic(frustum) => {
-//                 frustum.compute_culling_volume(position, direction, up)
-//             }
-//         }
-//     }
-
-//     pub fn get_pixel_dimensions(
-//         &self,
-//         draw_width: u32,
-//         draw_height: u32,
-//         distance: FloatType,
-//         pixel_ratio: FloatType,
-//         result: Option<Vec2>,
-//     ) -> Vec2 {
-//         match self {
-//             CameraFrustum::Perspective(frustum) => {
-//                 frustum.get_pixel_dimensions(
-//                     draw_width,
-//                     draw_height,
-//                     distance,
-//                     pixel_ratio,
-//                     result,
-//                 )
-//             }
-//             CameraFrustum::Orthographic(frustum) => {
-//                 frustum.get_pixel_dimensions(
-//                     draw_width,
-//                     draw_height, 
-//                     distance,
-//                     pixel_ratio,
-//                     result,
-//                 )
-//             }
-//         }
-//     }
-// }
-
-#[derive(Component)]
-pub struct Camera {
-    pub transform: Transform,
-    pub frustum: CameraFrustum,
-    pub default_move_amount: FloatType,
-    pub default_look_amount: FloatType,
-    pub default_rotate_amount: FloatType,
-    pub default_zoom_amount: FloatType,
-    pub maximum_zoom_factor: FloatType,
-}
-
-impl Default for Camera {
-    fn default() -> Self {
-        Self {
-            transform: Transform::default(),
-            frustum: CameraFrustum::new(
-                &Transform::default(),
-                0.1,
-                1000.0,
-                Angle::new(50.0).rad().val(),
-                1.0,
-            ),
-            default_move_amount: 1.0,
-            default_look_amount: 0.01,
-            default_rotate_amount: 0.01,
-            default_zoom_amount: 1.0,
-            maximum_zoom_factor: 1.5,
-        }
-    }
-}
-
-impl Camera {
-    pub fn new(position: Vec3, target: Vec3, up: Vec3) -> (Self, Transform) {
-        let mut camera = Self::default();
-        let transform = Transform::from_translation(position).looking_at(target, up);
-        camera.update_frustum(&transform);
-        (camera, transform)
-    }
-
-    pub fn update_frustum(&mut self, transform: &Transform) {
-        self.frustum.update_sse_denominator();
-        self.frustum.update_planes(transform);
-    }
-
-    pub fn position(&self) -> Vec3 {
-        self.transform.translation
-    }
-
-    pub fn direction(&self) -> Vec3 {
-        *-self.transform.forward()
-    }
-
-    pub fn up(&self) -> Vec3 {
-        *self.transform.up()
-    }
-
-    pub fn right(&self) -> Vec3 {
-        *self.transform.right()
-    }
-
-    pub fn view_matrix(transform: &Transform) -> Mat4 {
-        transform.compute_matrix().inverse()
-    }
-}
-
 #[derive(Component)]
 pub struct CameraController {
     pub enabled: bool,
-    pub enable_rotate: bool,
-    pub enable_translate: bool,
+    pub enable_spin: bool,
     pub enable_zoom: bool,
     pub enable_tilt: bool,
     pub enable_look: bool,
@@ -252,26 +118,31 @@ pub struct CameraController {
     pub spin_speed: FloatType,
     pub rotate_speed: FloatType,
     pub zoom_speed: FloatType,
-    pub translate_speed: FloatType,
     pub inertia: FloatType,
+    pub is_tilting: bool,
+}
+
+impl CameraController {
+    pub fn reset_mode(&mut self) {
+        self.is_tilting = false;
+    }
 }
 
 impl Default for CameraController {
     fn default() -> Self {
         Self {
             enabled: true,
-            enable_rotate: true,
-            enable_translate: true,
+            enable_spin: true,
             enable_zoom: true,
             enable_tilt: true,
             enable_look: true,
             minimum_zoom_distance: EARTH_RADIUS_F32 * 1.0,
             maximum_zoom_distance: EARTH_RADIUS_F32 * 10.0,
-            spin_speed: 0.1,
-            rotate_speed: 0.5,
-            zoom_speed: 800.0,
-            translate_speed: 0.01,
+            spin_speed: 1.3,
+            rotate_speed: 1.,
+            zoom_speed: 0.6,
             inertia: 0.9,
+            is_tilting: false,
         }
     }
 }
@@ -279,31 +150,71 @@ impl Default for CameraController {
 #[derive(Component, Default)]
 pub struct CameraInertia {
     pub spin: Vec3,
+    pub tilt: Vec3,
     pub translate: Vec3,
     pub zoom: FloatType,
     pub pan: Vec3,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct Orbit {
-    pub r: FloatType,
     pub quat: Quat,
-    pub tilt: FloatType,
+    pub world_quat: Quat,
+    pub default_world_quat: Option<Quat>,
     pub pivot: Vec3,
+    pub horizontal_axis: Vec3,
+    pub vertical_axis: Vec3,
+    pub local_up: Vec3,
+    pub local_forward: Vec3,
+    pub local_position: Vec3,
+    pub should_tilt: bool,
 }
 
 impl Orbit {
-    pub fn new(distance: FloatType) -> Self {
-        Self {
-            r: distance,
-            quat: Quat::IDENTITY,
-            tilt: 0.0,
-            pivot: Vec3::ZERO,
+    pub fn get_default_world_quat(&mut self) -> Quat {
+        match self.default_world_quat.take() {
+            Some(d) => d,
+            None => self.world_quat,
         }
     }
 
-    pub fn to_vec3(&self) -> Vec3 {
-        self.quat * Quat::from_rotation_x(self.tilt) * Vec3::new(0.0, 0.0, self.r)
+    pub fn set_orbit(
+        &mut self,
+        transform: &Transform,
+        world: Quat,
+        center: Vec3,
+        tilt: bool,
+        fixed_horizon_axis: Option<Vec3>,
+    ) {
+        self.quat = Quat::IDENTITY;
+        self.world_quat = world;
+
+        self.pivot = center;
+
+        let position = transform.transform_point(Vec3::ZERO);
+
+        let inverse = self.world_quat.inverse();
+
+        let direction = position - center;
+
+        self.local_up = inverse * transform.up().as_vec3();
+        self.local_forward = if tilt {
+            inverse * -direction.normalize()
+        } else {
+            inverse * transform.forward().as_vec3()
+        };
+        self.local_position = inverse * direction;
+
+        self.vertical_axis = inverse * transform.right().as_vec3();
+
+        match fixed_horizon_axis {
+            Some(a) => {
+                self.horizontal_axis = a;
+            }
+            None => {
+                self.horizontal_axis = self.local_up;
+            }
+        }
     }
 }
 
@@ -386,4 +297,3 @@ mod test {
         debug_assert!(!frustum.intersection_with_aabb(&aabb));
     }
 }
-

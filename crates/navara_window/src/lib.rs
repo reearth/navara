@@ -1,12 +1,7 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_app::Update;
-use bevy_ecs::{
-    event::{Event, EventReader},
-    system::{Query, Resource},
-};
+use bevy_ecs::{event::Event, system::Resource};
 
-use navara_camera::{CameraFrustum, CameraMarker};
 use navara_math::FloatType;
 
 pub struct WindowPlugin;
@@ -15,19 +10,6 @@ impl bevy_app::Plugin for WindowPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.init_resource::<Window>();
         app.add_event::<WindowResizeEvent>();
-        app.add_systems(Update, handle_resize);
-    }
-}
-
-fn handle_resize(
-    mut camera: Query<(&CameraMarker, &mut CameraFrustum)>,
-    mut ev: EventReader<WindowResizeEvent>,
-) {
-    for w in ev.read() {
-        for (_, mut frustum) in &mut camera {
-            frustum.aspect_ratio = w.width / w.height;
-            frustum.update_sse_denominator();
-        }
     }
 }
 
@@ -44,4 +26,14 @@ pub struct Window {
     pub width: FloatType,
     pub height: FloatType,
     pub pixel_ratio: FloatType,
+}
+
+impl Window {
+    pub fn raw_width(&self) -> FloatType {
+        self.width / self.pixel_ratio
+    }
+
+    pub fn raw_height(&self) -> FloatType {
+        self.height / self.pixel_ratio
+    }
 }
