@@ -1,4 +1,5 @@
 import ThreeView from "@navara/three";
+
 import { type LayerDescription } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
@@ -283,6 +284,53 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
     },
   },
+  {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/12/3587/1632.mvt",
+    },
+    point: {
+      color: 0xff0000,
+      size: 0.01,
+      height: 1,
+      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
+      center: {
+        x: 0.5,
+        y: 0,
+      },
+      scale_by_distance: {
+        near: 0,
+        far: 1000,
+      },
+      clamp_to_ground: true,
+      depth_test: true,
+    },
+  },
+  {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/10/904/402.mvt",
+    },
+    polyline: {
+      show: true,
+      color: 0x00ff00,
+      width: 2,
+      height: 1,
+      clamp_to_ground: true,
+    },
+  },
+  {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
+    },
+    polygon: {
+      color: 0x00aaff,
+      height: 10,
+      extruded_height: 0,
+      clamp_to_ground: false,
+    },
+  },
 ];
 
 export const run = async (view: ThreeView) => {
@@ -397,6 +445,7 @@ export const run = async (view: ThreeView) => {
   });
 
   const layerIds = Array.from(geoLayerMap.keys());
+  const layerDeleted = layerIds.map(() => 0);
 
   const layerIdOptions: Record<string, number> = {};
   for (let i = 0; i < layerIds.length; i++) {
@@ -456,7 +505,7 @@ export const run = async (view: ThreeView) => {
   function onDeleteBtnClick() {
     if (btnCtrl.title == "Delete Layer") {
       view.deleteLayer(layerIds[paneParams.layer]);
-
+      layerDeleted[paneParams.layer] = 1;
       btnCtrl.title = "Add Layer";
     } else {
       const oldLayerId = layerIds[paneParams.layer];
@@ -466,6 +515,7 @@ export const run = async (view: ThreeView) => {
         if (newLayerId) {
           geoLayerMap.set(newLayerId, layerDef);
           layerIds[paneParams.layer] = newLayerId;
+          layerDeleted[paneParams.layer] = 0;
         }
       }
 
@@ -476,6 +526,12 @@ export const run = async (view: ThreeView) => {
   }
 
   function onLayerChange() {
+    if (layerDeleted[paneParams.layer]) {
+      btnCtrl.title = "Add Layer";
+    } else {
+      btnCtrl.title = "Delete Layer";
+    }
+
     if (materialCtrl) {
       materialCtrl.dispose();
     }

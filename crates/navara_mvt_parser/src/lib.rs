@@ -100,6 +100,9 @@ mod tests {
         let layer_names = rslt_layer_names.unwrap();
         assert_eq!(layer_names[0], "test_layer_with_all_geom_types");
 
+        let extent = reader.get_extent(0);
+        assert_eq!(extent, 4096);
+
         let rslt_features = reader.get_features(0);
         assert!(rslt_features.is_ok(), "mvt_reader get_features error");
 

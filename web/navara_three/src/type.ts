@@ -4,12 +4,18 @@ import type {
   GeoJsonLayerDescription,
   TerrainLayerDescription,
   TileLayerDescription,
+  MvtLayerDescription,
 } from "navara";
 import type { Mesh, Sprite, Object3D } from "three";
 
 export type LayerDescription =
   // | MVTLayer
-  TilesLayer | TerrainLayer | GeoJsonLayer | B3dmLayer | Cesium3dTilesLayer;
+  | TilesLayer
+  | TerrainLayer
+  | GeoJsonLayer
+  | B3dmLayer
+  | Cesium3dTilesLayer
+  | MvtLayer;
 
 // export type MVTLayer = {
 //   type: "mvt";
@@ -34,5 +40,6 @@ export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
 >;
+export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
