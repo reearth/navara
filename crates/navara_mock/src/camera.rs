@@ -4,12 +4,11 @@ use navara_math::{FloatType, Quat, Transform, Vec3};
 
 pub fn update_camera_transform(r: FloatType) -> (Vec3, LLE<FloatType, Radians>) {
     let orbit = Orbit {
-        r,
         quat: Quat::from_axis_angle(Vec3::Y, 0.0),
-        tilt: 0.0,
+        ..Default::default()
     };
     let mut camera_transform = Transform::from_translation(Vec3::ZERO);
-    camera_transform.translation = orbit.to_vec3();
+    camera_transform.translation = orbit.quat * Vec3::new(0.0, r, 0.0);
     camera_transform = camera_transform.looking_at(Vec3::ZERO, Vec3::Y);
 
     let camera_pos = camera_transform.transform_point(Vec3::ZERO);

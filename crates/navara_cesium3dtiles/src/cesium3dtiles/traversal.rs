@@ -76,7 +76,7 @@ fn mark_leaves(
     tile.reset_state();
 
     let is_visible =
-        !matches!(&tile.bounding_volume, Some(aabb) if !frustum.interseciton_with_aabb(aabb));
+        !matches!(&tile.bounding_volume, Some(aabb) if !frustum.intersection_with_aabb(aabb));
     if !is_visible {
         return TraversalResult::Culled;
     }

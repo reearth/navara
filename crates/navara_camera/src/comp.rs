@@ -1,17 +1,13 @@
-use bevy_ecs::{bundle::Bundle, component::Component};
-use navara_core::{Aabb, Plane};
+use bevy_ecs::component::Component;
+use navara_core::{Aabb, Plane, EARTH_RADIUS_F32};
 use navara_math::{FloatType, Quat, Transform, Vec3};
 
 #[derive(Component)]
 pub struct CameraMarker;
 
-#[derive(Bundle)]
-pub struct CameraBundle {
-    pub marker: CameraMarker,
-    pub transform: Transform,
-}
-
-#[derive(Debug, Component)]
+// TODO: Support orthogonal camera.
+/// Frustum for perspective camera.
+#[derive(Component)]
 pub struct CameraFrustum {
     pub near: FloatType,
     pub far: FloatType,
@@ -100,27 +96,125 @@ impl CameraFrustum {
         ];
     }
 
-    pub fn interseciton_with_aabb(&self, aabb: &Aabb) -> bool {
-        for plane in self.planes {
-            if !aabb.is_on_or_forward_plane(&plane) {
+    pub fn intersection_with_aabb(&self, aabb: &Aabb) -> bool {
+        for plane in self.planes.iter() {
+            if !aabb.is_on_or_forward_plane(plane) {
                 return false;
             }
         }
-
         true
     }
 }
 
-#[derive(Debug, Clone, Copy, Component)]
+#[derive(Component)]
+pub struct CameraController {
+    pub enabled: bool,
+    pub enable_spin: bool,
+    pub enable_zoom: bool,
+    pub enable_tilt: bool,
+    pub enable_look: bool,
+    pub minimum_zoom_distance: FloatType,
+    pub maximum_zoom_distance: FloatType,
+    pub spin_speed: FloatType,
+    pub rotate_speed: FloatType,
+    pub zoom_speed: FloatType,
+    pub inertia: FloatType,
+    pub is_tilting: bool,
+}
+
+impl CameraController {
+    pub fn reset_mode(&mut self) {
+        self.is_tilting = false;
+    }
+}
+
+impl Default for CameraController {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            enable_spin: true,
+            enable_zoom: true,
+            enable_tilt: true,
+            enable_look: true,
+            minimum_zoom_distance: EARTH_RADIUS_F32 * 1.0,
+            maximum_zoom_distance: EARTH_RADIUS_F32 * 10.0,
+            spin_speed: 1.3,
+            rotate_speed: 1.,
+            zoom_speed: 0.6,
+            inertia: 0.9,
+            is_tilting: false,
+        }
+    }
+}
+
+#[derive(Component, Default)]
+pub struct CameraInertia {
+    pub spin: Vec3,
+    pub tilt: Vec3,
+    pub translate: Vec3,
+    pub zoom: FloatType,
+    pub pan: Vec3,
+}
+
+#[derive(Component, Default, Clone)]
 pub struct Orbit {
-    pub r: FloatType,
     pub quat: Quat,
-    pub tilt: FloatType,
+    pub world_quat: Quat,
+    pub default_world_quat: Option<Quat>,
+    pub pivot: Vec3,
+    pub horizontal_axis: Vec3,
+    pub vertical_axis: Vec3,
+    pub local_up: Vec3,
+    pub local_forward: Vec3,
+    pub local_position: Vec3,
+    pub should_tilt: bool,
 }
 
 impl Orbit {
-    pub fn to_vec3(self) -> Vec3 {
-        self.quat * Vec3::new(0.0, self.r, 0.0)
+    pub fn get_default_world_quat(&mut self) -> Quat {
+        match self.default_world_quat.take() {
+            Some(d) => d,
+            None => self.world_quat,
+        }
+    }
+
+    pub fn set_quat(
+        &mut self,
+        transform: &Transform,
+        world: Quat,
+        center: Vec3,
+        tilt: bool,
+        fixed_horizon_axis: Option<Vec3>,
+    ) {
+        self.quat = Quat::IDENTITY;
+        self.world_quat = world;
+
+        self.pivot = center;
+
+        let position = transform.transform_point(Vec3::ZERO);
+
+        let inverse = self.world_quat.inverse();
+
+        let direction = position - center;
+
+        self.local_up = inverse * transform.up().as_vec3();
+        self.local_forward = if tilt {
+            inverse * -direction.normalize_or_zero()
+        } else {
+            inverse * transform.forward().as_vec3()
+        };
+        self.local_position = inverse * direction;
+
+        self.vertical_axis = inverse * transform.right().as_vec3();
+
+        match fixed_horizon_axis {
+            Some(a) => {
+                self.horizontal_axis = a;
+            }
+            None => {
+                self.horizontal_axis = self.local_up;
+            }
+        }
     }
 }
 
@@ -183,23 +277,23 @@ mod test {
         let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
         let aabb = Aabb::from_vec3(&[Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.)]);
-        debug_assert!(frustum.interseciton_with_aabb(&aabb));
+        debug_assert!(frustum.intersection_with_aabb(&aabb));
 
         let aabb = Aabb::from_vec3(&[Vec3::new(10., 10., 100.), Vec3::new(20., 20., 100.)]);
-        debug_assert!(frustum.interseciton_with_aabb(&aabb));
+        debug_assert!(frustum.intersection_with_aabb(&aabb));
 
         let aabb = Aabb::from_vec3(&[
             Vec3::new(-1000., -1000., -1000.),
             Vec3::new(1000., 1000., -9.8),
         ]);
-        debug_assert!(frustum.interseciton_with_aabb(&aabb));
+        debug_assert!(frustum.intersection_with_aabb(&aabb));
 
         // Out of top
         let aabb = Aabb::from_vec3(&[Vec3::new(100., 100., 10.), Vec3::new(120., 120., 10.)]);
-        debug_assert!(!frustum.interseciton_with_aabb(&aabb));
+        debug_assert!(!frustum.intersection_with_aabb(&aabb));
 
         // Out of bottom
         let aabb = Aabb::from_vec3(&[Vec3::new(-100., -100., 10.), Vec3::new(-120., -120., 10.)]);
-        debug_assert!(!frustum.interseciton_with_aabb(&aabb));
+        debug_assert!(!frustum.intersection_with_aabb(&aabb));
     }
 }

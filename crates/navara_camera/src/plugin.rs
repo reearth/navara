@@ -1,11 +1,15 @@
 use navara_event_store::EventStore;
 
 use navara_math::Transform;
+use navara_window::WindowResizeEvent;
+
+use crate::CameraFrustum;
 
 use super::CameraMarker;
 use bevy_app::{PostUpdate, Startup, Update};
 use bevy_ecs::{
     entity::Entity,
+    event::EventReader,
     query::Changed,
     schedule::IntoSystemConfigs,
     system::{Query, ResMut},
@@ -19,7 +23,10 @@ impl bevy_app::Plugin for CameraPlugin {
         app.add_systems(Startup, super::system::startup)
             .add_systems(
                 Update,
-                (super::system::update, super::system::update_frustum).chain(),
+                (
+                    handle_resize,
+                    (super::system::update, super::system::update_frustum).chain(),
+                ),
             )
             .add_systems(PostUpdate, commit);
     }
@@ -41,4 +48,16 @@ fn commit(
         return;
     };
     events.camera_transform_updated = Some(e);
+}
+
+fn handle_resize(
+    mut camera: Query<(&CameraMarker, &mut CameraFrustum)>,
+    mut ev: EventReader<WindowResizeEvent>,
+) {
+    for w in ev.read() {
+        for (_, mut frustum) in &mut camera {
+            frustum.aspect_ratio = w.width / w.height;
+            frustum.update_sse_denominator();
+        }
+    }
 }

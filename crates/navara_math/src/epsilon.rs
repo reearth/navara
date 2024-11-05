@@ -1,5 +1,9 @@
 use super::FloatType;
 
+pub const EPSILON1: FloatType = 0.1;
+pub const EPSILON2: FloatType = 0.01;
+pub const EPSILON3: FloatType = 0.001;
+pub const EPSILON4: FloatType = 0.0001;
 pub const EPSILON5: FloatType = 0.00001;
 pub const EPSILON6: FloatType = 0.000001;
 pub const EPSILON7: FloatType = 0.0000001;

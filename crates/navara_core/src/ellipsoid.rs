@@ -6,9 +6,9 @@ use crate::{scale_to_geodetic_surface, Float, Meters, Rad, Radians, LLE, XYZ};
 pub struct Ellipsoid<F: Float> {
     pub a: F,
     pub b: F,
-    one_over_radii: [F; 3],
-    one_over_radii_squared: [F; 3],
-    center_tolerance_squared: F,
+    pub one_over_radii: [F; 3],
+    pub one_over_radii_squared: [F; 3],
+    pub center_tolerance_squared: F,
 }
 
 // TODO: Move this variable to the correct place.
