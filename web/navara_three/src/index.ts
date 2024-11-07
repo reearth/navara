@@ -1,3 +1,4 @@
+import { EventManager } from "@navara/core";
 import initCore, { Core, TextureFragmentStatus } from "navara";
 import {
   PerspectiveCamera,
@@ -29,7 +30,6 @@ import {
   type BufferLoader,
   type TextureFragmentHandler,
 } from "./event";
-import { EventManager } from "./helpers/event/EventManager";
 import { registerInputEvents } from "./input";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";

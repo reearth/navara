@@ -20,6 +20,7 @@
     "verbatimModuleSyntax": true,
     "paths": {
       "@navara/three": ["./src"],
+      "@navara/core": ["./src/packages/core"],
       "@shaders/*": ["../../shaders"]
     }
   },

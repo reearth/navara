@@ -1,3 +1,9 @@
+import type { EventManager } from "@navara/core";
+import {
+  generate_id_from_entity,
+  to_draped_feature_id,
+  to_globe_depth_id,
+} from "@navara/core";
 import {
   type Events,
   type Transform,
@@ -36,12 +42,6 @@ import {
   ShaderMaterial,
 } from "three";
 
-import type { EventManager } from "../helpers/event/EventManager";
-import {
-  generate_id_from_entity,
-  to_draped_feature_id,
-  to_globe_depth_id,
-} from "../helpers/id";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
