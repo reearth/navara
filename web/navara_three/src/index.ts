@@ -1,3 +1,4 @@
+import { EventManager } from "@navara/core";
 import initCore, { Core, TextureFragmentStatus } from "navara";
 import {
   PerspectiveCamera,
@@ -109,6 +110,7 @@ export default class ThreeView {
       this._core?.triggerTextureFragmentLoaded(bits, status);
     },
   };
+  private _eventManager = new EventManager();
 
   constructor(options: Options) {
     if (!options.container && !options.canvas && !options.renderer) {
@@ -269,7 +271,6 @@ export default class ThreeView {
     this.resize(size.width, size.height, this.renderer.getPixelRatio());
   }
 
-  // TODO: Handle dispose
   dispose() {
     this._disposed = true;
     if (!isWorker()) window.removeEventListener("resize", this._handleResize);
@@ -348,6 +349,7 @@ export default class ThreeView {
     const events = this._core?.readEvents();
     if (events && this._core) {
       processEvent(
+        this._eventManager,
         this._scenes,
         this.camera,
         this._meshes,

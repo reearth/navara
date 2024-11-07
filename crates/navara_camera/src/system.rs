@@ -204,6 +204,8 @@ fn handle_tilt(
     // TODO: Support movement underground.
     let intersection = match ray_ellipsoid(&ray, ellipsoid) {
         Some(i) if i.start != 0. => i,
+        // TODO: Handle the case where intersection point couldn't find.
+        // Ref: https://github.com/CesiumGS/cesium/blob/57857b0d563d0d7592fe6254080c22130ce8d3ed/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2487-L2515
         _ => Intersection { start: 1., end: 1. },
     };
     let center = ray.get_point(intersection.start);

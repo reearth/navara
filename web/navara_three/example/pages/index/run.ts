@@ -1,5 +1,4 @@
 import ThreeView from "@navara/three";
-
 import { type LayerDescription } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
