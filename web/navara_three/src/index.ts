@@ -268,7 +268,7 @@ export default class ThreeView {
 
     const size = new Vector2();
     this.renderer.getSize(size);
-    this._resize(size.width, size.height, this.renderer.getPixelRatio());
+    this.resize(size.width, size.height, this.renderer.getPixelRatio());
   }
 
   dispose() {
@@ -287,7 +287,7 @@ export default class ThreeView {
     }
   }
 
-  private _resize = (width?: number, height?: number, pixelRatio?: number) => {
+  resize = (width?: number, height?: number, pixelRatio?: number) => {
     if (this._disposed) return;
 
     const canvas = this._getCanvasSize();
@@ -499,7 +499,7 @@ export default class ThreeView {
     const pixelRatio = isWorker()
       ? (this._options.initialPixelRatio ?? 1)
       : window.devicePixelRatio;
-    this._resize(width, height, pixelRatio);
+    this.resize(width, height, pixelRatio);
   };
 }
 
