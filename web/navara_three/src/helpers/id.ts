@@ -11,3 +11,7 @@ export function to_globe_depth_id(id: string) {
 export function to_draped_feature_id(id: string) {
   return `${id}_draped_feature`;
 }
+
+export function isEntityEvent(v: unknown): v is EntityEvent {
+  return !!v && typeof v === "object" && "ind" in v && "gen" in v;
+}

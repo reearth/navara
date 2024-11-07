@@ -138,7 +138,7 @@ async function renderModel(m: ModelMesh, buf: BufferLoader) {
       if (!bin) {
         return;
       }
-      // TODO: Avoid parsing here when the model is removed before it's completed.
+
       const model = await loader.parseAsync(bin.buffer, "");
       return model.scene;
     } else {
