@@ -59,28 +59,29 @@ export type Events = {
 };
 
 export default class ThreeView {
-  _scenes: Scenes;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
+  control?: { update: () => void; get target(): Vector3 | undefined };
 
-  _globeDepthRenderTarget: WebGLRenderTarget;
+  private _scenes: Scenes;
+  private _globeDepthRenderTarget: WebGLRenderTarget;
   // Store draped feature's materials
-  _drapedFeatureMaterials = new Map<string, Material>();
+  private _drapedFeatureMaterials = new Map<string, Material>();
 
-  _core: Core | undefined;
-  _options: Options;
-  _stats: RendererStats | undefined;
-  _eventDisposer: (() => void) | undefined;
-  _disposed = false;
-  _events: {
+  private _core: Core | undefined;
+  private _options: Options;
+  private _stats: RendererStats | undefined;
+  private _eventDisposer: (() => void) | undefined;
+  private _disposed = false;
+  private _events: {
     [K in keyof Events]?: Events[K][];
   } = {};
-  _uniforms: CommonUniforms;
+  private _uniforms: CommonUniforms;
 
-  _meshes = new Map<string, Mesh>();
-  _loadedTexs = new Map<string, Texture>();
-  _tex = new TextureLoader();
-  _buf: BufferLoader = {
+  private _meshes = new Map<string, Mesh>();
+  private _loadedTexs = new Map<string, Texture>();
+  private _tex = new TextureLoader();
+  private _buf: BufferLoader = {
     u8: (handle) => {
       const b = this._core?.getBufferU8(handle);
       return b ?? null;
@@ -100,7 +101,7 @@ export default class ThreeView {
       this._core?.triggerDataRequesterFailed(bits);
     },
   };
-  _texFragment: TextureFragmentHandler = {
+  private _texFragment: TextureFragmentHandler = {
     triggerTextureFragmentLoaded: (
       bits: bigint,
       status: TextureFragmentStatus,
@@ -108,8 +109,6 @@ export default class ThreeView {
       this._core?.triggerTextureFragmentLoaded(bits, status);
     },
   };
-
-  control?: { update: () => void; get target(): Vector3 | undefined };
 
   constructor(options: Options) {
     if (!options.container && !options.canvas && !options.renderer) {
@@ -212,7 +211,7 @@ export default class ThreeView {
     }
 
     if (!options.disableAutoResize && !isWorker()) {
-      window.addEventListener("resize", this._resize);
+      window.addEventListener("resize", this._handleResize);
     }
 
     if (options.debug) {
@@ -267,12 +266,13 @@ export default class ThreeView {
 
     const size = new Vector2();
     this.renderer.getSize(size);
-    this.resize(size.width, size.height, this.renderer.getPixelRatio());
+    this._resize(size.width, size.height, this.renderer.getPixelRatio());
   }
 
+  // TODO: Handle dispose
   dispose() {
     this._disposed = true;
-    if (!isWorker()) window.removeEventListener("resize", this._resize);
+    if (!isWorker()) window.removeEventListener("resize", this._handleResize);
     if (this._eventDisposer) {
       this._eventDisposer();
       this._eventDisposer = undefined;
@@ -286,7 +286,7 @@ export default class ThreeView {
     }
   }
 
-  resize = (width?: number, height?: number, pixelRatio?: number) => {
+  private _resize = (width?: number, height?: number, pixelRatio?: number) => {
     if (this._disposed) return;
 
     const canvas = this._getCanvasSize();
@@ -314,7 +314,7 @@ export default class ThreeView {
     this._emit("resize");
   };
 
-  updateUniforms() {
+  private _updateUniforms() {
     const viewport = this._getCanvasSize();
     const pixelRatio = this.renderer.getPixelRatio();
 
@@ -341,13 +341,13 @@ export default class ThreeView {
   }
 
   /** Returns true if the scene was updated and needs to be rendered. */
-  async update(): Promise<boolean> {
+  private _update(): boolean {
     this._core?.update();
-    this.updateUniforms();
+    this._updateUniforms();
 
     const events = this._core?.readEvents();
     if (events && this._core) {
-      await processEvent(
+      processEvent(
         this._scenes,
         this.camera,
         this._meshes,
@@ -368,7 +368,7 @@ export default class ThreeView {
     return true;
   }
 
-  render() {
+  private _render() {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
     this.renderer.setRenderTarget(this._globeDepthRenderTarget);
@@ -379,7 +379,7 @@ export default class ThreeView {
     this.renderer.clearDepth();
 
     if (shouldDrapeByStencilTest) {
-      this.renderDrapedMesh();
+      this._renderDrapedMesh();
     }
 
     this.renderer.render(this._scenes.main, this.camera);
@@ -387,7 +387,7 @@ export default class ThreeView {
 
   // Drape a feature on the terrain by stencil test.
   // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
-  renderDrapedMesh() {
+  private _renderDrapedMesh() {
     // Render the terrain first
     this.renderer.render(this._scenes.globe, this.camera);
 
@@ -425,6 +425,7 @@ export default class ThreeView {
     this.renderer.clearDepth();
   }
 
+  // TODO: Handle event from user.
   on<K extends keyof Events>(event: K, callback: Events[K]) {
     if (!this._events[event]) this._events[event] = [];
     this._events[event]?.push(callback);
@@ -451,18 +452,21 @@ export default class ThreeView {
     this._core?.deleteLayer(layerId);
   }
 
-  _emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>) {
+  private _emit<K extends keyof Events>(
+    event: K,
+    ...args: Parameters<Events[K]>
+  ) {
     this._events[event]?.forEach((c) =>
       (c as (...args: any[]) => any)(...args),
     );
   }
 
-  _startMainLoop() {
-    const loop = async () => {
+  private _startMainLoop() {
+    const loop = () => {
       if (this._disposed) return;
       this._stats?.begin();
 
-      if (await this.update()) this.render();
+      if (this._update()) this._render();
 
       this._stats?.end();
       if (!this._disposed) requestAnimationFrame(loop);
@@ -470,7 +474,7 @@ export default class ThreeView {
     requestAnimationFrame(loop);
   }
 
-  _getCanvasSize(): { width: number; height: number } | undefined {
+  private _getCanvasSize(): { width: number; height: number } | undefined {
     const element =
       this._options.container ??
       this.renderer.domElement?.parentElement ??
@@ -486,14 +490,14 @@ export default class ThreeView {
     return { width, height };
   }
 
-  _resize = () => {
+  private _handleResize = () => {
     const { width, height } = this._getCanvasSize() ?? {};
     if (!width || !height) return;
 
     const pixelRatio = isWorker()
       ? (this._options.initialPixelRatio ?? 1)
       : window.devicePixelRatio;
-    this.resize(width, height, pixelRatio);
+    this._resize(width, height, pixelRatio);
   };
 }
 
