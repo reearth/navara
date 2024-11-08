@@ -101,7 +101,7 @@ export class EventManager {
     key: Key,
     cb: (value: GetJsEventValue<Key>) => Promise<void>,
     max = 20,
-    shouldRemoveStack?: (value: GetJsEventValue<Key>) => boolean,
+    shouldProcess?: (value: GetJsEventValue<Key>) => boolean,
   ) {
     const promises = [];
 
@@ -114,11 +114,13 @@ export class EventManager {
 
       const v = value as GetJsEventValue<Key>;
 
+      if (shouldProcess && !shouldProcess(v)) {
+        continue;
+      }
+
       promises.push(cb(v));
 
-      if (!shouldRemoveStack || (shouldRemoveStack && shouldRemoveStack(v))) {
-        removedIndices.push(idx);
-      }
+      removedIndices.push(idx);
 
       idx++;
     }
@@ -192,7 +194,7 @@ export class EventManager {
     cb: (
       ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
     ) => Promise<void>,
-    shouldRemoveStack?: (
+    shouldProcess?: (
       ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
     ) => boolean,
   ) {
@@ -205,8 +207,8 @@ export class EventManager {
           options.add.key,
           (event) => cb({ type: "add", event }),
           options.add.max,
-          shouldRemoveStack
-            ? (event) => shouldRemoveStack({ type: "add", event })
+          shouldProcess
+            ? (event) => shouldProcess({ type: "add", event })
             : undefined,
         ),
       )
@@ -215,8 +217,8 @@ export class EventManager {
           options.remove.key,
           (event) => cb({ type: "remove", event }),
           options.remove.max,
-          shouldRemoveStack
-            ? (event) => shouldRemoveStack({ type: "remove", event })
+          shouldProcess
+            ? (event) => shouldProcess({ type: "remove", event })
             : undefined,
         ),
       )
@@ -225,8 +227,8 @@ export class EventManager {
           options.change.key,
           (event) => cb({ type: "change", event }),
           options.change.max,
-          shouldRemoveStack
-            ? (event) => shouldRemoveStack({ type: "change", event })
+          shouldProcess
+            ? (event) => shouldProcess({ type: "change", event })
             : undefined,
         ),
       )
