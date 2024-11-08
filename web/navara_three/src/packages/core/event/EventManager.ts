@@ -36,6 +36,15 @@ type TransactionProcessOption<
   };
 };
 
+type TransactionCallbackParams<
+  AddKey extends JsEventsKey,
+  RemoveKey extends JsEventsKey,
+  ChangeKey extends JsEventsKey,
+> =
+  | { type: "add"; event: GetJsEventValue<AddKey> }
+  | { type: "remove"; event: GetJsEventValue<RemoveKey> }
+  | { type: "change"; event: GetJsEventValue<ChangeKey> };
+
 export class EventManager {
   stacks: EventsStacks = {
     camera_transform_updated: [],
@@ -92,22 +101,34 @@ export class EventManager {
     key: Key,
     cb: (value: GetJsEventValue<Key>) => Promise<void>,
     max = 20,
+    shouldRemoveStack?: (value: GetJsEventValue<Key>) => boolean,
   ) {
     const promises = [];
 
     let idx = 0;
+    const removedIndices = [];
     for (const value of this.stacks[key]) {
       if (idx === max) {
         break;
       }
 
-      promises.push(cb(value as GetJsEventValue<Key>));
+      const v = value as GetJsEventValue<Key>;
+
+      promises.push(cb(v));
+
+      if (!shouldRemoveStack || (shouldRemoveStack && shouldRemoveStack(v))) {
+        removedIndices.push(idx);
+      }
 
       idx++;
     }
 
-    // Remove processed events
-    this.stacks[key].splice(0, idx);
+    let offset = 0;
+    for (const idx of removedIndices) {
+      // Remove processed events
+      this.stacks[key].splice(idx - offset, 1);
+      offset++;
+    }
 
     await Promise.all(promises);
   }
@@ -169,11 +190,11 @@ export class EventManager {
     transactionKey: string,
     options: TransactionProcessOption<AddKey, RemoveKey, ChangeKey>,
     cb: (
-      ev:
-        | { type: "add"; event: GetJsEventValue<AddKey> }
-        | { type: "remove"; event: GetJsEventValue<RemoveKey> }
-        | { type: "change"; event: GetJsEventValue<ChangeKey> },
+      ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
     ) => Promise<void>,
+    shouldRemoveStack?: (
+      ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
+    ) => boolean,
   ) {
     this.removeDuplicatedTransactionEvents(options);
 
@@ -184,6 +205,9 @@ export class EventManager {
           options.add.key,
           (event) => cb({ type: "add", event }),
           options.add.max,
+          shouldRemoveStack
+            ? (event) => shouldRemoveStack({ type: "add", event })
+            : undefined,
         ),
       )
       .then(() =>
@@ -191,6 +215,9 @@ export class EventManager {
           options.remove.key,
           (event) => cb({ type: "remove", event }),
           options.remove.max,
+          shouldRemoveStack
+            ? (event) => shouldRemoveStack({ type: "remove", event })
+            : undefined,
         ),
       )
       .then(() =>
@@ -198,6 +225,9 @@ export class EventManager {
           options.change.key,
           (event) => cb({ type: "change", event }),
           options.change.max,
+          shouldRemoveStack
+            ? (event) => shouldRemoveStack({ type: "change", event })
+            : undefined,
         ),
       )
       .end();

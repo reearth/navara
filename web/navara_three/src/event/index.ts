@@ -1,6 +1,7 @@
 import type { EventManager } from "@navara/core";
 import {
   generate_id_from_entity,
+  isEntityEvent,
   to_draped_feature_id,
   to_globe_depth_id,
 } from "@navara/core";
@@ -147,6 +148,20 @@ export function processEvent(
             drapedFeatureMaterials,
           );
           break;
+      }
+    },
+    ({ type, event }) => {
+      switch (type) {
+        case "add":
+          return true;
+        case "remove":
+          return true;
+        case "change":
+          if (isEntityEvent(event)) {
+            const id = generate_id_from_entity(event);
+            return meshes.has(id);
+          }
+          return true;
       }
     },
   );
