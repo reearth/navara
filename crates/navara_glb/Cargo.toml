@@ -8,9 +8,9 @@ edition = "2021"
 [features]
 
 [dependencies]
-binrw = { version = "0.13.3", default-features = false }
-serde = { version = "1.0.208", features = ["derive"] }
-serde_json = { version = "1.0.128", default-features = false, features = ["alloc"] }
+binrw = { version = "0.14.1", default-features = false }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = { version = "1.0.132", default-features = false, features = ["alloc"] }
 navara_bin = { path = "../navara_bin" }
 
 [dev-dependencies]
