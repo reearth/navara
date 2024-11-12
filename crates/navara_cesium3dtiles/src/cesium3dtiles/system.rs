@@ -36,6 +36,7 @@ pub fn request_metadata(
     for (e, layer) in &layers {
         commands.spawn((
             Cesium3dTilesMetadataDataRequesterMarker(e),
+            navara_data_requester::Priority::Medium,
             DataRequester::from_store(
                 layer.data.as_ref().unwrap().url.clone(),
                 &mut buf,

@@ -12,6 +12,7 @@ use nanoid::nanoid;
 use navara_ecs::App;
 use navara_input::Key;
 use navara_math::FloatType;
+use navara_tile::tile::TileHandle;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -142,6 +143,11 @@ impl Core {
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
         self.app
             .trigger_texture_fragment_loaded(bits, status.into());
+    }
+
+    #[wasm_bindgen(js_name = setTileMeshPrepared)]
+    pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
+        self.app.set_tile_mesh_prepared(handle);
     }
 }
 

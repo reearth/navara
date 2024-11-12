@@ -41,6 +41,7 @@ pub(crate) fn request_tile_content(
         .spawn((
             Cesium3dTileContentDataRequesterMarker,
             B3dmDataRequesterMarker,
+            navara_data_requester::Priority::Medium,
             TileOrderByDistance {
                 distance_from_camera: tile.state.distance_from_camera,
                 sse: tile.state.sse,

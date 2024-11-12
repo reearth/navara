@@ -10,6 +10,16 @@ use super::TileHandle;
 /// These values are removed and added frequently,so we should use this cache structure.
 pub struct TileCache {
     pub mesh_entity: Option<Entity>,
+    pub mesh_prepared: bool,
+    pub are_children_prepared: bool,
+    pub has_children: bool,
+}
+
+impl TileCache {
+    pub fn reset_state(&mut self) {
+        self.are_children_prepared = false;
+        self.has_children = false;
+    }
 }
 
 // Manage the tiles that are going to be rendered.
@@ -20,3 +30,5 @@ pub struct TileCacheManager {
     pub rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
 }
+
+pub const MAX_CACHE_SIZE: usize = 100;

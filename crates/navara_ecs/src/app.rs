@@ -38,9 +38,9 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(LayerPlugin);
         app.add_plugins(FeaturePlugin);
         app.add_plugins(GeoJsonPlugin);
+        app.add_plugins(TilePlugin);
         app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(MvtPlugin);
-        app.add_plugins(TilePlugin);
 
         // custom systems
         app.add_systems(Startup, startup);

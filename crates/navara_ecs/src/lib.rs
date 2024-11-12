@@ -6,6 +6,7 @@ use navara_event::Events;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
+use navara_tile::tile::TileHandle;
 use navara_window::{Window, WindowResizeEvent};
 
 mod app;
@@ -67,6 +68,14 @@ impl App {
             .send_event(navara_buffer_store::BufferStoreLoadedEvent {
                 id: Entity::from_bits(bits),
                 ty: navara_buffer_store::BufferType::U8,
+            });
+    }
+
+    pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
+        self.app
+            .world_mut()
+            .send_event(navara_tile::tile::MeshPreparedEvent {
+                tile_handle: handle,
             });
     }
 

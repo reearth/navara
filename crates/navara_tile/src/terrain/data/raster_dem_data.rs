@@ -4,13 +4,12 @@ use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
     ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
 };
-use navara_data_requester::DataRequester;
 use navara_geometry::{
     decode_height_from_dem, tile_triangles_with_terrain, Geometry, UpsampledTerrainGeometry,
 };
 use navara_math::FloatType;
 
-use crate::{data_requester::TerrainDataRequesterMarker, tile::Tile};
+use crate::{data_requester::TileTerrainDataRequesterQuery, tile::Tile};
 
 use super::TerrainData;
 
@@ -37,10 +36,7 @@ impl TerrainData for RasterDEMData {
         &mut self,
         extent: &Extent<FloatType, Radians>,
         buf: &mut BufferStore,
-        terrain_data_requesters: &bevy_ecs::system::Query<(
-            &TerrainDataRequesterMarker,
-            &DataRequester,
-        )>,
+        terrain_data_requesters: &TileTerrainDataRequesterQuery,
         point: &navara_core::LngLat<FloatType, navara_core::Radians>,
     ) -> Option<FloatType> {
         let heights = if let Some(handle) = &self.heights_handle {

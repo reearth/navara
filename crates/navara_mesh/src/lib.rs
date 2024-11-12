@@ -35,6 +35,7 @@ pub struct Mesh {
 #[derive(Debug, Clone, Component, PartialEq)]
 pub struct Material {
     pub color: u32,
+    pub show: bool,
     pub wireframe: bool,
     pub should_compute_normal_from_vertex: bool,
     // for tile
@@ -85,6 +86,6 @@ fn commit_events(
     }
 
     for e in removed.read() {
-        events.object_removed.push(e);
+        events.mesh_removed.push(e);
     }
 }

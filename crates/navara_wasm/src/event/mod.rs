@@ -3,6 +3,7 @@ mod feature_event;
 
 use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
 use navara_math::FloatType;
+use navara_tile::tile::TileHandle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -11,10 +12,11 @@ use wasm_bindgen::prelude::*;
 pub struct Events {
     pub camera_transform_updated: Option<Transform>,
     pub object_transform_updated: Vec<ObjectTransformEvent>,
-    pub object_removed: Vec<EntityEvent>,
+    pub mesh_removed: Vec<EntityEvent>,
     pub mesh_added: Vec<MeshAdded>,
     pub mesh_updated: Vec<MeshChanged>,
     pub data_requested: Vec<DataRequestEvent>,
+    pub data_requester_removed: Vec<EntityEvent>,
     pub texture_fragment_requested: Vec<TextureFragmentRequestedEvent>,
     pub texture_fragment_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
@@ -50,6 +52,7 @@ pub struct Transform {
 pub struct MeshAdded {
     pub ind: u32,
     pub gen: u32,
+    pub tile_handle: TileHandle,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
     pub material: MeshMaterial,
@@ -142,10 +145,15 @@ impl<'a> From<navara_event::Events<'a>> for Events {
                 .into_iter()
                 .map(|ev| ev.into())
                 .collect(),
-            object_removed: ev.object_removed.into_iter().map(|ev| ev.into()).collect(),
+            mesh_removed: ev.mesh_removed.into_iter().map(|ev| ev.into()).collect(),
             mesh_added: ev.mesh_added.into_iter().map(|ev| ev.into()).collect(),
             mesh_updated: ev.mesh_updated.into_iter().map(|ev| ev.into()).collect(),
             data_requested: ev.data_requested.into_iter().map(|ev| ev.into()).collect(),
+            data_requester_removed: ev
+                .data_requester_removed
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
             texture_fragment_requested: ev
                 .texture_fragment_reqested
                 .into_iter()
@@ -216,6 +224,7 @@ impl<'a> From<&'a navara_math::Transform> for Transform {
 impl
     From<
         navara_event_store::ComponentEvent<(
+            &navara_tile::tile::TileMeshMarker,
             &navara_mesh::Mesh,
             &navara_mesh::Material,
             &navara_math::Transform,
@@ -224,6 +233,7 @@ impl
 {
     fn from(
         ev: navara_event_store::ComponentEvent<(
+            &navara_tile::tile::TileMeshMarker,
             &navara_mesh::Mesh,
             &navara_mesh::Material,
             &navara_math::Transform,
@@ -232,9 +242,10 @@ impl
         Self {
             ind: ev.ind,
             gen: ev.gen,
-            mesh: ev.comp.0.into(),
-            material: ev.comp.1.clone().into(),
-            transform: ev.comp.2.into(),
+            tile_handle: ev.comp.0 .0,
+            mesh: ev.comp.1.into(),
+            material: ev.comp.2.clone().into(),
+            transform: ev.comp.3.into(),
         }
     }
 }

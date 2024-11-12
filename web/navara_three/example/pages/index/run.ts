@@ -375,7 +375,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    color: 0xffffff,
+    color: 0xcccccc,
     segments: 10,
     url: tileUrls.openstreetmap,
     max_sse: 2,

@@ -1,11 +1,11 @@
 import { EventManager } from "@navara/core";
+import { initializeWorkerPool } from "@navara/worker";
 import initCore, { Core, TextureFragmentStatus } from "navara";
 import {
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
   Mesh,
-  TextureLoader,
   Vector3,
   Texture,
   Vector2,
@@ -28,6 +28,7 @@ import invariant from "tiny-invariant";
 import {
   processEvent,
   type BufferLoader,
+  type MeshHandler,
   type TextureFragmentHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
@@ -38,6 +39,9 @@ import MVT from "./temp/MVT";
 import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
 import type { CommonUniforms } from "./uniforms";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+/** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
+import WorkerURL from "./worker?url&worker";
 
 export * from "./type";
 
@@ -81,7 +85,6 @@ export default class ThreeView {
 
   private _meshes = new Map<string, Mesh>();
   private _loadedTexs = new Map<string, Texture>();
-  private _tex = new TextureLoader();
   private _buf: BufferLoader = {
     u8: (handle) => {
       const b = this._core?.getBufferU8(handle);
@@ -108,6 +111,11 @@ export default class ThreeView {
       status: TextureFragmentStatus,
     ) => {
       this._core?.triggerTextureFragmentLoaded(bits, status);
+    },
+  };
+  private _meshHandler: MeshHandler = {
+    setTileMeshPrepared: (handle: bigint) => {
+      this._core?.setTileMeshPrepared(handle);
     },
   };
   private _eventManager = new EventManager();
@@ -253,6 +261,8 @@ export default class ThreeView {
   async init() {
     if (this._core) return;
 
+    initializeWorkerPool(WorkerURL);
+
     await initCore();
 
     this._core = new Core(newId());
@@ -355,8 +365,8 @@ export default class ThreeView {
         this._meshes,
         this._buf,
         this._texFragment,
+        this._meshHandler,
         this._loadedTexs,
-        this._tex,
         events,
         this._uniforms,
         this._drapedFeatureMaterials,

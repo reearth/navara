@@ -37,6 +37,7 @@ pub fn request_model_by_b3dm_layer(
     for (e, layer) in &b3dm_layers {
         commands.spawn((
             B3dmLayerDataRequesterMarker(e),
+            navara_data_requester::Priority::Medium,
             DataRequester::from_store(
                 layer.data.as_ref().unwrap().url.clone(),
                 &mut buf,
@@ -309,7 +310,9 @@ pub fn remove_invisible_rendered_tiles(
         // Remove data requester
         if let Ok(requester) = requesters.get(tile.data_requester_id) {
             buf.remove(&requester.handle);
-            commands.entity(tile.data_requester_id).despawn();
+            commands
+                .entity(tile.data_requester_id)
+                .insert(navara_data_requester::Deleted);
         }
 
         commands.entity(entity).despawn();

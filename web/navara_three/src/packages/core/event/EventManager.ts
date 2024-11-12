@@ -30,7 +30,7 @@ type TransactionProcessOption<
     key: RemoveKey;
     max?: number;
   };
-  change: {
+  change?: {
     key: ChangeKey;
     max?: number;
   };
@@ -49,9 +49,10 @@ export class EventManager {
   stacks: EventsStacks = {
     camera_transform_updated: [],
     data_requested: [],
+    data_requester_removed: [],
     mesh_added: [],
     mesh_updated: [],
-    object_removed: [],
+    mesh_removed: [],
     object_transform_updated: [],
     renderable_feature_added: [],
     renderable_feature_changed: [],
@@ -148,6 +149,7 @@ export class EventManager {
         continue;
       }
       const removedId = generate_id_from_entity(removed);
+
       const removedAddedEventIdx = this.stacks[options.add.key].findIndex(
         (added) => {
           if (!isEntityEvent(added)) return;
@@ -155,22 +157,26 @@ export class EventManager {
           return removedId === addedId;
         },
       );
-      const removedChangedEventIdx = this.stacks[options.change.key].findIndex(
-        (changed) => {
-          if (!isEntityEvent(changed)) return;
-          const changedId = generate_id_from_entity(changed);
-          return removedId === changedId;
-        },
-      );
-
       const isRemovedAddedEventIdxFound = removedAddedEventIdx !== -1;
       if (isRemovedAddedEventIdxFound) {
         this.stacks[options.add.key].splice(removedAddedEventIdx, 1);
       }
-      const isRemovedChangedEventIdx = removedChangedEventIdx !== -1;
-      if (isRemovedChangedEventIdx) {
-        this.stacks[options.change.key].splice(removedChangedEventIdx, 1);
+
+      if (options.change) {
+        const removedChangedEventIdx = this.stacks[
+          options.change.key
+        ].findIndex((changed) => {
+          if (!isEntityEvent(changed)) return;
+          const changedId = generate_id_from_entity(changed);
+          return removedId === changedId;
+        });
+
+        const isRemovedChangedEventIdx = removedChangedEventIdx !== -1;
+        if (isRemovedChangedEventIdx) {
+          this.stacks[options.change.key].splice(removedChangedEventIdx, 1);
+        }
       }
+
       if (isRemovedAddedEventIdxFound) {
         processedEvents.push(removedIdx);
       }
@@ -200,7 +206,7 @@ export class EventManager {
   ) {
     this.removeDuplicatedTransactionEvents(options);
 
-    this.transactionManager
+    const transaction = this.transactionManager
       .getOrInsert(transactionKey)
       .then(() =>
         this.forEachStackAsync(
@@ -221,17 +227,24 @@ export class EventManager {
             ? (event) => shouldProcess({ type: "remove", event })
             : undefined,
         ),
-      )
-      .then(() =>
-        this.forEachStackAsync(
-          options.change.key,
-          (event) => cb({ type: "change", event }),
-          options.change.max,
-          shouldProcess
-            ? (event) => shouldProcess({ type: "change", event })
-            : undefined,
-        ),
-      )
-      .end();
+      );
+
+    if (options.change) {
+      const change = options.change;
+      transaction
+        .then(() =>
+          this.forEachStackAsync(
+            change.key,
+            (event) => cb({ type: "change", event }),
+            change.max,
+            shouldProcess
+              ? (event) => shouldProcess({ type: "change", event })
+              : undefined,
+          ),
+        )
+        .end();
+    } else {
+      transaction.end();
+    }
   }
 }

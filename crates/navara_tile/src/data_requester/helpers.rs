@@ -40,6 +40,7 @@ pub(crate) fn request_terrain_data(
             };
             let entity = commands.spawn((
                 TerrainDataRequesterMarker(handle),
+                navara_data_requester::Priority::High,
                 DataRequester::from_store(url, buf, DataRequesterExtension::Png),
                 TileOrderByDistance(tile_distance),
             ));

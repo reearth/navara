@@ -59,6 +59,23 @@ impl<'a, T: Component, U: Component, V: Component> ComponentEvent<(&'a T, &'a U,
     }
 }
 
+impl<'a, A: Component, B: Component, C: Component, D: Component>
+    ComponentEvent<(&'a A, &'a B, &'a C, &'a D)>
+{
+    pub fn from_world_4(e: Entity, world: &'a World) -> Option<Self> {
+        let (Some(a), Some(b), Some(c), Some(d)) = (
+            world.get::<A>(e),
+            world.get::<B>(e),
+            world.get::<C>(e),
+            world.get::<D>(e),
+        ) else {
+            return None;
+        };
+
+        Some(Self::new(e, (a, b, c, d)))
+    }
+}
+
 #[derive(Debug)]
 pub struct ReconstructableComponentEvent<T = ()> {
     pub ind: u32,

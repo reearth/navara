@@ -1,11 +1,10 @@
 use std::fmt::Debug;
 
-use crate::{data_requester::TerrainDataRequesterMarker, tile::Tile};
-use bevy_ecs::{entity::Entity, system::Query};
+use crate::{data_requester::TileTerrainDataRequesterQuery, tile::Tile};
+use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::BufferStore;
 use navara_core::{Ellipsoid, Extent, LngLat, Radians, TileRegion};
-use navara_data_requester::DataRequester;
 use navara_geometry::{Geometry, UpsampledTerrainGeometry};
 use navara_math::FloatType;
 
@@ -32,7 +31,7 @@ pub trait TerrainData: Debug + Sync + Send {
         &mut self,
         extent: &Extent<FloatType, Radians>,
         buf: &mut BufferStore,
-        terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_data_requesters: &TileTerrainDataRequesterQuery,
         point: &LngLat<FloatType, Radians>,
     ) -> Option<FloatType>;
     // Indicates the max height of the terrain from the globe surface.
