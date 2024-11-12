@@ -339,11 +339,11 @@ export const run = async (view: ThreeView) => {
   axesHelper.scale.multiplyScalar(1e9);
   view.scene.add(axesHelper);
 
-  const ambientLight = new AmbientLight(0xffffff, 0.2);
+  const ambientLight = new AmbientLight(0xffffff, 0.5);
   view.scene.add(ambientLight);
 
-  const directionalLight = new DirectionalLight(0xffffff);
-  directionalLight.position.set(1, 1, 1);
+  const directionalLight = new DirectionalLight(0xffffff, 5);
+  directionalLight.position.set(1, 5, 3);
   view.scene.add(directionalLight);
 
   const tileUrls = {
