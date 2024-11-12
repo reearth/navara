@@ -75,6 +75,7 @@ pub struct Mesh {
     pub vertices: i32, // handle
     pub uvs: i32,      // handle
     pub indices: i32,  // handle
+    pub active: bool,
 }
 
 #[wasm_bindgen]
@@ -88,6 +89,7 @@ pub struct TextureFragment {
 #[derive(Debug, Clone, Serialize)]
 pub struct MeshMaterial {
     pub color: u32,
+    pub show: bool,
     pub wireframe: bool,
     pub should_compute_normal_from_vertex: bool,
     #[wasm_bindgen(getter_with_clone)]
@@ -271,6 +273,7 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             vertices: m.vertices,
             uvs: m.uvs,
             indices: m.indices,
+            active: m.active,
         }
     }
 }
@@ -279,6 +282,7 @@ impl From<navara_mesh::Material> for MeshMaterial {
     fn from(m: navara_mesh::Material) -> Self {
         Self {
             color: m.color,
+            show: m.show,
             wireframe: m.wireframe,
             should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
             texture_fragment: m.texture_fragment.map(|t| TextureFragment {

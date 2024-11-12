@@ -256,7 +256,7 @@ impl LayerDescription {
                     url: layer.url,
                     segments: layer.segments,
                     color: layer.color,
-                    show: layer.show.unwrap_or(false),
+                    show: layer.show.unwrap_or(true),
                     max_sse: layer.max_sse.unwrap_or(4.),
                     max_z: layer.max_z,
                     wireframe: layer.wireframe,

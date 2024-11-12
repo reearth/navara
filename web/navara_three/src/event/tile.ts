@@ -4,6 +4,7 @@ import {
   type MeshAdded,
   type Mesh as EventMesh,
   type MeshMaterial as EventMaterial,
+  MeshChanged,
 } from "navara";
 import {
   BufferAttribute,
@@ -42,44 +43,15 @@ export async function processMeshAdded(
   );
 }
 
-// export function processMeshChanged(
-//   parent: Object3D,
-//   globeDepthScene: Object3D,
-//   meshes: MeshCache,
-//   mesh: MeshChanged,
-//   buf: BufferLoader,
-//   loadedTexes: Map<string, Texture>,
-// ) {
-//   const id = generate_id_from_entity(mesh);
-//   const m = meshes.get(id);
-//   if (!m) return;
+export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
+  const id = generate_id_from_entity(mesh);
+  const m = meshes.get(id);
+  if (!m) return;
 
-//   meshes.delete(id);
-//   parent.remove(m);
-
-//   const globeDepthId = to_globe_depth_id(id);
-//   const globeDepthMesh = meshes.get(globeDepthId);
-//   if (globeDepthMesh) {
-//     globeDepthScene.remove(globeDepthMesh);
-//     meshes.delete(globeDepthId);
-//   }
-
-//   const newm = createMesh(
-//     parent,
-//     globeDepthScene,
-//     meshes,
-//     buf,
-//     loadedTexes,
-//     id,
-//     mesh.mesh,
-//     mesh.material,
-//   );
-//   if (!newm) return;
-
-//   newm.position.copy(m.position);
-//   newm.quaternion.copy(m.quaternion);
-//   newm.scale.copy(m.scale);
-// }
+  if (!(m instanceof Mesh)) return;
+  if (!(m.material instanceof Material)) return;
+  m.material.visible = mesh.material.show && mesh.mesh.active;
+}
 
 async function createMesh(
   parent: Object3D,
@@ -105,11 +77,9 @@ async function createMesh(
   geometry.setIndex(new BufferAttribute(indices, 1));
   if (mat.should_compute_normal_from_vertex) {
     geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
-    // geometry.computeVertexNormals();
   }
 
-  // const material = new MeshStandardMaterial({ color: 0x00ff00 });
-  const material = toMaterial(mat, loadedTexes);
+  const material = toMaterial(mat, loadedTexes, false);
   const m = new Mesh(geometry, material);
   m.name = id;
   if (tranform) setTransform(m, tranform);
@@ -134,20 +104,27 @@ function setTransform(obj: Object3D, transform: Transform) {
 function toMaterial(
   mat: EventMaterial,
   loadedTexes: Map<string, Texture>,
+  active: boolean,
 ): Material {
   if (mat.wireframe) {
     return new MeshBasicMaterial({
       color: mat.color,
       wireframe: true,
       stencilWrite: false,
+      visible: active,
     });
   }
 
   const m = mat.should_compute_normal_from_vertex
-    ? new MeshLambertMaterial({ color: mat.color, stencilWrite: false })
+    ? new MeshLambertMaterial({
+        color: mat.color,
+        stencilWrite: false,
+        visible: active,
+      })
     : new MeshBasicMaterial({
         color: mat.color,
         stencilWrite: false,
+        visible: active,
       });
   if (mat.texture_fragment) {
     const textureFragmentId = generate_id_from_entity(mat.texture_fragment);

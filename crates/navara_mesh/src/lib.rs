@@ -30,6 +30,7 @@ pub struct Mesh {
     pub vertices: Handle,
     pub uvs: Handle,
     pub indices: Handle,
+    pub active: bool,
 }
 
 #[derive(Debug, Clone, Component, PartialEq)]
@@ -63,7 +64,7 @@ fn commit_events(
     t_changed: Query<(Entity, &ObjectMarker), Changed<Transform>>,
     mesh_added: Query<(Entity, &ObjectMarker, &Mesh), Added<Mesh>>,
     mesh_changed: Query<(Entity, &ObjectMarker, &Mesh), Changed<Mesh>>,
-    mat_changed: Query<(Entity, &ObjectMarker, &Material), Changed<Material>>,
+    // mat_changed: Query<(Entity, &ObjectMarker, &Material), Changed<Material>>,
 ) {
     for (e, _) in t_changed.iter() {
         events.object_transform_updated.push(e);
@@ -74,16 +75,12 @@ fn commit_events(
     }
 
     for (e, _, _) in mesh_changed.iter() {
-        if mesh_added.get(e).is_err() {
-            events.mesh_updated.push(e);
-        }
+        events.mesh_updated.push(e);
     }
 
-    for (e, _, _) in mat_changed.iter() {
-        if mesh_added.get(e).is_err() && mesh_changed.get(e).is_err() {
-            events.mesh_updated.push(e);
-        }
-    }
+    // for (e, _, _) in mat_changed.iter() {
+    //     events.mesh_updated.push(e);
+    // }
 
     for e in removed.read() {
         events.mesh_removed.push(e);

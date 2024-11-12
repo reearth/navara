@@ -51,13 +51,14 @@ fn spawn_tile_entity(
         return;
     }
 
-    commands.spawn((
+    let e = commands.spawn((
         RenderedTile { tile_handle },
         TileOrderByDistance(distance_from_camera),
     ));
     tc.rendered_tile_caches.insert(
         tile_handle,
         TileCache {
+            rendered_tile_entity: e.id(),
             mesh_entity: None,
             mesh_prepared: false,
             are_children_prepared: false,
@@ -170,6 +171,7 @@ fn update_tile_occludee_point(
 pub(super) enum TraversalResult {
     TileRendered,
     ChildrenRendered,
+    ChildrenMeshesPrepared,
     Culled,
     NotFound,
 }
@@ -226,6 +228,7 @@ fn traverse_tile(
     window: &Window,
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
+    meshes: &mut Query<&mut Mesh, With<TileMeshMarker>>,
 ) -> TraversalResult {
     if let Some(t) = tc.rendered_tile_caches.get_mut(&handle) {
         t.reset_state();
@@ -350,13 +353,18 @@ fn traverse_tile(
     let children = find_children(qt, handle);
 
     if let Some(children) = children {
-        let mut are_children_rendered = false;
+        let mut any_children_rendered = false;
         let mut are_all_children_rendered = true;
-        let mut has_children = false;
+        let mut are_children_prepared = true;
+        let mut are_children_activated = true;
         let mut rendered_children_indices = vec![];
+        let mut activated_children_indices = vec![];
         let mut hidden_children_indices = vec![];
         for (i, (child, is_created)) in children.iter().enumerate() {
             if *is_created {
+                are_all_children_rendered = false;
+                are_children_prepared = false;
+                are_children_activated = false;
                 continue;
             }
 
@@ -375,10 +383,13 @@ fn traverse_tile(
                 window,
                 ellipsoid,
                 occluder,
+                meshes,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
                 are_all_children_rendered = false;
+                are_children_prepared = false;
+                are_children_activated = false;
             }
 
             if matches!(
@@ -391,23 +402,41 @@ fn traverse_tile(
             // If there is one child at least, trigger the rendering children process.
             if matches!(
                 traversal_result,
-                TraversalResult::TileRendered | TraversalResult::ChildrenRendered
+                TraversalResult::TileRendered
+                    | TraversalResult::ChildrenRendered
+                    | TraversalResult::ChildrenMeshesPrepared
             ) {
-                are_children_rendered = true;
+                any_children_rendered = true;
             }
 
             if matches!(traversal_result, TraversalResult::TileRendered) {
-                has_children = true;
+                if !tc.is_rendered_tile_prepared(child) {
+                    are_children_prepared = false;
+                }
+                if !tc.is_rendered_tile_activated(child, meshes) {
+                    are_children_activated = false;
+                }
             }
 
-            // Skip rendering chilren in this tile.
-            if matches!(traversal_result, TraversalResult::ChildrenRendered) {
+            // Skip rendering children in this tile.
+            if matches!(
+                traversal_result,
+                TraversalResult::ChildrenRendered | TraversalResult::ChildrenMeshesPrepared
+            ) {
                 rendered_children_indices.push(i);
+            }
+
+            // These children meshes haven't been prepared yet.
+            if matches!(traversal_result, TraversalResult::ChildrenRendered) {
+                are_children_activated = false;
+            }
+
+            if matches!(traversal_result, TraversalResult::ChildrenMeshesPrepared) {
+                activated_children_indices.push(i);
             }
         }
 
-        if are_children_rendered {
-            let mut are_children_prepared = true;
+        if any_children_rendered {
             for (i, (child, is_created)) in children.iter().enumerate() {
                 // If this child is not renderable, skip rendering this child.
                 if hidden_children_indices.contains(&i) {
@@ -423,14 +452,6 @@ fn traverse_tile(
                     continue;
                 }
 
-                if let Some(t) = tc.rendered_tile_caches.get(child) {
-                    if !t.mesh_prepared {
-                        are_children_prepared = false;
-                    }
-                } else {
-                    are_children_prepared = false;
-                }
-
                 let handle = *child;
                 let tile = match qt.qt.get_mut(handle) {
                     Some(t) => t,
@@ -439,13 +460,28 @@ fn traverse_tile(
                 spawn_tile_entity(command, tc, tile, handle, distance_from_camera);
             }
 
+            for (i, (child, _)) in children.iter().enumerate() {
+                if activated_children_indices.contains(&i) {
+                    // Hide parent tile when children are activated.
+                    tc.activate_rendered_tile(child, meshes, false);
+                    continue;
+                }
+                // Activate child tile when children are activated.
+                tc.activate_rendered_tile(child, meshes, are_children_prepared);
+            }
+
             if let Some(t) = tc.rendered_tile_caches.get_mut(&handle) {
-                t.are_children_prepared = are_children_prepared;
-                t.has_children = has_children;
+                t.are_children_prepared = are_children_activated;
+                t.has_children = true;
             }
 
             qt.qt.get_mut(handle).unwrap().previous_rendered_state =
                 Some(RenderedState::RenderedChildren);
+
+            if are_children_prepared {
+                return TraversalResult::ChildrenMeshesPrepared;
+            }
+
             if are_all_children_rendered {
                 // This tile's children are rendered completely, so parent tile isn't rendered.
                 return TraversalResult::ChildrenRendered;
@@ -481,6 +517,7 @@ pub fn update_tiles(
     texture_fragment: Query<(&TileTextureFragmentMarker, &TextureFragment)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     occluder: Query<&EllipsoidalOccluder>,
+    mut meshes: Query<&mut Mesh, With<TileMeshMarker>>,
 ) {
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer.iter().next();
@@ -514,6 +551,7 @@ pub fn update_tiles(
                 &window,
                 &WGS84_32,
                 occluder,
+                &mut meshes,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
@@ -523,6 +561,7 @@ pub fn update_tiles(
                         zero_tile.handle(),
                         0.,
                     );
+                    tc.activate_rendered_tile(&zero_tile.handle(), &mut meshes, true);
                 }
                 TraversalResult::NotFound => {
                     prepare_tile_resource(
@@ -586,6 +625,7 @@ pub fn transfer_mesh(
                         vertices: cached_mesh_handle.vertices,
                         indices: cached_mesh_handle.indices,
                         uvs: cached_mesh_handle.uvs,
+                        active: false,
                     },
                     material: Material {
                         color: tile_layer.color,
@@ -647,6 +687,7 @@ pub fn transfer_mesh(
                         vertices: vhandle,
                         indices: ihandle,
                         uvs: uvshandle,
+                        active: false,
                     },
                     material: Material {
                         color: tile_layer.color,
@@ -706,6 +747,7 @@ pub fn transfer_mesh(
                         vertices: vhandle,
                         indices: ihandle,
                         uvs: uvshandle,
+                        active: false,
                     },
                     material: Material {
                         color: tile_layer.color,
@@ -774,6 +816,7 @@ pub fn transfer_mesh(
                     vertices: vhandle,
                     indices: ihandle,
                     uvs: uvshandle,
+                    active: false,
                 },
                 material: Material {
                     color: tile_layer.color,
@@ -818,6 +861,11 @@ pub fn clear_caches(
     rendered_tiles: Query<(Entity, &RenderedTile, &TileOrderByDistance)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
+    let cache_size = tc.rendered_tile_caches.len();
+    if cache_size <= MAX_CACHE_SIZE {
+        return;
+    }
+
     let now = instant::Instant::now();
     for (rendered_tile_entity_id, rendered_tile, _) in
         rendered_tiles.iter().sort::<&TileOrderByDistance>().rev()
@@ -827,71 +875,33 @@ pub fn clear_caches(
             break;
         }
 
-        let rendered_at = {
+        let visited_at = {
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
-            tile.rendered_at
+            tile.visited_at
         };
+
         let cache = tc.rendered_tile_caches.get(&rendered_tile.tile_handle);
-        // Remove unused mesh.
-        if tc.rendered_frame != rendered_at && cache.is_some() {
-            let cache = cache.unwrap();
-            if cache.has_children && !cache.are_children_prepared {
-                continue;
-            }
 
-            if let Some(mesh_entity) = cache.mesh_entity {
-                commands
-                    .entity(mesh_entity)
-                    .remove::<(TileMeshMarker, MeshBundle)>();
-            }
-            commands
-                .entity(rendered_tile_entity_id)
-                .remove::<(RenderedTile, TileOrderByDistance)>();
-            tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
-
-            // To order the vector in oldest value first, the handle in last of the vector if it exists.
-            if !tc
-                .cached_textures_tile_handles
-                .insert(rendered_tile.tile_handle)
-            {
-                tc.cached_textures_tile_handles
-                    .remove(&rendered_tile.tile_handle);
-                tc.cached_textures_tile_handles
-                    .insert(rendered_tile.tile_handle);
-            }
-        }
-    }
-
-    let mut removed_cached_tile_handler = vec![];
-
-    // Prevent blocking the frame by this deletion process
-    let now = instant::Instant::now();
-
-    let cache_size = tc.cached_textures_tile_handles.len();
-
-    // the cache overflowes the specified cache size
-    for tile_handle in &tc.cached_textures_tile_handles {
-        if now.elapsed() > instant::Duration::from_micros(1) {
-            break;
-        }
-
-        let tile = qt.qt.get(*tile_handle).unwrap();
-        let visited_at = tile.visited_at;
-
-        if tc.rendered_frame <= visited_at + 1 || cache_size <= MAX_CACHE_SIZE {
+        if tc.rendered_frame <= visited_at + 1 || cache.is_none() {
             continue;
         }
 
-        qt.qt.get_mut(*tile_handle).unwrap().destroy(
+        let cache = cache.unwrap();
+        if cache.has_children && !cache.are_children_prepared {
+            continue;
+        }
+
+        if let Some(mesh_entity) = cache.mesh_entity {
+            commands.entity(mesh_entity).despawn();
+        }
+        commands.entity(rendered_tile_entity_id).despawn();
+        tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
+
+        qt.qt.get_mut(rendered_tile.tile_handle).unwrap().destroy(
             &mut commands,
             &mut buf,
             &terrain_data_requester,
         );
-        removed_cached_tile_handler.push(*tile_handle);
-    }
-
-    for i in removed_cached_tile_handler {
-        tc.cached_textures_tile_handles.remove(&i);
     }
 
     tc.is_updated_in_this_frame = false;

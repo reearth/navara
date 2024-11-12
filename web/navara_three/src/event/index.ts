@@ -41,7 +41,7 @@ import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
 import { IMAGE_LOADER, TEXTURE_LOADER } from "./loaders";
-import { processMeshAdded } from "./tile";
+import { processMeshAdded, processMeshChanged } from "./tile";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -94,7 +94,7 @@ export function processEvent(
       remove: {
         key: "mesh_removed",
         // This process is not heavy for now, so we can process it infinitely.
-        max: 20,
+        max: Infinity,
       },
       change: {
         key: "mesh_updated",
@@ -122,15 +122,7 @@ export function processEvent(
           }
           break;
         case "change":
-          // TODO: Update mesh
-          // processMeshChanged(
-          //   scenes.main,
-          //   scenes.globe,
-          //   meshes,
-          //   event,
-          //   buf,
-          //   loadedTexs,
-          // );
+          processMeshChanged(meshes, event);
           break;
       }
     },
