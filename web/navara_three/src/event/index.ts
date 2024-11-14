@@ -1,3 +1,10 @@
+import type { EventManager } from "@navara/core";
+import {
+  generate_id_from_entity,
+  isEntityEvent,
+  to_draped_feature_id,
+  to_globe_depth_id,
+} from "@navara/core";
 import {
   type Events,
   type Transform,
@@ -42,11 +49,6 @@ import type { MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
-import {
-  generate_id_from_entity,
-  to_draped_feature_id,
-  to_globe_depth_id,
-} from "./id";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -63,7 +65,8 @@ export type TextureFragmentHandler = {
   ) => void;
 };
 
-export async function processEvent(
+export function processEvent(
+  eventManager: EventManager,
   scenes: Scenes,
   camera: Camera,
   meshes: MeshCache,
@@ -75,66 +78,110 @@ export async function processEvent(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
 ) {
-  if (event.camera_transform_updated) {
-    processCameraTransformUpdated(camera, event.camera_transform_updated);
-  }
+  eventManager.pushEvents(event);
 
-  event.object_transform_updated?.forEach((obj) =>
-    processObjectTransformUpdated(meshes, obj),
+  eventManager.forEachStack("camera_transform_updated", (ev) =>
+    processCameraTransformUpdated(camera, ev),
   );
-  event.object_removed?.forEach((obj) => {
-    processObjectRemoved(scenes.main, meshes, obj);
-    processObjectRemoved(scenes.globe, meshes, obj, true);
-  });
-  event.mesh_added?.forEach((mesh) =>
-    processMeshAdded(scenes.main, scenes.globe, meshes, mesh, buf, loadedTexs),
+
+  eventManager.forEachStack("object_transform_updated", (ev) =>
+    processObjectTransformUpdated(meshes, ev),
   );
-  event.mesh_updated?.forEach((mesh) =>
-    processMeshChanged(
-      scenes.main,
-      scenes.globe,
-      meshes,
-      mesh,
-      buf,
-      loadedTexs,
-    ),
-  );
-  await Promise.all(
-    event.renderable_feature_added?.map((ev) =>
-      processRenderableFeatureAdded(
-        ev,
-        scenes,
-        meshes,
-        buf,
-        uniforms,
-        drapedFeatureMaterials,
-      ),
-    ),
-  );
-  event.renderable_feature_changed?.forEach((ev) =>
-    processRenderableFeatureChanged(scenes, ev, meshes, drapedFeatureMaterials),
-  );
-  event.renderable_feature_removed?.forEach((ev) => {
+
+  eventManager.forEachStack("object_removed", (ev) => {
     processObjectRemoved(scenes.main, meshes, ev);
-    processObjectRemoved(
-      scenes.drapedFeatures,
-      meshes,
-      ev,
-      undefined,
-      drapedFeatureMaterials,
-    );
+    processObjectRemoved(scenes.globe, meshes, ev, true);
   });
-
-  event.texture_fragment_requested?.forEach((req) =>
-    processTextureFragmentRequested(req, texFragment, tex, loadedTexs),
+  eventManager.forEachStack("mesh_added", (ev) =>
+    processMeshAdded(scenes.main, scenes.globe, meshes, ev, buf, loadedTexs),
   );
-  event.data_requested?.forEach((req) => processRequestedData(req, buf));
-  event.texture_fragment_removed?.forEach((req) =>
-    processTextureFragmentRemoved(req, loadedTexs),
+  eventManager.forEachStack("mesh_updated", (ev) =>
+    processMeshChanged(scenes.main, scenes.globe, meshes, ev, buf, loadedTexs),
+  );
+
+  eventManager.processTransactionEvents(
+    "renderableFeatureEvent",
+    {
+      add: {
+        key: "renderable_feature_added",
+      },
+      remove: {
+        key: "renderable_feature_removed",
+        // This process is not heavy for now, so we can process it infinitely.
+        max: Infinity,
+      },
+      change: {
+        key: "renderable_feature_changed",
+        // This process is not heavy for now, so we can process it infinitely.
+        max: Infinity,
+      },
+    },
+    async ({ type, event }) => {
+      switch (type) {
+        case "add":
+          await processRenderableFeatureAdded(
+            event,
+            scenes,
+            meshes,
+            buf,
+            uniforms,
+            drapedFeatureMaterials,
+          );
+          break;
+        case "remove":
+          {
+            processObjectRemoved(scenes.main, meshes, event);
+            processObjectRemoved(
+              scenes.drapedFeatures,
+              meshes,
+              event,
+              undefined,
+              drapedFeatureMaterials,
+            );
+          }
+          break;
+        case "change":
+          processRenderableFeatureChanged(
+            scenes,
+            event,
+            meshes,
+            drapedFeatureMaterials,
+          );
+          break;
+      }
+    },
+    ({ type, event }) => {
+      switch (type) {
+        case "add":
+          return true;
+        case "remove":
+          return true;
+        case "change":
+          if (isEntityEvent(event)) {
+            const id = generate_id_from_entity(event);
+            return meshes.has(id);
+          }
+          return true;
+      }
+    },
+  );
+
+  eventManager.forEachStack("texture_fragment_requested", (ev) =>
+    processTextureFragmentRequested(ev, texFragment, tex, loadedTexs),
+  );
+  eventManager.forEachStack("data_requested", (ev) =>
+    processRequestedData(ev, buf),
+  );
+  eventManager.forEachStack("texture_fragment_removed", (ev) =>
+    processTextureFragmentRemoved(ev, loadedTexs),
   );
 }
 
-function processCameraTransformUpdated(camera: Camera, transform: Transform) {
+function processCameraTransformUpdated(
+  camera: Camera,
+  transform: Transform | undefined,
+) {
+  if (!transform) return;
   setTransform(camera, transform); // disable temporarily
 }
 
@@ -287,6 +334,7 @@ function disposeObject3D(model: Object3D): void {
   });
 }
 
+// TODO: Need to check if the cached texture is removed completely
 function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
   if (req.extension === "png") {
     const loader = new ImageLoader();

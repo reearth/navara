@@ -172,6 +172,14 @@ pub fn update_height_by_terrain(
     let is_tile_meshes_empty = tile_meshes.is_empty();
 
     for (_, mut feature) in &mut renderable_features {
+        match feature.as_ref() {
+            RenderableFeature::Polygon { render_info, .. } => {
+                if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                    continue;
+                }
+            }
+            _ => continue,
+        };
         match feature.as_mut() {
             RenderableFeature::Polygon {
                 material,
@@ -179,9 +187,6 @@ pub fn update_height_by_terrain(
                 render_info,
                 ..
             } => {
-                if is_tile_meshes_empty && !render_info.should_recalculate_height {
-                    continue;
-                }
                 render_info.should_recalculate_height = false;
 
                 let (min_height, max_height) = if material.clamp_to_ground {

@@ -9,6 +9,7 @@ import tsconfig from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [wasm(), topLevelAwait(), glsl(), tsconfig()],
   resolve: {
+    mainFields: ["module"],
     alias: {
       "@shaders": path.resolve(__dirname, "../../shaders"),
     },
