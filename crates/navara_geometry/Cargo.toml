@@ -17,5 +17,5 @@ itertools = "0.13.0"
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_buffer_store = { path = "../navara_buffer_store" }
-earcut = "0.4.1"
+earcut = "0.4.2"
 approx.workspace = true
