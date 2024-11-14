@@ -76,6 +76,7 @@ pub struct Mesh {
     pub uvs: i32,      // handle
     pub indices: i32,  // handle
     pub active: bool,
+    pub render_order: i32,
 }
 
 #[wasm_bindgen]
@@ -274,6 +275,7 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             uvs: m.uvs,
             indices: m.indices,
             active: m.active,
+            render_order: m.render_order,
         }
     }
 }

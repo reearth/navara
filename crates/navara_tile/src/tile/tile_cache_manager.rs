@@ -17,15 +17,6 @@ pub struct TileCache {
     pub mesh_entity: Option<Entity>,
     pub rendered_tile_entity: Entity,
     pub mesh_prepared: bool,
-    pub are_children_prepared: bool,
-    pub has_children: bool,
-}
-
-impl TileCache {
-    pub fn reset_state(&mut self) {
-        self.are_children_prepared = false;
-        self.has_children = false;
-    }
 }
 
 // Manage the tiles that are going to be rendered.
@@ -82,6 +73,15 @@ impl TileCacheManager {
         mesh.active
     }
 
+    pub fn set_is_rendered_tile_prepared(&mut self, handle: &TileHandle, prepared: bool) {
+        let t = match self.rendered_tile_caches.get_mut(handle) {
+            Some(t) => t,
+            None => return,
+        };
+
+        t.mesh_prepared = prepared;
+    }
+
     pub fn is_rendered_tile_prepared(&self, handle: &TileHandle) -> bool {
         let t = match self.rendered_tile_caches.get(handle) {
             Some(t) => t,
@@ -92,4 +92,4 @@ impl TileCacheManager {
     }
 }
 
-pub const MAX_CACHE_SIZE: usize = 100;
+pub const MAX_CACHE_SIZE: usize = 30;

@@ -126,6 +126,7 @@ async function renderModel(m: ModelMesh, buf: BufferLoader) {
       }
 
       const model = await loader.parseAsync(bin.buffer, "");
+      bin.set([]);
       return model.scene;
     } else {
       if (!m.material.url) {

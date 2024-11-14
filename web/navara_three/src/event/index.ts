@@ -315,6 +315,11 @@ function disposeObject3D(model: Object3D): void {
       // Dispose geometry
       if (mesh.geometry) {
         mesh.geometry.dispose();
+        // Prevent GC overhead
+        mesh.geometry.deleteAttribute("position");
+        mesh.geometry.deleteAttribute("uv");
+        mesh.geometry.deleteAttribute("normal");
+        mesh.geometry.index = null;
       }
 
       // Dispose material(s)

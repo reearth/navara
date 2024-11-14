@@ -61,8 +61,6 @@ fn spawn_tile_entity(
             rendered_tile_entity: e.id(),
             mesh_entity: None,
             mesh_prepared: false,
-            are_children_prepared: false,
-            has_children: false,
         },
     );
 }
@@ -230,10 +228,6 @@ fn traverse_tile(
     occluder: &EllipsoidalOccluder,
     meshes: &mut Query<&mut Mesh, With<TileMeshMarker>>,
 ) -> TraversalResult {
-    if let Some(t) = tc.rendered_tile_caches.get_mut(&handle) {
-        t.reset_state();
-    }
-
     match qt.qt.get(handle) {
         Some(tile) => {
             if tile.coords.z >= tiles.max_z {
@@ -305,7 +299,7 @@ fn traverse_tile(
         if terrain_layer.is_some() { 65. } else { 64. },
         distance_from_camera,
     );
-    let meets_sse = sse < max_sse;
+    let meets_sse = sse <= max_sse;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
@@ -326,13 +320,11 @@ fn traverse_tile(
             distance_from_camera,
         );
 
-        if is_tile_failed {
-            return TraversalResult::NotFound;
-        }
-
         if is_renderable {
             return TraversalResult::TileRendered;
         }
+
+        return TraversalResult::NotFound;
     }
 
     if !is_tile_ready && !was_children_rendered && !is_tile_failed {
@@ -356,7 +348,6 @@ fn traverse_tile(
         let mut any_children_rendered = false;
         let mut are_all_children_rendered = true;
         let mut are_children_prepared = true;
-        let mut are_children_activated = true;
         let mut rendered_children_indices = vec![];
         let mut activated_children_indices = vec![];
         let mut hidden_children_indices = vec![];
@@ -364,7 +355,6 @@ fn traverse_tile(
             if *is_created {
                 are_all_children_rendered = false;
                 are_children_prepared = false;
-                are_children_activated = false;
                 continue;
             }
 
@@ -389,7 +379,6 @@ fn traverse_tile(
             if matches!(traversal_result, TraversalResult::NotFound) {
                 are_all_children_rendered = false;
                 are_children_prepared = false;
-                are_children_activated = false;
             }
 
             if matches!(
@@ -409,13 +398,10 @@ fn traverse_tile(
                 any_children_rendered = true;
             }
 
-            if matches!(traversal_result, TraversalResult::TileRendered) {
-                if !tc.is_rendered_tile_prepared(child) {
-                    are_children_prepared = false;
-                }
-                if !tc.is_rendered_tile_activated(child, meshes) {
-                    are_children_activated = false;
-                }
+            if matches!(traversal_result, TraversalResult::TileRendered)
+                && !tc.is_rendered_tile_prepared(child)
+            {
+                are_children_prepared = false;
             }
 
             // Skip rendering children in this tile.
@@ -424,11 +410,6 @@ fn traverse_tile(
                 TraversalResult::ChildrenRendered | TraversalResult::ChildrenMeshesPrepared
             ) {
                 rendered_children_indices.push(i);
-            }
-
-            // These children meshes haven't been prepared yet.
-            if matches!(traversal_result, TraversalResult::ChildrenRendered) {
-                are_children_activated = false;
             }
 
             if matches!(traversal_result, TraversalResult::ChildrenMeshesPrepared) {
@@ -468,11 +449,6 @@ fn traverse_tile(
                 }
                 // Activate child tile when children are activated.
                 tc.activate_rendered_tile(child, meshes, are_children_prepared);
-            }
-
-            if let Some(t) = tc.rendered_tile_caches.get_mut(&handle) {
-                t.are_children_prepared = are_children_activated;
-                t.has_children = true;
             }
 
             qt.qt.get_mut(handle).unwrap().previous_rendered_state =
@@ -561,7 +537,6 @@ pub fn update_tiles(
                         zero_tile.handle(),
                         0.,
                     );
-                    tc.activate_rendered_tile(&zero_tile.handle(), &mut meshes, true);
                 }
                 TraversalResult::NotFound => {
                     prepare_tile_resource(
@@ -574,7 +549,10 @@ pub fn update_tiles(
                         0.,
                     );
                 }
-                _ => {}
+                _ => {
+                    // Alway shows level zero tile.
+                    tc.activate_rendered_tile(&zero_tile.handle(), &mut meshes, true);
+                }
             };
         }
     }
@@ -608,6 +586,9 @@ pub fn transfer_mesh(
 
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&TileOrderByDistance>() {
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
+        let is_root = tile.is_root();
+        let scale = if is_root { 0.98 } else { 1. };
+        let render_order = if is_root { -1 } else { 0 };
 
         let extent = tile.extent;
 
@@ -626,6 +607,7 @@ pub fn transfer_mesh(
                         indices: cached_mesh_handle.indices,
                         uvs: cached_mesh_handle.uvs,
                         active: false,
+                        render_order,
                     },
                     material: Material {
                         color: tile_layer.color,
@@ -635,7 +617,7 @@ pub fn transfer_mesh(
                         texture_fragment: texture_fragment_entity_id,
                     },
                     object: ObjectBundle {
-                        transform: Default::default(),
+                        transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                         marker: Default::default(),
                     },
                 },
@@ -664,7 +646,12 @@ pub fn transfer_mesh(
             || (terrain_layer.map_or(false, |t| t.min_z >= tile.coords.z)
                 || (!should_upsample_terrain && is_terrain_failed))
         {
-            let triangles = tile_triangles_flat(WGS84_32, &extent, tile_layer.segments, 0.);
+            let triangles = tile_triangles_flat(
+                WGS84_32,
+                &extent,
+                if is_root { 65 } else { tile_layer.segments },
+                0.,
+            );
 
             let vhandle = buf.new_f32(triangles.vertices);
             let ihandle = buf.new_u32(triangles.indices);
@@ -688,6 +675,7 @@ pub fn transfer_mesh(
                         indices: ihandle,
                         uvs: uvshandle,
                         active: false,
+                        render_order,
                     },
                     material: Material {
                         color: tile_layer.color,
@@ -697,7 +685,7 @@ pub fn transfer_mesh(
                         texture_fragment: texture_fragment_entity_id,
                     },
                     object: ObjectBundle {
-                        transform: Default::default(),
+                        transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                         marker: Default::default(),
                     },
                 },
@@ -748,6 +736,7 @@ pub fn transfer_mesh(
                         indices: ihandle,
                         uvs: uvshandle,
                         active: false,
+                        render_order,
                     },
                     material: Material {
                         color: tile_layer.color,
@@ -758,7 +747,7 @@ pub fn transfer_mesh(
                         texture_fragment: texture_fragment_entity_id,
                     },
                     object: ObjectBundle {
-                        transform: Default::default(),
+                        transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                         marker: Default::default(),
                     },
                 },
@@ -817,6 +806,7 @@ pub fn transfer_mesh(
                     indices: ihandle,
                     uvs: uvshandle,
                     active: false,
+                    render_order,
                 },
                 material: Material {
                     color: tile_layer.color,
@@ -827,7 +817,7 @@ pub fn transfer_mesh(
                     texture_fragment: texture_fragment_entity_id,
                 },
                 object: ObjectBundle {
-                    transform: Default::default(),
+                    transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                     marker: Default::default(),
                 },
             },
@@ -871,7 +861,7 @@ pub fn clear_caches(
         rendered_tiles.iter().sort::<&TileOrderByDistance>().rev()
     {
         // Prevent blocking the frame by this deletion process
-        if now.elapsed() > instant::Duration::from_micros(1) {
+        if now.elapsed() > instant::Duration::from_micros(10) {
             break;
         }
 
@@ -880,14 +870,12 @@ pub fn clear_caches(
             tile.visited_at
         };
 
-        let cache = tc.rendered_tile_caches.get(&rendered_tile.tile_handle);
+        let cache = match tc.rendered_tile_caches.get(&rendered_tile.tile_handle) {
+            Some(cache) => cache,
+            None => continue,
+        };
 
-        if tc.rendered_frame <= visited_at + 1 || cache.is_none() {
-            continue;
-        }
-
-        let cache = cache.unwrap();
-        if cache.has_children && !cache.are_children_prepared {
+        if tc.rendered_frame <= visited_at + 1 {
             continue;
         }
 

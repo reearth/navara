@@ -31,6 +31,7 @@ pub struct Mesh {
     pub uvs: Handle,
     pub indices: Handle,
     pub active: bool,
+    pub render_order: i32,
 }
 
 #[derive(Debug, Clone, Component, PartialEq)]

@@ -81,12 +81,14 @@ async function createMesh(
 
   const material = toMaterial(mat, loadedTexes, false);
   const m = new Mesh(geometry, material);
+  m.renderOrder = mesh.render_order;
   m.name = id;
   if (tranform) setTransform(m, tranform);
 
   parent.add(m);
 
   const clonedMesh = new Mesh(geometry, material);
+  clonedMesh.renderOrder = mesh.render_order;
   globeDepthScene.add(clonedMesh);
 
   meshes.set(id, m);
