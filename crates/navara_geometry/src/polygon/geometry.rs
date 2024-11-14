@@ -32,7 +32,7 @@ impl Default for PolygonGeometryOptions {
         Self {
             hierarchy: Hierarchy {
                 outer_ring: vec![],
-                holes: vec![],
+                holes: None,
             },
             granularity: RADIANS_PER_DEGREE,
             crs: Default::default(),
@@ -78,25 +78,10 @@ pub fn create_polygon_geometry(
             granularity,
             &hierarchies[i],
         );
-        let scale_normal_and_cap = scale_to_geodetic_height_extruded(
-            &mut split_geometry.top_bottom_geometry.attributes.position.data,
-            WGS84_32,
-        );
-        split_geometry
-            .top_bottom_geometry
-            .attributes
-            .scale_normal_and_cap = Some(FloatAttribute::new(scale_normal_and_cap, 4));
 
         let top_bottom_normals =
             compute_extruded_normals(WGS84_32, &split_geometry.top_bottom_geometry, false);
 
-        // TODO: Support wall for holes
-        let scale_normal_and_cap = scale_to_geodetic_height_extruded(
-            &mut split_geometry.wall_geometry.attributes.position.data,
-            WGS84_32,
-        );
-        split_geometry.wall_geometry.attributes.scale_normal_and_cap =
-            Some(FloatAttribute::new(scale_normal_and_cap, 4));
         let wall_normals = compute_extruded_normals(WGS84_32, &split_geometry.wall_geometry, true);
 
         split_geometry.top_bottom_geometry.attributes.normal =
@@ -192,16 +177,40 @@ pub fn create_geometry_from_positions_extruded(
         top_bottom_indices.push(i0);
     }
 
+    let scale_normal_and_cap =
+        scale_to_geodetic_height_extruded(&mut top_bottom_positions, WGS84_32);
+
     let outer_ring = &hierarchy.outer_ring;
-    let (wall_positions, wall_indices) = compute_wall_geometry(ellipsoid, outer_ring, granularity);
-    // TODO: Hole support
+    let (mut wall_positions, mut wall_indices) =
+        compute_wall_geometry(ellipsoid, outer_ring, granularity);
+
+    let mut wall_scale_normal_and_cap =
+        scale_to_geodetic_height_extruded(&mut wall_positions, WGS84_32);
+
+    if let Some(holes_src) = &hierarchy.holes {
+        let mut pos_cnt = (wall_positions.len() / 3) as u32;
+        for hole_src in holes_src {
+            let (mut hole_wall_pos, hole_wall_i) =
+                compute_wall_geometry(ellipsoid, &hole_src.outer_ring, granularity);
+
+            let hole_scale_normal_and_cap =
+                scale_to_geodetic_height_extruded(&mut hole_wall_pos, WGS84_32);
+
+            wall_positions.extend_from_slice(&hole_wall_pos);
+            wall_scale_normal_and_cap.extend(hole_scale_normal_and_cap.iter());
+
+            wall_indices.extend(hole_wall_i.iter().map(|&i| pos_cnt + i));
+
+            pos_cnt = (wall_positions.len() / 3) as u32;
+        }
+    }
 
     ExtrudedPolygonGeometry {
         top_bottom_geometry: PolygonGeometry {
             attributes: PolygonGeometryAttributes {
                 position: FloatAttribute::new(top_bottom_positions, 3),
                 normal: None,
-                scale_normal_and_cap: None,
+                scale_normal_and_cap: Some(FloatAttribute::new(scale_normal_and_cap, 4)),
             },
             indices: top_bottom_indices,
         },
@@ -209,7 +218,7 @@ pub fn create_geometry_from_positions_extruded(
             attributes: PolygonGeometryAttributes {
                 position: FloatAttribute::new(wall_positions, 3),
                 normal: None,
-                scale_normal_and_cap: None,
+                scale_normal_and_cap: Some(FloatAttribute::new(wall_scale_normal_and_cap, 4)),
             },
             indices: wall_indices,
         },

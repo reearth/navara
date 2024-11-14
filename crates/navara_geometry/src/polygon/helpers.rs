@@ -36,27 +36,46 @@ where
 
     while let Some(outer_node) = queue.pop_front() {
         let outer_ring = &outer_node.outer_ring;
-        // TODO: Calculate holes
-        // let holes = outer_node.holes;
 
         let outer_ring = unique_with_delta_e(outer_ring, 10);
         if outer_ring.len() < 3 {
             continue;
         }
 
-        let positions_2d = project_points_to_2d(&outer_ring);
+        let mut positions = outer_ring.clone();
+        let mut hole_indices =
+            Vec::with_capacity(outer_node.holes.as_ref().map_or(0, |holes| holes.len()));
+        let mut holes_dst = Vec::with_capacity(hole_indices.capacity());
+
+        if let Some(holes_src) = &outer_node.holes {
+            for hole_src in holes_src {
+                let hole_dst: Vec<_> = unique_with_delta_e(&hole_src.outer_ring, 10);
+                if hole_dst.len() > 2 {
+                    let index = positions.len() as u32;
+                    hole_indices.push(index);
+                    positions.extend(hole_dst.iter());
+
+                    holes_dst.push(Hierarchy {
+                        outer_ring: hole_dst,
+                        holes: None,
+                    });
+                }
+            }
+        }
+
+        let positions_2d = project_points_to_2d(&positions);
         if positions_2d.is_empty() {
             continue;
         }
 
         polygons.push(Polygon {
-            positions: outer_ring.clone(),
+            positions,
             positions_2d,
-            hole_indices: vec![],
+            hole_indices,
         });
         hierarchies.push(Hierarchy {
             outer_ring,
-            holes: vec![],
+            holes: (!holes_dst.is_empty()).then_some(holes_dst),
         })
     }
 

@@ -10,5 +10,5 @@ pub struct Polygon {
 #[derive(Default, Debug)]
 pub struct Hierarchy {
     pub outer_ring: Vec<Vec3>,
-    pub holes: Vec<Vec3>,
+    pub holes: Option<Vec<Hierarchy>>,
 }
