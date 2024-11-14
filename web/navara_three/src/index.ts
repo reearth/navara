@@ -42,6 +42,7 @@ import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+import { MAIN_CONCURRENCY } from "./concurrency";
 
 export * from "./type";
 
@@ -261,7 +262,7 @@ export default class ThreeView {
   async init() {
     if (this._core) return;
 
-    initializeWorkerPool(WorkerURL);
+    initializeWorkerPool(WorkerURL, MAIN_CONCURRENCY);
 
     await initCore();
 

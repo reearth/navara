@@ -5,9 +5,13 @@ import type { ExecOptions } from "workerpool/types/types";
 import { type commonTasks } from "./worker";
 
 let pool: Pool;
-export const initializeWorkerPool = (url: string): Pool =>
+export const initializeWorkerPool = (
+  url: string,
+  concurrency = navigator.hardwareConcurrency - 1,
+): Pool =>
   pool ??
   (pool = workerpool.pool(url, {
+    maxWorkers: concurrency,
     workerOpts: {
       type: import.meta.env.PROD ? undefined : "module",
     },
