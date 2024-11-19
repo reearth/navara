@@ -74,7 +74,7 @@ export function processEvent(
   texFragment: TextureFragmentHandler,
   meshHandler: MeshHandler,
   loadedTexs: Map<string, Texture>,
-  event: Events,
+  event: Events | undefined,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
 ) {

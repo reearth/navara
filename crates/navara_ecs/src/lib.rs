@@ -40,7 +40,7 @@ impl App {
             .app
             .world()
             .get_resource::<navara_event_store::EventStore>()?;
-        Some(Events::from_event_store(self.app.world(), ev))
+        Events::from_event_store(self.app.world(), ev)
     }
 
     pub fn get_buffer_u8(&self, handle: i32) -> Option<&[u8]> {

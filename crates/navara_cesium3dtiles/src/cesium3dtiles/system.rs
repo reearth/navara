@@ -1,7 +1,9 @@
 use bevy_ecs::{
+    change_detection::DetectChanges,
     entity::Entity,
     query::{Added, Changed, With, Without},
     system::{Commands, Query, Res, ResMut},
+    world::Ref,
 };
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
@@ -25,7 +27,7 @@ use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileCon
 
 use super::{
     traversal::{mark_rendered_tiles_invisible, select_tiles},
-    types::Cesium3dTileContentRequesterQuery,
+    types::{Cesium3dTileContentRequesterQuery, ChangedCesium3dTileContentRequesterQuery},
     Cesium3dTilesMetadata, Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
 };
 
@@ -96,17 +98,26 @@ pub fn construct_cesium_3d_tiles_tree(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn traverse_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     window: Res<Window>,
     mut tiles: Query<(&Cesium3dTilesMetadata, &mut Cesium3dTilesTree)>,
-    camera: Query<(&CameraMarker, &Transform, &CameraFrustum)>,
+    camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
     requesters: Cesium3dTileContentRequesterQuery,
+    changed_requesters: ChangedCesium3dTileContentRequesterQuery,
     mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
 ) {
+    let is_data_requesters_changed = !changed_requesters.is_empty();
+
     for (metadata, mut tree) in &mut tiles {
         for (_, camera, frustum) in &camera {
+            let needs_update =
+                is_data_requesters_changed || camera.is_added() || camera.is_changed();
+            if !needs_update {
+                continue;
+            }
             let camera_pos = camera.transform_point(Vec3::ZERO);
             select_tiles(
                 &mut commands,

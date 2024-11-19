@@ -1,5 +1,5 @@
 use bevy_ecs::{
-    query::{Added, Changed},
+    query::{Added, Changed, Or},
     system::{Commands, Query},
 };
 use navara_core::WGS84_32;
@@ -21,8 +21,12 @@ pub fn startup(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn update(
-    camera_position: Query<(&mut Transform, &CameraMarker), Changed<Transform>>,
+    camera_position: Query<
+        (&mut Transform, &CameraMarker),
+        Or<(Added<Transform>, Changed<Transform>)>,
+    >,
     mut occluder: Query<&mut EllipsoidalOccluder>,
 ) {
     for position in &camera_position {

@@ -1,7 +1,9 @@
 use bevy_ecs::{
+    change_detection::DetectChanges,
     event::EventReader,
-    query::{Changed, With},
+    query::{Added, Changed, Or, With},
     system::{Commands, Query, Res},
+    world::Ref,
 };
 use bevy_input::{
     keyboard::KeyCode,
@@ -55,10 +57,12 @@ pub fn startup(mut commands: Commands) {
     ));
 }
 
+#[allow(clippy::type_complexity)]
 pub fn update(
     window: Res<Window>,
     mut query: Query<
         (
+            Ref<CameraMarker>,
             &mut Transform,
             &mut CameraController,
             &mut CameraInertia,
@@ -73,7 +77,8 @@ pub fn update(
     mut _mp: EventReader<MouseMoveInput>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    for (mut transform, mut controller, mut inertia, frustum, mut orbit) in query.iter_mut() {
+    for (marker, mut transform, mut controller, mut inertia, frustum, mut orbit) in query.iter_mut()
+    {
         if !controller.enabled {
             continue;
         }
@@ -116,14 +121,16 @@ pub fn update(
             &mb,
             &mut mm,
             is_ctrl,
-            &mut transform,
+            &transform,
             frustum,
         );
 
         // Apply inertia
         apply_inertia(&mut orbit, &mut inertia, &controller);
 
-        commit(&mut transform, &mut orbit);
+        if needs_update(&inertia) || window.is_changed() || marker.is_added() {
+            commit(&mut transform, &mut orbit);
+        }
 
         after_inertia(&mut inertia, &controller);
     }
@@ -190,7 +197,7 @@ fn handle_tilt(
     mb: &Res<ButtonInput<MouseButton>>,
     mm: &mut EventReader<MouseMotion>,
     is_ctrl: bool,
-    transform: &mut Transform,
+    transform: &Transform,
     frustum: &CameraFrustum,
 ) {
     let ellipsoid = WGS84_32;
@@ -297,6 +304,10 @@ fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &Camer
     orbit.local_position = next;
 }
 
+fn needs_update(inertia: &CameraInertia) -> bool {
+    inertia.spin.length() != 0. || inertia.zoom != 0. || inertia.tilt.length() != 0.
+}
+
 fn after_inertia(inertia: &mut CameraInertia, controller: &CameraController) {
     inertia.spin *= controller.inertia;
     inertia.zoom *= controller.inertia;
@@ -319,7 +330,10 @@ fn after_inertia(inertia: &mut CameraInertia, controller: &CameraController) {
 // // Flight/animation systems
 // pub fn update_camera_flight() {...}
 
-pub fn update_frustum(mut query: Query<(&mut CameraFrustum, &Transform), Changed<Transform>>) {
+#[allow(clippy::type_complexity)]
+pub fn update_frustum(
+    mut query: Query<(&mut CameraFrustum, &Transform), Or<(Added<Transform>, Changed<Transform>)>>,
+) {
     for (mut frustum, transform) in query.iter_mut() {
         frustum.update_sse_denominator();
         frustum.update_planes(transform);

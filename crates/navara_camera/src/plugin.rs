@@ -10,7 +10,7 @@ use bevy_app::{PostUpdate, Startup, Update};
 use bevy_ecs::{
     entity::Entity,
     event::EventReader,
-    query::Changed,
+    query::{Added, Changed, Or},
     schedule::IntoSystemConfigs,
     system::{Query, ResMut},
 };
@@ -40,11 +40,12 @@ impl bevy_app::Plugin for CameraPlugin {
 //     });
 // }
 
+#[allow(clippy::type_complexity)]
 fn commit(
     mut events: ResMut<EventStore>,
-    query: Query<(Entity, &CameraMarker), Changed<Transform>>,
+    query: Query<(Entity, &CameraMarker), Or<(Added<Transform>, Changed<Transform>)>>,
 ) {
-    let Some((e, _)) = query.iter().next() else {
+    let Some((e, _)) = query.iter().last() else {
         return;
     };
     events.camera_transform_updated = Some(e);

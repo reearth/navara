@@ -62,9 +62,13 @@ export class EventManager {
   };
   private transactionManager = new TransactionManager();
 
-  pushEvents(events: Events) {
+  needsUpdate() {
+    return Object.values(this.stacks).some((v) => !!v.length);
+  }
+
+  pushEvents(events: Events | undefined) {
     for (const k of Object.keys(this.stacks) as JsEventsKey[]) {
-      const event = events[k];
+      const event = events?.[k];
       if (!event) continue;
       if (Array.isArray(event)) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment

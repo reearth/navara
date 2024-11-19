@@ -35,8 +35,6 @@ import {
 import { registerInputEvents } from "./input";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
-import { C3TilesManager } from "./temp/C3Tiles";
-import MVT from "./temp/MVT";
 import { isWorker } from "./temp/utils";
 import { type LayerDescription } from "./type";
 import type { CommonUniforms } from "./uniforms";
@@ -242,13 +240,6 @@ export default class ThreeView {
     // orbit
     // this.control = new MapControls(this.camera, this.renderer.domElement);
 
-    // c3tiles
-    this._c3tiles = new C3TilesManager(
-      this._scenes.main,
-      this.camera,
-      this.renderer,
-      this.control,
-    );
     this._uniforms = {
       viewportAndPixelRatio: { value: null },
       frustumNearFar: { value: null },
@@ -357,11 +348,13 @@ export default class ThreeView {
 
   /** Returns true if the scene was updated and needs to be rendered. */
   private _update(): boolean {
+    let needs_update = false;
+
     this._core?.update();
     this._updateUniforms();
 
     const events = this._core?.readEvents();
-    if (events && this._core) {
+    if ((events || this._eventManager.needsUpdate()) && this._core) {
       processEvent(
         this._eventManager,
         this._scenes,
@@ -375,13 +368,13 @@ export default class ThreeView {
         this._uniforms,
         this._drapedFeatureMaterials,
       );
+      needs_update = true;
     }
 
     this.control?.update();
     this.camera.updateMatrixWorld();
-    this._c3tiles.update();
 
-    return true;
+    return needs_update;
   }
 
   private _render() {
@@ -450,9 +443,6 @@ export default class ThreeView {
   off<K extends keyof Events>(event: K, callback: Events[K]) {
     this._events[event] = this._events[event]?.filter((c) => c !== callback);
   }
-
-  _c3tiles: C3TilesManager;
-  _mvts: MVT[] = [];
 
   addLayer(l: LayerDescription) {
     const layerId = this._core?.addLayer(l);
