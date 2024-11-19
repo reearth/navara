@@ -13,7 +13,7 @@ use navara_feature::{
     point::PointGeometry, polygon::PolygonGeometry, polygon::UpdatePolygon,
     polyline::PolylineGeometry, render::RenderableFeature,
 };
-use navara_geometry::Hierarchy;
+use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMvtLayerMarker};
 use navara_material::Appearance;
 use navara_math::Vec3;
@@ -85,9 +85,6 @@ pub fn construct_mvt(
                                                 for polygon in plgs {
                                                     let LineString(outer) = polygon.exterior();
                                                     let outer_vec = converter.project_points(outer);
-                                                    // TODO: holes are not support yet
-                                                    // let holes = polygon.interiors();
-                                                    // info!("holes.len {}", holes.len());
 
                                                     if outer_vec.len() < 50 {
                                                         // A large number of polygons can cause the webpage to slow down,
@@ -95,12 +92,27 @@ pub fn construct_mvt(
                                                         continue;
                                                     }
 
+                                                    let interiors = polygon.interiors();
+                                                    let mut holes: Vec<Hierarchy> = Vec::new();
+
+                                                    for LineString(hole) in interiors {
+                                                        holes.push(Hierarchy {
+                                                            outer_ring: converter
+                                                                .project_points(hole),
+                                                            holes: None,
+                                                            expected_winding_order:
+                                                                WindingOrder::CounterClockwise,
+                                                        });
+                                                    }
+
                                                     commands.spawn((
                                                         LayerId(layer.layer_id.to_owned()),
                                                         PolygonGeometry {
                                                             hierarchy: Hierarchy {
                                                                 outer_ring: outer_vec,
-                                                                holes: None,
+                                                                holes: Some(holes),
+                                                                expected_winding_order:
+                                                                    WindingOrder::Clockwise,
                                                             },
                                                             crs: CRS::Geographic,
                                                         },

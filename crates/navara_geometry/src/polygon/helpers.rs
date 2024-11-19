@@ -7,7 +7,7 @@ use crate::helpers::vec::{unique_with_delta_e, unpack_flatten_vec3};
 
 use super::{
     types::{Hierarchy, Polygon},
-    PolygonResource,
+    PolygonResource, WindingOrder,
 };
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometry.js#L1163
@@ -58,6 +58,7 @@ where
                     holes_dst.push(Hierarchy {
                         outer_ring: hole_dst,
                         holes: None,
+                        expected_winding_order: WindingOrder::Clockwise,
                     });
                 }
             }
@@ -76,6 +77,7 @@ where
         hierarchies.push(Hierarchy {
             outer_ring,
             holes: (!holes_dst.is_empty()).then_some(holes_dst),
+            expected_winding_order: WindingOrder::CounterClockwise,
         })
     }
 

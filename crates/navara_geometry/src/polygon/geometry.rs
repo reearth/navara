@@ -9,7 +9,7 @@ use super::{
         project_to_2d, scale_to_geodetic_height_extruded,
     },
     types::{Hierarchy, Polygon},
-    PolygonGeometryAttributes, PolygonResource,
+    PolygonGeometryAttributes, PolygonResource, WindingOrder,
 };
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -33,6 +33,7 @@ impl Default for PolygonGeometryOptions {
             hierarchy: Hierarchy {
                 outer_ring: vec![],
                 holes: None,
+                expected_winding_order: WindingOrder::Unknown,
             },
             granularity: RADIANS_PER_DEGREE,
             crs: Default::default(),

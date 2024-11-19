@@ -49,11 +49,16 @@ fn to_transferable_geometry(
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    polygon: Query<(Entity, &LayerId, &PolygonGeometry, &PolygonMaterial), Added<PolygonGeometry>>,
+    mut polygon: Query<
+        (Entity, &LayerId, &mut PolygonGeometry, &PolygonMaterial),
+        Added<PolygonGeometry>,
+    >,
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, geometry, material) in &polygon {
+    for (entity, layer_id, mut geometry, material) in &mut polygon {
+        geometry.hierarchy.align_winding_order();
+
         let mut hierarchy = Hierarchy::default();
         for c in &geometry.hierarchy.outer_ring {
             hierarchy
@@ -72,6 +77,7 @@ pub fn transfer_mesh(
                             .map(|&c| geometry.crs.to_vec3(WGS84_32, c, material.height))
                             .collect(),
                         holes: None,
+                        expected_winding_order: geometry.hierarchy.expected_winding_order,
                     })
                     .collect(),
             );
