@@ -238,7 +238,15 @@ fn handle_tilt(
         Some(Vec3::Z),
     );
 
-    inertia.spin = rotate(mm, controller, 1.);
+    let mut spin = rotate(mm, controller, 1.);
+
+    if spin.x.abs() > spin.y.abs() {
+        spin.y = 0.;
+    } else {
+        spin.x = 0.;
+    }
+
+    inertia.spin = spin;
 }
 
 fn rotate(mm: &mut EventReader<MouseMotion>, controller: &CameraController, ratio: f32) -> Vec3 {
