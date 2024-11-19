@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 mvt-reader = { git = "https://github.com/reearth/mvt-reader.git" }
-geo-types = "0.7.13"
+geo-types.workspace = true
 
 [dev-dependencies]
 prost = "0.13.3"

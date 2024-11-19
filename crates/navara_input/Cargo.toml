@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.14.2"
-bevy_ecs = "0.14.2"
-bevy_input = "0.14.2"
-bevy_log = "0.14.2"
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_input.workspace = true
+bevy_log.workspace = true
 navara_math = { path = "../navara_math" }

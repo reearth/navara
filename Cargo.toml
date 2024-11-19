@@ -7,4 +7,21 @@ members = [
 ]
 
 [workspace.dependencies]
+bevy_app = "0.14.2"
+bevy_ecs = "0.14.2"
+bevy_input = "0.14.2"
+bevy_time = "0.14.2"
+bevy_log = "0.14.2"
+bevy_math = "0.14.2"
+bevy_transform = "0.14.2"
 approx = "0.5.1"
+url = "2.5.3"
+binrw = { version = "0.14.1", default-features = false }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = { version = "1.0.132", default-features = false, features = ["alloc"] }
+nanoid = "0.4"
+cfg-if = "1.0.0"
+radians = "0.3.1"
+itertools = "0.13.0"
+geo-types = "0.7.13"
+instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }

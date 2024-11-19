@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_math = "0.14.2"
-bevy_transform = "0.14.2"
-cfg-if = "1.0.0"
-radians = "0.3.1"
-approx = "0.5.1"
+bevy_math.workspace = true
+bevy_transform.workspace = true
+cfg-if.workspace = true
+radians.workspace = true
+approx.workspace = true
 
 [features]
 default = ["use_f32"]
