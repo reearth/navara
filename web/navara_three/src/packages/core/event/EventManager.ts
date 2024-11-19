@@ -91,7 +91,9 @@ export class EventManager {
 
       cb(value as GetJsEventValue<Key>);
 
-      value?.free();
+      if (value?.free && value.free instanceof Function) {
+        value.free();
+      }
 
       idx++;
     }
@@ -142,7 +144,9 @@ export class EventManager {
     await Promise.all(promises);
 
     for (const e of removedEvs) {
-      e?.free();
+      if (e?.free && e.free instanceof Function) {
+        e.free();
+      }
     }
   }
 

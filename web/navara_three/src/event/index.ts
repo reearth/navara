@@ -78,11 +78,6 @@ export function processEvent(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
 ) {
-  console.log(
-    "EVENT: ",
-    event.data_requested.length,
-    event.data_requester_removed.length,
-  );
   eventManager.pushEvents(event);
 
   eventManager.forEachStack("camera_transform_updated", (ev) =>
