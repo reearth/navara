@@ -82,6 +82,7 @@ mod test {
             1000.,
             Angle::new(50.).rad().val(),
             window.width / window.height,
+            1.,
         );
 
         let position_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);

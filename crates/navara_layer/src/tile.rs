@@ -6,6 +6,7 @@ pub struct TilesLayer {
     pub url: String,
     pub segments: usize,
     pub color: u32,
+    pub show: bool,
     pub max_sse: f32,
     pub max_z: usize,
     pub wireframe: bool,

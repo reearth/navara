@@ -17,5 +17,6 @@ navara_data_requester = { path = "../navara_data_requester" }
 navara_event_store = { path = "../navara_event_store" }
 navara_geometry = { path = "../navara_geometry" }
 navara_layer = { path = "../navara_layer" }
+navara_component = { path = "../navara_component" }
 geo-types = "0.7.13"
 regex = "1.11.1"

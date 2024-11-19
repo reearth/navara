@@ -1,11 +1,12 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Changed},
+    query::{Added, Changed, Without},
     system::{Commands, Query, Res, ResMut},
 };
 
 use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point};
 use navara_buffer_store::BufferStore;
+use navara_component::{Deleted, Priority};
 use navara_core::{calc_transform, CRS};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature::{
@@ -29,6 +30,7 @@ pub fn request_mvt(
     for (e, layer) in &mvt_layers {
         commands.spawn((
             MvtDataRequesterMarker(e),
+            Priority::Medium,
             DataRequester::from_store(
                 layer.data.as_ref().unwrap().url.clone(),
                 &mut buf,
@@ -38,10 +40,14 @@ pub fn request_mvt(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn construct_mvt(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    requesters: Query<(Entity, &MvtDataRequesterMarker, &DataRequester), Changed<DataRequester>>,
+    requesters: Query<
+        (Entity, &MvtDataRequesterMarker, &DataRequester),
+        (Changed<DataRequester>, Without<Deleted>),
+    >,
     mvt_layers: Query<(Entity, &MvtLayer)>,
 ) {
     for (e, marker, req) in &requesters {

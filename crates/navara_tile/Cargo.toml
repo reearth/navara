@@ -20,6 +20,7 @@ navara_data_requester = { path = "../navara_data_requester" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_occluder = { path = "../navara_occluder" }
 navara_mesh = { path = "../navara_mesh" }
+navara_component = { path = "../navara_component" }
 martini = { path = "../martini" }
 navara_mock = { path = "../navara_mock" }
 instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
