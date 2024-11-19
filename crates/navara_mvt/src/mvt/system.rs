@@ -100,7 +100,7 @@ pub fn construct_mvt(
                                                         PolygonGeometry {
                                                             hierarchy: Hierarchy {
                                                                 outer_ring: outer_vec,
-                                                                holes: std::vec::Vec::new(),
+                                                                holes: None,
                                                             },
                                                             crs: CRS::Geographic,
                                                         },

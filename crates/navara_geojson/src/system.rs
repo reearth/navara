@@ -34,6 +34,18 @@ fn multi_coords(f: &[Vec<f64>]) -> Vec<Vec3> {
     f.iter().map(|p| coords(p)).collect::<Vec<_>>()
 }
 
+fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
+    let holes: Vec<Hierarchy> = f[1..]
+        .iter()
+        .map(|hole| Hierarchy {
+            outer_ring: multi_coords(hole),
+            holes: None,
+        })
+        .collect();
+
+    (!holes.is_empty()).then_some(holes)
+}
+
 fn spawn_feature(
     commands: &mut Commands,
     appearances: &[Appearance],
@@ -126,9 +138,7 @@ fn spawn_feature(
                                 outer_ring: f
                                     .first()
                                     .map_or_else(std::vec::Vec::new, |v| multi_coords(v)),
-                                holes: f
-                                    .get(1)
-                                    .map_or_else(std::vec::Vec::new, |v| multi_coords(v)),
+                                holes: get_polygon_holes(f),
                             },
                             crs: CRS::Geographic,
                         },
@@ -142,7 +152,7 @@ fn spawn_feature(
                             PolygonGeometry {
                                 hierarchy: Hierarchy {
                                     outer_ring: multi_coords(&f[0]),
-                                    holes: multi_coords(&f[1]),
+                                    holes: get_polygon_holes(f),
                                 },
                                 crs: CRS::Geographic,
                             },

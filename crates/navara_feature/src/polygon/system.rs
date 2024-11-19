@@ -60,10 +60,21 @@ pub fn transfer_mesh(
                 .outer_ring
                 .push(geometry.crs.to_vec3(WGS84_32, *c, material.height));
         }
-        for c in &geometry.hierarchy.holes {
-            hierarchy
-                .holes
-                .push(geometry.crs.to_vec3(WGS84_32, *c, material.height));
+
+        if let Some(holes_before) = &geometry.hierarchy.holes {
+            hierarchy.holes = Some(
+                holes_before
+                    .iter()
+                    .map(|hole| Hierarchy {
+                        outer_ring: hole
+                            .outer_ring
+                            .iter()
+                            .map(|&c| geometry.crs.to_vec3(WGS84_32, c, material.height))
+                            .collect(),
+                        holes: None,
+                    })
+                    .collect(),
+            );
         }
 
         let extent = Extent::from_points(
