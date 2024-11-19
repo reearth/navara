@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.14.2"
-bevy_ecs = "0.14.2"
-bevy_log = "0.14.2"
-nanoid = "0.4"
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_log.workspace = true
+nanoid.workspace = true
 navara_core = { path = "../navara_core" }
 navara_layer = { path = "../navara_layer" }
 navara_material = { path = "../navara_material" }

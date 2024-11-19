@@ -8,6 +8,6 @@ edition = "2021"
 [features]
 
 [dependencies]
-bevy_app = "0.14.2"
-bevy_ecs = "0.14.2"
+bevy_app.workspace = true
+bevy_ecs.workspace = true
 navara_math = { path = "../navara_math" }

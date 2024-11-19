@@ -19,11 +19,11 @@ wasm-bindgen = { version = "0.2.94" }
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
 js-sys = "0.3.72"
-serde = { version = "1.0.215", features = ["derive"] }
+serde.workspace = true
 serde-wasm-bindgen = "0.6.5"
 gloo-utils = { version = "0.2.0", features = ["serde"] }
-nanoid = "0.4"
-bevy_log = "0.14.2"
+nanoid.workspace = true
+bevy_log.workspace = true
 
 navara_core = { path = "../navara_core" }
 navara_ecs = { path = "../navara_ecs" }

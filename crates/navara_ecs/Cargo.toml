@@ -5,10 +5,10 @@ edition = "2021"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-bevy_app = "0.14.2"
-bevy_ecs = "0.14.2"
-bevy_log = "0.14.2"
-bevy_time = "0.14.2"
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_log.workspace = true
+bevy_time.workspace = true
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_camera = { path = "../navara_camera" }
 navara_data_requester = { path = "../navara_data_requester" }

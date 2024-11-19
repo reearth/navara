@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.14.2"
-bevy_ecs = "0.14.2"
-bevy_log = "0.14.2"
-bevy_time = "0.14.2"
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_log.workspace = true
+bevy_time.workspace = true
 navara_core = { path = "../navara_core" }
 navara_geometry = { path = "../navara_geometry" }
 navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }
@@ -23,4 +23,4 @@ navara_mesh = { path = "../navara_mesh" }
 navara_component = { path = "../navara_component" }
 martini = { path = "../martini" }
 navara_mock = { path = "../navara_mock" }
-instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
+instant.workspace = true

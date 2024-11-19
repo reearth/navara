@@ -8,9 +8,9 @@ edition = "2021"
 [features]
 
 [dependencies]
-bevy_app = "0.14.2"
-bevy_ecs = "0.14.2"
-bevy_log = "0.14.2"
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_log.workspace = true
 navara_core = { path = "../navara_core" }
 navara_layer = { path = "../navara_layer" }
 navara_material = { path = "../navara_material" }
@@ -24,5 +24,5 @@ navara_geometry = { path = "../navara_geometry" }
 navara_camera = { path = "../navara_camera" }
 navara_window = { path = "../navara_window" }
 navara_component = { path = "../navara_component" }
-url = "2.5.3"
-serde_json = { version = "1.0.132", default-features = false, features = ["alloc"] }
+url.workspace = true
+serde_json.workspace = true
