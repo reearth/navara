@@ -171,7 +171,6 @@ async function renderPolyline(
     !indices
   )
     return;
-
   const geometry = new BufferGeometry();
   geometry.setAttribute(
     "position",

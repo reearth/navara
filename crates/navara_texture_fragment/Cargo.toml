@@ -7,3 +7,4 @@ edition = "2021"
 bevy_app = "0.14.2"
 bevy_ecs = "0.14.2"
 navara_event_store = { path = "../navara_event_store" }
+navara_component = { path = "../navara_component" }

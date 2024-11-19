@@ -91,6 +91,8 @@ export class EventManager {
 
       cb(value as GetJsEventValue<Key>);
 
+      value?.free();
+
       idx++;
     }
 
@@ -126,14 +128,22 @@ export class EventManager {
       idx++;
     }
 
+    const removedEvs = [];
+
     let offset = 0;
     for (const idx of removedIndices) {
       // Remove processed events
-      this.stacks[key].splice(idx - offset, 1);
+      const i = idx - offset;
+      removedEvs.push(this.stacks[key][i]);
+      this.stacks[key].splice(i, 1);
       offset++;
     }
 
     await Promise.all(promises);
+
+    for (const e of removedEvs) {
+      e?.free();
+    }
   }
 
   removeDuplicatedTransactionEvents<

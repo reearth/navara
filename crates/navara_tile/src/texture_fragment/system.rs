@@ -3,6 +3,7 @@ use bevy_ecs::{
     query::Added,
     system::{Commands, Query, ResMut},
 };
+use navara_component::Deleted;
 use navara_texture_fragment::TextureFragment;
 
 use crate::tile::{render::TileOrderByDistance, TileQuadtree};
@@ -27,11 +28,7 @@ pub(crate) fn filter_requestable_texture_fragment(
         let handle = marker.0;
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
-            commands.entity(e).remove::<(
-                TileTextureFragmentMarker,
-                TextureFragment,
-                TileOrderByDistance,
-            )>();
+            commands.entity(e).insert(Deleted);
             tile.texture_fragment_entity_id = None;
         }
     }

@@ -64,17 +64,27 @@ async function createMesh(
   mat: EventMaterial,
   tranform?: Transform,
 ) {
-  const position = buf.f32(mesh.vertices);
-  const indices = buf.u32(mesh.indices);
+  let position = buf.f32(mesh.vertices);
+  let indices = buf.u32(mesh.indices);
   if (!position || !indices) return;
 
   let geometry = new BufferGeometry();
+
   geometry.setAttribute("position", new BufferAttribute(position, 3));
-  const uv = buf.f32(mesh.uvs);
+  position.set([]);
+  position = null;
+
+  let uv = buf.f32(mesh.uvs);
   if (uv) {
     geometry.setAttribute("uv", new BufferAttribute(uv, 2));
+    uv.set([]);
+    uv = null;
   }
+
   geometry.setIndex(new BufferAttribute(indices, 1));
+  indices.set([]);
+  indices = null;
+
   if (mat.should_compute_normal_from_vertex) {
     geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
   }
@@ -82,13 +92,14 @@ async function createMesh(
   const material = toMaterial(mat, loadedTexes, false);
   const m = new Mesh(geometry, material);
   m.renderOrder = mesh.render_order;
-  m.name = id;
+  m.name = `tile_${id}`;
   if (tranform) setTransform(m, tranform);
 
   parent.add(m);
 
-  const clonedMesh = new Mesh(geometry, material);
+  const clonedMesh = m.clone();
   clonedMesh.renderOrder = mesh.render_order;
+  m.name = `depth_tile_${id}`;
   globeDepthScene.add(clonedMesh);
 
   meshes.set(id, m);

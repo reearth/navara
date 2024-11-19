@@ -1,11 +1,12 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Changed, With},
+    query::{Added, Changed, With, Without},
     system::{Commands, Query, Res, ResMut},
 };
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
+use navara_component::{Deleted, Priority};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature::{
     model::{ModelBin, ModelGeometry},
@@ -36,7 +37,7 @@ pub fn request_metadata(
     for (e, layer) in &layers {
         commands.spawn((
             Cesium3dTilesMetadataDataRequesterMarker(e),
-            navara_data_requester::Priority::Medium,
+            Priority::Medium,
             DataRequester::from_store(
                 layer.data.as_ref().unwrap().url.clone(),
                 &mut buf,
@@ -46,6 +47,7 @@ pub fn request_metadata(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn construct_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
@@ -55,7 +57,7 @@ pub fn construct_cesium_3d_tiles_tree(
             &Cesium3dTilesMetadataDataRequesterMarker,
             &DataRequester,
         ),
-        Changed<DataRequester>,
+        (Changed<DataRequester>, Without<Deleted>),
     >,
     layers: Query<&Cesium3dTilesLayer>,
 ) {

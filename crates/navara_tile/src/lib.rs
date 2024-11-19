@@ -3,7 +3,7 @@
 pub mod data_requester;
 pub mod texture_fragment;
 
-use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
+use bevy_app::{App, Plugin, PreUpdate, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
 use terrain::CachedMartini;
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager, TileQuadtree};
@@ -35,9 +35,9 @@ impl Plugin for TilePlugin {
                     tile::system::transfer_mesh,
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
+                    tile::system::clear_caches,
                 )
                     .chain(),
-            )
-            .add_systems(PostUpdate, tile::system::clear_caches);
+            );
     }
 }

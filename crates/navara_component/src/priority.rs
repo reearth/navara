@@ -2,15 +2,6 @@ use std::cmp::Ordering;
 
 use bevy_ecs::component::Component;
 
-#[derive(Component)]
-pub struct Requested;
-
-#[derive(Component)]
-pub struct Deleted;
-
-#[derive(Component)]
-pub struct Ignore;
-
 #[derive(Component, PartialEq, Eq, Debug)]
 pub enum Priority {
     High,

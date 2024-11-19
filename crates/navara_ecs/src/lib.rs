@@ -71,6 +71,13 @@ impl App {
             });
     }
 
+    pub fn remove_buffer(&mut self, handle: i32) {
+        let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
+            return;
+        };
+        store.remove(&handle);
+    }
+
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
         self.app
             .world_mut()

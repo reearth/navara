@@ -1,18 +1,18 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_app::PostUpdate;
+use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     bundle::Bundle,
     component::Component,
     entity::Entity,
-    query::{Added, Changed},
-    removal_detection::RemovedComponents,
-    system::{Query, ResMut},
+    query::{Added, Changed, With, Without},
+    system::{Commands, Query, ResMut},
 };
 
 mod cache;
 pub use cache::*;
 use navara_buffer_store::Handle;
+use navara_component::Deleted;
 use navara_event_store::EventStore;
 use navara_math::Transform;
 
@@ -55,27 +55,29 @@ pub struct MeshPlugin;
 
 impl bevy_app::Plugin for MeshPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.add_systems(PostUpdate, commit_events);
+        app.add_systems(PreUpdate, remove_removed_mesh)
+            .add_systems(PostUpdate, commit_events);
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn commit_events(
     mut events: ResMut<EventStore>,
-    mut removed: RemovedComponents<ObjectMarker>,
-    t_changed: Query<(Entity, &ObjectMarker), Changed<Transform>>,
-    mesh_added: Query<(Entity, &ObjectMarker, &Mesh), Added<Mesh>>,
-    mesh_changed: Query<(Entity, &ObjectMarker, &Mesh), Changed<Mesh>>,
+    removed: Query<Entity, (With<Mesh>, With<Deleted>)>,
+    t_changed: Query<Entity, (With<Mesh>, Changed<Transform>, Without<Deleted>)>,
+    mesh_added: Query<Entity, (Added<Mesh>, Without<Deleted>)>,
+    mesh_changed: Query<Entity, (Changed<Mesh>, Without<Deleted>)>,
     // mat_changed: Query<(Entity, &ObjectMarker, &Material), Changed<Material>>,
 ) {
-    for (e, _) in t_changed.iter() {
+    for e in t_changed.iter() {
         events.object_transform_updated.push(e);
     }
 
-    for (e, _, _) in mesh_added.iter() {
+    for e in mesh_added.iter() {
         events.mesh_added.push(e);
     }
 
-    for (e, _, _) in mesh_changed.iter() {
+    for e in mesh_changed.iter() {
         events.mesh_updated.push(e);
     }
 
@@ -83,7 +85,16 @@ fn commit_events(
     //     events.mesh_updated.push(e);
     // }
 
-    for e in removed.read() {
+    for e in &removed {
         events.mesh_removed.push(e);
+    }
+}
+
+fn remove_removed_mesh(
+    mut commands: Commands,
+    removed: Query<Entity, (With<Mesh>, With<Deleted>)>,
+) {
+    for e in &removed {
+        commands.entity(e).despawn();
     }
 }

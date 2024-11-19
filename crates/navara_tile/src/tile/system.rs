@@ -1,6 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
+use navara_component::Deleted;
 use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
 use navara_geometry::tile_triangles_flat;
@@ -8,7 +9,7 @@ use navara_math::{FloatType, Transform, Vec3};
 
 use navara_mesh::{CachedMeshHandle, Material, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
-use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
+use navara_texture_fragment::TextureFragmentStatus;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_window::Window;
@@ -16,7 +17,7 @@ use navara_window::Window;
 use crate::{
     data_requester::TileTerrainDataRequesterQuery,
     terrain::{CachedMartini, MartiniComponent},
-    texture_fragment::TileTextureFragmentMarker,
+    texture_fragment::TileTextureFragmentQuery,
     tile::TileMeshMarker,
 };
 
@@ -26,7 +27,7 @@ use crate::texture_fragment::request_texture_fragment;
 use super::{
     event::MeshPreparedEvent,
     render::{RenderedTile, TileOrderByDistance},
-    tile_cache_manager::{TileCache, TileCacheManager, MAX_CACHE_SIZE},
+    tile_cache_manager::{RenderedTileCache, RequestedTileCache, TileCacheManager},
     RenderedState, Tile, TileHandle, TileQuadtree,
 };
 
@@ -57,7 +58,7 @@ fn spawn_tile_entity(
     ));
     tc.rendered_tile_caches.insert(
         tile_handle,
-        TileCache {
+        RenderedTileCache {
             rendered_tile_entity: e.id(),
             mesh_entity: None,
             mesh_prepared: false,
@@ -65,8 +66,9 @@ fn spawn_tile_entity(
     );
 }
 
-// Prepare some resource that is necessary to render the tile.
-// This returns whether the resource is requested or not.
+/// Prepare some resource that is necessary to render the tile.
+/// This returns whether the resource is requested or not.
+#[allow(clippy::too_many_arguments)]
 fn prepare_tile_resource(
     commands: &mut Commands,
     qt: &mut TileQuadtree,
@@ -75,11 +77,43 @@ fn prepare_tile_resource(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tile_distance: FloatType,
+    tc: &mut TileCacheManager,
+    texture_fragment: &TileTextureFragmentQuery,
+    terrain_data_requester: &TileTerrainDataRequesterQuery,
 ) -> bool {
-    let requested_terrain =
-        request_terrain_data(commands, qt, buf, terrain_layer, handle, tile_distance);
-    let requested_texture = request_texture_fragment(commands, qt, tiles, handle, tile_distance);
-    requested_terrain || requested_texture
+    let requested_terrain = request_terrain_data(
+        commands,
+        qt,
+        buf,
+        terrain_layer,
+        handle,
+        tile_distance,
+        terrain_data_requester,
+    );
+    let requested_texture =
+        request_texture_fragment(commands, qt, tiles, handle, tile_distance, texture_fragment);
+
+    match tc.requested_tile_caches.get_mut(&handle) {
+        Some(r) => {
+            if requested_terrain.is_some() {
+                r.data_requester = requested_terrain;
+            }
+            if requested_texture.is_some() {
+                r.texture_fragment = requested_texture;
+            }
+        }
+        None => {
+            tc.requested_tile_caches.insert(
+                handle,
+                RequestedTileCache {
+                    data_requester: requested_terrain,
+                    texture_fragment: requested_texture,
+                },
+            );
+        }
+    }
+
+    requested_terrain.is_some() || requested_texture.is_some()
 }
 
 fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
@@ -221,12 +255,12 @@ fn traverse_tile(
     buf: &mut BufferStore,
     camera: &Transform,
     frustum: &CameraFrustum,
-    texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
+    texture_fragment: &TileTextureFragmentQuery,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     window: &Window,
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
-    meshes: &mut Query<&mut Mesh, With<TileMeshMarker>>,
+    meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
@@ -272,24 +306,36 @@ fn traverse_tile(
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
-    let is_intersecting_with_frustum = intersect_with_camera_frustum(camera, frustum, tile);
-    if !is_intersecting_with_frustum {
-        qt.qt.get_mut(handle).unwrap().previous_rendered_state = Some(RenderedState::Culled);
-        return TraversalResult::Culled;
-    }
+    let is_culled = !intersect_with_camera_frustum(camera, frustum, tile)  // Frustum culling 
+        || !tile
+            .occludee_point_in_scaled_space
+            .map(|p| occluder.is_scaled_space_point_visible(p))
+            .unwrap_or(true); // Occlusion culling
 
-    let is_visible = tile
-        .occludee_point_in_scaled_space
-        .map(|p| occluder.is_scaled_space_point_visible(p))
-        .unwrap_or(true);
-    if !is_visible {
+    let distance_from_camera = calc_distance_from_camera(camera, tile, ellipsoid);
+
+    let tile = qt.qt.get_mut(handle).unwrap();
+    tile.visited_at = tc.rendered_frame;
+    tile.previous_rendered_state = None;
+
+    if is_culled {
+        prepare_tile_resource(
+            command,
+            qt,
+            buf,
+            tiles,
+            terrain_layer,
+            handle,
+            distance_from_camera,
+            tc,
+            texture_fragment,
+            terrain_data_requester,
+        );
         qt.qt.get_mut(handle).unwrap().previous_rendered_state = Some(RenderedState::Culled);
         return TraversalResult::Culled;
     }
 
     let max_sse = tiles.max_sse;
-
-    let distance_from_camera = calc_distance_from_camera(camera, tile, ellipsoid);
 
     let sse = calc_sse(
         frustum,
@@ -303,12 +349,6 @@ fn traverse_tile(
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
-    {
-        let tile = qt.qt.get_mut(handle).unwrap();
-        tile.visited_at = tc.rendered_frame;
-        tile.previous_rendered_state = None;
-    }
-
     if meets_sse {
         prepare_tile_resource(
             command,
@@ -318,6 +358,9 @@ fn traverse_tile(
             terrain_layer,
             handle,
             distance_from_camera,
+            tc,
+            texture_fragment,
+            terrain_data_requester,
         );
 
         if is_renderable {
@@ -337,6 +380,9 @@ fn traverse_tile(
                 terrain_layer,
                 handle,
                 distance_from_camera,
+                tc,
+                texture_fragment,
+                terrain_data_requester,
             );
         }
         return TraversalResult::NotFound;
@@ -473,6 +519,9 @@ fn traverse_tile(
         terrain_layer,
         handle,
         distance_from_camera,
+        tc,
+        texture_fragment,
+        terrain_data_requester,
     ) {
         return TraversalResult::NotFound;
     }
@@ -490,10 +539,10 @@ pub fn update_tiles(
     tiles: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
     camera: Query<(&CameraMarker, &Transform, &CameraFrustum)>,
-    texture_fragment: Query<(&TileTextureFragmentMarker, &TextureFragment)>,
+    texture_fragment: TileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     occluder: Query<&EllipsoidalOccluder>,
-    mut meshes: Query<&mut Mesh, With<TileMeshMarker>>,
+    mut meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
 ) {
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer.iter().next();
@@ -547,6 +596,9 @@ pub fn update_tiles(
                         &terrain_layer,
                         zero_tile.handle(),
                         0.,
+                        &mut tc,
+                        &texture_fragment,
+                        &terrain_data_requester,
                     );
                 }
                 _ => {
@@ -597,36 +649,6 @@ pub fn transfer_mesh(
             terrain_layer.map_or(false, |t| t.should_compute_normal_from_vertex);
 
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
-
-        if let Some(cached_mesh_handle) = &tile.cached_mesh_handle {
-            let e = commands.spawn((
-                TileMeshMarker(rendered_tile.tile_handle),
-                MeshBundle {
-                    mesh: Mesh {
-                        vertices: cached_mesh_handle.vertices,
-                        indices: cached_mesh_handle.indices,
-                        uvs: cached_mesh_handle.uvs,
-                        active: false,
-                        render_order,
-                    },
-                    material: Material {
-                        color: tile_layer.color,
-                        show: tile_layer.show,
-                        wireframe: tile_layer.wireframe,
-                        should_compute_normal_from_vertex,
-                        texture_fragment: texture_fragment_entity_id,
-                    },
-                    object: ObjectBundle {
-                        transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
-                        marker: Default::default(),
-                    },
-                },
-            ));
-            if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
-                cache.mesh_entity = Some(e.id());
-            };
-            continue;
-        }
 
         let terrain_req = match tile.terrain_data.as_ref() {
             Some(t) => t
@@ -764,6 +786,7 @@ pub fn transfer_mesh(
 
         let terrain_req = terrain_req.unwrap();
 
+        // FIXME: This data will be removable after terrain mesh is constructed.
         let bytes = match buf.get_u8(&terrain_req.handle) {
             Some(data) => data,
             None => {
@@ -851,17 +874,12 @@ pub fn clear_caches(
     rendered_tiles: Query<(Entity, &RenderedTile, &TileOrderByDistance)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
-    let cache_size = tc.rendered_tile_caches.len();
-    if cache_size <= MAX_CACHE_SIZE {
-        return;
-    }
-
     let now = instant::Instant::now();
     for (rendered_tile_entity_id, rendered_tile, _) in
         rendered_tiles.iter().sort::<&TileOrderByDistance>().rev()
     {
         // Prevent blocking the frame by this deletion process
-        if now.elapsed() > instant::Duration::from_micros(10) {
+        if now.elapsed() > instant::Duration::from_micros(1) {
             break;
         }
 
@@ -870,26 +888,58 @@ pub fn clear_caches(
             tile.visited_at
         };
 
+        if tc.rendered_frame <= visited_at + 1 {
+            continue;
+        }
+
         let cache = match tc.rendered_tile_caches.get(&rendered_tile.tile_handle) {
             Some(cache) => cache,
             None => continue,
         };
 
-        if tc.rendered_frame <= visited_at + 1 {
-            continue;
-        }
-
         if let Some(mesh_entity) = cache.mesh_entity {
-            commands.entity(mesh_entity).despawn();
+            commands.entity(mesh_entity).insert(Deleted);
         }
         commands.entity(rendered_tile_entity_id).despawn();
         tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
+        tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
         qt.qt.get_mut(rendered_tile.tile_handle).unwrap().destroy(
             &mut commands,
             &mut buf,
             &terrain_data_requester,
         );
+    }
+
+    let mut removed_handles = vec![];
+    for (handle, _requested) in tc.requested_tile_caches.iter() {
+        // Prevent blocking the frame by this deletion process
+        if now.elapsed() > instant::Duration::from_micros(1) {
+            break;
+        }
+
+        let tile_handle = *handle;
+
+        let visited_at = {
+            let tile = qt.qt.get(tile_handle).unwrap();
+            tile.visited_at
+        };
+
+        if tc.rendered_frame <= visited_at + 1 {
+            continue;
+        }
+
+        qt.qt.get_mut(tile_handle).unwrap().destroy(
+            &mut commands,
+            &mut buf,
+            &terrain_data_requester,
+        );
+
+        removed_handles.push(tile_handle);
+    }
+
+    for removed in removed_handles {
+        tc.requested_tile_caches.remove(&removed);
     }
 
     tc.is_updated_in_this_frame = false;

@@ -20,6 +20,7 @@ import {
   ModelMaterial,
   PolylineMaterial,
   PolygonMaterial,
+  DataRequesterRemovedEvent,
 } from "navara";
 import {
   type Camera,
@@ -34,6 +35,7 @@ import {
   ShaderMaterial,
 } from "three";
 
+import { FEATURE_CONCURRENCY, MAP_CONCURRENCY } from "../concurrency";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
@@ -48,6 +50,7 @@ export type BufferLoader = {
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
   setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
+  remove: (handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
 
@@ -75,6 +78,11 @@ export function processEvent(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
 ) {
+  console.log(
+    "EVENT: ",
+    event.data_requested.length,
+    event.data_requester_removed.length,
+  );
   eventManager.pushEvents(event);
 
   eventManager.forEachStack("camera_transform_updated", (ev) =>
@@ -90,6 +98,7 @@ export function processEvent(
     {
       add: {
         key: "mesh_added",
+        max: MAP_CONCURRENCY,
       },
       remove: {
         key: "mesh_removed",
@@ -133,6 +142,7 @@ export function processEvent(
     {
       add: {
         key: "renderable_feature_added",
+        max: FEATURE_CONCURRENCY,
       },
       remove: {
         key: "renderable_feature_removed",
@@ -200,7 +210,6 @@ export function processEvent(
     {
       add: {
         key: "texture_fragment_requested",
-        max: 30,
       },
       remove: {
         key: "texture_fragment_removed",
@@ -230,7 +239,6 @@ export function processEvent(
     {
       add: {
         key: "data_requested",
-        max: 30,
       },
       remove: {
         key: "data_requester_removed",
@@ -244,7 +252,7 @@ export function processEvent(
           await processRequestedData(event, buf);
           break;
         case "remove":
-          // Do nothing
+          processDataRequesterRemoved(event, buf);
           break;
       }
     },
@@ -372,11 +380,13 @@ async function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
         if (data === undefined) {
           throw new Error("failed to convert array");
         } else {
-          const u8a = new Uint8Array(data);
+          let u8a: Uint8Array | null = new Uint8Array(data);
           buf.setU8(req.handle, req.bits, u8a);
 
           // Prevent memory leak
           u8a.set([]);
+          u8a = null;
+
           data.set([]);
         }
         img.remove();
@@ -397,6 +407,13 @@ async function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
       // Prevent memory leak
       bytes.set([]);
     });
+}
+
+function processDataRequesterRemoved(
+  req: DataRequesterRemovedEvent,
+  buf: BufferLoader,
+) {
+  buf.remove(req.handle);
 }
 
 async function processTextureFragmentRequested(

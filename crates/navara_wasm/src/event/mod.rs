@@ -16,7 +16,7 @@ pub struct Events {
     pub mesh_added: Vec<MeshAdded>,
     pub mesh_updated: Vec<MeshChanged>,
     pub data_requested: Vec<DataRequestEvent>,
-    pub data_requester_removed: Vec<EntityEvent>,
+    pub data_requester_removed: Vec<DataRequesterRemovedEvent>,
     pub texture_fragment_requested: Vec<TextureFragmentRequestedEvent>,
     pub texture_fragment_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
@@ -110,6 +110,17 @@ pub struct DataRequestEvent {
     pub extension: String,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct DataRequesterRemovedEvent {
+    // Entity
+    pub ind: u32,
+    pub gen: u32,
+    pub bits: u64,
+
+    pub handle: i32,
 }
 
 #[wasm_bindgen]
@@ -312,6 +323,25 @@ impl<'a>
             handle: ev.comp.handle,
             extension: ev.comp.extension.to_string(),
             url: ev.comp.url.clone(),
+        }
+    }
+}
+
+impl<'a>
+    From<
+        navara_event_store::ReconstructableComponentEvent<&'a navara_data_requester::DataRequester>,
+    > for DataRequesterRemovedEvent
+{
+    fn from(
+        ev: navara_event_store::ReconstructableComponentEvent<
+            &'a navara_data_requester::DataRequester,
+        >,
+    ) -> Self {
+        Self {
+            ind: ev.ind,
+            gen: ev.gen,
+            bits: ev.bits,
+            handle: ev.comp.handle,
         }
     }
 }

@@ -102,6 +102,11 @@ impl Core {
         self.app.set_buffer(handle, bits, data.to_vec());
     }
 
+    #[wasm_bindgen(js_name = removeBuffer)]
+    pub fn remove_buffer(&mut self, handle: i32) {
+        self.app.remove_buffer(handle);
+    }
+
     #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app.trigger_data_requester_failed(bits);

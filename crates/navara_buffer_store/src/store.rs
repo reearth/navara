@@ -29,6 +29,14 @@ impl BufferStore {
         Self::default()
     }
 
+    pub fn len(&self) -> usize {
+        self.buffers.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.buffers.is_empty()
+    }
+
     pub fn get_u8(&self, handle: &Handle) -> Option<&[u8]> {
         match self.buffers.get(handle)? {
             Buffer::U8(b) => Some(b),

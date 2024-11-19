@@ -9,4 +9,5 @@ bevy_ecs = "0.14.2"
 bevy_log = "0.14.2"
 navara_event_store = { path = "../navara_event_store" }
 navara_math = { path = "../navara_math" }
+navara_component = { path = "../navara_component" }
 navara_buffer_store = { path = "../navara_buffer_store" }

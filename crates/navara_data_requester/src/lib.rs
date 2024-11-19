@@ -1,34 +1,34 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_app::PostUpdate;
+use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     component::Component,
     entity::Entity,
     event::EventReader,
     query::{Added, With, Without},
+    schedule::IntoSystemConfigs,
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::{BufferStore, BufferStoreFailedEvent, BufferStoreLoadedEvent, Handle};
+use navara_component::{Deleted, Ignored, Priority, Requested};
 use navara_event_store::EventStore;
 use url::Url;
-mod component;
-
-pub use component::*;
 
 pub struct DataRequesterPlugin;
 
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.add_systems(
-            PostUpdate,
-            (
-                send_data_request_events,
-                send_data_request_events_with_priority,
-                set_data_requester_loaded,
-                set_data_requester_failed,
-                remove_removed_data_requesters,
-            ),
-        );
+        app.add_systems(PreUpdate, remove_removed_data_requesters)
+            .add_systems(
+                PostUpdate,
+                (
+                    send_data_request_events,
+                    send_data_request_events_with_priority,
+                    set_data_requester_loaded,
+                    set_data_requester_failed,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -138,8 +138,8 @@ pub fn set_data_requester_failed(
 pub fn send_data_request_events(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
-    requests: Query<Entity, (Added<DataRequester>, Without<Priority>, Without<Ignore>)>,
-    removed: Query<Entity, (With<DataRequester>, With<Deleted>, Without<Ignore>)>,
+    requests: Query<Entity, (Added<DataRequester>, Without<Priority>, Without<Deleted>)>,
+    removed: Query<Entity, (With<DataRequester>, With<Deleted>, Without<Ignored>)>,
 ) {
     for e in requests.iter() {
         commands.entity(e).insert(Requested);
@@ -156,7 +156,7 @@ pub fn send_data_request_events(
 pub fn send_data_request_events_with_priority(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
-    requests: Query<(Entity, &Priority), (Added<DataRequester>, Without<Ignore>)>,
+    requests: Query<(Entity, &Priority), (Added<DataRequester>, Without<Deleted>)>,
 ) {
     for (e, _) in requests.iter().sort::<&Priority>() {
         commands.entity(e).insert(Requested);

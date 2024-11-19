@@ -1,8 +1,9 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Or, With},
+    query::{Added, Or, With, Without},
     system::{Commands, Query},
 };
+use navara_component::{Deleted, Ignored, Requested};
 use navara_data_requester::DataRequester;
 
 use crate::{
@@ -25,18 +26,20 @@ pub fn filter_requestable_data_requester(
                 // With<GlbDataRequesterMarker>
             )>,
             Added<DataRequester>,
+            Without<Deleted>,
         ),
     >,
     requested_data_requesters: Query<
         Entity,
         (
             With<DataRequester>,
-            With<navara_data_requester::Requested>,
+            With<Requested>,
             With<Cesium3dTileContentDataRequesterMarker>,
             Or<(
                 With<B3dmDataRequesterMarker>,
                 // With<GlbDataRequesterMarker>
             )>,
+            Without<Deleted>,
         ),
     >,
 ) {
@@ -49,9 +52,6 @@ pub fn filter_requestable_data_requester(
         .sort::<&TileOrderByDistance>()
         .skip(num_skip as usize)
     {
-        commands.entity(e).insert((
-            navara_data_requester::Ignore,
-            navara_data_requester::Deleted,
-        ));
+        commands.entity(e).insert((Deleted, Ignored));
     }
 }

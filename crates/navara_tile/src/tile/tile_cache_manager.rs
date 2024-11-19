@@ -2,9 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use bevy_ecs::{
     entity::Entity,
-    query::With,
+    query::{With, Without},
     system::{Query, Resource},
 };
+use navara_component::Deleted;
 use navara_mesh::Mesh;
 
 use super::{TileHandle, TileMeshMarker};
@@ -13,16 +14,28 @@ use super::{TileHandle, TileMeshMarker};
 /// Of course, we can store these value in the tile of TileQuadtree,
 /// but accessing it is a little bit high cost.
 /// These values are removed and added frequently,so we should use this cache structure.
-pub struct TileCache {
+pub struct RenderedTileCache {
     pub mesh_entity: Option<Entity>,
     pub rendered_tile_entity: Entity,
+    /// This is used to check if the mesh is prepared in client side.
+    /// Because sometimes rendering engine needs to do some preparation asynchronously.
     pub mesh_prepared: bool,
+}
+
+/// This struct caches requested resources depending on the tile.
+/// [`RenderedTileCache`] tracks the rendered tile, but it can't track requested tile resources.
+/// These resources might be rendered because of it's children or parent is rendered.
+/// Therefore these resources would be leaked, so we need to track them in another cache.
+pub struct RequestedTileCache {
+    pub texture_fragment: Option<Entity>,
+    pub data_requester: Option<Entity>,
 }
 
 // Manage the tiles that are going to be rendered.
 #[derive(Default, Resource)]
 pub struct TileCacheManager {
-    pub rendered_tile_caches: HashMap<TileHandle, TileCache>,
+    pub rendered_tile_caches: HashMap<TileHandle, RenderedTileCache>,
+    pub requested_tile_caches: HashMap<TileHandle, RequestedTileCache>,
     pub cached_textures_tile_handles: HashSet<TileHandle>,
     pub rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
@@ -32,7 +45,7 @@ impl TileCacheManager {
     pub fn activate_rendered_tile(
         &self,
         handle: &TileHandle,
-        meshes: &mut Query<&mut Mesh, With<TileMeshMarker>>,
+        meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
         active: bool,
     ) {
         let t = match self.rendered_tile_caches.get(handle) {

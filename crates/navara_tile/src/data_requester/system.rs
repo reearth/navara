@@ -1,9 +1,10 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, With},
+    query::{Added, With, Without},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
+use navara_component::{Deleted, Ignored, Requested};
 use navara_data_requester::DataRequester;
 
 use crate::tile::{render::TileOrderByDistance, TileQuadtree};
@@ -24,14 +25,15 @@ pub(crate) fn filter_requestable_data_requester(
             &DataRequester,
             &TileOrderByDistance,
         ),
-        Added<TerrainDataRequesterMarker>,
+        (Added<TerrainDataRequesterMarker>, Without<Deleted>),
     >,
     requested_data_requesters: Query<
         Entity,
         (
             With<TerrainDataRequesterMarker>,
             With<DataRequester>,
-            With<navara_data_requester::Requested>,
+            With<Requested>,
+            Without<Deleted>,
         ),
     >,
 ) {
@@ -51,10 +53,7 @@ pub(crate) fn filter_requestable_data_requester(
             terrain_data.set_data_requester_entity_id(None);
             terrain_data.destroy(&mut buf);
             tile.terrain_data = None;
-            commands.entity(e).insert((
-                navara_data_requester::Ignore,
-                navara_data_requester::Deleted,
-            ));
+            commands.entity(e).insert((Deleted, Ignored));
         }
     }
 }

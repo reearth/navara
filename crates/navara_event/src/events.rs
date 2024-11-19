@@ -16,7 +16,7 @@ pub struct Events<'a> {
         Vec<ComponentEvent<(&'a TileMeshMarker, &'a Mesh, &'a Material, &'a Transform)>>,
     pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a Material)>>,
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
-    pub data_requester_removed: Vec<EntityEvent>,
+    pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
@@ -60,7 +60,9 @@ impl<'a> Events<'a> {
         }
 
         for e in store.data_requester_removed.iter() {
-            events.data_requester_removed.push((*e).into());
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.data_requester_removed.push(e);
+            }
         }
 
         for e in store.texture_fragment_reqested.iter() {

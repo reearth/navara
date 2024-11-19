@@ -2,13 +2,13 @@ use crate::{
     tile::{render::TileOrderByDistance, TileHandle},
     TileQuadtree,
 };
-use bevy_ecs::system::Commands;
+use bevy_ecs::{entity::Entity, system::Commands};
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
 use navara_math::FloatType;
 use navara_texture_fragment::TextureFragment;
 
-use super::TileTextureFragmentMarker;
+use super::{TileTextureFragmentMarker, TileTextureFragmentQuery};
 
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
@@ -16,10 +16,11 @@ pub(crate) fn request_texture_fragment(
     tiles: &TilesLayer,
     handle: TileHandle,
     tile_distance: FloatType,
-) -> bool {
+    texture_fragment: &TileTextureFragmentQuery,
+) -> Option<Entity> {
     let tile = qt.qt.get_mut(handle).unwrap();
-    if tile.texture_fragment_entity_id.is_some() {
-        return false;
+    if matches!(tile.texture_fragment_entity_id, Some(e) if texture_fragment.contains(e)) {
+        return None;
     }
 
     let url = tile_url(&tiles.url, &tile.coords);
@@ -28,7 +29,8 @@ pub(crate) fn request_texture_fragment(
         TextureFragment::new(url),
         TileOrderByDistance(tile_distance),
     ));
-    tile.texture_fragment_entity_id = Some(entity.id());
+    let id = entity.id();
+    tile.texture_fragment_entity_id = Some(id);
 
-    true
+    Some(id)
 }

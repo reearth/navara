@@ -1,6 +1,7 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
+use navara_component::Priority;
 use navara_data_requester::DataRequester;
 use url::Url;
 
@@ -41,7 +42,7 @@ pub(crate) fn request_tile_content(
         .spawn((
             Cesium3dTileContentDataRequesterMarker,
             B3dmDataRequesterMarker,
-            navara_data_requester::Priority::Medium,
+            Priority::Medium,
             TileOrderByDistance {
                 distance_from_camera: tile.state.distance_from_camera,
                 sse: tile.state.sse,

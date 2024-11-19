@@ -1,5 +1,3 @@
-export const DRACO_LOADER_CONCURRENCY = Math.floor(
-  navigator.hardwareConcurrency / 3,
-);
-export const MAIN_CONCURRENCY =
-  navigator.hardwareConcurrency - DRACO_LOADER_CONCURRENCY;
+const TOTAL_CONCURRENCY = navigator.hardwareConcurrency - 1;
+export const FEATURE_CONCURRENCY = Math.floor(TOTAL_CONCURRENCY / 3);
+export const MAP_CONCURRENCY = TOTAL_CONCURRENCY - FEATURE_CONCURRENCY;

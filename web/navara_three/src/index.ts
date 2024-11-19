@@ -25,6 +25,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import { MAP_CONCURRENCY } from "./concurrency";
 import {
   processEvent,
   type BufferLoader,
@@ -42,7 +43,6 @@ import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
-import { MAIN_CONCURRENCY } from "./concurrency";
 
 export * from "./type";
 
@@ -101,6 +101,9 @@ export default class ThreeView {
     },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
       this._core?.setBufferU8(handle, bits, b);
+    },
+    remove: (handle: number) => {
+      this._core?.removeBuffer(handle);
     },
     triggerDataRequesterFailed: (bits: bigint) => {
       this._core?.triggerDataRequesterFailed(bits);
@@ -262,7 +265,7 @@ export default class ThreeView {
   async init() {
     if (this._core) return;
 
-    initializeWorkerPool(WorkerURL, MAIN_CONCURRENCY);
+    initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
 
     await initCore();
 

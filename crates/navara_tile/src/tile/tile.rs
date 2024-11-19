@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
+use navara_component::Deleted;
 use navara_core::{
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
@@ -10,11 +11,11 @@ use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
 use navara_quadtree::Quadtree;
-use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
+use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
     data_requester::TileTerrainDataRequesterQuery, terrain::TerrainData,
-    texture_fragment::TileTextureFragmentMarker,
+    texture_fragment::TileTextureFragmentQuery,
 };
 
 use navara_layer::TerrainLayer;
@@ -83,7 +84,7 @@ impl Tile {
     pub(super) fn is_ready(
         &self,
         qt: &TileQuadtree,
-        texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
+        texture_fragment: &TileTextureFragmentQuery,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> ReadyState {
@@ -303,19 +304,20 @@ impl Tile {
             buf.remove(&cached_mesh.vertices);
             buf.remove(&cached_mesh.indices);
             buf.remove(&cached_mesh.uvs);
+            if let Some(h) = &cached_mesh.heights {
+                buf.remove(h);
+            }
             self.cached_mesh_handle = None;
         }
         if let Some(fragment) = self.texture_fragment_entity_id {
-            commands
-                .entity(fragment)
-                .remove::<(TileTextureFragmentMarker, TextureFragment)>();
+            commands.entity(fragment).insert(Deleted);
             self.texture_fragment_entity_id = None;
         }
         if let Some(t) = &mut self.terrain_data {
             if let Some(e) = t.data_requester_entity_id() {
                 let data_requester = terrain_data_requester.get(e).unwrap();
                 buf.remove(&data_requester.1.handle);
-                commands.entity(e).insert(navara_data_requester::Deleted);
+                commands.entity(e).insert(Deleted);
                 t.set_data_requester_entity_id(None);
             }
             t.destroy(buf);
