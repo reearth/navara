@@ -1,5 +1,5 @@
 use bevy_ecs::{
-    query::{Or, With, Without},
+    query::{Added, Changed, Or, With, Without},
     system::Query,
 };
 use navara_component::Deleted;
@@ -21,6 +21,23 @@ pub type Cesium3dTileContentRequesterQuery<'a, 'world, 'state> = Query<
             With<B3dmDataRequesterMarker>,
             // With<GlbDataRequesterMarker>
         )>,
+        Without<Deleted>,
+    ),
+>;
+
+pub type ChangedCesium3dTileContentRequesterQuery<'a, 'world, 'state> = Query<
+    'world,
+    'state,
+    (
+        &'a Cesium3dTileContentDataRequesterMarker,
+        &'a DataRequester,
+    ),
+    (
+        Or<(
+            With<B3dmDataRequesterMarker>,
+            // With<GlbDataRequesterMarker>
+        )>,
+        Or<(Added<DataRequester>, Changed<DataRequester>)>,
         Without<Deleted>,
     ),
 >;

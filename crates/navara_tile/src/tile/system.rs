@@ -15,9 +15,9 @@ use navara_camera::{CameraFrustum, CameraMarker};
 use navara_window::Window;
 
 use crate::{
-    data_requester::TileTerrainDataRequesterQuery,
+    data_requester::{ChangedTileTerrainDataRequesterQuery, TileTerrainDataRequesterQuery},
     terrain::{CachedMartini, MartiniComponent},
-    texture_fragment::TileTextureFragmentQuery,
+    texture_fragment::{ChangedTileTextureFragmentQuery, TileTextureFragmentQuery},
     tile::TileMeshMarker,
 };
 
@@ -529,7 +529,7 @@ fn traverse_tile(
     TraversalResult::TileRendered
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<TileQuadtree>,
@@ -538,12 +538,32 @@ pub fn update_tiles(
     window: Res<Window>,
     tiles: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
-    camera: Query<(&CameraMarker, &Transform, &CameraFrustum)>,
+    camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
     texture_fragment: TileTextureFragmentQuery,
+    changed_texture_fragment: ChangedTileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
+    changed_terrain_data_requester: ChangedTileTerrainDataRequesterQuery,
     occluder: Query<&EllipsoidalOccluder>,
-    mut meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+    mut meshes_set: ParamSet<(
+        // All meshes
+        Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+        // All changed meshes
+        Query<
+            &Mesh,
+            (
+                Or<(Added<Mesh>, Changed<Mesh>)>,
+                With<TileMeshMarker>,
+                Without<Deleted>,
+            ),
+        >,
+    )>,
 ) {
+    let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
+    let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
+    let is_mesh_changed = !meshes_set.p1().is_empty();
+
+    let mut meshes = meshes_set.p0();
+
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer.iter().next();
 
@@ -551,6 +571,18 @@ pub fn update_tiles(
     // TODO: Support multiple tiles
     for tiles in &tiles {
         for (_, camera, frustum) in &camera {
+            let needs_update = is_texture_fragment_changed
+                || is_data_requester_changed
+                || is_mesh_changed
+                || tc.is_updated_in_this_frame
+                || camera.is_added()
+                || camera.is_changed();
+            if !needs_update {
+                continue;
+            }
+
+            tc.is_updated_in_this_frame = true;
+
             let zero_tile = match qt.qt.zero() {
                 Some(z) => z,
                 None => {
@@ -569,7 +601,7 @@ pub fn update_tiles(
                 &mut tc,
                 &mut qt,
                 &mut buf,
-                camera,
+                &camera,
                 frustum,
                 &texture_fragment,
                 &terrain_data_requester,
@@ -859,10 +891,12 @@ pub fn handle_prepared_mesh_event(
     mut tc: ResMut<TileCacheManager>,
 ) {
     for e in events.read() {
-        tc.is_updated_in_this_frame = true;
         if let Some(t) = tc.rendered_tile_caches.get_mut(&e.tile_handle) {
             t.mesh_prepared = true;
+        } else {
+            continue;
         }
+        tc.is_updated_in_this_frame = true;
     }
 }
 
@@ -874,6 +908,12 @@ pub fn clear_caches(
     rendered_tiles: Query<(Entity, &RenderedTile, &TileOrderByDistance)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
+    if !tc.is_updated_in_this_frame {
+        tc.is_updated_in_this_frame = false;
+        return;
+    }
+    tc.is_updated_in_this_frame = false;
+
     let now = instant::Instant::now();
     for (rendered_tile_entity_id, rendered_tile, _) in
         rendered_tiles.iter().sort::<&TileOrderByDistance>().rev()
@@ -941,6 +981,4 @@ pub fn clear_caches(
     for removed in removed_handles {
         tc.requested_tile_caches.remove(&removed);
     }
-
-    tc.is_updated_in_this_frame = false;
 }
