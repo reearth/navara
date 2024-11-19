@@ -11,7 +11,7 @@ use bevy_input::{
     ButtonInput,
 };
 use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Intersection, WGS84_32};
-use navara_math::{Mat3, Quat, Transform, Vec2, Vec3};
+use navara_math::{Mat3, Quat, Transform, Vec2, Vec3, EPSILON10};
 use navara_window::Window;
 
 use crate::{helpers::get_pick_ray_from_camera, CameraController, CameraInertia};
@@ -305,7 +305,9 @@ fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &Camer
 }
 
 fn needs_update(inertia: &CameraInertia) -> bool {
-    inertia.spin.length() != 0. || inertia.zoom != 0. || inertia.tilt.length() != 0.
+    inertia.spin.length().abs() >= EPSILON10
+        || inertia.zoom.abs() >= EPSILON10
+        || inertia.tilt.length().abs() >= EPSILON10
 }
 
 fn after_inertia(inertia: &mut CameraInertia, controller: &CameraController) {
