@@ -64,6 +64,7 @@ impl Hierarchy {
 }
 
 // Use the area method to determine the orientation of a polygon.
+// ref: https://github.com/search?q=repo%3ACesiumGS%2Fcesium%20PolygonPipeline.computeWindingOrder2D&type=code
 fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
     let length = positions.len();
     if length < 3 {
