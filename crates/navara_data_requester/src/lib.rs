@@ -1,33 +1,34 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_app::PostUpdate;
+use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     component::Component,
     entity::Entity,
     event::EventReader,
-    query::Added,
-    system::{Query, ResMut},
+    query::{Added, With, Without},
+    schedule::IntoSystemConfigs,
+    system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::{BufferStore, BufferStoreFailedEvent, BufferStoreLoadedEvent, Handle};
+use navara_component::{Deleted, Ignored, Priority, Requested};
 use navara_event_store::EventStore;
 use url::Url;
-mod manager;
-
-pub use manager::*;
 
 pub struct DataRequesterPlugin;
 
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.init_resource::<DataRequesterManager>();
-        app.add_systems(
-            PostUpdate,
-            (
-                send_data_requst_events,
-                set_data_requester_loaded,
-                set_data_requester_faled,
-            ),
-        );
+        app.add_systems(PreUpdate, remove_removed_data_requesters)
+            .add_systems(
+                PostUpdate,
+                (
+                    send_data_request_events,
+                    send_data_request_events_with_priority,
+                    set_data_requester_loaded,
+                    set_data_requester_failed,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -108,38 +109,69 @@ impl DataRequester {
 }
 
 pub fn set_data_requester_loaded(
-    mut manager: ResMut<DataRequesterManager>,
+    mut commands: Commands,
     mut events: EventReader<BufferStoreLoadedEvent>,
     mut requests: Query<&mut DataRequester>,
 ) {
     for e in events.read() {
         if let Ok(mut d) = requests.get_mut(e.id) {
+            commands.entity(e.id).remove::<Requested>();
             d.status = DataRequesterStatus::Success;
-            manager.decrement_pending();
         }
     }
 }
 
-pub fn set_data_requester_faled(
-    mut manager: ResMut<DataRequesterManager>,
+pub fn set_data_requester_failed(
+    mut commands: Commands,
     mut events: EventReader<BufferStoreFailedEvent>,
     mut requests: Query<&mut DataRequester>,
 ) {
     for e in events.read() {
         if let Ok(mut d) = requests.get_mut(e.id) {
+            commands.entity(e.id).remove::<Requested>();
             d.status = DataRequesterStatus::Fail;
-            manager.decrement_pending();
         }
     }
 }
 
-pub fn send_data_requst_events(
-    mut manager: ResMut<DataRequesterManager>,
+#[allow(clippy::type_complexity)]
+pub fn send_data_request_events(
+    mut commands: Commands,
     mut events: ResMut<EventStore>,
-    requests: Query<Entity, Added<DataRequester>>,
+    requests: Query<Entity, (Added<DataRequester>, Without<Priority>, Without<Deleted>)>,
+    removed: Query<Entity, (With<DataRequester>, With<Deleted>, Without<Ignored>)>,
 ) {
     for e in requests.iter() {
+        commands.entity(e).insert(Requested);
         events.data_requested.push(e);
-        manager.increment_pending();
+    }
+
+    for e in removed.iter() {
+        commands.entity(e).remove::<Requested>();
+        events.data_requester_removed.push(e);
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn send_data_request_events_with_priority(
+    mut commands: Commands,
+    mut events: ResMut<EventStore>,
+    requests: Query<(Entity, &Priority), (Added<DataRequester>, Without<Deleted>)>,
+) {
+    for (e, _) in requests.iter().sort::<&Priority>() {
+        commands.entity(e).insert(Requested);
+        events.data_requested.push(e);
+    }
+}
+
+pub fn remove_removed_data_requesters(
+    mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
+    removed: Query<(Entity, &DataRequester), With<Deleted>>,
+) {
+    for (e, d) in removed.iter() {
+        buf.remove(&d.handle);
+        commands.entity(e).remove::<Requested>();
+        commands.entity(e).despawn();
     }
 }

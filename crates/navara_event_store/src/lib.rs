@@ -10,10 +10,11 @@ pub use model::*;
 pub struct EventStore {
     pub camera_transform_updated: Option<Entity>,
     pub object_transform_updated: Vec<Entity>,
-    pub object_removed: Vec<Entity>,
+    pub mesh_removed: Vec<Entity>,
     pub mesh_added: Vec<Entity>,
     pub mesh_updated: Vec<Entity>,
-    pub data_requested: Vec<Entity>, // FIXME: Make a data_removed event to remove unnecessary data
+    pub data_requested: Vec<Entity>,
+    pub data_requester_removed: Vec<Entity>,
     pub texture_fragment_reqested: Vec<Entity>,
     pub texture_fragment_removed: Vec<Entity>,
     pub renderable_feature_added: Vec<Entity>,
@@ -25,10 +26,11 @@ impl EventStore {
     pub fn clear(&mut self) {
         self.camera_transform_updated = None;
         self.object_transform_updated.clear();
-        self.object_removed.clear();
+        self.mesh_removed.clear();
         self.mesh_added.clear();
         self.mesh_updated.clear();
         self.data_requested.clear();
+        self.data_requester_removed.clear();
         self.texture_fragment_reqested.clear();
         self.texture_fragment_removed.clear();
         self.renderable_feature_added.clear();

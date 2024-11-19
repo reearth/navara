@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
+use navara_component::Deleted;
 use navara_core::{
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
@@ -10,11 +11,11 @@ use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
 use navara_quadtree::Quadtree;
-use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
+use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
-    data_requester::TerrainDataRequesterMarker, terrain::TerrainData,
-    texture_fragment::TileTextureFragmentMarker,
+    data_requester::TileTerrainDataRequesterQuery, terrain::TerrainData,
+    texture_fragment::TileTextureFragmentQuery,
 };
 
 use navara_layer::TerrainLayer;
@@ -22,9 +23,9 @@ use navara_math::FloatType;
 
 use super::tile_bounding_region::TileBoundingReagion;
 
-pub(crate) type TileHandle = u64;
+pub type TileHandle = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum RenderedState {
     RenderedChildren,
     Culled,
@@ -47,7 +48,16 @@ pub struct Tile {
     pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
     pub(crate) previous_rendered_state: Option<RenderedState>,
     pub(crate) cached_mesh_handle: Option<CachedMeshHandle>,
+    /// Whether it's upsampled tile or not.
     pub(crate) upsampled: bool,
+}
+
+#[derive(Default)]
+pub struct ReadyState {
+    pub is_tile_ready: bool,
+    pub is_texture_ready: bool,
+    pub is_terrain_ready: bool,
+    pub should_upsample: bool,
 }
 
 impl Tile {
@@ -74,10 +84,10 @@ impl Tile {
     pub(super) fn is_ready(
         &self,
         qt: &TileQuadtree,
-        texture_fragment: &Query<(&TileTextureFragmentMarker, &TextureFragment)>,
-        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        texture_fragment: &TileTextureFragmentQuery,
+        terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
-    ) -> bool {
+    ) -> ReadyState {
         let texture_fragment_status = self
             .texture_fragment_entity_id
             .map(|e| texture_fragment.get(e).map(|t| &t.1.status));
@@ -94,20 +104,39 @@ impl Tile {
             && self.texture_fragment_entity_id.is_some()
             && data_requester_entity_id.is_none()
         {
-            return is_texture_loaded;
+            return ReadyState {
+                is_tile_ready: is_texture_loaded,
+                is_texture_ready: is_texture_loaded,
+                ..Default::default()
+            };
         }
 
-        is_texture_loaded
-            && (self.is_terrain_ready(terrain_data_requester)
-                || ((self.should_upsampling(terrain_layer.map_or(1, |t|t.max_z)) && self.is_upsamplable(qt, terrain_data_requester, terrain_layer))
-                    // This tile doesn't need to be upsampled, so pass it if the terrain has already been requested.
-                    || matches!(self.get_terrain_data_requester(terrain_data_requester).map(|t| t.status), Some(DataRequesterStatus::Fail)))
-                || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
+        let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
+        let should_upsample = self.should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
+            && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
+
+        // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
+        let should_be_rendered_without_terrain = !self
+            .should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
+            && matches!(
+                self.get_terrain_data_requester(terrain_data_requester)
+                    .map(|t| t.status),
+                Some(DataRequesterStatus::Fail)
+            );
+
+        ReadyState {
+            is_tile_ready: is_texture_loaded
+                && (is_terrain_ready || (should_upsample || should_be_rendered_without_terrain)),
+            // || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
+            is_texture_ready: is_texture_loaded,
+            is_terrain_ready,
+            should_upsample,
+        }
     }
 
     pub(crate) fn get_terrain_data_requester(
         &self,
-        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_data_requester: &TileTerrainDataRequesterQuery,
     ) -> Option<DataRequester> {
         let data_requester_entity_id = self
             .terrain_data
@@ -122,7 +151,7 @@ impl Tile {
 
     pub(super) fn is_terrain_ready(
         &self,
-        terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         let terrain_data_requester = self.get_terrain_data_requester(terrain_data_requesters);
         terrain_data_requester.map_or(false, |s| {
@@ -131,19 +160,29 @@ impl Tile {
         })
     }
 
+    pub fn is_parent_terrain_ready(
+        &self,
+        qt: &TileQuadtree,
+        terrain_data_requester: &TileTerrainDataRequesterQuery,
+    ) -> bool {
+        self.get_parent_tile(qt).map_or(false, |p| {
+            (p.is_terrain_ready(terrain_data_requester) || p.upsampled)
+                && p.cached_mesh_handle.is_some()
+        })
+    }
+
     pub(crate) fn is_upsamplable(
         &self,
         qt: &TileQuadtree,
-        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
         let terrain_req = self.get_terrain_data_requester(terrain_data_requester);
         terrain_layer.is_some()
             && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
-                || terrain_layer.map_or(false, |l| self.should_upsampling(l.max_z)))
-            && self.get_parent_tile(qt).map_or(false, |p| {
-                p.is_terrain_ready(terrain_data_requester) || p.upsampled
-            })
+                // If parent tile is upsampled, we don't need to wait failed request.
+                || self.get_parent_tile(qt).map_or(false, |t| t.upsampled))
+            && self.is_parent_terrain_ready(qt, terrain_data_requester)
     }
 
     pub(crate) fn should_upsampling(&self, max_zoom: usize) -> bool {
@@ -259,27 +298,26 @@ impl Tile {
         &mut self,
         commands: &mut Commands,
         buf: &mut BufferStore,
-        terrain_data_requester: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+        terrain_data_requester: &TileTerrainDataRequesterQuery,
     ) {
         if let Some(cached_mesh) = &self.cached_mesh_handle {
             buf.remove(&cached_mesh.vertices);
             buf.remove(&cached_mesh.indices);
             buf.remove(&cached_mesh.uvs);
+            if let Some(h) = &cached_mesh.heights {
+                buf.remove(h);
+            }
             self.cached_mesh_handle = None;
         }
         if let Some(fragment) = self.texture_fragment_entity_id {
-            commands
-                .entity(fragment)
-                .remove::<(TileTextureFragmentMarker, TextureFragment)>();
+            commands.entity(fragment).insert(Deleted);
             self.texture_fragment_entity_id = None;
         }
         if let Some(t) = &mut self.terrain_data {
             if let Some(e) = t.data_requester_entity_id() {
                 let data_requester = terrain_data_requester.get(e).unwrap();
                 buf.remove(&data_requester.1.handle);
-                commands
-                    .entity(e)
-                    .remove::<(TerrainDataRequesterMarker, DataRequester)>();
+                commands.entity(e).insert(Deleted);
                 t.set_data_requester_entity_id(None);
             }
             t.destroy(buf);
@@ -294,14 +332,14 @@ impl Tile {
 }
 
 pub type TileQuadtree = Quadtree<usize, Tile>;
-#[derive(Component)]
-pub struct TileMeshMarker;
+#[derive(Debug, Default, Component)]
+pub struct TileMeshMarker(pub TileHandle);
 
 /// Compute a terrain height at specified point.
 pub fn compute_terrain_height_at_point(
     qt: &mut TileQuadtree,
     buf: &mut BufferStore,
-    terrain_data_requesters: &Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+    terrain_data_requesters: &TileTerrainDataRequesterQuery,
     point: &LngLat<FloatType, Radians>,
 ) -> Option<FloatType> {
     let tile_handle = find_contained_child(qt, &|t| {

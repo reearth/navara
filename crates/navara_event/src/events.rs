@@ -5,15 +5,18 @@ use navara_feature::render::RenderableFeature;
 use navara_math::Transform;
 use navara_mesh::{Material, Mesh};
 use navara_texture_fragment::TextureFragment;
+use navara_tile::tile::TileMeshMarker;
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
-    pub object_removed: Vec<EntityEvent>,
-    pub mesh_added: Vec<ComponentEvent<(&'a Mesh, &'a Material, &'a Transform)>>,
+    pub mesh_removed: Vec<EntityEvent>,
+    pub mesh_added:
+        Vec<ComponentEvent<(&'a TileMeshMarker, &'a Mesh, &'a Material, &'a Transform)>>,
     pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a Material)>>,
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
+    pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
@@ -34,12 +37,12 @@ impl<'a> Events<'a> {
             }
         }
 
-        for e in store.object_removed.iter() {
-            events.object_removed.push((*e).into());
+        for e in store.mesh_removed.iter() {
+            events.mesh_removed.push((*e).into());
         }
 
         for e in store.mesh_added.iter() {
-            if let Some(e) = ComponentEvent::from_world_3(*e, world) {
+            if let Some(e) = ComponentEvent::from_world_4(*e, world) {
                 events.mesh_added.push(e);
             }
         }
@@ -53,6 +56,12 @@ impl<'a> Events<'a> {
         for e in store.data_requested.iter() {
             if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
                 events.data_requested.push(e);
+            }
+        }
+
+        for e in store.data_requester_removed.iter() {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.data_requester_removed.push(e);
             }
         }
 

@@ -10,12 +10,11 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
-use navara_data_requester::DataRequester;
 use navara_layer::{LayerId, LayerStore};
 use navara_material::ModelMaterial;
 use navara_math::{Quat, Transform, Vec3};
 use navara_tile::{
-    data_requester::TerrainDataRequesterMarker,
+    data_requester::TileTerrainDataRequesterQuery,
     tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
 };
 
@@ -110,7 +109,7 @@ pub fn update_height_by_terrain(
     mut renderable_features: Query<(&ModelMarker, &mut RenderableFeature)>,
     geometries: Query<&ModelGeometry>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
-    terrain_data_requester: Query<(&TerrainDataRequesterMarker, &DataRequester)>,
+    terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
     if tile_meshes.is_empty() {
         return;

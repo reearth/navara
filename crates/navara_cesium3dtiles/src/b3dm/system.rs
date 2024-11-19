@@ -1,10 +1,11 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Changed, With},
+    query::{Added, Changed, With, Without},
     system::{Commands, Query, Res, ResMut},
 };
 use bevy_log::error;
 use navara_buffer_store::{BufferStore, Handle};
+use navara_component::{Deleted, Priority};
 use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature::{
@@ -37,6 +38,7 @@ pub fn request_model_by_b3dm_layer(
     for (e, layer) in &b3dm_layers {
         commands.spawn((
             B3dmLayerDataRequesterMarker(e),
+            Priority::Medium,
             DataRequester::from_store(
                 layer.data.as_ref().unwrap().url.clone(),
                 &mut buf,
@@ -50,12 +52,13 @@ pub fn request_model_by_b3dm_layer(
 // - We could use TextureFragment to fetch GLB.
 // - However we might need to transform the position by the extension.
 // FIXME: Store BatchTable to Bevy Resource.
+#[allow(clippy::type_complexity)]
 pub fn construct_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     requesters: Query<
         (Entity, &B3dmLayerDataRequesterMarker, &DataRequester),
-        Changed<DataRequester>,
+        (Changed<DataRequester>, Without<Deleted>),
     >,
     b3dm_layers: Query<&B3dmLayer>,
 ) {
@@ -162,11 +165,14 @@ pub fn delete_model_by_b3dm_layer(
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    requesters: Query<(
-        &Cesium3dTileContentDataRequesterMarker,
-        &B3dmDataRequesterMarker,
-        &DataRequester,
-    )>,
+    requesters: Query<
+        (
+            &Cesium3dTileContentDataRequesterMarker,
+            &B3dmDataRequesterMarker,
+            &DataRequester,
+        ),
+        Without<Deleted>,
+    >,
     mut rendered_tiles: Query<
         &mut RenderedCesium3dTileContent,
         (
@@ -264,6 +270,7 @@ pub fn remove_invisible_rendered_tiles(
         (
             With<Cesium3dTileContentDataRequesterMarker>,
             With<B3dmDataRequesterMarker>,
+            Without<Deleted>,
         ),
     >,
     rendered_tiles: Query<
@@ -309,7 +316,7 @@ pub fn remove_invisible_rendered_tiles(
         // Remove data requester
         if let Ok(requester) = requesters.get(tile.data_requester_id) {
             buf.remove(&requester.handle);
-            commands.entity(tile.data_requester_id).despawn();
+            commands.entity(tile.data_requester_id).insert(Deleted);
         }
 
         commands.entity(entity).despawn();

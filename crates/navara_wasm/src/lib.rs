@@ -12,6 +12,7 @@ use nanoid::nanoid;
 use navara_ecs::App;
 use navara_input::Key;
 use navara_math::FloatType;
+use navara_tile::tile::TileHandle;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -101,6 +102,11 @@ impl Core {
         self.app.set_buffer(handle, bits, data.to_vec());
     }
 
+    #[wasm_bindgen(js_name = removeBuffer)]
+    pub fn remove_buffer(&mut self, handle: i32) {
+        self.app.remove_buffer(handle);
+    }
+
     #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app.trigger_data_requester_failed(bits);
@@ -142,6 +148,11 @@ impl Core {
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
         self.app
             .trigger_texture_fragment_loaded(bits, status.into());
+    }
+
+    #[wasm_bindgen(js_name = setTileMeshPrepared)]
+    pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
+        self.app.set_tile_mesh_prepared(handle);
     }
 }
 

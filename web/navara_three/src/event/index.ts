@@ -8,11 +8,7 @@ import {
 import {
   type Events,
   type Transform,
-  type MeshAdded,
-  type MeshChanged,
   type EntityEvent,
-  type Mesh as EventMesh,
-  type MeshMaterial as EventMaterial,
   type ObjectTransformEvent,
   type DataRequestEvent,
   type RenderableFeatureAddedEvent,
@@ -24,17 +20,13 @@ import {
   ModelMaterial,
   PolylineMaterial,
   PolygonMaterial,
+  DataRequesterRemovedEvent,
 } from "navara";
 import {
-  BufferAttribute,
-  BufferGeometry,
-  // MeshStandardMaterial,
   type Camera,
   Mesh,
-  MeshBasicMaterial,
   Material,
   TextureLoader,
-  ImageLoader,
   MeshLambertMaterial,
   Object3D,
   Texture,
@@ -43,18 +35,22 @@ import {
   ShaderMaterial,
 } from "three";
 
+import { FEATURE_CONCURRENCY, MAP_CONCURRENCY } from "../concurrency";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
+import { IMAGE_LOADER, TEXTURE_LOADER } from "./loaders";
+import { processMeshAdded, processMeshChanged } from "./tile";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
   setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
+  remove: (handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
 
@@ -65,6 +61,10 @@ export type TextureFragmentHandler = {
   ) => void;
 };
 
+export type MeshHandler = {
+  setTileMeshPrepared: (handle: bigint) => void;
+};
+
 export function processEvent(
   eventManager: EventManager,
   scenes: Scenes,
@@ -72,8 +72,8 @@ export function processEvent(
   meshes: MeshCache,
   buf: BufferLoader,
   texFragment: TextureFragmentHandler,
+  meshHandler: MeshHandler,
   loadedTexs: Map<string, Texture>,
-  tex: TextureLoader,
   event: Events,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
@@ -88,15 +88,48 @@ export function processEvent(
     processObjectTransformUpdated(meshes, ev),
   );
 
-  eventManager.forEachStack("object_removed", (ev) => {
-    processObjectRemoved(scenes.main, meshes, ev);
-    processObjectRemoved(scenes.globe, meshes, ev, true);
-  });
-  eventManager.forEachStack("mesh_added", (ev) =>
-    processMeshAdded(scenes.main, scenes.globe, meshes, ev, buf, loadedTexs),
-  );
-  eventManager.forEachStack("mesh_updated", (ev) =>
-    processMeshChanged(scenes.main, scenes.globe, meshes, ev, buf, loadedTexs),
+  eventManager.processTransactionEvents(
+    "meshEvent",
+    {
+      add: {
+        key: "mesh_added",
+        max: MAP_CONCURRENCY,
+      },
+      remove: {
+        key: "mesh_removed",
+        // This process is not heavy for now, so we can process it infinitely.
+        max: Infinity,
+      },
+      change: {
+        key: "mesh_updated",
+        // This process is not heavy for now, so we can process it infinitely.
+        max: Infinity,
+      },
+    },
+    async ({ type, event }) => {
+      switch (type) {
+        case "add":
+          await processMeshAdded(
+            scenes.main,
+            scenes.globe,
+            meshes,
+            event,
+            buf,
+            loadedTexs,
+          );
+          meshHandler.setTileMeshPrepared(event.tile_handle);
+          break;
+        case "remove":
+          {
+            processObjectRemoved(scenes.main, meshes, event);
+            processObjectRemoved(scenes.globe, meshes, event, true);
+          }
+          break;
+        case "change":
+          processMeshChanged(meshes, event);
+          break;
+      }
+    },
   );
 
   eventManager.processTransactionEvents(
@@ -104,6 +137,7 @@ export function processEvent(
     {
       add: {
         key: "renderable_feature_added",
+        max: FEATURE_CONCURRENCY,
       },
       remove: {
         key: "renderable_feature_removed",
@@ -166,14 +200,57 @@ export function processEvent(
     },
   );
 
-  eventManager.forEachStack("texture_fragment_requested", (ev) =>
-    processTextureFragmentRequested(ev, texFragment, tex, loadedTexs),
+  eventManager.processTransactionEvents(
+    "textureFragmentEvent",
+    {
+      add: {
+        key: "texture_fragment_requested",
+      },
+      remove: {
+        key: "texture_fragment_removed",
+        // This process is not heavy for now, so we can process it infinitely.
+        max: Infinity,
+      },
+    },
+    async ({ type, event }) => {
+      switch (type) {
+        case "add":
+          await processTextureFragmentRequested(
+            event,
+            texFragment,
+            TEXTURE_LOADER,
+            loadedTexs,
+          );
+          break;
+        case "remove":
+          processTextureFragmentRemoved(event, loadedTexs);
+          break;
+      }
+    },
   );
-  eventManager.forEachStack("data_requested", (ev) =>
-    processRequestedData(ev, buf),
-  );
-  eventManager.forEachStack("texture_fragment_removed", (ev) =>
-    processTextureFragmentRemoved(ev, loadedTexs),
+
+  eventManager.processTransactionEvents(
+    "dataRequesterEvent",
+    {
+      add: {
+        key: "data_requested",
+      },
+      remove: {
+        key: "data_requester_removed",
+        // This process is not heavy for now, so we can process it infinitely.
+        max: Infinity,
+      },
+    },
+    async ({ type, event }) => {
+      switch (type) {
+        case "add":
+          await processRequestedData(event, buf);
+          break;
+        case "remove":
+          processDataRequesterRemoved(event, buf);
+          break;
+      }
+    },
   );
 }
 
@@ -199,66 +276,6 @@ function processObjectTransformUpdated(
   if (globeDepthMesh) {
     setTransform(globeDepthMesh, e.transform);
   }
-}
-
-function processMeshAdded(
-  parent: Object3D,
-  globeDepthScene: Object3D,
-  meshes: MeshCache,
-  mesh: MeshAdded,
-  buf: BufferLoader,
-  loadedTexes: Map<string, Texture>,
-) {
-  createMesh(
-    parent,
-    globeDepthScene,
-    meshes,
-    buf,
-    loadedTexes,
-    `${mesh.ind}_${mesh.gen}`,
-    mesh.mesh,
-    mesh.material,
-    mesh.transform,
-  );
-}
-
-function processMeshChanged(
-  parent: Object3D,
-  globeDepthScene: Object3D,
-  meshes: MeshCache,
-  mesh: MeshChanged,
-  buf: BufferLoader,
-  loadedTexes: Map<string, Texture>,
-) {
-  const id = generate_id_from_entity(mesh);
-  const m = meshes.get(id);
-  if (!m) return;
-
-  meshes.delete(id);
-  parent.remove(m);
-
-  const globeDepthId = to_globe_depth_id(id);
-  const globeDepthMesh = meshes.get(globeDepthId);
-  if (globeDepthMesh) {
-    globeDepthScene.remove(globeDepthMesh);
-    meshes.delete(globeDepthId);
-  }
-
-  const newm = createMesh(
-    parent,
-    globeDepthScene,
-    meshes,
-    buf,
-    loadedTexes,
-    id,
-    mesh.mesh,
-    mesh.material,
-  );
-  if (!newm) return;
-
-  newm.position.copy(m.position);
-  newm.quaternion.copy(m.quaternion);
-  newm.scale.copy(m.scale);
 }
 
 function processObjectRemoved(
@@ -301,6 +318,11 @@ function disposeObject3D(model: Object3D): void {
       // Dispose geometry
       if (mesh.geometry) {
         mesh.geometry.dispose();
+        // Prevent GC overhead
+        mesh.geometry.deleteAttribute("position");
+        mesh.geometry.deleteAttribute("uv");
+        mesh.geometry.deleteAttribute("normal");
+        mesh.geometry.index = null;
       }
 
       // Dispose material(s)
@@ -335,11 +357,9 @@ function disposeObject3D(model: Object3D): void {
 }
 
 // TODO: Need to check if the cached texture is removed completely
-function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
+async function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
   if (req.extension === "png") {
-    const loader = new ImageLoader();
-    loader
-      .loadAsync(req.url)
+    await IMAGE_LOADER.loadAsync(req.url)
       .then((img) => {
         // TODO: Get OffScreeCanvas from main thread in worker.
         const canvas = document.createElement("canvas");
@@ -355,11 +375,13 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
         if (data === undefined) {
           throw new Error("failed to convert array");
         } else {
-          const u8a = new Uint8Array(data);
+          let u8a: Uint8Array | null = new Uint8Array(data);
           buf.setU8(req.handle, req.bits, u8a);
 
           // Prevent memory leak
           u8a.set([]);
+          u8a = null;
+
           data.set([]);
         }
         img.remove();
@@ -371,7 +393,7 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
     return;
   }
 
-  fetch(req.url)
+  await fetch(req.url)
     .then((res) => res.arrayBuffer())
     .then((val) => {
       const bytes = new Uint8Array(val);
@@ -382,20 +404,23 @@ function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
     });
 }
 
-function makeTextureFragmentId(ind: number, gen: number) {
-  return `${ind}_${gen}`;
+function processDataRequesterRemoved(
+  req: DataRequesterRemovedEvent,
+  buf: BufferLoader,
+) {
+  buf.remove(req.handle);
 }
 
-function processTextureFragmentRequested(
+async function processTextureFragmentRequested(
   req: TextureFragmentRequestedEvent,
   handler: TextureFragmentHandler,
   tex: TextureLoader,
   loadedTexes: Map<string, Texture>,
 ) {
-  const id = makeTextureFragmentId(req.ind, req.gen);
+  const id = generate_id_from_entity(req);
   if (loadedTexes.has(id)) return;
 
-  tex
+  await tex
     .loadAsync(req.url)
     .then((t) => {
       loadedTexes.set(id, t);
@@ -416,7 +441,7 @@ function processTextureFragmentRemoved(
   req: EntityEvent,
   loadedTexes: Map<string, Texture>,
 ) {
-  const id = makeTextureFragmentId(req.ind, req.gen);
+  const id = generate_id_from_entity(req);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
 }
@@ -563,78 +588,9 @@ function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
   }
 }
 
-function createMesh(
-  parent: Object3D,
-  globeDepthScene: Object3D,
-  meshes: MeshCache,
-  buf: BufferLoader,
-  loadedTexes: Map<string, Texture>,
-  id: string,
-  mesh: EventMesh,
-  mat: EventMaterial,
-  tranform?: Transform,
-) {
-  const position = buf.f32(mesh.vertices);
-  const indices = buf.u32(mesh.indices);
-  if (!position || !indices) return;
-
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(position, 3));
-  const uv = buf.f32(mesh.uvs);
-  if (uv) {
-    geometry.setAttribute("uv", new BufferAttribute(uv, 2));
-  }
-  geometry.setIndex(new BufferAttribute(indices, 1));
-  if (mat.should_compute_normal_from_vertex) {
-    geometry.computeVertexNormals();
-  }
-
-  // const material = new MeshStandardMaterial({ color: 0x00ff00 });
-  const material = toMaterial(mat, loadedTexes);
-  const m = new Mesh(geometry, material);
-  m.name = id;
-  if (tranform) setTransform(m, tranform);
-
-  parent.add(m);
-
-  const clonedMesh = new Mesh(geometry, material);
-  globeDepthScene.add(clonedMesh);
-
-  meshes.set(id, m);
-  meshes.set(to_globe_depth_id(id), clonedMesh);
-  return m;
-}
-
 function setTransform(obj: Object3D, transform: Transform) {
   const { tx, ty, tz, qx, qy, qz, qw, sx, sy, sz } = transform;
   obj.position.set(tx, ty, tz);
   obj.quaternion.set(qx, qy, qz, qw);
   obj.scale.set(sx, sy, sz);
-}
-
-function toMaterial(
-  mat: EventMaterial,
-  loadedTexes: Map<string, Texture>,
-): Material {
-  if (mat.wireframe) {
-    return new MeshBasicMaterial({
-      color: mat.color,
-      wireframe: true,
-      stencilWrite: false,
-    });
-  }
-
-  const m = new MeshLambertMaterial({ color: mat.color, stencilWrite: false });
-  if (mat.texture_fragment) {
-    const textureFragmentId = makeTextureFragmentId(
-      mat.texture_fragment.ind,
-      mat.texture_fragment.gen,
-    );
-    const t = loadedTexes.get(textureFragmentId);
-    if (t) {
-      m.map = t;
-    }
-  }
-
-  return m;
 }
