@@ -13,7 +13,7 @@ use navara_feature::{
 
 use navara_buffer_store::BufferStore;
 
-use navara_geometry::Hierarchy;
+use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::{
     DeleteGeoJsonLayerMarker, GeoJsonLayer, LayerId, LayerStore, UpdateGeoJsonLayerMarker,
 };
@@ -40,6 +40,7 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
         .map(|hole| Hierarchy {
             outer_ring: multi_coords(hole),
             holes: None,
+            expected_winding_order: WindingOrder::Unknown,
         })
         .collect();
 
@@ -139,6 +140,7 @@ fn spawn_feature(
                                     .first()
                                     .map_or_else(std::vec::Vec::new, |v| multi_coords(v)),
                                 holes: get_polygon_holes(f),
+                                expected_winding_order: WindingOrder::Unknown,
                             },
                             crs: CRS::Geographic,
                         },
@@ -153,6 +155,7 @@ fn spawn_feature(
                                 hierarchy: Hierarchy {
                                     outer_ring: multi_coords(&f[0]),
                                     holes: get_polygon_holes(f),
+                                    expected_winding_order: WindingOrder::Unknown,
                                 },
                                 crs: CRS::Geographic,
                             },
