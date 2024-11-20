@@ -77,12 +77,14 @@ fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
         let p0 = positions[i0];
         let p1 = positions[i];
 
-        area += p0.x * p1.y - p1.x * p0.y;
+        area += p0.x as f64 * p1.y as f64 - p1.x as f64 * p0.y as f64;
     }
 
     if area > 0.0 {
         WindingOrder::CounterClockwise
-    } else {
+    } else if area < 0.0 {
         WindingOrder::Clockwise
+    } else {
+        WindingOrder::Unknown
     }
 }
