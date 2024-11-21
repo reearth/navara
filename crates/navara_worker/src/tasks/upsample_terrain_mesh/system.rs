@@ -47,10 +47,7 @@ pub(crate) fn upsample_terrain_mesh(
     mut buf: ResMut<BufferStore>,
     constructors: Query<
         (Entity, &UpsampleTerrainMeshParameters),
-        (
-            Added<UpsampleTerrainMeshMarker>,
-            With<UpsampleTerrainMeshMarker>,
-        ),
+        (Added<WorkerTaskMarker>, With<WorkerTaskMarker>),
     >,
 ) {
     // TODO: Fill it later

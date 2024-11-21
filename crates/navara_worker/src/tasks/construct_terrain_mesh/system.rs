@@ -63,10 +63,7 @@ pub(crate) fn construct_terrain_mesh(
     mut buf: ResMut<BufferStore>,
     constructors: Query<
         (Entity, &ConstructTerrainMeshParameters),
-        (
-            Added<ConstructTerrainMeshMarker>,
-            With<ConstructTerrainMeshMarker>,
-        ),
+        (Added<WorkerTaskMarker>, With<WorkerTaskMarker>),
     >,
     mut martini_components: Query<&mut MartiniComponent>,
 ) {
