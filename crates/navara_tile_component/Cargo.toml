@@ -1,5 +1,5 @@
 [package]
-name = "navara_tile"
+name = "navara_tile_component"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-bevy_time.workspace = true
+navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }
 navara_core = { path = "../navara_core" }
 navara_geometry = { path = "../navara_geometry" }
 navara_layer = { path = "../navara_layer" }
@@ -20,7 +20,5 @@ navara_buffer_store = { path = "../navara_buffer_store" }
 navara_occluder = { path = "../navara_occluder" }
 navara_mesh = { path = "../navara_mesh" }
 navara_component = { path = "../navara_component" }
-navara_tile_component = { path = "../navara_tile_component" }
 navara_mock = { path = "../navara_mock" }
-navara_worker = { path = "../navara_worker" }
-instant.workspace = true
+martini = { path = "../martini" }

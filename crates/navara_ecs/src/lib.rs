@@ -6,7 +6,7 @@ use navara_event::Events;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
-use navara_tile::tile::TileHandle;
+use navara_tile_component::TileHandle;
 use navara_window::{Window, WindowResizeEvent};
 
 mod app;

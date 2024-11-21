@@ -5,7 +5,7 @@ use navara_feature::render::RenderableFeature;
 use navara_math::Transform;
 use navara_mesh::{Material, Mesh};
 use navara_texture_fragment::TextureFragment;
-use navara_tile::tile::TileMeshMarker;
+use navara_tile_component::TileMeshMarker;
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {

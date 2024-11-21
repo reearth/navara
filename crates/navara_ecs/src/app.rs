@@ -16,6 +16,7 @@ use navara_occluder::OccluderPlugin;
 use navara_texture_fragment::TextureFragmentPlugin;
 use navara_tile::TilePlugin;
 use navara_window::WindowPlugin;
+use navara_worker::WorkerPlugin;
 
 pub struct Plugin;
 
@@ -41,6 +42,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(TilePlugin);
         app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(MvtPlugin);
+        app.add_plugins(WorkerPlugin);
 
         // custom systems
         app.add_systems(Startup, startup);

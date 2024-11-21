@@ -16,11 +16,11 @@ use super::TerrainData;
 #[derive(Debug, Default)]
 pub struct RasterDEMData {
     pub decoder: ElevationDecoder,
-    pub(crate) data_requester_entity_id: Option<Entity>,
+    pub data_requester_entity_id: Option<Entity>,
     // Indicates the max height of the terrain from the globe surface.
-    pub(crate) current_max_height: Option<FloatType>,
-    pub(crate) current_min_height: Option<FloatType>,
-    pub(crate) heights_handle: Option<Handle>,
+    pub current_max_height: Option<FloatType>,
+    pub current_min_height: Option<FloatType>,
+    pub heights_handle: Option<Handle>,
 }
 
 impl TerrainData for RasterDEMData {

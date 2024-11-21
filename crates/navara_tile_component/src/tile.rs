@@ -10,46 +10,43 @@ use navara_geometry::Geometry;
 use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
-use navara_quadtree::Quadtree;
 use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
     data_requester::TileTerrainDataRequesterQuery, terrain::TerrainData,
-    texture_fragment::TileTextureFragmentQuery,
+    texture_fragment::TileTextureFragmentQuery, TileHandle, TileQuadtree,
 };
 
 use navara_layer::TerrainLayer;
 use navara_math::FloatType;
 
-use super::tile_bounding_region::TileBoundingReagion;
-
-pub type TileHandle = u64;
+use super::tile_bounding_region::TileBoundingRegion;
 
 #[derive(Debug, Clone)]
-pub(crate) enum RenderedState {
+pub enum RenderedState {
     RenderedChildren,
     Culled,
 }
 
 // Note Tile have to keep light size for caching efficiently.
-// So if you want to store large data in this struct, use `BufferStore`.
-// And don't forget to destroy the stored data in [`Tile::detroy method`].
+// So if you want to store large data in this struct, use [`BufferStore`].
+// And don't forget to destroy the stored data in [`Tile::destroy method`].
 #[derive(Debug)]
 pub struct Tile {
     pub coords: TileXYZ,
     pub extent: Extent<FloatType, Radians>,
     pub aabb: Aabb,
-    pub bounding_reagion: Option<TileBoundingReagion<FloatType>>,
-    pub(crate) children: Vec<TileHandle>,
-    pub(crate) rendered_at: usize,
-    pub(crate) visited_at: usize,
-    pub(crate) terrain_data: Option<Box<dyn TerrainData>>,
-    pub(crate) texture_fragment_entity_id: Option<Entity>,
-    pub(crate) occludee_point_in_scaled_space: Option<Vec3>,
-    pub(crate) previous_rendered_state: Option<RenderedState>,
-    pub(crate) cached_mesh_handle: Option<CachedMeshHandle>,
+    pub bounding_region: Option<TileBoundingRegion<FloatType>>,
+    pub children: Vec<TileHandle>,
+    pub rendered_at: usize,
+    pub visited_at: usize,
+    pub terrain_data: Option<Box<dyn TerrainData>>,
+    pub texture_fragment_entity_id: Option<Entity>,
+    pub occludee_point_in_scaled_space: Option<Vec3>,
+    pub previous_rendered_state: Option<RenderedState>,
+    pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
-    pub(crate) upsampled: bool,
+    pub upsampled: bool,
 }
 
 #[derive(Default)]
@@ -61,14 +58,14 @@ pub struct ReadyState {
 }
 
 impl Tile {
-    pub(crate) fn new(coords: TileXYZ, max_height: FloatType) -> Self {
+    pub fn new(coords: TileXYZ, max_height: FloatType) -> Self {
         let extent = coords.extent();
 
         Self {
             coords,
             extent: coords.extent(),
             aabb: Aabb::from_extent_f32(extent, 0., max_height),
-            bounding_reagion: Some(TileBoundingReagion::from_extent_f32(extent, WGS84_32)),
+            bounding_region: Some(TileBoundingRegion::from_extent_f32(extent, WGS84_32)),
             rendered_at: 0,
             visited_at: 0,
             terrain_data: None,
@@ -81,7 +78,7 @@ impl Tile {
         }
     }
 
-    pub(super) fn is_ready(
+    pub fn is_ready(
         &self,
         qt: &TileQuadtree,
         texture_fragment: &TileTextureFragmentQuery,
@@ -134,7 +131,7 @@ impl Tile {
         }
     }
 
-    pub(crate) fn get_terrain_data_requester(
+    pub fn get_terrain_data_requester(
         &self,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
     ) -> Option<DataRequester> {
@@ -149,7 +146,7 @@ impl Tile {
         })
     }
 
-    pub(super) fn is_terrain_ready(
+    pub fn is_terrain_ready(
         &self,
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
@@ -171,7 +168,7 @@ impl Tile {
         })
     }
 
-    pub(crate) fn is_upsamplable(
+    pub fn is_upsamplable(
         &self,
         qt: &TileQuadtree,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
@@ -185,12 +182,12 @@ impl Tile {
             && self.is_parent_terrain_ready(qt, terrain_data_requester)
     }
 
-    pub(crate) fn should_upsampling(&self, max_zoom: usize) -> bool {
+    pub fn should_upsampling(&self, max_zoom: usize) -> bool {
         // In low zoom level, we don't need to upsample it.
         self.coords.z >= max_zoom
     }
 
-    pub(super) fn get_parent_tile<'a>(&self, qt: &'a TileQuadtree) -> Option<&'a Self> {
+    pub fn get_parent_tile<'a>(&self, qt: &'a TileQuadtree) -> Option<&'a Self> {
         qt.qt
             .parent((self.coords.x, self.coords.y, self.coords.z))
             .and_then(|p| qt.qt.get(p.handle()))
@@ -330,10 +327,6 @@ impl Tile {
         self.coords.x == 0 && self.coords.y == 0 && self.coords.z == 0
     }
 }
-
-pub type TileQuadtree = Quadtree<usize, Tile>;
-#[derive(Debug, Default, Component)]
-pub struct TileMeshMarker(pub TileHandle);
 
 /// Compute a terrain height at specified point.
 pub fn compute_terrain_height_at_point(

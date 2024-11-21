@@ -3,7 +3,7 @@ mod feature_event;
 
 use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
 use navara_math::FloatType;
-use navara_tile::tile::TileHandle;
+use navara_tile_component::TileHandle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -238,7 +238,7 @@ impl<'a> From<&'a navara_math::Transform> for Transform {
 impl
     From<
         navara_event_store::ComponentEvent<(
-            &navara_tile::tile::TileMeshMarker,
+            &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
             &navara_mesh::Material,
             &navara_math::Transform,
@@ -247,7 +247,7 @@ impl
 {
     fn from(
         ev: navara_event_store::ComponentEvent<(
-            &navara_tile::tile::TileMeshMarker,
+            &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
             &navara_mesh::Material,
             &navara_math::Transform,

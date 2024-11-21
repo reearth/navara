@@ -1,7 +1,6 @@
 use bevy_ecs::prelude::*;
-use bevy_log::error;
 use navara_buffer_store::BufferStore;
-use navara_component::Deleted;
+use navara_component::{Deleted, Rendered};
 use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Meters, TileXYZ, LLE, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
 use navara_geometry::tile_triangles_flat;
@@ -12,13 +11,21 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_texture_fragment::TextureFragmentStatus;
 
 use navara_camera::{CameraFrustum, CameraMarker};
+use navara_tile_component::{
+    CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
+    RenderedState, Tile, TileHandle, TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery,
+    TileTextureFragmentQuery,
+};
 use navara_window::Window;
-
-use crate::{
-    data_requester::{ChangedTileTerrainDataRequesterQuery, TileTerrainDataRequesterQuery},
-    terrain::{CachedMartini, MartiniComponent},
-    texture_fragment::{ChangedTileTextureFragmentQuery, TileTextureFragmentQuery},
-    tile::TileMeshMarker,
+use navara_worker::{
+    construct_terrain_mesh::{
+        ConstructTerrainMeshParameters, ConstructTerrainMeshResult,
+        ConstructTerrainMeshWorkerTaskBundle,
+    },
+    upsample_terrain_mesh::{
+        UpsampleTerrainMeshParameters, UpsampleTerrainMeshResult,
+        UpsampleTerrainMeshWorkerTaskBundle,
+    },
 };
 
 use crate::data_requester::request_terrain_data;
@@ -28,7 +35,6 @@ use super::{
     event::MeshPreparedEvent,
     render::{RenderedTile, TileOrderByDistance},
     tile_cache_manager::{RenderedTileCache, RequestedTileCache, TileCacheManager},
-    RenderedState, Tile, TileHandle, TileQuadtree,
 };
 
 use navara_layer::{TerrainLayer, TilesLayer};
@@ -53,7 +59,10 @@ fn spawn_tile_entity(
     }
 
     let e = commands.spawn((
-        RenderedTile { tile_handle },
+        RenderedTile {
+            tile_handle,
+            ..Default::default()
+        },
         TileOrderByDistance(distance_from_camera),
     ));
     tc.rendered_tile_caches.insert(
@@ -128,7 +137,7 @@ fn calc_distance_from_camera(
     ellipsoid: &Ellipsoid<FloatType>,
 ) -> FloatType {
     let camera_pos = camera.transform_point(Vec3::ZERO);
-    t.bounding_reagion
+    t.bounding_region
         .as_ref()
         .unwrap()
         .distance_to_camera(camera_pos, ellipsoid.xyz_to_lle(vec3_to_xyz(camera_pos)))
@@ -582,6 +591,7 @@ pub fn update_tiles(
             }
 
             tc.is_updated_in_this_frame = true;
+            tc.last_rendered_frame = tc.rendered_frame;
 
             let zero_tile = match qt.qt.zero() {
                 Some(z) => z,
@@ -642,18 +652,26 @@ pub fn update_tiles(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+fn attach_rendered(commands: &mut Commands, e: Entity) {
+    commands.entity(e).insert(Rendered);
+}
+
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<TileQuadtree>,
     cached_martini: Res<CachedMartini>,
-    rendered_tiles: Query<(&RenderedTile, &TileOrderByDistance), Added<RenderedTile>>,
+    mut rendered_tiles: Query<
+        (Entity, &mut RenderedTile, &TileOrderByDistance),
+        Or<(Added<RenderedTile>, Without<Rendered>)>,
+    >,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     tile_layers: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
-    mut martini_components: Query<&mut MartiniComponent>,
+    terrain_mesh_constructors: Query<&ConstructTerrainMeshResult, Without<Deleted>>,
+    terrain_mesh_upsamplers: Query<&UpsampleTerrainMeshResult, Without<Deleted>>,
 ) {
     if !tc.is_updated_in_this_frame {
         return;
@@ -668,7 +686,20 @@ pub fn transfer_mesh(
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
 
-    for (rendered_tile, _) in rendered_tiles.iter().sort::<&TileOrderByDistance>() {
+    for (rendered_tile_id, mut rendered_tile, _) in
+        rendered_tiles.iter_mut().sort::<&TileOrderByDistance>()
+    {
+        let needs_update = rendered_tile.is_added()
+            || rendered_tile
+                .terrain_mesh_constructor
+                .map_or(false, |c| terrain_mesh_constructors.contains(c))
+            || rendered_tile
+                .terrain_mesh_upsampler
+                .map_or(false, |c| terrain_mesh_upsamplers.contains(c));
+        if !needs_update {
+            continue;
+        }
+
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
         let is_root = tile.is_root();
         let scale = if is_root { 0.98 } else { 1. };
@@ -721,6 +752,8 @@ pub fn transfer_mesh(
                 };
             }
 
+            attach_rendered(&mut commands, rendered_tile_id);
+
             let e = commands.spawn((
                 TileMeshMarker(rendered_tile.tile_handle),
                 MeshBundle {
@@ -764,12 +797,36 @@ pub fn transfer_mesh(
         }
 
         if should_upsample_terrain {
-            let (geometry, heights, max_height, min_height) =
-                tile.upsample(WGS84_32, &qt, &buf).unwrap();
-            let vhandle = buf.new_f32(geometry.vertices);
-            let ihandle = buf.new_u32(geometry.indices);
-            let uvshandle = buf.new_f32(geometry.uvs);
-            let heights_handle = buf.new_f32(heights);
+            let terrain_mesh_upsampler_id = match rendered_tile.terrain_mesh_upsampler {
+                Some(e) => e,
+                None => {
+                    let terrain_mesh_upsampler = commands
+                        .spawn(UpsampleTerrainMeshWorkerTaskBundle::new(
+                            UpsampleTerrainMeshParameters {
+                                tile_handle: rendered_tile.tile_handle,
+                            },
+                        ))
+                        .id();
+                    rendered_tile.terrain_mesh_upsampler = Some(terrain_mesh_upsampler);
+                    continue;
+                }
+            };
+            let terrain_mesh_upsampler =
+                match terrain_mesh_upsamplers.get(terrain_mesh_upsampler_id) {
+                    Ok(t) => t,
+                    Err(_) => unreachable!(),
+                };
+
+            rendered_tile.terrain_mesh_upsampler = None;
+            commands.entity(terrain_mesh_upsampler_id).insert(Deleted);
+
+            let min_height = terrain_mesh_upsampler.min_height;
+            let max_height = terrain_mesh_upsampler.max_height;
+
+            let vhandle = terrain_mesh_upsampler.geometry.vertices;
+            let ihandle = terrain_mesh_upsampler.geometry.indices;
+            let uvshandle = terrain_mesh_upsampler.geometry.uvs;
+            let heights_handle = terrain_mesh_upsampler.heights;
             {
                 if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
                     t.cached_mesh_handle = Some(CachedMeshHandle {
@@ -781,6 +838,8 @@ pub fn transfer_mesh(
                     t.upsampled = true;
                 };
             }
+
+            attach_rendered(&mut commands, rendered_tile_id);
 
             let e = commands.spawn((
                 TileMeshMarker(rendered_tile.tile_handle),
@@ -818,30 +877,42 @@ pub fn transfer_mesh(
 
         let terrain_req = terrain_req.unwrap();
 
-        // FIXME: This data will be removable after terrain mesh is constructed.
-        let bytes = match buf.get_u8(&terrain_req.handle) {
-            Some(data) => data,
-            None => {
-                error!("This line should be invoked only when the terrain data is ready");
-                continue;
-            }
-        };
-
         let martini_id = cached_martini
             .get(&terrain_layer.tile_size)
             .expect("It must be initialized when terrain layer is added");
-        let mut martini = martini_components.get_mut(*martini_id).unwrap();
 
-        let (triangles, max_height, min_height, heights) = tile
-            .terrain_data
-            .as_ref()
-            .unwrap()
-            .construct_terrain_mesh(WGS84_32, tile, bytes, 0., martini.get_mut());
+        let terrain_mesh_constructor_id = match rendered_tile.terrain_mesh_constructor {
+            Some(e) => e,
+            None => {
+                let terrain_mesh_constructor = commands
+                    .spawn(ConstructTerrainMeshWorkerTaskBundle::new(
+                        ConstructTerrainMeshParameters {
+                            martini_id: *martini_id,
+                            bytes_handle: terrain_req.handle,
+                            tile_handle: rendered_tile.tile_handle,
+                        },
+                    ))
+                    .id();
+                rendered_tile.terrain_mesh_constructor = Some(terrain_mesh_constructor);
+                continue;
+            }
+        };
+        let terrain_mesh_constructor =
+            match terrain_mesh_constructors.get(terrain_mesh_constructor_id) {
+                Ok(t) => t,
+                Err(_) => unreachable!(),
+            };
 
-        let vhandle = buf.new_f32(triangles.vertices);
-        let ihandle = buf.new_u32(triangles.indices);
-        let uvshandle = buf.new_f32(triangles.uvs);
-        let heights_handle = buf.new_f32(heights);
+        rendered_tile.terrain_mesh_constructor = None;
+        commands.entity(terrain_mesh_constructor_id).insert(Deleted);
+
+        let min_height = terrain_mesh_constructor.min_height;
+        let max_height = terrain_mesh_constructor.max_height;
+
+        let vhandle = terrain_mesh_constructor.geometry.vertices;
+        let ihandle = terrain_mesh_constructor.geometry.indices;
+        let uvshandle = terrain_mesh_constructor.geometry.uvs;
+        let heights_handle = terrain_mesh_constructor.heights;
         {
             if let Some(t) = qt.qt.get_mut(rendered_tile.tile_handle) {
                 t.cached_mesh_handle = Some(CachedMeshHandle {
@@ -852,6 +923,8 @@ pub fn transfer_mesh(
                 })
             };
         }
+
+        attach_rendered(&mut commands, rendered_tile_id);
 
         let e = commands.spawn((
             TileMeshMarker(rendered_tile.tile_handle),
@@ -905,7 +978,7 @@ pub fn clear_caches(
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<TileQuadtree>,
     mut buf: ResMut<BufferStore>,
-    rendered_tiles: Query<(Entity, &RenderedTile, &TileOrderByDistance)>,
+    mut rendered_tiles: Query<(Entity, &mut RenderedTile, &TileOrderByDistance)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
     if !tc.is_updated_in_this_frame {
@@ -914,21 +987,17 @@ pub fn clear_caches(
     }
     tc.is_updated_in_this_frame = false;
 
-    let now = instant::Instant::now();
-    for (rendered_tile_entity_id, rendered_tile, _) in
-        rendered_tiles.iter().sort::<&TileOrderByDistance>().rev()
+    for (rendered_tile_entity_id, mut rendered_tile, _) in rendered_tiles
+        .iter_mut()
+        .sort::<&TileOrderByDistance>()
+        .rev()
     {
-        // Prevent blocking the frame by this deletion process
-        if now.elapsed() > instant::Duration::from_micros(1) {
-            break;
-        }
-
         let visited_at = {
             let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
             tile.visited_at
         };
 
-        if tc.rendered_frame <= visited_at + 1 {
+        if tc.last_rendered_frame <= visited_at + 1 {
             continue;
         }
 
@@ -944,6 +1013,7 @@ pub fn clear_caches(
         tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
         tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
+        rendered_tile.destroy(&mut commands);
         qt.qt.get_mut(rendered_tile.tile_handle).unwrap().destroy(
             &mut commands,
             &mut buf,
@@ -953,11 +1023,6 @@ pub fn clear_caches(
 
     let mut removed_handles = vec![];
     for (handle, _requested) in tc.requested_tile_caches.iter() {
-        // Prevent blocking the frame by this deletion process
-        if now.elapsed() > instant::Duration::from_micros(1) {
-            break;
-        }
-
         let tile_handle = *handle;
 
         let visited_at = {
@@ -965,7 +1030,7 @@ pub fn clear_caches(
             tile.visited_at
         };
 
-        if tc.rendered_frame <= visited_at + 1 {
+        if tc.last_rendered_frame <= visited_at + 1 {
             continue;
         }
 

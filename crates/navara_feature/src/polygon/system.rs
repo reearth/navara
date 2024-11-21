@@ -12,7 +12,7 @@ use navara_geometry::{
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
-use navara_tile::tile::{sample_terrain_height_within_extent, TileMeshMarker, TileQuadtree};
+use navara_tile_component::{sample_terrain_height_within_extent, TileMeshMarker, TileQuadtree};
 
 use crate::render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry};
 
