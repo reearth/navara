@@ -54,18 +54,3 @@ pub(crate) fn construct_terrain_mesh(
         });
     }
 }
-
-#[warn(clippy::type_complexity)]
-#[cfg(feature = "delegated_worker")]
-pub(crate) fn construct_terrain_mesh(
-    mut commands: Commands,
-    qt: Res<TileQuadtree>,
-    mut buf: ResMut<BufferStore>,
-    constructors: Query<
-        (Entity, &ConstructTerrainMeshParameters),
-        (Added<WorkerTaskMarker>, With<WorkerTaskMarker>),
-    >,
-    mut martini_components: Query<&mut MartiniComponent>,
-) {
-    // TODO: Fill it later
-}

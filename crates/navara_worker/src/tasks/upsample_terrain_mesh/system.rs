@@ -38,17 +38,3 @@ pub(crate) fn upsample_terrain_mesh(
         });
     }
 }
-
-#[allow(clippy::type_complexity)]
-#[cfg(feature = "delegated_worker")]
-pub(crate) fn upsample_terrain_mesh(
-    mut commands: Commands,
-    qt: Res<TileQuadtree>,
-    mut buf: ResMut<BufferStore>,
-    constructors: Query<
-        (Entity, &UpsampleTerrainMeshParameters),
-        (Added<WorkerTaskMarker>, With<WorkerTaskMarker>),
-    >,
-) {
-    // TODO: Fill it later
-}

@@ -11,6 +11,7 @@ delegated_worker = []
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
+cfg-if.workspace = true
 navara_math = { path = "../navara_math" }
 navara_tile_component = { path = "../navara_tile_component" }
 navara_core = { path = "../navara_core" }
