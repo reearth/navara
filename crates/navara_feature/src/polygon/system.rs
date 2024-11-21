@@ -7,7 +7,7 @@ use navara_buffer_store::BufferStore;
 use navara_core::{Aabb, Extent, CRS, WGS84_32};
 use navara_geometry::{
     create_polygon_geometry, Hierarchy, PolygonGeometryOptions, PolygonResource,
-    TransferableFloatAttribute,
+    TransferableFloatAttribute, WindingOrder,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
@@ -58,6 +58,12 @@ pub fn transfer_mesh(
 ) {
     for (entity, layer_id, mut geometry, material) in &mut polygon {
         geometry.hierarchy.align_winding_order();
+
+        if geometry.hierarchy.expected_winding_order == WindingOrder::Unknown {
+            // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
+            // Such a polygon should be discarded.
+            continue;
+        }
 
         let mut hierarchy = Hierarchy::default();
         for c in &geometry.hierarchy.outer_ring {

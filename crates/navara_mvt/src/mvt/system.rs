@@ -16,7 +16,7 @@ use navara_feature::{
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMvtLayerMarker};
 use navara_material::Appearance;
-use navara_math::Vec3;
+use navara_math::{FloatType, Vec3};
 use navara_parser::mvt;
 
 use super::pos_converter::PosConverter;
@@ -69,9 +69,7 @@ pub fn construct_mvt(
                         let extent = reader.get_extent(index);
                         let mut converter =
                             PosConverter::new(layer.data.as_ref().unwrap().url.as_str(), extent);
-                        if converter.get_size() == 0.0 {
-                            continue;
-                        }
+
                         if let Ok(features) = reader.get_features(index) {
                             for feature in features {
                                 let geom = feature.get_geometry();
@@ -95,6 +93,9 @@ pub fn construct_mvt(
                                                     let interiors = polygon.interiors();
                                                     let mut holes: Vec<Hierarchy> = Vec::new();
 
+                                                    // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
+                                                    // which is based on the origin being at the top-left.
+                                                    // However, after converting to geographic coordinates, it is actually counterclockwise.
                                                     for LineString(hole) in interiors {
                                                         holes.push(Hierarchy {
                                                             outer_ring: converter
@@ -135,7 +136,11 @@ pub fn construct_mvt(
                                                     commands.spawn((
                                                         LayerId(layer.layer_id.to_owned()),
                                                         PointGeometry {
-                                                            coords: Vec3::new(x, y, 0.0),
+                                                            coords: Vec3::new(
+                                                                x,
+                                                                y,
+                                                                0.0 as FloatType,
+                                                            ),
                                                             crs: CRS::Geographic,
                                                         },
                                                         appearance.clone(),
