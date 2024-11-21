@@ -60,7 +60,7 @@ pub fn transfer_mesh(
         geometry.hierarchy.align_winding_order();
 
         if geometry.hierarchy.expected_winding_order == WindingOrder::Unknown {
-            // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown. 
+            // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
             // Such a polygon should be discarded.
             continue;
         }
