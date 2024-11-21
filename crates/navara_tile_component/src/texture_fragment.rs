@@ -6,7 +6,7 @@ use bevy_ecs::{
 use navara_component::Deleted;
 use navara_texture_fragment::TextureFragment;
 
-use crate::tile::TileHandle;
+use crate::TileHandle;
 
 #[derive(Component)]
 pub struct TileTextureFragmentMarker(pub TileHandle);

@@ -1,14 +1,10 @@
-use crate::{
-    tile::{render::TileOrderByDistance, TileHandle},
-    TileQuadtree,
-};
+use crate::{tile::render::TileOrderByDistance, TileQuadtree};
 use bevy_ecs::{entity::Entity, system::Commands};
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
 use navara_math::FloatType;
 use navara_texture_fragment::TextureFragment;
-
-use super::{TileTextureFragmentMarker, TileTextureFragmentQuery};
+use navara_tile_component::{TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery};
 
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,

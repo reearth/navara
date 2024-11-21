@@ -395,7 +395,7 @@ mod test {
     use navara_material::{BillboardMaterial, PointMaterial};
     use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
-    use navara_tile::tile::TileQuadtree;
+    use navara_tile_component::TileQuadtree;
 
     use super::construct_feature;
 

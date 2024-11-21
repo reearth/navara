@@ -14,3 +14,6 @@ pub struct Requested;
 
 #[derive(Component)]
 pub struct Ignored;
+
+#[derive(Component)]
+pub struct Rendered;

@@ -7,8 +7,7 @@ use bevy_ecs::{
 };
 use navara_component::Deleted;
 use navara_mesh::Mesh;
-
-use super::{TileHandle, TileMeshMarker};
+use navara_tile_component::{TileHandle, TileMeshMarker};
 
 /// This struct caches an information that is necessary in rendering.
 /// Of course, we can store these value in the tile of TileQuadtree,
@@ -38,6 +37,7 @@ pub struct TileCacheManager {
     pub requested_tile_caches: HashMap<TileHandle, RequestedTileCache>,
     pub cached_textures_tile_handles: HashSet<TileHandle>,
     pub rendered_frame: usize,
+    pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
 }
 

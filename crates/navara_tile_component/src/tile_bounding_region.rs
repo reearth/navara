@@ -3,7 +3,7 @@ use navara_math::{FloatType, Vec3};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/290f01d9091c381a0d3f21e3131c0e9f488c6937/packages/engine/Source/Scene/TileBoundingRegion.js
 #[derive(Debug)]
-pub struct TileBoundingReagion<F: Float> {
+pub struct TileBoundingRegion<F: Float> {
     pub extent: Extent<F, Radians>,
     pub southwest_corner: XYZ<F>,
     pub northeast_corner: XYZ<F>,
@@ -15,7 +15,7 @@ pub struct TileBoundingReagion<F: Float> {
     pub minimum_height: F,
 }
 
-impl TileBoundingReagion<FloatType> {
+impl TileBoundingRegion<FloatType> {
     pub fn from_extent_f32(e: Extent<FloatType, Radians>, ellipsoid: Ellipsoid<FloatType>) -> Self {
         let southwest_corner_lle = LLE {
             lng: e.west,
@@ -142,12 +142,12 @@ mod test {
     use navara_core::{Meters, TileXYZ, EARTH_RADIUS_F32, WGS84_32, XYZ};
     use navara_mock::camera::update_camera_transform;
 
-    use super::TileBoundingReagion;
+    use super::TileBoundingRegion;
 
     #[test]
     fn get_correct_bounding_region_from_tile() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
-        let tbr = TileBoundingReagion::from_extent_f32(tile_coords.extent(), WGS84_32);
+        let tbr = TileBoundingRegion::from_extent_f32(tile_coords.extent(), WGS84_32);
         debug_assert_eq!(
             tbr.northeast_corner,
             XYZ {
@@ -201,7 +201,7 @@ mod test {
     #[test]
     fn get_correct_distance_to_camera() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
-        let tbr = TileBoundingReagion::from_extent_f32(tile_coords.extent(), WGS84_32);
+        let tbr = TileBoundingRegion::from_extent_f32(tile_coords.extent(), WGS84_32);
 
         let (camera_pos, camera_lle) = update_camera_transform(EARTH_RADIUS_F32 * 3.);
         debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 29879596.0);

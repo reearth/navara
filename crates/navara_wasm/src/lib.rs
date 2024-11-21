@@ -12,7 +12,7 @@ use nanoid::nanoid;
 use navara_ecs::App;
 use navara_input::Key;
 use navara_math::FloatType;
-use navara_tile::tile::TileHandle;
+use navara_tile_component::TileHandle;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;

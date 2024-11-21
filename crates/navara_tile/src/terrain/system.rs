@@ -3,8 +3,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_layer::TerrainLayer;
-
-use super::{CachedMartini, MartiniComponent};
+use navara_tile_component::{CachedMartini, MartiniComponent};
 
 pub fn begine_terrain_layer(
     mut commands: Commands,

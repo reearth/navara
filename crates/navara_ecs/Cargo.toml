@@ -23,7 +23,9 @@ navara_mesh = { path = "../navara_mesh" }
 navara_occluder = { path = "../navara_occluder" }
 navara_texture_fragment = { path = "../navara_texture_fragment" }
 navara_tile = { path = "../navara_tile" }
+navara_tile_component = { path = "../navara_tile_component" }
 navara_window = { path = "../navara_window" }
 navara_math = { path = "../navara_math" }
 navara_cesium3dtiles = { path = "../navara_cesium3dtiles" }
 navara_mvt = { path = "../navara_mvt" }
+navara_worker = { path = "../navara_worker" }

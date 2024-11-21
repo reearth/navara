@@ -9,9 +9,8 @@ use navara_core::WGS84_32;
 use navara_layer::{LayerId, LayerStore};
 use navara_material::BillboardMaterial;
 use navara_math::{Transform, Vec3};
-use navara_tile::{
-    data_requester::TileTerrainDataRequesterQuery,
-    tile::{compute_terrain_height_at_point, TileMeshMarker, TileQuadtree},
+use navara_tile_component::{
+    compute_terrain_height_at_point, TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery,
 };
 
 use super::{BillboardGeometry, BillboardMarker};

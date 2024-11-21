@@ -5,8 +5,8 @@ pub mod texture_fragment;
 
 use bevy_app::{App, Plugin, PreUpdate, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
-use terrain::CachedMartini;
-use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager, TileQuadtree};
+use navara_tile_component::{CachedMartini, TileQuadtree};
+use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 
 pub mod terrain;
 pub mod tile;

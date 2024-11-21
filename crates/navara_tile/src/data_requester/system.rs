@@ -6,10 +6,9 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, Requested};
 use navara_data_requester::DataRequester;
+use navara_tile_component::{TerrainDataRequesterMarker, TileQuadtree};
 
-use crate::tile::{render::TileOrderByDistance, TileQuadtree};
-
-use super::TerrainDataRequesterMarker;
+use crate::tile::render::TileOrderByDistance;
 
 const MAX_PENDINGS: u32 = 50;
 

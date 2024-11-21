@@ -5,10 +5,9 @@ use bevy_ecs::{
 };
 use navara_component::Deleted;
 use navara_texture_fragment::TextureFragment;
+use navara_tile_component::{TileQuadtree, TileTextureFragmentMarker};
 
-use crate::tile::{render::TileOrderByDistance, TileQuadtree};
-
-use super::TileTextureFragmentMarker;
+use crate::tile::render::TileOrderByDistance;
 
 pub(crate) fn filter_requestable_texture_fragment(
     mut commands: Commands,

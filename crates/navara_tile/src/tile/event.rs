@@ -1,6 +1,5 @@
 use bevy_ecs::event::Event;
-
-use super::TileHandle;
+use navara_tile_component::TileHandle;
 
 #[derive(Debug, Event)]
 pub struct MeshPreparedEvent {

@@ -6,7 +6,7 @@ use bevy_ecs::{
 use navara_component::Deleted;
 use navara_data_requester::DataRequester;
 
-use crate::tile::TileHandle;
+use crate::TileHandle;
 
 #[derive(Component)]
 pub struct TerrainDataRequesterMarker(pub TileHandle);
