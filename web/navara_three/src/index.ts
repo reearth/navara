@@ -123,8 +123,22 @@ export default class ThreeView {
   private _eventManager = new EventManager();
 
   constructor(options: Options) {
-    if (!options.container && !options.canvas && !options.renderer) {
-      throw new Error("Must provide either target, canvas, or renderer");
+    if (!options.canvas) {
+      if (!options.canvas) {
+        const div = document.createElement("div");
+        div.id = "root";
+        div.style.width = "100vw";
+        div.style.height = "100vh";
+
+        options.canvas = document.createElement("canvas");
+        options.canvas.id = "canvas";
+        options.canvas.style.width = "100%";
+        options.canvas.style.height = "100%";
+
+        div.appendChild(options.canvas);
+
+        document.body.appendChild(div);
+      }
     }
 
     this._options = options;
