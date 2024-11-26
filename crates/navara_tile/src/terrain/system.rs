@@ -11,7 +11,7 @@ pub fn begine_terrain_layer(
     layers: Query<&TerrainLayer, Added<TerrainLayer>>,
 ) {
     for layer in layers.iter() {
-        let size = layer.tile_size;
+        let size = layer.appearance.as_ref().unwrap().tile_size;
         if cached_martini.get(&size).is_some() {
             continue;
         }

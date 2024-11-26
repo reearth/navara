@@ -1,13 +1,10 @@
+use crate::LayerData;
 use bevy_ecs::component::Component;
+use navara_material::RasterTileMaterial;
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TilesLayer {
     pub layer_id: String,
-    pub url: String,
-    pub segments: usize,
-    pub color: u32,
-    pub show: bool,
-    pub max_sse: f32,
-    pub max_z: usize,
-    pub wireframe: bool,
+    pub data: Option<LayerData>,
+    pub appearance: Option<RasterTileMaterial>,
 }

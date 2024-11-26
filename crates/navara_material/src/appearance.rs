@@ -1,4 +1,5 @@
 use bevy_ecs::component::Component;
+use navara_core::ElevationDecoder;
 use navara_math::{FloatType, Vec2};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,4 +72,25 @@ pub struct ModelMaterial {
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Component, Default)]
+pub struct RasterTileMaterial {
+    pub show: bool,
+    pub segments: usize,
+    pub color: u32,
+    pub max_sse: f32,
+    pub max_z: usize,
+    pub wireframe: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Component, Default)]
+pub struct RasterTerrainMaterial {
+    pub show: bool,
+    pub segments: usize,
+    pub max_z: usize,
+    pub min_z: usize,
+    pub wireframe: bool,
+    pub elevation_decoder: ElevationDecoder,
+    pub tile_size: u32,
 }

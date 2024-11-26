@@ -29,16 +29,16 @@ impl Hierarchy {
             // all outer rings and inner rings need to be checked,
             // adjusting the outer rings to CounterClockwise and the inner rings to Clockwise.
             WindingOrder::Unknown => {
-                let input_order = check_winding_order(&self.outer_ring);
-                if input_order != WindingOrder::CounterClockwise {
+                self.expected_winding_order = check_winding_order(&self.outer_ring);
+                if self.expected_winding_order == WindingOrder::Clockwise {
                     self.outer_ring.reverse();
                     self.expected_winding_order = WindingOrder::CounterClockwise;
                 }
 
                 if let Some(holes) = self.holes.as_mut() {
                     for hole in holes.iter_mut() {
-                        let input_order = check_winding_order(&hole.outer_ring);
-                        if input_order != WindingOrder::Clockwise {
+                        hole.expected_winding_order = check_winding_order(&hole.outer_ring);
+                        if hole.expected_winding_order != WindingOrder::Clockwise {
                             hole.outer_ring.reverse();
                             hole.expected_winding_order = WindingOrder::Clockwise;
                         }
