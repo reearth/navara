@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use num::PrimInt;
 
-use crate::utils::to_int;
+use crate::{child_coords, utils::to_int};
 
 #[cfg(feature = "bevy")]
 pub trait Resource: bevy_ecs::system::Resource {}
@@ -58,17 +58,8 @@ where
         child_index: U,
         init: &dyn Fn(Coords<U>) -> T,
     ) -> u64 {
-        self.initialize_leaf(self.child_coords((x, y, z), child_index), init)
+        self.initialize_leaf(child_coords((x, y, z), child_index), init)
             .unwrap()
-    }
-
-    /// Calculate child coords
-    fn child_coords(&self, (x, y, z): Coords<U>, child_index: U) -> Coords<U> {
-        let i = child_index;
-        let x = (x << 1) + (i % (U::one() + U::one()));
-        let y = (y << 1) + (i >> 1);
-        let z = z + U::one();
-        (x, y, z)
     }
 
     /// Get a leaf by specified coordinates.
@@ -90,7 +81,7 @@ where
         let mut children: Vec<Box<dyn GeoSpacialQuadLeaf<U>>> = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
-            let (x, y, z) = self.child_coords((x, y, z), i);
+            let (x, y, z) = child_coords((x, y, z), i);
             match self.leaf((x, y, z)) {
                 Some(v) => children.push(v),
                 None => return None,

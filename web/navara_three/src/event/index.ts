@@ -21,7 +21,12 @@ import {
   PolylineMaterial,
   PolygonMaterial,
   DataRequesterRemovedEvent,
-} from "navara";
+  DelegatedWorkerTasksResult,
+  TransferableTile,
+  TransferableMartini,
+  ReconstructableEntity,
+  ElevationDecoder,
+} from "@navara/engine";
 import {
   type Camera,
   Mesh,
@@ -35,7 +40,11 @@ import {
   ShaderMaterial,
 } from "three";
 
-import { FEATURE_CONCURRENCY, MAP_CONCURRENCY } from "../concurrency";
+import {
+  FEATURE_CONCURRENCY,
+  MESH_CONCURRENCY,
+  WORKER_TASK_CONCURRENCY,
+} from "../concurrency";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache } from "../type";
@@ -44,12 +53,16 @@ import type { CommonUniforms } from "../uniforms";
 import { renderFeature } from "./feature";
 import { IMAGE_LOADER, TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
+import { processWorkerTaskDelegatedEvent } from "./worker";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
   setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
+  newU8: (bytes: Uint8Array) => number | undefined;
+  newU32: (bytes: Uint32Array) => number | undefined;
+  newF32: (bytes: Float32Array) => number | undefined;
   remove: (handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
@@ -59,6 +72,20 @@ export type TextureFragmentHandler = {
     bits: bigint,
     status: TextureFragmentStatus,
   ) => void;
+};
+
+export type WorkerTaskHandler = {
+  triggerWorkerTaskCompleted: (
+    bits: bigint,
+    result: DelegatedWorkerTasksResult,
+  ) => void;
+};
+
+export type TileHandler = {
+  getMartini: (bits: ReconstructableEntity) => TransferableMartini | undefined;
+  getTile: (handle: bigint) => TransferableTile | undefined;
+  getParentTile: (handle: bigint) => TransferableTile | undefined;
+  getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
 };
 
 export type MeshHandler = {
@@ -72,6 +99,8 @@ export function processEvent(
   meshes: MeshCache,
   buf: BufferLoader,
   texFragment: TextureFragmentHandler,
+  tileHandler: TileHandler,
+  workerTaskHandler: WorkerTaskHandler,
   meshHandler: MeshHandler,
   loadedTexs: Map<string, Texture>,
   event: Events | undefined,
@@ -93,7 +122,7 @@ export function processEvent(
     {
       add: {
         key: "mesh_added",
-        max: MAP_CONCURRENCY,
+        max: MESH_CONCURRENCY,
       },
       remove: {
         key: "mesh_removed",
@@ -127,6 +156,34 @@ export function processEvent(
           break;
         case "change":
           processMeshChanged(meshes, event);
+          break;
+      }
+    },
+  );
+
+  eventManager.processTransactionEvents(
+    "workerTaskEvent",
+    {
+      add: {
+        key: "worker_task_delegated",
+        max: WORKER_TASK_CONCURRENCY,
+      },
+      remove: {
+        key: "worker_task_removed",
+        max: Infinity,
+      },
+    },
+    async ({ type, event }) => {
+      switch (type) {
+        case "add":
+          await processWorkerTaskDelegatedEvent(
+            event,
+            buf,
+            tileHandler,
+            workerTaskHandler,
+          );
+          break;
+        case "remove":
           break;
       }
     },

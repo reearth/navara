@@ -3,11 +3,9 @@ use bevy_ecs::{
     query::Added,
     system::{Commands, Query, ResMut},
 };
-use navara_component::Deleted;
+use navara_component::{Deleted, Ignored, OrderByDistance};
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{TileQuadtree, TileTextureFragmentMarker};
-
-use crate::tile::render::TileOrderByDistance;
 
 pub(crate) fn filter_requestable_texture_fragment(
     mut commands: Commands,
@@ -17,17 +15,17 @@ pub(crate) fn filter_requestable_texture_fragment(
             Entity,
             &TileTextureFragmentMarker,
             &TextureFragment,
-            &TileOrderByDistance,
+            &OrderByDistance,
         ),
         Added<TileTextureFragmentMarker>,
     >,
 ) {
     // Limit the number of requests in this frame
-    for (e, marker, _, _) in fragments.iter().sort::<&TileOrderByDistance>().skip(5) {
+    for (e, marker, _, _) in fragments.iter().sort::<&OrderByDistance>().skip(10) {
         let handle = marker.0;
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
-            commands.entity(e).insert(Deleted);
+            commands.entity(e).insert((Deleted, Ignored));
             tile.texture_fragment_entity_id = None;
         }
     }

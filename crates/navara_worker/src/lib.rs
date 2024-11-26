@@ -15,13 +15,17 @@ pub struct WorkerPlugin;
 
 impl bevy_app::Plugin for WorkerPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.add_event::<WorkerCompletedEvent>().add_systems(
+        app.add_event::<WorkerTaskCompletedEvent>().add_systems(
             Update,
             (
+                system::remove,
                 tasks::construct_terrain_mesh::system::construct_terrain_mesh,
                 tasks::upsample_terrain_mesh::system::upsample_terrain_mesh,
+                system::handle_completed_event,
+                system::commit,
+                system::remove_relation,
             )
-                .before(system::remove),
+                .chain(),
         );
     }
 }

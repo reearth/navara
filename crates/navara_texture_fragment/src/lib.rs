@@ -10,7 +10,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 
-use navara_component::Deleted;
+use navara_component::{Deleted, Ignored};
 use navara_event_store::EventStore;
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -52,7 +52,7 @@ impl bevy_app::Plugin for TextureFragmentPlugin {
 fn commit(
     mut events: ResMut<EventStore>,
     added: Query<Entity, (Added<TextureFragment>, Without<Deleted>)>,
-    removed: Query<Entity, (With<TextureFragment>, With<Deleted>)>,
+    removed: Query<Entity, (With<TextureFragment>, With<Deleted>, Without<Ignored>)>,
 ) {
     for e in &added {
         events.texture_fragment_reqested.push(e);

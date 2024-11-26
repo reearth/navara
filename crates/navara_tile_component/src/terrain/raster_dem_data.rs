@@ -5,7 +5,8 @@ use navara_core::{
     ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
 };
 use navara_geometry::{
-    decode_height_from_dem, tile_triangles_with_terrain, Geometry, UpsampledTerrainGeometry,
+    decode_height_from_dem, tile_triangles_with_terrain, Geometry, ReturnedConstructedTerrainMesh,
+    UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
 };
 use navara_math::FloatType;
 
@@ -13,7 +14,7 @@ use crate::{data_requester::TileTerrainDataRequesterQuery, tile::Tile};
 
 use super::TerrainData;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RasterDEMData {
     pub decoder: ElevationDecoder,
     pub data_requester_entity_id: Option<Entity>,
@@ -21,6 +22,15 @@ pub struct RasterDEMData {
     pub current_max_height: Option<FloatType>,
     pub current_min_height: Option<FloatType>,
     pub heights_handle: Option<Handle>,
+}
+
+impl RasterDEMData {
+    pub fn new(decoder: ElevationDecoder) -> Self {
+        Self {
+            decoder,
+            ..Default::default()
+        }
+    }
 }
 
 impl TerrainData for RasterDEMData {
@@ -92,7 +102,7 @@ impl TerrainData for RasterDEMData {
         bytes: &[u8],
         geoid_height: FloatType,
         martini: &mut Martini,
-    ) -> (Geometry, FloatType, FloatType, Vec<FloatType>) {
+    ) -> ReturnedConstructedTerrainMesh {
         let extent = &tile.extent;
         let martini_size = martini.size as usize;
 
@@ -156,8 +166,8 @@ impl TerrainData for RasterDEMData {
             );
         }
 
-        (
-            Geometry {
+        ReturnedConstructedTerrainMesh {
+            geometry: Geometry {
                 vertices,
                 indices,
                 uvs,
@@ -165,17 +175,15 @@ impl TerrainData for RasterDEMData {
             max_height,
             min_height,
             heights,
-        )
+        }
     }
 
     fn upsample(
         &self,
         region: &TileRegion,
-        uvs: &[FloatType],
-        heights: &[FloatType],
-        indices: &[u32],
+        upsamplable_geometry: UpsamplableTerrainGeometry,
     ) -> Option<UpsampledTerrainGeometry> {
-        Some(UpsampledTerrainGeometry::new(uvs, heights, indices, region))
+        Some(UpsampledTerrainGeometry::new(upsamplable_geometry, region))
     }
 
     fn destroy(&mut self, buf: &mut BufferStore) {
@@ -183,6 +191,14 @@ impl TerrainData for RasterDEMData {
             buf.remove(&handle);
             self.heights_handle = None;
         }
+    }
+
+    fn box_clone(&self) -> Box<dyn TerrainData> {
+        Box::new(self.clone())
+    }
+
+    fn decoder(&self) -> Option<&ElevationDecoder> {
+        Some(&self.decoder)
     }
 }
 

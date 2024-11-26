@@ -5,7 +5,7 @@ import type {
   TerrainLayerDescription,
   TileLayerDescription,
   MvtLayerDescription,
-} from "navara";
+} from "@navara/engine";
 import type { Mesh, Sprite, Object3D } from "three";
 
 export type LayerDescription =

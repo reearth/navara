@@ -1,4 +1,8 @@
-extend = [{ path = "makes/rust.toml" }, { path = "makes/web.toml" }]
+extend = [
+    { path = "makes/rust.toml" },
+    { path = "makes/rust-worker.toml" },
+    { path = "makes/web.toml" },
+]
 
 [config]
 skip_core_tasks = true
@@ -6,8 +10,9 @@ default_to_workspace = false
 
 [env]
 PROJ_NAME = "navara"
+
 [tasks.build-dev]
-run_task = { name = ["build-dev-rust"] }
+run_task = { name = ["build-dev-rust", "build-dev-rust-worker"] }
 
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
@@ -28,13 +33,13 @@ run_task = { name = ["format-rust", "format-web"], parallel = true }
 run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
 
 [tasks.build-example]
-run_task = { name = ["build-rust", "build-web-example"] }
+run_task = { name = ["build-rust", "build-rust-worker", "build-web-example"] }
 
 [tasks.build]
-run_task = { name = ["build-rust", "build-web"] }
+run_task = { name = ["build-rust", "build-rust-worker", "build-web"] }
 
 [tasks.watch]
-run_task = { name = ["watch-rust"] }
+run_task = { name = ["watch-rust", "watch-rust-worker"], parallel = true }
 
 [tasks.doc]
 run_task = { name = ["doc-rust"] }

@@ -3,19 +3,29 @@ use std::collections::HashMap;
 use bevy_ecs::{component::Component, entity::Entity, system::Resource};
 
 #[derive(Component)]
-pub struct MartiniComponent(martini::Martini);
+pub struct MartiniComponent {
+    martini: martini::Martini,
+}
 
 impl MartiniComponent {
     pub fn new(size: u32) -> Self {
-        Self(martini::Martini::new(size))
+        Self {
+            martini: martini::Martini::new(size),
+        }
+    }
+
+    pub fn with_coords(size: u32, coords: Vec<u32>) -> Self {
+        Self {
+            martini: martini::Martini::with_coords(size, coords),
+        }
     }
 
     pub fn get(&self) -> &martini::Martini {
-        &self.0
+        &self.martini
     }
 
     pub fn get_mut(&mut self) -> &mut martini::Martini {
-        &mut self.0
+        &mut self.martini
     }
 }
 

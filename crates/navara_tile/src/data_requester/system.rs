@@ -4,13 +4,11 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_component::{Deleted, Ignored, Requested};
+use navara_component::{Deleted, Ignored, OrderByDistance, Requested};
 use navara_data_requester::DataRequester;
 use navara_tile_component::{TerrainDataRequesterMarker, TileQuadtree};
 
-use crate::tile::render::TileOrderByDistance;
-
-const MAX_PENDINGS: u32 = 50;
+const MAX_PENDINGS: u32 = 10;
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_data_requester(
@@ -22,7 +20,7 @@ pub(crate) fn filter_requestable_data_requester(
             Entity,
             &TerrainDataRequesterMarker,
             &DataRequester,
-            &TileOrderByDistance,
+            &OrderByDistance,
         ),
         (Added<TerrainDataRequesterMarker>, Without<Deleted>),
     >,
@@ -42,7 +40,7 @@ pub(crate) fn filter_requestable_data_requester(
     // Limit the number of requests in this frame
     for (e, marker, _, _) in data_requesters
         .iter()
-        .sort::<&TileOrderByDistance>()
+        .sort::<&OrderByDistance>()
         .skip(num_skip as usize)
     {
         let handle = marker.0;

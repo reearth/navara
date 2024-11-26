@@ -6,6 +6,45 @@ use crate::attribute::TransferableFloatAttribute;
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
+pub struct TransferableGeometry {
+    pub vertices: Handle,
+    pub uvs: Handle,
+    pub indices: Handle,
+}
+
+#[wasm_bindgen]
+impl TransferableGeometry {
+    #[wasm_bindgen(constructor)]
+    pub fn new(vertices: Handle, uvs: Handle, indices: Handle) -> Self {
+        Self {
+            vertices,
+            uvs,
+            indices,
+        }
+    }
+}
+
+impl From<TransferableGeometry> for navara_geometry::TransferableGeometry {
+    fn from(val: TransferableGeometry) -> Self {
+        navara_geometry::TransferableGeometry {
+            vertices: val.vertices,
+            uvs: val.uvs,
+            indices: val.indices,
+        }
+    }
+}
+impl<'a> From<&'a navara_geometry::TransferableGeometry> for TransferableGeometry {
+    fn from(val: &'a navara_geometry::TransferableGeometry) -> Self {
+        TransferableGeometry {
+            vertices: val.vertices,
+            uvs: val.uvs,
+            indices: val.indices,
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
 pub struct TransferablePolylineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub position: TransferableFloatAttribute,

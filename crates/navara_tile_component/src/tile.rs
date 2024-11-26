@@ -6,10 +6,11 @@ use navara_core::{
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
-use navara_geometry::Geometry;
+use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
 use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
+use navara_quadtree::children_coords;
 use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
@@ -47,6 +48,33 @@ pub struct Tile {
     pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
     pub upsampled: bool,
+    pub max_height: FloatType,
+    pub distance_from_camera: FloatType,
+    pub sse: FloatType,
+}
+
+impl Clone for Tile {
+    fn clone(&self) -> Self {
+        Self {
+            coords: self.coords.clone(),
+            extent: self.extent.clone(),
+            aabb: self.aabb.clone(),
+            bounding_region: self.bounding_region.clone(),
+            // Note: `children` needs to be updated dynamically.
+            children: vec![],
+            rendered_at: self.rendered_at,
+            visited_at: self.visited_at,
+            terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
+            texture_fragment_entity_id: self.texture_fragment_entity_id.clone(),
+            occludee_point_in_scaled_space: self.occludee_point_in_scaled_space.clone(),
+            previous_rendered_state: self.previous_rendered_state.clone(),
+            cached_mesh_handle: self.cached_mesh_handle.clone(),
+            upsampled: self.upsampled,
+            max_height: self.max_height,
+            distance_from_camera: 0.,
+            sse: 0.,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -75,6 +103,9 @@ impl Tile {
             cached_mesh_handle: None,
             upsampled: false,
             children: Vec::with_capacity(4),
+            max_height,
+            distance_from_camera: 0.,
+            sse: 0.,
         }
     }
 
@@ -193,18 +224,9 @@ impl Tile {
             .and_then(|p| qt.qt.get(p.handle()))
     }
 
-    fn get_region(&self, qt: &TileQuadtree) -> Option<TileRegion> {
-        let parent = match self.get_parent_tile(qt) {
-            Some(p) => p,
-            None => return None,
-        };
-        let parent_children_coords = qt
-            .qt
-            .children((parent.coords.x, parent.coords.y, parent.coords.z))
-            .unwrap()
-            .iter()
-            .map(|t| t.coords())
-            .collect::<Vec<_>>();
+    fn get_region(&self, parent: &Tile) -> Option<TileRegion> {
+        let parent_children_coords =
+            children_coords((parent.coords.x, parent.coords.y, parent.coords.z));
 
         Some(match (self.coords.x, self.coords.y) {
             (x, y) if x == parent_children_coords[0].0 && y == parent_children_coords[0].1 => {
@@ -231,38 +253,18 @@ impl Tile {
     pub fn upsample(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        qt: &TileQuadtree,
-        buf_store: &BufferStore,
-    ) -> Option<(Geometry, Vec<FloatType>, FloatType, FloatType)> {
-        let parent = match self.get_parent_tile(qt) {
-            Some(p) => p,
-            None => return None,
-        };
-        let region = match self.get_region(qt) {
+        parent: &Tile,
+        upsamplable_geometry: UpsamplableTerrainGeometry,
+    ) -> Option<ReturnedConstructedTerrainMesh> {
+        let region = match self.get_region(parent) {
             Some(r) => r,
             None => return None,
-        };
-
-        let cached_mesh_handle = match &parent.cached_mesh_handle {
-            Some(c) => c,
-            None => return None,
-        };
-
-        let (uvs, heights, indices) = match (
-            buf_store.get_f32(&cached_mesh_handle.uvs),
-            cached_mesh_handle
-                .heights
-                .and_then(|h| buf_store.get_f32(&h)),
-            buf_store.get_u32(&cached_mesh_handle.indices),
-        ) {
-            (Some(u), Some(h), Some(i)) => (u, h, i),
-            _ => return None,
         };
 
         let mut upsampled_mesh = match self
             .terrain_data
             .as_ref()
-            .and_then(|t| t.upsample(&region, uvs, heights, indices))
+            .and_then(|t| t.upsample(&region, upsamplable_geometry))
         {
             Some(u) => u,
             None => return None,
@@ -270,12 +272,12 @@ impl Tile {
 
         let (geometry, heights) = upsampled_mesh.construct_geometry(ellipsoid, &self.extent);
 
-        Some((
+        Some(ReturnedConstructedTerrainMesh {
             geometry,
             heights,
-            upsampled_mesh.max_height,
-            upsampled_mesh.min_height,
-        ))
+            max_height: upsampled_mesh.max_height,
+            min_height: upsampled_mesh.min_height,
+        })
     }
 
     pub fn get_level_maximum_geometric_error(

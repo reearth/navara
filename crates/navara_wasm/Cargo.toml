@@ -7,17 +7,9 @@ license = "MIT/Apache-2.0"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[features]
-default = ["console_error_panic_hook"]
-
 [dependencies]
 wasm-bindgen.workspace = true
 
-# The `console_error_panic_hook` crate provides better debugging of panics by
-# logging them with `console.error`. This is great for development, but requires
-# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
-# code size when deploying.
-console_error_panic_hook = { workspace = true, optional = true }
 js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
@@ -42,6 +34,10 @@ navara_feature = { path = "../navara_feature" }
 navara_geometry = { path = "../navara_geometry" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_tile_component = { path = "../navara_tile_component" }
+navara_worker = { path = "../navara_worker" }
+navara_wasm_types = { path = "../navara_wasm_types" }
+navara_wasm_utils = { path = "../navara_wasm_utils" }
+navara_wasm_transferable = { path = "../navara_wasm_transferable" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.45"

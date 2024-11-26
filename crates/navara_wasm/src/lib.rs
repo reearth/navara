@@ -1,24 +1,31 @@
 #![doc = include_str!("../README.md")]
 mod appearance;
 mod attribute;
+mod entity;
 mod event;
 mod geometry;
 mod input;
 mod types;
 mod unit;
-mod utils;
 
+use bevy_log::info;
+use entity::ReconstructableEntity;
 use nanoid::nanoid;
+use navara_buffer_store::Handle;
 use navara_ecs::App;
 use navara_input::Key;
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
+use navara_wasm_utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
 pub use input::*;
+pub use navara_wasm_transferable::*;
+pub use navara_wasm_types::*;
 pub use types::*;
 pub use unit::*;
+use worker::DelegatedWorkerTasksResult;
 
 #[wasm_bindgen]
 extern "C" {
@@ -99,7 +106,22 @@ impl Core {
 
     #[wasm_bindgen(js_name = setBufferU8)]
     pub fn set_buffer_u8(&mut self, handle: i32, bits: u64, data: &[u8]) {
-        self.app.set_buffer(handle, bits, data.to_vec());
+        self.app.set_buffer_u8(handle, bits, data.to_vec());
+    }
+
+    #[wasm_bindgen(js_name = newBufferU8)]
+    pub fn new_buffer_u8(&mut self, data: &[u8]) -> Option<Handle> {
+        self.app.new_buffer_u8(data.to_vec())
+    }
+
+    #[wasm_bindgen(js_name = newBufferU32)]
+    pub fn new_buffer_u32(&mut self, data: &[u32]) -> Option<Handle> {
+        self.app.new_buffer_u32(data.to_vec())
+    }
+
+    #[wasm_bindgen(js_name = newBufferF32)]
+    pub fn new_buffer_f32(&mut self, data: &[f32]) -> Option<Handle> {
+        self.app.new_buffer_f32(data.to_vec())
     }
 
     #[wasm_bindgen(js_name = removeBuffer)]
@@ -154,11 +176,60 @@ impl Core {
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
         self.app.set_tile_mesh_prepared(handle);
     }
+
+    #[wasm_bindgen(js_name = triggerWorkerTaskCompleted)]
+    pub fn trigger_worker_task_completed(&mut self, bits: u64, result: DelegatedWorkerTasksResult) {
+        self.app.trigger_worker_task_completed(
+            bits,
+            match result {
+                DelegatedWorkerTasksResult {
+                    delegator_id,
+                    construct_terrain_mesh: Some(v),
+                    ..
+                } => navara_worker::DelegatedWorkerTasksResult::ConstructTerrainMesh(
+                    navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
+                ),
+                DelegatedWorkerTasksResult {
+                    delegator_id,
+                    upsample_terrain_mesh: Some(v),
+                    ..
+                } => navara_worker::DelegatedWorkerTasksResult::UpsampleTerrainMesh(
+                    navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
+                ),
+                _ => unreachable!(),
+            },
+        );
+    }
+
+    #[wasm_bindgen(js_name = getMartini)]
+    pub fn get_martini(
+        &mut self,
+        martini_id: ReconstructableEntity,
+    ) -> Option<TransferableMartini> {
+        self.app.get_martini(martini_id.0).map(|v| v.into())
+    }
+
+    #[wasm_bindgen(js_name = getTile)]
+    pub fn get_tile(&mut self, handle: TileHandle) -> Option<TransferableTile> {
+        self.app.get_tile(handle).map(|v| v.into())
+    }
+
+    #[wasm_bindgen(js_name = getParentTile)]
+    pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<TransferableTile> {
+        self.app.get_parent_tile(handle).map(|v| v.into())
+    }
+
+    #[wasm_bindgen(js_name = getTileElevationDecoder)]
+    pub fn get_tile_elevation_decoder(&mut self, handle: TileHandle) -> Option<ElevationDecoder> {
+        self.app
+            .get_tile_elevation_decoder(handle)
+            .map(|v| v.into())
+    }
 }
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    utils::set_panic_hook();
+    set_panic_hook();
     log("init navara_wasm");
 }
 

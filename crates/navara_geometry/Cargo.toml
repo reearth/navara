@@ -14,6 +14,7 @@ bevy_log.workspace = true
 bevy_ecs = { workspace = true, optional = true }
 radians.workspace = true
 itertools.workspace = true
+serde.workspace = true
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_buffer_store = { path = "../navara_buffer_store" }

@@ -1,16 +1,15 @@
 use bevy_ecs::{entity::Entity, system::Commands};
 use navara_buffer_store::BufferStore;
-use navara_component::Priority;
+use navara_component::{OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
-use navara_math::FloatType;
 use navara_tile_component::{
     RasterDEMData, TerrainData, TerrainDataRequesterMarker, TileHandle,
     TileTerrainDataRequesterQuery,
 };
 
-use crate::{tile::render::TileOrderByDistance, TileQuadtree};
+use crate::TileQuadtree;
 
 pub(crate) fn request_terrain_data(
     commands: &mut Commands,
@@ -18,7 +17,6 @@ pub(crate) fn request_terrain_data(
     buf: &mut BufferStore,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
-    tile_distance: FloatType,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
 ) -> Option<Entity> {
     let tile = qt.qt.get_mut(handle).unwrap();
@@ -33,10 +31,7 @@ pub(crate) fn request_terrain_data(
         Some(t) => {
             let url = tile_url(&t.url, &tile.coords);
             let mut terrain_data = match &t.terrain_type {
-                TerrainDataType::RasterDEM => RasterDEMData {
-                    decoder: t.elevation_decoder.clone(),
-                    ..Default::default()
-                }, // DEM
+                TerrainDataType::RasterDEM => RasterDEMData::new(t.elevation_decoder.clone()), // DEM
                 // TODO: Support quantized-mesh
                 TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
                 TerrainDataType::Unknown => return None,
@@ -45,7 +40,7 @@ pub(crate) fn request_terrain_data(
                 TerrainDataRequesterMarker(handle),
                 Priority::High,
                 DataRequester::from_store(url, buf, DataRequesterExtension::Png),
-                TileOrderByDistance(tile_distance),
+                OrderByDistance(tile.distance_from_camera),
             ));
             let id = entity.id();
             terrain_data.set_data_requester_entity_id(Some(id));

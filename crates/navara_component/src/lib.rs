@@ -1,7 +1,9 @@
 #![doc = include_str!("../README.md")]
 
+mod order;
 mod priority;
 
+pub use order::*;
 pub use priority::*;
 
 use bevy_ecs::component::Component;

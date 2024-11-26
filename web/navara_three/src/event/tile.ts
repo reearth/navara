@@ -5,7 +5,7 @@ import {
   type Mesh as EventMesh,
   type MeshMaterial as EventMaterial,
   MeshChanged,
-} from "navara";
+} from "@navara/engine";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -17,7 +17,7 @@ import {
   Texture,
 } from "three";
 
-import { toCreasedNormalsAsync } from "../helpers/toCreasedNormalsAsync";
+import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
 import type { MeshCache } from "../type";
 
 import type { BufferLoader } from ".";

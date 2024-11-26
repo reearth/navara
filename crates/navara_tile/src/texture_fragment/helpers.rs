@@ -1,8 +1,8 @@
-use crate::{tile::render::TileOrderByDistance, TileQuadtree};
+use crate::TileQuadtree;
 use bevy_ecs::{entity::Entity, system::Commands};
+use navara_component::OrderByDistance;
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
-use navara_math::FloatType;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery};
 
@@ -11,7 +11,6 @@ pub(crate) fn request_texture_fragment(
     qt: &mut TileQuadtree,
     tiles: &TilesLayer,
     handle: TileHandle,
-    tile_distance: FloatType,
     texture_fragment: &TileTextureFragmentQuery,
 ) -> Option<Entity> {
     let tile = qt.qt.get_mut(handle).unwrap();
@@ -23,7 +22,7 @@ pub(crate) fn request_texture_fragment(
     let entity = commands.spawn((
         TileTextureFragmentMarker(handle),
         TextureFragment::new(url),
-        TileOrderByDistance(tile_distance),
+        OrderByDistance(tile.distance_from_camera),
     ));
     let id = entity.id();
     tile.texture_fragment_entity_id = Some(id);

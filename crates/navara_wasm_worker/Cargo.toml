@@ -1,0 +1,30 @@
+[package]
+name = "navara_wasm_worker"
+version = "0.1.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen.workspace = true
+
+js-sys.workspace = true
+serde.workspace = true
+serde-wasm-bindgen.workspace = true
+gloo-utils = { workspace = true, features = ["serde"] }
+nanoid.workspace = true
+web-sys = { workspace = true, features = ["console"] }
+
+navara_wasm_utils = { path = "../navara_wasm_utils" }
+navara_wasm_types = { path = "../navara_wasm_types" }
+navara_wasm_transferable = { path = "../navara_wasm_transferable" }
+navara_tile_component = { path = "../navara_tile_component" }
+navara_core = { path = "../navara_core" }
+navara_math = { path = "../navara_math" }
+navara_geometry = { path = "../navara_geometry" }
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"

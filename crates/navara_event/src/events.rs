@@ -6,6 +6,7 @@ use navara_math::Transform;
 use navara_mesh::{Material, Mesh};
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::TileMeshMarker;
+use navara_worker::DelegatedWorkerTasksParameters;
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
@@ -19,6 +20,8 @@ pub struct Events<'a> {
     pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
     pub texture_fragment_removed: Vec<EntityEvent>,
+    pub worker_task_delegated: Vec<ReconstructableComponentEvent<&'a DelegatedWorkerTasksParameters>>,
+    pub worker_task_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
     pub renderable_feature_changed: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
     pub renderable_feature_removed: Vec<EntityEvent>,
@@ -84,6 +87,18 @@ impl<'a> Events<'a> {
 
         for e in store.texture_fragment_removed.iter() {
             events.texture_fragment_removed.push((*e).into());
+            is_changed = true;
+        }
+
+        for e in store.worker_task_delegated.iter() {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.worker_task_delegated.push(e);
+                is_changed = true;
+            }
+        }
+
+        for e in store.worker_task_removed.iter() {
+            events.worker_task_removed.push((*e).into());
             is_changed = true;
         }
 

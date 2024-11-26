@@ -9,6 +9,7 @@ use navara_layer::{
 use navara_material::Appearance;
 use navara_math::FloatType;
 use navara_parser::geojson::GeoJson;
+use navara_wasm_types::ElevationDecoder;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -225,19 +226,6 @@ pub struct LayerDescriptionUrl {
     pub url: String,
 }
 
-#[wasm_bindgen]
-#[derive(Debug, Clone, PartialEq, Default, Copy, Deserialize)]
-pub struct ElevationDecoder {
-    pub r_scaler: FloatType,
-    pub g_scaler: FloatType,
-    pub b_scaler: FloatType,
-    pub offset: FloatType,
-    pub max_offset: FloatType,
-    pub min_offset: FloatType,
-    pub boundary: FloatType,
-    pub epsilon: FloatType,
-}
-
 impl LayerDescription {
     pub fn from(value: JsValue) -> Option<Self> {
         serde_wasm_bindgen::from_value(value).ok()
@@ -364,21 +352,6 @@ impl LayerDescription {
                 ))
             }
             _ => None,
-        }
-    }
-}
-
-impl From<ElevationDecoder> for navara_core::ElevationDecoder {
-    fn from(d: ElevationDecoder) -> Self {
-        navara_core::ElevationDecoder {
-            r_scaler: d.r_scaler,
-            g_scaler: d.g_scaler,
-            b_scaler: d.b_scaler,
-            offset: d.offset,
-            max_offset: d.max_offset,
-            min_offset: d.min_offset,
-            boundary: d.boundary,
-            epsilon: d.epsilon,
         }
     }
 }

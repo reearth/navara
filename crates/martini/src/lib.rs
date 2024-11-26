@@ -4,7 +4,7 @@ pub struct Martini {
     pub size: u32,
     num_triangles: u32,
     num_parent_triangles: u32,
-    coords: Vec<u32>,
+    pub coords: Vec<u32>,
     index_map: Vec<Option<usize>>,
 }
 
@@ -20,6 +20,21 @@ impl Martini {
             num_triangles,
             num_parent_triangles: num_triangles - tile_size * tile_size,
             coords: Self::construct_coords(tile_size, num_triangles as usize),
+            index_map: vec![None; (size * size) as usize],
+        }
+    }
+
+    pub fn with_coords(size: u32, coords: Vec<u32>) -> Self {
+        let tile_size = size - 1;
+        if tile_size & (tile_size - 1) == 1 {
+            panic!("Expected grid size to be 2^n+1, got {}.", size)
+        }
+        let num_triangles = tile_size * tile_size * 2 - 2;
+        Self {
+            size,
+            num_triangles,
+            num_parent_triangles: num_triangles - tile_size * tile_size,
+            coords,
             index_map: vec![None; (size * size) as usize],
         }
     }

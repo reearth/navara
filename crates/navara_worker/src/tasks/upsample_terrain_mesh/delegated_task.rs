@@ -1,13 +1,4 @@
-use crate::DelegatedWorkerTask;
+use super::{UpsampleTerrainMeshParameters, UpsampleTerrainMeshResult};
 
-use super::UpsampleTerrainMeshResult;
-
-// TODO: Fill it later
-pub struct DelegatableUpsampleTerrainMeshParameters {}
-
+pub type DelegatableUpsampleTerrainMeshParameters = UpsampleTerrainMeshParameters;
 pub type DelegatableUpsampleTerrainMeshResult = UpsampleTerrainMeshResult;
-
-pub type UpsampleTerrainMeshDelegatedWorkerTask = DelegatedWorkerTask<
-    DelegatableUpsampleTerrainMeshParameters,
-    DelegatableUpsampleTerrainMeshResult,
->;
