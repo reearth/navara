@@ -273,7 +273,7 @@ fn traverse_tile(
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
-            if tile.coords.z >= tiles.max_z {
+            if tile.coords.z >= tiles.appearance.as_ref().unwrap().max_z {
                 let tile = qt.qt.get_mut(handle).unwrap();
                 tile.previous_rendered_state = None;
                 return TraversalResult::NotFound;
@@ -344,7 +344,7 @@ fn traverse_tile(
         return TraversalResult::Culled;
     }
 
-    let max_sse = tiles.max_sse;
+    let max_sse = tiles.appearance.as_ref().unwrap().max_sse;
 
     let sse = calc_sse(
         frustum,
@@ -724,17 +724,23 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = tile.should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
+        let should_upsample_terrain = tile
+            .should_upsampling(terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_z))
             && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain
-            || (terrain_layer.map_or(false, |t| t.min_z >= tile.coords.z)
-                || (!should_upsample_terrain && is_terrain_failed))
+            || (terrain_layer.map_or(false, |t| {
+                t.appearance.as_ref().unwrap().min_z >= tile.coords.z
+            }) || (!should_upsample_terrain && is_terrain_failed))
         {
             let triangles = tile_triangles_flat(
                 WGS84_32,
                 &extent,
-                if is_root { 65 } else { tile_layer.segments },
+                if is_root {
+                    65
+                } else {
+                    tile_layer.appearance.as_ref().unwrap().segments
+                },
                 0.,
             );
 
@@ -765,9 +771,9 @@ pub fn transfer_mesh(
                         render_order,
                     },
                     material: Material {
-                        color: tile_layer.color,
-                        show: tile_layer.show,
-                        wireframe: tile_layer.wireframe,
+                        color: tile_layer.appearance.as_ref().unwrap().color,
+                        show: tile_layer.appearance.as_ref().unwrap().show,
+                        wireframe: tile_layer.appearance.as_ref().unwrap().wireframe,
                         should_compute_normal_from_vertex,
                         texture_fragment: texture_fragment_entity_id,
                     },
@@ -852,9 +858,9 @@ pub fn transfer_mesh(
                         render_order,
                     },
                     material: Material {
-                        color: tile_layer.color,
-                        show: tile_layer.show,
-                        wireframe: terrain_layer.wireframe,
+                        color: tile_layer.appearance.as_ref().unwrap().color,
+                        show: tile_layer.appearance.as_ref().unwrap().show,
+                        wireframe: terrain_layer.appearance.as_ref().unwrap().wireframe,
                         should_compute_normal_from_vertex: terrain_layer
                             .should_compute_normal_from_vertex,
                         texture_fragment: texture_fragment_entity_id,
@@ -878,7 +884,7 @@ pub fn transfer_mesh(
         let terrain_req = terrain_req.unwrap();
 
         let martini_id = cached_martini
-            .get(&terrain_layer.tile_size)
+            .get(&terrain_layer.appearance.as_ref().unwrap().tile_size)
             .expect("It must be initialized when terrain layer is added");
 
         let terrain_mesh_constructor_id = match rendered_tile.terrain_mesh_constructor {
@@ -937,9 +943,9 @@ pub fn transfer_mesh(
                     render_order,
                 },
                 material: Material {
-                    color: tile_layer.color,
-                    show: tile_layer.show,
-                    wireframe: terrain_layer.wireframe,
+                    color: tile_layer.appearance.as_ref().unwrap().color,
+                    show: tile_layer.appearance.as_ref().unwrap().show,
+                    wireframe: terrain_layer.appearance.as_ref().unwrap().wireframe,
                     should_compute_normal_from_vertex: terrain_layer
                         .should_compute_normal_from_vertex,
                     texture_fragment: texture_fragment_entity_id,

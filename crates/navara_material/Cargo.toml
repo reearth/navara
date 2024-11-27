@@ -11,3 +11,4 @@ edition = "2021"
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 navara_math = { path = "../navara_math" }
+navara_core = { path = "../navara_core" }

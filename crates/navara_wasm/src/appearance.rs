@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::Vec2;
+use crate::{ElevationDecoder, Vec2};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,6 +237,91 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             max_sse: Some(value.max_sse),
             clamp_to_ground: Some(value.clamp_to_ground),
             should_rotate_in_default: Some(value.should_rotate_in_default),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RasterTileMaterial {
+    pub show: Option<bool>,
+    pub segments: usize,
+    pub color: u32,
+    pub max_z: usize,
+    pub max_sse: f32,
+    pub wireframe: Option<bool>,
+}
+
+impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
+    fn from(val: RasterTileMaterial) -> Self {
+        navara_material::RasterTileMaterial {
+            show: val.show.unwrap_or(true),
+            segments: val.segments,
+            color: val.color,
+            max_z: val.max_z,
+            max_sse: val.max_sse,
+            wireframe: val.wireframe.unwrap_or(false),
+        }
+    }
+}
+impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
+    fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
+        RasterTileMaterial {
+            show: Some(value.show),
+            segments: value.segments,
+            color: value.color,
+            max_z: value.max_z,
+            max_sse: value.max_sse,
+            wireframe: Some(value.wireframe),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RasterTerrainMaterial {
+    pub show: Option<bool>,
+    pub segments: usize,
+    pub max_z: usize,
+    pub min_z: usize,
+    pub wireframe: Option<bool>,
+    pub elevation_decoder: ElevationDecoder,
+    pub tile_size: Option<u32>,
+}
+
+impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
+    fn from(val: RasterTerrainMaterial) -> Self {
+        navara_material::RasterTerrainMaterial {
+            show: val.show.unwrap_or(true),
+            segments: val.segments,
+            max_z: val.max_z,
+            min_z: val.min_z,
+            wireframe: val.wireframe.unwrap_or(false),
+            tile_size: val.tile_size.unwrap_or(256),
+            elevation_decoder: val.elevation_decoder.into(),
+        }
+    }
+}
+
+impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMaterial {
+    fn from(value: &'a navara_material::RasterTerrainMaterial) -> RasterTerrainMaterial {
+        RasterTerrainMaterial {
+            show: Some(value.show),
+            segments: value.segments,
+            max_z: value.max_z,
+            min_z: value.min_z,
+            wireframe: Some(value.wireframe),
+            elevation_decoder: ElevationDecoder {
+                r_scaler: value.elevation_decoder.r_scaler,
+                g_scaler: value.elevation_decoder.g_scaler,
+                b_scaler: value.elevation_decoder.b_scaler,
+                offset: value.elevation_decoder.offset,
+                max_offset: value.elevation_decoder.max_offset,
+                min_offset: value.elevation_decoder.min_offset,
+                boundary: value.elevation_decoder.boundary,
+                epsilon: value.elevation_decoder.epsilon,
+            },
+            tile_size: Some(value.tile_size),
         }
     }
 }

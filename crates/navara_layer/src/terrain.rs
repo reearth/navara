@@ -1,18 +1,14 @@
+use crate::LayerData;
 use bevy_ecs::component::Component;
-use navara_core::ElevationDecoder;
+use navara_material::RasterTerrainMaterial;
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TerrainLayer {
     pub layer_id: String,
-    pub url: String,
-    pub segments: usize,
-    pub max_z: usize,
-    pub min_z: usize,
-    pub wireframe: bool,
+    pub data: Option<LayerData>,
     pub should_compute_normal_from_vertex: bool,
-    pub elevation_decoder: ElevationDecoder,
     pub terrain_type: TerrainDataType,
-    pub tile_size: u32,
+    pub appearance: Option<RasterTerrainMaterial>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

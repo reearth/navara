@@ -9,11 +9,12 @@ use navara_layer::{
 use navara_material::Appearance;
 use navara_math::FloatType;
 use navara_parser::geojson::GeoJson;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use crate::appearance::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
+    RasterTerrainMaterial, RasterTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -22,13 +23,17 @@ pub struct TileLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: String,
     #[wasm_bindgen(getter_with_clone)]
-    pub url: String,
-    pub segments: usize,
-    pub color: u32,
-    pub show: Option<bool>,
-    pub max_sse: Option<FloatType>,
-    pub max_z: usize,
-    pub wireframe: bool,
+    #[serde(skip_deserializing)]
+    pub data: JsValue,
+
+    #[wasm_bindgen(getter_with_clone)]
+    pub raster_tile: Option<RasterTileMaterial>,
+}
+
+impl TileLayerDescription {
+    pub fn appearance(&mut self) -> Option<navara_material::RasterTileMaterial> {
+        self.raster_tile.take().map(|v| v.into())
+    }
 }
 
 #[wasm_bindgen]
@@ -37,15 +42,21 @@ pub struct TerrainLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: String,
     #[wasm_bindgen(getter_with_clone)]
-    pub url: String,
-    pub segments: usize,
-    pub max_z: usize,
-    pub min_z: usize,
-    pub wireframe: bool,
+    #[serde(skip_deserializing)]
+    pub data: JsValue,
+
+    #[wasm_bindgen(getter_with_clone)]
+    pub raster_terrain: Option<RasterTerrainMaterial>,
+
     /// Compute normals from vertices if the model doesn't have a normal.
     pub should_compute_normal_from_vertex: Option<bool>,
     pub elevation_decoder: Option<ElevationDecoder>,
-    pub tile_size: Option<u32>,
+}
+
+impl TerrainLayerDescription {
+    pub fn appearance(&mut self) -> Option<navara_material::RasterTerrainMaterial> {
+        self.raster_terrain.take().map(|v| v.into())
+    }
 }
 
 #[wasm_bindgen]
@@ -226,7 +237,7 @@ pub struct LayerDescriptionUrl {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, PartialEq, Default, Copy, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Copy, Serialize, Deserialize)]
 pub struct ElevationDecoder {
     pub r_scaler: FloatType,
     pub g_scaler: FloatType,
@@ -250,33 +261,50 @@ impl LayerDescription {
     ) -> Option<navara_layer::LayerDescription> {
         match layer_type {
             "tiles" => {
-                let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
+                    .unwrap_or_else(|_e| LayerDescriptionData {
+                        data: JsValue::NULL,
+                    });
+
+                let mut data: Option<LayerDescriptionUrl> = None;
+                if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                }
+
+                let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
                     layer_id: layer_id.to_string(),
-                    url: layer.url,
-                    segments: layer.segments,
-                    color: layer.color,
-                    show: layer.show.unwrap_or(true),
-                    max_sse: layer.max_sse.unwrap_or(4.),
-                    max_z: layer.max_z,
-                    wireframe: layer.wireframe,
+                    data: data.map(|d| LayerData { url: d.url }),
+                    appearance: layer.appearance(),
                 }))
             }
             "terrain" => {
-                let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
+                    .unwrap_or_else(|_e| LayerDescriptionData {
+                        data: JsValue::NULL,
+                    });
+
+                let mut data: Option<LayerDescriptionUrl> = None;
+                if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                }
+
+                let url = data.as_ref().unwrap().url.as_str();
+
+                let mut layer: TerrainLayerDescription =
+                    serde_wasm_bindgen::from_value(value).ok()?;
+
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
                     layer_id: layer_id.to_string(),
-                    url: layer.url.clone(),
-                    segments: layer.segments,
-                    max_z: layer.max_z,
-                    min_z: layer.min_z,
-                    wireframe: layer.wireframe,
+                    data: Some(LayerData {
+                        url: String::from(url),
+                    }),
+                    appearance: layer.appearance(),
                     should_compute_normal_from_vertex: layer
                         .should_compute_normal_from_vertex
                         .unwrap_or(true),
-                    elevation_decoder: layer.elevation_decoder.unwrap_or_default().into(),
-                    terrain_type: TerrainDataType::from_url(&layer.url),
-                    tile_size: layer.tile_size.unwrap_or(256),
+                    terrain_type: TerrainDataType::from_url(url),
                 }))
             }
             "geojson" => {
