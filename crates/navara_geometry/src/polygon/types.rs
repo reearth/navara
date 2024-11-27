@@ -38,7 +38,7 @@ impl Hierarchy {
                 if let Some(holes) = self.holes.as_mut() {
                     for hole in holes.iter_mut() {
                         hole.expected_winding_order = check_winding_order(&hole.outer_ring);
-                        if hole.expected_winding_order == WindingOrder::Clockwise {
+                        if hole.expected_winding_order == WindingOrder::CounterClockwise {
                             hole.outer_ring.reverse();
                             hole.expected_winding_order = WindingOrder::Clockwise;
                         }
