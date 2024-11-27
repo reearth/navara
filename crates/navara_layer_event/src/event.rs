@@ -1,6 +1,5 @@
 use bevy_ecs::prelude::*;
 
-use bevy_log::info;
 use navara_layer::{
     DeleteB3dmLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
     DeleteMvtLayerMarker, LayerDescStore, LayerDescription, LayerId, UpdateB3dmLayerMarker,
@@ -25,11 +24,9 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
         let AddLayerEvent(desc) = ev;
         match desc {
             LayerDescription::Tiles(t) => {
-                info!("tile {:?}", t);
                 commands.spawn(t.clone());
             }
             LayerDescription::Terrain(t) => {
-                info!("terrain {:?}", t);
                 commands.spawn(t.clone());
             }
             LayerDescription::GeoJson(t) => {
