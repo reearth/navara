@@ -18,6 +18,7 @@ pub(crate) fn request_terrain_data(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
+    priority: Priority,
 ) -> Option<Entity> {
     let tile = qt.qt.get_mut(handle).unwrap();
     let data_requester_entity_id = tile
@@ -38,9 +39,9 @@ pub(crate) fn request_terrain_data(
             };
             let entity = commands.spawn((
                 TerrainDataRequesterMarker(handle),
-                Priority::High,
                 DataRequester::from_store(url, buf, DataRequesterExtension::Png),
                 OrderByDistance(tile.distance_from_camera),
+                priority,
             ));
             let id = entity.id();
             terrain_data.set_data_requester_entity_id(Some(id));

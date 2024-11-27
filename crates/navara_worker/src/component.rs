@@ -10,15 +10,17 @@ pub struct WorkerTaskDelegateeMarker(pub Entity);
 pub struct WorkerTaskCompleted;
 
 #[derive(Bundle)]
-pub struct WorkerTaskBundle<Parameters: Component> {
-    pub marker: WorkerTaskMarker,
+pub struct WorkerTaskBundle<Marker: Component, Parameters: Component> {
+    pub marker: Marker,
+    pub worker_task_marker: WorkerTaskMarker,
     pub parameters: Parameters,
 }
 
-impl<Parameters: Component> WorkerTaskBundle<Parameters> {
-    pub fn new(p: Parameters) -> Self {
+impl<Marker: Component, Parameters: Component> WorkerTaskBundle<Marker, Parameters> {
+    pub fn new(m: Marker, p: Parameters) -> Self {
         Self {
-            marker: WorkerTaskMarker,
+            marker: m,
+            worker_task_marker: WorkerTaskMarker,
             parameters: p,
         }
     }

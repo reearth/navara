@@ -116,11 +116,7 @@ impl Tile {
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> ReadyState {
-        let texture_fragment_status = self
-            .texture_fragment_entity_id
-            .map(|e| texture_fragment.get(e).map(|t| &t.1.status));
-        let is_texture_loaded = texture_fragment_status
-            .map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Success)));
+        let is_texture_loaded = self.is_texture_ready(texture_fragment);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -141,7 +137,7 @@ impl Tile {
 
         let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
         let should_upsample = self.should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
-            && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
+            && self.is_upsamplable(qt, texture_fragment, terrain_data_requester, terrain_layer);
 
         // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
         let should_be_rendered_without_terrain = !self
@@ -177,6 +173,13 @@ impl Tile {
         })
     }
 
+    pub fn is_texture_ready(&self, texture_fragment: &TileTextureFragmentQuery) -> bool {
+        let texture_fragment_status = self
+            .texture_fragment_entity_id
+            .map(|e| texture_fragment.get(e).map(|t| &t.1.status));
+        texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Success)))
+    }
+
     pub fn is_terrain_ready(
         &self,
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
@@ -188,13 +191,15 @@ impl Tile {
         })
     }
 
-    pub fn is_parent_terrain_ready(
+    pub fn is_parent_ready(
         &self,
         qt: &TileQuadtree,
-        terrain_data_requester: &TileTerrainDataRequesterQuery,
+        texture_fragments: &TileTextureFragmentQuery,
+        terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         self.get_parent_tile(qt).map_or(false, |p| {
-            (p.is_terrain_ready(terrain_data_requester) || p.upsampled)
+            p.is_texture_ready(texture_fragments)
+                && (p.is_terrain_ready(terrain_data_requesters) || p.upsampled)
                 && p.cached_mesh_handle.is_some()
         })
     }
@@ -202,6 +207,7 @@ impl Tile {
     pub fn is_upsamplable(
         &self,
         qt: &TileQuadtree,
+        texture_fragment: &TileTextureFragmentQuery,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
@@ -210,7 +216,7 @@ impl Tile {
             && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
                 // If parent tile is upsampled, we don't need to wait failed request.
                 || self.get_parent_tile(qt).map_or(false, |t| t.upsampled))
-            && self.is_parent_terrain_ready(qt, terrain_data_requester)
+            && self.is_parent_ready(qt, texture_fragment, terrain_data_requester)
     }
 
     pub fn should_upsampling(&self, max_zoom: usize) -> bool {

@@ -11,7 +11,7 @@ use crate::{
     WorkerTaskCompleted, WorkerTaskDelegateeMarker, WorkerTaskMarker,
 };
 
-const MAX_PENDINGS: usize = 5;
+const MAX_PENDINGS: usize = 10;
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn construct_terrain_mesh(
@@ -25,6 +25,7 @@ pub(crate) fn construct_terrain_mesh(
         (
             With<WorkerTaskMarker>,
             With<Requested>,
+            Without<Deleted>,
             Without<WorkerTaskCompleted>,
         ),
     >,

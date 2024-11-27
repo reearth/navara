@@ -24,7 +24,7 @@ export async function constructTerrainMesh(
   const result = await queueTask(
     "constructTerrainMesh",
     [bytes, tileLike, rasterDEMDataLike, martiniLike],
-    { transfer: [bytes.buffer, martini.coords.buffer] },
+    { transfer: [bytes.buffer] },
   );
   return result;
 }

@@ -15,6 +15,9 @@ pub struct Deleted;
 pub struct Requested;
 
 #[derive(Component)]
+pub struct Completed;
+
+#[derive(Component)]
 pub struct Ignored;
 
 #[derive(Component)]

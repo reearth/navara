@@ -25,4 +25,5 @@ pub struct ConstructTerrainMeshResult {
     pub max_height: FloatType,
 }
 
-pub type ConstructTerrainMeshWorkerTaskBundle = WorkerTaskBundle<ConstructTerrainMeshParameters>;
+pub type ConstructTerrainMeshWorkerTaskBundle =
+    WorkerTaskBundle<ConstructTerrainMeshMarker, ConstructTerrainMeshParameters>;

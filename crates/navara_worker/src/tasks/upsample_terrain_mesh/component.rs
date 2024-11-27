@@ -22,4 +22,4 @@ pub struct UpsampleTerrainMeshResult {
     pub max_height: FloatType,
 }
 
-pub type UpsampleTerrainMeshWorkerTaskBundle = WorkerTaskBundle<UpsampleTerrainMeshParameters>;
+pub type UpsampleTerrainMeshWorkerTaskBundle = WorkerTaskBundle<UpsampleTerrainMeshMarker, UpsampleTerrainMeshParameters>;
