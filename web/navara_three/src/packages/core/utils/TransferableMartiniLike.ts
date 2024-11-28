@@ -7,7 +7,7 @@ import type { TransferableMartini } from "@navara/engine";
 const MARTINI_CACHE = new Map<number, Uint32Array>();
 
 export class TransferableMartiniLike implements TransferableMartini {
-  coords: Uint32Array<ArrayBufferLike>;
+  coords: Uint32Array;
   size: number;
 
   constructor(t: TransferableMartini) {
