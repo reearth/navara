@@ -273,7 +273,7 @@ fn traverse_tile(
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
-            if tile.coords.z >= tiles.appearance.as_ref().unwrap().max_z {
+            if tile.coords.z >= tiles.appearance.as_ref().unwrap().max_zoom {
                 let tile = qt.qt.get_mut(handle).unwrap();
                 tile.previous_rendered_state = None;
                 return TraversalResult::NotFound;
@@ -724,13 +724,14 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = tile
-            .should_upsampling(terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_z))
-            && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
+        let should_upsample_terrain =
+            tile.should_upsampling(
+                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            ) && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain
             || (terrain_layer.map_or(false, |t| {
-                t.appearance.as_ref().unwrap().min_z >= tile.coords.z
+                t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z
             }) || (!should_upsample_terrain && is_terrain_failed))
         {
             let triangles = tile_triangles_flat(
