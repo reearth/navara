@@ -187,6 +187,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: -30000,
       clamp_to_ground: true,
       url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      should_rotate_in_default: true,
     },
   },
 
@@ -495,6 +496,7 @@ export const run = async (view: ThreeView) => {
     height: 1,
     extrudedHeight: 1,
     clampToGround: false,
+    shouldRotateInDefault: true,
   };
 
   pane
@@ -632,6 +634,10 @@ export const run = async (view: ThreeView) => {
         material.clamp_to_ground = paneParams.clampToGround;
       }
 
+      if ("should_rotate_in_default" in material) {
+        material.should_rotate_in_default = paneParams.shouldRotateInDefault;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -695,6 +701,11 @@ function createParamCtrl(
     if ("clamp_to_ground" in material) {
       paneParams.clampToGround = material.clamp_to_ground;
       f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
+    }
+
+    if ("should_rotate_in_default" in material) {
+      paneParams.shouldRotateInDefault = material.should_rotate_in_default;
+      f.addBinding(paneParams, "shouldRotateInDefault").on("change", changeFunc);
     }
 
     return f;
