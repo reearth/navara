@@ -27,6 +27,7 @@ import {
   ReconstructableEntity,
   ElevationDecoder,
 } from "@navara/engine";
+import { canWorkerProcessImmediately } from "@navara/worker";
 import {
   type Camera,
   Mesh,
@@ -39,11 +40,7 @@ import {
   ShaderMaterial,
 } from "three";
 
-import {
-  FEATURE_CONCURRENCY,
-  MESH_CONCURRENCY,
-  WORKER_TASK_CONCURRENCY,
-} from "../concurrency";
+import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
@@ -123,7 +120,6 @@ export function processEvent(
     {
       add: {
         key: "mesh_added",
-        max: MESH_CONCURRENCY,
       },
       remove: {
         key: "mesh_removed",
@@ -160,6 +156,16 @@ export function processEvent(
           break;
       }
     },
+    ({ type }) => {
+      switch (type) {
+        case "add":
+          return canWorkerProcessImmediately();
+        case "remove":
+          return true;
+        case "change":
+          return true;
+      }
+    },
   );
 
   eventManager.processTransactionEvents(
@@ -167,7 +173,6 @@ export function processEvent(
     {
       add: {
         key: "worker_task_delegated",
-        max: WORKER_TASK_CONCURRENCY,
       },
       remove: {
         key: "worker_task_removed",
@@ -184,8 +189,16 @@ export function processEvent(
             workerTaskHandler,
           );
           break;
+      }
+    },
+    ({ type }) => {
+      switch (type) {
+        case "add":
+          return canWorkerProcessImmediately();
         case "remove":
-          break;
+          return true;
+        case "change":
+          return true;
       }
     },
   );

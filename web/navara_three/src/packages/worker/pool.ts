@@ -19,6 +19,11 @@ export const initializeWorkerPool = (
 
 export const workerPool = (): Pool => pool;
 
+export const canWorkerProcessImmediately = () => {
+  const stats = workerPool().stats();
+  return stats.pendingTasks === 0;
+};
+
 export type { ExecOptions } from "workerpool/types/types";
 
 type GetTaskName<Task> = Task extends { [K in string]: unknown }

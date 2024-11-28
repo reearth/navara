@@ -5,7 +5,6 @@ import {
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
-  Mesh,
   Vector3,
   Texture,
   Vector2,
@@ -38,7 +37,11 @@ import { registerInputEvents } from "./input";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import { isWorker } from "./temp/utils";
-import { type LayerDescription } from "./type";
+import {
+  type AbortControllers,
+  type LayerDescription,
+  type MeshCache,
+} from "./type";
 import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
@@ -84,8 +87,8 @@ export default class ThreeView {
   } = {};
   private _uniforms: CommonUniforms;
 
-  private _meshes = new Map<string, Mesh>();
-  private _abortControllers = new Map<string, AbortController>();
+  private _meshes: MeshCache = new Map();
+  private _abortControllers: AbortControllers = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _buf: BufferLoader = {
     u8: (handle) => {
