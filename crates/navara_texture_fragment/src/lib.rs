@@ -89,6 +89,7 @@ fn remove_removed_data_requesters(
     removed: Query<Entity, (With<TextureFragment>, With<Deleted>)>,
 ) {
     for e in &removed {
+        commands.entity(e).remove::<Requested>();
         commands.entity(e).despawn();
     }
 }

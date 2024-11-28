@@ -13,10 +13,10 @@ impl PartialOrd for OrderByDistance {
 
 impl Ord for OrderByDistance {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.0 > other.0 {
+        if self.0.abs() > other.0.abs() {
             return Ordering::Greater;
         }
-        if self.0 < other.0 {
+        if self.0.abs() < other.0.abs() {
             return Ordering::Less;
         }
         Ordering::Equal

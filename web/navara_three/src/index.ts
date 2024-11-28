@@ -85,6 +85,7 @@ export default class ThreeView {
   private _uniforms: CommonUniforms;
 
   private _meshes = new Map<string, Mesh>();
+  private _abortControllers = new Map<string, AbortController>();
   private _loadedTexs = new Map<string, Texture>();
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -390,6 +391,7 @@ export default class ThreeView {
         this._scenes,
         this.camera,
         this._meshes,
+        this._abortControllers,
         this._buf,
         this._texFragment,
         this._tileHandler,

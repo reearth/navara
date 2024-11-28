@@ -43,3 +43,5 @@ export type Cesium3dTilesLayer = Layer<
 export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
+
+export type AbortControllers = Map<string, AbortController>;
