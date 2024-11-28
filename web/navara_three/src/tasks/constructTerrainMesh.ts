@@ -5,7 +5,6 @@ import {
 } from "@navara/core";
 import type {
   ReturnedConstructedTerrainMesh,
-  TransferableMartini,
   TransferableRasterDEMData,
   TransferableTile,
 } from "@navara/engine";
@@ -16,10 +15,9 @@ export async function constructTerrainMesh(
   bytes: Uint8Array,
   tile: TransferableTile,
   rasterDEMData: TransferableRasterDEMData,
-  martini: TransferableMartini,
+  martiniLike: TransferableMartiniLike,
 ): Promise<ReturnedConstructedTerrainMesh> {
   const tileLike = new TransferableTileLike(tile);
-  const martiniLike = new TransferableMartiniLike(martini);
   const rasterDEMDataLike = new TransferableRasterDEMDataLike(rasterDEMData);
   const result = await queueTask(
     "constructTerrainMesh",

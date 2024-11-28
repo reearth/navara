@@ -1,3 +1,4 @@
+import { TransferableMartiniLike } from "@navara/core";
 import {
   ConstructTerrainMeshParameters,
   ConstructTerrainMeshResult,
@@ -13,6 +14,7 @@ import {
 
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
+import type { MartiniCache } from "../type";
 
 import type { BufferLoader, TileHandler, WorkerTaskHandler } from ".";
 
@@ -21,6 +23,7 @@ export async function processWorkerTaskDelegatedEvent(
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
+  martiniCache: MartiniCache,
 ) {
   if (event.task.construct_terrain_mesh) {
     return await processConstructTerrainMesh(
@@ -30,6 +33,7 @@ export async function processWorkerTaskDelegatedEvent(
       bufHandler,
       tileHandler,
       workerTaskHandler,
+      martiniCache,
     );
   }
   if (event.task.upsample_terrain_mesh) {
@@ -51,12 +55,25 @@ async function processConstructTerrainMesh(
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
+  martiniCache: MartiniCache,
 ) {
   const bytes = bufHandler.u8(params.bytes_handle);
   if (!bytes) {
     return;
   }
-  const martini = tileHandler.getMartini(params.martini_id);
+
+  const martiniId = params.martini_id[0];
+  const cachedMartini = martiniCache.get(martiniId);
+  const martini = (() => {
+    if (cachedMartini) {
+      return cachedMartini;
+    }
+    const martini = tileHandler.getMartini(params.martini_id);
+    if (!martini) return;
+    const martiniLike = new TransferableMartiniLike(martini);
+    martiniCache.set(martiniId, martiniLike);
+    return martiniLike;
+  })();
   if (!martini) {
     return;
   }

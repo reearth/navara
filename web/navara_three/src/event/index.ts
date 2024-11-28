@@ -44,7 +44,7 @@ import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
-import type { AbortControllers, MeshCache } from "../type";
+import type { AbortControllers, MartiniCache, MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
@@ -95,6 +95,7 @@ export function processEvent(
   camera: Camera,
   meshes: MeshCache,
   abortControllers: AbortControllers,
+  martiniCache: MartiniCache,
   buf: BufferLoader,
   texFragment: TextureFragmentHandler,
   tileHandler: TileHandler,
@@ -187,6 +188,7 @@ export function processEvent(
             buf,
             tileHandler,
             workerTaskHandler,
+            martiniCache,
           );
           break;
       }

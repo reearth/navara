@@ -40,6 +40,7 @@ import { isWorker } from "./temp/utils";
 import {
   type AbortControllers,
   type LayerDescription,
+  type MartiniCache,
   type MeshCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
@@ -89,6 +90,7 @@ export default class ThreeView {
 
   private _meshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
+  private _martiniCache: MartiniCache = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -407,6 +409,7 @@ export default class ThreeView {
         this.camera,
         this._meshes,
         this._abortControllers,
+        this._martiniCache,
         this._buf,
         this._texFragment,
         this._tileHandler,
