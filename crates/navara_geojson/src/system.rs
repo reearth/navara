@@ -434,7 +434,7 @@ mod test {
             color: 123,
             center: Vec2::new(1., 1.),
             height: 1.,
-            scale_by_distance: (0., 1000.),
+            scale_by_distance: Some(true),
             clamp_to_ground: false,
             depth_test: false,
         };
@@ -544,7 +544,7 @@ mod test {
             color: 123,
             center: Vec2::new(1., 1.),
             height: 1.,
-            scale_by_distance: (0., 1000.),
+            scale_by_distance: Some(true),
             clamp_to_ground: false,
             depth_test: false,
         };
@@ -650,7 +650,7 @@ mod test {
             center: Vec2::new(1., 1.),
             height: 1.,
             url: "https://example.com".to_string(),
-            scale_by_distance: (0., 1000.),
+            scale_by_distance: Some(true),
             clamp_to_ground: false,
             depth_test: false,
         };
@@ -761,7 +761,7 @@ mod test {
             center: Vec2::new(1., 1.),
             height: 1.,
             url: "https://example.com".to_string(),
-            scale_by_distance: (0., 1000.),
+            scale_by_distance: Some(true),
             clamp_to_ground: false,
             depth_test: false,
         };

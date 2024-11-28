@@ -12,7 +12,7 @@ pub struct PointMaterial {
     pub center: Vec2,
     pub height: f32,
     #[wasm_bindgen(getter_with_clone)]
-    pub scale_by_distance: NearFar,
+    pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
@@ -25,7 +25,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             color: val.color,
             center: val.center.into(),
             height: val.height,
-            scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
+            scale_by_distance: val.scale_by_distance,
             clamp_to_ground: val.clamp_to_ground,
             depth_test: val.depth_test,
         }
@@ -39,10 +39,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             color: value.color,
             center: value.center.into(),
             height: value.height,
-            scale_by_distance: NearFar {
-                near: value.scale_by_distance.0,
-                far: value.scale_by_distance.1,
-            },
+            scale_by_distance: value.scale_by_distance,
             clamp_to_ground: value.clamp_to_ground,
             depth_test: value.depth_test,
         }
@@ -67,7 +64,7 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
     #[wasm_bindgen(getter_with_clone)]
-    pub scale_by_distance: NearFar,
+    pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
@@ -81,7 +78,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             center: val.center.into(),
             height: val.height,
             url: val.url,
-            scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
+            scale_by_distance: val.scale_by_distance,
             clamp_to_ground: val.clamp_to_ground,
             depth_test: val.depth_test,
         }
@@ -96,10 +93,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             center: value.center.into(),
             height: value.height,
             url: value.url.clone(),
-            scale_by_distance: NearFar {
-                near: value.scale_by_distance.0,
-                far: value.scale_by_distance.1,
-            },
+            scale_by_distance: value.scale_by_distance,
             clamp_to_ground: value.clamp_to_ground,
             depth_test: value.depth_test,
         }

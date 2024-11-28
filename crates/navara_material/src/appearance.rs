@@ -19,7 +19,7 @@ pub struct PointMaterial {
     pub center: Vec2,
     pub height: FloatType,
     /// near, far
-    pub scale_by_distance: (FloatType, FloatType),
+    pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
@@ -33,7 +33,7 @@ pub struct BillboardMaterial {
     pub height: FloatType,
     pub url: String,
     /// near, far
-    pub scale_by_distance: (FloatType, FloatType),
+    pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
