@@ -56,8 +56,8 @@ pub struct Tile {
 impl Clone for Tile {
     fn clone(&self) -> Self {
         Self {
-            coords: self.coords.clone(),
-            extent: self.extent.clone(),
+            coords: self.coords,
+            extent: self.extent,
             aabb: self.aabb.clone(),
             bounding_region: self.bounding_region.clone(),
             // Note: `children` needs to be updated dynamically.
@@ -65,8 +65,8 @@ impl Clone for Tile {
             rendered_at: self.rendered_at,
             visited_at: self.visited_at,
             terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
-            texture_fragment_entity_id: self.texture_fragment_entity_id.clone(),
-            occludee_point_in_scaled_space: self.occludee_point_in_scaled_space.clone(),
+            texture_fragment_entity_id: self.texture_fragment_entity_id,
+            occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
             previous_rendered_state: self.previous_rendered_state.clone(),
             cached_mesh_handle: self.cached_mesh_handle.clone(),
             upsampled: self.upsampled,

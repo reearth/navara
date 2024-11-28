@@ -26,6 +26,7 @@ pub fn commit(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn handle_completed_event(
     mut commands: Commands,
     mut loaded_ev: EventReader<WorkerTaskCompletedEvent>,
@@ -79,6 +80,7 @@ pub fn remove_relation(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn remove(
     mut commands: Commands,
     constructors: Query<

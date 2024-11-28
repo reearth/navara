@@ -1,9 +1,7 @@
-use std::cmp::Ordering;
 
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 
 use navara_component::Deleted;
-use navara_math::FloatType;
 use navara_tile_component::TileHandle;
 
 #[derive(Component, Default)]

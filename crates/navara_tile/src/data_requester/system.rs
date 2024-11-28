@@ -47,13 +47,10 @@ pub(crate) fn filter_requestable_data_requester(
         let handle = marker.0;
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
-            match tile.terrain_data.as_mut() {
-                Some(terrain_data) => {
-                    terrain_data.set_data_requester_entity_id(None);
-                    terrain_data.destroy(&mut buf);
-                    tile.terrain_data = None;
-                }
-                None => {}
+            if let Some(terrain_data) = tile.terrain_data.as_mut() {
+                terrain_data.set_data_requester_entity_id(None);
+                terrain_data.destroy(&mut buf);
+                tile.terrain_data = None;
             };
             commands.entity(e).insert((Deleted, Ignored));
         }

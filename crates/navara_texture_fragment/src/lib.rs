@@ -49,6 +49,7 @@ impl bevy_app::Plugin for TextureFragmentPlugin {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn commit(
     mut commands: Commands,
     mut events: ResMut<EventStore>,

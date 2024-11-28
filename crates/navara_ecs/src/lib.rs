@@ -76,23 +76,17 @@ impl App {
     }
 
     pub fn new_buffer_u8(&mut self, data: Vec<u8>) -> Option<Handle> {
-        let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
-            return None;
-        };
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
         Some(store.new_u8(data))
     }
 
     pub fn new_buffer_u32(&mut self, data: Vec<u32>) -> Option<Handle> {
-        let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
-            return None;
-        };
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
         Some(store.new_u32(data))
     }
 
     pub fn new_buffer_f32(&mut self, data: Vec<f32>) -> Option<Handle> {
-        let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
-            return None;
-        };
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
         Some(store.new_f32(data))
     }
 
@@ -234,7 +228,7 @@ impl App {
         let qt = world.get_resource::<TileQuadtree>()?;
 
         let tile = qt.qt.get(handle).unwrap();
-        tile.terrain_data.as_ref()?.decoder().map(|v| v.clone())
+        tile.terrain_data.as_ref()?.decoder().copied()
     }
 }
 

@@ -15,6 +15,7 @@ pub struct ElevationDecoder {
     pub epsilon: FloatType,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[wasm_bindgen]
 impl ElevationDecoder {
     #[wasm_bindgen(constructor)]

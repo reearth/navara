@@ -8,7 +8,6 @@ mod input;
 mod types;
 mod unit;
 
-use bevy_log::info;
 use entity::ReconstructableEntity;
 use nanoid::nanoid;
 use navara_buffer_store::Handle;

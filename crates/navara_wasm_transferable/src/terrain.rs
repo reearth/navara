@@ -18,7 +18,7 @@ impl TransferableRasterDEMData {
 impl<'a> From<&'a RasterDEMData> for TransferableRasterDEMData {
     fn from(value: &'a RasterDEMData) -> Self {
         Self {
-            decoder: value.decoder.clone().into(),
+            decoder: value.decoder.into(),
         }
     }
 }

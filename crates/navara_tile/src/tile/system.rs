@@ -245,6 +245,7 @@ fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Vec<TileHandle> {
 }
 
 // TODO: Prerender
+#[allow(clippy::too_many_arguments)]
 fn preload_children(
     commands: &mut Commands,
     qt: &mut TileQuadtree,
@@ -995,6 +996,7 @@ pub fn handle_prepared_mesh_event(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn handle_tile_worker_task_completed(
     mut tc: ResMut<TileCacheManager>,
     worker_tasks: Query<

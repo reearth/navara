@@ -9,6 +9,7 @@ use navara_tile_component::{TileQuadtree, TileTextureFragmentMarker};
 
 const MAX_PENDINGS: u32 = 20;
 
+#[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_texture_fragment(
     mut commands: Commands,
     mut qt: ResMut<TileQuadtree>,
