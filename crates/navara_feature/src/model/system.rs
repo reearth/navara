@@ -71,7 +71,11 @@ pub fn transfer_mesh(
                 .with_rotation(rotation)
                 .with_scale(Vec3::new(material.size, material.size, material.size))
         } else {
-            Transform::from_translation(position)
+            Transform::from_translation(position).with_scale(Vec3::new(
+                material.size,
+                material.size,
+                material.size,
+            ))
         };
         let transform = match adjustment_transform {
             Some(a) => transform.mul_transform(*a),
