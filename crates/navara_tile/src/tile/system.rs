@@ -734,7 +734,8 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = tile.should_upsampling(terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_z))
+        let should_upsample_terrain = tile
+            .should_upsampling(terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_z))
             && tile.is_upsamplable(
                 &qt,
                 &texture_fragment,

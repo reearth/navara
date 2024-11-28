@@ -1,4 +1,3 @@
-
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 
 use navara_component::Deleted;

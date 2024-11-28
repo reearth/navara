@@ -32,7 +32,9 @@ pub(crate) fn request_terrain_data(
         Some(t) => {
             let url = tile_url(t.data.as_ref().unwrap().url.as_str(), &tile.coords);
             let mut terrain_data = match &t.terrain_type {
-                TerrainDataType::RasterDEM => RasterDEMData::new(t.appearance.as_ref().unwrap().elevation_decoder), // DEM
+                TerrainDataType::RasterDEM => {
+                    RasterDEMData::new(t.appearance.as_ref().unwrap().elevation_decoder)
+                } // DEM
                 // TODO: Support quantized-mesh
                 TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
                 TerrainDataType::Unknown => return None,
