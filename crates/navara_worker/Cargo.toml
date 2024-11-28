@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
+default = ["delegated_worker"]
 delegated_worker = []
 
 [dependencies]
@@ -12,9 +12,11 @@ bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
 cfg-if.workspace = true
+serde.workspace = true
 navara_math = { path = "../navara_math" }
 navara_tile_component = { path = "../navara_tile_component" }
 navara_core = { path = "../navara_core" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_geometry = { path = "../navara_geometry" }
 navara_component = { path = "../navara_component" }
+navara_event_store = { path = "../navara_event_store" }

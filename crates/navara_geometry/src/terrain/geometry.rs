@@ -1,4 +1,4 @@
-use crate::{tile_triangles, Geometry};
+use crate::{tile_triangles, ReturnedConstructedTerrainMesh};
 use navara_core::{ElevationDecoder, Ellipsoid, Extent, Radians};
 use navara_math::FloatType;
 
@@ -49,7 +49,7 @@ pub fn tile_triangles_with_terrain(
     terrain_w: usize,
     terrain_h: usize,
     decoder: &ElevationDecoder,
-) -> (Geometry, FloatType, FloatType, Vec<FloatType>) {
+) -> ReturnedConstructedTerrainMesh {
     let mut max_height = 0.0f32;
     let mut min_height = 9999.0f32;
     let mut heights = vec![];
@@ -72,12 +72,12 @@ pub fn tile_triangles_with_terrain(
         height
     };
 
-    (
-        tile_triangles(ellipsoid, extent, segments, &mut height),
+    ReturnedConstructedTerrainMesh {
+        geometry: tile_triangles(ellipsoid, extent, segments, &mut height),
         max_height,
         min_height,
         heights,
-    )
+    }
 }
 
 #[cfg(test)]

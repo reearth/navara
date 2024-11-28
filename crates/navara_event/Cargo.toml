@@ -13,3 +13,4 @@ navara_feature = { path = "../navara_feature" }
 navara_mesh = { path = "../navara_mesh" }
 navara_tile_component = { path = "../navara_tile_component" }
 navara_data_requester = { path = "../navara_data_requester" }
+navara_worker = { path = "../navara_worker" }

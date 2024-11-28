@@ -14,5 +14,6 @@
   "[rust]": {
     "editor.tabSize": 4,
     "editor.insertSpaces": false,
-  }
+  },
+  "rust-analyzer.check.command": "clippy"
 }

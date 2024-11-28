@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use bevy_ecs::component::Component;
 
-#[derive(Component, PartialEq, Eq, Debug)]
+#[derive(Component, PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Priority {
     High,
     Medium,

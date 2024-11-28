@@ -7,3 +7,4 @@ mod utils;
 
 pub use quadtree::*;
 pub use traits::*;
+pub use utils::*;

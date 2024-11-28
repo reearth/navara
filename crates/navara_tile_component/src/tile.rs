@@ -6,10 +6,11 @@ use navara_core::{
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
-use navara_geometry::Geometry;
+use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
 use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
+use navara_quadtree::children_coords;
 use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
@@ -47,6 +48,33 @@ pub struct Tile {
     pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
     pub upsampled: bool,
+    pub max_height: FloatType,
+    pub distance_from_camera: FloatType,
+    pub sse: FloatType,
+}
+
+impl Clone for Tile {
+    fn clone(&self) -> Self {
+        Self {
+            coords: self.coords,
+            extent: self.extent,
+            aabb: self.aabb.clone(),
+            bounding_region: self.bounding_region.clone(),
+            // Note: `children` needs to be updated dynamically.
+            children: vec![],
+            rendered_at: self.rendered_at,
+            visited_at: self.visited_at,
+            terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
+            texture_fragment_entity_id: self.texture_fragment_entity_id,
+            occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
+            previous_rendered_state: self.previous_rendered_state.clone(),
+            cached_mesh_handle: self.cached_mesh_handle.clone(),
+            upsampled: self.upsampled,
+            max_height: self.max_height,
+            distance_from_camera: 0.,
+            sse: 0.,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -75,6 +103,9 @@ impl Tile {
             cached_mesh_handle: None,
             upsampled: false,
             children: Vec::with_capacity(4),
+            max_height,
+            distance_from_camera: 0.,
+            sse: 0.,
         }
     }
 
@@ -85,11 +116,7 @@ impl Tile {
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> ReadyState {
-        let texture_fragment_status = self
-            .texture_fragment_entity_id
-            .map(|e| texture_fragment.get(e).map(|t| &t.1.status));
-        let is_texture_loaded = texture_fragment_status
-            .map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Success)));
+        let is_texture_loaded = self.is_texture_ready(texture_fragment);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -109,9 +136,10 @@ impl Tile {
         }
 
         let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
-        let should_upsample = self.should_upsampling(
-            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
-        ) && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
+        let should_upsample =
+            self.should_upsampling(
+                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            ) && self.is_upsamplable(qt, texture_fragment, terrain_data_requester, terrain_layer);
 
         // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
         let should_be_rendered_without_terrain = !self.should_upsampling(
@@ -147,6 +175,13 @@ impl Tile {
         })
     }
 
+    pub fn is_texture_ready(&self, texture_fragment: &TileTextureFragmentQuery) -> bool {
+        let texture_fragment_status = self
+            .texture_fragment_entity_id
+            .map(|e| texture_fragment.get(e).map(|t| &t.1.status));
+        texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Success)))
+    }
+
     pub fn is_terrain_ready(
         &self,
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
@@ -158,13 +193,15 @@ impl Tile {
         })
     }
 
-    pub fn is_parent_terrain_ready(
+    pub fn is_parent_ready(
         &self,
         qt: &TileQuadtree,
-        terrain_data_requester: &TileTerrainDataRequesterQuery,
+        texture_fragments: &TileTextureFragmentQuery,
+        terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         self.get_parent_tile(qt).map_or(false, |p| {
-            (p.is_terrain_ready(terrain_data_requester) || p.upsampled)
+            p.is_texture_ready(texture_fragments)
+                && (p.is_terrain_ready(terrain_data_requesters) || p.upsampled)
                 && p.cached_mesh_handle.is_some()
         })
     }
@@ -172,6 +209,7 @@ impl Tile {
     pub fn is_upsamplable(
         &self,
         qt: &TileQuadtree,
+        texture_fragment: &TileTextureFragmentQuery,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
@@ -180,7 +218,7 @@ impl Tile {
             && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
                 // If parent tile is upsampled, we don't need to wait failed request.
                 || self.get_parent_tile(qt).map_or(false, |t| t.upsampled))
-            && self.is_parent_terrain_ready(qt, terrain_data_requester)
+            && self.is_parent_ready(qt, texture_fragment, terrain_data_requester)
     }
 
     pub fn should_upsampling(&self, max_zoom: usize) -> bool {
@@ -194,18 +232,9 @@ impl Tile {
             .and_then(|p| qt.qt.get(p.handle()))
     }
 
-    fn get_region(&self, qt: &TileQuadtree) -> Option<TileRegion> {
-        let parent = match self.get_parent_tile(qt) {
-            Some(p) => p,
-            None => return None,
-        };
-        let parent_children_coords = qt
-            .qt
-            .children((parent.coords.x, parent.coords.y, parent.coords.z))
-            .unwrap()
-            .iter()
-            .map(|t| t.coords())
-            .collect::<Vec<_>>();
+    fn get_region(&self, parent: &Tile) -> Option<TileRegion> {
+        let parent_children_coords =
+            children_coords((parent.coords.x, parent.coords.y, parent.coords.z));
 
         Some(match (self.coords.x, self.coords.y) {
             (x, y) if x == parent_children_coords[0].0 && y == parent_children_coords[0].1 => {
@@ -232,38 +261,18 @@ impl Tile {
     pub fn upsample(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        qt: &TileQuadtree,
-        buf_store: &BufferStore,
-    ) -> Option<(Geometry, Vec<FloatType>, FloatType, FloatType)> {
-        let parent = match self.get_parent_tile(qt) {
-            Some(p) => p,
-            None => return None,
-        };
-        let region = match self.get_region(qt) {
+        parent: &Tile,
+        upsamplable_geometry: UpsamplableTerrainGeometry,
+    ) -> Option<ReturnedConstructedTerrainMesh> {
+        let region = match self.get_region(parent) {
             Some(r) => r,
             None => return None,
-        };
-
-        let cached_mesh_handle = match &parent.cached_mesh_handle {
-            Some(c) => c,
-            None => return None,
-        };
-
-        let (uvs, heights, indices) = match (
-            buf_store.get_f32(&cached_mesh_handle.uvs),
-            cached_mesh_handle
-                .heights
-                .and_then(|h| buf_store.get_f32(&h)),
-            buf_store.get_u32(&cached_mesh_handle.indices),
-        ) {
-            (Some(u), Some(h), Some(i)) => (u, h, i),
-            _ => return None,
         };
 
         let mut upsampled_mesh = match self
             .terrain_data
             .as_ref()
-            .and_then(|t| t.upsample(&region, uvs, heights, indices))
+            .and_then(|t| t.upsample(&region, upsamplable_geometry))
         {
             Some(u) => u,
             None => return None,
@@ -271,12 +280,12 @@ impl Tile {
 
         let (geometry, heights) = upsampled_mesh.construct_geometry(ellipsoid, &self.extent);
 
-        Some((
+        Some(ReturnedConstructedTerrainMesh {
             geometry,
             heights,
-            upsampled_mesh.max_height,
-            upsampled_mesh.min_height,
-        ))
+            max_height: upsampled_mesh.max_height,
+            min_height: upsampled_mesh.min_height,
+        })
     }
 
     pub fn get_level_maximum_geometric_error(

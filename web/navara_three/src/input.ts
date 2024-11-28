@@ -1,4 +1,4 @@
-import type { Core } from "navara";
+import type { Core } from "@navara/engine";
 
 // TODO: Need to think about how to propagate these event to worker.
 export function registerInputEvents(

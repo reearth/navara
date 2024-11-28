@@ -1,5 +1,6 @@
 use navara_buffer_store::{BufferStore, Handle};
 use navara_math::FloatType;
+use serde::Serialize;
 
 /// A struct to construct a geometry.
 #[derive(Debug, Clone, PartialEq)]
@@ -12,6 +13,7 @@ pub struct Geometry {
     pub indices: Vec<u32>,
 }
 
+#[derive(Clone, Debug, Serialize)]
 /// You should use this struct if you want to store [`Geometry`] to Bevy component.
 pub struct TransferableGeometry {
     pub vertices: Handle,
@@ -27,4 +29,11 @@ impl TransferableGeometry {
             indices: buf.new_u32(geo.indices),
         }
     }
+}
+
+pub struct ReturnedConstructedTerrainMesh {
+    pub geometry: Geometry,
+    pub max_height: FloatType,
+    pub min_height: FloatType,
+    pub heights: Vec<FloatType>,
 }

@@ -21,12 +21,17 @@ import {
   PolylineMaterial,
   PolygonMaterial,
   DataRequesterRemovedEvent,
-} from "navara";
+  DelegatedWorkerTasksResult,
+  TransferableTile,
+  TransferableMartini,
+  ReconstructableEntity,
+  ElevationDecoder,
+} from "@navara/engine";
+import { canWorkerProcessImmediately } from "@navara/worker";
 import {
   type Camera,
   Mesh,
   Material,
-  TextureLoader,
   MeshLambertMaterial,
   Object3D,
   Texture,
@@ -35,21 +40,26 @@ import {
   ShaderMaterial,
 } from "three";
 
-import { FEATURE_CONCURRENCY, MAP_CONCURRENCY } from "../concurrency";
+import { FEATURE_CONCURRENCY } from "../concurrency";
+import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
-import type { MeshCache } from "../type";
+import type { AbortControllers, MartiniCache, MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
-import { IMAGE_LOADER, TEXTURE_LOADER } from "./loaders";
+import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
+import { processWorkerTaskDelegatedEvent } from "./worker";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   u32: (handle: number) => Uint32Array | null;
   setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
+  newU8: (bytes: Uint8Array) => number | undefined;
+  newU32: (bytes: Uint32Array) => number | undefined;
+  newF32: (bytes: Float32Array) => number | undefined;
   remove: (handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
@@ -61,6 +71,20 @@ export type TextureFragmentHandler = {
   ) => void;
 };
 
+export type WorkerTaskHandler = {
+  triggerWorkerTaskCompleted: (
+    bits: bigint,
+    result: DelegatedWorkerTasksResult,
+  ) => void;
+};
+
+export type TileHandler = {
+  getMartini: (bits: ReconstructableEntity) => TransferableMartini | undefined;
+  getTile: (handle: bigint) => TransferableTile | undefined;
+  getParentTile: (handle: bigint) => TransferableTile | undefined;
+  getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
+};
+
 export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
@@ -70,8 +94,12 @@ export function processEvent(
   scenes: Scenes,
   camera: Camera,
   meshes: MeshCache,
+  abortControllers: AbortControllers,
+  martiniCache: MartiniCache,
   buf: BufferLoader,
   texFragment: TextureFragmentHandler,
+  tileHandler: TileHandler,
+  workerTaskHandler: WorkerTaskHandler,
   meshHandler: MeshHandler,
   loadedTexs: Map<string, Texture>,
   event: Events | undefined,
@@ -93,7 +121,6 @@ export function processEvent(
     {
       add: {
         key: "mesh_added",
-        max: MAP_CONCURRENCY,
       },
       remove: {
         key: "mesh_removed",
@@ -128,6 +155,52 @@ export function processEvent(
         case "change":
           processMeshChanged(meshes, event);
           break;
+      }
+    },
+    ({ type }) => {
+      switch (type) {
+        case "add":
+          return canWorkerProcessImmediately();
+        case "remove":
+          return true;
+        case "change":
+          return true;
+      }
+    },
+  );
+
+  eventManager.processTransactionEvents(
+    "workerTaskEvent",
+    {
+      add: {
+        key: "worker_task_delegated",
+      },
+      remove: {
+        key: "worker_task_removed",
+        max: Infinity,
+      },
+    },
+    async ({ type, event }) => {
+      switch (type) {
+        case "add":
+          await processWorkerTaskDelegatedEvent(
+            event,
+            buf,
+            tileHandler,
+            workerTaskHandler,
+            martiniCache,
+          );
+          break;
+      }
+    },
+    ({ type }) => {
+      switch (type) {
+        case "add":
+          return canWorkerProcessImmediately();
+        case "remove":
+          return true;
+        case "change":
+          return true;
       }
     },
   );
@@ -218,12 +291,13 @@ export function processEvent(
           await processTextureFragmentRequested(
             event,
             texFragment,
-            TEXTURE_LOADER,
+            ABORTABLE_TEXTURE_LOADER,
             loadedTexs,
+            abortControllers,
           );
           break;
         case "remove":
-          processTextureFragmentRemoved(event, loadedTexs);
+          processTextureFragmentRemoved(event, loadedTexs, abortControllers);
           break;
       }
     },
@@ -244,10 +318,10 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processRequestedData(event, buf);
+          await processRequestedData(event, buf, abortControllers);
           break;
         case "remove":
-          processDataRequesterRemoved(event, buf);
+          processDataRequesterRemoved(event, buf, abortControllers);
           break;
       }
     },
@@ -357,9 +431,26 @@ function disposeObject3D(model: Object3D): void {
 }
 
 // TODO: Need to check if the cached texture is removed completely
-async function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
+async function processRequestedData(
+  req: DataRequestEvent,
+  buf: BufferLoader,
+  abortControllers: AbortControllers,
+) {
+  const id = generate_id_from_entity(req);
+
+  const abortController = (() => {
+    const a = abortControllers.get(id);
+    if (a) {
+      return a;
+    } else {
+      const a = new AbortController();
+      abortControllers.set(id, a);
+      return a;
+    }
+  })();
+
   if (req.extension === "png") {
-    await IMAGE_LOADER.loadAsync(req.url)
+    await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
       .then((img) => {
         // TODO: Get OffScreeCanvas from main thread in worker.
         const canvas = document.createElement("canvas");
@@ -389,10 +480,14 @@ async function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
       })
       .catch(() => {
         buf.triggerDataRequesterFailed(req.bits);
+      })
+      .finally(() => {
+        abortControllers.delete(id);
       });
     return;
   }
 
+  // TODO: Handle abort
   await fetch(req.url)
     .then((res) => res.arrayBuffer())
     .then((val) => {
@@ -407,21 +502,37 @@ async function processRequestedData(req: DataRequestEvent, buf: BufferLoader) {
 function processDataRequesterRemoved(
   req: DataRequesterRemovedEvent,
   buf: BufferLoader,
+  abortControllers: AbortControllers,
 ) {
+  const id = generate_id_from_entity(req);
+  const abortController = abortControllers.get(id);
   buf.remove(req.handle);
+  abortController?.abort();
 }
 
 async function processTextureFragmentRequested(
   req: TextureFragmentRequestedEvent,
   handler: TextureFragmentHandler,
-  tex: TextureLoader,
+  tex: AbortableTextureLoader,
   loadedTexes: Map<string, Texture>,
+  abortControllers: AbortControllers,
 ) {
   const id = generate_id_from_entity(req);
   if (loadedTexes.has(id)) return;
 
+  const abortController = (() => {
+    const a = abortControllers.get(id);
+    if (a) {
+      return a;
+    } else {
+      const a = new AbortController();
+      abortControllers.set(id, a);
+      return a;
+    }
+  })();
+
   await tex
-    .loadAsync(req.url)
+    .loadAsyncWithAbort(req.url, abortController)
     .then((t) => {
       loadedTexes.set(id, t);
       handler.triggerTextureFragmentLoaded(
@@ -434,16 +545,22 @@ async function processTextureFragmentRequested(
         req.bits,
         TextureFragmentStatus.Fail,
       );
+    })
+    .finally(() => {
+      abortControllers.delete(id);
     });
 }
 
 function processTextureFragmentRemoved(
   req: EntityEvent,
   loadedTexes: Map<string, Texture>,
+  abortControllers: AbortControllers,
 ) {
   const id = generate_id_from_entity(req);
+  const abortController = abortControllers.get(id);
   loadedTexes.get(id)?.dispose();
   loadedTexes.delete(id);
+  abortController?.abort();
 }
 
 async function processRenderableFeatureAdded(

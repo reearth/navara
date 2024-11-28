@@ -1,11 +1,10 @@
 import { EventManager } from "@navara/core";
+import initCore, { Core, TextureFragmentStatus } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
-import initCore, { Core, TextureFragmentStatus } from "navara";
 import {
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
-  Mesh,
   Vector3,
   Texture,
   Vector2,
@@ -31,12 +30,19 @@ import {
   type BufferLoader,
   type MeshHandler,
   type TextureFragmentHandler,
+  type TileHandler,
+  type WorkerTaskHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import { isWorker } from "./temp/utils";
-import { type LayerDescription } from "./type";
+import {
+  type AbortControllers,
+  type LayerDescription,
+  type MartiniCache,
+  type MeshCache,
+} from "./type";
 import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
@@ -82,7 +88,9 @@ export default class ThreeView {
   } = {};
   private _uniforms: CommonUniforms;
 
-  private _meshes = new Map<string, Mesh>();
+  private _meshes: MeshCache = new Map();
+  private _abortControllers: AbortControllers = new Map();
+  private _martiniCache: MartiniCache = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -100,6 +108,15 @@ export default class ThreeView {
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
       this._core?.setBufferU8(handle, bits, b);
     },
+    newU8: (b: Uint8Array) => {
+      return this._core?.newBufferU8(b);
+    },
+    newU32: (b: Uint32Array) => {
+      return this._core?.newBufferU32(b);
+    },
+    newF32: (b: Float32Array) => {
+      return this._core?.newBufferF32(b);
+    },
     remove: (handle: number) => {
       this._core?.removeBuffer(handle);
     },
@@ -113,6 +130,25 @@ export default class ThreeView {
       status: TextureFragmentStatus,
     ) => {
       this._core?.triggerTextureFragmentLoaded(bits, status);
+    },
+  };
+  private _tileHandler: TileHandler = {
+    getMartini: (id) => {
+      return this._core?.getMartini(id);
+    },
+    getTile: (handle) => {
+      return this._core?.getTile(handle);
+    },
+    getParentTile: (handle) => {
+      return this._core?.getParentTile(handle);
+    },
+    getTileElevationDecoder: (handle) => {
+      return this._core?.getTileElevationDecoder(handle);
+    },
+  };
+  private _workerTaskHandler: WorkerTaskHandler = {
+    triggerWorkerTaskCompleted: (bits, result) => {
+      this._core?.triggerWorkerTaskCompleted(bits, result);
     },
   };
   private _meshHandler: MeshHandler = {
@@ -372,8 +408,12 @@ export default class ThreeView {
         this._scenes,
         this.camera,
         this._meshes,
+        this._abortControllers,
+        this._martiniCache,
         this._buf,
         this._texFragment,
+        this._tileHandler,
+        this._workerTaskHandler,
         this._meshHandler,
         this._loadedTexs,
         events,

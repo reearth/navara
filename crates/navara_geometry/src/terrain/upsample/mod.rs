@@ -12,6 +12,13 @@ use crate::Geometry;
 
 use navara_math::FloatType;
 
+#[derive(Debug)]
+pub struct UpsamplableTerrainGeometry<'a> {
+    pub uvs: &'a [FloatType],
+    pub heights: &'a [FloatType],
+    pub indices: &'a [u32],
+}
+
 /// Upsample a terrain mesh which is one of the four split child tiles.
 /// The upsampled mesh have to be same size.
 /// | 1 | 2 |  upsample 1  |       |
@@ -29,12 +36,11 @@ pub struct UpsampledTerrainGeometry {
 }
 
 impl UpsampledTerrainGeometry {
-    pub fn new(
-        uvs: &[FloatType],
-        heights: &[FloatType],
-        indices: &[u32],
-        tile_region: &TileRegion,
-    ) -> Self {
+    pub fn new(upsamplable_geometry: UpsamplableTerrainGeometry, tile_region: &TileRegion) -> Self {
+        let uvs = &upsamplable_geometry.uvs;
+        let heights = &upsamplable_geometry.heights;
+        let indices = &upsamplable_geometry.indices;
+
         let (is_east, is_north) = match tile_region {
             TileRegion::NorthEast => (true, true),
             TileRegion::SouthEast => (true, false),
@@ -349,14 +355,18 @@ impl ClippedCoordMap {
 mod test {
     use navara_core::TileRegion;
 
+    use crate::UpsamplableTerrainGeometry;
+
     use super::UpsampledTerrainGeometry;
 
     #[test]
     fn it_should_construct_upsampled_coords() {
         let mesh = UpsampledTerrainGeometry::new(
-            &[0.1, 0.8, 0.4, 0.2, 0.8, 0.9],
-            &[0., 50., 100.],
-            &[0, 1, 2],
+            UpsamplableTerrainGeometry {
+                uvs: &[0.1, 0.8, 0.4, 0.2, 0.8, 0.9],
+                heights: &[0., 50., 100.],
+                indices: &[0, 1, 2],
+            },
             &TileRegion::NorthEast,
         );
 
@@ -371,9 +381,11 @@ mod test {
         assert_eq!(mesh.indices.unwrap(), [0, 1, 2, 0, 2, 3]);
 
         let mesh = UpsampledTerrainGeometry::new(
-            &[0., 1., 0., 0., 1., 0., 1., 1.],
-            &[0., 50., 100., 50.],
-            &[0, 1, 2, 0, 2, 3],
+            UpsamplableTerrainGeometry {
+                uvs: &[0., 1., 0., 0., 1., 0., 1., 1.],
+                heights: &[0., 50., 100., 50.],
+                indices: &[0, 1, 2, 0, 2, 3],
+            },
             &TileRegion::NorthEast,
         );
 
