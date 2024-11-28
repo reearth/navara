@@ -705,7 +705,10 @@ function createParamCtrl(
 
     if ("should_rotate_in_default" in material) {
       paneParams.shouldRotateInDefault = material.should_rotate_in_default;
-      f.addBinding(paneParams, "shouldRotateInDefault").on("change", changeFunc);
+      f.addBinding(paneParams, "shouldRotateInDefault").on(
+        "change",
+        changeFunc,
+      );
     }
 
     return f;
