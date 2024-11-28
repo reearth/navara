@@ -114,10 +114,7 @@ export const run = async (view: ThreeView) => {
         x: 0.5,
         y: 0,
       },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
+      scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
       url: "/example.png",

@@ -65,10 +65,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 0.5,
         y: 0,
       },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
+      scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
     },
@@ -107,10 +104,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 0.5,
         y: 0,
       },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
+      scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
       url: "/example.png",
@@ -324,10 +318,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 0.5,
         y: 0,
       },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
+      scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
     },
@@ -495,6 +486,7 @@ export const run = async (view: ThreeView) => {
     height: 1,
     extrudedHeight: 1,
     clampToGround: false,
+    scaleByDistance: true,
   };
 
   pane
@@ -632,6 +624,10 @@ export const run = async (view: ThreeView) => {
         material.clamp_to_ground = paneParams.clampToGround;
       }
 
+      if ("scale_by_distance" in material) {
+        material.scale_by_distance = paneParams.scaleByDistance;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -695,6 +691,11 @@ function createParamCtrl(
     if ("clamp_to_ground" in material) {
       paneParams.clampToGround = material.clamp_to_ground;
       f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
+    }
+
+    if ("scale_by_distance" in material) {
+      paneParams.scaleByDistance = material.scale_by_distance;
+      f.addBinding(paneParams, "scaleByDistance").on("change", changeFunc);
     }
 
     return f;
