@@ -31,12 +31,14 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    color: 0xffffff,
-    segments: 10,
-    url: tileUrls.gsiSeamlessphoto,
-    max_sse: 2,
-    max_z: 23,
-    wireframe: false,
+    data: { url: tileUrls.gsiSeamlessphoto },
+    raster_tile: {
+      segments: 10,
+      color: 0xcccccc,
+      max_sse: 2,
+      max_z: 23,
+      wireframe: false,
+    },
   });
 
   const terrainType: "mapbox" | "gsi" = "gsi";
@@ -63,17 +65,21 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "terrain",
-    segments: 64,
-    // @ts-expect-error : Make switch button later
-    url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
-    max_z: 15,
-    min_z: 5,
-    wireframe: false,
-    elevation_decoder:
+    data: {
       // @ts-expect-error : Make switch button later
-      terrainType === "mapbox"
-        ? MAPBOX_ELEVATION_DECODER
-        : JAPAN_GSI_ELEVATION_DECODER,
+      url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
+    },
+    raster_terrain: {
+      segments: 64,
+      max_z: 15,
+      min_z: 5,
+      wireframe: false,
+      elevation_decoder:
+        // @ts-expect-error : Make switch button later
+        terrainType === "mapbox"
+          ? MAPBOX_ELEVATION_DECODER
+          : JAPAN_GSI_ELEVATION_DECODER,
+    },
   });
 
   view.addLayer({

@@ -1,9 +1,9 @@
 use navara_math::FloatType;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, PartialEq, Default, Copy, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Copy, Serialize, Deserialize)]
 pub struct ElevationDecoder {
     pub r_scaler: FloatType,
     pub g_scaler: FloatType,

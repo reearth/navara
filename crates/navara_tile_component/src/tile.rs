@@ -136,12 +136,13 @@ impl Tile {
         }
 
         let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
-        let should_upsample = self.should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
+        let should_upsample = self
+            .should_upsampling(terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_z))
             && self.is_upsamplable(qt, texture_fragment, terrain_data_requester, terrain_layer);
 
         // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
         let should_be_rendered_without_terrain = !self
-            .should_upsampling(terrain_layer.map_or(1, |t| t.max_z))
+            .should_upsampling(terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_z))
             && matches!(
                 self.get_terrain_data_requester(terrain_data_requester)
                     .map(|t| t.status),

@@ -12,6 +12,8 @@ export default defineConfig({
     mainFields: ["module"],
     alias: {
       "@shaders": path.resolve(__dirname, "../../shaders"),
+      "@navara/core": path.resolve(__dirname, "./src/packages/core"),
+      "@navara/worker": path.resolve(__dirname, "./src/packages/worker"),
     },
   },
   build: {

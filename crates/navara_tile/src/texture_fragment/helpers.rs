@@ -19,7 +19,7 @@ pub(crate) fn request_texture_fragment(
         return None;
     }
 
-    let url = tile_url(&tiles.url, &tile.coords);
+    let url = tile_url(tiles.data.as_ref().unwrap().url.as_str(), &tile.coords);
     let entity = commands.spawn((
         TileTextureFragmentMarker(handle),
         TextureFragment::new(url),
