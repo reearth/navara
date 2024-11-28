@@ -181,6 +181,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: -30000,
       clamp_to_ground: true,
       url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      should_rotate_in_default: true,
     },
   },
 
@@ -386,7 +387,7 @@ export const run = async (view: ThreeView) => {
   //   height: 0,
   //   tile_url: "http://localhost:8888/{z}/{x}/{y}.png",
   //   z: 4,
-  //   max_z: 21,
+  //   max_zoom: 21,
   //   max_sse: 2,
   //   wireframe: false,
   // });
@@ -398,7 +399,7 @@ export const run = async (view: ThreeView) => {
       segments: 10,
       color: 0xcccccc,
       max_sse: 2,
-      max_z: 23,
+      max_zoom: 23,
       wireframe: false,
     },
   });
@@ -433,8 +434,8 @@ export const run = async (view: ThreeView) => {
     },
     raster_terrain: {
       segments: 64,
-      max_z: 15,
-      min_z: 5,
+      max_zoom: 15,
+      min_zoom: 5,
       wireframe: false,
       elevation_decoder:
         // @ts-expect-error : Make switch button later
@@ -487,6 +488,7 @@ export const run = async (view: ThreeView) => {
     extrudedHeight: 1,
     clampToGround: false,
     scaleByDistance: true,
+    shouldRotateInDefault: true,
   };
 
   pane
@@ -628,6 +630,10 @@ export const run = async (view: ThreeView) => {
         material.scale_by_distance = paneParams.scaleByDistance;
       }
 
+      if ("should_rotate_in_default" in material) {
+        material.should_rotate_in_default = paneParams.shouldRotateInDefault;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -696,6 +702,14 @@ function createParamCtrl(
     if ("scale_by_distance" in material) {
       paneParams.scaleByDistance = material.scale_by_distance;
       f.addBinding(paneParams, "scaleByDistance").on("change", changeFunc);
+    }
+
+    if ("should_rotate_in_default" in material) {
+      paneParams.shouldRotateInDefault = material.should_rotate_in_default;
+      f.addBinding(paneParams, "shouldRotateInDefault").on(
+        "change",
+        changeFunc,
+      );
     }
 
     return f;

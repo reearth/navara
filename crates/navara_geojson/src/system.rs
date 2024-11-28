@@ -296,8 +296,10 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Model(mat) = &u.appearance {
-                            let should_update_transform =
-                                material.height != mat.height || material.size != mat.size;
+                            let should_update_transform = material.height != mat.height
+                                || material.size != mat.size
+                                || material.should_rotate_in_default
+                                    != mat.should_rotate_in_default;
                             *material = mat.clone();
                             if should_update_transform {
                                 *transform = calc_transform(
@@ -305,7 +307,7 @@ pub fn update_geo_json_layer(
                                     crs,
                                     material.height,
                                     material.size,
-                                    true,
+                                    material.should_rotate_in_default,
                                 );
                             }
                         }
