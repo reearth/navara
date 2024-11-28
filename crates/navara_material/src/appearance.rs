@@ -80,7 +80,7 @@ pub struct RasterTileMaterial {
     pub segments: usize,
     pub color: u32,
     pub max_sse: f32,
-    pub max_z: usize,
+    pub max_zoom: usize,
     pub wireframe: bool,
 }
 
@@ -88,8 +88,8 @@ pub struct RasterTileMaterial {
 pub struct RasterTerrainMaterial {
     pub show: bool,
     pub segments: usize,
-    pub max_z: usize,
-    pub min_z: usize,
+    pub max_zoom: usize,
+    pub min_zoom: usize,
     pub wireframe: bool,
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: u32,
