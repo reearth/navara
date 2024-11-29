@@ -46,6 +46,7 @@ impl Plugin for FeaturePlugin {
                 Update,
                 (
                     polygon::system::transfer_mesh,
+                    polygon::system::transfer_batched_mesh,
                     polygon::system::update_polygon,
                     polygon::system::update_height_by_terrain,
                 ),
