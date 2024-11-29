@@ -22,10 +22,10 @@ impl Ord for TileOrderByDistance {
         if self.sse < other.sse {
             return Ordering::Less;
         }
-        if self.distance_from_camera > other.distance_from_camera {
+        if self.distance_from_camera.abs() > other.distance_from_camera.abs() {
             return Ordering::Greater;
         }
-        if self.distance_from_camera < other.distance_from_camera {
+        if self.distance_from_camera.abs() < other.distance_from_camera.abs() {
             return Ordering::Less;
         }
         Ordering::Equal

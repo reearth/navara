@@ -12,13 +12,17 @@ export const initializeWorkerPool = (
   pool ??
   (pool = workerpool.pool(url, {
     maxWorkers: concurrency,
-    maxQueueSize: concurrency,
     workerOpts: {
       type: import.meta.env.PROD ? undefined : "module",
     },
   }));
 
 export const workerPool = (): Pool => pool;
+
+export const canWorkerProcessImmediately = () => {
+  const stats = workerPool().stats();
+  return stats.pendingTasks === 0;
+};
 
 export type { ExecOptions } from "workerpool/types/types";
 

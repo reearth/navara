@@ -1,8 +1,3 @@
-import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
-import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
-import PointFragShader from "@shaders/glsl/point.frag.glsl";
-import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
-import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
 import type {
   BillboardMesh,
   PointMesh,
@@ -10,7 +5,12 @@ import type {
   PolylineMesh,
   RenderableFeature,
   PolygonMesh,
-} from "navara";
+} from "@navara/engine";
+import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
+import PointFragShader from "@shaders/glsl/point.frag.glsl";
+import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
+import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -55,7 +55,7 @@ async function renderPoint(m: PointMesh) {
   const material = new SpriteMaterial({
     color: m.material.color,
     depthTest: m.material.depth_test,
-    sizeAttenuation: false,
+    sizeAttenuation: !m.material.scale_by_distance,
     visible: m.material.show,
   });
   material.onBeforeCompile = (shader) => {
@@ -105,7 +105,7 @@ async function renderBillboard(m: BillboardMesh) {
   const material = new SpriteMaterial({
     map: map,
     color: m.material.color,
-    sizeAttenuation: false,
+    sizeAttenuation: !m.material.scale_by_distance,
     depthTest: m.material.depth_test,
     visible: m.material.show,
   });

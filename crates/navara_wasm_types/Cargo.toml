@@ -1,0 +1,18 @@
+[package]
+name = "navara_wasm_types"
+version = "0.1.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen.workspace = true
+serde.workspace = true
+
+navara_core = { path = "../navara_core" }
+navara_math = { path = "../navara_math" }
+navara_geometry = { path = "../navara_geometry" }
+navara_mesh = { path = "../navara_mesh" }
+navara_buffer_store = { path = "../navara_buffer_store" }

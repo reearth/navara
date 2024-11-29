@@ -1,0 +1,21 @@
+[package]
+name = "navara_wasm_transferable"
+version = "0.1.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen.workspace = true
+navara_buffer_store = { path = "../navara_buffer_store" }
+navara_tile_component = { path = "../navara_tile_component" }
+navara_wasm_types = { path = "../navara_wasm_types" }
+navara_math = { path = "../navara_math" }
+
+js-sys.workspace = true
+serde.workspace = true
+serde-wasm-bindgen.workspace = true
+gloo-utils = { workspace = true, features = ["serde"] }
+web-sys = { workspace = true, features = ["console"] }

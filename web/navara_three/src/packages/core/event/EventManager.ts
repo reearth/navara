@@ -1,4 +1,4 @@
-import { type Events } from "navara";
+import { type Events } from "@navara/engine";
 
 import { generate_id_from_entity, isEntityEvent } from "../id";
 
@@ -59,6 +59,8 @@ export class EventManager {
     renderable_feature_removed: [],
     texture_fragment_removed: [],
     texture_fragment_requested: [],
+    worker_task_delegated: [],
+    worker_task_removed: [],
   };
   private transactionManager = new TransactionManager();
 

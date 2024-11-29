@@ -17,6 +17,8 @@ pub struct EventStore {
     pub data_requester_removed: Vec<Entity>,
     pub texture_fragment_reqested: Vec<Entity>,
     pub texture_fragment_removed: Vec<Entity>,
+    pub worker_task_delegated: Vec<Entity>,
+    pub worker_task_removed: Vec<Entity>,
     pub renderable_feature_added: Vec<Entity>,
     pub renderable_feature_changed: Vec<Entity>,
     pub renderable_feature_removed: Vec<Entity>,
@@ -33,6 +35,8 @@ impl EventStore {
         self.data_requester_removed.clear();
         self.texture_fragment_reqested.clear();
         self.texture_fragment_removed.clear();
+        self.worker_task_delegated.clear();
+        self.worker_task_removed.clear();
         self.renderable_feature_added.clear();
         self.renderable_feature_changed.clear();
         self.renderable_feature_removed.clear();

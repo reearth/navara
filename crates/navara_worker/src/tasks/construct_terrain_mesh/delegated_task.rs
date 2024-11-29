@@ -1,13 +1,4 @@
-use crate::DelegatedWorkerTask;
+use super::{ConstructTerrainMeshParameters, ConstructTerrainMeshResult};
 
-use super::ConstructTerrainMeshResult;
-
-// TODO: Fill it later
-pub struct DelegatableConstructTerrainMeshParameters {}
-
+pub type DelegatableConstructTerrainMeshParameters = ConstructTerrainMeshParameters;
 pub type DelegatableConstructTerrainMeshResult = ConstructTerrainMeshResult;
-
-pub type ConstructTerrainMeshDelegatedWorkerTask = DelegatedWorkerTask<
-    DelegatableConstructTerrainMeshParameters,
-    DelegatableConstructTerrainMeshResult,
->;

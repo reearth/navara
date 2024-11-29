@@ -4,17 +4,17 @@ use crate::{data_requester::TileTerrainDataRequesterQuery, tile::Tile};
 use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::BufferStore;
-use navara_core::{Ellipsoid, Extent, LngLat, Radians, TileRegion};
-use navara_geometry::{Geometry, UpsampledTerrainGeometry};
+use navara_core::{ElevationDecoder, Ellipsoid, Extent, LngLat, Radians, TileRegion};
+use navara_geometry::{
+    ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
+};
 use navara_math::FloatType;
 
 pub trait TerrainData: Debug + Sync + Send {
     fn upsample(
         &self,
         region: &TileRegion,
-        uvs: &[FloatType],
-        heights: &[FloatType],
-        indices: &[u32],
+        upsamplable_geometry: UpsamplableTerrainGeometry,
     ) -> Option<UpsampledTerrainGeometry>;
     fn construct_terrain_mesh(
         &self,
@@ -23,7 +23,7 @@ pub trait TerrainData: Debug + Sync + Send {
         bytes: &[u8],
         geoid_height: FloatType,
         martini: &mut Martini,
-    ) -> (Geometry, FloatType, FloatType, Vec<FloatType>);
+    ) -> ReturnedConstructedTerrainMesh;
     fn data_requester_entity_id(&self) -> Option<Entity>;
     fn set_data_requester_entity_id(&mut self, e: Option<Entity>);
     /// Compute a terrain height at specified point.
@@ -40,4 +40,8 @@ pub trait TerrainData: Debug + Sync + Send {
     fn current_min_height(&self) -> Option<FloatType>;
     fn set_current_min_height(&mut self, h: FloatType);
     fn destroy(&mut self, buf: &mut BufferStore);
+    fn box_clone(&self) -> Box<dyn TerrainData>;
+    fn decoder(&self) -> Option<&ElevationDecoder> {
+        None
+    }
 }

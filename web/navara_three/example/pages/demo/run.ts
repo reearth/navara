@@ -36,7 +36,7 @@ export const run = async (view: ThreeView) => {
       segments: 10,
       color: 0xcccccc,
       max_sse: 2,
-      max_z: 23,
+      max_zoom: 23,
       wireframe: false,
     },
   });
@@ -71,8 +71,8 @@ export const run = async (view: ThreeView) => {
     },
     raster_terrain: {
       segments: 64,
-      max_z: 15,
-      min_z: 5,
+      max_zoom: 15,
+      min_zoom: 5,
       wireframe: false,
       elevation_decoder:
         // @ts-expect-error : Make switch button later
@@ -114,10 +114,7 @@ export const run = async (view: ThreeView) => {
         x: 0.5,
         y: 0,
       },
-      scale_by_distance: {
-        near: 0,
-        far: 1000,
-      },
+      scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
       url: "/example.png",

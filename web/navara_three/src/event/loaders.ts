@@ -2,9 +2,13 @@ import { ImageLoader, TextureLoader } from "three";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import { FEATURE_CONCURRENCY } from "../concurrency";
+import { AbortableImageLoader } from "../loaders";
+import { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 
 export const TEXTURE_LOADER = new TextureLoader();
+export const ABORTABLE_TEXTURE_LOADER = new AbortableTextureLoader();
 export const IMAGE_LOADER = new ImageLoader();
+export const ABORTABLE_IMAGE_LOADER = new AbortableImageLoader();
 
 export const initializeGltfLoader = (() => {
   let GLTF: GLTFLoader;

@@ -12,7 +12,7 @@ pub struct PointMaterial {
     pub center: Vec2,
     pub height: f32,
     #[wasm_bindgen(getter_with_clone)]
-    pub scale_by_distance: NearFar,
+    pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
@@ -25,7 +25,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             color: val.color,
             center: val.center.into(),
             height: val.height,
-            scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
+            scale_by_distance: val.scale_by_distance,
             clamp_to_ground: val.clamp_to_ground,
             depth_test: val.depth_test,
         }
@@ -39,10 +39,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             color: value.color,
             center: value.center.into(),
             height: value.height,
-            scale_by_distance: NearFar {
-                near: value.scale_by_distance.0,
-                far: value.scale_by_distance.1,
-            },
+            scale_by_distance: value.scale_by_distance,
             clamp_to_ground: value.clamp_to_ground,
             depth_test: value.depth_test,
         }
@@ -67,7 +64,7 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
     #[wasm_bindgen(getter_with_clone)]
-    pub scale_by_distance: NearFar,
+    pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
 }
@@ -81,7 +78,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             center: val.center.into(),
             height: val.height,
             url: val.url,
-            scale_by_distance: (val.scale_by_distance.near, val.scale_by_distance.far),
+            scale_by_distance: val.scale_by_distance,
             clamp_to_ground: val.clamp_to_ground,
             depth_test: val.depth_test,
         }
@@ -96,10 +93,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             center: value.center.into(),
             height: value.height,
             url: value.url.clone(),
-            scale_by_distance: NearFar {
-                near: value.scale_by_distance.0,
-                far: value.scale_by_distance.1,
-            },
+            scale_by_distance: value.scale_by_distance,
             clamp_to_ground: value.clamp_to_ground,
             depth_test: value.depth_test,
         }
@@ -193,7 +187,7 @@ impl From<PolygonInternalMaterial> for navara_material::PolygonInternalMaterial 
         }
     }
 }
-impl<'a> From<&'a navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
+impl From<&navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
     fn from(val: &navara_material::PolygonInternalMaterial) -> Self {
         PolygonInternalMaterial {
             min_max_heights: val.min_max_heights.clone(),
@@ -247,7 +241,7 @@ pub struct RasterTileMaterial {
     pub show: Option<bool>,
     pub segments: usize,
     pub color: u32,
-    pub max_z: usize,
+    pub max_zoom: usize,
     pub max_sse: f32,
     pub wireframe: Option<bool>,
 }
@@ -258,7 +252,7 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             show: val.show.unwrap_or(true),
             segments: val.segments,
             color: val.color,
-            max_z: val.max_z,
+            max_zoom: val.max_zoom,
             max_sse: val.max_sse,
             wireframe: val.wireframe.unwrap_or(false),
         }
@@ -270,7 +264,7 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             show: Some(value.show),
             segments: value.segments,
             color: value.color,
-            max_z: value.max_z,
+            max_zoom: value.max_zoom,
             max_sse: value.max_sse,
             wireframe: Some(value.wireframe),
         }
@@ -282,8 +276,8 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
 pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
     pub segments: usize,
-    pub max_z: usize,
-    pub min_z: usize,
+    pub max_zoom: usize,
+    pub min_zoom: usize,
     pub wireframe: Option<bool>,
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: Option<u32>,
@@ -294,8 +288,8 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
         navara_material::RasterTerrainMaterial {
             show: val.show.unwrap_or(true),
             segments: val.segments,
-            max_z: val.max_z,
-            min_z: val.min_z,
+            max_zoom: val.max_zoom,
+            min_zoom: val.min_zoom,
             wireframe: val.wireframe.unwrap_or(false),
             tile_size: val.tile_size.unwrap_or(256),
             elevation_decoder: val.elevation_decoder.into(),
@@ -308,8 +302,8 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
         RasterTerrainMaterial {
             show: Some(value.show),
             segments: value.segments,
-            max_z: value.max_z,
-            min_z: value.min_z,
+            max_zoom: value.max_zoom,
+            min_zoom: value.min_zoom,
             wireframe: Some(value.wireframe),
             elevation_decoder: ElevationDecoder {
                 r_scaler: value.elevation_decoder.r_scaler,

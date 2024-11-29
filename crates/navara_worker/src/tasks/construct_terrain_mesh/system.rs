@@ -1,10 +1,11 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, With},
+    query::{Added, With, Without},
     system::{Commands, Query, Res, ResMut},
 };
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
+use navara_component::Deleted;
 use navara_core::WGS84_32;
 use navara_geometry::TransferableGeometry;
 use navara_tile_component::{MartiniComponent, TileQuadtree};
@@ -20,7 +21,11 @@ pub(crate) fn construct_terrain_mesh(
     mut buf: ResMut<BufferStore>,
     constructors: Query<
         (Entity, &ConstructTerrainMeshParameters),
-        (Added<WorkerTaskMarker>, With<WorkerTaskMarker>),
+        (
+            Added<WorkerTaskMarker>,
+            With<WorkerTaskMarker>,
+            Without<Deleted>,
+        ),
     >,
     mut martini_components: Query<&mut MartiniComponent>,
 ) {
@@ -40,17 +45,19 @@ pub(crate) fn construct_terrain_mesh(
         };
         let mut martini = martini_components.get_mut(constructor.martini_id).unwrap();
 
-        let (triangles, max_height, min_height, heights) = tile
-            .terrain_data
-            .as_ref()
-            .unwrap()
-            .construct_terrain_mesh(WGS84_32, tile, bytes, 0., martini.get_mut());
+        let returned = tile.terrain_data.as_ref().unwrap().construct_terrain_mesh(
+            WGS84_32,
+            tile,
+            bytes,
+            0.,
+            martini.get_mut(),
+        );
 
         commands.entity(e).insert(ConstructTerrainMeshResult {
-            geometry: TransferableGeometry::with_buf(&mut buf, triangles),
-            heights: buf.new_f32(heights),
-            max_height,
-            min_height,
+            geometry: TransferableGeometry::with_buf(&mut buf, returned.geometry),
+            heights: buf.new_f32(returned.heights),
+            max_height: returned.max_height,
+            min_height: returned.min_height,
         });
     }
 }

@@ -1,11 +1,13 @@
 mod feature;
 mod feature_event;
+pub mod worker;
 
 use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
+use worker::WorkerTaskDelegatedEvent;
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -19,6 +21,8 @@ pub struct Events {
     pub data_requester_removed: Vec<DataRequesterRemovedEvent>,
     pub texture_fragment_requested: Vec<TextureFragmentRequestedEvent>,
     pub texture_fragment_removed: Vec<EntityEvent>,
+    pub worker_task_delegated: Vec<WorkerTaskDelegatedEvent>,
+    pub worker_task_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
     pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
     pub renderable_feature_removed: Vec<EntityEvent>,
@@ -150,7 +154,7 @@ pub struct EntityEvent {
     pub gen: u32,
 }
 
-impl<'a> From<navara_event::Events<'a>> for Events {
+impl From<navara_event::Events<'_>> for Events {
     fn from(ev: navara_event::Events) -> Self {
         Self {
             camera_transform_updated: ev.camera_transform_updated.map(|ev| ev.into()),
@@ -175,6 +179,16 @@ impl<'a> From<navara_event::Events<'a>> for Events {
                 .collect(),
             texture_fragment_removed: ev
                 .texture_fragment_removed
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
+            worker_task_delegated: ev
+                .worker_task_delegated
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
+            worker_task_removed: ev
+                .worker_task_removed
                 .into_iter()
                 .map(|ev| ev.into())
                 .collect(),

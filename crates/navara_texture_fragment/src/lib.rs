@@ -10,7 +10,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 
-use navara_component::Deleted;
+use navara_component::{Deleted, Ignored, Requested};
 use navara_event_store::EventStore;
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -49,15 +49,19 @@ impl bevy_app::Plugin for TextureFragmentPlugin {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn commit(
+    mut commands: Commands,
     mut events: ResMut<EventStore>,
     added: Query<Entity, (Added<TextureFragment>, Without<Deleted>)>,
-    removed: Query<Entity, (With<TextureFragment>, With<Deleted>)>,
+    removed: Query<Entity, (With<TextureFragment>, With<Deleted>, Without<Ignored>)>,
 ) {
     for e in &added {
+        commands.entity(e).insert(Requested);
         events.texture_fragment_reqested.push(e);
     }
     for e in &removed {
+        commands.entity(e).remove::<Requested>();
         events.texture_fragment_removed.push(e);
     }
 }
@@ -69,11 +73,13 @@ pub struct TextureFragmentLoadedEvent {
 }
 
 fn handle_loaded_event(
+    mut commands: Commands,
     mut loaded_ev: EventReader<TextureFragmentLoadedEvent>,
     mut t: Query<&mut TextureFragment, Without<Deleted>>,
 ) {
     for e in loaded_ev.read() {
         let _ = t.get_mut(e.id).map(|mut t| {
+            commands.entity(e.id).remove::<Requested>();
             t.status = e.status.clone();
         });
     }
@@ -84,6 +90,7 @@ fn remove_removed_data_requesters(
     removed: Query<Entity, (With<TextureFragment>, With<Deleted>)>,
 ) {
     for e in &removed {
+        commands.entity(e).remove::<Requested>();
         commands.entity(e).despawn();
     }
 }

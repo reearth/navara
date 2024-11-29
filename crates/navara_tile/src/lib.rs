@@ -17,7 +17,7 @@ impl Plugin for TilePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
             .init_resource::<CachedMartini>()
-            .insert_resource(TileQuadtree::new_with_region_qt(30))
+            .insert_resource(TileQuadtree::new_with_linear_qt())
             .add_event::<MeshPreparedEvent>()
             .add_systems(
                 PreUpdate,
@@ -25,6 +25,7 @@ impl Plugin for TilePlugin {
                     tile::system::begine_update,
                     terrain::system::begine_terrain_layer,
                     tile::system::handle_prepared_mesh_event,
+                    tile::system::handle_tile_worker_task_completed,
                 )
                     .chain(),
             )
@@ -36,6 +37,7 @@ impl Plugin for TilePlugin {
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
                     tile::system::clear_caches,
+                    tile::system::remove_unnecessary_delegated_worker_task,
                 )
                     .chain(),
             );

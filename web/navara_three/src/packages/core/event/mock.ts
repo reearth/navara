@@ -3,7 +3,7 @@ import type {
   Events,
   RenderableFeatureAddedEvent,
   RenderableFeatureChangedEvent,
-} from "navara";
+} from "@navara/engine";
 
 import type { JsEvents, JsEventsKey } from "./EventManager";
 
