@@ -2,17 +2,16 @@ use std::fmt::Debug;
 
 use num::PrimInt;
 
-use crate::{region_quadtree::RegionQuadtree, traits::GeoSpacialQuadtree};
+use crate::{linear_quadtree::LinearQuadtree, traits::GeoSpacialQuadtree};
 
-/// Entry point for each quadtree implementation.
-/// If you want to use `RegionQuadtree` which is based on [quadtree_rs], you can use it as below.
+/// Entry point for quadtree implementation.
 /// ```
 /// use navara_quadtree::Quadtree;
 ///
 /// #[derive(Debug)]
 /// struct Tile { x: u32, y: u32, z: u32 }
 ///
-/// let qt: Quadtree<u32, Tile> = Quadtree::new_with_region_qt(30);
+/// let qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt(30);
 /// ```
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
 pub struct Quadtree<U, V>
@@ -33,9 +32,9 @@ where
         Self { qt }
     }
 
-    /// Initialize [`Quadtree`] with `RegionQuadtree`.
+    /// Initialize [`Quadtree`] with `LinearQuadtree`.
     /// - `depth`: The depth of quadtree.
-    pub fn new_with_region_qt(depth: usize) -> Self {
-        Self::new(Box::new(RegionQuadtree::new(depth)))
+    pub fn new_with_linear_qt() -> Self {
+        Self::new(Box::new(LinearQuadtree::new()))
     }
 }

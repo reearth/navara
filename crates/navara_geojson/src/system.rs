@@ -406,7 +406,7 @@ mod test {
 
         app.init_resource::<BufferStore>();
         app.init_resource::<EventStore>();
-        app.insert_resource(TileQuadtree::new_with_region_qt(30));
+        app.insert_resource(TileQuadtree::new_with_linear_qt());
         app.insert_resource(LayerStore::new());
         app.add_plugins(FeaturePlugin);
         app.add_systems(Update, construct_feature);

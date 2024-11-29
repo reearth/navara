@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
+mod linear_quadtree;
 mod quadtree;
-mod region_quadtree;
 mod traits;
 mod utils;
 

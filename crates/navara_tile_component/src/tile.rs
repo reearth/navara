@@ -494,12 +494,12 @@ mod test {
             )
         });
         let tile = qt.qt.get_mut(qt.qt.leaf(coords).unwrap().handle()).unwrap();
-        tile.children = children;
+        tile.children = children.unwrap();
     }
 
     #[test]
     fn it_should_find_contained_tile() {
-        let mut qt = TileQuadtree::new_with_region_qt(20);
+        let mut qt = TileQuadtree::new_with_linear_qt();
 
         qt.qt.initialize_zero(&|v| {
             Tile::new(
