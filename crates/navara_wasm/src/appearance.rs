@@ -187,7 +187,7 @@ impl From<PolygonInternalMaterial> for navara_material::PolygonInternalMaterial 
         }
     }
 }
-impl<'a> From<&'a navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
+impl From<&navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
     fn from(val: &navara_material::PolygonInternalMaterial) -> Self {
         PolygonInternalMaterial {
             min_max_heights: val.min_max_heights.clone(),

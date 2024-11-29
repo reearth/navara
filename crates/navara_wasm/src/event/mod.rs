@@ -154,7 +154,7 @@ pub struct EntityEvent {
     pub gen: u32,
 }
 
-impl<'a> From<navara_event::Events<'a>> for Events {
+impl From<navara_event::Events<'_>> for Events {
     fn from(ev: navara_event::Events) -> Self {
         Self {
             camera_transform_updated: ev.camera_transform_updated.map(|ev| ev.into()),
