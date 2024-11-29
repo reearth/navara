@@ -11,7 +11,7 @@ use crate::{linear_quadtree::LinearQuadtree, traits::GeoSpacialQuadtree};
 /// #[derive(Debug)]
 /// struct Tile { x: u32, y: u32, z: u32 }
 ///
-/// let qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt(30);
+/// let qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt();
 /// ```
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
 pub struct Quadtree<U, V>
