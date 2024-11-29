@@ -17,7 +17,7 @@ impl Plugin for TilePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
             .init_resource::<CachedMartini>()
-            .insert_resource(TileQuadtree::new_with_region_qt(30))
+            .insert_resource(TileQuadtree::new_with_linear_qt())
             .add_event::<MeshPreparedEvent>()
             .add_systems(
                 PreUpdate,

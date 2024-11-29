@@ -1,89 +1,62 @@
-use std::fmt::Debug;
+mod id;
+
+use std::{collections::HashMap, fmt::Debug};
 
 use num::PrimInt;
-use quadtree_rs::{
-    area::{Area, AreaBuilder},
-    point::Point,
-};
 
-use crate::{
-    traits::{Coords, GeoSpacialQuadLeaf, GeoSpacialQuadtree, Resource},
-    utils::to_int,
-};
+use crate::traits::{Coords, GeoSpacialQuadLeaf, GeoSpacialQuadtree, Resource};
+
+pub use id::*;
 
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
-pub struct RegionQuadtree<U, V>
+pub struct LinearQuadtree<U, V>
 where
     U: PrimInt + Default,
 {
-    qt: quadtree_rs::Quadtree<U, V>,
-    depth: usize,
+    leaves: HashMap<LinearQuadleafId<U>, V>,
+    params: LinearQuadleafIdParams,
 }
 
-impl<U, V> Resource for RegionQuadtree<U, V>
+impl<U, V> Resource for LinearQuadtree<U, V>
 where
     U: PrimInt + Default + Sync + Send + 'static,
     V: Sync + Send + 'static + Debug,
 {
 }
 
-impl<U, V> RegionQuadtree<U, V>
+impl<U, V> LinearQuadtree<U, V>
 where
     U: PrimInt + Default + Sync + Send + 'static,
 {
-    pub fn new(depth: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            qt: quadtree_rs::Quadtree::new(depth),
-            depth,
+            leaves: HashMap::new(),
+            params: LinearQuadleafIdParams::new(),
         }
     }
 
-    fn insert(&mut self, (x, y, z): Coords<U>, init: &dyn Fn((U, U, U)) -> V) -> Option<u64> {
-        let width = ((to_int::<usize, U>(self.depth) - z) as U).pow(2);
-        if width.is_zero() {
-            return None;
-        }
-
-        match AreaBuilder::default()
-            .anchor(Point { x, y })
-            .dimensions((width, width))
-            .build()
-        {
-            Ok(area) => self.qt.insert(area, init((x, y, z))),
-            Err(e) => unreachable!("{}", e),
-        }
+    fn insert(
+        &mut self,
+        coords: Coords<U>,
+        init: &dyn Fn((U, U, U)) -> V,
+    ) -> Option<LinearQuadleafIdKey> {
+        let id = LinearQuadleafId::new(coords, &self.params)?;
+        let key = id.key;
+        self.leaves.insert(id, init(coords));
+        Some(key)
     }
 
-    fn query_strict(&self, (x, y, z): Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
-        let cur_depth = to_int::<usize, U>(self.depth) - z;
-        let width = cur_depth.pow(2) as U;
-        if width.is_zero() {
-            return None;
-        }
-        match AreaBuilder::default()
-            .anchor(Point { x, y })
-            .dimensions((width, width))
-            .build()
-        {
-            Ok(area) => {
-                let child = self.qt.query_strict(area);
-                if let Some(child) = child.into_iter().next() {
-                    let area = child.area();
-                    let area_point = area.anchor();
-                    let area_width = area.width();
-                    if area_point.x != x || area_point.y != y || area_width != width {
-                        return None;
-                    }
-                    return Some(Box::new(Entry::new(child, (x, y, z), self.depth)));
-                }
-                None
-            }
-            Err(e) => unreachable!("{}", e),
+    fn entry(&self, coords: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
+        let key = LinearQuadleafId::make_key(coords, &self.params)?;
+        if self.leaves.contains_key(&key) {
+            Some(Box::new(Entry::new(key, coords)))
+        } else {
+            None
         }
     }
 }
 
-impl<U, V> GeoSpacialQuadtree<U, V> for RegionQuadtree<U, V>
+impl<U, V> GeoSpacialQuadtree<U, V> for LinearQuadtree<U, V>
 where
     U: PrimInt + Default + Sync + Send + 'static,
     V: Sync + Send + 'static + Debug,
@@ -97,19 +70,19 @@ where
     }
 
     fn leaf(&self, c: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
-        self.query_strict(c)
+        self.entry(c)
     }
 
     fn get(&self, handle: u64) -> Option<&V> {
-        self.qt.get(handle).map(|e| e.value_ref())
+        self.leaves.get(&handle)
     }
 
     fn get_mut(&mut self, handle: u64) -> Option<&mut V> {
-        self.qt.get_mut(handle).map(|e| e.value_mut())
+        self.leaves.get_mut(&handle)
     }
 
     fn remove(&mut self, handle: u64) -> bool {
-        self.qt.delete_by_handle(handle).is_some()
+        self.leaves.remove(&handle).is_some()
     }
 }
 
@@ -118,27 +91,16 @@ struct Entry<U>
 where
     U: PrimInt + Default + Sync + Send + 'static,
 {
-    handle: u64,
-    area: Area<U>,
-    x: U,
-    y: U,
-    z: U,
-    max_depth: usize,
+    key: LinearQuadleafIdKey,
+    coords: Coords<U>,
 }
 
 impl<U> Entry<U>
 where
     U: PrimInt + Default + Sync + Send + 'static,
 {
-    fn new<V>(e: &quadtree_rs::entry::Entry<U, V>, (x, y, z): Coords<U>, max_depth: usize) -> Self {
-        Self {
-            handle: e.handle(),
-            area: e.area(),
-            x,
-            y,
-            z,
-            max_depth,
-        }
+    fn new(key: LinearQuadleafIdKey, coords: Coords<U>) -> Self {
+        Self { key, coords }
     }
 }
 
@@ -147,23 +109,11 @@ where
     U: PrimInt + Default + Sync + Send + 'static,
 {
     fn handle(&self) -> u64 {
-        self.handle
+        self.key
     }
 
-    fn coords(&self) -> (U, U, U) {
-        (self.x, self.y, self.z)
-    }
-
-    fn contains(&self, (x, y, z): Coords<U>) -> bool {
-        let width = (to_int::<usize, U>(self.max_depth) - z).pow(2) as U;
-        match AreaBuilder::default()
-            .anchor(Point { x, y })
-            .dimensions((width, width))
-            .build()
-        {
-            Ok(area) => self.area.contains(area),
-            Err(_) => false,
-        }
+    fn coords(&self) -> Coords<U> {
+        self.coords
     }
 }
 
@@ -175,7 +125,7 @@ mod tests {
 
     #[test]
     fn children_should_be_queried_by_coords() {
-        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(RegionQuadtree::new(20));
+        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(LinearQuadtree::new());
 
         {
             let zero = qt.zero();
@@ -273,7 +223,7 @@ mod tests {
 
     #[test]
     fn it_should_not_get_unxepected_children() {
-        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(RegionQuadtree::new(20));
+        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(LinearQuadtree::new());
 
         {
             let zero = qt.zero();
@@ -321,23 +271,5 @@ mod tests {
                 ],
             ));
         }
-    }
-
-    #[test]
-    fn coords_should_be_contained_in_children() {
-        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(RegionQuadtree::new(20));
-
-        let current_coords = (2, 2, 4);
-
-        qt.initialize_leaf(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
-        qt.initialize_children(current_coords, &|(x, y, z)| zxy_string((z, x, y)));
-
-        let leaf = qt.leaf(current_coords).unwrap();
-
-        // Check parent
-        debug_assert!(!leaf.contains((1, 1, 3)));
-
-        debug_assert!(leaf.contains((4, 4, 5)));
-        debug_assert!(leaf.contains((5, 4, 5)));
     }
 }

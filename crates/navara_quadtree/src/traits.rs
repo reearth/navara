@@ -16,7 +16,6 @@ where
     U: PrimInt + Default + Sync + Send + 'static,
 {
     fn coords(&self) -> Coords<U>;
-    fn contains(&self, coords: Coords<U>) -> bool;
     fn handle(&self) -> u64;
 }
 
@@ -42,13 +41,13 @@ where
         &mut self,
         (x, y, z): Coords<U>,
         init: &dyn Fn(Coords<U>) -> T,
-    ) -> Vec<u64> {
+    ) -> Option<Vec<u64>> {
         let mut result = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
-            result.push(self.initialize_child((x, y, z), i, init));
+            result.push(self.initialize_child((x, y, z), i, init)?);
         }
-        result
+        Some(result)
     }
 
     /// Initialize a child of specified coordinates.
@@ -57,9 +56,8 @@ where
         (x, y, z): Coords<U>,
         child_index: U,
         init: &dyn Fn(Coords<U>) -> T,
-    ) -> u64 {
+    ) -> Option<u64> {
         self.initialize_leaf(child_coords((x, y, z), child_index), init)
-            .unwrap()
     }
 
     /// Get a leaf by specified coordinates.

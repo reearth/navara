@@ -1,7 +1,6 @@
 # Navara Quadtree
 
 This is an implementation of a quadtree.  
-This crate mainly use [quadtree_rs](https://github.com/ambuc/quadtree) crate, and abstracts it for our use case.
 
 ## What is Quadtree
 
@@ -18,7 +17,7 @@ use navara_quadtree::Quadtree;
 #[derive(Debug)]
 struct Tile { x: u32, y: u32, z: u32 }
 
-let qt: Quadtree<u32, Tile> = Quadtree::new_with_region_qt(30);
+let qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt();
 ```
 
 Then you can create children. In this case, they're children of the root coordinates.
@@ -29,7 +28,7 @@ use navara_quadtree::Quadtree;
 #[derive(Debug)]
 struct Tile { x: u32, y: u32, z: u32 }
 
-let mut qt: Quadtree<u32, Tile> = Quadtree::new_with_region_qt(30);
+let mut qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt();
 let root = (0, 0, 0);
 let children =
     qt.qt.initialize_children(root, &|(x, y, z)| Tile { x, y, z });

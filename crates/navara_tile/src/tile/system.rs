@@ -216,7 +216,7 @@ pub(super) enum TraversalResult {
     NotFound,
 }
 
-fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Vec<TileHandle> {
+fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Option<Vec<TileHandle>> {
     let tile = qt.qt.get(handle).unwrap();
     let children = tile.children.clone();
     let coords = (tile.coords.x, tile.coords.y, tile.coords.z);
@@ -226,10 +226,10 @@ fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Vec<TileHandle> {
         .map_or(0., |t| t.current_max_height().unwrap_or(0.));
     let init = |(x, y, z)| Tile::new(TileXYZ { x, y, z }, parent_max_height);
     if children.is_empty() {
-        let children = qt.qt.initialize_children(coords, &init);
+        let children = qt.qt.initialize_children(coords, &init)?;
         let tile = qt.qt.get_mut(handle).unwrap();
         tile.children = children.clone();
-        return children;
+        return Some(children);
     }
 
     let mut new_children = Vec::with_capacity(4);
@@ -239,9 +239,9 @@ fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Vec<TileHandle> {
             new_children.push(c);
             continue;
         }
-        new_children.push(qt.qt.initialize_child(coords, i, &init));
+        new_children.push(qt.qt.initialize_child(coords, i, &init)?);
     }
-    new_children
+    Some(new_children)
 }
 
 // TODO: Prerender
@@ -257,20 +257,21 @@ fn preload_children(
     texture_fragment: &TileTextureFragmentQuery,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
 ) {
-    let children = find_children(qt, handle);
-    for child in children {
-        prepare_tile_resource(
-            commands,
-            qt,
-            buf,
-            tiles,
-            terrain_layer,
-            child,
-            tc,
-            texture_fragment,
-            terrain_data_requester,
-            Priority::Low,
-        );
+    if let Some(children) = find_children(qt, handle) {
+        for child in children {
+            prepare_tile_resource(
+                commands,
+                qt,
+                buf,
+                tiles,
+                terrain_layer,
+                child,
+                tc,
+                texture_fragment,
+                terrain_data_requester,
+                Priority::Low,
+            );
+        }
     }
 }
 
@@ -415,9 +416,7 @@ fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    {
-        let children = find_children(qt, handle);
-
+    if let Some(children) = find_children(qt, handle) {
         let mut any_children_rendered = false;
         let mut are_all_children_rendered = true;
         let mut are_children_prepared = true;
