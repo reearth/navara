@@ -206,9 +206,9 @@ impl Tile {
     ) -> bool {
         let terrain_req = self.get_terrain_data_requester(terrain_data_requester);
         terrain_layer.is_some()
-            && (terrain_req.map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
+            && (terrain_req.as_ref().map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
                 // If parent tile is upsampled, we don't need to wait failed request.
-                || self.get_parent_tile(qt).map_or(false, |t| t.upsampled))
+                || (terrain_req.is_some() && self.get_parent_tile(qt).map_or(false, |t| t.upsampled)))
             && self.is_parent_ready(qt, texture_fragment, terrain_data_requester)
     }
 

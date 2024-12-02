@@ -119,6 +119,5 @@ export const run = async (view: ThreeView) => {
       depth_test: true,
       url: "/example.png",
     },
-    wireframe: false,
   });
 };
