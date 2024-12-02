@@ -1,10 +1,9 @@
-use std::collections::{HashMap, HashSet};
-
 use bevy_ecs::{
     entity::Entity,
     query::{With, Without},
     system::{Query, Resource},
 };
+use fxhash::{FxHashMap, FxHashSet};
 use navara_component::Deleted;
 use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
@@ -33,9 +32,9 @@ pub struct RequestedTileCache {
 // Manage the tiles that are going to be rendered.
 #[derive(Default, Resource)]
 pub struct TileCacheManager {
-    pub rendered_tile_caches: HashMap<TileHandle, RenderedTileCache>,
-    pub requested_tile_caches: HashMap<TileHandle, RequestedTileCache>,
-    pub cached_textures_tile_handles: HashSet<TileHandle>,
+    pub rendered_tile_caches: FxHashMap<TileHandle, RenderedTileCache>,
+    pub requested_tile_caches: FxHashMap<TileHandle, RequestedTileCache>,
+    pub cached_textures_tile_handles: FxHashSet<TileHandle>,
     pub rendered_frame: usize,
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,

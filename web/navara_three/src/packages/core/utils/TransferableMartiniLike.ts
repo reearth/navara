@@ -4,10 +4,13 @@ export class TransferableMartiniLike implements TransferableMartini {
   coords: Uint32Array;
   size: number;
 
-  constructor(t: TransferableMartini) {
-    this.coords = t.coords;
-    this.size = t.size;
-    t.free();
+  constructor(coords: Uint32Array, size: number) {
+    this.coords = coords;
+    this.size = size;
+  }
+
+  clone() {
+    return new TransferableMartiniLike(this.coords.slice(), this.size);
   }
 
   free(): void {}

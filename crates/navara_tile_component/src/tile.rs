@@ -23,12 +23,6 @@ use navara_math::FloatType;
 
 use super::tile_bounding_region::TileBoundingRegion;
 
-#[derive(Debug, Clone)]
-pub enum RenderedState {
-    RenderedChildren,
-    Culled,
-}
-
 // Note Tile have to keep light size for caching efficiently.
 // So if you want to store large data in this struct, use [`BufferStore`].
 // And don't forget to destroy the stored data in [`Tile::destroy method`].
@@ -44,7 +38,6 @@ pub struct Tile {
     pub terrain_data: Option<Box<dyn TerrainData>>,
     pub texture_fragment_entity_id: Option<Entity>,
     pub occludee_point_in_scaled_space: Option<Vec3>,
-    pub previous_rendered_state: Option<RenderedState>,
     pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
     pub upsampled: bool,
@@ -67,7 +60,6 @@ impl Clone for Tile {
             terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
             texture_fragment_entity_id: self.texture_fragment_entity_id,
             occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
-            previous_rendered_state: self.previous_rendered_state.clone(),
             cached_mesh_handle: self.cached_mesh_handle.clone(),
             upsampled: self.upsampled,
             max_height: self.max_height,
@@ -99,7 +91,6 @@ impl Tile {
             terrain_data: None,
             texture_fragment_entity_id: None,
             occludee_point_in_scaled_space: None,
-            previous_rendered_state: None,
             cached_mesh_handle: None,
             upsampled: false,
             children: Vec::with_capacity(4),
@@ -330,7 +321,6 @@ impl Tile {
             t.destroy(buf);
         }
         self.upsampled = false;
-        self.previous_rendered_state = None;
     }
 
     pub fn is_root(&self) -> bool {

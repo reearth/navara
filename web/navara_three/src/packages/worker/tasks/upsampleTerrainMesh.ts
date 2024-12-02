@@ -9,6 +9,7 @@ import { upsampleTerrainMesh as upsampleTerrainMeshImpl } from "@navara/engine-w
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";
 import { toTransferableTile, toUpsamplableTerrainGeometry } from "../utils";
 import { toTransferableRasterDEMDataLike } from "../utils/toTransferableRasterDEMDataLike";
+import { transfer } from "../worker";
 
 import { waitWasm } from "./waitWasm";
 
@@ -20,11 +21,13 @@ export async function upsampleTerrainMesh(
 ): Promise<ReturnedConstructedTerrainMeshLike> {
   await waitWasm();
 
-  const result = upsampleTerrainMeshImpl(
+  const mesh = upsampleTerrainMeshImpl(
     toTransferableTile(tile),
     toTransferableTile(parentTile),
     toTransferableRasterDEMDataLike(rasterDEMData),
     toUpsamplableTerrainGeometry(upsamplableGeometry),
   );
-  return transferReturnedConstructedTerrainMesh(result);
+  const { result, transfers } = transferReturnedConstructedTerrainMesh(mesh);
+
+  return transfer(result, transfers);
 }

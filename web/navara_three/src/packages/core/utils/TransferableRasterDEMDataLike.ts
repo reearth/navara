@@ -8,8 +8,8 @@ export class TransferableRasterDEMDataLike
 {
   decoder: ElevationDecoder;
 
-  constructor(t: TransferableRasterDEMData) {
-    this.decoder = new ElevationDecoderLike(t.decoder);
+  constructor(decoder: ElevationDecoder) {
+    this.decoder = new ElevationDecoderLike(decoder);
   }
 
   free(): void {}

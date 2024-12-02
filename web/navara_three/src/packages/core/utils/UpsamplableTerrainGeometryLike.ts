@@ -7,10 +7,10 @@ export class UpsamplableTerrainGeometryLike
   indices: Uint32Array;
   heights: Float32Array;
 
-  constructor(t: UpsamplableTerrainGeometry) {
-    this.uvs = t.uvs;
-    this.indices = t.indices;
-    this.heights = t.heights;
+  constructor(uvs: Float32Array, indices: Uint32Array, heights: Float32Array) {
+    this.uvs = uvs;
+    this.indices = indices;
+    this.heights = heights;
   }
 
   free(): void {}

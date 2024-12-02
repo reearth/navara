@@ -10,10 +10,10 @@ import type { Tasks } from "../worker";
 type AllTasks = WorkerTask<Tasks>;
 type TaskNames = keyof AllTasks;
 
-export async function queueTask<T extends TaskNames>(
+export function queueTask<T extends TaskNames>(
   method: T,
   params?: TaskParams<AllTasks, T>,
   options?: ExecOptions,
 ) {
-  return await queueTaskImpl(method, params, options);
+  return queueTaskImpl(method, params, options);
 }

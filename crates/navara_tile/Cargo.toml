@@ -24,3 +24,4 @@ navara_tile_component = { path = "../navara_tile_component" }
 navara_mock = { path = "../navara_mock" }
 navara_worker = { path = "../navara_worker" }
 instant.workspace = true
+fxhash.workspace = true

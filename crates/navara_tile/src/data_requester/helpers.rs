@@ -5,22 +5,19 @@ use navara_core::tile_url;
 use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_tile_component::{
-    RasterDEMData, TerrainData, TerrainDataRequesterMarker, TileHandle,
+    RasterDEMData, TerrainData, TerrainDataRequesterMarker, Tile, TileHandle,
     TileTerrainDataRequesterQuery,
 };
 
-use crate::TileQuadtree;
-
 pub(crate) fn request_terrain_data(
     commands: &mut Commands,
-    qt: &mut TileQuadtree,
+    tile: &mut Tile,
     buf: &mut BufferStore,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
 ) -> Option<Entity> {
-    let tile = qt.qt.get_mut(handle).unwrap();
     let data_requester_entity_id = tile
         .terrain_data
         .as_ref()

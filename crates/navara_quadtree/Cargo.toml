@@ -11,3 +11,4 @@ bevy = ["dep:bevy_ecs"]
 [dependencies]
 num = "0.4.3"
 bevy_ecs = { workspace = true, optional = true }
+fxhash.workspace = true

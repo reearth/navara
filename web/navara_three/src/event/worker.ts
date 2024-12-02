@@ -1,12 +1,15 @@
-import { TransferableMartiniLike } from "@navara/core";
+import {
+  TransferableMartiniLike,
+  TransferableRasterDEMDataLike,
+  TransferableTileLike,
+  UpsamplableTerrainGeometryLike,
+} from "@navara/core";
 import {
   ConstructTerrainMeshParameters,
   ConstructTerrainMeshResult,
   DelegatedWorkerTasksResult,
   ReconstructableEntity,
   TransferableGeometry,
-  TransferableRasterDEMData,
-  UpsamplableTerrainGeometry,
   UpsampleTerrainMeshParameters,
   UpsampleTerrainMeshResult,
   type WorkerTaskDelegatedEvent,
@@ -63,20 +66,36 @@ async function processConstructTerrainMesh(
   }
 
   const martiniId = params.martini_id[0];
-  const cachedMartini = martiniCache.get(martiniId);
+  const cachedMartinis = martiniCache.get(martiniId);
+
+  // workerpool doesn't support initialize worker resource, so we need to manage heavy resource in main thread.
+  // MARTINI coords is very heavy task, so we wanna avoid to clone it every frame.
+  // We will reuse cloned it and transfer it, then it should be back after the task is completed.
   const martini = (() => {
-    if (cachedMartini) {
+    // Pop cached MARTINI instance if it's exist.
+    if (cachedMartinis && cachedMartinis.length > 1) {
+      const cachedMartini = cachedMartinis.pop();
       return cachedMartini;
+    }
+    // Clone original MARTINI instance if there is no instance.
+    if (cachedMartinis) {
+      const v = cachedMartinis[0].clone();
+      return v;
     }
     const martini = tileHandler.getMartini(params.martini_id);
     if (!martini) return;
-    const martiniLike = new TransferableMartiniLike(martini);
-    martiniCache.set(martiniId, martiniLike);
+    const martiniLike = new TransferableMartiniLike(
+      martini.coords,
+      martini.size,
+    );
+    martini.free();
+    martiniCache.set(martiniId, [martiniLike.clone()]);
     return martiniLike;
   })();
   if (!martini) {
     return;
   }
+
   const tile = tileHandler.getTile(params.tile_handle);
   if (!tile) {
     return;
@@ -87,12 +106,16 @@ async function processConstructTerrainMesh(
   if (!elevationDecoder) {
     return;
   }
-  const result = await constructTerrainMesh(
+  const { result, martini: transferredMartini } = await constructTerrainMesh(
     bytes,
-    tile,
-    new TransferableRasterDEMData(elevationDecoder),
+    new TransferableTileLike(tile),
+    new TransferableRasterDEMDataLike(elevationDecoder),
     martini,
   );
+
+  // MARTINI's coords is very heavy, so reuse multiple the instance.
+  // And it should be back after the task.
+  martiniCache.get(martiniId)?.push(transferredMartini);
 
   const vertices = bufHandler.newF32(result.geometry.vertices);
   const uvs = bufHandler.newF32(result.geometry.uvs);
@@ -155,16 +178,16 @@ async function processUpsampleTerrainMesh(
     return;
   }
 
-  const upsamplableTerrainGeometry = new UpsamplableTerrainGeometry(
+  const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
     parentUvs,
     parentIndices,
     parentHeights,
   );
 
   const result = await upsampleTerrainMesh(
-    tile,
-    parentTile,
-    new TransferableRasterDEMData(elevationDecoder),
+    new TransferableTileLike(tile),
+    new TransferableTileLike(parentTile),
+    new TransferableRasterDEMDataLike(elevationDecoder),
     upsamplableTerrainGeometry,
   );
 
