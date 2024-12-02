@@ -51,4 +51,4 @@ export type AbortControllers = Map<string, AbortController>;
 // But the number of items of `coords` is over ten thousand, so it's huge data. And reading `coords` from WASM is too slow.
 // Fortunately, `coords` is precomputed by each size of tile, so it will be same if the size is same.
 // So we can cache it by `size`.
-export type MartiniCache = Map<bigint, TransferableMartiniLike>;
+export type MartiniCache = Map<bigint, TransferableMartiniLike[]>;

@@ -11,8 +11,8 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
-    CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
-    RenderedState, Tile, TileHandle, TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery,
+    CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, Tile,
+    TileHandle, TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery,
     TileTextureFragmentQuery,
 };
 use navara_window::Window;
@@ -79,7 +79,7 @@ fn spawn_tile_entity(
 #[allow(clippy::too_many_arguments)]
 fn prepare_tile_resource(
     commands: &mut Commands,
-    qt: &mut TileQuadtree,
+    tile: &mut Tile,
     buf: &mut BufferStore,
     tiles: &TilesLayer,
     terrain_layer: &Option<&TerrainLayer>,
@@ -91,7 +91,7 @@ fn prepare_tile_resource(
 ) -> bool {
     let requested_terrain = request_terrain_data(
         commands,
-        qt,
+        tile,
         buf,
         terrain_layer,
         handle,
@@ -99,7 +99,7 @@ fn prepare_tile_resource(
         priority,
     );
     let requested_texture =
-        request_texture_fragment(commands, qt, tiles, handle, texture_fragment, priority);
+        request_texture_fragment(commands, tile, tiles, handle, texture_fragment, priority);
 
     match tc.requested_tile_caches.get_mut(&handle) {
         Some(r) => {
@@ -174,6 +174,10 @@ fn update_tile_occludee_point(
     occluder: &EllipsoidalOccluder,
     tile: &mut Tile,
 ) {
+    if tile.occludee_point_in_scaled_space.is_some() {
+        return;
+    }
+
     let extent = tile.extent;
     let center = tile.aabb.center;
     let max_height = match tile.terrain_data.as_ref() {
@@ -244,37 +248,6 @@ fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Option<Vec<TileHa
     Some(new_children)
 }
 
-// TODO: Prerender
-#[allow(clippy::too_many_arguments)]
-fn preload_children(
-    commands: &mut Commands,
-    qt: &mut TileQuadtree,
-    buf: &mut BufferStore,
-    tiles: &TilesLayer,
-    terrain_layer: &Option<&TerrainLayer>,
-    handle: TileHandle,
-    tc: &mut TileCacheManager,
-    texture_fragment: &TileTextureFragmentQuery,
-    terrain_data_requester: &TileTerrainDataRequesterQuery,
-) {
-    if let Some(children) = find_children(qt, handle) {
-        for child in children {
-            prepare_tile_resource(
-                commands,
-                qt,
-                buf,
-                tiles,
-                terrain_layer,
-                child,
-                tc,
-                texture_fragment,
-                terrain_data_requester,
-                Priority::Low,
-            );
-        }
-    }
-}
-
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
 // 2. Check horizon culling because the frustum culling isn't enough.
@@ -304,8 +277,6 @@ fn traverse_tile(
     match qt.qt.get(handle) {
         Some(tile) => {
             if tile.coords.z >= tiles.appearance.as_ref().unwrap().max_zoom {
-                let tile = qt.qt.get_mut(handle).unwrap();
-                tile.previous_rendered_state = None;
                 return TraversalResult::NotFound;
             }
         }
@@ -322,17 +293,24 @@ fn traverse_tile(
         None => unreachable!(),
     };
 
+    let is_culled_by_frustum = !intersect_with_camera_frustum(camera, frustum, tile);
+    if is_culled_by_frustum {
+        return TraversalResult::Culled;
+    }
+
+    let is_culled_by_occlusion = !tile
+        .occludee_point_in_scaled_space
+        .map(|p| occluder.is_scaled_space_point_visible(p))
+        .unwrap_or(true);
+    if is_culled_by_occlusion {
+        return TraversalResult::Culled;
+    }
+
     let tile_ready_state =
         tile.is_ready(qt, texture_fragment, terrain_data_requester, terrain_layer);
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
-
-    let is_culled = !intersect_with_camera_frustum(camera, frustum, tile)  // Frustum culling 
-        || !tile
-            .occludee_point_in_scaled_space
-            .map(|p| occluder.is_scaled_space_point_visible(p))
-            .unwrap_or(true); // Occlusion culling
 
     let distance_from_camera = calc_distance_from_camera(camera, tile, ellipsoid);
     let sse = calc_sse(
@@ -348,46 +326,20 @@ fn traverse_tile(
     tile.sse = sse;
     tile.distance_from_camera = distance_from_camera;
     tile.visited_at = tc.rendered_frame;
-    tile.previous_rendered_state = None;
 
     let max_sse = tiles.appearance.as_ref().unwrap().max_sse;
     let meets_sse = sse <= max_sse;
 
-    if is_culled {
-        prepare_tile_resource(
-            command,
-            qt,
-            buf,
-            tiles,
-            terrain_layer,
-            handle,
-            tc,
-            texture_fragment,
-            terrain_data_requester,
-            Priority::Low,
-        );
-        preload_children(
-            command,
-            qt,
-            buf,
-            tiles,
-            terrain_layer,
-            handle,
-            tc,
-            texture_fragment,
-            terrain_data_requester,
-        );
-
-        qt.qt.get_mut(handle).unwrap().previous_rendered_state = Some(RenderedState::Culled);
-        return TraversalResult::Culled;
-    }
-
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     if meets_sse {
+        if is_renderable {
+            return TraversalResult::TileRendered;
+        }
+
         prepare_tile_resource(
             command,
-            qt,
+            tile,
             buf,
             tiles,
             terrain_layer,
@@ -397,21 +349,6 @@ fn traverse_tile(
             terrain_data_requester,
             Priority::Medium,
         );
-        preload_children(
-            command,
-            qt,
-            buf,
-            tiles,
-            terrain_layer,
-            handle,
-            tc,
-            texture_fragment,
-            terrain_data_requester,
-        );
-
-        if is_renderable {
-            return TraversalResult::TileRendered;
-        }
 
         return TraversalResult::NotFound;
     }
@@ -452,6 +389,7 @@ fn traverse_tile(
                 TraversalResult::NotFound | TraversalResult::Culled
             ) {
                 hidden_children_indices.push(i);
+                continue;
             }
 
             // If there is one child at least, trigger the rendering children process.
@@ -516,8 +454,6 @@ fn traverse_tile(
             }
 
             if are_children_prepared {
-                qt.qt.get_mut(handle).unwrap().previous_rendered_state =
-                    Some(RenderedState::RenderedChildren);
                 return TraversalResult::ChildrenMeshesPrepared;
             }
 
@@ -528,19 +464,21 @@ fn traverse_tile(
         }
     }
 
-    if prepare_tile_resource(
-        command,
-        qt,
-        buf,
-        tiles,
-        terrain_layer,
-        handle,
-        tc,
-        texture_fragment,
-        terrain_data_requester,
-        Priority::High,
-    ) || !is_renderable
-    {
+    if !is_renderable {
+        let tile = qt.qt.get_mut(handle).unwrap();
+        prepare_tile_resource(
+            command,
+            tile,
+            buf,
+            tiles,
+            terrain_layer,
+            handle,
+            tc,
+            texture_fragment,
+            terrain_data_requester,
+            Priority::High,
+        );
+
         return TraversalResult::NotFound;
     }
 
@@ -640,7 +578,7 @@ pub fn update_tiles(
                 TraversalResult::NotFound => {
                     prepare_tile_resource(
                         &mut commands,
-                        &mut qt,
+                        qt.qt.get_mut(zero_tile.handle()).unwrap(),
                         &mut buf,
                         tiles,
                         &terrain_layer,
@@ -1087,7 +1025,7 @@ pub fn clear_caches(
         tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
         rendered_tile.destroy(&mut commands);
-        qt.qt.get_mut(rendered_tile.tile_handle).unwrap().destroy(
+        qt.qt.remove(rendered_tile.tile_handle).unwrap().destroy(
             &mut commands,
             &mut buf,
             &terrain_data_requester,
