@@ -8,7 +8,6 @@ use navara_layer::{
 
 use navara_material::Appearance;
 use navara_parser::geojson::GeoJson;
-use navara_wasm_types::ElevationDecoder;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -50,7 +49,6 @@ pub struct TerrainLayerDescription {
 
     /// Compute normals from vertices if the model doesn't have a normal.
     pub should_compute_normal_from_vertex: Option<bool>,
-    pub elevation_decoder: Option<ElevationDecoder>,
 }
 
 impl TerrainLayerDescription {
@@ -64,7 +62,6 @@ impl TerrainLayerDescription {
 pub struct GeoJsonLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
-    pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
@@ -116,7 +113,6 @@ impl GeoJsonLayerDescription {
 pub struct B3dmLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
-    pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
@@ -147,7 +143,6 @@ impl B3dmLayerDescription {
 pub struct Cesium3dTilesLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
-    pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
@@ -178,7 +173,6 @@ impl Cesium3dTilesLayerDescription {
 pub struct MvtLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
-    pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
