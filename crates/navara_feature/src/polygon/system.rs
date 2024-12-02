@@ -96,7 +96,9 @@ pub fn transfer_batched_mesh(
                     let (extent_opt, polygon_result_opt) =
                         triangulate_one_polygon(&mut geometry, material, &mut polygon_resource);
 
-                    if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
+                    if let (Some(extent), Some(mut polygon_result)) =
+                        (extent_opt, polygon_result_opt)
+                    {
                         extent_vec.push(extent);
 
                         let position_length =
@@ -124,8 +126,7 @@ pub fn transfer_batched_mesh(
                                 );
 
                             combined_attributes.batch_id.as_mut().unwrap().data.extend(
-                                std::iter::repeat(batch_id.0 as FloatType)
-                                    .take(position_length),
+                                std::iter::repeat(batch_id.0 as FloatType).take(position_length),
                             );
 
                             if index_offset == 0 {
