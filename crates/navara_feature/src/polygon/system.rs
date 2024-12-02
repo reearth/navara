@@ -68,7 +68,6 @@ pub fn transfer_batched_mesh(
     for batched_feature in &batched_features {
         let mut extent_vec = Vec::new();
         let mut material_opt: Option<PolygonMaterial> = None;
-        let mut entity_opt: Option<Entity> = None;
         let mut layer_id_opt: Option<LayerId> = None;
         let mut combined_attributes = PolygonGeometryAttributes {
             position: FloatAttribute::new(vec![], 3),
@@ -80,73 +79,78 @@ pub fn transfer_batched_mesh(
         let mut index_offset = 0;
 
         for feature_id in &batched_feature.features {
-            let feature = polygon.get_mut(*feature_id);
-            match feature {
-                Ok((entity, layer_id, mut geometry, material, batch_id)) => {
-                    if material_opt.is_none() {
-                        material_opt = Some(material.clone());
-                    }
-                    if entity_opt.is_none() {
-                        entity_opt = Some(entity);
-                    }
-                    if layer_id_opt.is_none() {
-                        layer_id_opt = Some(layer_id.clone());
-                    }
+            let (_entity, layer_id, mut geometry, material, batch_id) =
+                match polygon.get_mut(*feature_id) {
+                    Ok(f) => f,
+                    Err(_) => continue,
+                };
 
-                    let (extent_opt, polygon_result_opt) =
-                        triangulate_one_polygon(&mut geometry, material, &mut polygon_resource);
-
-                    if let (Some(extent), Some(mut polygon_result)) =
-                        (extent_opt, polygon_result_opt)
-                    {
-                        extent_vec.push(extent);
-
-                        let position_length =
-                            polygon_result.geometry.attributes.position.data.len() / 3;
-                        if position_length > 0 {
-                            combined_attributes
-                                .position
-                                .data
-                                .append(&mut polygon_result.geometry.attributes.position.data);
-                            combined_attributes.normal.as_mut().unwrap().data.append(
-                                &mut polygon_result.geometry.attributes.normal.unwrap().data,
-                            );
-                            combined_attributes
-                                .scale_normal_and_cap
-                                .as_mut()
-                                .unwrap()
-                                .data
-                                .append(
-                                    &mut polygon_result
-                                        .geometry
-                                        .attributes
-                                        .scale_normal_and_cap
-                                        .unwrap()
-                                        .data,
-                                );
-
-                            combined_attributes.batch_id.as_mut().unwrap().data.extend(
-                                std::iter::repeat(batch_id.0 as FloatType).take(position_length),
-                            );
-
-                            if index_offset == 0 {
-                                indices.append(&mut polygon_result.geometry.indices);
-                            } else {
-                                let mut new_indices = polygon_result
-                                    .geometry
-                                    .indices
-                                    .into_iter()
-                                    .map(|i| i + index_offset)
-                                    .collect::<Vec<_>>();
-                                indices.append(&mut new_indices);
-                            }
-
-                            index_offset += position_length as u32;
-                        }
-                    }
-                }
-                Err(_e) => {}
+            if material_opt.is_none() {
+                material_opt = Some(material.clone());
             }
+            if layer_id_opt.is_none() {
+                layer_id_opt = Some(layer_id.clone());
+            }
+
+            let (extent_opt, polygon_result_opt) =
+                triangulate_one_polygon(&mut geometry, material, &mut polygon_resource);
+
+            let (extent, mut polygon_result) = match (extent_opt, polygon_result_opt) {
+                (Some(extent), Some(polygon_result)) => (extent, polygon_result),
+                _ => continue,
+            };
+
+            extent_vec.push(extent);
+
+            let position_length = polygon_result.geometry.attributes.position.data.len() / 3;
+            if position_length == 0 {
+                continue;
+            }
+
+            combined_attributes
+                .position
+                .data
+                .append(&mut polygon_result.geometry.attributes.position.data);
+            combined_attributes
+                .normal
+                .as_mut()
+                .unwrap()
+                .data
+                .append(&mut polygon_result.geometry.attributes.normal.unwrap().data);
+            combined_attributes
+                .scale_normal_and_cap
+                .as_mut()
+                .unwrap()
+                .data
+                .append(
+                    &mut polygon_result
+                        .geometry
+                        .attributes
+                        .scale_normal_and_cap
+                        .unwrap()
+                        .data,
+                );
+
+            combined_attributes
+                .batch_id
+                .as_mut()
+                .unwrap()
+                .data
+                .extend(std::iter::repeat(batch_id.0 as FloatType).take(position_length));
+
+            if index_offset == 0 {
+                indices.append(&mut polygon_result.geometry.indices);
+            } else {
+                let mut new_indices = polygon_result
+                    .geometry
+                    .indices
+                    .into_iter()
+                    .map(|i| i + index_offset)
+                    .collect::<Vec<_>>();
+                indices.append(&mut new_indices);
+            }
+
+            index_offset += position_length as u32;
         }
 
         if !extent_vec.is_empty() {
@@ -218,7 +222,7 @@ pub fn transfer_mesh(
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
-            let entity: bevy_ecs::system::EntityCommands<'_> = commands.spawn((
+            let entity = commands.spawn((
                 PolygonMarker,
                 RenderableFeature::Polygon {
                     // TODO: Calculate coordinate to update transform
