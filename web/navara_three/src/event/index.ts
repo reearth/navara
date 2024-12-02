@@ -1,6 +1,7 @@
 import type { EventManager } from "@navara/core";
 import {
   generate_id_from_entity,
+  IMAGE_EXTENSIONS,
   isEntityEvent,
   to_draped_feature_id,
   to_globe_depth_id,
@@ -43,6 +44,7 @@ import {
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
+import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import { applyTextureAspect } from "../texture";
 import type { AbortControllers, MartiniCache, MeshCache } from "../type";
 import type { CommonUniforms } from "../uniforms";
@@ -325,6 +327,16 @@ export function processEvent(
           break;
       }
     },
+    ({ type, event }) => {
+      switch (type) {
+        case "add":
+          return IMAGE_EXTENSIONS.includes(event.extension)
+            ? canWorkerProcessImmediately()
+            : true;
+        default:
+          return true;
+      }
+    },
   );
 }
 
@@ -449,32 +461,27 @@ async function processRequestedData(
     }
   })();
 
-  if (req.extension === "png") {
+  if (IMAGE_EXTENSIONS.includes(req.extension)) {
     await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
-      .then((img) => {
+      .then(async (img) => {
         // TODO: Get OffScreeCanvas from main thread in worker.
         const canvas = document.createElement("canvas");
         canvas.height = img.height;
         canvas.width = img.width;
-        const context = canvas.getContext("2d");
-        if (context === null) {
-          throw new Error("failed to get context of canvas");
-        } else {
-          context.drawImage(img, 0, 0);
-        }
-        const data = context.getImageData(0, 0, img.height, img.width).data;
-        if (data === undefined) {
-          throw new Error("failed to convert array");
-        } else {
-          let u8a: Uint8Array | null = new Uint8Array(data);
-          buf.setU8(req.handle, req.bits, u8a);
+        const data = await getImageDataFromImageBitmap(
+          await createImageBitmap(img),
+          canvas.transferControlToOffscreen(),
+        );
 
-          // Prevent memory leak
-          u8a.set([]);
-          u8a = null;
+        let u8a: Uint8Array | null = new Uint8Array(data);
+        buf.setU8(req.handle, req.bits, u8a);
 
-          data.set([]);
-        }
+        // Prevent memory leak
+        u8a.set([]);
+        u8a = null;
+
+        data.set([]);
+
         img.remove();
         canvas.remove();
       })

@@ -1,4 +1,4 @@
-import workerpool from "workerpool";
+import workerpool, { Promise } from "workerpool";
 import type Pool from "workerpool/types/Pool";
 import type { ExecOptions } from "workerpool/types/types";
 
@@ -49,7 +49,7 @@ type MethodReturnType<
   R = Awaited<ReturnType<Task[Name]>>,
 > = R extends infer U ? U : R;
 
-export async function queueTask<
+export function queueTask<
   Task extends CommonTask,
   Name extends GetTaskName<Task>,
 >(
@@ -57,5 +57,5 @@ export async function queueTask<
   params?: TaskParams<Task, Name>,
   options?: ExecOptions,
 ): Promise<MethodReturnType<Task, Name>> {
-  return await workerPool().exec(method, params, options);
+  return workerPool().exec(method, params, options);
 }

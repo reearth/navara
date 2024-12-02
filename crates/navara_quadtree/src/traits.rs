@@ -95,5 +95,5 @@ where
     fn get_mut(&mut self, handle: u64) -> Option<&mut T>;
 
     /// Get a leaf by a leaf's handle.
-    fn remove(&mut self, handle: u64) -> bool;
+    fn remove(&mut self, handle: u64) -> Option<T>;
 }

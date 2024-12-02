@@ -1,6 +1,7 @@
 mod id;
 
-use std::{collections::HashMap, fmt::Debug};
+use fxhash::FxHashMap;
+use std::fmt::Debug;
 
 use num::PrimInt;
 
@@ -13,7 +14,7 @@ pub struct LinearQuadtree<U, V>
 where
     U: PrimInt + Default,
 {
-    leaves: HashMap<LinearQuadleafId<U>, V>,
+    leaves: FxHashMap<LinearQuadleafId<U>, V>,
     params: LinearQuadleafIdParams,
 }
 
@@ -30,7 +31,7 @@ where
 {
     pub fn new() -> Self {
         Self {
-            leaves: HashMap::new(),
+            leaves: FxHashMap::default(),
             params: LinearQuadleafIdParams::new(),
         }
     }
@@ -81,8 +82,8 @@ where
         self.leaves.get_mut(&handle)
     }
 
-    fn remove(&mut self, handle: u64) -> bool {
-        self.leaves.remove(&handle).is_some()
+    fn remove(&mut self, handle: u64) -> Option<V> {
+        self.leaves.remove(&handle)
     }
 }
 
