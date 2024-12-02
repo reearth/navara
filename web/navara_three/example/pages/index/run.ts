@@ -69,7 +69,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clamp_to_ground: true,
       depth_test: true,
     },
-    wireframe: false,
   },
 
   {
@@ -109,7 +108,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       depth_test: true,
       url: "/example.png",
     },
-    wireframe: false,
   },
 
   {
@@ -134,7 +132,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 1,
       clamp_to_ground: true,
     },
-    wireframe: false,
   },
 
   {
@@ -157,7 +154,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 1,
       clamp_to_ground: true,
     },
-    wireframe: false,
   },
 
   {
@@ -276,7 +272,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       extruded_height: 5000,
       clamp_to_ground: true,
     },
-    wireframe: false,
   },
   {
     type: "b3dm",
