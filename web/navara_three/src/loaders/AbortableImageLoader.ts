@@ -25,6 +25,7 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
     _onProgress?: (event: ProgressEvent) => void,
     onError?: (err: unknown) => void,
     abort?: AbortController,
+    timeout = 5000,
   ): HTMLImageElement {
     if (this.path !== undefined) url = this.path + url;
 
@@ -45,6 +46,11 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
       return cached;
     }
 
+    const timeoutId = window.setTimeout(() => {
+      abort?.abort();
+      onImageError(new Error("TimeoutError"));
+    }, timeout);
+
     const image = createElementNS("img") as HTMLImageElement;
     function onImageLoad(this: any) {
       removeEventListeners();
@@ -59,6 +65,7 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
       image.removeEventListener("load", onImageLoad, false);
       image.removeEventListener("error", onImageError, false);
       abort?.signal.removeEventListener("abort", onAbort, false);
+      window.clearTimeout(timeoutId);
     }
     function onImageError(event: unknown) {
       removeEventListeners();
@@ -74,16 +81,15 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
       image.src = "";
       image.remove();
     }
+    if (abort) {
+      abort.signal.onabort = onAbort;
+    }
 
     fetch(url, { signal: abort?.signal })
       .then((r) => r.blob())
       .then((blob) => {
         if (abort?.signal.aborted) {
           return;
-        }
-
-        if (abort) {
-          abort.signal.onabort = onAbort;
         }
 
         image.addEventListener("load", onImageLoad, false);
@@ -98,7 +104,10 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
 
         image.src = window.URL.createObjectURL(blob);
       })
-      .catch(() => {
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          onImageError(e);
+        }
         removeEventListeners();
       });
 
