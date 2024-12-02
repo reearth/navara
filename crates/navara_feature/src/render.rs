@@ -55,7 +55,7 @@ pub enum RenderableFeature {
         material: PolygonMaterial,
         geometry: TransferablePolygonGeometry,
         transform: Transform,
-        feature_id: Entity,
+        feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
         extent: Extent<f32, Radians>,
     },

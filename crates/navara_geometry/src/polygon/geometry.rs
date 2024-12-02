@@ -97,6 +97,7 @@ pub fn create_polygon_geometry(
         position: FloatAttribute::new(vec![], 3),
         normal: Some(FloatAttribute::new(vec![], 3)),
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
+        batch_id: None,
     };
     let mut indices = vec![];
 
@@ -212,6 +213,7 @@ pub fn create_geometry_from_positions_extruded(
                 position: FloatAttribute::new(top_bottom_positions, 3),
                 normal: None,
                 scale_normal_and_cap: Some(FloatAttribute::new(scale_normal_and_cap, 4)),
+                batch_id: None,
             },
             indices: top_bottom_indices,
         },
@@ -220,6 +222,7 @@ pub fn create_geometry_from_positions_extruded(
                 position: FloatAttribute::new(wall_positions, 3),
                 normal: None,
                 scale_normal_and_cap: Some(FloatAttribute::new(wall_scale_normal_and_cap, 4)),
+                batch_id: None,
             },
             indices: wall_indices,
         },

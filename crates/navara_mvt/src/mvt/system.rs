@@ -120,7 +120,7 @@ pub fn construct_mvt(
 
                                                     feature_ids.push(entity.id());
 
-                                                    polygon_idx = polygon_idx + 1;
+                                                    polygon_idx += 1;
                                                 }
                                                 break;
                                             }
@@ -184,7 +184,7 @@ pub fn construct_mvt(
             }
         }
 
-        if feature_ids.len() > 0 {
+        if !feature_ids.is_empty() {
             commands.spawn(BatchedFeature {
                 features: feature_ids,
             });
