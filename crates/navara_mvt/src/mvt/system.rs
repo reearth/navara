@@ -10,8 +10,8 @@ use navara_component::{Deleted, Priority};
 use navara_core::{calc_transform, CRS};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature::{
-    point::PointGeometry, polygon::PolygonGeometry, polygon::UpdatePolygon,
-    polyline::PolylineGeometry, render::RenderableFeature,
+    point::PointGeometry, polygon::BatchId, polygon::BatchedFeature, polygon::PolygonGeometry,
+    polygon::UpdatePolygon, polyline::PolylineGeometry, render::RenderableFeature,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMvtLayerMarker};
@@ -62,6 +62,9 @@ pub fn construct_mvt(
 
         commands.entity(e).despawn();
 
+        let mut polygon_idx = 0;
+        let mut feature_ids = vec![];
+
         if let Some(mvt_bin) = buf.get_u8(&req.handle) {
             if let Ok(reader) = mvt::MvtReader::new((*mvt_bin).to_vec()) {
                 if let Ok(layer_names) = reader.get_layer_names() {
@@ -84,12 +87,6 @@ pub fn construct_mvt(
                                                     let LineString(outer) = polygon.exterior();
                                                     let outer_vec = converter.project_points(outer);
 
-                                                    if outer_vec.len() < 50 {
-                                                        // A large number of polygons can cause the webpage to slow down,
-                                                        // so for now, only draw some of the larger polygons.
-                                                        continue;
-                                                    }
-
                                                     let interiors = polygon.interiors();
                                                     let mut holes: Vec<Hierarchy> = Vec::new();
 
@@ -106,7 +103,7 @@ pub fn construct_mvt(
                                                         });
                                                     }
 
-                                                    commands.spawn((
+                                                    let entity = commands.spawn((
                                                         LayerId(layer.layer_id.to_owned()),
                                                         PolygonGeometry {
                                                             hierarchy: Hierarchy {
@@ -118,7 +115,12 @@ pub fn construct_mvt(
                                                             crs: CRS::Geographic,
                                                         },
                                                         appearance.clone(),
+                                                        BatchId(polygon_idx),
                                                     ));
+
+                                                    feature_ids.push(entity.id());
+
+                                                    polygon_idx += 1;
                                                 }
                                                 break;
                                             }
@@ -180,6 +182,12 @@ pub fn construct_mvt(
                     }
                 }
             }
+        }
+
+        if !feature_ids.is_empty() {
+            commands.spawn(BatchedFeature {
+                features: feature_ids,
+            });
         }
 
         buf.remove(&req.handle);

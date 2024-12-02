@@ -7,6 +7,7 @@ pub struct PolygonGeometryAttributes {
     pub position: FloatAttribute,
     pub normal: Option<FloatAttribute>,
     pub scale_normal_and_cap: Option<FloatAttribute>,
+    pub batch_id: Option<FloatAttribute>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

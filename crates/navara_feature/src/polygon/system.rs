@@ -1,13 +1,14 @@
 use bevy_ecs::{
     entity::Entity,
-    query::Added,
+    query::{Added, Without},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_core::{Aabb, Extent, CRS, WGS84_32};
+use navara_core::{Aabb, Extent, Radians, CRS, WGS84_32};
 use navara_geometry::{
-    create_polygon_geometry, Hierarchy, PolygonGeometryOptions, PolygonResource,
-    TransferableFloatAttribute, WindingOrder,
+    create_polygon_geometry, FloatAttribute, Hierarchy, PolygonGeometryAttributes,
+    PolygonGeometryOptions, PolygonGeometryResult, PolygonResource, TransferableFloatAttribute,
+    WindingOrder,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
@@ -16,7 +17,7 @@ use navara_tile_component::{sample_terrain_height_within_extent, TileMeshMarker,
 
 use crate::render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry};
 
-use super::{PolygonGeometry, PolygonMarker, UpdatePolygon};
+use super::{BatchId, BatchedFeature, PolygonGeometry, PolygonMarker, UpdatePolygon};
 
 fn to_transferable_geometry(
     buf: &mut ResMut<BufferStore>,
@@ -46,67 +47,172 @@ fn to_transferable_geometry(
     }
 }
 
+#[allow(clippy::type_complexity)]
+pub fn transfer_batched_mesh(
+    mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
+    mut polygon: Query<
+        (
+            Entity,
+            &LayerId,
+            &mut PolygonGeometry,
+            &PolygonMaterial,
+            &BatchId,
+        ),
+        (Added<PolygonGeometry>,),
+    >,
+    batched_features: Query<&BatchedFeature, Added<BatchedFeature>>,
+    mut polygon_resource: ResMut<PolygonResource>,
+    mut layer_store: ResMut<LayerStore>,
+) {
+    for batched_feature in &batched_features {
+        let mut extent_vec = Vec::new();
+        let mut material_opt: Option<PolygonMaterial> = None;
+        let mut layer_id_opt: Option<LayerId> = None;
+        let mut combined_attributes = PolygonGeometryAttributes {
+            position: FloatAttribute::new(vec![], 3),
+            normal: Some(FloatAttribute::new(vec![], 3)),
+            scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
+            batch_id: Some(FloatAttribute::new(vec![], 1)),
+        };
+        let mut indices = Vec::new();
+        let mut index_offset = 0;
+
+        for feature_id in &batched_feature.features {
+            let (_entity, layer_id, mut geometry, material, batch_id) =
+                match polygon.get_mut(*feature_id) {
+                    Ok(f) => f,
+                    Err(_) => continue,
+                };
+
+            if material_opt.is_none() {
+                material_opt = Some(material.clone());
+            }
+            if layer_id_opt.is_none() {
+                layer_id_opt = Some(layer_id.clone());
+            }
+
+            let (extent_opt, polygon_result_opt) =
+                triangulate_one_polygon(&mut geometry, material, &mut polygon_resource);
+
+            let (extent, mut polygon_result) = match (extent_opt, polygon_result_opt) {
+                (Some(extent), Some(polygon_result)) => (extent, polygon_result),
+                _ => continue,
+            };
+
+            extent_vec.push(extent);
+
+            let position_length = polygon_result.geometry.attributes.position.data.len() / 3;
+            if position_length == 0 {
+                continue;
+            }
+
+            combined_attributes
+                .position
+                .data
+                .append(&mut polygon_result.geometry.attributes.position.data);
+            combined_attributes
+                .normal
+                .as_mut()
+                .unwrap()
+                .data
+                .append(&mut polygon_result.geometry.attributes.normal.unwrap().data);
+            combined_attributes
+                .scale_normal_and_cap
+                .as_mut()
+                .unwrap()
+                .data
+                .append(
+                    &mut polygon_result
+                        .geometry
+                        .attributes
+                        .scale_normal_and_cap
+                        .unwrap()
+                        .data,
+                );
+
+            combined_attributes
+                .batch_id
+                .as_mut()
+                .unwrap()
+                .data
+                .extend(std::iter::repeat(batch_id.0 as FloatType).take(position_length));
+
+            if index_offset == 0 {
+                indices.append(&mut polygon_result.geometry.indices);
+            } else {
+                let mut new_indices = polygon_result
+                    .geometry
+                    .indices
+                    .into_iter()
+                    .map(|i| i + index_offset)
+                    .collect::<Vec<_>>();
+                indices.append(&mut new_indices);
+            }
+
+            index_offset += position_length as u32;
+        }
+
+        if !extent_vec.is_empty() {
+            let mut combined_extent = extent_vec[0];
+            for extent in extent_vec.iter().skip(1) {
+                combined_extent = combined_extent.union(*extent);
+            }
+
+            let mut material = material_opt.unwrap();
+            material.internal = Some(PolygonInternalMaterial {
+                min_max_heights: vec![0., 0.],
+            });
+
+            let aabb = Aabb::from_extent_f32(combined_extent, 0., 0.);
+            let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
+
+            let entity = commands.spawn((
+                PolygonMarker,
+                RenderableFeature::Polygon {
+                    // TODO: Calculate coordinate to update transform
+                    coordinates: Vec3::new(0., 0., 0.),
+                    crs: CRS::Geocentric,
+                    material,
+                    geometry: to_transferable_geometry(
+                        &mut buf,
+                        navara_geometry::PolygonGeometry {
+                            attributes: combined_attributes.clone(),
+                            indices: indices.clone(),
+                        },
+                    ),
+                    transform: Transform::default(),
+                    feature_id: None,
+                    render_info: PolygonRenderInformation {
+                        should_recalculate_height: true,
+                        distance_to_center_from_ellipsoid_surface: -aabb
+                            .center
+                            .distance(surface_point.unwrap()),
+                    },
+                    extent: combined_extent,
+                },
+            ));
+
+            layer_store.add(layer_id_opt.unwrap().0, entity.id());
+        }
+    }
+}
+
+#[allow(clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut polygon: Query<
         (Entity, &LayerId, &mut PolygonGeometry, &PolygonMaterial),
-        Added<PolygonGeometry>,
+        (Added<PolygonGeometry>, Without<BatchId>),
     >,
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, mut geometry, material) in &mut polygon {
-        geometry.hierarchy.align_winding_order();
-
-        if geometry.hierarchy.expected_winding_order == WindingOrder::Unknown {
-            // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
-            // Such a polygon should be discarded.
-            continue;
-        }
-
-        let mut hierarchy = Hierarchy::default();
-        for c in &geometry.hierarchy.outer_ring {
-            hierarchy
-                .outer_ring
-                .push(geometry.crs.to_vec3(WGS84_32, *c, material.height));
-        }
-
-        if let Some(holes_before) = &geometry.hierarchy.holes {
-            hierarchy.holes = Some(
-                holes_before
-                    .iter()
-                    .map(|hole| Hierarchy {
-                        outer_ring: hole
-                            .outer_ring
-                            .iter()
-                            .map(|&c| geometry.crs.to_vec3(WGS84_32, c, material.height))
-                            .collect(),
-                        holes: None,
-                        expected_winding_order: geometry.hierarchy.expected_winding_order,
-                    })
-                    .collect(),
-            );
-        }
-
-        let extent = Extent::from_points(
-            &geometry
-                .hierarchy
-                .outer_ring
-                .iter()
-                .map(|o| geometry.crs.to_lng_lat(WGS84_32, *o))
-                .collect::<Vec<_>>(),
-        );
-        if let Some(result) = create_polygon_geometry(
-            PolygonGeometryOptions {
-                hierarchy,
-                clamp_to_ground: material.clamp_to_ground,
-                height: material.height,
-                extruded_height: material.extruded_height.unwrap_or_default(),
-                ..Default::default()
-            },
-            &mut polygon_resource,
-        ) {
+        let (extent_opt, polygon_result_opt) =
+            triangulate_one_polygon(&mut geometry, material, &mut polygon_resource);
+        if let (Some(extent), Some(polygon_result)) = (extent_opt, polygon_result_opt) {
             let mut material = material.clone();
             material.internal = Some(PolygonInternalMaterial {
                 min_max_heights: vec![0., 0.],
@@ -123,9 +229,9 @@ pub fn transfer_mesh(
                     coordinates: Vec3::new(0., 0., 0.),
                     crs: CRS::Geocentric,
                     material,
-                    geometry: to_transferable_geometry(&mut buf, result.geometry),
+                    geometry: to_transferable_geometry(&mut buf, polygon_result.geometry),
                     transform: Transform::default(),
-                    feature_id: entity,
+                    feature_id: Some(entity),
                     render_info: PolygonRenderInformation {
                         should_recalculate_height: true,
                         distance_to_center_from_ellipsoid_surface: -aabb
@@ -170,6 +276,66 @@ pub fn update_polygon(
         }
         commands.entity(e).remove::<UpdatePolygon>();
     }
+}
+
+fn triangulate_one_polygon(
+    geometry: &mut PolygonGeometry,
+    material: &PolygonMaterial,
+    polygon_resource: &mut PolygonResource,
+) -> (Option<Extent<f32, Radians>>, Option<PolygonGeometryResult>) {
+    geometry.hierarchy.align_winding_order();
+
+    if geometry.hierarchy.expected_winding_order == WindingOrder::Unknown {
+        // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
+        // Such a polygon should be discarded.
+        return (None, None);
+    }
+
+    let mut hierarchy = Hierarchy::default();
+    for c in &geometry.hierarchy.outer_ring {
+        hierarchy
+            .outer_ring
+            .push(geometry.crs.to_vec3(WGS84_32, *c, material.height));
+    }
+
+    if let Some(holes_before) = &geometry.hierarchy.holes {
+        hierarchy.holes = Some(
+            holes_before
+                .iter()
+                .map(|hole| Hierarchy {
+                    outer_ring: hole
+                        .outer_ring
+                        .iter()
+                        .map(|&c| geometry.crs.to_vec3(WGS84_32, c, material.height))
+                        .collect(),
+                    holes: None,
+                    expected_winding_order: geometry.hierarchy.expected_winding_order,
+                })
+                .collect(),
+        );
+    }
+
+    let extent = Extent::from_points(
+        &geometry
+            .hierarchy
+            .outer_ring
+            .iter()
+            .map(|o| geometry.crs.to_lng_lat(WGS84_32, *o))
+            .collect::<Vec<_>>(),
+    );
+
+    let polygon_result = create_polygon_geometry(
+        PolygonGeometryOptions {
+            hierarchy,
+            clamp_to_ground: material.clamp_to_ground,
+            height: material.height,
+            extruded_height: material.extruded_height.unwrap_or_default(),
+            ..Default::default()
+        },
+        polygon_resource,
+    );
+
+    (Some(extent), polygon_result)
 }
 
 // TODO: This system is executed whenever a tile is added.
