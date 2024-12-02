@@ -295,6 +295,25 @@ fn traverse_tile(
 
     let is_culled_by_frustum = !intersect_with_camera_frustum(camera, frustum, tile);
     if is_culled_by_frustum {
+        // Preload culled frustum nearby this tile.
+        // Assuming the tile is far away.
+        let tile = qt.qt.get_mut(handle).unwrap();
+        tile.sse = 9999.;
+        tile.distance_from_camera = 9999.;
+        tile.visited_at = tc.rendered_frame;
+
+        prepare_tile_resource(
+            command,
+            tile,
+            buf,
+            tiles,
+            terrain_layer,
+            handle,
+            tc,
+            texture_fragment,
+            terrain_data_requester,
+            Priority::Low,
+        );
         return TraversalResult::Culled;
     }
 
