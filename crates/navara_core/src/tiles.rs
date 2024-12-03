@@ -84,6 +84,10 @@ pub fn tile_url(s: &str, xyz: &TileXYZ) -> String {
         .replace("{z}", &xyz.z.to_string())
 }
 
+pub fn is_tile_url(s: &str) -> bool {
+    s.contains("/{x}") && s.contains("/{y}") && s.contains("/{z}")
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TileXYZIterator {
     z: usize,

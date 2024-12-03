@@ -3,7 +3,10 @@
 use bevy_app::{App, Plugin, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
 
-mod mvt;
+mod data_requester;
+mod geometry;
+mod layer;
+mod pos_converter;
 
 pub struct MvtPlugin;
 
@@ -12,10 +15,10 @@ impl Plugin for MvtPlugin {
         app.add_systems(
             Update,
             (
-                mvt::system::request_mvt,
-                mvt::system::construct_mvt,
-                mvt::system::update_mvt_layer,
-                mvt::system::delete_mvt_layer,
+                data_requester::system::request_single_mvt,
+                layer::system::construct_single_mvt,
+                layer::system::update_mvt_layer,
+                layer::system::delete_mvt_layer,
             )
                 .chain(),
         );
