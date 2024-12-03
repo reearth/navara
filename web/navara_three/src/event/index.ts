@@ -327,12 +327,10 @@ export function processEvent(
           break;
       }
     },
-    ({ type, event }) => {
+    ({ type }) => {
       switch (type) {
         case "add":
-          return IMAGE_EXTENSIONS.includes(event.extension)
-            ? canWorkerProcessImmediately()
-            : true;
+          return canWorkerProcessImmediately();
         default:
           return true;
       }

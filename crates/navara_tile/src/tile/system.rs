@@ -408,7 +408,6 @@ fn traverse_tile(
                 TraversalResult::NotFound | TraversalResult::Culled
             ) {
                 hidden_children_indices.push(i);
-                continue;
             }
 
             // If there is one child at least, trigger the rendering children process.
@@ -976,33 +975,6 @@ pub fn handle_tile_worker_task_completed(
         return;
     }
     tc.is_updated_in_this_frame = true;
-}
-
-pub fn remove_unnecessary_delegated_worker_task(
-    mut commands: Commands,
-    qt: Res<TileQuadtree>,
-    mut rendered_tiles: Query<&mut RenderedTile>,
-    tc: ResMut<TileCacheManager>,
-) {
-    if !tc.is_updated_in_this_frame {
-        return;
-    }
-
-    for mut rendered_tile in &mut rendered_tiles {
-        let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
-        if tile.rendered_at == tc.last_rendered_frame {
-            continue;
-        }
-        let e = match (
-            rendered_tile.terrain_mesh_constructor.take(),
-            rendered_tile.terrain_mesh_upsampler.take(),
-        ) {
-            (Some(e), _) => e,
-            (_, Some(e)) => e,
-            _ => continue,
-        };
-        commands.entity(e).insert(Deleted);
-    }
 }
 
 pub fn clear_caches(

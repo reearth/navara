@@ -37,7 +37,6 @@ impl Plugin for TilePlugin {
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
                     tile::system::clear_caches,
-                    tile::system::remove_unnecessary_delegated_worker_task,
                 )
                     .chain(),
             );
