@@ -2,7 +2,7 @@ use crate::render::{RenderInformation, RenderableFeature};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
-    system::{Commands, Query, ResMut},
+    system::{Commands, ParamSet, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
@@ -50,20 +50,23 @@ pub fn transfer_mesh(
 // TODO: This system is executed whenever a tile is added.
 //       This isn't efficient, so we need to update this system
 //       to execute only when the layer's bounding box is within the camera frustum.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_height_by_terrain(
     mut qt: ResMut<TileQuadtree>,
     mut buf: ResMut<BufferStore>,
-    mut renderable_features: Query<(&PointMarker, &mut RenderableFeature)>,
+    mut renderable_features: ParamSet<(
+        Query<(&PointMarker, &mut RenderableFeature)>,
+        Query<&PointMarker, Added<RenderableFeature>>,
+    )>,
     geometries: Query<&PointGeometry>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
-    if tile_meshes.is_empty() {
+    if tile_meshes.is_empty() && renderable_features.p1().is_empty() {
         return;
     }
 
-    for (_, mut feature) in &mut renderable_features {
+    for (_, mut feature) in &mut renderable_features.p0() {
         match feature.as_mut() {
             RenderableFeature::Point {
                 coordinates: _,
