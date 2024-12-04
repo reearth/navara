@@ -10,7 +10,8 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::BillboardMaterial;
 use navara_math::{Transform, Vec3};
 use navara_tile_component::{
-    compute_terrain_height_at_point, TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery,
+    compute_terrain_height_at_point, RasterTileQuadtree, TileMeshMarker,
+    TileTerrainDataRequesterQuery,
 };
 
 use super::{BillboardGeometry, BillboardMarker};
@@ -52,7 +53,7 @@ pub fn transfer_mesh(
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_height_by_terrain(
-    mut qt: ResMut<TileQuadtree>,
+    mut qt: ResMut<RasterTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut renderable_features: ParamSet<(
         Query<(&BillboardMarker, &mut RenderableFeature)>,

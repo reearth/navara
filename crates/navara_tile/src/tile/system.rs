@@ -11,8 +11,9 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
-    CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, Tile,
-    TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
+    RasterTile, RasterTileQuadtree, Tile, TileMeshMarker, TileTerrainDataRequesterQuery,
+    TileTextureFragmentQuery,
 };
 use navara_window::Window;
 use navara_worker::{
@@ -43,7 +44,7 @@ pub fn begine_update(mut tc: ResMut<TileCacheManager>) {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
-    mut qt: ResMut<TileQuadtree>,
+    mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
     mut buf: ResMut<BufferStore>,
     window: Res<Window>,
@@ -99,7 +100,7 @@ pub fn update_tiles(
                 Some(z) => z,
                 None => {
                     qt.qt
-                        .initialize_zero(&|(x, y, z)| Tile::new(TileXYZ { x, y, z }, 0.));
+                        .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0.));
                     qt.qt
                         .zero()
                         .expect("Failed to initialize a level zero tile unexpectedly")
@@ -162,7 +163,7 @@ pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut tc: ResMut<TileCacheManager>,
-    mut qt: ResMut<TileQuadtree>,
+    mut qt: ResMut<RasterTileQuadtree>,
     cached_martini: Res<CachedMartini>,
     mut rendered_tiles: Query<
         (Entity, &mut RenderedTile, &OrderByDistance),
@@ -299,7 +300,7 @@ pub fn transfer_mesh(
 
         let terrain_layer = terrain_layer.unwrap();
 
-        fn postupdate_tile(tile: &mut Tile, max_height: FloatType, min_height: FloatType) {
+        fn postupdate_tile(tile: &mut RasterTile, max_height: FloatType, min_height: FloatType) {
             let terrain_data = tile
                 .terrain_data
                 .as_mut()
@@ -517,7 +518,7 @@ pub fn handle_tile_worker_task_completed(
 pub fn clear_caches(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
-    mut qt: ResMut<TileQuadtree>,
+    mut qt: ResMut<RasterTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,

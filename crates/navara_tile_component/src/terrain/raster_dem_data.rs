@@ -10,7 +10,7 @@ use navara_geometry::{
 };
 use navara_math::FloatType;
 
-use crate::{data_requester::TileTerrainDataRequesterQuery, tile::Tile};
+use crate::{data_requester::TileTerrainDataRequesterQuery, raster_tile::RasterTile, Tile};
 
 use super::TerrainData;
 
@@ -98,7 +98,7 @@ impl TerrainData for RasterDEMData {
     fn construct_terrain_mesh(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        tile: &Tile,
+        tile: &RasterTile,
         bytes: &[u8],
         geoid_height: FloatType,
         martini: &mut Martini,
@@ -233,11 +233,11 @@ fn compute_terrain_height_from_tile(
 mod test {
     use navara_core::{Angle, LngLat, TileXYZ};
 
-    use super::{compute_terrain_height_from_tile, Tile};
+    use super::{compute_terrain_height_from_tile, RasterTile};
 
     #[test]
     fn it_should_compute_terrain_height_from_tile() {
-        let tile = Tile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0.);
+        let tile = RasterTile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0.);
         #[rustfmt::skip]
         let heights = &[
             0., 1., 2., 3.,

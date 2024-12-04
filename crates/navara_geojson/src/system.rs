@@ -397,7 +397,7 @@ mod test {
     use navara_material::{BillboardMaterial, PointMaterial};
     use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
-    use navara_tile_component::TileQuadtree;
+    use navara_tile_component::RasterTileQuadtree;
 
     use super::construct_feature;
 
@@ -406,7 +406,7 @@ mod test {
 
         app.init_resource::<BufferStore>();
         app.init_resource::<EventStore>();
-        app.insert_resource(TileQuadtree::new_with_linear_qt());
+        app.insert_resource(RasterTileQuadtree::new_with_linear_qt());
         app.insert_resource(LayerStore::new());
         app.add_plugins(FeaturePlugin);
         app.add_systems(Update, construct_feature);

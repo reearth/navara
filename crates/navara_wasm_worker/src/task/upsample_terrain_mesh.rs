@@ -1,5 +1,5 @@
 use navara_core::WGS84_32;
-use navara_tile_component::{RasterDEMData, Tile};
+use navara_tile_component::{RasterDEMData, RasterTile};
 use navara_wasm_transferable::{TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -13,9 +13,9 @@ pub fn upsample_terrain_mesh(
 ) -> ReturnedConstructedTerrainMesh {
     let raster_dem_data: RasterDEMData = raster_dem_data.into();
 
-    let mut tile: Tile = tile.into();
+    let mut tile: RasterTile = tile.into();
     tile.terrain_data = Some(Box::new(raster_dem_data.clone()));
-    let mut parent_tile: Tile = parent_tile.into();
+    let mut parent_tile: RasterTile = parent_tile.into();
     parent_tile.terrain_data = Some(Box::new(raster_dem_data));
 
     let upsamplable_geometry: navara_geometry::UpsamplableTerrainGeometry =

@@ -7,7 +7,7 @@ use navara_event::Events;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
-use navara_tile_component::{MartiniComponent, Tile, TileHandle, TileQuadtree};
+use navara_tile_component::{MartiniComponent, RasterTile, RasterTileQuadtree, TileHandle};
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{DelegatedWorkerTasksResult, WorkerTaskCompletedEvent};
 
@@ -208,16 +208,16 @@ impl App {
         query.get(world, martini_id).ok()
     }
 
-    pub fn get_tile(&mut self, handle: TileHandle) -> Option<&Tile> {
+    pub fn get_tile(&mut self, handle: TileHandle) -> Option<&RasterTile> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<TileQuadtree>()?;
+        let qt = world.get_resource::<RasterTileQuadtree>()?;
 
         qt.qt.get(handle)
     }
 
-    pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<&Tile> {
+    pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<&RasterTile> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<TileQuadtree>()?;
+        let qt = world.get_resource::<RasterTileQuadtree>()?;
 
         let tile = qt.qt.get(handle).unwrap();
         tile.get_parent_tile(qt)
@@ -225,7 +225,7 @@ impl App {
 
     pub fn get_tile_elevation_decoder(&mut self, handle: TileHandle) -> Option<ElevationDecoder> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<TileQuadtree>()?;
+        let qt = world.get_resource::<RasterTileQuadtree>()?;
 
         let tile = qt.qt.get(handle).unwrap();
         tile.terrain_data.as_ref()?.decoder().copied()
