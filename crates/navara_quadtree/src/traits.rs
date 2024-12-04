@@ -2,21 +2,19 @@ use std::fmt::Debug;
 
 use num::PrimInt;
 
-use crate::{child_coords, utils::to_int};
+use crate::{child_coords, utils::to_int, Coords, QuadLeafHandle};
 
 #[cfg(feature = "bevy")]
 pub trait Resource: bevy_ecs::system::Resource {}
 #[cfg(not(feature = "bevy"))]
 pub trait Resource {}
 
-pub type Coords<U> = (U, U, U);
-
 pub trait GeoSpacialQuadLeaf<U>
 where
     U: PrimInt + Default + Sync + Send + 'static,
 {
     fn coords(&self) -> Coords<U>;
-    fn handle(&self) -> u64;
+    fn handle(&self) -> QuadLeafHandle;
 }
 
 pub trait GeoSpacialQuadtree<U, T>: Resource
@@ -26,7 +24,11 @@ where
 {
     /// Initialize a leaf with specified coordinates.
     /// The value which is made by `init` is stored internally as a custom value.
-    fn initialize_leaf(&mut self, coords: Coords<U>, init: &dyn Fn(Coords<U>) -> T) -> Option<u64>;
+    fn initialize_leaf(
+        &mut self,
+        coords: Coords<U>,
+        init: &dyn Fn(Coords<U>) -> T,
+    ) -> Option<QuadLeafHandle>;
 
     /// Initialize a root leaf.
     fn initialize_zero(&mut self, init: &dyn Fn(Coords<U>) -> T) {
@@ -41,7 +43,7 @@ where
         &mut self,
         (x, y, z): Coords<U>,
         init: &dyn Fn(Coords<U>) -> T,
-    ) -> Option<Vec<u64>> {
+    ) -> Option<Vec<QuadLeafHandle>> {
         let mut result = Vec::with_capacity(4);
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
@@ -56,7 +58,7 @@ where
         (x, y, z): Coords<U>,
         child_index: U,
         init: &dyn Fn(Coords<U>) -> T,
-    ) -> Option<u64> {
+    ) -> Option<QuadLeafHandle> {
         self.initialize_leaf(child_coords((x, y, z), child_index), init)
     }
 
@@ -89,11 +91,11 @@ where
     }
 
     /// Get a custom value of a leaf.
-    fn get(&self, handle: u64) -> Option<&T>;
+    fn get(&self, handle: QuadLeafHandle) -> Option<&T>;
 
     /// Get a custom value of a leaf with mutation.
-    fn get_mut(&mut self, handle: u64) -> Option<&mut T>;
+    fn get_mut(&mut self, handle: QuadLeafHandle) -> Option<&mut T>;
 
     /// Get a leaf by a leaf's handle.
-    fn remove(&mut self, handle: u64) -> Option<T>;
+    fn remove(&mut self, handle: QuadLeafHandle) -> Option<T>;
 }

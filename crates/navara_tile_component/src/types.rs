@@ -1,7 +1,7 @@
-use navara_quadtree::Quadtree;
+use navara_quadtree::{QuadLeafHandle, Quadtree};
 
 use crate::Tile;
 
-pub type TileHandle = u64;
+pub type TileHandle = QuadLeafHandle;
 
 pub type TileQuadtree = Quadtree<usize, Tile>;

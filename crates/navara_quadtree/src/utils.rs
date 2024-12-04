@@ -1,6 +1,6 @@
 use num::{PrimInt, ToPrimitive};
 
-use crate::traits::Coords;
+use crate::types::Coords;
 
 pub fn to_int<V, U>(v: V) -> U
 where

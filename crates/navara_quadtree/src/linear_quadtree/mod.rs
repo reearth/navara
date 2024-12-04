@@ -5,7 +5,10 @@ use std::fmt::Debug;
 
 use num::PrimInt;
 
-use crate::traits::{Coords, GeoSpacialQuadLeaf, GeoSpacialQuadtree, Resource};
+use crate::{
+    traits::{GeoSpacialQuadLeaf, GeoSpacialQuadtree, Resource},
+    Coords, QuadLeafHandle,
+};
 
 pub use id::*;
 
@@ -66,7 +69,7 @@ where
         &mut self,
         (x, y, z): Coords<U>,
         init: &dyn Fn(Coords<U>) -> V,
-    ) -> Option<u64> {
+    ) -> Option<QuadLeafHandle> {
         self.insert((x, y, z), init)
     }
 
@@ -74,15 +77,15 @@ where
         self.entry(c)
     }
 
-    fn get(&self, handle: u64) -> Option<&V> {
+    fn get(&self, handle: QuadLeafHandle) -> Option<&V> {
         self.leaves.get(&handle)
     }
 
-    fn get_mut(&mut self, handle: u64) -> Option<&mut V> {
+    fn get_mut(&mut self, handle: QuadLeafHandle) -> Option<&mut V> {
         self.leaves.get_mut(&handle)
     }
 
-    fn remove(&mut self, handle: u64) -> Option<V> {
+    fn remove(&mut self, handle: QuadLeafHandle) -> Option<V> {
         self.leaves.remove(&handle)
     }
 }
@@ -109,7 +112,7 @@ impl<U> GeoSpacialQuadLeaf<U> for Entry<U>
 where
     U: PrimInt + Default + Sync + Send + 'static,
 {
-    fn handle(&self) -> u64 {
+    fn handle(&self) -> QuadLeafHandle {
         self.key
     }
 

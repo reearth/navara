@@ -2,7 +2,7 @@ use std::{borrow::Borrow, hash::Hash};
 
 use num::PrimInt;
 
-use crate::Coords;
+use crate::types::Coords;
 
 pub type LinearQuadleafIdKey = u64;
 
@@ -89,7 +89,7 @@ impl<U: PrimInt + Default> Borrow<LinearQuadleafIdKey> for LinearQuadleafId<U> {
 
 #[cfg(test)]
 mod test {
-    use crate::{linear_quadtree::LinearQuadleafId, Coords};
+    use crate::{linear_quadtree::LinearQuadleafId, types::Coords};
 
     use super::LinearQuadleafIdParams;
 

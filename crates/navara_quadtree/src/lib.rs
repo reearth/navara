@@ -3,8 +3,10 @@
 mod linear_quadtree;
 mod quadtree;
 mod traits;
+mod types;
 mod utils;
 
 pub use quadtree::*;
 pub use traits::*;
+pub use types::*;
 pub use utils::*;
