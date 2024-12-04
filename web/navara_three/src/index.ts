@@ -421,6 +421,7 @@ export default class ThreeView {
         this._drapedFeatureMaterials,
       );
       needs_update = true;
+      events?.free();
     }
 
     this.control?.update();
