@@ -1,5 +1,5 @@
 use navara_math::FloatType;
-use navara_tile_component::Tile;
+use navara_tile_component::RasterTile;
 use navara_wasm_types::{CachedMeshHandle, TileXYZ};
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -27,8 +27,8 @@ impl TransferableTile {
     }
 }
 
-impl<'a> From<&'a Tile> for TransferableTile {
-    fn from(value: &'a Tile) -> Self {
+impl<'a> From<&'a RasterTile> for TransferableTile {
+    fn from(value: &'a RasterTile) -> Self {
         Self {
             coords: value.coords.into(),
             max_height: value.max_height,
@@ -37,7 +37,7 @@ impl<'a> From<&'a Tile> for TransferableTile {
     }
 }
 
-impl From<TransferableTile> for Tile {
+impl From<TransferableTile> for RasterTile {
     fn from(value: TransferableTile) -> Self {
         let mut t = Self::new(value.coords.into(), value.max_height);
         t.cached_mesh_handle = value.cached_mesh_handle.map(|v| v.into());

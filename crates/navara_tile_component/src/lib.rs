@@ -2,6 +2,7 @@
 
 mod component;
 mod data_requester;
+mod raster_tile;
 mod terrain;
 mod texture_fragment;
 mod tile;
@@ -10,6 +11,7 @@ mod types;
 
 pub use component::*;
 pub use data_requester::*;
+pub use raster_tile::*;
 pub use terrain::*;
 pub use texture_fragment::*;
 pub use tile::*;

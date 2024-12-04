@@ -5,13 +5,13 @@ use navara_core::tile_url;
 use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_tile_component::{
-    RasterDEMData, TerrainData, TerrainDataRequesterMarker, Tile, TileHandle,
+    RasterDEMData, RasterTile, TerrainData, TerrainDataRequesterMarker, TileHandle,
     TileTerrainDataRequesterQuery,
 };
 
 pub(crate) fn request_terrain_data(
     commands: &mut Commands,
-    tile: &mut Tile,
+    tile: &mut RasterTile,
     buf: &mut BufferStore,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,

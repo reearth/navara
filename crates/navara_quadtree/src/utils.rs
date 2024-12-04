@@ -11,7 +11,7 @@ where
 }
 
 #[allow(dead_code)]
-pub fn zxy_string((z, x, y): Coords<u32>) -> String {
+pub(crate) fn zxy_string((z, x, y): Coords<u32>) -> String {
     format!("{}/{}/{}", z, x, y)
 }
 

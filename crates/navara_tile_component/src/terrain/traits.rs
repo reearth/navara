@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{data_requester::TileTerrainDataRequesterQuery, tile::Tile};
+use crate::{data_requester::TileTerrainDataRequesterQuery, raster_tile::RasterTile};
 use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::BufferStore;
@@ -19,7 +19,7 @@ pub trait TerrainData: Debug + Sync + Send {
     fn construct_terrain_mesh(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        tile: &Tile,
+        tile: &RasterTile,
         bytes: &[u8],
         geoid_height: FloatType,
         martini: &mut Martini,

@@ -1,5 +1,5 @@
 use navara_core::WGS84_32;
-use navara_tile_component::{MartiniComponent, RasterDEMData, Tile};
+use navara_tile_component::{MartiniComponent, RasterDEMData, RasterTile};
 use navara_wasm_transferable::{TransferableMartini, TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::ReturnedConstructedTerrainMesh;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -11,7 +11,7 @@ pub fn construct_terrain_mesh(
     raster_dem_data: TransferableRasterDEMData,
     martini: TransferableMartini,
 ) -> ReturnedConstructedTerrainMesh {
-    let mut tile: Tile = tile.into();
+    let mut tile: RasterTile = tile.into();
     let raster_dem_data: RasterDEMData = raster_dem_data.into();
     tile.terrain_data = Some(Box::new(raster_dem_data));
 

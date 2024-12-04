@@ -4,12 +4,12 @@ use navara_core::tile_url;
 use navara_layer::TilesLayer;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
-    Tile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
+    RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
-    tile: &mut Tile,
+    tile: &mut RasterTile,
     tiles: &TilesLayer,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,

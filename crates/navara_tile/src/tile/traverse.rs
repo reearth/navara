@@ -1,17 +1,17 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance, Priority};
-use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Meters, TileXYZ, LLE};
+use navara_core::Ellipsoid;
 
-use navara_math::{FloatType, Transform, Vec3};
+use navara_math::{FloatType, Transform};
 
 use navara_mesh::Mesh;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::CameraFrustum;
 use navara_tile_component::{
-    Tile, TileHandle, TileMeshMarker, TileQuadtree, TileTerrainDataRequesterQuery,
-    TileTextureFragmentQuery,
+    RasterTile, RasterTileQuadtree, Tile, TileHandle, TileMeshMarker,
+    TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 
@@ -40,7 +40,7 @@ pub fn traverse_tile(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
-    qt: &mut TileQuadtree,
+    qt: &mut RasterTileQuadtree,
     buf: &mut BufferStore,
     camera: &Transform,
     frustum: &CameraFrustum,
@@ -70,7 +70,7 @@ pub fn traverse_tile(
         None => unreachable!(),
     };
 
-    let is_culled_by_frustum = !intersect_with_camera_frustum(camera, frustum, tile);
+    let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
     if is_culled_by_frustum {
         // Preload culled frustum nearby this tile.
         // Assuming the tile is far away.
@@ -108,10 +108,9 @@ pub fn traverse_tile(
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
-    let distance_from_camera = calc_distance_from_camera(camera, tile, ellipsoid);
-    let sse = calc_sse(
+    let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid);
+    let sse = tile.calc_sse(
         frustum,
-        tile,
         window,
         ellipsoid,
         if terrain_layer.is_some() { 65. } else { 64. },
@@ -149,7 +148,7 @@ pub fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    if let Some(children) = find_children(qt, handle) {
+    if let Some(children) = RasterTile::traversable_children(qt, handle) {
         let mut any_children_rendered = false;
         let mut are_all_children_rendered = true;
         let mut are_children_prepared = true;
@@ -284,7 +283,7 @@ pub fn traverse_tile(
 pub fn spawn_tile_entity(
     commands: &mut Commands,
     tc: &mut TileCacheManager,
-    tile: &mut Tile,
+    tile: &mut RasterTile,
     tile_handle: TileHandle,
 ) {
     tile.rendered_at = tc.rendered_frame;
@@ -316,7 +315,7 @@ pub fn spawn_tile_entity(
 #[allow(clippy::too_many_arguments)]
 pub fn prepare_tile_resource(
     commands: &mut Commands,
-    tile: &mut Tile,
+    tile: &mut RasterTile,
     buf: &mut BufferStore,
     tiles: &TilesLayer,
     terrain_layer: &Option<&TerrainLayer>,
@@ -361,92 +360,13 @@ pub fn prepare_tile_resource(
     requested_terrain.is_some() || requested_texture.is_some()
 }
 
-fn intersect_with_camera_frustum(_camera: &Transform, frustum: &CameraFrustum, t: &Tile) -> bool {
-    frustum.intersection_with_aabb(&t.aabb)||
-    // Avoid frustum culling with root tile
-    t.is_root()
-}
-
-fn calc_distance_from_camera(
-    camera: &Transform,
-    t: &Tile,
-    ellipsoid: &Ellipsoid<FloatType>,
-) -> FloatType {
-    let camera_pos = camera.transform_point(Vec3::ZERO);
-    t.bounding_region
-        .as_ref()
-        .unwrap()
-        .distance_to_camera(camera_pos, ellipsoid.xyz_to_lle(vec3_to_xyz(camera_pos)))
-}
-
-// Ref: https://github.com/CesiumGS/cesium/blob/3b393448d7e976165c0260fab9ea90843583c3a7/packages/engine/Source/Scene/QuadtreePrimitive.js#L1245
-fn calc_sse(
-    frustum: &CameraFrustum,
-    t: &Tile,
-    window: &Window,
-    ellipsoid: &Ellipsoid<FloatType>,
-    height_map_width: FloatType,
-    distance_from_camera: FloatType,
-) -> FloatType {
-    let max_geometric_error = t.get_level_maximum_geometric_error(ellipsoid, height_map_width);
-
-    // TODO: Support fog culling
-
-    (max_geometric_error * window.height)
-        / (distance_from_camera * frustum.sse_denominator)
-        / window.pixel_ratio
-}
-
 fn begine_traverse_tile(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
-    tile: &mut Tile,
+    tile: &mut RasterTile,
 ) {
-    update_tile_occludee_point(ellipsoid, occluder, tile)
-}
-
-fn update_tile_occludee_point(
-    ellipsoid: &Ellipsoid<FloatType>,
-    occluder: &EllipsoidalOccluder,
-    tile: &mut Tile,
-) {
-    if tile.occludee_point_in_scaled_space.is_some() {
-        return;
-    }
-
-    let extent = tile.extent;
-    let center = tile.aabb.center;
-    let max_height = match tile.terrain_data.as_ref() {
-        Some(t) => t.current_max_height().map_or(Meters::new(0.), Meters::new),
-        None => Meters::new(0.),
-    };
-
-    let positions = vec![
-        xyz_to_vec3(ellipsoid.lle_to_xyz(LLE {
-            lng: extent.west,
-            lat: extent.south,
-            height: max_height,
-        })),
-        xyz_to_vec3(ellipsoid.lle_to_xyz(LLE {
-            lng: extent.east,
-            lat: extent.south,
-            height: max_height,
-        })),
-        xyz_to_vec3(ellipsoid.lle_to_xyz(LLE {
-            lng: extent.west,
-            lat: extent.north,
-            height: max_height,
-        })),
-        xyz_to_vec3(ellipsoid.lle_to_xyz(LLE {
-            lng: extent.east,
-            lat: extent.north,
-            height: max_height,
-        })),
-    ];
-
-    tile.occludee_point_in_scaled_space =
-        occluder.compute_horizontal_culling_point(ellipsoid, center, positions);
+    tile.update_tile_occludee_point(ellipsoid, occluder);
 }
 
 pub(super) enum TraversalResult {
@@ -455,32 +375,4 @@ pub(super) enum TraversalResult {
     ChildrenMeshesPrepared,
     Culled,
     NotFound,
-}
-
-fn find_children(qt: &mut TileQuadtree, handle: TileHandle) -> Option<Vec<TileHandle>> {
-    let tile = qt.qt.get(handle).unwrap();
-    let children = tile.children.clone();
-    let coords = (tile.coords.x, tile.coords.y, tile.coords.z);
-    let parent_max_height = tile
-        .terrain_data
-        .as_ref()
-        .map_or(0., |t| t.current_max_height().unwrap_or(0.));
-    let init = |(x, y, z)| Tile::new(TileXYZ { x, y, z }, parent_max_height);
-    if children.is_empty() {
-        let children = qt.qt.initialize_children(coords, &init)?;
-        let tile = qt.qt.get_mut(handle).unwrap();
-        tile.children = children.clone();
-        return Some(children);
-    }
-
-    let mut new_children = Vec::with_capacity(4);
-    for (i, c) in children.into_iter().enumerate() {
-        let is_tile_some = qt.qt.get(c).is_some();
-        if is_tile_some {
-            new_children.push(c);
-            continue;
-        }
-        new_children.push(qt.qt.initialize_child(coords, i, &init)?);
-    }
-    Some(new_children)
 }

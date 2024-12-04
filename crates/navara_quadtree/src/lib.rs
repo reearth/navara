@@ -6,6 +6,7 @@ mod traits;
 mod types;
 mod utils;
 
+pub use num;
 pub use quadtree::*;
 pub use traits::*;
 pub use types::*;

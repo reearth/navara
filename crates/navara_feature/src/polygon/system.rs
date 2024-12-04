@@ -13,7 +13,9 @@ use navara_geometry::{
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
-use navara_tile_component::{sample_terrain_height_within_extent, TileMeshMarker, TileQuadtree};
+use navara_tile_component::{
+    sample_terrain_height_within_extent, RasterTileQuadtree, TileMeshMarker,
+};
 
 use crate::render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry};
 
@@ -343,7 +345,7 @@ fn triangulate_one_polygon(
 //       to execute only when the layer's bounding box is within the camera frustum.
 #[allow(clippy::too_many_arguments)]
 pub fn update_height_by_terrain(
-    mut qt: ResMut<TileQuadtree>,
+    mut qt: ResMut<RasterTileQuadtree>,
     mut renderable_features: Query<(&PolygonMarker, &mut RenderableFeature)>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
 ) {
