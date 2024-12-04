@@ -1,7 +1,8 @@
-use bevy_ecs::{entity::Entity, system::Commands};
+use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point};
 use navara_core::CRS;
 use navara_feature::{
+    billboard::BillboardGeometry,
     point::PointGeometry,
     polygon::{BatchId, PolygonGeometry},
     polyline::PolylineGeometry,
@@ -92,22 +93,37 @@ pub fn construct_geometry(
                     let MultiPoint(points) = v;
 
                     for one_appr in appearances {
-                        if let Appearance::Point(appearance) = one_appr {
-                            for point in points {
-                                let Point(pt) = point;
-                                let (x, y) = converter.project_point(pt);
-
-                                commands.spawn((
-                                    LayerId(layer_id.to_owned()),
-                                    PointGeometry {
+                        match one_appr {
+                            Appearance::Point(appearance) => {
+                                construct_point_geometry(
+                                    commands,
+                                    layer_id,
+                                    points,
+                                    &mut converter,
+                                    appearance,
+                                    |x, y| PointGeometry {
                                         coords: Vec3::new(x, y, 0.0 as FloatType),
                                         crs: CRS::Geographic,
                                     },
-                                    appearance.clone(),
-                                ));
+                                );
+                                break;
                             }
-                            break;
-                        }
+                            Appearance::Billboard(appearance) => {
+                                construct_point_geometry(
+                                    commands,
+                                    layer_id,
+                                    points,
+                                    &mut converter,
+                                    appearance,
+                                    |x, y| BillboardGeometry {
+                                        coords: Vec3::new(x, y, 0.0 as FloatType),
+                                        crs: CRS::Geographic,
+                                    },
+                                );
+                                break;
+                            }
+                            _ => {}
+                        };
                     }
                 }
                 Geometry::MultiLineString(v) => {
@@ -138,4 +154,26 @@ pub fn construct_geometry(
     }
 
     Some(feature_ids)
+}
+
+fn construct_point_geometry<A: Component + Clone, G: Component, F>(
+    commands: &mut Commands,
+    layer_id: &str,
+    points: &[Point<f32>],
+    converter: &mut PosConverter,
+    appearance: &A,
+    geometry: F,
+) where
+    F: Fn(FloatType, FloatType) -> G,
+{
+    for point in points {
+        let Point(pt) = point;
+        let (x, y) = converter.project_point(pt);
+
+        commands.spawn((
+            LayerId(layer_id.to_owned()),
+            geometry(x, y),
+            appearance.clone(),
+        ));
+    }
 }

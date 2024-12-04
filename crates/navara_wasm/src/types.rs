@@ -183,6 +183,8 @@ pub struct MvtLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub point: Option<PointMaterial>,
     #[wasm_bindgen(getter_with_clone)]
+    pub billboard: Option<BillboardMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
     pub polyline: Option<PolylineMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMaterial>,
@@ -193,6 +195,9 @@ impl MvtLayerDescription {
         let mut result = vec![];
         if let Some(v) = self.point.take() {
             result.push(Appearance::Point(v.into()));
+        }
+        if let Some(v) = self.billboard.take() {
+            result.push(Appearance::Billboard(v.into()));
         }
         if let Some(v) = self.polyline.take() {
             result.push(Appearance::Polyline(v.into()));
