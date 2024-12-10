@@ -13,7 +13,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::appearance::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
-    RasterTerrainMaterial, RasterTileMaterial,
+    RasterTerrainMaterial, RasterTileMaterial, VectorTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -188,6 +188,8 @@ pub struct MvtLayerDescription {
     pub polyline: Option<PolylineMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub vector_tile: Option<VectorTileMaterial>,
 }
 
 impl MvtLayerDescription {
@@ -204,6 +206,9 @@ impl MvtLayerDescription {
         }
         if let Some(v) = self.polygon.take() {
             result.push(Appearance::Polygon(v.into()));
+        }
+        if let Some(v) = self.vector_tile.take() {
+            result.push(Appearance::VectorTile(v.into()));
         }
         result
     }

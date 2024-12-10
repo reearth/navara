@@ -148,7 +148,7 @@ pub fn scale_to_geodetic_height_extruded(
 pub fn compute_subdivision(
     ellipsoid: Ellipsoid<FloatType>,
     positions: &[Vec3],
-    indices: Vec<u32>,
+    indices: Vec<usize>,
     granularity: FloatType,
 ) -> (Vec<FloatType>, Vec<u32>) {
     let radius = ellipsoid.semi_major_axis();
@@ -165,7 +165,7 @@ pub fn compute_subdivision(
 
     let mut triangles = indices;
 
-    let mut make_triangle = |triangles: &mut Vec<u32>,
+    let mut make_triangle = |triangles: &mut Vec<usize>,
                              subdivided_positions: &mut Vec<FloatType>,
                              ia: usize,
                              ib: usize,
@@ -185,14 +185,13 @@ pub fn compute_subdivision(
                 i
             }
         };
-        triangles.append(&mut vec![ia as u32, i as u32, ic as u32]);
-        triangles.append(&mut vec![i as u32, ib as u32, ic as u32]);
+        triangles.append(&mut vec![ia, i, ic]);
+        triangles.append(&mut vec![i, ib, ic]);
     };
 
     while let Some(i2) = triangles.pop() {
-        let i2 = i2 as usize;
-        let i1 = triangles.pop().unwrap() as usize;
-        let i0 = triangles.pop().unwrap() as usize;
+        let i1 = triangles.pop().unwrap();
+        let i0 = triangles.pop().unwrap();
 
         let v0 = unpack_flatten_vec3(&subdivided_positions, i0 * 3);
         let v1 = unpack_flatten_vec3(&subdivided_positions, i1 * 3);

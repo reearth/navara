@@ -13,7 +13,10 @@ use crate::{linear_quadtree::LinearQuadtree, traits::GeoSpacialQuadtree};
 ///
 /// let qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt();
 /// ```
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
+#[cfg_attr(
+    feature = "bevy",
+    derive(bevy_ecs::prelude::Resource, bevy_ecs::prelude::Component)
+)]
 pub struct Quadtree<U, V>
 where
     U: PrimInt + Default + Sync + Send + 'static,

@@ -1,4 +1,7 @@
-use crate::render::{RenderInformation, RenderableFeature};
+use crate::{
+    id::FeatureId,
+    render::{RenderInformation, RenderableFeature},
+};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -16,38 +19,51 @@ use navara_tile_component::{
 
 use super::{BillboardGeometry, BillboardMarker};
 
+#[allow(clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
-    billboards: Query<
-        (Entity, &LayerId, &BillboardGeometry, &BillboardMaterial),
+    mut billboards: Query<
+        (
+            Entity,
+            &LayerId,
+            Option<&mut FeatureId>,
+            &BillboardGeometry,
+            &BillboardMaterial,
+        ),
         Added<BillboardGeometry>,
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, geometry, material) in &billboards {
+    for (entity, layer_id, feature_id, geometry, material) in &mut billboards {
         let position = geometry
             .crs
             .to_vec3(WGS84_32, geometry.coords, material.height);
 
-        let entity = commands.spawn((
-            BillboardMarker,
-            RenderableFeature::Billboard {
-                coordinates: geometry.coords,
-                crs: geometry.crs.clone(),
-                material: material.clone(),
-                transform: Transform::from_translation(position).with_scale(Vec3::new(
-                    material.size,
-                    material.size,
-                    material.size,
-                )),
-                feature_id: entity,
-                render_info: RenderInformation {
-                    current_terrain_height: 0.,
+        let entity = commands
+            .spawn((
+                BillboardMarker,
+                RenderableFeature::Billboard {
+                    coordinates: geometry.coords,
+                    crs: geometry.crs.clone(),
+                    material: material.clone(),
+                    transform: Transform::from_translation(position).with_scale(Vec3::new(
+                        material.size,
+                        material.size,
+                        material.size,
+                    )),
+                    feature_id: entity,
+                    render_info: RenderInformation {
+                        current_terrain_height: 0.,
+                    },
                 },
-            },
-        ));
+            ))
+            .id();
 
-        layer_store.add(layer_id.0.clone(), entity.id());
+        if let Some(mut feature_id) = feature_id {
+            feature_id.0 = Some(entity);
+        }
+
+        layer_store.add(layer_id.0.clone(), entity);
     }
 }
 

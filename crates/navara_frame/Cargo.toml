@@ -1,0 +1,10 @@
+[package]
+name = "navara_frame"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_input.workspace = true
+bevy_log.workspace = true

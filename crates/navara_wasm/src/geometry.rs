@@ -59,6 +59,8 @@ pub struct TransferablePolylineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
     #[wasm_bindgen(getter_with_clone)]
+    pub batch_id: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
     pub indices: Handle,
 }
 
@@ -75,6 +77,7 @@ impl From<TransferablePolylineGeometry> for navara_feature::render::Transferable
             right_normal_and_texture_coordinate_normalization_y: val
                 .right_normal_and_texture_coordinate_normalization_y
                 .into(),
+            batch_id: val.batch_id.map(|b| b.into()),
             indices: val.indices,
         }
     }
@@ -96,6 +99,7 @@ impl<'a> From<&'a navara_feature::render::TransferablePolylineGeometry>
             right_normal_and_texture_coordinate_normalization_y: (&val
                 .right_normal_and_texture_coordinate_normalization_y)
                 .into(),
+            batch_id: val.batch_id.as_ref().map(|b| b.into()),
             indices: val.indices,
         }
     }
@@ -111,6 +115,8 @@ pub struct TransferablePolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
+    pub batch_id: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
     pub indices: Handle,
 }
 
@@ -120,6 +126,7 @@ impl From<TransferablePolygonGeometry> for navara_feature::render::TransferableP
             position: val.position.into(),
             normal: val.normal.map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|n| n.into()),
+            batch_id: val.batch_id.map(|n| n.into()),
             indices: val.indices,
         }
     }
@@ -134,6 +141,7 @@ impl<'a> From<&'a navara_feature::render::TransferablePolygonGeometry>
             position: (&val.position).into(),
             normal: val.normal.as_ref().map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|n| n.into()),
+            batch_id: val.batch_id.as_ref().map(|n| n.into()),
             indices: val.indices,
         }
     }

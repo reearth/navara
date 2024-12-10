@@ -41,7 +41,7 @@ impl UniqueWithDelta for Vec3 {
     }
 }
 
-fn decimal(v: f32) -> f32 {
+fn decimal(v: f64) -> f64 {
     v.abs() - v.abs().floor()
 }
 
@@ -56,20 +56,25 @@ where
         y: SeparatedFloat,
         z: SeparatedFloat,
     }
-    let e = 10u32.pow(e) as f32;
+
+    if e >= 20 {
+        panic!("Unexpected exponent");
+    }
+
+    let e = 10u64.pow(e) as f64;
     a.iter()
         .unique_by(|v| Multiplied {
             x: SeparatedFloat {
                 v: v.x().floor() as i32,
-                f: (decimal(v.x()) * e).floor() as i32,
+                f: (decimal(v.x() as f64) * e).floor() as i32,
             },
             y: SeparatedFloat {
                 v: v.y().floor() as i32,
-                f: (decimal(v.y()) * e).floor() as i32,
+                f: (decimal(v.y() as f64) * e).floor() as i32,
             },
             z: SeparatedFloat {
                 v: v.z().floor() as i32,
-                f: (decimal(v.z()) * e).floor() as i32,
+                f: (decimal(v.z() as f64) * e).floor() as i32,
             },
         })
         .cloned()

@@ -9,3 +9,4 @@ radians.workspace = true
 bevy_log.workspace = true
 navara_math = { path = "../navara_math" }
 approx.workspace = true
+regex = "1.11.1"

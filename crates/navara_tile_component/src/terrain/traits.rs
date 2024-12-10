@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{data_requester::TileTerrainDataRequesterQuery, raster_tile::RasterTile};
+use crate::{raster_tile::RasterTile, terrain_data_requester::TileTerrainDataRequesterQuery};
 use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::BufferStore;

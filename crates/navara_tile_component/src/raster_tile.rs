@@ -14,8 +14,8 @@ use navara_quadtree::{children_coords, Coords};
 use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
-    data_requester::TileTerrainDataRequesterQuery, terrain::TerrainData,
-    texture_fragment::TileTextureFragmentQuery, RasterTileQuadtree, Tile, TileHandle,
+    raster_tile_texture_fragment::TileTextureFragmentQuery, terrain::TerrainData,
+    terrain_data_requester::TileTerrainDataRequesterQuery, RasterTileQuadtree, Tile, TileHandle,
 };
 
 use navara_layer::TerrainLayer;

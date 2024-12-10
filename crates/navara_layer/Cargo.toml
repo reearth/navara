@@ -9,6 +9,7 @@ edition = "2021"
 
 [dependencies]
 bevy_ecs.workspace = true
+bevy_log.workspace = true
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_parser = { path = "../navara_parser" }

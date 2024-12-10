@@ -7,6 +7,7 @@ mod data_requester;
 mod geometry;
 mod layer;
 mod pos_converter;
+mod tile;
 
 pub struct MvtPlugin;
 
@@ -19,6 +20,17 @@ impl Plugin for MvtPlugin {
                 layer::system::construct_single_mvt,
                 layer::system::update_mvt_layer,
                 layer::system::delete_mvt_layer,
+            )
+                .chain(),
+        )
+        .add_systems(
+            Update,
+            (
+                layer::system::prepare_layer_resource,
+                tile::system::update_tiles,
+                tile::system::transfer_mesh,
+                data_requester::system::filter_requestable_data_requester,
+                tile::system::clear_caches,
             )
                 .chain(),
         );

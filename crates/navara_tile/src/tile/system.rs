@@ -3,6 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
+use navara_frame::FrameManager;
 use navara_geometry::tile_triangles_flat;
 use navara_math::{FloatType, Transform, Vec3};
 
@@ -37,16 +38,13 @@ use super::{
 
 use navara_layer::{TerrainLayer, TilesLayer};
 
-pub fn begine_update(mut tc: ResMut<TileCacheManager>) {
-    tc.rendered_frame += 1;
-}
-
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
     mut buf: ResMut<BufferStore>,
+    frame: Res<FrameManager>,
     window: Res<Window>,
     tiles: Query<&TilesLayer>,
     terrain_layer: Query<&TerrainLayer>,
@@ -94,7 +92,7 @@ pub fn update_tiles(
             }
 
             tc.is_updated_in_this_frame = true;
-            tc.last_rendered_frame = tc.rendered_frame;
+            tc.last_rendered_frame = frame.rendered_frame();
 
             let zero_tile = match qt.qt.zero() {
                 Some(z) => z,
@@ -114,6 +112,7 @@ pub fn update_tiles(
                 &mut tc,
                 &mut qt,
                 &mut buf,
+                &frame,
                 &camera,
                 frustum,
                 &texture_fragment,
@@ -127,6 +126,7 @@ pub fn update_tiles(
                     spawn_tile_entity(
                         &mut commands,
                         &mut tc,
+                        &frame,
                         qt.qt.get_mut(zero_tile.handle()).unwrap(),
                         zero_tile.handle(),
                     );
@@ -294,6 +294,8 @@ pub fn transfer_mesh(
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
                 cache.mesh_entity = Some(e.id());
+            } else {
+                panic!("Mesh duplication error");
             };
             continue;
         }
@@ -386,6 +388,8 @@ pub fn transfer_mesh(
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
                 cache.mesh_entity = Some(e.id());
+            } else {
+                panic!("Mesh duplication error");
             };
             let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
             postupdate_tile(tile, max_height, min_height);
@@ -472,8 +476,11 @@ pub fn transfer_mesh(
                 },
             },
         ));
+
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
             cache.mesh_entity = Some(e.id());
+        } else {
+            panic!("Mesh duplication error");
         };
 
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
@@ -574,7 +581,7 @@ pub fn clear_caches(
             continue;
         }
 
-        qt.qt.get_mut(tile_handle).unwrap().destroy(
+        qt.qt.remove(tile_handle).unwrap().destroy(
             &mut commands,
             &mut buf,
             &terrain_data_requester,

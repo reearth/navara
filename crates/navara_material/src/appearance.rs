@@ -9,6 +9,30 @@ pub enum Appearance {
     Polyline(PolylineMaterial),
     Polygon(PolygonMaterial),
     Model(ModelMaterial),
+    VectorTile(VectorTileMaterial),
+}
+
+impl Appearance {
+    pub fn set(&mut self, appearance: &Appearance) {
+        match (self, appearance) {
+            (Appearance::Point(dist), Appearance::Point(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::Polyline(dist), Appearance::Polyline(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::Polygon(dist), Appearance::Polygon(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::Model(dist), Appearance::Model(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::VectorTile(dist), Appearance::VectorTile(src)) => {
+                *dist = src.clone();
+            }
+            _ => {}
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -72,6 +96,23 @@ pub struct ModelMaterial {
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Component)]
+pub struct VectorTileMaterial {
+    pub show: bool,
+    pub max_sse: f32,
+    pub max_zoom: usize,
+}
+
+impl Default for VectorTileMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            max_sse: 2.,
+            max_zoom: 20,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Component, Default)]

@@ -3,7 +3,7 @@ use bevy_ecs::{
     query::{With, Without},
     system::{Query, Resource},
 };
-use fxhash::{FxHashMap, FxHashSet};
+use fxhash::FxHashMap;
 use navara_component::Deleted;
 use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
@@ -34,8 +34,6 @@ pub struct RequestedTileCache {
 pub struct TileCacheManager {
     pub rendered_tile_caches: FxHashMap<TileHandle, RenderedTileCache>,
     pub requested_tile_caches: FxHashMap<TileHandle, RequestedTileCache>,
-    pub cached_textures_tile_handles: FxHashSet<TileHandle>,
-    pub rendered_frame: usize,
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
 }
@@ -103,5 +101,3 @@ impl TileCacheManager {
         t.mesh_prepared
     }
 }
-
-pub const MAX_CACHE_SIZE: usize = 30;
