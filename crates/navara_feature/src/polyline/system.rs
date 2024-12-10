@@ -266,7 +266,6 @@ fn triangulate_one_polyline(
         PolylineGeometryOptions {
             positions,
             clamp_to_ground: material.clamp_to_ground,
-            granularity: 1000000000.,
             ..Default::default()
         },
     )
