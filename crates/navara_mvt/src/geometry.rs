@@ -375,7 +375,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
         holes.push(Hierarchy {
             outer_ring: converter.project_points(hole),
             holes: None,
-            expected_winding_order: WindingOrder::CounterClockwise,
+            expected_winding_order: WindingOrder::Clockwise,
         });
     }
 
@@ -385,7 +385,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
             hierarchy: Hierarchy {
                 outer_ring: outer_vec,
                 holes: Some(holes),
-                expected_winding_order: WindingOrder::Clockwise,
+                expected_winding_order: WindingOrder::CounterClockwise,
             },
             crs: CRS::Geographic,
         },
