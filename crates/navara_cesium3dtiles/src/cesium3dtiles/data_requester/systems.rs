@@ -11,7 +11,7 @@ use crate::{
     Cesium3dTileContentDataRequesterMarker,
 };
 
-const MAX_PENDINGS: u32 = 20;
+const MAX_PENDINGS: u32 = 10;
 
 #[allow(clippy::type_complexity)]
 pub fn filter_requestable_data_requester(

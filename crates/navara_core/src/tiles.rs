@@ -1,5 +1,6 @@
 use crate::{Extent, Float, LngLat, Rad, Radians};
 use navara_math::{FloatType, Two};
+use regex::Regex;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TileXY {
@@ -86,6 +87,26 @@ pub fn tile_url(s: &str, xyz: &TileXYZ) -> String {
 
 pub fn is_tile_url(s: &str) -> bool {
     s.contains("/{x}") && s.contains("/{y}") && s.contains("/{z}")
+}
+
+// Ref: https://github.com/mapbox/vector-tile-spec/tree/master/2.1#3-projection-and-bounds
+// The function get_tile_pos_from_url is designed to parse the values of x, y, and z
+// from the end of a URL in the format .../z/x/y.mvt
+pub fn get_tile_pos_from_url(url: &str) -> Option<TileXYZ> {
+    // Define a regular expression to match the three numbers in the URL
+    let re = Regex::new(r"/(\d+)/(\d+)/(\d+)\.mvt$").unwrap();
+
+    if let Some(captures) = re.captures(url) {
+        // Parse and assign the three values to z, x, and y respectively
+        let z: usize = captures[1].parse().ok()?;
+        let x: usize = captures[2].parse().ok()?;
+        let y: usize = captures[3].parse().ok()?;
+
+        // Return (x, y, z)
+        Some(TileXYZ { x, y, z })
+    } else {
+        None
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

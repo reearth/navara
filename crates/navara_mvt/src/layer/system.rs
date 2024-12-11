@@ -1,33 +1,64 @@
 use bevy_ecs::{
+    component::Component,
     entity::Entity,
-    query::{Changed, With, Without},
+    query::{Added, Changed, Without},
     system::{Commands, Query, Res, ResMut},
 };
 
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::calc_transform;
+use navara_core::{calc_transform, get_tile_pos_from_url};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
-use navara_feature::{polygon::BatchedFeature, polygon::UpdatePolygon, render::RenderableFeature};
+use navara_feature::{
+    batch::BatchedFeature,
+    id::FeatureId,
+    point::PointMarker,
+    polygon::{PolygonMarker, UpdatePolygon},
+    polyline::PolylineMarker,
+    render::RenderableFeature,
+};
 use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMvtLayerMarker};
 use navara_material::Appearance;
+use navara_tile_component::VectorTileQuadtree;
 
 use crate::{
-    data_requester::{MvtDataRequesterMarker, SingleMvtDataRequesterMarker},
-    geometry::construct_geometry,
+    data_requester::SingleMvtDataRequesterMarker,
+    geometry::{construct_geometry, ConstructedGeometryType},
+    tile::RenderedTile,
 };
+
+use super::{resource::LayerResources, tile_cache_manager::TileCacheManager};
+
+pub fn prepare_layer_resource(
+    mut commands: Commands,
+    mvt_layers: Query<(Entity, &MvtLayer), Added<MvtLayer>>,
+) {
+    for (e, layer) in &mvt_layers {
+        if !layer.has_template_url() {
+            continue;
+        }
+
+        let quadtree = commands
+            .spawn(VectorTileQuadtree::new_with_linear_qt())
+            .id();
+        let tc = commands.spawn(TileCacheManager::default()).id();
+        commands.entity(e).insert(LayerResources {
+            quadtree,
+            tile_cache_manager: tc,
+        });
+    }
+}
+
+#[derive(Component)]
+pub struct RenderedSingleFeature(Entity);
 
 #[allow(clippy::type_complexity)]
 pub fn construct_single_mvt(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     requesters: Query<
-        (Entity, &MvtDataRequesterMarker, &DataRequester),
-        (
-            Changed<DataRequester>,
-            With<SingleMvtDataRequesterMarker>,
-            Without<Deleted>,
-        ),
+        (Entity, &SingleMvtDataRequesterMarker, &DataRequester),
+        (Changed<DataRequester>, Without<Deleted>),
     >,
     mvt_layers: Query<(Entity, &MvtLayer)>,
 ) {
@@ -36,7 +67,7 @@ pub fn construct_single_mvt(
         if !matches!(req.status, DataRequesterStatus::Success) {
             continue;
         }
-        let (_, layer) = match mvt_layers.get(marker.0) {
+        let (layer_entity, layer) = match mvt_layers.get(marker.0) {
             Ok(l) => l,
             Err(_) => unreachable!(),
         };
@@ -49,17 +80,30 @@ pub fn construct_single_mvt(
         };
 
         // TODO: Move this process to worker.
-        match construct_geometry(
+        if let Some(geometries) = construct_geometry(
             &mut commands,
             mvt_bin,
             &layer.layer_id,
-            &layer.data.as_ref().unwrap().url,
+            get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
             &layer.appearances,
         ) {
-            Some(f) if !f.is_empty() => {
-                commands.spawn(BatchedFeature { features: f });
+            for v in geometries {
+                let batched = BatchedFeature {
+                    features: v.feature_ids,
+                };
+                let e = match v.geometry_type {
+                    ConstructedGeometryType::Point => commands.spawn((PointMarker, batched)).id(),
+                    ConstructedGeometryType::Polyline => {
+                        commands.spawn((PolylineMarker, batched)).id()
+                    }
+                    ConstructedGeometryType::Polygon => {
+                        commands.spawn((PolygonMarker, batched)).id()
+                    }
+                };
+                commands
+                    .entity(layer_entity)
+                    .insert(RenderedSingleFeature(e));
             }
-            _ => {}
         };
         buf.remove(&req.handle);
     }
@@ -67,12 +111,24 @@ pub fn construct_single_mvt(
 
 pub fn update_mvt_layer(
     mut commands: Commands,
+    mut layers: Query<&mut MvtLayer>,
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateMvtLayerMarker)>,
     mut features: Query<&mut RenderableFeature>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
+
+        for mut layer in &mut layers {
+            if layer.layer_id != layer_id {
+                continue;
+            }
+
+            for appearance in &mut layer.appearances {
+                appearance.set(&u.appearance);
+            }
+        }
+
         if let Some(ids) = layer_store.get(&layer_id) {
             for id in ids {
                 let mut f = match features.get_mut(*id) {
@@ -125,15 +181,24 @@ pub fn update_mvt_layer(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn delete_mvt_layer(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteMvtLayerMarker)>,
-    layers: Query<(Entity, &MvtLayer)>,
-    mut features: Query<&mut RenderableFeature>,
+    layers: Query<(
+        Entity,
+        &MvtLayer,
+        Option<&RenderedSingleFeature>,
+        Option<&LayerResources>,
+    )>,
     mut buf: ResMut<BufferStore>,
+    mut features: Query<&mut RenderableFeature>,
+    feature_ids: Query<&FeatureId>,
+    batched_features: Query<&BatchedFeature>,
+    mut rendered_tiles: Query<&mut RenderedTile>,
     entities_with_layerid: Query<(Entity, &LayerId)>,
+    tc: Query<&TileCacheManager>,
 ) {
     for (e, d) in &deleted {
         let entities = layer_store.get(&d.0);
@@ -141,15 +206,7 @@ pub fn delete_mvt_layer(
             // delete RenderableFeature and related Buffers
             for entity in vec {
                 if let Ok(mut feature) = features.get_mut(*entity) {
-                    match &mut *feature {
-                        RenderableFeature::Polyline { geometry, .. } => {
-                            geometry.remove_from_buf(&mut buf);
-                        }
-                        RenderableFeature::Polygon { geometry, .. } => {
-                            geometry.remove_from_buf(&mut buf);
-                        }
-                        _ => (),
-                    }
+                    feature.destroy(&mut buf);
                 }
 
                 commands.entity(*entity).despawn();
@@ -166,9 +223,23 @@ pub fn delete_mvt_layer(
         // delete stored layer id
         layer_store.remove(&d.0);
 
-        for (e, l) in &layers {
+        for (e, l, rendered, resource) in &layers {
             if l.layer_id != d.0 {
                 continue;
+            }
+            if let Some(rendered) = rendered {
+                commands.entity(rendered.0).despawn();
+            }
+            if let Some(resource) = resource {
+                resource.destroy(
+                    &mut commands,
+                    &mut buf,
+                    &tc,
+                    &feature_ids,
+                    &batched_features,
+                    &mut features,
+                    &mut rendered_tiles,
+                );
             }
             commands.entity(e).despawn();
         }

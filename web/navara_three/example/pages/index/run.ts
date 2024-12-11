@@ -303,7 +303,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/12/3587/1632.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/12/3587/1632.mvt",
+      url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/{z}/{x}/{y}.mvt",
     },
     point: {
       color: 0xff0000,
@@ -323,25 +324,32 @@ const geoLayersDef: MaterialLayerDescription[] = [
     type: "mvt",
     data: {
       url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/10/904/402.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/{z}/{x}/{y}.mvt",
     },
     polyline: {
       show: true,
       color: 0x00ff00,
       width: 2,
       height: 1,
-      clamp_to_ground: true,
+      clamp_to_ground: false,
     },
   },
   {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/{z}/{x}/{y}.mvt",
+      url: "https://assets.cms.plateau.reearth.io/assets/c7/a9681c-bf92-4496-a367-f4d2dcf35aec/13101_chiyoda-ku_pref_2023_citygml_1_op_tran_mvt_lod1/{z}/{x}/{y}.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/a2/81a1a7-03b8-4cf2-bb26-19103b32e255/13_tokyo_pref_2023_citygml_1_op_urf_HeightControlDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
     },
     polygon: {
       color: 0x00aaff,
       height: 10,
       extruded_height: 0,
       clamp_to_ground: false,
+    },
+    vector_tile: {
+      max_zoom: 16,
     },
   },
 ];

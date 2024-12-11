@@ -18,5 +18,5 @@ serde.workspace = true
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_buffer_store = { path = "../navara_buffer_store" }
-earcut = "0.4.2"
+earcutr = "0.4.2"
 approx.workspace = true

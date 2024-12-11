@@ -1,6 +1,6 @@
 use geo_types::Coord;
+use navara_core::TileXYZ;
 use navara_math::{FloatType, Vec3};
-use regex::Regex;
 use std::f64::consts::PI;
 
 #[derive(Debug)]
@@ -15,7 +15,7 @@ pub struct PosConverter {
 // The conversion method refers to:
 // https://github.com/mapbox/vector-tile-js/blob/main/index.js#L135 (toGeoJSON(x, y, z) )
 impl PosConverter {
-    pub fn new(url: &str, extent: u32) -> Self {
+    pub fn new(xyz: TileXYZ, extent: u32) -> Self {
         let mut converter = Self {
             x0: 0.0,
             y0: 0.0,
@@ -24,13 +24,11 @@ impl PosConverter {
             scale_y: 0.0,
         };
 
-        if let Some((x, y, z)) = converter.get_tile_pos_from_url(url) {
-            converter.x0 = (extent as f64) * (x as f64);
-            converter.y0 = (extent as f64) * (y as f64);
-            converter.size = (extent as f64) * (2_u64.pow(z) as f64);
-            converter.scale_x = 360.0 / converter.size;
-            converter.scale_y = 2.0 / converter.size;
-        }
+        converter.x0 = (extent as f64) * (xyz.x as f64);
+        converter.y0 = (extent as f64) * (xyz.y as f64);
+        converter.size = (extent as f64) * (2_u64.pow(xyz.z as u32) as f64);
+        converter.scale_x = 360.0 / converter.size;
+        converter.scale_y = 2.0 / converter.size;
 
         converter
     }
@@ -52,25 +50,5 @@ impl PosConverter {
         }
 
         ret
-    }
-
-    // Ref: https://github.com/mapbox/vector-tile-spec/tree/master/2.1#3-projection-and-bounds
-    // The function get_tile_pos_from_url is designed to parse the values of x, y, and z
-    // from the end of a URL in the format .../z/x/y.mvt
-    fn get_tile_pos_from_url(&self, url: &str) -> Option<(u32, u32, u32)> {
-        // Define a regular expression to match the three numbers in the URL
-        let re = Regex::new(r"/(\d+)/(\d+)/(\d+)\.mvt$").unwrap();
-
-        if let Some(captures) = re.captures(url) {
-            // Parse and assign the three values to z, x, and y respectively
-            let z: u32 = captures[1].parse().ok()?;
-            let x: u32 = captures[2].parse().ok()?;
-            let y: u32 = captures[3].parse().ok()?;
-
-            // Return (x, y, z)
-            Some((x, y, z))
-        } else {
-            None
-        }
     }
 }

@@ -1,11 +1,9 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
-use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point};
-use navara_core::CRS;
+use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon};
+use navara_core::{TileXYZ, CRS};
 use navara_feature::{
-    billboard::BillboardGeometry,
-    point::PointGeometry,
-    polygon::{BatchId, PolygonGeometry},
-    polyline::PolylineGeometry,
+    batch::BatchId, billboard::BillboardGeometry, id::FeatureId, point::PointGeometry,
+    polygon::PolygonGeometry, polyline::PolylineGeometry,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
@@ -15,28 +13,53 @@ use navara_parser::mvt;
 
 use crate::pos_converter::PosConverter;
 
+#[derive(Clone, Copy)]
+pub(crate) enum ConstructedGeometryType {
+    Point,
+    Polyline,
+    Polygon,
+}
+
+pub(crate) struct ConstructedGeometry {
+    pub feature_ids: Vec<Entity>,
+    pub geometry_type: ConstructedGeometryType,
+}
+
+// TODO: Store the coordinates into BufferStore.
 // TODO: Move this process to worker.
 pub fn construct_geometry(
     commands: &mut Commands,
     mvt_bin: &[u8],
     layer_id: &str,
-    url: &str,
+    xyz: TileXYZ,
     appearances: &[Appearance],
-) -> Option<Vec<Entity>> {
-    let mut polygon_idx = 0;
-    let mut feature_ids = vec![];
+) -> Option<Vec<ConstructedGeometry>> {
+    let mut result = vec![];
 
     let reader = mvt::MvtReader::new((*mvt_bin).to_vec()).ok()?;
     let layer_names = reader.get_layer_names().ok()?;
 
     for (index, _name) in layer_names.iter().enumerate() {
         let extent = reader.get_extent(index);
-        let mut converter = PosConverter::new(url, extent);
+        let mut converter = PosConverter::new(xyz, extent);
         let features = match reader.get_features(index) {
             Ok(f) => f,
             Err(_) => continue,
         };
 
+        let geometry_type = match features.first().map(|f| f.get_geometry()) {
+            Some(Geometry::Point(_) | Geometry::MultiPoint(_)) => ConstructedGeometryType::Point,
+            Some(Geometry::Line(_) | Geometry::LineString(_) | Geometry::MultiLineString(_)) => {
+                ConstructedGeometryType::Polyline
+            }
+            Some(Geometry::Polygon(_) | Geometry::MultiPolygon(_)) => {
+                ConstructedGeometryType::Polygon
+            }
+            _ => continue,
+        };
+
+        let mut feature_ids = vec![];
+        let mut batch_id = 0;
         for feature in features {
             let geom = feature.get_geometry();
             match geom {
@@ -51,43 +74,34 @@ pub fn construct_geometry(
                         _ => continue,
                     };
 
-                    // TODO: Merge these geometries into one
-                    for polygon in plgs {
-                        let LineString(outer) = polygon.exterior();
-                        let outer_vec = converter.project_points(outer);
+                    construct_polygons_geometry(
+                        commands,
+                        &mut feature_ids,
+                        layer_id,
+                        plgs,
+                        &mut converter,
+                        appearance,
+                        &mut batch_id,
+                    );
+                }
+                Geometry::Polygon(v) => {
+                    let appearance = match appearances
+                        .iter()
+                        .find(|a| matches!(a, Appearance::Polygon(_)))
+                    {
+                        Some(Appearance::Polygon(a)) => a,
+                        _ => continue,
+                    };
 
-                        let interiors = polygon.interiors();
-                        let mut holes: Vec<Hierarchy> = Vec::new();
-
-                        // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
-                        // which is based on the origin being at the top-left.
-                        // However, after converting to geographic coordinates, it is actually counterclockwise.
-                        for LineString(hole) in interiors {
-                            holes.push(Hierarchy {
-                                outer_ring: converter.project_points(hole),
-                                holes: None,
-                                expected_winding_order: WindingOrder::CounterClockwise,
-                            });
-                        }
-
-                        let entity = commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            PolygonGeometry {
-                                hierarchy: Hierarchy {
-                                    outer_ring: outer_vec,
-                                    holes: Some(holes),
-                                    expected_winding_order: WindingOrder::Clockwise,
-                                },
-                                crs: CRS::Geographic,
-                            },
-                            appearance.clone(),
-                            BatchId(polygon_idx),
-                        ));
-
-                        feature_ids.push(entity.id());
-
-                        polygon_idx += 1;
-                    }
+                    construct_polygon_geometry(
+                        commands,
+                        &mut feature_ids,
+                        layer_id,
+                        v,
+                        &mut converter,
+                        appearance,
+                        &mut batch_id,
+                    );
                 }
                 Geometry::MultiPoint(v) => {
                     let MultiPoint(points) = v;
@@ -95,8 +109,9 @@ pub fn construct_geometry(
                     for one_appr in appearances {
                         match one_appr {
                             Appearance::Point(appearance) => {
-                                construct_point_geometry(
+                                construct_points_geometry(
                                     commands,
+                                    &mut feature_ids,
                                     layer_id,
                                     points,
                                     &mut converter,
@@ -109,8 +124,9 @@ pub fn construct_geometry(
                                 break;
                             }
                             Appearance::Billboard(appearance) => {
-                                construct_point_geometry(
+                                construct_points_geometry(
                                     commands,
+                                    &mut feature_ids,
                                     layer_id,
                                     points,
                                     &mut converter,
@@ -126,38 +142,93 @@ pub fn construct_geometry(
                         };
                     }
                 }
+                Geometry::Point(point) => {
+                    for one_appr in appearances {
+                        match one_appr {
+                            Appearance::Point(appearance) => {
+                                construct_point_geometry(
+                                    commands,
+                                    &mut feature_ids,
+                                    layer_id,
+                                    point,
+                                    &mut converter,
+                                    appearance,
+                                    &|x, y| PointGeometry {
+                                        coords: Vec3::new(x, y, 0.0 as FloatType),
+                                        crs: CRS::Geographic,
+                                    },
+                                );
+                                break;
+                            }
+                            Appearance::Billboard(appearance) => {
+                                construct_point_geometry(
+                                    commands,
+                                    &mut feature_ids,
+                                    layer_id,
+                                    point,
+                                    &mut converter,
+                                    appearance,
+                                    &|x, y| BillboardGeometry {
+                                        coords: Vec3::new(x, y, 0.0 as FloatType),
+                                        crs: CRS::Geographic,
+                                    },
+                                );
+                                break;
+                            }
+                            _ => {}
+                        };
+                    }
+                }
                 Geometry::MultiLineString(v) => {
                     let MultiLineString(lines) = v;
 
                     for one_appr in appearances {
                         if let Appearance::Polyline(appearance) = one_appr {
-                            for line in lines {
-                                let LineString(points) = line;
-                                let geo_points = converter.project_points(points);
-
-                                commands.spawn((
-                                    LayerId(layer_id.to_owned()),
-                                    PolylineGeometry {
-                                        coords: geo_points,
-                                        crs: CRS::Geographic,
-                                    },
-                                    appearance.clone(),
-                                ));
-                            }
+                            construct_lines_geometry(
+                                commands,
+                                &mut feature_ids,
+                                layer_id,
+                                lines,
+                                &mut converter,
+                                appearance,
+                                &mut batch_id,
+                            );
+                            break;
+                        }
+                    }
+                }
+                Geometry::LineString(line) => {
+                    for one_appr in appearances {
+                        if let Appearance::Polyline(appearance) = one_appr {
+                            construct_line_geometry(
+                                commands,
+                                &mut feature_ids,
+                                layer_id,
+                                line,
+                                &mut converter,
+                                appearance,
+                                &mut batch_id,
+                            );
                             break;
                         }
                     }
                 }
                 _ => {}
-            }
+            };
         }
+
+        result.push(ConstructedGeometry {
+            feature_ids,
+            geometry_type,
+        });
     }
 
-    Some(feature_ids)
+    Some(result)
 }
 
-fn construct_point_geometry<A: Component + Clone, G: Component, F>(
+fn construct_points_geometry<A: Component + Clone, G: Component, F>(
     commands: &mut Commands,
+    feature_ids: &mut Vec<Entity>,
     layer_id: &str,
     points: &[Point<f32>],
     converter: &mut PosConverter,
@@ -167,13 +238,162 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     F: Fn(FloatType, FloatType) -> G,
 {
     for point in points {
-        let Point(pt) = point;
-        let (x, y) = converter.project_point(pt);
+        construct_point_geometry(
+            commands,
+            feature_ids,
+            layer_id,
+            point,
+            converter,
+            appearance,
+            &geometry,
+        );
+    }
+}
 
-        commands.spawn((
+fn construct_point_geometry<A: Component + Clone, G: Component, F>(
+    commands: &mut Commands,
+    feature_ids: &mut Vec<Entity>,
+    layer_id: &str,
+    point: &Point<f32>,
+    converter: &mut PosConverter,
+    appearance: &A,
+    geometry: &F,
+) where
+    F: Fn(FloatType, FloatType) -> G,
+{
+    let Point(pt) = point;
+    let (x, y) = converter.project_point(pt);
+
+    let e = commands
+        .spawn((
             LayerId(layer_id.to_owned()),
+            FeatureId::default(),
             geometry(x, y),
             appearance.clone(),
-        ));
+        ))
+        .id();
+
+    feature_ids.push(e);
+}
+
+fn construct_lines_geometry<A: Component + Clone>(
+    commands: &mut Commands,
+    feature_ids: &mut Vec<Entity>,
+    layer_id: &str,
+    lines: &[LineString<f32>],
+    converter: &mut PosConverter,
+    appearance: &A,
+    batch_id: &mut usize,
+) -> usize {
+    let mut count = 0;
+    for line in lines {
+        construct_line_geometry(
+            commands,
+            feature_ids,
+            layer_id,
+            line,
+            converter,
+            appearance,
+            batch_id,
+        );
+        count += line.0.len();
     }
+
+    count
+}
+
+fn construct_line_geometry<A: Component + Clone>(
+    commands: &mut Commands,
+    feature_ids: &mut Vec<Entity>,
+    layer_id: &str,
+    line: &LineString<f32>,
+    converter: &mut PosConverter,
+    appearance: &A,
+    batch_id: &mut usize,
+) {
+    let LineString(points) = line;
+    let geo_points = converter.project_points(points);
+
+    let e = commands
+        .spawn((
+            LayerId(layer_id.to_owned()),
+            PolylineGeometry {
+                coords: geo_points,
+                crs: CRS::Geographic,
+            },
+            appearance.clone(),
+            BatchId(*batch_id),
+        ))
+        .id();
+
+    feature_ids.push(e);
+
+    *batch_id += 1;
+}
+
+fn construct_polygons_geometry<A: Component + Clone>(
+    commands: &mut Commands,
+    feature_ids: &mut Vec<Entity>,
+    layer_id: &str,
+    polygons: &[Polygon<f32>],
+    converter: &mut PosConverter,
+    appearance: &A,
+    batch_id: &mut usize,
+) {
+    for polygon in polygons {
+        construct_polygon_geometry(
+            commands,
+            feature_ids,
+            layer_id,
+            polygon,
+            converter,
+            appearance,
+            batch_id,
+        );
+    }
+}
+
+fn construct_polygon_geometry<A: Component + Clone>(
+    commands: &mut Commands,
+    feature_ids: &mut Vec<Entity>,
+    layer_id: &str,
+    polygon: &Polygon<f32>,
+    converter: &mut PosConverter,
+    appearance: &A,
+    batch_id: &mut usize,
+) {
+    let LineString(outer) = polygon.exterior();
+    let outer_vec = converter.project_points(outer);
+
+    let interiors = polygon.interiors();
+    let mut holes: Vec<Hierarchy> = Vec::new();
+
+    // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
+    // which is based on the origin being at the top-left.
+    // However, after converting to geographic coordinates, it is actually counterclockwise.
+    for LineString(hole) in interiors {
+        holes.push(Hierarchy {
+            outer_ring: converter.project_points(hole),
+            holes: None,
+            expected_winding_order: WindingOrder::Clockwise,
+        });
+    }
+
+    let entity = commands.spawn((
+        LayerId(layer_id.to_owned()),
+        PolygonGeometry {
+            hierarchy: Hierarchy {
+                outer_ring: outer_vec,
+                holes: Some(holes),
+                expected_winding_order: WindingOrder::CounterClockwise,
+            },
+            crs: CRS::Geographic,
+        },
+        appearance.clone(),
+        BatchId(*batch_id),
+    ));
+
+    feature_ids.push(entity.id());
+
+    *batch_id += 1;
 }

@@ -30,3 +30,4 @@ navara_cesium3dtiles = { path = "../navara_cesium3dtiles" }
 navara_mvt = { path = "../navara_mvt" }
 navara_worker = { path = "../navara_worker" }
 navara_core = { path = "../navara_core" }
+navara_frame = { path = "../navara_frame" }

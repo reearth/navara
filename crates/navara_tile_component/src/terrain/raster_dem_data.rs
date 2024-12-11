@@ -10,7 +10,7 @@ use navara_geometry::{
 };
 use navara_math::FloatType;
 
-use crate::{data_requester::TileTerrainDataRequesterQuery, raster_tile::RasterTile, Tile};
+use crate::{raster_tile::RasterTile, terrain_data_requester::TileTerrainDataRequesterQuery, Tile};
 
 use super::TerrainData;
 

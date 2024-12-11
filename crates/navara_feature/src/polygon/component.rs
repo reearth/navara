@@ -17,11 +17,3 @@ pub struct UpdatePolygon {
     pub material: PolygonMaterial,
     pub feature_id: Entity,
 }
-
-#[derive(Component, Debug)]
-pub struct BatchedFeature {
-    pub features: Vec<Entity>,
-}
-
-#[derive(Component, Debug)]
-pub struct BatchId(pub usize);

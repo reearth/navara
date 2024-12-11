@@ -46,7 +46,7 @@ pub enum RenderableFeature {
         material: PolylineMaterial,
         geometry: TransferablePolylineGeometry,
         transform: Transform,
-        feature_id: Entity,
+        feature_id: Option<Entity>,
         render_info: RenderInformation,
     },
     Polygon {
@@ -72,6 +72,20 @@ pub enum RenderableFeature {
     Unknown,
 }
 
+impl RenderableFeature {
+    pub fn destroy(&mut self, buf: &mut BufferStore) {
+        match self {
+            RenderableFeature::Polyline { geometry, .. } => {
+                geometry.remove_from_buf(buf);
+            }
+            RenderableFeature::Polygon { geometry, .. } => {
+                geometry.remove_from_buf(buf);
+            }
+            _ => (),
+        }
+    }
+}
+
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePolylineGeometry {
     pub position: TransferableFloatAttribute,
@@ -80,6 +94,7 @@ pub struct TransferablePolylineGeometry {
     pub start_normals: TransferableFloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
+    pub batch_id: Option<TransferableFloatAttribute>,
     pub indices: Handle,
 }
 
@@ -95,6 +110,9 @@ impl TransferablePolylineGeometry {
                 .right_normal_and_texture_coordinate_normalization_y
                 .data,
         );
+        if let Some(batch_id) = &self.batch_id {
+            buf.remove(&batch_id.data);
+        }
         buf.remove(&self.indices);
     }
 }
@@ -104,6 +122,7 @@ pub struct TransferablePolygonGeometry {
     pub position: TransferableFloatAttribute,
     pub normal: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
+    pub batch_id: Option<TransferableFloatAttribute>,
     pub indices: Handle,
 }
 
@@ -114,6 +133,12 @@ impl TransferablePolygonGeometry {
 
         if let Some(normal) = &self.normal {
             buf.remove(&normal.data);
+        }
+        if let Some(normal) = &self.scale_normal_and_cap {
+            buf.remove(&normal.data);
+        }
+        if let Some(batch_id) = &self.batch_id {
+            buf.remove(&batch_id.data);
         }
     }
 }

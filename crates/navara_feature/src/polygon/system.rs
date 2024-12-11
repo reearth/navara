@@ -1,6 +1,6 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Without},
+    query::{Added, With, Without},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
@@ -17,9 +17,13 @@ use navara_tile_component::{
     sample_terrain_height_within_extent, RasterTileQuadtree, TileMeshMarker,
 };
 
-use crate::render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry};
+use crate::{
+    batch::{BatchId, BatchedFeature},
+    id::FeatureId,
+    render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry},
+};
 
-use super::{BatchId, BatchedFeature, PolygonGeometry, PolygonMarker, UpdatePolygon};
+use super::{PolygonGeometry, PolygonMarker, UpdatePolygon};
 
 fn to_transferable_geometry(
     buf: &mut ResMut<BufferStore>,
@@ -30,6 +34,10 @@ fn to_transferable_geometry(
     let scale_normal_and_cap = geo
         .attributes
         .scale_normal_and_cap
+        .map(|n| (buf.new_f32(n.data), n.size));
+    let batch_id = geo
+        .attributes
+        .batch_id
         .map(|n| (buf.new_f32(n.data), n.size));
     let indices = buf.new_u32(geo.indices);
 
@@ -44,6 +52,10 @@ fn to_transferable_geometry(
                 data: scale_normal_and_cap,
                 size,
             }
+        }),
+        batch_id: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
+            data: batch_id,
+            size,
         }),
         indices,
     }
@@ -63,11 +75,14 @@ pub fn transfer_batched_mesh(
         ),
         (Added<PolygonGeometry>,),
     >,
-    batched_features: Query<&BatchedFeature, Added<BatchedFeature>>,
+    mut batched_features: Query<
+        (&BatchedFeature, Option<&mut FeatureId>),
+        (Added<BatchedFeature>, With<PolygonMarker>),
+    >,
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for batched_feature in &batched_features {
+    for (batched_feature, feature_id) in &mut batched_features {
         let mut extent_vec = Vec::new();
         let mut material_opt: Option<PolygonMaterial> = None;
         let mut layer_id_opt: Option<LayerId> = None;
@@ -77,7 +92,7 @@ pub fn transfer_batched_mesh(
             scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
             batch_id: Some(FloatAttribute::new(vec![], 1)),
         };
-        let mut indices = Vec::new();
+        let mut indices = vec![];
         let mut index_offset = 0;
 
         for feature_id in &batched_feature.features {
@@ -104,7 +119,8 @@ pub fn transfer_batched_mesh(
 
             extent_vec.push(extent);
 
-            let position_length = polygon_result.geometry.attributes.position.data.len() / 3;
+            let position_length = polygon_result.geometry.attributes.position.data.len()
+                / polygon_result.geometry.attributes.position.size as usize;
             if position_length == 0 {
                 continue;
             }
@@ -143,13 +159,9 @@ pub fn transfer_batched_mesh(
             if index_offset == 0 {
                 indices.append(&mut polygon_result.geometry.indices);
             } else {
-                let mut new_indices = polygon_result
-                    .geometry
-                    .indices
-                    .into_iter()
-                    .map(|i| i + index_offset)
-                    .collect::<Vec<_>>();
-                indices.append(&mut new_indices);
+                for i in polygon_result.geometry.indices {
+                    indices.push(i + index_offset);
+                }
             }
 
             index_offset += position_length as u32;
@@ -169,33 +181,39 @@ pub fn transfer_batched_mesh(
             let aabb = Aabb::from_extent_f32(combined_extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
-            let entity = commands.spawn((
-                PolygonMarker,
-                RenderableFeature::Polygon {
-                    // TODO: Calculate coordinate to update transform
-                    coordinates: Vec3::new(0., 0., 0.),
-                    crs: CRS::Geocentric,
-                    material,
-                    geometry: to_transferable_geometry(
-                        &mut buf,
-                        navara_geometry::PolygonGeometry {
-                            attributes: combined_attributes.clone(),
-                            indices: indices.clone(),
+            let entity = commands
+                .spawn((
+                    PolygonMarker,
+                    RenderableFeature::Polygon {
+                        // TODO: Calculate coordinate to update transform
+                        coordinates: Vec3::new(0., 0., 0.),
+                        crs: CRS::Geocentric,
+                        material,
+                        geometry: to_transferable_geometry(
+                            &mut buf,
+                            navara_geometry::PolygonGeometry {
+                                attributes: combined_attributes,
+                                indices,
+                            },
+                        ),
+                        transform: Transform::default(),
+                        feature_id: None,
+                        render_info: PolygonRenderInformation {
+                            should_recalculate_height: true,
+                            distance_to_center_from_ellipsoid_surface: -aabb
+                                .center
+                                .distance(surface_point.unwrap()),
                         },
-                    ),
-                    transform: Transform::default(),
-                    feature_id: None,
-                    render_info: PolygonRenderInformation {
-                        should_recalculate_height: true,
-                        distance_to_center_from_ellipsoid_surface: -aabb
-                            .center
-                            .distance(surface_point.unwrap()),
+                        extent: combined_extent,
                     },
-                    extent: combined_extent,
-                },
-            ));
+                ))
+                .id();
 
-            layer_store.add(layer_id_opt.unwrap().0, entity.id());
+            if let Some(mut feature_id) = feature_id {
+                feature_id.0 = Some(entity);
+            }
+
+            layer_store.add(layer_id_opt.unwrap().0, entity);
         }
     }
 }
@@ -205,13 +223,19 @@ pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut polygon: Query<
-        (Entity, &LayerId, &mut PolygonGeometry, &PolygonMaterial),
+        (
+            Entity,
+            &LayerId,
+            Option<&mut FeatureId>,
+            &mut PolygonGeometry,
+            &PolygonMaterial,
+        ),
         (Added<PolygonGeometry>, Without<BatchId>),
     >,
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, mut geometry, material) in &mut polygon {
+    for (entity, layer_id, feature_id, mut geometry, material) in &mut polygon {
         let (extent_opt, polygon_result_opt) =
             triangulate_one_polygon(&mut geometry, material, &mut polygon_resource);
         if let (Some(extent), Some(polygon_result)) = (extent_opt, polygon_result_opt) {
@@ -224,27 +248,33 @@ pub fn transfer_mesh(
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
-            let entity = commands.spawn((
-                PolygonMarker,
-                RenderableFeature::Polygon {
-                    // TODO: Calculate coordinate to update transform
-                    coordinates: Vec3::new(0., 0., 0.),
-                    crs: CRS::Geocentric,
-                    material,
-                    geometry: to_transferable_geometry(&mut buf, polygon_result.geometry),
-                    transform: Transform::default(),
-                    feature_id: Some(entity),
-                    render_info: PolygonRenderInformation {
-                        should_recalculate_height: true,
-                        distance_to_center_from_ellipsoid_surface: -aabb
-                            .center
-                            .distance(surface_point.unwrap()),
+            let entity = commands
+                .spawn((
+                    PolygonMarker,
+                    RenderableFeature::Polygon {
+                        // TODO: Calculate coordinate to update transform
+                        coordinates: Vec3::new(0., 0., 0.),
+                        crs: CRS::Geocentric,
+                        material,
+                        geometry: to_transferable_geometry(&mut buf, polygon_result.geometry),
+                        transform: Transform::default(),
+                        feature_id: Some(entity),
+                        render_info: PolygonRenderInformation {
+                            should_recalculate_height: true,
+                            distance_to_center_from_ellipsoid_surface: -aabb
+                                .center
+                                .distance(surface_point.unwrap()),
+                        },
+                        extent,
                     },
-                    extent,
-                },
-            ));
+                ))
+                .id();
 
-            layer_store.add(layer_id.0.clone(), entity.id());
+            if let Some(mut feature_id) = feature_id {
+                feature_id.0 = Some(entity);
+            }
+
+            layer_store.add(layer_id.0.clone(), entity);
         }
     }
 }

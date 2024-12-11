@@ -22,3 +22,4 @@ navara_mesh = { path = "../navara_mesh" }
 navara_component = { path = "../navara_component" }
 navara_mock = { path = "../navara_mock" }
 martini = { path = "../martini" }
+fxhash.workspace = true

@@ -8,12 +8,15 @@ use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::DataRequester;
 use navara_tile_component::{RasterTileQuadtree, TerrainDataRequesterMarker};
 
-const MAX_PENDINGS: u32 = 20;
+use crate::tile::tile_cache_manager::TileCacheManager;
+
+const MAX_PENDINGS: u32 = 10;
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_data_requester(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
+    mut tc: ResMut<TileCacheManager>,
     mut buf: ResMut<BufferStore>,
     data_requesters: Query<
         (
@@ -53,6 +56,9 @@ pub(crate) fn filter_requestable_data_requester(
                 tile.terrain_data = None;
             };
             commands.entity(e).insert((Deleted, Ignored));
+        }
+        if let Some(requested) = tc.requested_tile_caches.get_mut(&handle) {
+            requested.data_requester = None;
         }
     }
 }

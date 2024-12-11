@@ -26,7 +26,26 @@ impl LayerStore {
     pub fn get(&self, key: &str) -> Option<&Vec<Entity>> {
         self.map.get(key)
     }
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut Vec<Entity>> {
+        self.map.get_mut(key)
+    }
     pub fn remove(&mut self, key: &str) {
         self.map.remove(key);
+    }
+
+    pub fn remove_features(&mut self, layer_id: &str, features: &[Entity]) {
+        let Some(stored_features) = self.get_mut(layer_id) else {
+            return;
+        };
+        let mut removed = vec![];
+        for (i, f) in stored_features.iter().enumerate() {
+            if features.contains(f) {
+                removed.push(i);
+            }
+        }
+
+        for (offset, i) in removed.iter().enumerate() {
+            stored_features.remove(i - offset);
+        }
     }
 }

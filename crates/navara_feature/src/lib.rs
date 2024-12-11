@@ -3,6 +3,7 @@
 use bevy_app::{App, Plugin, PostUpdate, Update};
 use navara_geometry::PolygonResource;
 
+pub mod batch;
 pub mod billboard;
 pub mod event;
 pub mod id;
@@ -41,7 +42,13 @@ impl Plugin for FeaturePlugin {
                     model::system::update_height_by_terrain,
                 ),
             )
-            .add_systems(Update, polyline::system::transfer_mesh)
+            .add_systems(
+                Update,
+                (
+                    polyline::system::transfer_mesh,
+                    polyline::system::transfer_batched_mesh,
+                ),
+            )
             .add_systems(
                 Update,
                 (

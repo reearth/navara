@@ -273,6 +273,34 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorTileMaterial {
+    pub show: Option<bool>,
+    pub max_zoom: Option<usize>,
+    pub max_sse: Option<f32>,
+}
+
+impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
+    fn from(val: VectorTileMaterial) -> Self {
+        let default = navara_material::VectorTileMaterial::default();
+        navara_material::VectorTileMaterial {
+            show: val.show.unwrap_or(true),
+            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            max_sse: val.max_sse.unwrap_or(default.max_sse),
+        }
+    }
+}
+impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
+    fn from(value: &'a navara_material::VectorTileMaterial) -> VectorTileMaterial {
+        VectorTileMaterial {
+            show: Some(value.show),
+            max_zoom: Some(value.max_zoom),
+            max_sse: Some(value.max_sse),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
     pub segments: usize,

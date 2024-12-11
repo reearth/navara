@@ -7,6 +7,8 @@ edition = "2021"
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
+geo-types.workspace = true
+fxhash.workspace = true
 navara_core = { path = "../navara_core" }
 navara_material = { path = "../navara_material" }
 navara_math = { path = "../navara_math" }
@@ -18,5 +20,9 @@ navara_event_store = { path = "../navara_event_store" }
 navara_geometry = { path = "../navara_geometry" }
 navara_layer = { path = "../navara_layer" }
 navara_component = { path = "../navara_component" }
-geo-types.workspace = true
-regex = "1.11.1"
+navara_tile_component = { path = "../navara_tile_component" }
+navara_quadtree = { path = "../navara_quadtree" }
+navara_camera = { path = "../navara_camera" }
+navara_window = { path = "../navara_window" }
+navara_occluder = { path = "../navara_occluder" }
+navara_frame = { path = "../navara_frame" }

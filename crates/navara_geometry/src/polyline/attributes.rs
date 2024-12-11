@@ -8,7 +8,7 @@ use super::{
     helpers::{adjust_height, break_miter},
 };
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PolylineGeometryAttributes {
     pub position: FloatAttribute,
     pub start: FloatAttribute,
@@ -16,6 +16,30 @@ pub struct PolylineGeometryAttributes {
     pub start_normals: FloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
+    pub batch_id: Option<FloatAttribute>,
+}
+
+impl PolylineGeometryAttributes {
+    pub fn with_batch_id() -> Self {
+        Self {
+            batch_id: Some(FloatAttribute::new(vec![], 1)),
+            ..Default::default()
+        }
+    }
+}
+
+impl Default for PolylineGeometryAttributes {
+    fn default() -> Self {
+        Self {
+            position: FloatAttribute::new(vec![], 3),
+            start: FloatAttribute::new(vec![], 3),
+            forward_offset: FloatAttribute::new(vec![], 3),
+            start_normals: FloatAttribute::new(vec![], 3),
+            end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(vec![], 4),
+            right_normal_and_texture_coordinate_normalization_y: FloatAttribute::new(vec![], 4),
+            batch_id: None,
+        }
+    }
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/165e0fb4fcc9a448b15de6a2df46db23c71fffda/packages/engine/Source/Core/GroundPolylineGeometry.js#L1055
@@ -250,6 +274,7 @@ pub(super) fn generate_geometry_attributes(
             right_normal_and_texture_coordinate_normalization_y,
             4,
         ),
+        batch_id: None,
     };
 
     // TODO: Bounding sphere
