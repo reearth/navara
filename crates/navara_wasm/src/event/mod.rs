@@ -5,9 +5,11 @@ pub mod worker;
 use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
+
+use crate::appearance::RasterTileMaterial;
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -59,7 +61,7 @@ pub struct MeshAdded {
     pub tile_handle: TileHandle,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
-    pub material: MeshMaterial,
+    pub material: RasterTileMaterial,
     pub transform: Transform,
 }
 
@@ -70,7 +72,7 @@ pub struct MeshChanged {
     pub gen: u32,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
-    pub material: MeshMaterial,
+    pub material: RasterTileMaterial,
 }
 
 #[wasm_bindgen]
@@ -84,21 +86,10 @@ pub struct Mesh {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextureFragment {
     pub ind: u32,
     pub gen: u32,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize)]
-pub struct MeshMaterial {
-    pub color: u32,
-    pub show: bool,
-    pub wireframe: bool,
-    pub should_compute_normal_from_vertex: bool,
-    #[wasm_bindgen(getter_with_clone)]
-    pub texture_fragment: Option<TextureFragment>,
 }
 
 #[wasm_bindgen]
@@ -254,7 +245,7 @@ impl
         navara_event_store::ComponentEvent<(
             &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
-            &navara_mesh::Material,
+            &navara_material::RasterTileMaterial,
             &navara_math::Transform,
         )>,
     > for MeshAdded
@@ -263,7 +254,7 @@ impl
         ev: navara_event_store::ComponentEvent<(
             &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
-            &navara_mesh::Material,
+            &navara_material::RasterTileMaterial,
             &navara_math::Transform,
         )>,
     ) -> Self {
@@ -272,23 +263,31 @@ impl
             gen: ev.gen,
             tile_handle: ev.comp.0 .0,
             mesh: ev.comp.1.into(),
-            material: ev.comp.2.clone().into(),
+            material: ev.comp.2.into(),
             transform: ev.comp.3.into(),
         }
     }
 }
 
-impl From<navara_event_store::ComponentEvent<(&navara_mesh::Mesh, &navara_mesh::Material)>>
-    for MeshChanged
+impl
+    From<
+        navara_event_store::ComponentEvent<(
+            &navara_mesh::Mesh,
+            &navara_material::RasterTileMaterial,
+        )>,
+    > for MeshChanged
 {
     fn from(
-        ev: navara_event_store::ComponentEvent<(&navara_mesh::Mesh, &navara_mesh::Material)>,
+        ev: navara_event_store::ComponentEvent<(
+            &navara_mesh::Mesh,
+            &navara_material::RasterTileMaterial,
+        )>,
     ) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
             mesh: ev.comp.0.into(),
-            material: ev.comp.1.clone().into(),
+            material: ev.comp.1.into(),
         }
     }
 }
@@ -301,21 +300,6 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             indices: m.indices,
             active: m.active,
             render_order: m.render_order,
-        }
-    }
-}
-
-impl From<navara_mesh::Material> for MeshMaterial {
-    fn from(m: navara_mesh::Material) -> Self {
-        Self {
-            color: m.color,
-            show: m.show,
-            wireframe: m.wireframe,
-            should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
-            texture_fragment: m.texture_fragment.map(|t| TextureFragment {
-                ind: t.index(),
-                gen: t.generation(),
-            }),
         }
     }
 }

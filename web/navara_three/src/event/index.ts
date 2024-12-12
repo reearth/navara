@@ -702,6 +702,7 @@ function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
   if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
     obj.material.visible = material.show ?? true;
+    obj.material.wireframe = material.wireframe ?? false;
     obj.material.userData.uMinMaxHeight.value =
       material.__internal__?.min_max_heights;
     if (

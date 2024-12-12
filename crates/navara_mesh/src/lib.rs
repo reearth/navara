@@ -34,20 +34,10 @@ pub struct Mesh {
     pub render_order: i32,
 }
 
-#[derive(Debug, Clone, Component, PartialEq)]
-pub struct Material {
-    pub color: u32,
-    pub show: bool,
-    pub wireframe: bool,
-    pub should_compute_normal_from_vertex: bool,
-    // for tile
-    pub texture_fragment: Option<Entity>,
-}
-
 #[derive(Bundle, Debug)]
-pub struct MeshBundle {
+pub struct MeshBundle<M: Component> {
     pub mesh: Mesh,
-    pub material: Material,
+    pub material: M,
     pub object: ObjectBundle,
 }
 

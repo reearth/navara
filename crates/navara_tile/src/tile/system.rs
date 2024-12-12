@@ -5,9 +5,10 @@ use navara_core::{TileXYZ, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
 use navara_frame::FrameManager;
 use navara_geometry::tile_triangles_flat;
+use navara_material::RasterTileInternalMaterial;
 use navara_math::{FloatType, Transform, Vec3};
 
-use navara_mesh::{CachedMeshHandle, Material, Mesh, MeshBundle, ObjectBundle};
+use navara_mesh::{CachedMeshHandle, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
@@ -216,6 +217,12 @@ pub fn transfer_mesh(
 
         let texture_fragment_entity_id = tile.texture_fragment_entity_id;
 
+        let mut appearance = tile_layer.appearance.as_ref().unwrap().clone();
+        appearance.set_internal(RasterTileInternalMaterial {
+            texture_fragment: texture_fragment_entity_id,
+        });
+        appearance.should_compute_normal_from_vertex = Some(should_compute_normal_from_vertex);
+
         let terrain_req = match tile.terrain_data.as_ref() {
             Some(t) => t
                 .data_requester_entity_id()
@@ -278,13 +285,7 @@ pub fn transfer_mesh(
                         active: false,
                         render_order,
                     },
-                    material: Material {
-                        color: tile_layer.appearance.as_ref().unwrap().color,
-                        show: tile_layer.appearance.as_ref().unwrap().show,
-                        wireframe: tile_layer.appearance.as_ref().unwrap().wireframe,
-                        should_compute_normal_from_vertex,
-                        texture_fragment: texture_fragment_entity_id,
-                    },
+                    material: appearance,
                     object: ObjectBundle {
                         transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                         marker: Default::default(),
@@ -371,14 +372,7 @@ pub fn transfer_mesh(
                         active: false,
                         render_order,
                     },
-                    material: Material {
-                        color: tile_layer.appearance.as_ref().unwrap().color,
-                        show: tile_layer.appearance.as_ref().unwrap().show,
-                        wireframe: terrain_layer.appearance.as_ref().unwrap().wireframe,
-                        should_compute_normal_from_vertex: terrain_layer
-                            .should_compute_normal_from_vertex,
-                        texture_fragment: texture_fragment_entity_id,
-                    },
+                    material: appearance,
                     object: ObjectBundle {
                         transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                         marker: Default::default(),
@@ -462,14 +456,7 @@ pub fn transfer_mesh(
                     active: false,
                     render_order,
                 },
-                material: Material {
-                    color: tile_layer.appearance.as_ref().unwrap().color,
-                    show: tile_layer.appearance.as_ref().unwrap().show,
-                    wireframe: terrain_layer.appearance.as_ref().unwrap().wireframe,
-                    should_compute_normal_from_vertex: terrain_layer
-                        .should_compute_normal_from_vertex,
-                    texture_fragment: texture_fragment_entity_id,
-                },
+                material: appearance,
                 object: ObjectBundle {
                     transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
                     marker: Default::default(),

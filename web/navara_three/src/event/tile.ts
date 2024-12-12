@@ -3,7 +3,7 @@ import {
   type Transform,
   type MeshAdded,
   type Mesh as EventMesh,
-  type MeshMaterial as EventMaterial,
+  type RasterTileMaterial as EventMaterial,
   MeshChanged,
 } from "@navara/engine";
 import {
@@ -50,7 +50,7 @@ export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
 
   if (!(m instanceof Mesh)) return;
   if (!(m.material instanceof Material)) return;
-  m.material.visible = mesh.material.show && mesh.mesh.active;
+  m.material.visible = !!mesh.material.show && mesh.mesh.active;
 }
 
 async function createMesh(
@@ -122,6 +122,8 @@ function toMaterial(
   if (mat.wireframe) {
     return new MeshBasicMaterial({
       color: mat.color,
+      opacity: mat.opacity,
+      transparent: mat.opacity != null,
       wireframe: true,
       stencilWrite: false,
       visible: active,
@@ -132,15 +134,21 @@ function toMaterial(
     ? new MeshLambertMaterial({
         color: mat.color,
         stencilWrite: false,
+        opacity: mat.opacity,
+        transparent: mat.opacity != null,
         visible: active,
       })
     : new MeshBasicMaterial({
         color: mat.color,
+        opacity: mat.opacity,
+        transparent: mat.opacity != null,
         stencilWrite: false,
         visible: active,
       });
-  if (mat.texture_fragment) {
-    const textureFragmentId = generate_id_from_entity(mat.texture_fragment);
+  if (mat.__internal__?.texture_fragment) {
+    const textureFragmentId = generate_id_from_entity(
+      mat.__internal__.texture_fragment,
+    );
     const t = loadedTexes.get(textureFragmentId);
     if (t) {
       m.map = t;

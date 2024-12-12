@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, Vec2};
+use crate::{ElevationDecoder, TextureFragment, Vec2};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -239,22 +239,29 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTileMaterial {
     pub show: Option<bool>,
-    pub segments: usize,
-    pub color: u32,
-    pub max_zoom: usize,
-    pub max_sse: f32,
+    pub segments: Option<usize>,
+    pub color: Option<u32>,
+    pub opacity: Option<f32>,
+    pub max_zoom: Option<usize>,
+    pub max_sse: Option<f32>,
     pub wireframe: Option<bool>,
+    pub should_compute_normal_from_vertex: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub __internal__: Option<RasterTileInternalMaterial>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
     fn from(val: RasterTileMaterial) -> Self {
         navara_material::RasterTileMaterial {
             show: val.show.unwrap_or(true),
-            segments: val.segments,
-            color: val.color,
-            max_zoom: val.max_zoom,
-            max_sse: val.max_sse,
+            segments: val.segments.unwrap_or(10),
+            color: val.color.unwrap_or(0xFFFFFF),
+            opacity: val.opacity.unwrap_or(1.),
+            max_zoom: val.max_zoom.unwrap_or(20),
+            max_sse: val.max_sse.unwrap_or(2.),
+            should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
             wireframe: val.wireframe.unwrap_or(false),
+            internal: None,
         }
     }
 }
@@ -262,11 +269,32 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
     fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
         RasterTileMaterial {
             show: Some(value.show),
-            segments: value.segments,
-            color: value.color,
-            max_zoom: value.max_zoom,
-            max_sse: value.max_sse,
+            segments: Some(value.segments),
+            color: Some(value.color),
+            opacity: Some(value.opacity),
+            max_zoom: Some(value.max_zoom),
+            max_sse: Some(value.max_sse),
+            should_compute_normal_from_vertex: value.should_compute_normal_from_vertex,
             wireframe: Some(value.wireframe),
+            __internal__: value.internal.as_ref().map(|v| v.into()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RasterTileInternalMaterial {
+    #[wasm_bindgen(getter_with_clone)]
+    pub texture_fragment: Option<TextureFragment>,
+}
+
+impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInternalMaterial {
+    fn from(m: &'a navara_material::RasterTileInternalMaterial) -> Self {
+        Self {
+            texture_fragment: m.texture_fragment.map(|t| TextureFragment {
+                ind: t.index(),
+                gen: t.generation(),
+            }),
         }
     }
 }
