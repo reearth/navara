@@ -180,14 +180,14 @@ pub fn create_geometry_from_positions_extruded(
     }
 
     let scale_normal_and_cap =
-        scale_to_geodetic_height_extruded(&mut top_bottom_positions, WGS84_32);
+        scale_to_geodetic_height_extruded(&mut top_bottom_positions, ellipsoid);
 
     let outer_ring = &hierarchy.outer_ring;
     let (mut wall_positions, mut wall_indices) =
         compute_wall_geometry(ellipsoid, outer_ring, granularity);
 
     let mut wall_scale_normal_and_cap =
-        scale_to_geodetic_height_extruded(&mut wall_positions, WGS84_32);
+        scale_to_geodetic_height_extruded(&mut wall_positions, ellipsoid);
 
     if let Some(holes_src) = &hierarchy.holes {
         let mut pos_cnt = (wall_positions.len() / 3) as u32;
@@ -195,13 +195,15 @@ pub fn create_geometry_from_positions_extruded(
             let (mut hole_wall_pos, hole_wall_i) =
                 compute_wall_geometry(ellipsoid, &hole_src.outer_ring, granularity);
 
-            let hole_scale_normal_and_cap =
-                scale_to_geodetic_height_extruded(&mut hole_wall_pos, WGS84_32);
+            let mut hole_scale_normal_and_cap =
+                scale_to_geodetic_height_extruded(&mut hole_wall_pos, ellipsoid);
 
-            wall_positions.extend_from_slice(&hole_wall_pos);
-            wall_scale_normal_and_cap.extend(hole_scale_normal_and_cap.iter());
+            wall_positions.append(&mut hole_wall_pos);
+            wall_scale_normal_and_cap.append(&mut hole_scale_normal_and_cap);
 
-            wall_indices.extend(hole_wall_i.iter().map(|&i| pos_cnt + i));
+            for i in hole_wall_i {
+                wall_indices.push(pos_cnt + i);
+            }
 
             pos_cnt = (wall_positions.len() / 3) as u32;
         }

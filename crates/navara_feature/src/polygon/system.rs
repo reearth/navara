@@ -401,10 +401,7 @@ pub fn update_height_by_terrain(
 
                 let (min_height, max_height) = if material.clamp_to_ground {
                     let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
-                    // TODO: Find a good way to approximate more detail.
-                    // Fix an issue the max height is off a bit.
-                    let e = max / 100.;
-                    (min, max + e)
+                    (min, max)
                 } else {
                     (material.height, material.extruded_height.unwrap_or(0.))
                 };

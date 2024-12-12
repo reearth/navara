@@ -80,6 +80,7 @@ fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
 
         area += p0.x as f64 * p1.y as f64 - p1.x as f64 * p0.y as f64;
     }
+    area *= 0.5;
 
     if area > 0.0 {
         WindingOrder::CounterClockwise
@@ -87,5 +88,40 @@ fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
         WindingOrder::Clockwise
     } else {
         WindingOrder::Unknown
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use navara_math::Vec3;
+
+    use crate::WindingOrder;
+
+    use super::check_winding_order;
+
+    #[test]
+    fn it_should_compute_counter_clockwise() {
+        assert!(matches!(
+            check_winding_order(&[
+                Vec3::new(0., 0., 0.),
+                Vec3::new(2., 0., 0.),
+                Vec3::new(2., 1., 0.),
+                Vec3::new(0., 1., 0.),
+            ]),
+            WindingOrder::CounterClockwise
+        ));
+    }
+
+    #[test]
+    fn it_should_compute_clockwise() {
+        assert!(matches!(
+            check_winding_order(&[
+                Vec3::new(0., 0., 0.),
+                Vec3::new(0., 2., 0.),
+                Vec3::new(1., 2., 0.),
+                Vec3::new(1., 0., 0.),
+            ]),
+            WindingOrder::Clockwise
+        ));
     }
 }
