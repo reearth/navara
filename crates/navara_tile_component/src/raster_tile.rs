@@ -425,7 +425,7 @@ pub fn sample_terrain_height_within_extent(
     // Set default height if terrain_data isn't found.
     if !has_terrain_data {
         min_height = 0.0;
-        max_height = 5000.0;
+        max_height = 10.0;
     }
 
     (min_height, max_height)

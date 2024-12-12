@@ -180,7 +180,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       should_rotate_in_default: true,
     },
   },
-
   {
     type: "geojson",
     data: {
@@ -274,6 +273,53 @@ const geoLayersDef: MaterialLayerDescription[] = [
       wireframe: false,
     },
   },
+  // {
+  //   type: "geojson",
+  //   data: {
+  //     type: "FeatureCollection",
+  //     features: [
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [
+  //             [
+  //               [139.7293, 35.70266],
+  //               [139.7293, 35.66704],
+  //               [139.7769, 35.66704],
+  //               [139.7769, 35.70266],
+  //               [139.7293, 35.70266],
+  //             ],
+  //           ],
+  //           type: "Polygon",
+  //         },
+  //       },
+  //       {
+  //         type: "Feature",
+  //         properties: {},
+  //         geometry: {
+  //           coordinates: [
+  //             [
+  //               [139.77342130700208, 35.70695612227624],
+  //               [139.80162768805087, 35.70695612227624],
+  //               [139.80162768805087, 35.665239167294914],
+  //               [139.77342130700208, 35.665239167294914],
+  //               [139.77342130700208, 35.70695612227624],
+  //             ],
+  //           ],
+  //           type: "Polygon",
+  //         },
+  //       },
+  //     ],
+  //   },
+  //   polygon: {
+  //     color: 0x00aaff,
+  //     height: 0,
+  //     extruded_height: 5000,
+  //     clamp_to_ground: true,
+  //     wireframe: false,
+  //   },
+  // },
   {
     type: "b3dm",
     data: {
@@ -283,24 +329,24 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
     },
   },
-  {
-    type: "cesium3dtiles",
-    data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
-    },
-    model: {
-      show: true,
-    },
-  },
-  {
-    type: "cesium3dtiles",
-    data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
-    },
-    model: {
-      show: true,
-    },
-  },
+  // {
+  //   type: "cesium3dtiles",
+  //   data: {
+  //     url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+  //   },
+  //   model: {
+  //     show: true,
+  //   },
+  // },
+  // {
+  //   type: "cesium3dtiles",
+  //   data: {
+  //     url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+  //   },
+  //   model: {
+  //     show: true,
+  //   },
+  // },
   {
     type: "mvt",
     data: {
@@ -347,7 +393,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0x00aaff,
       height: 10,
       extruded_height: 0,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
+      wireframe: false,
     },
     vector_tile: {
       max_zoom: 16,
