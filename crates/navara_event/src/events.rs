@@ -2,8 +2,9 @@ use bevy_ecs::world::World;
 use navara_data_requester::DataRequester;
 use navara_event_store::{ComponentEvent, EntityEvent, EventStore, ReconstructableComponentEvent};
 use navara_feature::render::RenderableFeature;
+use navara_material::RasterTileMaterial;
 use navara_math::Transform;
-use navara_mesh::{Material, Mesh};
+use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::TileMeshMarker;
 use navara_worker::DelegatedWorkerTasksParameters;
@@ -13,9 +14,15 @@ pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
     pub mesh_removed: Vec<EntityEvent>,
-    pub mesh_added:
-        Vec<ComponentEvent<(&'a TileMeshMarker, &'a Mesh, &'a Material, &'a Transform)>>,
-    pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a Material)>>,
+    pub mesh_added: Vec<
+        ComponentEvent<(
+            &'a TileMeshMarker,
+            &'a Mesh,
+            &'a RasterTileMaterial,
+            &'a Transform,
+        )>,
+    >,
+    pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a RasterTileMaterial)>>,
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,

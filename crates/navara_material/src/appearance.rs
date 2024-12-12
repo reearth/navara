@@ -1,4 +1,4 @@
-use bevy_ecs::component::Component;
+use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::ElevationDecoder;
 use navara_math::{FloatType, Vec2};
 
@@ -120,9 +120,23 @@ pub struct RasterTileMaterial {
     pub show: bool,
     pub segments: usize,
     pub color: u32,
+    pub opacity: f32,
     pub max_sse: f32,
     pub max_zoom: usize,
     pub wireframe: bool,
+    pub should_compute_normal_from_vertex: Option<bool>,
+    pub internal: Option<RasterTileInternalMaterial>,
+}
+
+impl RasterTileMaterial {
+    pub fn set_internal(&mut self, internal: RasterTileInternalMaterial) {
+        self.internal = Some(internal);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Component, Default)]
+pub struct RasterTileInternalMaterial {
+    pub texture_fragment: Option<Entity>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component, Default)]

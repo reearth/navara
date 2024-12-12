@@ -271,6 +271,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 0,
       extruded_height: 5000,
       clamp_to_ground: true,
+      wireframe: false,
     },
   },
   {
@@ -399,10 +400,10 @@ export const run = async (view: ThreeView) => {
     type: "tiles",
     data: { url: tileUrls.openstreetmap },
     raster_tile: {
-      segments: 10,
       color: 0xcccccc,
       max_sse: 2,
       max_zoom: 23,
+      opacity: 1,
       wireframe: false,
     },
   });
@@ -490,6 +491,7 @@ export const run = async (view: ThreeView) => {
     height: 1,
     extrudedHeight: 1,
     clampToGround: false,
+    wireframe: false,
     scaleByDistance: true,
     shouldRotateInDefault: true,
   };
@@ -629,6 +631,10 @@ export const run = async (view: ThreeView) => {
         material.clamp_to_ground = paneParams.clampToGround;
       }
 
+      if ("wireframe" in material) {
+        material.wireframe = paneParams.wireframe;
+      }
+
       if ("scale_by_distance" in material) {
         material.scale_by_distance = paneParams.scaleByDistance;
       }
@@ -700,6 +706,11 @@ function createParamCtrl(
     if ("clamp_to_ground" in material) {
       paneParams.clampToGround = material.clamp_to_ground;
       f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
+    }
+
+    if ("wireframe" in material) {
+      paneParams.wireframe = material.wireframe;
+      f.addBinding(paneParams, "wireframe").on("change", changeFunc);
     }
 
     if ("scale_by_distance" in material) {
