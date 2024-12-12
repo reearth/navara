@@ -58,7 +58,6 @@ impl Hierarchy {
             }
             // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
             // which is based on the origin being at the top-left.
-            // However, after converting to geographic coordinates, it is actually counterclockwise.
             WindingOrder::CounterClockwise => {}
         }
     }

@@ -462,8 +462,6 @@ export default class ThreeView {
       m.stencilFail = KeepStencilOp;
       m.stencilZFail = KeepStencilOp;
       m.stencilZPass = IncrementStencilOp;
-      m.stencilFuncMask = 0;
-      m.stencilRef = 0;
       m.side = FrontSide;
       m.colorWrite = false;
       m.depthWrite = false;
@@ -483,7 +481,6 @@ export default class ThreeView {
       m.stencilFail = KeepStencilOp;
       m.stencilZFail = KeepStencilOp;
       m.stencilZPass = KeepStencilOp;
-      m.stencilFuncMask = 1;
       m.side = FrontSide;
       m.colorWrite = true;
       m.depthWrite = true;

@@ -180,7 +180,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       should_rotate_in_default: true,
     },
   },
-
   {
     type: "geojson",
     data: {
@@ -347,7 +346,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0x00aaff,
       height: 10,
       extruded_height: 0,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
+      wireframe: false,
     },
     vector_tile: {
       max_zoom: 16,

@@ -370,12 +370,11 @@ fn construct_polygon_geometry<A: Component + Clone>(
 
     // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
     // which is based on the origin being at the top-left.
-    // However, after converting to geographic coordinates, it is actually counterclockwise.
     for LineString(hole) in interiors {
         holes.push(Hierarchy {
             outer_ring: converter.project_points(hole),
             holes: None,
-            expected_winding_order: WindingOrder::Clockwise,
+            expected_winding_order: WindingOrder::CounterClockwise,
         });
     }
 
@@ -385,7 +384,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
             hierarchy: Hierarchy {
                 outer_ring: outer_vec,
                 holes: Some(holes),
-                expected_winding_order: WindingOrder::CounterClockwise,
+                expected_winding_order: WindingOrder::Clockwise,
             },
             crs: CRS::Geographic,
         },
