@@ -20,7 +20,6 @@ import {
   BackSide,
   DecrementStencilOp,
   NotEqualStencilFunc,
-  ZeroStencilOp,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -448,8 +447,12 @@ export default class ThreeView {
   }
 
   // Drape a feature on the terrain by stencil test.
-  // Ref: http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
+  // Refs
+  // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
+  // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
   private _renderDrapedMesh() {
+    this.renderer.clearStencil();
+
     // Render the terrain first
     this.renderer.render(this._scenes.globe, this.camera);
 
@@ -459,6 +462,8 @@ export default class ThreeView {
       m.stencilFail = KeepStencilOp;
       m.stencilZFail = KeepStencilOp;
       m.stencilZPass = IncrementStencilOp;
+      m.stencilFuncMask = 0;
+      m.stencilRef = 0;
       m.side = FrontSide;
       m.colorWrite = false;
       m.depthWrite = false;
@@ -475,9 +480,10 @@ export default class ThreeView {
 
     this._drapedFeatureMaterials.forEach((m) => {
       m.stencilFunc = NotEqualStencilFunc;
-      m.stencilFail = ZeroStencilOp;
-      m.stencilZFail = ZeroStencilOp;
-      m.stencilZPass = ZeroStencilOp;
+      m.stencilFail = KeepStencilOp;
+      m.stencilZFail = KeepStencilOp;
+      m.stencilZPass = KeepStencilOp;
+      m.stencilFuncMask = 1;
       m.side = FrontSide;
       m.colorWrite = true;
       m.depthWrite = true;

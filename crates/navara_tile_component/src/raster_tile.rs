@@ -466,10 +466,6 @@ fn traverse_contained_child(
     let h = handle?;
     let tile = tile?;
 
-    if !contain(tile) {
-        return None;
-    }
-
     for child in &tile.children {
         if let Some(v) = traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain) {
             return Some(v);
@@ -493,9 +489,7 @@ fn traverse_contained_children(
     let h = handle?;
     let tile = tile?;
 
-    if !contain(tile) {
-        return None;
-    }
+    let previous_result_len = result.len();
 
     for child in &tile.children {
         if let Some(v) =
@@ -505,7 +499,7 @@ fn traverse_contained_children(
         }
     }
 
-    if contain(tile) {
+    if (previous_result_len == result.len()) && contain(tile) {
         return Some(h);
     }
 
