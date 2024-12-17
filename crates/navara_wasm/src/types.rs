@@ -11,7 +11,7 @@ use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
-use crate::appearance::{
+use navara_wasm_types::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
     RasterTerrainMaterial, RasterTileMaterial, VectorTileMaterial,
 };

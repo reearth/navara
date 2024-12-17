@@ -2,6 +2,10 @@ use bevy_ecs::{bundle::Bundle, component::Component, entity::Entity};
 use navara_component::Priority;
 
 use crate::{
+    construct_polygon_batched_feature::{
+        DelegatableConstructPolygonBatchedFeatureParameters,
+        DelegatableConstructPolygonBatchedFeatureResult,
+    },
     construct_terrain_mesh::{
         DelegatableConstructTerrainMeshParameters, DelegatableConstructTerrainMeshResult,
     },
@@ -44,8 +48,10 @@ impl<V> DelegatedWorkerTask<V> {
 pub enum DelegatedWorkerTasksParameters {
     ConstructTerrainMesh(DelegatedWorkerTask<DelegatableConstructTerrainMeshParameters>),
     UpsampleTerrainMesh(DelegatedWorkerTask<DelegatableUpsampleTerrainMeshParameters>),
+    ConstructPolygonBatchedFeature(
+        DelegatedWorkerTask<DelegatableConstructPolygonBatchedFeatureParameters>,
+    ),
     // Polyline(...),
-    // Polygon(...),
 }
 
 #[derive(Bundle)]
@@ -72,6 +78,9 @@ impl<M: Component> DelegatedWorkerTasksParametersBundle<M> {
 pub enum DelegatedWorkerTasksResult {
     ConstructTerrainMesh(DelegatedWorkerTask<DelegatableConstructTerrainMeshResult>),
     UpsampleTerrainMesh(DelegatedWorkerTask<DelegatableUpsampleTerrainMeshResult>),
+    ConstructPolygonBatchedFeature(
+        DelegatedWorkerTask<DelegatableConstructPolygonBatchedFeatureResult>,
+    ),
     // Polyline(...),
     // Polygon(...),
 }

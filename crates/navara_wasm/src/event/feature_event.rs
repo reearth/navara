@@ -18,13 +18,13 @@ pub struct RenderableFeatureAddedEvent {
 impl<'a>
     From<
         navara_event_store::ReconstructableComponentEvent<
-            &'a navara_feature::render::RenderableFeature,
+            &'a navara_feature_component::render::RenderableFeature,
         >,
     > for RenderableFeatureAddedEvent
 {
     fn from(
         ev: navara_event_store::ReconstructableComponentEvent<
-            &'a navara_feature::render::RenderableFeature,
+            &'a navara_feature_component::render::RenderableFeature,
         >,
     ) -> Self {
         Self {
@@ -51,13 +51,13 @@ pub struct RenderableFeatureChangedEvent {
 impl<'a>
     From<
         navara_event_store::ReconstructableComponentEvent<
-            &'a navara_feature::render::RenderableFeature,
+            &'a navara_feature_component::render::RenderableFeature,
         >,
     > for RenderableFeatureChangedEvent
 {
     fn from(
         ev: navara_event_store::ReconstructableComponentEvent<
-            &'a navara_feature::render::RenderableFeature,
+            &'a navara_feature_component::render::RenderableFeature,
         >,
     ) -> Self {
         Self {

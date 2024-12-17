@@ -1,9 +1,10 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_ecs::entity::Entity;
+use bevy_ecs::{entity::Entity, world::EntityRef};
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::ElevationDecoder;
 use navara_event::Events;
+use navara_feature_component::batch::BatchedFeature;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
@@ -229,6 +230,23 @@ impl App {
 
         let tile = qt.qt.get(handle).unwrap();
         tile.terrain_data.as_ref()?.decoder().copied()
+    }
+
+    pub fn get_buffer_store(&self) -> Option<&BufferStore> {
+        let world = self.app.world();
+        world.get_resource::<BufferStore>()
+    }
+
+    pub fn get_batched_features(&self, batched_feature_id: u64) -> Option<Vec<EntityRef>> {
+        let entity = Entity::from_bits(batched_feature_id);
+        let world = self.app.world();
+        let batched_feature = world.get_entity(entity)?.get::<BatchedFeature>()?;
+
+        let features = world
+            .get_many_entities_dynamic(&batched_feature.features)
+            .ok()?;
+
+        Some(features)
     }
 }
 

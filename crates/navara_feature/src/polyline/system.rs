@@ -1,8 +1,3 @@
-use crate::{
-    batch::{BatchId, BatchedFeature},
-    id::FeatureId,
-    render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry},
-};
 use bevy_ecs::{
     entity::Entity,
     query::{Added, With, Without},
@@ -10,6 +5,11 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_core::{CRS, WGS84_32};
+use navara_feature_component::{
+    batch::{BatchId, BatchedFeature},
+    id::FeatureId,
+    render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry},
+};
 use navara_geometry::{
     create_polyline_geometry, PolylineGeometryAttributes, PolylineGeometryOptions,
     TransferableFloatAttribute,
@@ -18,7 +18,7 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::PolylineMaterial;
 use navara_math::{FloatType, Transform, Vec3};
 
-use super::{PolylineGeometry, PolylineMarker};
+use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
 
 fn to_transferable_geometry(
     buf: &mut ResMut<BufferStore>,

@@ -30,7 +30,7 @@ navara_math = { path = "../navara_math" }
 navara_mesh = { path = "../navara_mesh" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_texture_fragment = { path = "../navara_texture_fragment" }
-navara_feature = { path = "../navara_feature" }
+navara_feature_component = { path = "../navara_feature_component" }
 navara_geometry = { path = "../navara_geometry" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_tile_component = { path = "../navara_tile_component" }

@@ -27,6 +27,7 @@ import {
   TransferableMartini,
   ReconstructableEntity,
   ElevationDecoder,
+  ReturnedTransferablePolygonBatchedFeature,
 } from "@navara/engine";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import {
@@ -87,6 +88,12 @@ export type TileHandler = {
   getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
 };
 
+export type FeatureHandler = {
+  getTransferablePolygonBatchedFeature: (
+    bits: bigint,
+  ) => ReturnedTransferablePolygonBatchedFeature | undefined;
+};
+
 export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
@@ -103,6 +110,7 @@ export function processEvent(
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
   meshHandler: MeshHandler,
+  featureHandler: FeatureHandler,
   loadedTexs: Map<string, Texture>,
   event: Events | undefined,
   uniforms: CommonUniforms,
@@ -189,6 +197,7 @@ export function processEvent(
             event,
             buf,
             tileHandler,
+            featureHandler,
             workerTaskHandler,
             martiniCache,
           );

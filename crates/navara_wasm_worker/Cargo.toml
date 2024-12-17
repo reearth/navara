@@ -24,6 +24,8 @@ navara_tile_component = { path = "../navara_tile_component" }
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_geometry = { path = "../navara_geometry" }
+navara_feature_component = { path = "../navara_feature_component" }
+navara_material = { path = "../navara_material" }
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

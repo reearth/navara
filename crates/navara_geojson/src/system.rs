@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 use navara_core::{calc_transform, CRS};
 
-use navara_feature::{
+use navara_feature_component::{
     billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
     polygon::PolygonGeometry, polygon::UpdatePolygon, polyline::PolylineGeometry,
     render::RenderableFeature,
@@ -34,11 +34,23 @@ fn multi_coords(f: &[Vec<f64>]) -> Vec<Vec3> {
     f.iter().map(|p| coords(p)).collect::<Vec<_>>()
 }
 
+fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<FloatType> {
+    f.iter()
+        .flat_map(|p| {
+            [
+                p[0] as FloatType,
+                p[1] as FloatType,
+                *p.get(2).unwrap_or(&0.) as FloatType,
+            ]
+        })
+        .collect::<Vec<_>>()
+}
+
 fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
     let holes: Vec<Hierarchy> = f[1..]
         .iter()
         .map(|hole| Hierarchy {
-            outer_ring: multi_coords(hole),
+            outer_ring: multi_flat_coords(hole),
             holes: None,
             expected_winding_order: WindingOrder::Unknown,
         })
@@ -49,6 +61,7 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
 
 fn spawn_feature(
     commands: &mut Commands,
+    buf: &mut BufferStore,
     appearances: &[Appearance],
     geometry: &Geometry,
     layer_id: &str,
@@ -138,10 +151,11 @@ fn spawn_feature(
                             hierarchy: Hierarchy {
                                 outer_ring: f
                                     .first()
-                                    .map_or_else(std::vec::Vec::new, |v| multi_coords(v)),
+                                    .map_or_else(std::vec::Vec::new, |v| multi_flat_coords(v)),
                                 holes: get_polygon_holes(f),
                                 expected_winding_order: WindingOrder::Unknown,
-                            },
+                            }
+                            .transfer(buf),
                             crs: CRS::Geographic,
                         },
                         v.clone(),
@@ -153,10 +167,11 @@ fn spawn_feature(
                             LayerId(layer_id.to_owned()),
                             PolygonGeometry {
                                 hierarchy: Hierarchy {
-                                    outer_ring: multi_coords(&f[0]),
+                                    outer_ring: multi_flat_coords(&f[0]),
                                     holes: get_polygon_holes(f),
                                     expected_winding_order: WindingOrder::Unknown,
-                                },
+                                }
+                                .transfer(buf),
                                 crs: CRS::Geographic,
                             },
                             v.clone(),
@@ -202,6 +217,7 @@ fn spawn_feature(
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
     for layer in &geojson_layers {
@@ -212,17 +228,35 @@ pub fn construct_feature(
                 GeoJson::FeatureCollection(fs) => {
                     for f in fs {
                         if let Some(g) = &f.geometry {
-                            spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
+                            spawn_feature(
+                                &mut commands,
+                                &mut buf,
+                                appearances,
+                                g,
+                                layer.layer_id.as_str(),
+                            );
                         }
                     }
                 }
                 GeoJson::Feature(f) => {
                     if let Some(g) = &f.geometry {
-                        spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
+                        spawn_feature(
+                            &mut commands,
+                            &mut buf,
+                            appearances,
+                            g,
+                            layer.layer_id.as_str(),
+                        );
                     }
                 }
                 GeoJson::Geometry(g) => {
-                    spawn_feature(&mut commands, appearances, g, layer.layer_id.as_str());
+                    spawn_feature(
+                        &mut commands,
+                        &mut buf,
+                        appearances,
+                        g,
+                        layer.layer_id.as_str(),
+                    );
                 }
             }
         }
@@ -392,7 +426,8 @@ mod test {
     use navara_buffer_store::BufferStore;
     use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_32};
     use navara_event_store::EventStore;
-    use navara_feature::{render::RenderableFeature, FeaturePlugin};
+    use navara_feature::FeaturePlugin;
+    use navara_feature_component::render::RenderableFeature;
     use navara_layer::{GeoJsonLayer, LayerStore};
     use navara_material::Appearance;
     use navara_material::{BillboardMaterial, PointMaterial};

@@ -41,12 +41,25 @@ impl PosConverter {
         (x as FloatType, y as FloatType)
     }
 
-    pub fn project_points(&mut self, points: &Vec<Coord<f32>>) -> Vec<Vec3> {
+    pub fn project_points_vec3(&mut self, points: &Vec<Coord<f32>>) -> Vec<Vec3> {
         let mut ret = Vec::new();
 
         for pt in points {
             let (x, y) = self.project_point(pt);
             ret.push(Vec3::new(x, y, 0.0 as FloatType));
+        }
+
+        ret
+    }
+
+    pub fn project_points(&mut self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
+        let mut ret = Vec::new();
+
+        for pt in points {
+            let (x, y) = self.project_point(pt);
+            ret.push(x);
+            ret.push(y);
+            ret.push(0.0 as FloatType);
         }
 
         ret

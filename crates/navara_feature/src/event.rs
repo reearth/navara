@@ -7,7 +7,7 @@ use bevy_ecs::{
 
 use navara_event_store::EventStore;
 
-use super::render::RenderableFeature;
+use navara_feature_component::render::RenderableFeature;
 
 pub fn commit(
     mut events: ResMut<EventStore>,

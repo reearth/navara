@@ -20,3 +20,5 @@ navara_buffer_store = { path = "../navara_buffer_store" }
 navara_geometry = { path = "../navara_geometry" }
 navara_component = { path = "../navara_component" }
 navara_event_store = { path = "../navara_event_store" }
+navara_feature_component = { path = "../navara_feature_component" }
+navara_material = { path = "../navara_material" }

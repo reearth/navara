@@ -1,0 +1,5 @@
+use super::{ConstructPolygonBatchedFeatureParameters, ConstructPolygonBatchedFeatureResult};
+
+pub type DelegatableConstructPolygonBatchedFeatureParameters =
+    ConstructPolygonBatchedFeatureParameters;
+pub type DelegatableConstructPolygonBatchedFeatureResult = ConstructPolygonBatchedFeatureResult;

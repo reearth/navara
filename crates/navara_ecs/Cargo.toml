@@ -31,3 +31,5 @@ navara_mvt = { path = "../navara_mvt" }
 navara_worker = { path = "../navara_worker" }
 navara_core = { path = "../navara_core" }
 navara_frame = { path = "../navara_frame" }
+navara_feature_component = { path = "../navara_feature_component" }
+navara_material = { path = "../navara_material" }

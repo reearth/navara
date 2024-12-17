@@ -127,6 +127,44 @@ pub struct TransferablePolygonGeometry {
 }
 
 impl TransferablePolygonGeometry {
+    pub fn with_buf(
+        buf: &mut BufferStore,
+        geo: navara_geometry::PolygonGeometry,
+    ) -> TransferablePolygonGeometry {
+        let position = buf.new_f32(geo.attributes.position.data);
+        let normal = geo.attributes.normal.map(|n| (buf.new_f32(n.data), n.size));
+        let scale_normal_and_cap = geo
+            .attributes
+            .scale_normal_and_cap
+            .map(|n| (buf.new_f32(n.data), n.size));
+        let batch_id = geo
+            .attributes
+            .batch_id
+            .map(|n| (buf.new_f32(n.data), n.size));
+        let indices = buf.new_u32(geo.indices);
+
+        TransferablePolygonGeometry {
+            position: TransferableFloatAttribute {
+                data: position,
+                size: geo.attributes.position.size,
+            },
+            normal: normal.map(|(normal, size)| TransferableFloatAttribute { data: normal, size }),
+            scale_normal_and_cap: scale_normal_and_cap.map(|(scale_normal_and_cap, size)| {
+                TransferableFloatAttribute {
+                    data: scale_normal_and_cap,
+                    size,
+                }
+            }),
+            batch_id: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
+                data: batch_id,
+                size,
+            }),
+            indices,
+        }
+    }
+}
+
+impl TransferablePolygonGeometry {
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
         buf.remove(&self.position.data);
         buf.remove(&self.indices);

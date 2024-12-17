@@ -398,6 +398,7 @@ pub fn sample_terrain_height_within_extent(
 ) -> (FloatType, FloatType) {
     let tiles = find_contained_children(qt, &|t| {
         t.extent.intersects(extent)
+            && extent.ratio(&t.extent) <= 1.
             && t.cached_mesh_handle.is_some()
             && !t.upsampled
             && t.terrain_data.is_some()

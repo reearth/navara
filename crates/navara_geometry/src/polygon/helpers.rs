@@ -5,10 +5,7 @@ use navara_math::{chord_length, EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10};
 
 use crate::helpers::vec::{unique_with_delta_e, unpack_flatten_vec3};
 
-use super::{
-    types::{Hierarchy, Polygon},
-    PolygonResource, WindingOrder,
-};
+use super::{types::Polygon, HierarchyVec3, PolygonResource, WindingOrder};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometry.js#L1163
 pub fn project_to_2d(
@@ -22,14 +19,14 @@ pub fn project_to_2d(
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometryLibrary.js#L753
 pub fn polygons_from_hierarchy<F>(
-    polygon_hierarchy: &Hierarchy,
+    polygon_hierarchy: &HierarchyVec3,
     project_points_to_2d: F,
-) -> (Vec<Polygon>, Vec<Hierarchy>)
+) -> (Vec<Polygon>, Vec<HierarchyVec3>)
 where
     F: Fn(&[Vec3]) -> Vec<Vec2>,
 {
     let mut polygons: Vec<Polygon> = vec![];
-    let mut hierarchies: Vec<Hierarchy> = vec![];
+    let mut hierarchies: Vec<HierarchyVec3> = vec![];
 
     let mut queue = VecDeque::new();
     queue.push_back(polygon_hierarchy);
@@ -55,7 +52,7 @@ where
                     hole_indices.push(index);
                     positions.extend(hole_dst.iter());
 
-                    holes_dst.push(Hierarchy {
+                    holes_dst.push(HierarchyVec3 {
                         outer_ring: hole_dst,
                         holes: None,
                         expected_winding_order: WindingOrder::Clockwise,
@@ -74,7 +71,7 @@ where
             positions_2d,
             hole_indices,
         });
-        hierarchies.push(Hierarchy {
+        hierarchies.push(HierarchyVec3 {
             outer_ring,
             holes: (!holes_dst.is_empty()).then_some(holes_dst),
             expected_winding_order: WindingOrder::CounterClockwise,

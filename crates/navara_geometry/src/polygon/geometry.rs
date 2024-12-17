@@ -8,8 +8,8 @@ use super::{
         compute_wall_geometry, create_geometry_from_positions, polygons_from_hierarchy,
         project_to_2d, scale_to_geodetic_height_extruded,
     },
-    types::{Hierarchy, Polygon},
-    PolygonGeometryAttributes, PolygonResource, WindingOrder,
+    types::Polygon,
+    HierarchyVec3, PolygonGeometryAttributes, PolygonResource, WindingOrder,
 };
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -19,7 +19,7 @@ pub struct PolygonGeometry {
 }
 
 pub struct PolygonGeometryOptions {
-    pub hierarchy: Hierarchy,
+    pub hierarchy: HierarchyVec3,
     pub granularity: f32,
     pub crs: CRS,
     pub clamp_to_ground: bool,
@@ -30,7 +30,7 @@ pub struct PolygonGeometryOptions {
 impl Default for PolygonGeometryOptions {
     fn default() -> Self {
         Self {
-            hierarchy: Hierarchy {
+            hierarchy: HierarchyVec3 {
                 outer_ring: vec![],
                 holes: None,
                 expected_winding_order: WindingOrder::Unknown,
@@ -155,7 +155,7 @@ pub fn create_geometry_from_positions_extruded(
     polygon_resource: &mut PolygonResource,
     polygon: &Polygon,
     granularity: FloatType,
-    hierarchy: &Hierarchy,
+    hierarchy: &HierarchyVec3,
 ) -> ExtrudedPolygonGeometry {
     let (mut top_positions, mut top_indices) =
         create_geometry_from_positions(ellipsoid, polygon_resource, polygon, granularity);

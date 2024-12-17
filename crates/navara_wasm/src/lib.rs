@@ -1,21 +1,22 @@
 #![doc = include_str!("../README.md")]
-mod appearance;
 mod attribute;
 mod entity;
 mod event;
 mod geometry;
 mod input;
 mod types;
-mod unit;
 
 use entity::ReconstructableEntity;
+use feature::ReturnedTransferablePolygonBatchedFeature;
 use nanoid::nanoid;
 use navara_buffer_store::Handle;
 use navara_ecs::App;
+use navara_geometry::Hierarchy;
 use navara_input::Key;
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
 use navara_wasm_utils::set_panic_hook;
+use polygon::TransferablePolygonBatchedFeature;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -23,7 +24,6 @@ pub use input::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
 pub use types::*;
-pub use unit::*;
 use worker::DelegatedWorkerTasksResult;
 
 #[wasm_bindgen]
@@ -195,6 +195,13 @@ impl Core {
                 } => navara_worker::DelegatedWorkerTasksResult::UpsampleTerrainMesh(
                     navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
                 ),
+                DelegatedWorkerTasksResult {
+                    delegator_id,
+                    construct_polygon_batched_feature: Some(v),
+                    ..
+                } => navara_worker::DelegatedWorkerTasksResult::ConstructPolygonBatchedFeature(
+                    navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
+                ),
                 _ => unreachable!(),
             },
         );
@@ -223,6 +230,38 @@ impl Core {
         self.app
             .get_tile_elevation_decoder(handle)
             .map(|v| v.into())
+    }
+
+    #[wasm_bindgen(js_name = getTransferablePolygonBatchedFeature)]
+    pub fn get_transferable_polygon_batched_feature(
+        &mut self,
+        batched_feature_id: u64,
+    ) -> Option<ReturnedTransferablePolygonBatchedFeature> {
+        let features = self.app.get_batched_features(batched_feature_id)?;
+        let buf_store = self.app.get_buffer_store()?;
+
+        let mut material: Option<PolygonMaterial> = None;
+
+        let mut transferable = TransferablePolygonBatchedFeature::empty(features.len());
+
+        for f in &features {
+            if material.is_none() {
+                let m = f.get::<navara_material::PolygonMaterial>()?;
+                material = Some(m.into());
+            }
+
+            let geometry = f.get::<navara_feature_component::polygon::PolygonGeometry>()?;
+            let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
+
+            let mut hierarchy = Hierarchy::from_transferred_cloned(&geometry.hierarchy, buf_store)?;
+
+            transferable.add(&mut hierarchy, batch_id);
+        }
+
+        material.map(|material| ReturnedTransferablePolygonBatchedFeature {
+            transferable,
+            material,
+        })
     }
 }
 

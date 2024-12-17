@@ -143,7 +143,7 @@ pub fn update_tiles(
                         &mut tc,
                         &texture_fragment,
                         &terrain_data_requester,
-                        Priority::High,
+                        Priority::Extreme,
                     );
                 }
                 _ => {

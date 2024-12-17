@@ -8,7 +8,7 @@ use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{Deleted, Priority};
 use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
-use navara_feature::{
+use navara_feature_component::{
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,

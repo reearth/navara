@@ -1,15 +1,15 @@
-mod feature;
+pub mod feature;
 mod feature_event;
 pub mod worker;
 
 use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use crate::appearance::RasterTileMaterial;
+use navara_wasm_types::RasterTileMaterial;
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -83,13 +83,6 @@ pub struct Mesh {
     pub indices: i32,  // handle
     pub active: bool,
     pub render_order: i32,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TextureFragment {
-    pub ind: u32,
-    pub gen: u32,
 }
 
 #[wasm_bindgen]
