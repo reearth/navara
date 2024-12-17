@@ -1,4 +1,4 @@
-import type { ReturnedConstructedTerrainMesh } from "@navara/engine";
+import type { Geometry, ReturnedConstructedTerrainMesh } from "@navara/engine";
 
 import { GeometryLike } from "./GeometryLike";
 
@@ -11,10 +11,17 @@ export class ReturnedConstructedTerrainMeshLike
   min_height: number;
 
   constructor(t: ReturnedConstructedTerrainMesh) {
-    this.geometry = new GeometryLike(t.geometry);
-    this.heights = t.heights;
+    this.geometry = new GeometryLike(t.transferGeometry());
+    this.heights = t.transferHeights();
     this.max_height = t.max_height;
     this.min_height = t.min_height;
+  }
+
+  transferGeometry(): Geometry {
+    throw new Error();
+  }
+  transferHeights(): Float32Array {
+    throw new Error();
   }
 
   free(): void {}

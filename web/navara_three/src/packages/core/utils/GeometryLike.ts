@@ -6,9 +6,19 @@ export class GeometryLike implements Geometry {
   vertices: Float32Array;
 
   constructor(t: Geometry) {
-    this.vertices = t.vertices;
-    this.uvs = t.uvs;
-    this.indices = t.indices;
+    this.vertices = t.transferVertices();
+    this.uvs = t.transferUvs();
+    this.indices = t.transferIndices();
+  }
+
+  transferVertices(): Float32Array {
+    throw new Error();
+  }
+  transferUvs(): Float32Array {
+    throw new Error();
+  }
+  transferIndices(): Uint32Array {
+    throw new Error();
   }
 
   free(): void {}

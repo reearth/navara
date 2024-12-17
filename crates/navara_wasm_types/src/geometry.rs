@@ -2,6 +2,8 @@ use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
+use crate::consume_vec;
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 pub struct Geometry {
@@ -25,6 +27,21 @@ impl Geometry {
             indices,
             uvs,
         }
+    }
+
+    #[wasm_bindgen(js_name = "transferVertices")]
+    pub fn transfer_vertices(&mut self) -> Vec<FloatType> {
+        consume_vec(&mut self.vertices)
+    }
+
+    #[wasm_bindgen(js_name = "transferUvs")]
+    pub fn transfer_uvs(&mut self) -> Vec<FloatType> {
+        consume_vec(&mut self.uvs)
+    }
+
+    #[wasm_bindgen(js_name = "transferIndices")]
+    pub fn transfer_indices(&mut self) -> Vec<u32> {
+        consume_vec(&mut self.indices)
     }
 }
 
@@ -73,6 +90,20 @@ impl ReturnedConstructedTerrainMesh {
             min_height,
             heights,
         }
+    }
+
+    #[wasm_bindgen(js_name = "transferGeometry")]
+    pub fn transfer_geometry(&mut self) -> Geometry {
+        Geometry {
+            vertices: self.geometry.transfer_vertices(),
+            uvs: self.geometry.transfer_uvs(),
+            indices: self.geometry.transfer_indices(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "transferHeights")]
+    pub fn transfer_heights(&mut self) -> Vec<FloatType> {
+        consume_vec(&mut self.heights)
     }
 }
 

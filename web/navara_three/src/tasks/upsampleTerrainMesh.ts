@@ -1,9 +1,9 @@
 import {
+  ReturnedConstructedTerrainMeshLike,
   TransferableRasterDEMDataLike,
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
 } from "@navara/core";
-import type { ReturnedConstructedTerrainMesh } from "@navara/engine";
 
 import { queueTask } from "./queueTask";
 
@@ -12,7 +12,7 @@ export async function upsampleTerrainMesh(
   parentTileLike: TransferableTileLike,
   rasterDEMDataLike: TransferableRasterDEMDataLike,
   upsamplableGeometryLike: UpsamplableTerrainGeometryLike,
-): Promise<ReturnedConstructedTerrainMesh> {
+): Promise<ReturnedConstructedTerrainMeshLike> {
   const result = await queueTask(
     "upsampleTerrainMesh",
     [tileLike, parentTileLike, rasterDEMDataLike, upsamplableGeometryLike],
