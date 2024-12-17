@@ -1,4 +1,4 @@
-import type { PolygonMaterial } from "@navara/engine";
+import type { PolygonInternalMaterial, PolygonMaterial } from "@navara/engine";
 
 export class PolygonMaterialLike implements PolygonMaterial {
   clamp_to_ground?: boolean;
@@ -7,6 +7,7 @@ export class PolygonMaterialLike implements PolygonMaterial {
   height?: number;
   show?: boolean;
   wireframe?: boolean;
+  __internal__?: PolygonInternalMaterial | undefined;
 
   constructor(material: PolygonMaterial) {
     this.clamp_to_ground = material.clamp_to_ground;
