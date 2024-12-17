@@ -3,7 +3,6 @@ use wasm_bindgen::prelude::*;
 
 use crate::consume_vec;
 
-// TODO: Find a way to avoid copy.
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FloatAttribute {

@@ -6,7 +6,6 @@ use navara_core::ElevationDecoder;
 use navara_event::Events;
 use navara_feature_component::batch::BatchedFeature;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
-use navara_material::PolygonMaterial;
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{MartiniComponent, RasterTile, RasterTileQuadtree, TileHandle};
@@ -248,24 +247,6 @@ impl App {
             .ok()?;
 
         Some(features)
-    }
-
-    pub fn get_polygon_feature(
-        &mut self,
-        entity: Entity,
-    ) -> Option<(
-        &navara_feature_component::polygon::PolygonGeometry,
-        &PolygonMaterial,
-        &navara_feature_component::batch::BatchId,
-    )> {
-        let world = self.app.world_mut();
-        let mut query = world.query::<(
-            &navara_feature_component::polygon::PolygonGeometry,
-            &PolygonMaterial,
-            &navara_feature_component::batch::BatchId,
-        )>();
-
-        query.get(world, entity).ok()
     }
 }
 
