@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
-use navara_feature::{
+use navara_feature_component::{
     batch::BatchedFeature, id::FeatureId, point::PointMarker, polygon::PolygonMarker,
     polyline::PolylineMarker, render::RenderableFeature,
 };
@@ -125,14 +125,11 @@ fn attach_rendered(commands: &mut Commands, e: Entity) {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
-    buf: Res<BufferStore>,
+    mut buf: ResMut<BufferStore>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
-    mut rendered_tiles: Query<
-        (Entity, &mut RenderedTile, &OrderByDistance),
-        Or<(Added<RenderedTile>, Without<Rendered>)>,
-    >,
+    mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance), Without<Rendered>>,
     mvt_data_requester: MvtDataRequesterQuery,
 ) {
     for (layer, resources) in &layers {
@@ -166,10 +163,11 @@ pub fn transfer_mesh(
             let (_, data_requester) = mvt_data_requester
                 .get(tile.data_requester_entity_id.unwrap())
                 .unwrap();
-            let mvt_bin = buf.get_u8(&data_requester.handle).unwrap();
+            let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
             if let Some(result) = construct_geometry(
                 &mut commands,
-                mvt_bin,
+                &mut buf,
+                &mvt_bin,
                 &layer.layer_id,
                 tile.coords,
                 &layer.appearances,
@@ -177,6 +175,7 @@ pub fn transfer_mesh(
                 for v in result {
                     let batched = BatchedFeature {
                         features: v.feature_ids,
+                        ..Default::default()
                     };
                     let e = match v.geometry_type {
                         ConstructedGeometryType::Point => {

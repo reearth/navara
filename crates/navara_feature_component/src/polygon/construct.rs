@@ -1,0 +1,78 @@
+use navara_core::{Extent, Radians, CRS, WGS84_32};
+use navara_geometry::{
+    create_polygon_geometry, Hierarchy, HierarchyVec3, PolygonGeometryOptions,
+    PolygonGeometryResult, PolygonResource, WindingOrder,
+};
+use navara_material::PolygonMaterial;
+use navara_math::Vec3;
+
+pub fn construct_polygon_feature(
+    geometry_hierarchy: Hierarchy,
+    crs: &CRS,
+    material: &PolygonMaterial,
+    polygon_resource: &mut PolygonResource,
+) -> (Option<Extent<f32, Radians>>, Option<PolygonGeometryResult>) {
+    if geometry_hierarchy.expected_winding_order == WindingOrder::Unknown {
+        // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
+        // Such a polygon should be discarded.
+        return (None, None);
+    }
+
+    let mut lnglats = vec![];
+
+    let mut hierarchy = HierarchyVec3 {
+        expected_winding_order: geometry_hierarchy.expected_winding_order,
+        ..Default::default()
+    };
+    let ring = geometry_hierarchy.outer_ring;
+    for i in 0..(ring.len() / 3) {
+        let i = i * 3;
+        let v = Vec3::new(ring[i], ring[i + 1], ring[i + 2]);
+        hierarchy
+            .outer_ring
+            .push(crs.to_vec3(WGS84_32, v, material.height));
+        lnglats.push(crs.to_lng_lat(WGS84_32, v));
+    }
+
+    if let Some(holes_before) = &geometry_hierarchy.holes {
+        hierarchy.holes = Some(
+            holes_before
+                .iter()
+                .map(|hole| {
+                    let ring = &hole.outer_ring;
+                    let mut outer_ring = vec![];
+                    for i in 0..(ring.len() / 3) {
+                        let i = i * 3;
+                        outer_ring.push(crs.to_vec3(
+                            WGS84_32,
+                            Vec3::new(ring[i], ring[i + 1], ring[i + 2]),
+                            material.height,
+                        ));
+                    }
+                    HierarchyVec3 {
+                        outer_ring,
+                        holes: None,
+                        expected_winding_order: geometry_hierarchy.expected_winding_order,
+                    }
+                })
+                .collect(),
+        );
+    }
+
+    hierarchy.align_winding_order();
+
+    let extent = Extent::from_points(&lnglats);
+
+    let polygon_result = create_polygon_geometry(
+        PolygonGeometryOptions {
+            hierarchy,
+            clamp_to_ground: material.clamp_to_ground,
+            height: material.height,
+            extruded_height: material.extruded_height.unwrap_or_default(),
+            ..Default::default()
+        },
+        polygon_resource,
+    );
+
+    (Some(extent), polygon_result)
+}

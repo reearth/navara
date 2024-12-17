@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 
 use navara_buffer_store::BufferStore;
-use navara_feature::{batch::BatchedFeature, id::FeatureId, render::RenderableFeature};
+use navara_feature_component::{batch::BatchedFeature, id::FeatureId, render::RenderableFeature};
 use navara_tile_component::TileHandle;
 
 #[derive(Component, Default)]

@@ -119,11 +119,12 @@ function toMaterial(
   loadedTexes: Map<string, Texture>,
   active: boolean,
 ): Material {
+  const transparent = mat.opacity != null && mat.opacity !== 1;
   if (mat.wireframe) {
     return new MeshBasicMaterial({
       color: mat.color,
       opacity: mat.opacity,
-      transparent: mat.opacity != null,
+      transparent,
       wireframe: true,
       stencilWrite: false,
       visible: active,
@@ -135,13 +136,13 @@ function toMaterial(
         color: mat.color,
         stencilWrite: false,
         opacity: mat.opacity,
-        transparent: mat.opacity != null,
+        transparent,
         visible: active,
       })
     : new MeshBasicMaterial({
         color: mat.color,
         opacity: mat.opacity,
-        transparent: mat.opacity != null,
+        transparent,
         stencilWrite: false,
         visible: active,
       });

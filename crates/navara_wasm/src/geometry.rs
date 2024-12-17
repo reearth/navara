@@ -64,9 +64,11 @@ pub struct TransferablePolylineGeometry {
     pub indices: Handle,
 }
 
-impl From<TransferablePolylineGeometry> for navara_feature::render::TransferablePolylineGeometry {
+impl From<TransferablePolylineGeometry>
+    for navara_feature_component::render::TransferablePolylineGeometry
+{
     fn from(val: TransferablePolylineGeometry) -> Self {
-        navara_feature::render::TransferablePolylineGeometry {
+        navara_feature_component::render::TransferablePolylineGeometry {
             position: val.position.into(),
             start: val.start.into(),
             forward_offset: val.forward_offset.into(),
@@ -82,11 +84,11 @@ impl From<TransferablePolylineGeometry> for navara_feature::render::Transferable
         }
     }
 }
-impl<'a> From<&'a navara_feature::render::TransferablePolylineGeometry>
+impl<'a> From<&'a navara_feature_component::render::TransferablePolylineGeometry>
     for TransferablePolylineGeometry
 {
     fn from(
-        val: &'a navara_feature::render::TransferablePolylineGeometry,
+        val: &'a navara_feature_component::render::TransferablePolylineGeometry,
     ) -> TransferablePolylineGeometry {
         TransferablePolylineGeometry {
             position: (&val.position).into(),
@@ -120,9 +122,31 @@ pub struct TransferablePolygonGeometry {
     pub indices: Handle,
 }
 
-impl From<TransferablePolygonGeometry> for navara_feature::render::TransferablePolygonGeometry {
+#[wasm_bindgen]
+impl TransferablePolygonGeometry {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        position: TransferableFloatAttribute,
+        normal: Option<TransferableFloatAttribute>,
+        scale_normal_and_cap: Option<TransferableFloatAttribute>,
+        batch_id: Option<TransferableFloatAttribute>,
+        indices: Handle,
+    ) -> Self {
+        Self {
+            position,
+            normal,
+            scale_normal_and_cap,
+            batch_id,
+            indices,
+        }
+    }
+}
+
+impl From<TransferablePolygonGeometry>
+    for navara_feature_component::render::TransferablePolygonGeometry
+{
     fn from(val: TransferablePolygonGeometry) -> Self {
-        navara_feature::render::TransferablePolygonGeometry {
+        navara_feature_component::render::TransferablePolygonGeometry {
             position: val.position.into(),
             normal: val.normal.map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|n| n.into()),
@@ -131,11 +155,11 @@ impl From<TransferablePolygonGeometry> for navara_feature::render::TransferableP
         }
     }
 }
-impl<'a> From<&'a navara_feature::render::TransferablePolygonGeometry>
+impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
     for TransferablePolygonGeometry
 {
     fn from(
-        val: &'a navara_feature::render::TransferablePolygonGeometry,
+        val: &'a navara_feature_component::render::TransferablePolygonGeometry,
     ) -> TransferablePolygonGeometry {
         TransferablePolygonGeometry {
             position: (&val.position).into(),

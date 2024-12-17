@@ -1,8 +1,3 @@
-use crate::{
-    id::FeatureId,
-    render::{RenderInformation, RenderableFeature},
-    DeletedFeatureMarker,
-};
 use bevy_ecs::{
     entity::Entity,
     query::Added,
@@ -10,6 +5,11 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
+use navara_feature_component::{
+    id::FeatureId,
+    render::{RenderInformation, RenderableFeature},
+    DeletedFeatureMarker,
+};
 use navara_layer::{LayerId, LayerStore};
 use navara_material::ModelMaterial;
 use navara_math::{Quat, Transform, Vec3};
@@ -18,7 +18,7 @@ use navara_tile_component::{
     TileTerrainDataRequesterQuery,
 };
 
-use super::{ModelBin, ModelGeometry, ModelMarker};
+use navara_feature_component::model::{ModelBin, ModelGeometry, ModelMarker};
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_mesh(

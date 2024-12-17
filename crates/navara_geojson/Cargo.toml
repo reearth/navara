@@ -13,9 +13,12 @@ navara_layer = { path = "../navara_layer" }
 navara_material = { path = "../navara_material" }
 navara_math = { path = "../navara_math" }
 navara_parser = { path = "../navara_parser" }
-navara_feature = { path = "../navara_feature" }
+navara_feature_component = { path = "../navara_feature_component" }
 navara_tile_component = { path = "../navara_tile_component" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_event_store = { path = "../navara_event_store" }
 navara_geometry = { path = "../navara_geometry" }
+
+[dev-dependencies]
+navara_feature = { path = "../navara_feature" }

@@ -10,7 +10,7 @@ use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
-use navara_feature::{
+use navara_feature_component::{
     model::{ModelBin, ModelGeometry},
     render::RenderableFeature,
 };

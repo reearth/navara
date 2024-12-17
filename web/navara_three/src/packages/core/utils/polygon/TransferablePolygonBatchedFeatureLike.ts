@@ -1,0 +1,56 @@
+import type { CRS, TransferablePolygonBatchedFeature } from "@navara/engine";
+
+export class TransferablePolygonBatchedFeatureLike
+  implements TransferablePolygonBatchedFeature
+{
+  batch_ids: Uint32Array;
+  crs: CRS;
+  expected_winding_orders: Uint8Array;
+  holes: Float32Array;
+  holes_boundaries: Uint32Array;
+  holes_sizes: Uint32Array;
+  holes_total_sizes: Uint32Array;
+  length: number;
+  outer_ring: Float32Array;
+  outer_ring_sizes: Uint32Array;
+
+  constructor(t: TransferablePolygonBatchedFeature) {
+    this.batch_ids = t.transferBatchIds();
+    this.crs = t.crs;
+    this.expected_winding_orders = t.transferExpectedWindingOrders();
+    this.holes = t.transferHoles();
+    this.holes_boundaries = t.transferHolesBoundaries();
+    this.holes_sizes = t.transferHolesSizes();
+    this.holes_total_sizes = t.transferHolesTotalSizes();
+    this.length = t.length;
+    this.outer_ring = t.transferOuterRing();
+    this.outer_ring_sizes = t.transferOuterRingSizes();
+  }
+
+  transferBatchIds(): Uint32Array {
+    throw new Error();
+  }
+  transferExpectedWindingOrders(): Uint8Array {
+    throw new Error();
+  }
+  transferOuterRing(): Float32Array {
+    throw new Error();
+  }
+  transferOuterRingSizes(): Uint32Array {
+    throw new Error();
+  }
+  transferHoles(): Float32Array {
+    throw new Error();
+  }
+  transferHolesBoundaries(): Uint32Array {
+    throw new Error();
+  }
+  transferHolesSizes(): Uint32Array {
+    throw new Error();
+  }
+  transferHolesTotalSizes(): Uint32Array {
+    throw new Error();
+  }
+
+  free(): void {}
+}

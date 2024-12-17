@@ -5,10 +5,18 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TransferableFloatAttribute {
-    #[wasm_bindgen(getter_with_clone)]
     pub data: Handle,
     pub size: u8,
 }
+
+#[wasm_bindgen]
+impl TransferableFloatAttribute {
+    #[wasm_bindgen(constructor)]
+    pub fn new(data: Handle, size: u8) -> Self {
+        Self { data, size }
+    }
+}
+
 impl From<TransferableFloatAttribute> for navara_geometry::TransferableFloatAttribute {
     fn from(val: TransferableFloatAttribute) -> Self {
         navara_geometry::TransferableFloatAttribute {

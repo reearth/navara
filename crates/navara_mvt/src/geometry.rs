@@ -1,7 +1,8 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon};
+use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
-use navara_feature::{
+use navara_feature_component::{
     batch::BatchId, billboard::BillboardGeometry, id::FeatureId, point::PointGeometry,
     polygon::PolygonGeometry, polyline::PolylineGeometry,
 };
@@ -29,6 +30,7 @@ pub(crate) struct ConstructedGeometry {
 // TODO: Move this process to worker.
 pub fn construct_geometry(
     commands: &mut Commands,
+    buf: &mut BufferStore,
     mvt_bin: &[u8],
     layer_id: &str,
     xyz: TileXYZ,
@@ -76,6 +78,7 @@ pub fn construct_geometry(
 
                     construct_polygons_geometry(
                         commands,
+                        buf,
                         &mut feature_ids,
                         layer_id,
                         plgs,
@@ -95,6 +98,7 @@ pub fn construct_geometry(
 
                     construct_polygon_geometry(
                         commands,
+                        buf,
                         &mut feature_ids,
                         layer_id,
                         v,
@@ -312,7 +316,7 @@ fn construct_line_geometry<A: Component + Clone>(
     batch_id: &mut usize,
 ) {
     let LineString(points) = line;
-    let geo_points = converter.project_points(points);
+    let geo_points = converter.project_points_vec3(points);
 
     let e = commands
         .spawn((
@@ -331,8 +335,10 @@ fn construct_line_geometry<A: Component + Clone>(
     *batch_id += 1;
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_polygons_geometry<A: Component + Clone>(
     commands: &mut Commands,
+    buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     layer_id: &str,
     polygons: &[Polygon<f32>],
@@ -343,6 +349,7 @@ fn construct_polygons_geometry<A: Component + Clone>(
     for polygon in polygons {
         construct_polygon_geometry(
             commands,
+            buf,
             feature_ids,
             layer_id,
             polygon,
@@ -353,8 +360,10 @@ fn construct_polygons_geometry<A: Component + Clone>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_polygon_geometry<A: Component + Clone>(
     commands: &mut Commands,
+    buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     layer_id: &str,
     polygon: &Polygon<f32>,
@@ -385,7 +394,8 @@ fn construct_polygon_geometry<A: Component + Clone>(
                 outer_ring: outer_vec,
                 holes: Some(holes),
                 expected_winding_order: WindingOrder::Clockwise,
-            },
+            }
+            .transfer(buf),
             crs: CRS::Geographic,
         },
         appearance.clone(),

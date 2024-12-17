@@ -25,6 +25,9 @@ pub struct DelegatedWorkerTasksParameters {
         Option<task::construct_terrain_mesh::ConstructTerrainMeshParameters>,
     #[wasm_bindgen(getter_with_clone)]
     pub upsample_terrain_mesh: Option<task::upsample_terrain_mesh::UpsampleTerrainMeshParameters>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub construct_polygon_batched_feature:
+        Option<task::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureParameters>,
 }
 
 impl<'a>
@@ -73,6 +76,16 @@ impl<'a> From<&'a navara_worker::DelegatedWorkerTasksParameters>
                 upsample_terrain_mesh: Some(value.into()),
                 ..Default::default()
             },
+            navara_worker::DelegatedWorkerTasksParameters::ConstructPolygonBatchedFeature(
+                navara_worker::DelegatedWorkerTask {
+                    delegator_id,
+                    value,
+                },
+            ) => Self {
+                delegator_id: ReconstructableEntity(delegator_id.to_bits()),
+                construct_polygon_batched_feature: Some(value.into()),
+                ..Default::default()
+            },
         }
     }
 }
@@ -86,20 +99,51 @@ pub struct DelegatedWorkerTasksResult {
     pub construct_terrain_mesh: Option<task::construct_terrain_mesh::ConstructTerrainMeshResult>,
     #[wasm_bindgen(getter_with_clone)]
     pub upsample_terrain_mesh: Option<task::upsample_terrain_mesh::UpsampleTerrainMeshResult>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub construct_polygon_batched_feature:
+        Option<task::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureResult>,
 }
 
 #[wasm_bindgen]
 impl DelegatedWorkerTasksResult {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
+    #[wasm_bindgen(js_name = "withConstructTerrainMesh")]
+    pub fn with_construct_terrain_mesh(
         delegator_id: ReconstructableEntity,
         construct_terrain_mesh: Option<task::construct_terrain_mesh::ConstructTerrainMeshResult>,
-        upsample_terrain_mesh: Option<task::upsample_terrain_mesh::UpsampleTerrainMeshResult>,
     ) -> Self {
         Self {
             delegator_id,
             construct_terrain_mesh,
+            upsample_terrain_mesh: None,
+            construct_polygon_batched_feature: None,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "withUpsampleTerrainMesh")]
+    pub fn with_upsample_terrain_mesh(
+        delegator_id: ReconstructableEntity,
+        upsample_terrain_mesh: Option<task::upsample_terrain_mesh::UpsampleTerrainMeshResult>,
+    ) -> Self {
+        Self {
+            delegator_id,
+            construct_terrain_mesh: None,
             upsample_terrain_mesh,
+            construct_polygon_batched_feature: None,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "withConstructPolygonBatchedFeature")]
+    pub fn with_construct_polygon_batched_feature(
+        delegator_id: ReconstructableEntity,
+        construct_polygon_batched_feature: Option<
+            task::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureResult,
+        >,
+    ) -> Self {
+        Self {
+            delegator_id,
+            construct_terrain_mesh: None,
+            upsample_terrain_mesh: None,
+            construct_polygon_batched_feature,
         }
     }
 }
@@ -125,6 +169,16 @@ impl<'a> From<&'a navara_worker::DelegatedWorkerTasksResult> for DelegatedWorker
             ) => Self {
                 delegator_id: ReconstructableEntity(delegator_id.to_bits()),
                 upsample_terrain_mesh: Some(value.into()),
+                ..Default::default()
+            },
+            navara_worker::DelegatedWorkerTasksResult::ConstructPolygonBatchedFeature(
+                navara_worker::DelegatedWorkerTask {
+                    delegator_id,
+                    value,
+                },
+            ) => Self {
+                delegator_id: ReconstructableEntity(delegator_id.to_bits()),
+                construct_polygon_batched_feature: Some(value.into()),
                 ..Default::default()
             },
         }

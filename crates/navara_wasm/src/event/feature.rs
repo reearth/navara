@@ -3,11 +3,12 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    appearance::{
-        BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
-    },
     geometry::{TransferablePolygonGeometry, TransferablePolylineGeometry},
     Transform,
+};
+use navara_wasm_types::{
+    polygon::TransferablePolygonBatchedFeature, BillboardMaterial, ModelMaterial, PointMaterial,
+    PolygonMaterial, PolylineMaterial,
 };
 
 #[wasm_bindgen]
@@ -70,10 +71,10 @@ pub struct RenderableFeature {
     pub model: Option<ModelMesh>,
 }
 
-impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeature {
-    fn from(v: &'a navara_feature::render::RenderableFeature) -> Self {
+impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for RenderableFeature {
+    fn from(v: &'a navara_feature_component::render::RenderableFeature) -> Self {
         match v {
-            navara_feature::render::RenderableFeature::Point {
+            navara_feature_component::render::RenderableFeature::Point {
                 coordinates: _,
                 crs: _,
                 material,
@@ -87,7 +88,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 }),
                 ..Default::default()
             },
-            navara_feature::render::RenderableFeature::Billboard {
+            navara_feature_component::render::RenderableFeature::Billboard {
                 coordinates: _,
                 crs: _,
                 material,
@@ -101,7 +102,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 }),
                 ..Default::default()
             },
-            navara_feature::render::RenderableFeature::Polyline {
+            navara_feature_component::render::RenderableFeature::Polyline {
                 coordinates: _,
                 crs: _,
                 material,
@@ -117,7 +118,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 }),
                 ..Default::default()
             },
-            navara_feature::render::RenderableFeature::Polygon {
+            navara_feature_component::render::RenderableFeature::Polygon {
                 coordinates: _,
                 crs: _,
                 material,
@@ -134,7 +135,7 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 }),
                 ..Default::default()
             },
-            navara_feature::render::RenderableFeature::Model {
+            navara_feature_component::render::RenderableFeature::Model {
                 coordinates: _,
                 crs: _,
                 material,
@@ -150,7 +151,21 @@ impl<'a> From<&'a navara_feature::render::RenderableFeature> for RenderableFeatu
                 }),
                 ..Default::default()
             },
-            navara_feature::render::RenderableFeature::Unknown => unreachable!(),
+            navara_feature_component::render::RenderableFeature::Unknown => unreachable!(),
         }
+    }
+}
+
+#[wasm_bindgen]
+pub struct ReturnedTransferablePolygonBatchedFeature {
+    pub(crate) transferable: TransferablePolygonBatchedFeature,
+    #[wasm_bindgen(getter_with_clone)]
+    pub material: PolygonMaterial,
+}
+
+#[wasm_bindgen]
+impl ReturnedTransferablePolygonBatchedFeature {
+    pub fn transferable(&mut self) -> TransferablePolygonBatchedFeature {
+        self.transferable.consume()
     }
 }

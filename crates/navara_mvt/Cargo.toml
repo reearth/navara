@@ -13,7 +13,7 @@ navara_core = { path = "../navara_core" }
 navara_material = { path = "../navara_material" }
 navara_math = { path = "../navara_math" }
 navara_parser = { path = "../navara_parser" }
-navara_feature = { path = "../navara_feature" }
+navara_feature_component = { path = "../navara_feature_component" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_event_store = { path = "../navara_event_store" }
@@ -26,3 +26,4 @@ navara_camera = { path = "../navara_camera" }
 navara_window = { path = "../navara_window" }
 navara_occluder = { path = "../navara_occluder" }
 navara_frame = { path = "../navara_frame" }
+navara_worker = { path = "../navara_worker" }

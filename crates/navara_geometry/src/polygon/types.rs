@@ -1,4 +1,5 @@
-use navara_math::{Vec2, Vec3};
+use navara_buffer_store::{BufferStore, Handle};
+use navara_math::{FloatType, Vec2, Vec3};
 
 #[derive(Debug)]
 pub struct Polygon {
@@ -16,13 +17,13 @@ pub enum WindingOrder {
 }
 
 #[derive(Default, Debug)]
-pub struct Hierarchy {
+pub struct HierarchyVec3 {
     pub outer_ring: Vec<Vec3>,
-    pub holes: Option<Vec<Hierarchy>>,
+    pub holes: Option<Vec<HierarchyVec3>>,
     pub expected_winding_order: WindingOrder, // for outer ring
 }
 
-impl Hierarchy {
+impl HierarchyVec3 {
     pub fn align_winding_order(&mut self) {
         match self.expected_winding_order {
             // If the polygon's orientation is unknown,
@@ -63,6 +64,95 @@ impl Hierarchy {
     }
 }
 
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct Hierarchy {
+    pub outer_ring: Vec<FloatType>,
+    pub holes: Option<Vec<Hierarchy>>,
+    pub expected_winding_order: WindingOrder, // for outer ring
+}
+
+impl Hierarchy {
+    pub fn from_transferred(value: &TransferableHierarchy, buf: &mut BufferStore) -> Option<Self> {
+        let outer_ring = buf.remove_f32(&value.outer_ring)?;
+
+        let holes = match &value.holes {
+            Some(h_holes) => {
+                let mut holes = vec![];
+                for hole in h_holes {
+                    let outer_ring = buf.remove_f32(&hole.outer_ring)?;
+
+                    holes.push(Hierarchy {
+                        outer_ring,
+                        holes: None,
+                        expected_winding_order: hole.expected_winding_order,
+                    });
+                }
+                Some(holes)
+            }
+            None => None,
+        };
+        Some(Hierarchy {
+            outer_ring,
+            holes,
+            expected_winding_order: value.expected_winding_order,
+        })
+    }
+
+    pub fn from_transferred_cloned(
+        value: &TransferableHierarchy,
+        buf: &BufferStore,
+    ) -> Option<Self> {
+        let outer_ring = buf.get_f32(&value.outer_ring)?;
+
+        let holes = match &value.holes {
+            Some(h_holes) => {
+                let mut holes = vec![];
+                for hole in h_holes {
+                    let outer_ring = buf.get_f32(&hole.outer_ring)?;
+
+                    holes.push(Hierarchy {
+                        outer_ring: outer_ring.to_vec(),
+                        holes: None,
+                        expected_winding_order: hole.expected_winding_order,
+                    });
+                }
+                Some(holes)
+            }
+            None => None,
+        };
+        Some(Hierarchy {
+            outer_ring: outer_ring.to_vec(),
+            holes,
+            expected_winding_order: value.expected_winding_order,
+        })
+    }
+
+    pub fn transfer(self, buf: &mut BufferStore) -> TransferableHierarchy {
+        let outer_ring = buf.new_f32(self.outer_ring);
+        let holes = match self.holes {
+            Some(h_holes) => {
+                let mut holes = vec![];
+                for hole in h_holes {
+                    let outer_ring = buf.new_f32(hole.outer_ring);
+                    holes.push(TransferableHierarchy {
+                        outer_ring,
+                        holes: None,
+                        expected_winding_order: hole.expected_winding_order,
+                    });
+                }
+                Some(holes)
+            }
+            None => None,
+        };
+
+        TransferableHierarchy {
+            outer_ring,
+            holes,
+            expected_winding_order: self.expected_winding_order,
+        }
+    }
+}
+
 // Use the area method to determine the orientation of a polygon.
 // ref: https://github.com/CesiumGS/cesium/blob/91821cc54d274ad7a28ecc164a4c5c867849e111/packages/engine/Source/Core/PolygonPipeline.js#L56
 fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
@@ -90,6 +180,13 @@ fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
     }
 }
 
+#[derive(Debug)]
+pub struct TransferableHierarchy {
+    pub outer_ring: Handle,
+    pub holes: Option<Vec<TransferableHierarchy>>,
+    pub expected_winding_order: WindingOrder,
+}
+
 #[cfg(test)]
 mod test {
     use navara_math::Vec3;
@@ -100,6 +197,7 @@ mod test {
 
     #[test]
     fn it_should_compute_counter_clockwise() {
+        #[rustfmt::skip]
         assert!(matches!(
             check_winding_order(&[
                 Vec3::new(0., 0., 0.),
@@ -113,6 +211,7 @@ mod test {
 
     #[test]
     fn it_should_compute_clockwise() {
+        #[rustfmt::skip]
         assert!(matches!(
             check_winding_order(&[
                 Vec3::new(0., 0., 0.),

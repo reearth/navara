@@ -9,7 +9,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{calc_transform, get_tile_pos_from_url};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
-use navara_feature::{
+use navara_feature_component::{
     batch::BatchedFeature,
     id::FeatureId,
     point::PointMarker,
@@ -74,7 +74,7 @@ pub fn construct_single_mvt(
 
         commands.entity(e).despawn();
 
-        let mvt_bin = match buf.get_u8(&req.handle) {
+        let mvt_bin = match buf.remove_u8(&req.handle) {
             Some(b) => b,
             None => continue,
         };
@@ -82,7 +82,8 @@ pub fn construct_single_mvt(
         // TODO: Move this process to worker.
         if let Some(geometries) = construct_geometry(
             &mut commands,
-            mvt_bin,
+            &mut buf,
+            &mvt_bin,
             &layer.layer_id,
             get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
             &layer.appearances,
@@ -90,6 +91,7 @@ pub fn construct_single_mvt(
             for v in geometries {
                 let batched = BatchedFeature {
                     features: v.feature_ids,
+                    ..Default::default()
                 };
                 let e = match v.geometry_type {
                     ConstructedGeometryType::Point => commands.spawn((PointMarker, batched)).id(),

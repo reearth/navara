@@ -16,4 +16,7 @@ navara_mesh = { path = "../navara_mesh" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_geometry = { path = "../navara_geometry" }
+navara_feature_component = { path = "../navara_feature_component" }
 navara_layer = { path = "../navara_layer" }
+navara_worker = { path = "../navara_worker" }
+navara_component = { path = "../navara_component" }

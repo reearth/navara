@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::CRS;
-use navara_geometry::Hierarchy;
+use navara_geometry::TransferableHierarchy;
 use navara_material::PolygonMaterial;
 
 #[derive(Component)]
@@ -8,7 +8,7 @@ pub struct PolygonMarker;
 
 #[derive(Component, Debug)]
 pub struct PolygonGeometry {
-    pub hierarchy: Hierarchy,
+    pub hierarchy: TransferableHierarchy,
     pub crs: CRS,
 }
 

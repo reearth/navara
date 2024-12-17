@@ -1,30 +1,44 @@
 import {
+  PolygonMaterialLike,
   TransferableMartiniLike,
+  TransferablePolygonBatchedFeatureLike,
   TransferableRasterDEMDataLike,
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
 } from "@navara/core";
 import {
+  ConstructPolygonBatchedFeatureParameters,
+  ConstructPolygonBatchedFeatureResult,
   ConstructTerrainMeshParameters,
   ConstructTerrainMeshResult,
   DelegatedWorkerTasksResult,
+  ExtentRadianF32,
   ReconstructableEntity,
+  TransferableFloatAttribute,
   TransferableGeometry,
+  TransferablePolygonGeometry,
   UpsampleTerrainMeshParameters,
   UpsampleTerrainMeshResult,
   type WorkerTaskDelegatedEvent,
 } from "@navara/engine";
 
+import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
 import type { MartiniCache } from "../type";
 
-import type { BufferLoader, TileHandler, WorkerTaskHandler } from ".";
+import type {
+  BufferLoader,
+  FeatureHandler,
+  TileHandler,
+  WorkerTaskHandler,
+} from ".";
 
 export async function processWorkerTaskDelegatedEvent(
   event: WorkerTaskDelegatedEvent,
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
+  featureHandler: FeatureHandler,
   workerTaskHandler: WorkerTaskHandler,
   martiniCache: MartiniCache,
 ) {
@@ -46,6 +60,16 @@ export async function processWorkerTaskDelegatedEvent(
       event.task.delegator_id,
       bufHandler,
       tileHandler,
+      workerTaskHandler,
+    );
+  }
+  if (event.task.construct_polygon_batched_feature) {
+    return await processConstructPolygonBatchedFeature(
+      event.bits,
+      event.task.construct_polygon_batched_feature,
+      event.task.delegator_id,
+      bufHandler,
+      featureHandler,
       workerTaskHandler,
     );
   }
@@ -134,10 +158,11 @@ async function processConstructTerrainMesh(
     result.max_height,
   );
 
-  const delegatedTaskResult = new DelegatedWorkerTasksResult(
-    delegator_id,
-    constructTerrainMeshResult,
-  );
+  const delegatedTaskResult =
+    DelegatedWorkerTasksResult.withConstructTerrainMesh(
+      delegator_id,
+      constructTerrainMeshResult,
+    );
 
   workerTaskHandler.triggerWorkerTaskCompleted(bits, delegatedTaskResult);
 }
@@ -208,11 +233,93 @@ async function processUpsampleTerrainMesh(
     result.max_height,
   );
 
-  const delegatedTaskResult = new DelegatedWorkerTasksResult(
-    delegator_id,
-    undefined,
-    upsampleTerrainMeshResult,
+  const delegatedTaskResult =
+    DelegatedWorkerTasksResult.withUpsampleTerrainMesh(
+      delegator_id,
+      upsampleTerrainMeshResult,
+    );
+
+  workerTaskHandler.triggerWorkerTaskCompleted(bits, delegatedTaskResult);
+}
+
+async function processConstructPolygonBatchedFeature(
+  bits: bigint,
+  params: ConstructPolygonBatchedFeatureParameters,
+  delegator_id: ReconstructableEntity,
+  bufHandler: BufferLoader,
+  featureHandler: FeatureHandler,
+  workerTaskHandler: WorkerTaskHandler,
+) {
+  const transferable = featureHandler.getTransferablePolygonBatchedFeature(
+    params.batched_feature[0],
   );
+
+  if (!transferable) return;
+
+  const result = await constructPolygonBatchedFeature(
+    new TransferablePolygonBatchedFeatureLike(transferable.transferable()),
+    new PolygonMaterialLike(transferable.material),
+  );
+
+  if (
+    !result ||
+    !result.geometry.attributes.batch_id ||
+    !result.geometry.attributes.normal ||
+    !result.geometry.attributes.scale_normal_and_cap
+  )
+    return;
+
+  const batchId = bufHandler.newF32(result.geometry.attributes.batch_id.data);
+  const normal = bufHandler.newF32(result.geometry.attributes.normal.data);
+  const position = bufHandler.newF32(result.geometry.attributes.position.data);
+  const scaleNormalAndCap = bufHandler.newF32(
+    result.geometry.attributes.scale_normal_and_cap.data,
+  );
+  const indices = bufHandler.newU32(result.geometry.indices);
+  if (!batchId || !normal || !position || !scaleNormalAndCap || !indices) {
+    return;
+  }
+
+  const transferableBatchId = new TransferableFloatAttribute(
+    batchId,
+    result.geometry.attributes.batch_id.size,
+  );
+  const transferableNormal = new TransferableFloatAttribute(
+    normal,
+    result.geometry.attributes.normal.size,
+  );
+  const transferablePosition = new TransferableFloatAttribute(
+    position,
+    result.geometry.attributes.position.size,
+  );
+  const transferableScaleNormalAndCap = new TransferableFloatAttribute(
+    scaleNormalAndCap,
+    result.geometry.attributes.scale_normal_and_cap.size,
+  );
+  const geometry = new TransferablePolygonGeometry(
+    transferablePosition,
+    transferableNormal,
+    transferableScaleNormalAndCap,
+    transferableBatchId,
+    indices,
+  );
+
+  const constructPolygonBatchedFeatureResult =
+    new ConstructPolygonBatchedFeatureResult(
+      geometry,
+      new ExtentRadianF32(
+        result.extent.west,
+        result.extent.south,
+        result.extent.east,
+        result.extent.north,
+      ),
+    );
+
+  const delegatedTaskResult =
+    DelegatedWorkerTasksResult.withConstructPolygonBatchedFeature(
+      delegator_id,
+      constructPolygonBatchedFeatureResult,
+    );
 
   workerTaskHandler.triggerWorkerTaskCompleted(bits, delegatedTaskResult);
 }

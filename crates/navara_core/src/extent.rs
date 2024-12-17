@@ -142,6 +142,19 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
             north: self.north.max(other.north),
         }
     }
+
+    // This just calculates approximated value. If you want to calculate correct value, you should not use this function.
+    pub fn ratio(&self, other: &Self) -> F {
+        let this_lat_diff = (self.north.val() - self.south.val()).abs();
+        let this_lng_diff = (self.east.val() - self.west.val()).abs();
+        let other_lat_diff = (other.north.val() - other.south.val()).abs();
+        let other_lng_diff = (other.east.val() - other.west.val()).abs();
+
+        let this_area = this_lat_diff * this_lng_diff;
+        let other_area = other_lat_diff * other_lng_diff;
+
+        this_area / other_area
+    }
 }
 
 impl<F: Float> From<Extent<F, Radians>> for Extent<F, Degrees> {
@@ -168,7 +181,8 @@ impl<F: Float> From<Extent<F, Degrees>> for Extent<F, Radians> {
 
 #[cfg(test)]
 mod test {
-    use radians::Degrees;
+
+    use radians::{Degrees, Radians};
 
     use crate::LngLat;
 
@@ -198,5 +212,34 @@ mod test {
         assert!(e1.intersects(e2));
         assert!(e1.intersects(e3));
         assert!(!e2.intersects(e3));
+    }
+
+    #[test]
+    fn it_should_check_if_its_angle_within_diff() {
+        let e1: Extent<f32, Degrees> = Extent::from_points(&[
+            LngLat::new(139.74272, 35.694575),
+            LngLat::new(139.74272, 35.665498),
+            LngLat::new(139.78024, 35.665498),
+            LngLat::new(139.78024, 35.694575),
+        ]);
+        let e1: Extent<f32, Radians> = e1.into();
+        let e2: Extent<f32, Degrees> = Extent::from_points(&[
+            LngLat::new(139.75002, 35.69018),
+            LngLat::new(139.75002, 35.68278),
+            LngLat::new(139.76229, 35.68278),
+            LngLat::new(139.76229, 35.69018),
+        ]);
+        let e2: Extent<f32, Radians> = e2.into();
+        let e3: Extent<f32, Degrees> = Extent::from_points(&[
+            LngLat::new(139.76084, 35.77462),
+            LngLat::new(139.19915, 35.77462),
+            LngLat::new(139.19915, 35.37846),
+            LngLat::new(139.76084, 35.37846),
+        ]);
+        let e3: Extent<f32, Radians> = e3.into();
+
+        assert!(e1.ratio(&e3) < 1.);
+        assert!(e1.ratio(&e2) > 1.);
+        // assert!(!e2.intersects(e3));
     }
 }

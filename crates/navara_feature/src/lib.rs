@@ -3,18 +3,12 @@
 use bevy_app::{App, Plugin, PostUpdate, Update};
 use navara_geometry::PolygonResource;
 
-pub mod batch;
-pub mod billboard;
-pub mod event;
-pub mod id;
-mod marker;
-pub mod model;
-pub mod point;
-pub mod polygon;
-pub mod polyline;
-pub mod render;
-
-pub use marker::*;
+mod billboard;
+mod event;
+mod model;
+mod point;
+mod polygon;
+mod polyline;
 
 pub struct FeaturePlugin;
 

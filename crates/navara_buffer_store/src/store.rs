@@ -113,6 +113,27 @@ impl BufferStore {
         self.buffers.remove(handle);
     }
 
+    pub fn remove_f32(&mut self, handle: &Handle) -> Option<Vec<f32>> {
+        match self.buffers.remove(handle)? {
+            Buffer::F32(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    pub fn remove_u32(&mut self, handle: &Handle) -> Option<Vec<u32>> {
+        match self.buffers.remove(handle)? {
+            Buffer::U32(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    pub fn remove_u8(&mut self, handle: &Handle) -> Option<Vec<u8>> {
+        match self.buffers.remove(handle)? {
+            Buffer::U8(b) => Some(b),
+            _ => None,
+        }
+    }
+
     pub fn get(&self, handle: &Handle) -> Option<&Buffer> {
         self.buffers.get(handle)
     }

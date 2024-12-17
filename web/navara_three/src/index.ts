@@ -27,6 +27,7 @@ import { MAP_CONCURRENCY } from "./concurrency";
 import {
   processEvent,
   type BufferLoader,
+  type FeatureHandler,
   type MeshHandler,
   type TextureFragmentHandler,
   type TileHandler,
@@ -148,6 +149,11 @@ export default class ThreeView {
   private _workerTaskHandler: WorkerTaskHandler = {
     triggerWorkerTaskCompleted: (bits, result) => {
       this._core?.triggerWorkerTaskCompleted(bits, result);
+    },
+  };
+  private _featureHandler: FeatureHandler = {
+    getTransferablePolygonBatchedFeature: (bits) => {
+      return this._core?.getTransferablePolygonBatchedFeature(bits);
     },
   };
   private _meshHandler: MeshHandler = {
@@ -414,6 +420,7 @@ export default class ThreeView {
         this._tileHandler,
         this._workerTaskHandler,
         this._meshHandler,
+        this._featureHandler,
         this._loadedTexs,
         events,
         this._uniforms,

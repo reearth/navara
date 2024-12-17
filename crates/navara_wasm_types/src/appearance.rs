@@ -146,6 +146,30 @@ pub struct PolygonMaterial {
     pub __internal__: Option<PolygonInternalMaterial>,
 }
 
+#[wasm_bindgen]
+impl PolygonMaterial {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        show: Option<bool>,
+        color: u32,
+        clamp_to_ground: Option<bool>,
+        height: Option<f32>,
+        extruded_height: Option<f32>,
+        wireframe: Option<bool>,
+        __internal__: Option<PolygonInternalMaterial>,
+    ) -> Self {
+        Self {
+            show,
+            color,
+            clamp_to_ground,
+            height,
+            extruded_height,
+            wireframe,
+            __internal__,
+        }
+    }
+}
+
 impl From<PolygonMaterial> for navara_material::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
         navara_material::PolygonMaterial {

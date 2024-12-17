@@ -7,9 +7,10 @@ use navara_buffer_store::BufferStore;
 
 use crate::{id::FeatureId, render::RenderableFeature};
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
 pub struct BatchedFeature {
     pub features: Vec<Entity>,
+    pub construct_polygon_feature: Option<Entity>,
 }
 
 impl BatchedFeature {
