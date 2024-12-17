@@ -133,11 +133,6 @@ pub fn transfer_mesh(
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, feature_id, geometry, material) in &mut polygon {
-        let needs_update = geometry.is_added();
-        if !needs_update {
-            continue;
-        }
-
         let geometry_hierarchy =
             Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
         let (extent_opt, polygon_result_opt) = construct_polygon_feature(

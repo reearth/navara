@@ -43,7 +43,7 @@ fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<FloatType> {
                 *p.get(2).unwrap_or(&0.) as FloatType,
             ]
         })
-        .collect::<Vec<FloatType>>()
+        .collect::<Vec<_>>()
 }
 
 fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {

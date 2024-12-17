@@ -12,12 +12,6 @@ pub fn construct_polygon_feature(
     material: &PolygonMaterial,
     polygon_resource: &mut PolygonResource,
 ) -> (Option<Extent<f32, Radians>>, Option<PolygonGeometryResult>) {
-    if geometry_hierarchy.expected_winding_order == WindingOrder::Unknown {
-        // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
-        // Such a polygon should be discarded.
-        return (None, None);
-    }
-
     let mut lnglats = vec![];
 
     let mut hierarchy = HierarchyVec3 {
@@ -60,6 +54,12 @@ pub fn construct_polygon_feature(
     }
 
     hierarchy.align_winding_order();
+
+    if hierarchy.expected_winding_order == WindingOrder::Unknown {
+        // If all the vertices of a polygon lie on a single line, the winding order becomes WindingOrder::Unknown.
+        // Such a polygon should be discarded.
+        return (None, None);
+    }
 
     let extent = Extent::from_points(&lnglats);
 
