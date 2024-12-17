@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use bevy_app::{App, Plugin, PostUpdate, Update};
+use bevy_ecs::schedule::IntoSystemConfigs;
 use navara_geometry::PolygonResource;
 
 mod billboard;
@@ -20,21 +21,24 @@ impl Plugin for FeaturePlugin {
                 (
                     point::system::transfer_mesh,
                     point::system::update_height_by_terrain,
-                ),
+                )
+                    .chain(),
             )
             .add_systems(
                 Update,
                 (
                     billboard::system::transfer_mesh,
                     billboard::system::update_height_by_terrain,
-                ),
+                )
+                    .chain(),
             )
             .add_systems(
                 Update,
                 (
                     model::system::transfer_mesh,
                     model::system::update_height_by_terrain,
-                ),
+                )
+                    .chain(),
             )
             .add_systems(
                 Update,
@@ -50,7 +54,8 @@ impl Plugin for FeaturePlugin {
                     polygon::system::transfer_batched_mesh,
                     polygon::system::update_polygon,
                     polygon::system::update_height_by_terrain,
-                ),
+                )
+                    .chain(),
             )
             .add_systems(PostUpdate, event::commit);
     }
