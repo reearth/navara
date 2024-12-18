@@ -41,12 +41,12 @@ void main() {
     float far = frustumNearFar.y;
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;
     float depthFromCamera = linearDepth + near;
-    float z_ndc = (far - depthFromCamera) / (far - near);
+    float z_ndc = -1. * depthFromCamera;
 
     // Transform to clip coordinates
     vec4 clipCoords = vec4(
         (gl_FragCoord.xy / viewport) * 2.0 - 1.0,
-        z_ndc * 2.0 - 1.0,
+        z_ndc,
         1.0
     );
     // Transform to eye coordinates
@@ -62,7 +62,7 @@ void main() {
     float distanceFromStart = nvr_planeDistance(v_startPlaneNormalEcAndHalfWidth.xyz, -dot(ecStart, v_startPlaneNormalEcAndHalfWidth.xyz), eyeCoordinate.xyz);
     float distanceFromEnd = nvr_planeDistance(v_endPlaneNormalEc.xyz, -dot(v_endEcAndStartEcX.xyz, v_endPlaneNormalEc.xyz), eyeCoordinate.xyz);
 
-    if (abs(widthwiseDistance) > halfMaxWidth || distanceFromStart < 0.0 || distanceFromEnd < 0.0) {
+    if (abs(widthwiseDistance) > halfMaxWidth || distanceFromStart <= 0.0 || distanceFromEnd <= 0.0) {
         discard;
     }
 
