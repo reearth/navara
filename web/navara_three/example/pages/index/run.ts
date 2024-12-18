@@ -331,7 +331,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0x00ff00,
       width: 2,
       height: 1,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
+    },
+    vector_tile: {
+      max_zoom: 16,
     },
   },
   {
