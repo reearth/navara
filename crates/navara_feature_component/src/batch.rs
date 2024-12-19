@@ -1,11 +1,15 @@
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    system::{Commands, Query},
+    system::{Commands, Query, Resource},
 };
+
 use navara_buffer_store::BufferStore;
 
 use crate::{id::FeatureId, render::RenderableFeature};
+
+use rand::Rng;
+use std::collections::HashMap;
 
 #[derive(Component, Debug, Default)]
 pub struct BatchedFeature {
@@ -18,7 +22,9 @@ impl BatchedFeature {
         &self,
         commands: &mut Commands,
         buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
         features: &Query<&FeatureId>,
+        batch_id: &Query<&BatchId>,
         renderable_features: &mut Query<&mut RenderableFeature>,
     ) -> Vec<Entity> {
         let mut removed = vec![];
@@ -31,6 +37,9 @@ impl BatchedFeature {
                 removed.push(rendered_feature_id);
             }
             if let Some(mut e) = commands.get_entity(*f) {
+                if let Ok(batchid) = batch_id.get(*f) {
+                    batch_table.remove(&batchid.0);
+                }
                 e.despawn();
             }
         }
@@ -39,4 +48,49 @@ impl BatchedFeature {
 }
 
 #[derive(Component, Debug)]
-pub struct BatchId(pub usize);
+pub struct BatchId(pub u32);
+
+#[derive(Resource, Debug)]
+pub struct BatchTable {
+    map: HashMap<u32, String>,
+}
+
+impl Default for BatchTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl BatchTable {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, value: String) -> u32 {
+        let mut rng = rand::thread_rng();
+        let mut key = rng.gen_range(1..0xffffffff);
+
+        let mut retry_count = 10;
+        while self.map.contains_key(&key) && retry_count > 0 {
+            key = rng.gen_range(1..0xffffffff);
+            retry_count -= 1;
+        }
+
+        if retry_count > 0 {
+            self.map.insert(key, value);
+            key
+        } else {
+            0
+        }
+    }
+
+    pub fn get(&self, key: &u32) -> Option<&String> {
+        self.map.get(key)
+    }
+
+    pub fn remove(&mut self, key: &u32) {
+        self.map.remove(key);
+    }
+}

@@ -5,7 +5,10 @@ use bevy_ecs::{
 };
 
 use navara_buffer_store::BufferStore;
-use navara_feature_component::{batch::BatchedFeature, id::FeatureId, render::RenderableFeature};
+use navara_feature_component::{
+    batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId,
+    render::RenderableFeature,
+};
 use navara_tile_component::TileHandle;
 
 #[derive(Component, Default)]
@@ -15,11 +18,14 @@ pub struct RenderedTile {
 }
 
 impl RenderedTile {
+    #[allow(clippy::too_many_arguments)]
     pub fn destroy(
         &mut self,
         commands: &mut Commands,
         buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
         features: &Query<&FeatureId>,
+        batch_id: &Query<&BatchId>,
         batched_features: &Query<&BatchedFeature>,
         renderable_features: &mut Query<&mut RenderableFeature>,
     ) -> Vec<Entity> {
@@ -29,7 +35,9 @@ impl RenderedTile {
                 let mut removed = batched_feature.despawn_recursively(
                     commands,
                     buf,
+                    batch_table,
                     features,
+                    batch_id,
                     renderable_features,
                 );
                 removed_features.append(&mut removed);

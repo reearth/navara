@@ -17,3 +17,4 @@ navara_buffer_store = { path = "../navara_buffer_store" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_geometry = { path = "../navara_geometry" }
 navara_layer = { path = "../navara_layer" }
+rand = "0.8.0"

@@ -3,8 +3,8 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::BatchId, billboard::BillboardGeometry, id::FeatureId, point::PointGeometry,
-    polygon::PolygonGeometry, polyline::PolylineGeometry,
+    batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, id::FeatureId,
+    point::PointGeometry, polygon::PolygonGeometry, polyline::PolylineGeometry,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
@@ -30,6 +30,7 @@ pub(crate) struct ConstructedGeometry {
 // TODO: Move this process to worker.
 pub fn construct_geometry(
     commands: &mut Commands,
+    batch_table: &mut BatchTable,
     buf: &mut BufferStore,
     mvt_bin: &[u8],
     layer_id: &str,
@@ -61,9 +62,20 @@ pub fn construct_geometry(
         };
 
         let mut feature_ids = vec![];
-        let mut batch_id = 0;
+
         for feature in features {
             let geom = feature.get_geometry();
+
+            let mut prop_string = String::from("{}");
+            if let Some(prop) = &feature.properties {
+                prop_string = serde_json::to_string(&prop).expect("Failed to serialize");
+            }
+
+            let batch_id = batch_table.add(prop_string);
+            if batch_id < 1 {
+                continue;
+            }
+
             match geom {
                 Geometry::MultiPolygon(v) => {
                     let MultiPolygon(plgs) = v;
@@ -84,7 +96,7 @@ pub fn construct_geometry(
                         plgs,
                         &mut converter,
                         appearance,
-                        &mut batch_id,
+                        &batch_id,
                     );
                 }
                 Geometry::Polygon(v) => {
@@ -104,7 +116,7 @@ pub fn construct_geometry(
                         v,
                         &mut converter,
                         appearance,
-                        &mut batch_id,
+                        &batch_id,
                     );
                 }
                 Geometry::MultiPoint(v) => {
@@ -124,6 +136,7 @@ pub fn construct_geometry(
                                         coords: Vec3::new(x, y, 0.0 as FloatType),
                                         crs: CRS::Geographic,
                                     },
+                                    &batch_id,
                                 );
                                 break;
                             }
@@ -139,6 +152,7 @@ pub fn construct_geometry(
                                         coords: Vec3::new(x, y, 0.0 as FloatType),
                                         crs: CRS::Geographic,
                                     },
+                                    &batch_id,
                                 );
                                 break;
                             }
@@ -161,6 +175,7 @@ pub fn construct_geometry(
                                         coords: Vec3::new(x, y, 0.0 as FloatType),
                                         crs: CRS::Geographic,
                                     },
+                                    &batch_id,
                                 );
                                 break;
                             }
@@ -176,6 +191,7 @@ pub fn construct_geometry(
                                         coords: Vec3::new(x, y, 0.0 as FloatType),
                                         crs: CRS::Geographic,
                                     },
+                                    &batch_id,
                                 );
                                 break;
                             }
@@ -195,7 +211,7 @@ pub fn construct_geometry(
                                 lines,
                                 &mut converter,
                                 appearance,
-                                &mut batch_id,
+                                &batch_id,
                             );
                             break;
                         }
@@ -211,7 +227,7 @@ pub fn construct_geometry(
                                 line,
                                 &mut converter,
                                 appearance,
-                                &mut batch_id,
+                                &batch_id,
                             );
                             break;
                         }
@@ -230,6 +246,7 @@ pub fn construct_geometry(
     Some(result)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_points_geometry<A: Component + Clone, G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
@@ -238,6 +255,7 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
     converter: &mut PosConverter,
     appearance: &A,
     geometry: F,
+    batch_id: &u32,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -250,10 +268,12 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
             converter,
             appearance,
             &geometry,
+            batch_id,
         );
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
@@ -262,6 +282,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     converter: &mut PosConverter,
     appearance: &A,
     geometry: &F,
+    batch_id: &u32,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -271,6 +292,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     let e = commands
         .spawn((
             LayerId(layer_id.to_owned()),
+            BatchId(*batch_id),
             FeatureId::default(),
             geometry(x, y),
             appearance.clone(),
@@ -287,7 +309,7 @@ fn construct_lines_geometry<A: Component + Clone>(
     lines: &[LineString<f32>],
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &mut usize,
+    batch_id: &u32,
 ) -> usize {
     let mut count = 0;
     for line in lines {
@@ -313,7 +335,7 @@ fn construct_line_geometry<A: Component + Clone>(
     line: &LineString<f32>,
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &mut usize,
+    batch_id: &u32,
 ) {
     let LineString(points) = line;
     let geo_points = converter.project_points_vec3(points);
@@ -331,8 +353,6 @@ fn construct_line_geometry<A: Component + Clone>(
         .id();
 
     feature_ids.push(e);
-
-    *batch_id += 1;
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -344,7 +364,7 @@ fn construct_polygons_geometry<A: Component + Clone>(
     polygons: &[Polygon<f32>],
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &mut usize,
+    batch_id: &u32,
 ) {
     for polygon in polygons {
         construct_polygon_geometry(
@@ -369,7 +389,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
     polygon: &Polygon<f32>,
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &mut usize,
+    batch_id: &u32,
 ) {
     let LineString(outer) = polygon.exterior();
     let outer_vec = converter.project_points(outer);
@@ -403,6 +423,4 @@ fn construct_polygon_geometry<A: Component + Clone>(
     ));
 
     feature_ids.push(entity.id());
-
-    *batch_id += 1;
 }

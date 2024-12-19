@@ -170,3 +170,31 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct TransferableCommonGeometry {
+    #[wasm_bindgen(getter_with_clone)]
+    pub batch_id: Option<u32>,
+}
+
+impl From<TransferableCommonGeometry>
+    for navara_feature_component::render::TransferableCommonGeometry
+{
+    fn from(val: TransferableCommonGeometry) -> Self {
+        navara_feature_component::render::TransferableCommonGeometry {
+            batch_id: val.batch_id,
+        }
+    }
+}
+impl<'a> From<&'a navara_feature_component::render::TransferableCommonGeometry>
+    for TransferableCommonGeometry
+{
+    fn from(
+        val: &'a navara_feature_component::render::TransferableCommonGeometry,
+    ) -> TransferableCommonGeometry {
+        TransferableCommonGeometry {
+            batch_id: val.batch_id,
+        }
+    }
+}

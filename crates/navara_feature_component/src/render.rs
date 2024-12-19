@@ -31,6 +31,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
+        geometry: TransferableCommonGeometry,
     },
     Billboard {
         coordinates: Vec3,
@@ -39,6 +40,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
+        geometry: TransferableCommonGeometry,
     },
     Polyline {
         coordinates: Vec3,
@@ -67,6 +69,7 @@ pub enum RenderableFeature {
         feature_id: Entity,
         render_info: RenderInformation,
         bin: Option<ModelBin>,
+        geometry: TransferableCommonGeometry,
     },
     #[default]
     Unknown,
@@ -179,4 +182,9 @@ impl TransferablePolygonGeometry {
             buf.remove(&batch_id.data);
         }
     }
+}
+
+#[derive(Component, Clone, Debug, Default, PartialEq)]
+pub struct TransferableCommonGeometry {
+    pub batch_id: Option<u32>,
 }
