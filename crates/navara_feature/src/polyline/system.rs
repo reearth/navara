@@ -4,21 +4,24 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_core::{CRS, WGS84_32};
+use navara_core::{Extent, Radians, CRS, WGS84_32};
 use navara_feature_component::{
     batch::{BatchId, BatchedFeature},
     id::FeatureId,
-    render::{RenderInformation, RenderableFeature, TransferablePolylineGeometry},
+    render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
 };
 use navara_geometry::{
     create_polyline_geometry, PolylineGeometryAttributes, PolylineGeometryOptions,
     TransferableFloatAttribute,
 };
 use navara_layer::{LayerId, LayerStore};
-use navara_material::PolylineMaterial;
+use navara_material::{PolylineInternalMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 
 use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
+use navara_tile_component::{
+    sample_terrain_height_within_extent, RasterTileQuadtree, TileMeshMarker,
+};
 
 fn to_transferable_geometry(
     buf: &mut ResMut<BufferStore>,
@@ -106,12 +109,14 @@ pub fn transfer_batched_mesh(
         let mut indices = vec![];
         let mut index_offset = 0;
 
+        let mut combined_extent: Option<Extent<f32, Radians>> = None;
         for feature_id in &batched_feature.features {
             let Ok((_layer_id, geometry, _material, batch_id)) = polylines.get(*feature_id) else {
                 continue;
             };
 
-            let Some(mut constructed_geometry) = triangulate_one_polyline(material, geometry)
+            let Some((extent, mut constructed_geometry)) =
+                triangulate_one_polyline(material, geometry)
             else {
                 continue;
             };
@@ -121,6 +126,11 @@ pub fn transfer_batched_mesh(
             if position_length == 0 {
                 continue;
             }
+
+            combined_extent = Some(match combined_extent {
+                Some(e) => e.union(extent),
+                None => extent,
+            });
 
             combined_attributes
                 .position
@@ -175,6 +185,11 @@ pub fn transfer_batched_mesh(
             index_offset += position_length as u32;
         }
 
+        let mut material = material.clone();
+        material.internal = Some(PolylineInternalMaterial {
+            min_max_heights: vec![0., 0.],
+        });
+
         let entity = commands
             .spawn((
                 PolylineMarker,
@@ -182,7 +197,7 @@ pub fn transfer_batched_mesh(
                     // TODO: Calculate coordinate to update transform
                     coordinates: Vec3::new(0., 0., 0.),
                     crs: CRS::Geocentric,
-                    material: material.clone(),
+                    material,
                     geometry: to_transferable_geometry(
                         &mut buf,
                         navara_geometry::PolylineGeometry {
@@ -190,10 +205,11 @@ pub fn transfer_batched_mesh(
                             indices,
                         },
                     ),
+                    extent: combined_extent.unwrap(),
                     transform: Transform::default(),
                     feature_id: None,
-                    render_info: RenderInformation {
-                        current_terrain_height: 0.,
+                    render_info: PolylineRenderInformation {
+                        should_recalculate_height: true,
                     },
                 },
             ))
@@ -224,7 +240,12 @@ pub fn transfer_mesh(
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, feature_id, geometry, material) in &mut polylines {
-        if let Some(geometry) = triangulate_one_polyline(material, geometry) {
+        if let Some((extent, geometry)) = triangulate_one_polyline(material, geometry) {
+            let mut material = material.clone();
+            material.internal = Some(PolylineInternalMaterial {
+                min_max_heights: vec![0., 0.],
+            });
+
             let entity = commands
                 .spawn((
                     PolylineMarker,
@@ -232,13 +253,14 @@ pub fn transfer_mesh(
                         // TODO: Calculate coordinate to update transform
                         coordinates: Vec3::new(0., 0., 0.),
                         crs: CRS::Geocentric,
-                        material: material.clone(),
+                        material,
                         geometry: to_transferable_geometry(&mut buf, geometry),
                         transform: Transform::default(),
                         feature_id: Some(entity),
-                        render_info: RenderInformation {
-                            current_terrain_height: 0.,
+                        render_info: PolylineRenderInformation {
+                            should_recalculate_height: true,
                         },
+                        extent,
                     },
                 ))
                 .id();
@@ -255,11 +277,15 @@ pub fn transfer_mesh(
 fn triangulate_one_polyline(
     material: &PolylineMaterial,
     geometry: &PolylineGeometry,
-) -> Option<navara_geometry::PolylineGeometry> {
+) -> Option<(Extent<f32, Radians>, navara_geometry::PolylineGeometry)> {
+    let mut latlngs = vec![];
     let mut positions = vec![];
     for c in &geometry.coords {
+        latlngs.push(geometry.crs.to_lng_lat(WGS84_32, *c));
         positions.push(geometry.crs.to_lle(WGS84_32, *c, material.height));
     }
+
+    let extent = Extent::from_points(&latlngs);
 
     create_polyline_geometry(
         WGS84_32,
@@ -269,4 +295,49 @@ fn triangulate_one_polyline(
             ..Default::default()
         },
     )
+    .map(|g| (extent, g))
+}
+
+// TODO: This system is executed whenever a tile is added.
+//       This isn't efficient, so we need to update this system
+//       to execute only when the layer's bounding box is within the camera frustum.
+#[allow(clippy::too_many_arguments)]
+pub fn update_height_by_terrain(
+    mut qt: ResMut<RasterTileQuadtree>,
+    mut renderable_features: Query<(&PolylineMarker, &mut RenderableFeature)>,
+    tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
+) {
+    let is_tile_meshes_empty = tile_meshes.is_empty();
+
+    for (_, mut feature) in &mut renderable_features {
+        match feature.as_ref() {
+            RenderableFeature::Polyline { render_info, .. } => {
+                if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                    continue;
+                }
+            }
+            _ => continue,
+        };
+        match feature.as_mut() {
+            RenderableFeature::Polyline {
+                material,
+                extent,
+                render_info,
+                ..
+            } => {
+                render_info.should_recalculate_height = false;
+
+                let (min_height, max_height) = if material.clamp_to_ground {
+                    let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
+                    (min, max)
+                } else {
+                    (0., 0.)
+                };
+
+                let internal = material.internal.as_mut().unwrap();
+                internal.min_max_heights = vec![min_height, max_height];
+            }
+            _ => unreachable!(),
+        };
+    }
 }

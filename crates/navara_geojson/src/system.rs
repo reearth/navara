@@ -349,7 +349,9 @@ pub fn update_geo_json_layer(
                     }
                     RenderableFeature::Polyline { material, .. } => {
                         if let Appearance::Polyline(mat) = &u.appearance {
+                            let internal = material.internal.take();
                             *material = mat.clone();
+                            material.internal = internal;
                         }
                     }
                     RenderableFeature::Polygon { .. } => {

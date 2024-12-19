@@ -45,7 +45,9 @@ impl Plugin for FeaturePlugin {
                 (
                     polyline::system::transfer_mesh,
                     polyline::system::transfer_batched_mesh,
-                ),
+                    polyline::system::update_height_by_terrain,
+                )
+                    .chain(),
             )
             .add_systems(
                 Update,

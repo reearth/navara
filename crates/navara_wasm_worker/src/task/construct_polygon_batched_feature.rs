@@ -1,3 +1,4 @@
+use navara_core::{Extent, Radians};
 use navara_geometry::{FloatAttribute, Hierarchy, PolygonGeometryAttributes, PolygonResource};
 use navara_math::FloatType;
 use navara_wasm_types::{
@@ -15,7 +16,6 @@ pub fn construct_polygon_batched_feature(
     let material: navara_material::PolygonMaterial = material.into();
     let crs: navara_core::CRS = (&features.crs).into();
 
-    let mut extent_vec = Vec::new();
     let mut combined_attributes = PolygonGeometryAttributes {
         position: FloatAttribute::new(vec![], 3),
         normal: Some(FloatAttribute::new(vec![], 3)),
@@ -25,6 +25,7 @@ pub fn construct_polygon_batched_feature(
     let mut indices = vec![];
     let mut index_offset = 0;
 
+    let mut combined_extent: Option<Extent<f32, Radians>> = None;
     for idx in 0..features.length {
         let (transferable_hierarchy, batch_id) = features.to_transferable_hierarchy_by_index(idx);
         let geometry_hierarchy: Hierarchy = transferable_hierarchy.into();
@@ -42,7 +43,10 @@ pub fn construct_polygon_batched_feature(
             _ => continue,
         };
 
-        extent_vec.push(extent);
+        combined_extent = Some(match combined_extent {
+            Some(e) => e.union(extent),
+            None => extent,
+        });
 
         let position_length = polygon_result.geometry.attributes.position.data.len()
             / polygon_result.geometry.attributes.position.size as usize;
@@ -92,17 +96,8 @@ pub fn construct_polygon_batched_feature(
         index_offset += position_length as u32;
     }
 
-    if extent_vec.is_empty() {
-        return None;
-    }
-
-    let mut combined_extent = extent_vec[0];
-    for extent in extent_vec.iter().skip(1) {
-        combined_extent = combined_extent.union(*extent);
-    }
-
     Some(ConstructedPolygonGeometry {
-        extent: (&combined_extent).into(),
+        extent: (&combined_extent.unwrap()).into(),
         geometry: PolygonGeometry {
             attributes: combined_attributes.into(),
             indices,

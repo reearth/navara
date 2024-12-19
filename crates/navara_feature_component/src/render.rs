@@ -20,6 +20,11 @@ pub struct PolygonRenderInformation {
     pub distance_to_center_from_ellipsoid_surface: FloatType,
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PolylineRenderInformation {
+    pub should_recalculate_height: bool,
+}
+
 // From data oriented design perspective, this is too bad structure.
 // But this is necessary to communicate with WASM.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
@@ -47,7 +52,8 @@ pub enum RenderableFeature {
         geometry: TransferablePolylineGeometry,
         transform: Transform,
         feature_id: Option<Entity>,
-        render_info: RenderInformation,
+        render_info: PolylineRenderInformation,
+        extent: Extent<f32, Radians>,
     },
     Polygon {
         coordinates: Vec3,

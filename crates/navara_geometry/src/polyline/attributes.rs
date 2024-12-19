@@ -133,7 +133,7 @@ pub(super) fn generate_geometry_attributes(
          * the line on terrain":
          * - position of start + offset to end
          * - start, end, and right-facing planes
-         * - encoded texture coordinate offsets
+         * - encoded texture coordinate offsets(TODO)
          ****************************************/
 
         /* 3D */
@@ -191,8 +191,9 @@ pub(super) fn generate_geometry_attributes(
         }
 
         // Adjust height of volume in 3D
+        // The actual height is updated by shader uniform.
         let min_height = 0.;
-        let max_height = if clamp_to_ground { 9999. } else { 0. };
+        let max_height = if clamp_to_ground { 1. } else { 0. };
         // sum_heights += 0.; // For the bounding sphere
 
         let (adjust_height_start_bottom, adjust_height_start_top) =
