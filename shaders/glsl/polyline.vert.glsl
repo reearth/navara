@@ -10,7 +10,7 @@ in vec3 start_normal;
 in vec4 end_normal_and_texture_coordinate_normalization_x;
 in vec4 right_normal_and_texture_coordinate_normalization_y;
 
-uniform float width;
+uniform vec3 minMaxHeightAndWidth;
 uniform vec3 viewportAndPixelRatio;
 uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
@@ -57,13 +57,20 @@ void main() {
     vec3 upOrDown = normalize(cross(v_rightPlaneEC.xyz, planeDirection)); // Points "up" for start plane, "down" at end plane.
     vec3 normalEC = normalize(cross(planeDirection, upOrDown));           // In practice, the opposite seems to work too.
 
+    // Extrudes height
+    vec3 heightNormal = normalize(nvr_branchFreeTernary(absStartPlaneDistance < absEndPlaneDistance, cross(v_rightPlaneEC.xyz, startPlaneEC.xyz), cross(endPlaneEC.xyz, v_rightPlaneEC.xyz)));
+    vec3 cur_point = nvr_branchFreeTernary(absStartPlaneDistance < absEndPlaneDistance, start, start + forward_offset);
+    vec3 diff = normalize(position - cur_point);
+    vec3 height = heightNormal * nvr_branchFreeTernary(dot(diff, heightNormal) > 0., minMaxHeightAndWidth.y, minMaxHeightAndWidth.x);
+    positionEC.xyz += height;
+
     // upOrDown = cross(forwardDirectionEC, normalEC);
     // upOrDown = float(v_texcoordNormalizationAndStartEcYZ.y > 1.0 || v_texcoordNormalizationAndStartEcYZ.y < 0.0) * upOrDown;
     // positionEC.xyz += upOrDown;
  
     v_texcoordNormalizationAndStartEcYZ.y = nvr_branchFreeTernary(v_texcoordNormalizationAndStartEcYZ.y > 1.0, 0.0, abs(v_texcoordNormalizationAndStartEcYZ.y));
 
-    float lineWidth = width;
+    float lineWidth = minMaxHeightAndWidth.z;
 
     v_startPlaneNormalEcAndHalfWidth.xyz = startPlaneEC.xyz;
     v_startPlaneNormalEcAndHalfWidth.w = lineWidth * 0.5;

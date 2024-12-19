@@ -69,6 +69,12 @@ pub struct PolylineMaterial {
     pub width: f32,
     pub clamp_to_ground: bool,
     pub height: f32,
+    pub internal: Option<PolylineInternalMaterial>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PolylineInternalMaterial {
+    pub min_max_heights: Vec<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

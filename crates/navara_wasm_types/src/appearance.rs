@@ -108,6 +108,8 @@ pub struct PolylineMaterial {
     pub width: f32,
     pub clamp_to_ground: bool,
     pub height: f32,
+    #[wasm_bindgen(getter_with_clone)]
+    pub __internal__: Option<PolylineInternalMaterial>,
 }
 
 impl From<PolylineMaterial> for navara_material::PolylineMaterial {
@@ -118,6 +120,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             width: val.width,
             clamp_to_ground: val.clamp_to_ground,
             height: val.height,
+            internal: val.__internal__.map(|v| v.into()),
         }
     }
 }
@@ -129,6 +132,29 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             width: value.width,
             clamp_to_ground: value.clamp_to_ground,
             height: value.height,
+            __internal__: value.internal.as_ref().map(|v| v.into()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolylineInternalMaterial {
+    #[wasm_bindgen(getter_with_clone)]
+    pub min_max_heights: Vec<f32>,
+}
+
+impl From<PolylineInternalMaterial> for navara_material::PolylineInternalMaterial {
+    fn from(val: PolylineInternalMaterial) -> Self {
+        navara_material::PolylineInternalMaterial {
+            min_max_heights: val.min_max_heights,
+        }
+    }
+}
+impl From<&navara_material::PolylineInternalMaterial> for PolylineInternalMaterial {
+    fn from(val: &navara_material::PolylineInternalMaterial) -> Self {
+        PolylineInternalMaterial {
+            min_max_heights: val.min_max_heights.clone(),
         }
     }
 }

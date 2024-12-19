@@ -6,6 +6,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
+use navara_core::{Extent, Radians};
 use navara_feature_component::render::TransferablePolygonGeometry;
 use navara_geometry::{FloatAttribute, Hierarchy, PolygonGeometryAttributes, PolygonResource};
 use navara_material::PolygonMaterial;
@@ -14,7 +15,6 @@ use navara_math::FloatType;
 use super::{ConstructPolygonBatchedFeatureParameters, ConstructPolygonBatchedFeatureResult};
 
 #[allow(clippy::type_complexity)]
-#[cfg(not(feature = "delegated_worker"))]
 pub(crate) fn construct_polygon_batched_feature(
     mut commands: Commands,
     mut polygon_resource: ResMut<PolygonResource>,
@@ -37,7 +37,6 @@ pub(crate) fn construct_polygon_batched_feature(
     for (e, constructor) in &constructors {
         let batched_feature = features.get(constructor.batched_feature).unwrap();
 
-        let mut extent_vec = Vec::new();
         let mut combined_attributes = PolygonGeometryAttributes {
             position: FloatAttribute::new(vec![], 3),
             normal: Some(FloatAttribute::new(vec![], 3)),
@@ -47,6 +46,7 @@ pub(crate) fn construct_polygon_batched_feature(
         let mut indices = vec![];
         let mut index_offset = 0;
 
+        let mut combined_extent: Option<Extent<f32, Radians>> = None;
         for feature_id in &batched_feature.features {
             let (geometry, material, batch_id) = match polygon.get_mut(*feature_id) {
                 Ok(f) => f,
@@ -69,7 +69,10 @@ pub(crate) fn construct_polygon_batched_feature(
                 _ => continue,
             };
 
-            extent_vec.push(extent);
+            combined_extent = Some(match combined_extent {
+                Some(e) => e.union(extent),
+                None => extent,
+            });
 
             let position_length = polygon_result.geometry.attributes.position.data.len()
                 / polygon_result.geometry.attributes.position.size as usize;
@@ -119,19 +122,10 @@ pub(crate) fn construct_polygon_batched_feature(
             index_offset += position_length as u32;
         }
 
-        if extent_vec.is_empty() {
-            continue;
-        }
-
-        let mut combined_extent = extent_vec[0];
-        for extent in extent_vec.iter().skip(1) {
-            combined_extent = combined_extent.union(*extent);
-        }
-
         commands
             .entity(e)
             .insert(ConstructPolygonBatchedFeatureResult {
-                extent: combined_extent,
+                extent: combined_extent.unwrap(),
                 geometry: TransferablePolygonGeometry::with_buf(
                     &mut buf,
                     navara_geometry::PolygonGeometry {

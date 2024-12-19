@@ -110,6 +110,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 geometry,
                 feature_id: _,
                 render_info: _,
+                extent: _,
             } => Self {
                 polyline: Some(PolylineMesh {
                     material: material.into(),
