@@ -223,7 +223,6 @@ async function renderPolyline(
       : PolylineFragShader,
     // fragmentShader: PolylineFragShader,
     depthTest: false,
-    depthWrite: false,
     visible: mesh.material.show,
   });
   const m = new Mesh(geometry, material);
