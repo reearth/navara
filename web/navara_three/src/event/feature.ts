@@ -202,9 +202,14 @@ async function renderPolyline(
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
 
+  const [minHeight, maxHeight] = mesh.material.__internal__
+    ?.min_max_heights ?? [0, 0];
+
   const material = new ShaderMaterial({
     uniforms: {
-      width: { value: mesh.material.width },
+      minMaxHeightAndWidth: {
+        value: [minHeight, maxHeight, mesh.material.width],
+      },
       color: { value: new Color(mesh.material.color) },
       viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
       frustumNearFar: uniforms.frustumNearFar,
@@ -216,8 +221,8 @@ async function renderPolyline(
     fragmentShader: mesh.material.clamp_to_ground
       ? GroundPolylineFragShader
       : PolylineFragShader,
+    // fragmentShader: PolylineFragShader,
     depthTest: false,
-    depthWrite: false,
     visible: mesh.material.show,
   });
   const m = new Mesh(geometry, material);

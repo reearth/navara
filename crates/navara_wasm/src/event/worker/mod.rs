@@ -28,6 +28,9 @@ pub struct DelegatedWorkerTasksParameters {
     #[wasm_bindgen(getter_with_clone)]
     pub construct_polygon_batched_feature:
         Option<task::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureParameters>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub construct_polyline_batched_feature:
+        Option<task::construct_polyline_batched_feature::ConstructPolylineBatchedFeatureParameters>,
 }
 
 impl<'a>
@@ -86,6 +89,16 @@ impl<'a> From<&'a navara_worker::DelegatedWorkerTasksParameters>
                 construct_polygon_batched_feature: Some(value.into()),
                 ..Default::default()
             },
+            navara_worker::DelegatedWorkerTasksParameters::ConstructPolylineBatchedFeature(
+                navara_worker::DelegatedWorkerTask {
+                    delegator_id,
+                    value,
+                },
+            ) => Self {
+                delegator_id: ReconstructableEntity(delegator_id.to_bits()),
+                construct_polyline_batched_feature: Some(value.into()),
+                ..Default::default()
+            },
         }
     }
 }
@@ -102,6 +115,9 @@ pub struct DelegatedWorkerTasksResult {
     #[wasm_bindgen(getter_with_clone)]
     pub construct_polygon_batched_feature:
         Option<task::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureResult>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub construct_polyline_batched_feature:
+        Option<task::construct_polyline_batched_feature::ConstructPolylineBatchedFeatureResult>,
 }
 
 #[wasm_bindgen]
@@ -116,6 +132,7 @@ impl DelegatedWorkerTasksResult {
             construct_terrain_mesh,
             upsample_terrain_mesh: None,
             construct_polygon_batched_feature: None,
+            construct_polyline_batched_feature: None,
         }
     }
 
@@ -129,6 +146,7 @@ impl DelegatedWorkerTasksResult {
             construct_terrain_mesh: None,
             upsample_terrain_mesh,
             construct_polygon_batched_feature: None,
+            construct_polyline_batched_feature: None,
         }
     }
 
@@ -144,6 +162,23 @@ impl DelegatedWorkerTasksResult {
             construct_terrain_mesh: None,
             upsample_terrain_mesh: None,
             construct_polygon_batched_feature,
+            construct_polyline_batched_feature: None,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "withConstructPolylineBatchedFeature")]
+    pub fn with_construct_polyline_batched_feature(
+        delegator_id: ReconstructableEntity,
+        construct_polyline_batched_feature: Option<
+            task::construct_polyline_batched_feature::ConstructPolylineBatchedFeatureResult,
+        >,
+    ) -> Self {
+        Self {
+            delegator_id,
+            construct_terrain_mesh: None,
+            upsample_terrain_mesh: None,
+            construct_polygon_batched_feature: None,
+            construct_polyline_batched_feature,
         }
     }
 }
@@ -179,6 +214,16 @@ impl<'a> From<&'a navara_worker::DelegatedWorkerTasksResult> for DelegatedWorker
             ) => Self {
                 delegator_id: ReconstructableEntity(delegator_id.to_bits()),
                 construct_polygon_batched_feature: Some(value.into()),
+                ..Default::default()
+            },
+            navara_worker::DelegatedWorkerTasksResult::ConstructPolylineBatchedFeature(
+                navara_worker::DelegatedWorkerTask {
+                    delegator_id,
+                    value,
+                },
+            ) => Self {
+                delegator_id: ReconstructableEntity(delegator_id.to_bits()),
+                construct_polyline_batched_feature: Some(value.into()),
                 ..Default::default()
             },
         }

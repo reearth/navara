@@ -31,10 +31,6 @@ fn coords(f: &[f64]) -> Vec3 {
     )
 }
 
-fn multi_coords(f: &[Vec<f64>]) -> Vec<Vec3> {
-    f.iter().map(|p| coords(p)).collect::<Vec<_>>()
-}
-
 fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<FloatType> {
     f.iter()
         .flat_map(|p| {
@@ -129,10 +125,7 @@ fn spawn_feature(
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         BatchId(batch_id),
-                        PolylineGeometry {
-                            coords: multi_coords(f),
-                            crs: CRS::Geographic,
-                        },
+                        PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                         v.clone(),
                     ));
                 }
@@ -141,10 +134,7 @@ fn spawn_feature(
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             BatchId(batch_id),
-                            PolylineGeometry {
-                                coords: multi_coords(f),
-                                crs: CRS::Geographic,
-                            },
+                            PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                             v.clone(),
                         ));
                     }
@@ -375,7 +365,9 @@ pub fn update_geo_json_layer(
                     }
                     RenderableFeature::Polyline { material, .. } => {
                         if let Appearance::Polyline(mat) = &u.appearance {
+                            let internal = material.internal.take();
                             *material = mat.clone();
+                            material.internal = internal;
                         }
                     }
                     RenderableFeature::Polygon { .. } => {

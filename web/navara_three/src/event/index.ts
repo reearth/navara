@@ -28,6 +28,7 @@ import {
   ReconstructableEntity,
   ElevationDecoder,
   ReturnedTransferablePolygonBatchedFeature,
+  ReturnedTransferablePolylineBatchedFeature,
 } from "@navara/engine";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import {
@@ -92,6 +93,9 @@ export type FeatureHandler = {
   getTransferablePolygonBatchedFeature: (
     bits: bigint,
   ) => ReturnedTransferablePolygonBatchedFeature | undefined;
+  getTransferablePolylineBatchedFeature: (
+    bits: bigint,
+  ) => ReturnedTransferablePolylineBatchedFeature | undefined;
 };
 
 export type MeshHandler = {
@@ -702,7 +706,15 @@ function processModelChanged(obj: Group, material: ModelMaterial) {
 function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
   if (obj.material instanceof ShaderMaterial) {
     obj.material.uniforms.color.value.set(material.color);
-    obj.material.uniforms.width.value = material.width;
+
+    const [minHeight, maxHeight] = material.__internal__?.min_max_heights ?? [
+      0, 0,
+    ];
+    obj.material.uniforms.minMaxHeightAndWidth.value = [
+      minHeight,
+      maxHeight,
+      material.width,
+    ];
     obj.material.visible = material.show ?? true;
   }
 }

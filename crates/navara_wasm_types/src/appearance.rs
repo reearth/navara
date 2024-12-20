@@ -105,9 +105,33 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
 pub struct PolylineMaterial {
     pub show: Option<bool>,
     pub color: u32,
-    pub width: f32,
-    pub clamp_to_ground: bool,
-    pub height: f32,
+    pub width: Option<f32>,
+    pub clamp_to_ground: Option<bool>,
+    pub height: Option<f32>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub __internal__: Option<PolylineInternalMaterial>,
+}
+
+#[wasm_bindgen]
+impl PolylineMaterial {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        show: Option<bool>,
+        color: u32,
+        clamp_to_ground: Option<bool>,
+        height: Option<f32>,
+        width: Option<f32>,
+        __internal__: Option<PolylineInternalMaterial>,
+    ) -> Self {
+        Self {
+            show,
+            color,
+            clamp_to_ground,
+            height,
+            width,
+            __internal__,
+        }
+    }
 }
 
 impl From<PolylineMaterial> for navara_material::PolylineMaterial {
@@ -115,9 +139,10 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
         navara_material::PolylineMaterial {
             show: val.show.unwrap_or(true),
             color: val.color,
-            width: val.width,
-            clamp_to_ground: val.clamp_to_ground,
-            height: val.height,
+            width: val.width.unwrap_or(1.),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(false),
+            height: val.height.unwrap_or(0.),
+            internal: val.__internal__.map(|v| v.into()),
         }
     }
 }
@@ -126,9 +151,32 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
         PolylineMaterial {
             show: Some(value.show),
             color: value.color,
-            width: value.width,
-            clamp_to_ground: value.clamp_to_ground,
-            height: value.height,
+            width: Some(value.width),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            height: Some(value.height),
+            __internal__: value.internal.as_ref().map(|v| v.into()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolylineInternalMaterial {
+    #[wasm_bindgen(getter_with_clone)]
+    pub min_max_heights: Vec<f32>,
+}
+
+impl From<PolylineInternalMaterial> for navara_material::PolylineInternalMaterial {
+    fn from(val: PolylineInternalMaterial) -> Self {
+        navara_material::PolylineInternalMaterial {
+            min_max_heights: val.min_max_heights,
+        }
+    }
+}
+impl From<&navara_material::PolylineInternalMaterial> for PolylineInternalMaterial {
+    fn from(val: &navara_material::PolylineInternalMaterial) -> Self {
+        PolylineInternalMaterial {
+            min_max_heights: val.min_max_heights.clone(),
         }
     }
 }

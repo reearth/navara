@@ -6,6 +6,10 @@ use crate::{
         DelegatableConstructPolygonBatchedFeatureParameters,
         DelegatableConstructPolygonBatchedFeatureResult,
     },
+    construct_polyline_batched_feature::{
+        DelegatableConstructPolylineBatchedFeatureParameters,
+        DelegatableConstructPolylineBatchedFeatureResult,
+    },
     construct_terrain_mesh::{
         DelegatableConstructTerrainMeshParameters, DelegatableConstructTerrainMeshResult,
     },
@@ -51,6 +55,9 @@ pub enum DelegatedWorkerTasksParameters {
     ConstructPolygonBatchedFeature(
         DelegatedWorkerTask<DelegatableConstructPolygonBatchedFeatureParameters>,
     ),
+    ConstructPolylineBatchedFeature(
+        DelegatedWorkerTask<DelegatableConstructPolylineBatchedFeatureParameters>,
+    ),
     // Polyline(...),
 }
 
@@ -80,6 +87,9 @@ pub enum DelegatedWorkerTasksResult {
     UpsampleTerrainMesh(DelegatedWorkerTask<DelegatableUpsampleTerrainMeshResult>),
     ConstructPolygonBatchedFeature(
         DelegatedWorkerTask<DelegatableConstructPolygonBatchedFeatureResult>,
+    ),
+    ConstructPolylineBatchedFeature(
+        DelegatedWorkerTask<DelegatableConstructPolylineBatchedFeatureResult>,
     ),
     // Polyline(...),
     // Polygon(...),

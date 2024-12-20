@@ -323,15 +323,18 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/10/904/402.mvt",
-      // url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/{z}/{x}/{y}.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/10/904/402.mvt",
+      url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/{z}/{x}/{y}.mvt",
     },
     polyline: {
       show: true,
       color: 0x00ff00,
       width: 2,
       height: 1,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
+    },
+    vector_tile: {
+      max_zoom: 16,
     },
   },
   {

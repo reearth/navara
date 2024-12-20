@@ -180,7 +180,7 @@ fn check_winding_order(positions: &[Vec3]) -> WindingOrder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TransferableHierarchy {
     pub outer_ring: Handle,
     pub holes: Option<Vec<TransferableHierarchy>>,

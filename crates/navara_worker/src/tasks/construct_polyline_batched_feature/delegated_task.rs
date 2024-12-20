@@ -1,0 +1,5 @@
+use super::{ConstructPolylineBatchedFeatureParameters, ConstructPolylineBatchedFeatureResult};
+
+pub type DelegatableConstructPolylineBatchedFeatureParameters =
+    ConstructPolylineBatchedFeatureParameters;
+pub type DelegatableConstructPolylineBatchedFeatureResult = ConstructPolylineBatchedFeatureResult;

@@ -9,8 +9,8 @@ use crate::{
     Transform,
 };
 use navara_wasm_types::{
-    polygon::TransferablePolygonBatchedFeature, BillboardMaterial, ModelMaterial, PointMaterial,
-    PolygonMaterial, PolylineMaterial,
+    polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
+    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
 };
 
 #[wasm_bindgen]
@@ -122,6 +122,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 geometry,
                 feature_id: _,
                 render_info: _,
+                extent: _,
             } => Self {
                 polyline: Some(PolylineMesh {
                     material: material.into(),
@@ -180,6 +181,20 @@ pub struct ReturnedTransferablePolygonBatchedFeature {
 #[wasm_bindgen]
 impl ReturnedTransferablePolygonBatchedFeature {
     pub fn transferable(&mut self) -> TransferablePolygonBatchedFeature {
+        self.transferable.consume()
+    }
+}
+
+#[wasm_bindgen]
+pub struct ReturnedTransferablePolylineBatchedFeature {
+    pub(crate) transferable: TransferablePolylineBatchedFeature,
+    #[wasm_bindgen(getter_with_clone)]
+    pub material: PolylineMaterial,
+}
+
+#[wasm_bindgen]
+impl ReturnedTransferablePolylineBatchedFeature {
+    pub fn transferable(&mut self) -> TransferablePolylineBatchedFeature {
         self.transferable.consume()
     }
 }

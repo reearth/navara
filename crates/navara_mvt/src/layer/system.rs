@@ -168,7 +168,9 @@ pub fn update_mvt_layer(
                     }
                     Appearance::Polyline(polyline) => {
                         if let RenderableFeature::Polyline { material, .. } = f.as_mut() {
+                            let internal = material.internal.take();
                             *material = polyline.clone();
+                            material.internal = internal;
                         }
                     }
                     Appearance::Polygon(polygon) => {
