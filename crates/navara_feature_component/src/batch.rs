@@ -11,6 +11,7 @@ use crate::{id::FeatureId, render::RenderableFeature};
 pub struct BatchedFeature {
     pub features: Vec<Entity>,
     pub construct_polygon_feature: Option<Entity>,
+    pub construct_polyline_feature: Option<Entity>,
 }
 
 impl BatchedFeature {

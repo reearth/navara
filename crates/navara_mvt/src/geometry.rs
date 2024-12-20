@@ -190,6 +190,7 @@ pub fn construct_geometry(
                         if let Appearance::Polyline(appearance) = one_appr {
                             construct_lines_geometry(
                                 commands,
+                                buf,
                                 &mut feature_ids,
                                 layer_id,
                                 lines,
@@ -206,6 +207,7 @@ pub fn construct_geometry(
                         if let Appearance::Polyline(appearance) = one_appr {
                             construct_line_geometry(
                                 commands,
+                                buf,
                                 &mut feature_ids,
                                 layer_id,
                                 line,
@@ -280,8 +282,10 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     feature_ids.push(e);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_lines_geometry<A: Component + Clone>(
     commands: &mut Commands,
+    buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     layer_id: &str,
     lines: &[LineString<f32>],
@@ -293,6 +297,7 @@ fn construct_lines_geometry<A: Component + Clone>(
     for line in lines {
         construct_line_geometry(
             commands,
+            buf,
             feature_ids,
             layer_id,
             line,
@@ -306,8 +311,10 @@ fn construct_lines_geometry<A: Component + Clone>(
     count
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_line_geometry<A: Component + Clone>(
     commands: &mut Commands,
+    buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     layer_id: &str,
     line: &LineString<f32>,
@@ -316,15 +323,12 @@ fn construct_line_geometry<A: Component + Clone>(
     batch_id: &mut usize,
 ) {
     let LineString(points) = line;
-    let geo_points = converter.project_points_vec3(points);
+    let geo_points = converter.project_points(points);
 
     let e = commands
         .spawn((
             LayerId(layer_id.to_owned()),
-            PolylineGeometry {
-                coords: geo_points,
-                crs: CRS::Geographic,
-            },
+            PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
             appearance.clone(),
             BatchId(*batch_id),
         ))

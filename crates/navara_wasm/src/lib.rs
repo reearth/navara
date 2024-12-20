@@ -7,16 +7,20 @@ mod input;
 mod types;
 
 use entity::ReconstructableEntity;
-use feature::ReturnedTransferablePolygonBatchedFeature;
+use feature::{
+    ReturnedTransferablePolygonBatchedFeature, ReturnedTransferablePolylineBatchedFeature,
+};
 use nanoid::nanoid;
 use navara_buffer_store::Handle;
 use navara_ecs::App;
+use navara_feature_component::batch::BatchId;
 use navara_geometry::Hierarchy;
 use navara_input::Key;
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
 use navara_wasm_utils::set_panic_hook;
 use polygon::TransferablePolygonBatchedFeature;
+use polyline::TransferablePolylineBatchedFeature;
 use wasm_bindgen::prelude::*;
 
 pub use event::*;
@@ -202,6 +206,13 @@ impl Core {
                 } => navara_worker::DelegatedWorkerTasksResult::ConstructPolygonBatchedFeature(
                     navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
                 ),
+                DelegatedWorkerTasksResult {
+                    delegator_id,
+                    construct_polyline_batched_feature: Some(v),
+                    ..
+                } => navara_worker::DelegatedWorkerTasksResult::ConstructPolylineBatchedFeature(
+                    navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
+                ),
                 _ => unreachable!(),
             },
         );
@@ -238,11 +249,12 @@ impl Core {
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolygonBatchedFeature> {
         let features = self.app.get_batched_features(batched_feature_id)?;
-        let buf_store = self.app.get_buffer_store()?;
 
         let mut material: Option<PolygonMaterial> = None;
 
         let mut transferable = TransferablePolygonBatchedFeature::empty(features.len());
+
+        let mut coords_handle_and_batch_ids = vec![];
 
         for f in &features {
             if material.is_none() {
@@ -253,12 +265,55 @@ impl Core {
             let geometry = f.get::<navara_feature_component::polygon::PolygonGeometry>()?;
             let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
 
-            let mut hierarchy = Hierarchy::from_transferred_cloned(&geometry.hierarchy, buf_store)?;
+            coords_handle_and_batch_ids.push((geometry.hierarchy.clone(), batch_id.0));
+        }
 
-            transferable.add(&mut hierarchy, batch_id);
+        let mut buf_store = self.app.get_buffer_store_mut()?;
+        for (hierarchy, batch_id) in coords_handle_and_batch_ids {
+            let mut hierarchy = Hierarchy::from_transferred(&hierarchy, &mut buf_store)?;
+
+            transferable.add(&mut hierarchy, &BatchId(batch_id));
         }
 
         material.map(|material| ReturnedTransferablePolygonBatchedFeature {
+            transferable,
+            material,
+        })
+    }
+
+    #[wasm_bindgen(js_name = getTransferablePolylineBatchedFeature)]
+    pub fn get_transferable_polyline_batched_feature(
+        &mut self,
+        batched_feature_id: u64,
+    ) -> Option<ReturnedTransferablePolylineBatchedFeature> {
+        let features = self.app.get_batched_features(batched_feature_id)?;
+
+        let mut material: Option<PolylineMaterial> = None;
+
+        let mut transferable = TransferablePolylineBatchedFeature::empty(features.len());
+
+        let mut coords_handle_and_batch_ids = vec![];
+
+        for f in &features {
+            if material.is_none() {
+                let m = f.get::<navara_material::PolylineMaterial>()?;
+                material = Some(m.into());
+            }
+
+            let geometry = f.get::<navara_feature_component::polyline::PolylineGeometry>()?;
+            let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
+
+            coords_handle_and_batch_ids.push((geometry.coords, batch_id.0));
+        }
+
+        let mut buf_store = self.app.get_buffer_store_mut()?;
+        for (coords, batch_id) in coords_handle_and_batch_ids {
+            let mut points = buf_store.remove_f32(&coords)?.to_vec();
+
+            transferable.add(&mut points, &BatchId(batch_id));
+        }
+
+        material.map(|material| ReturnedTransferablePolylineBatchedFeature {
             transferable,
             material,
         })

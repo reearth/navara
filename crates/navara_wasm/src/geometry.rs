@@ -64,6 +64,33 @@ pub struct TransferablePolylineGeometry {
     pub indices: Handle,
 }
 
+#[wasm_bindgen]
+impl TransferablePolylineGeometry {
+    #[allow(clippy::too_many_arguments)]
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        position: TransferableFloatAttribute,
+        start: TransferableFloatAttribute,
+        forward_offset: TransferableFloatAttribute,
+        start_normals: TransferableFloatAttribute,
+        end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
+        right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
+        batch_id: Option<TransferableFloatAttribute>,
+        indices: Handle,
+    ) -> Self {
+        Self {
+            position,
+            start,
+            forward_offset,
+            start_normals,
+            end_normal_and_texture_coordinate_normalization_x,
+            right_normal_and_texture_coordinate_normalization_y,
+            batch_id,
+            indices,
+        }
+    }
+}
+
 impl From<TransferablePolylineGeometry>
     for navara_feature_component::render::TransferablePolylineGeometry
 {
