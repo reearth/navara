@@ -8,7 +8,7 @@ use navara_core::WGS84_32;
 use navara_feature_component::{
     batch::BatchId,
     id::FeatureId,
-    render::{RenderInformation, RenderableFeature, TransferableCommonGeometry},
+    render::{RenderInformation, RenderableFeature, TransferableSingleGeometry},
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::BillboardMaterial;
@@ -57,7 +57,7 @@ pub fn transfer_mesh(
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
                     },
-                    geometry: TransferableCommonGeometry {
+                    geometry: TransferableSingleGeometry {
                         batch_id: Some(batch_id.0),
                     },
                 },

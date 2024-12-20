@@ -241,14 +241,25 @@ pub fn construct_feature(
                 GeoJson::FeatureCollection(fs) => {
                     for f in fs {
                         if let Some(g) = &f.geometry {
-                            let mut prop_string = String::from("{}");
                             if let Some(prop) = &f.properties {
-                                prop_string =
-                                    serde_json::to_string(&prop).expect("Failed to serialize");
+                                if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                                    spawn_feature(
+                                        &mut commands,
+                                        &mut buf,
+                                        appearances,
+                                        g,
+                                        layer.layer_id.as_str(),
+                                        batch_id,
+                                    );
+                                }
                             }
-
-                            let batch_id = batch_table.add(prop_string);
-                            if batch_id > 0 {
+                        }
+                    }
+                }
+                GeoJson::Feature(f) => {
+                    if let Some(g) = &f.geometry {
+                        if let Some(prop) = &f.properties {
+                            if let Some(batch_id) = batch_table.add_hash_map(prop) {
                                 spawn_feature(
                                     &mut commands,
                                     &mut buf,
@@ -261,32 +272,8 @@ pub fn construct_feature(
                         }
                     }
                 }
-                GeoJson::Feature(f) => {
-                    if let Some(g) = &f.geometry {
-                        let mut prop_string = String::from("{}");
-                        if let Some(prop) = &f.properties {
-                            prop_string =
-                                serde_json::to_string(&prop).expect("Failed to serialize");
-                        }
-
-                        let batch_id = batch_table.add(prop_string);
-                        if batch_id > 0 {
-                            spawn_feature(
-                                &mut commands,
-                                &mut buf,
-                                appearances,
-                                g,
-                                layer.layer_id.as_str(),
-                                batch_id,
-                            );
-                        }
-                    }
-                }
                 GeoJson::Geometry(g) => {
-                    let prop_string = String::from("{}");
-
-                    let batch_id = batch_table.add(prop_string);
-                    if batch_id > 0 {
+                    if let Some(batch_id) = batch_table.add("{}".to_string()) {
                         spawn_feature(
                             &mut commands,
                             &mut buf,

@@ -66,15 +66,15 @@ pub fn construct_geometry(
         for feature in features {
             let geom = feature.get_geometry();
 
-            let mut prop_string = String::from("{}");
+            let mut op_batch_id = None;
             if let Some(prop) = &feature.properties {
-                prop_string = serde_json::to_string(&prop).expect("Failed to serialize");
+                op_batch_id = batch_table.add_hash_map(prop);
             }
 
-            let batch_id = batch_table.add(prop_string);
-            if batch_id < 1 {
+            if op_batch_id.is_none() {
                 continue;
             }
+            let batch_id = op_batch_id.unwrap();
 
             match geom {
                 Geometry::MultiPolygon(v) => {

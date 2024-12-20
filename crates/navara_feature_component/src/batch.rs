@@ -9,6 +9,7 @@ use navara_buffer_store::BufferStore;
 use crate::{id::FeatureId, render::RenderableFeature};
 
 use rand::Rng;
+use serde::Serialize;
 use std::collections::HashMap;
 
 #[derive(Component, Debug, Default)]
@@ -68,7 +69,7 @@ impl BatchTable {
         }
     }
 
-    pub fn add(&mut self, value: String) -> u32 {
+    pub fn add(&mut self, value: String) -> Option<u32> {
         let mut rng = rand::thread_rng();
         let mut key = rng.gen_range(1..0xffffffff);
 
@@ -80,10 +81,15 @@ impl BatchTable {
 
         if retry_count > 0 {
             self.map.insert(key, value);
-            key
+            Some(key)
         } else {
-            0
+            None
         }
+    }
+
+    pub fn add_hash_map<T: Serialize>(&mut self, prop: &T) -> Option<u32> {
+        let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
+        self.add(props)
     }
 
     pub fn get(&self, key: &u32) -> Option<&String> {
