@@ -9,6 +9,8 @@ import {
 import {
   ConstructPolygonBatchedFeatureParameters,
   ConstructPolygonBatchedFeatureResult,
+  ConstructPolylineBatchedFeatureParameters,
+  ConstructPolylineBatchedFeatureResult,
   ConstructTerrainMeshParameters,
   ConstructTerrainMeshResult,
   DelegatedWorkerTasksResult,
@@ -17,12 +19,18 @@ import {
   TransferableFloatAttribute,
   TransferableGeometry,
   TransferablePolygonGeometry,
+  TransferablePolylineGeometry,
   UpsampleTerrainMeshParameters,
   UpsampleTerrainMeshResult,
   type WorkerTaskDelegatedEvent,
 } from "@navara/engine";
 
+import {
+  PolylineMaterialLike,
+  TransferablePolylineBatchedFeatureLike,
+} from "../packages/core/utils/polyline";
 import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatchedFeature";
+import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
 import type { MartiniCache } from "../type";
@@ -67,6 +75,16 @@ export async function processWorkerTaskDelegatedEvent(
     return await processConstructPolygonBatchedFeature(
       event.bits,
       event.task.construct_polygon_batched_feature,
+      event.task.delegator_id,
+      bufHandler,
+      featureHandler,
+      workerTaskHandler,
+    );
+  }
+  if (event.task.construct_polyline_batched_feature) {
+    return await processConstructPolylineBatchedFeature(
+      event.bits,
+      event.task.construct_polyline_batched_feature,
       event.task.delegator_id,
       bufHandler,
       featureHandler,
@@ -319,6 +337,120 @@ async function processConstructPolygonBatchedFeature(
     DelegatedWorkerTasksResult.withConstructPolygonBatchedFeature(
       delegator_id,
       constructPolygonBatchedFeatureResult,
+    );
+
+  workerTaskHandler.triggerWorkerTaskCompleted(bits, delegatedTaskResult);
+}
+
+async function processConstructPolylineBatchedFeature(
+  bits: bigint,
+  params: ConstructPolylineBatchedFeatureParameters,
+  delegator_id: ReconstructableEntity,
+  bufHandler: BufferLoader,
+  featureHandler: FeatureHandler,
+  workerTaskHandler: WorkerTaskHandler,
+) {
+  const transferable = featureHandler.getTransferablePolylineBatchedFeature(
+    params.batched_feature[0],
+  );
+
+  if (!transferable) return;
+
+  const result = await constructPolylineBatchedFeature(
+    new TransferablePolylineBatchedFeatureLike(transferable.transferable()),
+    new PolylineMaterialLike(transferable.material),
+  );
+
+  if (!result || !result.geometry.attributes.batch_id) return;
+
+  const position = bufHandler.newF32(result.geometry.attributes.position.data);
+  const start = bufHandler.newF32(result.geometry.attributes.start.data);
+  const startNormals = bufHandler.newF32(
+    result.geometry.attributes.start_normals.data,
+  );
+  const forwardOffset = bufHandler.newF32(
+    result.geometry.attributes.forward_offset.data,
+  );
+  const endNormalAndTextureCoordinateNormalizationX = bufHandler.newF32(
+    result.geometry.attributes.end_normal_and_texture_coordinate_normalization_x
+      .data,
+  );
+  const rightNormalAndTextureCoordinateNormalizationY = bufHandler.newF32(
+    result.geometry.attributes
+      .right_normal_and_texture_coordinate_normalization_y.data,
+  );
+  const batchId = bufHandler.newF32(result.geometry.attributes.batch_id.data);
+  const indices = bufHandler.newU32(result.geometry.indices);
+  if (
+    !batchId ||
+    !position ||
+    !start ||
+    !startNormals ||
+    !forwardOffset ||
+    !endNormalAndTextureCoordinateNormalizationX ||
+    !rightNormalAndTextureCoordinateNormalizationY ||
+    !indices
+  ) {
+    return;
+  }
+
+  const transferableBatchId = new TransferableFloatAttribute(
+    batchId,
+    result.geometry.attributes.batch_id.size,
+  );
+  const transferablePosition = new TransferableFloatAttribute(
+    position,
+    result.geometry.attributes.position.size,
+  );
+  const transferableStart = new TransferableFloatAttribute(
+    start,
+    result.geometry.attributes.start.size,
+  );
+  const transferableStartNormals = new TransferableFloatAttribute(
+    startNormals,
+    result.geometry.attributes.start_normals.size,
+  );
+  const transferableForwardOffset = new TransferableFloatAttribute(
+    forwardOffset,
+    result.geometry.attributes.forward_offset.size,
+  );
+  const transferableEndNormalAndTextureCoordinateNormalizationX =
+    new TransferableFloatAttribute(
+      endNormalAndTextureCoordinateNormalizationX,
+      result.geometry.attributes.end_normal_and_texture_coordinate_normalization_x.size,
+    );
+  const transferableRightNormalAndTextureCoordinateNormalizationY =
+    new TransferableFloatAttribute(
+      rightNormalAndTextureCoordinateNormalizationY,
+      result.geometry.attributes.right_normal_and_texture_coordinate_normalization_y.size,
+    );
+
+  const geometry = new TransferablePolylineGeometry(
+    transferablePosition,
+    transferableStart,
+    transferableForwardOffset,
+    transferableStartNormals,
+    transferableEndNormalAndTextureCoordinateNormalizationX,
+    transferableRightNormalAndTextureCoordinateNormalizationY,
+    transferableBatchId,
+    indices,
+  );
+
+  const constructPolylineBatchedFeatureResult =
+    new ConstructPolylineBatchedFeatureResult(
+      geometry,
+      new ExtentRadianF32(
+        result.extent.west,
+        result.extent.south,
+        result.extent.east,
+        result.extent.north,
+      ),
+    );
+
+  const delegatedTaskResult =
+    DelegatedWorkerTasksResult.withConstructPolylineBatchedFeature(
+      delegator_id,
+      constructPolylineBatchedFeatureResult,
     );
 
   workerTaskHandler.triggerWorkerTaskCompleted(bits, delegatedTaskResult);

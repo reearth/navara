@@ -74,6 +74,17 @@ pub fn handle_completed_event(
                     .entity(*delegator_id)
                     .insert((value.clone(), WorkerTaskCompleted));
             }
+            DelegatedWorkerTasksResult::ConstructPolylineBatchedFeature(DelegatedWorkerTask {
+                delegator_id,
+                value,
+            }) => {
+                if !constructors.contains(*delegator_id) {
+                    continue;
+                }
+                commands
+                    .entity(*delegator_id)
+                    .insert((value.clone(), WorkerTaskCompleted));
+            }
         }
         commands.entity(e.parameters_id).insert(Deleted);
     }

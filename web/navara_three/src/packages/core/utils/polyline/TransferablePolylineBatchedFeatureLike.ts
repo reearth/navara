@@ -1,0 +1,31 @@
+import type { CRS, TransferablePolylineBatchedFeature } from "@navara/engine";
+
+export class TransferablePolylineBatchedFeatureLike
+  implements TransferablePolylineBatchedFeature
+{
+  points: Float32Array;
+  points_sizes: Uint32Array;
+  batch_ids: Uint32Array;
+  crs: CRS;
+  length: number;
+
+  constructor(t: TransferablePolylineBatchedFeature) {
+    this.points = t.transferPoints();
+    this.points_sizes = t.transferPointsSizes();
+    this.batch_ids = t.transferBatchIds();
+    this.crs = t.crs;
+    this.length = t.length;
+  }
+
+  transferPoints(): Float32Array {
+    throw new Error();
+  }
+  transferPointsSizes(): Uint32Array {
+    throw new Error();
+  }
+  transferBatchIds(): Uint32Array {
+    throw new Error();
+  }
+
+  free(): void {}
+}

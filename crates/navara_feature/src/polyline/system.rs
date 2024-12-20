@@ -1,189 +1,76 @@
 use bevy_ecs::{
+    change_detection::DetectChanges,
     entity::Entity,
     query::{Added, With, Without},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_core::{Extent, Radians, CRS, WGS84_32};
+use navara_component::Deleted;
+use navara_core::CRS;
 use navara_feature_component::{
     batch::{BatchId, BatchedFeature},
     id::FeatureId,
+    polyline::construct_polyline_feature,
     render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
-};
-use navara_geometry::{
-    create_polyline_geometry, PolylineGeometryAttributes, PolylineGeometryOptions,
-    TransferableFloatAttribute,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
-use navara_math::{FloatType, Transform, Vec3};
+use navara_math::{Transform, Vec3};
 
 use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
 use navara_tile_component::{
     sample_terrain_height_within_extent, RasterTileQuadtree, TileMeshMarker,
 };
-
-fn to_transferable_geometry(
-    buf: &mut ResMut<BufferStore>,
-    geo: navara_geometry::PolylineGeometry,
-) -> TransferablePolylineGeometry {
-    let position = buf.new_f32(geo.attributes.position.data);
-    let start = buf.new_f32(geo.attributes.start.data);
-    let forward_offset = buf.new_f32(geo.attributes.forward_offset.data);
-    let start_normals = buf.new_f32(geo.attributes.start_normals.data);
-    let end_normal_and_texture_coordinate_normalization_x = buf.new_f32(
-        geo.attributes
-            .end_normal_and_texture_coordinate_normalization_x
-            .data,
-    );
-    let right_normal_and_texture_coordinate_normalization_y = buf.new_f32(
-        geo.attributes
-            .right_normal_and_texture_coordinate_normalization_y
-            .data,
-    );
-    let indices = buf.new_u32(geo.indices);
-
-    TransferablePolylineGeometry {
-        position: TransferableFloatAttribute {
-            data: position,
-            size: geo.attributes.position.size,
-        },
-        start: TransferableFloatAttribute {
-            data: start,
-            size: geo.attributes.start.size,
-        },
-        forward_offset: TransferableFloatAttribute {
-            data: forward_offset,
-            size: geo.attributes.forward_offset.size,
-        },
-        start_normals: TransferableFloatAttribute {
-            data: start_normals,
-            size: geo.attributes.start_normals.size,
-        },
-        end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute {
-            data: end_normal_and_texture_coordinate_normalization_x,
-            size: geo
-                .attributes
-                .end_normal_and_texture_coordinate_normalization_x
-                .size,
-        },
-        right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute {
-            data: right_normal_and_texture_coordinate_normalization_y,
-            size: geo
-                .attributes
-                .right_normal_and_texture_coordinate_normalization_y
-                .size,
-        },
-        batch_id: geo
-            .attributes
-            .batch_id
-            .map(|batch_id| TransferableFloatAttribute {
-                data: buf.new_f32(batch_id.data),
-                size: batch_id.size,
-            }),
-        indices,
-    }
-}
+use navara_worker::construct_polyline_batched_feature::{
+    ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,
+    ConstructPolylineBatchedFeatureResult, ConstructPolylineBatchedFeatureWorkerTaskBundle,
+};
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
     mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    polylines: Query<
-        (&LayerId, &PolylineGeometry, &PolylineMaterial, &BatchId),
-        Added<PolylineGeometry>,
-    >,
+    polylines: Query<(&LayerId, &PolylineMaterial)>,
     mut batched_features: Query<
-        (&BatchedFeature, Option<&mut FeatureId>),
-        (Added<BatchedFeature>, With<PolylineMarker>),
+        (Entity, &mut BatchedFeature, Option<&mut FeatureId>),
+        With<PolylineMarker>,
     >,
     mut layer_store: ResMut<LayerStore>,
+    construct_polyline_feature_tasks: Query<
+        (Entity, &ConstructPolylineBatchedFeatureResult),
+        Without<Deleted>,
+    >,
 ) {
-    for (batched_feature, feature_id) in &mut batched_features {
-        let Ok((layer_id, _geometry, material, _batch_id)) =
-            polylines.get(*batched_feature.features.first().unwrap())
+    for (batched_feature_entity, mut batched_feature, feature_id) in &mut batched_features {
+        let needs_update = batched_feature.is_added()
+            || batched_feature
+                .construct_polyline_feature
+                .map_or(false, |c| construct_polyline_feature_tasks.contains(c));
+        if !needs_update {
+            continue;
+        }
+
+        if batched_feature.construct_polyline_feature.is_none() {
+            let task_entity = commands
+                .spawn(ConstructPolylineBatchedFeatureWorkerTaskBundle::new(
+                    ConstructPolylineBatchedFeatureMarker,
+                    ConstructPolylineBatchedFeatureParameters {
+                        batched_feature: batched_feature_entity,
+                    },
+                ))
+                .id();
+            batched_feature.construct_polyline_feature = Some(task_entity);
+            continue;
+        }
+
+        let (task_entity, ConstructPolylineBatchedFeatureResult { extent, geometry }) =
+            construct_polyline_feature_tasks
+                .get(batched_feature.construct_polyline_feature.unwrap())
+                .unwrap();
+
+        let Ok((layer_id, material)) = polylines.get(*batched_feature.features.first().unwrap())
         else {
             continue;
         };
-        let mut combined_attributes = PolylineGeometryAttributes::with_batch_id();
-        let mut indices = vec![];
-        let mut index_offset = 0;
-
-        let mut combined_extent: Option<Extent<f32, Radians>> = None;
-        for feature_id in &batched_feature.features {
-            let Ok((_layer_id, geometry, _material, batch_id)) = polylines.get(*feature_id) else {
-                continue;
-            };
-
-            let Some((extent, mut constructed_geometry)) =
-                triangulate_one_polyline(material, geometry)
-            else {
-                continue;
-            };
-
-            let position_length = constructed_geometry.attributes.position.data.len()
-                / constructed_geometry.attributes.position.size as usize;
-            if position_length == 0 {
-                continue;
-            }
-
-            combined_extent = Some(match combined_extent {
-                Some(e) => e.union(extent),
-                None => extent,
-            });
-
-            combined_attributes
-                .position
-                .data
-                .append(&mut constructed_geometry.attributes.position.data);
-            combined_attributes
-                .start
-                .data
-                .append(&mut constructed_geometry.attributes.start.data);
-            combined_attributes
-                .forward_offset
-                .data
-                .append(&mut constructed_geometry.attributes.forward_offset.data);
-            combined_attributes
-                .start_normals
-                .data
-                .append(&mut constructed_geometry.attributes.start_normals.data);
-            combined_attributes
-                .end_normal_and_texture_coordinate_normalization_x
-                .data
-                .append(
-                    &mut constructed_geometry
-                        .attributes
-                        .end_normal_and_texture_coordinate_normalization_x
-                        .data,
-                );
-            combined_attributes
-                .right_normal_and_texture_coordinate_normalization_y
-                .data
-                .append(
-                    &mut constructed_geometry
-                        .attributes
-                        .right_normal_and_texture_coordinate_normalization_y
-                        .data,
-                );
-            combined_attributes
-                .batch_id
-                .as_mut()
-                .unwrap()
-                .data
-                // TODO: Avoid cast
-                .append(&mut vec![batch_id.0 as FloatType; position_length]);
-
-            if index_offset == 0 {
-                indices.append(&mut constructed_geometry.indices);
-            } else {
-                for i in constructed_geometry.indices {
-                    indices.push(i + index_offset);
-                }
-            }
-
-            index_offset += position_length as u32;
-        }
 
         let mut material = material.clone();
         material.internal = Some(PolylineInternalMaterial {
@@ -198,14 +85,8 @@ pub fn transfer_batched_mesh(
                     coordinates: Vec3::new(0., 0., 0.),
                     crs: CRS::Geocentric,
                     material,
-                    geometry: to_transferable_geometry(
-                        &mut buf,
-                        navara_geometry::PolylineGeometry {
-                            attributes: combined_attributes,
-                            indices,
-                        },
-                    ),
-                    extent: combined_extent.unwrap(),
+                    geometry: geometry.clone(),
+                    extent: *extent,
                     transform: Transform::default(),
                     feature_id: None,
                     render_info: PolylineRenderInformation {
@@ -220,6 +101,8 @@ pub fn transfer_batched_mesh(
         }
 
         layer_store.add(layer_id.0.clone(), entity);
+
+        commands.entity(task_entity).insert(Deleted);
     }
 }
 
@@ -240,7 +123,11 @@ pub fn transfer_mesh(
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, feature_id, geometry, material) in &mut polylines {
-        if let Some((extent, geometry)) = triangulate_one_polyline(material, geometry) {
+        if let Some((extent, geometry)) = construct_polyline_feature(
+            material,
+            buf.remove_f32(&geometry.coords).unwrap(),
+            &geometry.crs,
+        ) {
             let mut material = material.clone();
             material.internal = Some(PolylineInternalMaterial {
                 min_max_heights: vec![0., 0.],
@@ -254,7 +141,7 @@ pub fn transfer_mesh(
                         coordinates: Vec3::new(0., 0., 0.),
                         crs: CRS::Geocentric,
                         material,
-                        geometry: to_transferable_geometry(&mut buf, geometry),
+                        geometry: TransferablePolylineGeometry::with_buf(&mut buf, geometry),
                         transform: Transform::default(),
                         feature_id: Some(entity),
                         render_info: PolylineRenderInformation {
@@ -272,30 +159,6 @@ pub fn transfer_mesh(
             layer_store.add(layer_id.0.clone(), entity);
         }
     }
-}
-
-fn triangulate_one_polyline(
-    material: &PolylineMaterial,
-    geometry: &PolylineGeometry,
-) -> Option<(Extent<f32, Radians>, navara_geometry::PolylineGeometry)> {
-    let mut latlngs = vec![];
-    let mut positions = vec![];
-    for c in &geometry.coords {
-        latlngs.push(geometry.crs.to_lng_lat(WGS84_32, *c));
-        positions.push(geometry.crs.to_lle(WGS84_32, *c, material.height));
-    }
-
-    let extent = Extent::from_points(&latlngs);
-
-    create_polyline_geometry(
-        WGS84_32,
-        PolylineGeometryOptions {
-            positions,
-            clamp_to_ground: material.clamp_to_ground,
-            ..Default::default()
-        },
-    )
-    .map(|g| (extent, g))
 }
 
 // TODO: This system is executed whenever a tile is added.

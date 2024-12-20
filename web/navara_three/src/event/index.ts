@@ -28,6 +28,7 @@ import {
   ReconstructableEntity,
   ElevationDecoder,
   ReturnedTransferablePolygonBatchedFeature,
+  ReturnedTransferablePolylineBatchedFeature,
 } from "@navara/engine";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import {
@@ -92,6 +93,9 @@ export type FeatureHandler = {
   getTransferablePolygonBatchedFeature: (
     bits: bigint,
   ) => ReturnedTransferablePolygonBatchedFeature | undefined;
+  getTransferablePolylineBatchedFeature: (
+    bits: bigint,
+  ) => ReturnedTransferablePolylineBatchedFeature | undefined;
 };
 
 export type MeshHandler = {

@@ -1,6 +1,9 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_ecs::{entity::Entity, world::EntityRef};
+use bevy_ecs::{
+    entity::Entity,
+    world::{EntityRef, Mut},
+};
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::ElevationDecoder;
 use navara_event::Events;
@@ -235,6 +238,11 @@ impl App {
     pub fn get_buffer_store(&self) -> Option<&BufferStore> {
         let world = self.app.world();
         world.get_resource::<BufferStore>()
+    }
+
+    pub fn get_buffer_store_mut(&mut self) -> Option<Mut<BufferStore>> {
+        let world = self.app.world_mut();
+        world.get_resource_mut::<BufferStore>()
     }
 
     pub fn get_batched_features(&self, batched_feature_id: u64) -> Option<Vec<EntityRef>> {

@@ -155,6 +155,9 @@ export default class ThreeView {
     getTransferablePolygonBatchedFeature: (bits) => {
       return this._core?.getTransferablePolygonBatchedFeature(bits);
     },
+    getTransferablePolylineBatchedFeature: (bits) => {
+      return this._core?.getTransferablePolylineBatchedFeature(bits);
+    },
   };
   private _meshHandler: MeshHandler = {
     setTileMeshPrepared: (handle: bigint) => {

@@ -30,10 +30,6 @@ fn coords(f: &[f64]) -> Vec3 {
     )
 }
 
-fn multi_coords(f: &[Vec<f64>]) -> Vec<Vec3> {
-    f.iter().map(|p| coords(p)).collect::<Vec<_>>()
-}
-
 fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<FloatType> {
     f.iter()
         .flat_map(|p| {
@@ -122,10 +118,7 @@ fn spawn_feature(
                 Value::LineString(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        PolylineGeometry {
-                            coords: multi_coords(f),
-                            crs: CRS::Geographic,
-                        },
+                        PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                         v.clone(),
                     ));
                 }
@@ -133,10 +126,7 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            PolylineGeometry {
-                                coords: multi_coords(f),
-                                crs: CRS::Geographic,
-                            },
+                            PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                             v.clone(),
                         ));
                     }

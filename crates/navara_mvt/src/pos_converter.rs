@@ -1,6 +1,6 @@
 use geo_types::Coord;
 use navara_core::TileXYZ;
-use navara_math::{FloatType, Vec3};
+use navara_math::FloatType;
 use std::f64::consts::PI;
 
 #[derive(Debug)]
@@ -39,17 +39,6 @@ impl PosConverter {
         let y = 360.0 / PI * (f64::atan(exp_value)) - 90.0;
 
         (x as FloatType, y as FloatType)
-    }
-
-    pub fn project_points_vec3(&mut self, points: &Vec<Coord<f32>>) -> Vec<Vec3> {
-        let mut ret = Vec::new();
-
-        for pt in points {
-            let (x, y) = self.project_point(pt);
-            ret.push(Vec3::new(x, y, 0.0 as FloatType));
-        }
-
-        ret
     }
 
     pub fn project_points(&mut self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {

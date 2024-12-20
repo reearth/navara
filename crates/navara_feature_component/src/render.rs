@@ -1,4 +1,4 @@
-use bevy_ecs::{component::Component, entity::Entity};
+use bevy_ecs::{component::Component, entity::Entity, system::ResMut};
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{Extent, Radians, CRS};
 use navara_geometry::TransferableFloatAttribute;
@@ -105,6 +105,68 @@ pub struct TransferablePolylineGeometry {
 }
 
 impl TransferablePolylineGeometry {
+    pub fn with_buf(
+        buf: &mut ResMut<BufferStore>,
+        geo: navara_geometry::PolylineGeometry,
+    ) -> TransferablePolylineGeometry {
+        let position = buf.new_f32(geo.attributes.position.data);
+        let start = buf.new_f32(geo.attributes.start.data);
+        let forward_offset = buf.new_f32(geo.attributes.forward_offset.data);
+        let start_normals = buf.new_f32(geo.attributes.start_normals.data);
+        let end_normal_and_texture_coordinate_normalization_x = buf.new_f32(
+            geo.attributes
+                .end_normal_and_texture_coordinate_normalization_x
+                .data,
+        );
+        let right_normal_and_texture_coordinate_normalization_y = buf.new_f32(
+            geo.attributes
+                .right_normal_and_texture_coordinate_normalization_y
+                .data,
+        );
+        let indices = buf.new_u32(geo.indices);
+
+        TransferablePolylineGeometry {
+            position: TransferableFloatAttribute {
+                data: position,
+                size: geo.attributes.position.size,
+            },
+            start: TransferableFloatAttribute {
+                data: start,
+                size: geo.attributes.start.size,
+            },
+            forward_offset: TransferableFloatAttribute {
+                data: forward_offset,
+                size: geo.attributes.forward_offset.size,
+            },
+            start_normals: TransferableFloatAttribute {
+                data: start_normals,
+                size: geo.attributes.start_normals.size,
+            },
+            end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute {
+                data: end_normal_and_texture_coordinate_normalization_x,
+                size: geo
+                    .attributes
+                    .end_normal_and_texture_coordinate_normalization_x
+                    .size,
+            },
+            right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute {
+                data: right_normal_and_texture_coordinate_normalization_y,
+                size: geo
+                    .attributes
+                    .right_normal_and_texture_coordinate_normalization_y
+                    .size,
+            },
+            batch_id: geo
+                .attributes
+                .batch_id
+                .map(|batch_id| TransferableFloatAttribute {
+                    data: buf.new_f32(batch_id.data),
+                    size: batch_id.size,
+                }),
+            indices,
+        }
+    }
+
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
         buf.remove(&self.position.data);
         buf.remove(&self.start.data);
