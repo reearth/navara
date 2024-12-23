@@ -31,7 +31,7 @@ pub struct TransferablePolygonBatchedFeature {
     pub holes_boundaries: Vec<usize>,
 
     #[wasm_bindgen(getter_with_clone)]
-    pub batch_ids: Vec<usize>,
+    pub batch_ids: Vec<u32>,
     #[wasm_bindgen(getter_with_clone)]
     pub expected_winding_orders: Vec<u8>,
 
@@ -54,7 +54,7 @@ impl TransferablePolygonBatchedFeature {
         holes_total_sizes: Vec<usize>,
         holes_sizes: Vec<usize>,
         holes_boundaries: Vec<usize>,
-        batch_ids: Vec<usize>,
+        batch_ids: Vec<u32>,
         expected_winding_orders: Vec<u8>,
         crs: CRS,
         length: usize,
@@ -75,7 +75,7 @@ impl TransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferBatchIds")]
-    pub fn transfer_batch_ids(&mut self) -> Vec<usize> {
+    pub fn transfer_batch_ids(&mut self) -> Vec<u32> {
         consume_vec(&mut self.batch_ids)
     }
 
@@ -130,7 +130,7 @@ impl TransferablePolygonBatchedFeature {
             outer_ring_sizes.push(hierarchy.outer_ring.len());
             outer_ring.append(&mut hierarchy.outer_ring);
 
-            batch_ids.push(batch_id);
+            batch_ids.push(batch_id as u32);
             expected_winding_orders
                 .push(Into::<WindingOrder>::into(hierarchy.expected_winding_order).0);
 

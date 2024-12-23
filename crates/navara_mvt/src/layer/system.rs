@@ -10,6 +10,8 @@ use navara_component::Deleted;
 use navara_core::{calc_transform, get_tile_pos_from_url};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
+    batch::BatchId,
+    batch::BatchTable,
     batch::BatchedFeature,
     id::FeatureId,
     point::PointMarker,
@@ -55,6 +57,7 @@ pub struct RenderedSingleFeature(Entity);
 #[allow(clippy::type_complexity)]
 pub fn construct_single_mvt(
     mut commands: Commands,
+    mut batch_table: ResMut<BatchTable>,
     mut buf: ResMut<BufferStore>,
     requesters: Query<
         (Entity, &SingleMvtDataRequesterMarker, &DataRequester),
@@ -82,6 +85,7 @@ pub fn construct_single_mvt(
         // TODO: Move this process to worker.
         if let Some(geometries) = construct_geometry(
             &mut commands,
+            &mut batch_table,
             &mut buf,
             &mvt_bin,
             &layer.layer_id,
@@ -203,6 +207,8 @@ pub fn delete_mvt_layer(
     mut rendered_tiles: Query<&mut RenderedTile>,
     entities_with_layerid: Query<(Entity, &LayerId)>,
     tc: Query<&TileCacheManager>,
+    mut batch_table: ResMut<BatchTable>,
+    batch_id: Query<&BatchId>,
 ) {
     for (e, d) in &deleted {
         let entities = layer_store.get(&d.0);
@@ -220,6 +226,9 @@ pub fn delete_mvt_layer(
         // delete all entities with this layer id
         for (entity, l_id) in entities_with_layerid.iter() {
             if l_id.0 == d.0 {
+                if batch_id.get(entity).is_ok() {
+                    batch_table.remove(&batch_id.get(entity).unwrap().0);
+                }
                 commands.entity(entity).despawn();
             }
         }
@@ -238,11 +247,13 @@ pub fn delete_mvt_layer(
                 resource.destroy(
                     &mut commands,
                     &mut buf,
+                    &mut batch_table,
                     &tc,
                     &feature_ids,
                     &batched_features,
                     &mut features,
                     &mut rendered_tiles,
+                    &batch_id,
                 );
             }
             commands.entity(e).despawn();

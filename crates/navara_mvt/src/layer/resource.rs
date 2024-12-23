@@ -4,7 +4,10 @@ use bevy_ecs::{
     system::{Commands, Query},
 };
 use navara_buffer_store::BufferStore;
-use navara_feature_component::{batch::BatchedFeature, id::FeatureId, render::RenderableFeature};
+use navara_feature_component::{
+    batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId,
+    render::RenderableFeature,
+};
 
 use crate::tile::RenderedTile;
 
@@ -22,11 +25,13 @@ impl LayerResources {
         &self,
         commands: &mut Commands,
         buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
         tc: &Query<&TileCacheManager>,
         features: &Query<&FeatureId>,
         batched_features: &Query<&BatchedFeature>,
         renderable_features: &mut Query<&mut RenderableFeature>,
         rendered_tiles: &mut Query<&mut RenderedTile>,
+        batch_id: &Query<&BatchId>,
     ) {
         if let Ok(tc) = tc.get(self.tile_cache_manager) {
             for e in tc.rendered_tile_caches.values() {
@@ -34,7 +39,9 @@ impl LayerResources {
                     r.destroy(
                         commands,
                         buf,
+                        batch_table,
                         features,
+                        batch_id,
                         batched_features,
                         renderable_features,
                     );

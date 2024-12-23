@@ -3,8 +3,8 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
-    batch::BatchedFeature, id::FeatureId, point::PointMarker, polygon::PolygonMarker,
-    polyline::PolylineMarker, render::RenderableFeature,
+    batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId, point::PointMarker,
+    polygon::PolygonMarker, polyline::PolylineMarker, render::RenderableFeature,
 };
 use navara_frame::FrameManager;
 use navara_math::Transform;
@@ -125,6 +125,7 @@ fn attach_rendered(commands: &mut Commands, e: Entity) {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
+    mut batch_table: ResMut<BatchTable>,
     mut buf: ResMut<BufferStore>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
@@ -166,6 +167,7 @@ pub fn transfer_mesh(
             let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
             if let Some(result) = construct_geometry(
                 &mut commands,
+                &mut batch_table,
                 &mut buf,
                 &mvt_bin,
                 &layer.layer_id,
@@ -199,6 +201,7 @@ pub fn transfer_mesh(
 pub fn clear_caches(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
+    mut batch_table: ResMut<BatchTable>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
@@ -206,6 +209,7 @@ pub fn clear_caches(
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
     batched_features: Query<&BatchedFeature>,
     features: Query<&FeatureId>,
+    batch_id: Query<&BatchId>,
     mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     for (rendered_tile_entity_id, mut rendered_tile, _) in
@@ -243,7 +247,9 @@ pub fn clear_caches(
             let removed_features = rendered_tile.destroy(
                 &mut commands,
                 &mut buf,
+                &mut batch_table,
                 &features,
+                &batch_id,
                 &batched_features,
                 &mut renderable_features,
             );

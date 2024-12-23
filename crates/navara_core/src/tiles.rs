@@ -94,7 +94,7 @@ pub fn is_tile_url(s: &str) -> bool {
 // from the end of a URL in the format .../z/x/y.mvt
 pub fn get_tile_pos_from_url(url: &str) -> Option<TileXYZ> {
     // Define a regular expression to match the three numbers in the URL
-    let re = Regex::new(r"/(\d+)/(\d+)/(\d+)\.mvt$").unwrap();
+    let re = Regex::new(r"/(\d+)/(\d+)/(\d+)\.(mvt|pbf)$").unwrap();
 
     if let Some(captures) = re.captures(url) {
         // Parse and assign the three values to z, x, and y respectively

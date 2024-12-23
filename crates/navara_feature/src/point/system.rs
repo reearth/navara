@@ -6,8 +6,9 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
 use navara_feature_component::{
+    batch::BatchId,
     id::FeatureId,
-    render::{RenderInformation, RenderableFeature},
+    render::{RenderInformation, RenderableFeature, TransferableSingleGeometry},
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::PointMaterial;
@@ -26,6 +27,7 @@ pub fn transfer_mesh(
         (
             Entity,
             &LayerId,
+            &BatchId,
             Option<&mut FeatureId>,
             &PointGeometry,
             &PointMaterial,
@@ -34,7 +36,7 @@ pub fn transfer_mesh(
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, feature_id, geometry, material) in &mut points {
+    for (entity, layer_id, batch_id, feature_id, geometry, material) in &mut points {
         let position = geometry
             .crs
             .to_vec3(WGS84_32, geometry.coords, material.height);
@@ -54,6 +56,9 @@ pub fn transfer_mesh(
                     feature_id: entity,
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
+                    },
+                    geometry: TransferableSingleGeometry {
+                        batch_id: Some(batch_id.0),
                     },
                 },
             ))
@@ -95,6 +100,7 @@ pub fn update_height_by_terrain(
                 transform,
                 feature_id,
                 render_info,
+                geometry: _,
             } => {
                 if !material.clamp_to_ground {
                     continue;

@@ -197,3 +197,31 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct TransferableSingleGeometry {
+    #[wasm_bindgen(getter_with_clone)]
+    pub batch_id: Option<u32>,
+}
+
+impl From<TransferableSingleGeometry>
+    for navara_feature_component::render::TransferableSingleGeometry
+{
+    fn from(val: TransferableSingleGeometry) -> Self {
+        navara_feature_component::render::TransferableSingleGeometry {
+            batch_id: val.batch_id,
+        }
+    }
+}
+impl<'a> From<&'a navara_feature_component::render::TransferableSingleGeometry>
+    for TransferableSingleGeometry
+{
+    fn from(
+        val: &'a navara_feature_component::render::TransferableSingleGeometry,
+    ) -> TransferableSingleGeometry {
+        TransferableSingleGeometry {
+            batch_id: val.batch_id,
+        }
+    }
+}
