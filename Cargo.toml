@@ -10,7 +10,6 @@ members = [
 bevy_app = "0.14.2"
 bevy_ecs = "0.14.2"
 bevy_input = "0.14.2"
-bevy_time = "0.14.2"
 bevy_log = "0.14.2"
 bevy_math = "0.14.2"
 bevy_transform = "0.14.2"

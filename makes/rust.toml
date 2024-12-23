@@ -40,7 +40,7 @@ wasm-pack build --target web
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web --features \"debug\"" --poll
 ''']
 
 [tasks.doc-rust]
