@@ -3,12 +3,13 @@ use bevy_ecs::{
     query::{Added, Changed, Or},
     system::{Commands, Query, Res, ResMut},
 };
+
 use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
-    billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
-    polygon::PolygonGeometry, polygon::UpdatePolygon, polyline::PolylineGeometry,
-    render::RenderableFeature,
+    batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, model::ModelGeometry,
+    point::PointGeometry, polygon::PolygonGeometry, polygon::UpdatePolygon,
+    polyline::PolylineGeometry, render::RenderableFeature,
 };
 
 use navara_buffer_store::BufferStore;
@@ -61,6 +62,7 @@ fn spawn_feature(
     appearances: &[Appearance],
     geometry: &Geometry,
     layer_id: &str,
+    batch_id: u32,
 ) {
     for appearance in appearances {
         match appearance {
@@ -68,6 +70,7 @@ fn spawn_feature(
                 Value::Point(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
+                        BatchId(batch_id),
                         PointGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -79,6 +82,7 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
+                            BatchId(batch_id),
                             PointGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -93,6 +97,7 @@ fn spawn_feature(
                 Value::Point(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
+                        BatchId(batch_id),
                         BillboardGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -104,6 +109,7 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
+                            BatchId(batch_id),
                             BillboardGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -118,6 +124,7 @@ fn spawn_feature(
                 Value::LineString(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
+                        BatchId(batch_id),
                         PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                         v.clone(),
                     ));
@@ -126,6 +133,7 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
+                            BatchId(batch_id),
                             PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                             v.clone(),
                         ));
@@ -137,6 +145,7 @@ fn spawn_feature(
                 Value::Polygon(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
+                        BatchId(batch_id),
                         PolygonGeometry {
                             hierarchy: Hierarchy {
                                 outer_ring: f
@@ -155,6 +164,7 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
+                            BatchId(batch_id),
                             PolygonGeometry {
                                 hierarchy: Hierarchy {
                                     outer_ring: multi_flat_coords(&f[0]),
@@ -174,6 +184,7 @@ fn spawn_feature(
                 Value::Point(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
+                        BatchId(batch_id),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -185,6 +196,7 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
+                            BatchId(batch_id),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -207,6 +219,7 @@ fn spawn_feature(
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
+    mut batch_table: ResMut<BatchTable>,
     mut buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
@@ -218,35 +231,48 @@ pub fn construct_feature(
                 GeoJson::FeatureCollection(fs) => {
                     for f in fs {
                         if let Some(g) = &f.geometry {
-                            spawn_feature(
-                                &mut commands,
-                                &mut buf,
-                                appearances,
-                                g,
-                                layer.layer_id.as_str(),
-                            );
+                            if let Some(prop) = &f.properties {
+                                if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                                    spawn_feature(
+                                        &mut commands,
+                                        &mut buf,
+                                        appearances,
+                                        g,
+                                        layer.layer_id.as_str(),
+                                        batch_id,
+                                    );
+                                }
+                            }
                         }
                     }
                 }
                 GeoJson::Feature(f) => {
                     if let Some(g) = &f.geometry {
+                        if let Some(prop) = &f.properties {
+                            if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                                spawn_feature(
+                                    &mut commands,
+                                    &mut buf,
+                                    appearances,
+                                    g,
+                                    layer.layer_id.as_str(),
+                                    batch_id,
+                                );
+                            }
+                        }
+                    }
+                }
+                GeoJson::Geometry(g) => {
+                    if let Some(batch_id) = batch_table.add("{}".to_string()) {
                         spawn_feature(
                             &mut commands,
                             &mut buf,
                             appearances,
                             g,
                             layer.layer_id.as_str(),
+                            batch_id,
                         );
                     }
-                }
-                GeoJson::Geometry(g) => {
-                    spawn_feature(
-                        &mut commands,
-                        &mut buf,
-                        appearances,
-                        g,
-                        layer.layer_id.as_str(),
-                    );
                 }
             }
         }
@@ -360,7 +386,7 @@ pub fn update_geo_json_layer(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn delete_geo_json_layer(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
@@ -369,6 +395,8 @@ pub fn delete_geo_json_layer(
     mut features: Query<&mut RenderableFeature>,
     mut buf: ResMut<BufferStore>,
     entities_with_layerid: Query<(Entity, &LayerId)>,
+    mut batch_table: ResMut<BatchTable>,
+    batch_id: Query<&BatchId>,
 ) {
     for (e, d) in &deleted {
         let entities = layer_store.get(&d.0);
@@ -394,6 +422,10 @@ pub fn delete_geo_json_layer(
         // delete all entities with this layer id
         for (entity, l_id) in entities_with_layerid.iter() {
             if l_id.0 == d.0 {
+                if batch_id.get(entity).is_ok() {
+                    batch_table.remove(&batch_id.get(entity).unwrap().0);
+                }
+
                 commands.entity(entity).despawn();
             }
         }
@@ -541,6 +573,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -555,6 +588,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -646,6 +680,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -660,6 +695,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -757,6 +793,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -771,6 +808,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -863,6 +901,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -877,6 +916,7 @@ mod test {
                     transform,
                     feature_id: _,
                     render_info: _,
+                    geometry: _,
                 } => Some(transform.translation),
                 _ => None,
             },

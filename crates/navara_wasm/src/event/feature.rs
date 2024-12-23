@@ -3,7 +3,9 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    geometry::{TransferablePolygonGeometry, TransferablePolylineGeometry},
+    geometry::{
+        TransferablePolygonGeometry, TransferablePolylineGeometry, TransferableSingleGeometry,
+    },
     Transform,
 };
 use navara_wasm_types::{
@@ -17,6 +19,8 @@ pub struct PointMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub material: PointMaterial,
     pub transform: Transform,
+    #[wasm_bindgen(getter_with_clone)]
+    pub geometry: TransferableSingleGeometry,
 }
 
 #[wasm_bindgen]
@@ -25,6 +29,8 @@ pub struct BillboardMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub material: BillboardMaterial,
     pub transform: Transform,
+    #[wasm_bindgen(getter_with_clone)]
+    pub geometry: TransferableSingleGeometry,
 }
 
 #[wasm_bindgen]
@@ -54,6 +60,8 @@ pub struct ModelMesh {
     pub material: ModelMaterial,
     pub transform: Transform,
     pub bin: Option<Handle>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub geometry: TransferableSingleGeometry,
 }
 
 #[wasm_bindgen]
@@ -81,10 +89,12 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 feature_id: _,
                 render_info: _,
+                geometry,
             } => Self {
                 point: Some(PointMesh {
                     material: material.into(),
                     transform: transform.into(),
+                    geometry: geometry.into(),
                 }),
                 ..Default::default()
             },
@@ -95,10 +105,12 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 feature_id: _,
                 render_info: _,
+                geometry,
             } => Self {
                 billboard: Some(BillboardMesh {
                     material: material.into(),
                     transform: transform.into(),
+                    geometry: geometry.into(),
                 }),
                 ..Default::default()
             },
@@ -144,11 +156,13 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 feature_id: _,
                 render_info: _,
                 bin,
+                geometry,
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
                     transform: transform.into(),
                     bin: bin.as_ref().map(|v| v.0),
+                    geometry: geometry.into(),
                 }),
                 ..Default::default()
             },

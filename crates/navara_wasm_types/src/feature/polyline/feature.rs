@@ -14,7 +14,7 @@ pub struct TransferablePolylineBatchedFeature {
     pub points_sizes: Vec<usize>,
 
     #[wasm_bindgen(getter_with_clone)]
-    pub batch_ids: Vec<usize>,
+    pub batch_ids: Vec<u32>,
 
     #[wasm_bindgen(getter_with_clone)]
     pub crs: CRS,
@@ -31,7 +31,7 @@ impl TransferablePolylineBatchedFeature {
     pub fn constructor(
         points: Vec<FloatType>,
         points_sizes: Vec<usize>,
-        batch_ids: Vec<usize>,
+        batch_ids: Vec<u32>,
         crs: CRS,
         length: usize,
     ) -> Self {
@@ -46,7 +46,7 @@ impl TransferablePolylineBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferBatchIds")]
-    pub fn transfer_batch_ids(&mut self) -> Vec<usize> {
+    pub fn transfer_batch_ids(&mut self) -> Vec<u32> {
         consume_vec(&mut self.batch_ids)
     }
 
@@ -62,7 +62,7 @@ impl TransferablePolylineBatchedFeature {
 }
 
 impl TransferablePolylineBatchedFeature {
-    pub fn new<I: Iterator<Item = (usize, Vec<FloatType>)>>(geometries: I, length: usize) -> Self {
+    pub fn new<I: Iterator<Item = (u32, Vec<FloatType>)>>(geometries: I, length: usize) -> Self {
         let mut points = Vec::with_capacity(length);
         let mut points_sizes = Vec::with_capacity(length);
         let mut batch_ids = Vec::with_capacity(length);
@@ -166,9 +166,9 @@ mod test {
                 vec![20., 20., 20.],
         ];
 
-        struct BatchedFeature(usize, Vec<Vec<FloatType>>);
+        struct BatchedFeature(u32, Vec<Vec<FloatType>>);
         impl Iterator for BatchedFeature {
-            type Item = (usize, Vec<FloatType>);
+            type Item = (u32, Vec<FloatType>);
             fn next(&mut self) -> Option<Self::Item> {
                 if self.1.is_empty() {
                     return None;

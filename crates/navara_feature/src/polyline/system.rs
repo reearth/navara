@@ -8,10 +8,11 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::CRS;
 use navara_feature_component::{
-    batch::{BatchId, BatchedFeature},
+    batch::BatchedFeature,
     id::FeatureId,
     polyline::construct_polyline_feature,
     render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
+    BatchedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
@@ -118,7 +119,7 @@ pub fn transfer_mesh(
             &PolylineGeometry,
             &PolylineMaterial,
         ),
-        (Added<PolylineGeometry>, Without<BatchId>),
+        (Added<PolylineGeometry>, Without<BatchedFeatureMarker>),
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
