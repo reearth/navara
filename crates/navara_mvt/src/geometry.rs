@@ -5,6 +5,7 @@ use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
     batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, id::FeatureId,
     point::PointGeometry, polygon::PolygonGeometry, polyline::PolylineGeometry,
+    BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
@@ -350,6 +351,7 @@ fn construct_line_geometry<A: Component + Clone>(
     let e = commands
         .spawn((
             LayerId(layer_id.to_owned()),
+            BatchedFeatureMarker,
             PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
             appearance.clone(),
             BatchId(*batch_id),
@@ -413,6 +415,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
 
     let entity = commands.spawn((
         LayerId(layer_id.to_owned()),
+        BatchedFeatureMarker,
         PolygonGeometry {
             hierarchy: Hierarchy {
                 outer_ring: outer_vec,

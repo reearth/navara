@@ -19,9 +19,10 @@ use navara_tile_component::{
 };
 
 use navara_feature_component::{
-    batch::{BatchId, BatchedFeature},
+    batch::BatchedFeature,
     id::FeatureId,
     render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry},
+    BatchedFeatureMarker,
 };
 use navara_worker::construct_polygon_batched_feature::{
     ConstructPolygonBatchedFeatureMarker, ConstructPolygonBatchedFeatureParameters,
@@ -127,7 +128,7 @@ pub fn transfer_mesh(
             &mut PolygonGeometry,
             &PolygonMaterial,
         ),
-        (Added<PolygonGeometry>, Without<BatchId>),
+        (Added<PolygonGeometry>, Without<BatchedFeatureMarker>),
     >,
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
