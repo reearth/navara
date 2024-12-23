@@ -286,8 +286,11 @@ export default class ThreeView {
       const t = options.container || this.renderer.domElement.parentElement;
       if (t) {
         this._stats = new RendererStats({
-          beginDrawCalls: () => this.renderer.info.reset(),
-          endDrawCalls: () => this.renderer.info.render.calls,
+          beginRender: () => this.renderer.info.reset(),
+          endRender: () => ({
+            ...this.renderer.info.render,
+            memGeometries: this.renderer.info.memory.geometries,
+          }),
         });
         t.appendChild(this._stats.dom);
       }
