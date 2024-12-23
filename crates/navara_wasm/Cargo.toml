@@ -7,6 +7,10 @@ license = "MIT/Apache-2.0"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+debug = ["navara_ecs/debug"]
+
 [dependencies]
 wasm-bindgen.workspace = true
 

@@ -1,6 +1,5 @@
 use bevy_app::prelude::*;
 use bevy_ecs::system::Commands;
-use bevy_time::TimePlugin;
 use navara_buffer_store::BufferStorePlugin;
 use navara_camera::CameraPlugin;
 use navara_cesium3dtiles::Cesium3dTilesPlugin;
@@ -24,8 +23,8 @@ pub struct Plugin;
 impl bevy_app::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // bevy plugins
+        #[cfg(feature = "debug")]
         app.add_plugins(bevy_log::LogPlugin::default());
-        app.add_plugins(TimePlugin);
 
         // custom plugins
         app.add_plugins(FramePlugin);

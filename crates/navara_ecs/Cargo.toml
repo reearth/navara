@@ -4,11 +4,14 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
 
+[features]
+default = []
+debug = ["dep:bevy_log"]
+
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
-bevy_log.workspace = true
-bevy_time.workspace = true
+bevy_log = { workspace = true, optional = true }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_camera = { path = "../navara_camera" }
 navara_data_requester = { path = "../navara_data_requester" }
