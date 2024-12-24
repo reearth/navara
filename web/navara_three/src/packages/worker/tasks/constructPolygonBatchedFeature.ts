@@ -28,6 +28,7 @@ export async function constructPolygonBatchedFeature(
   }
 
   const { result, transfers } = transferConstructedPolygonGeometry(geometry);
+  geometry.drop();
 
   return transfer(result, transfers);
 }

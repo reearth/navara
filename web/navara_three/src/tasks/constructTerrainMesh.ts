@@ -1,9 +1,9 @@
 import {
+  ReturnedConstructedTerrainMeshLike,
   TransferableMartiniLike,
   TransferableRasterDEMDataLike,
   TransferableTileLike,
 } from "@navara/core";
-import type { ReturnedConstructedTerrainMesh } from "@navara/engine";
 
 import { queueTask } from "./queueTask";
 
@@ -13,8 +13,7 @@ export async function constructTerrainMesh(
   rasterDEMDataLike: TransferableRasterDEMDataLike,
   martiniLike: TransferableMartiniLike,
 ): Promise<{
-  result: ReturnedConstructedTerrainMesh;
-  martini: TransferableMartiniLike;
+  result: ReturnedConstructedTerrainMeshLike;
 }> {
   const result = await queueTask(
     "constructTerrainMesh",

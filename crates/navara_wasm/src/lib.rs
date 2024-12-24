@@ -87,43 +87,64 @@ impl Core {
     pub fn get_buffer_u8(&self, handle: i32) -> Option<js_sys::Uint8Array> {
         let buf = self.app.get_buffer_u8(handle)?;
 
-        Some(js_sys::Uint8Array::from(buf))
-        // unsafe { Some(js_sys::Uint8Array::view(buf)) } // zero copy
+        Some(copy_u8_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferU32)]
     pub fn get_buffer_u32(&self, handle: i32) -> Option<js_sys::Uint32Array> {
         let buf = self.app.get_buffer_u32(handle)?;
 
-        Some(js_sys::Uint32Array::from(buf))
-        // unsafe { Some(js_sys::Uint32Array::view(buf)) } // zero copy
+        Some(copy_u32_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferF32)]
     pub fn get_buffer_f32(&self, handle: i32) -> Option<js_sys::Float32Array> {
         let buf = self.app.get_buffer_f32(handle)?;
 
-        Some(js_sys::Float32Array::from(buf))
-        // unsafe { Some(js_sys::Float32Array::view(buf)) } // zero copy
+        Some(copy_f32_array(buf))
     }
 
     #[wasm_bindgen(js_name = setBufferU8)]
-    pub fn set_buffer_u8(&mut self, handle: i32, bits: u64, data: &[u8]) {
-        self.app.set_buffer_u8(handle, bits, data.to_vec());
+    pub fn set_buffer_u8(
+        &mut self,
+        handle: i32,
+        bits: u64,
+        byte_length: usize,
+        f: &js_sys::Function,
+    ) {
+        unsafe {
+            self.app
+                .set_buffer_u8(handle, bits, transfer_u8_array(byte_length, f));
+        }
     }
 
     #[wasm_bindgen(js_name = newBufferU8)]
-    pub fn new_buffer_u8(&mut self, data: &[u8]) -> Option<Handle> {
-        self.app.new_buffer_u8(data.to_vec())
+    pub fn new_buffer_u8(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
+        unsafe { self.app.new_buffer_u8(transfer_u8_array(byte_length, f)) }
     }
 
     #[wasm_bindgen(js_name = newBufferU32)]
-    pub fn new_buffer_u32(&mut self, data: &[u32]) -> Option<Handle> {
-        self.app.new_buffer_u32(data.to_vec())
+    pub fn new_buffer_u32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
+        unsafe { self.app.new_buffer_u32(transfer_u32_array(byte_length, f)) }
     }
 
     #[wasm_bindgen(js_name = newBufferF32)]
-    pub fn new_buffer_f32(&mut self, data: &[f32]) -> Option<Handle> {
+    pub fn new_buffer_f32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
+        unsafe { self.app.new_buffer_f32(transfer_f32_array(byte_length, f)) }
+    }
+
+    #[wasm_bindgen(js_name = newBufferU8Cloned)]
+    pub fn new_buffer_u8_cloned(&mut self, data: &[u8]) -> Option<Handle> {
+        self.app.new_buffer_u8(data.to_vec())
+    }
+
+    #[wasm_bindgen(js_name = newBufferU32Cloned)]
+    pub fn new_buffer_u32_cloned(&mut self, data: &[u32]) -> Option<Handle> {
+        self.app.new_buffer_u32(data.to_vec())
+    }
+
+    #[wasm_bindgen(js_name = newBufferF32Cloned)]
+    pub fn new_buffer_f32_cloned(&mut self, data: &[f32]) -> Option<Handle> {
         self.app.new_buffer_f32(data.to_vec())
     }
 
@@ -308,9 +329,12 @@ impl Core {
 
         let mut buf_store = self.app.get_buffer_store_mut()?;
         for (coords, batch_id) in coords_handle_and_batch_ids {
-            let mut points = buf_store.remove_f32(&coords)?.to_vec();
+            // `coords` comes from Rust for sure.
+            unsafe {
+                let mut points = buf_store.remove_f32(&coords)?.to_vec();
 
-            transferable.add(&mut points, &BatchId(batch_id));
+                transferable.add(&mut points, &BatchId(batch_id));
+            }
         }
 
         material.map(|material| ReturnedTransferablePolylineBatchedFeature {

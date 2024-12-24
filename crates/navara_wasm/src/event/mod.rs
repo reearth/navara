@@ -38,6 +38,7 @@ pub struct ObjectTransformEvent {
     pub transform: Transform,
 }
 
+// TODO: Use TypedArray to avoid unnecessary clone.
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct Transform {

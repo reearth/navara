@@ -2,19 +2,15 @@ use navara_feature_component::batch::BatchId;
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
-use crate::{consume_vec, CRS};
+use crate::{copy_f32_array, copy_u32_array, transfer_f32_array, transfer_u32_array, CRS};
 
 /// To transfer the batched feature efficiently, the all feature's properties are managed as one-dimensional array.
 #[wasm_bindgen]
 #[derive(Debug, Default)]
 pub struct TransferablePolylineBatchedFeature {
-    #[wasm_bindgen(getter_with_clone)]
-    pub points: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub points_sizes: Vec<usize>,
-
-    #[wasm_bindgen(getter_with_clone)]
-    pub batch_ids: Vec<u32>,
+    points: Vec<FloatType>,
+    points_sizes: Vec<u32>,
+    batch_ids: Vec<u32>,
 
     #[wasm_bindgen(getter_with_clone)]
     pub crs: CRS,
@@ -28,36 +24,49 @@ pub struct TransferablePolylineBatchedFeature {
 impl TransferablePolylineBatchedFeature {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
-    pub fn constructor(
-        points: Vec<FloatType>,
-        points_sizes: Vec<usize>,
-        batch_ids: Vec<u32>,
-        crs: CRS,
-        length: usize,
-    ) -> Self {
+    pub fn constructor(crs: CRS, length: usize) -> Self {
         Self {
-            points,
-            points_sizes,
-            batch_ids,
+            points: vec![],
+            points_sizes: vec![],
+            batch_ids: vec![],
             crs,
             length,
             cur_idx: 0,
         }
     }
 
+    #[wasm_bindgen(js_name = "setBatchIds")]
+    pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.batch_ids = transfer_u32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setPoints")]
+    pub fn set_points(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.points = transfer_f32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setPointsSizes")]
+    pub fn set_points_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.points_sizes = transfer_u32_array(byte_length, f) }
+    }
+
+    pub fn drop(self) {
+        drop(self.points);
+        drop(self.points_sizes);
+        drop(self.batch_ids);
+    }
+
     #[wasm_bindgen(js_name = "transferBatchIds")]
-    pub fn transfer_batch_ids(&mut self) -> Vec<u32> {
-        consume_vec(&mut self.batch_ids)
+    pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.batch_ids)
     }
 
     #[wasm_bindgen(js_name = "transferPoints")]
-    pub fn transfer_points(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.points)
+    pub fn transfer_points(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.points)
     }
 
     #[wasm_bindgen(js_name = "transferPointsSizes")]
-    pub fn transfer_points_sizes(&mut self) -> Vec<usize> {
-        consume_vec(&mut self.points_sizes)
+    pub fn transfer_points_sizes(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.points_sizes)
     }
 }
 
@@ -68,7 +77,7 @@ impl TransferablePolylineBatchedFeature {
         let mut batch_ids = Vec::with_capacity(length);
 
         for (batch_id, mut ps) in geometries {
-            points_sizes.push(ps.len());
+            points_sizes.push(ps.len() as u32);
             points.append(&mut ps);
 
             batch_ids.push(batch_id);
@@ -100,33 +109,20 @@ impl TransferablePolylineBatchedFeature {
     }
 
     pub fn add(&mut self, points: &mut Vec<FloatType>, batch_id: &BatchId) {
-        self.points_sizes.push(points.len());
+        self.points_sizes.push(points.len() as u32);
         self.points.append(points);
 
         self.batch_ids.push(batch_id.0);
     }
 
     pub fn to_transferable_by_index(&mut self, idx: usize) -> (Vec<FloatType>, BatchId) {
-        let points = self.points.drain(..self.points_sizes[idx]).collect();
+        let points = self
+            .points
+            .drain(..self.points_sizes[idx] as usize)
+            .collect();
         let batch_id = BatchId(self.batch_ids[idx]);
 
         (points, batch_id)
-    }
-
-    /// Move all items into new self.
-    pub fn consume(&mut self) -> Self {
-        let points = consume_vec(&mut self.points);
-        let points_sizes = consume_vec(&mut self.points_sizes);
-        let batch_ids = consume_vec(&mut self.batch_ids);
-
-        TransferablePolylineBatchedFeature {
-            points,
-            points_sizes,
-            batch_ids,
-            crs: CRS::default(),
-            length: self.length,
-            ..Default::default()
-        }
     }
 }
 

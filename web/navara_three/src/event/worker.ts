@@ -33,7 +33,6 @@ import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatched
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
-import type { MartiniCache } from "../type";
 
 import type {
   BufferLoader,
@@ -48,7 +47,6 @@ export async function processWorkerTaskDelegatedEvent(
   tileHandler: TileHandler,
   featureHandler: FeatureHandler,
   workerTaskHandler: WorkerTaskHandler,
-  martiniCache: MartiniCache,
 ) {
   if (event.task.construct_terrain_mesh) {
     return await processConstructTerrainMesh(
@@ -58,7 +56,6 @@ export async function processWorkerTaskDelegatedEvent(
       bufHandler,
       tileHandler,
       workerTaskHandler,
-      martiniCache,
     );
   }
   if (event.task.upsample_terrain_mesh) {
@@ -100,38 +97,20 @@ async function processConstructTerrainMesh(
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
-  martiniCache: MartiniCache,
 ) {
   const bytes = bufHandler.u8(params.bytes_handle);
   if (!bytes) {
     return;
   }
 
-  const martiniId = params.martini_id[0];
-  const cachedMartinis = martiniCache.get(martiniId);
-
-  // workerpool doesn't support initialize worker resource, so we need to manage heavy resource in main thread.
-  // MARTINI coords is very heavy task, so we wanna avoid to clone it every frame.
-  // We will reuse cloned it and transfer it, then it should be back after the task is completed.
   const martini = (() => {
-    // Pop cached MARTINI instance if it's exist.
-    if (cachedMartinis && cachedMartinis.length > 1) {
-      const cachedMartini = cachedMartinis.pop();
-      return cachedMartini;
-    }
-    // Clone original MARTINI instance if there is no instance.
-    if (cachedMartinis) {
-      const v = cachedMartinis[0].clone();
-      return v;
-    }
     const martini = tileHandler.getMartini(params.martini_id);
     if (!martini) return;
     const martiniLike = new TransferableMartiniLike(
-      martini.coords,
+      martini.transfer_coords(),
       martini.size,
     );
     martini.free();
-    martiniCache.set(martiniId, [martiniLike.clone()]);
     return martiniLike;
   })();
   if (!martini) {
@@ -148,20 +127,16 @@ async function processConstructTerrainMesh(
   if (!elevationDecoder) {
     return;
   }
-  const { result, martini: transferredMartini } = await constructTerrainMesh(
+  const { result } = await constructTerrainMesh(
     bytes,
     new TransferableTileLike(tile),
     new TransferableRasterDEMDataLike(elevationDecoder),
     martini,
   );
 
-  // MARTINI's coords is very heavy, so reuse multiple the instance.
-  // And it should be back after the task.
-  martiniCache.get(martiniId)?.push(transferredMartini);
-
-  const vertices = bufHandler.newF32(result.geometry.vertices);
-  const uvs = bufHandler.newF32(result.geometry.uvs);
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const vertices = bufHandler.newF32(result.vertices);
+  const uvs = bufHandler.newF32(result.uvs);
+  const indices = bufHandler.newU32(result.indices);
   const heights = bufHandler.newF32(result.heights);
   if (!vertices || !uvs || !indices || !heights) {
     return;
@@ -234,9 +209,9 @@ async function processUpsampleTerrainMesh(
     upsamplableTerrainGeometry,
   );
 
-  const vertices = bufHandler.newF32(result.geometry.vertices);
-  const uvs = bufHandler.newF32(result.geometry.uvs);
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const vertices = bufHandler.newF32(result.vertices);
+  const uvs = bufHandler.newF32(result.uvs);
+  const indices = bufHandler.newU32(result.indices);
   const heights = bufHandler.newF32(result.heights);
   if (!vertices || !uvs || !indices || !heights) {
     return;
@@ -275,44 +250,42 @@ async function processConstructPolygonBatchedFeature(
   if (!transferable) return;
 
   const result = await constructPolygonBatchedFeature(
-    new TransferablePolygonBatchedFeatureLike(transferable.transferable()),
+    new TransferablePolygonBatchedFeatureLike(transferable),
     new PolygonMaterialLike(transferable.material),
   );
 
   if (
     !result ||
-    !result.geometry.attributes.batch_id ||
-    !result.geometry.attributes.normal ||
-    !result.geometry.attributes.scale_normal_and_cap
+    !result.batch_id ||
+    !result.normal ||
+    !result.scale_normal_and_cap
   )
     return;
 
-  const batchId = bufHandler.newF32(result.geometry.attributes.batch_id.data);
-  const normal = bufHandler.newF32(result.geometry.attributes.normal.data);
-  const position = bufHandler.newF32(result.geometry.attributes.position.data);
-  const scaleNormalAndCap = bufHandler.newF32(
-    result.geometry.attributes.scale_normal_and_cap.data,
-  );
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const batchId = bufHandler.newF32(result.batch_id);
+  const normal = bufHandler.newF32(result.normal);
+  const position = bufHandler.newF32(result.position);
+  const scaleNormalAndCap = bufHandler.newF32(result.scale_normal_and_cap);
+  const indices = bufHandler.newU32(result.indices);
   if (!batchId || !normal || !position || !scaleNormalAndCap || !indices) {
     return;
   }
 
   const transferableBatchId = new TransferableFloatAttribute(
     batchId,
-    result.geometry.attributes.batch_id.size,
+    result.batch_id_size ?? 0,
   );
   const transferableNormal = new TransferableFloatAttribute(
     normal,
-    result.geometry.attributes.normal.size,
+    result.normal_size ?? 0,
   );
   const transferablePosition = new TransferableFloatAttribute(
     position,
-    result.geometry.attributes.position.size,
+    result.position_size,
   );
   const transferableScaleNormalAndCap = new TransferableFloatAttribute(
     scaleNormalAndCap,
-    result.geometry.attributes.scale_normal_and_cap.size,
+    result.scale_normal_and_cap_size ?? 0,
   );
   const geometry = new TransferablePolygonGeometry(
     transferablePosition,
@@ -357,30 +330,26 @@ async function processConstructPolylineBatchedFeature(
   if (!transferable) return;
 
   const result = await constructPolylineBatchedFeature(
-    new TransferablePolylineBatchedFeatureLike(transferable.transferable()),
+    new TransferablePolylineBatchedFeatureLike(transferable),
     new PolylineMaterialLike(transferable.material),
   );
 
-  if (!result || !result.geometry.attributes.batch_id) return;
+  transferable.free();
 
-  const position = bufHandler.newF32(result.geometry.attributes.position.data);
-  const start = bufHandler.newF32(result.geometry.attributes.start.data);
-  const startNormals = bufHandler.newF32(
-    result.geometry.attributes.start_normals.data,
-  );
-  const forwardOffset = bufHandler.newF32(
-    result.geometry.attributes.forward_offset.data,
-  );
+  if (!result || !result.batch_id) return;
+
+  const position = bufHandler.newF32(result.position);
+  const start = bufHandler.newF32(result.start);
+  const startNormals = bufHandler.newF32(result.start_normals);
+  const forwardOffset = bufHandler.newF32(result.forward_offset);
   const endNormalAndTextureCoordinateNormalizationX = bufHandler.newF32(
-    result.geometry.attributes.end_normal_and_texture_coordinate_normalization_x
-      .data,
+    result.end_normal_and_texture_coordinate_normalization_x,
   );
   const rightNormalAndTextureCoordinateNormalizationY = bufHandler.newF32(
-    result.geometry.attributes
-      .right_normal_and_texture_coordinate_normalization_y.data,
+    result.right_normal_and_texture_coordinate_normalization_y,
   );
-  const batchId = bufHandler.newF32(result.geometry.attributes.batch_id.data);
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const batchId = bufHandler.newF32(result.batch_id);
+  const indices = bufHandler.newU32(result.indices);
   if (
     !batchId ||
     !position ||
@@ -396,33 +365,33 @@ async function processConstructPolylineBatchedFeature(
 
   const transferableBatchId = new TransferableFloatAttribute(
     batchId,
-    result.geometry.attributes.batch_id.size,
+    result.batch_id_size ?? 0,
   );
   const transferablePosition = new TransferableFloatAttribute(
     position,
-    result.geometry.attributes.position.size,
+    result.position_size,
   );
   const transferableStart = new TransferableFloatAttribute(
     start,
-    result.geometry.attributes.start.size,
+    result.start_size,
   );
   const transferableStartNormals = new TransferableFloatAttribute(
     startNormals,
-    result.geometry.attributes.start_normals.size,
+    result.start_normals_size,
   );
   const transferableForwardOffset = new TransferableFloatAttribute(
     forwardOffset,
-    result.geometry.attributes.forward_offset.size,
+    result.forward_offset_size,
   );
   const transferableEndNormalAndTextureCoordinateNormalizationX =
     new TransferableFloatAttribute(
       endNormalAndTextureCoordinateNormalizationX,
-      result.geometry.attributes.end_normal_and_texture_coordinate_normalization_x.size,
+      result.end_normal_and_texture_coordinate_normalization_x_size,
     );
   const transferableRightNormalAndTextureCoordinateNormalizationY =
     new TransferableFloatAttribute(
       rightNormalAndTextureCoordinateNormalizationY,
-      result.geometry.attributes.right_normal_and_texture_coordinate_normalization_y.size,
+      result.right_normal_and_texture_coordinate_normalization_y_size,
     );
 
   const geometry = new TransferablePolylineGeometry(

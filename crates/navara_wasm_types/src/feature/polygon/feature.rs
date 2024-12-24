@@ -3,7 +3,10 @@ use navara_geometry::Hierarchy;
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
-use crate::{consume_vec, CRS};
+use crate::{
+    copy_f32_array, copy_u32_array, copy_u8_array, transfer_f32_array, transfer_u32_array,
+    transfer_u8_array, CRS,
+};
 
 use super::{TransferableHierarchy, TransferableHoles, WindingOrder};
 
@@ -11,29 +14,18 @@ use super::{TransferableHierarchy, TransferableHoles, WindingOrder};
 #[wasm_bindgen]
 #[derive(Debug, Default)]
 pub struct TransferablePolygonBatchedFeature {
-    #[wasm_bindgen(getter_with_clone)]
-    pub outer_ring: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub outer_ring_sizes: Vec<usize>,
-
+    outer_ring: Vec<FloatType>,
+    outer_ring_sizes: Vec<u32>,
     /// All holes for a batched feature
-    #[wasm_bindgen(getter_with_clone)]
-    pub holes: Vec<FloatType>,
+    holes: Vec<FloatType>,
     /// Total holes for one feature.
-    #[wasm_bindgen(getter_with_clone)]
-    pub holes_total_sizes: Vec<usize>,
+    holes_total_sizes: Vec<u32>,
     /// Each hole size
-    #[wasm_bindgen(getter_with_clone)]
-    pub holes_sizes: Vec<usize>,
-
+    holes_sizes: Vec<u32>,
     /// Each hole boundaries
-    #[wasm_bindgen(getter_with_clone)]
-    pub holes_boundaries: Vec<usize>,
-
-    #[wasm_bindgen(getter_with_clone)]
-    pub batch_ids: Vec<u32>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub expected_winding_orders: Vec<u8>,
+    holes_boundaries: Vec<u32>,
+    batch_ids: Vec<u32>,
+    expected_winding_orders: Vec<u8>,
 
     #[wasm_bindgen(getter_with_clone)]
     pub crs: CRS,
@@ -47,71 +39,104 @@ pub struct TransferablePolygonBatchedFeature {
 impl TransferablePolygonBatchedFeature {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
-    pub fn constructor(
-        outer_ring: Vec<FloatType>,
-        outer_ring_sizes: Vec<usize>,
-        holes: Vec<FloatType>,
-        holes_total_sizes: Vec<usize>,
-        holes_sizes: Vec<usize>,
-        holes_boundaries: Vec<usize>,
-        batch_ids: Vec<u32>,
-        expected_winding_orders: Vec<u8>,
-        crs: CRS,
-        length: usize,
-    ) -> Self {
+    pub fn constructor(crs: CRS, length: usize) -> Self {
         Self {
-            outer_ring,
-            outer_ring_sizes,
-            holes,
-            holes_total_sizes,
-            holes_sizes,
-            holes_boundaries,
-            batch_ids,
-            expected_winding_orders,
+            outer_ring: vec![],
+            outer_ring_sizes: vec![],
+            holes: vec![],
+            holes_total_sizes: vec![],
+            holes_sizes: vec![],
+            holes_boundaries: vec![],
+            batch_ids: vec![],
+            expected_winding_orders: vec![],
             crs,
             length,
             cur_idx: 0,
         }
     }
 
+    #[wasm_bindgen(js_name = "setOuterRing")]
+    pub fn set_outer_ring(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.outer_ring = transfer_f32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setOuterRingSizes")]
+    pub fn set_outer_ring_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.outer_ring_sizes = transfer_u32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setHoles")]
+    pub fn set_holes(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.holes = transfer_f32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setHolesSizes")]
+    pub fn set_holes_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.holes_sizes = transfer_u32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setHolesTotalSizes")]
+    pub fn set_holes_total_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.holes_total_sizes = transfer_u32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setHolesBoundaries")]
+    pub fn set_holes_boundaries(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.holes_boundaries = transfer_u32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setBatchIds")]
+    pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.batch_ids = transfer_u32_array(byte_length, f) }
+    }
+    #[wasm_bindgen(js_name = "setExpectedWindingOrders")]
+    pub fn set_expected_winding_orders(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.expected_winding_orders = transfer_u8_array(byte_length, f) }
+    }
+
+    pub fn drop(self) {
+        drop(self.outer_ring);
+        drop(self.outer_ring_sizes);
+        drop(self.holes);
+        drop(self.holes_boundaries);
+        drop(self.holes_sizes);
+        drop(self.holes_total_sizes);
+        drop(self.batch_ids);
+        drop(self.expected_winding_orders);
+    }
+
     #[wasm_bindgen(js_name = "transferBatchIds")]
-    pub fn transfer_batch_ids(&mut self) -> Vec<u32> {
-        consume_vec(&mut self.batch_ids)
+    pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.batch_ids)
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
-    pub fn transfer_outer_ring(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.outer_ring)
+    pub fn transfer_outer_ring(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.outer_ring)
     }
 
     #[wasm_bindgen(js_name = "transferOuterRingSizes")]
-    pub fn transfer_outer_ring_sizes(&mut self) -> Vec<usize> {
-        consume_vec(&mut self.outer_ring_sizes)
+    pub fn transfer_outer_ring_sizes(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.outer_ring_sizes)
     }
 
     #[wasm_bindgen(js_name = "transferHoles")]
-    pub fn transfer_holes(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.holes)
+    pub fn transfer_holes(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.holes)
     }
 
     #[wasm_bindgen(js_name = "transferHolesBoundaries")]
-    pub fn transfer_holes_boundaries(&mut self) -> Vec<usize> {
-        consume_vec(&mut self.holes_boundaries)
+    pub fn transfer_holes_boundaries(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.holes_boundaries)
     }
 
     #[wasm_bindgen(js_name = "transferHolesSizes")]
-    pub fn transfer_holes_sizes(&mut self) -> Vec<usize> {
-        consume_vec(&mut self.holes_sizes)
+    pub fn transfer_holes_sizes(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.holes_sizes)
     }
 
     #[wasm_bindgen(js_name = "transferHolesTotalSizes")]
-    pub fn transfer_holes_total_sizes(&mut self) -> Vec<usize> {
-        consume_vec(&mut self.holes_total_sizes)
+    pub fn transfer_holes_total_sizes(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.holes_total_sizes)
     }
 
     #[wasm_bindgen(js_name = "transferExpectedWindingOrders")]
-    pub fn transfer_expected_winding_orders(&mut self) -> Vec<u8> {
-        consume_vec(&mut self.expected_winding_orders)
+    pub fn transfer_expected_winding_orders(&mut self) -> js_sys::Uint8Array {
+        copy_u8_array(&self.expected_winding_orders)
     }
 }
 
@@ -127,7 +152,7 @@ impl TransferablePolygonBatchedFeature {
         let mut expected_winding_orders = Vec::with_capacity(length);
 
         for (batch_id, mut hierarchy) in hierarchies {
-            outer_ring_sizes.push(hierarchy.outer_ring.len());
+            outer_ring_sizes.push(hierarchy.outer_ring.len() as u32);
             outer_ring.append(&mut hierarchy.outer_ring);
 
             batch_ids.push(batch_id as u32);
@@ -137,16 +162,16 @@ impl TransferablePolygonBatchedFeature {
             let Some(h_holes) = hierarchy.holes else {
                 continue;
             };
-            holes_boundaries.push(h_holes.len());
+            holes_boundaries.push(h_holes.len() as u32);
             let mut holes_total_size = 0;
             for mut hole in h_holes {
                 holes_total_size += hole.outer_ring.len();
-                holes_sizes.push(hole.outer_ring.len());
+                holes_sizes.push(hole.outer_ring.len() as u32);
                 holes.append(&mut hole.outer_ring);
                 expected_winding_orders
                     .push(Into::<WindingOrder>::into(hole.expected_winding_order).0);
             }
-            holes_total_sizes.push(holes_total_size);
+            holes_total_sizes.push(holes_total_size as u32);
         }
 
         TransferablePolygonBatchedFeature {
@@ -190,7 +215,8 @@ impl TransferablePolygonBatchedFeature {
     }
 
     pub fn add(&mut self, hierarchy: &mut Hierarchy, batch_id: &BatchId) {
-        self.outer_ring_sizes.push(hierarchy.outer_ring.len());
+        self.outer_ring_sizes
+            .push(hierarchy.outer_ring.len() as u32);
         self.outer_ring.append(&mut hierarchy.outer_ring);
 
         self.batch_ids.push(batch_id.0);
@@ -201,16 +227,16 @@ impl TransferablePolygonBatchedFeature {
             return;
         };
 
-        self.holes_boundaries.push(h_holes.len());
+        self.holes_boundaries.push(h_holes.len() as u32);
         let mut holes_total_size = 0;
         for hole in h_holes {
             holes_total_size += hole.outer_ring.len();
-            self.holes_sizes.push(hole.outer_ring.len());
+            self.holes_sizes.push(hole.outer_ring.len() as u32);
             self.holes.append(&mut hole.outer_ring);
             self.expected_winding_orders
                 .push(Into::<WindingOrder>::into(hole.expected_winding_order).0);
         }
-        self.holes_total_sizes.push(holes_total_size);
+        self.holes_total_sizes.push(holes_total_size as u32);
     }
 
     pub fn to_transferable_hierarchy_by_index(
@@ -220,50 +246,27 @@ impl TransferablePolygonBatchedFeature {
         let transferable_hierarchy = TransferableHierarchy {
             outer_ring: self
                 .outer_ring
-                .drain(..self.outer_ring_sizes[idx])
+                .drain(..self.outer_ring_sizes[idx] as usize)
                 .collect(),
             expected_winding_order: self.expected_winding_orders.remove(0),
             holes: TransferableHoles {
-                holes: self.holes.drain(..self.holes_total_sizes[idx]).collect(),
+                holes: self
+                    .holes
+                    .drain(..self.holes_total_sizes[idx] as usize)
+                    .collect(),
                 sizes: self
                     .holes_sizes
-                    .drain(..self.holes_boundaries[idx])
+                    .drain(..self.holes_boundaries[idx] as usize)
                     .collect(),
                 expected_winding_orders: self
                     .expected_winding_orders
-                    .drain(..self.holes_boundaries[idx])
+                    .drain(..self.holes_boundaries[idx] as usize)
                     .collect(),
             },
         };
         let batch_id = BatchId(self.batch_ids[idx]);
 
         (transferable_hierarchy, batch_id)
-    }
-
-    /// Move all items into new self.
-    pub fn consume(&mut self) -> Self {
-        let outer_ring = consume_vec(&mut self.outer_ring);
-        let outer_ring_sizes = consume_vec(&mut self.outer_ring_sizes);
-        let holes = consume_vec(&mut self.holes);
-        let holes_total_sizes = consume_vec(&mut self.holes_total_sizes);
-        let holes_boundaries = consume_vec(&mut self.holes_boundaries);
-        let holes_sizes = consume_vec(&mut self.holes_sizes);
-        let batch_ids = consume_vec(&mut self.batch_ids);
-        let expected_winding_orders = consume_vec(&mut self.expected_winding_orders);
-
-        TransferablePolygonBatchedFeature {
-            outer_ring,
-            outer_ring_sizes,
-            holes,
-            holes_sizes,
-            holes_total_sizes,
-            holes_boundaries,
-            batch_ids,
-            expected_winding_orders,
-            crs: CRS::default(),
-            length: self.length,
-            ..Default::default()
-        }
     }
 }
 

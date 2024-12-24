@@ -40,7 +40,6 @@ import { isWorker } from "./temp/utils";
 import {
   type AbortControllers,
   type LayerDescription,
-  type MartiniCache,
   type MeshCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
@@ -90,7 +89,6 @@ export default class ThreeView {
 
   private _meshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
-  private _martiniCache: MartiniCache = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -106,16 +104,27 @@ export default class ThreeView {
       return b ?? null;
     },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
-      this._core?.setBufferU8(handle, bits, b);
+      this._core?.setBufferU8(handle, bits, b.length, (buf: Uint8Array) => {
+        buf.set(b);
+      });
     },
     newU8: (b: Uint8Array) => {
-      return this._core?.newBufferU8(b);
+      return this._core?.newBufferU8(b.length, (buf: Uint8Array) => {
+        buf.set(b);
+      });
+      // return this._core?.newBufferU8Cloned(b);
     },
     newU32: (b: Uint32Array) => {
-      return this._core?.newBufferU32(b);
+      return this._core?.newBufferU32(b.length, (buf: Uint32Array) => {
+        buf.set(b);
+      });
+      // return this._core?.newBufferU32Cloned(b);
     },
     newF32: (b: Float32Array) => {
-      return this._core?.newBufferF32(b);
+      return this._core?.newBufferF32(b.length, (buf: Float32Array) => {
+        buf.set(b);
+      });
+      // return this._core?.newBufferF32Cloned(b);
     },
     remove: (handle: number) => {
       this._core?.removeBuffer(handle);
@@ -407,39 +416,38 @@ export default class ThreeView {
 
   /** Returns true if the scene was updated and needs to be rendered. */
   private _update(): boolean {
-    let needs_update = false;
-
     this._core?.update();
-    this._updateUniforms();
 
     const events = this._core?.readEvents();
-    if ((events || this._eventManager.needsUpdate()) && this._core) {
-      processEvent(
-        this._eventManager,
-        this._scenes,
-        this.camera,
-        this._meshes,
-        this._abortControllers,
-        this._martiniCache,
-        this._buf,
-        this._texFragment,
-        this._tileHandler,
-        this._workerTaskHandler,
-        this._meshHandler,
-        this._featureHandler,
-        this._loadedTexs,
-        events,
-        this._uniforms,
-        this._drapedFeatureMaterials,
-      );
-      needs_update = true;
-      events?.free();
+    if ((!events && !this._eventManager.needsUpdate()) || !this._core) {
+      return false;
     }
+
+    this._updateUniforms();
+
+    processEvent(
+      this._eventManager,
+      this._scenes,
+      this.camera,
+      this._meshes,
+      this._abortControllers,
+      this._buf,
+      this._texFragment,
+      this._tileHandler,
+      this._workerTaskHandler,
+      this._meshHandler,
+      this._featureHandler,
+      this._loadedTexs,
+      events,
+      this._uniforms,
+      this._drapedFeatureMaterials,
+    );
+    events?.free();
 
     this.control?.update();
     this.camera.updateMatrixWorld();
 
-    return needs_update;
+    return true;
   }
 
   private _render() {

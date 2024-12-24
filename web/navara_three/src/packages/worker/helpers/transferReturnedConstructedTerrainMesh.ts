@@ -8,9 +8,9 @@ export function transferReturnedConstructedTerrainMesh(
   return {
     result: like,
     transfers: [
-      like.geometry.vertices.buffer,
-      like.geometry.uvs.buffer,
-      like.geometry.indices.buffer,
+      like.vertices.buffer,
+      like.uvs.buffer,
+      like.indices.buffer,
       like.heights.buffer,
     ],
   };

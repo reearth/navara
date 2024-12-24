@@ -96,11 +96,10 @@ pub fn construct_polygon_batched_feature(
         index_offset += position_length as u32;
     }
 
-    Some(ConstructedPolygonGeometry {
-        extent: (&combined_extent.unwrap()).into(),
-        geometry: PolygonGeometry {
-            attributes: combined_attributes.into(),
-            indices,
-        },
-    })
+    features.drop();
+
+    Some(ConstructedPolygonGeometry::new(
+        (&combined_extent.unwrap()).into(),
+        PolygonGeometry::new(combined_attributes.into(), indices),
+    ))
 }

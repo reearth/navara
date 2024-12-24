@@ -8,16 +8,14 @@ export function transferConstructedPolylineGeometry(
   return {
     result: like,
     transfers: [
-      like.geometry.attributes.position.data.buffer,
-      like.geometry.attributes.start.data.buffer,
-      like.geometry.attributes.start_normals.data.buffer,
-      like.geometry.attributes.forward_offset.data.buffer,
-      like.geometry.attributes.end_normal_and_texture_coordinate_normalization_x
-        .data.buffer,
-      like.geometry.attributes
-        .right_normal_and_texture_coordinate_normalization_y.data.buffer,
-      like.geometry.attributes.batch_id?.data.buffer,
-      like.geometry.indices.buffer,
+      like.position.buffer,
+      like.start.buffer,
+      like.start_normals.buffer,
+      like.forward_offset.buffer,
+      like.end_normal_and_texture_coordinate_normalization_x.buffer,
+      like.right_normal_and_texture_coordinate_normalization_y.buffer,
+      like.batch_id?.buffer,
+      like.indices.buffer,
     ].filter(isNotNullish),
   };
 }

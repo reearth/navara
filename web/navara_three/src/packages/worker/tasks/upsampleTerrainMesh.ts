@@ -28,6 +28,7 @@ export async function upsampleTerrainMesh(
     toUpsamplableTerrainGeometry(upsamplableGeometry),
   );
   const { result, transfers } = transferReturnedConstructedTerrainMesh(mesh);
+  mesh.drop();
 
   return transfer(result, transfers);
 }

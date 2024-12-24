@@ -77,40 +77,47 @@ pub fn construct_single_mvt(
 
         commands.entity(e).despawn();
 
-        let mvt_bin = match buf.remove_u8(&req.handle) {
-            Some(b) => b,
-            None => continue,
+        unsafe {
+            let mvt_bin = match buf.remove_u8(&req.handle) {
+                Some(b) => b,
+                None => continue,
+            };
+
+            // TODO: Move this process to worker.
+            if let Some(geometries) = construct_geometry(
+                &mut commands,
+                &mut batch_table,
+                &mut buf,
+                &mvt_bin,
+                &layer.layer_id,
+                get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
+                &layer.appearances,
+            ) {
+                for v in geometries {
+                    let batched = BatchedFeature {
+                        features: v.feature_ids,
+                        ..Default::default()
+                    };
+                    let e = match v.geometry_type {
+                        ConstructedGeometryType::Point => {
+                            commands.spawn((PointMarker, batched)).id()
+                        }
+                        ConstructedGeometryType::Polyline => {
+                            commands.spawn((PolylineMarker, batched)).id()
+                        }
+                        ConstructedGeometryType::Polygon => {
+                            commands.spawn((PolygonMarker, batched)).id()
+                        }
+                    };
+                    commands
+                        .entity(layer_entity)
+                        .insert(RenderedSingleFeature(e));
+                }
+            };
+
+            drop(mvt_bin);
         };
 
-        // TODO: Move this process to worker.
-        if let Some(geometries) = construct_geometry(
-            &mut commands,
-            &mut batch_table,
-            &mut buf,
-            &mvt_bin,
-            &layer.layer_id,
-            get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
-            &layer.appearances,
-        ) {
-            for v in geometries {
-                let batched = BatchedFeature {
-                    features: v.feature_ids,
-                    ..Default::default()
-                };
-                let e = match v.geometry_type {
-                    ConstructedGeometryType::Point => commands.spawn((PointMarker, batched)).id(),
-                    ConstructedGeometryType::Polyline => {
-                        commands.spawn((PolylineMarker, batched)).id()
-                    }
-                    ConstructedGeometryType::Polygon => {
-                        commands.spawn((PolygonMarker, batched)).id()
-                    }
-                };
-                commands
-                    .entity(layer_entity)
-                    .insert(RenderedSingleFeature(e));
-            }
-        };
         buf.remove(&req.handle);
     }
 }

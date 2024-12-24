@@ -1,15 +1,15 @@
 import {
+  ConstructedPolylineGeometryLike,
   PolylineMaterialLike,
   TransferablePolylineBatchedFeatureLike,
 } from "@navara/core";
-import type { ConstructedPolylineGeometry } from "@navara/engine";
 
 import { queueTask } from "./queueTask";
 
 export async function constructPolylineBatchedFeature(
   transferableBatchedFeatureLike: TransferablePolylineBatchedFeatureLike,
   materialLike: PolylineMaterialLike,
-): Promise<ConstructedPolylineGeometry | undefined> {
+): Promise<ConstructedPolylineGeometryLike | undefined> {
   const result = await queueTask(
     "constructPolylineBatchedFeature",
     [transferableBatchedFeatureLike, materialLike],

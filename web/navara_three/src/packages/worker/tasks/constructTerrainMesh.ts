@@ -20,7 +20,6 @@ export async function constructTerrainMesh(
   martini: TransferableMartiniLike,
 ): Promise<{
   result: ReturnedConstructedTerrainMeshLike;
-  martini: TransferableMartiniLike;
 }> {
   await waitWasm();
 
@@ -31,5 +30,6 @@ export async function constructTerrainMesh(
     toTransferableMartini(martini),
   );
   const { result, transfers } = transferReturnedConstructedTerrainMesh(mesh);
-  return transfer({ result, martini }, [...transfers, martini.coords.buffer]);
+  mesh.drop();
+  return transfer({ result }, [...transfers]);
 }

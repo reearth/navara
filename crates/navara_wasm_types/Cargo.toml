@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 wasm-bindgen.workspace = true
 serde.workspace = true
-
+js-sys.workspace = true
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_geometry = { path = "../navara_geometry" }

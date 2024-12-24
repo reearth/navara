@@ -1,21 +1,19 @@
+use js_sys::{Float32Array, Uint32Array};
 use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::consume_vec;
+use crate::{copy_f32_array, copy_u32_array};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 pub struct Geometry {
     /// Vector of vertex. The stride is 3.
-    #[wasm_bindgen(getter_with_clone)]
-    pub vertices: Vec<FloatType>,
+    vertices: Vec<FloatType>,
     /// Vector of UV for a texture. The stride is 2.
-    #[wasm_bindgen(getter_with_clone)]
-    pub uvs: Vec<FloatType>,
+    uvs: Vec<FloatType>,
     /// Vector of index that constracts a triangle.
-    #[wasm_bindgen(getter_with_clone)]
-    pub indices: Vec<u32>,
+    indices: Vec<u32>,
 }
 
 #[wasm_bindgen]
@@ -30,18 +28,24 @@ impl Geometry {
     }
 
     #[wasm_bindgen(js_name = "transferVertices")]
-    pub fn transfer_vertices(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.vertices)
+    pub fn transfer_vertices(&self) -> Float32Array {
+        copy_f32_array(&self.vertices)
     }
 
     #[wasm_bindgen(js_name = "transferUvs")]
-    pub fn transfer_uvs(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.uvs)
+    pub fn transfer_uvs(&self) -> Float32Array {
+        copy_f32_array(&self.uvs)
     }
 
     #[wasm_bindgen(js_name = "transferIndices")]
-    pub fn transfer_indices(&mut self) -> Vec<u32> {
-        consume_vec(&mut self.indices)
+    pub fn transfer_indices(&self) -> Uint32Array {
+        copy_u32_array(&self.indices)
+    }
+
+    pub fn drop(self) {
+        drop(self.vertices);
+        drop(self.uvs);
+        drop(self.indices);
     }
 }
 
@@ -67,12 +71,10 @@ impl From<Geometry> for navara_geometry::Geometry {
 
 #[wasm_bindgen]
 pub struct ReturnedConstructedTerrainMesh {
-    #[wasm_bindgen(getter_with_clone)]
-    pub geometry: Geometry,
+    geometry: Geometry,
     pub max_height: FloatType,
     pub min_height: FloatType,
-    #[wasm_bindgen(getter_with_clone)]
-    pub heights: Vec<FloatType>,
+    heights: Vec<FloatType>,
 }
 
 #[wasm_bindgen]
@@ -92,18 +94,29 @@ impl ReturnedConstructedTerrainMesh {
         }
     }
 
-    #[wasm_bindgen(js_name = "transferGeometry")]
-    pub fn transfer_geometry(&mut self) -> Geometry {
-        Geometry {
-            vertices: self.geometry.transfer_vertices(),
-            uvs: self.geometry.transfer_uvs(),
-            indices: self.geometry.transfer_indices(),
-        }
+    #[wasm_bindgen(js_name = "transferVertices")]
+    pub fn transfer_vertices(&self) -> Float32Array {
+        self.geometry.transfer_vertices()
+    }
+
+    #[wasm_bindgen(js_name = "transferUvs")]
+    pub fn transfer_uvs(&self) -> Float32Array {
+        self.geometry.transfer_uvs()
+    }
+
+    #[wasm_bindgen(js_name = "transferIndices")]
+    pub fn transfer_indices(&self) -> Uint32Array {
+        self.geometry.transfer_indices()
     }
 
     #[wasm_bindgen(js_name = "transferHeights")]
-    pub fn transfer_heights(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.heights)
+    pub fn transfer_heights(&self) -> Float32Array {
+        copy_f32_array(&self.heights)
+    }
+
+    pub fn drop(self) {
+        drop(self.heights);
+        self.geometry.drop();
     }
 }
 
@@ -131,12 +144,9 @@ impl From<ReturnedConstructedTerrainMesh> for navara_geometry::ReturnedConstruct
 
 #[wasm_bindgen]
 pub struct UpsamplableTerrainGeometry {
-    #[wasm_bindgen(getter_with_clone)]
-    pub uvs: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub heights: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub indices: Vec<u32>,
+    uvs: Vec<FloatType>,
+    heights: Vec<FloatType>,
+    indices: Vec<u32>,
 }
 
 #[wasm_bindgen]
