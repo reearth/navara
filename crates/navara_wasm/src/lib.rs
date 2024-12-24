@@ -5,7 +5,6 @@ mod event;
 mod geometry;
 mod input;
 mod types;
-mod view;
 
 use entity::ReconstructableEntity;
 use feature::{
@@ -29,7 +28,6 @@ pub use input::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
 pub use types::*;
-pub use view::*;
 use worker::DelegatedWorkerTasksResult;
 
 #[wasm_bindgen]
@@ -89,33 +87,21 @@ impl Core {
     pub fn get_buffer_u8(&self, handle: i32) -> Option<js_sys::Uint8Array> {
         let buf = self.app.get_buffer_u8(handle)?;
 
-        let array = js_sys::Uint8Array::new(&JsValue::from(buf.len()));
-
-        array.copy_from(buf);
-
-        Some(array)
+        Some(copy_u8_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferU32)]
     pub fn get_buffer_u32(&self, handle: i32) -> Option<js_sys::Uint32Array> {
         let buf = self.app.get_buffer_u32(handle)?;
 
-        let array = js_sys::Uint32Array::new(&JsValue::from(buf.len()));
-
-        array.copy_from(buf);
-
-        Some(array)
+        Some(copy_u32_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferF32)]
     pub fn get_buffer_f32(&self, handle: i32) -> Option<js_sys::Float32Array> {
         let buf = self.app.get_buffer_f32(handle)?;
 
-        let array = js_sys::Float32Array::new(&JsValue::from(buf.len()));
-
-        array.copy_from(buf);
-
-        Some(array)
+        Some(copy_f32_array(buf))
     }
 
     #[wasm_bindgen(js_name = setBufferU8)]

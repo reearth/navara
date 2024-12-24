@@ -256,38 +256,36 @@ async function processConstructPolygonBatchedFeature(
 
   if (
     !result ||
-    !result.geometry.attributes.batch_id ||
-    !result.geometry.attributes.normal ||
-    !result.geometry.attributes.scale_normal_and_cap
+    !result.batch_id ||
+    !result.normal ||
+    !result.scale_normal_and_cap
   )
     return;
 
-  const batchId = bufHandler.newF32(result.geometry.attributes.batch_id.data);
-  const normal = bufHandler.newF32(result.geometry.attributes.normal.data);
-  const position = bufHandler.newF32(result.geometry.attributes.position.data);
-  const scaleNormalAndCap = bufHandler.newF32(
-    result.geometry.attributes.scale_normal_and_cap.data,
-  );
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const batchId = bufHandler.newF32(result.batch_id);
+  const normal = bufHandler.newF32(result.normal);
+  const position = bufHandler.newF32(result.position);
+  const scaleNormalAndCap = bufHandler.newF32(result.scale_normal_and_cap);
+  const indices = bufHandler.newU32(result.indices);
   if (!batchId || !normal || !position || !scaleNormalAndCap || !indices) {
     return;
   }
 
   const transferableBatchId = new TransferableFloatAttribute(
     batchId,
-    result.geometry.attributes.batch_id.size,
+    result.batch_id_size ?? 0,
   );
   const transferableNormal = new TransferableFloatAttribute(
     normal,
-    result.geometry.attributes.normal.size,
+    result.normal_size ?? 0,
   );
   const transferablePosition = new TransferableFloatAttribute(
     position,
-    result.geometry.attributes.position.size,
+    result.position_size,
   );
   const transferableScaleNormalAndCap = new TransferableFloatAttribute(
     scaleNormalAndCap,
-    result.geometry.attributes.scale_normal_and_cap.size,
+    result.scale_normal_and_cap_size ?? 0,
   );
   const geometry = new TransferablePolygonGeometry(
     transferablePosition,
@@ -338,26 +336,20 @@ async function processConstructPolylineBatchedFeature(
 
   transferable.free();
 
-  if (!result || !result.geometry.attributes.batch_id) return;
+  if (!result || !result.batch_id) return;
 
-  const position = bufHandler.newF32(result.geometry.attributes.position.data);
-  const start = bufHandler.newF32(result.geometry.attributes.start.data);
-  const startNormals = bufHandler.newF32(
-    result.geometry.attributes.start_normals.data,
-  );
-  const forwardOffset = bufHandler.newF32(
-    result.geometry.attributes.forward_offset.data,
-  );
+  const position = bufHandler.newF32(result.position);
+  const start = bufHandler.newF32(result.start);
+  const startNormals = bufHandler.newF32(result.start_normals);
+  const forwardOffset = bufHandler.newF32(result.forward_offset);
   const endNormalAndTextureCoordinateNormalizationX = bufHandler.newF32(
-    result.geometry.attributes.end_normal_and_texture_coordinate_normalization_x
-      .data,
+    result.end_normal_and_texture_coordinate_normalization_x,
   );
   const rightNormalAndTextureCoordinateNormalizationY = bufHandler.newF32(
-    result.geometry.attributes
-      .right_normal_and_texture_coordinate_normalization_y.data,
+    result.right_normal_and_texture_coordinate_normalization_y,
   );
-  const batchId = bufHandler.newF32(result.geometry.attributes.batch_id.data);
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const batchId = bufHandler.newF32(result.batch_id);
+  const indices = bufHandler.newU32(result.indices);
   if (
     !batchId ||
     !position ||
@@ -373,33 +365,33 @@ async function processConstructPolylineBatchedFeature(
 
   const transferableBatchId = new TransferableFloatAttribute(
     batchId,
-    result.geometry.attributes.batch_id.size,
+    result.batch_id_size ?? 0,
   );
   const transferablePosition = new TransferableFloatAttribute(
     position,
-    result.geometry.attributes.position.size,
+    result.position_size,
   );
   const transferableStart = new TransferableFloatAttribute(
     start,
-    result.geometry.attributes.start.size,
+    result.start_size,
   );
   const transferableStartNormals = new TransferableFloatAttribute(
     startNormals,
-    result.geometry.attributes.start_normals.size,
+    result.start_normals_size,
   );
   const transferableForwardOffset = new TransferableFloatAttribute(
     forwardOffset,
-    result.geometry.attributes.forward_offset.size,
+    result.forward_offset_size,
   );
   const transferableEndNormalAndTextureCoordinateNormalizationX =
     new TransferableFloatAttribute(
       endNormalAndTextureCoordinateNormalizationX,
-      result.geometry.attributes.end_normal_and_texture_coordinate_normalization_x.size,
+      result.end_normal_and_texture_coordinate_normalization_x_size,
     );
   const transferableRightNormalAndTextureCoordinateNormalizationY =
     new TransferableFloatAttribute(
       rightNormalAndTextureCoordinateNormalizationY,
-      result.geometry.attributes.right_normal_and_texture_coordinate_normalization_y.size,
+      result.right_normal_and_texture_coordinate_normalization_y_size,
     );
 
   const geometry = new TransferablePolylineGeometry(

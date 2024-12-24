@@ -77,7 +77,6 @@ impl Hierarchy {
             Some(h_holes) => {
                 let mut holes = vec![];
                 for hole in h_holes {
-                    // `outer_ring` has a lifetime for sure.
                     unsafe {
                         let outer_ring = buf.remove_f32(&hole.outer_ring)?;
 

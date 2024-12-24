@@ -28,6 +28,7 @@ export async function constructPolylineBatchedFeature(
   }
 
   const { result, transfers } = transferConstructedPolylineGeometry(geometry);
+  geometry.drop();
 
   return transfer(result, transfers);
 }

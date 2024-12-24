@@ -11,6 +11,7 @@ mod texture_fragment;
 mod tile;
 mod unit;
 mod utils;
+mod view;
 
 pub use appearance::*;
 pub use attribute::*;
@@ -24,3 +25,4 @@ pub use texture_fragment::*;
 pub use tile::*;
 pub use unit::*;
 pub use utils::*;
+pub use view::*;

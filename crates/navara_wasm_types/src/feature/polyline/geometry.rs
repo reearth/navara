@@ -1,140 +1,232 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{consume_vec, ExtentRadianF32, FloatAttribute};
+use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute};
 
 #[wasm_bindgen]
 pub struct ConstructedPolylineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub extent: ExtentRadianF32,
-    #[wasm_bindgen(getter_with_clone)]
-    pub geometry: PolylineGeometry,
+    geometry: PolylineGeometry,
+}
+
+impl ConstructedPolylineGeometry {
+    pub fn new(extent: ExtentRadianF32, geometry: PolylineGeometry) -> Self {
+        Self { extent, geometry }
+    }
 }
 
 #[wasm_bindgen]
 impl ConstructedPolylineGeometry {
-    #[wasm_bindgen(js_name = "transferGeometry")]
-    pub fn transfer_geometry(&mut self) -> PolylineGeometry {
-        PolylineGeometry {
-            attributes: self.geometry.transfer_attributes(),
-            indices: self.geometry.transfer_indices(),
-        }
+    pub fn position(&mut self) -> js_sys::Float32Array {
+        self.geometry.position()
+    }
+    pub fn position_size(&mut self) -> u8 {
+        self.geometry.position_size()
+    }
+    pub fn start(&mut self) -> js_sys::Float32Array {
+        self.geometry.start()
+    }
+    pub fn start_size(&mut self) -> u8 {
+        self.geometry.start_size()
+    }
+    pub fn forward_offset(&mut self) -> js_sys::Float32Array {
+        self.geometry.forward_offset()
+    }
+    pub fn forward_offset_size(&mut self) -> u8 {
+        self.geometry.forward_offset_size()
+    }
+    pub fn start_normals(&mut self) -> js_sys::Float32Array {
+        self.geometry.start_normals()
+    }
+    pub fn start_normals_size(&mut self) -> u8 {
+        self.geometry.start_normals_size()
+    }
+    pub fn end_normal_and_texture_coordinate_normalization_x(&mut self) -> js_sys::Float32Array {
+        self.geometry
+            .end_normal_and_texture_coordinate_normalization_x()
+    }
+    pub fn end_normal_and_texture_coordinate_normalization_x_size(&mut self) -> u8 {
+        self.geometry
+            .end_normal_and_texture_coordinate_normalization_x_size()
+    }
+    pub fn right_normal_and_texture_coordinate_normalization_y(&mut self) -> js_sys::Float32Array {
+        self.geometry
+            .right_normal_and_texture_coordinate_normalization_y()
+    }
+    pub fn right_normal_and_texture_coordinate_normalization_y_size(&mut self) -> u8 {
+        self.geometry
+            .right_normal_and_texture_coordinate_normalization_y_size()
+    }
+    pub fn batch_id(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.batch_id()
+    }
+    pub fn batch_id_size(&mut self) -> Option<u8> {
+        self.geometry.batch_id_size()
+    }
+    pub fn indices(&mut self) -> js_sys::Uint32Array {
+        self.geometry.indices()
+    }
+
+    pub fn drop(self) {
+        self.geometry.drop();
     }
 }
 
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolylineGeometry {
-    #[wasm_bindgen(getter_with_clone)]
-    pub attributes: PolylineGeometryAttributes,
-    #[wasm_bindgen(getter_with_clone)]
-    pub indices: Vec<u32>,
+    attributes: PolylineGeometryAttributes,
+    indices: Vec<u32>,
+}
+
+impl PolylineGeometry {
+    pub fn new(attributes: PolylineGeometryAttributes, indices: Vec<u32>) -> Self {
+        Self {
+            attributes,
+            indices,
+        }
+    }
 }
 
 #[wasm_bindgen]
 impl PolylineGeometry {
-    #[wasm_bindgen(js_name = "transferAttributes")]
-    pub fn transfer_attributes(&mut self) -> PolylineGeometryAttributes {
-        PolylineGeometryAttributes {
-            position: self.attributes.transfer_position(),
-            forward_offset: self.attributes.transfer_forward_offset(),
-            start: self.attributes.transfer_start(),
-            start_normals: self.attributes.transfer_start_normals(),
-            end_normal_and_texture_coordinate_normalization_x: self
-                .attributes
-                .transfer_end_normal_and_texture_coordinate_normalization_x(),
-            right_normal_and_texture_coordinate_normalization_y: self
-                .attributes
-                .transfer_right_normal_and_texture_coordinate_normalization_y(),
-            batch_id: self.attributes.transfer_batch_id(),
-        }
+    pub fn position(&mut self) -> js_sys::Float32Array {
+        self.attributes.transfer_position()
+    }
+    pub fn position_size(&mut self) -> u8 {
+        self.attributes.transfer_position_size()
+    }
+    pub fn start(&mut self) -> js_sys::Float32Array {
+        self.attributes.transfer_start()
+    }
+    pub fn start_size(&mut self) -> u8 {
+        self.attributes.transfer_start_size()
+    }
+    pub fn forward_offset(&mut self) -> js_sys::Float32Array {
+        self.attributes.transfer_forward_offset()
+    }
+    pub fn forward_offset_size(&mut self) -> u8 {
+        self.attributes.transfer_forward_offset_size()
+    }
+    pub fn start_normals(&mut self) -> js_sys::Float32Array {
+        self.attributes.transfer_start_normals()
+    }
+    pub fn start_normals_size(&mut self) -> u8 {
+        self.attributes.transfer_start_normals_size()
+    }
+    pub fn end_normal_and_texture_coordinate_normalization_x(&mut self) -> js_sys::Float32Array {
+        self.attributes
+            .transfer_end_normal_and_texture_coordinate_normalization_x()
+    }
+    pub fn end_normal_and_texture_coordinate_normalization_x_size(&mut self) -> u8 {
+        self.attributes
+            .transfer_end_normal_and_texture_coordinate_normalization_x_size()
+    }
+    pub fn right_normal_and_texture_coordinate_normalization_y(&mut self) -> js_sys::Float32Array {
+        self.attributes
+            .transfer_right_normal_and_texture_coordinate_normalization_y()
+    }
+    pub fn right_normal_and_texture_coordinate_normalization_y_size(&mut self) -> u8 {
+        self.attributes
+            .transfer_right_normal_and_texture_coordinate_normalization_y_size()
+    }
+    pub fn batch_id(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_batch_id()
+    }
+    pub fn batch_id_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_batch_id_size()
+    }
+    pub fn indices(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.indices)
     }
 
-    #[wasm_bindgen(js_name = "transferIndices")]
-    pub fn transfer_indices(&mut self) -> Vec<u32> {
-        consume_vec(&mut self.indices)
+    pub fn drop(self) {
+        drop(self.indices);
+        self.attributes.drop();
     }
 }
 
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolylineGeometryAttributes {
-    #[wasm_bindgen(getter_with_clone)]
-    pub position: FloatAttribute,
-    #[wasm_bindgen(getter_with_clone)]
-    pub start: FloatAttribute,
-    #[wasm_bindgen(getter_with_clone)]
-    pub forward_offset: FloatAttribute,
-    #[wasm_bindgen(getter_with_clone)]
-    pub start_normals: FloatAttribute,
-    #[wasm_bindgen(getter_with_clone)]
-    pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
-    #[wasm_bindgen(getter_with_clone)]
-    pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
-    #[wasm_bindgen(getter_with_clone)]
-    pub batch_id: Option<FloatAttribute>,
+    position: FloatAttribute,
+    start: FloatAttribute,
+    forward_offset: FloatAttribute,
+    start_normals: FloatAttribute,
+    end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
+    right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
+    batch_id: Option<FloatAttribute>,
 }
 
 #[wasm_bindgen]
 impl PolylineGeometryAttributes {
-    #[wasm_bindgen(js_name = "transferPosition")]
-    pub fn transfer_position(&mut self) -> FloatAttribute {
-        FloatAttribute {
-            data: self.position.transfer_data(),
-            size: self.position.size,
-        }
+    pub fn transfer_position(&mut self) -> js_sys::Float32Array {
+        self.position.transfer_data()
     }
-    #[wasm_bindgen(js_name = "transferStart")]
-    pub fn transfer_start(&mut self) -> FloatAttribute {
-        FloatAttribute {
-            data: self.start.transfer_data(),
-            size: self.start.size,
-        }
+    pub fn transfer_position_size(&mut self) -> u8 {
+        self.position.size
     }
-    #[wasm_bindgen(js_name = "transferForwardOffset")]
-    pub fn transfer_forward_offset(&mut self) -> FloatAttribute {
-        FloatAttribute {
-            data: self.forward_offset.transfer_data(),
-            size: self.forward_offset.size,
-        }
+    pub fn transfer_start(&mut self) -> js_sys::Float32Array {
+        self.start.transfer_data()
     }
-    #[wasm_bindgen(js_name = "transferStartNormals")]
-    pub fn transfer_start_normals(&mut self) -> FloatAttribute {
-        FloatAttribute {
-            data: self.start_normals.transfer_data(),
-            size: self.start_normals.size,
-        }
+    pub fn transfer_start_size(&mut self) -> u8 {
+        self.start.size
     }
-    #[wasm_bindgen(js_name = "transferEndNormalAndTextureCoordinateNormalizationX")]
-    pub fn transfer_end_normal_and_texture_coordinate_normalization_x(&mut self) -> FloatAttribute {
-        FloatAttribute {
-            data: self
-                .end_normal_and_texture_coordinate_normalization_x
-                .transfer_data(),
-            size: self.end_normal_and_texture_coordinate_normalization_x.size,
-        }
+    pub fn transfer_forward_offset(&mut self) -> js_sys::Float32Array {
+        self.forward_offset.transfer_data()
     }
-    #[wasm_bindgen(js_name = "transferRightNormalAndTextureCoordinateNormalizationY")]
+    pub fn transfer_forward_offset_size(&mut self) -> u8 {
+        self.forward_offset.size
+    }
+    pub fn transfer_start_normals(&mut self) -> js_sys::Float32Array {
+        self.start_normals.transfer_data()
+    }
+    pub fn transfer_start_normals_size(&mut self) -> u8 {
+        self.start_normals.size
+    }
+    pub fn transfer_end_normal_and_texture_coordinate_normalization_x(
+        &mut self,
+    ) -> js_sys::Float32Array {
+        self.end_normal_and_texture_coordinate_normalization_x
+            .transfer_data()
+    }
+    pub fn transfer_end_normal_and_texture_coordinate_normalization_x_size(&mut self) -> u8 {
+        self.end_normal_and_texture_coordinate_normalization_x.size
+    }
     pub fn transfer_right_normal_and_texture_coordinate_normalization_y(
         &mut self,
-    ) -> FloatAttribute {
-        FloatAttribute {
-            data: self
-                .right_normal_and_texture_coordinate_normalization_y
-                .transfer_data(),
-            size: self
-                .right_normal_and_texture_coordinate_normalization_y
-                .size,
-        }
+    ) -> js_sys::Float32Array {
+        self.right_normal_and_texture_coordinate_normalization_y
+            .transfer_data()
     }
-    #[wasm_bindgen(js_name = "transferBatchId")]
-    pub fn transfer_batch_id(&mut self) -> Option<FloatAttribute> {
+    pub fn transfer_right_normal_and_texture_coordinate_normalization_y_size(&mut self) -> u8 {
+        self.right_normal_and_texture_coordinate_normalization_y
+            .size
+    }
+    pub fn transfer_batch_id(&mut self) -> Option<js_sys::Float32Array> {
         let Some(batch_id) = &mut self.batch_id else {
             return None;
         };
-        Some(FloatAttribute {
-            data: batch_id.transfer_data(),
-            size: batch_id.size,
-        })
+        Some(batch_id.transfer_data())
+    }
+    pub fn transfer_batch_id_size(&mut self) -> Option<u8> {
+        let Some(batch_id) = &mut self.batch_id else {
+            return None;
+        };
+        Some(batch_id.size)
+    }
+
+    pub fn drop(self) {
+        drop(self.position.data);
+        drop(self.start.data);
+        drop(self.start_normals.data);
+        drop(self.forward_offset.data);
+        drop(self.end_normal_and_texture_coordinate_normalization_x.data);
+        drop(
+            self.right_normal_and_texture_coordinate_normalization_y
+                .data,
+        );
+        drop(self.batch_id.unwrap().data);
     }
 }
 

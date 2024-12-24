@@ -30,3 +30,19 @@ pub unsafe fn transfer_f32_array(byte_length: usize, f: &js_sys::Function) -> Ve
         .expect("The callback function should not throw");
     buffer
 }
+
+pub fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
+    let array = js_sys::Uint8Array::new(&JsValue::from(buf.len()));
+    array.copy_from(buf);
+    array
+}
+pub fn copy_u32_array(buf: &[u32]) -> js_sys::Uint32Array {
+    let array = js_sys::Uint32Array::new(&JsValue::from(buf.len()));
+    array.copy_from(buf);
+    array
+}
+pub fn copy_f32_array(buf: &[f32]) -> js_sys::Float32Array {
+    let array = js_sys::Float32Array::new(&JsValue::from(buf.len()));
+    array.copy_from(buf);
+    array
+}

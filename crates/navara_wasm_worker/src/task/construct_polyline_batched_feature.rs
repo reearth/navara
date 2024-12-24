@@ -95,11 +95,10 @@ pub fn construct_polyline_batched_feature(
         index_offset += position_length as u32;
     }
 
-    Some(ConstructedPolylineGeometry {
-        extent: (&combined_extent.unwrap()).into(),
-        geometry: PolylineGeometry {
-            attributes: combined_attributes.into(),
-            indices,
-        },
-    })
+    features.drop();
+
+    Some(ConstructedPolylineGeometry::new(
+        (&combined_extent.unwrap()).into(),
+        PolylineGeometry::new(combined_attributes.into(), indices),
+    ))
 }

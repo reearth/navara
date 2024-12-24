@@ -1,13 +1,12 @@
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
-use crate::consume_vec;
+use crate::copy_f32_array;
 
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FloatAttribute {
-    #[wasm_bindgen(getter_with_clone)]
-    pub data: Vec<FloatType>,
+    pub(crate) data: Vec<FloatType>,
     pub size: u8,
 }
 
@@ -19,8 +18,8 @@ impl FloatAttribute {
     }
 
     #[wasm_bindgen(js_name = "transferData")]
-    pub fn transfer_data(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.data)
+    pub fn transfer_data(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.data)
     }
 }
 

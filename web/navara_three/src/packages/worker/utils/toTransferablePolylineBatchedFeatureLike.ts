@@ -4,11 +4,15 @@ import { TransferablePolylineBatchedFeature } from "@navara/engine-worker";
 export function toTransferablePolylineBatchedFeatureLike(
   like: TransferablePolylineBatchedFeatureLike,
 ) {
-  return new TransferablePolylineBatchedFeature(
-    like.points,
-    like.points_sizes,
-    like.batch_ids,
-    like.crs,
-    like.length,
-  );
+  const t = new TransferablePolylineBatchedFeature(like.crs, like.length);
+  t.setPoints(like.points.length, (b: Float32Array) => {
+    b.set(like.points);
+  });
+  t.setPointsSizes(like.points_sizes.length, (b: Uint32Array) => {
+    b.set(like.points_sizes);
+  });
+  t.setBatchIds(like.batch_ids.length, (b: Uint32Array) => {
+    b.set(like.batch_ids);
+  });
+  return t;
 }

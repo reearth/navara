@@ -8,14 +8,11 @@ use crate::consume_vec;
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 pub struct Geometry {
     /// Vector of vertex. The stride is 3.
-    #[wasm_bindgen(getter_with_clone)]
-    pub vertices: Vec<FloatType>,
+    vertices: Vec<FloatType>,
     /// Vector of UV for a texture. The stride is 2.
-    #[wasm_bindgen(getter_with_clone)]
-    pub uvs: Vec<FloatType>,
+    uvs: Vec<FloatType>,
     /// Vector of index that constracts a triangle.
-    #[wasm_bindgen(getter_with_clone)]
-    pub indices: Vec<u32>,
+    indices: Vec<u32>,
 }
 
 #[wasm_bindgen]
@@ -67,12 +64,10 @@ impl From<Geometry> for navara_geometry::Geometry {
 
 #[wasm_bindgen]
 pub struct ReturnedConstructedTerrainMesh {
-    #[wasm_bindgen(getter_with_clone)]
-    pub geometry: Geometry,
+    geometry: Geometry,
     pub max_height: FloatType,
     pub min_height: FloatType,
-    #[wasm_bindgen(getter_with_clone)]
-    pub heights: Vec<FloatType>,
+    heights: Vec<FloatType>,
 }
 
 #[wasm_bindgen]
@@ -131,12 +126,9 @@ impl From<ReturnedConstructedTerrainMesh> for navara_geometry::ReturnedConstruct
 
 #[wasm_bindgen]
 pub struct UpsamplableTerrainGeometry {
-    #[wasm_bindgen(getter_with_clone)]
-    pub uvs: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub heights: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub indices: Vec<u32>,
+    uvs: Vec<FloatType>,
+    heights: Vec<FloatType>,
+    indices: Vec<u32>,
 }
 
 #[wasm_bindgen]

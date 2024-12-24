@@ -27,6 +27,16 @@ export class TransferablePolygonBatchedFeatureLike
     this.outer_ring_sizes = t.transferOuterRingSizes();
   }
 
+  setBatchIds(_length: number, _f: () => void) {}
+  setExpectedWindingOrders(_length: number, _f: () => void) {}
+  setOuterRing(_length: number, _f: () => void) {}
+  setOuterRingSizes(_length: number, _f: () => void) {}
+  setHoles(_length: number, _f: () => void) {}
+  setHolesBoundaries(_length: number, _f: () => void) {}
+  setHolesSizes(_length: number, _f: () => void) {}
+  setHolesTotalSizes(_length: number, _f: () => void) {}
+  drop(): void {}
+
   transferBatchIds(): Uint32Array {
     throw new Error();
   }

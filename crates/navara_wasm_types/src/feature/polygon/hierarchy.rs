@@ -5,10 +5,8 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct TransferableHierarchy {
-    #[wasm_bindgen(getter_with_clone)]
-    pub outer_ring: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub holes: TransferableHoles,
+    pub(crate) outer_ring: Vec<FloatType>,
+    pub(crate) holes: TransferableHoles,
     #[wasm_bindgen(getter_with_clone)]
     pub expected_winding_order: u8,
 }
@@ -17,12 +15,9 @@ pub struct TransferableHierarchy {
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct TransferableHoles {
-    #[wasm_bindgen(getter_with_clone)]
-    pub holes: Vec<FloatType>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub expected_winding_orders: Vec<u8>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub sizes: Vec<usize>,
+    pub(crate) holes: Vec<FloatType>,
+    pub(crate) expected_winding_orders: Vec<u8>,
+    pub(crate) sizes: Vec<u32>,
 }
 
 impl From<TransferableHierarchy> for navara_geometry::Hierarchy {
@@ -31,7 +26,7 @@ impl From<TransferableHierarchy> for navara_geometry::Hierarchy {
         let mut t_holes = val.holes;
         for (winding_order_idx, size) in t_holes.sizes.into_iter().enumerate() {
             holes.push(Hierarchy {
-                outer_ring: t_holes.holes.drain(0..size).collect(),
+                outer_ring: t_holes.holes.drain(0..size as usize).collect(),
                 holes: None,
                 expected_winding_order: WindingOrder(
                     t_holes.expected_winding_orders[winding_order_idx],

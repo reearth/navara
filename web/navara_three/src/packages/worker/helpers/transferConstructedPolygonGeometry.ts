@@ -10,11 +10,11 @@ export function transferConstructedPolygonGeometry(
   return {
     result: like,
     transfers: [
-      like.geometry.attributes.batch_id?.data.buffer,
-      like.geometry.attributes.normal?.data.buffer,
-      like.geometry.attributes.position?.data.buffer,
-      like.geometry.attributes.scale_normal_and_cap?.data.buffer,
-      like.geometry.indices.buffer,
+      like.batch_id?.buffer,
+      like.normal?.buffer,
+      like.position?.buffer,
+      like.scale_normal_and_cap?.buffer,
+      like.indices.buffer,
     ].filter(isNotNullish),
   };
 }
