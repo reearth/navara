@@ -124,11 +124,13 @@ pub fn transfer_mesh(
     mut layer_store: ResMut<LayerStore>,
 ) {
     for (entity, layer_id, feature_id, geometry, material) in &mut polylines {
-        if let Some((extent, geometry)) = construct_polyline_feature(
-            material,
-            buf.remove_f32(&geometry.coords).unwrap(),
-            &geometry.crs,
-        ) {
+        // `coords` has a lifetime for sure.
+        let constructed_feature = unsafe {
+            let coords = buf.remove_f32(&geometry.coords).unwrap();
+            construct_polyline_feature(material, coords, &geometry.crs)
+        };
+
+        if let Some((extent, geometry)) = constructed_feature {
             let mut material = material.clone();
             material.internal = Some(PolylineInternalMaterial {
                 min_max_heights: vec![0., 0.],

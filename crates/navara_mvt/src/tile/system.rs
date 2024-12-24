@@ -164,34 +164,37 @@ pub fn transfer_mesh(
             let (_, data_requester) = mvt_data_requester
                 .get(tile.data_requester_entity_id.unwrap())
                 .unwrap();
-            let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
-            if let Some(result) = construct_geometry(
-                &mut commands,
-                &mut batch_table,
-                &mut buf,
-                &mvt_bin,
-                &layer.layer_id,
-                tile.coords,
-                &layer.appearances,
-            ) {
-                for v in result {
-                    let batched = BatchedFeature {
-                        features: v.feature_ids,
-                        ..Default::default()
-                    };
-                    let e = match v.geometry_type {
-                        ConstructedGeometryType::Point => {
-                            commands.spawn((PointMarker, batched)).id()
-                        }
-                        ConstructedGeometryType::Polyline => commands
-                            .spawn((PolylineMarker, batched, FeatureId::default()))
-                            .id(),
-                        ConstructedGeometryType::Polygon => commands
-                            .spawn((PolygonMarker, batched, FeatureId::default()))
-                            .id(),
-                    };
-                    rendered_tile.feature_id = Some(e);
+            unsafe {
+                let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
+                if let Some(result) = construct_geometry(
+                    &mut commands,
+                    &mut batch_table,
+                    &mut buf,
+                    &mvt_bin,
+                    &layer.layer_id,
+                    tile.coords,
+                    &layer.appearances,
+                ) {
+                    for v in result {
+                        let batched = BatchedFeature {
+                            features: v.feature_ids,
+                            ..Default::default()
+                        };
+                        let e = match v.geometry_type {
+                            ConstructedGeometryType::Point => {
+                                commands.spawn((PointMarker, batched)).id()
+                            }
+                            ConstructedGeometryType::Polyline => commands
+                                .spawn((PolylineMarker, batched, FeatureId::default()))
+                                .id(),
+                            ConstructedGeometryType::Polygon => commands
+                                .spawn((PolygonMarker, batched, FeatureId::default()))
+                                .id(),
+                        };
+                        rendered_tile.feature_id = Some(e);
+                    }
                 }
+                drop(mvt_bin);
             }
         }
     }

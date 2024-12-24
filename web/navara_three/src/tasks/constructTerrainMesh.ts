@@ -14,7 +14,6 @@ export async function constructTerrainMesh(
   martiniLike: TransferableMartiniLike,
 ): Promise<{
   result: ReturnedConstructedTerrainMesh;
-  martini: TransferableMartiniLike;
 }> {
   const result = await queueTask(
     "constructTerrainMesh",

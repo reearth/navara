@@ -33,7 +33,6 @@ import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatched
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
-import type { MartiniCache } from "../type";
 
 import type {
   BufferLoader,
@@ -48,7 +47,6 @@ export async function processWorkerTaskDelegatedEvent(
   tileHandler: TileHandler,
   featureHandler: FeatureHandler,
   workerTaskHandler: WorkerTaskHandler,
-  martiniCache: MartiniCache,
 ) {
   if (event.task.construct_terrain_mesh) {
     return await processConstructTerrainMesh(
@@ -58,7 +56,6 @@ export async function processWorkerTaskDelegatedEvent(
       bufHandler,
       tileHandler,
       workerTaskHandler,
-      martiniCache,
     );
   }
   if (event.task.upsample_terrain_mesh) {
@@ -100,38 +97,20 @@ async function processConstructTerrainMesh(
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
-  martiniCache: MartiniCache,
 ) {
   const bytes = bufHandler.u8(params.bytes_handle);
   if (!bytes) {
     return;
   }
 
-  const martiniId = params.martini_id[0];
-  const cachedMartinis = martiniCache.get(martiniId);
-
-  // workerpool doesn't support initialize worker resource, so we need to manage heavy resource in main thread.
-  // MARTINI coords is very heavy task, so we wanna avoid to clone it every frame.
-  // We will reuse cloned it and transfer it, then it should be back after the task is completed.
   const martini = (() => {
-    // Pop cached MARTINI instance if it's exist.
-    if (cachedMartinis && cachedMartinis.length > 1) {
-      const cachedMartini = cachedMartinis.pop();
-      return cachedMartini;
-    }
-    // Clone original MARTINI instance if there is no instance.
-    if (cachedMartinis) {
-      const v = cachedMartinis[0].clone();
-      return v;
-    }
     const martini = tileHandler.getMartini(params.martini_id);
     if (!martini) return;
     const martiniLike = new TransferableMartiniLike(
-      martini.coords,
+      martini.transfer_coords(),
       martini.size,
     );
     martini.free();
-    martiniCache.set(martiniId, [martiniLike.clone()]);
     return martiniLike;
   })();
   if (!martini) {
@@ -148,16 +127,12 @@ async function processConstructTerrainMesh(
   if (!elevationDecoder) {
     return;
   }
-  const { result, martini: transferredMartini } = await constructTerrainMesh(
+  const { result } = await constructTerrainMesh(
     bytes,
     new TransferableTileLike(tile),
     new TransferableRasterDEMDataLike(elevationDecoder),
     martini,
   );
-
-  // MARTINI's coords is very heavy, so reuse multiple the instance.
-  // And it should be back after the task.
-  martiniCache.get(martiniId)?.push(transferredMartini);
 
   const vertices = bufHandler.newF32(result.geometry.vertices);
   const uvs = bufHandler.newF32(result.geometry.uvs);
@@ -360,6 +335,8 @@ async function processConstructPolylineBatchedFeature(
     new TransferablePolylineBatchedFeatureLike(transferable.transferable()),
     new PolylineMaterialLike(transferable.material),
   );
+
+  transferable.free();
 
   if (!result || !result.geometry.attributes.batch_id) return;
 

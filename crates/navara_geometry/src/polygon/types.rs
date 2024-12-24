@@ -73,29 +73,35 @@ pub struct Hierarchy {
 
 impl Hierarchy {
     pub fn from_transferred(value: &TransferableHierarchy, buf: &mut BufferStore) -> Option<Self> {
-        let outer_ring = buf.remove_f32(&value.outer_ring)?;
-
         let holes = match &value.holes {
             Some(h_holes) => {
                 let mut holes = vec![];
                 for hole in h_holes {
-                    let outer_ring = buf.remove_f32(&hole.outer_ring)?;
+                    // `outer_ring` has a lifetime for sure.
+                    unsafe {
+                        let outer_ring = buf.remove_f32(&hole.outer_ring)?;
 
-                    holes.push(Hierarchy {
-                        outer_ring,
-                        holes: None,
-                        expected_winding_order: hole.expected_winding_order,
-                    });
+                        holes.push(Hierarchy {
+                            outer_ring,
+                            holes: None,
+                            expected_winding_order: hole.expected_winding_order,
+                        });
+                    }
                 }
                 Some(holes)
             }
             None => None,
         };
-        Some(Hierarchy {
-            outer_ring,
-            holes,
-            expected_winding_order: value.expected_winding_order,
-        })
+
+        // `outer_ring` has a lifetime for sure.
+        unsafe {
+            let outer_ring = buf.remove_f32(&value.outer_ring)?;
+            Some(Hierarchy {
+                outer_ring,
+                holes,
+                expected_winding_order: value.expected_winding_order,
+            })
+        }
     }
 
     pub fn from_transferred_cloned(

@@ -9,6 +9,10 @@ export class TransferableMartiniLike implements TransferableMartini {
     this.size = size;
   }
 
+  transfer_coords(): Uint32Array {
+    return this.coords;
+  }
+
   clone() {
     return new TransferableMartiniLike(this.coords.slice(), this.size);
   }
