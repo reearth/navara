@@ -1,8 +1,9 @@
+use js_sys::{Float32Array, Uint32Array};
 use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::consume_vec;
+use crate::{copy_f32_array, copy_u32_array};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
@@ -27,18 +28,24 @@ impl Geometry {
     }
 
     #[wasm_bindgen(js_name = "transferVertices")]
-    pub fn transfer_vertices(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.vertices)
+    pub fn transfer_vertices(&self) -> Float32Array {
+        copy_f32_array(&self.vertices)
     }
 
     #[wasm_bindgen(js_name = "transferUvs")]
-    pub fn transfer_uvs(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.uvs)
+    pub fn transfer_uvs(&self) -> Float32Array {
+        copy_f32_array(&self.uvs)
     }
 
     #[wasm_bindgen(js_name = "transferIndices")]
-    pub fn transfer_indices(&mut self) -> Vec<u32> {
-        consume_vec(&mut self.indices)
+    pub fn transfer_indices(&self) -> Uint32Array {
+        copy_u32_array(&self.indices)
+    }
+
+    pub fn drop(self) {
+        drop(self.vertices);
+        drop(self.uvs);
+        drop(self.indices);
     }
 }
 
@@ -87,18 +94,29 @@ impl ReturnedConstructedTerrainMesh {
         }
     }
 
-    #[wasm_bindgen(js_name = "transferGeometry")]
-    pub fn transfer_geometry(&mut self) -> Geometry {
-        Geometry {
-            vertices: self.geometry.transfer_vertices(),
-            uvs: self.geometry.transfer_uvs(),
-            indices: self.geometry.transfer_indices(),
-        }
+    #[wasm_bindgen(js_name = "transferVertices")]
+    pub fn transfer_vertices(&self) -> Float32Array {
+        self.geometry.transfer_vertices()
+    }
+
+    #[wasm_bindgen(js_name = "transferUvs")]
+    pub fn transfer_uvs(&self) -> Float32Array {
+        self.geometry.transfer_uvs()
+    }
+
+    #[wasm_bindgen(js_name = "transferIndices")]
+    pub fn transfer_indices(&self) -> Uint32Array {
+        self.geometry.transfer_indices()
     }
 
     #[wasm_bindgen(js_name = "transferHeights")]
-    pub fn transfer_heights(&mut self) -> Vec<FloatType> {
-        consume_vec(&mut self.heights)
+    pub fn transfer_heights(&self) -> Float32Array {
+        copy_f32_array(&self.heights)
+    }
+
+    pub fn drop(self) {
+        drop(self.heights);
+        self.geometry.drop();
     }
 }
 

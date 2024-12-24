@@ -1,4 +1,8 @@
-import type { CRS, TransferablePolylineBatchedFeature } from "@navara/engine";
+import type {
+  CRS,
+  ReturnedTransferablePolylineBatchedFeature,
+  TransferablePolylineBatchedFeature,
+} from "@navara/engine";
 
 export class TransferablePolylineBatchedFeatureLike
   implements TransferablePolylineBatchedFeature
@@ -9,12 +13,12 @@ export class TransferablePolylineBatchedFeatureLike
   crs: CRS;
   length: number;
 
-  constructor(t: TransferablePolylineBatchedFeature) {
+  constructor(t: ReturnedTransferablePolylineBatchedFeature) {
     this.points = t.transferPoints();
     this.points_sizes = t.transferPointsSizes();
     this.batch_ids = t.transferBatchIds();
-    this.crs = t.crs;
-    this.length = t.length;
+    this.crs = t.crs();
+    this.length = t.length();
   }
 
   setPoints(_byte_length: number, _f: () => void): void {}

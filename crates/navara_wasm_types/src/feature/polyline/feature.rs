@@ -2,9 +2,7 @@ use navara_feature_component::batch::BatchId;
 use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    consume_vec, copy_f32_array, copy_u32_array, transfer_f32_array, transfer_u32_array, CRS,
-};
+use crate::{copy_f32_array, copy_u32_array, transfer_f32_array, transfer_u32_array, CRS};
 
 /// To transfer the batched feature efficiently, the all feature's properties are managed as one-dimensional array.
 #[wasm_bindgen]
@@ -125,22 +123,6 @@ impl TransferablePolylineBatchedFeature {
         let batch_id = BatchId(self.batch_ids[idx]);
 
         (points, batch_id)
-    }
-
-    /// Move all items into new self.
-    pub fn consume(&mut self) -> Self {
-        let points = consume_vec(&mut self.points);
-        let points_sizes = consume_vec(&mut self.points_sizes);
-        let batch_ids = consume_vec(&mut self.batch_ids);
-
-        TransferablePolylineBatchedFeature {
-            points,
-            points_sizes,
-            batch_ids,
-            crs: CRS::default(),
-            length: self.length,
-            ..Default::default()
-        }
     }
 }
 

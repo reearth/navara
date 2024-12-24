@@ -4,8 +4,8 @@ use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    consume_vec, copy_f32_array, copy_u32_array, copy_u8_array, transfer_f32_array,
-    transfer_u32_array, transfer_u8_array, CRS,
+    copy_f32_array, copy_u32_array, copy_u8_array, transfer_f32_array, transfer_u32_array,
+    transfer_u8_array, CRS,
 };
 
 use super::{TransferableHierarchy, TransferableHoles, WindingOrder};
@@ -267,32 +267,6 @@ impl TransferablePolygonBatchedFeature {
         let batch_id = BatchId(self.batch_ids[idx]);
 
         (transferable_hierarchy, batch_id)
-    }
-
-    /// Move all items into new self.
-    pub fn consume(&mut self) -> Self {
-        let outer_ring = consume_vec(&mut self.outer_ring);
-        let outer_ring_sizes = consume_vec(&mut self.outer_ring_sizes);
-        let holes = consume_vec(&mut self.holes);
-        let holes_total_sizes = consume_vec(&mut self.holes_total_sizes);
-        let holes_boundaries = consume_vec(&mut self.holes_boundaries);
-        let holes_sizes = consume_vec(&mut self.holes_sizes);
-        let batch_ids = consume_vec(&mut self.batch_ids);
-        let expected_winding_orders = consume_vec(&mut self.expected_winding_orders);
-
-        TransferablePolygonBatchedFeature {
-            outer_ring,
-            outer_ring_sizes,
-            holes,
-            holes_sizes,
-            holes_total_sizes,
-            holes_boundaries,
-            batch_ids,
-            expected_winding_orders,
-            crs: CRS::default(),
-            length: self.length,
-            ..Default::default()
-        }
     }
 }
 

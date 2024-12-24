@@ -1,5 +1,6 @@
+use js_sys::Uint32Array;
 use navara_tile_component::MartiniComponent;
-use navara_wasm_types::consume_vec;
+use navara_wasm_types::copy_u32_array;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
@@ -16,8 +17,8 @@ impl TransferableMartini {
         Self { size, coords }
     }
 
-    pub fn transfer_coords(&mut self) -> Vec<u32> {
-        consume_vec(&mut self.coords)
+    pub fn transfer_coords(&self) -> Uint32Array {
+        copy_u32_array(&self.coords)
     }
 }
 

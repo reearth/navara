@@ -1,4 +1,8 @@
-import type { CRS, TransferablePolygonBatchedFeature } from "@navara/engine";
+import type {
+  CRS,
+  ReturnedTransferablePolygonBatchedFeature,
+  TransferablePolygonBatchedFeature,
+} from "@navara/engine";
 
 export class TransferablePolygonBatchedFeatureLike
   implements TransferablePolygonBatchedFeature
@@ -14,15 +18,15 @@ export class TransferablePolygonBatchedFeatureLike
   outer_ring: Float32Array;
   outer_ring_sizes: Uint32Array;
 
-  constructor(t: TransferablePolygonBatchedFeature) {
+  constructor(t: ReturnedTransferablePolygonBatchedFeature) {
     this.batch_ids = t.transferBatchIds();
-    this.crs = t.crs;
+    this.crs = t.crs();
     this.expected_winding_orders = t.transferExpectedWindingOrders();
     this.holes = t.transferHoles();
     this.holes_boundaries = t.transferHolesBoundaries();
     this.holes_sizes = t.transferHolesSizes();
     this.holes_total_sizes = t.transferHolesTotalSizes();
-    this.length = t.length;
+    this.length = t.length();
     this.outer_ring = t.transferOuterRing();
     this.outer_ring_sizes = t.transferOuterRingSizes();
   }

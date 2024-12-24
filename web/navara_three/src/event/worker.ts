@@ -134,9 +134,9 @@ async function processConstructTerrainMesh(
     martini,
   );
 
-  const vertices = bufHandler.newF32(result.geometry.vertices);
-  const uvs = bufHandler.newF32(result.geometry.uvs);
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const vertices = bufHandler.newF32(result.vertices);
+  const uvs = bufHandler.newF32(result.uvs);
+  const indices = bufHandler.newU32(result.indices);
   const heights = bufHandler.newF32(result.heights);
   if (!vertices || !uvs || !indices || !heights) {
     return;
@@ -209,9 +209,9 @@ async function processUpsampleTerrainMesh(
     upsamplableTerrainGeometry,
   );
 
-  const vertices = bufHandler.newF32(result.geometry.vertices);
-  const uvs = bufHandler.newF32(result.geometry.uvs);
-  const indices = bufHandler.newU32(result.geometry.indices);
+  const vertices = bufHandler.newF32(result.vertices);
+  const uvs = bufHandler.newF32(result.uvs);
+  const indices = bufHandler.newU32(result.indices);
   const heights = bufHandler.newF32(result.heights);
   if (!vertices || !uvs || !indices || !heights) {
     return;
@@ -250,7 +250,7 @@ async function processConstructPolygonBatchedFeature(
   if (!transferable) return;
 
   const result = await constructPolygonBatchedFeature(
-    new TransferablePolygonBatchedFeatureLike(transferable.transferable()),
+    new TransferablePolygonBatchedFeatureLike(transferable),
     new PolygonMaterialLike(transferable.material),
   );
 
@@ -330,7 +330,7 @@ async function processConstructPolylineBatchedFeature(
   if (!transferable) return;
 
   const result = await constructPolylineBatchedFeature(
-    new TransferablePolylineBatchedFeatureLike(transferable.transferable()),
+    new TransferablePolylineBatchedFeatureLike(transferable),
     new PolylineMaterialLike(transferable.material),
   );
 

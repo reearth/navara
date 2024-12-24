@@ -10,7 +10,7 @@ use crate::{
 };
 use navara_wasm_types::{
     polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
-    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
+    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, CRS,
 };
 
 #[wasm_bindgen]
@@ -180,8 +180,52 @@ pub struct ReturnedTransferablePolygonBatchedFeature {
 
 #[wasm_bindgen]
 impl ReturnedTransferablePolygonBatchedFeature {
-    pub fn transferable(&mut self) -> TransferablePolygonBatchedFeature {
-        self.transferable.consume()
+    #[wasm_bindgen(js_name = "transferBatchIds")]
+    pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_batch_ids()
+    }
+
+    #[wasm_bindgen(js_name = "transferOuterRing")]
+    pub fn transfer_outer_ring(&mut self) -> js_sys::Float32Array {
+        self.transferable.transfer_outer_ring()
+    }
+
+    #[wasm_bindgen(js_name = "transferOuterRingSizes")]
+    pub fn transfer_outer_ring_sizes(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_outer_ring_sizes()
+    }
+
+    #[wasm_bindgen(js_name = "transferHoles")]
+    pub fn transfer_holes(&mut self) -> js_sys::Float32Array {
+        self.transferable.transfer_holes()
+    }
+
+    #[wasm_bindgen(js_name = "transferHolesBoundaries")]
+    pub fn transfer_holes_boundaries(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_holes_boundaries()
+    }
+
+    #[wasm_bindgen(js_name = "transferHolesSizes")]
+    pub fn transfer_holes_sizes(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_holes_sizes()
+    }
+
+    #[wasm_bindgen(js_name = "transferHolesTotalSizes")]
+    pub fn transfer_holes_total_sizes(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_holes_total_sizes()
+    }
+
+    #[wasm_bindgen(js_name = "transferExpectedWindingOrders")]
+    pub fn transfer_expected_winding_orders(&mut self) -> js_sys::Uint8Array {
+        self.transferable.transfer_expected_winding_orders()
+    }
+
+    pub fn crs(&self) -> CRS {
+        self.transferable.crs.clone()
+    }
+
+    pub fn length(&self) -> usize {
+        self.transferable.length
     }
 }
 
@@ -194,7 +238,26 @@ pub struct ReturnedTransferablePolylineBatchedFeature {
 
 #[wasm_bindgen]
 impl ReturnedTransferablePolylineBatchedFeature {
-    pub fn transferable(&mut self) -> TransferablePolylineBatchedFeature {
-        self.transferable.consume()
+    #[wasm_bindgen(js_name = "transferBatchIds")]
+    pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_batch_ids()
+    }
+
+    #[wasm_bindgen(js_name = "transferPoints")]
+    pub fn transfer_points(&mut self) -> js_sys::Float32Array {
+        self.transferable.transfer_points()
+    }
+
+    #[wasm_bindgen(js_name = "transferPointsSizes")]
+    pub fn transfer_points_sizes(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_points_sizes()
+    }
+
+    pub fn crs(&self) -> CRS {
+        self.transferable.crs.clone()
+    }
+
+    pub fn length(&self) -> usize {
+        self.transferable.length
     }
 }
