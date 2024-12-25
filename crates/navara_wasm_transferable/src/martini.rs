@@ -6,8 +6,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 #[wasm_bindgen]
 pub struct TransferableMartini {
     pub size: u32,
-    #[wasm_bindgen(getter_with_clone)]
-    pub coords: Vec<u32>,
+    pub(crate) coords: Vec<u32>,
 }
 
 #[wasm_bindgen]
