@@ -2,10 +2,13 @@
 
 use bevy_ecs::{
     entity::Entity,
+    query::Without,
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
+use navara_component::Deleted;
 use navara_core::ElevationDecoder;
+use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::batch::BatchedFeature;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
@@ -13,7 +16,9 @@ use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{MartiniComponent, RasterTile, RasterTileQuadtree, TileHandle};
 use navara_window::{Window, WindowResizeEvent};
-use navara_worker::{DelegatedWorkerTasksResult, WorkerTaskCompletedEvent};
+use navara_worker::{
+    DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskMarker,
+};
 
 mod app;
 
@@ -76,6 +81,7 @@ impl App {
             .send_event(navara_buffer_store::BufferStoreLoadedEvent {
                 id: Entity::from_bits(bits),
                 ty: navara_buffer_store::BufferType::U8,
+                handle,
             });
     }
 
@@ -202,6 +208,24 @@ impl App {
             .send_event(navara_layer_event::DeleteLayerEvent(LayerId(
                 layer_id.to_owned(),
             )));
+    }
+
+    pub fn has_data_requester(&mut self, bits: u64) -> bool {
+        let entity = Entity::from_bits(bits);
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<&DataRequester, Without<Deleted>>();
+
+        query.get(world, entity).is_ok()
+    }
+
+    pub fn has_worker_task(&mut self, bits: u64) -> bool {
+        let entity = Entity::from_bits(bits);
+        let world = self.app.world_mut();
+        let mut query = world
+            .query_filtered::<&WorkerTaskMarker, (Without<Deleted>, Without<WorkerTaskCompleted>)>(
+            );
+
+        query.get(world, entity).is_ok()
     }
 
     pub fn get_martini(&mut self, martini_id: u64) -> Option<&MartiniComponent> {

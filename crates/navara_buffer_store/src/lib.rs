@@ -19,6 +19,7 @@ impl bevy_app::Plugin for BufferStorePlugin {
 pub struct BufferStoreLoadedEvent {
     pub id: Entity,
     pub ty: BufferType,
+    pub handle: Handle,
 }
 
 #[derive(Debug, Event)]

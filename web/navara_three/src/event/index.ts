@@ -80,6 +80,7 @@ export type WorkerTaskHandler = {
     bits: bigint,
     result: DelegatedWorkerTasksResult,
   ) => void;
+  hasWorkerTask: (bits: bigint) => boolean;
 };
 
 export type TileHandler = {
