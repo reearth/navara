@@ -3,14 +3,15 @@ import {
   PolylineMaterialLike,
   TransferablePolylineBatchedFeatureLike,
 } from "@navara/core";
+import type { Promise } from "workerpool";
 
 import { queueTask } from "./queueTask";
 
-export async function constructPolylineBatchedFeature(
+export function constructPolylineBatchedFeature(
   transferableBatchedFeatureLike: TransferablePolylineBatchedFeatureLike,
   materialLike: PolylineMaterialLike,
 ): Promise<ConstructedPolylineGeometryLike | undefined> {
-  const result = await queueTask(
+  return queueTask(
     "constructPolylineBatchedFeature",
     [transferableBatchedFeatureLike, materialLike],
     {
@@ -21,5 +22,4 @@ export async function constructPolylineBatchedFeature(
       ],
     },
   );
-  return result;
 }

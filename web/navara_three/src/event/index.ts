@@ -48,13 +48,16 @@ import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import { applyTextureAspect } from "../texture";
-import type { AbortControllers, MeshCache } from "../type";
+import type { AbortControllers, MeshCache, WorkerPoolPromises } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
-import { processWorkerTaskDelegatedEvent } from "./worker";
+import {
+  processWorkerTaskDelegatedEvent,
+  processWorkerTaskRemovedEvent,
+} from "./worker";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -116,6 +119,7 @@ export function processEvent(
   meshHandler: MeshHandler,
   featureHandler: FeatureHandler,
   loadedTexs: Map<string, Texture>,
+  workerPoolPromises: WorkerPoolPromises,
   event: Events | undefined,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
@@ -171,15 +175,17 @@ export function processEvent(
           break;
       }
     },
-    ({ type }) => {
-      switch (type) {
-        case "add":
-          return canWorkerProcessImmediately();
-        case "remove":
-          return true;
-        case "change":
-          return true;
-      }
+    {
+      shouldProcess: ({ type }) => {
+        switch (type) {
+          case "add":
+            return canWorkerProcessImmediately();
+          case "remove":
+            return true;
+          case "change":
+            return true;
+        }
+      },
     },
   );
 
@@ -203,19 +209,28 @@ export function processEvent(
             tileHandler,
             featureHandler,
             workerTaskHandler,
+            workerPoolPromises,
           );
+          break;
+        case "remove":
+          await processWorkerTaskRemovedEvent(event, workerPoolPromises);
           break;
       }
     },
-    ({ type }) => {
-      switch (type) {
-        case "add":
-          return canWorkerProcessImmediately();
-        case "remove":
-          return true;
-        case "change":
-          return true;
-      }
+    {
+      shouldProcess: ({ type }) => {
+        switch (type) {
+          case "add":
+            return canWorkerProcessImmediately();
+          case "remove":
+            return true;
+          case "change":
+            return true;
+        }
+      },
+      onAbort: async (event) => {
+        await processWorkerTaskRemovedEvent(event, workerPoolPromises);
+      },
     },
   );
 
@@ -271,19 +286,21 @@ export function processEvent(
           break;
       }
     },
-    ({ type, event }) => {
-      switch (type) {
-        case "add":
-          return true;
-        case "remove":
-          return true;
-        case "change":
-          if (isEntityEvent(event)) {
-            const id = generate_id_from_entity(event);
-            return meshes.has(id);
-          }
-          return true;
-      }
+    {
+      shouldProcess: ({ type, event }) => {
+        switch (type) {
+          case "add":
+            return true;
+          case "remove":
+            return true;
+          case "change":
+            if (isEntityEvent(event)) {
+              const id = generate_id_from_entity(event);
+              return meshes.has(id);
+            }
+            return true;
+        }
+      },
     },
   );
 
@@ -315,6 +332,11 @@ export function processEvent(
           break;
       }
     },
+    {
+      onAbort: (event) => {
+        processTextureFragmentRemoved(event, loadedTexs, abortControllers);
+      },
+    },
   );
 
   eventManager.processTransactionEvents(
@@ -339,13 +361,18 @@ export function processEvent(
           break;
       }
     },
-    ({ type }) => {
-      switch (type) {
-        case "add":
-          return canWorkerProcessImmediately();
-        default:
-          return true;
-      }
+    {
+      shouldProcess: ({ type }) => {
+        switch (type) {
+          case "add":
+            return canWorkerProcessImmediately();
+          default:
+            return true;
+        }
+      },
+      onAbort: (event) => {
+        processDataRequesterRemoved(event, buf, abortControllers);
+      },
     },
   );
 }
@@ -483,6 +510,10 @@ async function processRequestedData(
           canvas.transferControlToOffscreen(),
         );
 
+        if (abortController.signal.aborted) {
+          return;
+        }
+
         let u8a: Uint8Array | null = new Uint8Array(data);
         buf.setU8(req.handle, req.bits, u8a);
 
@@ -505,14 +536,24 @@ async function processRequestedData(
   }
 
   // TODO: Handle abort
-  await fetch(req.url)
+  await fetch(req.url, { signal: abortController.signal })
     .then((res) => res.arrayBuffer())
     .then((val) => {
+      if (abortController.signal.aborted) {
+        return;
+      }
+
       const bytes = new Uint8Array(val);
       buf.setU8(req.handle, req.bits, bytes);
 
       // Prevent memory leak
       bytes.set([]);
+    })
+    .catch(() => {
+      buf.triggerDataRequesterFailed(req.bits);
+    })
+    .finally(() => {
+      abortControllers.delete(id);
     });
 }
 

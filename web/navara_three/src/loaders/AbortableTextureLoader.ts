@@ -21,7 +21,7 @@ export class AbortableTextureLoader extends Loader {
     url: string,
     onLoad: (data: Texture) => void,
     onProgress?: (event: ProgressEvent) => void,
-    onError?: (err: unknown) => void,
+    onError?: (err: unknown, isAborted?: boolean) => void,
     abort?: AbortController,
   ): Texture {
     const texture = new Texture();
