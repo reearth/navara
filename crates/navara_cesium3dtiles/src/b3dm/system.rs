@@ -9,6 +9,7 @@ use navara_component::{Deleted, Priority};
 use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
+    batch::BatchId,
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
@@ -88,6 +89,8 @@ pub fn construct_model_by_b3dm_layer(
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
+            // TODO: Support batch id
+            BatchId(0),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -210,6 +213,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
+            // TODO: Support batch id
+            BatchId(0),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
