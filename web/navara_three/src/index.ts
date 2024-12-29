@@ -1,5 +1,5 @@
 import { EventManager } from "@navara/core";
-import initCore, { Core, TextureFragmentStatus } from "@navara/engine";
+import initCore, { Core, type TextureFragmentStatus } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
 import {
   PerspectiveCamera,
@@ -352,6 +352,7 @@ export default class ThreeView {
       this._eventDisposer = undefined;
     }
     this._globeDepthRenderTarget.dispose();
+    this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
       typeof this.renderer.dispose === "function"
@@ -552,9 +553,8 @@ export default class ThreeView {
       if (this._update()) this._render();
 
       this._stats?.end();
-      if (!this._disposed) requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    this.renderer.setAnimationLoop(loop);
   }
 
   private _getCanvasSize(): { width: number; height: number } | undefined {
