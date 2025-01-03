@@ -10,8 +10,8 @@ use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
 };
-use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Intersection, WGS84_32};
-use navara_math::{Mat3, Quat, Transform, Vec2, Vec3, EPSILON10};
+use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Ellipsoid, Ray, WGS84_32};
+use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10};
 use navara_window::Window;
 
 use crate::{helpers::get_pick_ray_from_camera, CameraController, CameraInertia};
@@ -179,12 +179,11 @@ fn handle_orbit_spin(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false, None);
 
-    inertia.spin = rotate(
-        mm,
-        controller,
-        (orbit.local_position.length() - controller.minimum_zoom_distance)
-            / controller.minimum_zoom_distance,
-    );
+    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
+
+    let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
+
+    inertia.spin(rotate(mm, controller, ratio * 1.5, ratio));
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
@@ -217,13 +216,25 @@ fn handle_tilt(
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
     // TODO: Support movement underground.
-    let intersection = match ray_ellipsoid(&ray, ellipsoid) {
-        Some(i) if i.start != 0. => i,
+    let point = match ray_ellipsoid(&ray, ellipsoid) {
+        i if i.start == f32::INFINITY => {
+            // Calculate an edge of ellipsoid
+            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
+            let forward = ellipsoid_vec3 * ray.direction;
+            let distance_to_edge = forward.dot(ray.origin);
+
+            if distance_to_edge.equal_epsilon(EPSILON10) {
+                1.
+            } else {
+                distance_to_edge
+            }
+        }
+        i if i.start != 0. => i.start,
+        i if i.end != 0. => i.end,
         // TODO: Handle the case where intersection point couldn't find.
-        // Ref: https://github.com/CesiumGS/cesium/blob/57857b0d563d0d7592fe6254080c22130ce8d3ed/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2487-L2515
-        _ => Intersection { start: 1., end: 1. },
+        _ => 1.,
     };
-    let center = ray.get_point(intersection.start);
+    let center = ray.get_point(point);
     let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
 
     if orbit.default_world_quat.is_none() {
@@ -238,7 +249,7 @@ fn handle_tilt(
         Some(Vec3::Z),
     );
 
-    let mut spin = rotate(mm, controller, 1.);
+    let mut spin = rotate(mm, controller, 1., 1.);
 
     if spin.x.abs() > spin.y.abs() {
         spin.y = 0.;
@@ -246,16 +257,21 @@ fn handle_tilt(
         spin.x = 0.;
     }
 
-    inertia.spin = spin;
+    inertia.spin(spin);
 }
 
-fn rotate(mm: &mut EventReader<MouseMotion>, controller: &CameraController, ratio: f32) -> Vec3 {
+fn rotate(
+    mm: &mut EventReader<MouseMotion>,
+    controller: &CameraController,
+    ratio_x: f32,
+    ratio_y: f32,
+) -> Vec3 {
     let mut screen_delta = Vec3::ZERO;
     for ev in mm.read() {
         screen_delta += Vec3::new(ev.delta.x, ev.delta.y, 0.0);
     }
 
-    let pan_delta = Vec2::new(screen_delta.x * ratio, screen_delta.y * ratio);
+    let pan_delta = Vec2::new(screen_delta.x * ratio_x, screen_delta.y * ratio_y);
 
     Vec3::new(-pan_delta.x, -pan_delta.y, 0.0) * controller.spin_speed
 }
@@ -281,12 +297,37 @@ fn handle_zoom(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false, None);
 
-    let length = orbit.local_position.length();
+    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
 
-    let dist = (length - controller.minimum_zoom_distance).max(0.);
+    let dist = distance_from_ellipsoid_surface.max(0.);
     let d = zoom * controller.zoom_speed * dist * 0.0025;
 
-    inertia.zoom = d;
+    inertia.zoom(d);
+}
+
+fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f32>) -> f32 {
+    let ray = Ray {
+        origin: transform.transform_point(Vec3::ZERO),
+        direction: transform.forward().normalize(),
+    };
+    match ray_ellipsoid(&ray, ellipsoid) {
+        i if i.start == f32::INFINITY => {
+            // Calculate an edge of ellipsoid
+            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
+            let forward = ellipsoid_vec3 * ray.direction;
+            let distance_to_edge = forward.dot(ray.origin);
+
+            if distance_to_edge.equal_epsilon(EPSILON10) {
+                1.
+            } else {
+                distance_to_edge
+            }
+        }
+        i if i.start != 0. => i.start,
+        i if i.end != 0. => i.end,
+        // TODO: Handle the case where intersection point couldn't find.
+        _ => 1.,
+    }
 }
 
 fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
@@ -313,15 +354,12 @@ fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &Camer
 }
 
 fn needs_update(inertia: &CameraInertia) -> bool {
-    inertia.spin.length().abs() >= EPSILON10
-        || inertia.zoom.abs() >= EPSILON10
-        || inertia.tilt.length().abs() >= EPSILON10
+    inertia.spin.length().abs() >= EPSILON10 || inertia.zoom.abs() >= EPSILON10
 }
 
 fn after_inertia(inertia: &mut CameraInertia, controller: &CameraController) {
     inertia.spin *= controller.inertia;
     inertia.zoom *= controller.inertia;
-    inertia.tilt *= controller.inertia;
 }
 
 // TODO

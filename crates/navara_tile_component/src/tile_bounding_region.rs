@@ -139,7 +139,7 @@ impl TileBoundingRegion<FloatType> {
 
 #[cfg(test)]
 mod test {
-    use navara_core::{Meters, TileXYZ, EARTH_RADIUS_F32, WGS84_32, XYZ};
+    use navara_core::{Meters, TileXYZ, WGS84_32, WGS84_A_32, XYZ};
     use navara_mock::camera::update_camera_transform;
 
     use super::TileBoundingRegion;
@@ -203,10 +203,10 @@ mod test {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
         let tbr = TileBoundingRegion::from_extent_f32(tile_coords.extent(), WGS84_32);
 
-        let (camera_pos, camera_lle) = update_camera_transform(EARTH_RADIUS_F32 * 3.);
-        debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 29879596.0);
+        let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32 * 3.);
+        debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 29916116.0);
 
-        let (camera_pos, camera_lle) = update_camera_transform(EARTH_RADIUS_F32);
-        debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 9009958.0);
+        let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32);
+        debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 9020048.0);
     }
 }

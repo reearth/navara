@@ -11,9 +11,6 @@ pub struct Ellipsoid<F: Float> {
     pub center_tolerance_squared: F,
 }
 
-// TODO: Move this variable to the correct place.
-pub const EARTH_RADIUS_F32: f32 = 6371000.;
-
 pub const WGS84_A_64: f64 = 6378137.0;
 pub const WGS84_A_32: f32 = 6378137.0;
 pub const WGS84_FE_64: f64 = 1.0 / 298.257223563;

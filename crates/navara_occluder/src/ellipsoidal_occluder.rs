@@ -138,7 +138,7 @@ fn is_scaled_space_point_visible(
 #[cfg(test)]
 mod test {
 
-    use navara_core::{EARTH_RADIUS_F32, WGS84_32};
+    use navara_core::{WGS84_32, WGS84_A_32};
     use navara_math::Vec3;
     use navara_mock::camera::update_camera_transform;
 
@@ -146,21 +146,17 @@ mod test {
 
     #[test]
     fn it_should_return_some_or_none() {
-        let (camera_pos, _camera_lle) = update_camera_transform(EARTH_RADIUS_F32 * 2.);
+        let (camera_pos, _camera_lle) = update_camera_transform(WGS84_A_32 * 2.);
         let occluder = EllipsoidalOccluder::new(&camera_pos, WGS84_32);
 
-        let center = Vec3::new(
-            EARTH_RADIUS_F32 / 2.,
-            EARTH_RADIUS_F32 / 2.,
-            EARTH_RADIUS_F32,
-        );
+        let center = Vec3::new(WGS84_A_32 / 2., WGS84_A_32 / 2., WGS84_A_32);
         debug_assert_eq!(
             occluder.compute_horizontal_culling_point(
                 &WGS84_32,
                 center,
                 vec![Vec3::new(center.x + 100., center.y, center.z - 100.)]
             ),
-            Some(Vec3::new(0.49944404, 0.49944404, 1.0022484))
+            Some(Vec3::new(0.5000035, 0.5000035, 1.003371))
         );
         debug_assert!(occluder
             .compute_horizontal_culling_point(
@@ -173,14 +169,10 @@ mod test {
 
     #[test]
     fn it_should_be_occluded() {
-        let (camera_pos, _camera_lle) = update_camera_transform(EARTH_RADIUS_F32 * 1.5);
+        let (camera_pos, _camera_lle) = update_camera_transform(WGS84_A_32 * 1.5);
         let occluder = EllipsoidalOccluder::new(&camera_pos, WGS84_32);
 
-        let center = Vec3::new(
-            EARTH_RADIUS_F32 / 2.,
-            EARTH_RADIUS_F32 / 2.,
-            -EARTH_RADIUS_F32,
-        );
+        let center = Vec3::new(WGS84_A_32 / 2., WGS84_A_32 / 2., -WGS84_A_32);
         let occludee_point = occluder
             .compute_horizontal_culling_point(
                 &WGS84_32,
@@ -190,7 +182,7 @@ mod test {
             .unwrap();
         debug_assert!(occluder.is_scaled_space_point_visible(occludee_point));
 
-        let center = Vec3::new(EARTH_RADIUS_F32 / 2., 0., -EARTH_RADIUS_F32);
+        let center = Vec3::new(WGS84_A_32 / 2., 0., -WGS84_A_32);
         let occludee_point = occluder
             .compute_horizontal_culling_point(
                 &WGS84_32,
