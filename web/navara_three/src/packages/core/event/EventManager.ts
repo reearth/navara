@@ -45,6 +45,22 @@ type TransactionCallbackParams<
   | { type: "remove"; event: GetJsEventValue<RemoveKey> }
   | { type: "change"; event: GetJsEventValue<ChangeKey> };
 
+const defaultGenerateEventId = <
+  AddKey extends JsEventsKey,
+  RemoveKey extends JsEventsKey,
+  ChangeKey extends JsEventsKey,
+>(
+  ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
+) => {
+  const { event } = ev;
+
+  if (!isEntityEvent(event)) {
+    return;
+  }
+  const id = generate_id_from_entity(event);
+  return id;
+};
+
 export class EventManager {
   stacks: EventsStacks = {
     camera_transform_updated: [],
@@ -62,6 +78,7 @@ export class EventManager {
     worker_task_delegated: [],
     worker_task_removed: [],
   };
+  addedEventIds = new Set();
   private transactionManager = new TransactionManager();
 
   needsUpdate() {
@@ -220,10 +237,22 @@ export class EventManager {
     cb: (
       ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
     ) => Promise<void>,
-    shouldProcess?: (
-      ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
-    ) => boolean,
+    handlers?: {
+      shouldProcess?: (
+        ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
+      ) => boolean;
+      generateEventId?: (
+        ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
+      ) => string;
+      onAbort?: (ev: GetJsEventValue<RemoveKey>) => void;
+    },
   ) {
+    const {
+      shouldProcess,
+      generateEventId = defaultGenerateEventId,
+      onAbort,
+    } = handlers ?? {};
+
     this.removeDuplicatedTransactionEvents(options);
 
     const transaction = this.transactionManager
@@ -231,23 +260,47 @@ export class EventManager {
       .then(() =>
         this.forEachStackAsync(
           options.add.key,
-          (event) => cb({ type: "add", event }),
+          (event) => {
+            if (onAbort) {
+              this.addedEventIds.add(generateEventId({ type: "add", event }));
+            }
+            return cb({ type: "add", event });
+          },
           options.add.max,
           shouldProcess
             ? (event) => shouldProcess({ type: "add", event })
             : undefined,
         ),
       )
-      .then(() =>
-        this.forEachStackAsync(
+      .then(() => {
+        if (onAbort) {
+          this.addedEventIds.clear();
+        }
+        return this.forEachStackAsync(
           options.remove.key,
           (event) => cb({ type: "remove", event }),
           options.remove.max,
           shouldProcess
             ? (event) => shouldProcess({ type: "remove", event })
             : undefined,
-        ),
-      );
+        );
+      });
+
+    // Handle an abort process to an add event.
+    if (generateEventId && onAbort && this.addedEventIds.size) {
+      for (const event of this.stacks[options.remove.key]) {
+        if (!event) continue;
+        const removeEv = event as GetJsEventValue<RemoveKey>;
+        const id = generateEventId({
+          type: "remove",
+          event: removeEv,
+        });
+        if (id && this.addedEventIds.has(id)) {
+          onAbort(removeEv);
+          this.addedEventIds.delete(id);
+        }
+      }
+    }
 
     if (options.change) {
       const change = options.change;

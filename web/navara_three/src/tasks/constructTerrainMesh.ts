@@ -4,10 +4,11 @@ import {
   TransferableRasterDEMDataLike,
   TransferableTileLike,
 } from "@navara/core";
+import type { Promise } from "workerpool";
 
 import { queueTask } from "./queueTask";
 
-export async function constructTerrainMesh(
+export function constructTerrainMesh(
   bytes: Uint8Array,
   tileLike: TransferableTileLike,
   rasterDEMDataLike: TransferableRasterDEMDataLike,
@@ -15,10 +16,9 @@ export async function constructTerrainMesh(
 ): Promise<{
   result: ReturnedConstructedTerrainMeshLike;
 }> {
-  const result = await queueTask(
+  return queueTask(
     "constructTerrainMesh",
     [bytes, tileLike, rasterDEMDataLike, martiniLike],
     { transfer: [bytes.buffer, martiniLike.coords.buffer] },
   );
-  return result;
 }

@@ -41,6 +41,7 @@ import {
   type AbortControllers,
   type LayerDescription,
   type MeshCache,
+  type WorkerPoolPromises,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -89,6 +90,7 @@ export default class ThreeView {
 
   private _meshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
+  private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -445,6 +447,7 @@ export default class ThreeView {
       this._meshHandler,
       this._featureHandler,
       this._loadedTexs,
+      this._workerPoolPromises,
       events,
       this._uniforms,
       this._drapedFeatureMaterials,

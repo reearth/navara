@@ -23,7 +23,7 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
     url: string,
     onLoad: (data: HTMLImageElement) => void,
     _onProgress?: (event: ProgressEvent) => void,
-    onError?: (err: unknown) => void,
+    onError?: (err: unknown, isAborted?: boolean) => void,
     abort?: AbortController,
     timeout = 5000,
   ): HTMLImageElement {
@@ -67,10 +67,10 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
       abort?.signal.removeEventListener("abort", onAbort, false);
       window.clearTimeout(timeoutId);
     }
-    function onImageError(event: unknown) {
+    function onImageError(event: unknown, isAborted?: boolean) {
       removeEventListeners();
 
-      if (onError) onError(event);
+      if (onError) onError(event, isAborted);
 
       scope.manager.itemError(url);
       scope.manager.itemEnd(url);
@@ -105,9 +105,7 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
         image.src = window.URL.createObjectURL(blob);
       })
       .catch((e) => {
-        if (e.name !== "AbortError") {
-          onImageError(e);
-        }
+        onImageError(e, !e.name || e.name === "AbortError");
         removeEventListeners();
       });
 

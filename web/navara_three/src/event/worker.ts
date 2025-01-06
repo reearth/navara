@@ -1,4 +1,5 @@
 import {
+  generate_id_from_entity,
   PolygonMaterialLike,
   TransferableMartiniLike,
   TransferablePolygonBatchedFeatureLike,
@@ -14,6 +15,7 @@ import {
   ConstructTerrainMeshParameters,
   ConstructTerrainMeshResult,
   DelegatedWorkerTasksResult,
+  EntityEvent,
   ExtentRadianF32,
   ReconstructableEntity,
   TransferableFloatAttribute,
@@ -33,6 +35,7 @@ import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatched
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
+import type { WorkerPoolPromises } from "../type";
 
 import type {
   BufferLoader,
@@ -47,56 +50,80 @@ export async function processWorkerTaskDelegatedEvent(
   tileHandler: TileHandler,
   featureHandler: FeatureHandler,
   workerTaskHandler: WorkerTaskHandler,
+  workerPoolPromises: WorkerPoolPromises,
 ) {
+  const id = generate_id_from_entity(event);
   if (event.task.construct_terrain_mesh) {
     return await processConstructTerrainMesh(
+      id,
       event.bits,
       event.task.construct_terrain_mesh,
       event.task.delegator_id,
       bufHandler,
       tileHandler,
       workerTaskHandler,
+      workerPoolPromises,
     );
   }
   if (event.task.upsample_terrain_mesh) {
     return await processUpsampleTerrainMesh(
+      id,
       event.bits,
       event.task.upsample_terrain_mesh,
       event.task.delegator_id,
       bufHandler,
       tileHandler,
       workerTaskHandler,
+      workerPoolPromises,
     );
   }
   if (event.task.construct_polygon_batched_feature) {
     return await processConstructPolygonBatchedFeature(
+      id,
       event.bits,
       event.task.construct_polygon_batched_feature,
       event.task.delegator_id,
       bufHandler,
       featureHandler,
       workerTaskHandler,
+      workerPoolPromises,
     );
   }
   if (event.task.construct_polyline_batched_feature) {
     return await processConstructPolylineBatchedFeature(
+      id,
       event.bits,
       event.task.construct_polyline_batched_feature,
       event.task.delegator_id,
       bufHandler,
       featureHandler,
       workerTaskHandler,
+      workerPoolPromises,
     );
   }
 }
 
+export async function processWorkerTaskRemovedEvent(
+  event: EntityEvent,
+  workerPoolPromises: WorkerPoolPromises,
+) {
+  const id = generate_id_from_entity(event);
+  const promise = workerPoolPromises.get(id);
+  if (promise) {
+    await promise.cancel();
+    workerPoolPromises.delete(id);
+  }
+}
+
 async function processConstructTerrainMesh(
+  id: string,
   bits: bigint,
   params: ConstructTerrainMeshParameters,
   delegator_id: ReconstructableEntity,
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
+  workerPoolPromises: WorkerPoolPromises,
 ) {
   const bytes = bufHandler.u8(params.bytes_handle);
   if (!bytes) {
@@ -127,12 +154,15 @@ async function processConstructTerrainMesh(
   if (!elevationDecoder) {
     return;
   }
-  const { result } = await constructTerrainMesh(
+  const promise = constructTerrainMesh(
     bytes,
     new TransferableTileLike(tile),
     new TransferableRasterDEMDataLike(elevationDecoder),
     martini,
   );
+  workerPoolPromises.set(id, promise);
+  const { result } = await promise;
+  workerPoolPromises.delete(id);
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
@@ -163,12 +193,14 @@ async function processConstructTerrainMesh(
 }
 
 async function processUpsampleTerrainMesh(
+  id: string,
   bits: bigint,
   params: UpsampleTerrainMeshParameters,
   delegator_id: ReconstructableEntity,
   bufHandler: BufferLoader,
   tileHandler: TileHandler,
   workerTaskHandler: WorkerTaskHandler,
+  workerPoolPromises: WorkerPoolPromises,
 ) {
   const tile = tileHandler.getTile(params.tile_handle);
   if (!tile) {
@@ -204,12 +236,15 @@ async function processUpsampleTerrainMesh(
     parentHeights,
   );
 
-  const result = await upsampleTerrainMesh(
+  const promise = upsampleTerrainMesh(
     new TransferableTileLike(tile),
     new TransferableTileLike(parentTile),
     new TransferableRasterDEMDataLike(elevationDecoder),
     upsamplableTerrainGeometry,
   );
+  workerPoolPromises.set(id, promise);
+  const result = await promise;
+  workerPoolPromises.delete(id);
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
@@ -240,12 +275,14 @@ async function processUpsampleTerrainMesh(
 }
 
 async function processConstructPolygonBatchedFeature(
+  id: string,
   bits: bigint,
   params: ConstructPolygonBatchedFeatureParameters,
   delegator_id: ReconstructableEntity,
   bufHandler: BufferLoader,
   featureHandler: FeatureHandler,
   workerTaskHandler: WorkerTaskHandler,
+  workerPoolPromises: WorkerPoolPromises,
 ) {
   const transferable = featureHandler.getTransferablePolygonBatchedFeature(
     params.batched_feature[0],
@@ -253,10 +290,13 @@ async function processConstructPolygonBatchedFeature(
 
   if (!transferable) return;
 
-  const result = await constructPolygonBatchedFeature(
+  const promise = constructPolygonBatchedFeature(
     new TransferablePolygonBatchedFeatureLike(transferable),
     new PolygonMaterialLike(transferable.material),
   );
+  workerPoolPromises.set(id, promise);
+  const result = await promise;
+  workerPoolPromises.delete(id);
 
   if (
     !result ||
@@ -322,12 +362,14 @@ async function processConstructPolygonBatchedFeature(
 }
 
 async function processConstructPolylineBatchedFeature(
+  id: string,
   bits: bigint,
   params: ConstructPolylineBatchedFeatureParameters,
   delegator_id: ReconstructableEntity,
   bufHandler: BufferLoader,
   featureHandler: FeatureHandler,
   workerTaskHandler: WorkerTaskHandler,
+  workerPoolPromises: WorkerPoolPromises,
 ) {
   const transferable = featureHandler.getTransferablePolylineBatchedFeature(
     params.batched_feature[0],
@@ -335,10 +377,13 @@ async function processConstructPolylineBatchedFeature(
 
   if (!transferable) return;
 
-  const result = await constructPolylineBatchedFeature(
+  const promise = constructPolylineBatchedFeature(
     new TransferablePolylineBatchedFeatureLike(transferable),
     new PolylineMaterialLike(transferable.material),
   );
+  workerPoolPromises.set(id, promise);
+  const result = await promise;
+  workerPoolPromises.delete(id);
 
   transferable.free();
 

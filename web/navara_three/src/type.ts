@@ -7,6 +7,9 @@ import type {
   MvtLayerDescription,
 } from "@navara/engine";
 import type { Mesh, Sprite, Object3D } from "three";
+import type { Promise as WorkerPoolPromise } from "workerpool";
+
+export type { Promise as WorkerPoolPromise } from "workerpool";
 
 export type LayerDescription =
   // | MVTLayer
@@ -45,3 +48,5 @@ export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 
 export type AbortControllers = Map<string, AbortController>;
+
+export type WorkerPoolPromises = Map<string, WorkerPoolPromise<unknown>>;
