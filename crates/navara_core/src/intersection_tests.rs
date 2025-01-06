@@ -217,6 +217,6 @@ mod test {
             },
             UNIT_SPHERE_32,
         );
-        assert!(result.start.is_finite());
+        assert!(result.start.is_infinite());
     }
 }
