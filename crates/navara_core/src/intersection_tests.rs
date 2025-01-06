@@ -31,7 +31,7 @@ pub fn ray_plane(ray: &Ray, plane: Plane) -> Option<Vec3> {
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Core/IntersectionTests.js#L421
-pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<Intersection> {
+pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Intersection {
     let inverse_radii = Vec3::from_array(ellipsoid.one_over_radii);
     let q = inverse_radii * ray.origin;
     let w = inverse_radii * ray.direction;
@@ -49,7 +49,10 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<Inter
         // Outside ellipsoid.
         if qw >= 0.0 {
             // Looking outward or tangent (0 intersections).
-            return None;
+            return Intersection {
+                start: f32::INFINITY,
+                end: f32::INFINITY,
+            };
         }
 
         // qw < 0.0.
@@ -60,7 +63,10 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<Inter
 
         if qw2 < product {
             // Imaginary roots (0 intersections).
-            return None;
+            return Intersection {
+                start: f32::INFINITY,
+                end: f32::INFINITY,
+            };
         } else if qw2 > product {
             // Distinct roots (2 intersections).
             discriminant = qw * qw - product;
@@ -68,23 +74,23 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<Inter
             let root0 = temp / w2;
             let root1 = difference / temp;
             if root0 < root1 {
-                return Some(Intersection {
+                return Intersection {
                     start: root0,
                     end: root1,
-                });
+                };
             }
 
-            return Some(Intersection {
+            return Intersection {
                 start: root1,
                 end: root0,
-            });
+            };
         }
         // qw2 == product.  Repeated roots (2 intersections).
         let root = (difference / w2).sqrt();
-        return Some(Intersection {
+        return Intersection {
             start: root,
             end: root,
-        });
+        };
     } else if q2 < 1.0 {
         // Inside ellipsoid (2 intersections).
         difference = q2 - 1.0; // Negatively valued.
@@ -93,23 +99,26 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<Inter
 
         discriminant = qw * qw - product;
         temp = -qw + discriminant.sqrt(); // Positively valued.
-        return Some(Intersection {
+        return Intersection {
             start: 0.0,
             end: temp / w2,
-        });
+        };
     }
     // q2 == 1.0. On ellipsoid.
     if qw < 0.0 {
         // Looking inward.
         w2 = w.length_squared();
-        return Some(Intersection {
+        return Intersection {
             start: 0.0,
             end: -qw / w2,
-        });
+        };
     }
 
     // qw >= 0.0.  Looking outward or tangent.
-    None
+    Intersection {
+        start: f32::INFINITY,
+        end: f32::INFINITY,
+    }
 }
 
 #[cfg(test)]
@@ -178,8 +187,8 @@ mod test {
             },
             UNIT_SPHERE_32,
         );
-        assert_abs_diff_eq!(result.as_ref().unwrap().start, 1.0, epsilon = EPSILON14);
-        assert_abs_diff_eq!(result.unwrap().end, 3.0, epsilon = EPSILON14);
+        assert_abs_diff_eq!(result.start, 1.0, epsilon = EPSILON14);
+        assert_abs_diff_eq!(result.end, 3.0, epsilon = EPSILON14);
 
         let result = ray_ellipsoid(
             &Ray {
@@ -188,8 +197,8 @@ mod test {
             },
             UNIT_SPHERE_32,
         );
-        assert_abs_diff_eq!(result.as_ref().unwrap().start, 1.0, epsilon = EPSILON14);
-        assert_abs_diff_eq!(result.unwrap().end, 1.0, epsilon = EPSILON14);
+        assert_abs_diff_eq!(result.start, 1.0, epsilon = EPSILON14);
+        assert_abs_diff_eq!(result.end, 1.0, epsilon = EPSILON14);
 
         let result = ray_ellipsoid(
             &Ray {
@@ -198,8 +207,8 @@ mod test {
             },
             UNIT_SPHERE_32,
         );
-        assert_abs_diff_eq!(result.as_ref().unwrap().start, 1.0, epsilon = EPSILON14);
-        assert_abs_diff_eq!(result.unwrap().end, 3.0, epsilon = EPSILON14);
+        assert_abs_diff_eq!(result.start, 1.0, epsilon = EPSILON14);
+        assert_abs_diff_eq!(result.end, 3.0, epsilon = EPSILON14);
 
         let result = ray_ellipsoid(
             &Ray {
@@ -208,6 +217,6 @@ mod test {
             },
             UNIT_SPHERE_32,
         );
-        assert!(result.is_none());
+        assert!(result.start.is_infinite());
     }
 }

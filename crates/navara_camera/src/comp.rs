@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::{Aabb, Plane, EARTH_RADIUS_F32};
+use navara_core::{Aabb, Plane, WGS84_B_32};
 use navara_math::{FloatType, Quat, Transform, Vec3};
 
 #[derive(Component)]
@@ -142,9 +142,9 @@ impl Default for CameraController {
             enable_zoom: true,
             enable_tilt: true,
             enable_look: true,
-            minimum_zoom_distance: EARTH_RADIUS_F32 * 1.0,
-            maximum_zoom_distance: EARTH_RADIUS_F32 * 10.0,
-            spin_speed: 1.3,
+            minimum_zoom_distance: WGS84_B_32,
+            maximum_zoom_distance: WGS84_B_32 * 10.0,
+            spin_speed: 2.0,
             rotate_speed: 1.,
             zoom_speed: 0.6,
             inertia: 0.9,
@@ -156,10 +156,21 @@ impl Default for CameraController {
 #[derive(Component, Default)]
 pub struct CameraInertia {
     pub spin: Vec3,
-    pub tilt: Vec3,
     pub translate: Vec3,
     pub zoom: FloatType,
     pub pan: Vec3,
+}
+
+impl CameraInertia {
+    pub fn spin(&mut self, v: Vec3) {
+        self.spin = v;
+        self.zoom = 0.;
+    }
+
+    pub fn zoom(&mut self, v: f32) {
+        self.zoom = v;
+        self.spin = Vec3::ZERO;
+    }
 }
 
 #[derive(Component, Default, Clone)]
