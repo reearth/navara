@@ -247,6 +247,15 @@ impl Core {
         self.app.get_martini(martini_id.0).map(|v| v.into())
     }
 
+    #[wasm_bindgen(js_name = hasDataRequester)]
+    pub fn has_data_requester(&mut self, id: u64) -> bool {
+        self.app.has_data_requester(id)
+    }
+    #[wasm_bindgen(js_name = hasWorkerTask)]
+    pub fn has_worker_task(&mut self, id: u64) -> bool {
+        self.app.has_worker_task(id)
+    }
+
     #[wasm_bindgen(js_name = getTile)]
     pub fn get_tile(&mut self, handle: TileHandle) -> Option<TransferableTile> {
         self.app.get_tile(handle).map(|v| v.into())

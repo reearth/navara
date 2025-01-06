@@ -104,6 +104,9 @@ export default class ThreeView {
       return b ?? null;
     },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
+      if (!this._core?.hasDataRequester(bits)) {
+        return;
+      }
       this._core?.setBufferU8(handle, bits, b.length, (buf: Uint8Array) => {
         buf.set(b);
       });
@@ -158,6 +161,9 @@ export default class ThreeView {
   private _workerTaskHandler: WorkerTaskHandler = {
     triggerWorkerTaskCompleted: (bits, result) => {
       this._core?.triggerWorkerTaskCompleted(bits, result);
+    },
+    hasWorkerTask: (bits) => {
+      return !!this._core?.hasWorkerTask(bits);
     },
   };
   private _featureHandler: FeatureHandler = {

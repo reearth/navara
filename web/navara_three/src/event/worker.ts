@@ -134,6 +134,8 @@ async function processConstructTerrainMesh(
     martini,
   );
 
+  if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
+
   const vertices = bufHandler.newF32(result.vertices);
   const uvs = bufHandler.newF32(result.uvs);
   const indices = bufHandler.newU32(result.indices);
@@ -209,6 +211,8 @@ async function processUpsampleTerrainMesh(
     upsamplableTerrainGeometry,
   );
 
+  if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
+
   const vertices = bufHandler.newF32(result.vertices);
   const uvs = bufHandler.newF32(result.uvs);
   const indices = bufHandler.newU32(result.indices);
@@ -261,6 +265,8 @@ async function processConstructPolygonBatchedFeature(
     !result.scale_normal_and_cap
   )
     return;
+
+  if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const batchId = bufHandler.newF32(result.batch_id);
   const normal = bufHandler.newF32(result.normal);
@@ -337,6 +343,8 @@ async function processConstructPolylineBatchedFeature(
   transferable.free();
 
   if (!result || !result.batch_id) return;
+
+  if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const position = bufHandler.newF32(result.position);
   const start = bufHandler.newF32(result.start);
