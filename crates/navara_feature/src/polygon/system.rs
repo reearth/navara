@@ -47,7 +47,9 @@ pub fn transfer_batched_mesh(
         let needs_update = batched_feature.is_added()
             || batched_feature
                 .construct_polygon_feature
-                .map_or(false, |c: Entity| construct_polygon_feature_tasks.contains(c));
+                .map_or(false, |c: Entity| {
+                    construct_polygon_feature_tasks.contains(c)
+                });
         if !needs_update {
             continue;
         }
