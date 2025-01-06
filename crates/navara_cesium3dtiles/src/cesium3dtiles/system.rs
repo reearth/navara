@@ -11,6 +11,7 @@ use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
+    id::FeatureId,
     model::{ModelBin, ModelGeometry},
     render::RenderableFeature,
 };
@@ -108,13 +109,17 @@ pub fn traverse_cesium_3d_tiles_tree(
     requesters: Cesium3dTileContentRequesterQuery,
     changed_requesters: ChangedCesium3dTileContentRequesterQuery,
     mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
+    features: Query<&FeatureId>,
+    renderable_features: Query<&RenderableFeature>,
 ) {
     let is_data_requesters_changed = !changed_requesters.is_empty();
 
     for (metadata, mut tree) in &mut tiles {
         for (_, camera, frustum) in &camera {
-            let needs_update =
-                is_data_requesters_changed || camera.is_added() || camera.is_changed();
+            let needs_update = is_data_requesters_changed
+                || camera.is_added()
+                || camera.is_changed()
+                || tree.is_added();
             if !needs_update {
                 continue;
             }
@@ -131,6 +136,8 @@ pub fn traverse_cesium_3d_tiles_tree(
                 frustum,
                 &requesters,
                 &mut rendered_tiles,
+                &features,
+                &renderable_features,
                 &window,
             );
         }

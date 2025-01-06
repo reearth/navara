@@ -17,15 +17,15 @@ impl PartialOrd for TileOrderByDistance {
 impl Ord for TileOrderByDistance {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.sse > other.sse {
-            return Ordering::Greater;
-        }
-        if self.sse < other.sse {
             return Ordering::Less;
         }
-        if self.distance_from_camera.abs() > other.distance_from_camera.abs() {
+        if self.sse < other.sse {
             return Ordering::Greater;
         }
-        if self.distance_from_camera.abs() < other.distance_from_camera.abs() {
+        if self.distance_from_camera > other.distance_from_camera {
+            return Ordering::Greater;
+        }
+        if self.distance_from_camera < other.distance_from_camera {
             return Ordering::Less;
         }
         Ordering::Equal

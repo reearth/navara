@@ -4,7 +4,9 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
+use navara_component::Priority;
 use navara_data_requester::DataRequesterStatus;
+use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_math::Vec3;
 use navara_parser::cesium3dtiles::tileset::Refine;
 use navara_window::Window;
@@ -19,8 +21,8 @@ use super::{
 
 pub enum TraversalResult {
     Selected,
-    ChildrenRendered,
-    ChildrenRenderedPartially,
+    ChildrenSelected,
+    ChildrenSelectedPartially,
     Culled,
 }
 
@@ -37,6 +39,8 @@ pub fn select_tiles(
     frustum: &CameraFrustum,
     requesters: &Cesium3dTileContentRequesterQuery,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    features: &Query<&FeatureId>,
+    renderable_features: &Query<&RenderableFeature>,
     window: &Window,
 ) {
     if let TraversalResult::Selected = mark_leaves(
@@ -47,6 +51,9 @@ pub fn select_tiles(
         frustum,
         requesters,
         window,
+        rendered_tiles,
+        features,
+        renderable_features,
     ) {
         tile.state.leaf = true;
     };
@@ -72,6 +79,9 @@ fn mark_leaves(
     frustum: &CameraFrustum,
     requesters: &Cesium3dTileContentRequesterQuery,
     window: &Window,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    features: &Query<&FeatureId>,
+    renderable_features: &Query<&RenderableFeature>,
 ) -> TraversalResult {
     tile.reset_state();
 
@@ -121,8 +131,8 @@ fn mark_leaves(
             tile.children = Some(Vec::with_capacity(tile_meta_children.len()));
         }
         let mut all_children_rendered = true;
+        let mut all_children_loaded = true;
         let mut any_children_rendered = false;
-        let mut culled_children = vec![];
         let mut selected_children = vec![];
         for (i, child_tile_meta) in tile_meta_children.iter().enumerate() {
             match tile.children.as_ref().unwrap().get(i) {
@@ -145,24 +155,30 @@ fn mark_leaves(
                 frustum,
                 requesters,
                 window,
+                rendered_tiles,
+                features,
+                renderable_features,
             ) {
                 TraversalResult::Selected => {
                     selected_children.push(i);
                     any_children_rendered = true;
                 }
-                TraversalResult::ChildrenRendered => {
+                TraversalResult::ChildrenSelected => {
                     any_children_rendered = true;
                 }
                 // Cull this tile partially
-                TraversalResult::Culled => {
-                    culled_children.push(i);
-                }
-                TraversalResult::ChildrenRenderedPartially => {
+                TraversalResult::Culled => {}
+                TraversalResult::ChildrenSelectedPartially => {
                     any_children_rendered = true;
                     all_children_rendered = false;
                 }
             };
+
+            all_children_loaded = all_children_loaded
+                && (child_tile.state.are_all_children_loaded || child_tile.state.is_data_loaded)
+                && child_tile.is_rendered(rendered_tiles, features, renderable_features);
         }
+        tile.state.are_all_children_loaded = all_children_loaded;
         if any_children_rendered {
             for (i, child) in tile.children.as_mut().unwrap().iter_mut().enumerate() {
                 let is_selected_child = selected_children.contains(&i);
@@ -178,11 +194,11 @@ fn mark_leaves(
             }
 
             if all_children_rendered {
-                return TraversalResult::ChildrenRendered;
+                return TraversalResult::ChildrenSelected;
             }
 
             if matches!(tile.refine, Refine::Add) {
-                return TraversalResult::ChildrenRenderedPartially;
+                return TraversalResult::ChildrenSelectedPartially;
             }
         }
     }
@@ -214,7 +230,7 @@ fn mark_rendered_tiles(
     }
 
     let leaf = state.touched && state.leaf;
-    if leaf && tile.is_renderable_content {
+    if (leaf || !tile.state.are_all_children_loaded) && tile.is_renderable_content {
         if state.is_data_loaded {
             let is_visible = state.is_visible;
             update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
@@ -222,7 +238,18 @@ fn mark_rendered_tiles(
                 *rendered_tiles_count += 1;
             }
         } else if state.is_visible {
-            request_tile_content(commands, buf, base_url, tile, requesters);
+            request_tile_content(
+                commands,
+                buf,
+                base_url,
+                tile,
+                requesters,
+                if tile.state.are_all_children_loaded {
+                    Priority::Low
+                } else {
+                    Priority::Medium
+                },
+            );
         } else {
             toggle_rendered_tile_visible(rendered_tiles, tile, false);
         }

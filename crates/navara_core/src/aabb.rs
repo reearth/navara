@@ -232,5 +232,9 @@ mod test {
         let point = Vec3::new(0., -3., 0.);
         let aabb = Aabb::from_vec3(&[Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.)]);
         assert_eq!(aabb.distance_to_point(point), 2.);
+
+        let point = Vec3::new(3., 3., -3.);
+        let aabb = Aabb::from_vec3(&[Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.)]);
+        assert_eq!(aabb.distance_to_point(point), 3.4641016);
     }
 }

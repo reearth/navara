@@ -10,7 +10,7 @@ use navara_component::Deleted;
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
-use navara_feature_component::batch::BatchedFeature;
+use navara_feature_component::{batch::BatchedFeature, render::RenderableFeature};
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
@@ -113,6 +113,20 @@ impl App {
             .send_event(navara_tile::tile::MeshPreparedEvent {
                 tile_handle: handle,
             });
+    }
+
+    pub fn mark_model_is_rendered(&mut self, bits: u64) {
+        let entity = Entity::from_bits(bits);
+        let world = self.app.world_mut();
+        let mut query = world.query::<&mut RenderableFeature>();
+
+        let Ok(mut feature) = query.get_mut(world, entity) else {
+            return;
+        };
+        let RenderableFeature::Model { render_info, .. } = feature.as_mut() else {
+            unreachable!("Unexpected RenderableFeature type");
+        };
+        render_info.is_rendered = true;
     }
 
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
