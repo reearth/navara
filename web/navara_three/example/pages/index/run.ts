@@ -1,4 +1,7 @@
-import ThreeView from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  MAPBOX_ELEVATION_DECODER,
+} from "@navara/three";
 import { type LayerDescription } from "@navara/three";
 import { AmbientLight, AxesHelper, DirectionalLight } from "three";
 import { Pane } from "tweakpane";
@@ -413,26 +416,6 @@ export const run = async (view: ThreeView) => {
   });
 
   const terrainType: "mapbox" | "gsi" = "gsi";
-  const JAPAN_GSI_ELEVATION_DECODER = {
-    r_scaler: 65536,
-    g_scaler: 256,
-    b_scaler: 1,
-    offset: 0,
-    max_offset: -16777216,
-    min_offset: 0,
-    boundary: 8388608,
-    epsilon: 0.01,
-  };
-  const MAPBOX_ELEVATION_DECODER = {
-    r_scaler: 65536,
-    g_scaler: 256,
-    b_scaler: 1,
-    offset: -10000,
-    max_offset: 0,
-    min_offset: 0,
-    boundary: 10000,
-    epsilon: 0.1,
-  };
 
   view.addLayer({
     type: "terrain",
@@ -448,8 +431,8 @@ export const run = async (view: ThreeView) => {
       elevation_decoder:
         // @ts-expect-error : Make switch button later
         terrainType === "mapbox"
-          ? MAPBOX_ELEVATION_DECODER
-          : JAPAN_GSI_ELEVATION_DECODER,
+          ? MAPBOX_ELEVATION_DECODER()
+          : JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 

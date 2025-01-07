@@ -40,6 +40,15 @@ impl ElevationDecoder {
             epsilon,
         }
     }
+
+    #[wasm_bindgen(js_name = japanGSI)]
+    pub fn japan_gsi() -> Self {
+        navara_core::JAPAN_GSI_ELEVATION_DECODER.into()
+    }
+
+    pub fn mapbox() -> Self {
+        navara_core::MAPBOX_ELEVATION_DECODER.into()
+    }
 }
 
 impl From<ElevationDecoder> for navara_core::ElevationDecoder {
