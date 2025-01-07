@@ -8,7 +8,7 @@ use navara_core::WGS84_32;
 use navara_feature_component::{
     batch::BatchId,
     id::FeatureId,
-    render::{RenderInformation, RenderableFeature, TransferableSingleGeometry},
+    render::{ModelRenderInformation, RenderableFeature, TransferableSingleGeometry},
     DeletedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
@@ -94,8 +94,9 @@ pub fn transfer_mesh(
                 material: material.clone(),
                 transform,
                 feature_id: entity,
-                render_info: RenderInformation {
+                render_info: ModelRenderInformation {
                     current_terrain_height: 0.,
+                    is_rendered: false,
                 },
                 bin: bin.cloned(),
                 geometry: TransferableSingleGeometry {

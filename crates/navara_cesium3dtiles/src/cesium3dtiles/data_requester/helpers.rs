@@ -23,6 +23,7 @@ pub(crate) fn request_tile_content(
     base_url: &Url,
     tile: &mut Cesium3dTileContent,
     requesters: &Cesium3dTileContentRequesterQuery,
+    priority: Priority,
 ) -> bool {
     let data_requester_entity_id = tile.data_requester_id;
     if let Some(id) = data_requester_entity_id {
@@ -42,7 +43,7 @@ pub(crate) fn request_tile_content(
         .spawn((
             Cesium3dTileContentDataRequesterMarker,
             B3dmDataRequesterMarker,
-            Priority::Medium,
+            priority,
             TileOrderByDistance {
                 distance_from_camera: tile.state.distance_from_camera,
                 sse: tile.state.sse,

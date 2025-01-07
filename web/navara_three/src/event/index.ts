@@ -100,6 +100,7 @@ export type FeatureHandler = {
   getTransferablePolylineBatchedFeature: (
     bits: bigint,
   ) => ReturnedTransferablePolylineBatchedFeature | undefined;
+  markModelIsRendered: (bits: bigint) => void;
 };
 
 export type MeshHandler = {
@@ -262,6 +263,7 @@ export function processEvent(
             buf,
             uniforms,
             drapedFeatureMaterials,
+            featureHandler,
           );
           break;
         case "remove":
@@ -628,9 +630,16 @@ async function processRenderableFeatureAdded(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
+  featureHandler: FeatureHandler,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(ev.feature, buf, uniforms);
+  const obj = await renderFeature(
+    ev.bits,
+    ev.feature,
+    buf,
+    uniforms,
+    featureHandler,
+  );
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;

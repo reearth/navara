@@ -1,6 +1,7 @@
-use bevy_ecs::{component::Component, entity::Entity};
+use bevy_ecs::{component::Component, entity::Entity, system::Query};
 use navara_core::{Aabb, Extent, LngLat};
 use navara_data_requester::DataRequesterExtension;
+use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::FloatType;
@@ -122,6 +123,24 @@ impl Cesium3dTileContent {
     pub fn reset_state(&mut self) {
         self.state.reset();
     }
+
+    pub fn is_rendered(
+        &self,
+        rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+        features: &Query<&FeatureId>,
+        renderable_features: &Query<&RenderableFeature>,
+    ) -> bool {
+        let Some(renderable_feature) = self
+            .rendered_tile_id
+            .and_then(|e| rendered_tiles.get(e).ok().and_then(|t| t.feature_id))
+            .and_then(|feature_id| features.get(feature_id).ok().and_then(|f| f.0))
+            .and_then(|renderable_feature_id| renderable_features.get(renderable_feature_id).ok())
+        else {
+            return false;
+        };
+
+        matches!(renderable_feature, RenderableFeature::Model { render_info, .. } if render_info.is_rendered)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -133,6 +152,7 @@ pub struct Cesium3dTileContentState {
     pub touched: bool,
     pub meet_sse: bool,
     pub is_data_loaded: bool,
+    pub are_all_children_loaded: bool,
     pub distance_from_camera: f32,
     pub sse: f32,
 }
@@ -143,6 +163,7 @@ impl Cesium3dTileContentState {
         self.is_visible = false;
         self.touched = false;
         self.is_data_loaded = false;
+        self.are_all_children_loaded = false;
         self.distance_from_camera = 0.;
         self.sse = 0.;
     }

@@ -201,6 +201,11 @@ impl Core {
         self.app.set_tile_mesh_prepared(handle);
     }
 
+    #[wasm_bindgen(js_name = markModelIsRendered)]
+    pub fn mark_model_is_rendered(&mut self, bits: u64) {
+        self.app.mark_model_is_rendered(bits);
+    }
+
     #[wasm_bindgen(js_name = triggerWorkerTaskCompleted)]
     pub fn trigger_worker_task_completed(&mut self, bits: u64, result: DelegatedWorkerTasksResult) {
         self.app.trigger_worker_task_completed(

@@ -3,7 +3,7 @@ use bevy_ecs::{
     query::{Added, Or, With, Without},
     system::{Commands, Query},
 };
-use navara_component::{Deleted, Ignored, Requested};
+use navara_component::{Deleted, Ignored, Priority, Requested};
 use navara_data_requester::DataRequester;
 
 use crate::{
@@ -17,7 +17,7 @@ const MAX_PENDINGS: u32 = 10;
 pub fn filter_requestable_data_requester(
     mut commands: Commands,
     data_requesters: Query<
-        (Entity, &DataRequester, &TileOrderByDistance),
+        (Entity, &DataRequester, &TileOrderByDistance, &Priority),
         (
             With<DataRequester>,
             With<Cesium3dTileContentDataRequesterMarker>,
@@ -47,9 +47,9 @@ pub fn filter_requestable_data_requester(
     let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
     // Limit the number of requests in this frame
-    for (e, _, _) in data_requesters
+    for (e, _, _, _) in data_requesters
         .iter()
-        .sort::<&TileOrderByDistance>()
+        .sort::<(&Priority, &TileOrderByDistance)>()
         .skip(num_skip as usize)
     {
         commands.entity(e).insert((Deleted, Ignored));

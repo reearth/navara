@@ -13,6 +13,11 @@ use crate::model::ModelBin;
 pub struct RenderInformation {
     pub current_terrain_height: FloatType,
 }
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ModelRenderInformation {
+    pub current_terrain_height: FloatType,
+    pub is_rendered: bool,
+}
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonRenderInformation {
@@ -73,7 +78,7 @@ pub enum RenderableFeature {
         material: ModelMaterial,
         transform: Transform,
         feature_id: Entity,
-        render_info: RenderInformation,
+        render_info: ModelRenderInformation,
         bin: Option<ModelBin>,
         geometry: TransferableSingleGeometry,
     },

@@ -17,15 +17,15 @@ impl PartialOrd for TileOrderByDistance {
 impl Ord for TileOrderByDistance {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.sse > other.sse {
-            return Ordering::Greater;
-        }
-        if self.sse < other.sse {
             return Ordering::Less;
         }
-        if self.distance_from_camera.abs() > other.distance_from_camera.abs() {
+        if self.sse < other.sse {
             return Ordering::Greater;
         }
-        if self.distance_from_camera.abs() < other.distance_from_camera.abs() {
+        if self.distance_from_camera > other.distance_from_camera {
+            return Ordering::Greater;
+        }
+        if self.distance_from_camera < other.distance_from_camera {
             return Ordering::Less;
         }
         Ordering::Equal
@@ -70,28 +70,28 @@ mod test {
 
         let expects = [
             TileOrderByDistance {
-                sse: 0.,
-                distance_from_camera: 0.3,
-            },
-            TileOrderByDistance {
-                sse: 0.1,
-                distance_from_camera: 0.2,
-            },
-            TileOrderByDistance {
-                sse: 0.2,
-                distance_from_camera: 0.,
-            },
-            TileOrderByDistance {
-                sse: 0.3,
-                distance_from_camera: 0.5,
+                sse: 0.5,
+                distance_from_camera: 0.1,
             },
             TileOrderByDistance {
                 sse: 0.4,
                 distance_from_camera: 0.4,
             },
             TileOrderByDistance {
-                sse: 0.5,
-                distance_from_camera: 0.1,
+                sse: 0.3,
+                distance_from_camera: 0.5,
+            },
+            TileOrderByDistance {
+                sse: 0.2,
+                distance_from_camera: 0.,
+            },
+            TileOrderByDistance {
+                sse: 0.1,
+                distance_from_camera: 0.2,
+            },
+            TileOrderByDistance {
+                sse: 0.,
+                distance_from_camera: 0.3,
             },
         ];
 
