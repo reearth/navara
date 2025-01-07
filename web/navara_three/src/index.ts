@@ -49,6 +49,7 @@ import type { CommonUniforms } from "./uniforms";
 import WorkerURL from "./worker?url&worker";
 
 export * from "./type";
+export * from "./constants";
 
 export type Options = {
   container?: HTMLElement;

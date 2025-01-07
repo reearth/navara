@@ -82,23 +82,13 @@ pub fn tile_triangles_with_terrain(
 
 #[cfg(test)]
 mod test {
-    use navara_core::ElevationDecoder;
+    use navara_core::{JAPAN_GSI_ELEVATION_DECODER, MAPBOX_ELEVATION_DECODER};
 
     use crate::{decode_height_from_dem, encode_height_to_dem};
 
     #[test]
     fn test_gsi_raster_dem_conversion() {
-        // https://maps.gsi.go.jp/development/demtile.html
-        let decoder = ElevationDecoder {
-            r_scaler: 65536.,
-            g_scaler: 256.,
-            b_scaler: 1.,
-            offset: 0.,
-            max_offset: -16777216.,
-            min_offset: 0.,
-            boundary: 8388608.,
-            epsilon: 0.01,
-        };
+        let decoder = JAPAN_GSI_ELEVATION_DECODER;
         let geoid_height = 1.;
         let expected_height = 3747.95;
         let decoded_rgba = encode_height_to_dem(expected_height, geoid_height, &decoder);
@@ -114,17 +104,7 @@ mod test {
 
     #[test]
     fn test_mapbox_raster_dem_conversion() {
-        // https://docs.mapbox.com/data/tilesets/guides/access-elevation-data/#decode-data
-        let decoder = ElevationDecoder {
-            r_scaler: 65536.,
-            g_scaler: 256.,
-            b_scaler: 1.,
-            offset: -10000.,
-            max_offset: 0.,
-            min_offset: 0.,
-            boundary: 10000.,
-            epsilon: 0.1,
-        };
+        let decoder = MAPBOX_ELEVATION_DECODER;
         let geoid_height = 1.;
         let expected_height = 407.2002;
         let decoded_rgba = encode_height_to_dem(expected_height, geoid_height, &decoder);
