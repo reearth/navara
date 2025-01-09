@@ -79,11 +79,11 @@ impl BatchTable {
 
     pub fn add(&mut self, value: String) -> Option<u32> {
         let mut rng = rand::thread_rng();
-        let mut key = rng.gen_range(1..0xffffffff);
+        let mut key = rng.gen_range(1..0xffffff);
 
         let mut retry_count = 10;
         while self.map.contains_key(&key) && retry_count > 0 {
-            key = rng.gen_range(1..0xffffffff);
+            key = rng.gen_range(1..0xffffff);
             retry_count -= 1;
         }
 

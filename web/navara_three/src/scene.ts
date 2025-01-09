@@ -6,4 +6,6 @@ export type Scenes = {
   globe: Scene;
   // Render only draped features
   drapedFeatures: Scene;
+  // for picking
+  pick: Scene;
 };

@@ -21,6 +21,7 @@ import {
   SpriteMaterial,
   Object3D,
   MeshLambertMaterial,
+  MeshBasicMaterial,
 } from "three";
 
 import type { CommonUniforms } from "../uniforms";
@@ -29,7 +30,7 @@ import { initializeGltfLoader, TEXTURE_LOADER } from "./loaders";
 
 import type { BufferLoader, FeatureHandler } from ".";
 
-export function renderFeature(
+export function renderFeatureForPicking(
   bits: bigint,
   f: RenderableFeature,
   buf: BufferLoader,
@@ -60,7 +61,12 @@ async function renderPoint(m: PointMesh) {
     sizeAttenuation: !m.material.scale_by_distance,
     visible: m.material.show,
   });
+
+  let batchId = m.geometry.batch_id ?? 0;
+
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.batchId = { value: batchId };
+
     shader.vertexShader = shader.vertexShader
       .replace(
         "uniform vec2 center;",
@@ -82,6 +88,7 @@ sprite_uv = position.xy;
         "uniform float opacity;",
         `
 uniform float opacity;
+uniform float batchId;
 in vec2 sprite_uv;
 ${PointFragShader}
 `,
@@ -90,6 +97,13 @@ ${PointFragShader}
         "#include <fog_fragment>",
         `
 #include <fog_fragment>
+
+float r = floor(batchId / 65536.0);
+float g = floor(mod(batchId / 256.0, 256.0));
+float b = floor(mod(batchId, 256.0));
+
+gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+
 gl_FragColor.a = nvr_circle_alpha(sprite_uv);
 `,
       );
@@ -97,6 +111,7 @@ gl_FragColor.a = nvr_circle_alpha(sprite_uv);
 
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
+  sprite.frustumCulled = false;
 
   return sprite;
 }
@@ -111,8 +126,37 @@ async function renderBillboard(m: BillboardMesh) {
     depthTest: m.material.depth_test,
     visible: m.material.show,
   });
+
+  let batchId = m.geometry.batch_id ?? 0;
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.batchId = { value: batchId };
+
+    shader.fragmentShader = shader.fragmentShader
+    .replace(
+      "#include <clipping_planes_pars_fragment>",
+      `
+        #include <clipping_planes_pars_fragment>
+        uniform float batchId;
+      `
+    )
+      .replace(
+        "#include <fog_fragment>",
+        `
+        #include <fog_fragment>
+        if (sampledDiffuseColor.a > 0.0) {
+          float r = floor(batchId / 65536.0);
+          float g = floor(mod(batchId / 256.0, 256.0));
+          float b = floor(mod(batchId, 256.0));
+
+          gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+        }
+        `,
+      );
+  };
+
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
+  sprite.frustumCulled = false;
 
   return sprite;
 }
@@ -147,6 +191,28 @@ async function renderModel(
   if (!scene) {
     return;
   }
+
+  let batchId = m.geometry.batch_id ?? 0;
+  let traverse = function(mesh: Object3D){
+    if(mesh instanceof Mesh){
+        let r = (batchId >> 16) / 255;
+        let g = ((batchId >> 8) & 0xFF) / 255;
+        let b = (batchId & 0xFF) / 255;
+
+        mesh.material = new MeshBasicMaterial({
+            color: new Color(r, g, b)
+        });
+    }
+
+    if(Array.isArray(mesh.children) && mesh.children.length > 0){
+      mesh.children.forEach(child => {
+        traverse(child);
+      });
+    }
+  };
+
+  traverse(scene);
+
   scene.visible = m.material.show ?? true;
   featureHandler.markModelIsRendered(bits);
   return scene;
@@ -169,6 +235,8 @@ async function renderPolyline(
     g.right_normal_and_texture_coordinate_normalization_y.data,
   );
   const indices = buf.u32(g.indices);
+  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (
     !position ||
     !start ||
@@ -176,7 +244,8 @@ async function renderPolyline(
     !start_normals ||
     !end_normal_and_texture_coordinate_normalization_x ||
     !right_normal_and_texture_coordinate_normalization_y ||
-    !indices
+    !indices ||
+    !batchId
   )
     return;
   const geometry = new BufferGeometry();
@@ -207,6 +276,7 @@ async function renderPolyline(
       g.right_normal_and_texture_coordinate_normalization_y.size,
     ),
   );
+  geometry.setAttribute("batchId", new BufferAttribute(batchId, batchIdSize));
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
 
@@ -224,7 +294,7 @@ async function renderPolyline(
       frustumRatio: uniforms.frustumRatio,
       tGlobeDepth: uniforms.tGlobeDepth,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
-      pickable: { value: 0 },
+      pickable: { value: 1 },
     },
     vertexShader: PolylineVertShader,
     fragmentShader: mesh.material.clamp_to_ground
@@ -251,7 +321,13 @@ async function renderPolygon(
     ? buf.f32(g.scale_normal_and_cap.data)
     : undefined;
   const indices = buf.u32(g.indices);
+  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (!position || !indices) return;
+
+  if(!batchId){
+    batchId = new Float32Array(position.length / g.position.size).fill(0);
+  }
 
   const geometry = new BufferGeometry();
   geometry.setAttribute(
@@ -268,6 +344,7 @@ async function renderPolygon(
     );
   }
   geometry.setIndex(new BufferAttribute(indices, 1));
+  geometry.setAttribute("batchId", new BufferAttribute(batchId, batchIdSize));
 
   const clampToGround = mesh.material.clamp_to_ground;
   // TODO: Need to calculate a shadow for a draped polygon by using terrain's normal.
@@ -303,6 +380,9 @@ in vec4 scaleNormalAndCap;
 
 uniform vec2 uMinMaxHeight;
 
+attribute float batchId;
+out float oBatchId;
+
 ${BranchFreeTernary}
 `,
       )
@@ -311,6 +391,7 @@ ${BranchFreeTernary}
         `
 #include <begin_vertex>
 transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
+oBatchId = batchId;
 `,
       );
     shader.fragmentShader = shader.fragmentShader
@@ -319,6 +400,7 @@ transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndC
         `
 uniform vec3 diffuse;
 uniform bool uClampToGround;
+in float oBatchId;
 `,
       )
       .replace(
@@ -329,6 +411,11 @@ if(uClampToGround) {
 } else {
   #include <opaque_fragment>
 }
+float r = floor(oBatchId / 65536.0);
+float g = floor(mod(oBatchId / 256.0, 256.0));
+float b = floor(mod(oBatchId, 256.0));
+
+gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
 `,
       );
   };

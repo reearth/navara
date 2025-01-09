@@ -20,6 +20,7 @@ import {
   BackSide,
   DecrementStencilOp,
   NotEqualStencilFunc,
+  Color,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -47,6 +48,7 @@ import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+import { PickHelper } from "./pickHelper";
 
 export * from "./type";
 
@@ -89,6 +91,7 @@ export default class ThreeView {
   private _uniforms: CommonUniforms;
 
   private _meshes: MeshCache = new Map();
+  private _pickMeshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
   private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
@@ -185,6 +188,7 @@ export default class ThreeView {
     },
   };
   private _eventManager = new EventManager();
+  private _pickHelper?: PickHelper;
 
   constructor(options: Options) {
     if (!options.canvas) {
@@ -272,11 +276,14 @@ export default class ThreeView {
     }
 
     const drapedFeaturesScene = new Scene();
+    const pickScene = new Scene();
+    pickScene.background = new Color(0);
 
     this._scenes = {
       main: scene,
       globe: globeScene,
       drapedFeatures: drapedFeaturesScene,
+      pick: pickScene,
     };
 
     if (options.camera) {
@@ -346,6 +353,13 @@ export default class ThreeView {
         this._core,
         this.renderer.domElement,
       );
+      this._pickHelper = new PickHelper(
+        this.renderer.domElement,
+        this.renderer,
+        this.camera,
+        this._scenes.pick,
+        this.onPick.bind(this),
+      );
     }
 
     this._startMainLoop();
@@ -361,6 +375,9 @@ export default class ThreeView {
     if (this._eventDisposer) {
       this._eventDisposer();
       this._eventDisposer = undefined;
+    }
+    if (this._pickHelper) {
+      this._pickHelper.dispose();
     }
     this._globeDepthRenderTarget.dispose();
     this.renderer.setAnimationLoop(null);
@@ -454,6 +471,7 @@ export default class ThreeView {
       events,
       this._uniforms,
       this._drapedFeatureMaterials,
+      this._pickMeshes,
     );
     events?.free();
 
@@ -594,6 +612,10 @@ export default class ThreeView {
       : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };
+
+  onPick(pickArr: number[]) {
+    console.log(pickArr);
+  }
 }
 
 function newId() {

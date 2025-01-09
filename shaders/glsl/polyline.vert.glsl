@@ -4,6 +4,8 @@
 #include chunks/planeDistance;
 #include chunks/metersPerPixel;
 
+attribute float batchId;
+
 in vec3 start;
 in vec3 forward_offset;
 in vec3 start_normal;
@@ -20,11 +22,14 @@ out vec3 v_endPlaneNormalEc;
 out vec4 v_rightPlaneEC;
 out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
+out float v_batchId;
 
 void main() {
     vec3 ecStart = (modelViewMatrix * vec4(start, 1.0)).xyz;
     vec3 offset = normalMatrix * forward_offset;
     vec3 ecEnd = ecStart + offset;
+
+    v_batchId = batchId;
 
     vec3 forwardDirectionEC = normalize(offset);
 

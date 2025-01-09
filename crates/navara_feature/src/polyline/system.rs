@@ -8,6 +8,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::CRS;
 use navara_feature_component::{
+    batch::BatchId,
     batch::BatchedFeature,
     id::FeatureId,
     polyline::construct_polyline_feature,
@@ -16,7 +17,7 @@ use navara_feature_component::{
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
-use navara_math::{Transform, Vec3};
+use navara_math::{FloatType, Transform, Vec3};
 
 use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
 use navara_tile_component::{
@@ -26,6 +27,8 @@ use navara_worker::construct_polyline_batched_feature::{
     ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,
     ConstructPolylineBatchedFeatureResult, ConstructPolylineBatchedFeatureWorkerTaskBundle,
 };
+
+use navara_geometry::FloatAttribute;
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
@@ -118,23 +121,29 @@ pub fn transfer_mesh(
             Option<&mut FeatureId>,
             &PolylineGeometry,
             &PolylineMaterial,
+            &BatchId,
         ),
         (Added<PolylineGeometry>, Without<BatchedFeatureMarker>),
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, feature_id, geometry, material) in &mut polylines {
+    for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polylines {
         // `coords` has a lifetime for sure.
         let constructed_feature = unsafe {
             let coords = buf.remove_f32(&geometry.coords).unwrap();
             construct_polyline_feature(material, coords, &geometry.crs)
         };
 
-        if let Some((extent, geometry)) = constructed_feature {
+        if let Some((extent, mut geometry)) = constructed_feature {
             let mut material = material.clone();
             material.internal = Some(PolylineInternalMaterial {
                 min_max_heights: vec![0., 0.],
             });
+
+            let pos_cnt = geometry.attributes.position.data.len()
+                / geometry.attributes.position.size as usize;
+            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+            geometry.attributes.batch_id = Some(FloatAttribute::new(batch_id_vec, 1));
 
             let entity = commands
                 .spawn((

@@ -10,7 +10,7 @@ use navara_core::{Aabb, CRS, WGS84_32};
 use navara_feature_component::polygon::{
     construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon,
 };
-use navara_geometry::{Hierarchy, PolygonResource};
+use navara_geometry::{FloatAttribute, Hierarchy, PolygonResource};
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
@@ -19,6 +19,7 @@ use navara_tile_component::{
 };
 
 use navara_feature_component::{
+    batch::BatchId,
     batch::BatchedFeature,
     id::FeatureId,
     render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry},
@@ -129,13 +130,14 @@ pub fn transfer_mesh(
             Option<&mut FeatureId>,
             &mut PolygonGeometry,
             &PolygonMaterial,
+            &BatchId,
         ),
         (Added<PolygonGeometry>, Without<BatchedFeatureMarker>),
     >,
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, feature_id, geometry, material) in &mut polygon {
+    for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polygon {
         let geometry_hierarchy =
             Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
         let (extent_opt, polygon_result_opt) = construct_polygon_feature(
@@ -144,11 +146,17 @@ pub fn transfer_mesh(
             material,
             &mut polygon_resource,
         );
-        if let (Some(extent), Some(polygon_result)) = (extent_opt, polygon_result_opt) {
+        if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
             let mut material = material.clone();
             material.internal = Some(PolygonInternalMaterial {
                 min_max_heights: vec![0., 0.],
             });
+
+            let pos_cnt = polygon_result.geometry.attributes.position.data.len()
+                / polygon_result.geometry.attributes.position.size as usize;
+            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+            polygon_result.geometry.attributes.batch_id =
+                Some(FloatAttribute::new(batch_id_vec, 1));
 
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);

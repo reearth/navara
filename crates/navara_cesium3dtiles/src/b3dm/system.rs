@@ -10,6 +10,7 @@ use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     batch::BatchId,
+    batch::BatchTable,
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
@@ -57,6 +58,7 @@ pub fn request_model_by_b3dm_layer(
 pub fn construct_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut batch_table: ResMut<BatchTable>,
     requesters: Query<
         (Entity, &B3dmLayerDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -87,10 +89,12 @@ pub fn construct_model_by_b3dm_layer(
             None => continue,
         };
 
+        let batchid = batch_table.add("{}".to_string()).unwrap_or_default();
+
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             // TODO: Support batch id
-            BatchId(0),
+            BatchId(batchid),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -168,6 +172,7 @@ pub fn delete_model_by_b3dm_layer(
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut batch_table: ResMut<BatchTable>,
     requesters: Query<
         (
             &Cesium3dTileContentDataRequesterMarker,
@@ -210,11 +215,13 @@ pub fn construct_model_by_cesium3dtiles_layer(
             None => continue,
         };
 
+        let batchid = batch_table.add("{}".to_string()).unwrap_or_default();
+
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
             // TODO: Support batch id
-            BatchId(0),
+            BatchId(batchid),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
