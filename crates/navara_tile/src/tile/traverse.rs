@@ -110,7 +110,7 @@ pub fn traverse_tile(
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
-    let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid);
+    let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid).abs();
     let sse = tile.calc_sse(
         frustum,
         window,

@@ -131,6 +131,14 @@ impl Tile for VectorTile {
         self.max_height
     }
 
+    fn set_max_height(&mut self, v: FloatType) {
+        self.max_height = v;
+    }
+
+    fn has_terrain(&self) -> bool {
+        false
+    }
+
     fn get_level_maximum_geometric_error(
         &self,
         ellipsoid: &Ellipsoid<FloatType>,
