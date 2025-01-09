@@ -139,8 +139,8 @@ fn clip(
     let mut new_heights = vec![];
     let mut new_indices = vec![];
 
-    let max_height = 0.0f32;
-    let min_height = 99999.0f32;
+    let mut max_height = 0.0f32;
+    let mut min_height = 99999.0f32;
 
     for polygon_indices in indices.chunks(3) {
         let [u0, v0] = [
@@ -203,7 +203,7 @@ fn clip(
                 interpolated_h_coords,
             ],
             &mut clipped_coord_map,
-            (max_height, min_height),
+            (&mut max_height, &mut min_height),
         );
 
         if clipped_u_indices.len() == 4 {
@@ -240,7 +240,7 @@ fn clip(
                     interpolated_h_coords,
                 ],
                 &mut clipped_coord_map,
-                (max_height, min_height),
+                (&mut max_height, &mut min_height),
             );
         }
     }
@@ -255,7 +255,7 @@ fn construct_polygon(
     new_indices: &mut Vec<u32>,
     [interpolated_u_coords, interpolated_v_coords, interpolated_h_coords]: [[FloatType; 3]; 3],
     clipped_coord_map: &mut ClippedCoordMap,
-    (mut max_height, mut min_height): (FloatType, FloatType),
+    (max_height, min_height): (&mut FloatType, &mut FloatType),
 ) {
     let mut new_polygon_indices = vec![];
     for i in clipped_indices {
@@ -276,8 +276,8 @@ fn construct_polygon(
             new_index
         };
 
-        max_height = max_height.max(h);
-        min_height = min_height.min(h);
+        *max_height = max_height.max(h);
+        *min_height = min_height.min(h);
 
         new_polygon_indices.push(new_index as u32);
     }

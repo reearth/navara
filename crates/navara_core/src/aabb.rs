@@ -171,9 +171,7 @@ impl Aabb {
     }
 
     pub fn is_on_or_forward_plane(&self, plane: &Plane) -> bool {
-        let r = (self.extents.x * plane.normal.x).abs()
-            + (self.extents.y * plane.normal.y).abs()
-            + (self.extents.z * plane.normal.z).abs();
+        let r = self.extents.dot(plane.normal.abs().into());
 
         plane.get_distance_to_point(self.center) >= -r
     }

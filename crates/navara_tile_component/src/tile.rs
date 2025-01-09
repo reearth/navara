@@ -22,6 +22,8 @@ pub trait Tile {
     fn bounding_region(&self) -> Option<&TileBoundingRegion<FloatType>>;
     fn aabb(&self) -> &Aabb;
     fn max_height(&self) -> FloatType;
+    fn set_max_height(&mut self, v: FloatType);
+    fn has_terrain(&self) -> bool;
 
     /// This is cached children, the children might be removed after the tile is cleared.
     /// If you want to traverse all children correctly, you need to use [`Tile::traversable_children`].
@@ -143,7 +145,16 @@ pub trait Tile {
         let mut new_children = Vec::with_capacity(4);
         for (i, c) in children.iter().enumerate() {
             let c = *c;
-            let is_tile_some = qt.qt.get(c).is_some();
+            let is_tile_some = match qt.qt.get_mut(c) {
+                Some(tile) => {
+                    if !tile.has_terrain() {
+                        tile.set_max_height(parent_max_height)
+                    }
+                    true
+                }
+                None => false,
+            };
+
             if is_tile_some {
                 new_children.push(c);
                 continue;
