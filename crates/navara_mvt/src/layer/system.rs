@@ -72,7 +72,10 @@ pub fn construct_single_mvt(
         }
         let (layer_entity, layer) = match mvt_layers.get(marker.0) {
             Ok(l) => l,
-            Err(_) => unreachable!(),
+            Err(_) => {
+                commands.entity(e).despawn();
+                continue;
+            }
         };
 
         commands.entity(e).despawn();
@@ -213,6 +216,7 @@ pub fn delete_mvt_layer(
     batched_features: Query<&BatchedFeature>,
     mut rendered_tiles: Query<&mut RenderedTile>,
     entities_with_layerid: Query<(Entity, &LayerId)>,
+    mut qts: Query<&mut VectorTileQuadtree>,
     tc: Query<&TileCacheManager>,
     mut batch_table: ResMut<BatchTable>,
     batch_id: Query<&BatchId>,
@@ -255,6 +259,7 @@ pub fn delete_mvt_layer(
                     &mut commands,
                     &mut buf,
                     &mut batch_table,
+                    &mut qts,
                     &tc,
                     &feature_ids,
                     &batched_features,

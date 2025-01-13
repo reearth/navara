@@ -90,7 +90,11 @@ ${PointFragShader}
         "#include <fog_fragment>",
         `
 #include <fog_fragment>
-gl_FragColor.a = nvr_circle_alpha(sprite_uv);
+float alpha = nvr_circle_alpha(sprite_uv);
+if (alpha == 0.) {
+  discard;
+}
+gl_FragColor.a = alpha;
 `,
       );
   };
@@ -273,7 +277,10 @@ async function renderPolygon(
   const material = new MeshLambertMaterial({
     color: mesh.material.color,
     wireframe: mesh.material.wireframe,
-    stencilWrite: clampToGround,
+    stencilWrite: false,
+    colorWrite: !clampToGround,
+    depthWrite: !clampToGround,
+    depthTest: !clampToGround,
   });
 
   // TODO: Update this value depends on the terrain updates.
@@ -289,7 +296,7 @@ async function renderPolygon(
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
-    if (material.userData.uClampToGround.value) {
+    if (material.userData.uClampToGround.value != null) {
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
 

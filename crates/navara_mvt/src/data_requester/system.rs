@@ -97,6 +97,6 @@ pub(crate) fn filter_requestable_data_requester(
             };
             tile.data_requester_entity_id = None;
         }
-        commands.entity(e).insert((Deleted, Ignored));
+        commands.entity(e).try_insert((Deleted, Ignored));
     }
 }

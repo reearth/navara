@@ -8,6 +8,7 @@ use navara_feature_component::{
     batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId,
     render::RenderableFeature,
 };
+use navara_tile_component::VectorTileQuadtree;
 
 use crate::tile::RenderedTile;
 
@@ -26,6 +27,7 @@ impl LayerResources {
         commands: &mut Commands,
         buf: &mut BufferStore,
         batch_table: &mut BatchTable,
+        qts: &mut Query<&mut VectorTileQuadtree>,
         tc: &Query<&TileCacheManager>,
         features: &Query<&FeatureId>,
         batched_features: &Query<&BatchedFeature>,
@@ -34,8 +36,12 @@ impl LayerResources {
         batch_id: &Query<&BatchId>,
     ) {
         if let Ok(tc) = tc.get(self.tile_cache_manager) {
+            let mut qt = qts.get_mut(self.quadtree);
             for e in tc.rendered_tile_caches.values() {
                 if let Ok(mut r) = rendered_tiles.get_mut(*e) {
+                    if let Ok(qt) = qt.as_mut() {
+                        qt.qt.remove(r.tile_handle).unwrap().destroy(commands)
+                    }
                     r.destroy(
                         commands,
                         buf,

@@ -4,7 +4,7 @@ import {
   IMAGE_EXTENSIONS,
   isEntityEvent,
   to_draped_feature_id,
-  to_globe_depth_id,
+  to_globe_id,
 } from "@navara/core";
 import {
   type Events,
@@ -155,21 +155,11 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processMeshAdded(
-            scenes.main,
-            scenes.globe,
-            meshes,
-            event,
-            buf,
-            loadedTexs,
-          );
+          await processMeshAdded(scenes.globe, meshes, event, buf, loadedTexs);
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
-          {
-            processObjectRemoved(scenes.main, meshes, event);
-            processObjectRemoved(scenes.globe, meshes, event, true);
-          }
+          processObjectRemoved(scenes.globe, meshes, event, true);
           break;
         case "change":
           processMeshChanged(meshes, event);
@@ -268,9 +258,8 @@ export function processEvent(
           break;
         case "remove":
           {
-            processObjectRemoved(scenes.main, meshes, event);
             processObjectRemoved(
-              scenes.drapedFeatures,
+              scenes.main,
               meshes,
               event,
               undefined,
@@ -280,7 +269,6 @@ export function processEvent(
           break;
         case "change":
           processRenderableFeatureChanged(
-            scenes,
             event,
             meshes,
             drapedFeatureMaterials,
@@ -393,13 +381,13 @@ function processObjectTransformUpdated(
 ) {
   const id = generate_id_from_entity(e);
   const m = meshes.get(id);
-  const globeDepthMesh = meshes.get(to_globe_depth_id(id));
+  const globeMesh = meshes.get(to_globe_id(id));
   if (m) {
     setTransform(m, e.transform);
   }
 
-  if (globeDepthMesh) {
-    setTransform(globeDepthMesh, e.transform);
+  if (globeMesh) {
+    setTransform(globeMesh, e.transform);
   }
 }
 
@@ -407,16 +395,16 @@ function processObjectRemoved(
   parent: Object3D,
   meshes: MeshCache,
   obj: EntityEvent,
-  isGlobeDepth?: boolean,
+  isGlobe?: boolean,
   drapedFeatureMaterials?: Map<string, Material>,
 ) {
   let id = generate_id_from_entity(obj);
-  if (isGlobeDepth) {
-    id = to_globe_depth_id(id);
+  if (isGlobe) {
+    id = to_globe_id(id);
   }
   if (drapedFeatureMaterials) {
-    id = to_draped_feature_id(id);
-    drapedFeatureMaterials.delete(id);
+    const materialId = to_draped_feature_id(id);
+    drapedFeatureMaterials.delete(materialId);
   }
   const m = meshes.get(id);
   if (!m) return;
@@ -653,22 +641,18 @@ async function processRenderableFeatureAdded(
 
   obj.renderOrder = 1;
 
-  scenes.main.add(obj);
-
+  if (!obj.userData.draped) {
+    scenes.main.add(obj);
+  }
   meshes.set(id, obj);
 
   if (obj.userData.draped && obj instanceof Mesh) {
-    const drapedId = to_draped_feature_id(id);
-    const m = new Mesh(obj.geometry, obj.material);
-    scenes.drapedFeatures.add(m);
-    drapedFeatureMaterials.set(drapedId, m.material as Material);
-    meshes.set(drapedId, m);
+    drapedFeatureMaterials.set(id, obj.material as Material);
   }
 }
 
 // TODO: Update material in this function.
 function processRenderableFeatureChanged(
-  scenes: Scenes,
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
@@ -708,23 +692,19 @@ function processRenderableFeatureChanged(
     if (obj instanceof Mesh && obj.userData.draped != null) {
       const drapedId = to_draped_feature_id(id);
       if (obj.userData.draped) {
-        obj.material.stencilWrite = true;
-        drapedFeatureMaterials.set(drapedId, obj.material);
-        if (!meshes.has(drapedId)) {
-          const m = new Mesh(obj.geometry, obj.material);
-          scenes.drapedFeatures.add(m);
-          meshes.set(drapedId, m);
+        if (!drapedFeatureMaterials.has(drapedId)) {
+          obj.material.stencilWrite = false;
+          obj.material.depthWrite = false;
+          obj.material.depthTest = false;
+          obj.material.colorWrite = false;
+          drapedFeatureMaterials.set(drapedId, obj.material);
         }
       } else {
+        obj.material.depthWrite = true;
+        obj.material.depthTest = true;
         obj.material.stencilWrite = false;
+        obj.material.colorWrite = true;
         drapedFeatureMaterials.delete(drapedId);
-        if (meshes.has(drapedId)) {
-          const m = meshes.get(drapedId);
-          if (m) {
-            scenes.drapedFeatures.remove(m);
-          }
-          meshes.delete(drapedId);
-        }
       }
     }
   }
