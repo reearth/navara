@@ -45,7 +45,7 @@ jobs:
             ${{ runner.os }}-npm-
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: 1.83.0
           targets: wasm32-unknown-unknown
       - name: Install deps for cargo
         run: |

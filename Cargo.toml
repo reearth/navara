@@ -6,6 +6,9 @@ members = [
     "crates/*",
 ]
 
+[workspace.package]
+rust-version = "1.83.0"
+
 [workspace.dependencies]
 bevy_app = "0.14.2"
 bevy_ecs = "0.14.2"
@@ -27,7 +30,7 @@ instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
 fxhash = "0.2.1"
 
 # --- WASM ---
-wasm-bindgen = { version = "0.2.99" }
+wasm-bindgen = { version = "=0.2.99" }
 
 js-sys = "0.3.72"
 serde-wasm-bindgen = "0.6.5"
