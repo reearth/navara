@@ -90,7 +90,6 @@ export class CustomRenderPass extends Pass {
       m.depthWrite = false;
       m.stencilWrite = true;
       m.depthTest = true;
-      m.visible = true;
 
       const originalMesh = this._meshes.get(k);
       if (!originalMesh) return;
