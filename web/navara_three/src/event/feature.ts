@@ -275,7 +275,7 @@ async function renderPolygon(
   const clampToGround = mesh.material.clamp_to_ground;
   // TODO: Need to calculate a shadow for a draped polygon by using terrain's normal.
   const material = new MeshLambertMaterial({
-    color: Math.random() * 255 ** 3,
+    color: mesh.material.color,
     wireframe: mesh.material.wireframe,
     stencilWrite: false,
     colorWrite: !clampToGround,
