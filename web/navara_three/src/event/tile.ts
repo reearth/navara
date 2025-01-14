@@ -1,4 +1,4 @@
-import { generate_id_from_entity, to_globe_depth_id } from "@navara/core";
+import { generate_id_from_entity, to_globe_id } from "@navara/core";
 import {
   type Transform,
   type MeshAdded,
@@ -23,16 +23,14 @@ import type { MeshCache } from "../type";
 import type { BufferLoader } from ".";
 
 export async function processMeshAdded(
-  parent: Object3D,
-  globeDepthScene: Object3D,
+  globeScene: Object3D,
   meshes: MeshCache,
   mesh: MeshAdded,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
 ) {
   await createMesh(
-    parent,
-    globeDepthScene,
+    globeScene,
     meshes,
     buf,
     loadedTexes,
@@ -45,7 +43,7 @@ export async function processMeshAdded(
 
 export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
   const id = generate_id_from_entity(mesh);
-  const m = meshes.get(id);
+  const m = meshes.get(to_globe_id(id));
   if (!m) return;
 
   if (!(m instanceof Mesh)) return;
@@ -54,8 +52,7 @@ export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
 }
 
 async function createMesh(
-  parent: Object3D,
-  globeDepthScene: Object3D,
+  globeScene: Object3D,
   meshes: MeshCache,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
@@ -94,16 +91,9 @@ async function createMesh(
   m.renderOrder = mesh.render_order;
   m.name = `tile_${id}`;
   if (tranform) setTransform(m, tranform);
+  globeScene.add(m);
+  meshes.set(to_globe_id(id), m);
 
-  parent.add(m);
-
-  const clonedMesh = m.clone();
-  clonedMesh.renderOrder = mesh.render_order;
-  m.name = `depth_tile_${id}`;
-  globeDepthScene.add(clonedMesh);
-
-  meshes.set(id, m);
-  meshes.set(to_globe_depth_id(id), clonedMesh);
   return m;
 }
 

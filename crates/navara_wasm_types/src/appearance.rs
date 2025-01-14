@@ -223,7 +223,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
         navara_material::PolygonMaterial {
             show: val.show.unwrap_or(true),
             color: val.color,
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(true),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(false),
             height: val.height.unwrap_or(0.),
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(false),

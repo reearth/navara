@@ -14,12 +14,13 @@ import {
   FloatType,
   Material,
   AlwaysStencilFunc,
-  IncrementStencilOp,
   KeepStencilOp,
   FrontSide,
   BackSide,
-  DecrementStencilOp,
   NotEqualStencilFunc,
+  IncrementWrapStencilOp,
+  DecrementWrapStencilOp,
+  ZeroStencilOp,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -215,13 +216,15 @@ export default class ThreeView {
       this.renderer = options.renderer;
     } else {
       const renderer = new WebGLRenderer({
-        antialias: true,
+        // If it's true, some noise will happen. So use other AA algorithm instead.
+        antialias: false,
         logarithmicDepthBuffer: true,
         canvas: options.canvas,
         stencil: true,
       });
       renderer.info.autoReset = false;
       renderer.autoClearStencil = false;
+      renderer.autoClearColor = false;
       renderer.autoClearDepth = false;
       this.renderer = renderer;
 
@@ -272,10 +275,12 @@ export default class ThreeView {
       globeScene = new Scene();
     }
 
+    const main = new Scene();
     const drapedFeaturesScene = new Scene();
 
     this._scenes = {
-      main: scene,
+      world: scene,
+      main,
       globe: globeScene,
       drapedFeatures: drapedFeaturesScene,
     };
@@ -330,7 +335,7 @@ export default class ThreeView {
   }
 
   get scene() {
-    return this._scenes.main;
+    return this._scenes.world;
   }
 
   async init() {
@@ -464,6 +469,13 @@ export default class ThreeView {
     return true;
   }
 
+  // Render the scene with world scene that includes user setting object like a light.
+  private _renderWithWorld(scene: Scene) {
+    scene.add(this._scenes.world);
+    this.renderer.render(scene, this.camera);
+    scene.remove(this._scenes.world);
+  }
+
   private _render() {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
@@ -473,12 +485,16 @@ export default class ThreeView {
 
     this.renderer.setRenderTarget(null);
     this.renderer.clearDepth();
+    this.renderer.clearColor();
+    this.renderer.clearStencil();
+
+    this._renderWithWorld(this._scenes.globe);
 
     if (shouldDrapeByStencilTest) {
       this._renderDrapedMesh();
     }
 
-    this.renderer.render(this._scenes.main, this.camera);
+    this._renderWithWorld(this._scenes.main);
   }
 
   // Drape a feature on the terrain by stencil test.
@@ -486,43 +502,59 @@ export default class ThreeView {
   // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
   // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
   private _renderDrapedMesh() {
-    this.renderer.clearStencil();
+    const drapedFeaturesScene = this._scenes.drapedFeatures;
 
-    // Render the terrain first
-    this.renderer.render(this._scenes.globe, this.camera);
-
-    // TODO: Make drapedFeatureScene
-    this._drapedFeatureMaterials.forEach((m) => {
+    this._drapedFeatureMaterials.forEach((m, k) => {
+      // Front face
       m.stencilFunc = AlwaysStencilFunc;
       m.stencilFail = KeepStencilOp;
-      m.stencilZFail = KeepStencilOp;
-      m.stencilZPass = IncrementStencilOp;
+      m.stencilZPass = KeepStencilOp;
+      m.stencilZFail = DecrementWrapStencilOp;
       m.side = FrontSide;
       m.colorWrite = false;
       m.depthWrite = false;
-    });
-    this.renderer.render(this._scenes.drapedFeatures, this.camera);
+      m.stencilWrite = true;
+      m.depthTest = true;
+      m.visible = true;
 
-    this._drapedFeatureMaterials.forEach((m) => {
-      m.stencilZPass = DecrementStencilOp;
+      const originalMesh = this._meshes.get(k);
+      if (!originalMesh) return;
+
+      let mesh = originalMesh.clone();
+      drapedFeaturesScene.add(mesh);
+      this._renderWithWorld(drapedFeaturesScene);
+      drapedFeaturesScene.remove(mesh);
+
+      // Back face
+      m.stencilZFail = IncrementWrapStencilOp;
       m.side = BackSide;
-    });
-    this.renderer.render(this._scenes.drapedFeatures, this.camera);
 
-    // TODO: Near plane support
+      mesh = originalMesh.clone();
+      drapedFeaturesScene.add(mesh);
+      this._renderWithWorld(drapedFeaturesScene);
+      drapedFeaturesScene.remove(mesh);
 
-    this._drapedFeatureMaterials.forEach((m) => {
+      // Final
       m.stencilFunc = NotEqualStencilFunc;
-      m.stencilFail = KeepStencilOp;
-      m.stencilZFail = KeepStencilOp;
-      m.stencilZPass = KeepStencilOp;
+      m.stencilFail = ZeroStencilOp;
+      m.stencilZFail = ZeroStencilOp;
+      m.stencilZPass = ZeroStencilOp;
       m.side = FrontSide;
       m.colorWrite = true;
       m.depthWrite = true;
-    });
+      m.depthTest = false;
 
-    // TODO: Reuse depth buffer
-    this.renderer.clearDepth();
+      mesh = originalMesh.clone();
+      drapedFeaturesScene.add(mesh);
+      this._renderWithWorld(drapedFeaturesScene);
+      drapedFeaturesScene.remove(mesh);
+
+      // Reset
+      m.colorWrite = false;
+      m.depthWrite = false;
+      m.depthTest = false;
+      m.stencilWrite = false;
+    });
   }
 
   // TODO: Handle event from user.
