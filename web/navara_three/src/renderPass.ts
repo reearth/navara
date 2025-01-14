@@ -91,22 +91,18 @@ export class CustomRenderPass extends Pass {
       m.stencilWrite = true;
       m.depthTest = true;
 
-      const originalMesh = this._meshes.get(k);
-      if (!originalMesh) return;
+      const mesh = this._meshes.get(k);
+      if (!mesh) return;
 
-      let mesh = originalMesh.clone();
       drapedFeaturesScene.add(mesh);
+
       this._renderWithWorld(renderer, drapedFeaturesScene);
-      drapedFeaturesScene.remove(mesh);
 
       // Back face
       m.stencilZFail = IncrementWrapStencilOp;
       m.side = BackSide;
 
-      mesh = originalMesh.clone();
-      drapedFeaturesScene.add(mesh);
       this._renderWithWorld(renderer, drapedFeaturesScene);
-      drapedFeaturesScene.remove(mesh);
 
       // Final
       m.stencilFunc = NotEqualStencilFunc;
@@ -118,9 +114,8 @@ export class CustomRenderPass extends Pass {
       m.depthWrite = true;
       m.depthTest = false;
 
-      mesh = originalMesh.clone();
-      drapedFeaturesScene.add(mesh);
       this._renderWithWorld(renderer, drapedFeaturesScene);
+
       drapedFeaturesScene.remove(mesh);
 
       // Reset
