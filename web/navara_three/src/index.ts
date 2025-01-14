@@ -1,6 +1,7 @@
 import { EventManager } from "@navara/core";
 import initCore, { Core, type TextureFragmentStatus } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
+import { EffectComposer, EffectPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -13,17 +14,14 @@ import {
   DepthFormat,
   FloatType,
   Material,
-  AlwaysStencilFunc,
-  KeepStencilOp,
-  FrontSide,
-  BackSide,
-  NotEqualStencilFunc,
-  IncrementWrapStencilOp,
-  DecrementWrapStencilOp,
-  ZeroStencilOp,
 } from "three";
 import invariant from "tiny-invariant";
 
+import {
+  DEFAULT_ANTIALIAS,
+  selectAntialiasEffect,
+  type Antialias,
+} from "./antialias";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
   processEvent,
@@ -35,6 +33,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
+import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import { isWorker } from "./temp/utils";
@@ -64,6 +63,7 @@ export type Options = {
   globeScene?: Scene;
   camera?: PerspectiveCamera;
   renderer?: WebGLRenderer;
+  antialias?: Antialias;
 };
 
 export type Events = {
@@ -76,6 +76,8 @@ export default class ThreeView {
   control?: { update: () => void; get target(): Vector3 | undefined };
 
   private _scenes: Scenes;
+  private _effectComposer: EffectComposer;
+  private _renderPass: CustomRenderPass;
   private _globeDepthRenderTarget: WebGLRenderTarget;
   // Store draped feature's materials
   private _drapedFeatureMaterials = new Map<string, Material>();
@@ -304,6 +306,27 @@ export default class ThreeView {
       this.camera = camera;
     }
 
+    const renderTarget = new WebGLRenderTarget(width, height, {
+      stencilBuffer: true,
+    });
+    this._effectComposer = new EffectComposer(this.renderer, renderTarget);
+    this._renderPass = new CustomRenderPass(
+      this._scenes,
+      this.camera,
+      this._meshes,
+      this._globeDepthRenderTarget,
+      this._drapedFeatureMaterials,
+    );
+    this._effectComposer.addPass(this._renderPass);
+
+    const aaEffect = selectAntialiasEffect(
+      options.antialias ?? DEFAULT_ANTIALIAS,
+    );
+    if (aaEffect) {
+      const aaPass = new EffectPass(this.camera, aaEffect);
+      this._effectComposer.addPass(aaPass);
+    }
+
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
     }
@@ -389,6 +412,7 @@ export default class ThreeView {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
+    this._effectComposer.setSize(w, h);
     this._globeDepthRenderTarget.setSize(
       w * (pixelRatio ?? 1),
       h * (pixelRatio ?? 1),
@@ -469,92 +493,8 @@ export default class ThreeView {
     return true;
   }
 
-  // Render the scene with world scene that includes user setting object like a light.
-  private _renderWithWorld(scene: Scene) {
-    scene.add(this._scenes.world);
-    this.renderer.render(scene, this.camera);
-    scene.remove(this._scenes.world);
-  }
-
   private _render() {
-    const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
-
-    this.renderer.setRenderTarget(this._globeDepthRenderTarget);
-    this.renderer.clearDepth();
-    this.renderer.render(this._scenes.globe, this.camera);
-
-    this.renderer.setRenderTarget(null);
-    this.renderer.clearDepth();
-    this.renderer.clearColor();
-    this.renderer.clearStencil();
-
-    this._renderWithWorld(this._scenes.globe);
-
-    if (shouldDrapeByStencilTest) {
-      this._renderDrapedMesh();
-    }
-
-    this._renderWithWorld(this._scenes.main);
-  }
-
-  // Drape a feature on the terrain by stencil test.
-  // Refs
-  // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
-  // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
-  private _renderDrapedMesh() {
-    const drapedFeaturesScene = this._scenes.drapedFeatures;
-
-    this._drapedFeatureMaterials.forEach((m, k) => {
-      // Front face
-      m.stencilFunc = AlwaysStencilFunc;
-      m.stencilFail = KeepStencilOp;
-      m.stencilZPass = KeepStencilOp;
-      m.stencilZFail = DecrementWrapStencilOp;
-      m.side = FrontSide;
-      m.colorWrite = false;
-      m.depthWrite = false;
-      m.stencilWrite = true;
-      m.depthTest = true;
-      m.visible = true;
-
-      const originalMesh = this._meshes.get(k);
-      if (!originalMesh) return;
-
-      let mesh = originalMesh.clone();
-      drapedFeaturesScene.add(mesh);
-      this._renderWithWorld(drapedFeaturesScene);
-      drapedFeaturesScene.remove(mesh);
-
-      // Back face
-      m.stencilZFail = IncrementWrapStencilOp;
-      m.side = BackSide;
-
-      mesh = originalMesh.clone();
-      drapedFeaturesScene.add(mesh);
-      this._renderWithWorld(drapedFeaturesScene);
-      drapedFeaturesScene.remove(mesh);
-
-      // Final
-      m.stencilFunc = NotEqualStencilFunc;
-      m.stencilFail = ZeroStencilOp;
-      m.stencilZFail = ZeroStencilOp;
-      m.stencilZPass = ZeroStencilOp;
-      m.side = FrontSide;
-      m.colorWrite = true;
-      m.depthWrite = true;
-      m.depthTest = false;
-
-      mesh = originalMesh.clone();
-      drapedFeaturesScene.add(mesh);
-      this._renderWithWorld(drapedFeaturesScene);
-      drapedFeaturesScene.remove(mesh);
-
-      // Reset
-      m.colorWrite = false;
-      m.depthWrite = false;
-      m.depthTest = false;
-      m.stencilWrite = false;
-    });
+    this._effectComposer.render();
   }
 
   // TODO: Handle event from user.
