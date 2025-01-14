@@ -84,8 +84,8 @@ export class CustomRenderPass extends Pass {
       m.stencilFunc = AlwaysStencilFunc;
       m.stencilFail = KeepStencilOp;
       m.stencilZPass = KeepStencilOp;
-      m.stencilZFail = DecrementWrapStencilOp;
-      m.side = FrontSide;
+      m.stencilZFail = IncrementWrapStencilOp;
+      m.side = BackSide;
       m.colorWrite = false;
       m.depthWrite = false;
       m.stencilWrite = true;
@@ -99,8 +99,8 @@ export class CustomRenderPass extends Pass {
       this._renderWithWorld(renderer, drapedFeaturesScene);
 
       // Back face
-      m.stencilZFail = IncrementWrapStencilOp;
-      m.side = BackSide;
+      m.side = FrontSide;
+      m.stencilZFail = DecrementWrapStencilOp;
 
       this._renderWithWorld(renderer, drapedFeaturesScene);
 
@@ -109,9 +109,9 @@ export class CustomRenderPass extends Pass {
       m.stencilFail = ZeroStencilOp;
       m.stencilZFail = ZeroStencilOp;
       m.stencilZPass = ZeroStencilOp;
-      m.side = FrontSide;
+      m.side = BackSide;
       m.colorWrite = true;
-      m.depthWrite = true;
+      m.depthWrite = false;
       m.depthTest = false;
 
       this._renderWithWorld(renderer, drapedFeaturesScene);
