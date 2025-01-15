@@ -20,6 +20,7 @@ out vec3 v_endPlaneNormalEc;
 out vec4 v_rightPlaneEC;
 out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
+out vec3 vViewPosition;
 
 void main() {
     vec3 ecStart = (modelViewMatrix * vec4(start, 1.0)).xyz;
@@ -84,4 +85,5 @@ void main() {
 
     positionEC.xyz += lineWidth * normalEC;
     gl_Position = projectionMatrix * positionEC;
+    vViewPosition = -positionEC.xyz;
 }
