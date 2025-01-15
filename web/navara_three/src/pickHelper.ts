@@ -43,15 +43,15 @@ export class PickHelper {
     this.camera.setViewOffset(
       this.renderer.getContext().drawingBufferWidth, // full width
       this.renderer.getContext().drawingBufferHeight, // full top
-      x * pixelRatio | 0, // rect x
-      y * pixelRatio | 0, // rect y
+      (x * pixelRatio) | 0, // rect x
+      (y * pixelRatio) | 0, // rect y
       1, // rect width
       1, // rect height
     );
 
-    this.renderer.setRenderTarget( this.pickingTexture );
+    this.renderer.setRenderTarget(this.pickingTexture);
     this.renderer.clearDepth();
-    this.renderer.render(this.pickScene, this.camera );
+    this.renderer.render(this.pickScene, this.camera);
 
     this.renderer.readRenderTargetPixels(
       this.pickingTexture,
@@ -59,16 +59,19 @@ export class PickHelper {
       0, // y
       1, // width
       1, // height
-      this.pixelBuffer );
+      this.pixelBuffer,
+    );
 
-    this.renderer.setRenderTarget( null );
+    this.renderer.setRenderTarget(null);
     this.camera.clearViewOffset();
 
-    let batchId = (this.pixelBuffer[0] << 16) + (this.pixelBuffer[1] << 8) + this.pixelBuffer[2];
-    if(batchId > 0){
+    const batchId =
+      (this.pixelBuffer[0] << 16) +
+      (this.pixelBuffer[1] << 8) +
+      this.pixelBuffer[2];
+    if (batchId > 0) {
       this.onPickCallback([batchId]);
-    }
-    else{
+    } else {
       this.onPickCallback([]);
     }
   }

@@ -98,7 +98,7 @@ gl_FragColor.a = nvr_circle_alpha(sprite_uv);
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
 
-  let batchId = m.geometry.batch_id ?? 0;
+  const batchId = m.geometry.batch_id ?? 0;
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
   sprite.userData.orgColor = m.material.color;
@@ -119,7 +119,7 @@ async function renderBillboard(m: BillboardMesh) {
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
 
-  let batchId = m.geometry.batch_id ?? 0;
+  const batchId = m.geometry.batch_id ?? 0;
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
   sprite.userData.orgColor = m.material.color;
@@ -158,7 +158,7 @@ async function renderModel(
     return;
   }
 
-  let batchId = m.geometry.batch_id ?? 0;
+  const batchId = m.geometry.batch_id ?? 0;
   scene.userData.batchId = batchId;
   scene.userData.isPicked = false;
   scene.userData.orgColor = 0xffffff;
@@ -185,7 +185,7 @@ async function renderPolyline(
     g.right_normal_and_texture_coordinate_normalization_y.data,
   );
   const indices = buf.u32(g.indices);
-  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (
     !position ||
@@ -225,7 +225,7 @@ async function renderPolyline(
       g.right_normal_and_texture_coordinate_normalization_y.size,
     ),
   );
-  let isPicked = new Float32Array(position.length / g.position.size).fill(0);
+  const isPicked = new Float32Array(position.length / g.position.size).fill(0);
   geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
@@ -245,7 +245,7 @@ async function renderPolyline(
       tGlobeDepth: uniforms.tGlobeDepth,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       pickable: { value: 0 },
-      uHighlightColor : uniforms.highlightColor
+      uHighlightColor: uniforms.highlightColor,
     },
     vertexShader: PolylineVertShader,
     fragmentShader: mesh.material.clamp_to_ground
@@ -274,7 +274,7 @@ async function renderPolygon(
     ? buf.f32(g.scale_normal_and_cap.data)
     : undefined;
   const indices = buf.u32(g.indices);
-  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (!position || !indices) return;
 
@@ -293,7 +293,7 @@ async function renderPolygon(
     );
   }
 
-  let isPicked = new Float32Array(position.length / g.position.size).fill(0);
+  const isPicked = new Float32Array(position.length / g.position.size).fill(0);
   geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
   geometry.setIndex(new BufferAttribute(indices, 1));
 

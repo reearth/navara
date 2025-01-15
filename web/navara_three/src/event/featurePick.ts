@@ -62,7 +62,7 @@ async function renderPoint(m: PointMesh) {
     visible: m.material.show,
   });
 
-  let batchId = m.geometry.batch_id ?? 0;
+  const batchId = m.geometry.batch_id ?? 0;
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.batchId = { value: batchId };
@@ -127,18 +127,18 @@ async function renderBillboard(m: BillboardMesh) {
     visible: m.material.show,
   });
 
-  let batchId = m.geometry.batch_id ?? 0;
+  const batchId = m.geometry.batch_id ?? 0;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.batchId = { value: batchId };
 
     shader.fragmentShader = shader.fragmentShader
-    .replace(
-      "#include <clipping_planes_pars_fragment>",
-      `
+      .replace(
+        "#include <clipping_planes_pars_fragment>",
+        `
         #include <clipping_planes_pars_fragment>
         uniform float batchId;
-      `
-    )
+      `,
+      )
       .replace(
         "#include <fog_fragment>",
         `
@@ -192,20 +192,20 @@ async function renderModel(
     return;
   }
 
-  let batchId = m.geometry.batch_id ?? 0;
-  let traverse = function(mesh: Object3D){
-    if(mesh instanceof Mesh){
-        let r = (batchId >> 16) / 255;
-        let g = ((batchId >> 8) & 0xFF) / 255;
-        let b = (batchId & 0xFF) / 255;
+  const batchId = m.geometry.batch_id ?? 0;
+  const r = (batchId >> 16) / 255;
+  const g = ((batchId >> 8) & 0xff) / 255;
+  const b = (batchId & 0xff) / 255;
 
-        mesh.material = new MeshBasicMaterial({
-            color: new Color(r, g, b)
-        });
+  const traverse = function (mesh: Object3D) {
+    if (mesh instanceof Mesh) {
+      mesh.material = new MeshBasicMaterial({
+        color: new Color(r, g, b),
+      });
     }
 
-    if(Array.isArray(mesh.children) && mesh.children.length > 0){
-      mesh.children.forEach(child => {
+    if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+      mesh.children.forEach((child) => {
         traverse(child);
       });
     }
@@ -235,7 +235,7 @@ async function renderPolyline(
     g.right_normal_and_texture_coordinate_normalization_y.data,
   );
   const indices = buf.u32(g.indices);
-  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (
     !position ||
@@ -325,7 +325,7 @@ async function renderPolygon(
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (!position || !indices) return;
 
-  if(!batchId){
+  if (!batchId) {
     batchId = new Float32Array(position.length / g.position.size).fill(0);
   }
 

@@ -356,6 +356,11 @@ impl Core {
             material,
         })
     }
+
+    #[wasm_bindgen(js_name = getBatchProp)]
+    pub fn get_batch_prop(&mut self, batch_id: u32) -> String {
+        self.app.get_batch_prop(&batch_id)
+    }
 }
 
 #[wasm_bindgen(start)]

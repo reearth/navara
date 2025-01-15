@@ -10,7 +10,9 @@ use navara_component::Deleted;
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
-use navara_feature_component::{batch::BatchedFeature, render::RenderableFeature};
+use navara_feature_component::{
+    batch::BatchTable, batch::BatchedFeature, render::RenderableFeature,
+};
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
@@ -293,6 +295,14 @@ impl App {
             .ok()?;
 
         Some(features)
+    }
+
+    pub fn get_batch_prop(&self, batch_id: &u32) -> String {
+        self.app
+            .world()
+            .get_resource::<BatchTable>()
+            .and_then(|batch_table| batch_table.get(batch_id).cloned())
+            .unwrap_or_else(|| String::from("{}"))
     }
 }
 

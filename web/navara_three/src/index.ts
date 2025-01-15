@@ -24,7 +24,7 @@ import {
   Sprite,
   Group,
   Object3D,
-  Mesh
+  Mesh,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -337,7 +337,7 @@ export default class ThreeView {
       frustumRatio: { value: null },
       tGlobeDepth: { value: null },
       inverseProjectionMatrix: { value: null },
-      highlightColor: { value: [0,1,1] },
+      highlightColor: { value: [0, 1, 1] },
     };
   }
 
@@ -620,80 +620,87 @@ export default class ThreeView {
     this.resize(width, height, pixelRatio);
   };
 
-  setModelColorTraverse(mesh: Object3D, isPicked: boolean, orgColor: number){
-    if(mesh instanceof Mesh){
-      if(isPicked){
-        const highlightColor = this._uniforms.highlightColor.value ?? [0,1,1];
-        mesh.material.color.setRGB(highlightColor[0], highlightColor[1], highlightColor[2]);
+  setModelColorTraverse(mesh: Object3D, isPicked: boolean, orgColor: number) {
+    if (mesh instanceof Mesh) {
+      if (isPicked) {
+        const highlightColor = this._uniforms.highlightColor.value ?? [0, 1, 1];
+        mesh.material.color.setRGB(
+          highlightColor[0],
+          highlightColor[1],
+          highlightColor[2],
+        );
       } else {
         mesh.material.color.setHex(orgColor);
       }
     }
 
-    if(Array.isArray(mesh.children) && mesh.children.length > 0){
-      mesh.children.forEach(child => {
+    if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+      mesh.children.forEach((child) => {
         this.setModelColorTraverse(child, isPicked, orgColor);
       });
     }
   }
 
-  pickSprite(pickArr: number[], obj: Sprite){
-    let batchId = obj.userData.batchId;
+  pickSprite(pickArr: number[], obj: Sprite) {
+    const batchId = obj.userData.batchId;
     let isPicked = false;
-    for(let i = 0; i < pickArr.length; i++){
-      if(pickArr[i] === batchId){
+    for (let i = 0; i < pickArr.length; i++) {
+      if (pickArr[i] === batchId) {
         isPicked = true;
         pickArr.splice(i, 1);
         break;
       }
     }
 
-    if(obj.userData.isPicked !== isPicked){
+    if (obj.userData.isPicked !== isPicked) {
       obj.userData.isPicked = isPicked;
-      if(isPicked){
-        const highlightColor = this._uniforms.highlightColor.value ?? [0,1,1];
-        obj.material.color.setRGB(highlightColor[0], highlightColor[1], highlightColor[2]);
+      if (isPicked) {
+        const highlightColor = this._uniforms.highlightColor.value ?? [0, 1, 1];
+        obj.material.color.setRGB(
+          highlightColor[0],
+          highlightColor[1],
+          highlightColor[2],
+        );
       } else {
         obj.material.color.setHex(obj.userData.orgColor);
       }
     }
   }
 
-  pickModel(pickArr: number[], obj: Group){
-    let batchId = obj.userData.batchId;
+  pickModel(pickArr: number[], obj: Group) {
+    const batchId = obj.userData.batchId;
     let isPicked = false;
-    for(let i = 0; i < pickArr.length; i++){
-      if(pickArr[i] === batchId){
+    for (let i = 0; i < pickArr.length; i++) {
+      if (pickArr[i] === batchId) {
         isPicked = true;
         pickArr.splice(i, 1);
         break;
       }
     }
 
-    if(obj.userData.isPicked !== isPicked){
+    if (obj.userData.isPicked !== isPicked) {
       obj.userData.isPicked = isPicked;
       this.setModelColorTraverse(obj, isPicked, obj.userData.orgColor);
     }
   }
 
-  pickMesh(pickArr: number[], obj: Mesh){
-    let batchId = obj.userData.batchId;
-    let isPicked = obj.geometry.attributes.isPicked.array;
+  pickMesh(pickArr: number[], obj: Mesh) {
+    const batchId = obj.userData.batchId;
+    const isPicked = obj.geometry.attributes.isPicked.array;
     isPicked.fill(0);
-    
-    for(let i = 0; i < pickArr.length; ){
+
+    for (let i = 0; i < pickArr.length; ) {
       let bFound = false;
-      for(let j = 0; j < batchId.length; j++){
-        if(batchId[j] === pickArr[i]){
+      for (let j = 0; j < batchId.length; j++) {
+        if (batchId[j] === pickArr[i]) {
           isPicked[j] = 1;
           bFound = true;
         }
       }
 
-      if(bFound){
+      if (bFound) {
         pickArr.splice(i, 1);
-      }
-      else{
+      } else {
         i++;
       }
     }
@@ -701,7 +708,12 @@ export default class ThreeView {
   }
 
   onPick(pickArr: number[]) {
-    for (const [_key, obj] of this._meshes){
+    if (pickArr.length > 0) {
+      const prop = this._core?.getBatchProp(pickArr[0]);
+      console.log(prop);
+    }
+
+    for (const [_key, obj] of this._meshes) {
       // point, billboard
       if (obj instanceof Sprite) {
         this.pickSprite(pickArr, obj);
