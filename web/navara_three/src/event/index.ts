@@ -4,6 +4,7 @@ import {
   IMAGE_EXTENSIONS,
   isEntityEvent,
   to_draped_feature_id,
+  to_globe_gbuffer_id,
   to_globe_id,
 } from "@navara/core";
 import {
@@ -155,11 +156,17 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processMeshAdded(scenes.globe, meshes, event, buf, loadedTexs);
+          await processMeshAdded(scenes, meshes, event, buf, loadedTexs);
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
-          processObjectRemoved(scenes.globe, meshes, event, true);
+          processObjectRemoved(scenes.globe, meshes, event, to_globe_id);
+          processObjectRemoved(
+            scenes.globeGBuffer,
+            meshes,
+            event,
+            to_globe_gbuffer_id,
+          );
           break;
         case "change":
           processMeshChanged(meshes, event);
@@ -381,13 +388,8 @@ function processObjectTransformUpdated(
 ) {
   const id = generate_id_from_entity(e);
   const m = meshes.get(id);
-  const globeMesh = meshes.get(to_globe_id(id));
   if (m) {
     setTransform(m, e.transform);
-  }
-
-  if (globeMesh) {
-    setTransform(globeMesh, e.transform);
   }
 }
 
@@ -395,12 +397,12 @@ function processObjectRemoved(
   parent: Object3D,
   meshes: MeshCache,
   obj: EntityEvent,
-  isGlobe?: boolean,
+  wrapId?: (id: string) => string,
   drapedFeatureMaterials?: Map<string, Material>,
 ) {
   let id = generate_id_from_entity(obj);
-  if (isGlobe) {
-    id = to_globe_id(id);
+  if (wrapId) {
+    id = wrapId(id);
   }
   if (drapedFeatureMaterials) {
     const materialId = to_draped_feature_id(id);

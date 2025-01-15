@@ -1,4 +1,8 @@
-import { generate_id_from_entity, to_globe_id } from "@navara/core";
+import {
+  generate_id_from_entity,
+  to_globe_gbuffer_id,
+  to_globe_id,
+} from "@navara/core";
 import {
   type Transform,
   type MeshAdded,
@@ -6,6 +10,8 @@ import {
   type RasterTileMaterial as EventMaterial,
   MeshChanged,
 } from "@navara/engine";
+import GBufferGlobeFragShader from "@shaders/glsl/gbufferGlobe.frag.glsl";
+import GBufferGlobeVertShader from "@shaders/glsl/gbufferGlobe.vert.glsl";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -15,22 +21,25 @@ import {
   MeshLambertMaterial,
   Object3D,
   Texture,
+  RawShaderMaterial,
+  GLSL3,
 } from "three";
 
+import type { Scenes } from "../scene";
 import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
 import type { MeshCache } from "../type";
 
 import type { BufferLoader } from ".";
 
 export async function processMeshAdded(
-  globeScene: Object3D,
+  scenes: Scenes,
   meshes: MeshCache,
   mesh: MeshAdded,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
 ) {
   await createMesh(
-    globeScene,
+    scenes,
     meshes,
     buf,
     loadedTexes,
@@ -44,15 +53,18 @@ export async function processMeshAdded(
 export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
   const id = generate_id_from_entity(mesh);
   const m = meshes.get(to_globe_id(id));
-  if (!m) return;
+  const mg = meshes.get(to_globe_gbuffer_id(id));
+  if (!m || !mg) return;
 
-  if (!(m instanceof Mesh)) return;
-  if (!(m.material instanceof Material)) return;
+  if (!(m instanceof Mesh) || !(mg instanceof Mesh)) return;
+  if (!(m.material instanceof Material) || !(mg.material instanceof Material))
+    return;
   m.material.visible = !!mesh.material.show && mesh.mesh.active;
+  mg.material.visible = !!mesh.material.show && mesh.mesh.active;
 }
 
 async function createMesh(
-  globeScene: Object3D,
+  scenes: Scenes,
   meshes: MeshCache,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
@@ -91,8 +103,18 @@ async function createMesh(
   m.renderOrder = mesh.render_order;
   m.name = `tile_${id}`;
   if (tranform) setTransform(m, tranform);
-  globeScene.add(m);
+  scenes.globe.add(m);
   meshes.set(to_globe_id(id), m);
+
+  const gbufferMaterial = new RawShaderMaterial({
+    vertexShader: GBufferGlobeVertShader,
+    fragmentShader: GBufferGlobeFragShader,
+    glslVersion: GLSL3,
+    visible: false,
+  });
+  const gbufferMesh = new Mesh(geometry, gbufferMaterial);
+  scenes.globeGBuffer.add(gbufferMesh);
+  meshes.set(to_globe_gbuffer_id(id), gbufferMesh);
 
   return m;
 }

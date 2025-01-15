@@ -10,10 +10,10 @@ import {
   Texture,
   Vector2,
   WebGLRenderTarget,
-  DepthTexture,
-  DepthFormat,
   FloatType,
   Material,
+  NearestFilter,
+  DepthTexture,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -78,7 +78,7 @@ export default class ThreeView {
   private _scenes: Scenes;
   private _effectComposer: EffectComposer;
   private _renderPass: CustomRenderPass;
-  private _globeDepthRenderTarget: WebGLRenderTarget;
+  private _globeGBufferRenderTarget: WebGLRenderTarget;
   // Store draped feature's materials
   private _drapedFeatureMaterials = new Map<string, Material>();
 
@@ -252,16 +252,21 @@ export default class ThreeView {
     const pixelRatio = this.renderer.getPixelRatio();
     const scaledWidth = width * pixelRatio;
     const scaledHeight = height * pixelRatio;
-    this._globeDepthRenderTarget = new WebGLRenderTarget(
+    this._globeGBufferRenderTarget = new WebGLRenderTarget(
+      scaledWidth,
+      scaledHeight,
+      {
+        count: 1,
+      },
+    );
+    this._globeGBufferRenderTarget.depthTexture = new DepthTexture(
       scaledWidth,
       scaledHeight,
     );
-    this._globeDepthRenderTarget.depthTexture = new DepthTexture(
-      scaledWidth,
-      scaledHeight,
-    );
-    this._globeDepthRenderTarget.depthTexture.format = DepthFormat;
-    this._globeDepthRenderTarget.depthTexture.type = FloatType;
+    const normalBuffer = this._globeGBufferRenderTarget.textures[0];
+    normalBuffer.magFilter = NearestFilter;
+    normalBuffer.minFilter = NearestFilter;
+    normalBuffer.type = FloatType;
 
     let scene: Scene;
     if (options.scene) {
@@ -279,11 +284,13 @@ export default class ThreeView {
 
     const main = new Scene();
     const drapedFeaturesScene = new Scene();
+    const globeGBufferScene = new Scene();
 
     this._scenes = {
       world: scene,
       main,
       globe: globeScene,
+      globeGBuffer: globeGBufferScene,
       drapedFeatures: drapedFeaturesScene,
     };
 
@@ -314,7 +321,7 @@ export default class ThreeView {
       this._scenes,
       this.camera,
       this._meshes,
-      this._globeDepthRenderTarget,
+      this._globeGBufferRenderTarget,
       this._drapedFeatureMaterials,
     );
     this._effectComposer.addPass(this._renderPass);
@@ -353,6 +360,7 @@ export default class ThreeView {
       frustumNearFar: { value: null },
       frustumRatio: { value: null },
       tGlobeDepth: { value: null },
+      tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
     };
   }
@@ -391,7 +399,7 @@ export default class ThreeView {
       this._eventDisposer();
       this._eventDisposer = undefined;
     }
-    this._globeDepthRenderTarget.dispose();
+    this._globeGBufferRenderTarget.dispose();
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -413,7 +421,7 @@ export default class ThreeView {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this._effectComposer.setSize(w, h);
-    this._globeDepthRenderTarget.setSize(
+    this._globeGBufferRenderTarget.setSize(
       w * (pixelRatio ?? 1),
       h * (pixelRatio ?? 1),
     );
@@ -451,7 +459,9 @@ export default class ThreeView {
     this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
-      this._globeDepthRenderTarget.depthTexture;
+      this._globeGBufferRenderTarget.depthTexture;
+    this._uniforms.tGlobeNormal.value =
+      this._globeGBufferRenderTarget.textures[0];
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.projectionMatrixInverse;
   }

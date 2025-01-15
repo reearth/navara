@@ -8,6 +8,10 @@ export function to_globe_id(id: string) {
   return `${id}_globe`;
 }
 
+export function to_globe_gbuffer_id(id: string) {
+  return `${id}_globe_gbuffer`;
+}
+
 export function to_draped_feature_id(id: string) {
   return `${id}_draped_feature`;
 }
