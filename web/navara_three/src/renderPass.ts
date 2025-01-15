@@ -22,20 +22,20 @@ export class CustomRenderPass extends Pass {
   private _camera: Camera;
   private _scenes: Scenes;
   private _drapedFeatureMaterials: Map<string, Material>;
-  private _globeDepthRenderTarget: WebGLRenderTarget;
+  private _globeGBufferRenderTarget: WebGLRenderTarget;
   private _meshes: MeshCache;
   constructor(
     scenes: Scenes,
     camera: Camera,
     meshes: MeshCache,
-    globeDepthRenderTarget: WebGLRenderTarget,
+    globeGBufferRenderTarget: WebGLRenderTarget,
     drapedFeatureMaterials: Map<string, Material>,
   ) {
     super();
     this._scenes = scenes;
     this._camera = camera;
     this._meshes = meshes;
-    this._globeDepthRenderTarget = globeDepthRenderTarget;
+    this._globeGBufferRenderTarget = globeGBufferRenderTarget;
     this._drapedFeatureMaterials = drapedFeatureMaterials;
   }
 
@@ -53,15 +53,13 @@ export class CustomRenderPass extends Pass {
   ) {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
-    renderer.setRenderTarget(this._globeDepthRenderTarget);
-    renderer.clearDepth();
-    renderer.render(this._scenes.globe, this._camera);
+    renderer.setRenderTarget(this._globeGBufferRenderTarget);
+    renderer.clear();
+    renderer.render(this._scenes.globeGBuffer, this._camera);
 
     renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
 
-    renderer.clearDepth();
-    renderer.clearColor();
-    renderer.clearStencil();
+    renderer.clear();
 
     this._renderWithWorld(renderer, this._scenes.globe);
 
