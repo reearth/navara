@@ -98,6 +98,11 @@ gl_FragColor.a = nvr_circle_alpha(sprite_uv);
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
 
+  let batchId = m.geometry.batch_id ?? 0;
+  sprite.userData.batchId = batchId;
+  sprite.userData.isPicked = false;
+  sprite.userData.orgColor = m.material.color;
+
   return sprite;
 }
 
@@ -113,6 +118,11 @@ async function renderBillboard(m: BillboardMesh) {
   });
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
+
+  let batchId = m.geometry.batch_id ?? 0;
+  sprite.userData.batchId = batchId;
+  sprite.userData.isPicked = false;
+  sprite.userData.orgColor = m.material.color;
 
   return sprite;
 }
@@ -147,6 +157,12 @@ async function renderModel(
   if (!scene) {
     return;
   }
+
+  let batchId = m.geometry.batch_id ?? 0;
+  scene.userData.batchId = batchId;
+  scene.userData.isPicked = false;
+  scene.userData.orgColor = 0xffffff;
+
   scene.visible = m.material.show ?? true;
   featureHandler.markModelIsRendered(bits);
   return scene;
@@ -169,6 +185,8 @@ async function renderPolyline(
     g.right_normal_and_texture_coordinate_normalization_y.data,
   );
   const indices = buf.u32(g.indices);
+  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (
     !position ||
     !start ||
@@ -207,6 +225,8 @@ async function renderPolyline(
       g.right_normal_and_texture_coordinate_normalization_y.size,
     ),
   );
+  let isPicked = new Float32Array(position.length / g.position.size).fill(0);
+  geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
 
@@ -225,6 +245,7 @@ async function renderPolyline(
       tGlobeDepth: uniforms.tGlobeDepth,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       pickable: { value: 0 },
+      uHighlightColor : uniforms.highlightColor
     },
     vertexShader: PolylineVertShader,
     fragmentShader: mesh.material.clamp_to_ground
@@ -235,6 +256,8 @@ async function renderPolyline(
     visible: mesh.material.show,
   });
   const m = new Mesh(geometry, material);
+  m.userData.batchId = batchId;
+  m.userData.batchIdSize = batchIdSize;
 
   return m;
 }
@@ -242,7 +265,7 @@ async function renderPolyline(
 async function renderPolygon(
   mesh: PolygonMesh,
   buf: BufferLoader,
-  _uniforms: CommonUniforms,
+  uniforms: CommonUniforms,
 ) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
@@ -251,6 +274,8 @@ async function renderPolygon(
     ? buf.f32(g.scale_normal_and_cap.data)
     : undefined;
   const indices = buf.u32(g.indices);
+  let batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (!position || !indices) return;
 
   const geometry = new BufferGeometry();
@@ -267,6 +292,9 @@ async function renderPolygon(
       new BufferAttribute(scale_normal_and_cap, g.scale_normal_and_cap.size),
     );
   }
+
+  let isPicked = new Float32Array(position.length / g.position.size).fill(0);
+  geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
   geometry.setIndex(new BufferAttribute(indices, 1));
 
   const clampToGround = mesh.material.clamp_to_ground;
@@ -294,14 +322,18 @@ async function renderPolygon(
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
 
+    shader.uniforms.uHighlightColor = uniforms.highlightColor;
+
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
         `
 #include <common>
+attribute float isPicked;
 in vec4 scaleNormalAndCap;
 
 uniform vec2 uMinMaxHeight;
+out float v_IsPicked;
 
 ${BranchFreeTernary}
 `,
@@ -311,6 +343,7 @@ ${BranchFreeTernary}
         `
 #include <begin_vertex>
 transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
+v_IsPicked = isPicked;
 `,
       );
     shader.fragmentShader = shader.fragmentShader
@@ -319,6 +352,8 @@ transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndC
         `
 uniform vec3 diffuse;
 uniform bool uClampToGround;
+uniform vec3 uHighlightColor;
+in float v_IsPicked;
 `,
       )
       .replace(
@@ -329,12 +364,18 @@ if(uClampToGround) {
 } else {
   #include <opaque_fragment>
 }
+
+if(v_IsPicked > 0.5) {
+  gl_FragColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+}
 `,
       );
   };
 
   const m = new Mesh(geometry, material);
   m.userData.draped = clampToGround;
+  m.userData.batchId = batchId;
+  m.userData.batchIdSize = batchIdSize;
 
   return m;
 }

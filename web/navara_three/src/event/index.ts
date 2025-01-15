@@ -768,14 +768,22 @@ function processRenderableFeatureChanged(
 }
 
 function processPointChanged(obj: Sprite, material: PointMaterial) {
-  obj.material.color.set(material.color);
+  obj.userData.orgColor = material.color;
+  if(!obj.userData.isPicked) {
+    obj.material.color.set(material.color);
+  }
+  
   obj.material.visible = material.show ?? true;
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
 }
 
 function processBillboardChanged(obj: Sprite, material: BillboardMaterial) {
-  obj.material.color.set(material.color);
+  obj.userData.orgColor = material.color;
+  if(!obj.userData.isPicked) {
+    obj.material.color.set(material.color);
+  }
+  
   obj.material.visible = material.show ?? true;
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;

@@ -21,6 +21,10 @@ import {
   DecrementStencilOp,
   NotEqualStencilFunc,
   Color,
+  Sprite,
+  Group,
+  Object3D,
+  Mesh
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -85,6 +89,7 @@ export default class ThreeView {
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
   private _disposed = false;
+  private _picked = false;
   private _events: {
     [K in keyof Events]?: Events[K][];
   } = {};
@@ -332,6 +337,7 @@ export default class ThreeView {
       frustumRatio: { value: null },
       tGlobeDepth: { value: null },
       inverseProjectionMatrix: { value: null },
+      highlightColor: { value: [0,1,1] },
     };
   }
 
@@ -580,7 +586,8 @@ export default class ThreeView {
       if (this._disposed) return;
       this._stats?.begin();
 
-      if (this._update()) this._render();
+      if (this._update() || this._picked) this._render();
+      this._picked = false;
 
       this._stats?.end();
     };
@@ -613,8 +620,105 @@ export default class ThreeView {
     this.resize(width, height, pixelRatio);
   };
 
+  setModelColorTraverse(mesh: Object3D, isPicked: boolean, orgColor: number){
+    if(mesh instanceof Mesh){
+      if(isPicked){
+        const highlightColor = this._uniforms.highlightColor.value ?? [0,1,1];
+        mesh.material.color.setRGB(highlightColor[0], highlightColor[1], highlightColor[2]);
+      } else {
+        mesh.material.color.setHex(orgColor);
+      }
+    }
+
+    if(Array.isArray(mesh.children) && mesh.children.length > 0){
+      mesh.children.forEach(child => {
+        this.setModelColorTraverse(child, isPicked, orgColor);
+      });
+    }
+  }
+
+  pickSprite(pickArr: number[], obj: Sprite){
+    let batchId = obj.userData.batchId;
+    let isPicked = false;
+    for(let i = 0; i < pickArr.length; i++){
+      if(pickArr[i] === batchId){
+        isPicked = true;
+        pickArr.splice(i, 1);
+        break;
+      }
+    }
+
+    if(obj.userData.isPicked !== isPicked){
+      obj.userData.isPicked = isPicked;
+      if(isPicked){
+        const highlightColor = this._uniforms.highlightColor.value ?? [0,1,1];
+        obj.material.color.setRGB(highlightColor[0], highlightColor[1], highlightColor[2]);
+      } else {
+        obj.material.color.setHex(obj.userData.orgColor);
+      }
+    }
+  }
+
+  pickModel(pickArr: number[], obj: Group){
+    let batchId = obj.userData.batchId;
+    let isPicked = false;
+    for(let i = 0; i < pickArr.length; i++){
+      if(pickArr[i] === batchId){
+        isPicked = true;
+        pickArr.splice(i, 1);
+        break;
+      }
+    }
+
+    if(obj.userData.isPicked !== isPicked){
+      obj.userData.isPicked = isPicked;
+      this.setModelColorTraverse(obj, isPicked, obj.userData.orgColor);
+    }
+  }
+
+  pickMesh(pickArr: number[], obj: Mesh){
+    let batchId = obj.userData.batchId;
+    let isPicked = obj.geometry.attributes.isPicked.array;
+    isPicked.fill(0);
+    
+    for(let i = 0; i < pickArr.length; ){
+      let bFound = false;
+      for(let j = 0; j < batchId.length; j++){
+        if(batchId[j] === pickArr[i]){
+          isPicked[j] = 1;
+          bFound = true;
+        }
+      }
+
+      if(bFound){
+        pickArr.splice(i, 1);
+      }
+      else{
+        i++;
+      }
+    }
+    obj.geometry.attributes.isPicked.needsUpdate = true;
+  }
+
   onPick(pickArr: number[]) {
-    console.log(pickArr);
+    for (const [_key, obj] of this._meshes){
+      // point, billboard
+      if (obj instanceof Sprite) {
+        this.pickSprite(pickArr, obj);
+      }
+
+      // model
+      if (obj instanceof Group && obj.userData.batchId) {
+        this.pickModel(pickArr, obj);
+      }
+
+      // polygon, polyline
+      if (obj instanceof Mesh && obj.userData.batchId) {
+        this.pickMesh(pickArr, obj);
+      }
+    }
+
+    this._picked = true;
   }
 }
 

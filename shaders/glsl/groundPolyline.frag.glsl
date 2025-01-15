@@ -12,6 +12,7 @@ in vec4 v_rightPlaneEC; // Technically can compute distance for this here
 in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
 in float v_batchId;
+in float v_IsPicked;
 
 uniform vec3 color;
 uniform vec3 viewportAndPixelRatio;
@@ -21,7 +22,7 @@ uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
 uniform float pickable;
-
+uniform vec3 uHighlightColor;
 
 float readDepth(sampler2D depthSampler, vec2 coord) {
     float fragCoordZ = texture( depthSampler, coord ).r;
@@ -77,5 +78,9 @@ void main() {
         float b = floor(mod(v_batchId, 256.0));
 
         gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+    }
+
+    if(v_IsPicked > 0.5) {
+        gl_FragColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
     }
 }
