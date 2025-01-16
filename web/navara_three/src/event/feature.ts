@@ -21,6 +21,7 @@ import {
   SpriteMaterial,
   Object3D,
   MeshLambertMaterial,
+  UniformsLib,
 } from "three";
 
 import type { CommonUniforms } from "../uniforms";
@@ -219,6 +220,7 @@ async function renderPolyline(
 
   const material = new ShaderMaterial({
     uniforms: {
+      ...UniformsLib["lights"],
       minMaxHeightAndWidth: {
         value: [minHeight, maxHeight, mesh.material.width],
       },
@@ -227,6 +229,7 @@ async function renderPolyline(
       frustumNearFar: uniforms.frustumNearFar,
       frustumRatio: uniforms.frustumRatio,
       tGlobeDepth: uniforms.tGlobeDepth,
+      uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
     },
     vertexShader: PolylineVertShader,
@@ -236,6 +239,7 @@ async function renderPolyline(
     // fragmentShader: PolylineFragShader,
     depthTest: false,
     visible: mesh.material.show,
+    lights: true,
   });
   const m = new Mesh(geometry, material);
 
