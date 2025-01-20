@@ -21,6 +21,7 @@ import {
   SpriteMaterial,
   Object3D,
   MeshLambertMaterial,
+  UniformsLib,
 } from "three";
 
 import type { CommonUniforms } from "../uniforms";
@@ -90,7 +91,11 @@ ${PointFragShader}
         "#include <fog_fragment>",
         `
 #include <fog_fragment>
-gl_FragColor.a = nvr_circle_alpha(sprite_uv);
+float alpha = nvr_circle_alpha(sprite_uv);
+if (alpha == 0.) {
+  discard;
+}
+gl_FragColor.a = alpha;
 `,
       );
   };
@@ -235,6 +240,7 @@ async function renderPolyline(
 
   const material = new ShaderMaterial({
     uniforms: {
+      ...UniformsLib["lights"],
       minMaxHeightAndWidth: {
         value: [minHeight, maxHeight, mesh.material.width],
       },
@@ -243,6 +249,7 @@ async function renderPolyline(
       frustumNearFar: uniforms.frustumNearFar,
       frustumRatio: uniforms.frustumRatio,
       tGlobeDepth: uniforms.tGlobeDepth,
+      uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       pickable: { value: 0 },
       uHighlightColor: uniforms.highlightColor,
@@ -254,6 +261,7 @@ async function renderPolyline(
     // fragmentShader: PolylineFragShader,
     depthTest: false,
     visible: mesh.material.show,
+    lights: true,
   });
   const m = new Mesh(geometry, material);
   m.userData.batchId = batchId;
@@ -302,7 +310,11 @@ async function renderPolygon(
   const material = new MeshLambertMaterial({
     color: mesh.material.color,
     wireframe: mesh.material.wireframe,
-    stencilWrite: clampToGround,
+    stencilWrite: false,
+    colorWrite: !clampToGround,
+    depthWrite: !clampToGround,
+    depthTest: !clampToGround,
+    reflectivity: 0,
   });
 
   // TODO: Update this value depends on the terrain updates.
@@ -315,10 +327,11 @@ async function renderPolygon(
   };
 
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
-    if (material.userData.uClampToGround.value) {
+    if (material.userData.uClampToGround.value != null) {
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
 
@@ -352,17 +365,22 @@ v_IsPicked = isPicked;
         `
 uniform vec3 diffuse;
 uniform bool uClampToGround;
+uniform sampler2D uGlobeNormal;
 uniform vec3 uHighlightColor;
 in float v_IsPicked;
 `,
       )
       .replace(
-        "#include <opaque_fragment>",
+        "#include <normal_fragment_maps>",
         `
 if(uClampToGround) {
-  gl_FragColor = diffuseColor;
+  vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
+  vec3 mapN = unpackRGBToNormal(texture2D( uGlobeNormal, uv ).xyz);
+  // TODO: Support scaling normal. It's used to emphasis the shadow.
+  // mapN.xy *= scaledNormal;
+  normal = normalize( mapN );
 } else {
-  #include <opaque_fragment>
+ #include <normal_fragment_maps>
 }
 
 if(v_IsPicked > 0.5) {

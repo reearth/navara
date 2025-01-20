@@ -3,9 +3,7 @@ import path, { resolve } from "path";
 
 import { defineConfig } from "vite";
 import glsl from "vite-plugin-glsl";
-import topLevelAwait from "vite-plugin-top-level-await";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
-import wasm from "vite-plugin-wasm";
 import tsconfig from "vite-tsconfig-paths";
 
 const pages = readdirSync(resolve(__dirname, "example/pages"));
@@ -13,8 +11,6 @@ const pages = readdirSync(resolve(__dirname, "example/pages"));
 export default defineConfig({
   envPrefix: "NAVARA",
   plugins: [
-    wasm(),
-    topLevelAwait(),
     glsl(),
     tsconfig(),
     createMpaPlugin({
@@ -45,7 +41,7 @@ export default defineConfig({
   publicDir: path.resolve(__dirname, "example/public"),
   envDir: path.resolve(__dirname, "example"),
   worker: {
-    plugins: () => [wasm(), topLevelAwait(), glsl(), tsconfig()],
+    plugins: () => [tsconfig()],
   },
   server: {
     open: true,

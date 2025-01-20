@@ -9,6 +9,7 @@ export type CommonUniforms = {
   frustumRatio: RefThree<[x: number, y: number, z: number, w: number]>;
   frustumNearFar: RefThree<[x: number, y: number]>;
   tGlobeDepth: RefThree<Texture>;
+  tGlobeNormal: RefThree<Texture>;
   inverseProjectionMatrix: RefThree<Matrix4>;
   highlightColor: RefThree<[x: number, y: number, z: number]>;
 };

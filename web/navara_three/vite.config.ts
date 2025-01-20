@@ -1,13 +1,16 @@
 import path from "path";
 
 import { defineConfig } from "vite";
+import dts from "vite-plugin-dts";
 import glsl from "vite-plugin-glsl";
-import topLevelAwait from "vite-plugin-top-level-await";
-import wasm from "vite-plugin-wasm";
 import tsconfig from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [wasm(), topLevelAwait(), glsl(), tsconfig()],
+  base: "./",
+  plugins: [glsl(), tsconfig(), dts({ rollupTypes: true })],
+  worker: {
+    plugins: () => [tsconfig()],
+  },
   resolve: {
     mainFields: ["module"],
     alias: {
@@ -20,10 +23,9 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "Navara",
-      fileName: "@navara/three",
     },
     rollupOptions: {
-      external: ["three"],
+      external: ["three", "@navara/engine", "@navara/engine-worker"],
     },
   },
 });

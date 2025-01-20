@@ -1,6 +1,7 @@
 import { EventManager } from "@navara/core";
 import initCore, { Core, type TextureFragmentStatus } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
+import { EffectComposer, EffectPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -9,17 +10,10 @@ import {
   Texture,
   Vector2,
   WebGLRenderTarget,
-  DepthTexture,
-  DepthFormat,
   FloatType,
   Material,
-  AlwaysStencilFunc,
-  IncrementStencilOp,
-  KeepStencilOp,
-  FrontSide,
-  BackSide,
-  DecrementStencilOp,
-  NotEqualStencilFunc,
+  NearestFilter,
+  DepthTexture,
   Color,
   Sprite,
   Group,
@@ -28,6 +22,11 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import {
+  DEFAULT_ANTIALIAS,
+  selectAntialiasEffect,
+  type Antialias,
+} from "./antialias";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
   processEvent,
@@ -39,6 +38,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
+import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import { isWorker } from "./temp/utils";
@@ -55,6 +55,7 @@ import WorkerURL from "./worker?url&worker";
 import { PickHelper } from "./pickHelper";
 
 export * from "./type";
+export * from "./constants";
 
 export type Options = {
   container?: HTMLElement;
@@ -68,6 +69,7 @@ export type Options = {
   globeScene?: Scene;
   camera?: PerspectiveCamera;
   renderer?: WebGLRenderer;
+  antialias?: Antialias;
 };
 
 export type Events = {
@@ -80,7 +82,9 @@ export default class ThreeView {
   control?: { update: () => void; get target(): Vector3 | undefined };
 
   private _scenes: Scenes;
-  private _globeDepthRenderTarget: WebGLRenderTarget;
+  private _effectComposer: EffectComposer;
+  private _renderPass: CustomRenderPass;
+  private _globeGBufferRenderTarget: WebGLRenderTarget;
   // Store draped feature's materials
   private _drapedFeatureMaterials = new Map<string, Material>();
 
@@ -223,13 +227,15 @@ export default class ThreeView {
       this.renderer = options.renderer;
     } else {
       const renderer = new WebGLRenderer({
-        antialias: true,
+        // If it's true, some noise will happen. So use other AA algorithm instead.
+        antialias: false,
         logarithmicDepthBuffer: true,
         canvas: options.canvas,
         stencil: true,
       });
       renderer.info.autoReset = false;
       renderer.autoClearStencil = false;
+      renderer.autoClearColor = false;
       renderer.autoClearDepth = false;
       this.renderer = renderer;
 
@@ -255,16 +261,21 @@ export default class ThreeView {
     const pixelRatio = this.renderer.getPixelRatio();
     const scaledWidth = width * pixelRatio;
     const scaledHeight = height * pixelRatio;
-    this._globeDepthRenderTarget = new WebGLRenderTarget(
+    this._globeGBufferRenderTarget = new WebGLRenderTarget(
+      scaledWidth,
+      scaledHeight,
+      {
+        count: 1,
+      },
+    );
+    this._globeGBufferRenderTarget.depthTexture = new DepthTexture(
       scaledWidth,
       scaledHeight,
     );
-    this._globeDepthRenderTarget.depthTexture = new DepthTexture(
-      scaledWidth,
-      scaledHeight,
-    );
-    this._globeDepthRenderTarget.depthTexture.format = DepthFormat;
-    this._globeDepthRenderTarget.depthTexture.type = FloatType;
+    const normalBuffer = this._globeGBufferRenderTarget.textures[0];
+    normalBuffer.magFilter = NearestFilter;
+    normalBuffer.minFilter = NearestFilter;
+    normalBuffer.type = FloatType;
 
     let scene: Scene;
     if (options.scene) {
@@ -280,13 +291,19 @@ export default class ThreeView {
       globeScene = new Scene();
     }
 
+    const main = new Scene();
     const drapedFeaturesScene = new Scene();
+
     const pickScene = new Scene();
     pickScene.background = new Color(0);
 
+    const globeGBufferScene = new Scene();
+
     this._scenes = {
-      main: scene,
+      world: scene,
+      main,
       globe: globeScene,
+      globeGBuffer: globeGBufferScene,
       drapedFeatures: drapedFeaturesScene,
       pick: pickScene,
     };
@@ -308,6 +325,27 @@ export default class ThreeView {
       camera.up.set(0, 0, 1);
       camera.lookAt(0, 0, 0);
       this.camera = camera;
+    }
+
+    const renderTarget = new WebGLRenderTarget(width, height, {
+      stencilBuffer: true,
+    });
+    this._effectComposer = new EffectComposer(this.renderer, renderTarget);
+    this._renderPass = new CustomRenderPass(
+      this._scenes,
+      this.camera,
+      this._meshes,
+      this._globeGBufferRenderTarget,
+      this._drapedFeatureMaterials,
+    );
+    this._effectComposer.addPass(this._renderPass);
+
+    const aaEffect = selectAntialiasEffect(
+      options.antialias ?? DEFAULT_ANTIALIAS,
+    );
+    if (aaEffect) {
+      const aaPass = new EffectPass(this.camera, aaEffect);
+      this._effectComposer.addPass(aaPass);
     }
 
     if (!options.disableAutoResize && !isWorker()) {
@@ -336,13 +374,14 @@ export default class ThreeView {
       frustumNearFar: { value: null },
       frustumRatio: { value: null },
       tGlobeDepth: { value: null },
+      tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
       highlightColor: { value: [0, 1, 1] },
     };
   }
 
   get scene() {
-    return this._scenes.main;
+    return this._scenes.world;
   }
 
   async init() {
@@ -382,10 +421,13 @@ export default class ThreeView {
       this._eventDisposer();
       this._eventDisposer = undefined;
     }
+
     if (this._pickHelper) {
       this._pickHelper.dispose();
     }
-    this._globeDepthRenderTarget.dispose();
+
+    this._globeGBufferRenderTarget.dispose();
+
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -406,7 +448,8 @@ export default class ThreeView {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
-    this._globeDepthRenderTarget.setSize(
+    this._effectComposer.setSize(w, h);
+    this._globeGBufferRenderTarget.setSize(
       w * (pixelRatio ?? 1),
       h * (pixelRatio ?? 1),
     );
@@ -444,7 +487,9 @@ export default class ThreeView {
     this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
-      this._globeDepthRenderTarget.depthTexture;
+      this._globeGBufferRenderTarget.depthTexture;
+    this._uniforms.tGlobeNormal.value =
+      this._globeGBufferRenderTarget.textures[0];
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.projectionMatrixInverse;
   }
@@ -488,64 +533,7 @@ export default class ThreeView {
   }
 
   private _render() {
-    const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
-
-    this.renderer.setRenderTarget(this._globeDepthRenderTarget);
-    this.renderer.clearDepth();
-    this.renderer.render(this._scenes.globe, this.camera);
-
-    this.renderer.setRenderTarget(null);
-    this.renderer.clearDepth();
-
-    if (shouldDrapeByStencilTest) {
-      this._renderDrapedMesh();
-    }
-
-    this.renderer.render(this._scenes.main, this.camera);
-  }
-
-  // Drape a feature on the terrain by stencil test.
-  // Refs
-  // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
-  // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
-  private _renderDrapedMesh() {
-    this.renderer.clearStencil();
-
-    // Render the terrain first
-    this.renderer.render(this._scenes.globe, this.camera);
-
-    // TODO: Make drapedFeatureScene
-    this._drapedFeatureMaterials.forEach((m) => {
-      m.stencilFunc = AlwaysStencilFunc;
-      m.stencilFail = KeepStencilOp;
-      m.stencilZFail = KeepStencilOp;
-      m.stencilZPass = IncrementStencilOp;
-      m.side = FrontSide;
-      m.colorWrite = false;
-      m.depthWrite = false;
-    });
-    this.renderer.render(this._scenes.drapedFeatures, this.camera);
-
-    this._drapedFeatureMaterials.forEach((m) => {
-      m.stencilZPass = DecrementStencilOp;
-      m.side = BackSide;
-    });
-    this.renderer.render(this._scenes.drapedFeatures, this.camera);
-
-    // TODO: Near plane support
-
-    this._drapedFeatureMaterials.forEach((m) => {
-      m.stencilFunc = NotEqualStencilFunc;
-      m.stencilFail = KeepStencilOp;
-      m.stencilZFail = KeepStencilOp;
-      m.stencilZPass = KeepStencilOp;
-      m.side = FrontSide;
-      m.colorWrite = true;
-      m.depthWrite = true;
-    });
-
-    // TODO: Reuse depth buffer
-    this.renderer.clearDepth();
+    this._effectComposer.render();
   }
 
   // TODO: Handle event from user.

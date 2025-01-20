@@ -312,7 +312,7 @@ async function renderPolyline(
 async function renderPolygon(
   mesh: PolygonMesh,
   buf: BufferLoader,
-  _uniforms: CommonUniforms,
+  uniforms: CommonUniforms,
 ) {
   const g = mesh.geometry;
   const position = buf.f32(g.position.data);
@@ -364,6 +364,7 @@ async function renderPolygon(
   };
 
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
@@ -400,17 +401,23 @@ oBatchId = batchId;
         `
 uniform vec3 diffuse;
 uniform bool uClampToGround;
+uniform sampler2D uGlobeNormal;
 in float oBatchId;
 `,
       )
       .replace(
-        "#include <opaque_fragment>",
+        "#include <normal_fragment_maps>",
         `
 if(uClampToGround) {
-  gl_FragColor = diffuseColor;
+  vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
+  vec3 mapN = unpackRGBToNormal(texture2D( uGlobeNormal, uv ).xyz);
+  // TODO: Support scaling normal. It's used to emphasis the shadow.
+  // mapN.xy *= scaledNormal;
+  normal = normalize( mapN );
 } else {
-  #include <opaque_fragment>
+ #include <normal_fragment_maps>
 }
+
 float r = floor(oBatchId / 65536.0);
 float g = floor(mod(oBatchId / 256.0, 256.0));
 float b = floor(mod(oBatchId, 256.0));

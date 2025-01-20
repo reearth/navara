@@ -4,7 +4,11 @@
 #include chunks/windowToEyeCoordinates;
 #include chunks/metersPerPixel;
 
+#include <common>
 #include <packing>
+
+#include <lights_pars_begin>
+#include <lights_lambert_pars_fragment>
 
 in vec4 v_startPlaneNormalEcAndHalfWidth;
 in vec3 v_endPlaneNormalEc;
@@ -17,6 +21,7 @@ in float v_IsPicked;
 uniform vec3 color;
 uniform vec3 viewportAndPixelRatio;
 uniform sampler2D tGlobeDepth;
+uniform sampler2D uGlobeNormal;
 uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
@@ -70,7 +75,32 @@ void main() {
         discard;
     }
 
-    gl_FragColor = vec4(color, 1.);
+    vec4 diffuseColor = vec4( color, 1. );
+
+    ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
+	vec3 totalEmissiveRadiance = vec3(1.);
+
+    #include <color_fragment>
+    #include <specularmap_fragment>
+    #include <emissivemap_fragment>
+
+    vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
+    vec3 mapN = unpackRGBToNormal(texture2D( uGlobeNormal, uv ).xyz);
+    // TODO: Support scaling normal. It's used to emphasis the shadow.
+    // mapN.xy *= scaledNormal;
+    vec3 normal = normalize( mapN );
+
+    // accumulation
+	#include <lights_lambert_fragment>
+	#include <lights_fragment_begin>
+	#include <lights_fragment_maps>
+	#include <lights_fragment_end>
+
+    vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
+
+    #include <opaque_fragment>
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
 
     if(pickable > 0.5) {
         float r = floor(v_batchId / 65536.0);

@@ -351,7 +351,13 @@ impl Tile for RasterTile {
         self.terrain_data
             .as_ref()
             .and_then(|t| t.current_max_height())
-            .unwrap_or(0.)
+            .unwrap_or(self.max_height)
+    }
+    fn set_max_height(&mut self, v: FloatType) {
+        self.max_height = v;
+    }
+    fn has_terrain(&self) -> bool {
+        self.terrain_data.is_some()
     }
 
     fn get_level_maximum_geometric_error(
