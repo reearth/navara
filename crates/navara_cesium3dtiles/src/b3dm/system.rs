@@ -9,8 +9,11 @@ use navara_component::{Deleted, Priority};
 use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
-    batch::BatchId,
     batch::BatchTable,
+    batch::BatchTableValue,
+    batch::FeatureBatchId,
+    batch::FeatureBatchIdMap,
+    batch::GlobalBatchIds,
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
@@ -21,6 +24,7 @@ use navara_layer::{
 };
 use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
+use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_parser::{b3dm::B3dm, glb::BinaryReader};
 
 use crate::{
@@ -58,7 +62,7 @@ pub fn request_model_by_b3dm_layer(
 pub fn construct_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    mut batch_table: ResMut<BatchTable>,
+    mut batch_table_res: ResMut<BatchTable>,
     requesters: Query<
         (Entity, &B3dmLayerDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -84,17 +88,22 @@ pub fn construct_model_by_b3dm_layer(
         };
         appearance.should_rotate_in_default = false;
 
-        let (center, glb_bin_handle) = match get_geometry_info_from_b3dm(&mut buf, &req.handle) {
-            Some(r) => r,
-            None => continue,
-        };
+        let (center, glb_bin_handle, batch_table, batch_length) =
+            match get_geometry_info_from_b3dm(&mut buf, &req.handle) {
+                Some(r) => r,
+                None => continue,
+            };
 
-        let batchid = batch_table.add("{}".to_string()).unwrap_or_default();
+        let feature_batch_id = batch_table_res
+            .add(BatchTableValue::Cesium3dTileset(batch_table))
+            .unwrap_or(0);
+        let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length);
+        let ids_handle = buf.new_u32(global_batch_ids);
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
-            // TODO: Support batch id
-            BatchId(batchid),
+            FeatureBatchId(feature_batch_id),
+            GlobalBatchIds(ids_handle),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -133,15 +142,17 @@ pub fn update_model_by_b3dm_layer(
     }
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn delete_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut batch_table_res: ResMut<BatchTable>,
+    mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
     b3dm_layers: Query<Entity, With<B3dmLayer>>,
     features: Query<
-        &ModelBin,
+        (&ModelBin, &FeatureBatchId, &LayerId),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -156,9 +167,18 @@ pub fn delete_model_by_b3dm_layer(
             None => continue,
         };
         for e in entities {
-            if let Ok(f) = features.get(*e) {
-                buf.remove(&f.0);
+            if let Ok((modebin, _feature_batch_id, _layer_id)) = features.get(*e) {
+                buf.remove(&modebin.0);
             };
+
+            if feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res) {
+                for (_modebin, feature_batch_id, layer_id) in &features {
+                    if layer_id.0 == d.0 {
+                        batch_table_res.remove(&feature_batch_id.0);
+                    }
+                }
+            }
+
             commands.entity(*e).despawn();
         }
         for e in &b3dm_layers {
@@ -172,7 +192,7 @@ pub fn delete_model_by_b3dm_layer(
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    mut batch_table: ResMut<BatchTable>,
+    mut batch_table_res: ResMut<BatchTable>,
     requesters: Query<
         (
             &Cesium3dTileContentDataRequesterMarker,
@@ -210,18 +230,23 @@ pub fn construct_model_by_cesium3dtiles_layer(
         appearance.should_rotate_in_default = false;
         appearance.clamp_to_ground = false;
 
-        let (center, glb_bin_handle) = match get_geometry_info_from_b3dm(&mut buf, &req.handle) {
-            Some(r) => r,
-            None => continue,
-        };
+        let (center, glb_bin_handle, batch_table, batch_length) =
+            match get_geometry_info_from_b3dm(&mut buf, &req.handle) {
+                Some(r) => r,
+                None => continue,
+            };
 
-        let batchid = batch_table.add("{}".to_string()).unwrap_or_default();
+        let feature_batch_id = batch_table_res
+            .add(BatchTableValue::Cesium3dTileset(batch_table))
+            .unwrap_or(0);
+        let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length);
+        let ids_handle = buf.new_u32(global_batch_ids);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
-            // TODO: Support batch id
-            BatchId(batchid),
+            FeatureBatchId(feature_batch_id),
+            GlobalBatchIds(ids_handle),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -238,7 +263,10 @@ pub fn construct_model_by_cesium3dtiles_layer(
     }
 }
 
-fn get_geometry_info_from_b3dm(buf: &mut BufferStore, handle: &Handle) -> Option<(Vec3, Handle)> {
+fn get_geometry_info_from_b3dm(
+    buf: &mut BufferStore,
+    handle: &Handle,
+) -> Option<(Vec3, Handle, B3dmBatchTable, usize)> {
     let b3dm_bin = buf.get_u8(handle)?;
     let b3dm = B3dm::from_data(b3dm_bin).unwrap();
     let center = match b3dm.glb.0.json_chunk.data["extensions"]["CESIUM_RTC"]["center"].as_array() {
@@ -267,16 +295,22 @@ fn get_geometry_info_from_b3dm(buf: &mut BufferStore, handle: &Handle) -> Option
     // NOTE: B3DM buffer is removed here to prevent duplicating data.
     buf.remove(handle);
 
+    let batch_length = b3dm.feature_table.json.batch_length.unwrap() as usize;
+
     Some((
         Vec3::new(center[0] as f32, center[1] as f32, center[2] as f32),
         glb_bin_handle,
+        b3dm.batch_table,
+        batch_length,
     ))
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn remove_invisible_rendered_tiles(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut batch_table_res: ResMut<BatchTable>,
+    mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     requesters: Query<
         &DataRequester,
         (
@@ -290,7 +324,7 @@ pub fn remove_invisible_rendered_tiles(
         With<RenderedCesium3dTileContentB3dmMarker>,
     >,
     features: Query<
-        (&FeatureId, &ModelBin),
+        (&FeatureId, &ModelBin, &FeatureBatchId),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -307,11 +341,21 @@ pub fn remove_invisible_rendered_tiles(
 
         if let Some(feature_id) = tile.feature_id {
             // Remove feature
-            if let Ok((rendered_feature_id, model_bin)) = features.get(feature_id) {
+            if let Ok((rendered_feature_id, model_bin, feature_batch_id)) = features.get(feature_id)
+            {
                 if let Some(rendered_feature_id) = rendered_feature_id.0 {
                     if !rendered_features.contains(rendered_feature_id) {
                         continue;
                     }
+
+                    if feature_batch_id_map.remove(
+                        &rendered_feature_id,
+                        &mut buf,
+                        &mut batch_table_res,
+                    ) {
+                        batch_table_res.remove(&feature_batch_id.0);
+                    }
+
                     buf.remove(&model_bin.0);
                     commands.entity(feature_id).despawn();
                     commands.entity(rendered_feature_id).despawn();

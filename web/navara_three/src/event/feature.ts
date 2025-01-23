@@ -29,6 +29,7 @@ import type { CommonUniforms } from "../uniforms";
 import { initializeGltfLoader, TEXTURE_LOADER } from "./loaders";
 
 import type { BufferLoader, FeatureHandler } from ".";
+import { isNumber } from "lodash-es";
 
 export function renderFeature(
   bits: bigint,
@@ -44,7 +45,7 @@ export function renderFeature(
     return renderBillboard(f.billboard);
   }
   if (f.model) {
-    return renderModel(bits, f.model, buf, featureHandler);
+    return renderModel(bits, f.model, buf, featureHandler, uniforms);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
@@ -137,6 +138,7 @@ async function renderModel(
   m: ModelMesh,
   buf: BufferLoader,
   featureHandler: FeatureHandler,
+  uniforms: CommonUniforms,
 ) {
   const loader = initializeGltfLoader();
 
@@ -163,10 +165,64 @@ async function renderModel(
     return;
   }
 
-  const batchId = m.geometry.batch_id ?? 0;
-  scene.userData.batchId = batchId;
-  scene.userData.isPicked = false;
-  scene.userData.orgColor = 0xffffff;
+  scene.userData.batchId = 0;
+  if(isNumber(m.geometry.global_batch_ids)){
+    scene.userData.batchId = buf.u32(m.geometry.global_batch_ids);
+  }
+
+  if (scene.userData.batchId) {
+    const traverse = function (mesh: Object3D) {
+      if (mesh instanceof Mesh) {
+        const attrBatchId = mesh.geometry.attributes._batchid;
+        if (attrBatchId && attrBatchId.array) {
+          const isPicked = new Float32Array(attrBatchId.array.length);
+          mesh.geometry.setAttribute(
+            "isPicked",
+            new BufferAttribute(isPicked, 1),
+          );
+
+          mesh.material.onBeforeCompile = (shader: any) => {
+            shader.uniforms.uHighlightColor = uniforms.highlightColor;
+            shader.vertexShader = shader.vertexShader.replace(
+              "void main() {",
+              `
+                attribute float isPicked;
+                out float v_IsPicked;
+                void main() {
+                v_IsPicked = isPicked;
+                `,
+            );
+
+            shader.fragmentShader = shader.fragmentShader
+              .replace(
+                "void main() {",
+                `
+                uniform vec3 uHighlightColor;
+                in float v_IsPicked;
+                void main() {
+                `,
+              )
+              .replace(
+                "vec4 diffuseColor = vec4( diffuse, opacity );",
+                `
+                vec4 diffuseColor = vec4( diffuse, opacity );
+                if(v_IsPicked > 0.5) {
+                  diffuseColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+                }
+                `,
+              );
+          };
+        }
+      }
+
+      if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+        mesh.children.forEach((child) => {
+          traverse(child);
+        });
+      }
+    };
+    traverse(scene);
+  }
 
   scene.visible = m.material.show ?? true;
   featureHandler.markModelIsRendered(bits);

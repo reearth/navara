@@ -192,26 +192,76 @@ async function renderModel(
     return;
   }
 
-  const batchId = m.geometry.batch_id ?? 0;
-  const r = (batchId >> 16) / 255;
-  const g = ((batchId >> 8) & 0xff) / 255;
-  const b = (batchId & 0xff) / 255;
+  const globalBatchIds = m.geometry.global_batch_ids ? buf.u32(m.geometry.global_batch_ids) : undefined;
+  if (globalBatchIds) {
+    const traverse = function (mesh: Object3D) {
+      if (mesh instanceof Mesh) {
+        const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+        if (internalBatchIds) {
+          const gBatchIds = new Float32Array(internalBatchIds.length);
+          for (let i = 0; i < internalBatchIds.length; i++) {
+            const internalBatchId = internalBatchIds[i];
+            gBatchIds[i] = globalBatchIds[internalBatchId] ?? 0;
+          }
 
-  const traverse = function (mesh: Object3D) {
-    if (mesh instanceof Mesh) {
-      mesh.material = new MeshBasicMaterial({
-        color: new Color(r, g, b),
-      });
-    }
+          mesh.geometry.setAttribute(
+            "gBatchIds",
+            new BufferAttribute(gBatchIds, 1),
+          );
 
-    if (Array.isArray(mesh.children) && mesh.children.length > 0) {
-      mesh.children.forEach((child) => {
-        traverse(child);
-      });
-    }
-  };
+          mesh.material = new MeshBasicMaterial();
+          mesh.material.onBeforeCompile = (shader: any) => {
+            shader.vertexShader = shader.vertexShader
+              .replace(
+                "#include <common>",
+                `
+                #include <common>
 
-  traverse(scene);
+                attribute float gBatchIds;
+                out float oBatchId;
+                `,
+              )
+              .replace(
+                "#include <begin_vertex>",
+                `
+                #include <begin_vertex>
+                oBatchId = gBatchIds;
+                `,
+              );
+
+            shader.fragmentShader = shader.fragmentShader
+              .replace(
+                "uniform vec3 diffuse;",
+                `
+                uniform vec3 diffuse;
+                in float oBatchId;
+                `,
+              )
+              .replace(
+                "#include <dithering_fragment>",
+                `
+                #include <dithering_fragment>
+
+                float r = floor(oBatchId / 65536.0);
+                float g = floor(mod(oBatchId / 256.0, 256.0));
+                float b = floor(mod(oBatchId, 256.0));
+        
+                gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+                `,
+              );
+          };
+        }
+      }
+
+      if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+        mesh.children.forEach((child) => {
+          traverse(child);
+        });
+      }
+    };
+
+    traverse(scene);
+  }
 
   scene.visible = m.material.show ?? true;
   featureHandler.markModelIsRendered(bits);

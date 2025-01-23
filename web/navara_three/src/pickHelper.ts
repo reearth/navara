@@ -50,7 +50,7 @@ export class PickHelper {
     );
 
     this.renderer.setRenderTarget(this.pickingTexture);
-    this.renderer.clearDepth();
+    this.renderer.clear();
     this.renderer.render(this.pickScene, this.camera);
 
     this.renderer.readRenderTargetPixels(

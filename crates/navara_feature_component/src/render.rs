@@ -80,7 +80,8 @@ pub enum RenderableFeature {
         feature_id: Entity,
         render_info: ModelRenderInformation,
         bin: Option<ModelBin>,
-        geometry: TransferableSingleGeometry,
+        geometry: TransferableModelGeometry,
+        feature_batch_id: u32,
     },
     #[default]
     Unknown,
@@ -260,4 +261,17 @@ impl TransferablePolygonGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferableSingleGeometry {
     pub batch_id: Option<u32>,
+}
+
+#[derive(Component, Clone, Debug, Default, PartialEq)]
+pub struct TransferableModelGeometry {
+    pub global_batch_ids: Option<Handle>,
+}
+
+impl TransferableModelGeometry {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
+        if let Some(global_batch_ids) = &self.global_batch_ids {
+            buf.remove(global_batch_ids);
+        }
+    }
 }

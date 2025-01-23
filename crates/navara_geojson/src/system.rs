@@ -7,7 +7,8 @@ use bevy_ecs::{
 use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, model::ModelGeometry,
+    batch::BatchId, batch::BatchTable, batch::BatchTableValue, batch::FeatureBatchId,
+    batch::GlobalBatchIds, billboard::BillboardGeometry, model::ModelGeometry,
     point::PointGeometry, polygon::PolygonGeometry, polygon::UpdatePolygon,
     polyline::PolylineGeometry, render::RenderableFeature,
 };
@@ -184,7 +185,8 @@ fn spawn_feature(
                 Value::Point(f) => {
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(batch_id),
+                        FeatureBatchId(0),
+                        GlobalBatchIds(0),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -196,7 +198,8 @@ fn spawn_feature(
                     for f in fs {
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(batch_id),
+                            FeatureBatchId(0),
+                            GlobalBatchIds(0),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -263,7 +266,9 @@ pub fn construct_feature(
                     }
                 }
                 GeoJson::Geometry(g) => {
-                    if let Some(batch_id) = batch_table.add("{}".to_string()) {
+                    if let Some(batch_id) =
+                        batch_table.add(BatchTableValue::MVT(String::from("{}")))
+                    {
                         spawn_feature(
                             &mut commands,
                             &mut buf,

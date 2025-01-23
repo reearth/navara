@@ -608,27 +608,6 @@ export default class ThreeView {
     this.resize(width, height, pixelRatio);
   };
 
-  setModelColorTraverse(mesh: Object3D, isPicked: boolean, orgColor: number) {
-    if (mesh instanceof Mesh) {
-      if (isPicked) {
-        const highlightColor = this._uniforms.highlightColor.value ?? [0, 1, 1];
-        mesh.material.color.setRGB(
-          highlightColor[0],
-          highlightColor[1],
-          highlightColor[2],
-        );
-      } else {
-        mesh.material.color.setHex(orgColor);
-      }
-    }
-
-    if (Array.isArray(mesh.children) && mesh.children.length > 0) {
-      mesh.children.forEach((child) => {
-        this.setModelColorTraverse(child, isPicked, orgColor);
-      });
-    }
-  }
-
   pickSprite(pickArr: number[], obj: Sprite) {
     const batchId = obj.userData.batchId;
     let isPicked = false;
@@ -656,19 +635,60 @@ export default class ThreeView {
   }
 
   pickModel(pickArr: number[], obj: Group) {
-    const batchId = obj.userData.batchId;
-    let isPicked = false;
-    for (let i = 0; i < pickArr.length; i++) {
-      if (pickArr[i] === batchId) {
-        isPicked = true;
-        pickArr.splice(i, 1);
-        break;
-      }
+    const globalBatchIds = obj.userData.batchId;
+    if (!globalBatchIds || globalBatchIds.length < 1) {
+      return;
     }
 
-    if (obj.userData.isPicked !== isPicked) {
-      obj.userData.isPicked = isPicked;
-      this.setModelColorTraverse(obj, isPicked, obj.userData.orgColor);
+    const traverseClear = function (mesh: Object3D) {
+      if (mesh instanceof Mesh) {
+        const isPicked = mesh.geometry.attributes?.isPicked?.array;
+        if (isPicked) {
+          isPicked.fill(0);
+          mesh.geometry.attributes.isPicked.needsUpdate = true;
+        }
+      }
+
+      if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+        mesh.children.forEach((child) => {
+          traverseClear(child);
+        });
+      }
+    };
+    traverseClear(obj);
+
+    for (let i = 0; i < pickArr.length; ) {
+      let bFound = false;
+
+      const traversePick = function (mesh: Object3D) {
+        if (mesh instanceof Mesh) {
+          const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+          const isPicked = mesh.geometry.attributes?.isPicked?.array;
+          if (internalBatchIds && isPicked) {
+            isPicked.fill(0);
+            for (let j = 0; j < internalBatchIds.length; j++) {
+              if (globalBatchIds[internalBatchIds[j]] === pickArr[i]) {
+                isPicked[j] = 1;
+                bFound = true;
+              }
+            }
+            mesh.geometry.attributes.isPicked.needsUpdate = true;
+          }
+        }
+
+        if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+          mesh.children.forEach((child) => {
+            traversePick(child);
+          });
+        }
+      };
+      traversePick(obj);
+
+      if (bFound) {
+        pickArr.splice(i, 1);
+      } else {
+        i++;
+      }
     }
   }
 
@@ -698,7 +718,9 @@ export default class ThreeView {
   onPick(pickArr: number[]) {
     if (pickArr.length > 0) {
       const prop = this._core?.getBatchProp(pickArr[0]);
-      console.log(prop);
+      if (prop){
+        console.log(JSON.parse(prop));
+      }
     }
 
     for (const [_key, obj] of this._meshes) {

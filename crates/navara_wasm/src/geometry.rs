@@ -225,3 +225,31 @@ impl<'a> From<&'a navara_feature_component::render::TransferableSingleGeometry>
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct TransferableModelGeometry {
+    #[wasm_bindgen(getter_with_clone)]
+    pub global_batch_ids: Option<Handle>,
+}
+
+impl From<TransferableModelGeometry>
+    for navara_feature_component::render::TransferableModelGeometry
+{
+    fn from(val: TransferableModelGeometry) -> Self {
+        navara_feature_component::render::TransferableModelGeometry {
+            global_batch_ids: val.global_batch_ids,
+        }
+    }
+}
+impl<'a> From<&'a navara_feature_component::render::TransferableModelGeometry>
+    for TransferableModelGeometry
+{
+    fn from(
+        val: &'a navara_feature_component::render::TransferableModelGeometry,
+    ) -> TransferableModelGeometry {
+        TransferableModelGeometry {
+            global_batch_ids: val.global_batch_ids,
+        }
+    }
+}

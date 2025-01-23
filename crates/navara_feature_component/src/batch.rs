@@ -4,11 +4,12 @@ use bevy_ecs::{
     system::{Commands, Query, Resource},
 };
 
-use navara_buffer_store::BufferStore;
+use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 
 use crate::{id::FeatureId, render::RenderableFeature};
 
+use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use rand::Rng;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -59,9 +60,61 @@ impl BatchedFeature {
 #[derive(Component, Debug)]
 pub struct BatchId(pub u32);
 
-#[derive(Resource, Debug)]
+// b3dm feature's batch id
+#[derive(Component, Debug)]
+pub struct FeatureBatchId(pub u32);
+
+// The global batch ID corresponding to the internal batch ID in b3dm.
+#[derive(Component, Default, Clone, Debug)]
+pub struct GlobalBatchIds(pub Handle);
+
+// Search b3dm feature by global batch id
+#[derive(Resource, Default)]
+pub struct FeatureBatchIdMap {
+    pub map: HashMap<Entity, GlobalBatchIds>,
+}
+
+impl FeatureBatchIdMap {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, key: Entity, ids: GlobalBatchIds) {
+        self.map.insert(key, ids);
+    }
+    pub fn get(&self, key: &Entity) -> Option<&GlobalBatchIds> {
+        self.map.get(key)
+    }
+    pub fn remove(
+        &mut self,
+        key: &Entity,
+        buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
+    ) -> bool {
+        if let Some(ids) = self.get(key) {
+            if let Some(global_ids) = buf.get_u32(&ids.0) {
+                for id in global_ids {
+                    batch_table.remove(id);
+                }
+            }
+            buf.remove(&ids.0);
+            self.map.remove(key);
+            return true;
+        }
+        false
+    }
+}
+
+pub enum BatchTableValue {
+    MVT(String),
+    Cesium3dTileset(B3dmBatchTable),
+}
+
+#[derive(Resource)]
 pub struct BatchTable {
-    map: HashMap<u32, String>,
+    pub map: HashMap<u32, BatchTableValue>,
 }
 
 impl Default for BatchTable {
@@ -77,7 +130,7 @@ impl BatchTable {
         }
     }
 
-    pub fn add(&mut self, value: String) -> Option<u32> {
+    pub fn add(&mut self, value: BatchTableValue) -> Option<u32> {
         let mut rng = rand::thread_rng();
         let mut key = rng.gen_range(1..0xffffff);
 
@@ -97,10 +150,21 @@ impl BatchTable {
 
     pub fn add_hash_map<T: Serialize>(&mut self, prop: &T) -> Option<u32> {
         let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
-        self.add(props)
+        self.add(BatchTableValue::MVT(props))
     }
 
-    pub fn get(&self, key: &u32) -> Option<&String> {
+    pub fn add_multiple_null_val(&mut self, count: usize) -> Vec<u32> {
+        let mut keys = vec![];
+        for _ in 0..count {
+            let key = self.add(BatchTableValue::MVT("{}".to_string()));
+            if let Some(k) = key {
+                keys.push(k);
+            }
+        }
+        keys
+    }
+
+    pub fn get(&self, key: &u32) -> Option<&BatchTableValue> {
         self.map.get(key)
     }
 

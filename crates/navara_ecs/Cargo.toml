@@ -11,6 +11,7 @@ debug = ["dep:bevy_log"]
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
+serde_json.workspace = true
 bevy_log = { workspace = true, optional = true }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_camera = { path = "../navara_camera" }
@@ -37,3 +38,4 @@ navara_frame = { path = "../navara_frame" }
 navara_feature_component = { path = "../navara_feature_component" }
 navara_material = { path = "../navara_material" }
 navara_component = { path = "../navara_component" }
+navara_parser = { path = "../navara_parser" }
