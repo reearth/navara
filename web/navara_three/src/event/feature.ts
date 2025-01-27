@@ -166,53 +166,52 @@ async function renderModel(
   }
 
   scene.userData.batchId = 0;
-  if(isNumber(m.geometry.global_batch_ids)){
+  if (isNumber(m.geometry.global_batch_ids)) {
     scene.userData.batchId = buf.u32(m.geometry.global_batch_ids);
   }
 
   if (scene.userData.batchId) {
     const traverse = function (mesh: Object3D) {
       if (mesh instanceof Mesh) {
-        const attrBatchId = mesh.geometry.attributes._batchid;
-        if (attrBatchId && attrBatchId.array) {
-          const isPicked = new Float32Array(attrBatchId.array.length);
-          mesh.geometry.setAttribute(
-            "isPicked",
-            new BufferAttribute(isPicked, 1),
+        const vertCnt = mesh.geometry.attributes?.position?.count;
+        const isPicked = new Float32Array(vertCnt).fill(0);
+
+        mesh.geometry.setAttribute(
+          "isPicked",
+          new BufferAttribute(isPicked, 1),
+        );
+
+        mesh.material.onBeforeCompile = (shader: any) => {
+          shader.uniforms.uHighlightColor = uniforms.highlightColor;
+          shader.vertexShader = shader.vertexShader.replace(
+            "void main() {",
+            `
+              attribute float isPicked;
+              out float v_IsPicked;
+              void main() {
+              v_IsPicked = isPicked;
+              `,
           );
 
-          mesh.material.onBeforeCompile = (shader: any) => {
-            shader.uniforms.uHighlightColor = uniforms.highlightColor;
-            shader.vertexShader = shader.vertexShader.replace(
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
               "void main() {",
               `
-                attribute float isPicked;
-                out float v_IsPicked;
-                void main() {
-                v_IsPicked = isPicked;
-                `,
+              uniform vec3 uHighlightColor;
+              in float v_IsPicked;
+              void main() {
+              `,
+            )
+            .replace(
+              "vec4 diffuseColor = vec4( diffuse, opacity );",
+              `
+              vec4 diffuseColor = vec4( diffuse, opacity );
+              if(v_IsPicked > 0.5) {
+                diffuseColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+              }
+              `,
             );
-
-            shader.fragmentShader = shader.fragmentShader
-              .replace(
-                "void main() {",
-                `
-                uniform vec3 uHighlightColor;
-                in float v_IsPicked;
-                void main() {
-                `,
-              )
-              .replace(
-                "vec4 diffuseColor = vec4( diffuse, opacity );",
-                `
-                vec4 diffuseColor = vec4( diffuse, opacity );
-                if(v_IsPicked > 0.5) {
-                  diffuseColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
-                }
-                `,
-              );
-          };
-        }
+        };
       }
 
       if (Array.isArray(mesh.children) && mesh.children.length > 0) {
@@ -438,9 +437,14 @@ if(uClampToGround) {
 } else {
  #include <normal_fragment_maps>
 }
-
+`,
+      )
+      .replace(
+        "vec4 diffuseColor = vec4( diffuse, opacity );",
+        `
+vec4 diffuseColor = vec4( diffuse, opacity );
 if(v_IsPicked > 0.5) {
-  gl_FragColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+  diffuseColor.xyz = uHighlightColor.xyz;
 }
 `,
       );

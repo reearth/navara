@@ -94,10 +94,17 @@ pub fn construct_model_by_b3dm_layer(
                 None => continue,
             };
 
-        let feature_batch_id = batch_table_res
-            .add(BatchTableValue::Cesium3dTileset(batch_table))
+        let feature_batch_id = (batch_length > 0)
+            .then(|| {
+                batch_table_res
+                    .add(BatchTableValue::Cesium3dTileset(batch_table))
+                    .unwrap_or(0)
+            })
             .unwrap_or(0);
-        let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length);
+
+        // batch_length.max(1): If there is no batch table, assign a global batch id to the entire model.
+        let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length.max(1));
+
         let ids_handle = buf.new_u32(global_batch_ids);
 
         commands.spawn((
@@ -236,10 +243,17 @@ pub fn construct_model_by_cesium3dtiles_layer(
                 None => continue,
             };
 
-        let feature_batch_id = batch_table_res
-            .add(BatchTableValue::Cesium3dTileset(batch_table))
+        let feature_batch_id = (batch_length > 0)
+            .then(|| {
+                batch_table_res
+                    .add(BatchTableValue::Cesium3dTileset(batch_table))
+                    .unwrap_or(0)
+            })
             .unwrap_or(0);
-        let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length);
+
+        // batch_length.max(1): If there is no batch table, assign a global batch id to the entire model.
+        let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length.max(1));
+
         let ids_handle = buf.new_u32(global_batch_ids);
 
         let entity = commands.spawn((

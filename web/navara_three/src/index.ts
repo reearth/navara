@@ -664,11 +664,17 @@ export default class ThreeView {
         if (mesh instanceof Mesh) {
           const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
           const isPicked = mesh.geometry.attributes?.isPicked?.array;
-          if (internalBatchIds && isPicked) {
-            isPicked.fill(0);
-            for (let j = 0; j < internalBatchIds.length; j++) {
-              if (globalBatchIds[internalBatchIds[j]] === pickArr[i]) {
-                isPicked[j] = 1;
+          if (isPicked) {
+            if (internalBatchIds) {
+              for (let j = 0; j < internalBatchIds.length; j++) {
+                if (globalBatchIds[internalBatchIds[j]] === pickArr[i]) {
+                  isPicked[j] = 1;
+                  bFound = true;
+                }
+              }
+            } else {
+              if (globalBatchIds[0] === pickArr[i]) {
+                isPicked.fill(1);
                 bFound = true;
               }
             }
@@ -718,7 +724,7 @@ export default class ThreeView {
   onPick(pickArr: number[]) {
     if (pickArr.length > 0) {
       const prop = this._core?.getBatchProp(pickArr[0]);
-      if (prop){
+      if (prop) {
         console.log(JSON.parse(prop));
       }
     }

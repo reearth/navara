@@ -192,65 +192,68 @@ async function renderModel(
     return;
   }
 
-  const globalBatchIds = m.geometry.global_batch_ids ? buf.u32(m.geometry.global_batch_ids) : undefined;
+  const globalBatchIds = m.geometry.global_batch_ids
+    ? buf.u32(m.geometry.global_batch_ids)
+    : undefined;
   if (globalBatchIds) {
     const traverse = function (mesh: Object3D) {
       if (mesh instanceof Mesh) {
+        const vertCnt = mesh.geometry.attributes?.position?.count;
+        const gBatchIds = new Float32Array(vertCnt).fill(globalBatchIds[0]);
         const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
         if (internalBatchIds) {
-          const gBatchIds = new Float32Array(internalBatchIds.length);
           for (let i = 0; i < internalBatchIds.length; i++) {
             const internalBatchId = internalBatchIds[i];
             gBatchIds[i] = globalBatchIds[internalBatchId] ?? 0;
           }
-
-          mesh.geometry.setAttribute(
-            "gBatchIds",
-            new BufferAttribute(gBatchIds, 1),
-          );
-
-          mesh.material = new MeshBasicMaterial();
-          mesh.material.onBeforeCompile = (shader: any) => {
-            shader.vertexShader = shader.vertexShader
-              .replace(
-                "#include <common>",
-                `
-                #include <common>
-
-                attribute float gBatchIds;
-                out float oBatchId;
-                `,
-              )
-              .replace(
-                "#include <begin_vertex>",
-                `
-                #include <begin_vertex>
-                oBatchId = gBatchIds;
-                `,
-              );
-
-            shader.fragmentShader = shader.fragmentShader
-              .replace(
-                "uniform vec3 diffuse;",
-                `
-                uniform vec3 diffuse;
-                in float oBatchId;
-                `,
-              )
-              .replace(
-                "#include <dithering_fragment>",
-                `
-                #include <dithering_fragment>
-
-                float r = floor(oBatchId / 65536.0);
-                float g = floor(mod(oBatchId / 256.0, 256.0));
-                float b = floor(mod(oBatchId, 256.0));
-        
-                gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
-                `,
-              );
-          };
         }
+
+        mesh.geometry.setAttribute(
+          "gBatchIds",
+          new BufferAttribute(gBatchIds, 1),
+        );
+
+        mesh.material = new MeshBasicMaterial();
+        mesh.material.onBeforeCompile = (shader: any) => {
+          shader.vertexShader = shader.vertexShader
+            .replace(
+              "#include <common>",
+              `
+              #include <common>
+
+              attribute float gBatchIds;
+              out float oBatchId;
+              `,
+            )
+            .replace(
+              "#include <begin_vertex>",
+              `
+              #include <begin_vertex>
+              oBatchId = gBatchIds;
+              `,
+            );
+
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              "uniform vec3 diffuse;",
+              `
+              uniform vec3 diffuse;
+              in float oBatchId;
+              `,
+            )
+            .replace(
+              "#include <dithering_fragment>",
+              `
+              #include <dithering_fragment>
+
+              float r = floor(oBatchId / 65536.0);
+              float g = floor(mod(oBatchId / 256.0, 256.0));
+              float b = floor(mod(oBatchId, 256.0));
+      
+              gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+              `,
+            );
+        };
       }
 
       if (Array.isArray(mesh.children) && mesh.children.length > 0) {
@@ -467,12 +470,18 @@ if(uClampToGround) {
 } else {
  #include <normal_fragment_maps>
 }
+`,
+      )
+      // replace the last line of the fragment shader.
+      .replace(
+        /}([^}]*)$/,
+        `
+  float r = floor(oBatchId / 65536.0);
+  float g = floor(mod(oBatchId / 256.0, 256.0));
+  float b = floor(mod(oBatchId, 256.0));
 
-float r = floor(oBatchId / 65536.0);
-float g = floor(mod(oBatchId / 256.0, 256.0));
-float b = floor(mod(oBatchId, 256.0));
-
-gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+  gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+}
 `,
       );
   };

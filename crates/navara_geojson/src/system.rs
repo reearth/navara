@@ -60,6 +60,7 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
 fn spawn_feature(
     commands: &mut Commands,
     buf: &mut BufferStore,
+    batch_table_res: &mut BatchTable,
     appearances: &[Appearance],
     geometry: &Geometry,
     layer_id: &str,
@@ -183,10 +184,12 @@ fn spawn_feature(
             },
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
+                    let global_batch_ids = batch_table_res.add_multiple_null_val(1);
+                    let ids_handle = buf.new_u32(global_batch_ids);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         FeatureBatchId(0),
-                        GlobalBatchIds(0),
+                        GlobalBatchIds(ids_handle),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -196,10 +199,12 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
+                        let global_batch_ids = batch_table_res.add_multiple_null_val(1);
+                        let ids_handle = buf.new_u32(global_batch_ids);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             FeatureBatchId(0),
-                            GlobalBatchIds(0),
+                            GlobalBatchIds(ids_handle),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -222,7 +227,7 @@ fn spawn_feature(
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
-    mut batch_table: ResMut<BatchTable>,
+    mut batch_table_res: ResMut<BatchTable>,
     mut buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
@@ -235,10 +240,11 @@ pub fn construct_feature(
                     for f in fs {
                         if let Some(g) = &f.geometry {
                             if let Some(prop) = &f.properties {
-                                if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                                if let Some(batch_id) = batch_table_res.add_hash_map(prop) {
                                     spawn_feature(
                                         &mut commands,
                                         &mut buf,
+                                        &mut batch_table_res,
                                         appearances,
                                         g,
                                         layer.layer_id.as_str(),
@@ -252,10 +258,11 @@ pub fn construct_feature(
                 GeoJson::Feature(f) => {
                     if let Some(g) = &f.geometry {
                         if let Some(prop) = &f.properties {
-                            if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                            if let Some(batch_id) = batch_table_res.add_hash_map(prop) {
                                 spawn_feature(
                                     &mut commands,
                                     &mut buf,
+                                    &mut batch_table_res,
                                     appearances,
                                     g,
                                     layer.layer_id.as_str(),
@@ -267,11 +274,12 @@ pub fn construct_feature(
                 }
                 GeoJson::Geometry(g) => {
                     if let Some(batch_id) =
-                        batch_table.add(BatchTableValue::MVT(String::from("{}")))
+                        batch_table_res.add(BatchTableValue::MVT(String::from("{}")))
                     {
                         spawn_feature(
                             &mut commands,
                             &mut buf,
+                            &mut batch_table_res,
                             appearances,
                             g,
                             layer.layer_id.as_str(),
