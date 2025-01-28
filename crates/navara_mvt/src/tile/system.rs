@@ -22,6 +22,7 @@ use crate::{
 };
 
 use super::{
+    component::MVTFeatureMarker,
     render::RenderedTile,
     traverse::{prepare_tile_resource, spawn_tile_entity, traverse_tile, TraversalResult},
 };
@@ -41,8 +42,13 @@ pub fn update_tiles(
     mvt_data_requester: MvtDataRequesterQuery,
     changed_mvt_data_requester: ChangedMvtDataRequesterQuery,
     occluder: Query<&EllipsoidalOccluder>,
+    rendered_tiles: Query<&RenderedTile>,
+    features: Query<&FeatureId, With<MVTFeatureMarker>>,
+    changed_features: Query<&FeatureId, (With<MVTFeatureMarker>, Changed<FeatureId>)>,
+    mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     let is_data_requester_changed = !changed_mvt_data_requester.is_empty();
+    let are_features_changed = !changed_features.is_empty();
 
     let occluder = occluder.iter().next().unwrap();
 
@@ -58,7 +64,8 @@ pub fn update_tiles(
             let needs_update = is_data_requester_changed
                 || tc.is_updated_in_this_frame
                 || camera.is_added()
-                || camera.is_changed();
+                || camera.is_changed()
+                || are_features_changed;
             if !needs_update {
                 continue;
             }
@@ -90,6 +97,9 @@ pub fn update_tiles(
                 &WGS84_32,
                 occluder,
                 &mvt_data_requester,
+                &rendered_tiles,
+                &features,
+                &mut renderable_features,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
@@ -109,7 +119,7 @@ pub fn update_tiles(
                         zero_tile.handle(),
                         &mut tc,
                         &mvt_data_requester,
-                        Priority::High,
+                        Priority::Medium,
                     );
                 }
                 _ => {}
@@ -181,14 +191,29 @@ pub fn transfer_mesh(
                             ..Default::default()
                         };
                         let e = match v.geometry_type {
-                            ConstructedGeometryType::Point => {
-                                commands.spawn((PointMarker, batched)).id()
-                            }
+                            ConstructedGeometryType::Point => commands
+                                .spawn((
+                                    PointMarker,
+                                    batched,
+                                    MVTFeatureMarker,
+                                    FeatureId::default(),
+                                ))
+                                .id(),
                             ConstructedGeometryType::Polyline => commands
-                                .spawn((PolylineMarker, batched, FeatureId::default()))
+                                .spawn((
+                                    PolylineMarker,
+                                    batched,
+                                    FeatureId::default(),
+                                    MVTFeatureMarker,
+                                ))
                                 .id(),
                             ConstructedGeometryType::Polygon => commands
-                                .spawn((PolygonMarker, batched, FeatureId::default()))
+                                .spawn((
+                                    PolygonMarker,
+                                    batched,
+                                    FeatureId::default(),
+                                    MVTFeatureMarker,
+                                ))
                                 .id(),
                         };
                         rendered_tile.feature_id = Some(e);
@@ -234,12 +259,12 @@ pub fn clear_caches(
                 continue;
             }
 
-            let rendered_at = {
+            let visited_at = {
                 let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
-                tile.rendered_at
+                tile.visited_at
             };
 
-            if tc.last_rendered_frame <= rendered_at {
+            if tc.last_rendered_frame <= visited_at {
                 continue;
             }
 

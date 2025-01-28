@@ -102,8 +102,10 @@ pub fn transfer_batched_mesh(
                         distance_to_center_from_ellipsoid_surface: -aabb
                             .center
                             .distance(surface_point.unwrap()),
+                        is_rendered: false,
                     },
                     extent: *extent,
+                    active: false,
                 },
             ))
             .id();
@@ -173,8 +175,10 @@ pub fn transfer_mesh(
                             distance_to_center_from_ellipsoid_surface: -aabb
                                 .center
                                 .distance(surface_point.unwrap()),
+                            is_rendered: false,
                         },
                         extent,
+                        active: true,
                     },
                 ))
                 .id();
@@ -232,8 +236,16 @@ pub fn update_height_by_terrain(
 
     for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
-            RenderableFeature::Polygon { render_info, .. } => {
+            RenderableFeature::Polygon {
+                render_info,
+                material,
+                active,
+                ..
+            } => {
                 if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                    continue;
+                }
+                if !material.show || !active {
                     continue;
                 }
             }

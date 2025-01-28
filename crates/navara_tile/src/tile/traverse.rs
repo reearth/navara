@@ -195,6 +195,7 @@ pub fn traverse_tile(
                 TraversalResult::TileRendered
                     | TraversalResult::ChildrenRendered
                     | TraversalResult::ChildrenMeshesPrepared
+                    | TraversalResult::Culled
             ) {
                 any_children_rendered = true;
             }
@@ -241,7 +242,7 @@ pub fn traverse_tile(
             }
 
             for (i, child) in children.iter().enumerate() {
-                if activated_children_indices.contains(&i) | hidden_children_indices.contains(&i) {
+                if activated_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
                     // Hide parent tile when children are activated.
                     tc.activate_rendered_tile(child, meshes, false);
                     continue;
@@ -302,7 +303,10 @@ pub fn spawn_tile_entity(
             tile_handle,
             ..Default::default()
         },
-        OrderByDistance(tile.distance_from_camera),
+        OrderByDistance {
+            sse: tile.sse,
+            distance: tile.distance_from_camera,
+        },
     ));
     tc.rendered_tile_caches.insert(
         tile_handle,

@@ -12,6 +12,7 @@ use crate::model::ModelBin;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
     pub current_terrain_height: FloatType,
+    pub is_rendered: bool,
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ModelRenderInformation {
@@ -23,11 +24,13 @@ pub struct ModelRenderInformation {
 pub struct PolygonRenderInformation {
     pub should_recalculate_height: bool,
     pub distance_to_center_from_ellipsoid_surface: FloatType,
+    pub is_rendered: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolylineRenderInformation {
     pub should_recalculate_height: bool,
+    pub is_rendered: bool,
 }
 
 // From data oriented design perspective, this is too bad structure.
@@ -37,6 +40,7 @@ pub enum RenderableFeature {
     Point {
         coordinates: Vec3,
         crs: CRS,
+        active: bool,
         material: PointMaterial,
         transform: Transform,
         feature_id: Entity,
@@ -46,6 +50,7 @@ pub enum RenderableFeature {
     Billboard {
         coordinates: Vec3,
         crs: CRS,
+        active: bool,
         material: BillboardMaterial,
         transform: Transform,
         feature_id: Entity,
@@ -55,6 +60,7 @@ pub enum RenderableFeature {
     Polyline {
         coordinates: Vec3,
         crs: CRS,
+        active: bool,
         material: PolylineMaterial,
         geometry: TransferablePolylineGeometry,
         transform: Transform,
@@ -65,6 +71,7 @@ pub enum RenderableFeature {
     Polygon {
         coordinates: Vec3,
         crs: CRS,
+        active: bool,
         material: PolygonMaterial,
         geometry: TransferablePolygonGeometry,
         transform: Transform,
@@ -75,6 +82,7 @@ pub enum RenderableFeature {
     Model {
         coordinates: Vec3,
         crs: CRS,
+        active: bool,
         material: ModelMaterial,
         transform: Transform,
         feature_id: Entity,
@@ -87,6 +95,39 @@ pub enum RenderableFeature {
 }
 
 impl RenderableFeature {
+    pub fn activate(&mut self, v: bool) {
+        match self {
+            RenderableFeature::Point { active, .. } => *active = v,
+            RenderableFeature::Billboard { active, .. } => *active = v,
+            RenderableFeature::Polyline { active, .. } => *active = v,
+            RenderableFeature::Polygon { active, .. } => *active = v,
+            RenderableFeature::Model { active, .. } => *active = v,
+            RenderableFeature::Unknown => {}
+        }
+    }
+
+    pub fn is_active(&self) -> bool {
+        match self {
+            RenderableFeature::Point { active, .. } => *active,
+            RenderableFeature::Billboard { active, .. } => *active,
+            RenderableFeature::Polyline { active, .. } => *active,
+            RenderableFeature::Polygon { active, .. } => *active,
+            RenderableFeature::Model { active, .. } => *active,
+            RenderableFeature::Unknown => unreachable!(),
+        }
+    }
+
+    pub fn is_rendered(&self) -> bool {
+        match self {
+            RenderableFeature::Point { render_info, .. } => render_info.is_rendered,
+            RenderableFeature::Billboard { render_info, .. } => render_info.is_rendered,
+            RenderableFeature::Polyline { render_info, .. } => render_info.is_rendered,
+            RenderableFeature::Polygon { render_info, .. } => render_info.is_rendered,
+            RenderableFeature::Model { render_info, .. } => render_info.is_rendered,
+            RenderableFeature::Unknown => unreachable!(),
+        }
+    }
+
     pub fn destroy(&mut self, buf: &mut BufferStore) {
         match self {
             RenderableFeature::Polyline { geometry, .. } => {

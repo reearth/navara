@@ -39,7 +39,10 @@ pub(crate) fn request_terrain_data(
             let entity = commands.spawn((
                 TerrainDataRequesterMarker(handle),
                 DataRequester::from_store(url, buf, DataRequesterExtension::Png),
-                OrderByDistance(tile.distance_from_camera),
+                OrderByDistance {
+                    sse: tile.sse,
+                    distance: tile.distance_from_camera,
+                },
                 priority,
             ));
             let id = entity.id();

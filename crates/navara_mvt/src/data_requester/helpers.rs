@@ -34,7 +34,10 @@ pub(crate) fn request_mvt_data(
                 buf,
                 DataRequesterExtension::Mvt,
             ),
-            OrderByDistance(tile.distance_from_camera),
+            OrderByDistance {
+                sse: tile.sse,
+                distance: tile.distance_from_camera,
+            },
             priority,
         ))
         .id();

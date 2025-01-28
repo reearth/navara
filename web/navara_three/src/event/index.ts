@@ -3,7 +3,6 @@ import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
   isEntityEvent,
-  to_draped_feature_id,
   to_globe_gbuffer_id,
   to_globe_id,
 } from "@navara/core";
@@ -101,7 +100,10 @@ export type FeatureHandler = {
   getTransferablePolylineBatchedFeature: (
     bits: bigint,
   ) => ReturnedTransferablePolylineBatchedFeature | undefined;
-  markModelIsRendered: (bits: bigint) => void;
+  markFeatureIsRendered: (
+    type: "point" | "polyline" | "polygon" | "model",
+    bits: bigint,
+  ) => void;
 };
 
 export type MeshHandler = {
@@ -405,8 +407,7 @@ function processObjectRemoved(
     id = wrapId(id);
   }
   if (drapedFeatureMaterials) {
-    const materialId = to_draped_feature_id(id);
-    drapedFeatureMaterials.delete(materialId);
+    drapedFeatureMaterials.delete(id);
   }
   const m = meshes.get(id);
   if (!m) return;
@@ -529,7 +530,10 @@ async function processRequestedData(
 
   // TODO: Handle abort
   await fetch(req.url, { signal: abortController.signal })
-    .then((res) => res.arrayBuffer())
+    .then((res) => {
+      if (!res.ok) throw new Error();
+      return res.arrayBuffer();
+    })
     .then((val) => {
       if (abortController.signal.aborted) {
         return;
@@ -623,13 +627,19 @@ async function processRenderableFeatureAdded(
   featureHandler: FeatureHandler,
 ) {
   const id = generate_id_from_entity(ev);
-  const obj = await renderFeature(
-    ev.bits,
-    ev.feature,
-    buf,
-    uniforms,
-    featureHandler,
-  );
+  const obj = await renderFeature(ev.feature, buf, uniforms)?.then((r) => {
+    const f = ev.feature;
+    const type = (() => {
+      if (f.point || f.billboard) return "point";
+      else if (f.model) return "model";
+      else if (f.polyline) return "polyline";
+      else if (f.polygon) return "polygon";
+    })();
+    if (type) {
+      featureHandler.markFeatureIsRendered(type, ev.bits);
+    }
+    return r;
+  });
   if (!obj) return;
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
@@ -673,40 +683,42 @@ function processRenderableFeatureChanged(
 
   const material = (point ?? billboard ?? polyline ?? polygon ?? model)
     ?.material;
+  const active =
+    (point ?? billboard ?? polyline ?? polygon ?? model)?.active ?? true;
+
   if (material) {
     if (obj instanceof Sprite && material instanceof PointMaterial) {
-      processPointChanged(obj, material);
+      processPointChanged(obj, material, active);
     }
     if (obj instanceof Sprite && material instanceof BillboardMaterial) {
-      processBillboardChanged(obj, material);
+      processBillboardChanged(obj, material, active);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {
-      processModelChanged(obj, material);
+      processModelChanged(obj, material, active);
     }
     if (obj instanceof Mesh && material instanceof PolylineMaterial) {
-      processPolylineChanged(obj, material);
+      processPolylineChanged(obj, material, active);
     }
     if (obj instanceof Mesh && material instanceof PolygonMaterial) {
-      processPolygonChanged(obj, material);
+      processPolygonChanged(obj, material, active);
     }
 
     // Handle a draped mesh
     if (obj instanceof Mesh && obj.userData.draped != null) {
-      const drapedId = to_draped_feature_id(id);
       if (obj.userData.draped) {
-        if (!drapedFeatureMaterials.has(drapedId)) {
+        if (!drapedFeatureMaterials.has(id)) {
           obj.material.stencilWrite = false;
           obj.material.depthWrite = false;
           obj.material.depthTest = false;
           obj.material.colorWrite = false;
-          drapedFeatureMaterials.set(drapedId, obj.material);
+          drapedFeatureMaterials.set(id, obj.material);
         }
       } else {
         obj.material.depthWrite = true;
         obj.material.depthTest = true;
         obj.material.stencilWrite = false;
         obj.material.colorWrite = true;
-        drapedFeatureMaterials.delete(drapedId);
+        drapedFeatureMaterials.delete(id);
       }
     }
   }
@@ -716,25 +728,41 @@ function processRenderableFeatureChanged(
   obj.updateMatrix();
 }
 
-function processPointChanged(obj: Sprite, material: PointMaterial) {
+function processPointChanged(
+  obj: Sprite,
+  material: PointMaterial,
+  active: boolean,
+) {
   obj.material.color.set(material.color);
-  obj.material.visible = material.show ?? true;
+  obj.material.visible = (material.show ?? true) && active;
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
 }
 
-function processBillboardChanged(obj: Sprite, material: BillboardMaterial) {
+function processBillboardChanged(
+  obj: Sprite,
+  material: BillboardMaterial,
+  active: boolean,
+) {
   obj.material.color.set(material.color);
-  obj.material.visible = material.show ?? true;
+  obj.material.visible = (material.show ?? true) && active;
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
 }
 
-function processModelChanged(obj: Group, material: ModelMaterial) {
-  obj.visible = material.show ?? true;
+function processModelChanged(
+  obj: Group,
+  material: ModelMaterial,
+  active: boolean,
+) {
+  obj.visible = (material.show ?? true) && active;
 }
 
-function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
+function processPolylineChanged(
+  obj: Mesh,
+  material: PolylineMaterial,
+  active: boolean,
+) {
   if (obj.material instanceof ShaderMaterial) {
     obj.material.uniforms.color.value.set(material.color);
 
@@ -746,14 +774,18 @@ function processPolylineChanged(obj: Mesh, material: PolylineMaterial) {
       maxHeight,
       material.width,
     ];
-    obj.material.visible = material.show ?? true;
+    obj.material.visible = (material.show ?? true) && active;
   }
 }
 
-function processPolygonChanged(obj: Mesh, material: PolygonMaterial) {
+function processPolygonChanged(
+  obj: Mesh,
+  material: PolygonMaterial,
+  active: boolean,
+) {
   if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
-    obj.material.visible = material.show ?? true;
+    obj.material.visible = (material.show ?? true) && active;
     obj.material.wireframe = material.wireframe ?? false;
     obj.material.userData.uMinMaxHeight.value =
       material.__internal__?.min_max_heights;
