@@ -574,6 +574,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -589,6 +590,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -681,6 +683,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -696,6 +699,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -794,6 +798,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -809,6 +814,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -902,6 +908,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },
@@ -917,6 +924,7 @@ mod test {
                     feature_id: _,
                     render_info: _,
                     geometry: _,
+                    ..
                 } => Some(transform.translation),
                 _ => None,
             },

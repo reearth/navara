@@ -179,8 +179,8 @@ export default class ThreeView {
     getTransferablePolylineBatchedFeature: (bits) => {
       return this._core?.getTransferablePolylineBatchedFeature(bits);
     },
-    markModelIsRendered: (bits) => {
-      this._core?.markModelIsRendered(bits);
+    markFeatureIsRendered: (type, bits) => {
+      this._core?.markFeatureIsRendered(type, bits);
     },
   };
   private _meshHandler: MeshHandler = {

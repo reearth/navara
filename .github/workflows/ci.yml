@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  PROTOC_VERSION: '3.20.3'
+  PROTOC_VERSION: "3.20.3"
 
 jobs:
   # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
@@ -47,6 +47,7 @@ jobs:
         with:
           toolchain: 1.83.0
           targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
       - name: Install deps for cargo
         run: |
           cargo install cargo-make

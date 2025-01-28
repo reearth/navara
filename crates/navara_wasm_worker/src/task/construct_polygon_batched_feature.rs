@@ -99,7 +99,7 @@ pub fn construct_polygon_batched_feature(
     features.drop();
 
     Some(ConstructedPolygonGeometry::new(
-        (&combined_extent.unwrap()).into(),
+        (&combined_extent?).into(),
         PolygonGeometry::new(combined_attributes.into(), indices),
     ))
 }

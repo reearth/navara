@@ -30,7 +30,7 @@ impl RenderedTile {
         renderable_features: &mut Query<&mut RenderableFeature>,
     ) -> Vec<Entity> {
         let mut removed_features = vec![];
-        if let Some(feature_id) = self.feature_id {
+        if let Some(feature_id) = self.feature_id.take() {
             if let Ok(batched_feature) = batched_features.get(feature_id) {
                 let mut removed = batched_feature.despawn_recursively(
                     commands,

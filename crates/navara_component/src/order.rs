@@ -3,7 +3,10 @@ use std::cmp::Ordering;
 use bevy_ecs::component::Component;
 
 #[derive(Component, PartialEq, Debug, Clone)]
-pub struct OrderByDistance(pub f32);
+pub struct OrderByDistance {
+    pub sse: f32,
+    pub distance: f32,
+}
 
 impl PartialOrd for OrderByDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -13,10 +16,16 @@ impl PartialOrd for OrderByDistance {
 
 impl Ord for OrderByDistance {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.0.abs() > other.0.abs() {
+        if self.sse > other.sse {
+            return Ordering::Less;
+        }
+        if self.sse < other.sse {
             return Ordering::Greater;
         }
-        if self.0.abs() < other.0.abs() {
+        if self.distance > other.distance {
+            return Ordering::Greater;
+        }
+        if self.distance < other.distance {
             return Ordering::Less;
         }
         Ordering::Equal
@@ -32,22 +41,58 @@ mod test {
     #[test]
     fn it_should_sort_near_to_far_order() {
         let mut d = [
-            OrderByDistance(0.2),
-            OrderByDistance(0.5),
-            OrderByDistance(0.1),
-            OrderByDistance(0.),
-            OrderByDistance(0.4),
-            OrderByDistance(0.3),
+            OrderByDistance {
+                sse: 0.1,
+                distance: 0.2,
+            },
+            OrderByDistance {
+                sse: 0.3,
+                distance: 0.5,
+            },
+            OrderByDistance {
+                sse: 0.5,
+                distance: 0.1,
+            },
+            OrderByDistance {
+                sse: 0.2,
+                distance: 0.,
+            },
+            OrderByDistance {
+                sse: 0.4,
+                distance: 0.4,
+            },
+            OrderByDistance {
+                sse: 0.,
+                distance: 0.3,
+            },
         ];
         d.sort();
 
         let expects = [
-            OrderByDistance(0.),
-            OrderByDistance(0.1),
-            OrderByDistance(0.2),
-            OrderByDistance(0.3),
-            OrderByDistance(0.4),
-            OrderByDistance(0.5),
+            OrderByDistance {
+                sse: 0.5,
+                distance: 0.1,
+            },
+            OrderByDistance {
+                sse: 0.4,
+                distance: 0.4,
+            },
+            OrderByDistance {
+                sse: 0.3,
+                distance: 0.5,
+            },
+            OrderByDistance {
+                sse: 0.2,
+                distance: 0.,
+            },
+            OrderByDistance {
+                sse: 0.1,
+                distance: 0.2,
+            },
+            OrderByDistance {
+                sse: 0.,
+                distance: 0.3,
+            },
         ];
 
         for (i, result) in d.iter().enumerate() {

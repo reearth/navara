@@ -429,10 +429,19 @@ pub fn sample_terrain_height_within_extent(
         }
     }
 
+    // If the difference is close, then it should be expanded.
+    {
+        let diff = max_height - min_height;
+        if diff <= 100. {
+            min_height -= 50.;
+            max_height += 50.;
+        }
+    }
+
     // Set default height if terrain_data isn't found.
     if !has_terrain_data {
         min_height = 0.0;
-        max_height = 10.0;
+        max_height = 100.0;
     }
 
     (min_height, max_height)

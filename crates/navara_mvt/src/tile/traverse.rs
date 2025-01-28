@@ -4,6 +4,8 @@ use navara_camera::CameraFrustum;
 use navara_component::{OrderByDistance, Priority};
 use navara_core::Ellipsoid;
 
+use navara_data_requester::DataRequesterStatus;
+use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_frame::FrameManager;
 use navara_math::{FloatType, Transform};
 
@@ -17,7 +19,7 @@ use crate::{
     layer::tile_cache_manager::TileCacheManager,
 };
 
-use super::render::RenderedTile;
+use super::{component::MVTFeatureMarker, render::RenderedTile};
 
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
@@ -42,12 +44,15 @@ pub fn traverse_tile(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     mvt_data_requester: &MvtDataRequesterQuery,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &mut Query<&mut RenderableFeature>,
 ) -> TraversalResult {
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
     match qt.qt.get(handle) {
         Some(tile) => {
-            if tile.coords.z >= vector_tile_appearance.max_zoom {
+            if tile.coords.z > vector_tile_appearance.max_zoom {
                 return TraversalResult::NotFound;
             }
         }
@@ -94,12 +99,15 @@ pub fn traverse_tile(
         return TraversalResult::Culled;
     }
 
-    let is_tile_ready = tile
+    let data_requester = tile
         .data_requester_entity_id
-        .and_then(|e| mvt_data_requester.get(e).ok())
-        .map_or(false, |(_, data_requester)| {
-            tile.is_ready(&data_requester.status)
-        });
+        .and_then(|e| mvt_data_requester.get(e).ok());
+    let is_tile_ready = data_requester.map_or(false, |(_, data_requester)| {
+        tile.is_ready(&data_requester.status)
+    });
+    let is_tile_failed = data_requester.map_or(false, |(_, data_requester)| {
+        matches!(data_requester.status, DataRequesterStatus::Fail)
+    });
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
@@ -135,11 +143,13 @@ pub fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    let mut any_children_rendered = false;
     if let Some(children) = VectorTile::traversable_children(qt, handle) {
+        let mut any_children_rendered = false;
         let mut are_all_children_rendered = true;
+        let mut are_all_children_mesh_prepared = true;
         let mut rendered_children_indices = vec![];
         let mut hidden_children_indices = vec![];
+        let mut prepared_children_indices = vec![];
         for (i, child) in children.iter().enumerate() {
             let traversal_result = traverse_tile(
                 command,
@@ -155,15 +165,19 @@ pub fn traverse_tile(
                 ellipsoid,
                 occluder,
                 mvt_data_requester,
+                rendered_tiles,
+                features,
+                renderable_features,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
                 are_all_children_rendered = false;
+                are_all_children_mesh_prepared = false;
             }
 
             if matches!(
                 traversal_result,
-                TraversalResult::NotFound | TraversalResult::Culled
+                TraversalResult::NotFound | TraversalResult::Culled | TraversalResult::Failed
             ) {
                 hidden_children_indices.push(i);
             }
@@ -171,18 +185,45 @@ pub fn traverse_tile(
             // If there is one child at least, trigger the rendering children process.
             if matches!(
                 traversal_result,
-                TraversalResult::TileRendered | TraversalResult::ChildrenRendered
+                TraversalResult::TileRendered
+                    | TraversalResult::ChildrenRendered
+                    | TraversalResult::ChildrenMeshPrepared
+                    | TraversalResult::Culled
             ) {
                 any_children_rendered = true;
             }
 
+            if matches!(traversal_result, TraversalResult::TileRendered)
+                && !is_feature_rendered(get_renderable_feature(
+                    tc,
+                    child,
+                    rendered_tiles,
+                    features,
+                    renderable_features,
+                ))
+            {
+                are_all_children_mesh_prepared = false;
+                are_all_children_rendered = false;
+            }
+
             // Skip rendering children in this tile.
-            if matches!(traversal_result, TraversalResult::ChildrenRendered) {
+            if matches!(
+                traversal_result,
+                TraversalResult::ChildrenRendered | TraversalResult::ChildrenMeshPrepared
+            ) {
                 rendered_children_indices.push(i);
+            }
+
+            if matches!(traversal_result, TraversalResult::ChildrenRendered) {
+                are_all_children_mesh_prepared = false;
+            }
+
+            if matches!(traversal_result, TraversalResult::ChildrenMeshPrepared) {
+                prepared_children_indices.push(i);
             }
         }
 
-        if are_all_children_rendered {
+        if any_children_rendered {
             for (i, child) in children.iter().enumerate() {
                 // If this child is not renderable, skip rendering this child.
                 if hidden_children_indices.contains(&i) {
@@ -202,30 +243,102 @@ pub fn traverse_tile(
                 spawn_tile_entity(command, tc, tile, frame, handle);
             }
 
-            // This tile's children are rendered completely, so parent tile isn't rendered.
-            return TraversalResult::ChildrenRendered;
+            for (i, child) in children.iter().enumerate() {
+                let renderable_feature = get_mut_renderable_feature(
+                    tc,
+                    child,
+                    rendered_tiles,
+                    features,
+                    renderable_features,
+                );
+
+                // If this child is not renderable, skip rendering this child.
+                if prepared_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
+                    if let Some(mut feature) = renderable_feature {
+                        // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
+                        if feature.is_active() {
+                            feature.activate(false);
+                        }
+                    };
+                    continue;
+                }
+
+                if let Some(mut feature) = renderable_feature {
+                    // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
+                    if feature.is_active() != are_all_children_mesh_prepared {
+                        feature.activate(are_all_children_mesh_prepared);
+                    }
+                };
+            }
+
+            if are_all_children_mesh_prepared {
+                return TraversalResult::ChildrenMeshPrepared;
+            }
+
+            if are_all_children_rendered {
+                // This tile's children are rendered completely, so parent tile isn't rendered.
+                return TraversalResult::ChildrenRendered;
+            }
         }
     }
 
+    if is_tile_failed {
+        return TraversalResult::Failed;
+    }
+
     if !is_renderable {
-        if !any_children_rendered {
-            let tile = qt.qt.get_mut(handle).unwrap();
-            prepare_tile_resource(
-                command,
-                tile,
-                buf,
-                layer,
-                handle,
-                tc,
-                mvt_data_requester,
-                Priority::Medium,
-            );
-        }
+        let tile = qt.qt.get_mut(handle).unwrap();
+        prepare_tile_resource(
+            command,
+            tile,
+            buf,
+            layer,
+            handle,
+            tc,
+            mvt_data_requester,
+            Priority::Medium,
+        );
 
         return TraversalResult::NotFound;
     }
 
     TraversalResult::TileRendered
+}
+
+fn get_renderable_feature<'a>(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &'a mut Query<&mut RenderableFeature>,
+) -> Option<&'a RenderableFeature> {
+    tc.rendered_tile_caches
+        .get(handle)
+        .and_then(|e| rendered_tiles.get(*e).ok())
+        .and_then(|v| v.feature_id)
+        .and_then(|e| features.get(e).ok())
+        .and_then(|f| f.0)
+        .and_then(|id| renderable_features.get(id).ok())
+}
+
+fn get_mut_renderable_feature<'a>(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &'a mut Query<&mut RenderableFeature>,
+) -> Option<Mut<'a, RenderableFeature>> {
+    tc.rendered_tile_caches
+        .get(handle)
+        .and_then(|e| rendered_tiles.get(*e).ok())
+        .and_then(|v| v.feature_id)
+        .and_then(|e| features.get(e).ok())
+        .and_then(|f| f.0)
+        .and_then(|id| renderable_features.get_mut(id).ok())
+}
+
+fn is_feature_rendered(renderable_feature: Option<&RenderableFeature>) -> bool {
+    renderable_feature.map(|r| r.is_rendered()).unwrap_or(false)
 }
 
 // We should use entity to store the rendered tile, because the Bevy's entity is extensible.
@@ -248,7 +361,10 @@ pub fn spawn_tile_entity(
             tile_handle,
             ..Default::default()
         },
-        OrderByDistance(tile.distance_from_camera),
+        OrderByDistance {
+            sse: tile.sse,
+            distance: tile.distance_from_camera,
+        },
     ));
     tc.rendered_tile_caches.insert(tile_handle, e.id());
 }
@@ -295,6 +411,8 @@ fn begine_traverse_tile(
 pub(super) enum TraversalResult {
     TileRendered,
     ChildrenRendered,
+    ChildrenMeshPrepared,
     Culled,
     NotFound,
+    Failed,
 }
