@@ -53,7 +53,6 @@ import type { AbortControllers, MeshCache, WorkerPoolPromises } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
-import { renderFeatureForPicking } from "./featurePick";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
@@ -126,7 +125,6 @@ export function processEvent(
   event: Events | undefined,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
-  pickMeshes: MeshCache,
 ) {
   eventManager.pushEvents(event);
 
@@ -263,7 +261,6 @@ export function processEvent(
             uniforms,
             drapedFeatureMaterials,
             featureHandler,
-            pickMeshes,
           );
           break;
         case "remove":
@@ -275,18 +272,12 @@ export function processEvent(
               undefined,
               drapedFeatureMaterials,
             );
-            processObjectRemoved(scenes.pick, pickMeshes, event);
           }
           break;
         case "change":
           processRenderableFeatureChanged(
             event,
             meshes,
-            drapedFeatureMaterials,
-          );
-          processRenderableFeatureChanged(
-            event,
-            pickMeshes,
             drapedFeatureMaterials,
           );
           break;
@@ -630,7 +621,6 @@ async function processRenderableFeatureAdded(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
   featureHandler: FeatureHandler,
-  pickMeshes: MeshCache,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = await renderFeature(
@@ -642,36 +632,22 @@ async function processRenderableFeatureAdded(
   );
   if (!obj) return;
 
-  const pickObj = await renderFeatureForPicking(
-    ev.bits,
-    ev.feature,
-    buf,
-    uniforms,
-    featureHandler,
-  );
-  if (!pickObj) return;
-
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
   const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
     ?.transform;
   if (transform) {
     setTransform(obj, transform);
-    setTransform(pickObj, transform);
   }
   applyTextureAspect(obj);
-  applyTextureAspect(pickObj);
 
   obj.renderOrder = 1;
-  pickObj.renderOrder = 1;
 
   if (!obj.userData.draped) {
     scenes.main.add(obj);
-    scenes.pick.add(pickObj);
   }
 
   meshes.set(id, obj);
-  pickMeshes.set(id, pickObj);
 
   if (obj.userData.draped && obj instanceof Mesh) {
     drapedFeatureMaterials.set(id, obj.material as Material);

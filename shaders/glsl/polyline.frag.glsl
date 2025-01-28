@@ -1,5 +1,5 @@
 uniform vec3 color;
-uniform float pickable;
+uniform float uPickable;
 uniform vec3 uHighlightColor;
 
 in float v_batchId;
@@ -8,7 +8,7 @@ in float v_IsPicked;
 void main() {
     gl_FragColor = vec4(color, 1.);
 
-    if(pickable > 0.5) {
+    if(uPickable > 0.5) {
         float r = floor(v_batchId / 65536.0);
         float g = floor(mod(v_batchId / 256.0, 256.0));
         float b = floor(mod(v_batchId, 256.0));

@@ -14,11 +14,6 @@ import {
   Material,
   NearestFilter,
   DepthTexture,
-  Color,
-  Sprite,
-  Group,
-  Object3D,
-  Mesh,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -100,7 +95,6 @@ export default class ThreeView {
   private _uniforms: CommonUniforms;
 
   private _meshes: MeshCache = new Map();
-  private _pickMeshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
   private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
@@ -294,9 +288,6 @@ export default class ThreeView {
     const main = new Scene();
     const drapedFeaturesScene = new Scene();
 
-    const pickScene = new Scene();
-    pickScene.background = new Color(0);
-
     const globeGBufferScene = new Scene();
 
     this._scenes = {
@@ -305,7 +296,6 @@ export default class ThreeView {
       globe: globeScene,
       globeGBuffer: globeGBufferScene,
       drapedFeatures: drapedFeaturesScene,
-      pick: pickScene,
     };
 
     if (options.camera) {
@@ -402,7 +392,11 @@ export default class ThreeView {
         this.renderer.domElement,
         this.renderer,
         this.camera,
-        this._scenes.pick,
+        this._scenes,
+        this._meshes,
+        this._drapedFeatureMaterials,
+        this._globeGBufferRenderTarget,
+        this._uniforms.highlightColor.value,
         this.onPick.bind(this),
       );
     }
@@ -522,7 +516,6 @@ export default class ThreeView {
       events,
       this._uniforms,
       this._drapedFeatureMaterials,
-      this._pickMeshes,
     );
     events?.free();
 
@@ -608,141 +601,11 @@ export default class ThreeView {
     this.resize(width, height, pixelRatio);
   };
 
-  pickSprite(pickArr: number[], obj: Sprite) {
-    const batchId = obj.userData.batchId;
-    let isPicked = false;
-    for (let i = 0; i < pickArr.length; i++) {
-      if (pickArr[i] === batchId) {
-        isPicked = true;
-        pickArr.splice(i, 1);
-        break;
-      }
-    }
-
-    if (obj.userData.isPicked !== isPicked) {
-      obj.userData.isPicked = isPicked;
-      if (isPicked) {
-        const highlightColor = this._uniforms.highlightColor.value ?? [0, 1, 1];
-        obj.material.color.setRGB(
-          highlightColor[0],
-          highlightColor[1],
-          highlightColor[2],
-        );
-      } else {
-        obj.material.color.setHex(obj.userData.orgColor);
-      }
-    }
-  }
-
-  pickModel(pickArr: number[], obj: Group) {
-    const globalBatchIds = obj.userData.batchId;
-    if (!globalBatchIds || globalBatchIds.length < 1) {
-      return;
-    }
-
-    const traverseClear = function (mesh: Object3D) {
-      if (mesh instanceof Mesh) {
-        const isPicked = mesh.geometry.attributes?.isPicked?.array;
-        if (isPicked) {
-          isPicked.fill(0);
-          mesh.geometry.attributes.isPicked.needsUpdate = true;
-        }
-      }
-
-      if (Array.isArray(mesh.children) && mesh.children.length > 0) {
-        mesh.children.forEach((child) => {
-          traverseClear(child);
-        });
-      }
-    };
-    traverseClear(obj);
-
-    for (let i = 0; i < pickArr.length; ) {
-      let bFound = false;
-
-      const traversePick = function (mesh: Object3D) {
-        if (mesh instanceof Mesh) {
-          const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
-          const isPicked = mesh.geometry.attributes?.isPicked?.array;
-          if (isPicked) {
-            if (internalBatchIds) {
-              for (let j = 0; j < internalBatchIds.length; j++) {
-                if (globalBatchIds[internalBatchIds[j]] === pickArr[i]) {
-                  isPicked[j] = 1;
-                  bFound = true;
-                }
-              }
-            } else {
-              if (globalBatchIds[0] === pickArr[i]) {
-                isPicked.fill(1);
-                bFound = true;
-              }
-            }
-            mesh.geometry.attributes.isPicked.needsUpdate = true;
-          }
-        }
-
-        if (Array.isArray(mesh.children) && mesh.children.length > 0) {
-          mesh.children.forEach((child) => {
-            traversePick(child);
-          });
-        }
-      };
-      traversePick(obj);
-
-      if (bFound) {
-        pickArr.splice(i, 1);
-      } else {
-        i++;
-      }
-    }
-  }
-
-  pickMesh(pickArr: number[], obj: Mesh) {
-    const batchId = obj.userData.batchId;
-    const isPicked = obj.geometry.attributes.isPicked.array;
-    isPicked.fill(0);
-
-    for (let i = 0; i < pickArr.length; ) {
-      let bFound = false;
-      for (let j = 0; j < batchId.length; j++) {
-        if (batchId[j] === pickArr[i]) {
-          isPicked[j] = 1;
-          bFound = true;
-        }
-      }
-
-      if (bFound) {
-        pickArr.splice(i, 1);
-      } else {
-        i++;
-      }
-    }
-    obj.geometry.attributes.isPicked.needsUpdate = true;
-  }
-
   onPick(pickArr: number[]) {
     if (pickArr.length > 0) {
       const prop = this._core?.getBatchProp(pickArr[0]);
       if (prop) {
         console.log(JSON.parse(prop));
-      }
-    }
-
-    for (const [_key, obj] of this._meshes) {
-      // point, billboard
-      if (obj instanceof Sprite) {
-        this.pickSprite(pickArr, obj);
-      }
-
-      // model
-      if (obj instanceof Group && obj.userData.batchId) {
-        this.pickModel(pickArr, obj);
-      }
-
-      // polygon, polyline
-      if (obj instanceof Mesh && obj.userData.batchId) {
-        this.pickMesh(pickArr, obj);
       }
     }
 

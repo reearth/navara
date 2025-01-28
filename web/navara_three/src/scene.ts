@@ -11,6 +11,4 @@ export type Scenes = {
   globeGBuffer: Scene;
   // Render only draped features
   drapedFeatures: Scene;
-  // for picking
-  pick: Scene;
 };

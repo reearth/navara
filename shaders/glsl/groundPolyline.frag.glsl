@@ -26,7 +26,7 @@ uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
-uniform float pickable;
+uniform float uPickable;
 uniform vec3 uHighlightColor;
 
 float readDepth(sampler2D depthSampler, vec2 coord) {
@@ -102,7 +102,7 @@ void main() {
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
 
-    if(pickable > 0.5) {
+    if(uPickable > 0.5) {
         float r = floor(v_batchId / 65536.0);
         float g = floor(mod(v_batchId / 256.0, 256.0));
         float b = floor(mod(v_batchId, 256.0));

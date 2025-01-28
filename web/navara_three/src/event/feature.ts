@@ -62,7 +62,16 @@ async function renderPoint(m: PointMesh) {
     sizeAttenuation: !m.material.scale_by_distance,
     visible: m.material.show,
   });
+
+  material.userData.uPickable = {
+    value: 0.0,
+  };
+
+  const batchId = m.geometry.batch_id ?? 0;
+
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBatchId = { value: batchId };
+    shader.uniforms.uPickable = material.userData.uPickable;
     shader.vertexShader = shader.vertexShader
       .replace(
         "uniform vec2 center;",
@@ -84,6 +93,8 @@ sprite_uv = position.xy;
         "uniform float opacity;",
         `
 uniform float opacity;
+uniform float uBatchId;
+uniform float uPickable;
 in vec2 sprite_uv;
 ${PointFragShader}
 `,
@@ -96,7 +107,16 @@ float alpha = nvr_circle_alpha(sprite_uv);
 if (alpha == 0.) {
   discard;
 }
+
 gl_FragColor.a = alpha;
+
+if (uPickable > 0.5) {
+  float r = floor(uBatchId / 65536.0);
+  float g = floor(mod(uBatchId / 256.0, 256.0));
+  float b = floor(mod(uBatchId, 256.0));
+
+  gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+}
 `,
       );
   };
@@ -104,7 +124,6 @@ gl_FragColor.a = alpha;
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
 
-  const batchId = m.geometry.batch_id ?? 0;
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
   sprite.userData.orgColor = m.material.color;
@@ -122,10 +141,43 @@ async function renderBillboard(m: BillboardMesh) {
     depthTest: m.material.depth_test,
     visible: m.material.show,
   });
+
+  const batchId = m.geometry.batch_id ?? 0;
+  material.userData.uPickable = {
+    value: 0.0,
+  };
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBatchId = { value: batchId };
+    shader.uniforms.uPickable = material.userData.uPickable;
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <clipping_planes_pars_fragment>",
+        `
+        #include <clipping_planes_pars_fragment>
+        uniform float uBatchId;
+        uniform float uPickable;
+      `,
+      )
+      .replace(
+        "#include <fog_fragment>",
+        `
+        #include <fog_fragment>
+        if (uPickable > 0.5 && sampledDiffuseColor.a > 0.0) {
+          float r = floor(uBatchId / 65536.0);
+          float g = floor(mod(uBatchId / 256.0, 256.0));
+          float b = floor(mod(uBatchId, 256.0));
+
+          gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+        }
+        `,
+      );
+  };
+
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
 
-  const batchId = m.geometry.batch_id ?? 0;
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
   sprite.userData.orgColor = m.material.color;
@@ -170,26 +222,53 @@ async function renderModel(
     scene.userData.batchId = buf.u32(m.geometry.global_batch_ids);
   }
 
+  let globalBatchIds = m.geometry.global_batch_ids
+    ? buf.u32(m.geometry.global_batch_ids)
+    : undefined;
+  globalBatchIds = globalBatchIds ?? new Uint32Array(1);
+
   if (scene.userData.batchId) {
     const traverse = function (mesh: Object3D) {
       if (mesh instanceof Mesh) {
         const vertCnt = mesh.geometry.attributes?.position?.count;
         const isPicked = new Float32Array(vertCnt).fill(0);
 
+        const gBatchIds = new Float32Array(vertCnt).fill(globalBatchIds[0]);
+        const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+        if (internalBatchIds) {
+          for (let i = 0; i < internalBatchIds.length; i++) {
+            const internalBatchId = internalBatchIds[i];
+            gBatchIds[i] = globalBatchIds[internalBatchId] ?? 0;
+          }
+        }
+
+        mesh.geometry.setAttribute(
+          "batchId",
+          new BufferAttribute(gBatchIds, 1),
+        );
+
         mesh.geometry.setAttribute(
           "isPicked",
           new BufferAttribute(isPicked, 1),
         );
 
+        mesh.material.userData.uPickable = {
+          value: 0.0,
+        };
+
         mesh.material.onBeforeCompile = (shader: any) => {
           shader.uniforms.uHighlightColor = uniforms.highlightColor;
+          shader.uniforms.uPickable = mesh.material.userData.uPickable;
           shader.vertexShader = shader.vertexShader.replace(
             "void main() {",
             `
               attribute float isPicked;
+              attribute float batchId;
+              out float v_BatchId;
               out float v_IsPicked;
               void main() {
               v_IsPicked = isPicked;
+              v_BatchId = batchId;
               `,
           );
 
@@ -198,7 +277,9 @@ async function renderModel(
               "void main() {",
               `
               uniform vec3 uHighlightColor;
+              uniform float uPickable;
               in float v_IsPicked;
+              in float v_BatchId;
               void main() {
               `,
             )
@@ -208,6 +289,20 @@ async function renderModel(
               vec4 diffuseColor = vec4( diffuse, opacity );
               if(v_IsPicked > 0.5) {
                 diffuseColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+              }
+              `,
+            )
+            .replace(
+              "#include <dithering_fragment>",
+              `
+              #include <dithering_fragment>
+
+              if (uPickable > 0.5 && diffuseColor.a > 0.0) {
+                float r = floor(v_BatchId / 65536.0);
+                float g = floor(mod(v_BatchId / 256.0, 256.0));
+                float b = floor(mod(v_BatchId, 256.0));
+        
+                gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
               }
               `,
             );
@@ -254,7 +349,8 @@ async function renderPolyline(
     !start_normals ||
     !end_normal_and_texture_coordinate_normalization_x ||
     !right_normal_and_texture_coordinate_normalization_y ||
-    !indices
+    !indices ||
+    !batchId
   )
     return;
   const geometry = new BufferGeometry();
@@ -287,11 +383,16 @@ async function renderPolyline(
   );
   const isPicked = new Float32Array(position.length / g.position.size).fill(0);
   geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
+  geometry.setAttribute("batchId", new BufferAttribute(batchId, batchIdSize));
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
 
   const [minHeight, maxHeight] = mesh.material.__internal__
     ?.min_max_heights ?? [0, 0];
+
+  const uPickable = {
+    value: 0.0,
+  };
 
   const material = new ShaderMaterial({
     uniforms: {
@@ -306,7 +407,7 @@ async function renderPolyline(
       tGlobeDepth: uniforms.tGlobeDepth,
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
-      pickable: { value: 0 },
+      uPickable: uPickable,
       uHighlightColor: uniforms.highlightColor,
     },
     vertexShader: PolylineVertShader,
@@ -318,6 +419,9 @@ async function renderPolyline(
     visible: mesh.material.show,
     lights: true,
   });
+
+  material.userData.uPickable = uPickable;
+
   const m = new Mesh(geometry, material);
   m.userData.batchId = batchId;
   m.userData.batchIdSize = batchIdSize;
@@ -339,7 +443,7 @@ async function renderPolygon(
   const indices = buf.u32(g.indices);
   const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
-  if (!position || !indices) return;
+  if (!position || !indices || !batchId) return;
 
   const geometry = new BufferGeometry();
   geometry.setAttribute(
@@ -358,6 +462,8 @@ async function renderPolygon(
 
   const isPicked = new Float32Array(position.length / g.position.size).fill(0);
   geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
+
+  geometry.setAttribute("batchId", new BufferAttribute(batchId, batchIdSize));
   geometry.setIndex(new BufferAttribute(indices, 1));
 
   const clampToGround = mesh.material.clamp_to_ground;
@@ -380,9 +486,13 @@ async function renderPolygon(
   material.userData.uClampToGround = {
     value: clampToGround,
   };
+  material.userData.uPickable = {
+    value: 0.0,
+  };
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
+    shader.uniforms.uPickable = material.userData.uPickable;
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
@@ -398,9 +508,11 @@ async function renderPolygon(
         `
 #include <common>
 attribute float isPicked;
+attribute float batchId;
 in vec4 scaleNormalAndCap;
 
 uniform vec2 uMinMaxHeight;
+out float v_BatchId;
 out float v_IsPicked;
 
 ${BranchFreeTernary}
@@ -412,6 +524,7 @@ ${BranchFreeTernary}
 #include <begin_vertex>
 transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
 v_IsPicked = isPicked;
+v_BatchId = batchId;
 `,
       );
     shader.fragmentShader = shader.fragmentShader
@@ -422,7 +535,9 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform vec3 uHighlightColor;
+uniform float uPickable;
 in float v_IsPicked;
+in float v_BatchId;
 `,
       )
       .replace(
@@ -445,6 +560,20 @@ if(uClampToGround) {
 vec4 diffuseColor = vec4( diffuse, opacity );
 if(v_IsPicked > 0.5) {
   diffuseColor.xyz = uHighlightColor.xyz;
+}
+`,
+      )
+      // replace the last line of the fragment shader.
+      .replace(
+        /}([^}]*)$/,
+        `
+  if (uPickable > 0.5 && diffuseColor.a > 0.0) {
+    float r = floor(v_BatchId / 65536.0);
+    float g = floor(mod(v_BatchId / 256.0, 256.0));
+    float b = floor(mod(v_BatchId, 256.0));
+
+    gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+  }
 }
 `,
       );
