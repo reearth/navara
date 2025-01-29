@@ -429,19 +429,20 @@ pub fn sample_terrain_height_within_extent(
         }
     }
 
+    // Extrude more
+    max_height *= 1.3;
+
     // If the difference is close, then it should be expanded.
+    // Or set default height if terrain_data isn't found.
     {
         let diff = max_height - min_height;
-        if diff <= 100. {
-            min_height -= 50.;
-            max_height += 50.;
+        // Need to investigate more why we need to extrude
+        // an additional height if the terrain closes to zero.
+        let distance_from_surface = 2000.0;
+        if diff <= distance_from_surface || !has_terrain_data {
+            min_height = -distance_from_surface / 2.;
+            max_height = distance_from_surface;
         }
-    }
-
-    // Set default height if terrain_data isn't found.
-    if !has_terrain_data {
-        min_height = 0.0;
-        max_height = 100.0;
     }
 
     (min_height, max_height)
