@@ -194,7 +194,7 @@ pub fn traverse_tile(
             }
 
             if matches!(traversal_result, TraversalResult::TileRendered)
-                && !is_feature_rendered(get_renderable_feature(
+                && !are_all_features_rendered(get_renderable_feature(
                     tc,
                     child,
                     rendered_tiles,
@@ -244,7 +244,7 @@ pub fn traverse_tile(
             }
 
             for (i, child) in children.iter().enumerate() {
-                let renderable_feature = get_mut_renderable_feature(
+                let are_active = are_all_renderable_features_active(
                     tc,
                     child,
                     rendered_tiles,
@@ -254,21 +254,30 @@ pub fn traverse_tile(
 
                 // If this child is not renderable, skip rendering this child.
                 if prepared_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
-                    if let Some(mut feature) = renderable_feature {
-                        // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
-                        if feature.is_active() {
-                            feature.activate(false);
-                        }
-                    };
+                    if matches!(are_active, Some(true)) {
+                        activate_all_renderable_features(
+                            tc,
+                            child,
+                            rendered_tiles,
+                            features,
+                            renderable_features,
+                            false,
+                        );
+                    }
                     continue;
                 }
 
-                if let Some(mut feature) = renderable_feature {
-                    // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
-                    if feature.is_active() != are_all_children_mesh_prepared {
-                        feature.activate(are_all_children_mesh_prepared);
-                    }
-                };
+                // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
+                if are_active.map_or(false, |v| v != are_all_children_mesh_prepared) {
+                    activate_all_renderable_features(
+                        tc,
+                        child,
+                        rendered_tiles,
+                        features,
+                        renderable_features,
+                        are_all_children_mesh_prepared,
+                    );
+                }
             }
 
             if are_all_children_mesh_prepared {
@@ -311,34 +320,74 @@ fn get_renderable_feature<'a>(
     rendered_tiles: &Query<&RenderedTile>,
     features: &Query<&FeatureId, With<MVTFeatureMarker>>,
     renderable_features: &'a mut Query<&mut RenderableFeature>,
-) -> Option<&'a RenderableFeature> {
+) -> Option<Vec<&'a RenderableFeature>> {
     tc.rendered_tile_caches
         .get(handle)
         .and_then(|e| rendered_tiles.get(*e).ok())
-        .and_then(|v| v.feature_id)
-        .and_then(|e| features.get(e).ok())
-        .and_then(|f| f.0)
-        .and_then(|id| renderable_features.get(id).ok())
+        .and_then(|v| v.feature_ids.as_ref())
+        .and_then(|es| {
+            es.iter()
+                .map(|e| features.get(*e).ok())
+                .collect::<Option<Vec<_>>>()
+        })
+        .and_then(|fs| fs.iter().map(|f| f.0).collect::<Option<Vec<_>>>())
+        .and_then(|ids| {
+            ids.into_iter()
+                .map(|id| renderable_features.get(id).ok())
+                .collect::<Option<Vec<_>>>()
+        })
 }
 
-fn get_mut_renderable_feature<'a>(
+fn activate_all_renderable_features(
     tc: &TileCacheManager,
     handle: &TileHandle,
     rendered_tiles: &Query<&RenderedTile>,
     features: &Query<&FeatureId, With<MVTFeatureMarker>>,
-    renderable_features: &'a mut Query<&mut RenderableFeature>,
-) -> Option<Mut<'a, RenderableFeature>> {
+    renderable_features: &mut Query<&mut RenderableFeature>,
+    active: bool,
+) {
+    let _ = tc
+        .rendered_tile_caches
+        .get(handle)
+        .and_then(|e| rendered_tiles.get(*e).ok())
+        .and_then(|v| v.feature_ids.as_ref())
+        .and_then(|es| {
+            es.iter()
+                .map(|e| features.get(*e).ok())
+                .collect::<Option<Vec<_>>>()
+        })
+        .and_then(|fs| fs.iter().map(|f| f.0).collect::<Option<Vec<_>>>())
+        .map(|ids| {
+            for id in ids {
+                let Some(mut r) = renderable_features.get_mut(id).ok() else {
+                    unreachable!("It must be set");
+                };
+                r.activate(active);
+            }
+        });
+}
+
+fn are_all_renderable_features_active(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &mut Query<&mut RenderableFeature>,
+) -> Option<bool> {
     tc.rendered_tile_caches
         .get(handle)
         .and_then(|e| rendered_tiles.get(*e).ok())
-        .and_then(|v| v.feature_id)
-        .and_then(|e| features.get(e).ok())
+        // Assume that all values have same activation with first one.
+        .and_then(|v| v.feature_ids.as_ref().and_then(|i| i.first()))
+        .and_then(|e| features.get(*e).ok())
         .and_then(|f| f.0)
-        .and_then(|id| renderable_features.get_mut(id).ok())
+        .and_then(|id| renderable_features.get(id).ok().map(|r| r.is_active()))
 }
 
-fn is_feature_rendered(renderable_feature: Option<&RenderableFeature>) -> bool {
-    renderable_feature.map(|r| r.is_rendered()).unwrap_or(false)
+fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeature>>) -> bool {
+    renderable_features
+        .map(|rs| rs.iter().all(|r| r.is_rendered()))
+        .unwrap_or(false)
 }
 
 // We should use entity to store the rendered tile, because the Bevy's entity is extensible.

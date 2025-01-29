@@ -644,14 +644,17 @@ async function processRenderableFeatureAdded(
 
   const { point, billboard, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
-    ?.transform;
+  const feature = point ?? billboard ?? polyline ?? polygon ?? model;
+  const transform = feature?.transform;
   if (transform) {
     setTransform(obj, transform);
   }
   applyTextureAspect(obj);
 
   obj.renderOrder = 1;
+
+  const material = feature?.material;
+  obj.visible = (material?.show ?? true) && !!feature?.active;
 
   if (!obj.userData.draped) {
     scenes.main.add(obj);
@@ -738,7 +741,7 @@ function processPointChanged(
   if (!obj.userData.isPicked) {
     obj.material.color.set(material.color);
   }
-  obj.material.visible = (material.show ?? true) && active;
+  obj.visible = (material.show ?? true) && active;
 
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
@@ -753,7 +756,7 @@ function processBillboardChanged(
   if (!obj.userData.isPicked) {
     obj.material.color.set(material.color);
   }
-  obj.material.visible = (material.show ?? true) && active;
+  obj.visible = (material.show ?? true) && active;
 
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
@@ -783,7 +786,7 @@ function processPolylineChanged(
       maxHeight,
       material.width,
     ];
-    obj.material.visible = (material.show ?? true) && active;
+    obj.visible = (material.show ?? true) && active;
   }
 }
 
@@ -794,7 +797,7 @@ function processPolygonChanged(
 ) {
   if (obj.material instanceof MeshLambertMaterial) {
     obj.material.color.set(material.color);
-    obj.material.visible = (material.show ?? true) && active;
+    obj.visible = (material.show ?? true) && active;
     obj.material.wireframe = material.wireframe ?? false;
     obj.material.userData.uMinMaxHeight.value =
       material.__internal__?.min_max_heights;

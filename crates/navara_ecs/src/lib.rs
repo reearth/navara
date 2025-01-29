@@ -6,7 +6,7 @@ use bevy_ecs::{
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
-use navara_component::Deleted;
+use navara_component::{Deleted, Rendered};
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
@@ -133,6 +133,7 @@ impl App {
             _ => unreachable!("Unexpected RenderableFeature type"),
         };
         render_info.is_rendered = true;
+        world.commands().entity(entity).insert(Rendered);
     }
 
     pub fn mark_polyline_is_rendered(&mut self, bits: u64) {
@@ -147,6 +148,7 @@ impl App {
             unreachable!("Unexpected RenderableFeature type");
         };
         render_info.is_rendered = true;
+        world.commands().entity(entity).insert(Rendered);
     }
 
     pub fn mark_polygon_is_rendered(&mut self, bits: u64) {
@@ -161,6 +163,7 @@ impl App {
             unreachable!("Unexpected RenderableFeature type");
         };
         render_info.is_rendered = true;
+        world.commands().entity(entity).insert(Rendered);
     }
 
     pub fn mark_model_is_rendered(&mut self, bits: u64) {
@@ -175,6 +178,7 @@ impl App {
             unreachable!("Unexpected RenderableFeature type");
         };
         render_info.is_rendered = true;
+        world.commands().entity(entity).insert(Rendered);
     }
 
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {

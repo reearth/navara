@@ -59,8 +59,8 @@ export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
   if (!(m instanceof Mesh) || !(mg instanceof Mesh)) return;
   if (!(m.material instanceof Material) || !(mg.material instanceof Material))
     return;
-  m.material.visible = !!mesh.material.show && mesh.mesh.active;
-  mg.material.visible = !!mesh.material.show && mesh.mesh.active;
+  m.visible = !!mesh.material.show && mesh.mesh.active;
+  mg.visible = !!mesh.material.show && mesh.mesh.active;
 }
 
 async function createMesh(
@@ -98,8 +98,9 @@ async function createMesh(
     geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
   }
 
-  const material = toMaterial(mat, loadedTexes, false);
+  const material = toMaterial(mat, loadedTexes);
   const m = new Mesh(geometry, material);
+  m.visible = false;
   m.renderOrder = mesh.render_order;
   m.name = `tile_${id}`;
   if (tranform) setTransform(m, tranform);
@@ -110,9 +111,9 @@ async function createMesh(
     vertexShader: GBufferGlobeVertShader,
     fragmentShader: GBufferGlobeFragShader,
     glslVersion: GLSL3,
-    visible: false,
   });
   const gbufferMesh = new Mesh(geometry, gbufferMaterial);
+  gbufferMesh.visible = false;
   scenes.globeGBuffer.add(gbufferMesh);
   meshes.set(to_globe_gbuffer_id(id), gbufferMesh);
 
@@ -129,7 +130,6 @@ function setTransform(obj: Object3D, transform: Transform) {
 function toMaterial(
   mat: EventMaterial,
   loadedTexes: Map<string, Texture>,
-  active: boolean,
 ): Material {
   const transparent = mat.opacity != null && mat.opacity !== 1;
   if (mat.wireframe) {
@@ -139,7 +139,6 @@ function toMaterial(
       transparent,
       wireframe: true,
       stencilWrite: false,
-      visible: active,
     });
   }
 
@@ -149,14 +148,12 @@ function toMaterial(
         stencilWrite: false,
         opacity: mat.opacity,
         transparent,
-        visible: active,
       })
     : new MeshBasicMaterial({
         color: mat.color,
         opacity: mat.opacity,
         transparent,
         stencilWrite: false,
-        visible: active,
       });
   if (mat.__internal__?.texture_fragment) {
     const textureFragmentId = generate_id_from_entity(

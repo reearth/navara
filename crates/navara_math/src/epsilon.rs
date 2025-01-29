@@ -7,6 +7,7 @@ pub const EPSILON4: FloatType = 0.0001;
 pub const EPSILON5: FloatType = 0.00001;
 pub const EPSILON6: FloatType = 0.000001;
 pub const EPSILON7: FloatType = 0.0000001;
+pub const EPSILON8: FloatType = 0.00000001;
 
 pub const EPSILON10: FloatType = 0.0000000001;
 pub const EPSILON11: FloatType = 0.00000000001;

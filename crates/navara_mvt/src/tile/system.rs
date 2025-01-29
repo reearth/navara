@@ -46,9 +46,13 @@ pub fn update_tiles(
     features: Query<&FeatureId, With<MVTFeatureMarker>>,
     changed_features: Query<&FeatureId, (With<MVTFeatureMarker>, Changed<FeatureId>)>,
     mut renderable_features: Query<&mut RenderableFeature>,
+    // TODO: This detects all `RenderableFeature` that has `Rendered`, but this isn't efficient.
+    //       We should use another marker to detect if it is MVT's RenderableFeature.
+    changed_renderable_features: Query<(), (With<RenderableFeature>, Changed<Rendered>)>,
 ) {
     let is_data_requester_changed = !changed_mvt_data_requester.is_empty();
     let are_features_changed = !changed_features.is_empty();
+    let are_renderable_features_rendered = !changed_renderable_features.is_empty();
 
     let occluder = occluder.iter().next().unwrap();
 
@@ -65,7 +69,8 @@ pub fn update_tiles(
                 || tc.is_updated_in_this_frame
                 || camera.is_added()
                 || camera.is_changed()
-                || are_features_changed;
+                || are_features_changed
+                || are_renderable_features_rendered;
             if !needs_update {
                 continue;
             }
@@ -185,6 +190,11 @@ pub fn transfer_mesh(
                     tile.coords,
                     &layer.appearances,
                 ) {
+                    if rendered_tile.feature_ids.is_some() {
+                        panic!("It should be cleaned before new feature is added");
+                    }
+                    rendered_tile.feature_ids = Some(Vec::with_capacity(result.len()));
+
                     for v in result {
                         let batched = BatchedFeature {
                             features: v.feature_ids,
@@ -216,7 +226,8 @@ pub fn transfer_mesh(
                                 ))
                                 .id(),
                         };
-                        rendered_tile.feature_id = Some(e);
+
+                        rendered_tile.feature_ids.as_mut().unwrap().push(e);
                     }
                 }
                 drop(mvt_bin);
