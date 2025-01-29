@@ -56,10 +56,12 @@ pub fn transfer_mesh(
                     feature_id: entity,
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
+                        is_rendered: false,
                     },
                     geometry: TransferableSingleGeometry {
                         batch_id: Some(batch_id.0),
                     },
+                    active: true,
                 },
             ))
             .id();
@@ -89,6 +91,20 @@ pub fn update_height_by_terrain(
     }
 
     for (_, mut feature) in &mut renderable_features.p0() {
+        match feature.as_ref() {
+            RenderableFeature::Point {
+                material, active, ..
+            } => {
+                if !material.clamp_to_ground {
+                    continue;
+                }
+                if !material.show || !active {
+                    continue;
+                }
+            }
+            _ => continue,
+        };
+
         match feature.as_mut() {
             RenderableFeature::Billboard {
                 coordinates: _,
@@ -98,11 +114,8 @@ pub fn update_height_by_terrain(
                 feature_id,
                 render_info,
                 geometry: _,
+                ..
             } => {
-                if !material.clamp_to_ground {
-                    continue;
-                }
-
                 let geometry = geometries.get(*feature_id).unwrap();
                 let terrain_height = compute_terrain_height_at_point(
                     &mut qt,

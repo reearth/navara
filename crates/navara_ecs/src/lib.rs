@@ -119,6 +119,50 @@ impl App {
             });
     }
 
+    pub fn mark_point_is_rendered(&mut self, bits: u64) {
+        let entity = Entity::from_bits(bits);
+        let world = self.app.world_mut();
+        let mut query = world.query::<&mut RenderableFeature>();
+
+        let Ok(mut feature) = query.get_mut(world, entity) else {
+            return;
+        };
+        let render_info = match feature.as_mut() {
+            RenderableFeature::Point { render_info, .. } => render_info,
+            RenderableFeature::Billboard { render_info, .. } => render_info,
+            _ => unreachable!("Unexpected RenderableFeature type"),
+        };
+        render_info.is_rendered = true;
+    }
+
+    pub fn mark_polyline_is_rendered(&mut self, bits: u64) {
+        let entity = Entity::from_bits(bits);
+        let world = self.app.world_mut();
+        let mut query = world.query::<&mut RenderableFeature>();
+
+        let Ok(mut feature) = query.get_mut(world, entity) else {
+            return;
+        };
+        let RenderableFeature::Polyline { render_info, .. } = feature.as_mut() else {
+            unreachable!("Unexpected RenderableFeature type");
+        };
+        render_info.is_rendered = true;
+    }
+
+    pub fn mark_polygon_is_rendered(&mut self, bits: u64) {
+        let entity = Entity::from_bits(bits);
+        let world = self.app.world_mut();
+        let mut query = world.query::<&mut RenderableFeature>();
+
+        let Ok(mut feature) = query.get_mut(world, entity) else {
+            return;
+        };
+        let RenderableFeature::Polygon { render_info, .. } = feature.as_mut() else {
+            unreachable!("Unexpected RenderableFeature type");
+        };
+        render_info.is_rendered = true;
+    }
+
     pub fn mark_model_is_rendered(&mut self, bits: u64) {
         let entity = Entity::from_bits(bits);
         let world = self.app.world_mut();

@@ -28,15 +28,13 @@ import type { CommonUniforms } from "../uniforms";
 
 import { initializeGltfLoader, TEXTURE_LOADER } from "./loaders";
 
-import type { BufferLoader, FeatureHandler } from ".";
 import { isNumber } from "lodash-es";
+import type { BufferLoader } from ".";
 
 export function renderFeature(
-  bits: bigint,
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  featureHandler: FeatureHandler,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point);
@@ -45,7 +43,7 @@ export function renderFeature(
     return renderBillboard(f.billboard);
   }
   if (f.model) {
-    return renderModel(bits, f.model, buf, featureHandler, uniforms);
+    return renderModel(f.model, buf, uniforms);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
@@ -186,10 +184,8 @@ async function renderBillboard(m: BillboardMesh) {
 }
 
 async function renderModel(
-  bits: bigint,
   m: ModelMesh,
   buf: BufferLoader,
-  featureHandler: FeatureHandler,
   uniforms: CommonUniforms,
 ) {
   const loader = initializeGltfLoader();
@@ -319,7 +315,6 @@ async function renderModel(
   }
 
   scene.visible = m.material.show ?? true;
-  featureHandler.markModelIsRendered(bits);
   return scene;
 }
 

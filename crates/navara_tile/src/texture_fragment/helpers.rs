@@ -23,7 +23,10 @@ pub(crate) fn request_texture_fragment(
     let entity = commands.spawn((
         TileTextureFragmentMarker(handle),
         TextureFragment::new(url),
-        OrderByDistance(tile.distance_from_camera),
+        OrderByDistance {
+            sse: tile.sse,
+            distance: tile.distance_from_camera,
+        },
         priority,
     ));
     let id = entity.id();

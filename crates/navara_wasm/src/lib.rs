@@ -201,9 +201,15 @@ impl Core {
         self.app.set_tile_mesh_prepared(handle);
     }
 
-    #[wasm_bindgen(js_name = markModelIsRendered)]
-    pub fn mark_model_is_rendered(&mut self, bits: u64) {
-        self.app.mark_model_is_rendered(bits);
+    #[wasm_bindgen(js_name = markFeatureIsRendered)]
+    pub fn mark_feature_is_rendered(&mut self, feature_type: &str, bits: u64) {
+        match feature_type {
+            "point" => self.app.mark_point_is_rendered(bits),
+            "polyline" => self.app.mark_polyline_is_rendered(bits),
+            "polygon" => self.app.mark_polygon_is_rendered(bits),
+            "model" => self.app.mark_model_is_rendered(bits),
+            _ => unreachable!(),
+        }
     }
 
     #[wasm_bindgen(js_name = triggerWorkerTaskCompleted)]

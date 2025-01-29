@@ -77,7 +77,9 @@ export class CustomRenderPass extends Pass {
   private _renderDrapedMesh(renderer: WebGLRenderer) {
     const drapedFeaturesScene = this._scenes.drapedFeatures;
 
-    this._drapedFeatureMaterials.forEach((m, k) => {
+    for (const [k, m] of this._drapedFeatureMaterials) {
+      if (!m.visible) continue;
+
       // Back face
       m.stencilFunc = AlwaysStencilFunc;
       m.stencilFail = KeepStencilOp;
@@ -120,6 +122,6 @@ export class CustomRenderPass extends Pass {
       m.depthWrite = false;
       m.depthTest = false;
       m.stencilWrite = false;
-    });
+    }
   }
 }

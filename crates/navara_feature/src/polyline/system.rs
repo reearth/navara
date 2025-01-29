@@ -95,7 +95,9 @@ pub fn transfer_batched_mesh(
                     feature_id: None,
                     render_info: PolylineRenderInformation {
                         should_recalculate_height: true,
+                        is_rendered: false,
                     },
+                    active: false,
                 },
             ))
             .id();
@@ -158,8 +160,10 @@ pub fn transfer_mesh(
                         feature_id: Some(entity),
                         render_info: PolylineRenderInformation {
                             should_recalculate_height: true,
+                            is_rendered: false,
                         },
                         extent,
+                        active: true,
                     },
                 ))
                 .id();
@@ -186,8 +190,16 @@ pub fn update_height_by_terrain(
 
     for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
-            RenderableFeature::Polyline { render_info, .. } => {
+            RenderableFeature::Polyline {
+                render_info,
+                material,
+                active,
+                ..
+            } => {
                 if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                    continue;
+                }
+                if !material.show || !active {
                     continue;
                 }
             }

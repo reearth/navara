@@ -22,6 +22,7 @@ pub struct PointMesh {
     pub transform: Transform,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableSingleGeometry,
+    pub active: bool,
 }
 
 #[wasm_bindgen]
@@ -32,6 +33,7 @@ pub struct BillboardMesh {
     pub transform: Transform,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableSingleGeometry,
+    pub active: bool,
 }
 
 #[wasm_bindgen]
@@ -42,6 +44,7 @@ pub struct PolylineMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePolylineGeometry,
     pub transform: Transform,
+    pub active: bool,
 }
 
 #[wasm_bindgen]
@@ -52,6 +55,7 @@ pub struct PolygonMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePolygonGeometry,
     pub transform: Transform,
+    pub active: bool,
 }
 
 #[wasm_bindgen]
@@ -63,6 +67,7 @@ pub struct ModelMesh {
     pub bin: Option<Handle>,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableModelGeometry,
+    pub active: bool,
 }
 
 #[wasm_bindgen]
@@ -91,11 +96,13 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 feature_id: _,
                 render_info: _,
                 geometry,
+                active,
             } => Self {
                 point: Some(PointMesh {
                     material: material.into(),
                     transform: transform.into(),
                     geometry: geometry.into(),
+                    active: *active,
                 }),
                 ..Default::default()
             },
@@ -107,11 +114,13 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 feature_id: _,
                 render_info: _,
                 geometry,
+                active,
             } => Self {
                 billboard: Some(BillboardMesh {
                     material: material.into(),
                     transform: transform.into(),
                     geometry: geometry.into(),
+                    active: *active,
                 }),
                 ..Default::default()
             },
@@ -124,11 +133,13 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 feature_id: _,
                 render_info: _,
                 extent: _,
+                active,
             } => Self {
                 polyline: Some(PolylineMesh {
                     material: material.into(),
                     geometry: geometry.into(),
                     transform: transform.into(),
+                    active: *active,
                 }),
                 ..Default::default()
             },
@@ -141,11 +152,13 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 feature_id: _,
                 render_info: _,
                 extent: _,
+                active,
             } => Self {
                 polygon: Some(PolygonMesh {
                     material: material.into(),
                     geometry: geometry.into(),
                     transform: transform.into(),
+                    active: *active,
                 }),
                 ..Default::default()
             },
@@ -159,12 +172,14 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 bin,
                 geometry,
                 feature_batch_id: _,
+                active,
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
                     transform: transform.into(),
                     bin: bin.as_ref().map(|v| v.0),
                     geometry: geometry.into(),
+                    active: *active,
                 }),
                 ..Default::default()
             },

@@ -109,6 +109,7 @@ pub fn transfer_mesh(
                     global_batch_ids: Some(global_batch_ids.0),
                 },
                 feature_batch_id: feature_batch_id.0,
+                active: true,
             },
         ));
 
@@ -139,6 +140,20 @@ pub fn update_height_by_terrain(
     }
 
     for (_, mut feature) in &mut renderable_features.p0() {
+        match feature.as_ref() {
+            RenderableFeature::Model {
+                material, active, ..
+            } => {
+                if !material.clamp_to_ground {
+                    continue;
+                }
+                if !material.show || !active {
+                    continue;
+                }
+            }
+            _ => continue,
+        };
+
         match feature.as_mut() {
             RenderableFeature::Model {
                 coordinates: _,
@@ -150,11 +165,8 @@ pub fn update_height_by_terrain(
                 bin: _,
                 geometry: _,
                 feature_batch_id: _,
+                ..
             } => {
-                if !material.clamp_to_ground {
-                    continue;
-                }
-
                 let geometry = match geometries.get(*feature_id) {
                     Ok(g) => g,
                     Err(_) => continue,
