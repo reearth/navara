@@ -654,7 +654,7 @@ async function processRenderableFeatureAdded(
   obj.renderOrder = 1;
 
   const material = feature?.material;
-  obj.visible = (material.show ?? true) && !!feature?.active;
+  obj.visible = (material?.show ?? true) && !!feature?.active;
 
   if (!obj.userData.draped) {
     scenes.main.add(obj);
