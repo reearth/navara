@@ -43,6 +43,7 @@ pub fn construct_geometry(
     let reader = mvt::MvtReader::new((*mvt_bin).to_vec()).ok()?;
     let layer_names = reader.get_layer_names().ok()?;
 
+    // TODO: Allow to specify a layer name.
     for (index, _name) in layer_names.iter().enumerate() {
         let extent = reader.get_extent(index);
         let mut converter = PosConverter::new(xyz, extent);
@@ -51,16 +52,8 @@ pub fn construct_geometry(
             Err(_) => continue,
         };
 
-        let geometry_type = match features.first().map(|f| f.get_geometry()) {
-            Some(Geometry::Point(_) | Geometry::MultiPoint(_)) => ConstructedGeometryType::Point,
-            Some(Geometry::Line(_) | Geometry::LineString(_) | Geometry::MultiLineString(_)) => {
-                ConstructedGeometryType::Polyline
-            }
-            Some(Geometry::Polygon(_) | Geometry::MultiPolygon(_)) => {
-                ConstructedGeometryType::Polygon
-            }
-            _ => continue,
-        };
+        // Assume a feature has only one type of geometry.
+        let mut geometry_type = Option::None;
 
         let mut feature_ids = vec![];
 
@@ -77,176 +70,232 @@ pub fn construct_geometry(
             }
             let batch_id = op_batch_id.unwrap();
 
-            match geom {
-                Geometry::MultiPolygon(v) => {
-                    let MultiPolygon(plgs) = v;
+            handle_geometry(
+                commands,
+                buf,
+                &mut feature_ids,
+                &mut geometry_type,
+                layer_id,
+                geom,
+                &mut converter,
+                &batch_id,
+                appearances,
+            );
+        }
 
-                    let appearance = match appearances
-                        .iter()
-                        .find(|a| matches!(a, Appearance::Polygon(_)))
-                    {
-                        Some(Appearance::Polygon(a)) => a,
-                        _ => continue,
-                    };
-
-                    construct_polygons_geometry(
-                        commands,
-                        buf,
-                        &mut feature_ids,
-                        layer_id,
-                        plgs,
-                        &mut converter,
-                        appearance,
-                        &batch_id,
-                    );
-                }
-                Geometry::Polygon(v) => {
-                    let appearance = match appearances
-                        .iter()
-                        .find(|a| matches!(a, Appearance::Polygon(_)))
-                    {
-                        Some(Appearance::Polygon(a)) => a,
-                        _ => continue,
-                    };
-
-                    construct_polygon_geometry(
-                        commands,
-                        buf,
-                        &mut feature_ids,
-                        layer_id,
-                        v,
-                        &mut converter,
-                        appearance,
-                        &batch_id,
-                    );
-                }
-                Geometry::MultiPoint(v) => {
-                    let MultiPoint(points) = v;
-
-                    for one_appr in appearances {
-                        match one_appr {
-                            Appearance::Point(appearance) => {
-                                construct_points_geometry(
-                                    commands,
-                                    &mut feature_ids,
-                                    layer_id,
-                                    points,
-                                    &mut converter,
-                                    appearance,
-                                    |x, y| PointGeometry {
-                                        coords: Vec3::new(x, y, 0.0 as FloatType),
-                                        crs: CRS::Geographic,
-                                    },
-                                    &batch_id,
-                                );
-                                break;
-                            }
-                            Appearance::Billboard(appearance) => {
-                                construct_points_geometry(
-                                    commands,
-                                    &mut feature_ids,
-                                    layer_id,
-                                    points,
-                                    &mut converter,
-                                    appearance,
-                                    |x, y| BillboardGeometry {
-                                        coords: Vec3::new(x, y, 0.0 as FloatType),
-                                        crs: CRS::Geographic,
-                                    },
-                                    &batch_id,
-                                );
-                                break;
-                            }
-                            _ => {}
-                        };
-                    }
-                }
-                Geometry::Point(point) => {
-                    for one_appr in appearances {
-                        match one_appr {
-                            Appearance::Point(appearance) => {
-                                construct_point_geometry(
-                                    commands,
-                                    &mut feature_ids,
-                                    layer_id,
-                                    point,
-                                    &mut converter,
-                                    appearance,
-                                    &|x, y| PointGeometry {
-                                        coords: Vec3::new(x, y, 0.0 as FloatType),
-                                        crs: CRS::Geographic,
-                                    },
-                                    &batch_id,
-                                );
-                                break;
-                            }
-                            Appearance::Billboard(appearance) => {
-                                construct_point_geometry(
-                                    commands,
-                                    &mut feature_ids,
-                                    layer_id,
-                                    point,
-                                    &mut converter,
-                                    appearance,
-                                    &|x, y| BillboardGeometry {
-                                        coords: Vec3::new(x, y, 0.0 as FloatType),
-                                        crs: CRS::Geographic,
-                                    },
-                                    &batch_id,
-                                );
-                                break;
-                            }
-                            _ => {}
-                        };
-                    }
-                }
-                Geometry::MultiLineString(v) => {
-                    let MultiLineString(lines) = v;
-
-                    for one_appr in appearances {
-                        if let Appearance::Polyline(appearance) = one_appr {
-                            construct_lines_geometry(
-                                commands,
-                                buf,
-                                &mut feature_ids,
-                                layer_id,
-                                lines,
-                                &mut converter,
-                                appearance,
-                                &batch_id,
-                            );
-                            break;
-                        }
-                    }
-                }
-                Geometry::LineString(line) => {
-                    for one_appr in appearances {
-                        if let Appearance::Polyline(appearance) = one_appr {
-                            construct_line_geometry(
-                                commands,
-                                buf,
-                                &mut feature_ids,
-                                layer_id,
-                                line,
-                                &mut converter,
-                                appearance,
-                                &batch_id,
-                            );
-                            break;
-                        }
-                    }
-                }
-                _ => {}
-            };
+        if feature_ids.is_empty() {
+            continue;
         }
 
         result.push(ConstructedGeometry {
             feature_ids,
-            geometry_type,
+            geometry_type: geometry_type.unwrap(),
         });
     }
 
     Some(result)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn handle_geometry(
+    commands: &mut Commands,
+    buf: &mut BufferStore,
+    feature_ids: &mut Vec<Entity>,
+    geometry_type: &mut Option<ConstructedGeometryType>,
+    layer_id: &str,
+    geom: &Geometry<f32>,
+    converter: &mut PosConverter,
+    batch_id: &u32,
+    appearances: &[Appearance],
+) {
+    match geom {
+        Geometry::MultiPolygon(v) => {
+            *geometry_type = Some(ConstructedGeometryType::Polygon);
+
+            let MultiPolygon(plgs) = v;
+
+            let appearance = match appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Polygon(_)))
+            {
+                Some(Appearance::Polygon(a)) => a,
+                _ => return,
+            };
+
+            construct_polygons_geometry(
+                commands,
+                buf,
+                feature_ids,
+                layer_id,
+                plgs,
+                converter,
+                appearance,
+                batch_id,
+            );
+        }
+        Geometry::Polygon(v) => {
+            *geometry_type = Some(ConstructedGeometryType::Polygon);
+
+            let appearance = match appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Polygon(_)))
+            {
+                Some(Appearance::Polygon(a)) => a,
+                _ => return,
+            };
+
+            construct_polygon_geometry(
+                commands,
+                buf,
+                feature_ids,
+                layer_id,
+                v,
+                converter,
+                appearance,
+                batch_id,
+            );
+        }
+        Geometry::MultiPoint(v) => {
+            *geometry_type = Some(ConstructedGeometryType::Point);
+
+            let MultiPoint(points) = v;
+
+            for one_appr in appearances {
+                match one_appr {
+                    Appearance::Point(appearance) => {
+                        construct_points_geometry(
+                            commands,
+                            feature_ids,
+                            layer_id,
+                            points,
+                            converter,
+                            appearance,
+                            |x, y| PointGeometry {
+                                coords: Vec3::new(x, y, 0.0 as FloatType),
+                                crs: CRS::Geographic,
+                            },
+                            batch_id,
+                        );
+                        break;
+                    }
+                    Appearance::Billboard(appearance) => {
+                        construct_points_geometry(
+                            commands,
+                            feature_ids,
+                            layer_id,
+                            points,
+                            converter,
+                            appearance,
+                            |x, y| BillboardGeometry {
+                                coords: Vec3::new(x, y, 0.0 as FloatType),
+                                crs: CRS::Geographic,
+                            },
+                            batch_id,
+                        );
+                        break;
+                    }
+                    _ => {}
+                };
+            }
+        }
+        Geometry::Point(point) => {
+            *geometry_type = Some(ConstructedGeometryType::Point);
+
+            for one_appr in appearances {
+                match one_appr {
+                    Appearance::Point(appearance) => {
+                        construct_point_geometry(
+                            commands,
+                            feature_ids,
+                            layer_id,
+                            point,
+                            converter,
+                            appearance,
+                            &|x, y| PointGeometry {
+                                coords: Vec3::new(x, y, 0.0 as FloatType),
+                                crs: CRS::Geographic,
+                            },
+                            batch_id,
+                        );
+                        break;
+                    }
+                    Appearance::Billboard(appearance) => {
+                        construct_point_geometry(
+                            commands,
+                            feature_ids,
+                            layer_id,
+                            point,
+                            converter,
+                            appearance,
+                            &|x, y| BillboardGeometry {
+                                coords: Vec3::new(x, y, 0.0 as FloatType),
+                                crs: CRS::Geographic,
+                            },
+                            batch_id,
+                        );
+                        break;
+                    }
+                    _ => {}
+                };
+            }
+        }
+        Geometry::MultiLineString(v) => {
+            *geometry_type = Some(ConstructedGeometryType::Polyline);
+
+            let MultiLineString(lines) = v;
+
+            for one_appr in appearances {
+                if let Appearance::Polyline(appearance) = one_appr {
+                    construct_lines_geometry(
+                        commands,
+                        buf,
+                        feature_ids,
+                        layer_id,
+                        lines,
+                        converter,
+                        appearance,
+                        batch_id,
+                    );
+                    break;
+                }
+            }
+        }
+        Geometry::LineString(line) => {
+            *geometry_type = Some(ConstructedGeometryType::Polyline);
+
+            for one_appr in appearances {
+                if let Appearance::Polyline(appearance) = one_appr {
+                    construct_line_geometry(
+                        commands,
+                        buf,
+                        feature_ids,
+                        layer_id,
+                        line,
+                        converter,
+                        appearance,
+                        batch_id,
+                    );
+                    break;
+                }
+            }
+        }
+        Geometry::GeometryCollection(geoms) => {
+            for geom in &geoms.0 {
+                handle_geometry(
+                    commands,
+                    buf,
+                    feature_ids,
+                    geometry_type,
+                    layer_id,
+                    geom,
+                    converter,
+                    batch_id,
+                    appearances,
+                );
+            }
+        }
+        _ => {}
+    };
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -78,7 +78,7 @@ export class CustomRenderPass extends Pass {
     const drapedFeaturesScene = this._scenes.drapedFeatures;
 
     for (const [k, m] of this._drapedFeatureMaterials) {
-      if (!m.visible) continue;
+      if (this._meshes.get(k)?.visible === false || !m.visible) continue;
 
       // Back face
       m.stencilFunc = AlwaysStencilFunc;

@@ -1,4 +1,4 @@
-use navara_math::EPSILON12;
+use navara_math::EPSILON10;
 use radians::{Angle, Radians};
 
 use crate::{Ellipsoid, Meters, LLE};
@@ -191,7 +191,7 @@ fn vincenty_inverse_formula(
             cosine_twice_sigma_midpoint,
         );
 
-        if (lambda - lambda_dot).abs() <= EPSILON12 {
+        if (lambda - lambda_dot).abs() <= EPSILON10 {
             break;
         }
     }
