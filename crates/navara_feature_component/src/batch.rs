@@ -95,10 +95,13 @@ impl FeatureBatchIdMap {
     ) -> bool {
         if let Some(ids) = self.get(key) {
             if let Some(global_ids) = buf.get_u32(&ids.0) {
+                // remove global batch ids from batch table
                 for id in global_ids {
                     batch_table.remove(id);
                 }
             }
+
+            // remove global batch ids from buffer store
             buf.remove(&ids.0);
             self.map.remove(key);
             return true;
@@ -108,7 +111,7 @@ impl FeatureBatchIdMap {
 }
 
 pub enum BatchTableValue {
-    MVT(String),
+    StringObj(String),
     Cesium3dTileset(B3dmBatchTable),
 }
 
@@ -150,13 +153,13 @@ impl BatchTable {
 
     pub fn add_hash_map<T: Serialize>(&mut self, prop: &T) -> Option<u32> {
         let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
-        self.add(BatchTableValue::MVT(props))
+        self.add(BatchTableValue::StringObj(props))
     }
 
     pub fn add_multiple_null_val(&mut self, count: usize) -> Vec<u32> {
         let mut keys = vec![];
         for _ in 0..count {
-            let key = self.add(BatchTableValue::MVT("{}".to_string()));
+            let key = self.add(BatchTableValue::StringObj("{}".to_string()));
             if let Some(k) = key {
                 keys.push(k);
             }

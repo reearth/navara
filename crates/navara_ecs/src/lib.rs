@@ -380,21 +380,18 @@ impl App {
                 Some(table) => table,
                 None => return String::from("{}"),
             };
-
-            get_prop_from_batch_table(in_batch_table, &in_batch_len, &in_batch_id)
-        } else {
-            if let Some(BatchTableValue::MVT(prop_str)) = self
-                .app
-                .world()
-                .get_resource::<BatchTable>()
-                .unwrap()
-                .get(batch_id)
-            {
-                return prop_str.clone();
-            }
-
-            String::from("{}")
+            return get_prop_from_batch_table(in_batch_table, &in_batch_len, &in_batch_id);
         }
+        if let Some(BatchTableValue::StringObj(prop_str)) = self
+            .app
+            .world()
+            .get_resource::<BatchTable>()
+            .unwrap()
+            .get(batch_id)
+        {
+            return prop_str.clone();
+        }
+        String::from("{}")
     }
 
     pub fn search_feature_entity_by_global_batch_id(

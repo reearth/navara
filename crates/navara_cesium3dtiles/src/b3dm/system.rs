@@ -159,7 +159,7 @@ pub fn delete_model_by_b3dm_layer(
     deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
     b3dm_layers: Query<Entity, With<B3dmLayer>>,
     features: Query<
-        (&ModelBin, &FeatureBatchId, &LayerId),
+        (&ModelBin, &FeatureBatchId, &LayerId, &GlobalBatchIds),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -173,21 +173,29 @@ pub fn delete_model_by_b3dm_layer(
             Some(e) => e,
             None => continue,
         };
+
         for e in entities {
-            if let Ok((modebin, _feature_batch_id, _layer_id)) = features.get(*e) {
-                buf.remove(&modebin.0);
-            };
-
-            if feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res) {
-                for (_modebin, feature_batch_id, layer_id) in &features {
-                    if layer_id.0 == d.0 {
-                        batch_table_res.remove(&feature_batch_id.0);
-                    }
-                }
-            }
-
+            // if a model has batch table, its global batch ids will be removed here.
+            feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res);
             commands.entity(*e).despawn();
         }
+
+        for (modebin, feature_batch_id, layer_id, global_batch_ids) in &features {
+            if layer_id.0 == d.0 {
+                batch_table_res.remove(&feature_batch_id.0);
+                buf.remove(&modebin.0);
+
+                // if a model hasn't batch table, its global batch ids will be removed here.
+                if let Some(global_ids) = buf.get_u32(&global_batch_ids.0) {
+                    // remove global batch ids from batch table
+                    for id in global_ids {
+                        batch_table_res.remove(id);
+                    }
+                }
+                buf.remove(&global_batch_ids.0);
+            }
+        }
+
         for e in &b3dm_layers {
             commands.entity(e).despawn();
         }
@@ -338,7 +346,7 @@ pub fn remove_invisible_rendered_tiles(
         With<RenderedCesium3dTileContentB3dmMarker>,
     >,
     features: Query<
-        (&FeatureId, &ModelBin, &FeatureBatchId),
+        (&FeatureId, &ModelBin, &FeatureBatchId, &GlobalBatchIds),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -355,19 +363,30 @@ pub fn remove_invisible_rendered_tiles(
 
         if let Some(feature_id) = tile.feature_id {
             // Remove feature
-            if let Ok((rendered_feature_id, model_bin, feature_batch_id)) = features.get(feature_id)
+            if let Ok((rendered_feature_id, model_bin, feature_batch_id, global_batch_ids)) =
+                features.get(feature_id)
             {
                 if let Some(rendered_feature_id) = rendered_feature_id.0 {
                     if !rendered_features.contains(rendered_feature_id) {
                         continue;
                     }
 
+                    // if a model has batch table, its global batch ids will be removed here.
                     if feature_batch_id_map.remove(
                         &rendered_feature_id,
                         &mut buf,
                         &mut batch_table_res,
                     ) {
                         batch_table_res.remove(&feature_batch_id.0);
+                    } else {
+                        // if a model hasn't batch table, its global batch ids will be removed here.
+                        if let Some(global_ids) = buf.get_u32(&global_batch_ids.0) {
+                            // remove global batch ids from batch table
+                            for id in global_ids {
+                                batch_table_res.remove(id);
+                            }
+                        }
+                        buf.remove(&global_batch_ids.0);
                     }
 
                     buf.remove(&model_bin.0);

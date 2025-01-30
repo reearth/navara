@@ -32,7 +32,7 @@ export class PickHelper {
   private highlightColor: number[];
   private onPickCallback: (pickArr: number[]) => void;
 
-  mousedownHandler: (event: MouseEvent) => void;
+  mouseclickHandler: (event: MouseEvent) => void;
 
   constructor(
     element: HTMLElement,
@@ -57,8 +57,8 @@ export class PickHelper {
     this.highlightColor = highlightColor ?? [0, 1, 1];
     this.onPickCallback = onPickCallback;
 
-    this.mousedownHandler = (event: MouseEvent) => this.onMouseDown(event);
-    element.addEventListener("mousedown", this.mousedownHandler);
+    this.mouseclickHandler = (event: MouseEvent) => this.onMouseClick(event);
+    element.addEventListener("click", this.mouseclickHandler);
   }
 
   private traverseModel(obj: Object3D, callfunc: (mesh: Mesh) => void) {
@@ -259,7 +259,24 @@ export class PickHelper {
     }
   }
 
-  private onMouseDown(event: MouseEvent) {
+  public renderDebug() {
+    this.togglePickable(1);
+
+    this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
+    this.renderer.clear();
+    this.renderer.render(this.scenes.globeGBuffer, this.camera);
+
+    this.renderer.setRenderTarget(null);
+    this.renderer.clear();
+    this.renderer.render(this.scenes.globe, this.camera);
+
+    this.renderDrapedMesh();
+    this.renderer.render(this.scenes.main, this.camera);
+
+    this.togglePickable(0);
+  }
+
+  private onMouseClick(event: MouseEvent) {
     const x = event.clientX;
     const y = event.clientY;
 
@@ -311,6 +328,6 @@ export class PickHelper {
   }
 
   public dispose() {
-    this.element.removeEventListener("mousedown", this.mousedownHandler);
+    this.element.removeEventListener("click", this.mouseclickHandler);
   }
 }

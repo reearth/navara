@@ -7,6 +7,8 @@ import type {
   PolygonMesh,
 } from "@navara/engine";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import Pick from "@shaders/glsl/chunks/pick.glsl";
+import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
@@ -91,10 +93,10 @@ sprite_uv = position.xy;
         "uniform float opacity;",
         `
 uniform float opacity;
-uniform float uBatchId;
-uniform float uPickable;
+${BatchDefinitioin}
 in vec2 sprite_uv;
 ${PointFragShader}
+${Pick}
 `,
       )
       .replace(
@@ -108,12 +110,9 @@ if (alpha == 0.) {
 
 gl_FragColor.a = alpha;
 
-if (uPickable > 0.5) {
-  float r = floor(uBatchId / 65536.0);
-  float g = floor(mod(uBatchId / 256.0, 256.0));
-  float b = floor(mod(uBatchId, 256.0));
-
-  gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+if (uPickable > 0.0 && alpha > 0.0) {
+  vec3 pickColor = nvr_batchIdToColor(uBatchId);
+  gl_FragColor = vec4(pickColor.xyz, 1.0);
 }
 `,
       );
@@ -154,20 +153,17 @@ async function renderBillboard(m: BillboardMesh) {
         "#include <clipping_planes_pars_fragment>",
         `
         #include <clipping_planes_pars_fragment>
-        uniform float uBatchId;
-        uniform float uPickable;
+        ${BatchDefinitioin}
+        ${Pick}
       `,
       )
       .replace(
         "#include <fog_fragment>",
         `
         #include <fog_fragment>
-        if (uPickable > 0.5 && sampledDiffuseColor.a > 0.0) {
-          float r = floor(uBatchId / 65536.0);
-          float g = floor(mod(uBatchId / 256.0, 256.0));
-          float b = floor(mod(uBatchId, 256.0));
-
-          gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+        if (uPickable > 0.0 && sampledDiffuseColor.a > 0.0) {
+          vec3 pickColor = nvr_batchIdToColor(uBatchId);
+          gl_FragColor = vec4(pickColor.xyz, 1.0);
         }
         `,
       );
@@ -276,6 +272,7 @@ async function renderModel(
               uniform float uPickable;
               in float v_IsPicked;
               in float v_BatchId;
+              ${Pick}
               void main() {
               `,
             )
@@ -293,12 +290,9 @@ async function renderModel(
               `
               #include <dithering_fragment>
 
-              if (uPickable > 0.5 && diffuseColor.a > 0.0) {
-                float r = floor(v_BatchId / 65536.0);
-                float g = floor(mod(v_BatchId / 256.0, 256.0));
-                float b = floor(mod(v_BatchId, 256.0));
-        
-                gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+              if (uPickable > 0.0 && diffuseColor.a > 0.0) {
+                vec3 pickColor = nvr_batchIdToColor(v_BatchId);
+                gl_FragColor = vec4(pickColor.xyz, 1.0);
               }
               `,
             );
@@ -533,6 +527,7 @@ uniform vec3 uHighlightColor;
 uniform float uPickable;
 in float v_IsPicked;
 in float v_BatchId;
+${Pick}
 `,
       )
       .replace(
@@ -560,16 +555,13 @@ if(v_IsPicked > 0.5) {
       )
       // replace the last line of the fragment shader.
       .replace(
-        /}([^}]*)$/,
+        "#include <dithering_fragment>",
         `
-  if (uPickable > 0.5 && diffuseColor.a > 0.0) {
-    float r = floor(v_BatchId / 65536.0);
-    float g = floor(mod(v_BatchId / 256.0, 256.0));
-    float b = floor(mod(v_BatchId, 256.0));
-
-    gl_FragColor = vec4(r/255.0, g/255.0, b/255.0, 1.0);
+        #include <dithering_fragment>
+  if (uPickable > 0.0 && diffuseColor.a > 0.0) {
+    vec3 pickColor = nvr_batchIdToColor(v_BatchId);
+    gl_FragColor = vec4(pickColor.xyz, 1.0);
   }
-}
 `,
       );
   };

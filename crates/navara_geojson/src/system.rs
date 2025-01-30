@@ -60,7 +60,6 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
 fn spawn_feature(
     commands: &mut Commands,
     buf: &mut BufferStore,
-    batch_table_res: &mut BatchTable,
     appearances: &[Appearance],
     geometry: &Geometry,
     layer_id: &str,
@@ -184,7 +183,7 @@ fn spawn_feature(
             },
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let global_batch_ids = batch_table_res.add_multiple_null_val(1);
+                    let global_batch_ids = vec![batch_id];
                     let ids_handle = buf.new_u32(global_batch_ids);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
@@ -199,7 +198,7 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let global_batch_ids = batch_table_res.add_multiple_null_val(1);
+                        let global_batch_ids = vec![batch_id];
                         let ids_handle = buf.new_u32(global_batch_ids);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
@@ -244,7 +243,6 @@ pub fn construct_feature(
                                     spawn_feature(
                                         &mut commands,
                                         &mut buf,
-                                        &mut batch_table_res,
                                         appearances,
                                         g,
                                         layer.layer_id.as_str(),
@@ -262,7 +260,6 @@ pub fn construct_feature(
                                 spawn_feature(
                                     &mut commands,
                                     &mut buf,
-                                    &mut batch_table_res,
                                     appearances,
                                     g,
                                     layer.layer_id.as_str(),
@@ -274,12 +271,11 @@ pub fn construct_feature(
                 }
                 GeoJson::Geometry(g) => {
                     if let Some(batch_id) =
-                        batch_table_res.add(BatchTableValue::MVT(String::from("{}")))
+                        batch_table_res.add(BatchTableValue::StringObj(String::from("{}")))
                     {
                         spawn_feature(
                             &mut commands,
                             &mut buf,
-                            &mut batch_table_res,
                             appearances,
                             g,
                             layer.layer_id.as_str(),
@@ -422,6 +418,17 @@ pub fn delete_geo_json_layer(
                             geometry.remove_from_buf(&mut buf);
                         }
                         RenderableFeature::Polygon { geometry, .. } => {
+                            geometry.remove_from_buf(&mut buf);
+                        }
+                        RenderableFeature::Model { geometry, .. } => {
+                            if let Some(global_ids) =
+                                buf.get_u32(&geometry.global_batch_ids.unwrap_or(0))
+                            {
+                                // remove global batch ids from batch table
+                                for id in global_ids {
+                                    batch_table.remove(id);
+                                }
+                            }
                             geometry.remove_from_buf(&mut buf);
                         }
                         _ => (),

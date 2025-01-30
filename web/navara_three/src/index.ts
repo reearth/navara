@@ -559,6 +559,7 @@ export default class ThreeView {
 
   private _render() {
     this._effectComposer.render();
+    // this._pickHelper?.renderDebug();
   }
 
   // TODO: Handle event from user.
