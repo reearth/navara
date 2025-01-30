@@ -14,6 +14,8 @@ import {
   Material,
   NearestFilter,
   DepthTexture,
+  DirectionalLight,
+  AmbientLight,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -33,6 +35,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
+import type { Light } from "./light";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
@@ -51,6 +54,8 @@ import { PickHelper } from "./pickHelper";
 
 export * from "./type";
 export * from "./constants";
+export * from "./light";
+export * from "./antialias";
 
 export type Options = {
   container?: HTMLElement;
@@ -65,6 +70,8 @@ export type Options = {
   camera?: PerspectiveCamera;
   renderer?: WebGLRenderer;
   antialias?: Antialias;
+  light?: Light;
+  backgroundColor?: number;
 };
 
 export type Events = {
@@ -320,6 +327,8 @@ export default class ThreeView {
     const renderTarget = new WebGLRenderTarget(width, height, {
       stencilBuffer: true,
     });
+
+    // Setup render pass
     this._effectComposer = new EffectComposer(this.renderer, renderTarget);
     this._renderPass = new CustomRenderPass(
       this._scenes,
@@ -330,6 +339,7 @@ export default class ThreeView {
     );
     this._effectComposer.addPass(this._renderPass);
 
+    // AA
     const aaEffect = selectAntialiasEffect(
       options.antialias ?? DEFAULT_ANTIALIAS,
     );
@@ -337,6 +347,28 @@ export default class ThreeView {
       const aaPass = new EffectPass(this.camera, aaEffect);
       this._effectComposer.addPass(aaPass);
     }
+
+    // TODO: Replace it with the aerial perspective.
+    // Light
+    const light = options.light;
+    if (light?.ambient?.enabled ?? true) {
+      const ambientLight = new AmbientLight(
+        light?.ambient?.color ?? 0xffffff,
+        light?.ambient?.intensity ?? 0.5,
+      );
+      this.scene.add(ambientLight);
+    }
+    if (light?.sun?.enabled ?? true) {
+      const directionalLight = new DirectionalLight(
+        light?.sun?.color ?? 0xffffff,
+        light?.sun?.intensity ?? 5,
+      );
+      directionalLight.position.set(...(light?.sun?.position ?? [1, 5, 3]));
+      this.scene.add(directionalLight);
+    }
+
+    // Background color
+    this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
 
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
