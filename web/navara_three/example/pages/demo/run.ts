@@ -2,7 +2,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
-import { AmbientLight, AxesHelper, DirectionalLight } from "three";
+import { AxesHelper } from "three";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -24,13 +24,6 @@ export const run = async (view: ThreeView) => {
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
   view.scene.add(axesHelper);
-
-  const ambientLight = new AmbientLight(0xffffff, 0.2);
-  view.scene.add(ambientLight);
-
-  const directionalLight = new DirectionalLight(0xffffff);
-  directionalLight.position.set(1, 1, 1);
-  view.scene.add(directionalLight);
 
   view.addLayer({
     type: "tiles",
