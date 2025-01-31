@@ -36,6 +36,7 @@ import {
 } from "./event";
 import { registerInputEvents } from "./input";
 import type { Light } from "./light";
+import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
@@ -72,7 +73,7 @@ export type Options = {
   antialias?: Antialias;
   light?: Light;
   backgroundColor?: number;
-  pickable?: boolean;
+  picking?: Picking;
 };
 
 export type Events = {
@@ -401,6 +402,10 @@ export default class ThreeView {
       inverseProjectionMatrix: { value: null },
       highlightColor: { value: [0, 1, 1] },
     };
+
+    if (options.picking) {
+      this._uniforms.highlightColor.value = options.picking.highlightColor;
+    }
   }
 
   get scene() {
@@ -432,7 +437,7 @@ export default class ThreeView {
         this._uniforms.highlightColor.value,
         this.onPick.bind(this),
       );
-      this._pickHelper.enablePick(this._options.pickable ?? true);
+      this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
 
     this._startMainLoop();
