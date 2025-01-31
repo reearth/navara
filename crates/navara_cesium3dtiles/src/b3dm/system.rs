@@ -180,11 +180,13 @@ pub fn delete_model_by_b3dm_layer(
             feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res);
             commands.entity(*e).despawn();
 
-            if let Ok((_m, RenderableFeature::Model { feature_id, .. })) = rendered_features.get(*e) {
-                if let Ok((modebin, feature_batch_id, global_batch_ids)) = features.get(*feature_id) {
+            if let Ok((_m, RenderableFeature::Model { feature_id, .. })) = rendered_features.get(*e)
+            {
+                if let Ok((modebin, feature_batch_id, global_batch_ids)) = features.get(*feature_id)
+                {
                     batch_table_res.remove(&feature_batch_id.0);
                     buf.remove(&modebin.0);
-            
+
                     // if a model hasn't batch table, its global batch ids will be removed here.
                     if let Some(global_ids) = buf.get_u32(&global_batch_ids.0) {
                         // remove global batch ids from batch table
@@ -194,7 +196,7 @@ pub fn delete_model_by_b3dm_layer(
                         buf.remove(&global_batch_ids.0);
                     }
                 }
-            }            
+            }
         }
 
         for e in &b3dm_layers {

@@ -72,6 +72,7 @@ export type Options = {
   antialias?: Antialias;
   light?: Light;
   backgroundColor?: number;
+  pickable?: boolean;
 };
 
 export type Events = {
@@ -431,6 +432,7 @@ export default class ThreeView {
         this._uniforms.highlightColor.value,
         this.onPick.bind(this),
       );
+      this._pickHelper.enablePick(this._options.pickable ?? true);
     }
 
     this._startMainLoop();

@@ -33,7 +33,10 @@ export class PickHelper {
   private highlightColor: number[];
   private onPickCallback: (pickArr: number[]) => void;
 
-  mouseclickHandler: (event: MouseEvent) => void;
+  private mouseMoved: boolean;
+  private mouseDownHandler: (event: MouseEvent) => void;
+  private mouseMoveHandler: (event: MouseEvent) => void;
+  private mouseUpHandler: (event: MouseEvent) => void;
 
   constructor(
     element: HTMLElement,
@@ -62,10 +65,38 @@ export class PickHelper {
     this.highlightColor = highlightColor ?? [0, 1, 1];
     this.onPickCallback = onPickCallback;
 
-    this.mouseclickHandler = (event: MouseEvent) => this.onMouseClick(event);
-    element.addEventListener("click", this.mouseclickHandler);
+    this.mouseMoved = false;
+    this.mouseDownHandler = (event: MouseEvent) => this.onMouseDown(event);
+    this.mouseMoveHandler = (event: MouseEvent) => this.onMouseMove(event);
+    this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
 
     // element.addEventListener("dblclick", this.renderDebugFile.bind(this));
+  }
+
+  private onMouseDown(_event: MouseEvent) {
+    this.mouseMoved = false;
+  }
+
+  private onMouseMove(_event: MouseEvent) {
+    this.mouseMoved = true;
+  }
+
+  private onMouseUp(event: MouseEvent) {
+    if (!this.mouseMoved) {
+      this.onMouseClick(event);
+    }
+  }
+
+  enablePick(bPick: boolean) {
+    if (bPick) {
+      this.element.addEventListener("mousedown", this.mouseDownHandler);
+      this.element.addEventListener("mousemove", this.mouseMoveHandler);
+      this.element.addEventListener("mouseup", this.mouseUpHandler);
+    } else {
+      this.element.removeEventListener("mousedown", this.mouseDownHandler);
+      this.element.removeEventListener("mousemove", this.mouseMoveHandler);
+      this.element.removeEventListener("mouseup", this.mouseUpHandler);
+    }
   }
 
   private traverseModel(obj: Object3D, callfunc: (mesh: Mesh) => void) {
@@ -401,6 +432,6 @@ export class PickHelper {
   }
 
   public dispose() {
-    this.element.removeEventListener("click", this.mouseclickHandler);
+    this.enablePick(false);
   }
 }
