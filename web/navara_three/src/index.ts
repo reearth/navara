@@ -16,6 +16,7 @@ import {
   DepthTexture,
   DirectionalLight,
   AmbientLight,
+  type Vector3Tuple,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -359,7 +360,11 @@ export default class ThreeView {
         light?.sun?.color ?? 0xffffff,
         light?.sun?.intensity ?? 5,
       );
-      directionalLight.position.set(...(light?.sun?.position ?? [1, 5, 3]));
+      directionalLight.position.set(
+        ...(light?.sun?.position
+          ? light.sun.position.toArray()
+          : ([1, 5, 3] as Vector3Tuple)),
+      );
       this.scene.add(directionalLight);
     }
 

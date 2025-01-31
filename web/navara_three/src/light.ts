@@ -1,3 +1,5 @@
+import type { Vector3 } from "three";
+
 export type Light = {
   ambient?: {
     enabled?: boolean;
@@ -7,7 +9,7 @@ export type Light = {
   sun?: {
     enabled?: boolean;
     color?: number;
-    position?: [number, number, number];
+    position?: Vector3;
     intensity?: number;
   };
 };
