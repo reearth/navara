@@ -373,6 +373,10 @@ export default class ThreeView {
 
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
+      // Observe a change in devicePixelRatio.
+      window
+        .matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+        .addEventListener("change", this._handleResize);
     }
 
     if (options.debug) {
@@ -462,11 +466,7 @@ export default class ThreeView {
       w * (pixelRatio ?? 1),
       h * (pixelRatio ?? 1),
     );
-    if (
-      typeof pixelRatio === "number" &&
-      "setPixelRatio" in this.renderer &&
-      typeof this.renderer.setPixelRatio === "function"
-    ) {
+    if (pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
 
