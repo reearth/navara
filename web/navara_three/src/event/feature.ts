@@ -70,8 +70,8 @@ async function renderPoint(m: PointMesh) {
   const batchId = m.geometry.batch_id ?? 0;
 
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uBatchId = { value: batchId };
-    shader.uniforms.uPickable = material.userData.uPickable;
+    shader.uniforms.nvr_uBatchId = { value: batchId };
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
     shader.vertexShader = shader.vertexShader
       .replace(
         "uniform vec2 center;",
@@ -110,8 +110,8 @@ if (alpha == 0.) {
 
 gl_FragColor.a = alpha;
 
-if (uPickable > 0.0 && alpha > 0.0) {
-  vec3 pickColor = nvr_batchIdToColor(uBatchId);
+if (nvr_uPickable > 0.0 && alpha > 0.0) {
+  vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
   gl_FragColor = vec4(pickColor.xyz, 1.0);
 }
 `,
@@ -145,8 +145,8 @@ async function renderBillboard(m: BillboardMesh) {
   };
 
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uBatchId = { value: batchId };
-    shader.uniforms.uPickable = material.userData.uPickable;
+    shader.uniforms.nvr_uBatchId = { value: batchId };
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
 
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -161,8 +161,8 @@ async function renderBillboard(m: BillboardMesh) {
         "#include <fog_fragment>",
         `
         #include <fog_fragment>
-        if (uPickable > 0.0 && sampledDiffuseColor.a > 0.0) {
-          vec3 pickColor = nvr_batchIdToColor(uBatchId);
+        if (nvr_uPickable > 0.0 && sampledDiffuseColor.a > 0.0) {
+          vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
           gl_FragColor = vec4(pickColor.xyz, 1.0);
         }
         `,
@@ -249,18 +249,18 @@ async function renderModel(
         };
 
         mesh.material.onBeforeCompile = (shader: any) => {
-          shader.uniforms.uHighlightColor = uniforms.highlightColor;
-          shader.uniforms.uPickable = mesh.material.userData.uPickable;
+          shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
+          shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
           shader.vertexShader = shader.vertexShader.replace(
             "void main() {",
             `
               attribute float isPicked;
               attribute float batchId;
-              out float v_BatchId;
-              out float v_IsPicked;
+              out float nvr_vBatchId;
+              out float nvr_vIsPicked;
               void main() {
-              v_IsPicked = isPicked;
-              v_BatchId = batchId;
+              nvr_vIsPicked = isPicked;
+              nvr_vBatchId = batchId;
               `,
           );
 
@@ -268,10 +268,10 @@ async function renderModel(
             .replace(
               "void main() {",
               `
-              uniform vec3 uHighlightColor;
-              uniform float uPickable;
-              in float v_IsPicked;
-              in float v_BatchId;
+              uniform vec3 nvr_uHighlightColor;
+              uniform float nvr_uPickable;
+              in float nvr_vIsPicked;
+              in float nvr_vBatchId;
               ${Pick}
               void main() {
               `,
@@ -280,8 +280,8 @@ async function renderModel(
               "vec4 diffuseColor = vec4( diffuse, opacity );",
               `
               vec4 diffuseColor = vec4( diffuse, opacity );
-              if(v_IsPicked > 0.5) {
-                diffuseColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+              if(nvr_vIsPicked > 0.0) {
+                diffuseColor = vec4(nvr_uHighlightColor.xyz, 1.0);
               }
               `,
             )
@@ -290,8 +290,8 @@ async function renderModel(
               `
               #include <dithering_fragment>
 
-              if (uPickable > 0.0 && diffuseColor.a > 0.0) {
-                vec3 pickColor = nvr_batchIdToColor(v_BatchId);
+              if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
+                vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
                 gl_FragColor = vec4(pickColor.xyz, 1.0);
               }
               `,
@@ -396,8 +396,8 @@ async function renderPolyline(
       tGlobeDepth: uniforms.tGlobeDepth,
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
-      uPickable: uPickable,
-      uHighlightColor: uniforms.highlightColor,
+      nvr_uPickable: uPickable,
+      nvr_uHighlightColor: uniforms.highlightColor,
     },
     vertexShader: PolylineVertShader,
     fragmentShader: mesh.material.clamp_to_ground
@@ -481,7 +481,7 @@ async function renderPolygon(
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
-    shader.uniforms.uPickable = material.userData.uPickable;
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
@@ -489,7 +489,7 @@ async function renderPolygon(
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
 
-    shader.uniforms.uHighlightColor = uniforms.highlightColor;
+    shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
 
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -501,8 +501,8 @@ attribute float batchId;
 in vec4 scaleNormalAndCap;
 
 uniform vec2 uMinMaxHeight;
-out float v_BatchId;
-out float v_IsPicked;
+out float nvr_vBatchId;
+out float nvr_vIsPicked;
 
 ${BranchFreeTernary}
 `,
@@ -512,8 +512,8 @@ ${BranchFreeTernary}
         `
 #include <begin_vertex>
 transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
-v_IsPicked = isPicked;
-v_BatchId = batchId;
+nvr_vIsPicked = isPicked;
+nvr_vBatchId = batchId;
 `,
       );
     shader.fragmentShader = shader.fragmentShader
@@ -523,10 +523,10 @@ v_BatchId = batchId;
 uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
-uniform vec3 uHighlightColor;
-uniform float uPickable;
-in float v_IsPicked;
-in float v_BatchId;
+uniform vec3 nvr_uHighlightColor;
+uniform float nvr_uPickable;
+in float nvr_vIsPicked;
+in float nvr_vBatchId;
 ${Pick}
 `,
       )
@@ -548,8 +548,8 @@ if(uClampToGround) {
         "vec4 diffuseColor = vec4( diffuse, opacity );",
         `
 vec4 diffuseColor = vec4( diffuse, opacity );
-if(v_IsPicked > 0.5) {
-  diffuseColor.xyz = uHighlightColor.xyz;
+if(nvr_vIsPicked > 0.0) {
+  diffuseColor.xyz = nvr_uHighlightColor.xyz;
 }
 `,
       )
@@ -558,8 +558,8 @@ if(v_IsPicked > 0.5) {
         "#include <dithering_fragment>",
         `
         #include <dithering_fragment>
-  if (uPickable > 0.0 && diffuseColor.a > 0.0) {
-    vec3 pickColor = nvr_batchIdToColor(v_BatchId);
+  if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
+    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
     gl_FragColor = vec4(pickColor.xyz, 1.0);
   }
 `,

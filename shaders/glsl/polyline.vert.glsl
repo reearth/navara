@@ -24,8 +24,8 @@ out vec4 v_rightPlaneEC;
 out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
 out vec3 vViewPosition;
-out float v_batchId;
-out float v_IsPicked;
+out float nvr_vBatchId;
+out float nvr_vIsPicked;
 
 
 void main() {
@@ -33,8 +33,8 @@ void main() {
     vec3 offset = normalMatrix * forward_offset;
     vec3 ecEnd = ecStart + offset;
 
-    v_batchId = batchId;
-    v_IsPicked = isPicked;
+    nvr_vBatchId = batchId;
+    nvr_vIsPicked = isPicked;
 
     vec3 forwardDirectionEC = normalize(offset);
 

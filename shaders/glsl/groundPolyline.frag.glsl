@@ -16,8 +16,8 @@ in vec3 v_endPlaneNormalEc;
 in vec4 v_rightPlaneEC; // Technically can compute distance for this here
 in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
-in float v_batchId;
-in float v_IsPicked;
+in float nvr_vBatchId;
+in float nvr_vIsPicked;
 
 uniform vec3 color;
 uniform vec3 viewportAndPixelRatio;
@@ -27,8 +27,8 @@ uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
-uniform float uPickable;
-uniform vec3 uHighlightColor;
+uniform float nvr_uPickable;
+uniform vec3 nvr_uHighlightColor;
 
 float readDepth(sampler2D depthSampler, vec2 coord) {
     float fragCoordZ = texture( depthSampler, coord ).r;
@@ -103,12 +103,12 @@ void main() {
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
 
-    if(uPickable > 0.0) {
-        vec3 pickColor = nvr_batchIdToColor(v_batchId);
+    if(nvr_uPickable > 0.0) {
+        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
         gl_FragColor = vec4(pickColor.xyz, 1.0);
     }
 
-    if(v_IsPicked > 0.0) {
-        gl_FragColor = vec4(uHighlightColor.x, uHighlightColor.y, uHighlightColor.z, 1.0);
+    if(nvr_vIsPicked > 0.0) {
+        gl_FragColor = vec4(nvr_uHighlightColor.xyz, 1.0);
     }
 }

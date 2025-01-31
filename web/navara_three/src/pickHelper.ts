@@ -15,6 +15,7 @@ import {
   KeepStencilOp,
   NotEqualStencilFunc,
   ZeroStencilOp,
+  RGBAFormat,
 } from "three";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
@@ -46,7 +47,11 @@ export class PickHelper {
     onPickCallback: (pickArr: number[]) => void,
   ) {
     this.element = element;
-    this.pickingTexture = new WebGLRenderTarget(1, 1);
+    this.pickingTexture = new WebGLRenderTarget(1, 1, {
+      format: RGBAFormat,
+      depthBuffer: true,
+      stencilBuffer: true,
+    });
     this.pixelBuffer = new Uint8Array(4);
     this.renderer = renderer;
     this.camera = camera;
@@ -59,6 +64,8 @@ export class PickHelper {
 
     this.mouseclickHandler = (event: MouseEvent) => this.onMouseClick(event);
     element.addEventListener("click", this.mouseclickHandler);
+
+    // element.addEventListener("dblclick", this.renderDebugFile.bind(this));
   }
 
   private traverseModel(obj: Object3D, callfunc: (mesh: Mesh) => void) {
@@ -259,7 +266,7 @@ export class PickHelper {
     }
   }
 
-  public renderDebug() {
+  public renderDebugScreen() {
     this.togglePickable(1);
 
     this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
@@ -274,6 +281,72 @@ export class PickHelper {
     this.renderer.render(this.scenes.main, this.camera);
 
     this.togglePickable(0);
+  }
+
+  public renderDebugFile() {
+    const width = this.renderer.getContext().drawingBufferWidth;
+    const height = this.renderer.getContext().drawingBufferHeight;
+
+    const renderTarget = new WebGLRenderTarget(width, height, {
+      format: RGBAFormat,
+      depthBuffer: true,
+      stencilBuffer: true,
+    });
+
+    this.camera.setViewOffset(width, height, 0, 0, width, height);
+
+    this.togglePickable(1);
+
+    this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
+    this.renderer.clear();
+    this.renderer.render(this.scenes.globeGBuffer, this.camera);
+
+    this.renderer.setRenderTarget(renderTarget);
+    this.renderer.clear();
+    this.renderer.render(this.scenes.globe, this.camera);
+
+    this.renderDrapedMesh();
+    this.renderer.render(this.scenes.main, this.camera);
+
+    this.togglePickable(0);
+
+    const pixelBuffer = new Uint8Array(width * height * 4);
+    this.renderer.readRenderTargetPixels(
+      renderTarget,
+      0,
+      0,
+      width,
+      height,
+      pixelBuffer,
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const imageData = ctx.createImageData(width, height);
+    imageData.data.set(pixelBuffer);
+
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx) return;
+    tempCtx.putImageData(imageData, 0, 0);
+
+    ctx.translate(0, canvas.height);
+    ctx.scale(1, -1);
+    ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+
+    const dataURL = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = dataURL;
+    link.download = "render.png";
+    link.click();
+
+    renderTarget.dispose();
   }
 
   private onMouseClick(event: MouseEvent) {
