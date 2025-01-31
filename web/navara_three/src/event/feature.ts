@@ -45,7 +45,7 @@ export function renderFeature(
     return renderBillboard(f.billboard);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms);
+    return renderModel(f.model, buf);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms);
@@ -179,11 +179,7 @@ async function renderBillboard(m: BillboardMesh) {
   return sprite;
 }
 
-async function renderModel(
-  m: ModelMesh,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
-) {
+async function renderModel(m: ModelMesh, buf: BufferLoader) {
   const loader = initializeGltfLoader();
 
   const scene = await (async () => {
@@ -248,8 +244,13 @@ async function renderModel(
           value: 0.0,
         };
 
+        mesh.material.userData.uHighlightColor = {
+          value: new Color(0),
+        };
+
         mesh.material.onBeforeCompile = (shader: any) => {
-          shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
+          shader.uniforms.nvr_uHighlightColor =
+            mesh.material.userData.uHighlightColor;
           shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
           shader.vertexShader = shader.vertexShader.replace(
             "void main() {",
@@ -383,6 +384,10 @@ async function renderPolyline(
     value: 0.0,
   };
 
+  const uHighlightColor = {
+    value: new Color(0),
+  };
+
   const material = new ShaderMaterial({
     uniforms: {
       ...UniformsLib["lights"],
@@ -397,7 +402,7 @@ async function renderPolyline(
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       nvr_uPickable: uPickable,
-      nvr_uHighlightColor: uniforms.highlightColor,
+      nvr_uHighlightColor: uHighlightColor,
     },
     vertexShader: PolylineVertShader,
     fragmentShader: mesh.material.clamp_to_ground
@@ -410,6 +415,7 @@ async function renderPolyline(
   });
 
   material.userData.uPickable = uPickable;
+  material.userData.uHighlightColor = uHighlightColor;
 
   const m = new Mesh(geometry, material);
   m.userData.batchId = batchId;
@@ -479,6 +485,10 @@ async function renderPolygon(
     value: 0.0,
   };
 
+  material.userData.uHighlightColor = {
+    value: new Color(0),
+  };
+
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
     shader.uniforms.nvr_uPickable = material.userData.uPickable;
@@ -489,7 +499,7 @@ async function renderPolygon(
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
 
-    shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
+    shader.uniforms.nvr_uHighlightColor = material.userData.uHighlightColor;
 
     shader.vertexShader = shader.vertexShader
       .replace(

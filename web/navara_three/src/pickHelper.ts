@@ -16,6 +16,7 @@ import {
   NotEqualStencilFunc,
   ZeroStencilOp,
   RGBAFormat,
+  Color,
 } from "three";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
@@ -30,7 +31,7 @@ export class PickHelper {
   private meshes: MeshCache;
   private drapedFeatureMaterials: Map<string, Material>;
   private globeGBufferRenderTarget: WebGLRenderTarget;
-  private highlightColor: number[];
+  private highlightColor: number;
   private onPickCallback: (pickArr: number[]) => void;
 
   private mouseMoved: boolean;
@@ -46,7 +47,7 @@ export class PickHelper {
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
     globeGBufferRenderTarget: WebGLRenderTarget,
-    highlightColor: number[] | null | undefined,
+    highlightColor: number,
     onPickCallback: (pickArr: number[]) => void,
   ) {
     this.element = element;
@@ -62,7 +63,7 @@ export class PickHelper {
     this.meshes = meshes;
     this.drapedFeatureMaterials = drapedFeatureMaterials;
     this.globeGBufferRenderTarget = globeGBufferRenderTarget;
-    this.highlightColor = highlightColor ?? [0, 1, 1];
+    this.highlightColor = highlightColor;
     this.onPickCallback = onPickCallback;
 
     this.mouseMoved = false;
@@ -197,11 +198,7 @@ export class PickHelper {
     if (obj.userData.isPicked !== isPicked) {
       obj.userData.isPicked = isPicked;
       if (isPicked) {
-        obj.material.color.setRGB(
-          this.highlightColor[0],
-          this.highlightColor[1],
-          this.highlightColor[2],
-        );
+        obj.material.color.setHex(this.highlightColor);
       } else {
         obj.material.color.setHex(obj.userData.orgColor);
       }
@@ -219,6 +216,11 @@ export class PickHelper {
       if (isPicked) {
         isPicked.fill(0);
         mesh.geometry.attributes.isPicked.needsUpdate = true;
+      }
+      if ("userData" in mesh.material) {
+        mesh.material.userData.uHighlightColor.value = new Color(
+          this.highlightColor,
+        );
       }
     });
 
@@ -258,6 +260,12 @@ export class PickHelper {
     const batchId = obj.userData.batchId;
     const isPicked = obj.geometry.attributes.isPicked.array;
     isPicked.fill(0);
+
+    if ("userData" in obj.material) {
+      obj.material.userData.uHighlightColor.value = new Color(
+        this.highlightColor,
+      );
+    }
 
     for (let i = 0; i < pickArr.length; ) {
       let bFound = false;

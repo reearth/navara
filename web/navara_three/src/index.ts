@@ -400,12 +400,7 @@ export default class ThreeView {
       tGlobeDepth: { value: null },
       tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
-      highlightColor: { value: [0, 1, 1] },
     };
-
-    if (options.picking) {
-      this._uniforms.highlightColor.value = options.picking.highlightColor;
-    }
   }
 
   get scene() {
@@ -434,7 +429,7 @@ export default class ThreeView {
         this._meshes,
         this._drapedFeatureMaterials,
         this._globeGBufferRenderTarget,
-        this._uniforms.highlightColor.value,
+        this._options.picking?.highlightColor ?? 0x00ffff,
         this.onPick.bind(this),
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);
