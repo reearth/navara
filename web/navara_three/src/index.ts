@@ -17,6 +17,7 @@ import {
   DirectionalLight,
   AmbientLight,
   Color,
+  type Vector3Tuple,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -366,7 +367,11 @@ export default class ThreeView {
         light?.sun?.color ?? 0xffffff,
         light?.sun?.intensity ?? 5,
       );
-      directionalLight.position.set(...(light?.sun?.position ?? [1, 5, 3]));
+      directionalLight.position.set(
+        ...(light?.sun?.position
+          ? light.sun.position.toArray()
+          : ([1, 5, 3] as Vector3Tuple)),
+      );
       this.scene.add(directionalLight);
     }
 
@@ -375,6 +380,10 @@ export default class ThreeView {
 
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
+      // Observe a change in devicePixelRatio.
+      window
+        .matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+        .addEventListener("change", this._handleResize);
     }
 
     if (options.debug) {
@@ -482,11 +491,7 @@ export default class ThreeView {
       w * (pixelRatio ?? 1),
       h * (pixelRatio ?? 1),
     );
-    if (
-      typeof pixelRatio === "number" &&
-      "setPixelRatio" in this.renderer &&
-      typeof this.renderer.setPixelRatio === "function"
-    ) {
+    if (pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
 
