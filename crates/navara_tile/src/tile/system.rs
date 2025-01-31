@@ -146,10 +146,7 @@ pub fn update_tiles(
                         Priority::Extreme,
                     );
                 }
-                _ => {
-                    // Alway shows level zero tile.
-                    tc.activate_rendered_tile(&zero_tile.handle(), &mut meshes, true);
-                }
+                _ => {}
             };
         }
     }
