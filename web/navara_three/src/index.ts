@@ -16,6 +16,7 @@ import {
   DepthTexture,
   DirectionalLight,
   AmbientLight,
+  Color,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -429,7 +430,7 @@ export default class ThreeView {
         this._meshes,
         this._drapedFeatureMaterials,
         this._globeGBufferRenderTarget,
-        this._options.picking?.highlightColor ?? 0x00ffff,
+        this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);

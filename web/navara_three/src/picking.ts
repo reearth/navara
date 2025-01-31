@@ -1,4 +1,6 @@
+import { Color } from "three";
+
 export type Picking = {
   enable: boolean;
-  highlightColor: number;
+  highlightColor: Color;
 };

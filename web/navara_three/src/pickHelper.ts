@@ -31,7 +31,7 @@ export class PickHelper {
   private meshes: MeshCache;
   private drapedFeatureMaterials: Map<string, Material>;
   private globeGBufferRenderTarget: WebGLRenderTarget;
-  private highlightColor: number;
+  private highlightColor: Color;
   private onPickCallback: (pickArr: number[]) => void;
 
   private mouseMoved: boolean;
@@ -47,7 +47,7 @@ export class PickHelper {
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
     globeGBufferRenderTarget: WebGLRenderTarget,
-    highlightColor: number,
+    highlightColor: Color,
     onPickCallback: (pickArr: number[]) => void,
   ) {
     this.element = element;
@@ -198,7 +198,7 @@ export class PickHelper {
     if (obj.userData.isPicked !== isPicked) {
       obj.userData.isPicked = isPicked;
       if (isPicked) {
-        obj.material.color.setHex(this.highlightColor);
+        obj.material.color.set(this.highlightColor);
       } else {
         obj.material.color.setHex(obj.userData.orgColor);
       }
@@ -218,9 +218,7 @@ export class PickHelper {
         mesh.geometry.attributes.isPicked.needsUpdate = true;
       }
       if ("userData" in mesh.material) {
-        mesh.material.userData.uHighlightColor.value = new Color(
-          this.highlightColor,
-        );
+        mesh.material.userData.uHighlightColor.value = this.highlightColor;
       }
     });
 
@@ -262,9 +260,7 @@ export class PickHelper {
     isPicked.fill(0);
 
     if ("userData" in obj.material) {
-      obj.material.userData.uHighlightColor.value = new Color(
-        this.highlightColor,
-      );
+      obj.material.userData.uHighlightColor.value = this.highlightColor;
     }
 
     for (let i = 0; i < pickArr.length; ) {
