@@ -9,6 +9,8 @@ use navara_math::{FloatType, Transform, Vec3};
 
 use crate::model::ModelBin;
 
+use crate::batch::BatchTable;
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
     pub current_terrain_height: FloatType,
@@ -310,8 +312,14 @@ pub struct TransferableModelGeometry {
 }
 
 impl TransferableModelGeometry {
-    pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
         if let Some(global_batch_ids) = &self.global_batch_ids {
+            if let Some(global_ids) = buf.get_u32(global_batch_ids) {
+                // remove global batch ids from batch table
+                for id in global_ids {
+                    batch_table.remove(id);
+                }
+            }
             buf.remove(global_batch_ids);
         }
     }

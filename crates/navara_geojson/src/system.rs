@@ -7,10 +7,10 @@ use bevy_ecs::{
 use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, batch::BatchTableValue, batch::FeatureBatchId,
-    batch::GlobalBatchIds, billboard::BillboardGeometry, model::ModelGeometry,
-    point::PointGeometry, polygon::PolygonGeometry, polygon::UpdatePolygon,
-    polyline::PolylineGeometry, render::RenderableFeature,
+    batch::BatchId, batch::BatchTable, batch::FeatureBatchId, batch::GlobalBatchIds,
+    billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
+    polygon::PolygonGeometry, polygon::UpdatePolygon, polyline::PolylineGeometry,
+    render::RenderableFeature,
 };
 
 use navara_buffer_store::BufferStore;
@@ -270,9 +270,7 @@ pub fn construct_feature(
                     }
                 }
                 GeoJson::Geometry(g) => {
-                    if let Some(batch_id) =
-                        batch_table_res.add(BatchTableValue::StringObj(String::from("{}")))
-                    {
+                    if let Some(batch_id) = batch_table_res.add(None) {
                         spawn_feature(
                             &mut commands,
                             &mut buf,
@@ -421,15 +419,7 @@ pub fn delete_geo_json_layer(
                             geometry.remove_from_buf(&mut buf);
                         }
                         RenderableFeature::Model { geometry, .. } => {
-                            if let Some(global_ids) =
-                                buf.get_u32(&geometry.global_batch_ids.unwrap_or(0))
-                            {
-                                // remove global batch ids from batch table
-                                for id in global_ids {
-                                    batch_table.remove(id);
-                                }
-                            }
-                            geometry.remove_from_buf(&mut buf);
+                            geometry.remove_from_buf(&mut buf, &mut batch_table);
                         }
                         _ => (),
                     }

@@ -117,7 +117,7 @@ pub enum BatchTableValue {
 
 #[derive(Resource)]
 pub struct BatchTable {
-    pub map: HashMap<u32, BatchTableValue>,
+    pub map: HashMap<u32, Option<BatchTableValue>>,
 }
 
 impl Default for BatchTable {
@@ -133,7 +133,7 @@ impl BatchTable {
         }
     }
 
-    pub fn add(&mut self, value: BatchTableValue) -> Option<u32> {
+    pub fn add(&mut self, value: Option<BatchTableValue>) -> Option<u32> {
         let mut rng = rand::thread_rng();
         let mut key = rng.gen_range(1..0xffffff);
 
@@ -153,13 +153,13 @@ impl BatchTable {
 
     pub fn add_hash_map<T: Serialize>(&mut self, prop: &T) -> Option<u32> {
         let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
-        self.add(BatchTableValue::StringObj(props))
+        self.add(Some(BatchTableValue::StringObj(props)))
     }
 
     pub fn add_multiple_null_val(&mut self, count: usize) -> Vec<u32> {
         let mut keys = vec![];
         for _ in 0..count {
-            let key = self.add(BatchTableValue::StringObj("{}".to_string()));
+            let key = self.add(None);
             if let Some(k) = key {
                 keys.push(k);
             }
@@ -168,7 +168,7 @@ impl BatchTable {
     }
 
     pub fn get(&self, key: &u32) -> Option<&BatchTableValue> {
-        self.map.get(key)
+        self.map.get(key).and_then(|value| value.as_ref())
     }
 
     pub fn remove(&mut self, key: &u32) {

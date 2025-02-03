@@ -97,7 +97,7 @@ pub fn construct_model_by_b3dm_layer(
         let feature_batch_id = (batch_length > 0)
             .then(|| {
                 batch_table_res
-                    .add(BatchTableValue::Cesium3dTileset(batch_table))
+                    .add(Some(BatchTableValue::Cesium3dTileset(batch_table)))
                     .unwrap_or(0)
             })
             .unwrap_or(0);
@@ -167,7 +167,7 @@ pub fn delete_model_by_b3dm_layer(
             With<Transform>,
         ),
     >,
-    rendered_features: Query<(&ModelMarker, &RenderableFeature)>,
+    mut rendered_features: Query<(&ModelMarker, &mut RenderableFeature)>,
 ) {
     for (e, d) in &deleted {
         let entities = match layer_store.get(&d.0.clone()) {
@@ -180,20 +180,19 @@ pub fn delete_model_by_b3dm_layer(
             feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res);
             commands.entity(*e).despawn();
 
-            if let Ok((_m, RenderableFeature::Model { feature_id, .. })) = rendered_features.get(*e)
-            {
-                if let Ok((modebin, feature_batch_id, global_batch_ids)) = features.get(*feature_id)
+            if let Ok((_maker, mut feature)) = rendered_features.get_mut(*e) {
+                if let RenderableFeature::Model {
+                    feature_id,
+                    geometry,
+                    ..
+                } = &mut *feature
                 {
-                    batch_table_res.remove(&feature_batch_id.0);
-                    buf.remove(&modebin.0);
-
                     // if a model hasn't batch table, its global batch ids will be removed here.
-                    if let Some(global_ids) = buf.get_u32(&global_batch_ids.0) {
-                        // remove global batch ids from batch table
-                        for id in global_ids {
-                            batch_table_res.remove(id);
-                        }
-                        buf.remove(&global_batch_ids.0);
+                    geometry.remove_from_buf(&mut buf, &mut batch_table_res);
+
+                    if let Ok((modebin, feature_batch_id, ..)) = features.get(*feature_id) {
+                        batch_table_res.remove(&feature_batch_id.0);
+                        buf.remove(&modebin.0);
                     }
                 }
             }
@@ -257,7 +256,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         let feature_batch_id = (batch_length > 0)
             .then(|| {
                 batch_table_res
-                    .add(BatchTableValue::Cesium3dTileset(batch_table))
+                    .add(Some(BatchTableValue::Cesium3dTileset(batch_table)))
                     .unwrap_or(0)
             })
             .unwrap_or(0);
@@ -349,7 +348,7 @@ pub fn remove_invisible_rendered_tiles(
         With<RenderedCesium3dTileContentB3dmMarker>,
     >,
     features: Query<
-        (&FeatureId, &ModelBin, &FeatureBatchId, &GlobalBatchIds),
+        (&FeatureId, &ModelBin, &FeatureBatchId),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -357,7 +356,7 @@ pub fn remove_invisible_rendered_tiles(
             With<Transform>,
         ),
     >,
-    rendered_features: Query<(&ModelMarker, &RenderableFeature)>,
+    mut rendered_features: Query<(&ModelMarker, &mut RenderableFeature)>,
 ) {
     for (entity, tile, _) in &rendered_tiles {
         if tile.is_visible {
@@ -366,8 +365,7 @@ pub fn remove_invisible_rendered_tiles(
 
         if let Some(feature_id) = tile.feature_id {
             // Remove feature
-            if let Ok((rendered_feature_id, model_bin, feature_batch_id, global_batch_ids)) =
-                features.get(feature_id)
+            if let Ok((rendered_feature_id, model_bin, feature_batch_id)) = features.get(feature_id)
             {
                 if let Some(rendered_feature_id) = rendered_feature_id.0 {
                     if !rendered_features.contains(rendered_feature_id) {
@@ -381,15 +379,13 @@ pub fn remove_invisible_rendered_tiles(
                         &mut batch_table_res,
                     ) {
                         batch_table_res.remove(&feature_batch_id.0);
-                    } else {
-                        // if a model hasn't batch table, its global batch ids will be removed here.
-                        if let Some(global_ids) = buf.get_u32(&global_batch_ids.0) {
-                            // remove global batch ids from batch table
-                            for id in global_ids {
-                                batch_table_res.remove(id);
-                            }
+                    } else if let Ok((_maker, mut feature)) =
+                        rendered_features.get_mut(rendered_feature_id)
+                    {
+                        if let RenderableFeature::Model { geometry, .. } = &mut *feature {
+                            // if a model hasn't batch table, its global batch ids will be removed here.
+                            geometry.remove_from_buf(&mut buf, &mut batch_table_res);
                         }
-                        buf.remove(&global_batch_ids.0);
                     }
 
                     buf.remove(&model_bin.0);
