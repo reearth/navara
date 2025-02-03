@@ -1,3 +1,4 @@
+use fxhash::FxHashMap;
 use navara_buffer_store::Handle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -147,6 +148,8 @@ pub struct TransferablePolygonGeometry {
     pub batch_id: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub indices: Handle,
+    #[wasm_bindgen(getter_with_clone)]
+    pub extruded_height: Option<TransferableFloatAttribute>,
 }
 
 #[wasm_bindgen]
@@ -158,6 +161,7 @@ impl TransferablePolygonGeometry {
         scale_normal_and_cap: Option<TransferableFloatAttribute>,
         batch_id: Option<TransferableFloatAttribute>,
         indices: Handle,
+        extruded_height: Option<TransferableFloatAttribute>,
     ) -> Self {
         Self {
             position,
@@ -165,6 +169,7 @@ impl TransferablePolygonGeometry {
             scale_normal_and_cap,
             batch_id,
             indices,
+            extruded_height,
         }
     }
 }
@@ -179,6 +184,7 @@ impl From<TransferablePolygonGeometry>
             scale_normal_and_cap: val.scale_normal_and_cap.map(|n| n.into()),
             batch_id: val.batch_id.map(|n| n.into()),
             indices: val.indices,
+            extruded_height: val.extruded_height.map(|n| n.into()),
         }
     }
 }
@@ -194,6 +200,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
             scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|n| n.into()),
             batch_id: val.batch_id.as_ref().map(|n| n.into()),
             indices: val.indices,
+            extruded_height: val.extruded_height.as_ref().map(|n| n.into()),
         }
     }
 }

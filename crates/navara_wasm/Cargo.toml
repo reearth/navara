@@ -20,6 +20,7 @@ serde-wasm-bindgen.workspace = true
 gloo-utils = { workspace = true, features = ["serde"] }
 nanoid.workspace = true
 bevy_log.workspace = true
+fxhash.workspace = true
 web-sys = { workspace = true, features = ["console"] }
 
 navara_core = { path = "../navara_core" }

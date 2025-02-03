@@ -309,6 +309,9 @@ async function processConstructPolygonBatchedFeature(
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const batchId = bufHandler.newF32(result.batch_id);
+  const extrudedHeight = result.extruded_height
+    ? bufHandler.newF32(result.extruded_height)
+    : undefined;
   const normal = bufHandler.newF32(result.normal);
   const position = bufHandler.newF32(result.position);
   const scaleNormalAndCap = bufHandler.newF32(result.scale_normal_and_cap);
@@ -321,6 +324,12 @@ async function processConstructPolygonBatchedFeature(
     batchId,
     result.batch_id_size ?? 0,
   );
+  const transferableExtrudedHeight = extrudedHeight
+    ? new TransferableFloatAttribute(
+        extrudedHeight,
+        result.extruded_height_size ?? 0,
+      )
+    : undefined;
   const transferableNormal = new TransferableFloatAttribute(
     normal,
     result.normal_size ?? 0,
@@ -339,6 +348,7 @@ async function processConstructPolygonBatchedFeature(
     transferableScaleNormalAndCap,
     transferableBatchId,
     indices,
+    transferableExtrudedHeight,
   );
 
   const constructPolygonBatchedFeatureResult =

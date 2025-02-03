@@ -41,6 +41,12 @@ impl ConstructedPolygonGeometry {
     pub fn batch_id_size(&mut self) -> Option<u8> {
         self.geometry.batch_id_size()
     }
+    pub fn extruded_height(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.extruded_height()
+    }
+    pub fn extruded_height_size(&mut self) -> Option<u8> {
+        self.geometry.extruded_height_size()
+    }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         self.geometry.indices()
     }
@@ -92,6 +98,12 @@ impl PolygonGeometry {
     pub fn batch_id_size(&mut self) -> Option<u8> {
         self.attributes.transfer_batch_id_size()
     }
+    pub fn extruded_height(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_extruded_height()
+    }
+    pub fn extruded_height_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_extruded_height_size()
+    }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.indices)
     }
@@ -109,6 +121,7 @@ pub struct PolygonGeometryAttributes {
     normal: Option<FloatAttribute>,
     scale_normal_and_cap: Option<FloatAttribute>,
     batch_id: Option<FloatAttribute>,
+    extruded_height: Option<FloatAttribute>,
 }
 
 #[wasm_bindgen]
@@ -155,6 +168,18 @@ impl PolygonGeometryAttributes {
         };
         Some(batch_id.size)
     }
+    pub fn transfer_extruded_height(&mut self) -> Option<js_sys::Float32Array> {
+        let Some(extruded_height) = &mut self.extruded_height else {
+            return None;
+        };
+        Some(extruded_height.transfer_data())
+    }
+    pub fn transfer_extruded_height_size(&mut self) -> Option<u8> {
+        let Some(extruded_height) = &mut self.extruded_height else {
+            return None;
+        };
+        Some(extruded_height.size)
+    }
 
     pub fn drop(self) {
         drop(self.position.data);
@@ -171,6 +196,7 @@ impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttribu
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
             batch_id: val.batch_id.map(|v| v.into()),
+            extruded_height: val.extruded_height.map(|v| v.into()),
         }
     }
 }
@@ -181,6 +207,7 @@ impl From<navara_geometry::PolygonGeometryAttributes> for PolygonGeometryAttribu
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
             batch_id: val.batch_id.map(|v| v.into()),
+            extruded_height: val.extruded_height.map(|v| v.into()),
         }
     }
 }

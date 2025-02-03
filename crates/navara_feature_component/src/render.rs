@@ -241,6 +241,7 @@ pub struct TransferablePolygonGeometry {
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub batch_id: Option<TransferableFloatAttribute>,
     pub indices: Handle,
+    pub extruded_height: Option<TransferableFloatAttribute>,
 }
 
 impl TransferablePolygonGeometry {
@@ -257,6 +258,10 @@ impl TransferablePolygonGeometry {
         let batch_id = geo
             .attributes
             .batch_id
+            .map(|n| (buf.new_f32(n.data), n.size));
+        let extruded_height = geo
+            .attributes
+            .extruded_height
             .map(|n| (buf.new_f32(n.data), n.size));
         let indices = buf.new_u32(geo.indices);
 
@@ -275,6 +280,12 @@ impl TransferablePolygonGeometry {
             batch_id: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
                 data: batch_id,
                 size,
+            }),
+            extruded_height: extruded_height.map(|(extruded_height, size)| {
+                TransferableFloatAttribute {
+                    data: extruded_height,
+                    size,
+                }
             }),
             indices,
         }

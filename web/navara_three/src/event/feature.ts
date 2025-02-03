@@ -249,8 +249,15 @@ async function renderPolygon(
   const scale_normal_and_cap = g.scale_normal_and_cap
     ? buf.f32(g.scale_normal_and_cap.data)
     : undefined;
+  const extrudedHeight = g.extruded_height
+    ? buf.f32(g.extruded_height.data)
+    : undefined;
   const indices = buf.u32(g.indices);
   if (!position || !indices) return;
+
+  const defines = {
+    BATCHED_EXTRUDED_HEIGHT: false,
+  };
 
   const geometry = new BufferGeometry();
   geometry.setAttribute(
@@ -265,6 +272,13 @@ async function renderPolygon(
       "scaleNormalAndCap",
       new BufferAttribute(scale_normal_and_cap, g.scale_normal_and_cap.size),
     );
+  }
+  if (g.extruded_height && extrudedHeight) {
+    geometry.setAttribute(
+      "extrudedHeight",
+      new BufferAttribute(extrudedHeight, g.extruded_height.size),
+    );
+    defines.BATCHED_EXTRUDED_HEIGHT = true;
   }
   geometry.setIndex(new BufferAttribute(indices, 1));
 
@@ -288,6 +302,7 @@ async function renderPolygon(
   material.userData.uClampToGround = {
     value: clampToGround,
   };
+  material.defines = defines;
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
@@ -305,6 +320,10 @@ async function renderPolygon(
 #include <common>
 in vec4 scaleNormalAndCap;
 
+#if defined( BATCHED_EXTRUDED_HEIGHT )
+in float extrudedHeight;
+#endif
+
 uniform vec2 uMinMaxHeight;
 
 ${BranchFreeTernary}
@@ -314,7 +333,14 @@ ${BranchFreeTernary}
         "#include <begin_vertex>",
         `
 #include <begin_vertex>
-transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
+
+#if defined( BATCHED_EXTRUDED_HEIGHT )
+float maxHeight = max(uMinMaxHeight.y, extrudedHeight);
+#else
+float maxHeight = uMinMaxHeight.y;
+#endif
+
+transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, maxHeight);
 `,
       );
     shader.fragmentShader = shader.fragmentShader

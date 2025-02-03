@@ -6,6 +6,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
+use navara_math::FloatType;
 
 use crate::{id::FeatureId, render::RenderableFeature};
 
@@ -107,4 +108,9 @@ impl BatchTable {
     pub fn remove(&mut self, key: &u32) {
         self.map.remove(key);
     }
+}
+
+#[derive(Default, Clone, Component)]
+pub struct BatchedPolygonMaterial {
+    pub extruded_height: FloatType,
 }

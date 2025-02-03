@@ -21,13 +21,15 @@ pub fn construct_polygon_batched_feature(
         normal: Some(FloatAttribute::new(vec![], 3)),
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_id: Some(FloatAttribute::new(vec![], 1)),
+        extruded_height: Some(FloatAttribute::new(vec![], 1)),
     };
     let mut indices = vec![];
     let mut index_offset = 0;
 
     let mut combined_extent: Option<Extent<f32, Radians>> = None;
     for idx in 0..features.length {
-        let (transferable_hierarchy, batch_id) = features.to_transferable_hierarchy_by_index(idx);
+        let (transferable_hierarchy, batch_id, batched_material) =
+            features.to_transferable_hierarchy_by_index(idx);
         let geometry_hierarchy: Hierarchy = transferable_hierarchy.into();
 
         let (extent_opt, polygon_result_opt) =
@@ -84,6 +86,16 @@ pub fn construct_polygon_batched_feature(
             .unwrap()
             .data
             .extend(std::iter::repeat(batch_id.0 as FloatType).take(position_length));
+
+        combined_attributes
+            .extruded_height
+            .as_mut()
+            .unwrap()
+            .data
+            .extend(
+                std::iter::repeat(batched_material.extruded_height as FloatType)
+                    .take(position_length),
+            );
 
         if index_offset == 0 {
             indices.append(&mut polygon_result.geometry.indices);

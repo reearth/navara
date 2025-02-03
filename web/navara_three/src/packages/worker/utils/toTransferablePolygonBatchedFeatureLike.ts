@@ -33,6 +33,9 @@ export function toTransferablePolygonBatchedFeatureLike(
   t.setBatchIds(like.batch_ids.length, (b: Uint32Array) => {
     b.set(like.batch_ids);
   });
+  t.setExtrudedHeights(like.extruded_heights.length, (b: Float32Array) => {
+    b.set(like.extruded_heights);
+  });
 
   return t;
 }

@@ -8,6 +8,7 @@ export class TransferablePolygonBatchedFeatureLike
   implements TransferablePolygonBatchedFeature
 {
   batch_ids: Uint32Array;
+  extruded_heights: Float32Array;
   crs: CRS;
   expected_winding_orders: Uint8Array;
   holes: Float32Array;
@@ -20,6 +21,7 @@ export class TransferablePolygonBatchedFeatureLike
 
   constructor(t: ReturnedTransferablePolygonBatchedFeature) {
     this.batch_ids = t.transferBatchIds();
+    this.extruded_heights = t.transferExtrudedHeights();
     this.crs = t.crs();
     this.expected_winding_orders = t.transferExpectedWindingOrders();
     this.holes = t.transferHoles();
@@ -32,6 +34,7 @@ export class TransferablePolygonBatchedFeatureLike
   }
 
   setBatchIds(_length: number, _f: () => void) {}
+  setExtrudedHeights(_length: number, _f: () => void) {}
   setExpectedWindingOrders(_length: number, _f: () => void) {}
   setOuterRing(_length: number, _f: () => void) {}
   setOuterRingSizes(_length: number, _f: () => void) {}
@@ -42,6 +45,9 @@ export class TransferablePolygonBatchedFeatureLike
   drop(): void {}
 
   transferBatchIds(): Uint32Array {
+    throw new Error();
+  }
+  transferExtrudedHeights(): Float32Array {
     throw new Error();
   }
   transferExpectedWindingOrders(): Uint8Array {

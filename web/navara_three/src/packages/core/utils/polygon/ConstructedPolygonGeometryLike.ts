@@ -12,6 +12,8 @@ export class ConstructedPolygonGeometryLike {
   scale_normal_and_cap_size: number | undefined;
   batch_id: Float32Array | undefined;
   batch_id_size: number | undefined;
+  extruded_height: Float32Array | undefined;
+  extruded_height_size: number | undefined;
   indices: Uint32Array;
 
   constructor(t: ConstructedPolygonGeometry) {
@@ -25,6 +27,8 @@ export class ConstructedPolygonGeometryLike {
     this.scale_normal_and_cap_size = t.scale_normal_and_cap_size();
     this.batch_id = t.batch_id()?.slice();
     this.batch_id_size = t.batch_id_size();
+    this.extruded_height = t.extruded_height()?.slice();
+    this.extruded_height_size = t.extruded_height_size();
     this.indices = t.indices().slice();
   }
 }

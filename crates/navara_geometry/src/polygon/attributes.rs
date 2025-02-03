@@ -8,6 +8,7 @@ pub struct PolygonGeometryAttributes {
     pub normal: Option<FloatAttribute>,
     pub scale_normal_and_cap: Option<FloatAttribute>,
     pub batch_id: Option<FloatAttribute>,
+    pub extruded_height: Option<FloatAttribute>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

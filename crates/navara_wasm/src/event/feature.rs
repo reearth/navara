@@ -200,6 +200,11 @@ impl ReturnedTransferablePolygonBatchedFeature {
         self.transferable.transfer_batch_ids()
     }
 
+    #[wasm_bindgen(js_name = "transferExtrudedHeights")]
+    pub fn transfer_extruded_heights(&mut self) -> js_sys::Float32Array {
+        self.transferable.transfer_extruded_heights()
+    }
+
     #[wasm_bindgen(js_name = "transferOuterRing")]
     pub fn transfer_outer_ring(&mut self) -> js_sys::Float32Array {
         self.transferable.transfer_outer_ring()

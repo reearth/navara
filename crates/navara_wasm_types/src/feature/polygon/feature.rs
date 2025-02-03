@@ -10,6 +10,11 @@ use crate::{
 
 use super::{TransferableHierarchy, TransferableHoles, WindingOrder};
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct BatchedPolygonMaterial {
+    pub extruded_height: FloatType,
+}
+
 /// To transfer the batched feature efficiently, the all feature's properties are managed as one-dimensional array.
 #[wasm_bindgen]
 #[derive(Debug, Default)]
@@ -26,6 +31,9 @@ pub struct TransferablePolygonBatchedFeature {
     holes_boundaries: Vec<u32>,
     batch_ids: Vec<u32>,
     expected_winding_orders: Vec<u8>,
+
+    // Batched materials
+    extruded_heights: Vec<FloatType>,
 
     #[wasm_bindgen(getter_with_clone)]
     pub crs: CRS,
@@ -49,6 +57,7 @@ impl TransferablePolygonBatchedFeature {
             holes_boundaries: vec![],
             batch_ids: vec![],
             expected_winding_orders: vec![],
+            extruded_heights: vec![],
             crs,
             length,
             cur_idx: 0,
@@ -83,6 +92,10 @@ impl TransferablePolygonBatchedFeature {
     pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
         unsafe { self.batch_ids = transfer_u32_array(byte_length, f) }
     }
+    #[wasm_bindgen(js_name = "setExtrudedHeights")]
+    pub fn set_extruded_heights(&mut self, byte_length: usize, f: &js_sys::Function) {
+        unsafe { self.extruded_heights = transfer_f32_array(byte_length, f) }
+    }
     #[wasm_bindgen(js_name = "setExpectedWindingOrders")]
     pub fn set_expected_winding_orders(&mut self, byte_length: usize, f: &js_sys::Function) {
         unsafe { self.expected_winding_orders = transfer_u8_array(byte_length, f) }
@@ -102,6 +115,11 @@ impl TransferablePolygonBatchedFeature {
     #[wasm_bindgen(js_name = "transferBatchIds")]
     pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.batch_ids)
+    }
+
+    #[wasm_bindgen(js_name = "transferExtrudedHeights")]
+    pub fn transfer_extruded_heights(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.extruded_heights)
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
@@ -141,7 +159,10 @@ impl TransferablePolygonBatchedFeature {
 }
 
 impl TransferablePolygonBatchedFeature {
-    pub fn new<I: Iterator<Item = (usize, Hierarchy)>>(hierarchies: I, length: usize) -> Self {
+    pub fn new<I: Iterator<Item = (usize, BatchedPolygonMaterial, Hierarchy)>>(
+        hierarchies: I,
+        length: usize,
+    ) -> Self {
         let mut outer_ring = Vec::with_capacity(length);
         let mut outer_ring_sizes = Vec::with_capacity(length);
         let mut holes = Vec::with_capacity(length);
@@ -149,13 +170,15 @@ impl TransferablePolygonBatchedFeature {
         let mut holes_boundaries = Vec::with_capacity(length);
         let mut holes_sizes = Vec::with_capacity(length);
         let mut batch_ids = Vec::with_capacity(length);
+        let mut extruded_heights = Vec::with_capacity(length);
         let mut expected_winding_orders = Vec::with_capacity(length);
 
-        for (batch_id, mut hierarchy) in hierarchies {
+        for (batch_id, materials, mut hierarchy) in hierarchies {
             outer_ring_sizes.push(hierarchy.outer_ring.len() as u32);
             outer_ring.append(&mut hierarchy.outer_ring);
 
             batch_ids.push(batch_id as u32);
+            extruded_heights.push(materials.extruded_height);
             expected_winding_orders
                 .push(Into::<WindingOrder>::into(hierarchy.expected_winding_order).0);
 
@@ -182,6 +205,7 @@ impl TransferablePolygonBatchedFeature {
             holes_total_sizes,
             holes_boundaries,
             batch_ids,
+            extruded_heights,
             expected_winding_orders,
             crs: CRS::default(),
             length,
@@ -197,6 +221,7 @@ impl TransferablePolygonBatchedFeature {
         let holes_boundaries = Vec::with_capacity(length);
         let holes_sizes = Vec::with_capacity(length);
         let batch_ids = Vec::with_capacity(length);
+        let extruded_heights = Vec::with_capacity(length);
         let expected_winding_orders = Vec::with_capacity(length);
 
         TransferablePolygonBatchedFeature {
@@ -207,6 +232,7 @@ impl TransferablePolygonBatchedFeature {
             holes_total_sizes,
             holes_boundaries,
             batch_ids,
+            extruded_heights,
             expected_winding_orders,
             crs: CRS::default(),
             length,
@@ -214,12 +240,18 @@ impl TransferablePolygonBatchedFeature {
         }
     }
 
-    pub fn add(&mut self, hierarchy: &mut Hierarchy, batch_id: &BatchId) {
+    pub fn add(
+        &mut self,
+        hierarchy: &mut Hierarchy,
+        batch_id: &BatchId,
+        materials: BatchedPolygonMaterial,
+    ) {
         self.outer_ring_sizes
             .push(hierarchy.outer_ring.len() as u32);
         self.outer_ring.append(&mut hierarchy.outer_ring);
 
         self.batch_ids.push(batch_id.0);
+        self.extruded_heights.push(materials.extruded_height);
         self.expected_winding_orders
             .push(Into::<WindingOrder>::into(hierarchy.expected_winding_order).0);
 
@@ -242,7 +274,7 @@ impl TransferablePolygonBatchedFeature {
     pub fn to_transferable_hierarchy_by_index(
         &mut self,
         idx: usize,
-    ) -> (TransferableHierarchy, BatchId) {
+    ) -> (TransferableHierarchy, BatchId, BatchedPolygonMaterial) {
         let transferable_hierarchy = TransferableHierarchy {
             outer_ring: self
                 .outer_ring
@@ -265,13 +297,16 @@ impl TransferablePolygonBatchedFeature {
             },
         };
         let batch_id = BatchId(self.batch_ids[idx]);
+        let extruded_height = self.extruded_heights[idx];
 
-        (transferable_hierarchy, batch_id)
+        let batched_materials = BatchedPolygonMaterial { extruded_height };
+
+        (transferable_hierarchy, batch_id, batched_materials)
     }
 }
 
 impl Iterator for TransferablePolygonBatchedFeature {
-    type Item = (TransferableHierarchy, BatchId);
+    type Item = (TransferableHierarchy, BatchId, BatchedPolygonMaterial);
     fn next(&mut self) -> Option<Self::Item> {
         if self.cur_idx == self.length {
             return None;
@@ -287,6 +322,8 @@ impl Iterator for TransferablePolygonBatchedFeature {
 mod test {
 
     use navara_geometry::Hierarchy;
+
+    use crate::polygon::BatchedPolygonMaterial;
 
     use super::TransferablePolygonBatchedFeature;
 
@@ -367,32 +404,54 @@ mod test {
             },
         ];
 
-        struct BatchedHierarchy(usize, Vec<Hierarchy>);
+        struct BatchedHierarchy(usize, BatchedPolygonMaterial, Vec<Hierarchy>);
         impl Iterator for BatchedHierarchy {
-            type Item = (usize, Hierarchy);
+            type Item = (usize, BatchedPolygonMaterial, Hierarchy);
             fn next(&mut self) -> Option<Self::Item> {
-                if self.1.is_empty() {
+                if self.2.is_empty() {
                     return None;
                 }
-                let result = (self.0, self.1.remove(0));
+                let result = (self.0, self.1.clone(), self.2.remove(0));
                 self.0 += 1;
                 Some(result)
             }
         }
 
         let transferable_features = TransferablePolygonBatchedFeature::new(
-            BatchedHierarchy(0, hierarchies.clone()),
+            BatchedHierarchy(
+                0,
+                BatchedPolygonMaterial {
+                    extruded_height: 0.,
+                },
+                hierarchies.clone(),
+            ),
             hierarchies.len(),
         );
 
         let mut features: Vec<Hierarchy> = vec![];
         let mut batch_ids = vec![];
-        for (feature, batch_id) in transferable_features {
+        let mut materials = vec![];
+        for (feature, batch_id, material) in transferable_features {
             features.push(feature.into());
             batch_ids.push(batch_id.0);
+            materials.push(material);
         }
 
         assert_eq!(features, hierarchies);
         assert_eq!(batch_ids, vec![0, 1, 2]);
+        assert_eq!(
+            materials,
+            vec![
+                BatchedPolygonMaterial {
+                    extruded_height: 0.
+                },
+                BatchedPolygonMaterial {
+                    extruded_height: 0.
+                },
+                BatchedPolygonMaterial {
+                    extruded_height: 0.
+                },
+            ]
+        );
     }
 }

@@ -18,6 +18,7 @@ use navara_geometry::Hierarchy;
 use navara_input::Key;
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
+use navara_wasm_types::polygon::BatchedPolygonMaterial;
 use navara_wasm_utils::set_panic_hook;
 use polygon::TransferablePolygonBatchedFeature;
 use polyline::TransferablePolylineBatchedFeature;
@@ -305,15 +306,27 @@ impl Core {
 
             let geometry = f.get::<navara_feature_component::polygon::PolygonGeometry>()?;
             let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
+            let batched_material =
+                f.get::<navara_feature_component::batch::BatchedPolygonMaterial>()?;
 
-            coords_handle_and_batch_ids.push((geometry.hierarchy.clone(), batch_id.0));
+            coords_handle_and_batch_ids.push((
+                geometry.hierarchy.clone(),
+                batch_id.0,
+                batched_material.clone(),
+            ));
         }
 
         let mut buf_store = self.app.get_buffer_store_mut()?;
-        for (hierarchy, batch_id) in coords_handle_and_batch_ids {
+        for (hierarchy, batch_id, batched_material) in coords_handle_and_batch_ids {
             let mut hierarchy = Hierarchy::from_transferred(&hierarchy, &mut buf_store)?;
 
-            transferable.add(&mut hierarchy, &BatchId(batch_id));
+            transferable.add(
+                &mut hierarchy,
+                &BatchId(batch_id),
+                BatchedPolygonMaterial {
+                    extruded_height: batched_material.extruded_height,
+                },
+            );
         }
 
         material.map(|material| ReturnedTransferablePolygonBatchedFeature {

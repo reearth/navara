@@ -3,8 +3,12 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, id::FeatureId,
-    point::PointGeometry, polygon::PolygonGeometry, polyline::PolylineGeometry,
+    batch::{BatchId, BatchTable, BatchedPolygonMaterial},
+    billboard::BillboardGeometry,
+    id::FeatureId,
+    point::PointGeometry,
+    polygon::PolygonGeometry,
+    polyline::PolylineGeometry,
     BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
@@ -26,6 +30,20 @@ pub(crate) struct ConstructedGeometry {
     pub feature_ids: Vec<Entity>,
     pub geometry_type: ConstructedGeometryType,
 }
+
+struct DebugBatchedMaterialKeyPars {
+    extruded_height: &'static str,
+}
+
+#[derive(Default)]
+struct BatchedMaterials {
+    extruded_height: FloatType,
+}
+
+// TODO: Get user value
+const DEBUG_SPECIFIED_PROPERTY: [DebugBatchedMaterialKeyPars; 1] = [DebugBatchedMaterialKeyPars {
+    extruded_height: "measuredHeight",
+}];
 
 // TODO: Store the coordinates into BufferStore.
 // TODO: Move this process to worker.
@@ -60,15 +78,31 @@ pub fn construct_geometry(
         for feature in features {
             let geom = feature.get_geometry();
 
-            let mut op_batch_id = None;
-            if let Some(prop) = &feature.properties {
-                op_batch_id = batch_table.add_hash_map(prop);
-            }
-
-            if op_batch_id.is_none() {
+            let Some(prop) = &feature.properties else {
                 continue;
+            };
+
+            let op_batch_id = batch_table.add_hash_map(prop);
+            let Some(batch_id) = op_batch_id else {
+                continue;
+            };
+
+            let mut materials = BatchedMaterials::default();
+
+            // TODO: Handle other type of property
+            for pars in DEBUG_SPECIFIED_PROPERTY {
+                let Some(val) = prop.get(pars.extruded_height) else {
+                    // TODO: Specify default value depends on appearance type
+                    materials.extruded_height = 0.;
+                    continue;
+                };
+                let Ok(converted_val) = val.parse::<f32>() else {
+                    // TODO: Specify default value depends on appearance type
+                    materials.extruded_height = 0.;
+                    continue;
+                };
+                materials.extruded_height = converted_val;
             }
-            let batch_id = op_batch_id.unwrap();
 
             handle_geometry(
                 commands,
@@ -80,6 +114,7 @@ pub fn construct_geometry(
                 &mut converter,
                 &batch_id,
                 appearances,
+                &materials,
             );
         }
 
@@ -107,6 +142,7 @@ fn handle_geometry(
     converter: &mut PosConverter,
     batch_id: &u32,
     appearances: &[Appearance],
+    materials: &BatchedMaterials,
 ) {
     match geom {
         Geometry::MultiPolygon(v) => {
@@ -131,6 +167,7 @@ fn handle_geometry(
                 converter,
                 appearance,
                 batch_id,
+                materials,
             );
         }
         Geometry::Polygon(v) => {
@@ -153,6 +190,7 @@ fn handle_geometry(
                 converter,
                 appearance,
                 batch_id,
+                materials,
             );
         }
         Geometry::MultiPoint(v) => {
@@ -175,6 +213,7 @@ fn handle_geometry(
                                 crs: CRS::Geographic,
                             },
                             batch_id,
+                            materials,
                         );
                         break;
                     }
@@ -191,6 +230,7 @@ fn handle_geometry(
                                 crs: CRS::Geographic,
                             },
                             batch_id,
+                            materials,
                         );
                         break;
                     }
@@ -216,6 +256,7 @@ fn handle_geometry(
                                 crs: CRS::Geographic,
                             },
                             batch_id,
+                            materials,
                         );
                         break;
                     }
@@ -232,6 +273,7 @@ fn handle_geometry(
                                 crs: CRS::Geographic,
                             },
                             batch_id,
+                            materials,
                         );
                         break;
                     }
@@ -255,6 +297,7 @@ fn handle_geometry(
                         converter,
                         appearance,
                         batch_id,
+                        materials,
                     );
                     break;
                 }
@@ -274,6 +317,7 @@ fn handle_geometry(
                         converter,
                         appearance,
                         batch_id,
+                        materials,
                     );
                     break;
                 }
@@ -291,6 +335,7 @@ fn handle_geometry(
                     converter,
                     batch_id,
                     appearances,
+                    materials,
                 );
             }
         }
@@ -308,6 +353,7 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
     appearance: &A,
     geometry: F,
     batch_id: &u32,
+    materials: &BatchedMaterials,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -321,6 +367,7 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
             appearance,
             &geometry,
             batch_id,
+            materials,
         );
     }
 }
@@ -335,6 +382,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     appearance: &A,
     geometry: &F,
     batch_id: &u32,
+    materials: &BatchedMaterials,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -348,6 +396,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
             FeatureId::default(),
             geometry(x, y),
             appearance.clone(),
+            // materials.clone(),
         ))
         .id();
 
@@ -364,6 +413,7 @@ fn construct_lines_geometry<A: Component + Clone>(
     converter: &mut PosConverter,
     appearance: &A,
     batch_id: &u32,
+    materials: &BatchedMaterials,
 ) -> usize {
     let mut count = 0;
     for line in lines {
@@ -376,6 +426,7 @@ fn construct_lines_geometry<A: Component + Clone>(
             converter,
             appearance,
             batch_id,
+            materials,
         );
         count += line.0.len();
     }
@@ -393,6 +444,7 @@ fn construct_line_geometry<A: Component + Clone>(
     converter: &mut PosConverter,
     appearance: &A,
     batch_id: &u32,
+    materials: &BatchedMaterials,
 ) {
     let LineString(points) = line;
     let geo_points = converter.project_points(points);
@@ -404,6 +456,7 @@ fn construct_line_geometry<A: Component + Clone>(
             PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
             appearance.clone(),
             BatchId(*batch_id),
+            // materials.clone(),
         ))
         .id();
 
@@ -420,6 +473,7 @@ fn construct_polygons_geometry<A: Component + Clone>(
     converter: &mut PosConverter,
     appearance: &A,
     batch_id: &u32,
+    materials: &BatchedMaterials,
 ) {
     for polygon in polygons {
         construct_polygon_geometry(
@@ -431,6 +485,7 @@ fn construct_polygons_geometry<A: Component + Clone>(
             converter,
             appearance,
             batch_id,
+            materials,
         );
     }
 }
@@ -445,6 +500,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
     converter: &mut PosConverter,
     appearance: &A,
     batch_id: &u32,
+    materials: &BatchedMaterials,
 ) {
     let LineString(outer) = polygon.exterior();
     let outer_vec = converter.project_points(outer);
@@ -476,6 +532,9 @@ fn construct_polygon_geometry<A: Component + Clone>(
         },
         appearance.clone(),
         BatchId(*batch_id),
+        BatchedPolygonMaterial {
+            extruded_height: materials.extruded_height,
+        },
     ));
 
     feature_ids.push(entity.id());
