@@ -10,9 +10,13 @@ use navara_component::{Deleted, Rendered};
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
-use navara_feature_component::{batch::BatchedFeature, render::RenderableFeature};
+use navara_feature_component::{
+    batch::BatchTable, batch::BatchTableValue, batch::BatchedFeature, batch::FeatureBatchIdMap,
+    render::RenderableFeature,
+};
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
+use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{MartiniComponent, RasterTile, RasterTileQuadtree, TileHandle};
 use navara_window::{Window, WindowResizeEvent};
@@ -342,6 +346,102 @@ impl App {
 
         Some(features)
     }
+
+    fn get_internal_batch_table(&mut self, entity: Entity) -> Option<&B3dmBatchTable> {
+        let world = self.app.world_mut();
+        let mut query = world.query::<&RenderableFeature>();
+
+        let batch_table = match world.get_resource::<BatchTable>() {
+            Some(batch_table) => batch_table,
+            None => return None,
+        };
+
+        if let Ok(RenderableFeature::Model {
+            feature_batch_id, ..
+        }) = query.get(world, entity)
+        {
+            batch_table.get(feature_batch_id).and_then(|batch_value| {
+                if let BatchTableValue::Cesium3dTileset(in_batch_table) = batch_value {
+                    Some(in_batch_table)
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn get_batch_prop(&mut self, batch_id: &u32) -> String {
+        if let Some((entity, in_batch_id, in_batch_len)) =
+            self.search_feature_entity_by_global_batch_id(batch_id)
+        {
+            let in_batch_table = match self.get_internal_batch_table(entity) {
+                Some(table) => table,
+                None => return String::from("{}"),
+            };
+            return get_prop_from_batch_table(in_batch_table, &in_batch_len, &in_batch_id);
+        }
+        if let Some(BatchTableValue::StringObj(prop_str)) = self
+            .app
+            .world()
+            .get_resource::<BatchTable>()
+            .unwrap()
+            .get(batch_id)
+        {
+            return prop_str.clone();
+        }
+        String::from("{}")
+    }
+
+    pub fn search_feature_entity_by_global_batch_id(
+        &self,
+        global_batch_id: &u32,
+    ) -> Option<(Entity, usize, usize)> {
+        let map = self.app.world().get_resource::<FeatureBatchIdMap>()?;
+
+        map.map.iter().find_map(|(entity, batch_ids)| {
+            self.get_buffer_u32(batch_ids.0).and_then(|vec_ids| {
+                vec_ids
+                    .iter()
+                    .position(|id| id == global_batch_id)
+                    .map(|i| (*entity, i, vec_ids.len()))
+            })
+        })
+    }
+}
+
+fn get_prop_from_batch_table(
+    in_batch_table: &B3dmBatchTable,
+    in_batch_len: &usize,
+    in_batch_id: &usize,
+) -> String {
+    if *in_batch_id >= *in_batch_len {
+        return String::from("{}");
+    }
+
+    let mut prop: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    let batch_table_json = in_batch_table.json().unwrap();
+
+    if let serde_json::Value::Object(map) = batch_table_json {
+        for (key, value) in map {
+            match value {
+                serde_json::Value::Object(ref _m) => {
+                    let arr = in_batch_table
+                        .read_property_from_binary(*in_batch_len, &value)
+                        .unwrap();
+
+                    prop.insert(key, arr[*in_batch_id].clone());
+                }
+                serde_json::Value::Array(arr) => {
+                    prop.insert(key, arr[*in_batch_id].clone());
+                }
+                _ => {}
+            }
+        }
+    }
+
+    serde_json::to_string(&prop).unwrap()
 }
 
 impl Default for App {

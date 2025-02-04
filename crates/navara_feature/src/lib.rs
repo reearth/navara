@@ -2,7 +2,7 @@
 
 use bevy_app::{App, Plugin, PostUpdate, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
-use navara_feature_component::batch::BatchTable;
+use navara_feature_component::batch::{BatchTable, FeatureBatchIdMap};
 use navara_geometry::PolygonResource;
 
 mod billboard;
@@ -18,6 +18,7 @@ impl Plugin for FeaturePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PolygonResource>()
             .init_resource::<BatchTable>()
+            .init_resource::<FeatureBatchIdMap>()
             .add_systems(
                 Update,
                 (

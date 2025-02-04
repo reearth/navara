@@ -88,10 +88,12 @@ impl BatchTable {
     pub fn read_property_from_binary(
         &self,
         batch_length: usize,
-        offset: usize,
-        data_type: DataType,
-        component_type: ComponentType,
+        prop: &serde_json::Value,
     ) -> Result<Vec<Value>, &'static str> {
+        let offset = prop["byteOffset"].as_u64().unwrap() as usize;
+        let component_type = ComponentType::from_str(prop["componentType"].as_str().unwrap());
+        let data_type = DataType::from_str(prop["type"].as_str().unwrap());
+
         match data_type {
             DataType::Scalar => self.read_scalar(offset, batch_length, component_type),
             DataType::Vec2 | DataType::Vec3 | DataType::Vec4 => {
@@ -423,13 +425,9 @@ mod tests {
 
         for (name, expect, assert) in expects {
             let property = &batch_table_json[name];
-            let offset = property["byteOffset"].as_u64().unwrap() as usize;
-            let component_type =
-                ComponentType::from_str(property["componentType"].as_str().unwrap());
-            let data_type = DataType::from_str(property["type"].as_str().unwrap());
             let property_value = b3dm
                 .batch_table
-                .read_property_from_binary(batch_length, offset, data_type, component_type)
+                .read_property_from_binary(batch_length, property)
                 .unwrap();
             assert(property_value, expect);
         }
