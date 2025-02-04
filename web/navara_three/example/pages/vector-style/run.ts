@@ -18,6 +18,13 @@ export const run = async (view: ThreeView) => {
   axesHelper.scale.multiplyScalar(1e9);
   view.scene.add(axesHelper);
 
+  // view.effectComposer.addPass(
+  //   new EffectPass(
+  //     this.camera,
+  //     new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
+  //   ),
+  // );
+
   view.addLayer({
     type: "tiles",
     data: {
@@ -25,7 +32,7 @@ export const run = async (view: ThreeView) => {
     },
     raster_tile: {
       segments: 10,
-      color: 0xcccccc,
+      color: 0xffffff,
       max_sse: 2,
       max_zoom: 23,
       wireframe: false,
@@ -34,24 +41,24 @@ export const run = async (view: ThreeView) => {
 
   const terrainType: "mapbox" | "gsi" = "gsi";
 
-  view.addLayer({
-    type: "terrain",
-    data: {
-      // @ts-expect-error : Make switch button later
-      url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
-    },
-    raster_terrain: {
-      segments: 64,
-      max_zoom: 15,
-      min_zoom: 5,
-      wireframe: false,
-      elevation_decoder:
-        // @ts-expect-error : Make switch button later
-        terrainType === "mapbox"
-          ? MAPBOX_ELEVATION_DECODER()
-          : JAPAN_GSI_ELEVATION_DECODER(),
-    },
-  });
+  // view.addLayer({
+  //   type: "terrain",
+  //   data: {
+  //     // @ts-expect-error : Make switch button later
+  //     url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
+  //   },
+  //   raster_terrain: {
+  //     segments: 64,
+  //     max_zoom: 15,
+  //     min_zoom: 5,
+  //     wireframe: false,
+  //     elevation_decoder:
+  //       // @ts-expect-error : Make switch button later
+  //       terrainType === "mapbox"
+  //         ? MAPBOX_ELEVATION_DECODER()
+  //         : JAPAN_GSI_ELEVATION_DECODER(),
+  //   },
+  // });
 
   view.addLayer({
     type: "mvt",
