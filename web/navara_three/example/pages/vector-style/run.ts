@@ -56,7 +56,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "mvt",
     data: {
-      url: `${location.origin}/chuo_mvt/{z}/{x}/{y}.pbf`,
+      url: `${location.origin}/data/chuo_mvt/{z}/{x}/{y}.pbf`,
     },
     vector_tile: {
       max_zoom: 16,
@@ -70,7 +70,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "mvt",
     data: {
-      url: `${location.origin}/chiyoda_mvt/{z}/{x}/{y}.pbf`,
+      url: `${location.origin}/data/chiyoda_mvt/{z}/{x}/{y}.pbf`,
     },
     vector_tile: {
       max_zoom: 16,
