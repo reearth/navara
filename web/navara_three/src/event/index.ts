@@ -41,6 +41,7 @@ import {
   Sprite,
   Group,
   ShaderMaterial,
+  SRGBColorSpace,
 } from "three";
 
 import { FEATURE_CONCURRENCY } from "../concurrency";
@@ -588,6 +589,7 @@ async function processTextureFragmentRequested(
   await tex
     .loadAsyncWithAbort(req.url, abortController)
     .then((t) => {
+      t.colorSpace = SRGBColorSpace;
       loadedTexes.set(id, t);
       handler.triggerTextureFragmentLoaded(
         req.bits,
