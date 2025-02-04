@@ -183,7 +183,9 @@ impl PolygonGeometryAttributes {
 
     pub fn drop(self) {
         drop(self.position.data);
-        drop(self.normal.unwrap().data);
+        if let Some(normal) = self.normal {
+            drop(normal.data);
+        }
         drop(self.scale_normal_and_cap.unwrap().data);
         drop(self.batch_id.unwrap().data);
     }

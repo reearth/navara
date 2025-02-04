@@ -298,13 +298,7 @@ async function processConstructPolygonBatchedFeature(
   const result = await promise;
   workerPoolPromises.delete(id);
 
-  if (
-    !result ||
-    !result.batch_id ||
-    !result.normal ||
-    !result.scale_normal_and_cap
-  )
-    return;
+  if (!result || !result.batch_id || !result.scale_normal_and_cap) return;
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
@@ -312,11 +306,11 @@ async function processConstructPolygonBatchedFeature(
   const extrudedHeight = result.extruded_height
     ? bufHandler.newF32(result.extruded_height)
     : undefined;
-  const normal = bufHandler.newF32(result.normal);
+  const normal = result.normal ? bufHandler.newF32(result.normal) : undefined;
   const position = bufHandler.newF32(result.position);
   const scaleNormalAndCap = bufHandler.newF32(result.scale_normal_and_cap);
   const indices = bufHandler.newU32(result.indices);
-  if (!batchId || !normal || !position || !scaleNormalAndCap || !indices) {
+  if (!batchId || !position || !scaleNormalAndCap || !indices) {
     return;
   }
 
@@ -330,10 +324,9 @@ async function processConstructPolygonBatchedFeature(
         result.extruded_height_size ?? 0,
       )
     : undefined;
-  const transferableNormal = new TransferableFloatAttribute(
-    normal,
-    result.normal_size ?? 0,
-  );
+  const transferableNormal = normal
+    ? new TransferableFloatAttribute(normal, result.normal_size ?? 0)
+    : undefined;
   const transferablePosition = new TransferableFloatAttribute(
     position,
     result.position_size,
