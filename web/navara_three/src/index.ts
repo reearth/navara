@@ -38,6 +38,7 @@ import {
 } from "./event";
 import { registerInputEvents } from "./input";
 import type { Light } from "./light";
+import { PickHelper } from "./pickHelper";
 import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
@@ -53,7 +54,6 @@ import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
-import { PickHelper } from "./pickHelper";
 
 export * from "./type";
 export * from "./constants";
@@ -358,14 +358,14 @@ export default class ThreeView {
     if (light?.ambient?.enabled ?? true) {
       const ambientLight = new AmbientLight(
         light?.ambient?.color ?? 0xffffff,
-        light?.ambient?.intensity ?? 0.5,
+        light?.ambient?.intensity ?? 1,
       );
       this.scene.add(ambientLight);
     }
     if (light?.sun?.enabled ?? true) {
       const directionalLight = new DirectionalLight(
         light?.sun?.color ?? 0xffffff,
-        light?.sun?.intensity ?? 5,
+        light?.sun?.intensity ?? 3,
       );
       directionalLight.position.set(
         ...(light?.sun?.position
