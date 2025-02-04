@@ -55,6 +55,7 @@ pub fn create_polygon_geometry(
 ) -> Option<PolygonGeometryResult> {
     let granularity = options.granularity;
     let polygon_hierarchy = &options.hierarchy;
+    let clamp_to_ground = options.clamp_to_ground;
 
     let outer_positions = &polygon_hierarchy.outer_ring;
     if outer_positions.len() < 3 {
@@ -80,22 +81,26 @@ pub fn create_polygon_geometry(
             &hierarchies[i],
         );
 
-        let top_bottom_normals =
-            compute_extruded_normals(WGS84_32, &split_geometry.top_bottom_geometry, false);
-        split_geometry.top_bottom_geometry.attributes.normal =
-            Some(FloatAttribute::new(top_bottom_normals, 3));
+        if !clamp_to_ground {
+            let top_bottom_normals =
+                compute_extruded_normals(WGS84_32, &split_geometry.top_bottom_geometry, false);
+            split_geometry.top_bottom_geometry.attributes.normal =
+                Some(FloatAttribute::new(top_bottom_normals, 3));
+        }
         geometries.push(split_geometry.top_bottom_geometry);
 
         for mut wall_geometry in split_geometry.wall_geometries {
-            let wall_normals = compute_extruded_normals(WGS84_32, &wall_geometry, true);
-            wall_geometry.attributes.normal = Some(FloatAttribute::new(wall_normals, 3));
+            if !clamp_to_ground {
+                let wall_normals = compute_extruded_normals(WGS84_32, &wall_geometry, true);
+                wall_geometry.attributes.normal = Some(FloatAttribute::new(wall_normals, 3));
+            }
             geometries.push(wall_geometry);
         }
     }
 
     let mut combined_attributes = PolygonGeometryAttributes {
         position: FloatAttribute::new(vec![], 3),
-        normal: Some(FloatAttribute::new(vec![], 3)),
+        normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_id: None,
     };
@@ -109,12 +114,13 @@ pub fn create_polygon_geometry(
             .position
             .data
             .append(&mut geometry.attributes.position.data);
-        combined_attributes
-            .normal
-            .as_mut()
-            .unwrap()
-            .data
-            .append(&mut geometry.attributes.normal.unwrap().data);
+        if let Some(normal) = geometry.attributes.normal.as_mut() {
+            combined_attributes
+                .normal
+                .get_or_insert_with(|| FloatAttribute::new(vec![], 3))
+                .data
+                .append(&mut normal.data);
+        }
         combined_attributes
             .scale_normal_and_cap
             .as_mut()

@@ -18,7 +18,7 @@ pub fn construct_polygon_batched_feature(
 
     let mut combined_attributes = PolygonGeometryAttributes {
         position: FloatAttribute::new(vec![], 3),
-        normal: Some(FloatAttribute::new(vec![], 3)),
+        normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_id: Some(FloatAttribute::new(vec![], 1)),
     };
@@ -58,12 +58,13 @@ pub fn construct_polygon_batched_feature(
             .position
             .data
             .append(&mut polygon_result.geometry.attributes.position.data);
-        combined_attributes
-            .normal
-            .as_mut()
-            .unwrap()
-            .data
-            .append(&mut polygon_result.geometry.attributes.normal.unwrap().data);
+        if let Some(normal) = polygon_result.geometry.attributes.normal.as_mut() {
+            combined_attributes
+                .normal
+                .get_or_insert_with(|| FloatAttribute::new(vec![], 3))
+                .data
+                .append(&mut normal.data);
+        }
         combined_attributes
             .scale_normal_and_cap
             .as_mut()
