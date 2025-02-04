@@ -123,9 +123,11 @@ pub fn scale_to_geodetic_height_extruded(
         positions[i3 + 1 + length] = p2.y as f32;
         positions[i3 + 2 + length] = p2.z as f32;
 
-        positions[i3] = p2.x as f32;
-        positions[i3 + 1] = p2.y as f32;
-        positions[i3 + 2] = p2.z as f32;
+        let top = p2 + n1;
+
+        positions[i3] = top.x as f32;
+        positions[i3 + 1] = top.y as f32;
+        positions[i3 + 2] = top.z as f32;
 
         scale_normals_and_cap[i4 + scale_normals_offset] = n1.x as f32;
         scale_normals_and_cap[i4 + 1 + scale_normals_offset] = n1.y as f32;

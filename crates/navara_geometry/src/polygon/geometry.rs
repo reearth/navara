@@ -82,15 +82,15 @@ pub fn create_polygon_geometry(
 
         let top_bottom_normals =
             compute_extruded_normals(WGS84_32, &split_geometry.top_bottom_geometry, false);
-
-        let wall_normals = compute_extruded_normals(WGS84_32, &split_geometry.wall_geometry, true);
-
         split_geometry.top_bottom_geometry.attributes.normal =
             Some(FloatAttribute::new(top_bottom_normals, 3));
-        split_geometry.wall_geometry.attributes.normal = Some(FloatAttribute::new(wall_normals, 3));
-
         geometries.push(split_geometry.top_bottom_geometry);
-        geometries.push(split_geometry.wall_geometry);
+
+        for mut wall_geometry in split_geometry.wall_geometries {
+            let wall_normals = compute_extruded_normals(WGS84_32, &wall_geometry, true);
+            wall_geometry.attributes.normal = Some(FloatAttribute::new(wall_normals, 3));
+            geometries.push(wall_geometry);
+        }
     }
 
     let mut combined_attributes = PolygonGeometryAttributes {
@@ -147,7 +147,7 @@ pub fn create_polygon_geometry(
 
 pub struct ExtrudedPolygonGeometry {
     pub top_bottom_geometry: PolygonGeometry,
-    pub wall_geometry: PolygonGeometry,
+    pub wall_geometries: Vec<PolygonGeometry>,
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/baaabaa49058067c855ad050be73a9cdfe9b6ac7/packages/engine/Source/Core/PolygonGeometry.js#L428
@@ -184,29 +184,43 @@ pub fn create_geometry_from_positions_extruded(
         scale_to_geodetic_height_extruded(&mut top_bottom_positions, ellipsoid);
 
     let outer_ring = &hierarchy.outer_ring;
-    let (mut wall_positions, mut wall_indices) =
+    let (mut wall_positions, wall_indices) =
         compute_wall_geometry(ellipsoid, outer_ring, granularity);
 
-    let mut wall_scale_normal_and_cap =
+    let wall_scale_normal_and_cap =
         scale_to_geodetic_height_extruded(&mut wall_positions, ellipsoid);
 
+    let mut wall_geometries =
+        Vec::with_capacity(hierarchy.holes.as_ref().map(|h| h.len()).unwrap_or(0) + 1);
+    wall_geometries.push(PolygonGeometry {
+        attributes: PolygonGeometryAttributes {
+            position: FloatAttribute::new(wall_positions, 3),
+            normal: None,
+            scale_normal_and_cap: Some(FloatAttribute::new(wall_scale_normal_and_cap, 4)),
+            batch_id: None,
+            extruded_height: None,
+        },
+        indices: wall_indices,
+    });
+
     if let Some(holes_src) = &hierarchy.holes {
-        let mut pos_cnt = (wall_positions.len() / 3) as u32;
         for hole_src in holes_src {
             let (mut hole_wall_pos, hole_wall_i) =
                 compute_wall_geometry(ellipsoid, &hole_src.outer_ring, granularity);
 
-            let mut hole_scale_normal_and_cap =
+            let hole_scale_normal_and_cap =
                 scale_to_geodetic_height_extruded(&mut hole_wall_pos, ellipsoid);
 
-            wall_positions.append(&mut hole_wall_pos);
-            wall_scale_normal_and_cap.append(&mut hole_scale_normal_and_cap);
-
-            for i in hole_wall_i {
-                wall_indices.push(pos_cnt + i);
-            }
-
-            pos_cnt = (wall_positions.len() / 3) as u32;
+            wall_geometries.push(PolygonGeometry {
+                attributes: PolygonGeometryAttributes {
+                    position: FloatAttribute::new(hole_wall_pos, 3),
+                    normal: None,
+                    scale_normal_and_cap: Some(FloatAttribute::new(hole_scale_normal_and_cap, 4)),
+                    batch_id: None,
+                    extruded_height: None,
+                },
+                indices: hole_wall_i,
+            });
         }
     }
 
@@ -221,16 +235,7 @@ pub fn create_geometry_from_positions_extruded(
             },
             indices: top_bottom_indices,
         },
-        wall_geometry: PolygonGeometry {
-            attributes: PolygonGeometryAttributes {
-                position: FloatAttribute::new(wall_positions, 3),
-                normal: None,
-                scale_normal_and_cap: Some(FloatAttribute::new(wall_scale_normal_and_cap, 4)),
-                batch_id: None,
-                extruded_height: None,
-            },
-            indices: wall_indices,
-        },
+        wall_geometries,
     }
 }
 
@@ -247,10 +252,10 @@ fn compute_extruded_normals(
     let mut is_in_corner = true;
 
     let bottom_offset = positions_length / 2;
+    let mut normal = Vec3::ZERO;
     for i in 0..(bottom_offset / 3) {
         let i: usize = i * 3;
         let p0 = unpack_flatten_vec3(positions, i);
-        let mut normal = Vec3::ZERO;
         if wall {
             if i + 3 < bottom_offset {
                 let mut p1 = unpack_flatten_vec3(positions, i + 3);
