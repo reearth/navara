@@ -136,6 +136,7 @@ export class PickHelper {
     }
   }
 
+  // TODO: Commonize this function with `renderPass.ts`, this class should be extended by `CustomRenderPass`.
   private renderDrapedMesh() {
     if (this.drapedFeatureMaterials.size !== 0) {
       const drapedFeaturesScene = this.scenes.drapedFeatures;
