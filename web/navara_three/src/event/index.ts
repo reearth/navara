@@ -659,6 +659,7 @@ async function processRenderableFeatureAdded(
   if (!obj.userData.draped) {
     scenes.main.add(obj);
   }
+
   meshes.set(id, obj);
 
   if (obj.userData.draped && obj instanceof Mesh) {
@@ -736,8 +737,12 @@ function processPointChanged(
   material: PointMaterial,
   active: boolean,
 ) {
+  obj.userData.orgColor = material.color;
+  if (!obj.userData.isPicked) {
+    obj.material.color.set(material.color);
+  }
   obj.visible = (material.show ?? true) && active;
-  obj.material.color.set(material.color);
+
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
 }
@@ -747,8 +752,12 @@ function processBillboardChanged(
   material: BillboardMaterial,
   active: boolean,
 ) {
+  obj.userData.orgColor = material.color;
+  if (!obj.userData.isPicked) {
+    obj.material.color.set(material.color);
+  }
   obj.visible = (material.show ?? true) && active;
-  obj.material.color.set(material.color);
+
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
 }

@@ -7,9 +7,10 @@ use bevy_ecs::{
 use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, model::ModelGeometry,
-    point::PointGeometry, polygon::PolygonGeometry, polygon::UpdatePolygon,
-    polyline::PolylineGeometry, render::RenderableFeature,
+    batch::BatchId, batch::BatchTable, batch::FeatureBatchId, batch::GlobalBatchIds,
+    billboard::BillboardGeometry, model::ModelGeometry, point::PointGeometry,
+    polygon::PolygonGeometry, polygon::UpdatePolygon, polyline::PolylineGeometry,
+    render::RenderableFeature,
 };
 
 use navara_buffer_store::BufferStore;
@@ -182,9 +183,12 @@ fn spawn_feature(
             },
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
+                    let global_batch_ids = vec![batch_id];
+                    let ids_handle = buf.new_u32(global_batch_ids);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(batch_id),
+                        FeatureBatchId(0),
+                        GlobalBatchIds(ids_handle),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -194,9 +198,12 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
+                        let global_batch_ids = vec![batch_id];
+                        let ids_handle = buf.new_u32(global_batch_ids);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(batch_id),
+                            FeatureBatchId(0),
+                            GlobalBatchIds(ids_handle),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -219,7 +226,7 @@ fn spawn_feature(
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
     mut commands: Commands,
-    mut batch_table: ResMut<BatchTable>,
+    mut batch_table_res: ResMut<BatchTable>,
     mut buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
@@ -232,7 +239,7 @@ pub fn construct_feature(
                     for f in fs {
                         if let Some(g) = &f.geometry {
                             if let Some(prop) = &f.properties {
-                                if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                                if let Some(batch_id) = batch_table_res.add_hash_map(prop) {
                                     spawn_feature(
                                         &mut commands,
                                         &mut buf,
@@ -249,7 +256,7 @@ pub fn construct_feature(
                 GeoJson::Feature(f) => {
                     if let Some(g) = &f.geometry {
                         if let Some(prop) = &f.properties {
-                            if let Some(batch_id) = batch_table.add_hash_map(prop) {
+                            if let Some(batch_id) = batch_table_res.add_hash_map(prop) {
                                 spawn_feature(
                                     &mut commands,
                                     &mut buf,
@@ -263,7 +270,7 @@ pub fn construct_feature(
                     }
                 }
                 GeoJson::Geometry(g) => {
-                    if let Some(batch_id) = batch_table.add("{}".to_string()) {
+                    if let Some(batch_id) = batch_table_res.add(None) {
                         spawn_feature(
                             &mut commands,
                             &mut buf,
@@ -410,6 +417,9 @@ pub fn delete_geo_json_layer(
                         }
                         RenderableFeature::Polygon { geometry, .. } => {
                             geometry.remove_from_buf(&mut buf);
+                        }
+                        RenderableFeature::Model { geometry, .. } => {
+                            geometry.remove_from_buf(&mut buf, &mut batch_table);
                         }
                         _ => (),
                     }

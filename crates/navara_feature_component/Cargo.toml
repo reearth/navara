@@ -21,4 +21,5 @@ navara_data_requester = { path = "../navara_data_requester" }
 navara_geometry = { path = "../navara_geometry" }
 navara_layer = { path = "../navara_layer" }
 navara_component = { path = "../navara_component" }
+navara_parser = { path = "../navara_parser" }
 rand = "0.8.0"

@@ -3,12 +3,15 @@ use bevy_ecs::{
     query::Added,
     system::{Commands, ParamSet, Query, ResMut},
 };
+
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
 use navara_feature_component::{
-    batch::BatchId,
+    batch::FeatureBatchId,
+    batch::FeatureBatchIdMap,
+    batch::GlobalBatchIds,
     id::FeatureId,
-    render::{ModelRenderInformation, RenderableFeature, TransferableSingleGeometry},
+    render::{ModelRenderInformation, RenderableFeature, TransferableModelGeometry},
     DeletedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
@@ -24,11 +27,13 @@ use navara_feature_component::model::{ModelBin, ModelGeometry, ModelMarker};
 #[allow(clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
+    mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     mut models: Query<
         (
             Entity,
             &LayerId,
-            &BatchId,
+            &FeatureBatchId,
+            &GlobalBatchIds,
             Option<&mut FeatureId>,
             &ModelGeometry,
             &ModelMaterial,
@@ -46,7 +51,8 @@ pub fn transfer_mesh(
     for (
         entity,
         layer_id,
-        batch_id,
+        feature_batch_id,
+        global_batch_ids,
         mut feature_id,
         geometry,
         material,
@@ -99,9 +105,10 @@ pub fn transfer_mesh(
                     is_rendered: false,
                 },
                 bin: bin.cloned(),
-                geometry: TransferableSingleGeometry {
-                    batch_id: Some(batch_id.0),
+                geometry: TransferableModelGeometry {
+                    global_batch_ids: Some(global_batch_ids.0),
                 },
+                feature_batch_id: feature_batch_id.0,
                 active: true,
             },
         ));
@@ -111,6 +118,8 @@ pub fn transfer_mesh(
         }
 
         layer_store.add(layer_id.0.clone(), entity.id());
+
+        feature_batch_id_map.add(entity.id(), global_batch_ids.clone());
     }
 }
 
@@ -155,6 +164,7 @@ pub fn update_height_by_terrain(
                 render_info,
                 bin: _,
                 geometry: _,
+                feature_batch_id: _,
                 ..
             } => {
                 let geometry = match geometries.get(*feature_id) {

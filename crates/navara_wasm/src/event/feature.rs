@@ -4,7 +4,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     geometry::{
-        TransferablePolygonGeometry, TransferablePolylineGeometry, TransferableSingleGeometry,
+        TransferableModelGeometry, TransferablePolygonGeometry, TransferablePolylineGeometry,
+        TransferableSingleGeometry,
     },
     Transform,
 };
@@ -65,7 +66,7 @@ pub struct ModelMesh {
     pub transform: Transform,
     pub bin: Option<Handle>,
     #[wasm_bindgen(getter_with_clone)]
-    pub geometry: TransferableSingleGeometry,
+    pub geometry: TransferableModelGeometry,
     pub active: bool,
 }
 
@@ -170,6 +171,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 render_info: _,
                 bin,
                 geometry,
+                feature_batch_id: _,
                 active,
             } => Self {
                 model: Some(ModelMesh {

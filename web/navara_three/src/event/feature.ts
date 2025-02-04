@@ -7,6 +7,8 @@ import type {
   PolygonMesh,
 } from "@navara/engine";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import Pick from "@shaders/glsl/chunks/pick.glsl";
+import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
@@ -28,6 +30,7 @@ import type { CommonUniforms } from "../uniforms";
 
 import { initializeGltfLoader, TEXTURE_LOADER } from "./loaders";
 
+import { isNumber } from "lodash-es";
 import type { BufferLoader } from ".";
 
 export function renderFeature(
@@ -59,7 +62,16 @@ async function renderPoint(m: PointMesh) {
     sizeAttenuation: !m.material.scale_by_distance,
     visible: m.material.show,
   });
+
+  material.userData.uPickable = {
+    value: 0.0,
+  };
+
+  const batchId = m.geometry.batch_id ?? 0;
+
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.nvr_uBatchId = { value: batchId };
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
     shader.vertexShader = shader.vertexShader
       .replace(
         "uniform vec2 center;",
@@ -81,8 +93,10 @@ sprite_uv = position.xy;
         "uniform float opacity;",
         `
 uniform float opacity;
+${BatchDefinitioin}
 in vec2 sprite_uv;
 ${PointFragShader}
+${Pick}
 `,
       )
       .replace(
@@ -93,13 +107,23 @@ float alpha = nvr_circle_alpha(sprite_uv);
 if (alpha == 0.) {
   discard;
 }
+
 gl_FragColor.a = alpha;
+
+if (nvr_uPickable > 0.0 && alpha > 0.0) {
+  vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
+  gl_FragColor = vec4(pickColor.xyz, 1.0);
+}
 `,
       );
   };
 
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
+
+  sprite.userData.batchId = batchId;
+  sprite.userData.isPicked = false;
+  sprite.userData.orgColor = m.material.color;
 
   return sprite;
 }
@@ -114,8 +138,43 @@ async function renderBillboard(m: BillboardMesh) {
     depthTest: m.material.depth_test,
     visible: m.material.show,
   });
+
+  const batchId = m.geometry.batch_id ?? 0;
+  material.userData.uPickable = {
+    value: 0.0,
+  };
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.nvr_uBatchId = { value: batchId };
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <clipping_planes_pars_fragment>",
+        `
+        #include <clipping_planes_pars_fragment>
+        ${BatchDefinitioin}
+        ${Pick}
+      `,
+      )
+      .replace(
+        "#include <fog_fragment>",
+        `
+        #include <fog_fragment>
+        if (nvr_uPickable > 0.0 && sampledDiffuseColor.a > 0.0) {
+          vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
+          gl_FragColor = vec4(pickColor.xyz, 1.0);
+        }
+        `,
+      );
+  };
+
   const sprite = new Sprite(material);
   sprite.center.set(m.material.center.x, m.material.center.y);
+
+  sprite.userData.batchId = batchId;
+  sprite.userData.isPicked = false;
+  sprite.userData.orgColor = m.material.color;
 
   return sprite;
 }
@@ -145,6 +204,111 @@ async function renderModel(m: ModelMesh, buf: BufferLoader) {
   if (!scene) {
     return;
   }
+
+  scene.userData.batchId = 0;
+  if (isNumber(m.geometry.global_batch_ids)) {
+    scene.userData.batchId = buf.u32(m.geometry.global_batch_ids);
+  }
+
+  let globalBatchIds = m.geometry.global_batch_ids
+    ? buf.u32(m.geometry.global_batch_ids)
+    : undefined;
+  globalBatchIds = globalBatchIds ?? new Uint32Array(1);
+
+  if (scene.userData.batchId) {
+    const traverse = function (mesh: Object3D) {
+      if (mesh instanceof Mesh) {
+        const vertCnt = mesh.geometry.attributes?.position?.count;
+        const isPicked = new Float32Array(vertCnt).fill(0);
+
+        const gBatchIds = new Float32Array(vertCnt).fill(globalBatchIds[0]);
+        const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+        if (internalBatchIds) {
+          for (let i = 0; i < internalBatchIds.length; i++) {
+            const internalBatchId = internalBatchIds[i];
+            gBatchIds[i] = globalBatchIds[internalBatchId] ?? 0;
+          }
+        }
+
+        mesh.geometry.setAttribute(
+          "batchId",
+          new BufferAttribute(gBatchIds, 1),
+        );
+
+        mesh.geometry.setAttribute(
+          "isPicked",
+          new BufferAttribute(isPicked, 1),
+        );
+
+        mesh.material.userData.uPickable = {
+          value: 0.0,
+        };
+
+        mesh.material.userData.uHighlightColor = {
+          value: new Color(0),
+        };
+
+        mesh.material.onBeforeCompile = (shader: any) => {
+          shader.uniforms.nvr_uHighlightColor =
+            mesh.material.userData.uHighlightColor;
+          shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
+          shader.vertexShader = shader.vertexShader.replace(
+            "void main() {",
+            `
+              attribute float isPicked;
+              attribute float batchId;
+              out float nvr_vBatchId;
+              out float nvr_vIsPicked;
+              void main() {
+              nvr_vIsPicked = isPicked;
+              nvr_vBatchId = batchId;
+              `,
+          );
+
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              "void main() {",
+              `
+              uniform vec3 nvr_uHighlightColor;
+              uniform float nvr_uPickable;
+              in float nvr_vIsPicked;
+              in float nvr_vBatchId;
+              ${Pick}
+              void main() {
+              `,
+            )
+            .replace(
+              "vec4 diffuseColor = vec4( diffuse, opacity );",
+              `
+              vec4 diffuseColor = vec4( diffuse, opacity );
+              if(nvr_vIsPicked > 0.0) {
+                diffuseColor = vec4(nvr_uHighlightColor.xyz, 1.0);
+              }
+              `,
+            )
+            .replace(
+              "#include <dithering_fragment>",
+              `
+              #include <dithering_fragment>
+
+              if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
+                vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
+                gl_FragColor = vec4(pickColor.xyz, 1.0);
+              }
+              `,
+            );
+        };
+      }
+
+      if (Array.isArray(mesh.children) && mesh.children.length > 0) {
+        mesh.children.forEach((child) => {
+          traverse(child);
+        });
+      }
+    };
+    traverse(scene);
+  }
+
   scene.visible = m.material.show ?? true;
   return scene;
 }
@@ -166,6 +330,8 @@ async function renderPolyline(
     g.right_normal_and_texture_coordinate_normalization_y.data,
   );
   const indices = buf.u32(g.indices);
+  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (
     !position ||
     !start ||
@@ -173,7 +339,8 @@ async function renderPolyline(
     !start_normals ||
     !end_normal_and_texture_coordinate_normalization_x ||
     !right_normal_and_texture_coordinate_normalization_y ||
-    !indices
+    !indices ||
+    !batchId
   )
     return;
   const geometry = new BufferGeometry();
@@ -204,11 +371,22 @@ async function renderPolyline(
       g.right_normal_and_texture_coordinate_normalization_y.size,
     ),
   );
+  const isPicked = new Float32Array(position.length / g.position.size).fill(0);
+  geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
+  geometry.setAttribute("batchId", new BufferAttribute(batchId, batchIdSize));
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
 
   const [minHeight, maxHeight] = mesh.material.__internal__
     ?.min_max_heights ?? [0, 0];
+
+  const uPickable = {
+    value: 0.0,
+  };
+
+  const uHighlightColor = {
+    value: new Color(0),
+  };
 
   const material = new ShaderMaterial({
     uniforms: {
@@ -223,6 +401,8 @@ async function renderPolyline(
       tGlobeDepth: uniforms.tGlobeDepth,
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
+      nvr_uPickable: uPickable,
+      nvr_uHighlightColor: uHighlightColor,
     },
     vertexShader: PolylineVertShader,
     fragmentShader: mesh.material.clamp_to_ground
@@ -233,7 +413,13 @@ async function renderPolyline(
     visible: mesh.material.show,
     lights: true,
   });
+
+  material.userData.uPickable = uPickable;
+  material.userData.uHighlightColor = uHighlightColor;
+
   const m = new Mesh(geometry, material);
+  m.userData.batchId = batchId;
+  m.userData.batchIdSize = batchIdSize;
 
   return m;
 }
@@ -253,7 +439,9 @@ async function renderPolygon(
     ? buf.f32(g.extruded_height.data)
     : undefined;
   const indices = buf.u32(g.indices);
-  if (!position || !indices) return;
+  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const batchIdSize = g.batch_id ? g.batch_id.size : 1;
+  if (!position || !indices || !batchId) return;
 
   const defines = {
     BATCHED_EXTRUDED_HEIGHT: false,
@@ -280,6 +468,12 @@ async function renderPolygon(
     );
     defines.BATCHED_EXTRUDED_HEIGHT = true;
   }
+
+  const isPicked = new Float32Array(position.length / g.position.size).fill(0);
+  geometry.setAttribute("isPicked", new BufferAttribute(isPicked, 1));
+
+  geometry.setAttribute("batchId", new BufferAttribute(batchId, batchIdSize));
+
   geometry.setIndex(new BufferAttribute(indices, 1));
 
   const clampToGround = mesh.material.clamp_to_ground;
@@ -301,11 +495,19 @@ async function renderPolygon(
   };
   material.userData.uClampToGround = {
     value: clampToGround,
+  };  
+  material.userData.uPickable = {
+    value: 0.0,
   };
+  material.userData.uHighlightColor = {
+    value: new Color(0),
+  };
+
   material.defines = defines;
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
@@ -313,11 +515,15 @@ async function renderPolygon(
       shader.uniforms.uClampToGround = material.userData.uClampToGround;
     }
 
+    shader.uniforms.nvr_uHighlightColor = material.userData.uHighlightColor;
+
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
         `
 #include <common>
+attribute float isPicked;
+attribute float batchId;
 in vec4 scaleNormalAndCap;
 
 #if defined( BATCHED_EXTRUDED_HEIGHT )
@@ -325,6 +531,8 @@ in float extrudedHeight;
 #endif
 
 uniform vec2 uMinMaxHeight;
+out float nvr_vBatchId;
+out float nvr_vIsPicked;
 
 ${BranchFreeTernary}
 `,
@@ -341,6 +549,9 @@ float maxHeight = uMinMaxHeight.y;
 #endif
 
 transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, maxHeight);
+
+nvr_vIsPicked = isPicked;
+nvr_vBatchId = batchId;
 `,
       );
     shader.fragmentShader = shader.fragmentShader
@@ -350,6 +561,11 @@ transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndC
 uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
+uniform vec3 nvr_uHighlightColor;
+uniform float nvr_uPickable;
+in float nvr_vIsPicked;
+in float nvr_vBatchId;
+${Pick}
 `,
       )
       .replace(
@@ -365,11 +581,33 @@ if(uClampToGround) {
  #include <normal_fragment_maps>
 }
 `,
+      )
+      .replace(
+        "vec4 diffuseColor = vec4( diffuse, opacity );",
+        `
+vec4 diffuseColor = vec4( diffuse, opacity );
+if(nvr_vIsPicked > 0.0) {
+  diffuseColor.xyz = nvr_uHighlightColor.xyz;
+}
+`,
+      )
+      // replace the last line of the fragment shader.
+      .replace(
+        "#include <dithering_fragment>",
+        `
+        #include <dithering_fragment>
+  if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
+    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
+    gl_FragColor = vec4(pickColor.xyz, 1.0);
+  }
+`,
       );
   };
 
   const m = new Mesh(geometry, material);
   m.userData.draped = clampToGround;
+  m.userData.batchId = batchId;
+  m.userData.batchIdSize = batchIdSize;
 
   return m;
 }

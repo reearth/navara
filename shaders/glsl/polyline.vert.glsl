@@ -4,6 +4,9 @@
 #include chunks/planeDistance;
 #include chunks/metersPerPixel;
 
+attribute float batchId;
+attribute float isPicked;
+
 in vec3 start;
 in vec3 forward_offset;
 in vec3 start_normal;
@@ -21,11 +24,17 @@ out vec4 v_rightPlaneEC;
 out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
 out vec3 vViewPosition;
+out float nvr_vBatchId;
+out float nvr_vIsPicked;
+
 
 void main() {
     vec3 ecStart = (modelViewMatrix * vec4(start, 1.0)).xyz;
     vec3 offset = normalMatrix * forward_offset;
     vec3 ecEnd = ecStart + offset;
+
+    nvr_vBatchId = batchId;
+    nvr_vIsPicked = isPicked;
 
     vec3 forwardDirectionEC = normalize(offset);
 

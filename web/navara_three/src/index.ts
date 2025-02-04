@@ -16,6 +16,7 @@ import {
   DepthTexture,
   DirectionalLight,
   AmbientLight,
+  Color,
   type Vector3Tuple,
 } from "three";
 import invariant from "tiny-invariant";
@@ -37,6 +38,7 @@ import {
 } from "./event";
 import { registerInputEvents } from "./input";
 import type { Light } from "./light";
+import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
@@ -51,6 +53,7 @@ import type { CommonUniforms } from "./uniforms";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+import { PickHelper } from "./pickHelper";
 
 export * from "./type";
 export * from "./constants";
@@ -72,6 +75,7 @@ export type Options = {
   antialias?: Antialias;
   light?: Light;
   backgroundColor?: number;
+  picking?: Picking;
 };
 
 export type Events = {
@@ -95,6 +99,7 @@ export default class ThreeView {
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
   private _disposed = false;
+  private _picked = false;
   private _events: {
     [K in keyof Events]?: Events[K][];
   } = {};
@@ -197,6 +202,7 @@ export default class ThreeView {
     },
   };
   private _eventManager = new EventManager();
+  private _pickHelper?: PickHelper;
 
   constructor(options: Options) {
     if (!options.canvas) {
@@ -292,6 +298,7 @@ export default class ThreeView {
 
     const main = new Scene();
     const drapedFeaturesScene = new Scene();
+
     const globeGBufferScene = new Scene();
 
     this._scenes = {
@@ -424,6 +431,18 @@ export default class ThreeView {
         this._core,
         this.renderer.domElement,
       );
+      this._pickHelper = new PickHelper(
+        this.renderer.domElement,
+        this.renderer,
+        this.camera,
+        this._scenes,
+        this._meshes,
+        this._drapedFeatureMaterials,
+        this._globeGBufferRenderTarget,
+        this._options.picking?.highlightColor ?? new Color(0x00ffff),
+        this.onPick.bind(this),
+      );
+      this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
 
     this._startMainLoop();
@@ -440,7 +459,13 @@ export default class ThreeView {
       this._eventDisposer();
       this._eventDisposer = undefined;
     }
+
+    if (this._pickHelper) {
+      this._pickHelper.dispose();
+    }
+
     this._globeGBufferRenderTarget.dispose();
+
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -542,6 +567,7 @@ export default class ThreeView {
 
   private _render() {
     this._effectComposer.render();
+    // this._pickHelper?.renderDebugScreen();
   }
 
   // TODO: Handle event from user.
@@ -582,7 +608,8 @@ export default class ThreeView {
       if (this._disposed) return;
       this._stats?.begin();
 
-      if (this._update()) this._render();
+      if (this._update() || this._picked) this._render();
+      this._picked = false;
 
       this._stats?.end();
     };
@@ -614,6 +641,17 @@ export default class ThreeView {
       : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };
+
+  onPick(pickArr: number[]) {
+    if (pickArr.length > 0) {
+      const prop = this._core?.getBatchProp(pickArr[0]);
+      if (prop) {
+        console.log(JSON.parse(prop));
+      }
+    }
+
+    this._picked = true;
+  }
 }
 
 function newId() {
