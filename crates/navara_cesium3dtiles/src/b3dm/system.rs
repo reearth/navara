@@ -103,6 +103,7 @@ pub fn construct_model_by_b3dm_layer(
             .unwrap_or(0);
 
         // batch_length.max(1): If there is no batch table, assign a global batch id to the entire model.
+        // TODO: This function might be a long task, we might need to run it on the worker.
         let global_batch_ids = batch_table_res.add_multiple_null_val(batch_length.max(1));
 
         let ids_handle = buf.new_u32(global_batch_ids);
