@@ -284,6 +284,7 @@ export class PickHelper {
 
   private toggleHighlight(pickArr: number[]) {
     const pickarr = pickArr.slice();
+    // TODO: Need to think improving a lot of loop.
     for (const [_key, obj] of this.meshes) {
       // point, billboard
       if (obj instanceof Sprite) {
