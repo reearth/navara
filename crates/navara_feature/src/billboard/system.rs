@@ -92,7 +92,7 @@ pub fn update_height_by_terrain(
 
     for (_, mut feature) in &mut renderable_features.p0() {
         match feature.as_ref() {
-            RenderableFeature::Point {
+            RenderableFeature::Billboard {
                 material, active, ..
             } => {
                 if !material.clamp_to_ground {
