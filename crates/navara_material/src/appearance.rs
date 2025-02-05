@@ -171,7 +171,7 @@ impl Default for ModelMaterial {
             height: 0.,
             url: "".to_string(),
             should_rotate_in_default: true,
-            max_sse: 2.3,
+            max_sse: 3.,
         }
     }
 }
@@ -187,7 +187,7 @@ impl Default for VectorTileMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            max_sse: 2.3,
+            max_sse: 3.,
             max_zoom: 20,
         }
     }
@@ -213,7 +213,7 @@ impl Default for RasterTileMaterial {
             segments: 10,
             color: 0xffffff,
             opacity: 1.,
-            max_sse: 2.3,
+            max_sse: 3.,
             max_zoom: 20,
             wireframe: false,
             should_compute_normal_from_vertex: None,
