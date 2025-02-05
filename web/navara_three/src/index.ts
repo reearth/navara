@@ -18,14 +18,11 @@ import {
   AmbientLight,
   Color,
   type Vector3Tuple,
+  HalfFloatType,
 } from "three";
 import invariant from "tiny-invariant";
 
-import {
-  DEFAULT_ANTIALIAS,
-  selectAntialiasEffect,
-  type Antialias,
-} from "./antialias";
+import { selectAntialiasEffect, type Antialias } from "./antialias";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
   processEvent,
@@ -44,6 +41,7 @@ import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import { isWorker } from "./temp/utils";
+import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
   type LayerDescription,
@@ -76,6 +74,10 @@ export type Options = {
   light?: Light;
   backgroundColor?: number;
   picking?: Picking;
+  // The number of samples. This affects the quality of the post-processing.
+  multisampling?: number;
+  // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
+  halfFloat?: boolean;
 };
 
 export type Events = {
@@ -203,6 +205,7 @@ export default class ThreeView {
   };
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
+  private _defaultTextureOptions: TextureOptions;
 
   constructor(options: Options) {
     if (!options.canvas) {
@@ -320,7 +323,7 @@ export default class ThreeView {
 
       const camera = new PerspectiveCamera(50, width / height);
       camera.far = 1e8; // 100,000 km
-      camera.near = 0.1;
+      camera.near = 1;
       const earthRadius = 6371000;
       camera.position.set(0, 0, earthRadius * 3);
       camera.up.set(0, 0, 1);
@@ -328,12 +331,14 @@ export default class ThreeView {
       this.camera = camera;
     }
 
-    const renderTarget = new WebGLRenderTarget(width, height, {
-      stencilBuffer: true,
-    });
-
     // Setup render pass
-    this._effectComposer = new EffectComposer(this.renderer, renderTarget);
+    this._effectComposer = new EffectComposer(this.renderer, {
+      stencilBuffer: true,
+      frameBufferType: options.halfFloat ? HalfFloatType : undefined,
+      multisampling: options.multisampling ?? 4,
+    });
+    this._effectComposer.setSize(width, height);
+
     this._renderPass = new CustomRenderPass(
       this._scenes,
       this.camera,
@@ -344,9 +349,7 @@ export default class ThreeView {
     this._effectComposer.addPass(this._renderPass);
 
     // AA
-    const aaEffect = selectAntialiasEffect(
-      options.antialias ?? DEFAULT_ANTIALIAS,
-    );
+    const aaEffect = selectAntialiasEffect(options.antialias);
     if (aaEffect) {
       const aaPass = new EffectPass(this.camera, aaEffect);
       this._effectComposer.addPass(aaPass);
@@ -400,9 +403,6 @@ export default class ThreeView {
       }
     }
 
-    // orbit
-    // this.control = new MapControls(this.camera, this.renderer.domElement);
-
     this._uniforms = {
       viewportAndPixelRatio: { value: null },
       frustumNearFar: { value: null },
@@ -410,6 +410,10 @@ export default class ThreeView {
       tGlobeDepth: { value: null },
       tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
+    };
+
+    this._defaultTextureOptions = {
+      maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
     };
   }
 
@@ -556,6 +560,7 @@ export default class ThreeView {
       events,
       this._uniforms,
       this._drapedFeatureMaterials,
+      this._defaultTextureOptions,
     );
     events?.free();
 
