@@ -2,7 +2,7 @@ import type { PolygonInternalMaterial, PolygonMaterial } from "@navara/engine";
 
 export class PolygonMaterialLike implements PolygonMaterial {
   clamp_to_ground?: boolean;
-  color: number;
+  color?: number;
   extruded_height?: number;
   height?: number;
   show?: boolean;
