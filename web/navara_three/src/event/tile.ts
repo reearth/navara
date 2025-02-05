@@ -24,7 +24,8 @@ import {
   RawShaderMaterial,
   GLSL3,
   SRGBColorSpace,
-  LinearMipmapNearestFilter,
+  type MinificationTextureFilter,
+  type MagnificationTextureFilter,
 } from "three";
 
 import type { Scenes } from "../scene";
@@ -169,8 +170,10 @@ function toMaterial(
     const t = loadedTexes.get(textureFragmentId);
     if (t) {
       t.colorSpace = SRGBColorSpace;
-      t.minFilter = LinearMipmapNearestFilter;
+      t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
+      t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
       t.anisotropy = textureOptions.maxAnisotropy;
+      t.generateMipmaps = textureOptions.useMipmaps;
       t.needsUpdate = true;
 
       m.map = t;

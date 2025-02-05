@@ -19,6 +19,7 @@ import {
   Color,
   type Vector3Tuple,
   HalfFloatType,
+  LinearFilter,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -414,6 +415,9 @@ export default class ThreeView {
 
     this._defaultTextureOptions = {
       maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
+      magFilter: LinearFilter,
+      minFilter: LinearFilter,
+      useMipmaps: true,
     };
   }
 
