@@ -24,7 +24,7 @@ import {
   RawShaderMaterial,
   GLSL3,
   SRGBColorSpace,
-  LinearFilter,
+  LinearMipmapNearestFilter,
 } from "three";
 
 import type { Scenes } from "../scene";
@@ -169,8 +169,7 @@ function toMaterial(
     const t = loadedTexes.get(textureFragmentId);
     if (t) {
       t.colorSpace = SRGBColorSpace;
-      t.minFilter = LinearFilter;
-      t.generateMipmaps = false;
+      t.minFilter = LinearMipmapNearestFilter;
       t.anisotropy = textureOptions.maxAnisotropy;
       t.needsUpdate = true;
 
