@@ -43,9 +43,24 @@ pub struct PointMaterial {
     pub center: Vec2,
     pub height: FloatType,
     /// near, far
-    pub scale_by_distance: Option<bool>,
+    pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+}
+
+impl Default for PointMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            size: 1.,
+            color: 0xffffff,
+            center: Vec2::new(0.5, 0.5),
+            clamp_to_ground: true,
+            height: 0.,
+            scale_by_distance: true,
+            depth_test: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -57,9 +72,25 @@ pub struct BillboardMaterial {
     pub height: FloatType,
     pub url: String,
     /// near, far
-    pub scale_by_distance: Option<bool>,
+    pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+}
+
+impl Default for BillboardMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            size: 1.,
+            color: 0xffffff,
+            center: Vec2::new(0.5, 0.5),
+            clamp_to_ground: true,
+            height: 0.,
+            url: "".to_string(),
+            scale_by_distance: true,
+            depth_test: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -70,6 +101,19 @@ pub struct PolylineMaterial {
     pub clamp_to_ground: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
+}
+
+impl Default for PolylineMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            color: 0xffffff,
+            width: 1.,
+            clamp_to_ground: true,
+            height: 0.,
+            internal: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -88,6 +132,20 @@ pub struct PolygonMaterial {
     pub internal: Option<PolygonInternalMaterial>,
 }
 
+impl Default for PolygonMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            color: 0xffffff,
+            clamp_to_ground: true,
+            height: 0.,
+            extruded_height: None,
+            wireframe: false,
+            internal: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolygonInternalMaterial {
     pub min_max_heights: Vec<f32>,
@@ -104,6 +162,20 @@ pub struct ModelMaterial {
     pub max_sse: f32,
 }
 
+impl Default for ModelMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            size: 1.,
+            clamp_to_ground: true,
+            height: 0.,
+            url: "".to_string(),
+            should_rotate_in_default: true,
+            max_sse: 2.3,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct VectorTileMaterial {
     pub show: bool,
@@ -115,13 +187,13 @@ impl Default for VectorTileMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            max_sse: 2.,
+            max_sse: 2.3,
             max_zoom: 20,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Component, Default)]
+#[derive(Debug, Clone, PartialEq, Component)]
 pub struct RasterTileMaterial {
     pub show: bool,
     pub segments: usize,
@@ -132,6 +204,22 @@ pub struct RasterTileMaterial {
     pub wireframe: bool,
     pub should_compute_normal_from_vertex: Option<bool>,
     pub internal: Option<RasterTileInternalMaterial>,
+}
+
+impl Default for RasterTileMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            segments: 10,
+            color: 0xffffff,
+            opacity: 1.,
+            max_sse: 2.3,
+            max_zoom: 20,
+            wireframe: false,
+            should_compute_normal_from_vertex: None,
+            internal: None,
+        }
+    }
 }
 
 impl RasterTileMaterial {
@@ -145,7 +233,7 @@ pub struct RasterTileInternalMaterial {
     pub texture_fragment: Option<Entity>,
 }
 
-#[derive(Debug, Clone, PartialEq, Component, Default)]
+#[derive(Debug, Clone, PartialEq, Component)]
 pub struct RasterTerrainMaterial {
     pub show: bool,
     pub segments: usize,
@@ -154,4 +242,18 @@ pub struct RasterTerrainMaterial {
     pub wireframe: bool,
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: u32,
+}
+
+impl Default for RasterTerrainMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            segments: 64,
+            max_zoom: 20,
+            min_zoom: 0,
+            wireframe: false,
+            elevation_decoder: ElevationDecoder::default(),
+            tile_size: 256,
+        }
+    }
 }

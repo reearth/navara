@@ -24,10 +24,7 @@ export const run = async (view: ThreeView) => {
       url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     },
     raster_tile: {
-      segments: 10,
-      color: 0xcccccc,
-      max_sse: 5,
-      max_zoom: 14,
+      max_zoom: 23,
       wireframe: false,
     },
   });
