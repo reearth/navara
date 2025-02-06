@@ -1,7 +1,7 @@
 use bevy_ecs::{
     entity::Entity,
     query::Added,
-    system::{Commands, ParamSet, Query, ResMut},
+    system::{Commands, Query, ResMut},
 };
 
 use navara_buffer_store::BufferStore;
@@ -103,6 +103,7 @@ pub fn transfer_mesh(
                 render_info: ModelRenderInformation {
                     current_terrain_height: 0.,
                     is_rendered: false,
+                    should_recalculate_height: true,
                 },
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
@@ -127,24 +128,22 @@ pub fn transfer_mesh(
 pub fn update_height_by_terrain(
     mut qt: ResMut<RasterTileQuadtree>,
     mut buf: ResMut<BufferStore>,
-    mut renderable_features: ParamSet<(
-        Query<(&ModelMarker, &mut RenderableFeature)>,
-        Query<&ModelMarker, Added<RenderableFeature>>,
-    )>,
+    mut renderable_features: Query<(&ModelMarker, &mut RenderableFeature)>,
     geometries: Query<&ModelGeometry>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
-    if tile_meshes.is_empty() && renderable_features.p1().is_empty() {
-        return;
-    }
+    let is_tile_meshes_empty = tile_meshes.is_empty();
 
-    for (_, mut feature) in &mut renderable_features.p0() {
+    for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
             RenderableFeature::Model {
-                material, active, ..
+                render_info,
+                material,
+                active,
+                ..
             } => {
-                if !material.clamp_to_ground {
+                if is_tile_meshes_empty && !render_info.should_recalculate_height {
                     continue;
                 }
                 if !material.show || !active {
@@ -167,23 +166,24 @@ pub fn update_height_by_terrain(
                 feature_batch_id: _,
                 ..
             } => {
+                render_info.should_recalculate_height = false;
                 let geometry = match geometries.get(*feature_id) {
                     Ok(g) => g,
                     Err(_) => continue,
                 };
-                let terrain_height = if material.clamp_to_ground {
-                    compute_terrain_height_at_point(
+                if material.clamp_to_ground {
+                    let terrain_height = compute_terrain_height_at_point(
                         &mut qt,
                         &mut buf,
                         &terrain_data_requester,
                         &geometry.crs.to_lng_lat(WGS84_32, geometry.coords),
                     )
-                    .unwrap_or(0.)
+                    .unwrap_or(0.);
+                    render_info.current_terrain_height =
+                        render_info.current_terrain_height.max(terrain_height);
                 } else {
-                    0.
+                    render_info.current_terrain_height = 0.;
                 };
-                render_info.current_terrain_height =
-                    render_info.current_terrain_height.max(terrain_height);
                 let position = geometry.crs.to_vec3(
                     WGS84_32,
                     geometry.coords,
