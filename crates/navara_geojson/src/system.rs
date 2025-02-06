@@ -307,12 +307,14 @@ pub fn update_geo_json_layer(
                         crs,
                         material,
                         transform,
+                        render_info,
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
                             let should_update_transform =
                                 material.height != mat.height || material.size != mat.size;
                             *material = mat.clone();
+                            render_info.should_recalculate_height = true;
                             if should_update_transform {
                                 *transform = calc_transform(
                                     coordinates,
@@ -329,12 +331,14 @@ pub fn update_geo_json_layer(
                         crs,
                         material,
                         transform,
+                        render_info,
                         ..
                     } => {
                         if let Appearance::Point(mat) = &u.appearance {
                             let should_update_transform =
                                 material.height != mat.height || material.size != mat.size;
                             *material = mat.clone();
+                            render_info.should_recalculate_height = true;
                             if should_update_transform {
                                 *transform = calc_transform(
                                     coordinates,
@@ -504,7 +508,7 @@ mod test {
             color: 123,
             center: Vec2::new(1., 1.),
             height: 1.,
-            scale_by_distance: Some(true),
+            scale_by_distance: true,
             clamp_to_ground: false,
             depth_test: false,
         };
@@ -618,7 +622,7 @@ mod test {
             color: 123,
             center: Vec2::new(1., 1.),
             height: 1.,
-            scale_by_distance: Some(true),
+            scale_by_distance: true,
             clamp_to_ground: false,
             depth_test: false,
         };
@@ -728,7 +732,7 @@ mod test {
             center: Vec2::new(1., 1.),
             height: 1.,
             url: "https://example.com".to_string(),
-            scale_by_distance: Some(true),
+            scale_by_distance: true,
             clamp_to_ground: false,
             depth_test: false,
         };
@@ -843,7 +847,7 @@ mod test {
             center: Vec2::new(1., 1.),
             height: 1.,
             url: "https://example.com".to_string(),
-            scale_by_distance: Some(true),
+            scale_by_distance: true,
             clamp_to_ground: false,
             depth_test: false,
         };

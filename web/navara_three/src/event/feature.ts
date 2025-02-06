@@ -6,13 +6,14 @@ import type {
   RenderableFeature,
   PolygonMesh,
 } from "@navara/engine";
+import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
-import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
+import { isNumber } from "lodash-es";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -30,7 +31,6 @@ import type { CommonUniforms } from "../uniforms";
 
 import { initializeGltfLoader, TEXTURE_LOADER } from "./loaders";
 
-import { isNumber } from "lodash-es";
 import type { BufferLoader } from ".";
 
 export function renderFeature(
@@ -119,7 +119,9 @@ if (nvr_uPickable > 0.0 && alpha > 0.0) {
   };
 
   const sprite = new Sprite(material);
-  sprite.center.set(m.material.center.x, m.material.center.y);
+  if (m.material.center) {
+    sprite.center.set(m.material.center.x, m.material.center.y);
+  }
 
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
@@ -129,6 +131,7 @@ if (nvr_uPickable > 0.0 && alpha > 0.0) {
 }
 
 async function renderBillboard(m: BillboardMesh) {
+  if (!m.material.url) return;
   const map = await TEXTURE_LOADER.loadAsync(m.material.url);
 
   const material = new SpriteMaterial({
@@ -170,7 +173,9 @@ async function renderBillboard(m: BillboardMesh) {
   };
 
   const sprite = new Sprite(material);
-  sprite.center.set(m.material.center.x, m.material.center.y);
+  if (m.material.center) {
+    sprite.center.set(m.material.center.x, m.material.center.y);
+  }
 
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;

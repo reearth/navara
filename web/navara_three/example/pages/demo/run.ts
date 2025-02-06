@@ -29,11 +29,7 @@ export const run = async (view: ThreeView) => {
     type: "tiles",
     data: { url: tileUrls.gsiSeamlessphoto },
     raster_tile: {
-      segments: 10,
-      color: 0xcccccc,
-      max_sse: 2,
       max_zoom: 23,
-      wireframe: false,
     },
   });
 
@@ -46,10 +42,8 @@ export const run = async (view: ThreeView) => {
       url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
     },
     raster_terrain: {
-      segments: 64,
       max_zoom: 15,
       min_zoom: 5,
-      wireframe: false,
       elevation_decoder:
         // @ts-expect-error : Make switch button later
         terrainType === "mapbox"
@@ -82,17 +76,7 @@ export const run = async (view: ThreeView) => {
       ],
     },
     billboard: {
-      color: 0xffffff,
       size: 0.05,
-      height: 1,
-      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
-      center: {
-        x: 0.5,
-        y: 0,
-      },
-      scale_by_distance: true,
-      clamp_to_ground: true,
-      depth_test: true,
       url: "/example.png",
     },
   });
