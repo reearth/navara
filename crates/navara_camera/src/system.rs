@@ -45,7 +45,7 @@ pub fn startup(mut commands: Commands) {
         transform,
         CameraFrustum::new(
             &transform,
-            0.1,
+            1.,
             1e8,
             // This is for frustum culling, so need to organize
             Angle::new(50.).rad().val(),
