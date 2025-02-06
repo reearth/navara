@@ -159,12 +159,39 @@ pub fn update_mvt_layer(
                             crs,
                             material,
                             transform,
+                            render_info,
                             ..
                         } = f.as_mut()
                         {
                             let should_update_transform =
                                 material.height != pt.height || material.size != pt.size;
                             *material = pt.clone();
+                            render_info.should_recalculate_height = true;
+                            if should_update_transform {
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                    false,
+                                );
+                            }
+                        }
+                    }
+                    Appearance::Billboard(pt) => {
+                        if let RenderableFeature::Billboard {
+                            coordinates,
+                            crs,
+                            material,
+                            transform,
+                            render_info,
+                            ..
+                        } = f.as_mut()
+                        {
+                            let should_update_transform =
+                                material.height != pt.height || material.size != pt.size;
+                            *material = pt.clone();
+                            render_info.should_recalculate_height = true;
                             if should_update_transform {
                                 *transform = calc_transform(
                                     coordinates,
