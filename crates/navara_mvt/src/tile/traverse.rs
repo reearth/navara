@@ -6,6 +6,7 @@ use navara_core::Ellipsoid;
 
 use navara_data_requester::DataRequesterStatus;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
+use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_math::{FloatType, Transform};
 
@@ -47,6 +48,7 @@ pub fn traverse_tile(
     rendered_tiles: &Query<&RenderedTile>,
     features: &Query<&FeatureId, With<MVTFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
+    fog: &Fog,
 ) -> TraversalResult {
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
@@ -112,7 +114,7 @@ pub fn traverse_tile(
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
     let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid);
-    let sse = tile.calc_sse(frustum, window, ellipsoid, 64., distance_from_camera);
+    let sse = tile.calc_sse(frustum, window, ellipsoid, 64., distance_from_camera, fog);
 
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.sse = sse;
@@ -168,6 +170,7 @@ pub fn traverse_tile(
                 rendered_tiles,
                 features,
                 renderable_features,
+                fog,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {

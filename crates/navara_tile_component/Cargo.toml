@@ -21,5 +21,6 @@ navara_occluder = { path = "../navara_occluder" }
 navara_mesh = { path = "../navara_mesh" }
 navara_component = { path = "../navara_component" }
 navara_mock = { path = "../navara_mock" }
+navara_fog = { path = "../navara_fog" }
 martini = { path = "../martini" }
 fxhash.workspace = true

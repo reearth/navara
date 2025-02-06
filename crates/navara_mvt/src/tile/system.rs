@@ -6,6 +6,7 @@ use navara_feature_component::{
     batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId, point::PointMarker,
     polygon::PolygonMarker, polyline::PolylineMarker, render::RenderableFeature,
 };
+use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_math::Transform;
 
@@ -45,16 +46,21 @@ pub fn update_tiles(
     rendered_tiles: Query<&RenderedTile>,
     features: Query<&FeatureId, With<MVTFeatureMarker>>,
     changed_features: Query<&FeatureId, (With<MVTFeatureMarker>, Changed<FeatureId>)>,
-    mut renderable_features: Query<&mut RenderableFeature>,
-    // TODO: This detects all `RenderableFeature` that has `Rendered`, but this isn't efficient.
-    //       We should use another marker to detect if it is MVT's RenderableFeature.
-    changed_renderable_features: Query<(), (With<RenderableFeature>, Changed<Rendered>)>,
+    mut renderable_features: ParamSet<(
+        Query<&mut RenderableFeature>,
+        // TODO: This detects all `RenderableFeature` that has `Rendered`, but this isn't efficient.
+        //       We should use another marker to detect if it is MVT's RenderableFeature.
+        Query<(), (With<RenderableFeature>, Changed<Rendered>)>,
+    )>,
+    fogs: Query<&Fog>,
 ) {
     let is_data_requester_changed = !changed_mvt_data_requester.is_empty();
     let are_features_changed = !changed_features.is_empty();
-    let are_renderable_features_rendered = !changed_renderable_features.is_empty();
+    let are_renderable_features_rendered = !renderable_features.p1().is_empty();
 
     let occluder = occluder.iter().next().unwrap();
+
+    let fog = fogs.single();
 
     for (layer, resources) in &tiles {
         let Ok(mut qt) = qts.get_mut(resources.quadtree) else {
@@ -104,7 +110,8 @@ pub fn update_tiles(
                 &mvt_data_requester,
                 &rendered_tiles,
                 &features,
-                &mut renderable_features,
+                &mut renderable_features.p0(),
+                fog,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(

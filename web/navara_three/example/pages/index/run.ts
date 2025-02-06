@@ -384,7 +384,6 @@ export const run = async (view: ThreeView) => {
   //   tile_url: "http://localhost:8888/{z}/{x}/{y}.png",
   //   z: 4,
   //   max_zoom: 21,
-  //   max_sse: 3,
   //   wireframe: false,
   // });
 

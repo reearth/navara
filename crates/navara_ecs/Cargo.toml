@@ -15,6 +15,7 @@ serde_json.workspace = true
 bevy_log = { workspace = true, optional = true }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_camera = { path = "../navara_camera" }
+navara_fog = { path = "../navara_fog" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_event = { path = "../navara_event" }
 navara_event_store = { path = "../navara_event_store" }
