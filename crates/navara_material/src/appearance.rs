@@ -52,11 +52,11 @@ impl Default for PointMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            size: 1.,
+            size: 0.1,
             color: 0xffffff,
-            center: Vec2::new(0.5, 0.5),
+            center: Vec2::new(0.5, 0.),
             clamp_to_ground: true,
-            height: 0.,
+            height: 1.,
             scale_by_distance: true,
             depth_test: true,
         }
@@ -81,11 +81,11 @@ impl Default for BillboardMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            size: 1.,
+            size: 0.1,
             color: 0xffffff,
-            center: Vec2::new(0.5, 0.5),
+            center: Vec2::new(0.5, 0.),
             clamp_to_ground: true,
-            height: 0.,
+            height: 1.,
             url: "".to_string(),
             scale_by_distance: true,
             depth_test: true,
@@ -110,7 +110,7 @@ impl Default for PolylineMaterial {
             color: 0xffffff,
             width: 1.,
             clamp_to_ground: true,
-            height: 0.,
+            height: 1.,
             internal: None,
         }
     }
@@ -138,7 +138,7 @@ impl Default for PolygonMaterial {
             show: true,
             color: 0xffffff,
             clamp_to_ground: true,
-            height: 0.,
+            height: 1.,
             extruded_height: None,
             wireframe: false,
             internal: None,
@@ -168,7 +168,7 @@ impl Default for ModelMaterial {
             show: true,
             size: 1.,
             clamp_to_ground: true,
-            height: 0.,
+            height: 1.,
             url: "".to_string(),
             should_rotate_in_default: true,
             max_sse: 3.,

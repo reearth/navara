@@ -63,11 +63,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       size: 0.1,
       height: 1,
-      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
-      center: {
-        x: 0.5,
-        y: 0,
-      },
       scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
@@ -101,11 +96,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       size: 0.05,
       height: 1,
-      // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
-      center: {
-        x: 0.5,
-        y: 0,
-      },
       scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
