@@ -3,6 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
+use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_geometry::tile_triangles_flat;
 use navara_material::RasterTileInternalMaterial;
@@ -68,6 +69,7 @@ pub fn update_tiles(
             ),
         >,
     )>,
+    fogs: Query<&Fog>,
 ) {
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
@@ -79,6 +81,9 @@ pub fn update_tiles(
     let terrain_layer = terrain_layer.iter().next();
 
     let occluder = occluder.iter().next().unwrap();
+
+    let fog = fogs.single();
+
     // TODO: Support multiple tiles
     for tiles in &tiles {
         for (_, camera, frustum) in &camera {
@@ -122,6 +127,7 @@ pub fn update_tiles(
                 &WGS84_32,
                 occluder,
                 &mut meshes,
+                fog,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(

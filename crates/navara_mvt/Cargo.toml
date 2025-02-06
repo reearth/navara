@@ -28,3 +28,4 @@ navara_window = { path = "../navara_window" }
 navara_occluder = { path = "../navara_occluder" }
 navara_frame = { path = "../navara_frame" }
 navara_worker = { path = "../navara_worker" }
+navara_fog = { path = "../navara_fog" }

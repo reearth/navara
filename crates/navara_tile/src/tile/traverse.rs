@@ -3,6 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance, Priority};
 use navara_core::Ellipsoid;
 
+use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_math::{FloatType, Transform};
 
@@ -52,6 +53,7 @@ pub fn traverse_tile(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+    fog: &Fog,
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
@@ -117,6 +119,7 @@ pub fn traverse_tile(
         ellipsoid,
         if terrain_layer.is_some() { 65. } else { 64. },
         distance_from_camera,
+        fog,
     );
 
     let tile = qt.qt.get_mut(handle).unwrap();
@@ -175,6 +178,7 @@ pub fn traverse_tile(
                 ellipsoid,
                 occluder,
                 meshes,
+                fog,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
