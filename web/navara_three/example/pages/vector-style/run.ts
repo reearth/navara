@@ -31,11 +31,7 @@ export const run = async (view: ThreeView) => {
       url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     },
     raster_tile: {
-      segments: 10,
-      color: 0xffffff,
-      max_sse: 2,
       max_zoom: 23,
-      wireframe: false,
     },
   });
 
@@ -48,10 +44,8 @@ export const run = async (view: ThreeView) => {
   //     url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
   //   },
   //   raster_terrain: {
-  //     segments: 64,
   //     max_zoom: 15,
   //     min_zoom: 5,
-  //     wireframe: false,
   //     elevation_decoder:
   //       // @ts-expect-error : Make switch button later
   //       terrainType === "mapbox"
