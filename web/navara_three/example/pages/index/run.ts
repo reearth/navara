@@ -394,7 +394,7 @@ export const run = async (view: ThreeView) => {
   //   tile_url: "http://localhost:8888/{z}/{x}/{y}.png",
   //   z: 4,
   //   max_zoom: 21,
-  //   max_sse: 2,
+  //   max_sse: 3,
   //   wireframe: false,
   // });
 
@@ -402,10 +402,7 @@ export const run = async (view: ThreeView) => {
     type: "tiles",
     data: { url: tileUrls.openstreetmap },
     raster_tile: {
-      color: 0xcccccc,
-      max_sse: 3,
       max_zoom: 23,
-      opacity: 1,
       wireframe: false,
     },
   });
@@ -419,10 +416,8 @@ export const run = async (view: ThreeView) => {
       url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
     },
     raster_terrain: {
-      segments: 64,
       max_zoom: 15,
       min_zoom: 5,
-      wireframe: false,
       elevation_decoder:
         // @ts-expect-error : Make switch button later
         terrainType === "mapbox"

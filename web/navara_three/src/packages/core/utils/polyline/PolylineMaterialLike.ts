@@ -5,7 +5,7 @@ import type {
 
 export class PolylineMaterialLike implements PolylineMaterial {
   clamp_to_ground?: boolean;
-  color: number;
+  color?: number;
   height?: number;
   width?: number;
   show?: boolean;

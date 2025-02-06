@@ -748,7 +748,7 @@ function processPointChanged(
 ) {
   obj.userData.orgColor = material.color;
   if (!obj.userData.isPicked) {
-    obj.material.color.set(material.color);
+    obj.material.color.set(material.color ?? 0);
   }
   obj.visible = (material.show ?? true) && active;
 
@@ -763,7 +763,7 @@ function processBillboardChanged(
 ) {
   obj.userData.orgColor = material.color;
   if (!obj.userData.isPicked) {
-    obj.material.color.set(material.color);
+    obj.material.color.set(material.color ?? 0);
   }
   obj.visible = (material.show ?? true) && active;
 
@@ -805,7 +805,7 @@ function processPolygonChanged(
   active: boolean,
 ) {
   if (obj.material instanceof MeshLambertMaterial) {
-    obj.material.color.set(material.color);
+    obj.material.color.set(material.color ?? 0);
     obj.visible = (material.show ?? true) && active;
     obj.material.wireframe = material.wireframe ?? false;
     obj.material.userData.uMinMaxHeight.value =
