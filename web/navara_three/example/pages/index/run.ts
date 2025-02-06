@@ -403,7 +403,7 @@ export const run = async (view: ThreeView) => {
     data: { url: tileUrls.openstreetmap },
     raster_tile: {
       color: 0xcccccc,
-      max_sse: 2,
+      max_sse: 3,
       max_zoom: 23,
       opacity: 1,
       wireframe: false,

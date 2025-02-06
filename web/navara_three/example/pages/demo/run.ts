@@ -31,7 +31,7 @@ export const run = async (view: ThreeView) => {
     raster_tile: {
       segments: 10,
       color: 0xcccccc,
-      max_sse: 2,
+      max_sse: 3,
       max_zoom: 23,
       wireframe: false,
     },
