@@ -23,10 +23,14 @@ import {
   Texture,
   RawShaderMaterial,
   GLSL3,
+  SRGBColorSpace,
+  type MinificationTextureFilter,
+  type MagnificationTextureFilter,
 } from "three";
 
 import type { Scenes } from "../scene";
 import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
+import type { TextureOptions } from "../textures";
 import type { MeshCache } from "../type";
 
 import type { BufferLoader } from ".";
@@ -37,6 +41,7 @@ export async function processMeshAdded(
   mesh: MeshAdded,
   buf: BufferLoader,
   loadedTexes: Map<string, Texture>,
+  textureOptions: TextureOptions,
 ) {
   await createMesh(
     scenes,
@@ -47,6 +52,7 @@ export async function processMeshAdded(
     mesh.mesh,
     mesh.material,
     mesh.transform,
+    textureOptions,
   );
 }
 
@@ -71,7 +77,8 @@ async function createMesh(
   id: string,
   mesh: EventMesh,
   mat: EventMaterial,
-  tranform?: Transform,
+  tranform: Transform | undefined,
+  textureOptions: TextureOptions,
 ) {
   let position = buf.f32(mesh.vertices);
   let indices = buf.u32(mesh.indices);
@@ -98,7 +105,7 @@ async function createMesh(
     geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
   }
 
-  const material = toMaterial(mat, loadedTexes);
+  const material = toMaterial(mat, loadedTexes, textureOptions);
   const m = new Mesh(geometry, material);
   m.visible = false;
   m.renderOrder = mesh.render_order;
@@ -130,6 +137,7 @@ function setTransform(obj: Object3D, transform: Transform) {
 function toMaterial(
   mat: EventMaterial,
   loadedTexes: Map<string, Texture>,
+  textureOptions: TextureOptions,
 ): Material {
   const transparent = mat.opacity != null && mat.opacity !== 1;
   if (mat.wireframe) {
@@ -161,6 +169,13 @@ function toMaterial(
     );
     const t = loadedTexes.get(textureFragmentId);
     if (t) {
+      t.colorSpace = SRGBColorSpace;
+      t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
+      t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
+      t.anisotropy = textureOptions.maxAnisotropy;
+      t.generateMipmaps = textureOptions.useMipmaps;
+      t.needsUpdate = true;
+
       m.map = t;
     }
   }

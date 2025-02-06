@@ -41,7 +41,6 @@ import {
   Sprite,
   Group,
   ShaderMaterial,
-  SRGBColorSpace,
 } from "three";
 
 import { FEATURE_CONCURRENCY } from "../concurrency";
@@ -49,6 +48,7 @@ import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import { applyTextureAspect } from "../texture";
+import type { TextureOptions } from "../textures";
 import type { AbortControllers, MeshCache, WorkerPoolPromises } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
@@ -128,6 +128,7 @@ export function processEvent(
   event: Events | undefined,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
+  textureOptions: TextureOptions,
 ) {
   eventManager.pushEvents(event);
 
@@ -159,7 +160,14 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processMeshAdded(scenes, meshes, event, buf, loadedTexs);
+          await processMeshAdded(
+            scenes,
+            meshes,
+            event,
+            buf,
+            loadedTexs,
+            textureOptions,
+          );
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
@@ -589,7 +597,6 @@ async function processTextureFragmentRequested(
   await tex
     .loadAsyncWithAbort(req.url, abortController)
     .then((t) => {
-      t.colorSpace = SRGBColorSpace;
       loadedTexes.set(id, t);
       handler.triggerTextureFragmentLoaded(
         req.bits,
