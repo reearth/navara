@@ -7,27 +7,27 @@ use crate::{ElevationDecoder, TextureFragment, Vec2};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: Option<bool>,
-    pub size: f32,
-    pub color: u32,
-    pub center: Vec2,
-    pub height: f32,
-    #[wasm_bindgen(getter_with_clone)]
+    pub size: Option<f32>,
+    pub color: Option<u32>,
+    pub center: Option<Vec2>,
+    pub height: Option<f32>,
     pub scale_by_distance: Option<bool>,
-    pub clamp_to_ground: bool,
-    pub depth_test: bool,
+    pub clamp_to_ground: Option<bool>,
+    pub depth_test: Option<bool>,
 }
 
 impl From<PointMaterial> for navara_material::PointMaterial {
     fn from(val: PointMaterial) -> Self {
+        let default = navara_material::PointMaterial::default();
         navara_material::PointMaterial {
             show: val.show.unwrap_or(true),
-            size: val.size,
-            color: val.color,
-            center: val.center.into(),
-            height: val.height,
-            scale_by_distance: val.scale_by_distance,
-            clamp_to_ground: val.clamp_to_ground,
-            depth_test: val.depth_test,
+            size: val.size.unwrap_or(default.size),
+            color: val.color.unwrap_or(default.color),
+            center: val.center.unwrap_or(default.center.into()).into(),
+            height: val.height.unwrap_or(default.height),
+            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            depth_test: val.depth_test.unwrap_or(default.depth_test),
         }
     }
 }
@@ -35,13 +35,13 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
     fn from(value: &'a navara_material::PointMaterial) -> PointMaterial {
         PointMaterial {
             show: Some(value.show),
-            size: value.size,
-            color: value.color,
-            center: value.center.into(),
-            height: value.height,
-            scale_by_distance: value.scale_by_distance,
-            clamp_to_ground: value.clamp_to_ground,
-            depth_test: value.depth_test,
+            size: Some(value.size),
+            color: Some(value.color),
+            center: Some(value.center.into()),
+            height: Some(value.height),
+            scale_by_distance: Some(value.scale_by_distance),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            depth_test: Some(value.depth_test),
         }
     }
 }
@@ -57,30 +57,30 @@ pub struct NearFar {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
     pub show: Option<bool>,
-    pub size: f32,
-    pub color: u32,
-    pub center: Vec2,
-    pub height: f32,
+    pub size: Option<f32>,
+    pub color: Option<u32>,
+    pub center: Option<Vec2>,
+    pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
-    pub url: String,
-    #[wasm_bindgen(getter_with_clone)]
+    pub url: Option<String>,
     pub scale_by_distance: Option<bool>,
-    pub clamp_to_ground: bool,
-    pub depth_test: bool,
+    pub clamp_to_ground: Option<bool>,
+    pub depth_test: Option<bool>,
 }
 
 impl From<BillboardMaterial> for navara_material::BillboardMaterial {
     fn from(val: BillboardMaterial) -> Self {
+        let default = navara_material::BillboardMaterial::default();
         navara_material::BillboardMaterial {
-            show: val.show.unwrap_or(true),
-            size: val.size,
-            color: val.color,
-            center: val.center.into(),
-            height: val.height,
-            url: val.url,
-            scale_by_distance: val.scale_by_distance,
-            clamp_to_ground: val.clamp_to_ground,
-            depth_test: val.depth_test,
+            show: val.show.unwrap_or(default.show),
+            size: val.size.unwrap_or(default.size),
+            color: val.color.unwrap_or(default.color),
+            center: val.center.unwrap_or(default.center.into()).into(),
+            height: val.height.unwrap_or(default.height),
+            url: val.url.unwrap_or(default.url),
+            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            depth_test: val.depth_test.unwrap_or(default.depth_test),
         }
     }
 }
@@ -88,14 +88,14 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
     fn from(value: &'a navara_material::BillboardMaterial) -> BillboardMaterial {
         BillboardMaterial {
             show: Some(value.show),
-            size: value.size,
-            color: value.color,
-            center: value.center.into(),
-            height: value.height,
-            url: value.url.clone(),
-            scale_by_distance: value.scale_by_distance,
-            clamp_to_ground: value.clamp_to_ground,
-            depth_test: value.depth_test,
+            size: Some(value.size),
+            color: Some(value.color),
+            center: Some(value.center.into()),
+            height: Some(value.height),
+            url: Some(value.url.clone()),
+            scale_by_distance: Some(value.scale_by_distance),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            depth_test: Some(value.depth_test),
         }
     }
 }
@@ -104,7 +104,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
     pub show: Option<bool>,
-    pub color: u32,
+    pub color: Option<u32>,
     pub width: Option<f32>,
     pub clamp_to_ground: Option<bool>,
     pub height: Option<f32>,
@@ -117,7 +117,7 @@ impl PolylineMaterial {
     #[wasm_bindgen(constructor)]
     pub fn new(
         show: Option<bool>,
-        color: u32,
+        color: Option<u32>,
         clamp_to_ground: Option<bool>,
         height: Option<f32>,
         width: Option<f32>,
@@ -136,12 +136,13 @@ impl PolylineMaterial {
 
 impl From<PolylineMaterial> for navara_material::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
+        let default = navara_material::PolylineMaterial::default();
         navara_material::PolylineMaterial {
             show: val.show.unwrap_or(true),
-            color: val.color,
-            width: val.width.unwrap_or(1.),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(false),
-            height: val.height.unwrap_or(0.),
+            color: val.color.unwrap_or(default.color),
+            width: val.width.unwrap_or(default.width),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
         }
     }
@@ -150,7 +151,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
     fn from(value: &'a navara_material::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
             show: Some(value.show),
-            color: value.color,
+            color: Some(value.color),
             width: Some(value.width),
             clamp_to_ground: Some(value.clamp_to_ground),
             height: Some(value.height),
@@ -185,7 +186,7 @@ impl From<&navara_material::PolylineInternalMaterial> for PolylineInternalMateri
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonMaterial {
     pub show: Option<bool>,
-    pub color: u32,
+    pub color: Option<u32>,
     pub clamp_to_ground: Option<bool>,
     pub height: Option<f32>,
     pub extruded_height: Option<f32>,
@@ -199,7 +200,7 @@ impl PolygonMaterial {
     #[wasm_bindgen(constructor)]
     pub fn new(
         show: Option<bool>,
-        color: u32,
+        color: Option<u32>,
         clamp_to_ground: Option<bool>,
         height: Option<f32>,
         extruded_height: Option<f32>,
@@ -220,13 +221,14 @@ impl PolygonMaterial {
 
 impl From<PolygonMaterial> for navara_material::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
+        let default = navara_material::PolygonMaterial::default();
         navara_material::PolygonMaterial {
-            show: val.show.unwrap_or(true),
-            color: val.color,
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(false),
-            height: val.height.unwrap_or(0.),
+            show: val.show.unwrap_or(default.show),
+            color: val.color.unwrap_or(default.color),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            height: val.height.unwrap_or(default.height),
             extruded_height: val.extruded_height,
-            wireframe: val.wireframe.unwrap_or(false),
+            wireframe: val.wireframe.unwrap_or(default.wireframe),
             internal: val.__internal__.map(|v| v.into()),
         }
     }
@@ -235,7 +237,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
     fn from(value: &'a navara_material::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
             show: Some(value.show),
-            color: value.color,
+            color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
             height: Some(value.height),
             extruded_height: value.extruded_height,
@@ -282,14 +284,17 @@ pub struct ModelMaterial {
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
+        let default = navara_material::ModelMaterial::default();
         navara_material::ModelMaterial {
-            show: val.show.unwrap_or(true),
-            url: val.url.unwrap_or("".to_string()),
-            size: val.size.unwrap_or(1.),
-            height: val.height.unwrap_or(0.),
-            max_sse: val.max_sse.unwrap_or(2.),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(true),
-            should_rotate_in_default: val.should_rotate_in_default.unwrap_or(true),
+            show: val.show.unwrap_or(default.show),
+            url: val.url.unwrap_or(default.url),
+            size: val.size.unwrap_or(default.size),
+            height: val.height.unwrap_or(default.height),
+            max_sse: val.max_sse.unwrap_or(default.max_sse),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            should_rotate_in_default: val
+                .should_rotate_in_default
+                .unwrap_or(default.should_rotate_in_default),
         }
     }
 }
@@ -324,15 +329,16 @@ pub struct RasterTileMaterial {
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
     fn from(val: RasterTileMaterial) -> Self {
+        let default = navara_material::RasterTileMaterial::default();
         navara_material::RasterTileMaterial {
-            show: val.show.unwrap_or(true),
-            segments: val.segments.unwrap_or(10),
-            color: val.color.unwrap_or(0xFFFFFF),
-            opacity: val.opacity.unwrap_or(1.),
-            max_zoom: val.max_zoom.unwrap_or(20),
-            max_sse: val.max_sse.unwrap_or(2.),
+            show: val.show.unwrap_or(default.show),
+            segments: val.segments.unwrap_or(default.segments),
+            color: val.color.unwrap_or(default.color),
+            opacity: val.opacity.unwrap_or(default.opacity),
+            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            max_sse: val.max_sse.unwrap_or(default.max_sse),
             should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
-            wireframe: val.wireframe.unwrap_or(false),
+            wireframe: val.wireframe.unwrap_or(default.wireframe),
             internal: None,
         }
     }
@@ -383,7 +389,7 @@ impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
     fn from(val: VectorTileMaterial) -> Self {
         let default = navara_material::VectorTileMaterial::default();
         navara_material::VectorTileMaterial {
-            show: val.show.unwrap_or(true),
+            show: val.show.unwrap_or(default.show),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             max_sse: val.max_sse.unwrap_or(default.max_sse),
         }
@@ -403,24 +409,28 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
-    pub segments: usize,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
+    pub segments: Option<usize>,
+    pub max_zoom: Option<usize>,
+    pub min_zoom: Option<usize>,
     pub wireframe: Option<bool>,
-    pub elevation_decoder: ElevationDecoder,
+    pub elevation_decoder: Option<ElevationDecoder>,
     pub tile_size: Option<u32>,
 }
 
 impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
     fn from(val: RasterTerrainMaterial) -> Self {
+        let default = navara_material::RasterTerrainMaterial::default();
         navara_material::RasterTerrainMaterial {
             show: val.show.unwrap_or(true),
-            segments: val.segments,
-            max_zoom: val.max_zoom,
-            min_zoom: val.min_zoom,
-            wireframe: val.wireframe.unwrap_or(false),
-            tile_size: val.tile_size.unwrap_or(256),
-            elevation_decoder: val.elevation_decoder.into(),
+            segments: val.segments.unwrap_or(default.segments),
+            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
+            wireframe: val.wireframe.unwrap_or(default.wireframe),
+            tile_size: val.tile_size.unwrap_or(default.tile_size),
+            elevation_decoder: val
+                .elevation_decoder
+                .unwrap_or(default.elevation_decoder.into())
+                .into(),
         }
     }
 }
@@ -429,11 +439,11 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
     fn from(value: &'a navara_material::RasterTerrainMaterial) -> RasterTerrainMaterial {
         RasterTerrainMaterial {
             show: Some(value.show),
-            segments: value.segments,
-            max_zoom: value.max_zoom,
-            min_zoom: value.min_zoom,
+            segments: Some(value.segments),
+            max_zoom: Some(value.max_zoom),
+            min_zoom: Some(value.min_zoom),
             wireframe: Some(value.wireframe),
-            elevation_decoder: ElevationDecoder {
+            elevation_decoder: Some(ElevationDecoder {
                 r_scaler: value.elevation_decoder.r_scaler,
                 g_scaler: value.elevation_decoder.g_scaler,
                 b_scaler: value.elevation_decoder.b_scaler,
@@ -442,7 +452,7 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
                 min_offset: value.elevation_decoder.min_offset,
                 boundary: value.elevation_decoder.boundary,
                 epsilon: value.elevation_decoder.epsilon,
-            },
+            }),
             tile_size: Some(value.tile_size),
         }
     }
