@@ -107,6 +107,7 @@ pub struct PolylineMaterial {
     pub color: Option<u32>,
     pub width: Option<f32>,
     pub clamp_to_ground: Option<bool>,
+    pub use_ground_normals: Option<bool>,
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
@@ -119,6 +120,7 @@ impl PolylineMaterial {
         show: Option<bool>,
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
+        use_ground_normals: Option<bool>,
         height: Option<f32>,
         width: Option<f32>,
         __internal__: Option<PolylineInternalMaterial>,
@@ -127,6 +129,7 @@ impl PolylineMaterial {
             show,
             color,
             clamp_to_ground,
+            use_ground_normals,
             height,
             width,
             __internal__,
@@ -142,6 +145,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             color: val.color.unwrap_or(default.color),
             width: val.width.unwrap_or(default.width),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
         }
@@ -154,6 +158,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             color: Some(value.color),
             width: Some(value.width),
             clamp_to_ground: Some(value.clamp_to_ground),
+            use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
         }
@@ -188,6 +193,7 @@ pub struct PolygonMaterial {
     pub show: Option<bool>,
     pub color: Option<u32>,
     pub clamp_to_ground: Option<bool>,
+    pub use_ground_normals: Option<bool>,
     pub height: Option<f32>,
     pub extruded_height: Option<f32>,
     pub wireframe: Option<bool>,
@@ -198,10 +204,12 @@ pub struct PolygonMaterial {
 #[wasm_bindgen]
 impl PolygonMaterial {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         show: Option<bool>,
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
+        use_ground_normals: Option<bool>,
         height: Option<f32>,
         extruded_height: Option<f32>,
         wireframe: Option<bool>,
@@ -211,6 +219,7 @@ impl PolygonMaterial {
             show,
             color,
             clamp_to_ground,
+            use_ground_normals,
             height,
             extruded_height,
             wireframe,
@@ -226,6 +235,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             show: val.show.unwrap_or(default.show),
             color: val.color.unwrap_or(default.color),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
@@ -239,6 +249,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             show: Some(value.show),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
+            use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),
