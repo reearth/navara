@@ -124,6 +124,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       width: 2,
       height: 1,
       clamp_to_ground: true,
+      use_ground_normals: true,
     },
   },
 
@@ -146,6 +147,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       width: 5,
       height: 1,
       clamp_to_ground: true,
+      use_ground_normals: true,
     },
   },
 
@@ -263,6 +265,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 0,
       extruded_height: 5000,
       clamp_to_ground: true,
+      use_ground_normals: true,
       wireframe: false,
     },
   },
@@ -328,6 +331,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       width: 2,
       height: 1,
       clamp_to_ground: true,
+      use_ground_normals: true,
     },
     vector_tile: {
       max_zoom: 16,
@@ -346,6 +350,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 10,
       extruded_height: 0,
       clamp_to_ground: true,
+      use_ground_normals: true,
       wireframe: false,
     },
     vector_tile: {
@@ -457,6 +462,7 @@ export const run = async (view: ThreeView) => {
     height: 1,
     extrudedHeight: 1,
     clampToGround: false,
+    useGroundNormals: false,
     wireframe: false,
     scaleByDistance: true,
     shouldRotateInDefault: true,
@@ -597,6 +603,10 @@ export const run = async (view: ThreeView) => {
         material.clamp_to_ground = paneParams.clampToGround;
       }
 
+      if ("use_ground_normals" in material) {
+        material.use_ground_normals = paneParams.useGroundNormals;
+      }
+
       if ("wireframe" in material) {
         material.wireframe = paneParams.wireframe;
       }
@@ -672,6 +682,11 @@ function createParamCtrl(
     if ("clamp_to_ground" in material) {
       paneParams.clampToGround = material.clamp_to_ground;
       f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
+    }
+
+    if ("use_ground_normals" in material) {
+      paneParams.useGroundNormals = material.use_ground_normals;
+      f.addBinding(paneParams, "useGroundNormals").on("change", changeFunc);
     }
 
     if ("wireframe" in material) {

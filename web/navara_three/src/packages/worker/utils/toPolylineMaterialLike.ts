@@ -6,6 +6,7 @@ export function toPolylineMaterialLike(like: PolylineMaterialLike) {
     like.show,
     like.color,
     like.clamp_to_ground,
+    like.use_ground_normals,
     like.height,
     like.width,
     like.__internal__,

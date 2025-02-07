@@ -5,6 +5,7 @@ import type {
 
 export class PolylineMaterialLike implements PolylineMaterial {
   clamp_to_ground?: boolean;
+  use_ground_normals?: boolean;
   color?: number;
   height?: number;
   width?: number;
@@ -13,6 +14,7 @@ export class PolylineMaterialLike implements PolylineMaterial {
 
   constructor(material: PolylineMaterial) {
     this.clamp_to_ground = material.clamp_to_ground;
+    this.use_ground_normals = material.use_ground_normals;
     this.color = material.color;
     this.width = material.width;
     this.height = material.height;
