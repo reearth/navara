@@ -99,6 +99,7 @@ pub struct PolylineMaterial {
     pub color: u32,
     pub width: f32,
     pub clamp_to_ground: bool,
+    pub use_ground_normals: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
 }
@@ -110,6 +111,7 @@ impl Default for PolylineMaterial {
             color: 0xffffff,
             width: 1.,
             clamp_to_ground: true,
+            use_ground_normals: false,
             height: 1.,
             internal: None,
         }
@@ -126,6 +128,7 @@ pub struct PolygonMaterial {
     pub show: bool,
     pub color: u32,
     pub clamp_to_ground: bool,
+    pub use_ground_normals: bool,
     pub height: f32,
     pub extruded_height: Option<f32>,
     pub wireframe: bool,
@@ -138,6 +141,7 @@ impl Default for PolygonMaterial {
             show: true,
             color: 0xffffff,
             clamp_to_ground: true,
+            use_ground_normals: false,
             height: 1.,
             extruded_height: None,
             wireframe: false,
@@ -171,7 +175,7 @@ impl Default for ModelMaterial {
             height: 1.,
             url: "".to_string(),
             should_rotate_in_default: true,
-            max_sse: 3.,
+            max_sse: 2.,
         }
     }
 }
@@ -187,7 +191,7 @@ impl Default for VectorTileMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            max_sse: 3.,
+            max_sse: 2.,
             max_zoom: 20,
         }
     }
@@ -213,7 +217,7 @@ impl Default for RasterTileMaterial {
             segments: 10,
             color: 0xffffff,
             opacity: 1.,
-            max_sse: 3.,
+            max_sse: 2.,
             max_zoom: 20,
             wireframe: false,
             should_compute_normal_from_vertex: None,

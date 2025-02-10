@@ -124,6 +124,8 @@ pub struct CameraController {
     pub spin_speed: FloatType,
     pub rotate_speed: FloatType,
     pub zoom_speed: FloatType,
+    pub spin_duration: f32,
+    pub zoom_duration: f32,
     pub inertia: FloatType,
     pub is_tilting: bool,
 }
@@ -147,7 +149,9 @@ impl Default for CameraController {
             spin_speed: 2.0,
             rotate_speed: 1.,
             zoom_speed: 0.6,
-            inertia: 0.9,
+            spin_duration: 500.,
+            zoom_duration: 100.,
+            inertia: 0.5,
             is_tilting: false,
         }
     }
@@ -156,19 +160,23 @@ impl Default for CameraController {
 #[derive(Component, Default)]
 pub struct CameraInertia {
     pub spin: Vec3,
+    pub spin_time: f32,
     pub translate: Vec3,
     pub zoom: FloatType,
+    pub zoom_time: f32,
     pub pan: Vec3,
 }
 
 impl CameraInertia {
     pub fn spin(&mut self, v: Vec3) {
         self.spin = v;
+        self.spin_time = 0.;
         self.zoom = 0.;
     }
 
     pub fn zoom(&mut self, v: f32) {
         self.zoom = v;
+        self.zoom_time = 0.;
         self.spin = Vec3::ZERO;
     }
 }

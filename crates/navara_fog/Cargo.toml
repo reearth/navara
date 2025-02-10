@@ -1,0 +1,10 @@
+[package]
+name = "navara_fog"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+bevy_log.workspace = true
+navara_math = { path = "../navara_math" }

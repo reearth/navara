@@ -6,6 +6,7 @@ use navara_cesium3dtiles::Cesium3dTilesPlugin;
 use navara_data_requester::DataRequesterPlugin;
 use navara_event::EventPlugin;
 use navara_feature::FeaturePlugin;
+use navara_fog::FogPlugin;
 use navara_frame::FramePlugin;
 use navara_geojson::GeoJsonPlugin;
 use navara_input::InputPlugin;
@@ -36,6 +37,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(MeshPlugin);
         app.add_plugins(WindowPlugin);
         app.add_plugins(CameraPlugin);
+        app.add_plugins(FogPlugin);
         app.add_plugins(OccluderPlugin);
         app.add_plugins(LayerPlugin);
         app.add_plugins(FeaturePlugin);

@@ -63,8 +63,8 @@ impl Core {
             }));
     }
 
-    pub fn update(&mut self) {
-        self.app.update();
+    pub fn update(&mut self, updated_at: f64) {
+        self.app.update(updated_at);
     }
 
     #[wasm_bindgen(js_name = readEvents)]

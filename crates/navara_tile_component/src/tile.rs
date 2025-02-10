@@ -4,6 +4,7 @@ use navara_camera::CameraFrustum;
 use navara_core::{
     vec3_to_xyz, xyz_to_vec3, Aabb, Ellipsoid, Extent, Meters, Radians, TileXYZ, LLE,
 };
+use navara_fog::{fog, Fog};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_quadtree::{num::PrimInt, to_int, Coords, Quadtree};
@@ -107,15 +108,19 @@ pub trait Tile {
         ellipsoid: &Ellipsoid<FloatType>,
         height_map_width: FloatType,
         distance_from_camera: FloatType,
+        fog_comp: &Fog,
     ) -> FloatType {
         let max_geometric_error =
             self.get_level_maximum_geometric_error(ellipsoid, height_map_width);
 
-        // TODO: Support fog culling
+        let mut error = (max_geometric_error * window.height)
+            / (distance_from_camera * frustum.sse_denominator);
 
-        (max_geometric_error * window.height)
-            / (distance_from_camera * frustum.sse_denominator)
-            / window.pixel_ratio
+        if fog_comp.enabled {
+            error -= fog(distance_from_camera, fog_comp.density) * fog_comp.sse_factor;
+        }
+
+        error / window.pixel_ratio
     }
 
     fn new_child(coords: Coords<Self::CoordUnit>, max_height: FloatType) -> Self;
