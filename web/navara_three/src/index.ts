@@ -425,6 +425,10 @@ export default class ThreeView {
     return this._scenes.world;
   }
 
+  get effectComposer() {
+    return this._effectComposer;
+  }
+
   async init() {
     if (this._core) return;
 
