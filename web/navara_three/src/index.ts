@@ -75,7 +75,7 @@ export type Options = {
   light?: Light;
   backgroundColor?: number;
   picking?: Picking;
-  // The number of samples. This affects the quality of the post-processing.
+  // The number of samples for MSAA.
   multisampling?: number;
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
   halfFloat?: boolean;
@@ -336,7 +336,7 @@ export default class ThreeView {
     this._effectComposer = new EffectComposer(this.renderer, {
       stencilBuffer: true,
       frameBufferType: options.halfFloat ? HalfFloatType : undefined,
-      multisampling: options.multisampling ?? 4,
+      multisampling: options.multisampling,
     });
     this._effectComposer.setSize(width, height);
 
