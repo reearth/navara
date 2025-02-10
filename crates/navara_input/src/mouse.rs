@@ -54,8 +54,10 @@ impl MouseScrollInput {
 
 #[derive(Debug, Clone, Copy, PartialEq, Event)]
 pub struct MouseMoveInput {
+    /// Relative position from window.
     /// 0.0 - 1.0
     pub x: FloatType,
+    /// Relative position from window.
     /// 0.0 - 1.0
     pub y: FloatType,
 }

@@ -10,7 +10,10 @@ use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
 };
-use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Ellipsoid, Ray, WGS84_32};
+use navara_core::{
+    ease_out_circ, east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Ellipsoid, Ray, WGS84_32,
+};
+use navara_frame::FrameManager;
 use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10};
 use navara_window::Window;
 
@@ -57,7 +60,7 @@ pub fn startup(mut commands: Commands) {
     ));
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update(
     window: Res<Window>,
     mut query: Query<
@@ -76,7 +79,11 @@ pub fn update(
     mut mw: EventReader<MouseWheel>,
     mut _mp: EventReader<MouseMoveInput>,
     keys: Res<ButtonInput<KeyCode>>,
+    frame: Res<FrameManager>,
 ) {
+    let updated_at = frame.updated_at();
+    let last_updated_at = frame.last_updated_at();
+    let duration = (updated_at - last_updated_at) as f32;
     for (marker, mut transform, mut controller, mut inertia, frustum, mut orbit) in query.iter_mut()
     {
         if !controller.enabled {
@@ -128,11 +135,11 @@ pub fn update(
         // Apply inertia
         apply_inertia(&mut orbit, &mut inertia, &controller);
 
-        if needs_update(&inertia) || window.is_changed() || marker.is_added() {
+        if needs_update(&inertia, &controller) || window.is_changed() || marker.is_added() {
             commit(&mut transform, &mut orbit);
         }
 
-        after_inertia(&mut inertia, &controller);
+        after_inertia(&mut inertia, duration, &controller);
     }
 }
 
@@ -183,7 +190,11 @@ fn handle_orbit_spin(
 
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
 
-    inertia.spin(rotate(mm, controller, ratio * 1.5, ratio));
+    let Some(spin) = rotate(mm, controller, ratio * 1.5, ratio) else {
+        return;
+    };
+
+    inertia.spin(spin);
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
@@ -208,6 +219,10 @@ fn handle_tilt(
     if !controller.enable_tilt
         || ((!is_ctrl || !mb.pressed(MouseButton::Left)) && !mb.pressed(MouseButton::Right))
     {
+        return;
+    }
+
+    if mm.is_empty() {
         return;
     }
 
@@ -249,7 +264,9 @@ fn handle_tilt(
         Some(Vec3::Z),
     );
 
-    let mut spin = rotate(mm, controller, 1., 1.);
+    let Some(mut spin) = rotate(mm, controller, 1., 1.) else {
+        return;
+    };
 
     if spin.x.abs() > spin.y.abs() {
         spin.y = 0.;
@@ -265,15 +282,17 @@ fn rotate(
     controller: &CameraController,
     ratio_x: f32,
     ratio_y: f32,
-) -> Vec3 {
-    let mut screen_delta = Vec3::ZERO;
-    for ev in mm.read() {
-        screen_delta += Vec3::new(ev.delta.x, ev.delta.y, 0.0);
-    }
+) -> Option<Vec3> {
+    // Use just the latest motion
+    let screen_delta = if let Some(ev) = mm.read().last() {
+        Vec3::new(ev.delta.x, ev.delta.y, 0.0)
+    } else {
+        return None;
+    };
 
     let pan_delta = Vec2::new(screen_delta.x * ratio_x, screen_delta.y * ratio_y);
 
-    Vec3::new(-pan_delta.x, -pan_delta.y, 0.0) * controller.spin_speed
+    Some(Vec3::new(-pan_delta.x, -pan_delta.y, 0.0) * controller.spin_speed)
 }
 
 // Ref: https://github.com/NASA-AMMOS/3DTilesRendererJS/blob/2933415dd04f969c902a976df8c85f132409bae7/src/three/controls/GlobeControls.js#L408
@@ -289,10 +308,11 @@ fn handle_zoom(
         return;
     }
 
-    let mut zoom = 0.0;
-    for ev in mw.read() {
-        zoom += ev.y;
-    }
+    let zoom = if let Some(ev) = mw.read().last() {
+        ev.y
+    } else {
+        return;
+    };
 
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false, None);
@@ -331,35 +351,49 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
 }
 
 fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
-    apply_move(orbit, inertia);
+    apply_move(orbit, inertia, controller);
     apply_zoom(orbit, inertia, controller);
 }
 
-fn apply_move(orbit: &mut Orbit, inertia: &mut CameraInertia) {
-    let vertical = Quat::from_axis_angle(orbit.vertical_axis, inertia.spin.y);
-    let horizontal = Quat::from_axis_angle(orbit.horizontal_axis, inertia.spin.x);
+fn apply_move(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
+    let t = inertia.spin_time / controller.spin_duration;
+    if t > 1. {
+        return;
+    }
+    let next = inertia.spin * (1. - ease_out_circ(t));
+    let vertical = Quat::from_axis_angle(orbit.vertical_axis, next.y);
+    let horizontal = Quat::from_axis_angle(orbit.horizontal_axis, next.x);
     orbit.quat *= horizontal * vertical;
 }
 
 fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
-    let next = orbit.local_position - orbit.local_forward * inertia.zoom;
-    let length = next.length();
-    if length >= controller.maximum_zoom_distance && inertia.zoom > 0. {
+    let t = inertia.zoom_time / controller.zoom_duration;
+    if t > 1. {
         return;
     }
-    if length <= controller.minimum_zoom_distance && inertia.zoom < 0. {
+    let next_zoom = inertia.zoom * (1. - ease_out_circ(t));
+    let next = orbit.local_position - orbit.local_forward * next_zoom;
+    let length = next.length();
+    if length >= controller.maximum_zoom_distance && next_zoom > 0. {
+        return;
+    }
+    if length <= controller.minimum_zoom_distance && next_zoom < 0. {
         return;
     }
     orbit.local_position = next;
 }
 
-fn needs_update(inertia: &CameraInertia) -> bool {
-    inertia.spin.length().abs() >= EPSILON10 || inertia.zoom.abs() >= EPSILON10
+fn needs_update(inertia: &CameraInertia, controller: &CameraController) -> bool {
+    inertia.spin_time <= controller.spin_duration || inertia.zoom_time <= controller.zoom_duration
 }
 
-fn after_inertia(inertia: &mut CameraInertia, controller: &CameraController) {
-    inertia.spin *= controller.inertia;
-    inertia.zoom *= controller.inertia;
+fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &CameraController) {
+    if inertia.spin_time < controller.spin_duration {
+        inertia.spin_time += duration;
+    }
+    if inertia.zoom_time < controller.zoom_duration {
+        inertia.zoom_time += duration;
+    }
 }
 
 // TODO
