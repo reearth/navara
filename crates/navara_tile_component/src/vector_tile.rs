@@ -32,6 +32,7 @@ pub struct VectorTile {
     pub max_height: FloatType,
     pub distance_from_camera: FloatType,
     pub sse: FloatType,
+    pub were_children_rendered: bool,
 }
 
 impl Clone for VectorTile {
@@ -50,6 +51,7 @@ impl Clone for VectorTile {
             max_height: self.max_height,
             distance_from_camera: 0.,
             sse: 0.,
+            were_children_rendered: false,
         }
     }
 }
@@ -71,6 +73,7 @@ impl VectorTile {
             max_height,
             distance_from_camera: 0.,
             sse: 0.,
+            were_children_rendered: false,
         }
     }
 
