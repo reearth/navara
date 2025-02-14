@@ -47,14 +47,13 @@ jobs:
         run: |
           cargo install cargo-make
           cargo install wasm-pack
-      - name: Install deps for node
-        run: cargo make install-deps-web
-
       - name: install protoc
         uses: taiki-e/install-action@v2
         with:
           tool: protoc@${{ env.PROTOC_VERSION }}
 
+      - name: Prepare
+        run: cargo make prepare
       - name: Run Build
         run: cargo make build-example
       - name: Run Test
