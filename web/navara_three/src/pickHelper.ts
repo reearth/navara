@@ -18,6 +18,7 @@ import {
   RGBAFormat,
   Color,
 } from "three";
+
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 

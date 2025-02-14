@@ -41,7 +41,6 @@ import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
-import { isWorker } from "./utils";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
@@ -50,6 +49,7 @@ import {
   type WorkerPoolPromises,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
+import { isWorker } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";

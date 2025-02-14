@@ -28,14 +28,12 @@ export const canWorkerProcessImmediately = () => {
 
 export type { ExecOptions } from "workerpool/types/types";
 
-type GetTaskName<Task> = Task extends { [K in string]: unknown }
-  ? keyof Task
-  : string;
+type GetTaskName<Task> =
+  Task extends Record<string, unknown> ? keyof Task : string;
 
 type AnyFunction = (...args: any) => any;
 
-export type WorkerTask<T extends { [K in string]: AnyFunction }> = T &
-  CommonTasks;
+export type WorkerTask<T extends Record<string, AnyFunction>> = T & CommonTasks;
 
 export type TaskParams<
   Task extends CommonTasks,

@@ -6,8 +6,8 @@ import type {
   TileLayerDescription,
   MvtLayerDescription,
 } from "@navara/engine";
-import type { Mesh, Sprite, Object3D } from "three";
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
+import type { Mesh, Sprite, Object3D } from "three";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
