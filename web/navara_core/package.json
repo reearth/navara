@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "tsc && vite build",
+    "build:example": "pnpm build",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
     "test": "vitest --passWithNoTests --watch=false",

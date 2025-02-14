@@ -6,6 +6,10 @@ import glsl from "vite-plugin-glsl";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
 import tsconfig from "vite-tsconfig-paths";
 
+import { commonConfig } from "../vite.config.common";
+
+const common = commonConfig("NavaraExample");
+
 const pages = readdirSync(resolve(__dirname, "example/pages"));
 
 export default defineConfig({
@@ -35,6 +39,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      ...common.resolve?.alias,
       "@shaders": path.resolve(__dirname, "../../shaders"),
     },
   },
