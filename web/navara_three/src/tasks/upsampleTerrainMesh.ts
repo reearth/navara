@@ -4,7 +4,7 @@ import {
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
 } from "@navara/core";
-import type { Promise } from "workerpool";
+import type { Promise } from "@navara/worker";
 
 import { queueTask } from "./queueTask";
 

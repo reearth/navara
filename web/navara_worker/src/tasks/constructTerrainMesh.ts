@@ -9,7 +9,7 @@ import { constructTerrainMesh as constructTerrainMeshImpl } from "@navara/engine
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";
 import { toTransferableMartini, toTransferableTile } from "../utils";
 import { toTransferableRasterDEMDataLike } from "../utils/toTransferableRasterDEMDataLike";
-import { transfer } from "../worker";
+import { transfer } from "..";
 
 import { waitWasm } from "./waitWasm";
 

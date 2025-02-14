@@ -1,31 +1,31 @@
 import path from "path";
 
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
 import glsl from "vite-plugin-glsl";
-import tsconfig from "vite-tsconfig-paths";
+
+import { commonConfig } from "../vite.config.common";
+
+const common = commonConfig("Navara");
 
 export default defineConfig({
+  ...common,
   base: "./",
-  plugins: [glsl(), tsconfig(), dts({ rollupTypes: true })],
+  plugins: [...common.plugins, glsl()],
   worker: {
-    plugins: () => [tsconfig()],
+    plugins: () => [...common.plugins],
   },
   resolve: {
-    mainFields: ["module"],
+    ...common.resolve,
     alias: {
+      ...common.resolve.alias,
       "@shaders": path.resolve(__dirname, "../../shaders"),
-      "@navara/core": path.resolve(__dirname, "./src/packages/core"),
-      "@navara/worker": path.resolve(__dirname, "./src/packages/worker"),
     },
   },
   build: {
-    lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
-      name: "Navara",
-    },
+    ...common.build,
     rollupOptions: {
-      external: ["three", "@navara/engine", "@navara/engine-worker"],
+      ...common.build.rollupOptions,
+      external: [...(common.build.rollupOptions.external as string[]), "three"],
     },
   },
 });

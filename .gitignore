@@ -17,3 +17,7 @@ Cargo.lock
 .env
 
 node_modules
+
+web/wasm
+
+dist

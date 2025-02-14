@@ -8,7 +8,7 @@ import { constructPolylineBatchedFeature as constructPolylineBatchedFeatureImpl 
 import { transferConstructedPolylineGeometry } from "../helpers/transferConstructedPolylineGeometry";
 import { toPolylineMaterialLike } from "../utils/toPolylineMaterialLike";
 import { toTransferablePolylineBatchedFeatureLike } from "../utils/toTransferablePolylineBatchedFeatureLike";
-import { transfer } from "../worker";
+import { transfer } from "..";
 
 import { waitWasm } from "./waitWasm";
 

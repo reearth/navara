@@ -8,7 +8,7 @@ import { constructPolygonBatchedFeature as constructPolygonBatchedFeatureImpl } 
 import { transferConstructedPolygonGeometry } from "../helpers/transferConstructedPolygonGeometry";
 import { toPolygonMaterialLike } from "../utils/toPolygonMaterialLike";
 import { toTransferablePolygonBatchedFeatureLike } from "../utils/toTransferablePolygonBatchedFeatureLike";
-import { transfer } from "../worker";
+import { transfer } from "..";
 
 import { waitWasm } from "./waitWasm";
 

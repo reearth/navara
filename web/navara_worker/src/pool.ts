@@ -2,7 +2,9 @@ import workerpool, { Promise } from "workerpool";
 import type Pool from "workerpool/types/Pool";
 import type { ExecOptions } from "workerpool/types/types";
 
-import { type commonTasks } from "./worker";
+import { type CommonTasks } from "./worker";
+
+export type { Promise } from "workerpool";
 
 let pool: Pool;
 export const initializeWorkerPool = (
@@ -33,24 +35,22 @@ type GetTaskName<Task> = Task extends { [K in string]: unknown }
 type AnyFunction = (...args: any) => any;
 
 export type WorkerTask<T extends { [K in string]: AnyFunction }> = T &
-  CommonTask;
-
-type CommonTask = typeof commonTasks;
+  CommonTasks;
 
 export type TaskParams<
-  Task extends CommonTask,
+  Task extends CommonTasks,
   Name extends keyof Task,
 > = Parameters<
   Task[Name] extends AnyFunction ? Task[Name] : (...args: unknown[]) => unknown
 >;
 type MethodReturnType<
-  Task extends CommonTask,
+  Task extends CommonTasks,
   Name extends GetTaskName<Task>,
   R = Awaited<ReturnType<Task[Name]>>,
 > = R extends infer U ? U : R;
 
 export function queueTask<
-  Task extends CommonTask,
+  Task extends CommonTasks,
   Name extends GetTaskName<Task>,
 >(
   method: Name,

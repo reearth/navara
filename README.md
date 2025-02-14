@@ -10,7 +10,15 @@
 - Node.js (LTS)
 - protoc
 
-MacOS
+### Install prerequisites
+
+```console
+cargo install cargo-make
+cargo install cargo-watch
+cargo install wasm-pack
+```
+
+**MacOS**
 
 ```console
 brew install protobuf
@@ -18,12 +26,12 @@ brew install protobuf
 
 For more information: https://grpc.io/docs/protoc-installation/
 
-### Install prerequisites
+### Initial setup
+
+You need to run this command first time.
 
 ```console
-cargo install cargo-make
-cargo install cargo-watch
-cargo install wasm-pack
+cargo make prepare
 ```
 
 ### Run with hot-reload

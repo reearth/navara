@@ -6,6 +6,8 @@ import {
   TransferableRasterDEMDataLike,
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
+  PolylineMaterialLike,
+  TransferablePolylineBatchedFeatureLike,
 } from "@navara/core";
 import {
   ConstructPolygonBatchedFeatureParameters,
@@ -27,10 +29,6 @@ import {
   type WorkerTaskDelegatedEvent,
 } from "@navara/engine";
 
-import {
-  PolylineMaterialLike,
-  TransferablePolylineBatchedFeatureLike,
-} from "../packages/core/utils/polyline";
 import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatchedFeature";
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";

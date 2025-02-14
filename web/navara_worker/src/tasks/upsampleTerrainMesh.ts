@@ -9,7 +9,7 @@ import { upsampleTerrainMesh as upsampleTerrainMeshImpl } from "@navara/engine-w
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";
 import { toTransferableTile, toUpsamplableTerrainGeometry } from "../utils";
 import { toTransferableRasterDEMDataLike } from "../utils/toTransferableRasterDEMDataLike";
-import { transfer } from "../worker";
+import { transfer } from "..";
 
 import { waitWasm } from "./waitWasm";
 

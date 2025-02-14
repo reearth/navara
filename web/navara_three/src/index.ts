@@ -41,7 +41,7 @@ import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import { RendererStats } from "./stats";
-import { isWorker } from "./temp/utils";
+import { isWorker } from "./utils";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,

@@ -11,3 +11,5 @@ export const commonTasks = {
   constructPolygonBatchedFeature,
   constructPolylineBatchedFeature,
 };
+
+export type CommonTasks = typeof commonTasks;

@@ -2,7 +2,7 @@ import workerpool from "workerpool";
 
 import { commonTasks } from "../tasks";
 
-export { type commonTasks } from "../tasks";
+export { type CommonTasks } from "../tasks";
 
 export * from "./transfer";
 
