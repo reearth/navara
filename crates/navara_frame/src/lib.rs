@@ -15,11 +15,26 @@ impl Plugin for FramePlugin {
 #[derive(Resource, Default)]
 pub struct FrameManager {
     rendered_frame: usize,
+    updated_at: f64,
+    last_updated_at: f64,
 }
 
 impl FrameManager {
     pub fn rendered_frame(&self) -> usize {
         self.rendered_frame
+    }
+
+    pub fn updated_at(&self) -> f64 {
+        self.updated_at
+    }
+
+    pub fn last_updated_at(&self) -> f64 {
+        self.last_updated_at
+    }
+
+    pub fn set_updated_at(&mut self, at: f64) {
+        self.last_updated_at = self.updated_at;
+        self.updated_at = at;
     }
 }
 

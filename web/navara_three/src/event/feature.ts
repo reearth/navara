@@ -400,6 +400,7 @@ async function renderPolyline(
         value: [minHeight, maxHeight, mesh.material.width],
       },
       color: { value: new Color(mesh.material.color) },
+      useGroundNormals: { value: !!mesh.material.use_ground_normals },
       viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
       frustumNearFar: uniforms.frustumNearFar,
       frustumRatio: uniforms.frustumRatio,
@@ -486,6 +487,9 @@ async function renderPolygon(
   material.userData.uClampToGround = {
     value: clampToGround,
   };
+  material.userData.useGroundNormals = {
+    value: !!mesh.material.use_ground_normals,
+  };
   material.userData.uPickable = {
     value: 0.0,
   };
@@ -497,6 +501,7 @@ async function renderPolygon(
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
     shader.uniforms.nvr_uPickable = material.userData.uPickable;
+    shader.uniforms.useGroundNormals = material.userData.useGroundNormals;
     if (material.userData.uMinMaxHeight.value) {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
     }
@@ -537,6 +542,7 @@ nvr_vBatchId = batchId;
         `
 uniform vec3 diffuse;
 uniform bool uClampToGround;
+uniform bool useGroundNormals;
 uniform sampler2D uGlobeNormal;
 uniform vec3 nvr_uHighlightColor;
 uniform float nvr_uPickable;
@@ -568,15 +574,27 @@ if(nvr_vIsPicked > 0.0) {
 }
 `,
       )
+      .replace(
+        "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
+        `
+vec3 outgoingLight;
+if(uClampToGround && !useGroundNormals) {
+  // Without lighting
+  outgoingLight = diffuseColor.xyz;
+} else {
+  outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
+}
+`,
+      )
       // replace the last line of the fragment shader.
       .replace(
         "#include <dithering_fragment>",
         `
-        #include <dithering_fragment>
-  if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
-    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
-    gl_FragColor = vec4(pickColor.xyz, 1.0);
-  }
+#include <dithering_fragment>
+if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
+  vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
+  gl_FragColor = vec4(pickColor.xyz, 1.0);
+}
 `,
       );
   };

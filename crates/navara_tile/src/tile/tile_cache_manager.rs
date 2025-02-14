@@ -66,7 +66,7 @@ impl TileCacheManager {
     pub fn is_rendered_tile_activated(
         &self,
         handle: &TileHandle,
-        meshes: &Query<&mut Mesh, With<TileMeshMarker>>,
+        meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     ) -> bool {
         let t = match self.rendered_tile_caches.get(handle) {
             Some(t) => t,

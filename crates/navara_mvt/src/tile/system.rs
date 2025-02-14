@@ -29,7 +29,10 @@ use crate::{
 use super::{
     component::MVTFeatureMarker,
     render::RenderedTile,
-    traverse::{prepare_tile_resource, spawn_tile_entity, traverse_tile, TraversalResult},
+    traverse::{
+        activate_all_renderable_features, are_all_renderable_features_active,
+        prepare_tile_resource, spawn_tile_entity, traverse_tile, TraversalResult,
+    },
 };
 
 use navara_layer::{LayerStore, MvtLayer};
@@ -98,10 +101,11 @@ pub fn update_tiles(
                         .expect("Failed to initialize a level zero tile unexpectedly")
                 }
             };
+            let zero_tile_handle = zero_tile.handle();
             match traverse_tile(
                 &mut commands,
                 layer,
-                zero_tile.handle(),
+                zero_tile_handle,
                 &mut qt,
                 &mut tc,
                 &mut buf,
@@ -116,26 +120,56 @@ pub fn update_tiles(
                 &features,
                 &mut renderable_features.p0(),
                 fog,
+                false,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
                         &mut commands,
                         &mut tc,
-                        qt.qt.get_mut(zero_tile.handle()).unwrap(),
+                        qt.qt.get_mut(zero_tile_handle).unwrap(),
                         &frame,
-                        zero_tile.handle(),
+                        zero_tile_handle,
                     );
+                    if matches!(
+                        are_all_renderable_features_active(
+                            &tc,
+                            &zero_tile_handle,
+                            &rendered_tiles,
+                            &features,
+                            &mut renderable_features.p0(),
+                        ),
+                        Some(true)
+                    ) {
+                        activate_all_renderable_features(
+                            &tc,
+                            &zero_tile_handle,
+                            &rendered_tiles,
+                            &features,
+                            &mut renderable_features.p0(),
+                            true,
+                        );
+                    }
                 }
                 TraversalResult::NotFound => {
                     prepare_tile_resource(
                         &mut commands,
-                        qt.qt.get_mut(zero_tile.handle()).unwrap(),
+                        qt.qt.get_mut(zero_tile_handle).unwrap(),
                         &mut buf,
                         layer,
-                        zero_tile.handle(),
+                        zero_tile_handle,
                         &mut tc,
                         &mvt_data_requester,
                         Priority::Medium,
+                    );
+                }
+                TraversalResult::ChildrenMeshPrepared => {
+                    activate_all_renderable_features(
+                        &tc,
+                        &zero_tile_handle,
+                        &rendered_tiles,
+                        &features,
+                        &mut renderable_features.p0(),
+                        false,
                     );
                 }
                 _ => {}

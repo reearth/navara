@@ -33,6 +33,7 @@ pub struct RasterTile {
     pub aabb: Aabb,
     pub bounding_region: Option<TileBoundingRegion<FloatType>>,
     pub children: Vec<TileHandle>,
+    pub were_children_rendered: bool,
     pub rendered_at: usize,
     pub visited_at: usize,
     pub terrain_data: Option<Box<dyn TerrainData>>,
@@ -55,6 +56,7 @@ impl Clone for RasterTile {
             bounding_region: self.bounding_region.clone(),
             // Note: `children` needs to be updated dynamically.
             children: vec![],
+            were_children_rendered: false,
             rendered_at: self.rendered_at,
             visited_at: self.visited_at,
             terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
@@ -94,6 +96,7 @@ impl RasterTile {
             cached_mesh_handle: None,
             upsampled: false,
             children: Vec::with_capacity(4),
+            were_children_rendered: false,
             max_height,
             distance_from_camera: 0.,
             sse: 0.,

@@ -786,6 +786,8 @@ function processPolylineChanged(
 ) {
   if (obj.material instanceof ShaderMaterial) {
     obj.material.uniforms.color.value.set(material.color);
+    obj.material.uniforms.useGroundNormals.value =
+      !!material.use_ground_normals;
 
     const [minHeight, maxHeight] = material.__internal__?.min_max_heights ?? [
       0, 0,
@@ -810,6 +812,8 @@ function processPolygonChanged(
     obj.material.wireframe = material.wireframe ?? false;
     obj.material.userData.uMinMaxHeight.value =
       material.__internal__?.min_max_heights;
+    obj.material.userData.useGroundNormals.value =
+      !!material.use_ground_normals;
     if (
       obj.material.userData.uClampToGround.value !== material.clamp_to_ground
     ) {

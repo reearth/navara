@@ -110,11 +110,12 @@ pub fn update_tiles(
                         .expect("Failed to initialize a level zero tile unexpectedly")
                 }
             };
+            let zero_tile_handle = zero_tile.handle();
             match traverse_tile(
                 &mut commands,
                 tiles,
                 &terrain_layer,
-                zero_tile.handle(),
+                zero_tile_handle,
                 &mut tc,
                 &mut qt,
                 &mut buf,
@@ -128,15 +129,19 @@ pub fn update_tiles(
                 occluder,
                 &mut meshes,
                 fog,
+                false,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
                         &mut commands,
                         &mut tc,
                         &frame,
-                        qt.qt.get_mut(zero_tile.handle()).unwrap(),
-                        zero_tile.handle(),
+                        qt.qt.get_mut(zero_tile_handle).unwrap(),
+                        zero_tile_handle,
                     );
+                    if tc.is_rendered_tile_prepared(&zero_tile_handle) {
+                        tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, true);
+                    }
                 }
                 TraversalResult::NotFound => {
                     prepare_tile_resource(
@@ -151,6 +156,9 @@ pub fn update_tiles(
                         &terrain_data_requester,
                         Priority::Extreme,
                     );
+                }
+                TraversalResult::ChildrenMeshesPrepared => {
+                    tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, false);
                 }
                 _ => {}
             };

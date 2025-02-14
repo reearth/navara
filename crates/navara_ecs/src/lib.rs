@@ -14,6 +14,7 @@ use navara_feature_component::{
     batch::{BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, IdPropertyTable},
     render::RenderableFeature,
 };
+use navara_frame::FrameManager;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_math::FloatType;
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
@@ -42,8 +43,16 @@ impl App {
         Self { app, win }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, updated_at: f64) {
+        self.set_updated_at(updated_at);
         self.app.update();
+    }
+
+    fn set_updated_at(&mut self, at: f64) {
+        let Some(mut m) = self.app.world_mut().get_resource_mut::<FrameManager>() else {
+            return;
+        };
+        m.set_updated_at(at);
     }
 
     pub fn trigger_event(&mut self, ev: navara_input::Input) {

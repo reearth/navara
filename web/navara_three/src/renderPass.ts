@@ -1,4 +1,4 @@
-import { Pass } from "postprocessing";
+import { RenderPass } from "postprocessing";
 import {
   AlwaysStencilFunc,
   BackSide,
@@ -18,7 +18,7 @@ import {
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 
-export class CustomRenderPass extends Pass {
+export class CustomRenderPass extends RenderPass {
   private _camera: Camera;
   private _scenes: Scenes;
   private _drapedFeatureMaterials: Map<string, Material>;
@@ -32,6 +32,9 @@ export class CustomRenderPass extends Pass {
     drapedFeatureMaterials: Map<string, Material>,
   ) {
     super();
+
+    this.clearPass.setClearFlags(true, true, true);
+
     this._scenes = scenes;
     this._camera = camera;
     this._meshes = meshes;
@@ -48,7 +51,7 @@ export class CustomRenderPass extends Pass {
 
   render(
     renderer: WebGLRenderer,
-    _inputBuffer: WebGLRenderTarget,
+    inputBuffer: WebGLRenderTarget,
     outputBuffer: WebGLRenderTarget,
   ) {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
@@ -57,9 +60,11 @@ export class CustomRenderPass extends Pass {
     renderer.clear();
     renderer.render(this._scenes.globeGBuffer, this._camera);
 
-    renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
+    renderer.setRenderTarget(this.renderToScreen ? null : inputBuffer);
 
-    renderer.clear();
+    if (this.clearPass.enabled) {
+      this.clearPass.render(renderer, inputBuffer, outputBuffer);
+    }
 
     this._renderWithWorld(renderer, this._scenes.globe);
 

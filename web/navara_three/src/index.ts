@@ -76,7 +76,7 @@ export type Options = {
   light?: Light;
   backgroundColor?: number;
   picking?: Picking;
-  // The number of samples. This affects the quality of the post-processing.
+  // The number of samples for MSAA.
   multisampling?: number;
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
   halfFloat?: boolean;
@@ -210,7 +210,7 @@ export default class ThreeView {
   private _pickHelper?: PickHelper;
   private _defaultTextureOptions: TextureOptions;
 
-  constructor(options: Options) {
+  constructor(options: Options = {}) {
     if (!options.canvas) {
       const div = document.createElement("div");
       div.id = "root";
@@ -338,7 +338,7 @@ export default class ThreeView {
     this._effectComposer = new EffectComposer(this.renderer, {
       stencilBuffer: true,
       frameBufferType: options.halfFloat ? HalfFloatType : undefined,
-      multisampling: options.multisampling ?? 4,
+      multisampling: options.multisampling,
     });
     this._effectComposer.setSize(width, height);
 
@@ -425,6 +425,10 @@ export default class ThreeView {
 
   get scene() {
     return this._scenes.world;
+  }
+
+  get effectComposer() {
+    return this._effectComposer;
   }
 
   async init() {
@@ -539,8 +543,8 @@ export default class ThreeView {
   }
 
   /** Returns true if the scene was updated and needs to be rendered. */
-  private _update(): boolean {
-    this._core?.update();
+  private _update(updatedAt: number): boolean {
+    this._core?.update(updatedAt);
 
     const events = this._core?.readEvents();
     if ((!events && !this._eventManager.needsUpdate()) || !this._core) {
@@ -618,11 +622,11 @@ export default class ThreeView {
   }
 
   private _startMainLoop() {
-    const loop = () => {
+    const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;
       this._stats?.begin();
 
-      if (this._update() || this._picked) this._render();
+      if (this._update(time) || this._picked) this._render();
       this._picked = false;
 
       this._stats?.end();

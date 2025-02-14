@@ -54,6 +54,8 @@ pub fn traverse_tile(
     occluder: &EllipsoidalOccluder,
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     fog: &Fog,
+    // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
+    meets_sse_ancestors: bool,
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
@@ -127,36 +129,57 @@ pub fn traverse_tile(
     tile.distance_from_camera = distance_from_camera;
     tile.visited_at = frame.rendered_frame();
 
+    let were_children_rendered = tile.were_children_rendered;
+
     let max_sse = tiles.appearance.as_ref().unwrap().max_sse;
     let meets_sse = sse <= max_sse;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
-    if meets_sse {
-        if is_renderable {
+    if meets_sse || meets_sse_ancestors {
+        if is_renderable
+            // Keep rendering children while preparing the tile if it's available, because rendering tile takes some time.
+            && !were_children_rendered
+        {
+            // Avoid to return an inactivated tile when meets SSE from ancestors.
+            if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
+                return TraversalResult::NotFound;
+            }
             return TraversalResult::TileRendered;
         }
 
-        prepare_tile_resource(
-            command,
-            tile,
-            buf,
-            tiles,
-            terrain_layer,
-            handle,
-            tc,
-            texture_fragment,
-            terrain_data_requester,
-            Priority::High,
-        );
+        if !meets_sse_ancestors {
+            prepare_tile_resource(
+                command,
+                tile,
+                buf,
+                tiles,
+                terrain_layer,
+                handle,
+                tc,
+                texture_fragment,
+                terrain_data_requester,
+                Priority::High,
+            );
+        }
 
-        return TraversalResult::NotFound;
+        if !were_children_rendered {
+            return TraversalResult::NotFound;
+        }
     }
 
     if let Some(children) = RasterTile::traversable_children(qt, handle) {
         let mut any_children_rendered = false;
+
+        // Tile has several states to switch LOD smoothly.
+        // 1. RenderedTile component is spawned if a tile is selected.
+        // 2. Rendering engine needs to do some preparations, so the selected tile is marked as it's prepared after these preparations.
+        // 3. The selected tile is activated if all other same level children are activated as well.
+        // 4. When the selected tile is activated, the tile will be visible.
         let mut are_all_children_rendered = true;
-        let mut are_children_prepared = true;
+        let mut are_all_children_prepared = true;
+        let mut are_all_children_activated = true;
+
         let mut rendered_children_indices = vec![];
         let mut activated_children_indices = vec![];
         let mut hidden_children_indices = vec![];
@@ -179,11 +202,13 @@ pub fn traverse_tile(
                 occluder,
                 meshes,
                 fog,
+                meets_sse,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
                 are_all_children_rendered = false;
-                are_children_prepared = false;
+                are_all_children_prepared = false;
+                are_all_children_activated = false;
             }
 
             if matches!(
@@ -208,8 +233,15 @@ pub fn traverse_tile(
             if (matches!(traversal_result, TraversalResult::TileRendered)
                 && !tc.is_rendered_tile_prepared(child))
             {
-                are_children_prepared = false;
+                are_all_children_prepared = false;
                 are_all_children_rendered = false;
+            }
+
+            // If tile's mesh isn't ready, render the parent tile.
+            if (matches!(traversal_result, TraversalResult::TileRendered)
+                && !tc.is_rendered_tile_activated(child, meshes))
+            {
+                are_all_children_activated = false;
             }
 
             // Skip rendering children in this tile.
@@ -226,23 +258,30 @@ pub fn traverse_tile(
         }
 
         if any_children_rendered {
-            for (i, child) in children.iter().enumerate() {
-                // If this child is not renderable, skip rendering this child.
-                if hidden_children_indices.contains(&i) {
-                    continue;
-                }
+            if are_all_children_activated && !meets_sse && !meets_sse_ancestors {
+                let tile = qt.qt.get_mut(handle).unwrap();
+                tile.were_children_rendered = true;
+            }
 
-                // If this child's children are rendered, skip rendering this child.
-                if rendered_children_indices.contains(&i) {
-                    continue;
-                }
+            if !meets_sse && !meets_sse_ancestors {
+                for (i, child) in children.iter().enumerate() {
+                    // If this child is not renderable, skip rendering this child.
+                    if hidden_children_indices.contains(&i) {
+                        continue;
+                    }
 
-                let handle = *child;
-                let tile = match qt.qt.get_mut(handle) {
-                    Some(t) => t,
-                    None => unreachable!(),
-                };
-                spawn_tile_entity(command, tc, frame, tile, handle);
+                    // If this child's children are rendered, skip rendering this child.
+                    if rendered_children_indices.contains(&i) {
+                        continue;
+                    }
+
+                    let handle = *child;
+                    let tile = match qt.qt.get_mut(handle) {
+                        Some(t) => t,
+                        None => unreachable!(),
+                    };
+                    spawn_tile_entity(command, tc, frame, tile, handle);
+                }
             }
 
             for (i, child) in children.iter().enumerate() {
@@ -252,21 +291,32 @@ pub fn traverse_tile(
                     continue;
                 }
                 // Activate child tile when children are activated.
-                tc.activate_rendered_tile(child, meshes, are_children_prepared);
+                tc.activate_rendered_tile(child, meshes, are_all_children_prepared);
             }
 
-            if are_children_prepared {
+            // Avoid to render new children while waiting for parent tile is activated.
+            if meets_sse_ancestors && are_all_children_activated {
                 return TraversalResult::ChildrenMeshesPrepared;
             }
+            if !meets_sse && !meets_sse_ancestors {
+                if are_all_children_prepared {
+                    return TraversalResult::ChildrenMeshesPrepared;
+                }
 
-            if are_all_children_rendered {
-                // This tile's children are rendered completely, so parent tile isn't rendered.
-                return TraversalResult::ChildrenRendered;
+                if are_all_children_rendered {
+                    // This tile's children are rendered completely, so parent tile isn't rendered.
+                    return TraversalResult::ChildrenRendered;
+                }
             }
         }
     }
 
     if !is_renderable {
+        // Avoid to request or render new tile while waiting for parent tile is activated.
+        if meets_sse_ancestors {
+            return TraversalResult::NotFound;
+        }
+
         let tile = qt.qt.get_mut(handle).unwrap();
         prepare_tile_resource(
             command,
@@ -281,6 +331,18 @@ pub fn traverse_tile(
             Priority::Extreme,
         );
 
+        return TraversalResult::NotFound;
+    }
+
+    let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
+
+    if meets_sse && !meets_sse_ancestors && is_activated {
+        let tile = qt.qt.get_mut(handle).unwrap();
+        tile.were_children_rendered = false;
+    }
+
+    // Avoid to return an inactivated tile when meets SSE from ancestors.
+    if meets_sse_ancestors && !is_activated {
         return TraversalResult::NotFound;
     }
 
