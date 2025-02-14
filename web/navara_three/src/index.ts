@@ -47,6 +47,7 @@ import {
   type AbortControllers,
   type LayerDescription,
   type MeshCache,
+  type PickedFeature,
   type WorkerPoolPromises,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
@@ -83,6 +84,7 @@ export type Options = {
 
 export type Events = {
   resize: () => void;
+  pick: (info: PickedFeature) => void;
 };
 
 export default class ThreeView {
@@ -104,7 +106,7 @@ export default class ThreeView {
   private _disposed = false;
   private _picked = false;
   private _events: {
-    [K in keyof Events]?: Events[K][];
+    [K in keyof Events]?: Set<Events[K]>;
   } = {};
   private _uniforms: CommonUniforms;
 
@@ -581,12 +583,15 @@ export default class ThreeView {
 
   // TODO: Handle event from user.
   on<K extends keyof Events>(event: K, callback: Events[K]) {
-    if (!this._events[event]) this._events[event] = [];
-    this._events[event]?.push(callback);
+    if (!this._events[event])
+      (this._events[event] as Set<Events[K]> | undefined) = new Set<
+        Events[K]
+      >();
+    this._events[event]?.add(callback);
   }
 
   off<K extends keyof Events>(event: K, callback: Events[K]) {
-    this._events[event] = this._events[event]?.filter((c) => c !== callback);
+    this._events[event]?.delete(callback);
   }
 
   addLayer(l: LayerDescription) {
@@ -651,15 +656,26 @@ export default class ThreeView {
     this.resize(width, height, pixelRatio);
   };
 
-  onPick(pickArr: number[]) {
+  onPick(pickArr: number[]): number[] {
+    this._picked = true;
+
     if (pickArr.length > 0) {
       const prop = this._core?.getBatchProp(pickArr[0]);
       if (prop) {
-        console.log(JSON.parse(prop));
+        const pickedFeature: PickedFeature = {
+          properties: JSON.parse(prop),
+        };
+        this._emit("pick", pickedFeature);
+      }
+
+      // for highlight
+      const pickedBatchIds = this._core?.getPickedBatchIds(pickArr[0]);
+      if (pickedBatchIds) {
+        return Array.from(pickedBatchIds);
       }
     }
 
-    this._picked = true;
+    return [];
   }
 }
 

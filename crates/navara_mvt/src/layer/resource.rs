@@ -5,7 +5,8 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId,
+    batch::{BatchId, BatchTable, BatchedFeature, IdPropertyTable},
+    id::FeatureId,
     render::RenderableFeature,
 };
 use navara_tile_component::VectorTileQuadtree;
@@ -27,6 +28,7 @@ impl LayerResources {
         commands: &mut Commands,
         buf: &mut BufferStore,
         batch_table: &mut BatchTable,
+        id_prop_table_res: &mut IdPropertyTable,
         qts: &mut Query<&mut VectorTileQuadtree>,
         tc: &Query<&TileCacheManager>,
         features: &Query<&FeatureId>,
@@ -46,6 +48,7 @@ impl LayerResources {
                         commands,
                         buf,
                         batch_table,
+                        id_prop_table_res,
                         features,
                         batch_id,
                         batched_features,

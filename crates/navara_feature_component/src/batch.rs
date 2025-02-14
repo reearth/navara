@@ -22,11 +22,13 @@ pub struct BatchedFeature {
 }
 
 impl BatchedFeature {
+    #[allow(clippy::too_many_arguments)]
     pub fn despawn_recursively(
         &self,
         commands: &mut Commands,
         buf: &mut BufferStore,
         batch_table: &mut BatchTable,
+        id_prop_table: &mut IdPropertyTable,
         features: &Query<&FeatureId>,
         batch_id: &Query<&BatchId>,
         renderable_features: &mut Query<&mut RenderableFeature>,
@@ -42,7 +44,7 @@ impl BatchedFeature {
             }
             if let Some(mut e) = commands.get_entity(*f) {
                 if let Ok(batchid) = batch_id.get(*f) {
-                    batch_table.remove(&batchid.0);
+                    batch_table.remove(&batchid.0, id_prop_table);
                 }
                 e.despawn();
             }
@@ -92,12 +94,13 @@ impl FeatureBatchIdMap {
         key: &Entity,
         buf: &mut BufferStore,
         batch_table: &mut BatchTable,
+        id_prop_table: &mut IdPropertyTable,
     ) -> bool {
         if let Some(ids) = self.get(key) {
             if let Some(global_ids) = buf.get_u32(&ids.0) {
                 // remove global batch ids from batch table
                 for id in global_ids {
-                    batch_table.remove(id);
+                    batch_table.remove(id, id_prop_table);
                 }
             }
 
@@ -110,9 +113,15 @@ impl FeatureBatchIdMap {
     }
 }
 
-pub enum BatchTableValue {
+pub enum BatchProperty {
     StringObj(String),
     Cesium3dTileset(B3dmBatchTable),
+}
+
+pub struct BatchTableValue {
+    pub id_property: Option<String>,
+    pub id_property_value: Option<serde_json::Value>,
+    pub properties: Option<BatchProperty>,
 }
 
 #[derive(Resource)]
@@ -151,27 +160,90 @@ impl BatchTable {
         }
     }
 
-    pub fn add_hash_map<T: Serialize>(&mut self, prop: &T) -> Option<u32> {
+    pub fn add_hash_map<T: Serialize>(
+        &mut self,
+        id_prop: Option<String>,
+        prop: &T,
+        id_prop_table: &mut IdPropertyTable,
+    ) -> Option<u32> {
         let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
-        self.add(Some(BatchTableValue::StringObj(props)))
-    }
 
-    pub fn add_multiple_null_val(&mut self, count: usize) -> Vec<u32> {
-        let mut keys = vec![];
-        for _ in 0..count {
-            let key = self.add(None);
-            if let Some(k) = key {
-                keys.push(k);
+        if let Some(ref key) = id_prop {
+            if !key.is_empty() {
+                if let Ok(value) = serde_json::to_value(prop) {
+                    let id_prop_value = value.get(key);
+                    if id_prop_value.is_some() {
+                        let batch_id = self.add(Some(BatchTableValue {
+                            id_property: id_prop,
+                            id_property_value: id_prop_value.cloned(),
+                            properties: Some(BatchProperty::StringObj(props)),
+                        }));
+
+                        if let Some(b_id) = batch_id {
+                            id_prop_table.add(id_prop_value.unwrap().clone(), b_id);
+                        }
+
+                        return batch_id;
+                    }
+                }
             }
-        }
-        keys
+        };
+
+        self.add(Some(BatchTableValue {
+            id_property: None,
+            id_property_value: None,
+            properties: Some(BatchProperty::StringObj(props)),
+        }))
     }
 
     pub fn get(&self, key: &u32) -> Option<&BatchTableValue> {
         self.map.get(key).and_then(|value| value.as_ref())
     }
 
-    pub fn remove(&mut self, key: &u32) {
+    pub fn remove(&mut self, key: &u32, id_prop_table: &mut IdPropertyTable) {
+        if let Some(value) = self.get(key) {
+            if let Some(id_prop_value) = &value.id_property_value {
+                id_prop_table.remove(id_prop_value, *key);
+            }
+        }
+
         self.map.remove(key);
+    }
+}
+
+#[derive(Resource)]
+pub struct IdPropertyTable {
+    // store the mapping of id property value to global batch ids
+    pub map: HashMap<serde_json::Value, Vec<u32>>,
+}
+
+impl Default for IdPropertyTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl IdPropertyTable {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, key: serde_json::Value, value: u32) {
+        self.map.entry(key).or_default().push(value);
+    }
+
+    pub fn get(&self, key: &serde_json::Value) -> Option<&Vec<u32>> {
+        self.map.get(key)
+    }
+
+    pub fn remove(&mut self, key: &serde_json::Value, value: u32) {
+        if let Some(ids) = self.map.get_mut(key) {
+            ids.retain(|&x| x != value);
+            if ids.is_empty() {
+                self.map.remove(key);
+            }
+        }
     }
 }

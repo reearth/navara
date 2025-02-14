@@ -32,7 +32,7 @@ export class PickHelper {
   private drapedFeatureMaterials: Map<string, Material>;
   private globeGBufferRenderTarget: WebGLRenderTarget;
   private highlightColor: Color;
-  private onPickCallback: (pickArr: number[]) => void;
+  private onPickCallback: (pickArr: number[]) => number[];
 
   private mouseMoved: boolean;
   private mouseDownHandler: (event: MouseEvent) => void;
@@ -48,7 +48,7 @@ export class PickHelper {
     drapedFeatureMaterials: Map<string, Material>,
     globeGBufferRenderTarget: WebGLRenderTarget,
     highlightColor: Color,
-    onPickCallback: (pickArr: number[]) => void,
+    onPickCallback: (pickArr: number[]) => number[],
   ) {
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {
@@ -185,15 +185,11 @@ export class PickHelper {
     }
   }
 
-  private pickSprite(pickArr: number[], obj: Sprite) {
+  private pickSprite(pickSet: Set<number>, obj: Sprite) {
     const batchId = obj.userData.batchId;
-    let isPicked = false;
-    for (let i = 0; i < pickArr.length; i++) {
-      if (pickArr[i] === batchId) {
-        isPicked = true;
-        pickArr.splice(i, 1);
-        break;
-      }
+    const isPicked = pickSet.has(batchId);
+    if (isPicked) {
+      pickSet.delete(batchId);
     }
 
     if (obj.userData.isPicked !== isPicked) {
@@ -206,7 +202,7 @@ export class PickHelper {
     }
   }
 
-  private pickModel(pickArr: number[], obj: Group) {
+  private pickModel(pickSet: Set<number>, obj: Group) {
     const globalBatchIds = obj.userData.batchId;
     if (!globalBatchIds || globalBatchIds.length < 1) {
       return;
@@ -223,39 +219,34 @@ export class PickHelper {
       }
     });
 
-    for (let i = 0; i < pickArr.length; ) {
-      let bFound = false;
+    const toDelete = new Set<number>();
 
-      this.traverseModel(obj, (mesh: Mesh) => {
-        const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
-        const isPicked = mesh.geometry.attributes?.isPicked?.array;
-        if (isPicked) {
-          if (internalBatchIds) {
-            for (let j = 0; j < internalBatchIds.length; j++) {
-              if (globalBatchIds[internalBatchIds[j]] === pickArr[i]) {
-                isPicked[j] = 1;
-                bFound = true;
-              }
-            }
-          } else {
-            if (globalBatchIds[0] === pickArr[i]) {
-              isPicked.fill(1);
-              bFound = true;
+    this.traverseModel(obj, (mesh: Mesh) => {
+      const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+      const isPicked = mesh.geometry.attributes?.isPicked?.array;
+      if (isPicked) {
+        if (internalBatchIds) {
+          for (let j = 0; j < internalBatchIds.length; j++) {
+            const batchId = globalBatchIds[internalBatchIds[j]];
+            if (pickSet.has(batchId)) {
+              isPicked[j] = 1;
+              toDelete.add(batchId);
             }
           }
-          mesh.geometry.attributes.isPicked.needsUpdate = true;
+        } else {
+          if (pickSet.has(globalBatchIds[0])) {
+            isPicked.fill(1);
+            toDelete.add(globalBatchIds[0]);
+          }
         }
-      });
-
-      if (bFound) {
-        pickArr.splice(i, 1);
-      } else {
-        i++;
+        mesh.geometry.attributes.isPicked.needsUpdate = true;
       }
-    }
+    });
+
+    toDelete.forEach((batchId) => pickSet.delete(batchId));
   }
 
-  private pickMesh(pickArr: number[], obj: Mesh) {
+  private pickMesh(pickSet: Set<number>, obj: Mesh) {
     const batchId = obj.userData.batchId;
     const isPicked = obj.geometry.attributes.isPicked.array;
     isPicked.fill(0);
@@ -264,41 +255,35 @@ export class PickHelper {
       obj.material.userData.uHighlightColor.value = this.highlightColor;
     }
 
-    for (let i = 0; i < pickArr.length; ) {
-      let bFound = false;
-      for (let j = 0; j < batchId.length; j++) {
-        if (batchId[j] === pickArr[i]) {
-          isPicked[j] = 1;
-          bFound = true;
-        }
-      }
+    const toDelete = new Set<number>();
 
-      if (bFound) {
-        pickArr.splice(i, 1);
-      } else {
-        i++;
+    for (let j = 0; j < batchId.length; j++) {
+      if (pickSet.has(batchId[j])) {
+        isPicked[j] = 1;
+        toDelete.add(batchId[j]);
       }
     }
+
+    toDelete.forEach((batchId) => pickSet.delete(batchId));
     obj.geometry.attributes.isPicked.needsUpdate = true;
   }
 
   private toggleHighlight(pickArr: number[]) {
-    const pickarr = pickArr.slice();
-    // TODO: Need to think improving a lot of loop.
+    const pickSet = new Set(pickArr);
     for (const [_key, obj] of this.meshes) {
       // point, billboard
       if (obj instanceof Sprite) {
-        this.pickSprite(pickarr, obj);
+        this.pickSprite(pickSet, obj);
       }
 
       // model
-      if (obj instanceof Group && obj.userData.batchId) {
-        this.pickModel(pickarr, obj);
+      else if (obj instanceof Group && obj.userData.batchId) {
+        this.pickModel(pickSet, obj);
       }
 
       // polygon, polyline
-      if (obj instanceof Mesh && obj.userData.batchId) {
-        this.pickMesh(pickarr, obj);
+      else if (obj instanceof Mesh && obj.userData.batchId) {
+        this.pickMesh(pickSet, obj);
       }
     }
   }
@@ -433,8 +418,10 @@ export class PickHelper {
       this.pixelBuffer[2];
 
     const pickArr = batchId > 0 ? [batchId] : [];
-    this.toggleHighlight(pickArr);
-    this.onPickCallback(pickArr);
+    const pickedBatchIds = this.onPickCallback(pickArr);
+    if (pickedBatchIds) {
+      this.toggleHighlight(pickedBatchIds);
+    }
   }
 
   public dispose() {

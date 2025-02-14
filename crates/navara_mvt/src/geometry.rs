@@ -3,8 +3,12 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, billboard::BillboardGeometry, id::FeatureId,
-    point::PointGeometry, polygon::PolygonGeometry, polyline::PolylineGeometry,
+    batch::{BatchId, BatchTable, BatchTableValue, IdPropertyTable},
+    billboard::BillboardGeometry,
+    id::FeatureId,
+    point::PointGeometry,
+    polygon::PolygonGeometry,
+    polyline::PolylineGeometry,
     BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
@@ -29,9 +33,11 @@ pub(crate) struct ConstructedGeometry {
 
 // TODO: Store the coordinates into BufferStore.
 // TODO: Move this process to worker.
+#[allow(clippy::too_many_arguments)]
 pub fn construct_geometry(
     commands: &mut Commands,
     batch_table: &mut BatchTable,
+    id_prop_table_res: &mut IdPropertyTable,
     buf: &mut BufferStore,
     mvt_bin: &[u8],
     layer_id: &str,
@@ -60,15 +66,22 @@ pub fn construct_geometry(
         for feature in features {
             let geom = feature.get_geometry();
 
-            let mut op_batch_id = None;
-            if let Some(prop) = &feature.properties {
-                op_batch_id = batch_table.add_hash_map(prop);
-            }
-
-            if op_batch_id.is_none() {
-                continue;
-            }
-            let batch_id = op_batch_id.unwrap();
+            let batch_id = {
+                if let Some(prop) = &feature.properties {
+                    let id_prop = get_id_property(geom, appearances);
+                    batch_table
+                        .add_hash_map(id_prop, prop, id_prop_table_res)
+                        .unwrap_or(0)
+                } else {
+                    batch_table
+                        .add(Some(BatchTableValue {
+                            id_property: None,
+                            id_property_value: None,
+                            properties: None,
+                        }))
+                        .unwrap_or(0)
+                }
+            };
 
             handle_geometry(
                 commands,
@@ -94,6 +107,60 @@ pub fn construct_geometry(
     }
 
     Some(result)
+}
+
+fn get_id_property(geom: &Geometry<f32>, appearances: &[Appearance]) -> Option<String> {
+    match geom {
+        Geometry::MultiPolygon(_) | Geometry::Polygon(_) => {
+            match appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Polygon(_)))
+            {
+                Some(Appearance::Polygon(a)) => {
+                    return Some(a.id_property.clone());
+                }
+                _ => {
+                    return None;
+                }
+            };
+        }
+        Geometry::MultiPoint(_) | Geometry::Point(_) => {
+            match appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Point(_)))
+            {
+                Some(Appearance::Point(a)) => {
+                    return Some(a.id_property.clone());
+                }
+                _ => {
+                    return None;
+                }
+            };
+        }
+        Geometry::MultiLineString(_) | Geometry::LineString(_) => {
+            match appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Polyline(_)))
+            {
+                Some(Appearance::Polyline(a)) => {
+                    return Some(a.id_property.clone());
+                }
+                _ => {
+                    return None;
+                }
+            };
+        }
+        Geometry::GeometryCollection(geoms) => {
+            for geom in &geoms.0 {
+                if let Some(id) = get_id_property(geom, appearances) {
+                    return Some(id);
+                }
+            }
+        }
+        _ => {}
+    };
+
+    None
 }
 
 #[allow(clippy::too_many_arguments)]

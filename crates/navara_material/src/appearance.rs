@@ -46,6 +46,7 @@ pub struct PointMaterial {
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+    pub id_property: String,
 }
 
 impl Default for PointMaterial {
@@ -59,6 +60,7 @@ impl Default for PointMaterial {
             height: 1.,
             scale_by_distance: true,
             depth_test: true,
+            id_property: "".to_string(),
         }
     }
 }
@@ -75,6 +77,7 @@ pub struct BillboardMaterial {
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+    pub id_property: String,
 }
 
 impl Default for BillboardMaterial {
@@ -89,6 +92,7 @@ impl Default for BillboardMaterial {
             url: "".to_string(),
             scale_by_distance: true,
             depth_test: true,
+            id_property: "".to_string(),
         }
     }
 }
@@ -101,6 +105,7 @@ pub struct PolylineMaterial {
     pub clamp_to_ground: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
+    pub id_property: String,
 }
 
 impl Default for PolylineMaterial {
@@ -112,6 +117,7 @@ impl Default for PolylineMaterial {
             clamp_to_ground: true,
             height: 1.,
             internal: None,
+            id_property: "".to_string(),
         }
     }
 }
@@ -130,6 +136,7 @@ pub struct PolygonMaterial {
     pub extruded_height: Option<f32>,
     pub wireframe: bool,
     pub internal: Option<PolygonInternalMaterial>,
+    pub id_property: String,
 }
 
 impl Default for PolygonMaterial {
@@ -142,6 +149,7 @@ impl Default for PolygonMaterial {
             extruded_height: None,
             wireframe: false,
             internal: None,
+            id_property: "".to_string(),
         }
     }
 }
@@ -160,6 +168,7 @@ pub struct ModelMaterial {
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
+    pub id_property: String,
 }
 
 impl Default for ModelMaterial {
@@ -172,6 +181,7 @@ impl Default for ModelMaterial {
             url: "".to_string(),
             should_rotate_in_default: true,
             max_sse: 2.,
+            id_property: "".to_string(),
         }
     }
 }

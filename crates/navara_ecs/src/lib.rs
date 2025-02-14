@@ -11,7 +11,7 @@ use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
-    batch::BatchTable, batch::BatchTableValue, batch::BatchedFeature, batch::FeatureBatchIdMap,
+    batch::{BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, IdPropertyTable},
     render::RenderableFeature,
 };
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
@@ -361,11 +361,15 @@ impl App {
         }) = query.get(world, entity)
         {
             batch_table.get(feature_batch_id).and_then(|batch_value| {
-                if let BatchTableValue::Cesium3dTileset(in_batch_table) = batch_value {
-                    Some(in_batch_table)
-                } else {
-                    None
+                let Some(batch_prop) = &batch_value.properties else {
+                    return None;
+                };
+
+                if let BatchProperty::Cesium3dTileset(in_batch_table) = batch_prop {
+                    return Some(in_batch_table);
                 }
+
+                None
             })
         } else {
             None
@@ -382,15 +386,21 @@ impl App {
             };
             return get_prop_from_batch_table(in_batch_table, &in_batch_len, &in_batch_id);
         }
-        if let Some(BatchTableValue::StringObj(prop_str)) = self
+
+        if let Some(batch_value) = self
             .app
             .world()
             .get_resource::<BatchTable>()
             .unwrap()
             .get(batch_id)
         {
-            return prop_str.clone();
+            if let Some(BatchProperty::StringObj(prop_str)) = &batch_value.properties {
+                return prop_str.clone();
+            };
+
+            return String::from("{}");
         }
+
         String::from("{}")
     }
 
@@ -408,6 +418,35 @@ impl App {
                     .map(|i| (*entity, i, vec_ids.len()))
             })
         })
+    }
+
+    // Get all batch ids that have the same id_property_value as the batch_id.
+    pub fn get_picked_batch_ids(&self, batch_id: &u32) -> Vec<u32> {
+        let Some(batch_table_res) = self.app.world().get_resource::<BatchTable>() else {
+            return vec![*batch_id];
+        };
+
+        let Some(id_prop_table) = self.app.world().get_resource::<IdPropertyTable>() else {
+            return vec![*batch_id];
+        };
+
+        let Some(batch_table_value) = batch_table_res.map.get(batch_id) else {
+            return vec![*batch_id];
+        };
+
+        let Some(batch_table_value) = batch_table_value else {
+            return vec![*batch_id];
+        };
+
+        let Some(id_prop_val) = &batch_table_value.id_property_value else {
+            return vec![*batch_id];
+        };
+
+        let Some(picked_batch_ids) = id_prop_table.get(id_prop_val) else {
+            return vec![*batch_id];
+        };
+
+        picked_batch_ids.clone()
     }
 }
 
