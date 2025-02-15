@@ -2,12 +2,19 @@
 
 3D globe map engine prototype built on Rust + WebAssembly + Three.js
 
+## Usage
+
+__TODO__
+
 ## Development
 
 ### Install toolchains
 
+You have to install the following environment.
+
 - Rust (stable)
 - Node.js (LTS)
+- [pnpm](https://pnpm.io/installation)
 - protoc
 
 ### Install prerequisites
