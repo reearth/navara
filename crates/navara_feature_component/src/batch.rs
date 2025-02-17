@@ -168,7 +168,7 @@ impl BatchTable {
         let Some(prop) = prop else {
             return self.add(Some(BatchTableValue {
                 id_property_value: None,
-                properties: Some(BatchProperty::StringObj("{}".to_string())),
+                properties: None,
             }));
         };
 
