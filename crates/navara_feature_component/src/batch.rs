@@ -119,7 +119,6 @@ pub enum BatchProperty {
 }
 
 pub struct BatchTableValue {
-    pub id_property: Option<String>,
     pub id_property_value: Option<serde_json::Value>,
     pub properties: Option<BatchProperty>,
 }
@@ -163,9 +162,16 @@ impl BatchTable {
     pub fn add_hash_map<T: Serialize>(
         &mut self,
         id_prop: Option<String>,
-        prop: &T,
+        prop: Option<&T>,
         id_prop_table: &mut IdPropertyTable,
     ) -> Option<u32> {
+        let Some(prop) = prop else {
+            return self.add(Some(BatchTableValue {
+                id_property_value: None,
+                properties: Some(BatchProperty::StringObj("{}".to_string())),
+            }));
+        };
+
         let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
 
         if let Some(ref key) = id_prop {
@@ -174,7 +180,6 @@ impl BatchTable {
                     let id_prop_value = value.get(key);
                     if id_prop_value.is_some() {
                         let batch_id = self.add(Some(BatchTableValue {
-                            id_property: id_prop,
                             id_property_value: id_prop_value.cloned(),
                             properties: Some(BatchProperty::StringObj(props)),
                         }));
@@ -190,7 +195,6 @@ impl BatchTable {
         };
 
         self.add(Some(BatchTableValue {
-            id_property: None,
             id_property_value: None,
             properties: Some(BatchProperty::StringObj(props)),
         }))

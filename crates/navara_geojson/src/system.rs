@@ -7,9 +7,7 @@ use bevy_ecs::{
 use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
-    batch::{
-        BatchId, BatchTable, BatchTableValue, FeatureBatchId, GlobalBatchIds, IdPropertyTable,
-    },
+    batch::{BatchId, BatchTable, FeatureBatchId, GlobalBatchIds, IdPropertyTable},
     billboard::BillboardGeometry,
     model::ModelGeometry,
     point::PointGeometry,
@@ -69,19 +67,9 @@ fn generate_batch_id(
     id_prop: String,
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) -> u32 {
-    if let Some(prop) = properties {
-        batch_table_res
-            .add_hash_map(Some(id_prop), prop, id_prop_table_res)
-            .unwrap_or(0)
-    } else {
-        batch_table_res
-            .add(Some(BatchTableValue {
-                id_property: None,
-                id_property_value: None,
-                properties: None,
-            }))
-            .unwrap_or(0)
-    }
+    batch_table_res
+        .add_hash_map(Some(id_prop), properties.as_ref(), id_prop_table_res)
+        .unwrap_or(0)
 }
 
 #[allow(clippy::too_many_arguments)]

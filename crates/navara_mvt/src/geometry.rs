@@ -3,7 +3,7 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, BatchTableValue, IdPropertyTable},
+    batch::{BatchId, BatchTable, IdPropertyTable},
     billboard::BillboardGeometry,
     id::FeatureId,
     point::PointGeometry,
@@ -66,22 +66,10 @@ pub fn construct_geometry(
         for feature in features {
             let geom = feature.get_geometry();
 
-            let batch_id = {
-                if let Some(prop) = &feature.properties {
-                    let id_prop = get_id_property(geom, appearances);
-                    batch_table
-                        .add_hash_map(id_prop, prop, id_prop_table_res)
-                        .unwrap_or(0)
-                } else {
-                    batch_table
-                        .add(Some(BatchTableValue {
-                            id_property: None,
-                            id_property_value: None,
-                            properties: None,
-                        }))
-                        .unwrap_or(0)
-                }
-            };
+            let id_prop = get_id_property(geom, appearances);
+            let batch_id = batch_table
+                .add_hash_map(id_prop, feature.properties.as_ref(), id_prop_table_res)
+                .unwrap_or(0);
 
             handle_geometry(
                 commands,

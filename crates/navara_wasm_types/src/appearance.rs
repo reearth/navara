@@ -126,6 +126,7 @@ pub struct PolylineMaterial {
 #[wasm_bindgen]
 impl PolylineMaterial {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         show: Option<bool>,
         color: Option<u32>,

@@ -68,7 +68,6 @@ fn generate_global_batch_ids(
             let val = arr.get(i).cloned();
             let g_id = batch_table_res
                 .add(Some(BatchTableValue {
-                    id_property: Some(id_property.clone()),
                     id_property_value: val.clone(),
                     properties: None,
                 }))
@@ -147,7 +146,6 @@ pub fn construct_model_by_b3dm_layer(
             .then(|| {
                 batch_table_res
                     .add(Some(BatchTableValue {
-                        id_property: None,
                         id_property_value: None,
                         properties: Some(BatchProperty::Cesium3dTileset(batch_table)),
                     }))
@@ -327,7 +325,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
             .then(|| {
                 batch_table_res
                     .add(Some(BatchTableValue {
-                        id_property: None,
                         id_property_value: None,
                         properties: Some(BatchProperty::Cesium3dTileset(batch_table)),
                     }))
