@@ -123,6 +123,15 @@ pub struct BatchTableValue {
     pub properties: Option<BatchProperty>,
 }
 
+impl BatchTableValue {
+    pub fn empty() -> Self {
+        Self {
+            id_property_value: None,
+            properties: None,
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct BatchTable {
     pub map: HashMap<u32, Option<BatchTableValue>>,
@@ -166,10 +175,7 @@ impl BatchTable {
         id_prop_table: &mut IdPropertyTable,
     ) -> Option<u32> {
         let Some(prop) = prop else {
-            return self.add(Some(BatchTableValue {
-                id_property_value: None,
-                properties: None,
-            }));
+            return self.add(Some(BatchTableValue::empty()));
         };
 
         let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
