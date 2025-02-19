@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use approx::AbsDiffEq;
 use cfg_if::cfg_if;
 
@@ -57,8 +59,14 @@ impl EqualEpsilon<FloatType> for FloatType {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct AbsDiffEqVec3(pub Vec3);
+
+impl AbsDiffEqVec3 {
+    pub fn new(x: FloatType, y: FloatType, z: FloatType) -> Self {
+        Self(Vec3::new(x, y, z))
+    }
+}
 
 impl AbsDiffEq for AbsDiffEqVec3 {
     type Epsilon = Vec3;
@@ -69,6 +77,52 @@ impl AbsDiffEq for AbsDiffEqVec3 {
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
         let diff = (self.0.abs() - other.0.abs()).abs();
         diff.x <= epsilon.x && diff.y <= epsilon.y && diff.z <= epsilon.z
+    }
+}
+
+impl Eq for AbsDiffEqVec3 {}
+impl Hash for AbsDiffEqVec3 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let factor = 10.;
+        let integer_vec3 = (self.0 * factor).floor();
+        (integer_vec3.x as u32).hash(state);
+        (integer_vec3.y as u32).hash(state);
+        (integer_vec3.z as u32).hash(state);
+    }
+}
+impl PartialEq for AbsDiffEqVec3 {
+    fn eq(&self, other: &Self) -> bool {
+        self.abs_diff_eq(other, AbsDiffEqVec3::default_epsilon())
+    }
+}
+
+#[derive(Debug)]
+pub struct DiffEqVec3(pub Vec3);
+
+impl DiffEqVec3 {
+    pub fn new(x: FloatType, y: FloatType, z: FloatType) -> Self {
+        Self(Vec3::new(x, y, z))
+    }
+
+    fn diff_eq(&self, other: &Self, epsilon: FloatType) -> bool {
+        let diff = self.0.distance(other.0);
+        diff <= epsilon
+    }
+}
+
+impl Eq for DiffEqVec3 {}
+impl Hash for DiffEqVec3 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let factor = 10u64.pow(10) as f64;
+        let integer_vec3 = (self.0.as_dvec3() * factor).floor();
+        (integer_vec3.x as u32).hash(state);
+        (integer_vec3.y as u32).hash(state);
+        (integer_vec3.z as u32).hash(state);
+    }
+}
+impl PartialEq for DiffEqVec3 {
+    fn eq(&self, other: &Self) -> bool {
+        self.diff_eq(other, EPSILON10)
     }
 }
 

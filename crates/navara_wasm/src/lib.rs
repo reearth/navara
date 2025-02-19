@@ -153,6 +153,19 @@ impl Core {
         self.app.remove_buffer(handle);
     }
 
+    #[wasm_bindgen(js_name = removeBufferU8)]
+    pub fn remove_buffer_u8(&mut self, handle: i32) -> Option<js_sys::Uint8Array> {
+        Some(copy_u8_array(&self.app.remove_buffer_u8(handle)?))
+    }
+    #[wasm_bindgen(js_name = removeBufferU32)]
+    pub fn remove_buffer_u32(&mut self, handle: i32) -> Option<js_sys::Uint32Array> {
+        Some(copy_u32_array(&self.app.remove_buffer_u32(handle)?))
+    }
+    #[wasm_bindgen(js_name = removeBufferF32)]
+    pub fn remove_buffer_f32(&mut self, handle: i32) -> Option<js_sys::Float32Array> {
+        Some(copy_f32_array(&self.app.remove_buffer_f32(handle)?))
+    }
+
     #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app.trigger_data_requester_failed(bits);
