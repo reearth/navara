@@ -27,5 +27,6 @@ export default defineConfig({
       ...common.build.rollupOptions,
       external: [...(common.build.rollupOptions.external as string[]), "three"],
     },
+    watch: undefined,
   },
 });
