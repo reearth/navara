@@ -214,9 +214,6 @@ export class PickHelper {
         isPicked.fill(0);
         mesh.geometry.attributes.isPicked.needsUpdate = true;
       }
-      if ("userData" in mesh.material) {
-        mesh.material.userData.uHighlightColor.value = this.highlightColor;
-      }
     });
 
     const toDelete = new Set<number>();
@@ -250,10 +247,6 @@ export class PickHelper {
     const batchId = obj.userData.batchId;
     const isPicked = obj.geometry.attributes.isPicked.array;
     isPicked.fill(0);
-
-    if ("userData" in obj.material) {
-      obj.material.userData.uHighlightColor.value = this.highlightColor;
-    }
 
     const toDelete = new Set<number>();
 

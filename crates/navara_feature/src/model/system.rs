@@ -7,9 +7,7 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
 use navara_feature_component::{
-    batch::FeatureBatchId,
-    batch::FeatureBatchIdMap,
-    batch::GlobalBatchIds,
+    batch::{BatchSelection, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{ModelRenderInformation, RenderableFeature, TransferableModelGeometry},
     DeletedFeatureMarker,
@@ -34,6 +32,7 @@ pub fn transfer_mesh(
             &LayerId,
             &FeatureBatchId,
             &GlobalBatchIds,
+            &BatchSelection,
             Option<&mut FeatureId>,
             &ModelGeometry,
             &ModelMaterial,
@@ -53,6 +52,7 @@ pub fn transfer_mesh(
         layer_id,
         feature_batch_id,
         global_batch_ids,
+        batch_selection,
         mut feature_id,
         geometry,
         material,
@@ -108,6 +108,7 @@ pub fn transfer_mesh(
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
                     global_batch_ids: Some(global_batch_ids.0),
+                    select_status: Some(batch_selection.0),
                 },
                 feature_batch_id: feature_batch_id.0,
                 active: true,

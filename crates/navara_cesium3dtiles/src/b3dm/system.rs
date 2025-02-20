@@ -10,8 +10,8 @@ use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     batch::{
-        BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIds, IdPropertyTable,
+        BatchProperty, BatchSelection, BatchTable, BatchTableValue, FeatureBatchId,
+        FeatureBatchIdMap, GlobalBatchIds, IdPropertySelections, IdPropertyTable,
     },
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
@@ -56,13 +56,15 @@ pub fn request_model_by_b3dm_layer(
 fn generate_global_batch_ids(
     batch_table_res: &mut BatchTable,
     id_prop_table_res: &mut IdPropertyTable,
+    id_prop_sel_res: &IdPropertySelections,
     batch_table_json: &serde_json::Value,
     batch_length: usize,
     id_property: &String,
-) -> Option<Vec<u32>> {
+) -> Option<(Vec<u32>, Vec<u32>)> {
     let prop_val = batch_table_json.get(id_property)?;
 
-    let mut global_batch_ids = vec![];
+    let mut global_batch_ids: Vec<u32> = vec![];
+    let mut batch_selection: Vec<u32> = vec![];
     if let serde_json::Value::Array(arr) = prop_val {
         for i in 0..batch_length {
             let val = arr.get(i).cloned();
@@ -76,12 +78,20 @@ fn generate_global_batch_ids(
 
             if let Some(val) = val {
                 id_prop_table_res.add(val.clone(), g_id);
+
+                batch_selection.push(if id_prop_sel_res.is_selected(&val) {
+                    1
+                } else {
+                    0
+                });
+            } else {
+                batch_selection.push(0);
             }
         }
     }
 
     if !global_batch_ids.is_empty() {
-        Some(global_batch_ids)
+        Some((global_batch_ids, batch_selection))
     } else {
         None
     }
@@ -97,6 +107,7 @@ pub fn construct_model_by_b3dm_layer(
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
     mut id_prop_table_res: ResMut<IdPropertyTable>,
+    id_prop_sel_res: Res<IdPropertySelections>,
     requesters: Query<
         (Entity, &B3dmLayerDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -132,9 +143,10 @@ pub fn construct_model_by_b3dm_layer(
             continue;
         };
 
-        let Some(global_batch_ids) = generate_global_batch_ids(
+        let Some((global_batch_ids, batch_selection)) = generate_global_batch_ids(
             &mut batch_table_res,
             &mut id_prop_table_res,
+            &id_prop_sel_res,
             &batch_table_json,
             batch_length,
             &appearance.id_property,
@@ -154,11 +166,13 @@ pub fn construct_model_by_b3dm_layer(
             .unwrap_or(0);
 
         let ids_handle = buf.new_u32(global_batch_ids);
+        let sel_handle = buf.new_u32(batch_selection);
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(feature_batch_id),
             GlobalBatchIds(ids_handle),
+            BatchSelection(sel_handle),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -259,11 +273,13 @@ pub fn delete_model_by_b3dm_layer(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
     mut id_prop_table_res: ResMut<IdPropertyTable>,
+    id_prop_sel_res: Res<IdPropertySelections>,
     requesters: Query<
         (
             &Cesium3dTileContentDataRequesterMarker,
@@ -311,9 +327,10 @@ pub fn construct_model_by_cesium3dtiles_layer(
             continue;
         };
 
-        let Some(global_batch_ids) = generate_global_batch_ids(
+        let Some((global_batch_ids, batch_selection)) = generate_global_batch_ids(
             &mut batch_table_res,
             &mut id_prop_table_res,
+            &id_prop_sel_res,
             &batch_table_json,
             batch_length,
             &appearance.id_property,
@@ -333,12 +350,14 @@ pub fn construct_model_by_cesium3dtiles_layer(
             .unwrap_or(0);
 
         let ids_handle = buf.new_u32(global_batch_ids);
+        let sel_handle = buf.new_u32(batch_selection);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
             FeatureBatchId(feature_batch_id),
             GlobalBatchIds(ids_handle),
+            BatchSelection(sel_handle),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,

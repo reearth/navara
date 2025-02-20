@@ -311,6 +311,7 @@ pub struct TransferableSingleGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferableModelGeometry {
     pub global_batch_ids: Option<Handle>,
+    pub select_status: Option<Handle>,
 }
 
 impl TransferableModelGeometry {
@@ -328,6 +329,10 @@ impl TransferableModelGeometry {
                 }
             }
             buf.remove(global_batch_ids);
+        }
+
+        if let Some(sel_handle) = &self.select_status {
+            buf.remove(sel_handle);
         }
     }
 }

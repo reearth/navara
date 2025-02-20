@@ -7,12 +7,14 @@ use bevy_ecs::{
 use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, FeatureBatchId, GlobalBatchIds, IdPropertyTable},
+    batch::{
+        BatchId, BatchSelection, BatchTable, FeatureBatchId, GlobalBatchIds, IdPropertySelections,
+        IdPropertyTable,
+    },
     billboard::BillboardGeometry,
     model::ModelGeometry,
     point::PointGeometry,
-    polygon::PolygonGeometry,
-    polygon::UpdatePolygon,
+    polygon::{PolygonGeometry, UpdatePolygon},
     polyline::PolylineGeometry,
     render::RenderableFeature,
 };
@@ -78,6 +80,7 @@ fn spawn_feature(
     buf: &mut BufferStore,
     batch_table_res: &mut BatchTable,
     id_prop_table_res: &mut IdPropertyTable,
+    id_prop_sel_res: &IdPropertySelections,
     appearances: &[Appearance],
     geometry: &Geometry,
     layer_id: &str,
@@ -247,11 +250,21 @@ fn spawn_feature(
                         v.id_property.clone(),
                         properties,
                     )];
+                    let mut batch_selection: Vec<u32> = vec![0];
+                    if let Some(batch_table_val) = batch_table_res.get(&global_batch_ids[0]) {
+                        if let Some(id_prop_val) = &batch_table_val.id_property_value {
+                            if id_prop_sel_res.is_selected(id_prop_val) {
+                                batch_selection = vec![1];
+                            }
+                        }
+                    }
                     let ids_handle = buf.new_u32(global_batch_ids);
+                    let sel_handle = buf.new_u32(batch_selection);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         FeatureBatchId(0),
                         GlobalBatchIds(ids_handle),
+                        BatchSelection(sel_handle),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -267,11 +280,21 @@ fn spawn_feature(
                             v.id_property.clone(),
                             properties,
                         )];
+                        let mut batch_selection: Vec<u32> = vec![0];
+                        if let Some(batch_table_val) = batch_table_res.get(&global_batch_ids[0]) {
+                            if let Some(id_prop_val) = &batch_table_val.id_property_value {
+                                if id_prop_sel_res.is_selected(id_prop_val) {
+                                    batch_selection = vec![1];
+                                }
+                            }
+                        }
                         let ids_handle = buf.new_u32(global_batch_ids);
+                        let sel_handle = buf.new_u32(batch_selection);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             FeatureBatchId(0),
                             GlobalBatchIds(ids_handle),
+                            BatchSelection(sel_handle),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -296,6 +319,7 @@ pub fn construct_feature(
     mut commands: Commands,
     mut batch_table_res: ResMut<BatchTable>,
     mut id_prop_table_res: ResMut<IdPropertyTable>,
+    id_prop_sel_res: Res<IdPropertySelections>,
     mut buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
@@ -312,6 +336,7 @@ pub fn construct_feature(
                                 &mut buf,
                                 &mut batch_table_res,
                                 &mut id_prop_table_res,
+                                &id_prop_sel_res,
                                 appearances,
                                 g,
                                 layer.layer_id.as_str(),
@@ -327,6 +352,7 @@ pub fn construct_feature(
                             &mut buf,
                             &mut batch_table_res,
                             &mut id_prop_table_res,
+                            &id_prop_sel_res,
                             appearances,
                             g,
                             layer.layer_id.as_str(),
@@ -340,6 +366,7 @@ pub fn construct_feature(
                         &mut buf,
                         &mut batch_table_res,
                         &mut id_prop_table_res,
+                        &id_prop_sel_res,
                         appearances,
                         g,
                         layer.layer_id.as_str(),

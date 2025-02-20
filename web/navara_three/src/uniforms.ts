@@ -1,4 +1,4 @@
-import type { Matrix4, Texture } from "three";
+import type { Matrix4, Texture, Color } from "three";
 
 type Ref<K extends string, T> = { [k in K]: T | undefined | null };
 type RefThree<T> = Ref<"value", T>;
@@ -11,4 +11,5 @@ export type CommonUniforms = {
   tGlobeDepth: RefThree<Texture>;
   tGlobeNormal: RefThree<Texture>;
   inverseProjectionMatrix: RefThree<Matrix4>;
+  highlightColor: RefThree<Color>;
 };

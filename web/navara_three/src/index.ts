@@ -413,6 +413,9 @@ export default class ThreeView {
       tGlobeDepth: { value: null },
       tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
+      highlightColor: {
+        value: options.picking?.highlightColor ?? new Color(0x00ffff),
+      },
     };
 
     this._defaultTextureOptions = {

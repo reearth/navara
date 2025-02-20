@@ -231,6 +231,8 @@ impl<'a> From<&'a navara_feature_component::render::TransferableSingleGeometry>
 pub struct TransferableModelGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub global_batch_ids: Option<Handle>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub select_status: Option<Handle>,
 }
 
 impl From<TransferableModelGeometry>
@@ -239,6 +241,7 @@ impl From<TransferableModelGeometry>
     fn from(val: TransferableModelGeometry) -> Self {
         navara_feature_component::render::TransferableModelGeometry {
             global_batch_ids: val.global_batch_ids,
+            select_status: val.select_status,
         }
     }
 }
@@ -250,6 +253,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferableModelGeometry>
     ) -> TransferableModelGeometry {
         TransferableModelGeometry {
             global_batch_ids: val.global_batch_ids,
+            select_status: val.select_status,
         }
     }
 }

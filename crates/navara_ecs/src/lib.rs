@@ -11,7 +11,10 @@ use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
-    batch::{BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, IdPropertyTable},
+    batch::{
+        BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, IdPropertySelections,
+        IdPropertyTable,
+    },
     render::RenderableFeature,
 };
 use navara_frame::FrameManager;
@@ -430,32 +433,43 @@ impl App {
     }
 
     // Get all batch ids that have the same id_property_value as the batch_id.
-    pub fn get_picked_batch_ids(&self, batch_id: &u32) -> Vec<u32> {
-        let Some(batch_table_res) = self.app.world().get_resource::<BatchTable>() else {
-            return vec![*batch_id];
+    pub fn get_picked_batch_ids(&mut self, batch_id: &u32) -> Vec<u32> {
+        let world = self.app.world_mut();
+
+        let (id_prop_val, picked_batch_ids) = {
+            let Some(batch_table_res) = world.get_resource::<BatchTable>() else {
+                return vec![*batch_id];
+            };
+
+            let Some(id_prop_table) = world.get_resource::<IdPropertyTable>() else {
+                return vec![*batch_id];
+            };
+
+            let Some(batch_table_value) = batch_table_res.map.get(batch_id) else {
+                return vec![*batch_id];
+            };
+
+            let Some(batch_table_value) = batch_table_value else {
+                return vec![*batch_id];
+            };
+
+            let Some(id_prop_val) = &batch_table_value.id_property_value else {
+                return vec![*batch_id];
+            };
+
+            let Some(picked_batch_ids) = id_prop_table.get(id_prop_val) else {
+                return vec![*batch_id];
+            };
+
+            (id_prop_val.clone(), picked_batch_ids.clone())
         };
 
-        let Some(id_prop_table) = self.app.world().get_resource::<IdPropertyTable>() else {
-            return vec![*batch_id];
+        if let Some(mut id_prop_sel) = world.get_resource_mut::<IdPropertySelections>() {
+            id_prop_sel.clear();
+            id_prop_sel.add(id_prop_val);
         };
 
-        let Some(batch_table_value) = batch_table_res.map.get(batch_id) else {
-            return vec![*batch_id];
-        };
-
-        let Some(batch_table_value) = batch_table_value else {
-            return vec![*batch_id];
-        };
-
-        let Some(id_prop_val) = &batch_table_value.id_property_value else {
-            return vec![*batch_id];
-        };
-
-        let Some(picked_batch_ids) = id_prop_table.get(id_prop_val) else {
-            return vec![*batch_id];
-        };
-
-        picked_batch_ids.clone()
+        picked_batch_ids
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{id::FeatureId, render::RenderableFeature};
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use rand::Rng;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Component, Debug, Default)]
 pub struct BatchedFeature {
@@ -69,6 +69,10 @@ pub struct FeatureBatchId(pub u32);
 // The global batch ID corresponding to the internal batch ID in b3dm.
 #[derive(Component, Default, Clone, Debug)]
 pub struct GlobalBatchIds(pub Handle);
+
+// Represents the selection state of a batch, indicating whether the batch is selected or not.
+#[derive(Component, Default, Clone, Debug)]
+pub struct BatchSelection(pub Handle);
 
 // Search b3dm feature by global batch id
 #[derive(Resource, Default)]
@@ -255,5 +259,37 @@ impl IdPropertyTable {
                 self.map.remove(key);
             }
         }
+    }
+}
+
+// store the selected id property values
+#[derive(Resource)]
+pub struct IdPropertySelections {
+    pub set: HashSet<serde_json::Value>,
+}
+
+impl Default for IdPropertySelections {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl IdPropertySelections {
+    pub fn new() -> Self {
+        Self {
+            set: HashSet::new(),
+        }
+    }
+
+    pub fn add(&mut self, key: serde_json::Value) {
+        self.set.insert(key);
+    }
+
+    pub fn is_selected(&self, key: &serde_json::Value) -> bool {
+        self.set.contains(key)
+    }
+
+    pub fn clear(&mut self) {
+        self.set.clear();
     }
 }
