@@ -13,7 +13,7 @@ import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
-import { isNumber } from "lodash-es";
+
 import {
   BufferAttribute,
   BufferGeometry,
@@ -214,34 +214,28 @@ async function renderModel(
     return;
   }
 
-  scene.userData.batchId = 0;
-  if (isNumber(m.geometry.global_batch_ids)) {
-    scene.userData.batchId = buf.u32(m.geometry.global_batch_ids);
-  }
+  const batchIdAndSelectedStatus = m.geometry.batch_id_and_selected_status;
+  const dataSize = batchIdAndSelectedStatus?.size ?? 0;
+  const batchIdAndSel = batchIdAndSelectedStatus
+    ? buf.u32(batchIdAndSelectedStatus.data)
+    : new Uint32Array(dataSize);
 
-  let globalBatchIds = m.geometry.global_batch_ids
-    ? buf.u32(m.geometry.global_batch_ids)
-    : undefined;
-  globalBatchIds = globalBatchIds ?? new Uint32Array(1);
+  scene.userData.batchIdAndSel = batchIdAndSel;
+  scene.userData.dataSize = dataSize;
 
-  let selStatus = m.geometry.select_status
-    ? buf.u32(m.geometry.select_status)
-    : undefined;
-  selStatus = selStatus ?? new Uint32Array(1);
-
-  if (scene.userData.batchId) {
+  if (batchIdAndSel) {
     const traverse = function (mesh: Object3D) {
       if (mesh instanceof Mesh) {
         const vertCnt = mesh.geometry.attributes?.position?.count;
         const isPicked = new Float32Array(vertCnt).fill(0);
 
-        const gBatchIds = new Float32Array(vertCnt).fill(globalBatchIds[0]);
+        const gBatchIds = new Float32Array(vertCnt).fill(batchIdAndSel[0]);
         const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
         if (internalBatchIds) {
           for (let i = 0; i < internalBatchIds.length; i++) {
             const internalBatchId = internalBatchIds[i];
-            gBatchIds[i] = globalBatchIds[internalBatchId] ?? 0;
-            isPicked[i] = selStatus[internalBatchId] ?? 0;
+            gBatchIds[i] = batchIdAndSel[internalBatchId * dataSize] ?? 0;
+            isPicked[i] = batchIdAndSel[internalBatchId * dataSize + 1] ?? 0;
           }
         }
 

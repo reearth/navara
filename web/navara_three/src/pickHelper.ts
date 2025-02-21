@@ -203,8 +203,9 @@ export class PickHelper {
   }
 
   private pickModel(pickSet: Set<number>, obj: Group) {
-    const globalBatchIds = obj.userData.batchId;
-    if (!globalBatchIds || globalBatchIds.length < 1) {
+    const batchIdAndSel = obj.userData.batchIdAndSel;
+    const dataSize = obj.userData.dataSize;
+    if (!batchIdAndSel || batchIdAndSel.length < 1 || !dataSize) {
       return;
     }
 
@@ -224,16 +225,16 @@ export class PickHelper {
       if (isPicked) {
         if (internalBatchIds) {
           for (let j = 0; j < internalBatchIds.length; j++) {
-            const batchId = globalBatchIds[internalBatchIds[j]];
+            const batchId = batchIdAndSel[internalBatchIds[j] * dataSize];
             if (pickSet.has(batchId)) {
               isPicked[j] = 1;
               toDelete.add(batchId);
             }
           }
         } else {
-          if (pickSet.has(globalBatchIds[0])) {
+          if (pickSet.has(batchIdAndSel[0])) {
             isPicked.fill(1);
-            toDelete.add(globalBatchIds[0]);
+            toDelete.add(batchIdAndSel[0]);
           }
         }
         mesh.geometry.attributes.isPicked.needsUpdate = true;
@@ -270,7 +271,7 @@ export class PickHelper {
       }
 
       // model
-      else if (obj instanceof Group && obj.userData.batchId) {
+      else if (obj instanceof Group && obj.userData.batchIdAndSel) {
         this.pickModel(pickSet, obj);
       }
 

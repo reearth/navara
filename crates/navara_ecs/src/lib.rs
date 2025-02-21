@@ -426,8 +426,9 @@ impl App {
             self.get_buffer_u32(batch_ids.0).and_then(|vec_ids| {
                 vec_ids
                     .iter()
+                    .step_by(2)
                     .position(|id| id == global_batch_id)
-                    .map(|i| (*entity, i, vec_ids.len()))
+                    .map(|i| (*entity, i, vec_ids.len() / 2))
             })
         })
     }
@@ -445,11 +446,7 @@ impl App {
                 return vec![*batch_id];
             };
 
-            let Some(batch_table_value) = batch_table_res.map.get(batch_id) else {
-                return vec![*batch_id];
-            };
-
-            let Some(batch_table_value) = batch_table_value else {
+            let Some(batch_table_value) = batch_table_res.get(batch_id) else {
                 return vec![*batch_id];
             };
 
@@ -489,11 +486,10 @@ fn get_prop_from_batch_table(
         for (key, value) in map {
             match value {
                 serde_json::Value::Object(ref _m) => {
-                    let arr = in_batch_table
-                        .read_property_from_binary(*in_batch_len, &value)
-                        .unwrap();
-
-                    prop.insert(key, arr[*in_batch_id].clone());
+                    if let Ok(arr) = in_batch_table.read_property_from_binary(*in_batch_len, &value)
+                    {
+                        prop.insert(key, arr[*in_batch_id].clone());
+                    }
                 }
                 serde_json::Value::Array(arr) => {
                     prop.insert(key, arr[*in_batch_id].clone());

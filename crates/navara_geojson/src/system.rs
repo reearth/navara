@@ -8,8 +8,7 @@ use navara_core::{calc_transform, CRS};
 
 use navara_feature_component::{
     batch::{
-        BatchId, BatchSelection, BatchTable, FeatureBatchId, GlobalBatchIds, IdPropertySelections,
-        IdPropertyTable,
+        BatchId, BatchTable, FeatureBatchId, GlobalBatchIds, IdPropertySelections, IdPropertyTable,
     },
     billboard::BillboardGeometry,
     model::ModelGeometry,
@@ -244,27 +243,28 @@ fn spawn_feature(
             },
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let global_batch_ids = vec![generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    )];
-                    let mut batch_selection: Vec<u32> = vec![0];
+                    let mut global_batch_ids = vec![
+                        generate_batch_id(
+                            batch_table_res,
+                            id_prop_table_res,
+                            v.id_property.clone(),
+                            properties,
+                        ),
+                        0,
+                    ];
+
                     if let Some(batch_table_val) = batch_table_res.get(&global_batch_ids[0]) {
                         if let Some(id_prop_val) = &batch_table_val.id_property_value {
                             if id_prop_sel_res.is_selected(id_prop_val) {
-                                batch_selection = vec![1];
+                                global_batch_ids[1] = 1;
                             }
                         }
                     }
                     let ids_handle = buf.new_u32(global_batch_ids);
-                    let sel_handle = buf.new_u32(batch_selection);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         FeatureBatchId(0),
                         GlobalBatchIds(ids_handle),
-                        BatchSelection(sel_handle),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -274,27 +274,28 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let global_batch_ids = vec![generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        )];
-                        let mut batch_selection: Vec<u32> = vec![0];
+                        let mut global_batch_ids = vec![
+                            generate_batch_id(
+                                batch_table_res,
+                                id_prop_table_res,
+                                v.id_property.clone(),
+                                properties,
+                            ),
+                            0,
+                        ];
+
                         if let Some(batch_table_val) = batch_table_res.get(&global_batch_ids[0]) {
                             if let Some(id_prop_val) = &batch_table_val.id_property_value {
                                 if id_prop_sel_res.is_selected(id_prop_val) {
-                                    batch_selection = vec![1];
+                                    global_batch_ids[1] = 1;
                                 }
                             }
                         }
                         let ids_handle = buf.new_u32(global_batch_ids);
-                        let sel_handle = buf.new_u32(batch_selection);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             FeatureBatchId(0),
                             GlobalBatchIds(ids_handle),
-                            BatchSelection(sel_handle),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,

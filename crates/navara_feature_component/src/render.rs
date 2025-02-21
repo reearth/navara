@@ -310,8 +310,7 @@ pub struct TransferableSingleGeometry {
 
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferableModelGeometry {
-    pub global_batch_ids: Option<Handle>,
-    pub select_status: Option<Handle>,
+    pub batch_id_and_selected_status: Option<TransferableFloatAttribute>,
 }
 
 impl TransferableModelGeometry {
@@ -321,18 +320,18 @@ impl TransferableModelGeometry {
         batch_table: &mut BatchTable,
         id_prop_table: &mut IdPropertyTable,
     ) {
-        if let Some(global_batch_ids) = &self.global_batch_ids {
-            if let Some(global_ids) = buf.get_u32(global_batch_ids) {
-                // remove global batch ids from batch table
-                for id in global_ids {
-                    batch_table.remove(id, id_prop_table);
-                }
-            }
-            buf.remove(global_batch_ids);
+        let Some(ids) = &self.batch_id_and_selected_status else {
+            return;
+        };
+
+        let Some(vec_ids) = buf.get_u32(&ids.data) else {
+            return;
+        };
+
+        for i in (0..vec_ids.len()).step_by(ids.size as usize) {
+            batch_table.remove(&vec_ids[i], id_prop_table);
         }
 
-        if let Some(sel_handle) = &self.select_status {
-            buf.remove(sel_handle);
-        }
+        buf.remove(&ids.data);
     }
 }

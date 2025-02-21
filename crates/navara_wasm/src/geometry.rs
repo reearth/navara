@@ -230,9 +230,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferableSingleGeometry>
 #[derive(Debug, Clone, Serialize)]
 pub struct TransferableModelGeometry {
     #[wasm_bindgen(getter_with_clone)]
-    pub global_batch_ids: Option<Handle>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub select_status: Option<Handle>,
+    pub batch_id_and_selected_status: Option<TransferableFloatAttribute>,
 }
 
 impl From<TransferableModelGeometry>
@@ -240,8 +238,7 @@ impl From<TransferableModelGeometry>
 {
     fn from(val: TransferableModelGeometry) -> Self {
         navara_feature_component::render::TransferableModelGeometry {
-            global_batch_ids: val.global_batch_ids,
-            select_status: val.select_status,
+            batch_id_and_selected_status: val.batch_id_and_selected_status.map(|b| b.into()),
         }
     }
 }
@@ -252,8 +249,10 @@ impl<'a> From<&'a navara_feature_component::render::TransferableModelGeometry>
         val: &'a navara_feature_component::render::TransferableModelGeometry,
     ) -> TransferableModelGeometry {
         TransferableModelGeometry {
-            global_batch_ids: val.global_batch_ids,
-            select_status: val.select_status,
+            batch_id_and_selected_status: val
+                .batch_id_and_selected_status
+                .as_ref()
+                .map(|b| b.into()),
         }
     }
 }

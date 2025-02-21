@@ -66,13 +66,9 @@ pub struct BatchId(pub u32);
 #[derive(Component, Debug)]
 pub struct FeatureBatchId(pub u32);
 
-// The global batch ID corresponding to the internal batch ID in b3dm.
+// The global batch ID and the selection state corresponding to the internal batch ID in b3dm.
 #[derive(Component, Default, Clone, Debug)]
 pub struct GlobalBatchIds(pub Handle);
-
-// Represents the selection state of a batch, indicating whether the batch is selected or not.
-#[derive(Component, Default, Clone, Debug)]
-pub struct BatchSelection(pub Handle);
 
 // Search b3dm feature by global batch id
 #[derive(Resource, Default)]
@@ -138,7 +134,7 @@ impl BatchTableValue {
 
 #[derive(Resource)]
 pub struct BatchTable {
-    pub map: HashMap<u32, Option<BatchTableValue>>,
+    map: HashMap<u32, Option<BatchTableValue>>,
 }
 
 impl Default for BatchTable {
@@ -228,7 +224,7 @@ impl BatchTable {
 #[derive(Resource)]
 pub struct IdPropertyTable {
     // store the mapping of id property value to global batch ids
-    pub map: HashMap<serde_json::Value, Vec<u32>>,
+    map: HashMap<serde_json::Value, Vec<u32>>,
 }
 
 impl Default for IdPropertyTable {
@@ -265,7 +261,7 @@ impl IdPropertyTable {
 // store the selected id property values
 #[derive(Resource)]
 pub struct IdPropertySelections {
-    pub set: HashSet<serde_json::Value>,
+    set: HashSet<serde_json::Value>,
 }
 
 impl Default for IdPropertySelections {
