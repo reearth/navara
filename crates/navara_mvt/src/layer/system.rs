@@ -91,7 +91,7 @@ pub fn construct_single_mvt(
                 &mut batch_table,
                 &mut id_prop_table_res,
                 &mut buf,
-                &mvt_bin,
+                mvt_bin,
                 &layer.layer_id,
                 get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
                 &layer.appearances,
@@ -117,8 +117,6 @@ pub fn construct_single_mvt(
                         .insert(RenderedSingleFeature(e));
                 }
             };
-
-            drop(mvt_bin);
         };
 
         buf.remove(&req.handle);

@@ -257,17 +257,8 @@ pub fn compute_wall_geometry(
     let length = positions.len();
     let min_distance = chord_length(granularity, ellipsoid.semi_major_axis());
 
-    let mut num_vertices = 0;
+    let mut edge_positions = vec![];
 
-    for i in 0..length {
-        num_vertices +=
-            subdivide_line_count(positions[i], positions[(i + 1) % length], min_distance);
-    }
-
-    let top_edge_length = (num_vertices as usize + length) * 3;
-    let mut edge_positions = vec![0.; top_edge_length * 2];
-
-    let mut edge_index = 0;
     for i in 0..length {
         let p1 = positions[i];
         let p2 = positions[(i + 1) % length];
@@ -275,35 +266,40 @@ pub fn compute_wall_geometry(
         // For geodesic arc type
         let subdivided_positions = subdivide_line(p1, p2, min_distance);
 
-        for pos in subdivided_positions {
-            edge_positions[edge_index] = pos;
-            edge_positions[edge_index + top_edge_length] = pos;
-            edge_index += 1;
+        for idx in 0..subdivided_positions.len() / 3 {
+            let i = idx * 3;
+            let x = subdivided_positions[i];
+            let y = subdivided_positions[i + 1];
+            let z = subdivided_positions[i + 2];
+
+            edge_positions.push(x);
+            edge_positions.push(y);
+            edge_positions.push(z);
         }
 
-        edge_positions[edge_index] = p2.x;
-        edge_positions[edge_index + top_edge_length] = p2.x;
-        edge_index += 1;
-        edge_positions[edge_index] = p2.y;
-        edge_positions[edge_index + top_edge_length] = p2.y;
-        edge_index += 1;
-        edge_positions[edge_index] = p2.z;
-        edge_positions[edge_index + top_edge_length] = p2.z;
-        edge_index += 1;
+        edge_positions.push(p2.x);
+        edge_positions.push(p2.y);
+        edge_positions.push(p2.z);
     }
 
-    let edge_positions_length = edge_positions.len();
-    let mut indices = vec![];
-    let length = edge_positions_length / 6;
+    edge_positions.extend_from_within(..);
 
+    let indices = calculate_wall_indices(&edge_positions);
+
+    (edge_positions, indices)
+}
+
+pub fn calculate_wall_indices(top_bottom_positions: &[FloatType]) -> Vec<u32> {
+    let length = top_bottom_positions.len() / 6;
+    let mut indices = vec![];
     for i in 0..length {
         let ul = i as u32;
         let ur = ul + 1;
         let ll = ul + length as u32;
         let lr = ll + 1;
 
-        let p1 = unpack_flatten_vec3(&edge_positions, (ul * 3) as usize);
-        let p2 = unpack_flatten_vec3(&edge_positions, (ur * 3) as usize);
+        let p1 = unpack_flatten_vec3(top_bottom_positions, (ul * 3) as usize);
+        let p2 = unpack_flatten_vec3(top_bottom_positions, (ur * 3) as usize);
         if p1.equal_diff_epsilon(p2, EPSILON10) {
             // skip corner
             continue;
@@ -312,12 +308,14 @@ pub fn compute_wall_geometry(
         indices.push(ul);
         indices.push(ll);
         indices.push(ur);
-        indices.push(ur);
-        indices.push(ll);
-        indices.push(lr);
+        if top_bottom_positions.get((lr * 3) as usize).is_some() {
+            indices.push(ur);
+            indices.push(ll);
+            indices.push(lr);
+        }
     }
 
-    (edge_positions, indices)
+    indices
 }
 
 fn subdivide_line_count(p0: Vec3, p1: Vec3, min_distance: FloatType) -> u32 {
@@ -355,6 +353,8 @@ fn subdivide_line(p0: Vec3, p1: Vec3, min_distance: FloatType) -> Vec<f32> {
 mod test {
     use navara_core::WGS84_32;
     use navara_math::{Vec3, RADIANS_PER_DEGREE};
+
+    use crate::polygon::helpers::calculate_wall_indices;
 
     use super::compute_subdivision;
 
@@ -426,5 +426,29 @@ mod test {
         assert_eq!(subdivision.1[9], 0);
         assert_eq!(subdivision.1[10], 1);
         assert_eq!(subdivision.1[11], 2);
+    }
+
+    #[test]
+    fn it_should_calculate_wall_indices() {
+        let mut top = vec![
+            0., 1., 2., //
+            3., 4., 5., //
+            6., 7., 8., //
+            9., 10., 11.,
+        ];
+        top.append(&mut top.clone());
+        let indices = calculate_wall_indices(&top);
+        assert_eq!(
+            indices,
+            vec![
+                0, 4, 1, //
+                1, 4, 5, //
+                1, 5, 2, //
+                2, 5, 6, //
+                2, 6, 3, //
+                3, 6, 7, //
+                3, 7, 4, //
+            ]
+        );
     }
 }

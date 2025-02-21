@@ -127,6 +127,18 @@ export default class ThreeView {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
+    removeU8: (handle) => {
+      const b = this._core?.removeBufferU8(handle);
+      return b ?? null;
+    },
+    removeU32: (handle) => {
+      const b = this._core?.removeBufferU32(handle);
+      return b ?? null;
+    },
+    removeF32: (handle) => {
+      const b = this._core?.removeBufferF32(handle);
+      return b ?? null;
+    },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
       if (!this._core?.hasDataRequester(bits)) {
         return;

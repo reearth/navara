@@ -123,6 +123,19 @@ impl App {
         store.remove(&handle);
     }
 
+    pub fn remove_buffer_u8(&mut self, handle: i32) -> Option<Vec<u8>> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        unsafe { store.remove_u8(&handle) }
+    }
+    pub fn remove_buffer_u32(&mut self, handle: i32) -> Option<Vec<u32>> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        unsafe { store.remove_u32(&handle) }
+    }
+    pub fn remove_buffer_f32(&mut self, handle: i32) -> Option<Vec<f32>> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        unsafe { store.remove_f32(&handle) }
+    }
+
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
         self.app
             .world_mut()
