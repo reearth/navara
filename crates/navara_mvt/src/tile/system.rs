@@ -226,7 +226,7 @@ pub fn transfer_mesh(
                     &mut commands,
                     &mut batch_table,
                     &mut buf,
-                    &mvt_bin,
+                    mvt_bin,
                     &layer.layer_id,
                     tile.coords,
                     &layer.appearances,
@@ -271,7 +271,6 @@ pub fn transfer_mesh(
                         rendered_tile.feature_ids.as_mut().unwrap().push(e);
                     }
                 }
-                drop(mvt_bin);
             }
         }
     }

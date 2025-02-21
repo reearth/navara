@@ -189,7 +189,7 @@ async function renderModel(m: ModelMesh, buf: BufferLoader) {
 
   const scene = await (async () => {
     if (m.bin) {
-      const bin = buf.u8(m.bin);
+      const bin = buf.removeU8(m.bin);
       if (!bin) {
         return;
       }
@@ -324,18 +324,18 @@ async function renderPolyline(
   uniforms: CommonUniforms,
 ) {
   const g = mesh.geometry;
-  const position = buf.f32(g.position.data);
-  const start = buf.f32(g.start.data);
-  const forward_offset = buf.f32(g.forward_offset.data);
-  const start_normals = buf.f32(g.start_normals.data);
-  const end_normal_and_texture_coordinate_normalization_x = buf.f32(
+  const position = buf.removeF32(g.position.data);
+  const start = buf.removeF32(g.start.data);
+  const forward_offset = buf.removeF32(g.forward_offset.data);
+  const start_normals = buf.removeF32(g.start_normals.data);
+  const end_normal_and_texture_coordinate_normalization_x = buf.removeF32(
     g.end_normal_and_texture_coordinate_normalization_x.data,
   );
-  const right_normal_and_texture_coordinate_normalization_y = buf.f32(
+  const right_normal_and_texture_coordinate_normalization_y = buf.removeF32(
     g.right_normal_and_texture_coordinate_normalization_y.data,
   );
-  const indices = buf.u32(g.indices);
-  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const indices = buf.removeU32(g.indices);
+  const batchId = g.batch_id ? buf.removeF32(g.batch_id.data) : undefined;
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (
     !position ||
@@ -436,16 +436,16 @@ async function renderPolygon(
   uniforms: CommonUniforms,
 ) {
   const g = mesh.geometry;
-  const position = buf.f32(g.position.data);
-  const normal = g.normal ? buf.f32(g.normal.data) : undefined;
+  const position = buf.removeF32(g.position.data);
+  const normal = g.normal ? buf.removeF32(g.normal.data) : undefined;
   const scale_normal_and_cap = g.scale_normal_and_cap
-    ? buf.f32(g.scale_normal_and_cap.data)
+    ? buf.removeF32(g.scale_normal_and_cap.data)
     : undefined;
   const extrudedHeight = g.extruded_height
-    ? buf.f32(g.extruded_height.data)
+    ? buf.removeF32(g.extruded_height.data)
     : undefined;
-  const indices = buf.u32(g.indices);
-  const batchId = g.batch_id ? buf.f32(g.batch_id.data) : undefined;
+  const indices = buf.removeU32(g.indices);
+  const batchId = g.batch_id ? buf.removeF32(g.batch_id.data) : undefined;
   const batchIdSize = g.batch_id ? g.batch_id.size : 1;
   if (!position || !indices || !batchId) return;
 

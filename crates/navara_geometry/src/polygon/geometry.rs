@@ -168,8 +168,8 @@ pub fn create_geometry_from_positions_extruded(
         create_geometry_from_positions(ellipsoid, polygon_resource, polygon, granularity);
 
     let mut top_bottom_positions = Vec::with_capacity(top_positions.len() * 2);
-    top_bottom_positions.append(&mut top_positions.clone());
     top_bottom_positions.append(&mut top_positions);
+    top_bottom_positions.extend_from_within(..);
 
     let bottom_positions_length = top_bottom_positions.len() / 3 / 2;
     let top_indices_length = top_indices.len();
@@ -190,14 +190,16 @@ pub fn create_geometry_from_positions_extruded(
         scale_to_geodetic_height_extruded(&mut top_bottom_positions, ellipsoid);
 
     let outer_ring = &hierarchy.outer_ring;
+
+    let mut wall_geometries =
+        Vec::with_capacity(hierarchy.holes.as_ref().map(|h| h.len()).unwrap_or(0) + 1);
+
     let (mut wall_positions, wall_indices) =
         compute_wall_geometry(ellipsoid, outer_ring, granularity);
 
     let wall_scale_normal_and_cap =
         scale_to_geodetic_height_extruded(&mut wall_positions, ellipsoid);
 
-    let mut wall_geometries =
-        Vec::with_capacity(hierarchy.holes.as_ref().map(|h| h.len()).unwrap_or(0) + 1);
     wall_geometries.push(PolygonGeometry {
         attributes: PolygonGeometryAttributes {
             position: FloatAttribute::new(wall_positions, 3),

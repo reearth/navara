@@ -51,14 +51,14 @@ pub fn construct_geometry(
     commands: &mut Commands,
     batch_table: &mut BatchTable,
     buf: &mut BufferStore,
-    mvt_bin: &[u8],
+    mvt_bin: Vec<u8>,
     layer_id: &str,
     xyz: TileXYZ,
     appearances: &[Appearance],
 ) -> Option<Vec<ConstructedGeometry>> {
     let mut result = vec![];
 
-    let reader = mvt::MvtReader::new((*mvt_bin).to_vec()).ok()?;
+    let reader = mvt::MvtReader::new(mvt_bin).ok()?;
     let layer_names = reader.get_layer_names().ok()?;
 
     // TODO: Allow to specify a layer name.
@@ -449,6 +449,10 @@ fn construct_line_geometry<A: Component + Clone>(
     let LineString(points) = line;
     let geo_points = converter.project_points(points);
 
+    if geo_points.is_empty() {
+        return;
+    }
+
     let e = commands
         .spawn((
             LayerId(layer_id.to_owned()),
@@ -516,6 +520,10 @@ fn construct_polygon_geometry<A: Component + Clone>(
             holes: None,
             expected_winding_order: WindingOrder::CounterClockwise,
         });
+    }
+
+    if outer_vec.is_empty() {
+        return;
     }
 
     let entity = commands.spawn((
