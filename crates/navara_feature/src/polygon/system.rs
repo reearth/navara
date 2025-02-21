@@ -50,6 +50,7 @@ pub fn transfer_batched_mesh(
                 .construct_polygon_feature
                 .map_or(false, |c: Entity| {
                     construct_polygon_feature_tasks.contains(c)
+                        && feature_id.as_ref().map_or(true, |f| f.0.is_none())
                 });
         if !needs_update {
             continue;
