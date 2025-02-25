@@ -78,11 +78,7 @@ fn generate_global_batch_ids(
             if let Some(val) = val {
                 id_prop_table_res.add(val.clone(), g_id);
 
-                global_batch_ids.push(if id_prop_sel_res.is_selected(&val) {
-                    1
-                } else {
-                    0
-                });
+                global_batch_ids.push(id_prop_sel_res.get_selection(&val));
             } else {
                 global_batch_ids.push(0);
             }

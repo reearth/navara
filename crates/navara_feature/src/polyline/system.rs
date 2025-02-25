@@ -147,8 +147,11 @@ pub fn transfer_mesh(
 
             let pos_cnt = geometry.attributes.position.data.len()
                 / geometry.attributes.position.size as usize;
-            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
-            geometry.attributes.batch_id = Some(FloatAttribute::new(batch_id_vec, 1));
+            let mut batch_id_vec = vec![batch_id.0.x as FloatType; pos_cnt * 2];
+            for i in (1..pos_cnt * 2).step_by(2) {
+                batch_id_vec[i] = batch_id.0.y as FloatType;
+            }
+            geometry.attributes.batch_id_and_sel = Some(FloatAttribute::new(batch_id_vec, 2));
 
             let entity = commands
                 .spawn((

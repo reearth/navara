@@ -154,7 +154,7 @@ pub struct TransferablePolylineGeometry {
     pub start_normals: TransferableFloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
-    pub batch_id: Option<TransferableFloatAttribute>,
+    pub batch_id_and_sel: Option<TransferableFloatAttribute>,
     pub indices: Handle,
 }
 
@@ -210,13 +210,12 @@ impl TransferablePolylineGeometry {
                     .right_normal_and_texture_coordinate_normalization_y
                     .size,
             },
-            batch_id: geo
-                .attributes
-                .batch_id
-                .map(|batch_id| TransferableFloatAttribute {
+            batch_id_and_sel: geo.attributes.batch_id_and_sel.map(|batch_id| {
+                TransferableFloatAttribute {
                     data: buf.new_f32(batch_id.data),
                     size: batch_id.size,
-                }),
+                }
+            }),
             indices,
         }
     }
@@ -232,7 +231,7 @@ impl TransferablePolylineGeometry {
                 .right_normal_and_texture_coordinate_normalization_y
                 .data,
         );
-        if let Some(batch_id) = &self.batch_id {
+        if let Some(batch_id) = &self.batch_id_and_sel {
             buf.remove(&batch_id.data);
         }
         buf.remove(&self.indices);
@@ -244,7 +243,7 @@ pub struct TransferablePolygonGeometry {
     pub position: TransferableFloatAttribute,
     pub normal: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
-    pub batch_id: Option<TransferableFloatAttribute>,
+    pub batch_id_and_sel: Option<TransferableFloatAttribute>,
     pub indices: Handle,
 }
 
@@ -261,7 +260,7 @@ impl TransferablePolygonGeometry {
             .map(|n| (buf.new_f32(n.data), n.size));
         let batch_id = geo
             .attributes
-            .batch_id
+            .batch_id_and_sel
             .map(|n| (buf.new_f32(n.data), n.size));
         let indices = buf.new_u32(geo.indices);
 
@@ -277,7 +276,7 @@ impl TransferablePolygonGeometry {
                     size,
                 }
             }),
-            batch_id: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
+            batch_id_and_sel: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
                 data: batch_id,
                 size,
             }),
@@ -297,7 +296,7 @@ impl TransferablePolygonGeometry {
         if let Some(normal) = &self.scale_normal_and_cap {
             buf.remove(&normal.data);
         }
-        if let Some(batch_id) = &self.batch_id {
+        if let Some(batch_id) = &self.batch_id_and_sel {
             buf.remove(&batch_id.data);
         }
     }
@@ -306,6 +305,7 @@ impl TransferablePolygonGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferableSingleGeometry {
     pub batch_id: Option<u32>,
+    pub selected: Option<u32>,
 }
 
 #[derive(Component, Clone, Debug, Default, PartialEq)]

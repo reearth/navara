@@ -6,6 +6,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
+use navara_math::Vec2;
 
 use crate::{id::FeatureId, render::RenderableFeature};
 
@@ -44,7 +45,7 @@ impl BatchedFeature {
             }
             if let Some(mut e) = commands.get_entity(*f) {
                 if let Ok(batchid) = batch_id.get(*f) {
-                    batch_table.remove(&batchid.0, id_prop_table);
+                    batch_table.remove(&(batchid.0[0] as u32), id_prop_table);
                 }
                 e.despawn();
             }
@@ -60,7 +61,7 @@ impl BatchedFeature {
 }
 
 #[derive(Component, Debug)]
-pub struct BatchId(pub u32);
+pub struct BatchId(pub Vec2);
 
 // b3dm feature's batch id
 #[derive(Component, Debug)]
@@ -210,6 +211,15 @@ impl BatchTable {
         self.map.get(key).and_then(|value| value.as_ref())
     }
 
+    pub fn get_selection(&self, key: &u32, id_prop_sel_res: &IdPropertySelections) -> u32 {
+        if let Some(value) = self.get(key) {
+            if let Some(id_prop_val) = &value.id_property_value {
+                return id_prop_sel_res.get_selection(id_prop_val);
+            }
+        }
+        0
+    }
+
     pub fn remove(&mut self, key: &u32, id_prop_table: &mut IdPropertyTable) {
         if let Some(value) = self.get(key) {
             if let Some(id_prop_value) = &value.id_property_value {
@@ -281,8 +291,12 @@ impl IdPropertySelections {
         self.set.insert(key);
     }
 
-    pub fn is_selected(&self, key: &serde_json::Value) -> bool {
-        self.set.contains(key)
+    pub fn get_selection(&self, key: &serde_json::Value) -> u32 {
+        if self.set.contains(key) {
+            1
+        } else {
+            0
+        }
     }
 
     pub fn clear(&mut self) {

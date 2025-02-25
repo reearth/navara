@@ -3,7 +3,7 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, IdPropertyTable},
+    batch::{BatchId, BatchTable, IdPropertySelections, IdPropertyTable},
     billboard::BillboardGeometry,
     id::FeatureId,
     point::PointGeometry,
@@ -14,7 +14,7 @@ use navara_feature_component::{
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
 use navara_material::Appearance;
-use navara_math::{FloatType, Vec3};
+use navara_math::{FloatType, Vec2, Vec3};
 use navara_parser::mvt;
 
 use crate::pos_converter::PosConverter;
@@ -40,6 +40,7 @@ pub fn construct_geometry(
     id_prop_table_res: &mut IdPropertyTable,
     buf: &mut BufferStore,
     mvt_bin: Vec<u8>,
+    id_prop_sel_res: &IdPropertySelections,
     layer_id: &str,
     xyz: TileXYZ,
     appearances: &[Appearance],
@@ -70,6 +71,11 @@ pub fn construct_geometry(
             let batch_id = batch_table
                 .add_hash_map(id_prop, feature.properties.as_ref(), id_prop_table_res)
                 .unwrap_or(0);
+
+            let batch_id = BatchId(Vec2::new(
+                batch_id as FloatType,
+                batch_table.get_selection(&batch_id, id_prop_sel_res) as FloatType,
+            ));
 
             handle_geometry(
                 commands,
@@ -160,7 +166,7 @@ fn handle_geometry(
     layer_id: &str,
     geom: &Geometry<f32>,
     converter: &mut PosConverter,
-    batch_id: &u32,
+    batch_id: &BatchId,
     appearances: &[Appearance],
 ) {
     match geom {
@@ -362,7 +368,7 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
     converter: &mut PosConverter,
     appearance: &A,
     geometry: F,
-    batch_id: &u32,
+    batch_id: &BatchId,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -389,7 +395,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     converter: &mut PosConverter,
     appearance: &A,
     geometry: &F,
-    batch_id: &u32,
+    batch_id: &BatchId,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -399,7 +405,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     let e = commands
         .spawn((
             LayerId(layer_id.to_owned()),
-            BatchId(*batch_id),
+            BatchId(batch_id.0),
             FeatureId::default(),
             geometry(x, y),
             appearance.clone(),
@@ -418,7 +424,7 @@ fn construct_lines_geometry<A: Component + Clone>(
     lines: &[LineString<f32>],
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &u32,
+    batch_id: &BatchId,
 ) -> usize {
     let mut count = 0;
     for line in lines {
@@ -447,7 +453,7 @@ fn construct_line_geometry<A: Component + Clone>(
     line: &LineString<f32>,
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &u32,
+    batch_id: &BatchId,
 ) {
     let LineString(points) = line;
     let geo_points = converter.project_points(points);
@@ -462,7 +468,7 @@ fn construct_line_geometry<A: Component + Clone>(
             BatchedFeatureMarker,
             PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
             appearance.clone(),
-            BatchId(*batch_id),
+            BatchId(batch_id.0),
         ))
         .id();
 
@@ -478,7 +484,7 @@ fn construct_polygons_geometry<A: Component + Clone>(
     polygons: &[Polygon<f32>],
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &u32,
+    batch_id: &BatchId,
 ) {
     for polygon in polygons {
         construct_polygon_geometry(
@@ -503,7 +509,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
     polygon: &Polygon<f32>,
     converter: &mut PosConverter,
     appearance: &A,
-    batch_id: &u32,
+    batch_id: &BatchId,
 ) {
     let LineString(outer) = polygon.exterior();
     let outer_vec = converter.project_points(outer);
@@ -538,7 +544,7 @@ fn construct_polygon_geometry<A: Component + Clone>(
             crs: CRS::Geographic,
         },
         appearance.clone(),
-        BatchId(*batch_id),
+        BatchId(batch_id.0),
     ));
 
     feature_ids.push(entity.id());

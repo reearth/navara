@@ -60,7 +60,8 @@ pub fn transfer_mesh(
                         should_recalculate_height: true,
                     },
                     geometry: TransferableSingleGeometry {
-                        batch_id: Some(batch_id.0),
+                        batch_id: Some(batch_id.0.x as u32),
+                        selected: Some(batch_id.0.y as u32),
                     },
                     active: true,
                 },

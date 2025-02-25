@@ -3,7 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, BatchedFeature, IdPropertyTable},
+    batch::{BatchId, BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
     id::FeatureId,
     point::PointMarker,
     polygon::PolygonMarker,
@@ -188,6 +188,7 @@ pub fn transfer_mesh(
     mut batch_table: ResMut<BatchTable>,
     mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut buf: ResMut<BufferStore>,
+    id_prop_sel_res: Res<IdPropertySelections>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
@@ -233,6 +234,7 @@ pub fn transfer_mesh(
                     &mut id_prop_table_res,
                     &mut buf,
                     mvt_bin,
+                    &id_prop_sel_res,
                     &layer.layer_id,
                     tile.coords,
                     &layer.appearances,

@@ -210,10 +210,12 @@ export class PickHelper {
     }
 
     this.traverseModel(obj, (mesh: Mesh) => {
-      const isPicked = mesh.geometry.attributes?.isPicked?.array;
-      if (isPicked) {
-        isPicked.fill(0);
-        mesh.geometry.attributes.isPicked.needsUpdate = true;
+      const attrBatchIdAndSel = mesh.geometry.attributes?.batchIdAndSel?.array;
+      if (attrBatchIdAndSel) {
+        for (let i = 1; i < attrBatchIdAndSel.length; i += 2) {
+          attrBatchIdAndSel[i] = 0;
+        }
+        mesh.geometry.attributes.batchIdAndSel.needsUpdate = true;
       }
     });
 
@@ -221,23 +223,25 @@ export class PickHelper {
 
     this.traverseModel(obj, (mesh: Mesh) => {
       const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
-      const isPicked = mesh.geometry.attributes?.isPicked?.array;
-      if (isPicked) {
+      const attrBatchIdAndSel = mesh.geometry.attributes?.batchIdAndSel?.array;
+      if (attrBatchIdAndSel) {
         if (internalBatchIds) {
           for (let j = 0; j < internalBatchIds.length; j++) {
             const batchId = batchIdAndSel[internalBatchIds[j] * dataSize];
             if (pickSet.has(batchId)) {
-              isPicked[j] = 1;
+              attrBatchIdAndSel[j * 2 + 1] = 1;
               toDelete.add(batchId);
             }
           }
         } else {
           if (pickSet.has(batchIdAndSel[0])) {
-            isPicked.fill(1);
+            for (let i = 1; i < attrBatchIdAndSel.length; i += 2) {
+              attrBatchIdAndSel[i] = 1;
+            }
             toDelete.add(batchIdAndSel[0]);
           }
         }
-        mesh.geometry.attributes.isPicked.needsUpdate = true;
+        mesh.geometry.attributes.batchIdAndSel.needsUpdate = true;
       }
     });
 
@@ -245,21 +249,27 @@ export class PickHelper {
   }
 
   private pickMesh(pickSet: Set<number>, obj: Mesh) {
-    const batchId = obj.userData.batchId;
-    const isPicked = obj.geometry.attributes.isPicked.array;
-    isPicked.fill(0);
+    const batchIdAndSel = obj.userData.batchIdAndSel;
+    const attrBatchIdAndSel = obj.geometry.attributes?.batchIdAndSel?.array;
+    if (!attrBatchIdAndSel) {
+      return;
+    }
+
+    for (let i = 1; i < attrBatchIdAndSel.length; i += 2) {
+      attrBatchIdAndSel[i] = 0;
+    }
 
     const toDelete = new Set<number>();
 
-    for (let j = 0; j < batchId.length; j++) {
-      if (pickSet.has(batchId[j])) {
-        isPicked[j] = 1;
-        toDelete.add(batchId[j]);
+    for (let j = 0; j < batchIdAndSel.length; j += 2) {
+      if (pickSet.has(batchIdAndSel[j])) {
+        attrBatchIdAndSel[j + 1] = 1;
+        toDelete.add(batchIdAndSel[j]);
       }
     }
 
     toDelete.forEach((batchId) => pickSet.delete(batchId));
-    obj.geometry.attributes.isPicked.needsUpdate = true;
+    obj.geometry.attributes.batchIdAndSel.needsUpdate = true;
   }
 
   private toggleHighlight(pickArr: number[]) {
@@ -276,7 +286,7 @@ export class PickHelper {
       }
 
       // polygon, polyline
-      else if (obj instanceof Mesh && obj.userData.batchId) {
+      else if (obj instanceof Mesh && obj.userData.batchIdAndSel) {
         this.pickMesh(pickSet, obj);
       }
     }

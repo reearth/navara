@@ -20,7 +20,7 @@ pub fn construct_polygon_batched_feature(
         position: FloatAttribute::new(vec![], 3),
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
-        batch_id: Some(FloatAttribute::new(vec![], 1)),
+        batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
     };
     let mut indices = vec![];
     let mut index_offset = 0;
@@ -79,12 +79,18 @@ pub fn construct_polygon_batched_feature(
                     .data,
             );
 
+        let mut batch_ids = vec![];
+        for _i in 0..position_length {
+            batch_ids.push(batch_id.0.x as FloatType);
+            batch_ids.push(batch_id.0.y as FloatType);
+        }
+
         combined_attributes
-            .batch_id
+            .batch_id_and_sel
             .as_mut()
             .unwrap()
             .data
-            .extend(std::iter::repeat(batch_id.0 as FloatType).take(position_length));
+            .extend(batch_ids);
 
         if index_offset == 0 {
             indices.append(&mut polygon_result.geometry.indices);
