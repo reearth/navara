@@ -481,6 +481,16 @@ impl App {
 
         picked_batch_ids
     }
+
+    pub fn clear_picking_status(&mut self) {
+        if let Some(mut id_prop_sel) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<IdPropertySelections>()
+        {
+            id_prop_sel.clear();
+        };
+    }
 }
 
 fn get_prop_from_batch_table(

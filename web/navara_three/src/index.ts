@@ -696,6 +696,8 @@ export default class ThreeView {
       if (pickedBatchIds) {
         return Array.from(pickedBatchIds);
       }
+    } else {
+      this._core?.clearPickingStatus();
     }
 
     return [];

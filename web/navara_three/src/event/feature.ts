@@ -123,13 +123,14 @@ if (nvr_uPickable > 0.0 && alpha > 0.0) {
     sprite.center.set(m.material.center.x, m.material.center.y);
   }
 
-  if (m.geometry.selected && uniforms?.highlightColor?.value) {
-    material.color.set(uniforms.highlightColor.value);
-  }
-
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
   sprite.userData.orgColor = m.material.color;
+
+  if (m.geometry.selected && uniforms?.highlightColor?.value) {
+    material.color.set(uniforms.highlightColor.value);
+    sprite.userData.isPicked = true;
+  }
 
   return sprite;
 }
@@ -181,13 +182,14 @@ async function renderBillboard(m: BillboardMesh, uniforms: CommonUniforms) {
     sprite.center.set(m.material.center.x, m.material.center.y);
   }
 
-  if (m.geometry.selected && uniforms?.highlightColor?.value) {
-    material.color.set(uniforms.highlightColor.value);
-  }
-
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
   sprite.userData.orgColor = m.material.color;
+
+  if (m.geometry.selected && uniforms?.highlightColor?.value) {
+    material.color.set(uniforms.highlightColor.value);
+    sprite.userData.isPicked = true;
+  }
 
   return sprite;
 }
@@ -342,7 +344,7 @@ async function renderPolyline(
   const batchIdAndSel = g.batch_id_and_sel
     ? buf.removeF32(g.batch_id_and_sel.data)
     : undefined;
-  const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 1;
+  const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
   if (
     !position ||
     !start ||
@@ -448,7 +450,7 @@ async function renderPolygon(
   const batchIdAndSel = g.batch_id_and_sel
     ? buf.removeF32(g.batch_id_and_sel.data)
     : undefined;
-  const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 1;
+  const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
   if (!position || !indices || !batchIdAndSel) return;
 
   const geometry = new BufferGeometry();
