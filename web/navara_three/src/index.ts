@@ -125,6 +125,18 @@ export default class ThreeView {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
+    removeU8: (handle) => {
+      const b = this._core?.removeBufferU8(handle);
+      return b ?? null;
+    },
+    removeU32: (handle) => {
+      const b = this._core?.removeBufferU32(handle);
+      return b ?? null;
+    },
+    removeF32: (handle) => {
+      const b = this._core?.removeBufferF32(handle);
+      return b ?? null;
+    },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
       if (!this._core?.hasDataRequester(bits)) {
         return;
@@ -453,6 +465,9 @@ export default class ThreeView {
         this._globeGBufferRenderTarget,
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
+        // {
+        //   debug: true,
+        // },
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
@@ -580,6 +595,7 @@ export default class ThreeView {
 
   private _render() {
     this._effectComposer.render();
+    this._pickHelper?.renderDebugCanvas();
     // this._pickHelper?.renderDebugScreen();
   }
 

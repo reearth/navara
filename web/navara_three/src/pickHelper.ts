@@ -19,8 +19,13 @@ import {
   Color,
 } from "three";
 
+import { BufferView } from "./bufferView";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
+
+export type PickHelperOptions = {
+  debug: boolean;
+};
 
 export class PickHelper {
   private element: HTMLElement;
@@ -34,6 +39,9 @@ export class PickHelper {
   private globeGBufferRenderTarget: WebGLRenderTarget;
   private highlightColor: Color;
   private onPickCallback: (pickArr: number[]) => void;
+
+  private debugBufferView?: BufferView;
+  private debugRenderTarget?: WebGLRenderTarget;
 
   private mouseMoved: boolean;
   private mouseDownHandler: (event: MouseEvent) => void;
@@ -50,6 +58,7 @@ export class PickHelper {
     globeGBufferRenderTarget: WebGLRenderTarget,
     highlightColor: Color,
     onPickCallback: (pickArr: number[]) => void,
+    options?: PickHelperOptions,
   ) {
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {
@@ -72,7 +81,16 @@ export class PickHelper {
     this.mouseMoveHandler = (event: MouseEvent) => this.onMouseMove(event);
     this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
 
-    // element.addEventListener("dblclick", this.renderDebugFile.bind(this));
+    if (options?.debug) {
+      const width = this.renderer.getContext().drawingBufferWidth;
+      const height = this.renderer.getContext().drawingBufferHeight;
+      this.debugBufferView = new BufferView(width, height);
+      this.debugRenderTarget = new WebGLRenderTarget(width, height, {
+        format: RGBAFormat,
+        depthBuffer: true,
+        stencilBuffer: true,
+      });
+    }
   }
 
   private onMouseDown(_event: MouseEvent) {
@@ -321,17 +339,8 @@ export class PickHelper {
     this.togglePickable(0);
   }
 
-  public renderDebugFile() {
-    const width = this.renderer.getContext().drawingBufferWidth;
-    const height = this.renderer.getContext().drawingBufferHeight;
-
-    const renderTarget = new WebGLRenderTarget(width, height, {
-      format: RGBAFormat,
-      depthBuffer: true,
-      stencilBuffer: true,
-    });
-
-    this.camera.setViewOffset(width, height, 0, 0, width, height);
+  public renderDebugCanvas() {
+    if (!this.debugBufferView || !this.debugRenderTarget) return;
 
     this.togglePickable(1);
 
@@ -339,7 +348,7 @@ export class PickHelper {
     this.renderer.clear();
     this.renderer.render(this.scenes.globeGBuffer, this.camera);
 
-    this.renderer.setRenderTarget(renderTarget);
+    this.renderer.setRenderTarget(this.debugRenderTarget);
     this.renderer.clear();
     this.renderer.render(this.scenes.globe, this.camera);
 
@@ -348,43 +357,7 @@ export class PickHelper {
 
     this.togglePickable(0);
 
-    const pixelBuffer = new Uint8Array(width * height * 4);
-    this.renderer.readRenderTargetPixels(
-      renderTarget,
-      0,
-      0,
-      width,
-      height,
-      pixelBuffer,
-    );
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const imageData = ctx.createImageData(width, height);
-    imageData.data.set(pixelBuffer);
-
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-    const tempCtx = tempCanvas.getContext("2d");
-    if (!tempCtx) return;
-    tempCtx.putImageData(imageData, 0, 0);
-
-    ctx.translate(0, canvas.height);
-    ctx.scale(1, -1);
-    ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
-
-    const dataURL = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = dataURL;
-    link.download = "render.png";
-    link.click();
-
-    renderTarget.dispose();
+    this.debugBufferView.render(this.renderer, this.debugRenderTarget);
   }
 
   private onMouseClick(event: MouseEvent) {
