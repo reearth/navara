@@ -470,6 +470,9 @@ export default class ThreeView {
         this._globeGBufferRenderTarget,
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
+        // {
+        //   debug: true,
+        // },
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
@@ -597,6 +600,7 @@ export default class ThreeView {
 
   private _render() {
     this._effectComposer.render();
+    this._pickHelper?.renderDebugCanvas();
     // this._pickHelper?.renderDebugScreen();
   }
 
