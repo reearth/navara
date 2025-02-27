@@ -19,6 +19,7 @@ impl KeyboardInput {
             key_code: self.key_code,
             state: self.state,
             window: win,
+            repeat: false,
         }
     }
 }
