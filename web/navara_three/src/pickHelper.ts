@@ -140,17 +140,25 @@ export class PickHelper {
       }
 
       // polygon, polyline
-      if (obj instanceof Mesh && "uPickable" in obj.material.userData) {
+      else if (obj instanceof Mesh && "uPickable" in obj.material.userData) {
         obj.material.userData.uPickable.value = picable;
       }
 
       // model
-      if (obj instanceof Group) {
+      else if (obj instanceof Group) {
         this.traverseModel(obj, (mesh: Mesh) => {
           if ("userData" in mesh.material) {
             mesh.material.userData.uPickable.value = picable;
           }
         });
+      }
+      // tile
+      else if (obj instanceof Mesh && "tileOrigColor" in obj.userData) {
+        if (picable) {
+          obj.material.color.setHex(0);
+        } else {
+          obj.material.color.setHex(obj.userData.tileOrigColor);
+        }
       }
     }
   }
@@ -311,14 +319,19 @@ export class PickHelper {
     }
   }
 
-  public renderDebugScreen() {
+  public processRender(target: WebGLRenderTarget) {
+    const orgClearColor = new Color();
+    this.renderer.getClearColor(orgClearColor);
+
+    this.renderer.setClearColor(0x000000);
+
     this.togglePickable(1);
 
     this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
     this.renderer.clear();
     this.renderer.render(this.scenes.globeGBuffer, this.camera);
 
-    this.renderer.setRenderTarget(null);
+    this.renderer.setRenderTarget(target);
     this.renderer.clear();
     this.renderer.render(this.scenes.globe, this.camera);
 
@@ -326,25 +339,14 @@ export class PickHelper {
     this.renderer.render(this.scenes.main, this.camera);
 
     this.togglePickable(0);
+
+    this.renderer.setClearColor(orgClearColor);
   }
 
   public renderDebugCanvas() {
     if (!this.debugBufferView || !this.debugRenderTarget) return;
 
-    this.togglePickable(1);
-
-    this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
-    this.renderer.clear();
-    this.renderer.render(this.scenes.globeGBuffer, this.camera);
-
-    this.renderer.setRenderTarget(this.debugRenderTarget);
-    this.renderer.clear();
-    this.renderer.render(this.scenes.globe, this.camera);
-
-    this.renderDrapedMesh();
-    this.renderer.render(this.scenes.main, this.camera);
-
-    this.togglePickable(0);
+    this.processRender(this.debugRenderTarget);
 
     this.debugBufferView.render(this.renderer, this.debugRenderTarget);
   }
@@ -363,20 +365,7 @@ export class PickHelper {
       1, // rect height
     );
 
-    this.togglePickable(1);
-
-    this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
-    this.renderer.clear();
-    this.renderer.render(this.scenes.globeGBuffer, this.camera);
-
-    this.renderer.setRenderTarget(this.pickingTexture);
-    this.renderer.clear();
-    this.renderer.render(this.scenes.globe, this.camera);
-
-    this.renderDrapedMesh();
-    this.renderer.render(this.scenes.main, this.camera);
-
-    this.togglePickable(0);
+    this.processRender(this.pickingTexture);
 
     this.renderer.readRenderTargetPixels(
       this.pickingTexture,
