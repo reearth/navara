@@ -14,6 +14,8 @@ pub struct PointMaterial {
     pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: Option<bool>,
     pub depth_test: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub id_property: Option<String>,
 }
 
 impl From<PointMaterial> for navara_material::PointMaterial {
@@ -28,6 +30,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            id_property: val.id_property.unwrap_or("".to_string()),
         }
     }
 }
@@ -42,6 +45,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -66,6 +70,8 @@ pub struct BillboardMaterial {
     pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: Option<bool>,
     pub depth_test: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub id_property: Option<String>,
 }
 
 impl From<BillboardMaterial> for navara_material::BillboardMaterial {
@@ -81,6 +87,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            id_property: val.id_property.unwrap_or("".to_string()),
         }
     }
 }
@@ -96,6 +103,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -111,11 +119,14 @@ pub struct PolylineMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub id_property: Option<String>,
 }
 
 #[wasm_bindgen]
 impl PolylineMaterial {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         show: Option<bool>,
         color: Option<u32>,
@@ -124,6 +135,7 @@ impl PolylineMaterial {
         height: Option<f32>,
         width: Option<f32>,
         __internal__: Option<PolylineInternalMaterial>,
+        id_property: Option<String>,
     ) -> Self {
         Self {
             show,
@@ -133,6 +145,7 @@ impl PolylineMaterial {
             height,
             width,
             __internal__,
+            id_property,
         }
     }
 }
@@ -148,6 +161,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
+            id_property: val.id_property.unwrap_or("".to_string()),
         }
     }
 }
@@ -161,6 +175,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
+            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -199,6 +214,8 @@ pub struct PolygonMaterial {
     pub wireframe: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolygonInternalMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub id_property: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -214,6 +231,7 @@ impl PolygonMaterial {
         extruded_height: Option<f32>,
         wireframe: Option<bool>,
         __internal__: Option<PolygonInternalMaterial>,
+        id_property: Option<String>,
     ) -> Self {
         Self {
             show,
@@ -224,6 +242,7 @@ impl PolygonMaterial {
             extruded_height,
             wireframe,
             __internal__,
+            id_property,
         }
     }
 }
@@ -240,6 +259,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
             internal: val.__internal__.map(|v| v.into()),
+            id_property: val.id_property.unwrap_or("".to_string()),
         }
     }
 }
@@ -254,6 +274,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),
             __internal__: value.internal.as_ref().map(|v| v.into()),
+            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -291,6 +312,8 @@ pub struct ModelMaterial {
     pub max_sse: Option<f32>,
     pub clamp_to_ground: Option<bool>,
     pub should_rotate_in_default: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub id_property: Option<String>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -306,6 +329,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             should_rotate_in_default: val
                 .should_rotate_in_default
                 .unwrap_or(default.should_rotate_in_default),
+            id_property: val.id_property.unwrap_or("".to_string()),
         }
     }
 }
@@ -319,6 +343,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             max_sse: Some(value.max_sse),
             clamp_to_ground: Some(value.clamp_to_ground),
             should_rotate_in_default: Some(value.should_rotate_in_default),
+            id_property: Some(value.id_property.clone()),
         }
     }
 }

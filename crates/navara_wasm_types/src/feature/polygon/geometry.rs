@@ -108,7 +108,7 @@ pub struct PolygonGeometryAttributes {
     position: FloatAttribute,
     normal: Option<FloatAttribute>,
     scale_normal_and_cap: Option<FloatAttribute>,
-    batch_id: Option<FloatAttribute>,
+    batch_id_and_sel: Option<FloatAttribute>,
 }
 
 #[wasm_bindgen]
@@ -144,13 +144,13 @@ impl PolygonGeometryAttributes {
         Some(scale_normal_and_cap.size)
     }
     pub fn transfer_batch_id(&mut self) -> Option<js_sys::Float32Array> {
-        let Some(batch_id) = &mut self.batch_id else {
+        let Some(batch_id) = &mut self.batch_id_and_sel else {
             return None;
         };
         Some(batch_id.transfer_data())
     }
     pub fn transfer_batch_id_size(&mut self) -> Option<u8> {
-        let Some(batch_id) = &mut self.batch_id else {
+        let Some(batch_id) = &mut self.batch_id_and_sel else {
             return None;
         };
         Some(batch_id.size)
@@ -162,7 +162,7 @@ impl PolygonGeometryAttributes {
             drop(normal.data);
         }
         drop(self.scale_normal_and_cap.unwrap().data);
-        drop(self.batch_id.unwrap().data);
+        drop(self.batch_id_and_sel.unwrap().data);
     }
 }
 
@@ -172,7 +172,7 @@ impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttribu
             position: val.position.into(),
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
-            batch_id: val.batch_id.map(|v| v.into()),
+            batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
         }
     }
 }
@@ -182,7 +182,7 @@ impl From<navara_geometry::PolygonGeometryAttributes> for PolygonGeometryAttribu
             position: val.position.into(),
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
-            batch_id: val.batch_id.map(|v| v.into()),
+            batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
         }
     }
 }

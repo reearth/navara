@@ -16,13 +16,13 @@ pub struct PolylineGeometryAttributes {
     pub start_normals: FloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
-    pub batch_id: Option<FloatAttribute>,
+    pub batch_id_and_sel: Option<FloatAttribute>,
 }
 
 impl PolylineGeometryAttributes {
     pub fn with_batch_id() -> Self {
         Self {
-            batch_id: Some(FloatAttribute::new(vec![], 1)),
+            batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
             ..Default::default()
         }
     }
@@ -37,7 +37,7 @@ impl Default for PolylineGeometryAttributes {
             start_normals: FloatAttribute::new(vec![], 3),
             end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(vec![], 4),
             right_normal_and_texture_coordinate_normalization_y: FloatAttribute::new(vec![], 4),
-            batch_id: None,
+            batch_id_and_sel: None,
         }
     }
 }
@@ -275,7 +275,7 @@ pub(super) fn generate_geometry_attributes(
             right_normal_and_texture_coordinate_normalization_y,
             4,
         ),
-        batch_id: None,
+        batch_id_and_sel: None,
     };
 
     // TODO: Bounding sphere

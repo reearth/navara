@@ -50,3 +50,7 @@ export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 export type AbortControllers = Map<string, AbortController>;
 
 export type WorkerPoolPromises = Map<string, WorkerPoolPromise<unknown>>;
+
+export type PickedFeature = {
+  properties: Record<string, any>;
+};

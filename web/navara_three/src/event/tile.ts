@@ -110,6 +110,7 @@ async function createMesh(
   m.visible = false;
   m.renderOrder = mesh.render_order;
   m.name = `tile_${id}`;
+  m.userData.tileOrigColor = mat.color || 0xffffff;
   if (tranform) setTransform(m, tranform);
   scenes.globe.add(m);
   meshes.set(to_globe_id(id), m);
