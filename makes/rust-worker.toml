@@ -2,14 +2,14 @@
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm_worker
-wasm-pack build --out-dir ../../web/wasm/navara_engine_worker --target web --release
+wasm-pack build --target web --release && cp -r ./pkg ../../web/wasm/navara_engine_worker
 ''']
 
 [tasks.build-dev-rust-worker]
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm_worker
-wasm-pack build --out-dir ../../web/wasm/navara_engine_worker --target web
+wasm-pack build --target web && cp -r ./pkg ../../web/wasm/navara_engine_worker
 ''']
 
 [tasks.watch-rust-worker]

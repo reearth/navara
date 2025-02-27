@@ -27,14 +27,14 @@ cargo test --workspace --all-targets --all-features
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm
-wasm-pack build --out-dir ../../web/wasm/navara_engine --target web --release
+wasm-pack build --target web --release && cp -r ./pkg ../../web/wasm/navara_engine
 ''']
 
 [tasks.build-dev-rust]
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm
-wasm-pack build --out-dir ../../web/wasm/navara_engine --target web
+wasm-pack build --target web && cp -r ./pkg ../../web/wasm/navara_engine
 ''']
 
 [tasks.watch-rust]
