@@ -5,10 +5,10 @@ import {
 } from "@navara/core";
 import { constructPolygonBatchedFeature as constructPolygonBatchedFeatureImpl } from "@navara/engine-worker";
 
+import { transfer } from "..";
 import { transferConstructedPolygonGeometry } from "../helpers/transferConstructedPolygonGeometry";
 import { toPolygonMaterialLike } from "../utils/toPolygonMaterialLike";
 import { toTransferablePolygonBatchedFeatureLike } from "../utils/toTransferablePolygonBatchedFeatureLike";
-import { transfer } from "../worker";
 
 import { waitWasm } from "./waitWasm";
 

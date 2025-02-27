@@ -2,21 +2,20 @@
 
 3D globe map engine prototype built on Rust + WebAssembly + Three.js
 
+## Usage
+
+__TODO__
+
 ## Development
 
 ### Install toolchains
 
+You have to install the following environment.
+
 - Rust (stable)
 - Node.js (LTS)
+- [pnpm](https://pnpm.io/installation)
 - protoc
-
-MacOS
-
-```console
-brew install protobuf
-```
-
-For more information: https://grpc.io/docs/protoc-installation/
 
 ### Install prerequisites
 
@@ -24,6 +23,22 @@ For more information: https://grpc.io/docs/protoc-installation/
 cargo install cargo-make
 cargo install cargo-watch
 cargo install wasm-pack
+```
+
+**MacOS**
+
+```console
+brew install protobuf
+```
+
+For more information: https://grpc.io/docs/protoc-installation/
+
+### Initial setup
+
+You need to run this command first time.
+
+```console
+cargo make prepare
 ```
 
 ### Run with hot-reload

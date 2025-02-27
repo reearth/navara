@@ -1,31 +1,15 @@
 {
+  "extends": "../tsconfig.common.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "verbatimModuleSyntax": true,
     "paths": {
       "@navara/three": ["./src"],
-      "@navara/core": ["./src/packages/core"],
-      "@navara/worker": ["./src/packages/worker"],
+      "@navara/engine": ["../../node_modules/navara_wasm"],
+      "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
       "@shaders/*": ["../../shaders"]
     }
   },
   "include": ["src", "example"],
+  "exclude": ["./dist", "./node_modules"],
   "references": [
     {
       "path": "./tsconfig.node.json"

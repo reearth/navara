@@ -1,5 +1,5 @@
 export class TransactionManager {
-  private record: { [K in string]: Transaction | undefined } = {};
+  private record: Record<string, Transaction | undefined> = {};
   getOrInsert(id: string) {
     if (this.record[id]) {
       return this.record[id];
