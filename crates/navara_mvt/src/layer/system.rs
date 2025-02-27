@@ -10,9 +10,7 @@ use navara_component::Deleted;
 use navara_core::{calc_transform, get_tile_pos_from_url};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
-    batch::BatchId,
-    batch::BatchTable,
-    batch::BatchedFeature,
+    batch::{BatchId, BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
     id::FeatureId,
     point::PointMarker,
     polygon::{PolygonMarker, UpdatePolygon},
@@ -58,7 +56,9 @@ pub struct RenderedSingleFeature(Entity);
 pub fn construct_single_mvt(
     mut commands: Commands,
     mut batch_table: ResMut<BatchTable>,
+    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut buf: ResMut<BufferStore>,
+    id_prop_sel_res: Res<IdPropertySelections>,
     requesters: Query<
         (Entity, &SingleMvtDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -90,8 +90,10 @@ pub fn construct_single_mvt(
             if let Some(geometries) = construct_geometry(
                 &mut commands,
                 &mut batch_table,
+                &mut id_prop_table_res,
                 &mut buf,
                 mvt_bin,
+                &id_prop_sel_res,
                 &layer.layer_id,
                 get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
                 &layer.appearances,
@@ -244,6 +246,7 @@ pub fn delete_mvt_layer(
     mut qts: Query<&mut VectorTileQuadtree>,
     tc: Query<&TileCacheManager>,
     mut batch_table: ResMut<BatchTable>,
+    mut id_prop_table_res: ResMut<IdPropertyTable>,
     batch_id: Query<&BatchId>,
 ) {
     for (e, d) in &deleted {
@@ -263,7 +266,10 @@ pub fn delete_mvt_layer(
         for (entity, l_id) in entities_with_layerid.iter() {
             if l_id.0 == d.0 {
                 if batch_id.get(entity).is_ok() {
-                    batch_table.remove(&batch_id.get(entity).unwrap().0);
+                    batch_table.remove(
+                        &(batch_id.get(entity).unwrap().0.x as u32),
+                        &mut id_prop_table_res,
+                    );
                 }
                 commands.entity(entity).despawn();
             }
@@ -284,6 +290,7 @@ pub fn delete_mvt_layer(
                     &mut commands,
                     &mut buf,
                     &mut batch_table,
+                    &mut id_prop_table_res,
                     &mut qts,
                     &tc,
                     &feature_ids,

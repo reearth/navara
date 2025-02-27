@@ -7,9 +7,7 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_core::WGS84_32;
 use navara_feature_component::{
-    batch::FeatureBatchId,
-    batch::FeatureBatchIdMap,
-    batch::GlobalBatchIds,
+    batch::{FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{ModelRenderInformation, RenderableFeature, TransferableModelGeometry},
     DeletedFeatureMarker,
@@ -23,6 +21,8 @@ use navara_tile_component::{
 };
 
 use navara_feature_component::model::{ModelBin, ModelGeometry, ModelMarker};
+
+use navara_geometry::TransferableFloatAttribute;
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_mesh(
@@ -107,7 +107,10 @@ pub fn transfer_mesh(
                 },
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
-                    global_batch_ids: Some(global_batch_ids.0),
+                    batch_id_and_selected_status: Some(TransferableFloatAttribute {
+                        data: global_batch_ids.0,
+                        size: 2,
+                    }),
                 },
                 feature_batch_id: feature_batch_id.0,
                 active: true,

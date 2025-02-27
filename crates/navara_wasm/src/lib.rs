@@ -380,6 +380,16 @@ impl Core {
     pub fn get_batch_prop(&mut self, batch_id: u32) -> String {
         self.app.get_batch_prop(&batch_id)
     }
+
+    #[wasm_bindgen(js_name = getPickedBatchIds)]
+    pub fn get_picked_batch_ids(&mut self, batch_id: u32) -> Vec<u32> {
+        self.app.get_picked_batch_ids(&batch_id)
+    }
+
+    #[wasm_bindgen(js_name = clearPickingStatus)]
+    pub fn clear_picking_status(&mut self) {
+        self.app.clear_picking_status();
+    }
 }
 
 #[wasm_bindgen(start)]

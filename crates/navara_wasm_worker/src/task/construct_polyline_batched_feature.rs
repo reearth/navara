@@ -76,13 +76,19 @@ pub fn construct_polyline_batched_feature(
                     .right_normal_and_texture_coordinate_normalization_y
                     .data,
             );
+
+        let mut batch_ids = vec![];
+        for _i in 0..position_length {
+            batch_ids.push(batch_id.0.x as FloatType);
+            batch_ids.push(batch_id.0.y as FloatType);
+        }
         combined_attributes
-            .batch_id
+            .batch_id_and_sel
             .as_mut()
             .unwrap()
             .data
             // TODO: Avoid cast
-            .append(&mut vec![batch_id.0 as FloatType; position_length]);
+            .append(&mut batch_ids);
 
         if index_offset == 0 {
             indices.append(&mut constructed_geometry.indices);

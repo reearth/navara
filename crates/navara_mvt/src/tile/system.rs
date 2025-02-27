@@ -3,8 +3,12 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
-    batch::BatchId, batch::BatchTable, batch::BatchedFeature, id::FeatureId, point::PointMarker,
-    polygon::PolygonMarker, polyline::PolylineMarker, render::RenderableFeature,
+    batch::{BatchId, BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
+    id::FeatureId,
+    point::PointMarker,
+    polygon::PolygonMarker,
+    polyline::PolylineMarker,
+    render::RenderableFeature,
 };
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -182,7 +186,9 @@ fn attach_rendered(commands: &mut Commands, e: Entity) {
 pub fn transfer_mesh(
     mut commands: Commands,
     mut batch_table: ResMut<BatchTable>,
+    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut buf: ResMut<BufferStore>,
+    id_prop_sel_res: Res<IdPropertySelections>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
@@ -225,8 +231,10 @@ pub fn transfer_mesh(
                 if let Some(result) = construct_geometry(
                     &mut commands,
                     &mut batch_table,
+                    &mut id_prop_table_res,
                     &mut buf,
                     mvt_bin,
+                    &id_prop_sel_res,
                     &layer.layer_id,
                     tile.coords,
                     &layer.appearances,
@@ -281,6 +289,7 @@ pub fn clear_caches(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
     mut batch_table: ResMut<BatchTable>,
+    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
@@ -327,6 +336,7 @@ pub fn clear_caches(
                 &mut commands,
                 &mut buf,
                 &mut batch_table,
+                &mut id_prop_table_res,
                 &features,
                 &batch_id,
                 &batched_features,

@@ -16,8 +16,7 @@ in vec3 v_endPlaneNormalEc;
 in vec4 v_rightPlaneEC; // Technically can compute distance for this here
 in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
-in float nvr_vBatchId;
-in float nvr_vIsPicked;
+in vec2 nvr_vBatchIdAndSel;
 
 uniform vec3 color;
 uniform vec3 viewportAndPixelRatio;
@@ -78,14 +77,14 @@ void main() {
     }
 
     if(nvr_uPickable > 0.0) {
-        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
+        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchIdAndSel.x);
         gl_FragColor = vec4(pickColor.xyz, 1.0);
         return;
     }
 
     vec4 diffuseColor = vec4( color, 1. );
 
-    if(nvr_vIsPicked > 0.0) {
+    if(nvr_vBatchIdAndSel.y > 0.0) {
         diffuseColor = vec4(nvr_uHighlightColor.xyz, 1.0);
     }
 

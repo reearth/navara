@@ -11,7 +11,10 @@ use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
-    batch::BatchTable, batch::BatchTableValue, batch::BatchedFeature, batch::FeatureBatchIdMap,
+    batch::{
+        BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, IdPropertySelections,
+        IdPropertyTable,
+    },
     render::RenderableFeature,
 };
 use navara_frame::FrameManager;
@@ -383,11 +386,15 @@ impl App {
         }) = query.get(world, entity)
         {
             batch_table.get(feature_batch_id).and_then(|batch_value| {
-                if let BatchTableValue::Cesium3dTileset(in_batch_table) = batch_value {
-                    Some(in_batch_table)
-                } else {
-                    None
+                let Some(batch_prop) = &batch_value.properties else {
+                    return None;
+                };
+
+                if let BatchProperty::Cesium3dTileset(in_batch_table) = batch_prop {
+                    return Some(in_batch_table);
                 }
+
+                None
             })
         } else {
             None
@@ -404,15 +411,21 @@ impl App {
             };
             return get_prop_from_batch_table(in_batch_table, &in_batch_len, &in_batch_id);
         }
-        if let Some(BatchTableValue::StringObj(prop_str)) = self
+
+        if let Some(batch_value) = self
             .app
             .world()
             .get_resource::<BatchTable>()
             .unwrap()
             .get(batch_id)
         {
-            return prop_str.clone();
+            if let Some(BatchProperty::StringObj(prop_str)) = &batch_value.properties {
+                return prop_str.clone();
+            };
+
+            return String::from("{}");
         }
+
         String::from("{}")
     }
 
@@ -426,10 +439,57 @@ impl App {
             self.get_buffer_u32(batch_ids.0).and_then(|vec_ids| {
                 vec_ids
                     .iter()
+                    .step_by(2)
                     .position(|id| id == global_batch_id)
-                    .map(|i| (*entity, i, vec_ids.len()))
+                    .map(|i| (*entity, i, vec_ids.len() / 2))
             })
         })
+    }
+
+    // Get all batch ids that have the same id_property_value as the batch_id.
+    pub fn get_picked_batch_ids(&mut self, batch_id: &u32) -> Vec<u32> {
+        let world = self.app.world_mut();
+
+        let (id_prop_val, picked_batch_ids) = {
+            let Some(batch_table_res) = world.get_resource::<BatchTable>() else {
+                return vec![*batch_id];
+            };
+
+            let Some(id_prop_table) = world.get_resource::<IdPropertyTable>() else {
+                return vec![*batch_id];
+            };
+
+            let Some(batch_table_value) = batch_table_res.get(batch_id) else {
+                return vec![*batch_id];
+            };
+
+            let Some(id_prop_val) = &batch_table_value.id_property_value else {
+                return vec![*batch_id];
+            };
+
+            let Some(picked_batch_ids) = id_prop_table.get(id_prop_val) else {
+                return vec![*batch_id];
+            };
+
+            (id_prop_val.clone(), picked_batch_ids.clone())
+        };
+
+        if let Some(mut id_prop_sel) = world.get_resource_mut::<IdPropertySelections>() {
+            id_prop_sel.clear();
+            id_prop_sel.add(id_prop_val);
+        };
+
+        picked_batch_ids
+    }
+
+    pub fn clear_picking_status(&mut self) {
+        if let Some(mut id_prop_sel) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<IdPropertySelections>()
+        {
+            id_prop_sel.clear();
+        };
     }
 }
 
@@ -449,11 +509,10 @@ fn get_prop_from_batch_table(
         for (key, value) in map {
             match value {
                 serde_json::Value::Object(ref _m) => {
-                    let arr = in_batch_table
-                        .read_property_from_binary(*in_batch_len, &value)
-                        .unwrap();
-
-                    prop.insert(key, arr[*in_batch_id].clone());
+                    if let Ok(arr) = in_batch_table.read_property_from_binary(*in_batch_len, &value)
+                    {
+                        prop.insert(key, arr[*in_batch_id].clone());
+                    }
                 }
                 serde_json::Value::Array(arr) => {
                     prop.insert(key, arr[*in_batch_id].clone());
