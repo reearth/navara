@@ -41,7 +41,7 @@ wasm-pack build --out-dir ../../web/wasm/navara_engine --target web
 script = ['''
 #!/usr/bin/env bash -eux
 cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
 ''']
 
 [tasks.doc-rust]

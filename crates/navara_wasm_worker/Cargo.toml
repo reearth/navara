@@ -31,5 +31,8 @@ navara_material = { path = "../navara_material" }
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
 
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = false
+
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ['-O4']
