@@ -5,28 +5,32 @@ import glsl from "vite-plugin-glsl";
 
 import { commonConfig } from "../vite.config.common";
 
-const common = commonConfig("Navara");
-
-export default defineConfig({
-  ...common,
-  base: "./",
-  plugins: [...common.plugins, glsl()],
-  worker: {
-    plugins: () => [...common.plugins],
-  },
-  resolve: {
-    ...common.resolve,
-    alias: {
-      ...common.resolve.alias,
-      "@shaders": path.resolve(__dirname, "../../shaders"),
+export default defineConfig((env) => {
+  const common = commonConfig("Navara", env);
+  return {
+    ...common,
+    base: "./",
+    plugins: [...common.plugins, glsl()],
+    worker: {
+      plugins: () => [...common.plugins],
     },
-  },
-  build: {
-    ...common.build,
-    rollupOptions: {
-      ...common.build.rollupOptions,
-      external: [...(common.build.rollupOptions.external as string[]), "three"],
+    resolve: {
+      ...common.resolve,
+      alias: {
+        ...common.resolve.alias,
+        "@shaders": path.resolve(__dirname, "../../shaders"),
+      },
     },
-    watch: undefined,
-  },
+    build: {
+      ...common.build,
+      rollupOptions: {
+        ...common.build.rollupOptions,
+        external: [
+          ...(common.build.rollupOptions.external as string[]),
+          "three",
+        ],
+      },
+      watch: undefined,
+    },
+  };
 });
