@@ -152,12 +152,12 @@ impl BatchTable {
     }
 
     pub fn add(&mut self, value: Option<BatchTableValue>) -> Option<u32> {
-        let mut rng = rand::thread_rng();
-        let mut key = rng.gen_range(1..0xffffff);
+        let mut rng = rand::rng();
+        let mut key = rng.random_range(1..0xffffff);
 
         let mut retry_count = 10;
         while self.map.contains_key(&key) && retry_count > 0 {
-            key = rng.gen_range(1..0xffffff);
+            key = rng.random_range(1..0xffffff);
             retry_count -= 1;
         }
 
