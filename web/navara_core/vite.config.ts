@@ -2,8 +2,9 @@ import { defineConfig } from "vite";
 
 import { commonConfig } from "../vite.config.common";
 
-const common = commonConfig("NavaraCore");
-
-export default defineConfig({
-  ...common,
+export default defineConfig((env) => {
+  const common = commonConfig("NavaraCore", env);
+  return {
+    ...common,
+  };
 });

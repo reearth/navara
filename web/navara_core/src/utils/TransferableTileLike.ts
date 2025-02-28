@@ -4,7 +4,7 @@ import type {
   TransferableTile,
 } from "@navara/engine";
 
-export class TransferableTileLike implements TransferableTile {
+export class TransferableTileLike {
   cached_mesh_handle?: CachedMeshHandleLike | undefined;
   coords: TileXYZLike;
   max_height: number;
@@ -34,7 +34,7 @@ export class TileXYZLike implements TileXYZ {
   free(): void {}
 }
 
-export class CachedMeshHandleLike implements CachedMeshHandle {
+export class CachedMeshHandleLike {
   vertices: number;
   uvs: number;
   indices: number;

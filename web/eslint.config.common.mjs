@@ -6,6 +6,13 @@ export default [
   {
     rules: {
       "import/no-extraneous-dependencies": "off",
+      // Ref: https://github.com/eslint/eslint/issues/19134#issuecomment-2480588649
+      "@typescript-eslint/no-unused-expressions": [
+        "error",
+        {
+          allowShortCircuit: true,
+        },
+      ],
     },
     ignores: ["dist"],
   },

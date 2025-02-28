@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { ConfigEnv } from "vite";
 import { PluginOption, type UserConfig } from "vite";
 
 import dts from "vite-plugin-dts";
@@ -25,7 +26,7 @@ function watchPackages(packageNames: string[]): PluginOption {
   };
 }
 
-export const commonConfig = (name: string, isLib = true): UserConfig => ({
+export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
     watchPackages(["navara_wasm", "navara_wasm_worker"]),
     tsconfig(),
@@ -49,8 +50,11 @@ export const commonConfig = (name: string, isLib = true): UserConfig => ({
     rollupOptions: {
       external: ["@navara/engine", "@navara/engine-worker"],
     },
-    watch: {
-      buildDelay: 100,
-    },
+    watch:
+      env.mode === "watch"
+        ? {
+            buildDelay: 100,
+          }
+        : undefined,
   },
 });

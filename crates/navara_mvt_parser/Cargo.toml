@@ -8,4 +8,4 @@ mvt-reader = { git = "https://github.com/reearth/mvt-reader.git" }
 geo-types.workspace = true
 
 [dev-dependencies]
-prost = "0.13.3"
+prost = "0.13.5"

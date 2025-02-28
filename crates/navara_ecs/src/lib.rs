@@ -363,11 +363,9 @@ impl App {
     pub fn get_batched_features(&self, batched_feature_id: u64) -> Option<Vec<EntityRef>> {
         let entity = Entity::from_bits(batched_feature_id);
         let world = self.app.world();
-        let batched_feature = world.get_entity(entity)?.get::<BatchedFeature>()?;
+        let batched_feature = world.get_entity(entity).ok()?.get::<BatchedFeature>()?;
 
-        let features = world
-            .get_many_entities_dynamic(&batched_feature.features)
-            .ok()?;
+        let features = world.get_entity(&batched_feature.features[..]).ok()?;
 
         Some(features)
     }

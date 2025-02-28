@@ -13,7 +13,6 @@ import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
-
 import {
   BufferAttribute,
   BufferGeometry,

@@ -34,7 +34,16 @@ type RemoveFreeRecursively<T> = T extends { free: any }
   ? Omit<{ [K in keyof T]: RemoveFreeRecursively<T[K]> }, "free">
   : T;
 
-type Layer<LD> = RemoveFreeRecursively<LD>;
+// wasm-bindgen generate a getter and setter, so need to extract it as a property.
+type ExtractProperties<T> = {
+  [K in keyof T]?: T[K] extends (...args: any) => any
+    ? ReturnType<T[K]> extends (...args: any) => any
+      ? ExtractProperties<ReturnType<T[K]>>
+      : ReturnType<T[K]>
+    : Partial<T[K]>;
+};
+
+type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 
 export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
 export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
