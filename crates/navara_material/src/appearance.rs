@@ -173,6 +173,9 @@ pub struct ModelMaterial {
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
     pub id_property: String,
+    pub color: u32,
+    pub metalness: f32,
+    pub roughness: f32,
 }
 
 impl Default for ModelMaterial {
@@ -186,6 +189,9 @@ impl Default for ModelMaterial {
             should_rotate_in_default: true,
             max_sse: 2.,
             id_property: "".to_string(),
+            color: 0xffffff,
+            metalness: 0.0,
+            roughness: 1.0,
         }
     }
 }

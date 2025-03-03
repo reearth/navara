@@ -174,6 +174,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
       should_rotate_in_default: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -278,6 +281,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -288,6 +294,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -298,6 +307,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -473,6 +485,8 @@ export const run = async (view: ThreeView) => {
     wireframe: false,
     scaleByDistance: true,
     shouldRotateInDefault: true,
+    roughness: 1.0,
+    metalness: 0.0,
   };
 
   pane
@@ -626,6 +640,14 @@ export const run = async (view: ThreeView) => {
         material.should_rotate_in_default = paneParams.shouldRotateInDefault;
       }
 
+      if ("metalness" in material) {
+        material.metalness = paneParams.metalness;
+      }
+
+      if ("roughness" in material) {
+        material.roughness = paneParams.roughness;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -709,6 +731,22 @@ function createParamCtrl(
     if ("should_rotate_in_default" in material) {
       paneParams.shouldRotateInDefault = material.should_rotate_in_default;
       f.addBinding(paneParams, "shouldRotateInDefault").on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("metalness" in material) {
+      paneParams.metalness = material.metalness;
+      f.addBinding(paneParams, "metalness", { min: 0.0, max: 1.0 }).on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("roughness" in material) {
+      paneParams.roughness = material.roughness;
+      f.addBinding(paneParams, "roughness", { min: 0.0, max: 1.0 }).on(
         "change",
         changeFunc,
       );

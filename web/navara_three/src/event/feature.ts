@@ -262,6 +262,10 @@ async function renderModel(
           value: 0.0,
         };
 
+        mesh.material.color.set(m.material.color);
+        mesh.material.metalness = m.material.metalness;
+        mesh.material.roughness = m.material.roughness;
+
         mesh.material.onBeforeCompile = (shader: any) => {
           shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
           shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
