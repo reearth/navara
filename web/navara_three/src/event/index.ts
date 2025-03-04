@@ -784,18 +784,18 @@ function processModelChanged(
   obj.visible = (material.show ?? true) && active;
 
   const updateMaterial = function (m: any) {
-    (m as any)?.color?.set(material.color ?? 0);
-
     if (
       m instanceof MeshStandardMaterial ||
       m instanceof MeshPhysicalMaterial
     ) {
+      m.color.set(material.color ?? 0);
       if (material.metalness != null) {
         m.metalness = material.metalness;
       }
       if (material.roughness != null) {
         m.roughness = material.roughness;
       }
+      m.needsUpdate = true;
     }
   };
 

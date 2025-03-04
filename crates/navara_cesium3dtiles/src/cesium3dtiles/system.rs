@@ -1,3 +1,4 @@
+use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
@@ -9,6 +10,7 @@ use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
+use navara_core::WGS84_32;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     id::FeatureId,
@@ -20,11 +22,9 @@ use navara_layer::{
     UpdateCesium3dTilesLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Transform, Vec3};
+use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
 use navara_parser::cesium3dtiles;
 use navara_window::Window;
-
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
 
 use super::{
     traversal::{mark_rendered_tiles_invisible, select_tiles},
@@ -184,8 +184,28 @@ pub fn update_cesium3dtiles_layer(
                     Ok(f) => f,
                     Err(_) => continue,
                 };
-                if let RenderableFeature::Model { material, .. } = f.as_mut() {
+                if let RenderableFeature::Model {
+                    material,
+                    crs,
+                    coordinates,
+                    transform,
+                    ..
+                } = f.as_mut()
+                {
                     *material = u.material.clone();
+                    material.clamp_to_ground = false;
+
+                    if material.should_rotate_in_default {
+                        let position = crs.to_vec3(WGS84_32, *coordinates, material.height);
+                        let trans = Transform::from_translation(position).with_scale(Vec3::new(
+                            material.size,
+                            material.size,
+                            material.size,
+                        ));
+                        *transform = trans.mul_transform(Transform::from_rotation(
+                            Quat::from_rotation_x(PI_OVER_TWO),
+                        ));
+                    }
                 }
             }
         }
