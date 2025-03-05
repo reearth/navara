@@ -428,6 +428,8 @@ pub struct VectorTileMaterial {
     pub show: Option<bool>,
     pub max_zoom: Option<usize>,
     pub max_sse: Option<f32>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub layers: Option<Vec<String>>,
 }
 
 impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
@@ -437,6 +439,7 @@ impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
             show: val.show.unwrap_or(default.show),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             max_sse: val.max_sse.unwrap_or(default.max_sse),
+            layers: val.layers.clone(),
         }
     }
 }
@@ -446,6 +449,7 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
             show: Some(value.show),
             max_zoom: Some(value.max_zoom),
             max_sse: Some(value.max_sse),
+            layers: value.layers.clone(),
         }
     }
 }

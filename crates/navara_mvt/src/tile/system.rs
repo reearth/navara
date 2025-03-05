@@ -207,6 +207,11 @@ pub fn transfer_mesh(
             continue;
         }
 
+        let limit_layers = layer
+            .vector_tile_appearance()
+            .map(|vt| &vt.layers)
+            .unwrap_or(&None);
+
         for (rendered_tile_id, mut rendered_tile, _) in
             rendered_tiles.iter_mut().sort::<&OrderByDistance>()
         {
@@ -238,6 +243,7 @@ pub fn transfer_mesh(
                     &layer.layer_id,
                     tile.coords,
                     &layer.appearances,
+                    limit_layers,
                 ) {
                     if rendered_tile.feature_ids.is_some() {
                         panic!("It should be cleaned before new feature is added");
