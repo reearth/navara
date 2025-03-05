@@ -314,6 +314,9 @@ pub struct ModelMaterial {
     pub should_rotate_in_default: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
+    pub color: Option<u32>,
+    pub metalness: Option<f32>,
+    pub roughness: Option<f32>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -330,6 +333,9 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
                 .should_rotate_in_default
                 .unwrap_or(default.should_rotate_in_default),
             id_property: val.id_property.unwrap_or("".to_string()),
+            color: val.color.unwrap_or(default.color),
+            metalness: val.metalness.unwrap_or(default.metalness),
+            roughness: val.roughness.unwrap_or(default.roughness),
         }
     }
 }
@@ -344,6 +350,9 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             clamp_to_ground: Some(value.clamp_to_ground),
             should_rotate_in_default: Some(value.should_rotate_in_default),
             id_property: Some(value.id_property.clone()),
+            color: Some(value.color),
+            metalness: Some(value.metalness),
+            roughness: Some(value.roughness),
         }
     }
 }
