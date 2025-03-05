@@ -795,7 +795,6 @@ function processModelChanged(
       if (material.roughness != null) {
         m.roughness = material.roughness;
       }
-      m.needsUpdate = true;
     }
   };
 
