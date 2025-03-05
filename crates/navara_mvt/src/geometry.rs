@@ -44,6 +44,7 @@ pub fn construct_geometry(
     layer_id: &str,
     xyz: TileXYZ,
     appearances: &[Appearance],
+    limit_layers: &Option<Vec<String>>,
 ) -> Option<Vec<ConstructedGeometry>> {
     let mut result = vec![];
 
@@ -58,6 +59,12 @@ pub fn construct_geometry(
             Ok(f) => f,
             Err(_) => continue,
         };
+
+        if let Some(ll) = limit_layers {
+            if !ll.contains(_name) {
+                continue;
+            }
+        }
 
         // Assume a feature has only one type of geometry.
         let mut geometry_type = Option::None;

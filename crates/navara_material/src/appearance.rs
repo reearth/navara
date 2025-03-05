@@ -201,6 +201,7 @@ pub struct VectorTileMaterial {
     pub show: bool,
     pub max_sse: f32,
     pub max_zoom: usize,
+    pub layers: Option<Vec<String>>,
 }
 
 impl Default for VectorTileMaterial {
@@ -209,6 +210,7 @@ impl Default for VectorTileMaterial {
             show: true,
             max_sse: 2.,
             max_zoom: 20,
+            layers: None,
         }
     }
 }
