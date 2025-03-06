@@ -11,7 +11,8 @@ use crate::{
 };
 use navara_wasm_types::{
     polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
-    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, CRS,
+    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
+    TextMaterial, CRS,
 };
 
 #[wasm_bindgen]
@@ -30,6 +31,17 @@ pub struct PointMesh {
 pub struct BillboardMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub material: BillboardMaterial,
+    pub transform: Transform,
+    #[wasm_bindgen(getter_with_clone)]
+    pub geometry: TransferableSingleGeometry,
+    pub active: bool,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct TextMesh {
+    #[wasm_bindgen(getter_with_clone)]
+    pub material: TextMaterial,
     pub transform: Transform,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableSingleGeometry,
@@ -78,6 +90,8 @@ pub struct RenderableFeature {
     #[wasm_bindgen(getter_with_clone)]
     pub billboard: Option<BillboardMesh>,
     #[wasm_bindgen(getter_with_clone)]
+    pub text: Option<TextMesh>,
+    #[wasm_bindgen(getter_with_clone)]
     pub polyline: Option<PolylineMesh>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMesh>,
@@ -117,6 +131,24 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 active,
             } => Self {
                 billboard: Some(BillboardMesh {
+                    material: material.into(),
+                    transform: transform.into(),
+                    geometry: geometry.into(),
+                    active: *active,
+                }),
+                ..Default::default()
+            },
+            navara_feature_component::render::RenderableFeature::Text {
+                coordinates: _,
+                crs: _,
+                material,
+                transform,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                active,
+            } => Self {
+                text: Some(TextMesh {
                     material: material.into(),
                     transform: transform.into(),
                     geometry: geometry.into(),

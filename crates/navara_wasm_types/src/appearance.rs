@@ -110,6 +110,66 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextMaterial {
+    pub show: Option<bool>,
+    pub color: Option<u32>,
+    pub center: Option<Vec2>,
+    pub height: Option<f32>,
+    pub scale_by_distance: Option<bool>,
+    pub clamp_to_ground: Option<bool>,
+    pub depth_test: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub text: Option<String>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub font_family: Option<String>,
+    pub font_size: Option<u32>,
+    pub background_color: Option<u32>,
+    pub border_color: Option<u32>,
+    pub border_width: Option<u32>,
+}
+
+impl From<TextMaterial> for navara_material::TextMaterial {
+    fn from(val: TextMaterial) -> Self {
+        let default = navara_material::TextMaterial::default();
+        navara_material::TextMaterial {
+            show: val.show.unwrap_or(default.show),
+            color: val.color.unwrap_or(default.color),
+            center: val.center.unwrap_or(default.center.into()).into(),
+            height: val.height.unwrap_or(default.height),
+            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            depth_test: val.depth_test.unwrap_or(default.depth_test),
+            text: val.text.unwrap_or(default.text),
+            font_family: val.font_family.unwrap_or(default.font_family),
+            font_size: val.font_size.unwrap_or(default.font_size),
+            background_color: val.background_color.unwrap_or(default.background_color),
+            border_color: val.border_color.unwrap_or(default.border_color),
+            border_width: val.border_width.unwrap_or(default.border_width),
+        }
+    }
+}
+impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
+    fn from(value: &'a navara_material::TextMaterial) -> TextMaterial {
+        TextMaterial {
+            show: Some(value.show),
+            color: Some(value.color),
+            center: Some(value.center.into()),
+            height: Some(value.height),
+            scale_by_distance: Some(value.scale_by_distance),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            depth_test: Some(value.depth_test),
+            text: Some(value.text.clone()),
+            font_family: Some(value.font_family.clone()),
+            font_size: Some(value.font_size),
+            background_color: Some(value.background_color),
+            border_color: Some(value.border_color),
+            border_width: Some(value.border_width),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
     pub show: Option<bool>,
     pub color: Option<u32>,

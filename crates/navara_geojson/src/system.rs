@@ -16,6 +16,7 @@ use navara_feature_component::{
     polygon::{PolygonGeometry, UpdatePolygon},
     polyline::PolylineGeometry,
     render::RenderableFeature,
+    text::TextGeometry,
 };
 
 use navara_buffer_store::BufferStore;
@@ -65,11 +66,11 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
 fn generate_batch_id(
     batch_table_res: &mut BatchTable,
     id_prop_table_res: &mut IdPropertyTable,
-    id_prop: String,
+    id_prop: Option<String>,
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) -> u32 {
     batch_table_res
-        .add_hash_map(Some(id_prop), properties.as_ref(), id_prop_table_res)
+        .add_hash_map(id_prop, properties.as_ref(), id_prop_table_res)
         .unwrap_or(0)
 }
 
@@ -92,7 +93,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        v.id_property.clone(),
+                        Some(v.id_property.clone()),
                         properties,
                     );
 
@@ -114,7 +115,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            v.id_property.clone(),
+                            Some(v.id_property.clone()),
                             properties,
                         );
 
@@ -140,7 +141,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        v.id_property.clone(),
+                        Some(v.id_property.clone()),
                         properties,
                     );
 
@@ -162,7 +163,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            v.id_property.clone(),
+                            Some(v.id_property.clone()),
                             properties,
                         );
 
@@ -183,12 +184,52 @@ fn spawn_feature(
                 }
                 _ => {}
             },
+            Appearance::Text(v) => match &geometry.value {
+                Value::Point(f) => {
+                    let batch_id =
+                        generate_batch_id(batch_table_res, id_prop_table_res, None, properties);
+
+                    commands.spawn((
+                        LayerId(layer_id.to_owned()),
+                        BatchId(Vec2::new(
+                            batch_id as FloatType,
+                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
+                        )),
+                        TextGeometry {
+                            coords: coords(f),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        let batch_id =
+                            generate_batch_id(batch_table_res, id_prop_table_res, None, properties);
+
+                        commands.spawn((
+                            LayerId(layer_id.to_owned()),
+                            BatchId(Vec2::new(
+                                batch_id as FloatType,
+                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
+                                    as FloatType,
+                            )),
+                            TextGeometry {
+                                coords: coords(f),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
             Appearance::Polyline(v) => match &geometry.value {
                 Value::LineString(f) => {
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        v.id_property.clone(),
+                        Some(v.id_property.clone()),
                         properties,
                     );
 
@@ -207,7 +248,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            v.id_property.clone(),
+                            Some(v.id_property.clone()),
                             properties,
                         );
 
@@ -230,7 +271,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        v.id_property.clone(),
+                        Some(v.id_property.clone()),
                         properties,
                     );
 
@@ -259,7 +300,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            v.id_property.clone(),
+                            Some(v.id_property.clone()),
                             properties,
                         );
                         commands.spawn((
@@ -289,7 +330,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        v.id_property.clone(),
+                        Some(v.id_property.clone()),
                         properties,
                     );
 
@@ -315,7 +356,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            v.id_property.clone(),
+                            Some(v.id_property.clone()),
                             properties,
                         );
 
@@ -449,6 +490,24 @@ pub fn update_geo_json_layer(
                                     material.size,
                                     false,
                                 );
+                            }
+                        }
+                    }
+                    RenderableFeature::Text {
+                        coordinates,
+                        crs,
+                        material,
+                        transform,
+                        render_info,
+                        ..
+                    } => {
+                        if let Appearance::Text(mat) = &u.appearance {
+                            let should_update_transform = material.height != mat.height;
+                            *material = mat.clone();
+                            render_info.should_recalculate_height = true;
+                            if should_update_transform {
+                                *transform =
+                                    calc_transform(coordinates, crs, material.height, 1.0, false);
                             }
                         }
                     }

@@ -13,6 +13,7 @@ mod model;
 mod point;
 mod polygon;
 mod polyline;
+mod text;
 
 pub struct FeaturePlugin;
 
@@ -36,6 +37,14 @@ impl Plugin for FeaturePlugin {
                 (
                     billboard::system::transfer_mesh,
                     billboard::system::update_height_by_terrain,
+                )
+                    .chain(),
+            )
+            .add_systems(
+                Update,
+                (
+                    text::system::transfer_mesh,
+                    text::system::update_height_by_terrain,
                 )
                     .chain(),
             )

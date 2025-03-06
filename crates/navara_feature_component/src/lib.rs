@@ -9,5 +9,6 @@ pub mod point;
 pub mod polygon;
 pub mod polyline;
 pub mod render;
+pub mod text;
 
 pub use marker::*;

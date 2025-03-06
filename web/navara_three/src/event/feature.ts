@@ -5,6 +5,8 @@ import type {
   PolylineMesh,
   RenderableFeature,
   PolygonMesh,
+  TextMaterial,
+  TextMesh,
 } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
@@ -24,6 +26,9 @@ import {
   Object3D,
   MeshLambertMaterial,
   UniformsLib,
+  CanvasTexture,
+  LinearFilter,
+  ClampToEdgeWrapping,
 } from "three";
 
 import type { CommonUniforms } from "../uniforms";
@@ -51,6 +56,9 @@ export function renderFeature(
   }
   if (f.polygon) {
     return renderPolygon(f.polygon, buf, uniforms);
+  }
+  if (f.text) {
+    return renderText(f.text, uniforms);
   }
 }
 
@@ -191,6 +199,127 @@ async function renderBillboard(m: BillboardMesh, uniforms: CommonUniforms) {
   }
 
   return sprite;
+}
+
+async function renderText(m: TextMesh, uniforms: CommonUniforms) {
+  const ret = makeTextTexture(m.material);
+  if (!ret) {
+    return;
+  }
+
+  const baseScale = 0.01;
+
+  const material = new SpriteMaterial({
+    map: ret.texture,
+    color: 0xffffff,
+    depthTest: m.material.depth_test,
+    sizeAttenuation: !m.material.scale_by_distance,
+    visible: m.material.show,
+  });
+
+  const batchId = m.geometry.batch_id ?? 0;
+  material.userData.uPickable = {
+    value: 0.0,
+  };
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.nvr_uBatchId = { value: batchId };
+    shader.uniforms.nvr_uPickable = material.userData.uPickable;
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <clipping_planes_pars_fragment>",
+        `
+        #include <clipping_planes_pars_fragment>
+        ${BatchDefinitioin}
+        ${Pick}
+      `,
+      )
+      .replace(
+        "#include <fog_fragment>",
+        `
+        #include <fog_fragment>
+        if (nvr_uPickable > 0.0 && sampledDiffuseColor.a > 0.0) {
+          vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
+          gl_FragColor = vec4(pickColor.xyz, 1.0);
+        }
+        `,
+      );
+  };
+
+  const sprite = new Sprite(material);
+  if (m.material.center) {
+    sprite.center.set(m.material.center.x, m.material.center.y);
+  }
+
+  sprite.scale.x = ret.width * baseScale;
+  sprite.scale.y = ret.height * baseScale;
+
+  sprite.userData.batchId = batchId;
+  sprite.userData.isPicked = false;
+  sprite.userData.orgColor = 0xffffff;
+
+  if (m.geometry.selected && uniforms?.highlightColor?.value) {
+    material.color.set(uniforms.highlightColor.value);
+    sprite.userData.isPicked = true;
+  }
+
+  return sprite;
+}
+
+export function makeTextTexture(m: TextMaterial) {
+  const borderSize = m.border_width ?? 0;
+  const fontSize = m.font_size ?? 12;
+  const fontFamily = m.font_family ?? "sans-serif";
+  const text = m.text ?? "";
+  const bg_color = m.background_color ?? 0xffffff;
+  const font_color = m.color ?? 0x000000;
+  const border_color = m.border_color ?? 0x000000;
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+
+  const font = `${fontSize}px ${fontFamily}`;
+  ctx.font = font;
+  // measure how long the name will be
+  const textWidth = ctx.measureText(text).width;
+
+  const doubleBorderSize = borderSize * 2;
+  const width = textWidth + doubleBorderSize;
+  const height = fontSize + doubleBorderSize;
+  canvas.width = width;
+  canvas.height = height;
+
+  // need to set font again after resizing canvas
+  ctx.font = font;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+
+  ctx.fillStyle = `#${bg_color.toString(16).padStart(6, "0")}`;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.lineWidth = borderSize;
+  ctx.strokeStyle = `#${border_color.toString(16).padStart(6, "0")}`;
+  ctx.strokeRect(
+    borderSize / 2,
+    borderSize / 2,
+    width - borderSize,
+    height - borderSize,
+  );
+
+  ctx.translate(width / 2, height / 2);
+  ctx.fillStyle = `#${font_color.toString(16).padStart(6, "0")}`;
+  ctx.fillText(text, 0, 0);
+
+  const texture = new CanvasTexture(canvas);
+  texture.minFilter = LinearFilter;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+
+  return { texture, width, height };
 }
 
 async function renderModel(

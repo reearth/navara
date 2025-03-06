@@ -106,6 +106,36 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "geojson",
     data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [135.7672689034169, 35.011034421881675],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    text: {
+      color: 0xffffff,
+      height: 100,
+      scale_by_distance: true,
+      clamp_to_ground: true,
+      depth_test: true,
+      text: "Hello, Kyoto!",
+      font_family: "sans-serif",
+      font_size: 20,
+      background_color: 0x0a70c2,
+      border_color: 0xf8e43c,
+      border_width: 2,
+    },
+  },
+
+  {
+    type: "geojson",
+    data: {
       type: "Feature",
       properties: {},
       geometry: {
@@ -488,6 +518,12 @@ export const run = async (view: ThreeView) => {
     shouldRotateInDefault: true,
     roughness: 1.0,
     metalness: 0.0,
+    text: "hello",
+    font_family: "",
+    font_size: 20,
+    background_color: "#0a70c2",
+    border_color: "#f8e43c",
+    border_width: 2,
   };
 
   pane
@@ -649,6 +685,36 @@ export const run = async (view: ThreeView) => {
         material.roughness = paneParams.roughness;
       }
 
+      if ("text" in material) {
+        material.text = paneParams.text;
+      }
+
+      if ("font_family" in material) {
+        material.font_family = paneParams.font_family;
+      }
+
+      if ("font_size" in material) {
+        material.font_size = paneParams.font_size;
+      }
+
+      if ("background_color" in material) {
+        material.background_color = parseInt(
+          paneParams.background_color.replace("#", ""),
+          16,
+        );
+      }
+
+      if ("border_color" in material) {
+        material.border_color = parseInt(
+          paneParams.border_color.replace("#", ""),
+          16,
+        );
+      }
+
+      if ("border_width" in material) {
+        material.border_width = paneParams.border_width;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -753,6 +819,48 @@ function createParamCtrl(
       );
     }
 
+    if ("text" in material) {
+      paneParams.text = material.text;
+      f.addBinding(paneParams, "text").on("change", changeFunc);
+    }
+
+    if ("font_family" in material) {
+      paneParams.font_family = material.font_family;
+      f.addBinding(paneParams, "font_family").on("change", changeFunc);
+    }
+
+    if ("font_size" in material) {
+      paneParams.font_size = material.font_size;
+      f.addBinding(paneParams, "font_size").on("change", changeFunc);
+    }
+
+    if ("background_color" in material) {
+      paneParams.background_color =
+        "#" + material.background_color.toString(16).padStart(6, "0");
+      // @ts-expect-error : Missing Type Definitions ?
+      f.addBinding(paneParams, "background_color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
+    }
+
+    if ("border_color" in material) {
+      paneParams.border_color =
+        "#" + material.border_color.toString(16).padStart(6, "0");
+      // @ts-expect-error : Missing Type Definitions ?
+      f.addBinding(paneParams, "border_color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
+    }
+
+    if ("border_width" in material) {
+      paneParams.border_width = material.border_width;
+      f.addBinding(paneParams, "border_width").on("change", changeFunc);
+    }
+
     return f;
   }
 
@@ -788,6 +896,9 @@ function getMaterialOptions(layer: MaterialLayerDescription) {
   }
   if ("billboard" in layer) {
     materials.push("billboard");
+  }
+  if ("text" in layer) {
+    materials.push("text");
   }
   if ("model" in layer) {
     materials.push("model");

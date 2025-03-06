@@ -18,6 +18,7 @@ import {
   RenderableFeatureChangedEvent,
   PointMaterial,
   BillboardMaterial,
+  TextMaterial,
   ModelMaterial,
   PolylineMaterial,
   PolygonMaterial,
@@ -54,7 +55,7 @@ import type { TextureOptions } from "../textures";
 import type { AbortControllers, MeshCache, WorkerPoolPromises } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
-import { renderFeature } from "./feature";
+import { renderFeature, makeTextTexture } from "./feature";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
@@ -467,7 +468,7 @@ function disposeObject3D(model: Object3D): void {
         }
       }
     }
-    // point, billboard
+    // point, billboard, text
     else if (object instanceof Sprite) {
       const sprite = object as Sprite;
 
@@ -644,7 +645,7 @@ async function processRenderableFeatureAdded(
   const obj = await renderFeature(ev.feature, buf, uniforms)?.then((r) => {
     const f = ev.feature;
     const type = (() => {
-      if (f.point || f.billboard) return "point";
+      if (f.point || f.billboard || f.text) return "point";
       else if (f.model) return "model";
       else if (f.polyline) return "polyline";
       else if (f.polygon) return "polygon";
@@ -656,9 +657,9 @@ async function processRenderableFeatureAdded(
   });
   if (!obj) return;
 
-  const { point, billboard, polyline, polygon, model } = ev.feature;
+  const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
-  const feature = point ?? billboard ?? polyline ?? polygon ?? model;
+  const feature = point ?? billboard ?? text ?? polyline ?? polygon ?? model;
   const transform = feature?.transform;
   if (transform) {
     setTransform(obj, transform);
@@ -691,18 +692,19 @@ function processRenderableFeatureChanged(
   const obj = meshes.get(id);
   if (!obj) return;
 
-  const { point, billboard, polyline, polygon, model } = ev.feature;
+  const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
+  const transform = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
     ?.transform;
   if (transform) {
     setTransform(obj, transform);
   }
 
-  const material = (point ?? billboard ?? polyline ?? polygon ?? model)
+  const material = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
     ?.material;
   const active =
-    (point ?? billboard ?? polyline ?? polygon ?? model)?.active ?? true;
+    (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
+    true;
 
   if (material) {
     if (obj instanceof Sprite && material instanceof PointMaterial) {
@@ -710,6 +712,9 @@ function processRenderableFeatureChanged(
     }
     if (obj instanceof Sprite && material instanceof BillboardMaterial) {
       processBillboardChanged(obj, material, active);
+    }
+    if (obj instanceof Sprite && material instanceof TextMaterial) {
+      processTextChanged(obj, material, active);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {
       processModelChanged(obj, material, active);
@@ -774,6 +779,26 @@ function processBillboardChanged(
 
   obj.material.sizeAttenuation = !material.scale_by_distance;
   obj.material.needsUpdate = true;
+}
+
+function processTextChanged(
+  obj: Sprite,
+  material: TextMaterial,
+  active: boolean,
+) {
+  obj.material.sizeAttenuation = !material.scale_by_distance;
+
+  if (!obj.userData.isPicked) {
+    obj.material.color.set(obj.userData.orgColor);
+  }
+
+  obj.visible = (material.show ?? true) && active;
+  if (obj.visible) {
+    const ret = makeTextTexture(material);
+    if (ret) {
+      obj.material.map = ret.texture;
+    }
+  }
 }
 
 function processModelChanged(
