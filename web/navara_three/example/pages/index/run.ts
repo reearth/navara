@@ -120,7 +120,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     text: {
       color: 0xffffff,
-      height: 100,
+      height: 1,
       scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,

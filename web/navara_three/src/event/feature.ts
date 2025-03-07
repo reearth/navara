@@ -207,8 +207,6 @@ async function renderText(m: TextMesh, uniforms: CommonUniforms) {
     return;
   }
 
-  const baseScale = 0.01;
-
   const material = new SpriteMaterial({
     map: ret.texture,
     color: 0xffffff,
@@ -251,9 +249,6 @@ async function renderText(m: TextMesh, uniforms: CommonUniforms) {
   if (m.material.center) {
     sprite.center.set(m.material.center.x, m.material.center.y);
   }
-
-  sprite.scale.x = ret.width * baseScale;
-  sprite.scale.y = ret.height * baseScale;
 
   sprite.userData.batchId = batchId;
   sprite.userData.isPicked = false;
