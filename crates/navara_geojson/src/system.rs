@@ -502,12 +502,18 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Text(mat) = &u.appearance {
-                            let should_update_transform = material.height != mat.height;
+                            let should_update_transform =
+                                material.height != mat.height || material.size != mat.size;
                             *material = mat.clone();
                             render_info.should_recalculate_height = true;
                             if should_update_transform {
-                                *transform =
-                                    calc_transform(coordinates, crs, material.height, 1.0, false);
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                    false,
+                                );
                             }
                         }
                     }

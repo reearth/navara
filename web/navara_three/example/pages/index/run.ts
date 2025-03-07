@@ -126,10 +126,11 @@ const geoLayersDef: MaterialLayerDescription[] = [
       depth_test: true,
       text: "Hello, Kyoto!",
       font_family: "sans-serif",
-      font_size: 20,
+      resolution: 1,
       background_color: 0x0a70c2,
       border_color: 0xf8e43c,
       border_width: 2,
+      size: 0.1,
     },
   },
 
@@ -520,7 +521,7 @@ export const run = async (view: ThreeView) => {
     metalness: 0.0,
     text: "hello",
     font_family: "",
-    font_size: 20,
+    resolution: 1,
     background_color: "#0a70c2",
     border_color: "#f8e43c",
     border_width: 2,
@@ -693,8 +694,8 @@ export const run = async (view: ThreeView) => {
         material.font_family = paneParams.font_family;
       }
 
-      if ("font_size" in material) {
-        material.font_size = paneParams.font_size;
+      if ("resolution" in material) {
+        material.resolution = paneParams.resolution;
       }
 
       if ("background_color" in material) {
@@ -829,9 +830,9 @@ function createParamCtrl(
       f.addBinding(paneParams, "font_family").on("change", changeFunc);
     }
 
-    if ("font_size" in material) {
-      paneParams.font_size = material.font_size;
-      f.addBinding(paneParams, "font_size").on("change", changeFunc);
+    if ("resolution" in material) {
+      paneParams.resolution = material.resolution;
+      f.addBinding(paneParams, "resolution").on("change", changeFunc);
     }
 
     if ("background_color" in material) {

@@ -101,6 +101,7 @@ impl Default for BillboardMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct TextMaterial {
     pub show: bool,
+    pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
     pub height: FloatType,
@@ -110,7 +111,7 @@ pub struct TextMaterial {
     pub depth_test: bool,
     pub text: String,
     pub font_family: String,
-    pub font_size: u32,
+    pub resolution: u32,
     pub background_color: u32,
     pub border_color: u32,
     pub border_width: u32,
@@ -120,6 +121,7 @@ impl Default for TextMaterial {
     fn default() -> Self {
         Self {
             show: true,
+            size: 0.1,
             color: 0xffffff,
             center: Vec2::new(0.5, 0.),
             clamp_to_ground: true,
@@ -128,7 +130,7 @@ impl Default for TextMaterial {
             depth_test: true,
             text: "".to_string(),
             font_family: "sans-serif".to_string(),
-            font_size: 12,
+            resolution: 1,
             background_color: 0xffffff,
             border_color: 0x000000,
             border_width: 1,

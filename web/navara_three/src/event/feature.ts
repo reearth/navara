@@ -263,8 +263,9 @@ async function renderText(m: TextMesh, uniforms: CommonUniforms) {
 }
 
 export function makeTextTexture(m: TextMaterial) {
+  const fontSizeFactor = 12;
   const borderSize = m.border_width ?? 0;
-  const fontSize = m.font_size ?? 12;
+  const fontSize = (m.resolution ?? 1) * fontSizeFactor;
   const fontFamily = m.font_family ?? "sans-serif";
   const text = m.text ?? "";
   const bg_color = m.background_color ?? 0xffffff;

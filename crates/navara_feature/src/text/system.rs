@@ -13,7 +13,7 @@ use navara_feature_component::{
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::TextMaterial;
-use navara_math::Transform;
+use navara_math::{Transform, Vec3};
 use navara_tile_component::{
     compute_terrain_height_at_point, RasterTileQuadtree, TileMeshMarker,
     TileTerrainDataRequesterQuery,
@@ -49,7 +49,11 @@ pub fn transfer_mesh(
                     coordinates: geometry.coords,
                     crs: geometry.crs.clone(),
                     material: material.clone(),
-                    transform: Transform::from_translation(position),
+                    transform: Transform::from_translation(position).with_scale(Vec3::new(
+                        material.size,
+                        material.size,
+                        material.size,
+                    )),
                     feature_id: entity,
                     render_info: RenderInformation {
                         current_terrain_height: 0.,

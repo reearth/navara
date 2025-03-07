@@ -112,6 +112,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMaterial {
     pub show: Option<bool>,
+    pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
     pub height: Option<f32>,
@@ -122,7 +123,7 @@ pub struct TextMaterial {
     pub text: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     pub font_family: Option<String>,
-    pub font_size: Option<u32>,
+    pub resolution: Option<u32>,
     pub background_color: Option<u32>,
     pub border_color: Option<u32>,
     pub border_width: Option<u32>,
@@ -133,6 +134,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
         let default = navara_material::TextMaterial::default();
         navara_material::TextMaterial {
             show: val.show.unwrap_or(default.show),
+            size: val.size.unwrap_or(default.size),
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
@@ -141,7 +143,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             text: val.text.unwrap_or(default.text),
             font_family: val.font_family.unwrap_or(default.font_family),
-            font_size: val.font_size.unwrap_or(default.font_size),
+            resolution: val.resolution.unwrap_or(default.resolution),
             background_color: val.background_color.unwrap_or(default.background_color),
             border_color: val.border_color.unwrap_or(default.border_color),
             border_width: val.border_width.unwrap_or(default.border_width),
@@ -152,6 +154,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
     fn from(value: &'a navara_material::TextMaterial) -> TextMaterial {
         TextMaterial {
             show: Some(value.show),
+            size: Some(value.size),
             color: Some(value.color),
             center: Some(value.center.into()),
             height: Some(value.height),
@@ -160,7 +163,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             depth_test: Some(value.depth_test),
             text: Some(value.text.clone()),
             font_family: Some(value.font_family.clone()),
-            font_size: Some(value.font_size),
+            resolution: Some(value.resolution),
             background_color: Some(value.background_color),
             border_color: Some(value.border_color),
             border_width: Some(value.border_width),

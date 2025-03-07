@@ -694,7 +694,7 @@ function processRenderableFeatureChanged(
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
-  const transform = (point ?? billboard ?? polyline ?? polygon ?? model)
+  const transform = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
     ?.transform;
   if (transform) {
     setTransform(obj, transform);
@@ -714,7 +714,7 @@ function processRenderableFeatureChanged(
       processBillboardChanged(obj, material, active);
     }
     if (obj instanceof Sprite && material instanceof TextMaterial) {
-      processTextChanged(obj, material, active, text?.transform);
+      processTextChanged(obj, material, active);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {
       processModelChanged(obj, material, active);
@@ -785,13 +785,7 @@ function processTextChanged(
   obj: Sprite,
   material: TextMaterial,
   active: boolean,
-  transform: Transform | undefined,
 ) {
-  if (transform) {
-    const { tx, ty, tz} = transform;
-    obj.position.set(tx, ty, tz);
-  }
-
   obj.material.sizeAttenuation = !material.scale_by_distance;
 
   if (!obj.userData.isPicked) {
@@ -803,13 +797,6 @@ function processTextChanged(
     const ret = makeTextTexture(material);
     if (ret) {
       obj.material.map = ret.texture;
-
-      if (material.scale_by_distance) {
-        // Ref: https://github.com/mrdoob/three.js/blob/537d3965a9cbc9163892d24c699a79768866885e/manual/examples/billboard-labels-w-sprites-adjust-height.html#L146C3-L148
-        const baseScale = 0.01;
-        obj.scale.x = ret.height * baseScale;
-        obj.scale.y = ret.height * baseScale;
-      }
     }
   }
 
