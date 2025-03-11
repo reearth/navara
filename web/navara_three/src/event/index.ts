@@ -36,6 +36,8 @@ import {
   Mesh,
   Material,
   MeshLambertMaterial,
+  MeshStandardMaterial,
+  MeshPhysicalMaterial,
   Object3D,
   Texture,
   Sprite,
@@ -780,6 +782,37 @@ function processModelChanged(
   active: boolean,
 ) {
   obj.visible = (material.show ?? true) && active;
+
+  const updateMaterial = function (m: any) {
+    if (
+      m instanceof MeshStandardMaterial ||
+      m instanceof MeshPhysicalMaterial
+    ) {
+      m.color.set(material.color ?? 0);
+      if (material.metalness != null) {
+        m.metalness = material.metalness;
+      }
+      if (material.roughness != null) {
+        m.roughness = material.roughness;
+      }
+    }
+  };
+
+  obj.traverse((object: Object3D) => {
+    if (object instanceof Mesh) {
+      const mesh = object as Mesh;
+
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((m) => {
+            updateMaterial(m);
+          });
+        } else {
+          updateMaterial(mesh.material);
+        }
+      }
+    }
+  });
 }
 
 function processPolylineChanged(

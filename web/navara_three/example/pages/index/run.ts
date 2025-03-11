@@ -183,6 +183,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
       should_rotate_in_default: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -287,6 +290,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -297,6 +303,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -307,6 +316,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
     },
   },
   {
@@ -371,6 +383,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     vector_tile: {
       max_zoom: 16,
+      layers: ["HeightControlDistrict"],
     },
   },
 ];

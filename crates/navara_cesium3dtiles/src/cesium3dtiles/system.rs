@@ -1,3 +1,4 @@
+use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
@@ -9,6 +10,7 @@ use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
+
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     id::FeatureId,
@@ -23,8 +25,6 @@ use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Transform, Vec3};
 use navara_parser::cesium3dtiles;
 use navara_window::Window;
-
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
 
 use super::{
     traversal::{mark_rendered_tiles_invisible, select_tiles},
@@ -175,6 +175,8 @@ pub fn update_cesium3dtiles_layer(
             for a in &mut l.appearances {
                 if let Appearance::Model(mat) = a {
                     *mat = u.material.clone();
+                    mat.should_rotate_in_default = false;
+                    mat.clamp_to_ground = false;
                 }
             }
         }
@@ -186,6 +188,8 @@ pub fn update_cesium3dtiles_layer(
                 };
                 if let RenderableFeature::Model { material, .. } = f.as_mut() {
                     *material = u.material.clone();
+                    material.should_rotate_in_default = false;
+                    material.clamp_to_ground = false;
                 }
             }
         }
@@ -198,6 +202,8 @@ pub fn update_cesium3dtiles_layer(
                 .and_then(|id| features.get_mut(id).ok())
             {
                 *mat = u.material.clone();
+                mat.should_rotate_in_default = false;
+                mat.clamp_to_ground = false;
             }
         }
         commands.entity(e).despawn();

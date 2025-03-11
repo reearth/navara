@@ -48,6 +48,8 @@ export const addCtrlPanel = (
     wireframe: false,
     scaleByDistance: true,
     shouldRotateInDefault: true,
+    roughness: 1.0,
+    metalness: 0.0,
   };
 
   pane
@@ -203,6 +205,14 @@ export const addCtrlPanel = (
         material.should_rotate_in_default = paneParams.shouldRotateInDefault;
       }
 
+      if ("metalness" in material) {
+        material.metalness = paneParams.metalness;
+      }
+
+      if ("roughness" in material) {
+        material.roughness = paneParams.roughness;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -292,6 +302,22 @@ function createParamCtrl(
     if ("should_rotate_in_default" in material) {
       paneParams.shouldRotateInDefault = material.should_rotate_in_default;
       f.addBinding(paneParams, "shouldRotateInDefault").on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("metalness" in material) {
+      paneParams.metalness = material.metalness;
+      f.addBinding(paneParams, "metalness", { min: 0.0, max: 1.0 }).on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("roughness" in material) {
+      paneParams.roughness = material.roughness;
+      f.addBinding(paneParams, "roughness", { min: 0.0, max: 1.0 }).on(
         "change",
         changeFunc,
       );

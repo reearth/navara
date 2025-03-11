@@ -78,6 +78,11 @@ pub fn construct_single_mvt(
             }
         };
 
+        let limit_layers = layer
+            .vector_tile_appearance()
+            .map(|vt| &vt.layers)
+            .unwrap_or(&None);
+
         commands.entity(e).despawn();
 
         unsafe {
@@ -97,6 +102,7 @@ pub fn construct_single_mvt(
                 &layer.layer_id,
                 get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
                 &layer.appearances,
+                limit_layers,
             ) {
                 for v in geometries {
                     let batched = BatchedFeature {
