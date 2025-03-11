@@ -1,3 +1,4 @@
+use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -359,8 +360,6 @@ pub struct RasterTileMaterial {
     pub max_sse: Option<f32>,
     pub wireframe: Option<bool>,
     pub should_compute_normal_from_vertex: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub __internal__: Option<RasterTileInternalMaterial>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
@@ -375,7 +374,6 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             max_sse: val.max_sse.unwrap_or(default.max_sse),
             should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
-            internal: None,
         }
     }
 }
@@ -390,7 +388,6 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             max_sse: Some(value.max_sse),
             should_compute_normal_from_vertex: value.should_compute_normal_from_vertex,
             wireframe: Some(value.wireframe),
-            __internal__: value.internal.as_ref().map(|v| v.into()),
         }
     }
 }
@@ -399,16 +396,45 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
-    pub texture_fragment: Option<TextureFragment>,
+    pub shows: Vec<u8>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub colors: Vec<u32>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub opacities: Vec<f32>,
+    texture_fragments: Option<Vec<Option<TextureFragment>>>,
+    pub should_compute_normal_from_vertex: Option<bool>,
+    pub wireframe: bool,
+}
+
+#[wasm_bindgen]
+impl RasterTileInternalMaterial {
+    pub fn texture_fragments(&self) -> Option<Vec<JsValue>> {
+        self.texture_fragments.as_ref().map(|ts| {
+            ts.iter()
+                .map(|t| t.clone().map(|t| t.into()).unwrap_or(JsValue::null()))
+                .collect()
+        })
+    }
 }
 
 impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInternalMaterial {
     fn from(m: &'a navara_material::RasterTileInternalMaterial) -> Self {
         Self {
-            texture_fragment: m.texture_fragment.map(|t| TextureFragment {
-                ind: t.index(),
-                gen: t.generation(),
+            shows: m.shows.iter().map(|s| s.to_u8()).collect(),
+            colors: m.colors.clone(),
+            opacities: m.opacities.clone(),
+            texture_fragments: m.texture_fragments.as_ref().map(|ts| {
+                ts.iter()
+                    .map(|t| {
+                        t.map(|t| TextureFragment {
+                            ind: t.index(),
+                            gen: t.generation(),
+                        })
+                    })
+                    .collect()
             }),
+            should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
+            wireframe: m.wireframe,
         }
     }
 }

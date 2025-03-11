@@ -9,7 +9,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::RasterTileMaterial;
+use navara_wasm_types::RasterTileInternalMaterial;
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -62,7 +62,7 @@ pub struct MeshAdded {
     pub tile_handle: TileHandle,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
-    pub material: RasterTileMaterial,
+    pub material: RasterTileInternalMaterial,
     pub transform: Transform,
 }
 
@@ -73,7 +73,7 @@ pub struct MeshChanged {
     pub gen: u32,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
-    pub material: RasterTileMaterial,
+    pub material: RasterTileInternalMaterial,
 }
 
 #[wasm_bindgen]
@@ -239,7 +239,7 @@ impl
         navara_event_store::ComponentEvent<(
             &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
-            &navara_material::RasterTileMaterial,
+            &navara_material::RasterTileInternalMaterial,
             &navara_math::Transform,
         )>,
     > for MeshAdded
@@ -248,7 +248,7 @@ impl
         ev: navara_event_store::ComponentEvent<(
             &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
-            &navara_material::RasterTileMaterial,
+            &navara_material::RasterTileInternalMaterial,
             &navara_math::Transform,
         )>,
     ) -> Self {
@@ -267,14 +267,14 @@ impl
     From<
         navara_event_store::ComponentEvent<(
             &navara_mesh::Mesh,
-            &navara_material::RasterTileMaterial,
+            &navara_material::RasterTileInternalMaterial,
         )>,
     > for MeshChanged
 {
     fn from(
         ev: navara_event_store::ComponentEvent<(
             &navara_mesh::Mesh,
-            &navara_material::RasterTileMaterial,
+            &navara_material::RasterTileInternalMaterial,
         )>,
     ) -> Self {
         Self {

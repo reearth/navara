@@ -7,15 +7,12 @@ use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
 
-use crate::tile::tile_cache_manager::TileCacheManager;
-
 const MAX_PENDINGS: u32 = 10;
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_texture_fragment(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
-    mut tc: ResMut<TileCacheManager>,
     fragments: Query<
         (
             Entity,
@@ -48,11 +45,15 @@ pub(crate) fn filter_requestable_texture_fragment(
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
             commands.entity(e).insert((Deleted, Ignored));
-            tile.texture_fragment_entity_id = None;
-        }
 
-        if let Some(requested) = tc.requested_tile_caches.get_mut(&handle) {
-            requested.data_requester = None;
+            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut() {
+                let idx = ids
+                    .iter()
+                    .enumerate()
+                    .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
+                    .unwrap();
+                ids.remove(idx);
+            }
         }
     }
 }

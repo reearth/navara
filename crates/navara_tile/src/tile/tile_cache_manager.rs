@@ -3,7 +3,7 @@ use bevy_ecs::{
     query::{With, Without},
     system::{Query, Resource},
 };
-use fxhash::FxHashMap;
+use fxhash::{FxHashMap, FxHashSet};
 use navara_component::Deleted;
 use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
@@ -20,20 +20,11 @@ pub struct RenderedTileCache {
     pub mesh_prepared: bool,
 }
 
-/// This struct caches requested resources depending on the tile.
-/// [`RenderedTileCache`] tracks the rendered tile, but it can't track requested tile resources.
-/// These resources might be rendered because of it's children or parent is rendered.
-/// Therefore these resources would be leaked, so we need to track them in another cache.
-pub struct RequestedTileCache {
-    pub texture_fragment: Option<Entity>,
-    pub data_requester: Option<Entity>,
-}
-
 // Manage the tiles that are going to be rendered.
 #[derive(Default, Resource)]
 pub struct TileCacheManager {
     pub rendered_tile_caches: FxHashMap<TileHandle, RenderedTileCache>,
-    pub requested_tile_caches: FxHashMap<TileHandle, RequestedTileCache>,
+    pub requested_tile_caches: FxHashSet<TileHandle>,
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
 }

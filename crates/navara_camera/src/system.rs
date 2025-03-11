@@ -53,7 +53,7 @@ pub fn startup(mut commands: Commands) {
             // This is for frustum culling, so need to organize
             Angle::new(50.).rad().val(),
             1.,
-            1.,
+            1.3,
         ),
         CameraController::default(),
         CameraInertia::default(),

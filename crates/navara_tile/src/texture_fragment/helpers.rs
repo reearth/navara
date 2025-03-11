@@ -1,4 +1,5 @@
-use bevy_ecs::{entity::Entity, system::Commands};
+use bevy_ecs::system::{Commands, Query};
+
 use navara_component::{OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
@@ -9,28 +10,59 @@ use navara_tile_component::{
 
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
-    tile: &mut RasterTile,
-    tiles: &TilesLayer,
+    leaf: &mut RasterTile,
+    tiles: &Query<&TilesLayer>,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
     priority: Priority,
-) -> Option<Entity> {
-    if matches!(tile.texture_fragment_entity_id, Some(e) if texture_fragment.contains(e)) {
-        return None;
+) {
+    let tiles_len = tiles.iter().len();
+    if matches!(leaf.texture_fragment_entity_ids.as_ref(), Some(e) if e.len() == tiles_len && e.iter().all(|e| e.is_some_and(|e| texture_fragment.contains(e))))
+    {
+        return;
     }
 
-    let url = tile_url(tiles.data.as_ref().unwrap().url.as_str(), &tile.coords);
+    // Wait until previous request is ready.
+    if let Some(Some(e)) = leaf
+        .texture_fragment_entity_ids
+        .as_ref()
+        .and_then(|ids| ids.last())
+    {
+        if texture_fragment.get(*e).map_or(false, |t| t.1.is_pending()) {
+            return;
+        }
+    }
+
+    let idx = leaf
+        .texture_fragment_entity_ids
+        .as_ref()
+        .map_or(0, |ids| ids.len());
+    let Some(mut next_tile) = tiles.iter().nth(idx) else {
+        return;
+    };
+
+    if next_tile.is_over_z(leaf.coords.z) {
+        leaf.texture_fragment_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+            .push(None);
+        if let Some(next) = tiles.iter().nth(idx + 1) {
+            next_tile = next;
+        };
+    }
+
+    let url = tile_url(next_tile.data.as_ref().unwrap().url.as_str(), &leaf.coords);
     let entity = commands.spawn((
         TileTextureFragmentMarker(handle),
         TextureFragment::new(url),
         OrderByDistance {
-            sse: tile.sse,
-            distance: tile.distance_from_camera,
+            sse: leaf.sse,
+            distance: leaf.distance_from_camera,
         },
         priority,
     ));
     let id = entity.id();
-    tile.texture_fragment_entity_id = Some(id);
 
-    Some(id)
+    leaf.texture_fragment_entity_ids
+        .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+        .push(Some(id));
 }

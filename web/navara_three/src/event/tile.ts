@@ -7,8 +7,9 @@ import {
   type Transform,
   type MeshAdded,
   type Mesh as EventMesh,
-  type RasterTileMaterial as EventMaterial,
+  type RasterTileInternalMaterial,
   MeshChanged,
+  TextureFragment,
 } from "@navara/engine";
 import GBufferGlobeFragShader from "@shaders/glsl/gbufferGlobe.frag.glsl";
 import GBufferGlobeVertShader from "@shaders/glsl/gbufferGlobe.vert.glsl";
@@ -26,14 +27,19 @@ import {
   SRGBColorSpace,
   type MinificationTextureFilter,
   type MagnificationTextureFilter,
+  Color,
 } from "three";
 
+import { generateMixOverlaidTexturesMacro } from "../material";
 import type { Scenes } from "../scene";
 import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
 import type { TextureOptions } from "../textures";
 import type { MeshCache } from "../type";
 
 import type { BufferLoader } from ".";
+
+// TODO: Replace with one resource
+const GLOBE_COLOR = 0xffffff;
 
 export async function processMeshAdded(
   scenes: Scenes,
@@ -56,7 +62,12 @@ export async function processMeshAdded(
   );
 }
 
-export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
+export function processMeshChanged(
+  meshes: MeshCache,
+  mesh: MeshChanged,
+  loadedTexes: Map<string, Texture>,
+  textureOptions: TextureOptions,
+) {
   const id = generate_id_from_entity(mesh);
   const m = meshes.get(to_globe_id(id));
   const mg = meshes.get(to_globe_gbuffer_id(id));
@@ -65,8 +76,21 @@ export function processMeshChanged(meshes: MeshCache, mesh: MeshChanged) {
   if (!(m instanceof Mesh) || !(mg instanceof Mesh)) return;
   if (!(m.material instanceof Material) || !(mg.material instanceof Material))
     return;
-  m.visible = !!mesh.material.show && mesh.mesh.active;
-  mg.visible = !!mesh.material.show && mesh.mesh.active;
+
+  const changedMaterial = mesh.material;
+  const active = mesh.mesh.active;
+
+  const maxTextures = textureOptions.maxTextures;
+
+  // TODO: Support hide entire globe.
+  m.visible = active;
+  mg.visible = active;
+
+  if (active) {
+    setupTextureFragments(m.material, changedMaterial?.texture_fragments());
+    setUniforms(m.material, changedMaterial, maxTextures);
+    setupTextures(m.material, loadedTexes, textureOptions, maxTextures);
+  }
 }
 
 async function createMesh(
@@ -76,7 +100,7 @@ async function createMesh(
   loadedTexes: Map<string, Texture>,
   id: string,
   mesh: EventMesh,
-  mat: EventMaterial,
+  mat: RasterTileInternalMaterial,
   tranform: Transform | undefined,
   textureOptions: TextureOptions,
 ) {
@@ -110,7 +134,7 @@ async function createMesh(
   m.visible = false;
   m.renderOrder = mesh.render_order;
   m.name = `tile_${id}`;
-  m.userData.tileOrigColor = mat.color || 0xffffff;
+  m.userData.tileOrigColor = GLOBE_COLOR;
   if (tranform) setTransform(m, tranform);
   scenes.globe.add(m);
   meshes.set(to_globe_id(id), m);
@@ -136,16 +160,14 @@ function setTransform(obj: Object3D, transform: Transform) {
 }
 
 function toMaterial(
-  mat: EventMaterial,
+  mat: RasterTileInternalMaterial,
   loadedTexes: Map<string, Texture>,
   textureOptions: TextureOptions,
 ): Material {
-  const transparent = mat.opacity != null && mat.opacity !== 1;
   if (mat.wireframe) {
     return new MeshBasicMaterial({
-      color: mat.color,
-      opacity: mat.opacity,
-      transparent,
+      color: GLOBE_COLOR,
+      transparent: true,
       wireframe: true,
       stencilWrite: false,
     });
@@ -153,33 +175,166 @@ function toMaterial(
 
   const m = mat.should_compute_normal_from_vertex
     ? new MeshLambertMaterial({
-        color: mat.color,
+        color: GLOBE_COLOR,
+        transparent: true,
         stencilWrite: false,
-        opacity: mat.opacity,
-        transparent,
       })
     : new MeshBasicMaterial({
-        color: mat.color,
-        opacity: mat.opacity,
-        transparent,
+        color: GLOBE_COLOR,
+        transparent: true,
         stencilWrite: false,
       });
-  if (mat.__internal__?.texture_fragment) {
-    const textureFragmentId = generate_id_from_entity(
-      mat.__internal__.texture_fragment,
+
+  const maxTextures = textureOptions.maxTextures;
+
+  setUniforms(m, mat, maxTextures);
+  setupTextureFragments(m, mat.texture_fragments());
+  setupTextures(m, loadedTexes, textureOptions, maxTextures);
+
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uShows = m.userData.shows;
+    shader.uniforms.uColors = m.userData.colors;
+    shader.uniforms.uOpacities = m.userData.opacities;
+    shader.uniforms.uTextures = m.userData.textures;
+    // shader.uniforms.uTextures0 = { value: m.userData.textures.value[0] };
+    // shader.uniforms.uTextures1 = { value: m.userData.textures.value[1] };
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `
+uniform int uShows[${maxTextures}];
+uniform vec3 uColors[${maxTextures}];
+uniform float uOpacities[${maxTextures}];
+uniform sampler2D uTextures[${maxTextures}];
+// uniform sampler2D uTextures0;
+// uniform sampler2D uTextures1;
+
+#include <common>
+`,
+      )
+      .replace(
+        "#include <map_fragment>",
+        `
+${generateMixOverlaidTexturesMacro(m, maxTextures)}
+diffuseColor = sampledDiffuseColor;
+`,
+      );
+  };
+
+  return m;
+}
+
+const setUniforms = (
+  m: Material,
+  mat: RasterTileInternalMaterial,
+  maxTextures: number,
+) => {
+  if (!m.userData.shows) {
+    m.userData.shows = {
+      value: [...new Array(maxTextures)].fill(0),
+    };
+  }
+  if (!m.userData.colors) {
+    m.userData.colors = {
+      value: [...new Array(maxTextures)].map(() => new Color()),
+    };
+  }
+  if (!m.userData.opacities) {
+    m.userData.opacities = {
+      value: [...new Array(maxTextures)].fill(1),
+    };
+  }
+
+  // Reset
+  for (let i = 0; i < m.userData.shows.value.length; i++) {
+    m.userData.shows.value[i] = 0;
+    m.userData.colors.value[i] = new Color();
+    m.userData.opacities.value[i] = 1;
+  }
+
+  // All properties have same length.
+  const shows = mat.shows;
+  const colors = mat.colors;
+  const opacities = mat.opacities;
+  for (let i = 0; i < shows.length; i++) {
+    m.userData.shows.value[i] = shows[i];
+    m.userData.colors.value[i] = new Color(colors[i]);
+    m.userData.opacities.value[i] = opacities[i];
+  }
+
+  if (!m.defines) {
+    m.defines = {
+      USE_UV: true,
+    };
+  }
+};
+
+const setupTextureFragments = (
+  m: Material,
+  textureFragments: TextureFragment[] | undefined,
+) => {
+  if (!textureFragments) {
+    return;
+  }
+  const texturesFragmentIds = [];
+  for (const fragment of textureFragments) {
+    texturesFragmentIds.push(
+      fragment ? generate_id_from_entity(fragment) : null,
     );
-    const t = loadedTexes.get(textureFragmentId);
-    if (t) {
+  }
+
+  m.userData.textureFragments = {
+    value: texturesFragmentIds,
+  };
+};
+
+const setupTextures = (
+  m: Material,
+  loadedTexes: Map<string, Texture>,
+  textureOptions: TextureOptions,
+  maxTextures: number,
+) => {
+  if (!m.userData.textures) {
+    m.userData.textures = {
+      value: [...new Array(maxTextures)].fill(null),
+    };
+  }
+
+  // Reset
+  for (let i = 0; i < maxTextures; i++) {
+    m.userData.textures.value[i] = null;
+  }
+
+  const textureFragments = m.userData.textureFragments?.value;
+  if (!textureFragments) {
+    return;
+  }
+
+  if (textureFragments.length > maxTextures) {
+    console.error(
+      `Exceeded maximum textures: ${textureFragments.length} layers are provided. Maximum the number of textures is ${maxTextures}.`,
+    );
+  }
+
+  const textures = m.userData.textures.value;
+  for (let i = 0; i < textureFragments.length; i++) {
+    const textureFragment = textureFragments[i];
+    const t = textureFragment ? loadedTexes.get(textureFragment) : undefined;
+    if (!t) {
+      textures[i] = null;
+      continue;
+    }
+
+    if (t.colorSpace !== SRGBColorSpace) {
       t.colorSpace = SRGBColorSpace;
       t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
       t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
       t.anisotropy = textureOptions.maxAnisotropy;
       t.generateMipmaps = textureOptions.useMipmaps;
       t.needsUpdate = true;
-
-      m.map = t;
     }
-  }
 
-  return m;
-}
+    textures[i] = t;
+  }
+};

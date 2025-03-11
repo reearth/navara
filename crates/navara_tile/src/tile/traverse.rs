@@ -22,7 +22,7 @@ use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     render::RenderedTile,
-    tile_cache_manager::{RenderedTileCache, RequestedTileCache, TileCacheManager},
+    tile_cache_manager::{RenderedTileCache, TileCacheManager},
 };
 
 use navara_layer::{TerrainLayer, TilesLayer};
@@ -38,7 +38,7 @@ use navara_layer::{TerrainLayer, TilesLayer};
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_tile(
     command: &mut Commands,
-    tiles: &TilesLayer,
+    tiles: &Query<&TilesLayer>,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
@@ -59,7 +59,8 @@ pub fn traverse_tile(
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
-            if tile.coords.z >= tiles.appearance.as_ref().unwrap().max_zoom {
+            let has_no_tile = tiles.iter().all(|t| t.is_over_z(tile.coords.z));
+            if has_no_tile {
                 return TraversalResult::NotFound;
             }
         }
@@ -131,23 +132,13 @@ pub fn traverse_tile(
 
     let were_children_rendered = tile.were_children_rendered;
 
-    let max_sse = tiles.appearance.as_ref().unwrap().max_sse;
+    // TODO: Replace with one resource
+    let max_sse = tiles.iter().next().unwrap().appearance().unwrap().max_sse;
     let meets_sse = sse <= max_sse;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     if meets_sse || meets_sse_ancestors {
-        if is_renderable
-            // Keep rendering children while preparing the tile if it's available, because rendering tile takes some time.
-            && !were_children_rendered
-        {
-            // Avoid to return an inactivated tile when meets SSE from ancestors.
-            if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
-                return TraversalResult::NotFound;
-            }
-            return TraversalResult::TileRendered;
-        }
-
         if !meets_sse_ancestors {
             prepare_tile_resource(
                 command,
@@ -159,8 +150,23 @@ pub fn traverse_tile(
                 tc,
                 texture_fragment,
                 terrain_data_requester,
-                Priority::High,
+                if is_renderable {
+                    Priority::Medium
+                } else {
+                    Priority::High
+                },
             );
+        }
+
+        if is_renderable
+            // Keep rendering children while preparing the tile if it's available, because rendering tile takes some time.
+            && !were_children_rendered
+        {
+            // Avoid to return an inactivated tile when meets SSE from ancestors.
+            if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
+                return TraversalResult::NotFound;
+            }
+            return TraversalResult::TileRendered;
         }
 
         if !were_children_rendered {
@@ -311,12 +317,8 @@ pub fn traverse_tile(
         }
     }
 
-    if !is_renderable {
-        // Avoid to request or render new tile while waiting for parent tile is activated.
-        if meets_sse_ancestors {
-            return TraversalResult::NotFound;
-        }
-
+    // Avoid to request or render new tile while waiting for parent tile is activated.
+    if !meets_sse_ancestors {
         let tile = qt.qt.get_mut(handle).unwrap();
         prepare_tile_resource(
             command,
@@ -328,9 +330,15 @@ pub fn traverse_tile(
             tc,
             texture_fragment,
             terrain_data_requester,
-            Priority::Extreme,
+            if is_renderable {
+                Priority::Medium
+            } else {
+                Priority::Extreme
+            },
         );
+    }
 
+    if !is_renderable {
         return TraversalResult::NotFound;
     }
 
@@ -391,15 +399,15 @@ pub fn prepare_tile_resource(
     commands: &mut Commands,
     tile: &mut RasterTile,
     buf: &mut BufferStore,
-    tiles: &TilesLayer,
+    tiles: &Query<&TilesLayer>,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
     texture_fragment: &TileTextureFragmentQuery,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
-) -> bool {
-    let requested_terrain = request_terrain_data(
+) {
+    request_terrain_data(
         commands,
         tile,
         buf,
@@ -408,30 +416,11 @@ pub fn prepare_tile_resource(
         terrain_data_requester,
         priority,
     );
-    let requested_texture =
-        request_texture_fragment(commands, tile, tiles, handle, texture_fragment, priority);
+    request_texture_fragment(commands, tile, tiles, handle, texture_fragment, priority);
 
-    match tc.requested_tile_caches.get_mut(&handle) {
-        Some(r) => {
-            if requested_terrain.is_some() {
-                r.data_requester = requested_terrain;
-            }
-            if requested_texture.is_some() {
-                r.texture_fragment = requested_texture;
-            }
-        }
-        None => {
-            tc.requested_tile_caches.insert(
-                handle,
-                RequestedTileCache {
-                    data_requester: requested_terrain,
-                    texture_fragment: requested_texture,
-                },
-            );
-        }
+    if !tc.requested_tile_caches.contains(&handle) {
+        tc.requested_tile_caches.insert(handle);
     }
-
-    requested_terrain.is_some() || requested_texture.is_some()
 }
 
 fn begine_traverse_tile(

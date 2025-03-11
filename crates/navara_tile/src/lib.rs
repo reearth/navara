@@ -31,8 +31,11 @@ impl Plugin for TilePlugin {
             .add_systems(
                 Update,
                 (
+                    tile::system::update_layer,
+                    tile::system::delete_layer,
                     tile::system::update_tiles,
                     tile::system::transfer_mesh,
+                    tile::system::update_mesh_material,
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
                     tile::system::clear_caches,

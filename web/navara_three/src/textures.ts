@@ -4,4 +4,5 @@ export type TextureOptions = {
   minFilter: number;
   magFilter: number;
   useMipmaps: boolean;
+  maxTextures: number;
 };

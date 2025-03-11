@@ -2,7 +2,7 @@ use bevy_ecs::world::World;
 use navara_data_requester::DataRequester;
 use navara_event_store::{ComponentEvent, EntityEvent, EventStore, ReconstructableComponentEvent};
 use navara_feature_component::render::RenderableFeature;
-use navara_material::RasterTileMaterial;
+use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
@@ -18,11 +18,11 @@ pub struct Events<'a> {
         ComponentEvent<(
             &'a TileMeshMarker,
             &'a Mesh,
-            &'a RasterTileMaterial,
+            &'a RasterTileInternalMaterial,
             &'a Transform,
         )>,
     >,
-    pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a RasterTileMaterial)>>,
+    pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a RasterTileInternalMaterial)>>,
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
