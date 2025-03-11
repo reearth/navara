@@ -79,25 +79,6 @@ pub fn traverse_tile(
 
     let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
     if is_culled_by_frustum {
-        // Preload culled frustum nearby this tile.
-        // Assuming the tile is far away.
-        let tile = qt.qt.get_mut(handle).unwrap();
-        tile.sse = 9999.;
-        tile.distance_from_camera = 9999.;
-        tile.visited_at = frame.rendered_frame();
-
-        prepare_tile_resource(
-            command,
-            tile,
-            buf,
-            tiles,
-            terrain_layer,
-            handle,
-            tc,
-            texture_fragment,
-            terrain_data_requester,
-            Priority::VeryLow,
-        );
         return TraversalResult::Culled;
     }
 
@@ -318,7 +299,11 @@ pub fn traverse_tile(
     }
 
     // Avoid to request or render new tile while waiting for parent tile is activated.
-    if !meets_sse_ancestors {
+
+    if !is_renderable {
+        if meets_sse_ancestors {
+            return TraversalResult::NotFound;
+        }
         let tile = qt.qt.get_mut(handle).unwrap();
         prepare_tile_resource(
             command,
@@ -330,15 +315,8 @@ pub fn traverse_tile(
             tc,
             texture_fragment,
             terrain_data_requester,
-            if is_renderable {
-                Priority::Medium
-            } else {
-                Priority::Extreme
-            },
+            Priority::Extreme,
         );
-    }
-
-    if !is_renderable {
         return TraversalResult::NotFound;
     }
 

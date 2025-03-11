@@ -10,20 +10,19 @@ export const run = async (view: ThreeView) => {
     [
       {
         type: "tiles",
-        data: { url: TILE_URLS.gsiStd },
+        data: { url: TILE_URLS.openstreetmap },
         raster_tile: {
           color: 0xffffff,
-          max_zoom: 18,
+          max_zoom: 23,
           opacity: 1,
         },
       },
       {
         type: "tiles",
-        data: { url: TILE_URLS.openstreetmap },
+        data: { url: TILE_URLS.gsiStd },
         raster_tile: {
           color: 0xffffff,
-          max_zoom: 23,
-          wireframe: false,
+          max_zoom: 18,
           opacity: 1,
         },
       },
