@@ -216,7 +216,7 @@ uniform sampler2D uTextures[${maxTextures}];
       .replace(
         "#include <map_fragment>",
         `
-${generateMixOverlaidTexturesMacro(m, maxTextures)}
+${generateMixOverlaidTexturesMacro(maxTextures)}
 diffuseColor = sampledDiffuseColor;
 `,
       );

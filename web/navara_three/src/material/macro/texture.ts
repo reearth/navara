@@ -1,29 +1,17 @@
-import type { Material } from "three";
-
-export const generateMixOverlaidTexturesMacro = (
-  m: Material,
-  numTextures: number,
-) => {
-  const shows = m.userData.shows.value.map(Boolean);
-  const result = mix(shows, numTextures);
-  if (!result) return;
-  return `vec4 sampledDiffuseColor = ${result};`;
-};
-
-const mix = (shows: boolean[], depth: number, i = 0): string | undefined => {
-  if (i >= depth) {
+export const generateMixOverlaidTexturesMacro = (numTextures: number) => {
+  if (numTextures === 0) {
     return;
   }
-  const nextIdx = i + 1;
-  const next = mix(shows, depth, nextIdx);
 
-  let tex0 = `texture2D(uTextures[${i}], vUv) * vec4(uColors[${i}], 1.)`;
-  if (i === 0) {
-    tex0 = `mix(diffuseColor, ${tex0}, float(uShows[0]) * uOpacities[0])`;
+  const tex0 = `texture2D(uTextures[0], vUv) * vec4(uColors[0], 1.)`;
+  const alpha0 = `float(uShows[0]) * uOpacities[0]`;
+  let result = `mix(diffuseColor, ${tex0}, ${alpha0})`;
+
+  for (let i = 1; i < numTextures; i++) {
+    const tex = `texture2D(uTextures[${i}], vUv) * vec4(uColors[${i}], 1.)`;
+    const alpha = `float(uShows[${i}]) * uOpacities[${i}]`;
+    result = `mix(${result}, ${tex}, ${alpha})`;
   }
 
-  if (!next) {
-    return tex0;
-  }
-  return `mix(${tex0}, ${next}, float(uShows[${nextIdx}]) * uOpacities[${nextIdx}])`;
+  return `vec4 sampledDiffuseColor = ${result};`;
 };
