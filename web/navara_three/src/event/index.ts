@@ -185,7 +185,7 @@ export function processEvent(
           );
           break;
         case "change":
-          processMeshChanged(meshes, event);
+          processMeshChanged(meshes, event, loadedTexs, textureOptions);
           break;
       }
     },

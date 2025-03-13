@@ -37,6 +37,16 @@ impl TextureFragment {
             ..Default::default()
         }
     }
+
+    pub fn is_succeeded(&self) -> bool {
+        matches!(self.status, TextureFragmentStatus::Success)
+    }
+    pub fn is_failed(&self) -> bool {
+        matches!(self.status, TextureFragmentStatus::Fail)
+    }
+    pub fn is_pending(&self) -> bool {
+        matches!(self.status, TextureFragmentStatus::Pending)
+    }
 }
 
 pub struct TextureFragmentPlugin;

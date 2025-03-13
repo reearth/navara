@@ -283,6 +283,7 @@ impl App {
             LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
             LayerDescription::Cesium3dTiles(layer) => layer.appearances[0].clone(),
             LayerDescription::Mvt(layer) => layer.appearances[0].clone(),
+            LayerDescription::Tiles(layer) => layer.appearance.unwrap().clone(),
             _ => return,
         };
         self.app

@@ -435,6 +435,7 @@ export default class ThreeView {
       magFilter: LinearFilter,
       minFilter: LinearFilter,
       useMipmaps: true,
+      maxTextures: Math.max(this.renderer.capabilities.maxTextures, 8),
     };
   }
 

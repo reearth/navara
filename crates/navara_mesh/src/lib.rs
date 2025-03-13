@@ -5,7 +5,7 @@ use bevy_ecs::{
     bundle::Bundle,
     component::Component,
     entity::Entity,
-    query::{Added, Changed, With, Without},
+    query::{Added, Changed, Or, With, Without},
     system::{Commands, Query, ResMut},
 };
 
@@ -14,6 +14,7 @@ pub use cache::*;
 use navara_buffer_store::Handle;
 use navara_component::Deleted;
 use navara_event_store::EventStore;
+use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 
 #[derive(Component, Debug, Default)]
@@ -56,7 +57,13 @@ fn commit_events(
     removed: Query<Entity, (With<Mesh>, With<Deleted>)>,
     t_changed: Query<Entity, (With<Mesh>, Changed<Transform>, Without<Deleted>)>,
     mesh_added: Query<Entity, (Added<Mesh>, Without<Deleted>)>,
-    mesh_changed: Query<Entity, (Changed<Mesh>, Without<Deleted>)>,
+    mesh_changed: Query<
+        Entity,
+        (
+            Or<(Changed<Mesh>, Changed<RasterTileInternalMaterial>)>,
+            Without<Deleted>,
+        ),
+    >,
     // mat_changed: Query<(Entity, &ObjectMarker, &Material), Changed<Material>>,
 ) {
     for e in t_changed.iter() {
