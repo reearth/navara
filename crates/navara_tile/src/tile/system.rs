@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_component::{Deleted, OrderByDistance, Priority, Rendered};
+use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
@@ -50,7 +50,7 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    mut tiles_set: ParamSet<(Query<&TilesLayer>, Query<(), Added<TilesLayer>>)>,
+    mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Added<TilesLayer>>)>,
     terrain_layer: Query<&TerrainLayer>,
     camera: Query<(Ref<Transform>, &CameraFrustum), With<CameraMarker>>,
     texture_fragment: TileTextureFragmentQuery,
@@ -76,7 +76,7 @@ pub fn update_tiles(
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
     let is_mesh_changed = !meshes_set.p1().is_empty();
-    let is_tile_layer_added = tiles_set.p1().is_empty();
+    let is_tile_layer_added =!tiles_set.p1().is_empty();
 
     let mut meshes = meshes_set.p0();
 
@@ -94,12 +94,12 @@ pub fn update_tiles(
         || tc.is_updated_in_this_frame
         || camera.is_added()
         || camera.is_changed()
-        || !is_tile_layer_added;
+        || is_tile_layer_added;
     if !needs_update {
         return;
     }
 
-    let tiles = tiles_set.p0();
+    let tiles = &tiles_set.p0();
 
     tc.is_updated_in_this_frame = true;
     tc.last_rendered_frame = frame.rendered_frame();
@@ -117,7 +117,7 @@ pub fn update_tiles(
     let zero_tile_handle = zero_tile.handle();
     match traverse_tile(
         &mut commands,
-        &tiles,
+        tiles,
         &terrain_layer,
         zero_tile_handle,
         &mut tc,
@@ -152,7 +152,7 @@ pub fn update_tiles(
                 &mut commands,
                 qt.qt.get_mut(zero_tile.handle()).unwrap(),
                 &mut buf,
-                &tiles,
+                tiles,
                 &terrain_layer,
                 zero_tile.handle(),
                 &mut tc,
@@ -185,7 +185,7 @@ pub fn transfer_mesh(
     >,
     texture_fragment: TileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
-    tile_layers: Query<&TilesLayer>,
+    tile_layers: Query<(&TilesLayer, &Order)>,
     terrain_layer: Query<&TerrainLayer>,
     terrain_mesh_constructors: Query<&ConstructTerrainMeshResult, Without<Deleted>>,
     terrain_mesh_upsamplers: Query<&UpsampleTerrainMeshResult, Without<Deleted>>,
@@ -195,7 +195,7 @@ pub fn transfer_mesh(
     }
 
     let tile_layer = match tile_layers.iter().next() {
-        Some(tile) => tile,
+        Some((tile, _)) => tile,
         None => return,
     };
 
@@ -233,7 +233,7 @@ pub fn transfer_mesh(
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
-        for (i, l) in tile_layers.iter().enumerate() {
+        for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let should_show = texture_fragment_entity_ids
                 .as_ref()
                 .and_then(|ids| ids.get(i))
@@ -536,15 +536,18 @@ pub fn delete_layer(
     mut qt: ResMut<RasterTileQuadtree>,
     mut rendered_tiles: Query<&mut RenderedTile, With<Rendered>>,
     deleted: Query<(Entity, &DeleteRasterTileLayerMarker)>,
-    layers: Query<(Entity, &TilesLayer)>,
+    layers: Query<(Entity, &TilesLayer, &Order)>,
 ) {
+    if deleted.is_empty() {
+        return;
+    }
+
     for (e, u) in &deleted {
         let layer_id = u.0.clone();
-        for (le, layer) in layers.iter() {
+        for (le, layer, _) in &layers {
             if layer.layer_id != layer_id {
                 continue;
             }
-
             commands.entity(le).despawn();
             break;
         }
@@ -556,7 +559,7 @@ pub fn delete_layer(
         for (_, u) in &deleted {
             let layer_id = u.0.clone();
             let mut is_removed = false;
-            for (i, (_, layer)) in layers.iter().enumerate() {
+            for (i, (_, layer, _)) in layers.iter().sort::<&Order>().enumerate() {
                 if layer.layer_id != layer_id {
                     continue;
                 }
@@ -587,7 +590,7 @@ pub fn update_mesh_material(
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut tile_layers: ParamSet<(
-        Query<&TilesLayer>,
+        Query<(&TilesLayer, &Order)>,
         Query<&TilesLayer, Changed<TilesLayer>>,
         RemovedComponents<TilesLayer>,
     )>,
@@ -635,7 +638,7 @@ pub fn update_mesh_material(
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
-        for (i, l) in tile_layers.iter().enumerate() {
+        for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // If this tile isn't ready, the remaining tiles aren't ready either.
             let should_show = texture_fragment_entity_ids
                 .get(i)
@@ -712,6 +715,21 @@ pub fn handle_tile_worker_task_completed(
         return;
     }
     tc.is_updated_in_this_frame = true;
+}
+
+pub fn add_order_to_tiles_layer(
+    mut commands: Commands,
+    tiles_layers: Query<Entity, Added<TilesLayer>>,
+    existing_orders: Query<&Order, With<TilesLayer>>,
+) {
+    // Find the maximum existing order value
+    let max_order = existing_orders.iter().map(|o| o.0).max().unwrap_or(0);
+
+    // Assign incremental order values to each new layer
+    for (i, entity) in tiles_layers.iter().enumerate() {
+        let order_value = max_order + i + 1;
+        commands.entity(entity).insert(Order(order_value));
+    }
 }
 
 pub fn clear_caches(

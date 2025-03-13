@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_component::{Deleted, OrderByDistance, Priority};
+use navara_component::{Deleted, Order, OrderByDistance, Priority};
 use navara_core::Ellipsoid;
 
 use navara_fog::Fog;
@@ -38,7 +38,7 @@ use navara_layer::{TerrainLayer, TilesLayer};
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_tile(
     command: &mut Commands,
-    tiles: &Query<&TilesLayer>,
+    tiles: &Query<(&TilesLayer, &Order)>,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
@@ -59,7 +59,7 @@ pub fn traverse_tile(
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
-            let has_no_tile = tiles.iter().all(|t| t.is_over_z(tile.coords.z));
+            let has_no_tile = tiles.iter().all(|t| t.0.is_over_z(tile.coords.z));
             if has_no_tile {
                 return TraversalResult::NotFound;
             }
@@ -114,7 +114,7 @@ pub fn traverse_tile(
     let were_children_rendered = tile.were_children_rendered;
 
     // TODO: Replace with one resource
-    let max_sse = tiles.iter().next().unwrap().appearance().unwrap().max_sse;
+    let max_sse = tiles.iter().next().unwrap().0.appearance().unwrap().max_sse;
     let meets_sse = sse <= max_sse;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
@@ -377,7 +377,7 @@ pub fn prepare_tile_resource(
     commands: &mut Commands,
     tile: &mut RasterTile,
     buf: &mut BufferStore,
-    tiles: &Query<&TilesLayer>,
+    tiles: &Query<(&TilesLayer, &Order)>,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,

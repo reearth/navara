@@ -2,6 +2,21 @@ use std::cmp::Ordering;
 
 use bevy_ecs::component::Component;
 
+#[derive(Component, PartialEq, Eq, Debug, Clone)]
+pub struct Order(pub usize);
+
+impl PartialOrd for Order {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Order {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
 #[derive(Component, PartialEq, Debug, Clone)]
 pub struct OrderByDistance {
     pub sse: f32,

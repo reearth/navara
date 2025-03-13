@@ -25,6 +25,7 @@ impl Plugin for TilePlugin {
                     terrain::system::begine_terrain_layer,
                     tile::system::handle_prepared_mesh_event,
                     tile::system::handle_tile_worker_task_completed,
+                    tile::system::add_order_to_tiles_layer,
                 )
                     .chain(),
             )

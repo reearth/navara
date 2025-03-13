@@ -1,6 +1,6 @@
 use bevy_ecs::system::{Commands, Query};
 
-use navara_component::{OrderByDistance, Priority};
+use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
 use navara_texture_fragment::TextureFragment;
@@ -11,7 +11,7 @@ use navara_tile_component::{
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
     leaf: &mut RasterTile,
-    tiles: &Query<&TilesLayer>,
+    tiles: &Query<(&TilesLayer, &Order)>,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
     priority: Priority,
@@ -37,7 +37,7 @@ pub(crate) fn request_texture_fragment(
         .texture_fragment_entity_ids
         .as_ref()
         .map_or(0, |ids| ids.len());
-    let Some(mut next_tile) = tiles.iter().nth(idx) else {
+    let Some((mut next_tile, _)) = tiles.iter().nth(idx) else {
         return;
     };
 
@@ -45,7 +45,7 @@ pub(crate) fn request_texture_fragment(
         leaf.texture_fragment_entity_ids
             .get_or_insert_with(|| Vec::with_capacity(tiles_len))
             .push(None);
-        if let Some(next) = tiles.iter().nth(idx + 1) {
+        if let Some((next, _)) = tiles.iter().nth(idx + 1) {
             next_tile = next;
         };
     }
