@@ -76,7 +76,7 @@ pub fn update_tiles(
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
     let is_mesh_changed = !meshes_set.p1().is_empty();
-    let is_tile_layer_added =!tiles_set.p1().is_empty();
+    let is_tile_layer_added = !tiles_set.p1().is_empty();
 
     let mut meshes = meshes_set.p0();
 
