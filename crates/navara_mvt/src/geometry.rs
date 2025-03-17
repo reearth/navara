@@ -9,7 +9,7 @@ use navara_feature_component::{
     point::PointGeometry,
     polygon::PolygonGeometry,
     polyline::PolylineGeometry,
-    BatchedFeatureMarker,
+    BatchedFeatureMarker, LODFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
@@ -17,7 +17,7 @@ use navara_material::Appearance;
 use navara_math::{FloatType, Vec2, Vec3};
 use navara_parser::mvt;
 
-use crate::pos_converter::PosConverter;
+use crate::{component::MVTFeatureMarker, pos_converter::PosConverter};
 
 #[derive(Clone, Copy)]
 pub(crate) enum ConstructedGeometryType {
@@ -178,50 +178,30 @@ fn handle_geometry(
 ) {
     match geom {
         Geometry::MultiPolygon(v) => {
+            if !appearances
+                .iter()
+                .any(|a| matches!(a, Appearance::Polygon(_)))
+            {
+                return;
+            }
+
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
             let MultiPolygon(plgs) = v;
 
-            let appearance = match appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polygon(_)))
-            {
-                Some(Appearance::Polygon(a)) => a,
-                _ => return,
-            };
-
-            construct_polygons_geometry(
-                commands,
-                buf,
-                feature_ids,
-                layer_id,
-                plgs,
-                converter,
-                appearance,
-                batch_id,
-            );
+            construct_polygons_geometry(commands, buf, feature_ids, plgs, converter, batch_id);
         }
         Geometry::Polygon(v) => {
+            if !appearances
+                .iter()
+                .any(|a| matches!(a, Appearance::Polygon(_)))
+            {
+                return;
+            }
+
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
-            let appearance = match appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polygon(_)))
-            {
-                Some(Appearance::Polygon(a)) => a,
-                _ => return,
-            };
-
-            construct_polygon_geometry(
-                commands,
-                buf,
-                feature_ids,
-                layer_id,
-                v,
-                converter,
-                appearance,
-                batch_id,
-            );
+            construct_polygon_geometry(commands, buf, feature_ids, v, converter, batch_id);
         }
         Geometry::MultiPoint(v) => {
             *geometry_type = Some(ConstructedGeometryType::Point);
@@ -308,44 +288,30 @@ fn handle_geometry(
             }
         }
         Geometry::MultiLineString(v) => {
+            if !appearances
+                .iter()
+                .any(|a| matches!(a, Appearance::Polyline(_)))
+            {
+                return;
+            }
+
             *geometry_type = Some(ConstructedGeometryType::Polyline);
 
             let MultiLineString(lines) = v;
 
-            for one_appr in appearances {
-                if let Appearance::Polyline(appearance) = one_appr {
-                    construct_lines_geometry(
-                        commands,
-                        buf,
-                        feature_ids,
-                        layer_id,
-                        lines,
-                        converter,
-                        appearance,
-                        batch_id,
-                    );
-                    break;
-                }
-            }
+            construct_lines_geometry(commands, buf, feature_ids, lines, converter, batch_id);
         }
         Geometry::LineString(line) => {
+            if !appearances
+                .iter()
+                .any(|a| matches!(a, Appearance::Polyline(_)))
+            {
+                return;
+            }
+
             *geometry_type = Some(ConstructedGeometryType::Polyline);
 
-            for one_appr in appearances {
-                if let Appearance::Polyline(appearance) = one_appr {
-                    construct_line_geometry(
-                        commands,
-                        buf,
-                        feature_ids,
-                        layer_id,
-                        line,
-                        converter,
-                        appearance,
-                        batch_id,
-                    );
-                    break;
-                }
-            }
+            construct_line_geometry(commands, buf, feature_ids, line, converter, batch_id);
         }
         Geometry::GeometryCollection(geoms) => {
             for geom in &geoms.0 {
@@ -416,6 +382,10 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
             FeatureId::default(),
             geometry(x, y),
             appearance.clone(),
+            // TODO: It can be removed if points is instanced or batched.
+            LODFeatureMarker,
+            // TODO: It can be removed if points is instanced or batched.
+            MVTFeatureMarker,
         ))
         .id();
 
@@ -423,28 +393,17 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_lines_geometry<A: Component + Clone>(
+fn construct_lines_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    layer_id: &str,
     lines: &[LineString<f32>],
     converter: &mut PosConverter,
-    appearance: &A,
     batch_id: &BatchId,
 ) -> usize {
     let mut count = 0;
     for line in lines {
-        construct_line_geometry(
-            commands,
-            buf,
-            feature_ids,
-            layer_id,
-            line,
-            converter,
-            appearance,
-            batch_id,
-        );
+        construct_line_geometry(commands, buf, feature_ids, line, converter, batch_id);
         count += line.0.len();
     }
 
@@ -452,14 +411,12 @@ fn construct_lines_geometry<A: Component + Clone>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_line_geometry<A: Component + Clone>(
+fn construct_line_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    layer_id: &str,
     line: &LineString<f32>,
     converter: &mut PosConverter,
-    appearance: &A,
     batch_id: &BatchId,
 ) {
     let LineString(points) = line;
@@ -471,10 +428,8 @@ fn construct_line_geometry<A: Component + Clone>(
 
     let e = commands
         .spawn((
-            LayerId(layer_id.to_owned()),
             BatchedFeatureMarker,
             PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
-            appearance.clone(),
             BatchId(batch_id.0),
         ))
         .id();
@@ -483,39 +438,26 @@ fn construct_line_geometry<A: Component + Clone>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_polygons_geometry<A: Component + Clone>(
+fn construct_polygons_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    layer_id: &str,
     polygons: &[Polygon<f32>],
     converter: &mut PosConverter,
-    appearance: &A,
     batch_id: &BatchId,
 ) {
     for polygon in polygons {
-        construct_polygon_geometry(
-            commands,
-            buf,
-            feature_ids,
-            layer_id,
-            polygon,
-            converter,
-            appearance,
-            batch_id,
-        );
+        construct_polygon_geometry(commands, buf, feature_ids, polygon, converter, batch_id);
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_polygon_geometry<A: Component + Clone>(
+fn construct_polygon_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    layer_id: &str,
     polygon: &Polygon<f32>,
     converter: &mut PosConverter,
-    appearance: &A,
     batch_id: &BatchId,
 ) {
     let LineString(outer) = polygon.exterior();
@@ -539,7 +481,6 @@ fn construct_polygon_geometry<A: Component + Clone>(
     }
 
     let entity = commands.spawn((
-        LayerId(layer_id.to_owned()),
         BatchedFeatureMarker,
         PolygonGeometry {
             hierarchy: Hierarchy {
@@ -550,7 +491,6 @@ fn construct_polygon_geometry<A: Component + Clone>(
             .transfer(buf),
             crs: CRS::Geographic,
         },
-        appearance.clone(),
         BatchId(batch_id.0),
     ));
 

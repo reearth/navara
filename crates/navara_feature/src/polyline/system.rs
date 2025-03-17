@@ -33,9 +33,14 @@ use navara_geometry::FloatAttribute;
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
     mut commands: Commands,
-    polylines: Query<(&LayerId, &PolylineMaterial)>,
     mut batched_features: Query<
-        (Entity, &mut BatchedFeature, Option<&mut FeatureId>),
+        (
+            Entity,
+            &LayerId,
+            &PolylineMaterial,
+            &mut BatchedFeature,
+            Option<&mut FeatureId>,
+        ),
         With<PolylineMarker>,
     >,
     mut layer_store: ResMut<LayerStore>,
@@ -44,7 +49,9 @@ pub fn transfer_batched_mesh(
         Without<Deleted>,
     >,
 ) {
-    for (batched_feature_entity, mut batched_feature, feature_id) in &mut batched_features {
+    for (batched_feature_entity, layer_id, material, mut batched_feature, feature_id) in
+        &mut batched_features
+    {
         let needs_update = batched_feature.is_added()
             || batched_feature
                 .construct_polyline_feature
@@ -73,11 +80,6 @@ pub fn transfer_batched_mesh(
             construct_polyline_feature_tasks
                 .get(batched_feature.construct_polyline_feature.unwrap())
                 .unwrap();
-
-        let Ok((layer_id, material)) = polylines.get(*batched_feature.features.first().unwrap())
-        else {
-            continue;
-        };
 
         let mut material = material.clone();
         material.internal = Some(PolylineInternalMaterial {

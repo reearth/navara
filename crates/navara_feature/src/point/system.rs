@@ -9,6 +9,7 @@ use navara_feature_component::{
     batch::BatchId,
     id::FeatureId,
     render::{RenderInformation, RenderableFeature, TransferableSingleGeometry},
+    LODFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::PointMaterial;
@@ -31,12 +32,13 @@ pub fn transfer_mesh(
             Option<&mut FeatureId>,
             &PointGeometry,
             &PointMaterial,
+            Option<&LODFeatureMarker>,
         ),
         Added<PointGeometry>,
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, batch_id, feature_id, geometry, material) in &mut points {
+    for (entity, layer_id, batch_id, feature_id, geometry, material, lod_marker) in &mut points {
         let position = geometry
             .crs
             .to_vec3(WGS84_32, geometry.coords, material.height);
@@ -63,7 +65,7 @@ pub fn transfer_mesh(
                         batch_id: Some(batch_id.0.x as u32),
                         selected: Some(batch_id.0.y as u32),
                     },
-                    active: true,
+                    active: lod_marker.is_none(),
                 },
             ))
             .id();

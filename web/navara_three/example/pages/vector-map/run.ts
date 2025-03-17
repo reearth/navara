@@ -55,6 +55,11 @@ export const run = async (view: ThreeView) => {
     data: {
       url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
     },
+    point: {
+      size: 1000,
+      scale_by_distance: false,
+      color: 0xff0000,
+    },
     polyline: {
       show: true,
       color: 0x3d1623,
