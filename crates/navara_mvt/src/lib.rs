@@ -3,6 +3,7 @@
 use bevy_app::{App, Plugin, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
 
+mod component;
 mod data_requester;
 mod geometry;
 mod layer;

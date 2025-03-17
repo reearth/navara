@@ -302,20 +302,15 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolygonBatchedFeature> {
-        let features = self.app.get_batched_features(batched_feature_id)?;
-
-        let mut material: Option<PolygonMaterial> = None;
+        let (features, material) = self
+            .app
+            .get_batched_features_for_polygon(batched_feature_id)?;
 
         let mut transferable = TransferablePolygonBatchedFeature::empty(features.len());
 
         let mut coords_handle_and_batch_ids = vec![];
 
         for f in &features {
-            if material.is_none() {
-                let m = f.get::<navara_material::PolygonMaterial>()?;
-                material = Some(m.into());
-            }
-
             let geometry = f.get::<navara_feature_component::polygon::PolygonGeometry>()?;
             let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
 
@@ -329,9 +324,9 @@ impl Core {
             transferable.add(&mut hierarchy, &BatchId(batch_id));
         }
 
-        material.map(|material| ReturnedTransferablePolygonBatchedFeature {
+        Some(ReturnedTransferablePolygonBatchedFeature {
             transferable,
-            material,
+            material: material.into(),
         })
     }
 
@@ -340,20 +335,15 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolylineBatchedFeature> {
-        let features = self.app.get_batched_features(batched_feature_id)?;
-
-        let mut material: Option<PolylineMaterial> = None;
+        let (features, material) = self
+            .app
+            .get_batched_features_for_polyline(batched_feature_id)?;
 
         let mut transferable = TransferablePolylineBatchedFeature::empty(features.len());
 
         let mut coords_handle_and_batch_ids = vec![];
 
         for f in &features {
-            if material.is_none() {
-                let m = f.get::<navara_material::PolylineMaterial>()?;
-                material = Some(m.into());
-            }
-
             let geometry = f.get::<navara_feature_component::polyline::PolylineGeometry>()?;
             let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
 
@@ -370,9 +360,9 @@ impl Core {
             }
         }
 
-        material.map(|material| ReturnedTransferablePolylineBatchedFeature {
+        Some(ReturnedTransferablePolylineBatchedFeature {
             transferable,
-            material,
+            material: material.into(),
         })
     }
 

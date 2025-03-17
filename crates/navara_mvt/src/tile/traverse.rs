@@ -16,11 +16,12 @@ use navara_tile_component::{Tile, TileHandle, VectorTile, VectorTileQuadtree};
 use navara_window::Window;
 
 use crate::{
+    component::MVTFeatureMarker,
     data_requester::{request_mvt_data, MvtDataRequesterQuery},
     layer::tile_cache_manager::TileCacheManager,
 };
 
-use super::{component::MVTFeatureMarker, render::RenderedTile};
+use super::render::RenderedTile;
 
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)

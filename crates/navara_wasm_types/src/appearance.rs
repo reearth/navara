@@ -181,6 +181,21 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
     }
 }
 
+impl From<navara_material::PolylineMaterial> for PolylineMaterial {
+    fn from(value: navara_material::PolylineMaterial) -> PolylineMaterial {
+        PolylineMaterial {
+            show: Some(value.show),
+            color: Some(value.color),
+            width: Some(value.width),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            use_ground_normals: Some(value.use_ground_normals),
+            height: Some(value.height),
+            __internal__: value.internal.map(|v| v.into()),
+            id_property: Some(value.id_property),
+        }
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineInternalMaterial {
@@ -199,6 +214,14 @@ impl From<&navara_material::PolylineInternalMaterial> for PolylineInternalMateri
     fn from(val: &navara_material::PolylineInternalMaterial) -> Self {
         PolylineInternalMaterial {
             min_max_heights: val.min_max_heights.clone(),
+        }
+    }
+}
+
+impl From<navara_material::PolylineInternalMaterial> for PolylineInternalMaterial {
+    fn from(val: navara_material::PolylineInternalMaterial) -> Self {
+        PolylineInternalMaterial {
+            min_max_heights: val.min_max_heights,
         }
     }
 }
@@ -279,6 +302,21 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
         }
     }
 }
+impl From<navara_material::PolygonMaterial> for PolygonMaterial {
+    fn from(value: navara_material::PolygonMaterial) -> PolygonMaterial {
+        PolygonMaterial {
+            show: Some(value.show),
+            color: Some(value.color),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            use_ground_normals: Some(value.use_ground_normals),
+            height: Some(value.height),
+            extruded_height: value.extruded_height,
+            wireframe: Some(value.wireframe),
+            __internal__: value.internal.map(|v| v.into()),
+            id_property: Some(value.id_property),
+        }
+    }
+}
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -298,6 +336,13 @@ impl From<&navara_material::PolygonInternalMaterial> for PolygonInternalMaterial
     fn from(val: &navara_material::PolygonInternalMaterial) -> Self {
         PolygonInternalMaterial {
             min_max_heights: val.min_max_heights.clone(),
+        }
+    }
+}
+impl From<navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
+    fn from(val: navara_material::PolygonInternalMaterial) -> Self {
+        PolygonInternalMaterial {
+            min_max_heights: val.min_max_heights,
         }
     }
 }
