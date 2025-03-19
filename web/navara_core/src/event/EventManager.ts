@@ -92,7 +92,7 @@ export class EventManager {
       if (Array.isArray(event)) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
-        this.stacks[k] = this.stacks[k].concat(event) as JsEvents[JsEventsKey];
+        this.stacks[k].push(...event);
       } else {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
@@ -173,57 +173,81 @@ export class EventManager {
     }
   }
 
+  // Remove duplicated events before it's proceeded.
+  // For example, if MeshAdd event and MeshRemove event are exist, it should be considered as duplicated.
   removeDuplicatedTransactionEvents<
     AddKey extends JsEventsKey,
     RemoveKey extends JsEventsKey,
     ChangeKey extends JsEventsKey,
   >(options: TransactionProcessOption<AddKey, RemoveKey, ChangeKey>) {
-    let removedIdx = 0;
-    const processedEvents = [];
-    for (const removed of this.stacks[options.remove.key]) {
-      if (!isEntityEvent(removed)) {
-        removedIdx++;
-        continue;
+    const addedEventsMap = new Map<string, number>();
+    const changedEventsMap = options.change ? new Map<string, number>() : null;
+
+    this.stacks[options.add.key].forEach((added, index) => {
+      if (isEntityEvent(added)) {
+        const id = generate_id_from_entity(added);
+        addedEventsMap.set(id, index);
       }
+    });
+
+    if (changedEventsMap && options.change) {
+      this.stacks[options.change.key].forEach((changed, index) => {
+        if (isEntityEvent(changed)) {
+          const id = generate_id_from_entity(changed);
+          changedEventsMap.set(id, index);
+        }
+      });
+    }
+
+    // Track indices to remove from each stack
+    const addedIndicesToRemove = new Set<number>();
+    const changedIndicesToRemove = new Set<number>();
+    const removedIndicesToSkip = new Set<number>();
+
+    this.stacks[options.remove.key].forEach((removed, removeIdx) => {
+      if (!isEntityEvent(removed)) return;
+
       const removedId = generate_id_from_entity(removed);
 
-      const removedAddedEventIdx = this.stacks[options.add.key].findIndex(
-        (added) => {
-          if (!isEntityEvent(added)) return;
-          const addedId = generate_id_from_entity(added);
-          return removedId === addedId;
-        },
-      );
-      const isRemovedAddedEventIdxFound = removedAddedEventIdx !== -1;
-      if (isRemovedAddedEventIdxFound) {
-        this.stacks[options.add.key].splice(removedAddedEventIdx, 1);
+      const addedIdx = addedEventsMap.get(removedId);
+      let foundMatch = false;
+
+      if (addedIdx !== undefined) {
+        addedIndicesToRemove.add(addedIdx);
+        foundMatch = true;
       }
 
-      if (options.change) {
-        const removedChangedEventIdx = this.stacks[
-          options.change.key
-        ].findIndex((changed) => {
-          if (!isEntityEvent(changed)) return;
-          const changedId = generate_id_from_entity(changed);
-          return removedId === changedId;
-        });
-
-        const isRemovedChangedEventIdx = removedChangedEventIdx !== -1;
-        if (isRemovedChangedEventIdx) {
-          this.stacks[options.change.key].splice(removedChangedEventIdx, 1);
+      if (changedEventsMap && options.change) {
+        const changedIdx = changedEventsMap.get(removedId);
+        if (changedIdx !== undefined) {
+          changedIndicesToRemove.add(changedIdx);
         }
       }
 
-      if (isRemovedAddedEventIdxFound) {
-        processedEvents.push(removedIdx);
+      if (foundMatch) {
+        removedIndicesToSkip.add(removeIdx);
       }
-      removedIdx++;
+    });
+
+    if (addedIndicesToRemove.size > 0) {
+      const sortedIndices = [...addedIndicesToRemove].sort((a, b) => b - a);
+      for (const idx of sortedIndices) {
+        this.stacks[options.add.key].splice(idx, 1);
+      }
     }
 
-    let removedIdxOffset = 0;
-    for (const idx of processedEvents) {
-      this.stacks[options.remove.key].splice(idx - removedIdxOffset, 1);
-      removedIdxOffset++;
+    if (changedIndicesToRemove.size > 0 && options.change) {
+      const sortedIndices = [...changedIndicesToRemove].sort((a, b) => b - a);
+      for (const idx of sortedIndices) {
+        this.stacks[options.change.key].splice(idx, 1);
+      }
+    }
+
+    if (removedIndicesToSkip.size > 0) {
+      const sortedIndices = [...removedIndicesToSkip].sort((a, b) => b - a);
+      for (const idx of sortedIndices) {
+        this.stacks[options.remove.key].splice(idx, 1);
+      }
     }
   }
 
@@ -287,14 +311,11 @@ export class EventManager {
       });
 
     // Handle an abort process to an add event.
-    if (generateEventId && onAbort && this.addedEventIds.size) {
+    if (onAbort && this.addedEventIds.size) {
       for (const event of this.stacks[options.remove.key]) {
         if (!event) continue;
         const removeEv = event as GetJsEventValue<RemoveKey>;
-        const id = generateEventId({
-          type: "remove",
-          event: removeEv,
-        });
+        const id = generateEventId({ type: "remove", event: removeEv });
         if (id && this.addedEventIds.has(id)) {
           onAbort(removeEv);
           this.addedEventIds.delete(id);

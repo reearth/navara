@@ -51,8 +51,7 @@ pub fn construct_geometry(
     let reader = mvt::MvtReader::new(mvt_bin).ok()?;
     let layer_names = reader.get_layer_names().ok()?;
 
-    // TODO: Allow to specify a layer name.
-    for (index, _name) in layer_names.iter().enumerate() {
+    for (index, name) in layer_names.iter().enumerate() {
         let extent = reader.get_extent(index);
         let mut converter = PosConverter::new(xyz, extent);
         let features = match reader.get_features(index) {
@@ -61,7 +60,7 @@ pub fn construct_geometry(
         };
 
         if let Some(ll) = limit_layers {
-            if !ll.contains(_name) {
+            if !ll.contains(name) {
                 continue;
             }
         }
