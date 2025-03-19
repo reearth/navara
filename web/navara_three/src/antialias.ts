@@ -1,5 +1,5 @@
 import {
-  EdgeDetectionMode,
+  EdgeDetectionMode as PostProcessingEdgeDetectionMode,
   FXAAEffect,
   SMAAEffect,
   SMAAPreset,
@@ -7,10 +7,14 @@ import {
 
 import type { Quality } from "./quality";
 
+export type EdgeDetectionMode = "color" | "depth";
+
 export type Antialias = {
   enabled: boolean;
   effect?: "fxaa" | "smaa";
   quality?: Quality;
+  // Using `color` might blur a texture, but `depth` has no effect on a mesh that has no depth.
+  edgeDetectionMode?: EdgeDetectionMode;
 };
 
 export const DEFAULT_ANTIALIAS: Antialias = {
@@ -29,7 +33,10 @@ export const selectAntialiasEffect = (aa: Antialias | undefined) => {
     case "smaa":
       // Anti-alias just to the depth to avoid blurring a texture.
       return new SMAAEffect({
-        edgeDetectionMode: EdgeDetectionMode.DEPTH,
+        edgeDetectionMode:
+          aa.edgeDetectionMode === "depth"
+            ? PostProcessingEdgeDetectionMode.DEPTH
+            : PostProcessingEdgeDetectionMode.COLOR,
         preset: selectSMAAPreset(aa.quality),
       });
   }
