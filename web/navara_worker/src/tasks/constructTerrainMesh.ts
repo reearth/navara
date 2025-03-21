@@ -30,6 +30,6 @@ export async function constructTerrainMesh(
     toTransferableMartini(martini),
   );
   const { result, transfers } = transferReturnedConstructedTerrainMesh(mesh);
-  mesh.drop();
+  mesh.free();
   return transfer({ result }, [...transfers]);
 }

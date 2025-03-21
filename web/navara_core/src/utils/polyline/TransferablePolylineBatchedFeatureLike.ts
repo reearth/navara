@@ -24,7 +24,6 @@ export class TransferablePolylineBatchedFeatureLike
   setPoints(_byte_length: number, _f: () => void): void {}
   setPointsSizes(_byte_length: number, _f: () => void): void {}
   setBatchIds(_byte_length: number, _f: () => void): void {}
-  drop(): void {}
 
   transferPoints(): Float32Array {
     throw new Error();

@@ -112,25 +112,23 @@ impl Core {
         byte_length: usize,
         f: &js_sys::Function,
     ) {
-        unsafe {
-            self.app
-                .set_buffer_u8(handle, bits, transfer_u8_array(byte_length, f));
-        }
+        self.app
+            .set_buffer_u8(handle, bits, transfer_u8_array(byte_length, f));
     }
 
     #[wasm_bindgen(js_name = newBufferU8)]
     pub fn new_buffer_u8(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
-        unsafe { self.app.new_buffer_u8(transfer_u8_array(byte_length, f)) }
+        self.app.new_buffer_u8(transfer_u8_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferU32)]
     pub fn new_buffer_u32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
-        unsafe { self.app.new_buffer_u32(transfer_u32_array(byte_length, f)) }
+        self.app.new_buffer_u32(transfer_u32_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferF32)]
     pub fn new_buffer_f32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
-        unsafe { self.app.new_buffer_f32(transfer_f32_array(byte_length, f)) }
+        self.app.new_buffer_f32(transfer_f32_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferU8Cloned)]
@@ -352,12 +350,9 @@ impl Core {
 
         let mut buf_store = self.app.get_buffer_store_mut()?;
         for (coords, batch_id) in coords_handle_and_batch_ids {
-            // `coords` comes from Rust for sure.
-            unsafe {
-                let mut points = buf_store.remove_f32(&coords)?.to_vec();
+            let mut points = buf_store.remove_f32(&coords)?.to_vec();
 
-                transferable.add(&mut points, &BatchId(batch_id));
-            }
+            transferable.add(&mut points, &BatchId(batch_id));
         }
 
         Some(ReturnedTransferablePolylineBatchedFeature {

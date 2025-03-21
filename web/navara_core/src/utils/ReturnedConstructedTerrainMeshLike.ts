@@ -31,7 +31,6 @@ export class ReturnedConstructedTerrainMeshLike
   transferHeights(): Float32Array {
     throw new Error();
   }
-  drop(): void {}
 
   free(): void {}
 }

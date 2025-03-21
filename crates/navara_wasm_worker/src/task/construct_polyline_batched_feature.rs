@@ -101,8 +101,6 @@ pub fn construct_polyline_batched_feature(
         index_offset += position_length as u32;
     }
 
-    features.drop();
-
     Some(ConstructedPolylineGeometry::new(
         (&combined_extent.unwrap()).into(),
         PolylineGeometry::new(combined_attributes.into(), indices),

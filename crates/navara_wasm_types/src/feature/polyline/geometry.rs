@@ -66,10 +66,6 @@ impl ConstructedPolylineGeometry {
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         self.geometry.indices()
     }
-
-    pub fn drop(self) {
-        self.geometry.drop();
-    }
 }
 
 #[wasm_bindgen]
@@ -138,11 +134,6 @@ impl PolylineGeometry {
     }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.indices)
-    }
-
-    pub fn drop(self) {
-        drop(self.indices);
-        self.attributes.drop();
     }
 }
 
@@ -214,19 +205,6 @@ impl PolylineGeometryAttributes {
             return None;
         };
         Some(batch_id.size)
-    }
-
-    pub fn drop(self) {
-        drop(self.position.data);
-        drop(self.start.data);
-        drop(self.start_normals.data);
-        drop(self.forward_offset.data);
-        drop(self.end_normal_and_texture_coordinate_normalization_x.data);
-        drop(
-            self.right_normal_and_texture_coordinate_normalization_y
-                .data,
-        );
-        drop(self.batch_id_and_sel.unwrap().data);
     }
 }
 

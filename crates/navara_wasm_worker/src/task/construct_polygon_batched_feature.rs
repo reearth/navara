@@ -103,8 +103,6 @@ pub fn construct_polygon_batched_feature(
         index_offset += position_length as u32;
     }
 
-    features.drop();
-
     Some(ConstructedPolygonGeometry::new(
         (&combined_extent?).into(),
         PolygonGeometry::new(combined_attributes.into(), indices),

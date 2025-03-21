@@ -136,7 +136,7 @@ pub fn transfer_mesh(
 ) {
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polylines {
         // `coords` has a lifetime for sure.
-        let constructed_feature = unsafe {
+        let constructed_feature = {
             let coords = buf.remove_f32(&geometry.coords).unwrap();
             construct_polyline_feature(material, coords, &geometry.crs)
         };
