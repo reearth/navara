@@ -23,6 +23,9 @@ import { BufferView } from "./bufferView";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 
+// @ts-expect-error : Could not find a declaration file for module 'troika-three-text'.
+import { Text } from "troika-three-text";
+
 export type PickHelperOptions = {
   debug: boolean;
 };
@@ -145,11 +148,19 @@ export class PickHelper {
       }
 
       // model
-      else if (obj instanceof Group) {
+      else if (obj.userData.isModel) {
         this.traverseModel(obj, (mesh: Mesh) => {
-          if ("userData" in mesh.material) {
+          if ("userData" in mesh.material && mesh.material.userData.uPickable) {
             mesh.material.userData.uPickable.value = picable;
           }
+        });
+      }
+      // text
+      else if (obj.userData.isText) {
+        obj.userData.uPickable.value = picable;
+
+        obj.children.forEach((item) => {
+          item.frustumCulled = picable < 0.5;
         });
       }
       // tile
@@ -299,6 +310,25 @@ export class PickHelper {
     obj.geometry.attributes.batchIdAndSel.needsUpdate = true;
   }
 
+  private pickText(pickSet: Set<number>, obj: Group) {
+    const batchId = obj.userData.batchId;
+    const isPicked = pickSet.has(batchId);
+    if (isPicked) {
+      pickSet.delete(batchId);
+    }
+
+    if (obj.userData.isPicked !== isPicked) {
+      obj.userData.isPicked = isPicked;
+
+      const txt = obj.children.find((item) => item instanceof Text) as Text;
+      if (isPicked) {
+        txt.color = this.highlightColor;
+      } else {
+        txt.color = obj.userData.fontColor;
+      }
+    }
+  }
+
   private toggleHighlight(pickArr: number[]) {
     const pickSet = new Set(pickArr);
     for (const [_key, obj] of this.meshes) {
@@ -308,13 +338,18 @@ export class PickHelper {
       }
 
       // model
-      else if (obj instanceof Group && obj.userData.batchIdAndSel) {
+      else if (obj instanceof Group && obj.userData.isModel) {
         this.pickModel(pickSet, obj);
       }
 
       // polygon, polyline
       else if (obj instanceof Mesh && obj.userData.batchIdAndSel) {
         this.pickMesh(pickSet, obj);
+      }
+
+      // text
+      else if (obj instanceof Group && obj.userData.isText) {
+        this.pickText(pickSet, obj);
       }
     }
   }

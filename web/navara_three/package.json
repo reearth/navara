@@ -32,7 +32,8 @@
     "postprocessing": "^6.36.7",
     "stats.js": "^0.17.0",
     "three-stdlib": "^2.35.14",
-    "tweakpane": "^4.0.5"
+    "tweakpane": "^4.0.5",
+    "troika-three-text": "^0.52.3"
   },
   "devDependencies": {
     "@types/stats.js": "^0.17.3",

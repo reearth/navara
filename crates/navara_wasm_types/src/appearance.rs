@@ -122,11 +122,10 @@ pub struct TextMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
-    pub font_family: Option<String>,
-    pub resolution: Option<u32>,
+    pub font: Option<String>,
     pub background_color: Option<u32>,
     pub border_color: Option<u32>,
-    pub border_width: Option<u32>,
+    pub border_width: Option<f32>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -142,9 +141,8 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             text: val.text.unwrap_or(default.text),
-            font_family: val.font_family.unwrap_or(default.font_family),
-            resolution: val.resolution.unwrap_or(default.resolution),
-            background_color: val.background_color.unwrap_or(default.background_color),
+            font: val.font.unwrap_or(default.font),
+            background_color: val.background_color,
             border_color: val.border_color.unwrap_or(default.border_color),
             border_width: val.border_width.unwrap_or(default.border_width),
         }
@@ -162,9 +160,8 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             text: Some(value.text.clone()),
-            font_family: Some(value.font_family.clone()),
-            resolution: Some(value.resolution),
-            background_color: Some(value.background_color),
+            font: Some(value.font.clone()),
+            background_color: value.background_color,
             border_color: Some(value.border_color),
             border_width: Some(value.border_width),
         }

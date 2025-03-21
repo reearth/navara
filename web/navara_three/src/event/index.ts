@@ -55,7 +55,8 @@ import type { TextureOptions } from "../textures";
 import type { AbortControllers, MeshCache, WorkerPoolPromises } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
-import { renderFeature, makeTextTexture } from "./feature";
+import { renderFeature } from "./feature";
+import { updateText } from "./text";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
@@ -713,7 +714,7 @@ function processRenderableFeatureChanged(
     if (obj instanceof Sprite && material instanceof BillboardMaterial) {
       processBillboardChanged(obj, material, active);
     }
-    if (obj instanceof Sprite && material instanceof TextMaterial) {
+    if (obj instanceof Group && material instanceof TextMaterial) {
       processTextChanged(obj, material, active);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {
@@ -782,25 +783,15 @@ function processBillboardChanged(
 }
 
 function processTextChanged(
-  obj: Sprite,
+  obj: Group,
   material: TextMaterial,
   active: boolean,
 ) {
-  obj.material.sizeAttenuation = !material.scale_by_distance;
-
-  if (!obj.userData.isPicked) {
-    obj.material.color.set(obj.userData.orgColor);
-  }
-
+  obj.scale.set(1, 1, 1);
   obj.visible = (material.show ?? true) && active;
   if (obj.visible) {
-    const ret = makeTextTexture(material);
-    if (ret) {
-      obj.material.map = ret.texture;
-    }
+    updateText(obj, material);
   }
-
-  obj.material.needsUpdate = true;
 }
 
 function processModelChanged(

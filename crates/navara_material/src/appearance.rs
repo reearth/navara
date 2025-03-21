@@ -110,11 +110,10 @@ pub struct TextMaterial {
     pub clamp_to_ground: bool,
     pub depth_test: bool,
     pub text: String,
-    pub font_family: String,
-    pub resolution: u32,
-    pub background_color: u32,
+    pub font: String,
+    pub background_color: Option<u32>,
     pub border_color: u32,
-    pub border_width: u32,
+    pub border_width: FloatType,
 }
 
 impl Default for TextMaterial {
@@ -129,11 +128,10 @@ impl Default for TextMaterial {
             scale_by_distance: true,
             depth_test: true,
             text: "".to_string(),
-            font_family: "sans-serif".to_string(),
-            resolution: 1,
-            background_color: 0xffffff,
+            font: "".to_string(),
+            background_color: None,
             border_color: 0x000000,
-            border_width: 1,
+            border_width: 0.05,
         }
     }
 }
