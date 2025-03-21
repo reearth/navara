@@ -44,10 +44,6 @@ impl ConstructedPolygonGeometry {
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         self.geometry.indices()
     }
-
-    pub fn drop(self) {
-        self.geometry.drop();
-    }
 }
 
 #[wasm_bindgen]
@@ -94,11 +90,6 @@ impl PolygonGeometry {
     }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.indices)
-    }
-
-    pub fn drop(self) {
-        self.attributes.drop();
-        drop(self.indices);
     }
 }
 
@@ -154,15 +145,6 @@ impl PolygonGeometryAttributes {
             return None;
         };
         Some(batch_id.size)
-    }
-
-    pub fn drop(self) {
-        drop(self.position.data);
-        if let Some(normal) = self.normal {
-            drop(normal.data);
-        }
-        drop(self.scale_normal_and_cap.unwrap().data);
-        drop(self.batch_id_and_sel.unwrap().data);
     }
 }
 

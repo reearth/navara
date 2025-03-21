@@ -39,7 +39,6 @@ export class TransferablePolygonBatchedFeatureLike
   setHolesBoundaries(_length: number, _f: () => void) {}
   setHolesSizes(_length: number, _f: () => void) {}
   setHolesTotalSizes(_length: number, _f: () => void) {}
-  drop(): void {}
 
   transferBatchIds(): Uint32Array {
     throw new Error();

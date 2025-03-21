@@ -77,30 +77,25 @@ impl Hierarchy {
             Some(h_holes) => {
                 let mut holes = vec![];
                 for hole in h_holes {
-                    unsafe {
-                        let outer_ring = buf.remove_f32(&hole.outer_ring)?;
+                    let outer_ring = buf.remove_f32(&hole.outer_ring)?;
 
-                        holes.push(Hierarchy {
-                            outer_ring,
-                            holes: None,
-                            expected_winding_order: hole.expected_winding_order,
-                        });
-                    }
+                    holes.push(Hierarchy {
+                        outer_ring,
+                        holes: None,
+                        expected_winding_order: hole.expected_winding_order,
+                    });
                 }
                 Some(holes)
             }
             None => None,
         };
 
-        // `outer_ring` has a lifetime for sure.
-        unsafe {
-            let outer_ring = buf.remove_f32(&value.outer_ring)?;
-            Some(Hierarchy {
-                outer_ring,
-                holes,
-                expected_winding_order: value.expected_winding_order,
-            })
-        }
+        let outer_ring = buf.remove_f32(&value.outer_ring)?;
+        Some(Hierarchy {
+            outer_ring,
+            holes,
+            expected_winding_order: value.expected_winding_order,
+        })
     }
 
     pub fn from_transferred_cloned(

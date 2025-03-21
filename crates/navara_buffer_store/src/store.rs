@@ -89,39 +89,24 @@ impl BufferStore {
     }
 
     pub fn remove(&mut self, handle: &Handle) {
-        // Need to drop it manually, because the stored Vec might be assigned by TypedArray::view.
-        match self.buffers.remove(handle) {
-            Some(Buffer::F32(v)) => drop(v),
-            Some(Buffer::U32(v)) => drop(v),
-            Some(Buffer::U8(v)) => drop(v),
-            None => {}
-        };
+        self.buffers.remove(handle);
     }
 
-    /// # Safety
-    /// The stored Vec might be assigned by TypedArray::view, so it has been leaked.
-    /// You need to drop it manually, otherwise it causes leaking memory.
-    pub unsafe fn remove_f32(&mut self, handle: &Handle) -> Option<Vec<f32>> {
+    pub fn remove_f32(&mut self, handle: &Handle) -> Option<Vec<f32>> {
         match self.buffers.remove(handle)? {
             Buffer::F32(b) => Some(b),
             _ => None,
         }
     }
 
-    /// # Safety
-    /// The stored Vec might be assigned by TypedArray::view, so it has been leaked.
-    /// You need to drop it manually, otherwise it causes leaking memory.
-    pub unsafe fn remove_u32(&mut self, handle: &Handle) -> Option<Vec<u32>> {
+    pub fn remove_u32(&mut self, handle: &Handle) -> Option<Vec<u32>> {
         match self.buffers.remove(handle)? {
             Buffer::U32(b) => Some(b),
             _ => None,
         }
     }
 
-    /// # Safety
-    /// The stored Vec might be assigned by TypedArray::view, so it has been leaked.
-    /// You need to drop it manually, otherwise it causes leaking memory.
-    pub unsafe fn remove_u8(&mut self, handle: &Handle) -> Option<Vec<u8>> {
+    pub fn remove_u8(&mut self, handle: &Handle) -> Option<Vec<u8>> {
         match self.buffers.remove(handle)? {
             Buffer::U8(b) => Some(b),
             _ => None,

@@ -37,21 +37,15 @@ impl TransferablePolylineBatchedFeature {
 
     #[wasm_bindgen(js_name = "setBatchIds")]
     pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.batch_ids = transfer_u32_array(byte_length, f) }
+        self.batch_ids = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setPoints")]
     pub fn set_points(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.points = transfer_f32_array(byte_length, f) }
+        self.points = transfer_f32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setPointsSizes")]
     pub fn set_points_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.points_sizes = transfer_u32_array(byte_length, f) }
-    }
-
-    pub fn drop(self) {
-        drop(self.points);
-        drop(self.points_sizes);
-        drop(self.batch_ids);
+        self.points_sizes = transfer_u32_array(byte_length, f)
     }
 
     #[wasm_bindgen(js_name = "transferBatchIds")]
