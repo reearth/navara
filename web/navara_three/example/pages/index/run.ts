@@ -458,4 +458,3 @@ export const run = async (view: ThreeView) => {
 
   addCtrlPanel(geoLayersDef, view);
 };
-
