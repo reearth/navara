@@ -11,3 +11,4 @@ navara_event_store = { path = "../navara_event_store" }
 navara_math = { path = "../navara_math" }
 navara_component = { path = "../navara_component" }
 navara_buffer_store = { path = "../navara_buffer_store" }
+navara_material = { path = "../navara_material" }

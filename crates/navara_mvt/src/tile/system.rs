@@ -5,13 +5,13 @@ use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
     batch::{BatchId, BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
     id::FeatureId,
-    point::PointMarker,
     polygon::PolygonMarker,
     polyline::PolylineMarker,
     render::RenderableFeature,
 };
 use navara_fog::Fog;
 use navara_frame::FrameManager;
+use navara_material::Appearance;
 use navara_math::Transform;
 
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -21,13 +21,13 @@ use navara_tile_component::{VectorTile, VectorTileQuadtree};
 use navara_window::Window;
 
 use crate::{
+    component::MVTFeatureMarker,
     data_requester::{ChangedMvtDataRequesterQuery, MvtDataRequesterQuery},
     geometry::{construct_geometry, ConstructedGeometryType},
     layer::{resource::LayerResources, tile_cache_manager::TileCacheManager},
 };
 
 use super::{
-    component::MVTFeatureMarker,
     render::RenderedTile,
     traverse::{
         activate_all_renderable_features, are_all_renderable_features_active,
@@ -35,7 +35,7 @@ use super::{
     },
 };
 
-use navara_layer::{LayerStore, MvtLayer};
+use navara_layer::{LayerId, LayerStore, MvtLayer};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
@@ -231,59 +231,89 @@ pub fn transfer_mesh(
             let (_, data_requester) = mvt_data_requester
                 .get(tile.data_requester_entity_id.unwrap())
                 .unwrap();
-            unsafe {
-                let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
-                if let Some(result) = construct_geometry(
-                    &mut commands,
-                    &mut batch_table,
-                    &mut id_prop_table_res,
-                    &mut buf,
-                    mvt_bin,
-                    &id_prop_sel_res,
-                    &layer.layer_id,
-                    tile.coords,
-                    &layer.appearances,
-                    limit_layers,
-                ) {
-                    if rendered_tile.feature_ids.is_some() {
-                        panic!("It should be cleaned before new feature is added");
-                    }
-                    rendered_tile.feature_ids = Some(Vec::with_capacity(result.len()));
+            let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
+            if let Some(result) = construct_geometry(
+                &mut commands,
+                &mut batch_table,
+                &mut id_prop_table_res,
+                &mut buf,
+                mvt_bin,
+                &id_prop_sel_res,
+                &layer.layer_id,
+                tile.coords,
+                &layer.appearances,
+                limit_layers,
+            ) {
+                if rendered_tile.feature_ids.is_some() {
+                    panic!("It should be cleaned before new feature is added");
+                }
+                rendered_tile.feature_ids = Some(Vec::with_capacity(result.len()));
 
-                    for v in result {
-                        let batched = BatchedFeature {
-                            features: v.feature_ids,
-                            ..Default::default()
-                        };
-                        let e = match v.geometry_type {
-                            ConstructedGeometryType::Point => commands
-                                .spawn((
-                                    PointMarker,
-                                    batched,
-                                    MVTFeatureMarker,
-                                    FeatureId::default(),
-                                ))
-                                .id(),
-                            ConstructedGeometryType::Polyline => commands
+                for v in result {
+                    let mut batched = BatchedFeature {
+                        features: v.feature_ids,
+                        ..Default::default()
+                    };
+                    let e = match v.geometry_type {
+                        ConstructedGeometryType::Point => {
+                            // Point doesn't support batched feature, so manage each feature directly.
+                            rendered_tile
+                                .feature_ids
+                                .as_mut()
+                                .unwrap()
+                                .append(&mut batched.features);
+                            continue;
+                            // TODO: Support instancing
+                            // commands
+                            // .spawn((
+                            //     PointMarker,
+                            //     batched,
+                            //     MVTFeatureMarker,
+                            //     FeatureId::default(),
+                            // ))
+                            // .id()
+                        }
+                        ConstructedGeometryType::Polyline => {
+                            let Some(Appearance::Polyline(appearance)) = layer
+                                .appearances
+                                .iter()
+                                .find(|a| matches!(a, Appearance::Polyline(_)))
+                            else {
+                                return;
+                            };
+                            commands
                                 .spawn((
                                     PolylineMarker,
                                     batched,
                                     FeatureId::default(),
                                     MVTFeatureMarker,
+                                    LayerId(layer.layer_id.clone()),
+                                    appearance.clone(),
                                 ))
-                                .id(),
-                            ConstructedGeometryType::Polygon => commands
+                                .id()
+                        }
+                        ConstructedGeometryType::Polygon => {
+                            let Some(Appearance::Polygon(appearance)) = layer
+                                .appearances
+                                .iter()
+                                .find(|a| matches!(a, Appearance::Polygon(_)))
+                            else {
+                                return;
+                            };
+                            commands
                                 .spawn((
                                     PolygonMarker,
                                     batched,
                                     FeatureId::default(),
                                     MVTFeatureMarker,
+                                    LayerId(layer.layer_id.clone()),
+                                    appearance.clone(),
                                 ))
-                                .id(),
-                        };
+                                .id()
+                        }
+                    };
 
-                        rendered_tile.feature_ids.as_mut().unwrap().push(e);
-                    }
+                    rendered_tile.feature_ids.as_mut().unwrap().push(e);
                 }
             }
         }

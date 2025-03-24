@@ -11,7 +11,6 @@ use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
 use navara_quadtree::{children_coords, Coords};
-use navara_texture_fragment::TextureFragmentStatus;
 
 use crate::{
     raster_tile_texture_fragment::TileTextureFragmentQuery, terrain::TerrainData,
@@ -37,7 +36,7 @@ pub struct RasterTile {
     pub rendered_at: usize,
     pub visited_at: usize,
     pub terrain_data: Option<Box<dyn TerrainData>>,
-    pub texture_fragment_entity_id: Option<Entity>,
+    pub texture_fragment_entity_ids: Option<Vec<Option<Entity>>>,
     pub occludee_point_in_scaled_space: Option<Vec3>,
     pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
@@ -60,7 +59,7 @@ impl Clone for RasterTile {
             rendered_at: self.rendered_at,
             visited_at: self.visited_at,
             terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
-            texture_fragment_entity_id: self.texture_fragment_entity_id,
+            texture_fragment_entity_ids: self.texture_fragment_entity_ids.clone(),
             occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
             cached_mesh_handle: self.cached_mesh_handle.clone(),
             upsampled: self.upsampled,
@@ -91,7 +90,7 @@ impl RasterTile {
             rendered_at: 0,
             visited_at: 0,
             terrain_data: None,
-            texture_fragment_entity_id: None,
+            texture_fragment_entity_ids: None,
             occludee_point_in_scaled_space: None,
             cached_mesh_handle: None,
             upsampled: false,
@@ -119,7 +118,10 @@ impl RasterTile {
 
         // This means a terrain isn't used.
         if terrain_layer.is_none()
-            && self.texture_fragment_entity_id.is_some()
+            && self
+                .texture_fragment_entity_ids
+                .as_ref()
+                .map_or(false, |ids| !ids.is_empty())
             && data_requester_entity_id.is_none()
         {
             return ReadyState {
@@ -170,10 +172,15 @@ impl RasterTile {
     }
 
     pub fn is_texture_ready(&self, texture_fragment: &TileTextureFragmentQuery) -> bool {
-        let texture_fragment_status = self
-            .texture_fragment_entity_id
-            .map(|e| texture_fragment.get(e).map(|t| &t.1.status));
-        texture_fragment_status.map_or(false, |s| matches!(s, Ok(TextureFragmentStatus::Success)))
+        self.texture_fragment_entity_ids
+            .as_ref()
+            .map(|e| {
+                e.iter().any(|e| {
+                    e.and_then(|e| texture_fragment.get(e).map(|t| t.1.is_succeeded()).ok())
+                        .unwrap_or(false)
+                })
+            })
+            .unwrap_or(false)
     }
 
     pub fn is_terrain_ready(
@@ -298,10 +305,13 @@ impl RasterTile {
             }
             self.cached_mesh_handle = None;
         }
-        if let Some(fragment) = self.texture_fragment_entity_id {
-            commands.entity(fragment).insert(Deleted);
-            self.texture_fragment_entity_id = None;
+
+        if let Some(fragments) = self.texture_fragment_entity_ids.take() {
+            for fragment in fragments.into_iter().flatten() {
+                commands.entity(fragment).insert(Deleted);
+            }
         }
+
         if let Some(t) = &mut self.terrain_data {
             if let Some(e) = t.data_requester_entity_id() {
                 let data_requester = terrain_data_requester.get(e).unwrap();

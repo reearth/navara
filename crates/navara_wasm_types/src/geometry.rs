@@ -41,12 +41,6 @@ impl Geometry {
     pub fn transfer_indices(&self) -> Uint32Array {
         copy_u32_array(&self.indices)
     }
-
-    pub fn drop(self) {
-        drop(self.vertices);
-        drop(self.uvs);
-        drop(self.indices);
-    }
 }
 
 impl From<navara_geometry::Geometry> for Geometry {
@@ -112,11 +106,6 @@ impl ReturnedConstructedTerrainMesh {
     #[wasm_bindgen(js_name = "transferHeights")]
     pub fn transfer_heights(&self) -> Float32Array {
         copy_f32_array(&self.heights)
-    }
-
-    pub fn drop(self) {
-        drop(self.heights);
-        self.geometry.drop();
     }
 }
 

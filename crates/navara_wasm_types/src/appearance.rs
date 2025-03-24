@@ -1,3 +1,4 @@
+use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -240,6 +241,21 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
     }
 }
 
+impl From<navara_material::PolylineMaterial> for PolylineMaterial {
+    fn from(value: navara_material::PolylineMaterial) -> PolylineMaterial {
+        PolylineMaterial {
+            show: Some(value.show),
+            color: Some(value.color),
+            width: Some(value.width),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            use_ground_normals: Some(value.use_ground_normals),
+            height: Some(value.height),
+            __internal__: value.internal.map(|v| v.into()),
+            id_property: Some(value.id_property),
+        }
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineInternalMaterial {
@@ -258,6 +274,14 @@ impl From<&navara_material::PolylineInternalMaterial> for PolylineInternalMateri
     fn from(val: &navara_material::PolylineInternalMaterial) -> Self {
         PolylineInternalMaterial {
             min_max_heights: val.min_max_heights.clone(),
+        }
+    }
+}
+
+impl From<navara_material::PolylineInternalMaterial> for PolylineInternalMaterial {
+    fn from(val: navara_material::PolylineInternalMaterial) -> Self {
+        PolylineInternalMaterial {
+            min_max_heights: val.min_max_heights,
         }
     }
 }
@@ -338,6 +362,21 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
         }
     }
 }
+impl From<navara_material::PolygonMaterial> for PolygonMaterial {
+    fn from(value: navara_material::PolygonMaterial) -> PolygonMaterial {
+        PolygonMaterial {
+            show: Some(value.show),
+            color: Some(value.color),
+            clamp_to_ground: Some(value.clamp_to_ground),
+            use_ground_normals: Some(value.use_ground_normals),
+            height: Some(value.height),
+            extruded_height: value.extruded_height,
+            wireframe: Some(value.wireframe),
+            __internal__: value.internal.map(|v| v.into()),
+            id_property: Some(value.id_property),
+        }
+    }
+}
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -357,6 +396,13 @@ impl From<&navara_material::PolygonInternalMaterial> for PolygonInternalMaterial
     fn from(val: &navara_material::PolygonInternalMaterial) -> Self {
         PolygonInternalMaterial {
             min_max_heights: val.min_max_heights.clone(),
+        }
+    }
+}
+impl From<navara_material::PolygonInternalMaterial> for PolygonInternalMaterial {
+    fn from(val: navara_material::PolygonInternalMaterial) -> Self {
+        PolygonInternalMaterial {
+            min_max_heights: val.min_max_heights,
         }
     }
 }
@@ -428,8 +474,6 @@ pub struct RasterTileMaterial {
     pub max_sse: Option<f32>,
     pub wireframe: Option<bool>,
     pub should_compute_normal_from_vertex: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub __internal__: Option<RasterTileInternalMaterial>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
@@ -444,7 +488,6 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             max_sse: val.max_sse.unwrap_or(default.max_sse),
             should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
-            internal: None,
         }
     }
 }
@@ -459,7 +502,6 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             max_sse: Some(value.max_sse),
             should_compute_normal_from_vertex: value.should_compute_normal_from_vertex,
             wireframe: Some(value.wireframe),
-            __internal__: value.internal.as_ref().map(|v| v.into()),
         }
     }
 }
@@ -468,16 +510,45 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
-    pub texture_fragment: Option<TextureFragment>,
+    pub shows: Vec<u8>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub colors: Vec<u32>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub opacities: Vec<f32>,
+    texture_fragments: Option<Vec<Option<TextureFragment>>>,
+    pub should_compute_normal_from_vertex: Option<bool>,
+    pub wireframe: bool,
+}
+
+#[wasm_bindgen]
+impl RasterTileInternalMaterial {
+    pub fn texture_fragments(&self) -> Option<Vec<JsValue>> {
+        self.texture_fragments.as_ref().map(|ts| {
+            ts.iter()
+                .map(|t| t.clone().map(|t| t.into()).unwrap_or(JsValue::null()))
+                .collect()
+        })
+    }
 }
 
 impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInternalMaterial {
     fn from(m: &'a navara_material::RasterTileInternalMaterial) -> Self {
         Self {
-            texture_fragment: m.texture_fragment.map(|t| TextureFragment {
-                ind: t.index(),
-                gen: t.generation(),
+            shows: m.shows.iter().map(|s| s.to_u8()).collect(),
+            colors: m.colors.clone(),
+            opacities: m.opacities.clone(),
+            texture_fragments: m.texture_fragments.as_ref().map(|ts| {
+                ts.iter()
+                    .map(|t| {
+                        t.map(|t| TextureFragment {
+                            ind: t.index(),
+                            gen: t.generation(),
+                        })
+                    })
+                    .collect()
             }),
+            should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
+            wireframe: m.wireframe,
         }
     }
 }

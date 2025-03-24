@@ -2,8 +2,9 @@ use bevy_ecs::prelude::*;
 
 use navara_layer::{
     DeleteB3dmLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
-    DeleteMvtLayerMarker, LayerDescStore, LayerDescription, LayerId, UpdateB3dmLayerMarker,
-    UpdateCesium3dTilesLayerMarker, UpdateGeoJsonLayerMarker, UpdateMvtLayerMarker,
+    DeleteMvtLayerMarker, DeleteRasterTileLayerMarker, LayerDescStore, LayerDescription, LayerId,
+    UpdateB3dmLayerMarker, UpdateCesium3dTilesLayerMarker, UpdateGeoJsonLayerMarker,
+    UpdateMvtLayerMarker, UpdateRasterTileLayerMarker,
 };
 use navara_material::Appearance;
 
@@ -84,6 +85,12 @@ pub fn process_update_events(
                     layer_id: ev.layer_id.0.clone(),
                 });
             }
+            LayerDescription::Tiles(_) => {
+                commands.spawn(UpdateRasterTileLayerMarker {
+                    appearance: ev.appearance.clone(),
+                    layer_id: ev.layer_id.0.clone(),
+                });
+            }
             _ => {}
         }
     }
@@ -112,6 +119,9 @@ pub fn process_delete_events(
             }
             LayerDescription::Mvt(_) => {
                 commands.spawn(DeleteMvtLayerMarker(layer_id.0.clone()));
+            }
+            LayerDescription::Tiles(_) => {
+                commands.spawn(DeleteRasterTileLayerMarker(layer_id.0.clone()));
             }
             _ => {}
         };

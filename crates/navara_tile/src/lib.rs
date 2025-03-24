@@ -25,14 +25,18 @@ impl Plugin for TilePlugin {
                     terrain::system::begine_terrain_layer,
                     tile::system::handle_prepared_mesh_event,
                     tile::system::handle_tile_worker_task_completed,
+                    tile::system::add_order_to_tiles_layer,
                 )
                     .chain(),
             )
             .add_systems(
                 Update,
                 (
+                    tile::system::update_layer,
+                    tile::system::delete_layer,
                     tile::system::update_tiles,
                     tile::system::transfer_mesh,
+                    tile::system::update_mesh_material,
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
                     tile::system::clear_caches,

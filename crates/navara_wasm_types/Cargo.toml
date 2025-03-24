@@ -19,3 +19,4 @@ navara_mesh = { path = "../navara_mesh" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_material = { path = "../navara_material" }
 navara_feature_component = { path = "../navara_feature_component" }
+navara_wasm_utils = { path = "../navara_wasm_utils" }

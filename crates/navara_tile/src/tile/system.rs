@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_component::{Deleted, OrderByDistance, Priority, Rendered};
+use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
@@ -38,7 +38,9 @@ use super::{
     traverse::{prepare_tile_resource, spawn_tile_entity, traverse_tile, TraversalResult},
 };
 
-use navara_layer::{TerrainLayer, TilesLayer};
+use navara_layer::{
+    DeleteRasterTileLayerMarker, TerrainLayer, TilesLayer, UpdateRasterTileLayerMarker,
+};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
@@ -48,9 +50,9 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    tiles: Query<&TilesLayer>,
+    mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Added<TilesLayer>>)>,
     terrain_layer: Query<&TerrainLayer>,
-    camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
+    camera: Query<(Ref<Transform>, &CameraFrustum), With<CameraMarker>>,
     texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
@@ -74,6 +76,7 @@ pub fn update_tiles(
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
     let is_mesh_changed = !meshes_set.p1().is_empty();
+    let is_tile_layer_added = !tiles_set.p1().is_empty();
 
     let mut meshes = meshes_set.p0();
 
@@ -83,86 +86,85 @@ pub fn update_tiles(
     let occluder = occluder.iter().next().unwrap();
 
     let fog = fogs.single();
+    let (camera, frustum) = camera.single();
 
-    // TODO: Support multiple tiles
-    for tiles in &tiles {
-        for (_, camera, frustum) in &camera {
-            let needs_update = is_texture_fragment_changed
-                || is_data_requester_changed
-                || is_mesh_changed
-                || tc.is_updated_in_this_frame
-                || camera.is_added()
-                || camera.is_changed();
-            if !needs_update {
-                continue;
-            }
+    let needs_update = is_texture_fragment_changed
+        || is_data_requester_changed
+        || is_mesh_changed
+        || tc.is_updated_in_this_frame
+        || camera.is_added()
+        || camera.is_changed()
+        || is_tile_layer_added;
+    if !needs_update {
+        return;
+    }
 
-            tc.is_updated_in_this_frame = true;
-            tc.last_rendered_frame = frame.rendered_frame();
+    let tiles = &tiles_set.p0();
 
-            let zero_tile = match qt.qt.zero() {
-                Some(z) => z,
-                None => {
-                    qt.qt
-                        .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0.));
-                    qt.qt
-                        .zero()
-                        .expect("Failed to initialize a level zero tile unexpectedly")
-                }
-            };
-            let zero_tile_handle = zero_tile.handle();
-            match traverse_tile(
+    tc.is_updated_in_this_frame = true;
+    tc.last_rendered_frame = frame.rendered_frame();
+
+    let zero_tile = match qt.qt.zero() {
+        Some(z) => z,
+        None => {
+            qt.qt
+                .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0.));
+            qt.qt
+                .zero()
+                .expect("Failed to initialize a level zero tile unexpectedly")
+        }
+    };
+    let zero_tile_handle = zero_tile.handle();
+    match traverse_tile(
+        &mut commands,
+        tiles,
+        &terrain_layer,
+        zero_tile_handle,
+        &mut tc,
+        &mut qt,
+        &mut buf,
+        &frame,
+        &camera,
+        frustum,
+        &texture_fragment,
+        &terrain_data_requester,
+        &window,
+        &WGS84_32,
+        occluder,
+        &mut meshes,
+        fog,
+        false,
+    ) {
+        TraversalResult::TileRendered => {
+            spawn_tile_entity(
                 &mut commands,
+                &mut tc,
+                &frame,
+                qt.qt.get_mut(zero_tile_handle).unwrap(),
+                zero_tile_handle,
+            );
+            if tc.is_rendered_tile_prepared(&zero_tile_handle) {
+                tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, true);
+            }
+        }
+        TraversalResult::NotFound => {
+            prepare_tile_resource(
+                &mut commands,
+                qt.qt.get_mut(zero_tile.handle()).unwrap(),
+                &mut buf,
                 tiles,
                 &terrain_layer,
-                zero_tile_handle,
+                zero_tile.handle(),
                 &mut tc,
-                &mut qt,
-                &mut buf,
-                &frame,
-                &camera,
-                frustum,
                 &texture_fragment,
                 &terrain_data_requester,
-                &window,
-                &WGS84_32,
-                occluder,
-                &mut meshes,
-                fog,
-                false,
-            ) {
-                TraversalResult::TileRendered => {
-                    spawn_tile_entity(
-                        &mut commands,
-                        &mut tc,
-                        &frame,
-                        qt.qt.get_mut(zero_tile_handle).unwrap(),
-                        zero_tile_handle,
-                    );
-                    if tc.is_rendered_tile_prepared(&zero_tile_handle) {
-                        tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, true);
-                    }
-                }
-                TraversalResult::NotFound => {
-                    prepare_tile_resource(
-                        &mut commands,
-                        qt.qt.get_mut(zero_tile.handle()).unwrap(),
-                        &mut buf,
-                        tiles,
-                        &terrain_layer,
-                        zero_tile.handle(),
-                        &mut tc,
-                        &texture_fragment,
-                        &terrain_data_requester,
-                        Priority::Extreme,
-                    );
-                }
-                TraversalResult::ChildrenMeshesPrepared => {
-                    tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, false);
-                }
-                _ => {}
-            };
+                Priority::Extreme,
+            );
         }
+        TraversalResult::ChildrenMeshesPrepared => {
+            tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, false);
+        }
+        _ => {}
     }
 }
 
@@ -183,7 +185,7 @@ pub fn transfer_mesh(
     >,
     texture_fragment: TileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
-    tile_layers: Query<&TilesLayer>,
+    tile_layers: Query<(&TilesLayer, &Order)>,
     terrain_layer: Query<&TerrainLayer>,
     terrain_mesh_constructors: Query<&ConstructTerrainMeshResult, Without<Deleted>>,
     terrain_mesh_upsamplers: Query<&UpsampleTerrainMeshResult, Without<Deleted>>,
@@ -192,9 +194,8 @@ pub fn transfer_mesh(
         return;
     }
 
-    // TODO: Support mutiple tile layers
     let tile_layer = match tile_layers.iter().next() {
-        Some(tile) => tile,
+        Some((tile, _)) => tile,
         None => return,
     };
 
@@ -226,13 +227,34 @@ pub fn transfer_mesh(
         let should_compute_normal_from_vertex =
             terrain_layer.map_or(false, |t| t.should_compute_normal_from_vertex);
 
-        let texture_fragment_entity_id = tile.texture_fragment_entity_id;
+        let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
 
-        let mut appearance = tile_layer.appearance.as_ref().unwrap().clone();
-        appearance.set_internal(RasterTileInternalMaterial {
-            texture_fragment: texture_fragment_entity_id,
-        });
-        appearance.should_compute_normal_from_vertex = Some(should_compute_normal_from_vertex);
+        let tile_layers_len = tile_layers.iter().len();
+        let mut shows = Vec::with_capacity(tile_layers_len);
+        let mut opacities = Vec::with_capacity(tile_layers_len);
+        let mut colors = Vec::with_capacity(tile_layers_len);
+        for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
+            let should_show = texture_fragment_entity_ids
+                .as_ref()
+                .and_then(|ids| ids.get(i))
+                .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
+                .map_or(false, |(_, tex)| tex.is_succeeded());
+            let a = l.appearance().unwrap();
+            shows.push(should_show && a.show);
+            opacities.push(a.opacity.clamp(0., 1.));
+            colors.push(a.color);
+        }
+
+        let appearance = RasterTileInternalMaterial {
+            shows,
+            opacities,
+            colors,
+            texture_fragments: texture_fragment_entity_ids.clone(),
+            // TODO: Replace with one resource
+            should_compute_normal_from_vertex: Some(should_compute_normal_from_vertex),
+            // TODO: Replace with one resource
+            wireframe: tile_layer.appearance().unwrap().wireframe,
+        };
 
         let terrain_req = match tile.terrain_data.as_ref() {
             Some(t) => t
@@ -265,7 +287,8 @@ pub fn transfer_mesh(
                 if is_root {
                     65
                 } else {
-                    tile_layer.appearance.as_ref().unwrap().segments
+                    // TODO: Replace with one resource
+                    tile_layer.appearance().unwrap().segments
                 },
                 0.,
             );
@@ -488,6 +511,178 @@ pub fn transfer_mesh(
     }
 }
 
+pub fn update_layer(
+    mut commands: Commands,
+    updated: Query<(Entity, &UpdateRasterTileLayerMarker)>,
+    mut layers: Query<&mut TilesLayer>,
+) {
+    for (e, u) in &updated {
+        let layer_id = u.layer_id.clone();
+        for mut layer in &mut layers {
+            if layer.layer_id != layer_id {
+                continue;
+            }
+
+            if let Some(a) = &mut layer.appearance {
+                a.set(&u.appearance);
+            }
+        }
+        commands.entity(e).despawn();
+    }
+}
+
+pub fn delete_layer(
+    mut commands: Commands,
+    mut qt: ResMut<RasterTileQuadtree>,
+    mut rendered_tiles: Query<&mut RenderedTile, With<Rendered>>,
+    deleted: Query<(Entity, &DeleteRasterTileLayerMarker)>,
+    layers: Query<(Entity, &TilesLayer, &Order)>,
+) {
+    if deleted.is_empty() {
+        return;
+    }
+
+    for (e, u) in &deleted {
+        let layer_id = u.0.clone();
+        for (le, layer, _) in &layers {
+            if layer.layer_id != layer_id {
+                continue;
+            }
+            commands.entity(le).despawn();
+            break;
+        }
+        commands.entity(e).despawn();
+    }
+
+    for rendered_tile in &mut rendered_tiles {
+        let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+        for (_, u) in &deleted {
+            let layer_id = u.0.clone();
+            let mut is_removed = false;
+            for (i, (_, layer, _)) in layers.iter().sort::<&Order>().enumerate() {
+                if layer.layer_id != layer_id {
+                    continue;
+                }
+
+                if let Some(Some(e)) = tile
+                    .texture_fragment_entity_ids
+                    .as_mut()
+                    .and_then(|ids| (ids.len() > i).then(|| ids.remove(i)))
+                {
+                    commands.entity(e).insert(Deleted);
+                }
+                is_removed = true;
+
+                break;
+            }
+
+            if is_removed {
+                break;
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn update_mesh_material(
+    tc: ResMut<TileCacheManager>,
+    qt: ResMut<RasterTileQuadtree>,
+    rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
+    mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
+    mut tile_layers: ParamSet<(
+        Query<(&TilesLayer, &Order)>,
+        Query<&TilesLayer, Changed<TilesLayer>>,
+        RemovedComponents<TilesLayer>,
+    )>,
+    mut appearances: Query<
+        &mut RasterTileInternalMaterial,
+        (With<TileMeshMarker>, Without<Deleted>),
+    >,
+) {
+    let are_tile_layers_updated = !tile_layers.p1().is_empty();
+    let are_tile_layers_removed = !tile_layers.p2().is_empty();
+    let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
+    if !are_tile_layers_updated && !are_texture_fragments_updated && !are_tile_layers_removed {
+        return;
+    }
+
+    let tile_layers = tile_layers.p0();
+    let texture_fragment = texture_fragment.p0();
+
+    for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
+        let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
+            continue;
+        };
+
+        let texture_fragment_entity_ids = match &tile.texture_fragment_entity_ids {
+            Some(texture_fragment_entity_ids) => texture_fragment_entity_ids,
+            None => &vec![],
+        };
+
+        let Some(appearance) = tc
+            .rendered_tile_caches
+            .get(&rendered_tile.tile_handle)
+            .and_then(|r| appearances.get(r.mesh_entity?).ok())
+        else {
+            continue;
+        };
+
+        let mut needs_update = are_tile_layers_removed;
+
+        let prev_texture_fragments = &appearance.texture_fragments;
+        let prev_shows = &appearance.shows;
+        let prev_colors = &appearance.colors;
+        let prev_opacities = &appearance.opacities;
+
+        let tile_layers_len = tile_layers.iter().len();
+        let mut shows = Vec::with_capacity(tile_layers_len);
+        let mut opacities = Vec::with_capacity(tile_layers_len);
+        let mut colors = Vec::with_capacity(tile_layers_len);
+        for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
+            // If this tile isn't ready, the remaining tiles aren't ready either.
+            let should_show = texture_fragment_entity_ids
+                .get(i)
+                .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
+                .map_or(false, |(_, tex)| tex.is_succeeded());
+
+            let a = l.appearance().unwrap();
+            let next_show = should_show && a.show;
+            let next_opacity = a.opacity;
+            let next_color = a.color;
+
+            if prev_shows.get(i) != Some(&next_show)
+                || prev_opacities.get(i) != Some(&next_opacity)
+                || prev_colors.get(i) != Some(&next_color)
+                || prev_texture_fragments.as_ref().and_then(|t| t.get(i))
+                    != texture_fragment_entity_ids.get(i)
+            {
+                needs_update = true;
+            }
+
+            shows.push(next_show);
+            opacities.push(a.opacity.clamp(0., 1.));
+            colors.push(a.color);
+        }
+
+        if !needs_update {
+            continue;
+        }
+
+        let Some(mut appearance) = tc
+            .rendered_tile_caches
+            .get(&rendered_tile.tile_handle)
+            .and_then(|r| appearances.get_mut(r.mesh_entity?).ok())
+        else {
+            continue;
+        };
+        appearance.texture_fragments = Some(texture_fragment_entity_ids.clone());
+
+        appearance.shows = shows;
+        appearance.opacities = opacities;
+        appearance.colors = colors;
+    }
+}
+
 pub fn handle_prepared_mesh_event(
     mut events: EventReader<MeshPreparedEvent>,
     mut tc: ResMut<TileCacheManager>,
@@ -520,6 +715,21 @@ pub fn handle_tile_worker_task_completed(
         return;
     }
     tc.is_updated_in_this_frame = true;
+}
+
+pub fn add_order_to_tiles_layer(
+    mut commands: Commands,
+    tiles_layers: Query<Entity, Added<TilesLayer>>,
+    existing_orders: Query<&Order, With<TilesLayer>>,
+) {
+    // Find the maximum existing order value
+    let max_order = existing_orders.iter().map(|o| o.0).max().unwrap_or(0);
+
+    // Assign incremental order values to each new layer
+    for (i, entity) in tiles_layers.iter().enumerate() {
+        let order_value = max_order + i + 1;
+        commands.entity(entity).insert(Order(order_value));
+    }
 }
 
 pub fn clear_caches(
@@ -569,7 +779,7 @@ pub fn clear_caches(
     }
 
     let mut removed_handles = vec![];
-    for (handle, _requested) in tc.requested_tile_caches.iter() {
+    for handle in tc.requested_tile_caches.iter() {
         let tile_handle = *handle;
 
         let visited_at = {

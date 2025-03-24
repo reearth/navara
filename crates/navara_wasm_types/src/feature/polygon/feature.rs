@@ -57,46 +57,35 @@ impl TransferablePolygonBatchedFeature {
 
     #[wasm_bindgen(js_name = "setOuterRing")]
     pub fn set_outer_ring(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.outer_ring = transfer_f32_array(byte_length, f) }
+        self.outer_ring = transfer_f32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setOuterRingSizes")]
     pub fn set_outer_ring_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.outer_ring_sizes = transfer_u32_array(byte_length, f) }
+        self.outer_ring_sizes = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setHoles")]
     pub fn set_holes(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.holes = transfer_f32_array(byte_length, f) }
+        self.holes = transfer_f32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setHolesSizes")]
     pub fn set_holes_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.holes_sizes = transfer_u32_array(byte_length, f) }
+        self.holes_sizes = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setHolesTotalSizes")]
     pub fn set_holes_total_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.holes_total_sizes = transfer_u32_array(byte_length, f) }
+        self.holes_total_sizes = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setHolesBoundaries")]
     pub fn set_holes_boundaries(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.holes_boundaries = transfer_u32_array(byte_length, f) }
+        self.holes_boundaries = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setBatchIds")]
     pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.batch_ids = transfer_u32_array(byte_length, f) }
+        self.batch_ids = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setExpectedWindingOrders")]
     pub fn set_expected_winding_orders(&mut self, byte_length: usize, f: &js_sys::Function) {
-        unsafe { self.expected_winding_orders = transfer_u8_array(byte_length, f) }
-    }
-
-    pub fn drop(self) {
-        drop(self.outer_ring);
-        drop(self.outer_ring_sizes);
-        drop(self.holes);
-        drop(self.holes_boundaries);
-        drop(self.holes_sizes);
-        drop(self.holes_total_sizes);
-        drop(self.batch_ids);
-        drop(self.expected_winding_orders);
+        self.expected_winding_orders = transfer_u8_array(byte_length, f)
     }
 
     #[wasm_bindgen(js_name = "transferBatchIds")]

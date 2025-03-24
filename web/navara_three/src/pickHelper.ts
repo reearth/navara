@@ -7,14 +7,7 @@ import {
   Object3D,
   Mesh,
   Material,
-  AlwaysStencilFunc,
-  BackSide,
-  DecrementWrapStencilOp,
-  FrontSide,
-  IncrementWrapStencilOp,
-  KeepStencilOp,
-  NotEqualStencilFunc,
-  ZeroStencilOp,
+  Scene,
   RGBAFormat,
   Color,
 } from "three";
@@ -22,6 +15,7 @@ import {
 import { BufferView } from "./bufferView";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
+import { CustomRenderPass } from "./renderPass";
 
 // @ts-expect-error : Could not find a declaration file for module 'troika-three-text'.
 import { Text } from "troika-three-text";
@@ -30,16 +24,11 @@ export type PickHelperOptions = {
   debug: boolean;
 };
 
-export class PickHelper {
+export class PickHelper extends CustomRenderPass {
   private element: HTMLElement;
   private pickingTexture: WebGLRenderTarget;
   private pixelBuffer: Uint8Array;
-  private renderer: WebGLRenderer;
-  private camera: PerspectiveCamera;
-  private scenes: Scenes;
-  private meshes: MeshCache;
-  private drapedFeatureMaterials: Map<string, Material>;
-  private globeGBufferRenderTarget: WebGLRenderTarget;
+  private _renderer: WebGLRenderer;
   private highlightColor: Color;
   private onPickCallback: (pickArr: number[]) => number[];
 
@@ -63,6 +52,14 @@ export class PickHelper {
     onPickCallback: (pickArr: number[]) => number[],
     options?: PickHelperOptions,
   ) {
+    super(
+      scenes,
+      camera,
+      meshes,
+      globeGBufferRenderTarget,
+      drapedFeatureMaterials,
+    );
+
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {
       format: RGBAFormat,
@@ -70,12 +67,8 @@ export class PickHelper {
       stencilBuffer: true,
     });
     this.pixelBuffer = new Uint8Array(4);
-    this.renderer = renderer;
+    this._renderer = renderer;
     this.camera = camera;
-    this.scenes = scenes;
-    this.meshes = meshes;
-    this.drapedFeatureMaterials = drapedFeatureMaterials;
-    this.globeGBufferRenderTarget = globeGBufferRenderTarget;
     this.highlightColor = highlightColor;
     this.onPickCallback = onPickCallback;
 
@@ -85,8 +78,8 @@ export class PickHelper {
     this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
 
     if (options?.debug) {
-      const width = this.renderer.getContext().drawingBufferWidth;
-      const height = this.renderer.getContext().drawingBufferHeight;
+      const width = this._renderer.getContext().drawingBufferWidth;
+      const height = this._renderer.getContext().drawingBufferHeight;
       this.debugBufferView = new BufferView(width, height);
       this.debugRenderTarget = new WebGLRenderTarget(width, height, {
         format: RGBAFormat,
@@ -135,7 +128,7 @@ export class PickHelper {
   }
 
   private togglePickable(picable: number) {
-    for (const [_key, obj] of this.meshes) {
+    for (const [_key, obj] of this._meshes) {
       // point, billboard
       if (obj instanceof Sprite) {
         obj.material.userData.uPickable.value = picable;
@@ -171,55 +164,6 @@ export class PickHelper {
           obj.material.color.setHex(obj.userData.tileOrigColor);
         }
       }
-    }
-  }
-
-  // TODO: Commonize this function with `renderPass.ts`, this class should be extended by `CustomRenderPass`.
-  private renderDrapedMesh() {
-    if (this.drapedFeatureMaterials.size !== 0) {
-      const drapedFeaturesScene = this.scenes.drapedFeatures;
-
-      this.drapedFeatureMaterials.forEach((m, k) => {
-        // Back face
-        m.stencilFunc = AlwaysStencilFunc;
-        m.stencilFail = KeepStencilOp;
-        m.stencilZPass = KeepStencilOp;
-        m.stencilZFail = IncrementWrapStencilOp;
-        m.side = BackSide;
-        m.colorWrite = false;
-        m.depthWrite = false;
-        m.stencilWrite = true;
-        m.depthTest = true;
-
-        const mesh = this.meshes.get(k);
-        if (!mesh) return;
-
-        drapedFeaturesScene.add(mesh);
-        this.renderer.render(drapedFeaturesScene, this.camera);
-
-        // Front face
-        m.side = FrontSide;
-        m.stencilZFail = DecrementWrapStencilOp;
-        this.renderer.render(drapedFeaturesScene, this.camera);
-
-        // Final
-        m.stencilFunc = NotEqualStencilFunc;
-        m.stencilFail = ZeroStencilOp;
-        m.stencilZFail = ZeroStencilOp;
-        m.stencilZPass = ZeroStencilOp;
-        m.side = BackSide;
-        m.colorWrite = true;
-        m.depthTest = false;
-        this.renderer.render(drapedFeaturesScene, this.camera);
-
-        drapedFeaturesScene.remove(mesh);
-
-        // Reset
-        m.colorWrite = false;
-        m.depthWrite = false;
-        m.depthTest = false;
-        m.stencilWrite = false;
-      });
     }
   }
 
@@ -331,7 +275,7 @@ export class PickHelper {
 
   private toggleHighlight(pickArr: number[]) {
     const pickSet = new Set(pickArr);
-    for (const [_key, obj] of this.meshes) {
+    for (const [_key, obj] of this._meshes) {
       // point, billboard
       if (obj instanceof Sprite) {
         this.pickSprite(pickSet, obj);
@@ -356,26 +300,30 @@ export class PickHelper {
 
   public processRender(target: WebGLRenderTarget) {
     const orgClearColor = new Color();
-    this.renderer.getClearColor(orgClearColor);
+    this._renderer.getClearColor(orgClearColor);
 
-    this.renderer.setClearColor(0x000000);
+    this._renderer.setClearColor(0x000000);
 
     this.togglePickable(1);
 
-    this.renderer.setRenderTarget(this.globeGBufferRenderTarget);
-    this.renderer.clear();
-    this.renderer.render(this.scenes.globeGBuffer, this.camera);
+    this._renderer.setRenderTarget(this._globeGBufferRenderTarget);
+    this._renderer.clear();
+    this._renderer.render(this._scenes.globeGBuffer, this.camera);
 
-    this.renderer.setRenderTarget(target);
-    this.renderer.clear();
-    this.renderer.render(this.scenes.globe, this.camera);
+    this._renderer.setRenderTarget(target);
+    this._renderer.clear();
+    this._renderer.render(this._scenes.globe, this.camera);
 
-    this.renderDrapedMesh();
-    this.renderer.render(this.scenes.main, this.camera);
+    this._renderDrapedMesh(this._renderer);
+    this._renderer.render(this._scenes.main, this.camera);
 
     this.togglePickable(0);
 
-    this.renderer.setClearColor(orgClearColor);
+    this._renderer.setClearColor(orgClearColor);
+  }
+
+  protected _renderWithWorld(renderer: WebGLRenderer, scene: Scene) {
+    renderer.render(scene, this._camera);
   }
 
   public renderDebugCanvas() {
@@ -383,17 +331,17 @@ export class PickHelper {
 
     this.processRender(this.debugRenderTarget);
 
-    this.debugBufferView.render(this.renderer, this.debugRenderTarget);
+    this.debugBufferView.render(this._renderer, this.debugRenderTarget);
   }
 
   private onMouseClick(event: MouseEvent) {
     const x = event.clientX;
     const y = event.clientY;
 
-    const pixelRatio = this.renderer.getPixelRatio();
-    this.camera.setViewOffset(
-      this.renderer.getContext().drawingBufferWidth, // full width
-      this.renderer.getContext().drawingBufferHeight, // full top
+    const pixelRatio = this._renderer.getPixelRatio();
+    this._camera.setViewOffset(
+      this._renderer.getContext().drawingBufferWidth, // full width
+      this._renderer.getContext().drawingBufferHeight, // full top
       (x * pixelRatio) | 0, // rect x
       (y * pixelRatio) | 0, // rect y
       1, // rect width
@@ -402,7 +350,7 @@ export class PickHelper {
 
     this.processRender(this.pickingTexture);
 
-    this.renderer.readRenderTargetPixels(
+    this._renderer.readRenderTargetPixels(
       this.pickingTexture,
       0, // x
       0, // y
@@ -411,8 +359,8 @@ export class PickHelper {
       this.pixelBuffer,
     );
 
-    this.renderer.setRenderTarget(null);
-    this.camera.clearViewOffset();
+    this._renderer.setRenderTarget(null);
+    this._camera.clearViewOffset();
 
     const batchId =
       (this.pixelBuffer[0] << 16) +

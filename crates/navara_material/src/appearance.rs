@@ -11,6 +11,7 @@ pub enum Appearance {
     Polygon(PolygonMaterial),
     Model(ModelMaterial),
     VectorTile(VectorTileMaterial),
+    RasterTile(RasterTileMaterial),
 }
 
 impl Appearance {
@@ -29,6 +30,9 @@ impl Appearance {
                 *dist = src.clone();
             }
             (Appearance::VectorTile(dist), Appearance::VectorTile(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::RasterTile(dist), Appearance::RasterTile(src)) => {
                 *dist = src.clone();
             }
             _ => {}
@@ -264,34 +268,34 @@ pub struct RasterTileMaterial {
     pub max_zoom: usize,
     pub wireframe: bool,
     pub should_compute_normal_from_vertex: Option<bool>,
-    pub internal: Option<RasterTileInternalMaterial>,
 }
 
 impl Default for RasterTileMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            segments: 10,
             color: 0xffffff,
             opacity: 1.,
+
+            // TODO: Replace with one resource
+            segments: 10,
             max_sse: 2.,
             max_zoom: 20,
             wireframe: false,
             should_compute_normal_from_vertex: None,
-            internal: None,
         }
     }
 }
 
-impl RasterTileMaterial {
-    pub fn set_internal(&mut self, internal: RasterTileInternalMaterial) {
-        self.internal = Some(internal);
-    }
-}
-
+/// This is used to handle each tile's style in uniforms.
 #[derive(Debug, Clone, PartialEq, Component, Default)]
 pub struct RasterTileInternalMaterial {
-    pub texture_fragment: Option<Entity>,
+    pub shows: Vec<bool>,
+    pub colors: Vec<u32>,
+    pub opacities: Vec<f32>,
+    pub texture_fragments: Option<Vec<Option<Entity>>>,
+    pub should_compute_normal_from_vertex: Option<bool>,
+    pub wireframe: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

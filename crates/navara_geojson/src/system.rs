@@ -384,7 +384,7 @@ fn spawn_feature(
                 }
                 _ => {}
             },
-            Appearance::VectorTile(_) => {}
+            _ => {}
         };
     }
 }

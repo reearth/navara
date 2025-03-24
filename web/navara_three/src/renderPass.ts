@@ -10,7 +10,7 @@ import {
   NotEqualStencilFunc,
   WebGLRenderTarget,
   ZeroStencilOp,
-  type Camera,
+  type PerspectiveCamera,
   type Scene,
   type WebGLRenderer,
 } from "three";
@@ -19,14 +19,14 @@ import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 
 export class CustomRenderPass extends RenderPass {
-  private _camera: Camera;
-  private _scenes: Scenes;
-  private _drapedFeatureMaterials: Map<string, Material>;
-  private _globeGBufferRenderTarget: WebGLRenderTarget;
-  private _meshes: MeshCache;
+  protected _camera: PerspectiveCamera;
+  protected _scenes: Scenes;
+  protected _drapedFeatureMaterials: Map<string, Material>;
+  protected _globeGBufferRenderTarget: WebGLRenderTarget;
+  protected _meshes: MeshCache;
   constructor(
     scenes: Scenes,
-    camera: Camera,
+    camera: PerspectiveCamera,
     meshes: MeshCache,
     globeGBufferRenderTarget: WebGLRenderTarget,
     drapedFeatureMaterials: Map<string, Material>,
@@ -43,7 +43,7 @@ export class CustomRenderPass extends RenderPass {
   }
 
   // Render the scene with world scene that includes user setting object like a light.
-  private _renderWithWorld(renderer: WebGLRenderer, scene: Scene) {
+  protected _renderWithWorld(renderer: WebGLRenderer, scene: Scene) {
     scene.add(this._scenes.world);
     renderer.render(scene, this._camera);
     scene.remove(this._scenes.world);
@@ -79,7 +79,7 @@ export class CustomRenderPass extends RenderPass {
   // Refs
   // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
   // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
-  private _renderDrapedMesh(renderer: WebGLRenderer) {
+  protected _renderDrapedMesh(renderer: WebGLRenderer) {
     const drapedFeaturesScene = this._scenes.drapedFeatures;
 
     for (const [k, m] of this._drapedFeatureMaterials) {

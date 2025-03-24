@@ -112,25 +112,23 @@ impl Core {
         byte_length: usize,
         f: &js_sys::Function,
     ) {
-        unsafe {
-            self.app
-                .set_buffer_u8(handle, bits, transfer_u8_array(byte_length, f));
-        }
+        self.app
+            .set_buffer_u8(handle, bits, transfer_u8_array(byte_length, f));
     }
 
     #[wasm_bindgen(js_name = newBufferU8)]
     pub fn new_buffer_u8(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
-        unsafe { self.app.new_buffer_u8(transfer_u8_array(byte_length, f)) }
+        self.app.new_buffer_u8(transfer_u8_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferU32)]
     pub fn new_buffer_u32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
-        unsafe { self.app.new_buffer_u32(transfer_u32_array(byte_length, f)) }
+        self.app.new_buffer_u32(transfer_u32_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferF32)]
     pub fn new_buffer_f32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
-        unsafe { self.app.new_buffer_f32(transfer_f32_array(byte_length, f)) }
+        self.app.new_buffer_f32(transfer_f32_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferU8Cloned)]
@@ -302,20 +300,15 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolygonBatchedFeature> {
-        let features = self.app.get_batched_features(batched_feature_id)?;
-
-        let mut material: Option<PolygonMaterial> = None;
+        let (features, material) = self
+            .app
+            .get_batched_features_for_polygon(batched_feature_id)?;
 
         let mut transferable = TransferablePolygonBatchedFeature::empty(features.len());
 
         let mut coords_handle_and_batch_ids = vec![];
 
         for f in &features {
-            if material.is_none() {
-                let m = f.get::<navara_material::PolygonMaterial>()?;
-                material = Some(m.into());
-            }
-
             let geometry = f.get::<navara_feature_component::polygon::PolygonGeometry>()?;
             let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
 
@@ -329,9 +322,9 @@ impl Core {
             transferable.add(&mut hierarchy, &BatchId(batch_id));
         }
 
-        material.map(|material| ReturnedTransferablePolygonBatchedFeature {
+        Some(ReturnedTransferablePolygonBatchedFeature {
             transferable,
-            material,
+            material: material.into(),
         })
     }
 
@@ -340,20 +333,15 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolylineBatchedFeature> {
-        let features = self.app.get_batched_features(batched_feature_id)?;
-
-        let mut material: Option<PolylineMaterial> = None;
+        let (features, material) = self
+            .app
+            .get_batched_features_for_polyline(batched_feature_id)?;
 
         let mut transferable = TransferablePolylineBatchedFeature::empty(features.len());
 
         let mut coords_handle_and_batch_ids = vec![];
 
         for f in &features {
-            if material.is_none() {
-                let m = f.get::<navara_material::PolylineMaterial>()?;
-                material = Some(m.into());
-            }
-
             let geometry = f.get::<navara_feature_component::polyline::PolylineGeometry>()?;
             let batch_id = f.get::<navara_feature_component::batch::BatchId>()?;
 
@@ -362,17 +350,14 @@ impl Core {
 
         let mut buf_store = self.app.get_buffer_store_mut()?;
         for (coords, batch_id) in coords_handle_and_batch_ids {
-            // `coords` comes from Rust for sure.
-            unsafe {
-                let mut points = buf_store.remove_f32(&coords)?.to_vec();
+            let mut points = buf_store.remove_f32(&coords)?.to_vec();
 
-                transferable.add(&mut points, &BatchId(batch_id));
-            }
+            transferable.add(&mut points, &BatchId(batch_id));
         }
 
-        material.map(|material| ReturnedTransferablePolylineBatchedFeature {
+        Some(ReturnedTransferablePolylineBatchedFeature {
             transferable,
-            material,
+            material: material.into(),
         })
     }
 

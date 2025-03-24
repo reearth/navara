@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use bevy_ecs::{
+    component::Component,
     entity::Entity,
     query::Without,
     world::{EntityRef, Mut},
@@ -19,6 +20,7 @@ use navara_feature_component::{
 };
 use navara_frame::FrameManager;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
+use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::FloatType;
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
@@ -125,15 +127,15 @@ impl App {
 
     pub fn remove_buffer_u8(&mut self, handle: i32) -> Option<Vec<u8>> {
         let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
-        unsafe { store.remove_u8(&handle) }
+        store.remove_u8(&handle)
     }
     pub fn remove_buffer_u32(&mut self, handle: i32) -> Option<Vec<u32>> {
         let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
-        unsafe { store.remove_u32(&handle) }
+        store.remove_u32(&handle)
     }
     pub fn remove_buffer_f32(&mut self, handle: i32) -> Option<Vec<f32>> {
         let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
-        unsafe { store.remove_f32(&handle) }
+        store.remove_f32(&handle)
     }
 
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
@@ -284,6 +286,7 @@ impl App {
             LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
             LayerDescription::Cesium3dTiles(layer) => layer.appearances[0].clone(),
             LayerDescription::Mvt(layer) => layer.appearances[0].clone(),
+            LayerDescription::Tiles(layer) => layer.appearance.unwrap().clone(),
             _ => return,
         };
         self.app
@@ -361,14 +364,34 @@ impl App {
         world.get_resource_mut::<BufferStore>()
     }
 
-    pub fn get_batched_features(&self, batched_feature_id: u64) -> Option<Vec<EntityRef>> {
+    fn get_batched_features_with_material<C: Component + Clone>(
+        &self,
+        batched_feature_id: u64,
+    ) -> Option<(Vec<EntityRef>, C)> {
         let entity = Entity::from_bits(batched_feature_id);
         let world = self.app.world();
-        let batched_feature = world.get_entity(entity).ok()?.get::<BatchedFeature>()?;
+        let (batched_feature, material) = world
+            .get_entity(entity)
+            .ok()?
+            .get_components::<(&BatchedFeature, &C)>()?;
 
         let features = world.get_entity(&batched_feature.features[..]).ok()?;
 
-        Some(features)
+        Some((features, material.clone()))
+    }
+
+    pub fn get_batched_features_for_polyline(
+        &self,
+        batched_feature_id: u64,
+    ) -> Option<(Vec<EntityRef>, PolylineMaterial)> {
+        self.get_batched_features_with_material(batched_feature_id)
+    }
+
+    pub fn get_batched_features_for_polygon(
+        &self,
+        batched_feature_id: u64,
+    ) -> Option<(Vec<EntityRef>, PolygonMaterial)> {
+        self.get_batched_features_with_material(batched_feature_id)
     }
 
     fn get_internal_batch_table(&mut self, entity: Entity) -> Option<&B3dmBatchTable> {

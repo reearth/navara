@@ -30,8 +30,11 @@ pub struct TileLayerDescription {
 }
 
 impl TileLayerDescription {
-    pub fn appearance(&mut self) -> Option<navara_material::RasterTileMaterial> {
-        self.raster_tile.take().map(|v| v.into())
+    pub fn appearance(&mut self) -> Option<navara_material::Appearance> {
+        self.raster_tile
+            .take()
+            .map(|v| v.into())
+            .map(Appearance::RasterTile)
     }
 }
 
