@@ -17,7 +17,6 @@ import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 import { CustomRenderPass } from "./renderPass";
 
-// @ts-expect-error : Could not find a declaration file for module 'troika-three-text'.
 import { Text } from "troika-three-text";
 
 export type PickHelperOptions = {

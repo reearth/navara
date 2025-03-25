@@ -14,7 +14,10 @@ mat4 nvr_getBillboardMat(float initScale, float scaleByDistance) {
     if(scaleByDistance > 0.0) {
         vec4 worldPosition = modelMatrix * vec4(position, 1.0);
         float distance = length(worldPosition.xyz - cameraPosition);
-        scaleFactor *= 0.02 * distance;
+
+        // TODO: 0.000125 can be temporarily approximated to implement set size in pixels.
+        // It needs to be calculated in the window resize event in the future.
+        scaleFactor *= 0.000125 * distance;
     }
 
     mat4 billboardMatrix = modelViewMatrix;

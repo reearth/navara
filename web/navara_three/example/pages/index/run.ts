@@ -138,7 +138,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       background_color: 0x0a70c2,
       border_color: 0xf8e43c,
       border_width: 0.05,
-      size: 2,
+      size: 100,
     },
   },
 

@@ -17,7 +17,6 @@ import {
 
 import type { CommonUniforms } from "../uniforms";
 
-// @ts-expect-error : Could not find a declaration file for module 'troika-three-text'.
 import { Text } from "troika-three-text";
 
 export async function renderText(m: TextMesh, uniforms: CommonUniforms) {
@@ -62,7 +61,11 @@ export async function renderText(m: TextMesh, uniforms: CommonUniforms) {
   return textGroup;
 }
 
-export function updateText(root: Group, material: TextMaterial) {
+export function updateText(
+  root: Group,
+  material: TextMaterial,
+  needRender?: () => void,
+) {
   let txt = root.children.find((item) => item instanceof Text) as Text;
   if (!txt) {
     txt = createText(root);
@@ -98,15 +101,18 @@ export function updateText(root: Group, material: TextMaterial) {
   root.userData.borderColor.value = new Color(material.border_color);
   root.userData.borderWidth.value = material.border_width ?? 0.05;
 
-  txt.text = material.text;
+  txt.text = material.text ?? "";
 
-  txt.material.depthTest = material.depth_test;
-  txt.font = material.font;
+  txt.material.depthTest = material.depth_test ?? true;
+
+  if (material.font) {
+    txt.font = material.font;
+  }
 
   if (root.userData.isPicked) {
     txt.color = root.userData.highlightColor;
   } else {
-    txt.color = material.color;
+    txt.color = material.color ?? "#ffffff";
   }
 
   if (bNeedUpdateBg) {
@@ -117,13 +123,17 @@ export function updateText(root: Group, material: TextMaterial) {
 
     txt.sync(() => {
       updateBackground(root, txt, material);
+
+      if (needRender) {
+        needRender();
+      }
     });
   }
 }
 
 function createText(root: Group) {
   const txt = new Text();
-  txt.fontSize = 1;
+  txt.fontSize = 4;
 
   (txt.material as Material).onBeforeCompile = (shader) => {
     shader.uniforms.nvr_uScaleByDistance = root.userData.scaleByDistance;
@@ -220,8 +230,9 @@ function updateBackground(root: Group, txt: Text, material: TextMaterial) {
     textRenderInfo.blockBounds[2] - textRenderInfo.blockBounds[0];
   const txtHeight =
     textRenderInfo.blockBounds[3] - textRenderInfo.blockBounds[1];
-  const bgWwidth = txtWidth + 0.4;
-  const bgHeight = txtHeight + 0.2;
+
+  const bgWwidth = txtWidth + txtHeight * 0.3;
+  const bgHeight = txtHeight + txtHeight * 0.05;
 
   root.userData.bgSize.value.set(bgWwidth, bgHeight);
 

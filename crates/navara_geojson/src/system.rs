@@ -186,8 +186,12 @@ fn spawn_feature(
             },
             Appearance::Text(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let batch_id =
-                        generate_batch_id(batch_table_res, id_prop_table_res, None, properties);
+                    let batch_id = generate_batch_id(
+                        batch_table_res,
+                        id_prop_table_res,
+                        Some(v.id_property.clone()),
+                        properties,
+                    );
 
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
@@ -204,8 +208,12 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let batch_id =
-                            generate_batch_id(batch_table_res, id_prop_table_res, None, properties);
+                        let batch_id = generate_batch_id(
+                            batch_table_res,
+                            id_prop_table_res,
+                            Some(v.id_property.clone()),
+                            properties,
+                        );
 
                         commands.spawn((
                             LayerId(layer_id.to_owned()),

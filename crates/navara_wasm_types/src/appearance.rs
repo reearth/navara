@@ -127,6 +127,8 @@ pub struct TextMaterial {
     pub background_color: Option<u32>,
     pub border_color: Option<u32>,
     pub border_width: Option<f32>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub id_property: Option<String>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -146,6 +148,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             background_color: val.background_color,
             border_color: val.border_color.unwrap_or(default.border_color),
             border_width: val.border_width.unwrap_or(default.border_width),
+            id_property: val.id_property.unwrap_or("".to_string()),
         }
     }
 }
@@ -165,6 +168,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             background_color: value.background_color,
             border_color: Some(value.border_color),
             border_width: Some(value.border_width),
+            id_property: Some(value.id_property.clone()),
         }
     }
 }
