@@ -52,7 +52,12 @@ import type { Scenes } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import { applyTextureAspect } from "../texture";
 import type { TextureOptions } from "../textures";
-import type { AbortControllers, MeshCache, WorkerPoolPromises } from "../type";
+import type {
+  AbortControllers,
+  MeshCache,
+  WorkerPoolPromises,
+  RenderFlag,
+} from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
@@ -136,7 +141,7 @@ export function processEvent(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
   textureOptions: TextureOptions,
-  flags: Record<string, boolean>,
+  renderFlag: RenderFlag,
 ) {
   eventManager.pushEvents(event);
 
@@ -298,7 +303,7 @@ export function processEvent(
             event,
             meshes,
             drapedFeatureMaterials,
-            flags,
+            renderFlag,
           );
           break;
       }
@@ -690,7 +695,7 @@ function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
-  flags: Record<string, boolean>,
+  renderFlag: RenderFlag,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
@@ -718,7 +723,7 @@ function processRenderableFeatureChanged(
       processBillboardChanged(obj, material, active);
     }
     if (obj instanceof Group && material instanceof TextMaterial) {
-      processTextChanged(obj, material, active, flags);
+      processTextChanged(obj, material, active, renderFlag);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {
       processModelChanged(obj, material, active);
@@ -789,13 +794,13 @@ function processTextChanged(
   obj: Group,
   material: TextMaterial,
   active: boolean,
-  flags: Record<string, boolean>,
+  renderFlag: RenderFlag,
 ) {
   obj.scale.set(1, 1, 1);
   obj.visible = (material.show ?? true) && active;
   if (obj.visible) {
     updateText(obj, material, () => {
-      flags["forceUpdate"] = true;
+      renderFlag.forceUpdate = true;
     });
   }
 }

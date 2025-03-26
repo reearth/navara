@@ -20,6 +20,7 @@ mat4 nvr_getBillboardMat(float initScale, float scaleByDistance) {
         scaleFactor *= 0.000125 * distance;
     }
 
+    // Set rotation to zero to behave like a billboard.
     mat4 billboardMatrix = modelViewMatrix;
     billboardMatrix[0][0] = scaleFactor;
     billboardMatrix[1][1] = scaleFactor;

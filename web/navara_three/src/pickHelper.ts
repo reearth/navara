@@ -131,6 +131,9 @@ export class PickHelper extends CustomRenderPass {
       // point, billboard
       if (obj instanceof Sprite) {
         obj.material.userData.uPickable.value = picable;
+
+        // The frustum used for picking is only 1 pixel in size,
+        // For sprites, the bounding box used for frustum culling can be inaccurately determined.
         obj.frustumCulled = picable < 0.5;
       }
 
@@ -152,6 +155,9 @@ export class PickHelper extends CustomRenderPass {
         obj.userData.uPickable.value = picable;
 
         obj.children.forEach((item) => {
+          // The frustum used for picking is only 1 pixel in size,
+          // and both the text and its background dynamically change positions,
+          // they risk being incorrectly culled. Therefore, frustumCulled must be set to false
           item.frustumCulled = picable < 0.5;
         });
       }

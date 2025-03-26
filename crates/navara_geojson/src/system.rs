@@ -66,11 +66,11 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
 fn generate_batch_id(
     batch_table_res: &mut BatchTable,
     id_prop_table_res: &mut IdPropertyTable,
-    id_prop: Option<String>,
+    id_prop: String,
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) -> u32 {
     batch_table_res
-        .add_hash_map(id_prop, properties.as_ref(), id_prop_table_res)
+        .add_hash_map(Some(id_prop), properties.as_ref(), id_prop_table_res)
         .unwrap_or(0)
 }
 
@@ -93,7 +93,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        Some(v.id_property.clone()),
+                        v.id_property.clone(),
                         properties,
                     );
 
@@ -115,7 +115,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            Some(v.id_property.clone()),
+                            v.id_property.clone(),
                             properties,
                         );
 
@@ -141,7 +141,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        Some(v.id_property.clone()),
+                        v.id_property.clone(),
                         properties,
                     );
 
@@ -163,7 +163,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            Some(v.id_property.clone()),
+                            v.id_property.clone(),
                             properties,
                         );
 
@@ -189,7 +189,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        Some(v.id_property.clone()),
+                        v.id_property.clone(),
                         properties,
                     );
 
@@ -211,7 +211,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            Some(v.id_property.clone()),
+                            v.id_property.clone(),
                             properties,
                         );
 
@@ -237,7 +237,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        Some(v.id_property.clone()),
+                        v.id_property.clone(),
                         properties,
                     );
 
@@ -256,7 +256,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            Some(v.id_property.clone()),
+                            v.id_property.clone(),
                             properties,
                         );
 
@@ -279,7 +279,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        Some(v.id_property.clone()),
+                        v.id_property.clone(),
                         properties,
                     );
 
@@ -308,7 +308,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            Some(v.id_property.clone()),
+                            v.id_property.clone(),
                             properties,
                         );
                         commands.spawn((
@@ -338,7 +338,7 @@ fn spawn_feature(
                     let batch_id = generate_batch_id(
                         batch_table_res,
                         id_prop_table_res,
-                        Some(v.id_property.clone()),
+                        v.id_property.clone(),
                         properties,
                     );
 
@@ -364,7 +364,7 @@ fn spawn_feature(
                         let batch_id = generate_batch_id(
                             batch_table_res,
                             id_prop_table_res,
-                            Some(v.id_property.clone()),
+                            v.id_property.clone(),
                             properties,
                         );
 

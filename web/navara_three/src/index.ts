@@ -48,6 +48,7 @@ import {
   type MeshCache,
   type PickedFeature,
   type WorkerPoolPromises,
+  type RenderFlag,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";
@@ -104,7 +105,9 @@ export default class ThreeView {
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
   private _disposed = false;
-  private _flags: Record<string, boolean> = { forceUpdate: false };
+  private _renderFlag: RenderFlag = {
+    forceUpdate: false,
+  };
   private _events: {
     [K in keyof Events]?: Set<Events[K]>;
   } = {};
@@ -590,7 +593,7 @@ export default class ThreeView {
       this._uniforms,
       this._drapedFeatureMaterials,
       this._defaultTextureOptions,
-      this._flags,
+      this._renderFlag,
     );
     events?.free();
 
@@ -646,8 +649,8 @@ export default class ThreeView {
       if (this._disposed) return;
       this._stats?.begin();
 
-      if (this._update(time) || this._flags["forceUpdate"]) this._render();
-      this._flags["forceUpdate"] = false;
+      if (this._update(time) || this._renderFlag.forceUpdate) this._render();
+      this._renderFlag.forceUpdate = false;
 
       this._stats?.end();
     };
@@ -681,7 +684,7 @@ export default class ThreeView {
   };
 
   onPick(pickArr: number[]): number[] {
-    this._flags["forceUpdate"] = true;
+    this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
       const prop = this._core?.getBatchProp(pickArr[0]);
