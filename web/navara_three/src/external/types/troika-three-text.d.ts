@@ -13,7 +13,7 @@ declare module "troika-three-text" {
   // https://github.com/protectwise/troika/blob/1abaf66d7a92cf347f12caa0fc41339af0cfef09/packages/troika-three-text/src/TextBuilder.js#L83-L108
   export type TroikaTextRenderInfo = {
     blockBounds: number[];
-  }
+  };
 
   export class Text extends Object3D {
     constructor();

@@ -18,7 +18,6 @@ import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 
-
 export type PickHelperOptions = {
   debug: boolean;
 };
