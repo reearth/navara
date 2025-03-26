@@ -2,6 +2,7 @@ use bevy_ecs::{component::Component, entity::Entity, system::ResMut};
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{Extent, Radians, CRS};
 use navara_geometry::TransferableFloatAttribute;
+use navara_layer::LayerId;
 use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
     TextMaterial,
@@ -41,6 +42,7 @@ pub struct PolylineRenderInformation {
 // From data oriented design perspective, this is too bad structure.
 // But this is necessary to communicate with WASM.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
+#[require(LayerId)]
 pub enum RenderableFeature {
     Point {
         coordinates: Vec3,

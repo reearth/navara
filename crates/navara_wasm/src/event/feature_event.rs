@@ -13,25 +13,30 @@ pub struct RenderableFeatureAddedEvent {
 
     #[wasm_bindgen(getter_with_clone)]
     pub feature: RenderableFeature,
+    #[wasm_bindgen(getter_with_clone)]
+    pub layer_id: String,
 }
 
 impl<'a>
     From<
-        navara_event_store::ReconstructableComponentEvent<
+        navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
-        >,
+            &'a navara_layer::LayerId,
+        )>,
     > for RenderableFeatureAddedEvent
 {
     fn from(
-        ev: navara_event_store::ReconstructableComponentEvent<
+        ev: navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
-        >,
+            &'a navara_layer::LayerId,
+        )>,
     ) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
             bits: ev.bits,
-            feature: RenderableFeature::from(ev.comp),
+            feature: RenderableFeature::from(ev.comp.0),
+            layer_id: ev.comp.1 .0.clone(),
         }
     }
 }
@@ -46,25 +51,30 @@ pub struct RenderableFeatureChangedEvent {
 
     #[wasm_bindgen(getter_with_clone)]
     pub feature: RenderableFeature,
+    #[wasm_bindgen(getter_with_clone)]
+    pub layer_id: String,
 }
 
 impl<'a>
     From<
-        navara_event_store::ReconstructableComponentEvent<
+        navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
-        >,
+            &'a navara_layer::LayerId,
+        )>,
     > for RenderableFeatureChangedEvent
 {
     fn from(
-        ev: navara_event_store::ReconstructableComponentEvent<
+        ev: navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
-        >,
+            &'a navara_layer::LayerId,
+        )>,
     ) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
             bits: ev.bits,
-            feature: RenderableFeature::from(ev.comp),
+            feature: RenderableFeature::from(ev.comp.0),
+            layer_id: ev.comp.1 .0.clone(),
         }
     }
 }

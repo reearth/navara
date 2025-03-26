@@ -13,7 +13,6 @@ import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
-
 import {
   BufferAttribute,
   BufferGeometry,
@@ -30,10 +29,9 @@ import {
 import type { CommonUniforms } from "../uniforms";
 
 import { initializeGltfLoader, TEXTURE_LOADER } from "./loaders";
+import { renderText } from "./text";
 
 import type { BufferLoader } from ".";
-
-import { renderText } from "./text";
 
 export function renderFeature(
   f: RenderableFeature,
@@ -213,7 +211,7 @@ async function renderModel(
         return;
       }
 
-      const model = await loader.parseAsync(bin.buffer, "");
+      const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
       bin.set([]);
       return model.scene;
     } else {

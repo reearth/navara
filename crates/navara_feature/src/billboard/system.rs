@@ -47,6 +47,7 @@ pub fn transfer_mesh(
         let entity = commands
             .spawn((
                 BillboardMarker,
+                layer_id.clone(),
                 RenderableFeature::Billboard {
                     coordinates: geometry.coords,
                     crs: geometry.crs.clone(),

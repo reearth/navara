@@ -92,6 +92,7 @@ pub fn transfer_batched_mesh(
         let entity = commands
             .spawn((
                 PolygonMarker,
+                layer_id.clone(),
                 RenderableFeature::Polygon {
                     // TODO: Calculate coordinate to update transform
                     coordinates: Vec3::new(0., 0., 0.),
@@ -172,6 +173,7 @@ pub fn transfer_mesh(
             let entity = commands
                 .spawn((
                     PolygonMarker,
+                    layer_id.clone(),
                     RenderableFeature::Polygon {
                         // TODO: Calculate coordinate to update transform
                         coordinates: Vec3::new(0., 0., 0.),

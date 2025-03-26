@@ -13,9 +13,9 @@ import {
 } from "three";
 
 import { BufferView } from "./bufferView";
+import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
-import { CustomRenderPass } from "./renderPass";
 
 import { Text } from "troika-three-text";
 

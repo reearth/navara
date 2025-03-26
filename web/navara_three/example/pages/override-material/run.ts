@@ -1,8 +1,9 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
+  type LayerDescription,
 } from "@navara/three";
-import { AxesHelper } from "three";
+import { AxesHelper, Sprite, SpriteMaterial } from "three";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -52,7 +53,7 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  view.addLayer({
+  const pointLayer: LayerDescription = {
     type: "geojson",
     data: {
       type: "FeatureCollection",
@@ -79,5 +80,31 @@ export const run = async (view: ThreeView) => {
       size: 0.05,
       url: "/example.png",
     },
+  };
+
+  const point = view.addLayer(pointLayer);
+
+  point.on("featureUpdated", (m, t) => {
+    if (!(m instanceof Sprite && m.material instanceof SpriteMaterial)) {
+      return;
+    }
+    m.material.opacity = Math.abs(Math.sin(t / 300));
+
+    // TODO: Update material following properties
+    // const batchIds = m.geometry.getAttribute("batch_id");
+    // const evaluated = view.evaluateBatchedProperties(batchIds, (props) => {
+    //   return [props.measuredHeight, /* props 1, props 2, props 3 */];
+    // });
+    // console.log(evaluated.get(0), evaluated.get(1));
+  });
+
+  view.on("preUpdate", (_t) => {
+    // TODO: Update in an easier way.
+    point.update({
+      ...pointLayer,
+      billboard: {
+        ...pointLayer.billboard,
+      },
+    });
   });
 };

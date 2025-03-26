@@ -13,7 +13,7 @@ export const addCtrlPanel = (
 ) => {
   const layerMap = new Map<string, MaterialLayerDescription>();
   layers.forEach((layer) => {
-    const layerId = view.addLayer(layer);
+    const layerId = view.addLayer(layer).id;
     if (layerId) {
       layerMap.set(layerId, layer);
     }
@@ -94,14 +94,14 @@ export const addCtrlPanel = (
 
   function onDeleteBtnClick() {
     if (btnCtrl.title == "Delete Layer") {
-      view.deleteLayer(layerIds[paneParams.layer]);
+      view.deleteLayerById(layerIds[paneParams.layer]);
       layerDeleted[paneParams.layer] = 1;
       btnCtrl.title = "Add Layer";
     } else {
       const oldLayerId = layerIds[paneParams.layer];
       const layerDef = layerMap.get(oldLayerId);
       if (layerDef) {
-        const newLayerId = view.addLayer(layerDef);
+        const newLayerId = view.addLayer(layerDef).id;
         if (newLayerId) {
           layerMap.set(newLayerId, layerDef);
           layerIds[paneParams.layer] = newLayerId;
@@ -244,7 +244,7 @@ export const addCtrlPanel = (
         material.border_width = paneParams.border_width;
       }
 
-      view.updateLayer(layerId, {
+      view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
         [paneParams.material]: material,

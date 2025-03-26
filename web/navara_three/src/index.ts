@@ -1,4 +1,4 @@
-import { EventManager } from "@navara/core";
+import { EventManager, EventHandler } from "@navara/core";
 import initCore, { Core, type TextureFragmentStatus } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
 import { EffectComposer, EffectPass } from "postprocessing";
@@ -35,6 +35,8 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { registerInputEvents } from "./input";
+import { Layer, type LayerEvent } from "./layer";
+import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { PickHelper } from "./pickHelper";
 import type { Picking } from "./picking";
@@ -83,12 +85,19 @@ export type Options = {
   halfFloat?: boolean;
 };
 
-export type Events = {
+export type ViewEvents = {
   resize: () => void;
   pick: (info: PickedFeature) => void;
+  layer: <K extends keyof LayerEvent>(
+    k: K,
+    layerId: string,
+    ...args: Parameters<LayerEvent[K]>
+  ) => void;
+  preUpdate: (t: number) => void;
+  postUpdate: (t: number) => void;
 };
 
-export default class ThreeView {
+export default class ThreeView extends EventHandler<ViewEvents> {
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
   control?: { update: () => void; get target(): Vector3 | undefined };
@@ -108,9 +117,6 @@ export default class ThreeView {
   private _renderFlag: RenderFlag = {
     forceUpdate: false,
   };
-  private _events: {
-    [K in keyof Events]?: Set<Events[K]>;
-  } = {};
   private _uniforms: CommonUniforms;
 
   private _meshes: MeshCache = new Map();
@@ -224,8 +230,11 @@ export default class ThreeView {
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
   private _defaultTextureOptions: TextureOptions;
+  private layersManager = new LayersManager();
 
   constructor(options: Options = {}) {
+    super();
+
     if (!options.canvas) {
       const div = document.createElement("div");
       div.id = "root";
@@ -440,6 +449,10 @@ export default class ThreeView {
       useMipmaps: true,
       maxTextures: Math.max(this.renderer.capabilities.maxTextures, 8),
     };
+
+    this.on("layer", (e, id, ...args) => {
+      this.layersManager.emitById(e, id, ...args);
+    });
   }
 
   get scene() {
@@ -533,7 +546,7 @@ export default class ThreeView {
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
-    this._emit("resize");
+    this.emit("resize");
   };
 
   private _updateUniforms() {
@@ -566,6 +579,8 @@ export default class ThreeView {
 
   /** Returns true if the scene was updated and needs to be rendered. */
   private _update(updatedAt: number): boolean {
+    this.emit("preUpdate", updatedAt);
+
     this._core?.update(updatedAt);
 
     const events = this._core?.readEvents();
@@ -594,11 +609,15 @@ export default class ThreeView {
       this._drapedFeatureMaterials,
       this._defaultTextureOptions,
       this._renderFlag,
+      this,
+      updatedAt,
     );
     events?.free();
 
     this.control?.update();
     this.camera.updateMatrixWorld();
+
+    this.emit("postUpdate", updatedAt);
 
     return true;
   }
@@ -608,40 +627,25 @@ export default class ThreeView {
     this._pickHelper?.renderDebugCanvas();
   }
 
-  // TODO: Handle event from user.
-  on<K extends keyof Events>(event: K, callback: Events[K]) {
-    if (!this._events[event])
-      (this._events[event] as Set<Events[K]> | undefined) = new Set<
-        Events[K]
-      >();
-    this._events[event]?.add(callback);
-  }
-
-  off<K extends keyof Events>(event: K, callback: Events[K]) {
-    this._events[event]?.delete(callback);
-  }
-
   addLayer(l: LayerDescription) {
     const layerId = this._core?.addLayer(l);
+    invariant(layerId);
+    invariant(this._core);
 
-    return layerId;
+    const layer = new Layer(layerId, this._core);
+    this.layersManager.add(layer);
+
+    return layer;
   }
 
-  updateLayer(layerId: string, l: LayerDescription) {
-    this._core?.updateLayer(layerId, l);
+  updateLayerById(layerId: string, l: LayerDescription) {
+    invariant(this._core);
+    this.layersManager.get(layerId)?.update(l);
   }
 
-  deleteLayer(layerId: string) {
-    this._core?.deleteLayer(layerId);
-  }
-
-  private _emit<K extends keyof Events>(
-    event: K,
-    ...args: Parameters<Events[K]>
-  ) {
-    this._events[event]?.forEach((c) =>
-      (c as (...args: any[]) => any)(...args),
-    );
+  deleteLayerById(layerId: string) {
+    invariant(this._core);
+    this.layersManager.get(layerId)?.delete();
   }
 
   private _startMainLoop() {
@@ -692,7 +696,7 @@ export default class ThreeView {
         const pickedFeature: PickedFeature = {
           properties: JSON.parse(prop),
         };
-        this._emit("pick", pickedFeature);
+        this.emit("pick", pickedFeature);
       }
 
       // for highlight
