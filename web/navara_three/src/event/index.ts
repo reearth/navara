@@ -36,14 +36,10 @@ import {
   type Camera,
   Mesh,
   Material,
-  MeshLambertMaterial,
-  MeshStandardMaterial,
-  MeshPhysicalMaterial,
   Object3D,
   Texture,
   Sprite,
   Group,
-  ShaderMaterial,
 } from "three";
 
 import type { ViewEvents } from "..";
@@ -62,12 +58,19 @@ import type {
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
+import { processPointChanged } from "./features/point";
+import { processBillboardChanged } from "./features/billboard";
+import { processModelChanged } from "./features/model";
+import { processPolylineChanged } from "./features/polyline";
+import { processPolygonChanged } from "./features/polygon";
+import { processTextChanged } from "./features/text";
+
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
 } from "./featureEvent";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
-import { updateText } from "./text";
+
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
   processWorkerTaskDelegatedEvent,
@@ -782,135 +785,6 @@ function processRenderableFeatureChanged(
     featureLayerId,
     updatedAt,
   );
-}
-
-function processPointChanged(
-  obj: Sprite,
-  material: PointMaterial,
-  active: boolean,
-) {
-  obj.userData.orgColor = material.color;
-  if (!obj.userData.isPicked) {
-    obj.material.color.set(material.color ?? 0);
-  }
-  obj.visible = (material.show ?? true) && active;
-
-  obj.material.sizeAttenuation = !material.scale_by_distance;
-  obj.material.needsUpdate = true;
-}
-
-function processBillboardChanged(
-  obj: Sprite,
-  material: BillboardMaterial,
-  active: boolean,
-) {
-  obj.userData.orgColor = material.color;
-  if (!obj.userData.isPicked) {
-    obj.material.color.set(material.color ?? 0);
-  }
-  obj.visible = (material.show ?? true) && active;
-
-  obj.material.sizeAttenuation = !material.scale_by_distance;
-  obj.material.needsUpdate = true;
-}
-
-function processTextChanged(
-  obj: Group,
-  material: TextMaterial,
-  active: boolean,
-  renderFlag: RenderFlag,
-) {
-  obj.scale.set(1, 1, 1);
-  obj.visible = (material.show ?? true) && active;
-  if (obj.visible) {
-    updateText(obj, material, () => {
-      renderFlag.forceUpdate = true;
-    });
-  }
-}
-
-function processModelChanged(
-  obj: Group,
-  material: ModelMaterial,
-  active: boolean,
-) {
-  obj.visible = (material.show ?? true) && active;
-
-  const updateMaterial = function (m: any) {
-    if (
-      m instanceof MeshStandardMaterial ||
-      m instanceof MeshPhysicalMaterial
-    ) {
-      m.color.set(material.color ?? 0);
-      if (material.metalness != null) {
-        m.metalness = material.metalness;
-      }
-      if (material.roughness != null) {
-        m.roughness = material.roughness;
-      }
-    }
-  };
-
-  obj.traverse((object: Object3D) => {
-    if (object instanceof Mesh) {
-      const mesh = object as Mesh;
-
-      if (mesh.material) {
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((m) => {
-            updateMaterial(m);
-          });
-        } else {
-          updateMaterial(mesh.material);
-        }
-      }
-    }
-  });
-}
-
-function processPolylineChanged(
-  obj: Mesh,
-  material: PolylineMaterial,
-  active: boolean,
-) {
-  if (obj.material instanceof ShaderMaterial) {
-    obj.material.uniforms.color.value.set(material.color);
-    obj.material.uniforms.useGroundNormals.value =
-      !!material.use_ground_normals;
-
-    const [minHeight, maxHeight] = material.__internal__?.min_max_heights ?? [
-      0, 0,
-    ];
-    obj.material.uniforms.minMaxHeightAndWidth.value = [
-      minHeight,
-      maxHeight,
-      material.width,
-    ];
-    obj.visible = (material.show ?? true) && active;
-  }
-}
-
-function processPolygonChanged(
-  obj: Mesh,
-  material: PolygonMaterial,
-  active: boolean,
-) {
-  if (obj.material instanceof MeshLambertMaterial) {
-    obj.material.color.set(material.color ?? 0);
-    obj.visible = (material.show ?? true) && active;
-    obj.material.wireframe = material.wireframe ?? false;
-    obj.material.userData.uMinMaxHeight.value =
-      material.__internal__?.min_max_heights;
-    obj.material.userData.useGroundNormals.value =
-      !!material.use_ground_normals;
-    if (
-      obj.material.userData.uClampToGround.value !== material.clamp_to_ground
-    ) {
-      obj.material.userData.uClampToGround.value = material.clamp_to_ground;
-      // obj.material = obj.material.clone();
-    }
-    obj.userData.draped = material.clamp_to_ground;
-  }
 }
 
 function setTransform(obj: Object3D, transform: Transform) {
