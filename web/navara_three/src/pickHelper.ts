@@ -11,13 +11,12 @@ import {
   RGBAFormat,
   Color,
 } from "three";
+import { Text } from "troika-three-text";
 
 import { BufferView } from "./bufferView";
+import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
-import { CustomRenderPass } from "./renderPass";
-
-import { Text } from "troika-three-text";
 
 export type PickHelperOptions = {
   debug: boolean;

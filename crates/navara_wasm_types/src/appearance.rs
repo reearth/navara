@@ -31,7 +31,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
-            id_property: val.id_property.unwrap_or("".to_string()),
+            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -88,7 +88,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
-            id_property: val.id_property.unwrap_or("".to_string()),
+            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -148,7 +148,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             background_color: val.background_color,
             border_color: val.border_color.unwrap_or(default.border_color),
             border_width: val.border_width.unwrap_or(default.border_width),
-            id_property: val.id_property.unwrap_or("".to_string()),
+            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -226,7 +226,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
-            id_property: val.id_property.unwrap_or("".to_string()),
+            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -347,7 +347,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
             internal: val.__internal__.map(|v| v.into()),
-            id_property: val.id_property.unwrap_or("".to_string()),
+            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -442,7 +442,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             should_rotate_in_default: val
                 .should_rotate_in_default
                 .unwrap_or(default.should_rotate_in_default),
-            id_property: val.id_property.unwrap_or("".to_string()),
+            id_property: val.id_property.unwrap_or(default.id_property),
             color: val.color.unwrap_or(default.color),
             metalness: val.metalness.unwrap_or(default.metalness),
             roughness: val.roughness.unwrap_or(default.roughness),

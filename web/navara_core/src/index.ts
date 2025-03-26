@@ -3,3 +3,4 @@ export * from "./event";
 export * from "./assertions";
 export * from "./utils";
 export * from "./constants";
+export * from "./eventHandler";

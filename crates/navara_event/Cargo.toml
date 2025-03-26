@@ -15,3 +15,4 @@ navara_material = { path = "../navara_material" }
 navara_tile_component = { path = "../navara_tile_component" }
 navara_data_requester = { path = "../navara_data_requester" }
 navara_worker = { path = "../navara_worker" }
+navara_layer = { path = "../navara_layer" }

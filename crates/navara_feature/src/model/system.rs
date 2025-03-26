@@ -94,6 +94,7 @@ pub fn transfer_mesh(
 
         let entity = commands.spawn((
             ModelMarker,
+            layer_id.clone(),
             RenderableFeature::Model {
                 coordinates: geometry.coords,
                 crs: geometry.crs.clone(),

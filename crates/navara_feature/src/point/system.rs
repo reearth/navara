@@ -46,6 +46,7 @@ pub fn transfer_mesh(
         let entity = commands
             .spawn((
                 PointMarker,
+                layer_id.clone(),
                 RenderableFeature::Point {
                     coordinates: geometry.coords,
                     crs: geometry.crs.clone(),

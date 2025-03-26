@@ -676,7 +676,6 @@ mod test {
     use navara_layer::{GeoJsonLayer, LayerStore};
     use navara_material::Appearance;
     use navara_material::{BillboardMaterial, PointMaterial};
-    use navara_math::Vec2;
     use navara_parser::geojson::GeoJson;
     use navara_tile_component::RasterTileQuadtree;
 
@@ -709,17 +708,7 @@ mod test {
     fn it_should_render_point_with_point() {
         let mut app = initialize_app();
 
-        let material = PointMaterial {
-            show: true,
-            size: 1.,
-            color: 123,
-            center: Vec2::new(1., 1.),
-            height: 1.,
-            scale_by_distance: true,
-            clamp_to_ground: false,
-            depth_test: false,
-            id_property: "".to_string(),
-        };
+        let material = PointMaterial::default();
 
         app.world_mut().spawn(construct_geojson_layer(
             r#"{
@@ -824,17 +813,7 @@ mod test {
     fn it_should_render_point_with_multipoint() {
         let mut app = initialize_app();
 
-        let material = PointMaterial {
-            show: true,
-            size: 1.,
-            color: 123,
-            center: Vec2::new(1., 1.),
-            height: 1.,
-            scale_by_distance: true,
-            clamp_to_ground: false,
-            depth_test: false,
-            id_property: "".to_string(),
-        };
+        let material = PointMaterial::default();
 
         app.world_mut().spawn(construct_geojson_layer(
             r#"{
@@ -934,18 +913,7 @@ mod test {
     fn it_should_render_billboard_with_point() {
         let mut app = initialize_app();
 
-        let material = BillboardMaterial {
-            show: true,
-            size: 1.,
-            color: 123,
-            center: Vec2::new(1., 1.),
-            height: 1.,
-            url: "https://example.com".to_string(),
-            scale_by_distance: true,
-            clamp_to_ground: false,
-            depth_test: false,
-            id_property: "".to_string(),
-        };
+        let material = BillboardMaterial::default();
 
         app.world_mut().spawn(construct_geojson_layer(
             r#"{
@@ -1050,18 +1018,7 @@ mod test {
     fn it_should_render_billboard_with_multipoint() {
         let mut app = initialize_app();
 
-        let material = BillboardMaterial {
-            show: true,
-            size: 1.,
-            color: 123,
-            center: Vec2::new(1., 1.),
-            height: 1.,
-            url: "https://example.com".to_string(),
-            scale_by_distance: true,
-            clamp_to_ground: false,
-            depth_test: false,
-            id_property: "".to_string(),
-        };
+        let material = BillboardMaterial::default();
 
         app.world_mut().spawn(construct_geojson_layer(
             r#"{

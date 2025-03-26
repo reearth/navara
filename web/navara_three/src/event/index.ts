@@ -1,4 +1,4 @@
-import type { EventManager } from "@navara/core";
+import type { EventHandler, EventManager } from "@navara/core";
 import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
@@ -46,6 +46,7 @@ import {
   ShaderMaterial,
 } from "three";
 
+import type { ViewEvents } from "..";
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
@@ -61,8 +62,12 @@ import type {
 import type { CommonUniforms } from "../uniforms";
 
 import { renderFeature } from "./feature";
-import { updateText } from "./text";
+import {
+  handleFeatureCreatedEventByLayerId,
+  handleFeatureUpdatedEventByLayerId,
+} from "./featureEvent";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
+import { updateText } from "./text";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
   processWorkerTaskDelegatedEvent,
@@ -142,6 +147,8 @@ export function processEvent(
   drapedFeatureMaterials: Map<string, Material>,
   textureOptions: TextureOptions,
   renderFlag: RenderFlag,
+  viewEvents: EventHandler<ViewEvents>,
+  updatedAt: number,
 ) {
   eventManager.pushEvents(event);
 
@@ -285,6 +292,7 @@ export function processEvent(
             uniforms,
             drapedFeatureMaterials,
             featureHandler,
+            viewEvents,
           );
           break;
         case "remove":
@@ -304,6 +312,8 @@ export function processEvent(
             meshes,
             drapedFeatureMaterials,
             renderFlag,
+            viewEvents,
+            updatedAt,
           );
           break;
       }
@@ -648,6 +658,7 @@ async function processRenderableFeatureAdded(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
   featureHandler: FeatureHandler,
+  viewEvents: EventHandler<ViewEvents>,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = await renderFeature(ev.feature, buf, uniforms)?.then((r) => {
@@ -665,6 +676,7 @@ async function processRenderableFeatureAdded(
   });
   if (!obj) return;
 
+  const featureLayerId = ev.layer_id;
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
   const feature = point ?? billboard ?? text ?? polyline ?? polygon ?? model;
@@ -688,6 +700,8 @@ async function processRenderableFeatureAdded(
   if (obj.userData.draped && obj instanceof Mesh) {
     drapedFeatureMaterials.set(id, obj.material as Material);
   }
+
+  handleFeatureCreatedEventByLayerId(obj, viewEvents, featureLayerId);
 }
 
 // TODO: Update material in this function.
@@ -696,11 +710,14 @@ function processRenderableFeatureChanged(
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
   renderFlag: RenderFlag,
+  viewEvents: EventHandler<ViewEvents>,
+  updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
   if (!obj) return;
 
+  const featureLayerId = ev.layer_id;
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
   const transform = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
@@ -758,6 +775,13 @@ function processRenderableFeatureChanged(
   applyTextureAspect(obj);
 
   obj.updateMatrix();
+
+  handleFeatureUpdatedEventByLayerId(
+    obj,
+    viewEvents,
+    featureLayerId,
+    updatedAt,
+  );
 }
 
 function processPointChanged(

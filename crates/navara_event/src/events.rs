@@ -2,6 +2,7 @@ use bevy_ecs::world::World;
 use navara_data_requester::DataRequester;
 use navara_event_store::{ComponentEvent, EntityEvent, EventStore, ReconstructableComponentEvent};
 use navara_feature_component::render::RenderableFeature;
+use navara_layer::LayerId;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
@@ -30,8 +31,10 @@ pub struct Events<'a> {
     pub worker_task_delegated:
         Vec<ReconstructableComponentEvent<&'a DelegatedWorkerTasksParameters>>,
     pub worker_task_removed: Vec<EntityEvent>,
-    pub renderable_feature_added: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
-    pub renderable_feature_changed: Vec<ReconstructableComponentEvent<&'a RenderableFeature>>,
+    pub renderable_feature_added:
+        Vec<ReconstructableComponentEvent<(&'a RenderableFeature, &'a LayerId)>>,
+    pub renderable_feature_changed:
+        Vec<ReconstructableComponentEvent<(&'a RenderableFeature, &'a LayerId)>>,
     pub renderable_feature_removed: Vec<EntityEvent>,
 }
 
@@ -111,14 +114,14 @@ impl<'a> Events<'a> {
         }
 
         for e in store.renderable_feature_added.iter() {
-            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+            if let Some(e) = ReconstructableComponentEvent::from_world_2(*e, world) {
                 events.renderable_feature_added.push(e);
                 is_changed = true;
             }
         }
 
         for e in store.renderable_feature_changed.iter() {
-            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+            if let Some(e) = ReconstructableComponentEvent::from_world_2(*e, world) {
                 events.renderable_feature_changed.push(e);
                 is_changed = true;
             }
