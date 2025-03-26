@@ -115,6 +115,36 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "geojson",
     data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [135.7672689034169, 35.011034421881675],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    text: {
+      color: 0xffffff,
+      height: 1,
+      scale_by_distance: true,
+      clamp_to_ground: true,
+      depth_test: true,
+      text: "hello 京都",
+      // font: "/font/LoveDays-2v7Oe.ttf",
+      background_color: 0x0a70c2,
+      border_color: 0xf8e43c,
+      border_width: 0.05,
+      size: 100,
+    },
+  },
+
+  {
+    type: "geojson",
+    data: {
       type: "Feature",
       properties: {},
       geometry: {

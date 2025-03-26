@@ -31,7 +31,8 @@
     "@navara/worker": "workspace:*",
     "postprocessing": "^6.36.7",
     "stats.js": "^0.17.0",
-    "three-stdlib": "^2.35.14"
+    "three-stdlib": "^2.35.14",
+    "troika-three-text": "^0.52.3"
   },
   "devDependencies": {
     "@tweakpane/core": "^2.0.5",

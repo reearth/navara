@@ -50,6 +50,11 @@ export const addCtrlPanel = (
     shouldRotateInDefault: true,
     roughness: 1.0,
     metalness: 0.0,
+    text: "",
+    font: "",
+    background_color: "#0a70c2",
+    border_color: "#f8e43c",
+    border_width: 2,
   };
 
   pane
@@ -213,6 +218,32 @@ export const addCtrlPanel = (
         material.roughness = paneParams.roughness;
       }
 
+      if ("text" in material) {
+        material.text = paneParams.text;
+      }
+
+      if ("font" in material) {
+        material.font = paneParams.font;
+      }
+
+      if ("background_color" in material) {
+        material.background_color = parseInt(
+          paneParams.background_color.replace("#", ""),
+          16,
+        );
+      }
+
+      if ("border_color" in material) {
+        material.border_color = parseInt(
+          paneParams.border_color.replace("#", ""),
+          16,
+        );
+      }
+
+      if ("border_width" in material) {
+        material.border_width = paneParams.border_width;
+      }
+
       view.updateLayer(layerId, {
         type: layer.type,
         data: layer.data,
@@ -323,6 +354,41 @@ function createParamCtrl(
       );
     }
 
+    if ("text" in material) {
+      paneParams.text = material.text;
+      f.addBinding(paneParams, "text").on("change", changeFunc);
+    }
+
+    if ("font" in material) {
+      paneParams.font = material.font;
+      f.addBinding(paneParams, "font").on("change", changeFunc);
+    }
+
+    if ("background_color" in material) {
+      paneParams.background_color =
+        "#" + material.background_color.toString(16).padStart(6, "0");
+      f.addBinding(paneParams, "background_color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
+    }
+
+    if ("border_color" in material) {
+      paneParams.border_color =
+        "#" + material.border_color.toString(16).padStart(6, "0");
+      f.addBinding(paneParams, "border_color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
+    }
+
+    if ("border_width" in material) {
+      paneParams.border_width = material.border_width;
+      f.addBinding(paneParams, "border_width").on("change", changeFunc);
+    }
+
     return f;
   }
 
@@ -360,6 +426,9 @@ function getMaterialOptions(layer: MaterialLayerDescription) {
   }
   if ("billboard" in layer) {
     materials.push("billboard");
+  }
+  if ("text" in layer) {
+    materials.push("text");
   }
   if ("model" in layer) {
     materials.push("model");

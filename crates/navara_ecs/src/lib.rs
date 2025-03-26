@@ -157,6 +157,7 @@ impl App {
         let render_info = match feature.as_mut() {
             RenderableFeature::Point { render_info, .. } => render_info,
             RenderableFeature::Billboard { render_info, .. } => render_info,
+            RenderableFeature::Text { render_info, .. } => render_info,
             _ => unreachable!("Unexpected RenderableFeature type"),
         };
         render_info.is_rendered = true;

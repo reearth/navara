@@ -4,6 +4,7 @@ use navara_core::{Extent, Radians, CRS};
 use navara_geometry::TransferableFloatAttribute;
 use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
+    TextMaterial,
 };
 use navara_math::{FloatType, Transform, Vec3};
 
@@ -61,6 +62,16 @@ pub enum RenderableFeature {
         render_info: RenderInformation,
         geometry: TransferableSingleGeometry,
     },
+    Text {
+        coordinates: Vec3,
+        crs: CRS,
+        active: bool,
+        material: TextMaterial,
+        transform: Transform,
+        feature_id: Entity,
+        render_info: RenderInformation,
+        geometry: TransferableSingleGeometry,
+    },
     Polyline {
         coordinates: Vec3,
         crs: CRS,
@@ -104,6 +115,7 @@ impl RenderableFeature {
         match self {
             RenderableFeature::Point { active, .. } => *active = v,
             RenderableFeature::Billboard { active, .. } => *active = v,
+            RenderableFeature::Text { active, .. } => *active = v,
             RenderableFeature::Polyline { active, .. } => *active = v,
             RenderableFeature::Polygon { active, .. } => *active = v,
             RenderableFeature::Model { active, .. } => *active = v,
@@ -115,6 +127,7 @@ impl RenderableFeature {
         match self {
             RenderableFeature::Point { active, .. } => *active,
             RenderableFeature::Billboard { active, .. } => *active,
+            RenderableFeature::Text { active, .. } => *active,
             RenderableFeature::Polyline { active, .. } => *active,
             RenderableFeature::Polygon { active, .. } => *active,
             RenderableFeature::Model { active, .. } => *active,
@@ -126,6 +139,7 @@ impl RenderableFeature {
         match self {
             RenderableFeature::Point { render_info, .. } => render_info.is_rendered,
             RenderableFeature::Billboard { render_info, .. } => render_info.is_rendered,
+            RenderableFeature::Text { render_info, .. } => render_info.is_rendered,
             RenderableFeature::Polyline { render_info, .. } => render_info.is_rendered,
             RenderableFeature::Polygon { render_info, .. } => render_info.is_rendered,
             RenderableFeature::Model { render_info, .. } => render_info.is_rendered,

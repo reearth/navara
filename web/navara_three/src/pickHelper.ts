@@ -17,6 +17,8 @@ import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 import { CustomRenderPass } from "./renderPass";
 
+import { Text } from "troika-three-text";
+
 export type PickHelperOptions = {
   debug: boolean;
 };
@@ -129,6 +131,9 @@ export class PickHelper extends CustomRenderPass {
       // point, billboard
       if (obj instanceof Sprite) {
         obj.material.userData.uPickable.value = picable;
+
+        // The frustum used for picking is only 1 pixel in size,
+        // For sprites, the bounding box used for frustum culling can be inaccurately determined.
         obj.frustumCulled = picable < 0.5;
       }
 
@@ -138,11 +143,22 @@ export class PickHelper extends CustomRenderPass {
       }
 
       // model
-      else if (obj instanceof Group) {
+      else if (obj.userData.isModel) {
         this.traverseModel(obj, (mesh: Mesh) => {
-          if ("userData" in mesh.material) {
+          if ("userData" in mesh.material && mesh.material.userData.uPickable) {
             mesh.material.userData.uPickable.value = picable;
           }
+        });
+      }
+      // text
+      else if (obj.userData.isText) {
+        obj.userData.uPickable.value = picable;
+
+        obj.children.forEach((item) => {
+          // The frustum used for picking is only 1 pixel in size,
+          // and both the text and its background dynamically change positions,
+          // they risk being incorrectly culled. Therefore, frustumCulled must be set to false
+          item.frustumCulled = picable < 0.5;
         });
       }
       // tile
@@ -243,6 +259,25 @@ export class PickHelper extends CustomRenderPass {
     obj.geometry.attributes.batchIdAndSel.needsUpdate = true;
   }
 
+  private pickText(pickSet: Set<number>, obj: Group) {
+    const batchId = obj.userData.batchId;
+    const isPicked = pickSet.has(batchId);
+    if (isPicked) {
+      pickSet.delete(batchId);
+    }
+
+    if (obj.userData.isPicked !== isPicked) {
+      obj.userData.isPicked = isPicked;
+
+      const txt = obj.children.find((item) => item instanceof Text) as Text;
+      if (isPicked) {
+        txt.color = this.highlightColor;
+      } else {
+        txt.color = obj.userData.fontColor;
+      }
+    }
+  }
+
   private toggleHighlight(pickArr: number[]) {
     const pickSet = new Set(pickArr);
     for (const [_key, obj] of this._meshes) {
@@ -252,13 +287,18 @@ export class PickHelper extends CustomRenderPass {
       }
 
       // model
-      else if (obj instanceof Group && obj.userData.batchIdAndSel) {
+      else if (obj instanceof Group && obj.userData.isModel) {
         this.pickModel(pickSet, obj);
       }
 
       // polygon, polyline
       else if (obj instanceof Mesh && obj.userData.batchIdAndSel) {
         this.pickMesh(pickSet, obj);
+      }
+
+      // text
+      else if (obj instanceof Group && obj.userData.isText) {
+        this.pickText(pickSet, obj);
       }
     }
   }

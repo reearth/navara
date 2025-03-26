@@ -16,6 +16,7 @@ use navara_feature_component::{
     polygon::{PolygonGeometry, UpdatePolygon},
     polyline::PolylineGeometry,
     render::RenderableFeature,
+    text::TextGeometry,
 };
 
 use navara_buffer_store::BufferStore;
@@ -174,6 +175,54 @@ fn spawn_feature(
                                     as FloatType,
                             )),
                             BillboardGeometry {
+                                coords: coords(f),
+                                crs: CRS::Geographic,
+                            },
+                            v.clone(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
+            Appearance::Text(v) => match &geometry.value {
+                Value::Point(f) => {
+                    let batch_id = generate_batch_id(
+                        batch_table_res,
+                        id_prop_table_res,
+                        v.id_property.clone(),
+                        properties,
+                    );
+
+                    commands.spawn((
+                        LayerId(layer_id.to_owned()),
+                        BatchId(Vec2::new(
+                            batch_id as FloatType,
+                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
+                        )),
+                        TextGeometry {
+                            coords: coords(f),
+                            crs: CRS::Geographic,
+                        },
+                        v.clone(),
+                    ));
+                }
+                Value::MultiPoint(fs) => {
+                    for f in fs {
+                        let batch_id = generate_batch_id(
+                            batch_table_res,
+                            id_prop_table_res,
+                            v.id_property.clone(),
+                            properties,
+                        );
+
+                        commands.spawn((
+                            LayerId(layer_id.to_owned()),
+                            BatchId(Vec2::new(
+                                batch_id as FloatType,
+                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
+                                    as FloatType,
+                            )),
+                            TextGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
                             },
@@ -437,6 +486,30 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
+                            let should_update_transform =
+                                material.height != mat.height || material.size != mat.size;
+                            *material = mat.clone();
+                            render_info.should_recalculate_height = true;
+                            if should_update_transform {
+                                *transform = calc_transform(
+                                    coordinates,
+                                    crs,
+                                    material.height,
+                                    material.size,
+                                    false,
+                                );
+                            }
+                        }
+                    }
+                    RenderableFeature::Text {
+                        coordinates,
+                        crs,
+                        material,
+                        transform,
+                        render_info,
+                        ..
+                    } => {
+                        if let Appearance::Text(mat) = &u.appearance {
                             let should_update_transform =
                                 material.height != mat.height || material.size != mat.size;
                             *material = mat.clone();

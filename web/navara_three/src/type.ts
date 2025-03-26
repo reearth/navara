@@ -63,3 +63,7 @@ export type WorkerPoolPromises = Map<string, WorkerPoolPromise<unknown>>;
 export type PickedFeature = {
   properties: Record<string, any>;
 };
+
+export type RenderFlag = {
+  forceUpdate: boolean;
+};
