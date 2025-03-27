@@ -229,9 +229,7 @@ pub fn update_polygon(
                 != updated.material.clamp_to_ground
                 || material.height != updated.material.height
                 || material.extruded_height != updated.material.extruded_height;
-            let internal = material.internal.clone();
-            *material = updated.material.clone();
-            material.internal = internal;
+            material.update(&updated.material);
             render_info.should_recalculate_height = should_recalculate_height;
         }
         commands.entity(e).remove::<UpdatePolygon>();
