@@ -4,7 +4,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
 };
 
-use navara_core::{calc_transform, CRS};
+use navara_core::CRS;
 
 use navara_feature_component::{
     batch::{
@@ -486,19 +486,8 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
-                            let should_update_transform =
-                                material.height != mat.height || material.size != mat.size;
-                            *material = mat.clone();
+                            material.update(mat, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
-                            if should_update_transform {
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
-                            }
                         }
                     }
                     RenderableFeature::Text {
@@ -510,19 +499,8 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Text(mat) = &u.appearance {
-                            let should_update_transform =
-                                material.height != mat.height || material.size != mat.size;
-                            *material = mat.clone();
+                            material.update(mat, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
-                            if should_update_transform {
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
-                            }
                         }
                     }
                     RenderableFeature::Point {
@@ -534,19 +512,8 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Point(mat) = &u.appearance {
-                            let should_update_transform =
-                                material.height != mat.height || material.size != mat.size;
-                            *material = mat.clone();
+                            material.update(mat, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
-                            if should_update_transform {
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
-                            }
                         }
                     }
                     RenderableFeature::Model {
@@ -557,27 +524,12 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Model(mat) = &u.appearance {
-                            let should_update_transform = material.height != mat.height
-                                || material.size != mat.size
-                                || material.should_rotate_in_default
-                                    != mat.should_rotate_in_default;
-                            *material = mat.clone();
-                            if should_update_transform {
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    material.should_rotate_in_default,
-                                );
-                            }
+                            material.update(mat, coordinates, crs, transform);
                         }
                     }
                     RenderableFeature::Polyline { material, .. } => {
                         if let Appearance::Polyline(mat) = &u.appearance {
-                            let internal = material.internal.take();
-                            *material = mat.clone();
-                            material.internal = internal;
+                            material.update(mat);
                         }
                     }
                     RenderableFeature::Polygon { .. } => {

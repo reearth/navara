@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::ElevationDecoder;
-use navara_math::{FloatType, Vec2};
+use navara_core::{calc_transform, ElevationDecoder, CRS};
+use navara_math::{FloatType, Transform, Vec2, Vec3};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
@@ -70,6 +70,23 @@ impl Default for PointMaterial {
     }
 }
 
+impl PointMaterial {
+    pub fn update(
+        &mut self,
+        from: &PointMaterial,
+        coordinates: &Vec3,
+        crs: &CRS,
+        transform: &mut Transform,
+    ) {
+        let should_update_transform = self.height != from.height || self.size != from.size;
+        *self = from.clone();
+
+        if should_update_transform {
+            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct BillboardMaterial {
     pub show: bool,
@@ -102,6 +119,23 @@ impl Default for BillboardMaterial {
     }
 }
 
+impl BillboardMaterial {
+    pub fn update(
+        &mut self,
+        from: &BillboardMaterial,
+        coordinates: &Vec3,
+        crs: &CRS,
+        transform: &mut Transform,
+    ) {
+        let should_update_transform = self.height != from.height || self.size != from.size;
+        *self = from.clone();
+
+        if should_update_transform {
+            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct TextMaterial {
     pub show: bool,
@@ -125,7 +159,7 @@ impl Default for TextMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            size: 0.1,
+            size: 1.0,
             color: 0xffffff,
             center: Vec2::new(0.5, 0.),
             clamp_to_ground: true,
@@ -138,6 +172,23 @@ impl Default for TextMaterial {
             border_color: 0x000000,
             border_width: 0.05,
             id_property: "".to_string(),
+        }
+    }
+}
+
+impl TextMaterial {
+    pub fn update(
+        &mut self,
+        from: &TextMaterial,
+        coordinates: &Vec3,
+        crs: &CRS,
+        transform: &mut Transform,
+    ) {
+        let should_update_transform = self.height != from.height;
+        *self = from.clone();
+
+        if should_update_transform {
+            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
         }
     }
 }
@@ -166,6 +217,14 @@ impl Default for PolylineMaterial {
             internal: None,
             id_property: "".to_string(),
         }
+    }
+}
+
+impl PolylineMaterial {
+    pub fn update(&mut self, from: &PolylineMaterial) {
+        let internal = self.internal.take();
+        *self = from.clone();
+        self.internal = internal;
     }
 }
 
@@ -237,6 +296,31 @@ impl Default for ModelMaterial {
             color: 0xffffff,
             metalness: 0.0,
             roughness: 1.0,
+        }
+    }
+}
+
+impl ModelMaterial {
+    pub fn update(
+        &mut self,
+        from: &ModelMaterial,
+        coordinates: &Vec3,
+        crs: &CRS,
+        transform: &mut Transform,
+    ) {
+        let should_update_transform = self.height != from.height
+            || self.size != from.size
+            || self.should_rotate_in_default != from.should_rotate_in_default;
+        *self = from.clone();
+
+        if should_update_transform {
+            *transform = calc_transform(
+                coordinates,
+                crs,
+                self.height,
+                self.size,
+                self.should_rotate_in_default,
+            );
         }
     }
 }
