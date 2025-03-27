@@ -262,6 +262,14 @@ impl Default for PolygonMaterial {
     }
 }
 
+impl PolygonMaterial {
+    pub fn update(&mut self, from: &PolygonMaterial) {
+        let internal = self.internal.clone();
+        *self = from.clone();
+        self.internal = internal;
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolygonInternalMaterial {
     pub min_max_heights: Vec<f32>,

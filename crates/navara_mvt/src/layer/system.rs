@@ -7,7 +7,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::{calc_transform, get_tile_pos_from_url};
+use navara_core::get_tile_pos_from_url;
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
     batch::{BatchId, BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
@@ -165,19 +165,8 @@ pub fn update_mvt_layer(
                             ..
                         } = f.as_mut()
                         {
-                            let should_update_transform =
-                                material.height != pt.height || material.size != pt.size;
-                            *material = pt.clone();
+                            material.update(pt, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
-                            if should_update_transform {
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
-                            }
                         }
                     }
                     Appearance::Billboard(pt) => {
@@ -190,26 +179,13 @@ pub fn update_mvt_layer(
                             ..
                         } = f.as_mut()
                         {
-                            let should_update_transform =
-                                material.height != pt.height || material.size != pt.size;
-                            *material = pt.clone();
+                            material.update(pt, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
-                            if should_update_transform {
-                                *transform = calc_transform(
-                                    coordinates,
-                                    crs,
-                                    material.height,
-                                    material.size,
-                                    false,
-                                );
-                            }
                         }
                     }
                     Appearance::Polyline(polyline) => {
                         if let RenderableFeature::Polyline { material, .. } = f.as_mut() {
-                            let internal = material.internal.take();
-                            *material = polyline.clone();
-                            material.internal = internal;
+                            material.update(polyline);
                         }
                     }
                     Appearance::Polygon(polygon) => {
