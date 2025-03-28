@@ -115,7 +115,7 @@ impl FeatureBatchIdMap {
 }
 
 pub enum BatchProperty {
-    StringObj(String),
+    Value(serde_json::Value),
     Cesium3dTileset(B3dmBatchTable),
 }
 
@@ -179,7 +179,7 @@ impl BatchTable {
             return self.add(Some(BatchTableValue::empty()));
         };
 
-        let props = serde_json::to_string(prop).unwrap_or("{}".to_string());
+        let props = serde_json::to_value(prop).unwrap_or(serde_json::Value::Null);
 
         if let Some(ref key) = id_prop {
             if !key.is_empty() {
@@ -188,7 +188,7 @@ impl BatchTable {
                     if id_prop_value.is_some() {
                         let batch_id = self.add(Some(BatchTableValue {
                             id_property_value: id_prop_value.cloned(),
-                            properties: Some(BatchProperty::StringObj(props)),
+                            properties: Some(BatchProperty::Value(props)),
                         }));
 
                         if let Some(b_id) = batch_id {
@@ -203,7 +203,7 @@ impl BatchTable {
 
         self.add(Some(BatchTableValue {
             id_property_value: None,
-            properties: Some(BatchProperty::StringObj(props)),
+            properties: Some(BatchProperty::Value(props)),
         }))
     }
 

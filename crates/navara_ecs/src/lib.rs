@@ -441,8 +441,8 @@ impl App {
             .unwrap()
             .get(batch_id)
         {
-            if let Some(BatchProperty::StringObj(prop_str)) = &batch_value.properties {
-                return prop_str.clone();
+            if let Some(BatchProperty::Value(prop_str)) = &batch_value.properties {
+                return prop_str.to_string().clone();
             };
 
             return String::from("{}");

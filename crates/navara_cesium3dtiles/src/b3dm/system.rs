@@ -53,7 +53,7 @@ pub fn request_model_by_b3dm_layer(
     }
 }
 
-fn generate_global_batch_ids(
+fn generate_global_batch_id_and_selections(
     batch_table_res: &mut BatchTable,
     id_prop_table_res: &mut IdPropertyTable,
     id_prop_sel_res: &IdPropertySelections,
@@ -63,7 +63,7 @@ fn generate_global_batch_ids(
 ) -> Option<Vec<u32>> {
     let prop_val = batch_table_json.get(id_property)?;
 
-    let mut global_batch_ids: Vec<u32> = vec![];
+    let mut global_batch_id_and_selections: Vec<u32> = vec![];
     if let serde_json::Value::Array(arr) = prop_val {
         for i in 0..batch_length {
             let val = arr.get(i).cloned();
@@ -73,20 +73,20 @@ fn generate_global_batch_ids(
                     properties: None,
                 }))
                 .unwrap_or(0);
-            global_batch_ids.push(g_id);
+            global_batch_id_and_selections.push(g_id);
 
             if let Some(val) = val {
                 id_prop_table_res.add(val.clone(), g_id);
 
-                global_batch_ids.push(id_prop_sel_res.get_selection(&val));
+                global_batch_id_and_selections.push(id_prop_sel_res.get_selection(&val));
             } else {
-                global_batch_ids.push(0);
+                global_batch_id_and_selections.push(0);
             }
         }
     }
 
-    if !global_batch_ids.is_empty() {
-        Some(global_batch_ids)
+    if !global_batch_id_and_selections.is_empty() {
+        Some(global_batch_id_and_selections)
     } else {
         None
     }
@@ -138,7 +138,7 @@ pub fn construct_model_by_b3dm_layer(
             continue;
         };
 
-        let Some(global_batch_ids) = generate_global_batch_ids(
+        let Some(global_batch_ids) = generate_global_batch_id_and_selections(
             &mut batch_table_res,
             &mut id_prop_table_res,
             &id_prop_sel_res,
@@ -320,7 +320,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             continue;
         };
 
-        let Some(global_batch_ids) = generate_global_batch_ids(
+        let Some(global_batch_ids) = generate_global_batch_id_and_selections(
             &mut batch_table_res,
             &mut id_prop_table_res,
             &id_prop_sel_res,
