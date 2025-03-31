@@ -424,6 +424,7 @@ impl App {
     }
 
     pub fn get_batch_prop(&mut self, batch_id: &u32) -> String {
+        // For Cesium 3D Tiles
         if let Some((entity, in_batch_id, in_batch_len)) =
             self.search_feature_entity_by_global_batch_id(batch_id)
         {
@@ -431,9 +432,14 @@ impl App {
                 Some(table) => table,
                 None => return String::from("{}"),
             };
-            return get_prop_from_batch_table(in_batch_table, &in_batch_len, &in_batch_id);
+            return get_prop_from_batch_table_as_string(
+                in_batch_table,
+                &in_batch_len,
+                &in_batch_id,
+            );
         }
 
+        // For other features
         if let Some(batch_value) = self
             .app
             .world()
@@ -515,13 +521,30 @@ impl App {
     }
 }
 
-fn get_prop_from_batch_table(
+fn get_prop_from_batch_table_as_string(
     in_batch_table: &B3dmBatchTable,
     in_batch_len: &usize,
     in_batch_id: &usize,
 ) -> String {
+    let default_str = String::from("{}");
     if *in_batch_id >= *in_batch_len {
-        return String::from("{}");
+        return default_str;
+    }
+
+    let Some(prop) = get_prop_from_batch_table(in_batch_table, in_batch_len, in_batch_id) else {
+        return default_str;
+    };
+
+    serde_json::to_string(&prop).unwrap_or(default_str)
+}
+
+fn get_prop_from_batch_table(
+    in_batch_table: &B3dmBatchTable,
+    in_batch_len: &usize,
+    in_batch_id: &usize,
+) -> Option<serde_json::Map<String, serde_json::Value>> {
+    if *in_batch_id >= *in_batch_len {
+        return None;
     }
 
     let mut prop: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
@@ -531,9 +554,8 @@ fn get_prop_from_batch_table(
         for (key, value) in map {
             match value {
                 serde_json::Value::Object(ref _m) => {
-                    if let Ok(arr) = in_batch_table.read_property_from_binary(*in_batch_len, &value)
-                    {
-                        prop.insert(key, arr[*in_batch_id].clone());
+                    if let Ok(v) = in_batch_table.read_property_from_binary(*in_batch_id, &value) {
+                        prop.insert(key, v);
                     }
                 }
                 serde_json::Value::Array(arr) => {
@@ -544,7 +566,7 @@ fn get_prop_from_batch_table(
         }
     }
 
-    serde_json::to_string(&prop).unwrap()
+    Some(prop)
 }
 
 impl Default for App {

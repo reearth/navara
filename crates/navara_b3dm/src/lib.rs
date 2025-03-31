@@ -87,17 +87,17 @@ impl BatchTable {
 
     pub fn read_property_from_binary(
         &self,
-        batch_length: usize,
+        idx: usize,
         prop: &serde_json::Value,
-    ) -> Result<Vec<Value>, &'static str> {
+    ) -> Result<Value, &'static str> {
         let offset = prop["byteOffset"].as_u64().unwrap() as usize;
         let component_type = ComponentType::from_str(prop["componentType"].as_str().unwrap());
         let data_type = DataType::from_str(prop["type"].as_str().unwrap());
 
         match data_type {
-            DataType::Scalar => self.read_scalar(offset, batch_length, component_type),
+            DataType::Scalar => self.read_scalar(offset, idx, component_type),
             DataType::Vec2 | DataType::Vec3 | DataType::Vec4 => {
-                self.read_vector(offset, batch_length, data_type, component_type)
+                self.read_vector(offset, idx, data_type, component_type)
             }
         }
     }
@@ -105,33 +105,25 @@ impl BatchTable {
     fn read_scalar(
         &self,
         byte_offset: usize,
-        count: usize,
+        idx: usize,
         component_type: ComponentType,
-    ) -> Result<Vec<Value>, &'static str> {
-        (0..count)
-            .map(|i| {
-                let offset = byte_offset + i * component_type.size();
-                self.read_value(offset, &component_type)
-            })
-            .collect()
+    ) -> Result<Value, &'static str> {
+        let offset = byte_offset + idx * component_type.size();
+        self.read_value(offset, &component_type)
     }
 
     fn read_vector(
         &self,
         byte_offset: usize,
-        count: usize,
+        idx: usize,
         data_type: DataType,
         component_type: ComponentType,
-    ) -> Result<Vec<Value>, &'static str> {
-        (0..count)
-            .map(|i| {
-                let offset = byte_offset + i * data_type.size() * component_type.size();
-                let values = (0..data_type.size())
-                    .map(|j| self.read_value(offset + j * component_type.size(), &component_type))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(Value::Array(values))
-            })
-            .collect()
+    ) -> Result<Value, &'static str> {
+        let offset = byte_offset + idx * data_type.size() * component_type.size();
+        let values = (0..data_type.size())
+            .map(|j| self.read_value(offset + j * component_type.size(), &component_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Value::Array(values))
     }
 
     fn read_value(
@@ -333,7 +325,7 @@ mod tests {
             ])
         );
 
-        type Expects<'a> = Vec<(&'a str, Vec<Value>, Box<dyn Fn(Vec<Value>, Vec<Value>)>)>;
+        type Expects<'a> = Vec<(&'a str, Vec<Value>, Box<dyn Fn(Value, Value)>)>;
 
         // Batch table binary
         let expects: Expects = vec![
@@ -346,7 +338,7 @@ mod tests {
                     Value::Number(4.into()),
                     Value::Number(5.into()),
                 ],
-                Box::new(|a: Vec<Value>, b: Vec<Value>| assert_eq!(a, b)),
+                Box::new(|a: Value, b: Value| assert_eq!(a, b)),
             ),
             (
                 "test_property_float",
@@ -357,14 +349,12 @@ mod tests {
                     Value::Number(Number::from_f64(2.3).unwrap()),
                     Value::Number(Number::from_f64(2.4).unwrap()),
                 ],
-                Box::new(|a: Vec<Value>, b: Vec<Value>| {
-                    for (i, a) in a.iter().enumerate() {
-                        assert_abs_diff_eq!(
-                            a.as_f64().unwrap(),
-                            b[i].as_f64().unwrap(),
-                            epsilon = 0.000001
-                        );
-                    }
+                Box::new(|a: Value, b: Value| {
+                    assert_abs_diff_eq!(
+                        a.as_f64().unwrap(),
+                        b.as_f64().unwrap(),
+                        epsilon = 0.000001
+                    );
                 }),
             ),
             (
@@ -396,40 +386,41 @@ mod tests {
                         Value::Number(Number::from_f64(5.4).unwrap()),
                     ]),
                 ],
-                Box::new(|a: Vec<Value>, b: Vec<Value>| {
-                    for (i, a) in a.iter().enumerate() {
-                        let a = a.as_array().unwrap();
-                        let b = b[i].as_array().unwrap();
-                        // x
-                        assert_abs_diff_eq!(
-                            a[0].as_f64().unwrap(),
-                            b[0].as_f64().unwrap(),
-                            epsilon = 0.000001
-                        );
-                        // y
-                        assert_abs_diff_eq!(
-                            a[1].as_f64().unwrap(),
-                            b[1].as_f64().unwrap(),
-                            epsilon = 0.000001
-                        );
-                        // z
-                        assert_abs_diff_eq!(
-                            a[2].as_f64().unwrap(),
-                            b[2].as_f64().unwrap(),
-                            epsilon = 0.000001
-                        );
-                    }
+                Box::new(|a: Value, b: Value| {
+                    let a = a.as_array().unwrap();
+                    let b = b.as_array().unwrap();
+                    // x
+                    assert_abs_diff_eq!(
+                        a[0].as_f64().unwrap(),
+                        b[0].as_f64().unwrap(),
+                        epsilon = 0.000001
+                    );
+                    // y
+                    assert_abs_diff_eq!(
+                        a[1].as_f64().unwrap(),
+                        b[1].as_f64().unwrap(),
+                        epsilon = 0.000001
+                    );
+                    // z
+                    assert_abs_diff_eq!(
+                        a[2].as_f64().unwrap(),
+                        b[2].as_f64().unwrap(),
+                        epsilon = 0.000001
+                    );
                 }),
             ),
         ];
 
         for (name, expect, assert) in expects {
             let property = &batch_table_json[name];
-            let property_value = b3dm
-                .batch_table
-                .read_property_from_binary(batch_length, property)
-                .unwrap();
-            assert(property_value, expect);
+
+            for (batch_id, v) in expect.iter().enumerate() {
+                let property_value = b3dm
+                    .batch_table
+                    .read_property_from_binary(batch_id, property)
+                    .unwrap();
+                assert(property_value, v.clone());
+            }
         }
     }
 
