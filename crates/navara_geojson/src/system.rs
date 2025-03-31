@@ -8,7 +8,8 @@ use navara_core::CRS;
 
 use navara_feature_component::{
     batch::{
-        BatchId, BatchTable, FeatureBatchId, GlobalBatchIds, IdPropertySelections, IdPropertyTable,
+        BatchId, BatchTable, FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections,
+        IdPropertyTable,
     },
     billboard::BillboardGeometry,
     model::ModelGeometry,
@@ -351,7 +352,7 @@ fn spawn_feature(
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         FeatureBatchId(0),
-                        GlobalBatchIds(ids_handle),
+                        GlobalBatchIdAndSelections(ids_handle),
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -377,7 +378,7 @@ fn spawn_feature(
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             FeatureBatchId(0),
-                            GlobalBatchIds(ids_handle),
+                            GlobalBatchIdAndSelections(ids_handle),
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,

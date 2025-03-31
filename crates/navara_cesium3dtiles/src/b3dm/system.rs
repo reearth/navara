@@ -11,7 +11,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequester
 use navara_feature_component::{
     batch::{
         BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIds, IdPropertySelections, IdPropertyTable,
+        GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
     },
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
@@ -165,7 +165,7 @@ pub fn construct_model_by_b3dm_layer(
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(feature_batch_id),
-            GlobalBatchIds(ids_handle),
+            GlobalBatchIdAndSelections(ids_handle),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -215,7 +215,7 @@ pub fn delete_model_by_b3dm_layer(
     deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
     b3dm_layers: Query<Entity, With<B3dmLayer>>,
     features: Query<
-        (&ModelBin, &FeatureBatchId, &GlobalBatchIds),
+        (&ModelBin, &FeatureBatchId, &GlobalBatchIdAndSelections),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -348,7 +348,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
             FeatureBatchId(feature_batch_id),
-            GlobalBatchIds(ids_handle),
+            GlobalBatchIdAndSelections(ids_handle),
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,

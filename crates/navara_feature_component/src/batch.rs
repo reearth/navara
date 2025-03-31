@@ -69,12 +69,12 @@ pub struct FeatureBatchId(pub u32);
 
 // The global batch ID and the selection state corresponding to the internal batch ID in b3dm.
 #[derive(Component, Default, Clone, Debug)]
-pub struct GlobalBatchIds(pub Handle);
+pub struct GlobalBatchIdAndSelections(pub Handle);
 
 // Search b3dm feature by global batch id
 #[derive(Resource, Default)]
 pub struct FeatureBatchIdMap {
-    pub map: HashMap<Entity, GlobalBatchIds>,
+    pub map: HashMap<Entity, GlobalBatchIdAndSelections>,
 }
 
 impl FeatureBatchIdMap {
@@ -84,10 +84,10 @@ impl FeatureBatchIdMap {
         }
     }
 
-    pub fn add(&mut self, key: Entity, ids: GlobalBatchIds) {
+    pub fn add(&mut self, key: Entity, ids: GlobalBatchIdAndSelections) {
         self.map.insert(key, ids);
     }
-    pub fn get(&self, key: &Entity) -> Option<&GlobalBatchIds> {
+    pub fn get(&self, key: &Entity) -> Option<&GlobalBatchIdAndSelections> {
         self.map.get(key)
     }
     pub fn remove(
