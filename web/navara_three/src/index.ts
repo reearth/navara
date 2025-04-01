@@ -440,6 +440,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       highlightColor: {
         value: options.picking?.highlightColor ?? new Color(0x00ffff),
       },
+      // TODO: Need to sync `fov` with WASM side
       fov: { value: (this.camera.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
     };
@@ -578,6 +579,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.projectionMatrixInverse;
 
+    // TODO: Need to sync `fov` with WASM side
     this._uniforms.fov.value = (this.camera.fov * Math.PI) / 180;
     this._uniforms.screenHeightPx.value = viewport?.height ?? 0;
   }
