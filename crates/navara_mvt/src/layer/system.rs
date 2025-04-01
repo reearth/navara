@@ -110,12 +110,22 @@ pub fn construct_single_mvt(
                 };
                 let e = match v.geometry_type {
                     ConstructedGeometryType::Point => commands.spawn((PointMarker, batched)).id(),
-                    ConstructedGeometryType::Polyline => {
-                        commands.spawn((PolylineMarker, batched)).id()
-                    }
-                    ConstructedGeometryType::Polygon => {
-                        commands.spawn((PolygonMarker, batched)).id()
-                    }
+                    ConstructedGeometryType::Polyline => commands
+                        .spawn((
+                            PolylineMarker,
+                            batched,
+                            v.feature_batch_id.unwrap(),
+                            v.global_batch_id_and_selections.unwrap(),
+                        ))
+                        .id(),
+                    ConstructedGeometryType::Polygon => commands
+                        .spawn((
+                            PolygonMarker,
+                            batched,
+                            v.feature_batch_id.unwrap(),
+                            v.global_batch_id_and_selections.unwrap(),
+                        ))
+                        .id(),
                 };
                 commands
                     .entity(layer_entity)

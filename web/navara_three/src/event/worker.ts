@@ -24,6 +24,7 @@ import {
   TransferableGeometry,
   TransferablePolygonGeometry,
   TransferablePolylineGeometry,
+  TransferableUintAttribute,
   UpsampleTerrainMeshParameters,
   UpsampleTerrainMeshResult,
   type WorkerTaskDelegatedEvent,
@@ -296,22 +297,33 @@ async function processConstructPolygonBatchedFeature(
   const result = await promise;
   workerPoolPromises.delete(id);
 
-  if (!result || !result.batch_id || !result.scale_normal_and_cap) return;
+  if (
+    !result ||
+    !result.batch_id ||
+    !result.batch_index ||
+    !result.scale_normal_and_cap
+  )
+    return;
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const batchId = bufHandler.newF32(result.batch_id);
+  const batchIndex = bufHandler.newU32(result.batch_index);
   const normal = result.normal ? bufHandler.newF32(result.normal) : undefined;
   const position = bufHandler.newF32(result.position);
   const scaleNormalAndCap = bufHandler.newF32(result.scale_normal_and_cap);
   const indices = bufHandler.newU32(result.indices);
-  if (!batchId || !position || !scaleNormalAndCap || !indices) {
+  if (!batchId || !batchIndex || !position || !scaleNormalAndCap || !indices) {
     return;
   }
 
   const transferableBatchId = new TransferableFloatAttribute(
     batchId,
     result.batch_id_size ?? 0,
+  );
+  const transferableBatchIndex = new TransferableUintAttribute(
+    batchIndex,
+    result.batch_index_size ?? 0,
   );
   const transferableNormal = normal
     ? new TransferableFloatAttribute(normal, result.normal_size ?? 0)
@@ -329,6 +341,7 @@ async function processConstructPolygonBatchedFeature(
     transferableNormal,
     transferableScaleNormalAndCap,
     transferableBatchId,
+    transferableBatchIndex,
     indices,
   );
 
@@ -378,7 +391,7 @@ async function processConstructPolylineBatchedFeature(
 
   transferable.free();
 
-  if (!result || !result.batch_id) return;
+  if (!result || !result.batch_id || !result.batch_index) return;
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
@@ -393,9 +406,11 @@ async function processConstructPolylineBatchedFeature(
     result.right_normal_and_texture_coordinate_normalization_y,
   );
   const batchId = bufHandler.newF32(result.batch_id);
+  const batchIndex = bufHandler.newU32(result.batch_index);
   const indices = bufHandler.newU32(result.indices);
   if (
     !batchId ||
+    !batchIndex ||
     !position ||
     !start ||
     !startNormals ||
@@ -410,6 +425,10 @@ async function processConstructPolylineBatchedFeature(
   const transferableBatchId = new TransferableFloatAttribute(
     batchId,
     result.batch_id_size ?? 0,
+  );
+  const transferableBatchIndex = new TransferableFloatAttribute(
+    batchIndex,
+    result.batch_index_size ?? 0,
   );
   const transferablePosition = new TransferableFloatAttribute(
     position,
@@ -446,6 +465,7 @@ async function processConstructPolylineBatchedFeature(
     transferableEndNormalAndTextureCoordinateNormalizationX,
     transferableRightNormalAndTextureCoordinateNormalizationY,
     transferableBatchId,
+    transferableBatchIndex,
     indices,
   );
 

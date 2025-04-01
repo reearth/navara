@@ -289,6 +289,8 @@ pub fn transfer_mesh(
                                     MVTFeatureMarker,
                                     LayerId(layer.layer_id.clone()),
                                     appearance.clone(),
+                                    v.feature_batch_id.unwrap(),
+                                    v.global_batch_id_and_selections.unwrap(),
                                 ))
                                 .id()
                         }
@@ -308,6 +310,8 @@ pub fn transfer_mesh(
                                     MVTFeatureMarker,
                                     LayerId(layer.layer_id.clone()),
                                     appearance.clone(),
+                                    v.feature_batch_id.unwrap(),
+                                    v.global_batch_id_and_selections.unwrap(),
                                 ))
                                 .id()
                         }

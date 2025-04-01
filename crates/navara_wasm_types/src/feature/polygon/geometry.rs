@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute};
+use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
 
 #[wasm_bindgen]
 pub struct ConstructedPolygonGeometry {
@@ -40,6 +40,12 @@ impl ConstructedPolygonGeometry {
     }
     pub fn batch_id_size(&mut self) -> Option<u8> {
         self.geometry.batch_id_size()
+    }
+    pub fn batch_index(&mut self) -> Option<js_sys::Uint32Array> {
+        self.geometry.batch_index()
+    }
+    pub fn batch_index_size(&mut self) -> Option<u8> {
+        self.geometry.batch_index_size()
     }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         self.geometry.indices()
@@ -88,6 +94,12 @@ impl PolygonGeometry {
     pub fn batch_id_size(&mut self) -> Option<u8> {
         self.attributes.transfer_batch_id_size()
     }
+    pub fn batch_index(&mut self) -> Option<js_sys::Uint32Array> {
+        self.attributes.transfer_batch_index()
+    }
+    pub fn batch_index_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_batch_index_size()
+    }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.indices)
     }
@@ -100,6 +112,7 @@ pub struct PolygonGeometryAttributes {
     normal: Option<FloatAttribute>,
     scale_normal_and_cap: Option<FloatAttribute>,
     batch_id_and_sel: Option<FloatAttribute>,
+    batch_index: Option<UintAttribute>,
 }
 
 #[wasm_bindgen]
@@ -146,6 +159,18 @@ impl PolygonGeometryAttributes {
         };
         Some(batch_id.size)
     }
+    pub fn transfer_batch_index(&mut self) -> Option<js_sys::Uint32Array> {
+        let Some(batch_index) = &mut self.batch_index else {
+            return None;
+        };
+        Some(batch_index.transfer_data())
+    }
+    pub fn transfer_batch_index_size(&mut self) -> Option<u8> {
+        let Some(batch_index) = &mut self.batch_index else {
+            return None;
+        };
+        Some(batch_index.size)
+    }
 }
 
 impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttributes {
@@ -155,6 +180,7 @@ impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttribu
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
             batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
+            batch_index: val.batch_index.map(|v| v.into()),
         }
     }
 }
@@ -165,6 +191,7 @@ impl From<navara_geometry::PolygonGeometryAttributes> for PolygonGeometryAttribu
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
             batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
+            batch_index: val.batch_index.map(|v| v.into()),
         }
     }
 }

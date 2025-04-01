@@ -70,8 +70,12 @@ fn generate_batch_id(
     id_prop: String,
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) -> u32 {
+    let props = properties
+        .as_ref()
+        .and_then(|prop| serde_json::to_value(prop).ok())
+        .unwrap_or(serde_json::Value::Null);
     batch_table_res
-        .add_hash_map(Some(id_prop), properties.as_ref(), id_prop_table_res)
+        .init_values_with_id_props(Some(id_prop), props, id_prop_table_res)
         .unwrap_or(0)
 }
 

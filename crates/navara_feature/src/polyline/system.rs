@@ -8,8 +8,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::CRS;
 use navara_feature_component::{
-    batch::BatchId,
-    batch::BatchedFeature,
+    batch::{BatchId, BatchedFeature, FeatureBatchId},
     id::FeatureId,
     polyline::construct_polyline_feature,
     render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
@@ -39,6 +38,7 @@ pub fn transfer_batched_mesh(
             &LayerId,
             &PolylineMaterial,
             &mut BatchedFeature,
+            &FeatureBatchId,
             Option<&mut FeatureId>,
         ),
         With<PolylineMarker>,
@@ -49,8 +49,14 @@ pub fn transfer_batched_mesh(
         Without<Deleted>,
     >,
 ) {
-    for (batched_feature_entity, layer_id, material, mut batched_feature, feature_id) in
-        &mut batched_features
+    for (
+        batched_feature_entity,
+        layer_id,
+        material,
+        mut batched_feature,
+        feature_batch_id,
+        feature_id,
+    ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
             || batched_feature
@@ -104,6 +110,7 @@ pub fn transfer_batched_mesh(
                         is_rendered: false,
                     },
                     active: false,
+                    feature_batch_id: Some(feature_batch_id.0),
                 },
             ))
             .id();
@@ -174,6 +181,7 @@ pub fn transfer_mesh(
                         },
                         extent,
                         active: true,
+                        feature_batch_id: None,
                     },
                 ))
                 .id();

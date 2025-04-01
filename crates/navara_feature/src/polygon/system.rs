@@ -7,8 +7,9 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{Aabb, CRS, WGS84_32};
-use navara_feature_component::polygon::{
-    construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon,
+use navara_feature_component::{
+    batch::FeatureBatchId,
+    polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
 };
 use navara_geometry::{FloatAttribute, Hierarchy, PolygonResource};
 use navara_layer::{LayerId, LayerStore};
@@ -39,6 +40,7 @@ pub fn transfer_batched_mesh(
             &LayerId,
             &PolygonMaterial,
             &mut BatchedFeature,
+            &FeatureBatchId,
             Option<&mut FeatureId>,
         ),
         With<PolygonMarker>,
@@ -49,8 +51,14 @@ pub fn transfer_batched_mesh(
         Without<Deleted>,
     >,
 ) {
-    for (batched_feature_entity, layer_id, material, mut batched_feature, feature_id) in
-        &mut batched_features
+    for (
+        batched_feature_entity,
+        layer_id,
+        material,
+        mut batched_feature,
+        feature_batch_id,
+        feature_id,
+    ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
             || batched_feature
@@ -110,6 +118,7 @@ pub fn transfer_batched_mesh(
                     },
                     extent: *extent,
                     active: false,
+                    feature_batch_id: Some(feature_batch_id.0),
                 },
             ))
             .id();
@@ -163,8 +172,10 @@ pub fn transfer_mesh(
             for i in (1..pos_cnt * 2).step_by(2) {
                 batch_id_vec[i] = batch_id.0.y as FloatType;
             }
-            polygon_result.geometry.attributes.batch_id_and_sel =
-                Some(FloatAttribute::new(batch_id_vec, 2));
+            polygon_result
+                .geometry
+                .attributes
+                .batch_id_and_sel = Some(FloatAttribute::new(batch_id_vec, 2));
 
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
@@ -194,6 +205,7 @@ pub fn transfer_mesh(
                         },
                         extent,
                         active: true,
+                        feature_batch_id: None,
                     },
                 ))
                 .id();

@@ -19,6 +19,7 @@ export function constructPolylineBatchedFeature(
         transferableBatchedFeatureLike.points.buffer,
         transferableBatchedFeatureLike.points_sizes.buffer,
         transferableBatchedFeatureLike.batch_ids.buffer,
+        transferableBatchedFeatureLike.batch_indices.buffer,
       ],
     },
   );

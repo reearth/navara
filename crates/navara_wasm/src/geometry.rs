@@ -2,7 +2,7 @@ use navara_buffer_store::Handle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-use crate::attribute::TransferableFloatAttribute;
+use crate::attribute::{TransferableFloatAttribute, TransferableUintAttribute};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
@@ -61,6 +61,8 @@ pub struct TransferablePolylineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub batch_id_and_sel: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
+    pub batch_index: Option<TransferableUintAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
     pub indices: Handle,
 }
 
@@ -76,6 +78,7 @@ impl TransferablePolylineGeometry {
         end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
         right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
         batch_id_and_sel: Option<TransferableFloatAttribute>,
+        batch_index: Option<TransferableUintAttribute>,
         indices: Handle,
     ) -> Self {
         Self {
@@ -86,6 +89,7 @@ impl TransferablePolylineGeometry {
             end_normal_and_texture_coordinate_normalization_x,
             right_normal_and_texture_coordinate_normalization_y,
             batch_id_and_sel,
+            batch_index,
             indices,
         }
     }
@@ -107,6 +111,7 @@ impl From<TransferablePolylineGeometry>
                 .right_normal_and_texture_coordinate_normalization_y
                 .into(),
             batch_id_and_sel: val.batch_id_and_sel.map(|b| b.into()),
+            batch_index: val.batch_index.map(|b| b.into()),
             indices: val.indices,
         }
     }
@@ -129,6 +134,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolylineGeometry
                 .right_normal_and_texture_coordinate_normalization_y)
                 .into(),
             batch_id_and_sel: val.batch_id_and_sel.as_ref().map(|b| b.into()),
+            batch_index: val.batch_index.as_ref().map(|b| b.into()),
             indices: val.indices,
         }
     }
@@ -146,6 +152,8 @@ pub struct TransferablePolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub batch_id_and_sel: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
+    pub batch_index: Option<TransferableUintAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
     pub indices: Handle,
 }
 
@@ -157,6 +165,7 @@ impl TransferablePolygonGeometry {
         normal: Option<TransferableFloatAttribute>,
         scale_normal_and_cap: Option<TransferableFloatAttribute>,
         batch_id_and_sel: Option<TransferableFloatAttribute>,
+        batch_index: Option<TransferableUintAttribute>,
         indices: Handle,
     ) -> Self {
         Self {
@@ -164,6 +173,7 @@ impl TransferablePolygonGeometry {
             normal,
             scale_normal_and_cap,
             batch_id_and_sel,
+            batch_index,
             indices,
         }
     }
@@ -178,6 +188,7 @@ impl From<TransferablePolygonGeometry>
             normal: val.normal.map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|n| n.into()),
             batch_id_and_sel: val.batch_id_and_sel.map(|n| n.into()),
+            batch_index: val.batch_index.map(|n| n.into()),
             indices: val.indices,
         }
     }
@@ -193,6 +204,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
             normal: val.normal.as_ref().map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|n| n.into()),
             batch_id_and_sel: val.batch_id_and_sel.as_ref().map(|n| n.into()),
+            batch_index: val.batch_index.as_ref().map(|n| n.into()),
             indices: val.indices,
         }
     }

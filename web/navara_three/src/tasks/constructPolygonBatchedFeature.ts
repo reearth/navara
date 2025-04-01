@@ -17,6 +17,7 @@ export function constructPolygonBatchedFeature(
     {
       transfer: [
         transferableBatchedFeatureLike.batch_ids.buffer,
+        transferableBatchedFeatureLike.batch_indices.buffer,
         transferableBatchedFeatureLike.expected_winding_orders.buffer,
         transferableBatchedFeatureLike.holes.buffer,
         transferableBatchedFeatureLike.holes_boundaries.buffer,

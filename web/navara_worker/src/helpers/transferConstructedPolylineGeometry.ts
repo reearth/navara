@@ -15,6 +15,7 @@ export function transferConstructedPolylineGeometry(
       like.end_normal_and_texture_coordinate_normalization_x.buffer,
       like.right_normal_and_texture_coordinate_normalization_y.buffer,
       like.batch_id?.buffer,
+      like.batch_index?.buffer,
       like.indices.buffer,
     ].filter(isNotNullish),
   };

@@ -1,8 +1,6 @@
 import type { PolygonMesh, PolygonMaterial } from "@navara/engine";
-
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
-
 import {
   BufferAttribute,
   BufferGeometry,
@@ -10,9 +8,8 @@ import {
   MeshLambertMaterial,
 } from "three";
 
-import type { CommonUniforms } from "../../uniforms";
-
 import type { BufferLoader } from "../";
+import type { CommonUniforms } from "../../uniforms";
 
 export async function renderPolygon(
   mesh: PolygonMesh,
@@ -30,7 +27,11 @@ export async function renderPolygon(
     ? buf.removeF32(g.batch_id_and_sel.data)
     : undefined;
   const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
-  if (!position || !indices || !batchIdAndSel) return;
+  const batchIndex = g.batch_index
+    ? buf.removeU32(g.batch_index.data)
+    : undefined;
+  const batchIndexSize = g.batch_index ? g.batch_index.size : 0;
+  if (!position || !indices || !batchIdAndSel || !batchIndex) return;
 
   const geometry = new BufferGeometry();
   geometry.setAttribute(
@@ -51,6 +52,14 @@ export async function renderPolygon(
     "batchIdAndSel",
     new BufferAttribute(batchIdAndSel, batchIdSize),
   );
+  // Align to B3DM attribute: https://github.com/CesiumGS/3d-tiles/blob/492adb06b00870d9ee99b8d97c261a466783034c/specification/TileFormats/Batched3DModel/README.adoc#binary-gltf
+  // TODO: However this need to be migrated to v1.1 in the future
+  geometry.setAttribute(
+    "_batchid",
+    new BufferAttribute(batchIndex, batchIndexSize),
+  );
+  console.log(batchIndex);
+
   geometry.setIndex(new BufferAttribute(indices, 1));
 
   const clampToGround = mesh.material.clamp_to_ground;

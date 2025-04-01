@@ -1,7 +1,7 @@
 use bevy_ecs::{component::Component, entity::Entity, system::ResMut};
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{Extent, Radians, CRS};
-use navara_geometry::TransferableFloatAttribute;
+use navara_geometry::{TransferableFloatAttribute, TransferableUintAttribute};
 use navara_layer::LayerId;
 use navara_material::{
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
@@ -84,6 +84,7 @@ pub enum RenderableFeature {
         feature_id: Option<Entity>,
         render_info: PolylineRenderInformation,
         extent: Extent<f32, Radians>,
+        feature_batch_id: Option<u32>,
     },
     Polygon {
         coordinates: Vec3,
@@ -95,6 +96,7 @@ pub enum RenderableFeature {
         feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
         extent: Extent<f32, Radians>,
+        feature_batch_id: Option<u32>,
     },
     Model {
         coordinates: Vec3,
@@ -171,6 +173,7 @@ pub struct TransferablePolylineGeometry {
     pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
     pub batch_id_and_sel: Option<TransferableFloatAttribute>,
+    pub batch_index: Option<TransferableUintAttribute>,
     pub indices: Handle,
 }
 
@@ -232,6 +235,13 @@ impl TransferablePolylineGeometry {
                     size: batch_id.size,
                 }
             }),
+            batch_index: geo
+                .attributes
+                .batch_index
+                .map(|batch_idx| TransferableUintAttribute {
+                    data: buf.new_u32(batch_idx.data),
+                    size: batch_idx.size,
+                }),
             indices,
         }
     }
@@ -260,6 +270,7 @@ pub struct TransferablePolygonGeometry {
     pub normal: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub batch_id_and_sel: Option<TransferableFloatAttribute>,
+    pub batch_index: Option<TransferableUintAttribute>,
     pub indices: Handle,
 }
 
@@ -278,6 +289,10 @@ impl TransferablePolygonGeometry {
             .attributes
             .batch_id_and_sel
             .map(|n| (buf.new_f32(n.data), n.size));
+        let batch_index = geo
+            .attributes
+            .batch_index
+            .map(|n| (buf.new_u32(n.data), n.size));
         let indices = buf.new_u32(geo.indices);
 
         TransferablePolygonGeometry {
@@ -294,6 +309,10 @@ impl TransferablePolygonGeometry {
             }),
             batch_id_and_sel: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
                 data: batch_id,
+                size,
+            }),
+            batch_index: batch_index.map(|(batch_index, size)| TransferableUintAttribute {
+                data: batch_index,
                 size,
             }),
             indices,
@@ -314,6 +333,9 @@ impl TransferablePolygonGeometry {
         }
         if let Some(batch_id) = &self.batch_id_and_sel {
             buf.remove(&batch_id.data);
+        }
+        if let Some(batch_index) = &self.batch_index {
+            buf.remove(&batch_index.data);
         }
     }
 }

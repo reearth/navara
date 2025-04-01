@@ -3,7 +3,10 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, IdPropertySelections, IdPropertyTable},
+    batch::{
+        BatchId, BatchIndex, BatchTable, FeatureBatchId, GlobalBatchIdAndSelections,
+        IdPropertySelections, IdPropertyTable,
+    },
     billboard::BillboardGeometry,
     id::FeatureId,
     point::PointGeometry,
@@ -29,6 +32,8 @@ pub(crate) enum ConstructedGeometryType {
 pub(crate) struct ConstructedGeometry {
     pub feature_ids: Vec<Entity>,
     pub geometry_type: ConstructedGeometryType,
+    pub feature_batch_id: Option<FeatureBatchId>,
+    pub global_batch_id_and_selections: Option<GlobalBatchIdAndSelections>,
 }
 
 // TODO: Store the coordinates into BufferStore.
@@ -70,18 +75,46 @@ pub fn construct_geometry(
 
         let mut feature_ids = vec![];
 
+        let feature_batch_id = batch_table.init_values().unwrap_or(0);
+        let mut global_batch_id_and_selections: Vec<u32> = vec![];
+
         for feature in features {
             let geom = feature.get_geometry();
-
+            let props = feature
+                .properties
+                .as_ref()
+                .and_then(|props| serde_json::to_value(props).ok())
+                .unwrap_or(serde_json::Value::Null);
             let id_prop = get_id_property(geom, appearances);
-            let batch_id = batch_table
-                .add_hash_map(id_prop, feature.properties.as_ref(), id_prop_table_res)
-                .unwrap_or(0);
 
-            let batch_id = BatchId(Vec2::new(
-                batch_id as FloatType,
-                batch_table.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-            ));
+            let batch_idx = BatchIndex((global_batch_id_and_selections.len() / 2) as u32);
+
+            let batch_id = match geom {
+                // For point
+                // This should be unnecessary once point instancing is supported
+                Geometry::Point(_) | Geometry::MultiPoint(_) => {
+                    let batch_id = batch_table
+                        .init_values_with_id_props(id_prop, props, id_prop_table_res)
+                        .unwrap_or(0);
+                    Some(BatchId(Vec2::new(
+                        batch_id as FloatType,
+                        batch_table.get_selection(&batch_id, id_prop_sel_res) as FloatType,
+                    )))
+                }
+                _ => {
+                    let batch_id = batch_table
+                        .add_id_prop(id_prop, &props, id_prop_table_res)
+                        .unwrap_or(0);
+
+                    batch_table.add_values(batch_id, props);
+
+                    global_batch_id_and_selections.push(batch_id);
+                    global_batch_id_and_selections
+                        .push(batch_table.get_selection(&batch_id, id_prop_sel_res));
+
+                    None
+                }
+            };
 
             handle_geometry(
                 commands,
@@ -91,7 +124,9 @@ pub fn construct_geometry(
                 layer_id,
                 geom,
                 &mut converter,
-                &batch_id,
+                batch_id.as_ref(),
+                // For batched feature
+                &batch_idx,
                 appearances,
             );
         }
@@ -100,9 +135,15 @@ pub fn construct_geometry(
             continue;
         }
 
+        let is_not_point_geometry = !(geometry_type.is_none()
+            || matches!(geometry_type, Some(ConstructedGeometryType::Point)));
+
         result.push(ConstructedGeometry {
             feature_ids,
             geometry_type: geometry_type.unwrap(),
+            feature_batch_id: is_not_point_geometry.then_some(FeatureBatchId(feature_batch_id)),
+            global_batch_id_and_selections: is_not_point_geometry
+                .then(|| GlobalBatchIdAndSelections(buf.new_u32(global_batch_id_and_selections))),
         });
     }
 
@@ -172,7 +213,8 @@ fn handle_geometry(
     layer_id: &str,
     geom: &Geometry<f32>,
     converter: &mut PosConverter,
-    batch_id: &BatchId,
+    batch_id: Option<&BatchId>,
+    batch_index: &BatchIndex,
     appearances: &[Appearance],
 ) {
     match geom {
@@ -188,7 +230,7 @@ fn handle_geometry(
 
             let MultiPolygon(plgs) = v;
 
-            construct_polygons_geometry(commands, buf, feature_ids, plgs, converter, batch_id);
+            construct_polygons_geometry(commands, buf, feature_ids, plgs, batch_index, converter);
         }
         Geometry::Polygon(v) => {
             if !appearances
@@ -200,7 +242,7 @@ fn handle_geometry(
 
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
-            construct_polygon_geometry(commands, buf, feature_ids, v, converter, batch_id);
+            construct_polygon_geometry(commands, buf, feature_ids, v, batch_index, converter);
         }
         Geometry::MultiPoint(v) => {
             *geometry_type = Some(ConstructedGeometryType::Point);
@@ -298,7 +340,7 @@ fn handle_geometry(
 
             let MultiLineString(lines) = v;
 
-            construct_lines_geometry(commands, buf, feature_ids, lines, converter, batch_id);
+            construct_lines_geometry(commands, buf, feature_ids, lines, batch_index, converter);
         }
         Geometry::LineString(line) => {
             if !appearances
@@ -310,7 +352,7 @@ fn handle_geometry(
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
 
-            construct_line_geometry(commands, buf, feature_ids, line, converter, batch_id);
+            construct_line_geometry(commands, buf, feature_ids, line, batch_index, converter);
         }
         Geometry::GeometryCollection(geoms) => {
             for geom in &geoms.0 {
@@ -323,6 +365,7 @@ fn handle_geometry(
                     geom,
                     converter,
                     batch_id,
+                    batch_index,
                     appearances,
                 );
             }
@@ -340,7 +383,7 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
     converter: &mut PosConverter,
     appearance: &A,
     geometry: F,
-    batch_id: &BatchId,
+    batch_id: Option<&BatchId>,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -367,7 +410,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     converter: &mut PosConverter,
     appearance: &A,
     geometry: &F,
-    batch_id: &BatchId,
+    batch_id: Option<&BatchId>,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -377,7 +420,7 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
     let e = commands
         .spawn((
             LayerId(layer_id.to_owned()),
-            BatchId(batch_id.0),
+            BatchId(batch_id.unwrap().0),
             FeatureId::default(),
             geometry(x, y),
             appearance.clone(),
@@ -397,12 +440,12 @@ fn construct_lines_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     lines: &[LineString<f32>],
+    batch_index: &BatchIndex,
     converter: &mut PosConverter,
-    batch_id: &BatchId,
 ) -> usize {
     let mut count = 0;
     for line in lines {
-        construct_line_geometry(commands, buf, feature_ids, line, converter, batch_id);
+        construct_line_geometry(commands, buf, feature_ids, line, batch_index, converter);
         count += line.0.len();
     }
 
@@ -415,8 +458,8 @@ fn construct_line_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     line: &LineString<f32>,
+    batch_index: &BatchIndex,
     converter: &mut PosConverter,
-    batch_id: &BatchId,
 ) {
     let LineString(points) = line;
     let geo_points = converter.project_points(points);
@@ -429,7 +472,7 @@ fn construct_line_geometry(
         .spawn((
             BatchedFeatureMarker,
             PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
-            BatchId(batch_id.0),
+            BatchIndex(batch_index.0),
         ))
         .id();
 
@@ -442,11 +485,11 @@ fn construct_polygons_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     polygons: &[Polygon<f32>],
+    batch_index: &BatchIndex,
     converter: &mut PosConverter,
-    batch_id: &BatchId,
 ) {
     for polygon in polygons {
-        construct_polygon_geometry(commands, buf, feature_ids, polygon, converter, batch_id);
+        construct_polygon_geometry(commands, buf, feature_ids, polygon, batch_index, converter);
     }
 }
 
@@ -456,8 +499,8 @@ fn construct_polygon_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     polygon: &Polygon<f32>,
+    batch_index: &BatchIndex,
     converter: &mut PosConverter,
-    batch_id: &BatchId,
 ) {
     let LineString(outer) = polygon.exterior();
     let outer_vec = converter.project_points(outer);
@@ -490,7 +533,7 @@ fn construct_polygon_geometry(
             .transfer(buf),
             crs: CRS::Geographic,
         },
-        BatchId(batch_id.0),
+        BatchIndex(batch_index.0),
     ));
 
     feature_ids.push(entity.id());
