@@ -440,6 +440,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       highlightColor: {
         value: options.picking?.highlightColor ?? new Color(0x00ffff),
       },
+      fov: { value: (this.camera.fov * Math.PI) / 180 },
+      screenHeightPx: { value: height },
     };
 
     this._defaultTextureOptions = {
@@ -575,6 +577,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._globeGBufferRenderTarget.textures[0];
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.projectionMatrixInverse;
+
+    this._uniforms.fov.value = (this.camera.fov * Math.PI) / 180;
+    this._uniforms.screenHeightPx.value = viewport?.height ?? 0;
   }
 
   /** Returns true if the scene was updated and needs to be rendered. */

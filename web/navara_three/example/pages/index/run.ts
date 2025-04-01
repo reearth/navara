@@ -137,8 +137,49 @@ const geoLayersDef: MaterialLayerDescription[] = [
       // font: "/font/LoveDays-2v7Oe.ttf",
       background_color: 0x0a70c2,
       border_color: 0xf8e43c,
-      border_width: 0.05,
-      size: 100,
+      border_width: 0.08, // 0 ~ 0.5, the ratio of the border to the height
+      size: 50,
+      center: {
+        x: 0.5,
+        y: 0,
+      },
+      padding: {
+        x: 10,
+        y: 0,
+      },
+    },
+  },
+
+  {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [86.925, 27.9881],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    text: {
+      color: 0x000000,
+      height: 1,
+      scale_by_distance: true,
+      clamp_to_ground: true,
+      depth_test: true,
+      text: "Mt.Everest",
+      background_color: 0xa4e996,
+      border_color: 0x4aac3b,
+      border_width: 0.1, // 0 ~ 0.5, the ratio of the border to the height
+      size: 30,
+      padding: {
+        x: 5,
+        y: 0,
+      },
     },
   },
 
