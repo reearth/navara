@@ -5,21 +5,10 @@
  * @name nvr_getBillboardMat
  * @glslFunction
  *
- * param {float} initScale - initial scale value.
- * param {float} scaleByDistance - scale by distance value.
+ * param {float} scaleFactor - scale value.
  * returns {mat4} billboardMatrix - billboard matrix.
  */
-mat4 nvr_getBillboardMat(float initScale, float scaleByDistance) {
-    float scaleFactor = initScale;
-    if(scaleByDistance > 0.0) {
-        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-        float distance = length(worldPosition.xyz - cameraPosition);
-
-        // TODO: 0.000125 can be temporarily approximated to implement set size in pixels.
-        // It needs to be calculated in the window resize event in the future.
-        scaleFactor *= 0.000125 * distance;
-    }
-
+mat4 nvr_getBillboardMat(float scaleFactor) {
     // Set rotation to zero to behave like a billboard.
     mat4 billboardMatrix = modelViewMatrix;
     billboardMatrix[0][0] = scaleFactor;
@@ -34,4 +23,3 @@ mat4 nvr_getBillboardMat(float initScale, float scaleByDistance) {
 
     return billboardMatrix;
 }
-

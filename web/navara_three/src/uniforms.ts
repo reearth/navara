@@ -12,4 +12,6 @@ export type CommonUniforms = {
   tGlobeNormal: RefThree<Texture>;
   inverseProjectionMatrix: RefThree<Matrix4>;
   highlightColor: RefThree<Color>;
+  fov: RefThree<number>;
+  screenHeightPx: RefThree<number>;
 };
