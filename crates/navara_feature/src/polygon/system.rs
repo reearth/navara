@@ -172,10 +172,8 @@ pub fn transfer_mesh(
             for i in (1..pos_cnt * 2).step_by(2) {
                 batch_id_vec[i] = batch_id.0.y as FloatType;
             }
-            polygon_result
-                .geometry
-                .attributes
-                .batch_id_and_sel = Some(FloatAttribute::new(batch_id_vec, 2));
+            polygon_result.geometry.attributes.batch_id_and_sel =
+                Some(FloatAttribute::new(batch_id_vec, 2));
 
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);

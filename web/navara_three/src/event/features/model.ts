@@ -1,3 +1,4 @@
+import type { ModelMesh, ModelMaterial } from "@navara/engine";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import {
   BufferAttribute,
@@ -8,10 +9,9 @@ import {
   MeshPhysicalMaterial,
 } from "three";
 
-import type { ModelMesh, ModelMaterial } from "@navara/engine";
+import type { BufferLoader } from "../";
 import type { CommonUniforms } from "../../uniforms";
 import { initializeGltfLoader } from "../loaders";
-import type { BufferLoader } from "../";
 
 export async function renderModel(
   m: ModelMesh,

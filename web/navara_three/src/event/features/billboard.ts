@@ -1,8 +1,8 @@
+import type { BillboardMesh, BillboardMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import { Sprite, SpriteMaterial } from "three";
 
-import type { BillboardMesh, BillboardMaterial } from "@navara/engine";
 import type { CommonUniforms } from "../../uniforms";
 import { TEXTURE_LOADER } from "../loaders";
 
