@@ -7,6 +7,7 @@ use bevy_ecs::{
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 use navara_math::Vec2;
+use rand::Rng;
 
 use crate::id::FeatureId;
 
@@ -127,7 +128,6 @@ impl BatchTableValue {
 #[derive(Resource)]
 pub struct BatchTable {
     map: HashMap<u32, Option<BatchTableValue>>,
-    handle: u32,
 }
 
 impl Default for BatchTable {
@@ -140,17 +140,24 @@ impl BatchTable {
     pub fn new() -> Self {
         Self {
             map: HashMap::new(),
-            handle: 0,
         }
     }
 
     pub fn add(&mut self, value: Option<BatchTableValue>) -> Option<u32> {
-        let handle = self.handle;
+        let mut rng = rand::rng();
+        let mut key = rng.random_range(1..0xffffff);
+        let mut retry_count = 10;
+        while self.map.contains_key(&key) && retry_count > 0 {
+            key = rng.random_range(1..0xffffff);
+            retry_count -= 1;
+        }
 
-        self.handle += 1;
-
-        self.map.insert(handle, value);
-        Some(handle)
+        if retry_count > 0 {
+            self.map.insert(key, value);
+            Some(key)
+        } else {
+            None
+        }
     }
 
     pub fn add_id_prop(
