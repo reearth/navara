@@ -51,7 +51,6 @@ import {
   processWorkerTaskRemovedEvent,
 } from "./worker";
 
-
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;

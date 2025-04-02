@@ -13,7 +13,6 @@ import {
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D, Material, Group } from "three";
 
-
 import type { ViewEvents } from "..";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
@@ -24,17 +23,15 @@ import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
 } from "./featureEvent";
-import { renderBillboard , processBillboardChanged } from "./features/billboard";
-import { renderModel , processModelChanged } from "./features/model";
-import { renderPoint , processPointChanged } from "./features/point";
-import { renderPolygon , processPolygonChanged } from "./features/polygon";
-import { renderPolyline , processPolylineChanged } from "./features/polyline";
-import { renderText } from "./features/text";
+import { renderBillboard, processBillboardChanged } from "./features/billboard";
+import { renderModel, processModelChanged } from "./features/model";
+import { renderPoint, processPointChanged } from "./features/point";
+import { renderPolygon, processPolygonChanged } from "./features/polygon";
+import { renderPolyline, processPolylineChanged } from "./features/polyline";
+import { renderText , processTextChanged } from "./features/text";
+
 import type { BufferLoader, FeatureHandler } from ".";
 import { setTransform } from ".";
-
-import { processTextChanged } from "./features/text";
-
 
 
 export function renderFeature(
