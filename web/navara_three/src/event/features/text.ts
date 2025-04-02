@@ -41,7 +41,10 @@ export async function renderText(m: TextMesh, uniforms: CommonUniforms) {
     value: new Color(m.material.border_color),
   };
   textGroup.userData.borderWidth = {
-    value: m.material.border_width ?? 0.05,
+    value: m.material.border_width ?? 0.0,
+  };
+  textGroup.userData.cornerRadius = {
+    value: m.material.corner_radius ?? 0.0,
   };
   textGroup.userData.bgSize = {
     value: new Vector2(1.0, 1.0),
@@ -122,6 +125,10 @@ export function updateText(
   root.userData.bgColor.value = new Color(material.background_color);
   root.userData.borderColor.value = new Color(material.border_color);
   root.userData.borderWidth.value = Math.max(material.border_width ?? 0.0, 0.0);
+  root.userData.cornerRadius.value = Math.max(
+    material.corner_radius ?? 0.0,
+    0.0,
+  );
 
   txt.text = material.text ?? "";
 
@@ -157,7 +164,7 @@ export function updateText(
 
 function createText(root: Group) {
   const txt = new Text();
-  txt.fontSize = 4;
+  txt.fontSize = 1;
 
   (txt.material as Material).onBeforeCompile = (shader) => {
     shader.uniforms.nvr_uScaleByDistance = root.userData.scaleByDistance;
@@ -316,7 +323,7 @@ function createBackground(root: Group) {
     shader.uniforms.nvr_uScaleByDistance = root.userData.scaleByDistance;
     shader.uniforms.nvr_uFontSizePx = root.userData.fontSizePx;
     shader.uniforms.nvr_uFontSizeWorld = root.userData.fontSizeWorld;
-    shader.uniforms.nvr_uCornerRadius = { value: 0.1 };
+    shader.uniforms.nvr_uCornerRadius = root.userData.cornerRadius;
     shader.uniforms.nvr_uFillColor = root.userData.bgColor;
     shader.uniforms.nvr_uBorderColor = root.userData.borderColor;
     shader.uniforms.nvr_uBorderWidth = root.userData.borderWidth;
