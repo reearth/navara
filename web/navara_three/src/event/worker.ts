@@ -426,7 +426,7 @@ async function processConstructPolylineBatchedFeature(
     batchId,
     result.batch_id_size ?? 0,
   );
-  const transferableBatchIndex = new TransferableFloatAttribute(
+  const transferableBatchIndex = new TransferableUintAttribute(
     batchIndex,
     result.batch_index_size ?? 0,
   );

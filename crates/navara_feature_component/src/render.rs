@@ -151,13 +151,21 @@ impl RenderableFeature {
         }
     }
 
-    pub fn destroy(&mut self, buf: &mut BufferStore) {
+    pub fn destroy(
+        &mut self,
+        buf: &mut BufferStore,
+        batch_table_res: &mut BatchTable,
+        id_prop_table_res: &mut IdPropertyTable,
+    ) {
         match self {
             RenderableFeature::Polyline { geometry, .. } => {
-                geometry.remove_from_buf(buf);
+                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
             }
             RenderableFeature::Polygon { geometry, .. } => {
-                geometry.remove_from_buf(buf);
+                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+            }
+            RenderableFeature::Model { geometry, .. } => {
+                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
             }
             _ => (),
         }
@@ -246,7 +254,12 @@ impl TransferablePolylineGeometry {
         }
     }
 
-    pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
+    pub fn remove_from_buf(
+        &mut self,
+        buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
+        id_prop_table: &mut IdPropertyTable,
+    ) {
         buf.remove(&self.position.data);
         buf.remove(&self.start.data);
         buf.remove(&self.forward_offset.data);
@@ -258,7 +271,17 @@ impl TransferablePolylineGeometry {
                 .data,
         );
         if let Some(batch_id) = &self.batch_id_and_sel {
+            let Some(vec_ids) = buf.get_u32(&batch_id.data) else {
+                return;
+            };
+
+            for i in (0..vec_ids.len()).step_by(batch_id.size as usize) {
+                batch_table.remove(&vec_ids[i], id_prop_table);
+            }
             buf.remove(&batch_id.data);
+        }
+        if let Some(batch_index) = &self.batch_index {
+            buf.remove(&batch_index.data);
         }
         buf.remove(&self.indices);
     }
@@ -321,7 +344,12 @@ impl TransferablePolygonGeometry {
 }
 
 impl TransferablePolygonGeometry {
-    pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
+    pub fn remove_from_buf(
+        &mut self,
+        buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
+        id_prop_table: &mut IdPropertyTable,
+    ) {
         buf.remove(&self.position.data);
         buf.remove(&self.indices);
 
@@ -332,6 +360,13 @@ impl TransferablePolygonGeometry {
             buf.remove(&normal.data);
         }
         if let Some(batch_id) = &self.batch_id_and_sel {
+            let Some(vec_ids) = buf.get_u32(&batch_id.data) else {
+                return;
+            };
+
+            for i in (0..vec_ids.len()).step_by(batch_id.size as usize) {
+                batch_table.remove(&vec_ids[i], id_prop_table);
+            }
             buf.remove(&batch_id.data);
         }
         if let Some(batch_index) = &self.batch_index {

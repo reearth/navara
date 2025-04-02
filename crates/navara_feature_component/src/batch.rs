@@ -8,7 +8,7 @@ use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 use navara_math::Vec2;
 
-use crate::{id::FeatureId, render::RenderableFeature};
+use crate::id::FeatureId;
 
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use std::collections::{HashMap, HashSet};
@@ -25,27 +25,16 @@ impl BatchedFeature {
     pub fn despawn_recursively(
         &self,
         commands: &mut Commands,
-        buf: &mut BufferStore,
-        batch_table: &mut BatchTable,
-        id_prop_table: &mut IdPropertyTable,
         features: &Query<&FeatureId>,
-        batch_id: &Query<&BatchId>,
-        renderable_features: &mut Query<&mut RenderableFeature>,
     ) -> Vec<Entity> {
         let mut removed = vec![];
         for f in &self.features {
             if let Some(rendered_feature_id) = features.get(*f).ok().and_then(|f| f.0) {
-                if let Ok(mut feature) = renderable_features.get_mut(rendered_feature_id) {
-                    feature.destroy(buf);
-                }
-                commands.entity(rendered_feature_id).despawn();
+                commands.entity(rendered_feature_id).insert(Deleted);
                 removed.push(rendered_feature_id);
             }
             if let Some(mut e) = commands.get_entity(*f) {
-                if let Ok(batchid) = batch_id.get(*f) {
-                    batch_table.remove(&(batchid.0[0] as u32), id_prop_table);
-                }
-                e.despawn();
+                e.insert(Deleted);
             }
         }
         if let Some(e) = self.construct_polyline_feature {

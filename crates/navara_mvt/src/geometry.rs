@@ -106,7 +106,7 @@ pub fn construct_geometry(
                         .add_id_prop(id_prop, &props, id_prop_table_res)
                         .unwrap_or(0);
 
-                    batch_table.add_values(batch_id, props);
+                    batch_table.add_values(feature_batch_id, props);
 
                     global_batch_id_and_selections.push(batch_id);
                     global_batch_id_and_selections

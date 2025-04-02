@@ -572,22 +572,7 @@ pub fn delete_geo_json_layer(
             // delete RenderableFeature and related Buffers
             for entity in vec {
                 if let Ok(mut feature) = features.get_mut(*entity) {
-                    match &mut *feature {
-                        RenderableFeature::Polyline { geometry, .. } => {
-                            geometry.remove_from_buf(&mut buf);
-                        }
-                        RenderableFeature::Polygon { geometry, .. } => {
-                            geometry.remove_from_buf(&mut buf);
-                        }
-                        RenderableFeature::Model { geometry, .. } => {
-                            geometry.remove_from_buf(
-                                &mut buf,
-                                &mut batch_table,
-                                &mut id_prop_table_res,
-                            );
-                        }
-                        _ => (),
-                    }
+                    feature.destroy(&mut buf, &mut batch_table, &mut id_prop_table_res);
                 }
 
                 commands.entity(*entity).despawn();

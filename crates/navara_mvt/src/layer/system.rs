@@ -243,10 +243,10 @@ pub fn delete_mvt_layer(
             // delete RenderableFeature and related Buffers
             for entity in vec {
                 if let Ok(mut feature) = features.get_mut(*entity) {
-                    feature.destroy(&mut buf);
+                    feature.destroy(&mut buf, &mut batch_table, &mut id_prop_table_res);
                 }
 
-                commands.entity(*entity).despawn();
+                commands.entity(*entity).insert(Deleted);
             }
         }
 
@@ -259,7 +259,7 @@ pub fn delete_mvt_layer(
                         &mut id_prop_table_res,
                     );
                 }
-                commands.entity(entity).despawn();
+                commands.entity(entity).insert(Deleted);
             }
         }
 
@@ -271,21 +271,16 @@ pub fn delete_mvt_layer(
                 continue;
             }
             if let Some(rendered) = rendered {
-                commands.entity(rendered.0).despawn();
+                commands.entity(rendered.0).insert(Deleted);
             }
             if let Some(resource) = resource {
                 resource.destroy(
                     &mut commands,
-                    &mut buf,
-                    &mut batch_table,
-                    &mut id_prop_table_res,
                     &mut qts,
                     &tc,
                     &feature_ids,
                     &batched_features,
-                    &mut features,
                     &mut rendered_tiles,
-                    &batch_id,
                 );
             }
             commands.entity(e).despawn();

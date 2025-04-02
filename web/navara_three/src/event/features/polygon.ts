@@ -58,7 +58,6 @@ export async function renderPolygon(
     "_batchid",
     new BufferAttribute(batchIndex, batchIndexSize),
   );
-  console.log(batchIndex);
 
   geometry.setIndex(new BufferAttribute(indices, 1));
 
