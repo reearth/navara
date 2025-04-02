@@ -2,6 +2,8 @@ import type { TextMaterial, TextMesh } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
+import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
+
 import {
   Color,
   Mesh,
@@ -27,7 +29,7 @@ export async function renderText(m: TextMesh, uniforms: CommonUniforms) {
   textGroup.userData.scaleByDistance = {
     value: m.material.scale_by_distance ? 1.0 : 0.0,
   };
-  textGroup.userData.scaleSize = {
+  textGroup.userData.fontSizePx = {
     value: m.material.size ?? 1.0,
   };
   textGroup.userData.bgColor = {
@@ -49,6 +51,15 @@ export async function renderText(m: TextMesh, uniforms: CommonUniforms) {
     x: m.material?.center?.x ?? 0.5,
     y: m.material?.center?.y ?? 0,
   };
+  textGroup.userData.fontSizeWorld = {
+    value: 0.0,
+  };
+  textGroup.userData.padding = {
+    x: m.material?.padding?.x ?? 0.5,
+    y: m.material?.padding?.y ?? 0,
+  };
+  textGroup.userData.fov = uniforms?.fov;
+  textGroup.userData.screenHeightPx = uniforms?.screenHeightPx;
   textGroup.userData.isPicked = m.geometry.selected;
   textGroup.userData.batchId = m.geometry.batch_id ?? 0;
   textGroup.userData.highlightColor = uniforms?.highlightColor?.value;
@@ -70,6 +81,7 @@ export function updateText(
   }
 
   let bNeedUpdateBg = false;
+  let bPaddingChanged = false;
 
   if (material.text !== root.userData.text) {
     root.userData.text = material.text;
@@ -86,6 +98,16 @@ export function updateText(
     bNeedUpdateBg = true;
   }
 
+  if (
+    material.padding &&
+    (material.padding.x != root.userData.padding.x ||
+      material.padding.y != root.userData.padding.y)
+  ) {
+    root.userData.padding.x = material.padding.x;
+    root.userData.padding.y = material.padding.y;
+    bPaddingChanged = true;
+  }
+
   if (material.font !== root.userData.font) {
     root.userData.font = material.font;
     bNeedUpdateBg = true;
@@ -94,7 +116,7 @@ export function updateText(
   root.userData.fontColor = material.color;
   root.userData.depthTest = material.depth_test;
   root.userData.scaleByDistance.value = material.scale_by_distance ? 1.0 : 0.0;
-  root.userData.scaleSize.value = material.size ?? 1.0;
+  root.userData.fontSizePx.value = material.size ?? 1.0;
   root.userData.bgColor.value = new Color(material.background_color);
   root.userData.borderColor.value = new Color(material.border_color);
   root.userData.borderWidth.value = material.border_width ?? 0.05;
@@ -126,6 +148,8 @@ export function updateText(
         needRender();
       }
     });
+  } else if (bPaddingChanged) {
+    updateBackground(root, txt, material);
   }
 }
 
@@ -135,24 +159,38 @@ function createText(root: Group) {
 
   (txt.material as Material).onBeforeCompile = (shader) => {
     shader.uniforms.nvr_uScaleByDistance = root.userData.scaleByDistance;
-    shader.uniforms.nvr_uScaleSize = root.userData.scaleSize;
+    shader.uniforms.nvr_uFontSizePx = root.userData.fontSizePx;
+    shader.uniforms.nvr_uFontSizeWorld = root.userData.fontSizeWorld;
     shader.uniforms.nvr_uBatchId = { value: root.userData.batchId };
     shader.uniforms.nvr_uPickable = root.userData.uPickable;
+    shader.uniforms.nvr_uFov = root.userData.fov;
+    shader.uniforms.nvr_uScreenHeightPx = root.userData.screenHeightPx;
 
     shader.vertexShader = shader.vertexShader.replace(
       `uniform vec3 diffuse;`,
       `
       uniform vec3 diffuse;
       uniform float nvr_uScaleByDistance;
-      uniform float nvr_uScaleSize;
+      uniform float nvr_uFontSizePx;
+      uniform float nvr_uFontSizeWorld;
+      uniform float nvr_uFov;
+      uniform float nvr_uScreenHeightPx;
       ${BillboardMatrix}
+      ${PixelToWorld}
       `,
     );
 
     shader.vertexShader = shader.vertexShader.replace(
       `gl_Position = projectionMatrix * mvPosition;`,
       `
-      mat4 billboardMatrix = nvr_getBillboardMat(nvr_uScaleSize, nvr_uScaleByDistance);
+      float scaleFactor = nvr_uFontSizePx;
+      if (nvr_uScaleByDistance > 0.0) {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldPosition.xyz, cameraPosition);
+        scaleFactor = worldSize / nvr_uFontSizeWorld;
+      }
+
+      mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
       vec4 newMvPosition = billboardMatrix * vec4(transformed, 1.0);
 
       gl_Position = projectionMatrix * newMvPosition;
@@ -204,6 +242,14 @@ if (edgeAlpha == 0.0) {
 }
 
 function updateBackground(root: Group, txt: Text, material: TextMaterial) {
+  const textRenderInfo = txt.textRenderInfo;
+  const txtWidth =
+    textRenderInfo.blockBounds[2] - textRenderInfo.blockBounds[0];
+  const txtHeight =
+    textRenderInfo.blockBounds[3] - textRenderInfo.blockBounds[1];
+
+  root.userData.fontSizeWorld.value = txtHeight;
+
   let bg = root.children.find((item) => !(item instanceof Text)) as Mesh;
 
   if (!material.background_color) {
@@ -223,14 +269,12 @@ function updateBackground(root: Group, txt: Text, material: TextMaterial) {
     bg = createBackground(root);
   }
 
-  const textRenderInfo = txt.textRenderInfo;
-  const txtWidth =
-    textRenderInfo.blockBounds[2] - textRenderInfo.blockBounds[0];
-  const txtHeight =
-    textRenderInfo.blockBounds[3] - textRenderInfo.blockBounds[1];
-
-  const bgWwidth = txtWidth + txtHeight * 0.3;
-  const bgHeight = txtHeight + txtHeight * 0.05;
+  const paddingRatioX =
+    root.userData.padding.x / root.userData.fontSizePx.value;
+  const paddingRatioY =
+    root.userData.padding.y / root.userData.fontSizePx.value;
+  const bgWwidth = txtWidth + txtHeight * paddingRatioX * 2;
+  const bgHeight = txtHeight + txtHeight * paddingRatioY * 2;
 
   root.userData.bgSize.value.set(bgWwidth, bgHeight);
 
@@ -268,7 +312,8 @@ function createBackground(root: Group) {
 
   background.material.onBeforeCompile = (shader) => {
     shader.uniforms.nvr_uScaleByDistance = root.userData.scaleByDistance;
-    shader.uniforms.nvr_uScaleSize = root.userData.scaleSize;
+    shader.uniforms.nvr_uFontSizePx = root.userData.fontSizePx;
+    shader.uniforms.nvr_uFontSizeWorld = root.userData.fontSizeWorld;
     shader.uniforms.nvr_uCornerRadius = { value: 0.1 };
     shader.uniforms.nvr_uFillColor = root.userData.bgColor;
     shader.uniforms.nvr_uBorderColor = root.userData.borderColor;
@@ -276,14 +321,20 @@ function createBackground(root: Group) {
     shader.uniforms.nvr_uGeomSize = root.userData.bgSize;
     shader.uniforms.nvr_uBatchId = { value: root.userData.batchId };
     shader.uniforms.nvr_uPickable = root.userData.uPickable;
+    shader.uniforms.nvr_uFov = root.userData.fov;
+    shader.uniforms.nvr_uScreenHeightPx = root.userData.screenHeightPx;
 
     shader.vertexShader = shader.vertexShader.replace(
       `void main() {`,
       `
       uniform float nvr_uScaleByDistance;
-      uniform float nvr_uScaleSize;
+      uniform float nvr_uFontSizePx;
+      uniform float nvr_uFontSizeWorld;
+      uniform float nvr_uFov;
+      uniform float nvr_uScreenHeightPx;
       out vec2 vUv;
       ${BillboardMatrix}
+      ${PixelToWorld}
       void main() {
         vUv = uv;
       `,
@@ -294,7 +345,14 @@ function createBackground(root: Group) {
       `
       #include <fog_vertex>
 
-      mat4 billboardMatrix = nvr_getBillboardMat(nvr_uScaleSize, nvr_uScaleByDistance);
+      float scaleFactor = nvr_uFontSizePx;
+      if (nvr_uScaleByDistance > 0.0) {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldPosition.xyz, cameraPosition);
+        scaleFactor = worldSize / nvr_uFontSizeWorld;
+      }
+
+      mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
       vec4 newMvPosition = billboardMatrix * vec4(transformed, 1.0);
 
       gl_Position = projectionMatrix * newMvPosition;

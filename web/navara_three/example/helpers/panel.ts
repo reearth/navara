@@ -54,7 +54,9 @@ export const addCtrlPanel = (
     font: "",
     background_color: "#0a70c2",
     border_color: "#f8e43c",
-    border_width: 2,
+    border_width: 0.0,
+    center: { x: 0, y: 0 },
+    padding: { x: 0, y: 0 },
   };
 
   pane
@@ -244,6 +246,16 @@ export const addCtrlPanel = (
         material.border_width = paneParams.border_width;
       }
 
+      if ("center" in material) {
+        material.center.x = paneParams.center.x;
+        material.center.y = paneParams.center.y;
+      }
+
+      if ("padding" in material) {
+        material.padding.x = paneParams.padding.x;
+        material.padding.y = paneParams.padding.y;
+      }
+
       view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
@@ -387,6 +399,18 @@ function createParamCtrl(
     if ("border_width" in material) {
       paneParams.border_width = material.border_width;
       f.addBinding(paneParams, "border_width").on("change", changeFunc);
+    }
+
+    if ("center" in material) {
+      paneParams.center.x = material.center.x;
+      paneParams.center.y = material.center.y;
+      f.addBinding(paneParams, "center").on("change", changeFunc);
+    }
+
+    if ("padding" in material) {
+      paneParams.padding.x = material.padding.x;
+      paneParams.padding.y = material.padding.y;
+      f.addBinding(paneParams, "padding").on("change", changeFunc);
     }
 
     return f;
