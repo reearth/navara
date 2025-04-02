@@ -121,7 +121,7 @@ export function updateText(
   root.userData.fontSizePx.value = material.size ?? 1.0;
   root.userData.bgColor.value = new Color(material.background_color);
   root.userData.borderColor.value = new Color(material.border_color);
-  root.userData.borderWidth.value = material.border_width ?? 0.05;
+  root.userData.borderWidth.value = Math.max(material.border_width ?? 0.0, 0.0);
 
   txt.text = material.text ?? "";
 
@@ -392,18 +392,21 @@ function createBackground(root: Group) {
 
         vec2 uv = (vUv - 0.5) * nvr_uGeomSize;
         float border = nvr_uBorderWidth * nvr_uGeomSize.y;
+        float cornerRadius = nvr_uCornerRadius * nvr_uGeomSize.y;
 
-        float effectiveRadius = min(nvr_uCornerRadius, min(nvr_uGeomSize.x, nvr_uGeomSize.y) * 0.5 - border);
+        float effectiveRadius = min(cornerRadius, min(nvr_uGeomSize.x, nvr_uGeomSize.y) * 0.5);
         vec2 b = nvr_uGeomSize * 0.5 - vec2(border);
 
         float d = sdRoundedBox(uv, b, effectiveRadius);
 
         if (d > border) {
-            discard;
+          discard;
+        }
+        else if (d < 0.0){
+          gl_FragColor = vec4(nvr_uFillColor, 1.0);
         }
         else{
-            vec3 color = mix(nvr_uBorderColor, nvr_uFillColor, smoothstep(0.0, nvr_uBorderWidth, -d));
-            gl_FragColor = vec4(color, 1.0);
+          gl_FragColor = vec4(nvr_uBorderColor, 1.0);
         }
       `,
     );
