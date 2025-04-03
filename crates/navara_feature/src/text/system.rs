@@ -11,6 +11,7 @@ use navara_feature_component::{
     batch::{BatchId, BatchTable, IdPropertyTable},
     id::FeatureId,
     render::{RenderInformation, RenderableFeature, TransferableSingleGeometry},
+    LODFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::TextMaterial;
@@ -33,12 +34,13 @@ pub fn transfer_mesh(
             Option<&mut FeatureId>,
             &TextGeometry,
             &TextMaterial,
+            Option<&LODFeatureMarker>,
         ),
         Added<TextGeometry>,
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
-    for (entity, layer_id, batch_id, feature_id, geometry, material) in &mut texts {
+    for (entity, layer_id, batch_id, feature_id, geometry, material, lod_marker) in &mut texts {
         let position = geometry
             .crs
             .to_vec3(WGS84_32, geometry.coords, material.height);
@@ -46,6 +48,7 @@ pub fn transfer_mesh(
         let entity = commands
             .spawn((
                 TextMarker,
+                layer_id.clone(),
                 RenderableFeature::Text {
                     coordinates: geometry.coords,
                     crs: geometry.crs.clone(),
@@ -65,7 +68,7 @@ pub fn transfer_mesh(
                         batch_id: Some(batch_id.0.x as u32),
                         selected: Some(batch_id.0.y as u32),
                     },
-                    active: true,
+                    active: lod_marker.is_none(),
                 },
             ))
             .id();

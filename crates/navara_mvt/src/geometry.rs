@@ -12,6 +12,7 @@ use navara_feature_component::{
     point::PointGeometry,
     polygon::PolygonGeometry,
     polyline::PolylineGeometry,
+    text::TextGeometry,
     BatchedFeatureMarker, LODFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
@@ -283,6 +284,22 @@ fn handle_geometry(
                         );
                         break;
                     }
+                    Appearance::Text(appearance) => {
+                        construct_points_geometry(
+                            commands,
+                            feature_ids,
+                            layer_id,
+                            points,
+                            converter,
+                            appearance,
+                            |x, y| TextGeometry {
+                                coords: Vec3::new(x, y, 0.0 as FloatType),
+                                crs: CRS::Geographic,
+                            },
+                            batch_id,
+                        );
+                        break;
+                    }
                     _ => {}
                 };
             }
@@ -317,6 +334,22 @@ fn handle_geometry(
                             converter,
                             appearance,
                             &|x, y| BillboardGeometry {
+                                coords: Vec3::new(x, y, 0.0 as FloatType),
+                                crs: CRS::Geographic,
+                            },
+                            batch_id,
+                        );
+                        break;
+                    }
+                    Appearance::Text(appearance) => {
+                        construct_point_geometry(
+                            commands,
+                            feature_ids,
+                            layer_id,
+                            point,
+                            converter,
+                            appearance,
+                            &|x, y| TextGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },

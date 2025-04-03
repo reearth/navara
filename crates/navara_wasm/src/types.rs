@@ -193,6 +193,8 @@ pub struct MvtLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub billboard: Option<BillboardMaterial>,
     #[wasm_bindgen(getter_with_clone)]
+    pub text: Option<TextMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
     pub polyline: Option<PolylineMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMaterial>,
@@ -208,6 +210,9 @@ impl MvtLayerDescription {
         }
         if let Some(v) = self.billboard.take() {
             result.push(Appearance::Billboard(v.into()));
+        }
+        if let Some(v) = self.text.take() {
+            result.push(Appearance::Text(v.into()));
         }
         if let Some(v) = self.polyline.take() {
             result.push(Appearance::Polyline(v.into()));
