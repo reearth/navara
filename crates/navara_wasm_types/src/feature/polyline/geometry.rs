@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute};
+use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
 
 #[wasm_bindgen]
 pub struct ConstructedPolylineGeometry {
@@ -62,6 +62,12 @@ impl ConstructedPolylineGeometry {
     }
     pub fn batch_id_size(&mut self) -> Option<u8> {
         self.geometry.batch_id_size()
+    }
+    pub fn batch_index(&mut self) -> Option<js_sys::Uint32Array> {
+        self.geometry.batch_index()
+    }
+    pub fn batch_index_size(&mut self) -> Option<u8> {
+        self.geometry.batch_index_size()
     }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         self.geometry.indices()
@@ -132,6 +138,12 @@ impl PolylineGeometry {
     pub fn batch_id_size(&mut self) -> Option<u8> {
         self.attributes.transfer_batch_id_size()
     }
+    pub fn batch_index(&mut self) -> Option<js_sys::Uint32Array> {
+        self.attributes.transfer_batch_index()
+    }
+    pub fn batch_index_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_batch_index_size()
+    }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.indices)
     }
@@ -147,6 +159,7 @@ pub struct PolylineGeometryAttributes {
     end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
     batch_id_and_sel: Option<FloatAttribute>,
+    batch_index: Option<UintAttribute>,
 }
 
 #[wasm_bindgen]
@@ -206,6 +219,18 @@ impl PolylineGeometryAttributes {
         };
         Some(batch_id.size)
     }
+    pub fn transfer_batch_index(&mut self) -> Option<js_sys::Uint32Array> {
+        let Some(batch_index) = &mut self.batch_index else {
+            return None;
+        };
+        Some(batch_index.transfer_data())
+    }
+    pub fn transfer_batch_index_size(&mut self) -> Option<u8> {
+        let Some(batch_index) = &mut self.batch_index else {
+            return None;
+        };
+        Some(batch_index.size)
+    }
 }
 
 impl From<PolylineGeometryAttributes> for navara_geometry::PolylineGeometryAttributes {
@@ -222,6 +247,7 @@ impl From<PolylineGeometryAttributes> for navara_geometry::PolylineGeometryAttri
                 .right_normal_and_texture_coordinate_normalization_y
                 .into(),
             batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
+            batch_index: val.batch_index.map(|v| v.into()),
         }
     }
 }
@@ -239,6 +265,7 @@ impl From<navara_geometry::PolylineGeometryAttributes> for PolylineGeometryAttri
                 .right_normal_and_texture_coordinate_normalization_y
                 .into(),
             batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
+            batch_index: val.batch_index.map(|v| v.into()),
         }
     }
 }

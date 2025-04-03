@@ -1,10 +1,8 @@
 import type { TextMaterial, TextMesh } from "@navara/engine";
-
-import Pick from "@shaders/glsl/chunks/pick.glsl";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
+import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
-
 import {
   Color,
   Mesh,
@@ -15,11 +13,10 @@ import {
   Vector2,
   Material,
 } from "three";
-
-import type { CommonUniforms } from "../../uniforms";
-import type { RenderFlag } from "../../type";
-
 import { Text } from "troika-three-text";
+
+import type { RenderFlag } from "../../type";
+import type { CommonUniforms } from "../../uniforms";
 
 export async function renderText(m: TextMesh, uniforms: CommonUniforms) {
   if (m.material.text === "") {

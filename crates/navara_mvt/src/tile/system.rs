@@ -3,7 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
+    batch::{BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
     id::FeatureId,
     polygon::PolygonMarker,
     polyline::PolylineMarker,
@@ -289,6 +289,8 @@ pub fn transfer_mesh(
                                     MVTFeatureMarker,
                                     LayerId(layer.layer_id.clone()),
                                     appearance.clone(),
+                                    v.feature_batch_id.unwrap(),
+                                    v.global_batch_id_and_selections.unwrap(),
                                 ))
                                 .id()
                         }
@@ -308,6 +310,8 @@ pub fn transfer_mesh(
                                     MVTFeatureMarker,
                                     LayerId(layer.layer_id.clone()),
                                     appearance.clone(),
+                                    v.feature_batch_id.unwrap(),
+                                    v.global_batch_id_and_selections.unwrap(),
                                 ))
                                 .id()
                         }
@@ -324,17 +328,12 @@ pub fn transfer_mesh(
 pub fn clear_caches(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
-    mut batch_table: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
-    mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
     batched_features: Query<&BatchedFeature>,
     features: Query<&FeatureId>,
-    batch_id: Query<&BatchId>,
-    mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     for (rendered_tile_entity_id, mut rendered_tile, _) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>().rev()
@@ -368,16 +367,8 @@ pub fn clear_caches(
             tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
             tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
-            let removed_features = rendered_tile.destroy(
-                &mut commands,
-                &mut buf,
-                &mut batch_table,
-                &mut id_prop_table_res,
-                &features,
-                &batch_id,
-                &batched_features,
-                &mut renderable_features,
-            );
+            let removed_features =
+                rendered_tile.destroy(&mut commands, &features, &batched_features);
             qt.qt
                 .remove(rendered_tile.tile_handle)
                 .unwrap()
