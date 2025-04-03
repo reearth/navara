@@ -16,6 +16,7 @@ import { Mesh, Sprite, Object3D, Material, Group } from "three";
 import type { CommonUniforms } from "../uniforms";
 
 import type { ViewEvents } from "..";
+import { TextMesh } from "../mesh";
 import type { Scenes } from "../scene";
 import type { MeshCache, RenderFlag } from "../type";
 import type { BufferLoader, FeatureHandler } from ".";
@@ -154,7 +155,7 @@ export function processRenderableFeatureChanged(
     if (obj instanceof Sprite && material instanceof BillboardMaterial) {
       processBillboardChanged(obj, material, active);
     }
-    if (obj instanceof Group && material instanceof TextMaterial) {
+    if (obj instanceof TextMesh && material instanceof TextMaterial) {
       processTextChanged(obj, material, active, renderFlag);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {

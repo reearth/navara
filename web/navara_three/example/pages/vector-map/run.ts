@@ -60,6 +60,12 @@ export const run = async (view: ThreeView) => {
       scale_by_distance: false,
       color: 0xff0000,
     },
+    // text: {
+    //   color: 0xff00ff,
+    //   size: 30,
+    //   scale_by_distance: true,
+    //   text: "MVT",
+    // },
     polyline: {
       show: true,
       color: 0x3d1623,

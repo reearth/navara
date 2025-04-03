@@ -183,6 +183,20 @@ pub fn update_mvt_layer(
                             render_info.should_recalculate_height = true;
                         }
                     }
+                    Appearance::Text(pt) => {
+                        if let RenderableFeature::Text {
+                            coordinates,
+                            crs,
+                            material,
+                            transform,
+                            render_info,
+                            ..
+                        } = f.as_mut()
+                        {
+                            material.update(pt, coordinates, crs, transform);
+                            render_info.should_recalculate_height = true;
+                        }
+                    }
                     Appearance::Polyline(polyline) => {
                         if let RenderableFeature::Polyline { material, .. } = f.as_mut() {
                             material.update(polyline);
