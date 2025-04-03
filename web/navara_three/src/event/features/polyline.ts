@@ -1,7 +1,7 @@
+import type { PolylineMesh, PolylineMaterial } from "@navara/engine";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
-
 import {
   BufferAttribute,
   BufferGeometry,
@@ -11,9 +11,8 @@ import {
   UniformsLib,
 } from "three";
 
-import type { PolylineMesh, PolylineMaterial } from "@navara/engine";
-import type { CommonUniforms } from "../../uniforms";
 import type { BufferLoader } from "../";
+import type { CommonUniforms } from "../../uniforms";
 
 export async function renderPolyline(
   mesh: PolylineMesh,
@@ -36,6 +35,11 @@ export async function renderPolyline(
     ? buf.removeF32(g.batch_id_and_sel.data)
     : undefined;
   const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
+  const batchIndex = g.batch_index
+    ? buf.removeU32(g.batch_index.data)
+    : undefined;
+  const batchIndexSize = g.batch_index ? g.batch_index.size : 0;
+
   if (
     !position ||
     !start ||
@@ -44,7 +48,8 @@ export async function renderPolyline(
     !end_normal_and_texture_coordinate_normalization_x ||
     !right_normal_and_texture_coordinate_normalization_y ||
     !indices ||
-    !batchIdAndSel
+    !batchIdAndSel ||
+    !batchIndex
   )
     return;
   const geometry = new BufferGeometry();
@@ -80,6 +85,13 @@ export async function renderPolyline(
     "batchIdAndSel",
     new BufferAttribute(batchIdAndSel, batchIdSize),
   );
+  // Align to B3DM attribute: https://github.com/CesiumGS/3d-tiles/blob/492adb06b00870d9ee99b8d97c261a466783034c/specification/TileFormats/Batched3DModel/README.adoc#binary-gltf
+  // TODO: However this need to be migrated to v1.1 in the future
+  geometry.setAttribute(
+    "_batchid",
+    new BufferAttribute(batchIndex, batchIndexSize),
+  );
+
   geometry.setIndex(new BufferAttribute(indices, 1));
   // geometry.computeVertexNormals();
 

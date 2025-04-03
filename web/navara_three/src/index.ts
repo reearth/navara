@@ -701,7 +701,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       const prop = this._core?.getBatchProp(pickArr[0]);
       if (prop) {
         const pickedFeature: PickedFeature = {
-          properties: JSON.parse(prop),
+          properties: prop,
         };
         this.emit("pick", pickedFeature);
       }

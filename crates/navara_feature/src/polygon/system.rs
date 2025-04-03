@@ -7,8 +7,11 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{Aabb, CRS, WGS84_32};
-use navara_feature_component::polygon::{
-    construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon,
+use navara_feature_component::{
+    batch::{
+        BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIdAndSelections, IdPropertyTable,
+    },
+    polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
 };
 use navara_geometry::{FloatAttribute, Hierarchy, PolygonResource};
 use navara_layer::{LayerId, LayerStore};
@@ -33,12 +36,15 @@ use navara_worker::construct_polygon_batched_feature::{
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
     mut commands: Commands,
+    mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     mut batched_features: Query<
         (
             Entity,
             &LayerId,
             &PolygonMaterial,
             &mut BatchedFeature,
+            &FeatureBatchId,
+            &GlobalBatchIdAndSelections,
             Option<&mut FeatureId>,
         ),
         With<PolygonMarker>,
@@ -49,8 +55,15 @@ pub fn transfer_batched_mesh(
         Without<Deleted>,
     >,
 ) {
-    for (batched_feature_entity, layer_id, material, mut batched_feature, feature_id) in
-        &mut batched_features
+    for (
+        batched_feature_entity,
+        layer_id,
+        material,
+        mut batched_feature,
+        feature_batch_id,
+        global_batch_ids,
+        feature_id,
+    ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
             || batched_feature
@@ -110,6 +123,7 @@ pub fn transfer_batched_mesh(
                     },
                     extent: *extent,
                     active: false,
+                    feature_batch_id: Some(feature_batch_id.0),
                 },
             ))
             .id();
@@ -119,6 +133,8 @@ pub fn transfer_batched_mesh(
         }
 
         layer_store.add(layer_id.0.clone(), entity);
+
+        feature_batch_id_map.add(entity, global_batch_ids.clone());
 
         commands.entity(task_entity).insert(Deleted);
     }
@@ -194,6 +210,7 @@ pub fn transfer_mesh(
                         },
                         extent,
                         active: true,
+                        feature_batch_id: None,
                     },
                 ))
                 .id();
@@ -311,4 +328,45 @@ fn calc_min_max_height(
     };
 
     vec![height, extruded_height]
+}
+
+#[allow(clippy::type_complexity)]
+pub fn remove_batched_feature(
+    mut commands: Commands,
+    mut removed_renderable_features: Query<&mut RenderableFeature>,
+    removed_features: Query<
+        (
+            Entity,
+            &FeatureId,
+            &FeatureBatchId,
+            &GlobalBatchIdAndSelections,
+        ),
+        (With<BatchedFeature>, With<PolygonMarker>, With<Deleted>),
+    >,
+    mut buf: ResMut<BufferStore>,
+    mut batch_table_res: ResMut<BatchTable>,
+    mut id_prop_table_res: ResMut<IdPropertyTable>,
+    mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
+) {
+    for (feature_id, rendered_feature_id, feature_batch_id, global_batch_id_and_selections) in
+        &removed_features
+    {
+        let Some(rendered_feature_id) = rendered_feature_id.0 else {
+            continue;
+        };
+        if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
+            feature.destroy(&mut buf, &mut batch_table_res, &mut id_prop_table_res);
+        }
+        feature_batch_id_map.remove(
+            &rendered_feature_id,
+            &mut buf,
+            &mut batch_table_res,
+            &mut id_prop_table_res,
+        );
+        buf.remove(&global_batch_id_and_selections.0);
+        batch_table_res.remove(&feature_batch_id.0, &mut id_prop_table_res);
+
+        commands.entity(feature_id).despawn();
+        commands.entity(rendered_feature_id).despawn();
+    }
 }

@@ -13,8 +13,8 @@ use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
     batch::{
-        BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, IdPropertySelections,
-        IdPropertyTable,
+        BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, GlobalBatchIdAndSelections,
+        IdPropertySelections, IdPropertyTable,
     },
     render::RenderableFeature,
 };
@@ -367,34 +367,43 @@ impl App {
     fn get_batched_features_with_material<C: Component + Clone>(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, C)> {
+    ) -> Option<(Vec<EntityRef>, GlobalBatchIdAndSelections, C)> {
         let entity = Entity::from_bits(batched_feature_id);
         let world = self.app.world();
-        let (batched_feature, material) = world
+        let (batched_feature, batch_id_and_selected_status, material) = world
             .get_entity(entity)
             .ok()?
-            .get_components::<(&BatchedFeature, &C)>()?;
+            .get_components::<(&BatchedFeature, &GlobalBatchIdAndSelections, &C)>()?;
 
         let features = world.get_entity(&batched_feature.features[..]).ok()?;
 
-        Some((features, material.clone()))
+        Some((
+            features,
+            batch_id_and_selected_status.clone(),
+            material.clone(),
+        ))
     }
 
     pub fn get_batched_features_for_polyline(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, PolylineMaterial)> {
+    ) -> Option<(Vec<EntityRef>, GlobalBatchIdAndSelections, PolylineMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
     pub fn get_batched_features_for_polygon(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, PolygonMaterial)> {
+    ) -> Option<(Vec<EntityRef>, GlobalBatchIdAndSelections, PolygonMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
-    fn get_internal_batch_table(&mut self, entity: Entity) -> Option<&B3dmBatchTable> {
+    fn get_internal_batch_table(
+        &mut self,
+        entity: Entity,
+        in_batch_len: &usize,
+        in_batch_id: &usize,
+    ) -> Option<serde_json::Map<String, serde_json::Value>> {
         let world = self.app.world_mut();
         let mut query = world.query::<&RenderableFeature>();
 
@@ -403,61 +412,85 @@ impl App {
             None => return None,
         };
 
-        if let Ok(RenderableFeature::Model {
-            feature_batch_id, ..
-        }) = query.get(world, entity)
-        {
-            batch_table.get(feature_batch_id).and_then(|batch_value| {
+        let renderable_feature = query.get(world, entity).ok()?;
+
+        match renderable_feature {
+            RenderableFeature::Model {
+                feature_batch_id, ..
+            } => batch_table.get(feature_batch_id).and_then(|batch_value| {
                 let Some(batch_prop) = &batch_value.properties else {
                     return None;
                 };
 
-                if let BatchProperty::Cesium3dTileset(in_batch_table) = batch_prop {
-                    return Some(in_batch_table);
-                }
+                let BatchProperty::Cesium3dTileset(in_batch_table) = batch_prop else {
+                    return None;
+                };
 
-                None
-            })
-        } else {
-            None
+                get_prop_from_batch_table(in_batch_table, in_batch_len, in_batch_id)
+            }),
+            RenderableFeature::Polyline {
+                feature_batch_id, ..
+            } => {
+                let batch_value = batch_table.get(feature_batch_id.as_ref()?)?;
+                let batch_prop = batch_value.properties.as_ref()?;
+                let BatchProperty::Values(values) = batch_prop else {
+                    return None;
+                };
+                let serde_json::Value::Object(map) = values[*in_batch_id].clone() else {
+                    return None;
+                };
+                Some(map)
+            }
+            RenderableFeature::Polygon {
+                feature_batch_id, ..
+            } => {
+                let batch_value = batch_table.get(feature_batch_id.as_ref()?)?;
+                let batch_prop = batch_value.properties.as_ref()?;
+                let BatchProperty::Values(values) = batch_prop else {
+                    return None;
+                };
+                let serde_json::Value::Object(map) = values[*in_batch_id].clone() else {
+                    return None;
+                };
+                Some(map)
+            }
+            _ => None,
         }
     }
 
-    pub fn get_batch_prop(&mut self, batch_id: &u32) -> String {
-        // For Cesium 3D Tiles
+    pub fn get_batch_prop(
+        &mut self,
+        batch_id: &u32,
+    ) -> Option<serde_json::Map<String, serde_json::Value>> {
+        // For batched features like MVT(polygon, polyline) and Cesium 3D Tiles.
         if let Some((entity, in_batch_id, in_batch_len)) =
             self.search_feature_entity_by_global_batch_id(batch_id)
         {
-            let in_batch_table = match self.get_internal_batch_table(entity) {
-                Some(table) => table,
-                None => return String::from("{}"),
-            };
-            return get_prop_from_batch_table_as_string(
-                in_batch_table,
-                &in_batch_len,
-                &in_batch_id,
-            );
-        }
+            let properties = self.get_internal_batch_table(entity, &in_batch_len, &in_batch_id);
+            if properties.is_some() {
+                return properties;
+            }
+        };
 
-        // For other features
-        if let Some(batch_value) = self
+        // For other features like GeoJSON and MVT point
+        let batch_value = self
             .app
             .world()
             .get_resource::<BatchTable>()
             .unwrap()
-            .get(batch_id)
-        {
-            if let Some(BatchProperty::Value(prop_str)) = &batch_value.properties {
-                return prop_str.to_string().clone();
-            };
+            .get(batch_id)?;
+        let Some(BatchProperty::Values(values)) = &batch_value.properties else {
+            return None;
+        };
+        // This should include only one batch.
+        let serde_json::Value::Object(map) = values[0].clone() else {
+            return None;
+        };
 
-            return String::from("{}");
-        }
-
-        String::from("{}")
+        Some(map)
     }
 
-    pub fn search_feature_entity_by_global_batch_id(
+    fn search_feature_entity_by_global_batch_id(
         &self,
         global_batch_id: &u32,
     ) -> Option<(Entity, usize, usize)> {
@@ -519,23 +552,6 @@ impl App {
             id_prop_sel.clear();
         };
     }
-}
-
-fn get_prop_from_batch_table_as_string(
-    in_batch_table: &B3dmBatchTable,
-    in_batch_len: &usize,
-    in_batch_id: &usize,
-) -> String {
-    let default_str = String::from("{}");
-    if *in_batch_id >= *in_batch_len {
-        return default_str;
-    }
-
-    let Some(prop) = get_prop_from_batch_table(in_batch_table, in_batch_len, in_batch_id) else {
-        return default_str;
-    };
-
-    serde_json::to_string(&prop).unwrap_or(default_str)
 }
 
 fn get_prop_from_batch_table(

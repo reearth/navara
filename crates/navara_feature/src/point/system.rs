@@ -1,12 +1,13 @@
 use bevy_ecs::{
     entity::Entity,
-    query::Added,
+    query::{Added, With},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
+use navara_component::Deleted;
 use navara_core::WGS84_32;
 use navara_feature_component::{
-    batch::BatchId,
+    batch::{BatchId, BatchTable, IdPropertyTable},
     id::FeatureId,
     render::{RenderInformation, RenderableFeature, TransferableSingleGeometry},
     LODFeatureMarker,
@@ -147,5 +148,32 @@ pub fn update_height_by_terrain(
             }
             _ => unreachable!(),
         };
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn remove_batched_feature(
+    mut commands: Commands,
+    mut removed_renderable_features: Query<&mut RenderableFeature, With<Deleted>>,
+    removed_features: Query<
+        (Entity, &FeatureId, Option<&BatchId>),
+        (With<PointGeometry>, With<Deleted>),
+    >,
+    mut buf: ResMut<BufferStore>,
+    mut batch_table_res: ResMut<BatchTable>,
+    mut id_prop_table_res: ResMut<IdPropertyTable>,
+) {
+    for (feature_id, rendered_feature_id, batch_id) in &removed_features {
+        let Some(rendered_feature_id) = rendered_feature_id.0 else {
+            continue;
+        };
+        if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
+            feature.destroy(&mut buf, &mut batch_table_res, &mut id_prop_table_res);
+        }
+        if let Some(batch_id) = batch_id {
+            batch_table_res.remove(&(batch_id.0[0] as u32), &mut id_prop_table_res);
+        }
+        commands.entity(feature_id).despawn();
+        commands.entity(rendered_feature_id).despawn();
     }
 }

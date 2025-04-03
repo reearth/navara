@@ -14,5 +14,8 @@ export function toTransferablePolylineBatchedFeatureLike(
   t.setBatchIds(like.batch_ids.length, (b: Uint32Array) => {
     b.set(like.batch_ids);
   });
+  t.setBatchIndices(like.batch_indices.length, (b: Uint32Array) => {
+    b.set(like.batch_indices);
+  });
   return t;
 }

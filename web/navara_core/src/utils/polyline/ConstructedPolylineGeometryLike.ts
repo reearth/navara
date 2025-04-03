@@ -18,6 +18,8 @@ export class ConstructedPolylineGeometryLike {
   right_normal_and_texture_coordinate_normalization_y_size: number;
   batch_id: Float32Array | undefined;
   batch_id_size: number | undefined;
+  batch_index: Uint32Array | undefined;
+  batch_index_size: number | undefined;
   indices: Uint32Array;
 
   constructor(t: ConstructedPolylineGeometry) {
@@ -43,6 +45,8 @@ export class ConstructedPolylineGeometryLike {
       t.right_normal_and_texture_coordinate_normalization_y_size();
     this.batch_id = t.batch_id()?.slice();
     this.batch_id_size = t.batch_id_size();
+    this.batch_index = t.batch_index()?.slice();
+    this.batch_index_size = t.batch_index_size();
     this.indices = t.indices().slice();
   }
 }

@@ -9,6 +9,7 @@ export function transferConstructedPolygonGeometry(
     result: like,
     transfers: [
       like.batch_id?.buffer,
+      like.batch_index?.buffer,
       like.normal?.buffer,
       like.position?.buffer,
       like.scale_normal_and_cap?.buffer,

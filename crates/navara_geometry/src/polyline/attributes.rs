@@ -1,6 +1,6 @@
 use crate::{
     helpers::vec::{append_flatten_vec3_with_index, unpack_flatten_vec3},
-    FloatAttribute,
+    FloatAttribute, UintAttribute,
 };
 
 use super::{
@@ -17,12 +17,14 @@ pub struct PolylineGeometryAttributes {
     pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
     pub batch_id_and_sel: Option<FloatAttribute>,
+    pub batch_index: Option<UintAttribute>,
 }
 
 impl PolylineGeometryAttributes {
     pub fn with_batch_id() -> Self {
         Self {
             batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
+            batch_index: Some(UintAttribute::new(vec![], 1)),
             ..Default::default()
         }
     }
@@ -38,6 +40,7 @@ impl Default for PolylineGeometryAttributes {
             end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(vec![], 4),
             right_normal_and_texture_coordinate_normalization_y: FloatAttribute::new(vec![], 4),
             batch_id_and_sel: None,
+            batch_index: None,
         }
     }
 }
@@ -276,6 +279,7 @@ pub(super) fn generate_geometry_attributes(
             4,
         ),
         batch_id_and_sel: None,
+        batch_index: None,
     };
 
     // TODO: Bounding sphere

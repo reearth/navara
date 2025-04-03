@@ -1,4 +1,4 @@
-use navara_feature_component::batch::BatchId;
+use navara_feature_component::batch::{BatchId, BatchIndex};
 use navara_geometry::Hierarchy;
 use navara_math::{FloatType, Vec2};
 use wasm_bindgen::prelude::*;
@@ -25,6 +25,7 @@ pub struct TransferablePolygonBatchedFeature {
     /// Each hole boundaries
     holes_boundaries: Vec<u32>,
     batch_ids: Vec<u32>,
+    batch_indices: Vec<u32>,
     expected_winding_orders: Vec<u8>,
 
     #[wasm_bindgen(getter_with_clone)]
@@ -48,6 +49,7 @@ impl TransferablePolygonBatchedFeature {
             holes_sizes: vec![],
             holes_boundaries: vec![],
             batch_ids: vec![],
+            batch_indices: vec![],
             expected_winding_orders: vec![],
             crs,
             length,
@@ -83,6 +85,10 @@ impl TransferablePolygonBatchedFeature {
     pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
         self.batch_ids = transfer_u32_array(byte_length, f)
     }
+    #[wasm_bindgen(js_name = "setBatchIndices")]
+    pub fn set_batch_indices(&mut self, byte_length: usize, f: &js_sys::Function) {
+        self.batch_indices = transfer_u32_array(byte_length, f)
+    }
     #[wasm_bindgen(js_name = "setExpectedWindingOrders")]
     pub fn set_expected_winding_orders(&mut self, byte_length: usize, f: &js_sys::Function) {
         self.expected_winding_orders = transfer_u8_array(byte_length, f)
@@ -91,6 +97,11 @@ impl TransferablePolygonBatchedFeature {
     #[wasm_bindgen(js_name = "transferBatchIds")]
     pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.batch_ids)
+    }
+
+    #[wasm_bindgen(js_name = "transferBatchIndices")]
+    pub fn transfer_batch_indices(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.batch_indices)
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
@@ -130,7 +141,8 @@ impl TransferablePolygonBatchedFeature {
 }
 
 impl TransferablePolygonBatchedFeature {
-    pub fn new<I: Iterator<Item = (usize, Hierarchy)>>(hierarchies: I, length: usize) -> Self {
+    #[allow(unused)]
+    fn new<I: Iterator<Item = (usize, Hierarchy)>>(hierarchies: I, length: usize) -> Self {
         let mut outer_ring = Vec::with_capacity(length);
         let mut outer_ring_sizes = Vec::with_capacity(length);
         let mut holes = Vec::with_capacity(length);
@@ -138,14 +150,18 @@ impl TransferablePolygonBatchedFeature {
         let mut holes_boundaries = Vec::with_capacity(length);
         let mut holes_sizes = Vec::with_capacity(length);
         let mut batch_ids = Vec::with_capacity(length * 2);
+        let mut batch_indices = Vec::with_capacity(length);
         let mut expected_winding_orders = Vec::with_capacity(length);
 
-        for (batch_id, mut hierarchy) in hierarchies {
+        for (i, (batch_id, mut hierarchy)) in hierarchies.into_iter().enumerate() {
             outer_ring_sizes.push(hierarchy.outer_ring.len() as u32);
             outer_ring.append(&mut hierarchy.outer_ring);
 
             batch_ids.push(batch_id as u32);
             batch_ids.push(0);
+
+            batch_indices.push(i as u32);
+
             expected_winding_orders
                 .push(Into::<WindingOrder>::into(hierarchy.expected_winding_order).0);
 
@@ -172,6 +188,7 @@ impl TransferablePolygonBatchedFeature {
             holes_total_sizes,
             holes_boundaries,
             batch_ids,
+            batch_indices,
             expected_winding_orders,
             crs: CRS::default(),
             length,
@@ -187,6 +204,7 @@ impl TransferablePolygonBatchedFeature {
         let holes_boundaries = Vec::with_capacity(length);
         let holes_sizes = Vec::with_capacity(length);
         let batch_ids = Vec::with_capacity(length * 2);
+        let batch_indices = Vec::with_capacity(length);
         let expected_winding_orders = Vec::with_capacity(length);
 
         TransferablePolygonBatchedFeature {
@@ -197,6 +215,7 @@ impl TransferablePolygonBatchedFeature {
             holes_total_sizes,
             holes_boundaries,
             batch_ids,
+            batch_indices,
             expected_winding_orders,
             crs: CRS::default(),
             length,
@@ -204,15 +223,15 @@ impl TransferablePolygonBatchedFeature {
         }
     }
 
-    pub fn add(&mut self, hierarchy: &mut Hierarchy, batch_id: &BatchId) {
+    pub fn add(&mut self, hierarchy: &mut Hierarchy, batch_index: BatchIndex) {
         self.outer_ring_sizes
             .push(hierarchy.outer_ring.len() as u32);
         self.outer_ring.append(&mut hierarchy.outer_ring);
 
-        self.batch_ids.push(batch_id.0.x as u32);
-        self.batch_ids.push(batch_id.0.y as u32);
         self.expected_winding_orders
             .push(Into::<WindingOrder>::into(hierarchy.expected_winding_order).0);
+
+        self.batch_indices.push(batch_index.0);
 
         let Some(h_holes) = &mut hierarchy.holes else {
             return;
@@ -230,10 +249,17 @@ impl TransferablePolygonBatchedFeature {
         self.holes_total_sizes.push(holes_total_size as u32);
     }
 
+    pub fn add_batch_id_and_selected_status(
+        &mut self,
+        batch_id_and_selected_status: &mut Vec<u32>,
+    ) {
+        self.batch_ids.append(batch_id_and_selected_status);
+    }
+
     pub fn to_transferable_hierarchy_by_index(
         &mut self,
         idx: usize,
-    ) -> (TransferableHierarchy, BatchId) {
+    ) -> (TransferableHierarchy, BatchIndex, BatchId) {
         let transferable_hierarchy = TransferableHierarchy {
             outer_ring: self
                 .outer_ring
@@ -256,17 +282,23 @@ impl TransferablePolygonBatchedFeature {
             },
         };
 
+        let batch_idx = self.batch_indices[idx] as usize;
+
         let batch_id = BatchId(Vec2::new(
-            self.batch_ids[idx * 2] as FloatType,
-            self.batch_ids[idx * 2 + 1] as FloatType,
+            self.batch_ids[batch_idx * 2] as FloatType,
+            self.batch_ids[batch_idx * 2 + 1] as FloatType,
         ));
 
-        (transferable_hierarchy, batch_id)
+        (
+            transferable_hierarchy,
+            BatchIndex(batch_idx as u32),
+            batch_id,
+        )
     }
 }
 
 impl Iterator for TransferablePolygonBatchedFeature {
-    type Item = (TransferableHierarchy, BatchId);
+    type Item = (TransferableHierarchy, BatchIndex, BatchId);
     fn next(&mut self) -> Option<Self::Item> {
         if self.cur_idx == self.length {
             return None;
@@ -381,9 +413,11 @@ mod test {
 
         let mut features: Vec<Hierarchy> = vec![];
         let mut batch_ids = vec![];
-        for (feature, batch_id) in transferable_features {
+        let mut batch_idxs = vec![];
+        for (feature, batch_index, batch_id) in transferable_features {
             features.push(feature.into());
             batch_ids.push(batch_id.0);
+            batch_idxs.push(batch_index.0);
         }
 
         assert_eq!(features, hierarchies);
@@ -395,5 +429,6 @@ mod test {
                 Vec2::new(2.0, 0.0)
             ]
         );
+        assert_eq!(batch_idxs, vec![0, 1, 2,]);
     }
 }

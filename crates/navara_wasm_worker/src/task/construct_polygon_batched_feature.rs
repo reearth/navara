@@ -1,5 +1,7 @@
 use navara_core::{Extent, Radians};
-use navara_geometry::{FloatAttribute, Hierarchy, PolygonGeometryAttributes, PolygonResource};
+use navara_geometry::{
+    FloatAttribute, Hierarchy, PolygonGeometryAttributes, PolygonResource, UintAttribute,
+};
 use navara_math::FloatType;
 use navara_wasm_types::{
     polygon::{ConstructedPolygonGeometry, PolygonGeometry, TransferablePolygonBatchedFeature},
@@ -21,13 +23,15 @@ pub fn construct_polygon_batched_feature(
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
+        batch_index: Some(UintAttribute::new(vec![], 1)),
     };
     let mut indices = vec![];
     let mut index_offset = 0;
 
     let mut combined_extent: Option<Extent<f32, Radians>> = None;
     for idx in 0..features.length {
-        let (transferable_hierarchy, batch_id) = features.to_transferable_hierarchy_by_index(idx);
+        let (transferable_hierarchy, batch_idx, batch_id) =
+            features.to_transferable_hierarchy_by_index(idx);
         let geometry_hierarchy: Hierarchy = transferable_hierarchy.into();
 
         let (extent_opt, polygon_result_opt) =
@@ -80,9 +84,12 @@ pub fn construct_polygon_batched_feature(
             );
 
         let mut batch_ids = vec![];
+        let mut batch_indices = vec![];
         for _i in 0..position_length {
             batch_ids.push(batch_id.0.x as FloatType);
             batch_ids.push(batch_id.0.y as FloatType);
+
+            batch_indices.push(batch_idx.0);
         }
 
         combined_attributes
@@ -90,7 +97,13 @@ pub fn construct_polygon_batched_feature(
             .as_mut()
             .unwrap()
             .data
-            .extend(batch_ids);
+            .append(&mut batch_ids);
+        combined_attributes
+            .batch_index
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut batch_indices);
 
         if index_offset == 0 {
             indices.append(&mut polygon_result.geometry.indices);

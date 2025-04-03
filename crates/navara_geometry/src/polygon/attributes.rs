@@ -1,6 +1,6 @@
 use navara_math::FloatType;
 
-use crate::FloatAttribute;
+use crate::{FloatAttribute, UintAttribute};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonGeometryAttributes {
@@ -8,6 +8,7 @@ pub struct PolygonGeometryAttributes {
     pub normal: Option<FloatAttribute>,
     pub scale_normal_and_cap: Option<FloatAttribute>,
     pub batch_id_and_sel: Option<FloatAttribute>,
+    pub batch_index: Option<UintAttribute>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

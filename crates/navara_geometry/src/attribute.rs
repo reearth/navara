@@ -18,3 +18,21 @@ pub struct TransferableFloatAttribute {
     pub data: Handle,
     pub size: u8,
 }
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct UintAttribute {
+    pub data: Vec<u32>,
+    pub size: u8,
+}
+
+impl UintAttribute {
+    pub fn new(data: Vec<u32>, size: u8) -> Self {
+        Self { data, size }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct TransferableUintAttribute {
+    pub data: Handle,
+    pub size: u8,
+}

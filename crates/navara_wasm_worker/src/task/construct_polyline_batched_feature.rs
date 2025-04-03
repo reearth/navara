@@ -23,7 +23,7 @@ pub fn construct_polyline_batched_feature(
     let mut combined_extent: Option<Extent<f32, Radians>> = None;
 
     for idx in 0..features.length {
-        let (geometry, batch_id) = features.to_transferable_by_index(idx);
+        let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
 
         let Some((extent, mut constructed_geometry)) =
             construct_polyline_feature(&material, geometry, &crs)
@@ -78,17 +78,25 @@ pub fn construct_polyline_batched_feature(
             );
 
         let mut batch_ids = vec![];
+        let mut batch_indices = vec![];
         for _i in 0..position_length {
             batch_ids.push(batch_id.0.x as FloatType);
             batch_ids.push(batch_id.0.y as FloatType);
+
+            batch_indices.push(batch_index.0);
         }
         combined_attributes
             .batch_id_and_sel
             .as_mut()
             .unwrap()
             .data
-            // TODO: Avoid cast
             .append(&mut batch_ids);
+        combined_attributes
+            .batch_index
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut batch_indices);
 
         if index_offset == 0 {
             indices.append(&mut constructed_geometry.indices);

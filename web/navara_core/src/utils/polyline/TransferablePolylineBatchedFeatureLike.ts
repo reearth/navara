@@ -10,6 +10,7 @@ export class TransferablePolylineBatchedFeatureLike
   points: Float32Array;
   points_sizes: Uint32Array;
   batch_ids: Uint32Array;
+  batch_indices: Uint32Array;
   crs: CRS;
   length: number;
 
@@ -17,6 +18,7 @@ export class TransferablePolylineBatchedFeatureLike
     this.points = t.transferPoints();
     this.points_sizes = t.transferPointsSizes();
     this.batch_ids = t.transferBatchIds();
+    this.batch_indices = t.transferBatchIndices();
     this.crs = t.crs();
     this.length = t.length();
   }
@@ -24,6 +26,7 @@ export class TransferablePolylineBatchedFeatureLike
   setPoints(_byte_length: number, _f: () => void): void {}
   setPointsSizes(_byte_length: number, _f: () => void): void {}
   setBatchIds(_byte_length: number, _f: () => void): void {}
+  setBatchIndices(_length: number, _f: () => void) {}
 
   transferPoints(): Float32Array {
     throw new Error();
@@ -32,6 +35,9 @@ export class TransferablePolylineBatchedFeatureLike
     throw new Error();
   }
   transferBatchIds(): Uint32Array {
+    throw new Error();
+  }
+  transferBatchIndices(): Uint32Array {
     throw new Error();
   }
 
