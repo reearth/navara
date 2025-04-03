@@ -70,8 +70,12 @@ fn generate_batch_id(
     id_prop: String,
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) -> u32 {
+    let props = properties
+        .as_ref()
+        .and_then(|prop| serde_json::to_value(prop).ok())
+        .unwrap_or(serde_json::Value::Null);
     batch_table_res
-        .add_hash_map(Some(id_prop), properties.as_ref(), id_prop_table_res)
+        .init_values_with_id_props(Some(id_prop), props, id_prop_table_res)
         .unwrap_or(0)
 }
 
@@ -568,22 +572,7 @@ pub fn delete_geo_json_layer(
             // delete RenderableFeature and related Buffers
             for entity in vec {
                 if let Ok(mut feature) = features.get_mut(*entity) {
-                    match &mut *feature {
-                        RenderableFeature::Polyline { geometry, .. } => {
-                            geometry.remove_from_buf(&mut buf);
-                        }
-                        RenderableFeature::Polygon { geometry, .. } => {
-                            geometry.remove_from_buf(&mut buf);
-                        }
-                        RenderableFeature::Model { geometry, .. } => {
-                            geometry.remove_from_buf(
-                                &mut buf,
-                                &mut batch_table,
-                                &mut id_prop_table_res,
-                            );
-                        }
-                        _ => (),
-                    }
+                    feature.destroy(&mut buf, &mut batch_table, &mut id_prop_table_res);
                 }
 
                 commands.entity(*entity).despawn();

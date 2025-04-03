@@ -1,6 +1,5 @@
 import type { EventHandler } from "@navara/core";
 import { generate_id_from_entity } from "@navara/core";
-
 import {
   type RenderableFeatureAddedEvent,
   type RenderableFeature,
@@ -13,32 +12,27 @@ import {
   PolygonMaterial,
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D, Material, Group } from "three";
-import type { CommonUniforms } from "../uniforms";
 
 import type { ViewEvents } from "..";
+import { TextMesh } from "../mesh";
 import type { Scenes } from "../scene";
-import type { MeshCache, RenderFlag } from "../type";
-import type { BufferLoader, FeatureHandler } from ".";
-import { setTransform } from ".";
-
-import { renderText } from "./features/text";
-import { renderPoint } from "./features/point";
-import { renderBillboard } from "./features/billboard";
-import { renderModel } from "./features/model";
-import { renderPolyline } from "./features/polyline";
-import { renderPolygon } from "./features/polygon";
-import { processPointChanged } from "./features/point";
-import { processBillboardChanged } from "./features/billboard";
-import { processModelChanged } from "./features/model";
-import { processPolylineChanged } from "./features/polyline";
-import { processPolygonChanged } from "./features/polygon";
-import { processTextChanged } from "./features/text";
 import { applyTextureAspect } from "../texture";
+import type { MeshCache, RenderFlag } from "../type";
+import type { CommonUniforms } from "../uniforms";
 
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
 } from "./featureEvent";
+import { renderBillboard, processBillboardChanged } from "./features/billboard";
+import { renderModel, processModelChanged } from "./features/model";
+import { renderPoint, processPointChanged } from "./features/point";
+import { renderPolygon, processPolygonChanged } from "./features/polygon";
+import { renderPolyline, processPolylineChanged } from "./features/polyline";
+import { renderText, processTextChanged } from "./features/text";
+
+import type { BufferLoader, FeatureHandler } from ".";
+import { setTransform } from ".";
 
 export function renderFeature(
   f: RenderableFeature,
@@ -154,7 +148,7 @@ export function processRenderableFeatureChanged(
     if (obj instanceof Sprite && material instanceof BillboardMaterial) {
       processBillboardChanged(obj, material, active);
     }
-    if (obj instanceof Group && material instanceof TextMaterial) {
+    if (obj instanceof TextMesh && material instanceof TextMaterial) {
       processTextChanged(obj, material, active, renderFlag);
     }
     if (obj instanceof Group && material instanceof ModelMaterial) {

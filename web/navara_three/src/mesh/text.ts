@@ -1,0 +1,451 @@
+import type { TextMesh as NavaraTextMesh, TextMaterial } from "@navara/engine";
+import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
+import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
+import Pick from "@shaders/glsl/chunks/pick.glsl";
+import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
+import {
+  Color,
+  Group,
+  Material,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+  Vector2,
+  Vector3,
+} from "three";
+import { Text } from "troika-three-text";
+
+import type { CommonUniforms } from "../uniforms";
+
+export class TextMesh extends Group {
+  text?: Text;
+  background?: Mesh;
+
+  constructor(m: NavaraTextMesh, uniforms: CommonUniforms) {
+    super();
+
+    this.userData.isText = true;
+    this.userData.scaleByDistance = {
+      value: m.material.scale_by_distance ? 1.0 : 0.0,
+    };
+    this.userData.fontSizePx = {
+      value: m.material.size ?? 1.0,
+    };
+    this.userData.bgColor = {
+      value: new Color(m.material.background_color ?? 0),
+    };
+    this.userData.borderColor = {
+      value: new Color(m.material.border_color),
+    };
+    this.userData.borderWidth = {
+      value: m.material.border_width ?? 0.0,
+    };
+    this.userData.cornerRadius = {
+      value: m.material.corner_radius ?? 0.0,
+    };
+    this.userData.bgSize = {
+      value: new Vector2(1.0, 1.0),
+    };
+    this.userData.uPickable = {
+      value: 0.0,
+    };
+    this.userData.center = {
+      x: m.material?.center?.x ?? 0.5,
+      y: m.material?.center?.y ?? 0,
+    };
+    this.userData.fontSizeWorld = {
+      value: 0.0,
+    };
+    this.userData.padding = {
+      x: m.material?.padding?.x ?? 0.5,
+      y: m.material?.padding?.y ?? 0,
+    };
+    this.userData.fov = uniforms?.fov;
+    this.userData.screenHeightPx = uniforms?.screenHeightPx;
+    this.userData.isPicked = m.geometry.selected;
+    this.userData.batchId = m.geometry.batch_id ?? 0;
+    this.userData.highlightColor = uniforms?.highlightColor?.value;
+    this.visible = m.material.show ?? true;
+  }
+
+  createText() {
+    if (this.text) return this.text;
+
+    const txt = new Text();
+    txt.fontSize = 1;
+
+    (txt.material as Material).onBeforeCompile = (shader) => {
+      shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
+      shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
+      shader.uniforms.nvr_uFontSizeWorld = this.userData.fontSizeWorld;
+      shader.uniforms.nvr_uBatchId = { value: this.userData.batchId };
+      shader.uniforms.nvr_uPickable = this.userData.uPickable;
+      shader.uniforms.nvr_uFov = this.userData.fov;
+      shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        `uniform vec3 diffuse;`,
+        `
+            uniform vec3 diffuse;
+            uniform float nvr_uScaleByDistance;
+            uniform float nvr_uFontSizePx;
+            uniform float nvr_uFontSizeWorld;
+            uniform float nvr_uFov;
+            uniform float nvr_uScreenHeightPx;
+            ${BillboardMatrix}
+            ${PixelToWorld}
+            `,
+      );
+
+      shader.vertexShader = shader.vertexShader.replace(
+        `gl_Position = projectionMatrix * mvPosition;`,
+        `
+            float scaleFactor = nvr_uFontSizePx;
+            if (nvr_uScaleByDistance > 0.0) {
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldPosition.xyz, cameraPosition);
+              scaleFactor = worldSize / nvr_uFontSizeWorld;
+            }
+      
+            mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
+            vec4 newMvPosition = billboardMatrix * vec4(transformed, 1.0);
+      
+            gl_Position = projectionMatrix * newMvPosition;
+            `,
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `void main() {`,
+        `
+      ${BatchDefinitioin}
+      ${Pick}
+      void main() {
+            `,
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `
+      if (edgeAlpha == 0.0) {
+        discard;
+      }
+      `,
+        `
+      if (edgeAlpha == 0.0) {
+        if (nvr_uPickable > 0.0) {
+          vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
+          gl_FragColor = vec4(pickColor.xyz, 1.0);
+          return;
+        }
+        else{
+          discard;
+        }
+      }
+      `,
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `//!END_POST_CHUNK`,
+        `//!END_POST_CHUNK
+            if (nvr_uPickable > 0.0) {
+              vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
+              gl_FragColor = vec4(pickColor.xyz, 1.0);
+            }`,
+      );
+    };
+
+    this.text = txt;
+    this.add(txt);
+
+    return this.text;
+  }
+
+  createBackground() {
+    if (this.background) return this.background;
+
+    const backgroundMaterial = new MeshBasicMaterial();
+    const background = new Mesh(new PlaneGeometry(), backgroundMaterial);
+
+    background.material.onBeforeCompile = (shader) => {
+      shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
+      shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
+      shader.uniforms.nvr_uFontSizeWorld = this.userData.fontSizeWorld;
+      shader.uniforms.nvr_uCornerRadius = this.userData.cornerRadius;
+      shader.uniforms.nvr_uFillColor = this.userData.bgColor;
+      shader.uniforms.nvr_uBorderColor = this.userData.borderColor;
+      shader.uniforms.nvr_uBorderWidth = this.userData.borderWidth;
+      shader.uniforms.nvr_uGeomSize = this.userData.bgSize;
+      shader.uniforms.nvr_uBatchId = { value: this.userData.batchId };
+      shader.uniforms.nvr_uPickable = this.userData.uPickable;
+      shader.uniforms.nvr_uFov = this.userData.fov;
+      shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        `void main() {`,
+        `
+        uniform float nvr_uScaleByDistance;
+        uniform float nvr_uFontSizePx;
+        uniform float nvr_uFontSizeWorld;
+        uniform float nvr_uFov;
+        uniform float nvr_uScreenHeightPx;
+        out vec2 vUv;
+        ${BillboardMatrix}
+        ${PixelToWorld}
+        void main() {
+          vUv = uv;
+        `,
+      );
+
+      shader.vertexShader = shader.vertexShader.replace(
+        `#include <fog_vertex>`,
+        `
+        #include <fog_vertex>
+  
+        float scaleFactor = nvr_uFontSizePx;
+        if (nvr_uScaleByDistance > 0.0) {
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldPosition.xyz, cameraPosition);
+          scaleFactor = worldSize / nvr_uFontSizeWorld;
+        }
+  
+        mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
+        vec4 newMvPosition = billboardMatrix * vec4(transformed, 1.0);
+  
+        gl_Position = projectionMatrix * newMvPosition;
+        `,
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `uniform vec3 diffuse;`,
+        `
+        uniform vec3 diffuse;
+        uniform float nvr_uCornerRadius;
+        uniform vec3 nvr_uFillColor;
+        uniform vec3 nvr_uBorderColor;
+        uniform float nvr_uBorderWidth;
+        uniform vec2 nvr_uGeomSize;
+        ${BatchDefinitioin}
+        in vec2 vUv;
+        ${Pick}
+        float sdRoundedBox(vec2 p, vec2 b, float r) {
+            vec2 q = abs(p) - b + vec2(r);
+            return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+        }
+        `,
+      );
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `#include <dithering_fragment>`,
+        `
+        #include <dithering_fragment>
+          if (nvr_uPickable > 0.0) {
+            vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
+            gl_FragColor = vec4(pickColor.xyz, 1.0);
+            return;
+          }
+  
+          vec2 uv = (vUv - 0.5) * nvr_uGeomSize;
+          float border = nvr_uBorderWidth * nvr_uGeomSize.y;
+          float cornerRadius = nvr_uCornerRadius * nvr_uGeomSize.y;
+  
+          float effectiveRadius = min(cornerRadius, min(nvr_uGeomSize.x, nvr_uGeomSize.y) * 0.5);
+          vec2 b = nvr_uGeomSize * 0.5 - vec2(border);
+  
+          float d = sdRoundedBox(uv, b, effectiveRadius);
+  
+          if (d > border) {
+            discard;
+          }
+          else if (d < 0.0){
+            gl_FragColor = vec4(nvr_uFillColor, 1.0);
+          }
+          else {
+              gl_FragColor = vec4(nvr_uBorderColor, 1.0);
+          }
+        `,
+      );
+    };
+
+    background.onBeforeRender = function (
+      _renderer,
+      _scene,
+      camera,
+      _geometry,
+      _material,
+      _group,
+    ) {
+      if (this?.parent) {
+        const worldPosition = new Vector3();
+        this.parent.getWorldPosition(worldPosition);
+
+        const direction = new Vector3();
+        direction.subVectors(worldPosition, camera.position).normalize();
+        this.position.copy(direction.multiplyScalar(10));
+      }
+    };
+
+    this.background = background;
+    this.add(background);
+
+    return this.background;
+  }
+
+  _updateTextByMaterial(material: TextMaterial, needRender?: () => void) {
+    const txt = this.createText();
+
+    let bNeedUpdateBg = false;
+    let bPaddingChanged = false;
+
+    if (material.text !== this.userData.text) {
+      this.userData.text = material.text;
+      txt.text = material.text ?? "";
+      bNeedUpdateBg = true;
+    }
+
+    if (
+      !material.center ||
+      material.center.x != this.userData.center.x ||
+      material.center.y != this.userData.center.y
+    ) {
+      this.userData.center.x = material.center?.x;
+      this.userData.center.y = material.center?.y;
+      bNeedUpdateBg = true;
+    }
+
+    if (
+      !material.padding ||
+      material.padding.x != this.userData.padding.x ||
+      material.padding.y != this.userData.padding.y
+    ) {
+      this.userData.padding.x = material.padding?.x;
+      this.userData.padding.y = material.padding?.y;
+      bPaddingChanged = true;
+    }
+
+    if (material.font !== this.userData.font) {
+      this.userData.font = material.font;
+      bNeedUpdateBg = true;
+    }
+
+    this.userData.fontColor = material.color;
+    this.userData.depthTest = material.depth_test;
+    this.userData.scaleByDistance.value = material.scale_by_distance
+      ? 1.0
+      : 0.0;
+    this.userData.fontSizePx.value = material.size ?? 1.0;
+    this.userData.bgColor.value = material.background_color
+      ? new Color(material.background_color)
+      : undefined;
+    this.userData.borderColor.value = new Color(material.border_color);
+    this.userData.borderWidth.value = Math.max(
+      material.border_width ?? 0.0,
+      0.0,
+    );
+    this.userData.cornerRadius.value = Math.max(
+      material.corner_radius ?? 0.0,
+      0.0,
+    );
+
+    txt.material.depthTest = material.depth_test ?? true;
+
+    if (material.font) {
+      txt.font = material.font;
+    }
+
+    if (this.userData.isPicked) {
+      txt.color = this.userData.highlightColor;
+    } else {
+      txt.color = material.color ?? "#ffffff";
+    }
+
+    if (bNeedUpdateBg) {
+      const cx = this.userData.center.x;
+      const cy = this.userData.center.y;
+      txt.anchorX = Math.floor(cx * 100) + "%";
+      txt.anchorY = Math.floor((1 - cy) * 100) + "%";
+
+      txt.sync(() => {
+        this.updateBackground();
+
+        if (needRender) {
+          needRender();
+        }
+      });
+    } else if (bPaddingChanged) {
+      this.updateBackground();
+    }
+  }
+
+  updateBackground() {
+    const txt = this.text;
+    if (!txt) return;
+
+    const textRenderInfo = txt.textRenderInfo;
+    const txtWidth =
+      textRenderInfo.blockBounds[2] - textRenderInfo.blockBounds[0];
+    const txtHeight =
+      textRenderInfo.blockBounds[3] - textRenderInfo.blockBounds[1];
+
+    this.userData.fontSizeWorld.value = txtHeight;
+
+    let bg = this.background;
+
+    if (!this.userData.bgColor.value) {
+      // remove background
+      if (bg) {
+        bg.geometry.dispose();
+        bg.geometry.deleteAttribute("position");
+        bg.geometry.deleteAttribute("uv");
+        bg.geometry.deleteAttribute("normal");
+        bg.geometry.index = null;
+        this.remove(bg);
+      }
+      return;
+    }
+
+    bg = this.createBackground();
+
+    const paddingRatioX =
+      this.userData.padding.x / this.userData.fontSizePx.value;
+    const paddingRatioY =
+      this.userData.padding.y / this.userData.fontSizePx.value;
+    const bgWwidth = txtWidth + txtHeight * paddingRatioX * 2;
+    const bgHeight = txtHeight + txtHeight * paddingRatioY * 2;
+
+    this.userData.bgSize.value.set(bgWwidth, bgHeight);
+
+    // update anchor point
+    const cx = this.userData.center?.x ?? 0.5;
+    const cy = this.userData.center?.y ?? 0.0;
+
+    const posArr = bg.geometry.attributes.position.array;
+    posArr[0] = -cx * bgWwidth;
+    posArr[1] = (1 - cy) * bgHeight;
+
+    posArr[3] = (1 - cx) * bgWwidth;
+    posArr[4] = (1 - cy) * bgHeight;
+
+    posArr[6] = -cx * bgWwidth;
+    posArr[7] = -cy * bgHeight;
+
+    posArr[9] = (1 - cx) * bgWwidth;
+    posArr[10] = -cy * bgHeight;
+
+    const txtCx = (txtWidth * 0.5 - (0.5 - cx) * bgWwidth) / txtWidth;
+    txt.anchorX = Math.floor(txtCx * 100) + "%";
+
+    const txtCy = (txtHeight * 0.5 - (0.5 - cy) * bgHeight) / txtHeight;
+    txt.anchorY = Math.floor((1 - txtCy) * 100) + "%";
+
+    txt.material.needsUpdate = true;
+    bg.geometry.attributes.position.needsUpdate = true;
+    txt.sync();
+  }
+
+  setText(text: string) {
+    if (!this.text) return;
+    this.text.text = text;
+    this.text.sync(() => {
+      this.updateBackground();
+    });
+  }
+}

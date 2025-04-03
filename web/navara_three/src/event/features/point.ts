@@ -1,9 +1,9 @@
-import Pick from "@shaders/glsl/chunks/pick.glsl";
+import type { PointMesh, PointMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
+import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import { SpriteMaterial, Sprite } from "three";
 
-import type { PointMesh, PointMaterial } from "@navara/engine";
 import type { CommonUniforms } from "../../uniforms";
 
 export async function renderPoint(m: PointMesh, uniforms: CommonUniforms) {

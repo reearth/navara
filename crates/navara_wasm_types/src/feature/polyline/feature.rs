@@ -1,4 +1,4 @@
-use navara_feature_component::batch::BatchId;
+use navara_feature_component::batch::{BatchId, BatchIndex};
 use navara_math::{FloatType, Vec2};
 use wasm_bindgen::prelude::*;
 
@@ -11,6 +11,7 @@ pub struct TransferablePolylineBatchedFeature {
     points: Vec<FloatType>,
     points_sizes: Vec<u32>,
     batch_ids: Vec<u32>,
+    batch_indices: Vec<u32>,
 
     #[wasm_bindgen(getter_with_clone)]
     pub crs: CRS,
@@ -29,6 +30,7 @@ impl TransferablePolylineBatchedFeature {
             points: vec![],
             points_sizes: vec![],
             batch_ids: vec![],
+            batch_indices: vec![],
             crs,
             length,
             cur_idx: 0,
@@ -38,6 +40,10 @@ impl TransferablePolylineBatchedFeature {
     #[wasm_bindgen(js_name = "setBatchIds")]
     pub fn set_batch_ids(&mut self, byte_length: usize, f: &js_sys::Function) {
         self.batch_ids = transfer_u32_array(byte_length, f)
+    }
+    #[wasm_bindgen(js_name = "setBatchIndices")]
+    pub fn set_batch_indices(&mut self, byte_length: usize, f: &js_sys::Function) {
+        self.batch_indices = transfer_u32_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setPoints")]
     pub fn set_points(&mut self, byte_length: usize, f: &js_sys::Function) {
@@ -51,6 +57,11 @@ impl TransferablePolylineBatchedFeature {
     #[wasm_bindgen(js_name = "transferBatchIds")]
     pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
         copy_u32_array(&self.batch_ids)
+    }
+
+    #[wasm_bindgen(js_name = "transferBatchIndices")]
+    pub fn transfer_batch_indices(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.batch_indices)
     }
 
     #[wasm_bindgen(js_name = "transferPoints")]
@@ -69,19 +80,23 @@ impl TransferablePolylineBatchedFeature {
         let mut points = Vec::with_capacity(length);
         let mut points_sizes = Vec::with_capacity(length);
         let mut batch_ids = Vec::with_capacity(length * 2);
+        let mut batch_indices = Vec::with_capacity(length);
 
-        for (batch_id, mut ps) in geometries {
+        for (i, (batch_id, mut ps)) in geometries.into_iter().enumerate() {
             points_sizes.push(ps.len() as u32);
             points.append(&mut ps);
 
             batch_ids.push(batch_id);
             batch_ids.push(0);
+
+            batch_indices.push(i as u32);
         }
 
         TransferablePolylineBatchedFeature {
             points,
             points_sizes,
             batch_ids,
+            batch_indices,
             crs: CRS::default(),
             length,
             ..Default::default()
@@ -103,31 +118,42 @@ impl TransferablePolylineBatchedFeature {
         }
     }
 
-    pub fn add(&mut self, points: &mut Vec<FloatType>, batch_id: &BatchId) {
+    pub fn add(&mut self, points: &mut Vec<FloatType>, batch_index: BatchIndex) {
         self.points_sizes.push(points.len() as u32);
         self.points.append(points);
 
-        self.batch_ids.push(batch_id.0.x as u32);
-        self.batch_ids.push(batch_id.0.y as u32);
+        self.batch_indices.push(batch_index.0);
     }
 
-    pub fn to_transferable_by_index(&mut self, idx: usize) -> (Vec<FloatType>, BatchId) {
+    pub fn add_batch_id_and_selected_status(
+        &mut self,
+        batch_id_and_selected_status: &mut Vec<u32>,
+    ) {
+        self.batch_ids.append(batch_id_and_selected_status);
+    }
+
+    pub fn to_transferable_by_index(
+        &mut self,
+        idx: usize,
+    ) -> (Vec<FloatType>, BatchIndex, BatchId) {
         let points = self
             .points
             .drain(..self.points_sizes[idx] as usize)
             .collect();
 
+        let batch_index = self.batch_indices[idx] as usize;
+
         let batch_id = BatchId(Vec2::new(
-            self.batch_ids[idx * 2] as FloatType,
-            self.batch_ids[idx * 2 + 1] as FloatType,
+            self.batch_ids[batch_index * 2] as FloatType,
+            self.batch_ids[batch_index * 2 + 1] as FloatType,
         ));
 
-        (points, batch_id)
+        (points, BatchIndex(batch_index as u32), batch_id)
     }
 }
 
 impl Iterator for TransferablePolylineBatchedFeature {
-    type Item = (Vec<FloatType>, BatchId);
+    type Item = (Vec<FloatType>, BatchIndex, BatchId);
     fn next(&mut self) -> Option<Self::Item> {
         if self.cur_idx == self.length {
             return None;
@@ -182,9 +208,11 @@ mod test {
 
         let mut features: Vec<Vec<FloatType>> = vec![];
         let mut batch_ids = vec![];
-        for (feature, batch_id) in transferable_features {
+        let mut batch_idxs = vec![];
+        for (feature, batch_index, batch_id) in transferable_features {
             features.push(feature);
             batch_ids.push(batch_id.0);
+            batch_idxs.push(batch_index.0);
         }
 
         assert_eq!(features, points);
@@ -196,5 +224,6 @@ mod test {
                 Vec2::new(2.0, 0.0)
             ]
         );
+        assert_eq!(batch_idxs, vec![0, 1, 2]);
     }
 }

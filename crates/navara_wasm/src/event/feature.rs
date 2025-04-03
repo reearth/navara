@@ -103,14 +103,11 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
     fn from(v: &'a navara_feature_component::render::RenderableFeature) -> Self {
         match v {
             navara_feature_component::render::RenderableFeature::Point {
-                coordinates: _,
-                crs: _,
                 material,
                 transform,
-                feature_id: _,
-                render_info: _,
                 geometry,
                 active,
+                ..
             } => Self {
                 point: Some(PointMesh {
                     material: material.into(),
@@ -121,14 +118,11 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 ..Default::default()
             },
             navara_feature_component::render::RenderableFeature::Billboard {
-                coordinates: _,
-                crs: _,
                 material,
                 transform,
-                feature_id: _,
-                render_info: _,
                 geometry,
                 active,
+                ..
             } => Self {
                 billboard: Some(BillboardMesh {
                     material: material.into(),
@@ -139,14 +133,11 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 ..Default::default()
             },
             navara_feature_component::render::RenderableFeature::Text {
-                coordinates: _,
-                crs: _,
                 material,
                 transform,
-                feature_id: _,
-                render_info: _,
                 geometry,
                 active,
+                ..
             } => Self {
                 text: Some(TextMesh {
                     material: material.into(),
@@ -157,15 +148,11 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 ..Default::default()
             },
             navara_feature_component::render::RenderableFeature::Polyline {
-                coordinates: _,
-                crs: _,
                 material,
                 transform,
                 geometry,
-                feature_id: _,
-                render_info: _,
-                extent: _,
                 active,
+                ..
             } => Self {
                 polyline: Some(PolylineMesh {
                     material: material.into(),
@@ -176,15 +163,11 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 ..Default::default()
             },
             navara_feature_component::render::RenderableFeature::Polygon {
-                coordinates: _,
-                crs: _,
                 material,
                 geometry,
                 transform,
-                feature_id: _,
-                render_info: _,
-                extent: _,
                 active,
+                ..
             } => Self {
                 polygon: Some(PolygonMesh {
                     material: material.into(),
@@ -195,16 +178,12 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 ..Default::default()
             },
             navara_feature_component::render::RenderableFeature::Model {
-                coordinates: _,
-                crs: _,
                 material,
                 transform,
-                feature_id: _,
-                render_info: _,
                 bin,
                 geometry,
-                feature_batch_id: _,
                 active,
+                ..
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
@@ -232,6 +211,11 @@ impl ReturnedTransferablePolygonBatchedFeature {
     #[wasm_bindgen(js_name = "transferBatchIds")]
     pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
         self.transferable.transfer_batch_ids()
+    }
+
+    #[wasm_bindgen(js_name = "transferBatchIndices")]
+    pub fn transfer_batch_indices(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_batch_indices()
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
@@ -290,6 +274,11 @@ impl ReturnedTransferablePolylineBatchedFeature {
     #[wasm_bindgen(js_name = "transferBatchIds")]
     pub fn transfer_batch_ids(&mut self) -> js_sys::Uint32Array {
         self.transferable.transfer_batch_ids()
+    }
+
+    #[wasm_bindgen(js_name = "transferBatchIndices")]
+    pub fn transfer_batch_indices(&mut self) -> js_sys::Uint32Array {
+        self.transferable.transfer_batch_indices()
     }
 
     #[wasm_bindgen(js_name = "transferPoints")]

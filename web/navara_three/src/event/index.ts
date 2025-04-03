@@ -40,18 +40,16 @@ import type {
 } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
+import {
+  processRenderableFeatureAdded,
+  processRenderableFeatureChanged,
+} from "./feature";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
-
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
-
-import {
-  processRenderableFeatureAdded,
-  processRenderableFeatureChanged,
-} from "./feature";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;

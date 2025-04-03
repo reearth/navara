@@ -33,3 +33,35 @@ impl<'a> From<&'a navara_geometry::TransferableFloatAttribute> for TransferableF
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct TransferableUintAttribute {
+    pub data: Handle,
+    pub size: u8,
+}
+
+#[wasm_bindgen]
+impl TransferableUintAttribute {
+    #[wasm_bindgen(constructor)]
+    pub fn new(data: Handle, size: u8) -> Self {
+        Self { data, size }
+    }
+}
+
+impl From<TransferableUintAttribute> for navara_geometry::TransferableUintAttribute {
+    fn from(val: TransferableUintAttribute) -> Self {
+        navara_geometry::TransferableUintAttribute {
+            data: val.data,
+            size: val.size,
+        }
+    }
+}
+impl<'a> From<&'a navara_geometry::TransferableUintAttribute> for TransferableUintAttribute {
+    fn from(val: &'a navara_geometry::TransferableUintAttribute) -> TransferableUintAttribute {
+        TransferableUintAttribute {
+            data: val.data,
+            size: val.size,
+        }
+    }
+}
