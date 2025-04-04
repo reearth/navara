@@ -152,6 +152,7 @@ pub struct TextMaterial {
     pub background_color: Option<u32>,
     pub border_color: u32,
     pub border_width: FloatType, // 0 ~ 0.5, the ratio of the border to the height
+    pub corner_radius: FloatType, // 0 ~ 0.5, the ratio of the corner radius to the height
     pub padding: Vec2,
     pub id_property: String,
 }
@@ -172,6 +173,7 @@ impl Default for TextMaterial {
             background_color: None,
             border_color: 0x000000,
             border_width: 0.05,
+            corner_radius: 0.1,
             padding: Vec2::new(5.0, 2.0),
             id_property: "".to_string(),
         }

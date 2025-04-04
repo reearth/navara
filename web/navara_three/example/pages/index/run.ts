@@ -138,6 +138,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       background_color: 0x0a70c2,
       border_color: 0xf8e43c,
       border_width: 0.08, // 0 ~ 0.5, the ratio of the border to the height
+      corner_radius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
       center: {
         x: 0.5,
@@ -175,6 +176,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       background_color: 0xa4e996,
       border_color: 0x4aac3b,
       border_width: 0.1, // 0 ~ 0.5, the ratio of the border to the height
+      corner_radius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 30,
       padding: {
         x: 5,
