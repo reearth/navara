@@ -23,6 +23,9 @@ export const addCtrlPanel = (
     title: "Parameters",
     expanded: true,
   });
+  pane.element.style.position = "absolute";
+  pane.element.style.width = "340px";
+  pane.element.style.right = "0px";
 
   const layerIds = Array.from(layerMap.keys());
   const layerDeleted = layerIds.map(() => 0);
@@ -55,6 +58,7 @@ export const addCtrlPanel = (
     background_color: "#0a70c2",
     border_color: "#f8e43c",
     border_width: 0.0,
+    corner_radius: 0.0,
     center: { x: 0, y: 0 },
     padding: { x: 0, y: 0 },
   };
@@ -246,6 +250,10 @@ export const addCtrlPanel = (
         material.border_width = paneParams.border_width;
       }
 
+      if ("corner_radius" in material) {
+        material.corner_radius = paneParams.corner_radius;
+      }
+
       if ("center" in material) {
         material.center.x = paneParams.center.x;
         material.center.y = paneParams.center.y;
@@ -398,7 +406,18 @@ function createParamCtrl(
 
     if ("border_width" in material) {
       paneParams.border_width = material.border_width;
-      f.addBinding(paneParams, "border_width").on("change", changeFunc);
+      f.addBinding(paneParams, "border_width", { min: 0, max: 0.5 }).on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("corner_radius" in material) {
+      paneParams.corner_radius = material.corner_radius;
+      f.addBinding(paneParams, "corner_radius", { min: 0, max: 0.5 }).on(
+        "change",
+        changeFunc,
+      );
     }
 
     if ("center" in material) {

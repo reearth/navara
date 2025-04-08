@@ -3,6 +3,7 @@ import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
+import SdRoundedBox from "@shaders/glsl/chunks/sdRoundedBox.glsl";
 import {
   Color,
   Group,
@@ -45,7 +46,10 @@ export class TextMesh extends Group {
         : undefined,
     };
     this.userData.borderWidth = {
-      value: meshMaterial.border_width ?? 0.05,
+      value: m.material.border_width ?? 0.0,
+    };
+    this.userData.cornerRadius = {
+      value: m.material.corner_radius ?? 0.0,
     };
     this.userData.bgSize = {
       value: new Vector2(1.0, 1.0),
@@ -76,7 +80,7 @@ export class TextMesh extends Group {
 
   private initText() {
     const txt = this.text;
-    txt.fontSize = 4;
+    txt.fontSize = 1;
 
     (txt.material as Material).onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
@@ -173,7 +177,7 @@ export class TextMesh extends Group {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
       shader.uniforms.nvr_uFontSizeWorld = this.userData.fontSizeWorld;
-      shader.uniforms.nvr_uCornerRadius = { value: 0.1 };
+      shader.uniforms.nvr_uCornerRadius = this.userData.cornerRadius;
       shader.uniforms.nvr_uFillColor = this.userData.bgColor;
       shader.uniforms.nvr_uBorderColor = this.userData.borderColor;
       shader.uniforms.nvr_uBorderWidth = this.userData.borderWidth;
@@ -230,10 +234,7 @@ export class TextMesh extends Group {
         ${BatchDefinitioin}
         in vec2 vUv;
         ${Pick}
-        float sdRoundedBox(vec2 p, vec2 b, float r) {
-            vec2 q = abs(p) - b + vec2(r);
-            return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-        }
+        ${SdRoundedBox}
         `,
       );
 
@@ -247,20 +248,32 @@ export class TextMesh extends Group {
             return;
           }
   
+          // Calculate UV coordinates relative to center and scaled by geometry size
           vec2 uv = (vUv - 0.5) * nvr_uGeomSize;
           float border = nvr_uBorderWidth * nvr_uGeomSize.y;
-  
-          float effectiveRadius = min(nvr_uCornerRadius, min(nvr_uGeomSize.x, nvr_uGeomSize.y) * 0.5 - border);
-          vec2 b = nvr_uGeomSize * 0.5 - vec2(border);
-  
-          float d = sdRoundedBox(uv, b, effectiveRadius);
-  
-          if (d > border) {
+
+          // Calculate outer corner radius (clamped to half the smallest dimension)
+          float outRadius = min(nvr_uGeomSize.y * nvr_uCornerRadius, min(nvr_uGeomSize.x, nvr_uGeomSize.y) * 0.5);
+          
+          // Calculate inner radius (ensuring it doesn't go negative)
+          float inRadius = max(outRadius - border, 0.0);
+
+          // Calculate distance to outer rounded box
+          float d = nvr_sdRoundedBox(uv, nvr_uGeomSize * 0.5, outRadius);
+          if (d > 0.0) {
+              // If outside the outer shape, discard the fragment
               discard;
           }
           else{
-              vec3 color = mix(nvr_uBorderColor, nvr_uFillColor, smoothstep(0.0, nvr_uBorderWidth, -d));
-              gl_FragColor = vec4(color, 1.0);
+              // Otherwise, set color to border color
+              gl_FragColor = vec4(nvr_uBorderColor, 1.0);
+          }
+
+          // Calculate distance to inner rounded box (border inset)
+          d = nvr_sdRoundedBox(uv, nvr_uGeomSize * 0.5 - vec2(border), inRadius);
+          if (d <= 0.0) {
+              // If inside the inner shape, overwrite with fill color
+              gl_FragColor = vec4(nvr_uFillColor, 1.0);
           }
         `,
       );
@@ -390,10 +403,16 @@ export class TextMesh extends Group {
       prev.borderColor = nextBoarderColor;
     }
 
-    const nextBorderWidth = material.border_width ?? 0.05;
+    const nextBorderWidth = Math.max(material.border_width ?? 0.0, 0.0);
     if (nextBorderWidth !== prev.borderWidth) {
       this.userData.borderWidth.value = nextBorderWidth;
       prev.borderWidth = nextBorderWidth;
+    }
+
+    const nextCornerRadius = Math.max(material.corner_radius ?? 0.0, 0.0);
+    if (nextCornerRadius !== prev.cornerRadius) {
+      this.userData.cornerRadius.value = nextCornerRadius;
+      prev.cornerRadius = nextCornerRadius;
     }
 
     const nextDepthTest = material.depth_test ?? true;
