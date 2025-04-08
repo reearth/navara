@@ -112,12 +112,13 @@ pub fn transfer_mesh(
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
                     batch_id_and_selected_status: Some(TransferableFloatAttribute {
-                        data: global_batch_ids.0,
+                        data: global_batch_ids.handle,
                         size: 2,
                     }),
                 },
                 feature_batch_id: feature_batch_id.0,
                 active: true,
+                batch_length: global_batch_ids.batch_length,
             },
         ));
 
@@ -242,7 +243,7 @@ pub fn remove_batched_feature(
             &mut id_prop_table_res,
         );
         if let Some(global_batch_id_and_selections) = global_batch_id_and_selections {
-            buf.remove(&global_batch_id_and_selections.0);
+            buf.remove(&global_batch_id_and_selections.handle);
         }
         if let Some(feature_batch_id) = feature_batch_id {
             batch_table_res.remove(&feature_batch_id.0, &mut id_prop_table_res);

@@ -19,24 +19,31 @@ import { Text } from "troika-three-text";
 import type { CommonUniforms } from "../uniforms";
 
 export class TextMesh extends Group {
-  text?: Text;
-  background?: Mesh;
+  text: Text;
+  background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
 
   constructor(m: NavaraTextMesh, uniforms: CommonUniforms) {
     super();
 
-    this.userData.isText = true;
+    this.text = new Text();
+
+    const meshMaterial = m.material;
+
     this.userData.scaleByDistance = {
-      value: m.material.scale_by_distance ? 1.0 : 0.0,
+      value: meshMaterial.scale_by_distance ? 1.0 : 0.0,
     };
     this.userData.fontSizePx = {
-      value: m.material.size ?? 1.0,
+      value: meshMaterial.size ?? 1.0,
     };
     this.userData.bgColor = {
-      value: new Color(m.material.background_color ?? 0),
+      value: meshMaterial.background_color
+        ? new Color(meshMaterial.background_color)
+        : undefined,
     };
     this.userData.borderColor = {
-      value: new Color(m.material.border_color),
+      value: meshMaterial.border_color
+        ? new Color(meshMaterial.border_color)
+        : undefined,
     };
     this.userData.borderWidth = {
       value: m.material.border_width ?? 0.0,
@@ -51,28 +58,28 @@ export class TextMesh extends Group {
       value: 0.0,
     };
     this.userData.center = {
-      x: m.material?.center?.x ?? 0.5,
-      y: m.material?.center?.y ?? 0,
+      x: meshMaterial?.center?.x ?? 0.5,
+      y: meshMaterial?.center?.y ?? 0,
     };
     this.userData.fontSizeWorld = {
       value: 0.0,
     };
     this.userData.padding = {
-      x: m.material?.padding?.x ?? 0.5,
-      y: m.material?.padding?.y ?? 0,
+      x: meshMaterial?.padding?.x ?? 0.5,
+      y: meshMaterial?.padding?.y ?? 0,
     };
     this.userData.fov = uniforms?.fov;
     this.userData.screenHeightPx = uniforms?.screenHeightPx;
     this.userData.isPicked = m.geometry.selected;
     this.userData.batchId = m.geometry.batch_id ?? 0;
     this.userData.highlightColor = uniforms?.highlightColor?.value;
-    this.visible = m.material.show ?? true;
+    this.visible = meshMaterial.show ?? true;
+
+    this.initText();
   }
 
-  createText() {
-    if (this.text) return this.text;
-
-    const txt = new Text();
+  private initText() {
+    const txt = this.text;
     txt.fontSize = 1;
 
     (txt.material as Material).onBeforeCompile = (shader) => {
@@ -160,7 +167,7 @@ export class TextMesh extends Group {
     return this.text;
   }
 
-  createBackground() {
+  _createBackground() {
     if (this.background) return this.background;
 
     const backgroundMaterial = new MeshBasicMaterial();
@@ -296,72 +303,122 @@ export class TextMesh extends Group {
     return this.background;
   }
 
-  _updateTextByMaterial(material: TextMaterial, needRender?: () => void) {
-    const txt = this.createText();
+  _updateTextByMaterial(
+    material: TextMaterial,
+    active: boolean,
+    needRender?: () => void,
+  ) {
+    if (!this.userData.prev) {
+      this.userData.prev = {};
+    }
+    const prev = this.userData.prev;
+
+    const nextVisible = (material.show ?? true) && active;
+    if (prev.visible !== nextVisible) {
+      this.visible = nextVisible;
+      prev.visible = nextVisible;
+    }
+
+    const txt = this.text;
 
     let bNeedUpdateBg = false;
     let bPaddingChanged = false;
 
-    if (material.text !== this.userData.text) {
-      this.userData.text = material.text;
+    if (material.text !== prev.text) {
+      prev.text = material.text;
       txt.text = material.text ?? "";
       bNeedUpdateBg = true;
     }
 
+    const nextCenterX = material.center?.x ?? 0;
+    const nextCenterY = material.center?.y ?? 0;
     if (
       !material.center ||
-      material.center.x != this.userData.center.x ||
-      material.center.y != this.userData.center.y
+      nextCenterX !== prev.centerX ||
+      nextCenterY !== prev.centerY
     ) {
-      this.userData.center.x = material.center?.x;
-      this.userData.center.y = material.center?.y;
+      this.userData.center.x = nextCenterX;
+      this.userData.center.y = nextCenterY;
+      prev.centerX = nextCenterX;
+      prev.centerY = nextCenterY;
       bNeedUpdateBg = true;
     }
 
+    const nextPaddingX = material.padding?.x ?? 0;
+    const nextPaddingY = material.padding?.y ?? 0;
     if (
       !material.padding ||
-      material.padding.x != this.userData.padding.x ||
-      material.padding.y != this.userData.padding.y
+      material.padding.x !== prev.paddingX ||
+      material.padding.y !== prev.paddingY
     ) {
-      this.userData.padding.x = material.padding?.x;
-      this.userData.padding.y = material.padding?.y;
+      this.userData.padding.x = nextPaddingX;
+      this.userData.padding.y = nextPaddingY;
+      prev.paddingX = nextPaddingX;
+      prev.paddingY = nextPaddingY;
       bPaddingChanged = true;
     }
 
-    if (material.font !== this.userData.font) {
-      this.userData.font = material.font;
+    const nextFont = material.font ?? "";
+    if (material.font !== prev.font) {
+      txt.font = nextFont;
+      prev.font = nextFont;
       bNeedUpdateBg = true;
     }
 
-    this.userData.fontColor = material.color;
-    this.userData.depthTest = material.depth_test;
-    this.userData.scaleByDistance.value = material.scale_by_distance
-      ? 1.0
-      : 0.0;
-    this.userData.fontSizePx.value = material.size ?? 1.0;
-    this.userData.bgColor.value = material.background_color
-      ? new Color(material.background_color)
-      : undefined;
-    this.userData.borderColor.value = new Color(material.border_color);
-    this.userData.borderWidth.value = Math.max(
-      material.border_width ?? 0.0,
-      0.0,
-    );
-    this.userData.cornerRadius.value = Math.max(
-      material.corner_radius ?? 0.0,
-      0.0,
-    );
-
-    txt.material.depthTest = material.depth_test ?? true;
-
-    if (material.font) {
-      txt.font = material.font;
+    const nextColor = material.color ?? "#ffffff";
+    if (nextColor !== prev.color) {
+      prev.color = nextColor;
+      if (this.userData.isPicked) {
+        txt.color = this.userData.highlightColor;
+      } else {
+        txt.color = nextColor;
+      }
     }
 
-    if (this.userData.isPicked) {
-      txt.color = this.userData.highlightColor;
-    } else {
-      txt.color = material.color ?? "#ffffff";
+    const nextScaleByDistance = material.scale_by_distance ? 1 : 0;
+    if (nextScaleByDistance !== prev.scaleByDistance) {
+      this.userData.scaleByDistance.value = nextScaleByDistance;
+      prev.scaleByDistance = nextScaleByDistance;
+    }
+
+    const nextFontSize = material.size ?? 1.0;
+    if (nextFontSize !== prev.fontSize) {
+      this.userData.fontSizePx.value = nextFontSize;
+      prev.fontSize = nextFontSize;
+    }
+
+    const nextBackgroundColor = material.background_color
+      ? new Color(material.background_color)
+      : undefined;
+    if (nextBackgroundColor !== prev.backgroundColor) {
+      this.userData.bgColor.value = nextBackgroundColor;
+      prev.backgroundColor = nextBackgroundColor;
+    }
+
+    const nextBoarderColor = material.border_color
+      ? new Color(material.border_color)
+      : undefined;
+    if (nextBoarderColor !== prev.borderColor) {
+      this.userData.borderColor.value = nextBoarderColor;
+      prev.borderColor = nextBoarderColor;
+    }
+
+    const nextBorderWidth = Math.max(material.border_width ?? 0.0, 0.0);
+    if (nextBorderWidth !== prev.borderWidth) {
+      this.userData.borderWidth.value = nextBorderWidth;
+      prev.borderWidth = nextBorderWidth;
+    }
+
+    const nextCornerRadius = Math.max(material.corner_radius ?? 0.0, 0.0);
+    if (nextCornerRadius !== prev.cornerRadius) {
+      this.userData.cornerRadius.value = nextCornerRadius;
+      prev.cornerRadius = nextCornerRadius;
+    }
+
+    const nextDepthTest = material.depth_test ?? true;
+    if (nextDepthTest !== prev.depthTest) {
+      txt.material.depthTest = nextDepthTest;
+      prev.depthTest = nextDepthTest;
     }
 
     if (bNeedUpdateBg) {
@@ -405,11 +462,12 @@ export class TextMesh extends Group {
         bg.geometry.deleteAttribute("normal");
         bg.geometry.index = null;
         this.remove(bg);
+        this.background = undefined;
       }
       return;
     }
 
-    bg = this.createBackground();
+    bg = this._createBackground();
 
     const paddingRatioX =
       this.userData.padding.x / this.userData.fontSizePx.value;

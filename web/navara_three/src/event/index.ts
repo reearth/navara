@@ -99,6 +99,10 @@ export type FeatureHandler = {
     type: "point" | "polyline" | "polygon" | "model",
     bits: bigint,
   ) => void;
+  readPropertiesFromFeature(
+    bits: bigint,
+    callback: (batchId: number, properties?: Map<string, unknown>) => void,
+  ): void;
 };
 
 export type MeshHandler = {
@@ -270,6 +274,7 @@ export function processEvent(
             drapedFeatureMaterials,
             featureHandler,
             viewEvents,
+            updatedAt,
           );
           break;
         case "remove":
@@ -284,12 +289,13 @@ export function processEvent(
           }
           break;
         case "change":
-          processRenderableFeatureChanged(
+          await processRenderableFeatureChanged(
             event,
             meshes,
             drapedFeatureMaterials,
             renderFlag,
             viewEvents,
+            featureHandler,
             updatedAt,
           );
           break;

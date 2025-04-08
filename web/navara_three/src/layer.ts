@@ -1,12 +1,12 @@
 import { EventHandler } from "@navara/core/src/eventHandler";
 import type { Core } from "navara_wasm";
-import type { Object3D } from "three";
 
+import type { FeatureEvaluator } from "./evaluations/FeatureEvaluator";
 import type { LayerDescription } from "./type";
 
 export type LayerEvent = {
-  featureCreated: (m: Object3D) => void;
-  featureUpdated: (m: Object3D, updatedAt: number) => void;
+  featureCreated: (evaluator: FeatureEvaluator) => void;
+  featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
   deleted: () => void;
 };
 

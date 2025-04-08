@@ -139,12 +139,18 @@ pub fn construct_geometry(
         let is_not_point_geometry = !(geometry_type.is_none()
             || matches!(geometry_type, Some(ConstructedGeometryType::Point)));
 
+        let batch_length = global_batch_id_and_selections.len() / 2;
+
         result.push(ConstructedGeometry {
             feature_ids,
             geometry_type: geometry_type.unwrap(),
             feature_batch_id: is_not_point_geometry.then_some(FeatureBatchId(feature_batch_id)),
-            global_batch_id_and_selections: is_not_point_geometry
-                .then(|| GlobalBatchIdAndSelections(buf.new_u32(global_batch_id_and_selections))),
+            global_batch_id_and_selections: is_not_point_geometry.then(|| {
+                GlobalBatchIdAndSelections {
+                    handle: buf.new_u32(global_batch_id_and_selections),
+                    batch_length: batch_length as u32,
+                }
+            }),
         });
     }
 

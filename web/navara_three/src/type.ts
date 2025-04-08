@@ -35,7 +35,7 @@ type RemoveFreeRecursively<T> = T extends { free: any }
   : T;
 
 // wasm-bindgen generate a getter and setter, so need to extract it as a property.
-type ExtractProperties<T> = {
+export type ExtractProperties<T> = {
   [K in keyof T]?: T[K] extends (...args: any) => any
     ? ReturnType<T[K]> extends (...args: any) => any
       ? ExtractProperties<ReturnType<T[K]>>

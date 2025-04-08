@@ -59,9 +59,12 @@ import { isWorker } from "./utils";
 import WorkerURL from "./worker?url&worker";
 
 export * from "./type";
+export * from "./types";
 export * from "./constants";
 export * from "./light";
 export * from "./antialias";
+export * from "./mesh";
+export * from "./layer";
 
 export type Options = {
   container?: HTMLElement;
@@ -221,6 +224,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     markFeatureIsRendered: (type, bits) => {
       this._core?.markFeatureIsRendered(type, bits);
     },
+    readPropertiesFromFeature: (featureId, f) =>
+      this._core?.readPropertiesFromFeature(featureId, f),
   };
   private _meshHandler: MeshHandler = {
     setTileMeshPrepared: (handle: bigint) => {

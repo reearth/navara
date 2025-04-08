@@ -322,7 +322,9 @@ impl Core {
         }
 
         transferable.add_batch_id_and_selected_status(
-            &mut buf_store.get_u32(&batch_id_and_selected_status.0)?.to_vec(),
+            &mut buf_store
+                .get_u32(&batch_id_and_selected_status.handle)?
+                .to_vec(),
         );
 
         Some(ReturnedTransferablePolygonBatchedFeature {
@@ -359,7 +361,9 @@ impl Core {
         }
 
         transferable.add_batch_id_and_selected_status(
-            &mut buf_store.get_u32(&batch_id_and_selected_status.0)?.to_vec(),
+            &mut buf_store
+                .get_u32(&batch_id_and_selected_status.handle)?
+                .to_vec(),
         );
 
         Some(ReturnedTransferablePolylineBatchedFeature {
@@ -384,6 +388,26 @@ impl Core {
     #[wasm_bindgen(js_name = clearPickingStatus)]
     pub fn clear_picking_status(&mut self) {
         self.app.clear_picking_status();
+    }
+
+    #[wasm_bindgen(js_name = readPropertiesFromFeature)]
+    pub fn read_properties_from_feature(
+        &mut self,
+        renderable_feature_bits: u64,
+        callback: &js_sys::Function,
+    ) {
+        let this = JsValue::NULL;
+        self.app
+            .read_properties_by_global_batch_ids(renderable_feature_bits, &|batch_id, v| {
+                let batch_id = JsValue::from(batch_id);
+                let _ = match v
+                    .as_ref()
+                    .and_then(|v| serde_wasm_bindgen::to_value(v).ok())
+                {
+                    Some(v) => callback.call2(&this, &batch_id, &v).unwrap(),
+                    None => callback.call1(&this, &batch_id).unwrap(),
+                };
+            });
     }
 }
 
