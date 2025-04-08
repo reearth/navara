@@ -391,7 +391,7 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = readPropertiesFromFeature)]
-    pub fn read_properties_by_global_batch_ids(
+    pub fn read_properties_from_feature(
         &mut self,
         renderable_feature_bits: u64,
         callback: &js_sys::Function,
