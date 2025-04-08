@@ -118,7 +118,7 @@ pub fn transfer_mesh(
                 },
                 feature_batch_id: feature_batch_id.0,
                 active: true,
-                batch_length: Some(global_batch_ids.batch_length),
+                batch_length: global_batch_ids.batch_length,
             },
         ));
 

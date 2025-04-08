@@ -542,7 +542,7 @@ impl App {
 
                 match batch_prop {
                     BatchProperty::Cesium3dTileset(in_batch_table) => {
-                        let batch_length = *batch_length.as_ref()? as usize;
+                        let batch_length = *batch_length as usize;
 
                         let batch_table_json = in_batch_table.json().unwrap();
 

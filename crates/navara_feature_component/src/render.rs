@@ -117,7 +117,7 @@ pub enum RenderableFeature {
         bin: Option<ModelBin>,
         geometry: TransferableModelGeometry,
         feature_batch_id: u32,
-        batch_length: Option<u32>,
+        batch_length: u32,
     },
     #[default]
     Unknown,
