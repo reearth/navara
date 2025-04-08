@@ -18,6 +18,7 @@ import {
 
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
+import { createReplacer } from "../utils";
 
 import type { FeatureMesh } from "./featureMesh";
 
@@ -91,7 +92,8 @@ export class ModelMesh extends Object3D implements FeatureMesh {
         ) => {
           shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
           shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
-          shader.vertexShader = shader.vertexShader.replace(
+
+          shader.vertexShader = createReplacer(shader.vertexShader).replace(
             "void main() {",
             `
                     in vec2 batchIdAndSel;
@@ -100,9 +102,9 @@ export class ModelMesh extends Object3D implements FeatureMesh {
                     void main() {
                       nvr_vBatchIdAndSel = batchIdAndSel;
                     `,
-          );
+          ).source;
 
-          shader.fragmentShader = shader.fragmentShader
+          shader.fragmentShader = createReplacer(shader.fragmentShader)
             .replace(
               "void main() {",
               `
@@ -132,7 +134,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
                       gl_FragColor = vec4(pickColor.xyz, 1.0);
                     }
                     `,
-            );
+            ).source;
         };
       });
     }

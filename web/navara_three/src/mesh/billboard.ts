@@ -9,6 +9,7 @@ import invariant from "tiny-invariant";
 
 import { TEXTURE_LOADER } from "../event/loaders";
 import type { CommonUniforms } from "../uniforms";
+import { createReplacer } from "../utils";
 
 import { FeatureMesh } from "./featureMesh";
 
@@ -37,7 +38,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = material.userData.uPickable;
 
-      shader.fragmentShader = shader.fragmentShader
+      shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
           "#include <clipping_planes_pars_fragment>",
           `
@@ -55,7 +56,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           gl_FragColor = vec4(pickColor.xyz, 1.0);
         }
         `,
-        );
+        ).source;
     };
 
     this.userData.batchId = batchId;

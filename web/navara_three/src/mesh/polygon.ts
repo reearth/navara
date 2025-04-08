@@ -13,6 +13,7 @@ import {
 
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
+import { createReplacer } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -135,7 +136,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
       shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
 
-      shader.vertexShader = shader.vertexShader
+      // Use Replacer for method chaining (with side-effect free implementation)
+      shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "#include <common>",
           `
@@ -156,8 +158,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
   transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
   nvr_vBatchIdAndSel = batchIdAndSel;
   `,
-        );
-      shader.fragmentShader = shader.fragmentShader
+        ).source;
+
+      shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
           "uniform vec3 diffuse;",
           `
@@ -206,7 +209,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
   `,
         )
-        // replace the last line of the fragment shader.
         .replace(
           "#include <dithering_fragment>",
           `
@@ -216,7 +218,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     gl_FragColor = vec4(pickColor.xyz, 1.0);
   }
   `,
-        );
+        ).source;
     };
 
     this.material = material;

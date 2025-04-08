@@ -17,6 +17,7 @@ import {
 import { Text } from "troika-three-text";
 
 import type { CommonUniforms } from "../uniforms";
+import { createReplacer } from "../utils";
 
 export class TextMesh extends Group {
   text: Text;
@@ -91,9 +92,10 @@ export class TextMesh extends Group {
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
 
-      shader.vertexShader = shader.vertexShader.replace(
-        `uniform vec3 diffuse;`,
-        `
+      shader.vertexShader = createReplacer(shader.vertexShader)
+        .replace(
+          `uniform vec3 diffuse;`,
+          `
             uniform vec3 diffuse;
             uniform float nvr_uScaleByDistance;
             uniform float nvr_uFontSizePx;
@@ -103,11 +105,10 @@ export class TextMesh extends Group {
             ${BillboardMatrix}
             ${PixelToWorld}
             `,
-      );
-
-      shader.vertexShader = shader.vertexShader.replace(
-        `gl_Position = projectionMatrix * mvPosition;`,
-        `
+        )
+        .replace(
+          `gl_Position = projectionMatrix * mvPosition;`,
+          `
             float scaleFactor = nvr_uFontSizePx;
             if (nvr_uScaleByDistance > 0.0) {
               vec4 worldPosition = modelMatrix * vec4(position, 1.0);
@@ -120,45 +121,25 @@ export class TextMesh extends Group {
       
             gl_Position = projectionMatrix * newMvPosition;
             `,
-      );
+        ).source;
 
-      shader.fragmentShader = shader.fragmentShader.replace(
-        `void main() {`,
-        `
+      shader.fragmentShader = createReplacer(shader.fragmentShader)
+        .replace(
+          `void main() {`,
+          `
       ${BatchDefinitioin}
       ${Pick}
       void main() {
             `,
-      );
-
-      shader.fragmentShader = shader.fragmentShader.replace(
-        `
-      if (edgeAlpha == 0.0) {
-        discard;
-      }
-      `,
-        `
-      if (edgeAlpha == 0.0) {
-        if (nvr_uPickable > 0.0) {
-          vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
-          gl_FragColor = vec4(pickColor.xyz, 1.0);
-          return;
-        }
-        else{
-          discard;
-        }
-      }
-      `,
-      );
-
-      shader.fragmentShader = shader.fragmentShader.replace(
-        `//!END_POST_CHUNK`,
-        `//!END_POST_CHUNK
+        )
+        .replace(
+          `//!END_POST_CHUNK`,
+          `//!END_POST_CHUNK
             if (nvr_uPickable > 0.0) {
               vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
               gl_FragColor = vec4(pickColor.xyz, 1.0);
             }`,
-      );
+        ).source;
     };
 
     this.text = txt;
@@ -187,9 +168,10 @@ export class TextMesh extends Group {
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
 
-      shader.vertexShader = shader.vertexShader.replace(
-        `void main() {`,
-        `
+      shader.vertexShader = createReplacer(shader.vertexShader)
+        .replace(
+          `void main() {`,
+          `
         uniform float nvr_uScaleByDistance;
         uniform float nvr_uFontSizePx;
         uniform float nvr_uFontSizeWorld;
@@ -201,11 +183,10 @@ export class TextMesh extends Group {
         void main() {
           vUv = uv;
         `,
-      );
-
-      shader.vertexShader = shader.vertexShader.replace(
-        `#include <fog_vertex>`,
-        `
+        )
+        .replace(
+          `#include <fog_vertex>`,
+          `
         #include <fog_vertex>
   
         float scaleFactor = nvr_uFontSizePx;
@@ -220,11 +201,12 @@ export class TextMesh extends Group {
   
         gl_Position = projectionMatrix * newMvPosition;
         `,
-      );
+        ).source;
 
-      shader.fragmentShader = shader.fragmentShader.replace(
-        `uniform vec3 diffuse;`,
-        `
+      shader.fragmentShader = createReplacer(shader.fragmentShader)
+        .replace(
+          `uniform vec3 diffuse;`,
+          `
         uniform vec3 diffuse;
         uniform float nvr_uCornerRadius;
         uniform vec3 nvr_uFillColor;
@@ -236,11 +218,10 @@ export class TextMesh extends Group {
         ${Pick}
         ${SdRoundedBox}
         `,
-      );
-
-      shader.fragmentShader = shader.fragmentShader.replace(
-        `#include <dithering_fragment>`,
-        `
+        )
+        .replace(
+          `#include <dithering_fragment>`,
+          `
         #include <dithering_fragment>
           if (nvr_uPickable > 0.0) {
             vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
@@ -276,7 +257,7 @@ export class TextMesh extends Group {
               gl_FragColor = vec4(nvr_uFillColor, 1.0);
           }
         `,
-      );
+        ).source;
     };
 
     background.onBeforeRender = function (

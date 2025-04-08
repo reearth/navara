@@ -276,7 +276,7 @@ export class PickHelper extends CustomRenderPass {
           txt.color instanceof Color ? txt.color.clone() : txt.color;
         txt.color = this.highlightColor;
       } else {
-        txt.color = obj.userData.orgColor;
+        txt.color = obj.userData.orgColor ?? txt.color;
       }
     }
   }
