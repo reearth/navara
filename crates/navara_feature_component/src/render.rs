@@ -53,6 +53,8 @@ pub enum RenderableFeature {
         feature_id: Entity,
         render_info: RenderInformation,
         geometry: TransferableSingleGeometry,
+        feature_batch_id: u32,
+        batch_length: u32,
     },
     Billboard {
         coordinates: Vec3,
@@ -63,6 +65,8 @@ pub enum RenderableFeature {
         feature_id: Entity,
         render_info: RenderInformation,
         geometry: TransferableSingleGeometry,
+        feature_batch_id: u32,
+        batch_length: u32,
     },
     Text {
         coordinates: Vec3,
@@ -73,6 +77,8 @@ pub enum RenderableFeature {
         feature_id: Entity,
         render_info: RenderInformation,
         geometry: TransferableSingleGeometry,
+        feature_batch_id: u32,
+        batch_length: u32,
     },
     Polyline {
         coordinates: Vec3,
@@ -84,7 +90,8 @@ pub enum RenderableFeature {
         feature_id: Option<Entity>,
         render_info: PolylineRenderInformation,
         extent: Extent<f32, Radians>,
-        feature_batch_id: Option<u32>,
+        feature_batch_id: u32,
+        batch_length: u32,
     },
     Polygon {
         coordinates: Vec3,
@@ -96,7 +103,8 @@ pub enum RenderableFeature {
         feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
         extent: Extent<f32, Radians>,
-        feature_batch_id: Option<u32>,
+        feature_batch_id: u32,
+        batch_length: u32,
     },
     Model {
         coordinates: Vec3,
@@ -109,6 +117,7 @@ pub enum RenderableFeature {
         bin: Option<ModelBin>,
         geometry: TransferableModelGeometry,
         feature_batch_id: u32,
+        batch_length: Option<u32>,
     },
     #[default]
     Unknown,

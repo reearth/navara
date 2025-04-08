@@ -1,6 +1,6 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Changed, Or},
+    query::{Added, Changed, Or, Without},
     system::{Commands, Query, Res, ResMut},
 };
 
@@ -352,11 +352,15 @@ fn spawn_feature(
                         batch_table_res.get_selection(&batch_id, id_prop_sel_res),
                     ];
 
+                    let batch_length = global_batch_ids.len() / 2;
                     let ids_handle = buf.new_u32(global_batch_ids);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        FeatureBatchId(0),
-                        GlobalBatchIdAndSelections(ids_handle),
+                        FeatureBatchId(batch_id),
+                        GlobalBatchIdAndSelections {
+                            handle: ids_handle,
+                            batch_length: batch_length as u32,
+                        },
                         ModelGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -378,11 +382,15 @@ fn spawn_feature(
                             batch_table_res.get_selection(&batch_id, id_prop_sel_res),
                         ];
 
+                        let batch_length = global_batch_ids.len() / 2;
                         let ids_handle = buf.new_u32(global_batch_ids);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            FeatureBatchId(0),
-                            GlobalBatchIdAndSelections(ids_handle),
+                            FeatureBatchId(batch_id),
+                            GlobalBatchIdAndSelections {
+                                handle: ids_handle,
+                                batch_length: batch_length as u32,
+                            },
                             ModelGeometry {
                                 coords: Vec3::new(
                                     f[0] as FloatType,
@@ -561,7 +569,7 @@ pub fn delete_geo_json_layer(
     layers: Query<(Entity, &GeoJsonLayer)>,
     mut features: Query<&mut RenderableFeature>,
     mut buf: ResMut<BufferStore>,
-    entities_with_layerid: Query<(Entity, &LayerId)>,
+    entities_with_layerid: Query<(Entity, &LayerId), Without<RenderableFeature>>,
     mut batch_table: ResMut<BatchTable>,
     mut id_prop_table_res: ResMut<IdPropertyTable>,
     batch_id: Query<&BatchId>,

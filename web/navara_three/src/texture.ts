@@ -1,6 +1,6 @@
 import type { Material, Object3D, Texture } from "three";
 
-// Ajust the texture's aspect ratio automatically.
+// Adjust the texture's aspect ratio automatically.
 export function applyTextureAspect(obj: Object3D) {
   const material = "material" in obj ? (obj.material as Material) : undefined;
   if (
@@ -10,7 +10,7 @@ export function applyTextureAspect(obj: Object3D) {
     material.map
   ) {
     const map = material.map as Texture;
-    if (material.map) {
+    if (map) {
       const aspectRatio = map.image.height / map.image.width;
       obj.scale.y *= aspectRatio;
     }

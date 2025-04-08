@@ -116,7 +116,8 @@ pub fn transfer_batched_mesh(
                         is_rendered: false,
                     },
                     active: false,
-                    feature_batch_id: Some(feature_batch_id.0),
+                    feature_batch_id: feature_batch_id.0,
+                    batch_length: global_batch_ids.batch_length,
                 },
             ))
             .id();
@@ -189,7 +190,8 @@ pub fn transfer_mesh(
                         },
                         extent,
                         active: true,
-                        feature_batch_id: None,
+                        feature_batch_id: batch_id.0.x as u32,
+                        batch_length: 1,
                     },
                 ))
                 .id();
@@ -289,7 +291,7 @@ pub fn remove_batched_feature(
             &mut batch_table_res,
             &mut id_prop_table_res,
         );
-        buf.remove(&global_batch_id_and_selections.0);
+        buf.remove(&global_batch_id_and_selections.handle);
         batch_table_res.remove(&feature_batch_id.0, &mut id_prop_table_res);
 
         commands.entity(feature_id).despawn();

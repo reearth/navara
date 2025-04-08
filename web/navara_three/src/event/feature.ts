@@ -11,10 +11,17 @@ import {
   PolylineMaterial,
   PolygonMaterial,
 } from "@navara/engine";
-import { Mesh, Sprite, Object3D, Material, Group } from "three";
+import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
-import { TextMesh } from "../mesh";
+import {
+  BillboardMesh,
+  ModelMesh,
+  PointMesh,
+  PolygonMesh,
+  PolylineMesh,
+  TextMesh,
+} from "../mesh";
 import type { Scenes } from "../scene";
 import { applyTextureAspect } from "../texture";
 import type { MeshCache, RenderFlag } from "../type";
@@ -68,6 +75,7 @@ export async function processRenderableFeatureAdded(
   drapedFeatureMaterials: Map<string, Material>,
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
+  updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = await renderFeature(ev.feature, buf, uniforms)?.then((r) => {
@@ -97,29 +105,44 @@ export async function processRenderableFeatureAdded(
 
   obj.renderOrder = 1;
 
-  const material = feature?.material;
-  obj.visible = (material?.show ?? true) && !!feature?.active;
-
   if (!obj.userData.draped) {
     scenes.main.add(obj);
   }
 
   meshes.set(id, obj);
 
-  if (obj.userData.draped && obj instanceof Mesh) {
-    drapedFeatureMaterials.set(id, obj.material as Material);
+  if (
+    (obj instanceof PolylineMesh || obj instanceof PolygonMesh) &&
+    obj.userData.draped
+  ) {
+    drapedFeatureMaterials.set(id, obj.material);
   }
 
-  handleFeatureCreatedEventByLayerId(obj, viewEvents, featureLayerId);
+  handleFeatureCreatedEventByLayerId(
+    featureHandler,
+    obj,
+    viewEvents,
+    featureLayerId,
+    ev.bits,
+  );
+  handleFeatureUpdatedEventByLayerId(
+    featureHandler,
+    obj,
+    viewEvents,
+    featureLayerId,
+    ev.bits,
+    updatedAt,
+  );
 }
 
 // TODO: Update material in this function.
-export function processRenderableFeatureChanged(
+export async function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
   renderFlag: RenderFlag,
   viewEvents: EventHandler<ViewEvents>,
+  featureHandler: FeatureHandler,
   updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
@@ -131,9 +154,6 @@ export function processRenderableFeatureChanged(
 
   const transform = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
     ?.transform;
-  if (transform) {
-    setTransform(obj, transform);
-  }
 
   const material = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
     ?.material;
@@ -142,27 +162,30 @@ export function processRenderableFeatureChanged(
     true;
 
   if (material) {
-    if (obj instanceof Sprite && material instanceof PointMaterial) {
+    if (obj instanceof PointMesh && material instanceof PointMaterial) {
       processPointChanged(obj, material, active);
     }
-    if (obj instanceof Sprite && material instanceof BillboardMaterial) {
-      processBillboardChanged(obj, material, active);
+    if (obj instanceof BillboardMesh && material instanceof BillboardMaterial) {
+      await processBillboardChanged(obj, material, active);
     }
     if (obj instanceof TextMesh && material instanceof TextMaterial) {
       processTextChanged(obj, material, active, renderFlag);
     }
-    if (obj instanceof Group && material instanceof ModelMaterial) {
+    if (obj instanceof ModelMesh && material instanceof ModelMaterial) {
       processModelChanged(obj, material, active);
     }
-    if (obj instanceof Mesh && material instanceof PolylineMaterial) {
+    if (obj instanceof PolylineMesh && material instanceof PolylineMaterial) {
       processPolylineChanged(obj, material, active);
     }
-    if (obj instanceof Mesh && material instanceof PolygonMaterial) {
+    if (obj instanceof PolygonMesh && material instanceof PolygonMaterial) {
       processPolygonChanged(obj, material, active);
     }
 
     // Handle a draped mesh
-    if (obj instanceof Mesh && obj.userData.draped != null) {
+    if (
+      (obj instanceof PolylineMesh || obj instanceof PolygonMesh) &&
+      obj.userData.draped != null
+    ) {
       if (obj.userData.draped) {
         if (!drapedFeatureMaterials.has(id)) {
           obj.material.stencilWrite = false;
@@ -179,16 +202,23 @@ export function processRenderableFeatureChanged(
         drapedFeatureMaterials.delete(id);
       }
     }
+
+    // This should be handled after the asynchronous process to avoid a conflict.
+    if (transform) {
+      setTransform(obj, transform);
+    }
+
+    applyTextureAspect(obj);
+
+    obj.updateMatrix();
   }
 
-  applyTextureAspect(obj);
-
-  obj.updateMatrix();
-
   handleFeatureUpdatedEventByLayerId(
+    featureHandler,
     obj,
     viewEvents,
     featureLayerId,
+    ev.bits,
     updatedAt,
   );
 }

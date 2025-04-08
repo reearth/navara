@@ -69,6 +69,8 @@ pub fn transfer_mesh(
                         selected: Some(batch_id.0.y as u32),
                     },
                     active: lod_marker.is_none(),
+                    feature_batch_id: batch_id.0.x as u32,
+                    batch_length: 1,
                 },
             ))
             .id();

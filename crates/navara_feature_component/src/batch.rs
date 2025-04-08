@@ -61,7 +61,10 @@ pub struct FeatureBatchId(pub u32);
 
 // The global batch ID and the selection state corresponding to the internal batch ID in b3dm.
 #[derive(Component, Default, Clone, Debug)]
-pub struct GlobalBatchIdAndSelections(pub Handle);
+pub struct GlobalBatchIdAndSelections {
+    pub handle: Handle,
+    pub batch_length: u32,
+}
 
 // Search b3dm feature by global batch id
 #[derive(Resource, Default)]
@@ -90,7 +93,7 @@ impl FeatureBatchIdMap {
         id_prop_table: &mut IdPropertyTable,
     ) -> bool {
         if let Some(ids) = self.get(key) {
-            if let Some(global_ids) = buf.get_u32(&ids.0) {
+            if let Some(global_ids) = buf.get_u32(&ids.handle) {
                 // remove global batch ids from batch table
                 for id in global_ids {
                     batch_table.remove(id, id_prop_table);
@@ -98,7 +101,7 @@ impl FeatureBatchIdMap {
             }
 
             // remove global batch ids from buffer store
-            buf.remove(&ids.0);
+            buf.remove(&ids.handle);
             self.map.remove(key);
             return true;
         }
@@ -172,7 +175,7 @@ impl BatchTable {
             properties: None,
         }));
 
-        // Next: Remove this
+        // FIXME(keiya01): Remove this
         if let Some(b_id) = batch_id {
             if let Some(id_property_value) = id_property_value {
                 id_prop_table.add(id_property_value, b_id);
@@ -201,7 +204,7 @@ impl BatchTable {
             properties: Some(BatchProperty::Values(vec![value])),
         }));
 
-        // Next: Remove this
+        // FIXME(keiya01): Remove this
         if let Some(b_id) = batch_id {
             if let Some(id_property_value) = id_property_value {
                 id_prop_table.add(id_property_value, b_id);

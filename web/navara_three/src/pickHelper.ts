@@ -14,6 +14,7 @@ import {
 import { Text } from "troika-three-text";
 
 import { BufferView } from "./bufferView";
+import { TextMesh, ModelMesh } from "./mesh";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
@@ -142,7 +143,7 @@ export class PickHelper extends CustomRenderPass {
       }
 
       // model
-      else if (obj.userData.isModel) {
+      else if (obj instanceof ModelMesh) {
         this.traverseModel(obj, (mesh: Mesh) => {
           if ("userData" in mesh.material && mesh.material.userData.uPickable) {
             mesh.material.userData.uPickable.value = picable;
@@ -150,7 +151,7 @@ export class PickHelper extends CustomRenderPass {
         });
       }
       // text
-      else if (obj.userData.isText) {
+      else if (obj instanceof TextMesh) {
         obj.userData.uPickable.value = picable;
 
         obj.children.forEach((item) => {
@@ -181,14 +182,15 @@ export class PickHelper extends CustomRenderPass {
     if (obj.userData.isPicked !== isPicked) {
       obj.userData.isPicked = isPicked;
       if (isPicked) {
+        obj.userData.orgColor = obj.material.color.clone();
         obj.material.color.set(this.highlightColor);
       } else {
-        obj.material.color.setHex(obj.userData.orgColor);
+        obj.material.color.set(obj.userData.orgColor);
       }
     }
   }
 
-  private pickModel(pickSet: Set<number>, obj: Group) {
+  private pickModel(pickSet: Set<number>, obj: ModelMesh) {
     const batchIdAndSel = obj.userData.batchIdAndSel;
     const dataSize = obj.userData.dataSize;
     if (!batchIdAndSel || batchIdAndSel.length < 1 || !dataSize) {
@@ -270,9 +272,11 @@ export class PickHelper extends CustomRenderPass {
 
       const txt = obj.children.find((item) => item instanceof Text) as Text;
       if (isPicked) {
+        obj.userData.orgColor =
+          txt.color instanceof Color ? txt.color.clone() : txt.color;
         txt.color = this.highlightColor;
       } else {
-        txt.color = obj.userData.fontColor;
+        txt.color = obj.userData.orgColor;
       }
     }
   }
@@ -286,7 +290,7 @@ export class PickHelper extends CustomRenderPass {
       }
 
       // model
-      else if (obj instanceof Group && obj.userData.isModel) {
+      else if (obj instanceof ModelMesh) {
         this.pickModel(pickSet, obj);
       }
 
@@ -296,7 +300,7 @@ export class PickHelper extends CustomRenderPass {
       }
 
       // text
-      else if (obj instanceof Group && obj.userData.isText) {
+      else if (obj instanceof TextMesh) {
         this.pickText(pickSet, obj);
       }
     }

@@ -7,6 +7,7 @@
 
 #include <common>
 #include <packing>
+#include <color_pars_fragment>
 
 #include <lights_pars_begin>
 #include <lights_lambert_pars_fragment>

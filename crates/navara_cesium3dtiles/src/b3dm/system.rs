@@ -160,12 +160,16 @@ pub fn construct_model_by_b3dm_layer(
             })
             .unwrap_or(0);
 
+        let batch_length = global_batch_ids.len() / 2;
         let ids_handle = buf.new_u32(global_batch_ids);
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(feature_batch_id),
-            GlobalBatchIdAndSelections(ids_handle),
+            GlobalBatchIdAndSelections {
+                handle: ids_handle,
+                batch_length: batch_length as u32,
+            },
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
@@ -343,13 +347,17 @@ pub fn construct_model_by_cesium3dtiles_layer(
             })
             .unwrap_or(0);
 
+        let batch_length = global_batch_ids.len() / 2;
         let ids_handle = buf.new_u32(global_batch_ids);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
             FeatureBatchId(feature_batch_id),
-            GlobalBatchIdAndSelections(ids_handle),
+            GlobalBatchIdAndSelections {
+                handle: ids_handle,
+                batch_length: batch_length as u32,
+            },
             ModelGeometry {
                 coords: center,
                 crs: CRS::Geocentric,
