@@ -5,6 +5,7 @@ import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import { Color, Sprite, SpriteMaterial } from "three";
 
 import type { CommonUniforms } from "../uniforms";
+import { createReplacer } from "../utils";
 
 import { FeatureMesh } from "./featureMesh";
 
@@ -28,7 +29,8 @@ export class PointMesh extends Sprite implements FeatureMesh {
     material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = material.userData.uPickable;
-      shader.vertexShader = shader.vertexShader
+
+      shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "uniform vec2 center;",
           `
@@ -42,9 +44,9 @@ export class PointMesh extends Sprite implements FeatureMesh {
           gl_Position = projectionMatrix * mvPosition;
           sprite_uv = position.xy;
           `,
-        );
+        ).source;
 
-      shader.fragmentShader = shader.fragmentShader
+      shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
           "uniform float opacity;",
           `
@@ -71,7 +73,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
             gl_FragColor = vec4(pickColor.xyz, 1.0);
           }
           `,
-        );
+        ).source;
     };
 
     if (meshMaterial.center) {
