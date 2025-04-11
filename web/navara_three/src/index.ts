@@ -660,6 +660,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.layersManager.get(layerId)?.delete();
   }
 
+  changeCamera(position: Float32Array, pitch: number, heading: number) {
+    this._core?.changeCamera(position, pitch, heading);
+  }
+
   private _startMainLoop() {
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;

@@ -7,6 +7,7 @@ use bevy_ecs::{
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
+use navara_camera::CameraChange;
 use navara_component::{Deleted, Rendered};
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
@@ -21,7 +22,7 @@ use navara_feature_component::{
 use navara_frame::FrameManager;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_material::{PolygonMaterial, PolylineMaterial};
-use navara_math::FloatType;
+use navara_math::{FloatType, Vec3};
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{MartiniComponent, RasterTile, RasterTileQuadtree, TileHandle};
@@ -660,6 +661,19 @@ impl App {
         {
             id_prop_sel.clear();
         };
+    }
+
+    pub fn change_camera(
+        &mut self,
+        position: Vec<FloatType>,
+        pitch: FloatType,
+        heading: FloatType,
+    ) {
+        self.app.world_mut().send_event(CameraChange {
+            position: Vec3::new(position[0], position[1], position[2]),
+            pitch,
+            heading,
+        });
     }
 }
 

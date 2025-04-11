@@ -409,6 +409,16 @@ impl Core {
                 };
             });
     }
+
+    #[wasm_bindgen(js_name = changeCamera)]
+    pub fn change_camera(
+        &mut self,
+        position: Vec<FloatType>,
+        pitch: FloatType,
+        heading: FloatType,
+    ) {
+        self.app.change_camera(position, pitch, heading);
+    }
 }
 
 #[wasm_bindgen(start)]
