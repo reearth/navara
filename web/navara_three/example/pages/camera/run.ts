@@ -46,13 +46,13 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   });
 
   const changeFunc = () => {
-    const position = new Float32Array([
-      cameraParams.longitude,
-      cameraParams.latitude,
-      cameraParams.altitude,
-    ]);
-
-    view.changeCamera(position, cameraParams.pitch, cameraParams.heading);
+    view.setCamera({
+      longitude: cameraParams.longitude,
+      latitude: cameraParams.latitude,
+      altitude: cameraParams.altitude,
+      heading: cameraParams.heading,
+      pitch: cameraParams.pitch,
+    });
   };
 
   folder

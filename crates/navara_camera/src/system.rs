@@ -319,9 +319,12 @@ fn handle_zoom(
 }
 
 fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f32>) -> f32 {
+    let camera_pos = transform.transform_point(Vec3::ZERO);
+    let direction_to_center = -camera_pos.normalize(); // 从相机指向椭球中心的单位向量
+
     let ray = Ray {
-        origin: transform.transform_point(Vec3::ZERO),
-        direction: transform.forward().normalize(),
+        origin: camera_pos,
+        direction: direction_to_center,
     };
     match ray_ellipsoid(&ray, ellipsoid) {
         i if i.start == f32::INFINITY => {
@@ -377,7 +380,7 @@ fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &Camer
 }
 
 fn needs_update(inertia: &CameraInertia, controller: &CameraController) -> bool {
-    inertia.spin_time <= controller.spin_duration || inertia.zoom_time <= controller.zoom_duration
+    inertia.spin_time < controller.spin_duration || inertia.zoom_time < controller.zoom_duration
 }
 
 fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &CameraController) {
@@ -421,7 +424,7 @@ fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &Camera
     // Set the orbit quaternion based on heading and rotation matrix
     orbit.world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
 
-    let cam_pos = -Vec3::Y * cc.position.z;
+    let cam_pos = -Vec3::Y * cc.position.z.max(1.0); // Ensure a minimum altitude of 1.0
 
     let world_position = pivot + (orbit.world_quat * cam_pos);
     let mut world_up = orbit.world_quat * orbit.local_up;

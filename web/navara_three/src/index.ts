@@ -51,6 +51,7 @@ import {
   type PickedFeature,
   type WorkerPoolPromises,
   type RenderFlag,
+  type CameraPosition,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";
@@ -660,8 +661,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.layersManager.get(layerId)?.delete();
   }
 
-  changeCamera(position: Float32Array, pitch: number, heading: number) {
-    this._core?.changeCamera(position, pitch, heading);
+  setCamera(cam: CameraPosition) {
+    const position = new Float32Array([
+      cam.longitude,
+      cam.latitude,
+      cam.altitude,
+    ]);
+    this._core?.changeCamera(position, cam.pitch, cam.heading);
   }
 
   private _startMainLoop() {
