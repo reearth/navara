@@ -1,3 +1,4 @@
+import { Unimplemented } from "@navara/core";
 import {
   ModelMaterial as NavaraModelMaterial,
   ModelMesh as NavaraModelMesh,
@@ -192,5 +193,13 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
   _setFeatureColor(color: Color, m?: ModelMaterial) {
     m?.color.set(color);
+  }
+
+  _getFeatureColor(): Color {
+    throw new Unimplemented();
+  }
+
+  _setFrustumCulled(culled: boolean): void {
+    this.frustumCulled = culled;
   }
 }
