@@ -4,24 +4,22 @@ use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
     batch::{
-        BatchId, BatchIndex, BatchTable, FeatureBatchId, GlobalBatchIdAndSelections,
-        IdPropertySelections, IdPropertyTable,
+        BatchIndex, BatchTable, FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections,
+        IdPropertyTable,
     },
     billboard::BillboardGeometry,
-    id::FeatureId,
     point::PointGeometry,
     polygon::PolygonGeometry,
     polyline::PolylineGeometry,
     text::TextGeometry,
-    BatchedFeatureMarker, LODFeatureMarker,
+    BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
-use navara_layer::LayerId;
 use navara_material::Appearance;
-use navara_math::{FloatType, Vec2, Vec3};
+use navara_math::{FloatType, Vec3};
 use navara_parser::mvt;
 
-use crate::{component::MVTFeatureMarker, pos_converter::PosConverter};
+use crate::pos_converter::PosConverter;
 
 #[derive(Clone, Copy)]
 pub(crate) enum ConstructedGeometryType {
@@ -33,8 +31,8 @@ pub(crate) enum ConstructedGeometryType {
 pub(crate) struct ConstructedGeometry {
     pub feature_ids: Vec<Entity>,
     pub geometry_type: ConstructedGeometryType,
-    pub feature_batch_id: Option<FeatureBatchId>,
-    pub global_batch_id_and_selections: Option<GlobalBatchIdAndSelections>,
+    pub feature_batch_id: FeatureBatchId,
+    pub global_batch_id_and_selections: GlobalBatchIdAndSelections,
 }
 
 // TODO: Store the coordinates into BufferStore.
@@ -47,7 +45,6 @@ pub fn construct_geometry(
     buf: &mut BufferStore,
     mvt_bin: Vec<u8>,
     id_prop_sel_res: &IdPropertySelections,
-    layer_id: &str,
     xyz: TileXYZ,
     appearances: &[Appearance],
     limit_layers: &Option<Vec<String>>,
@@ -90,42 +87,23 @@ pub fn construct_geometry(
 
             let batch_idx = BatchIndex((global_batch_id_and_selections.len() / 2) as u32);
 
-            let batch_id = match geom {
-                // For point
-                // This should be unnecessary once point instancing is supported
-                Geometry::Point(_) | Geometry::MultiPoint(_) => {
-                    let batch_id = batch_table
-                        .init_values_with_id_props(id_prop, props, id_prop_table_res)
-                        .unwrap_or(0);
-                    Some(BatchId(Vec2::new(
-                        batch_id as FloatType,
-                        batch_table.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-                    )))
-                }
-                _ => {
-                    let batch_id = batch_table
-                        .add_id_prop(id_prop, &props, id_prop_table_res)
-                        .unwrap_or(0);
+            let batch_id = batch_table
+                .add_id_prop(id_prop, &props, id_prop_table_res)
+                .unwrap_or(0);
 
-                    batch_table.add_values(feature_batch_id, props);
+            batch_table.add_values(feature_batch_id, props);
 
-                    global_batch_id_and_selections.push(batch_id);
-                    global_batch_id_and_selections
-                        .push(batch_table.get_selection(&batch_id, id_prop_sel_res));
-
-                    None
-                }
-            };
+            global_batch_id_and_selections.push(batch_id);
+            global_batch_id_and_selections
+                .push(batch_table.get_selection(&batch_id, id_prop_sel_res));
 
             handle_geometry(
                 commands,
                 buf,
                 &mut feature_ids,
                 &mut geometry_type,
-                layer_id,
                 geom,
                 &mut converter,
-                batch_id.as_ref(),
                 // For batched feature
                 &batch_idx,
                 appearances,
@@ -136,21 +114,16 @@ pub fn construct_geometry(
             continue;
         }
 
-        let is_not_point_geometry = !(geometry_type.is_none()
-            || matches!(geometry_type, Some(ConstructedGeometryType::Point)));
-
         let batch_length = global_batch_id_and_selections.len() / 2;
 
         result.push(ConstructedGeometry {
             feature_ids,
             geometry_type: geometry_type.unwrap(),
-            feature_batch_id: is_not_point_geometry.then_some(FeatureBatchId(feature_batch_id)),
-            global_batch_id_and_selections: is_not_point_geometry.then(|| {
-                GlobalBatchIdAndSelections {
-                    handle: buf.new_u32(global_batch_id_and_selections),
-                    batch_length: batch_length as u32,
-                }
-            }),
+            feature_batch_id: FeatureBatchId(feature_batch_id),
+            global_batch_id_and_selections: GlobalBatchIdAndSelections {
+                handle: buf.new_u32(global_batch_id_and_selections),
+                batch_length: batch_length as u32,
+            },
         });
     }
 
@@ -217,10 +190,8 @@ fn handle_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     geometry_type: &mut Option<ConstructedGeometryType>,
-    layer_id: &str,
     geom: &Geometry<f32>,
     converter: &mut PosConverter,
-    batch_id: Option<&BatchId>,
     batch_index: &BatchIndex,
     appearances: &[Appearance],
 ) {
@@ -258,51 +229,45 @@ fn handle_geometry(
 
             for one_appr in appearances {
                 match one_appr {
-                    Appearance::Point(appearance) => {
+                    Appearance::Point(_appearance) => {
                         construct_points_geometry(
                             commands,
                             feature_ids,
-                            layer_id,
                             points,
                             converter,
-                            appearance,
                             |x, y| PointGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },
-                            batch_id,
+                            batch_index,
                         );
                         break;
                     }
-                    Appearance::Billboard(appearance) => {
+                    Appearance::Billboard(_appearance) => {
                         construct_points_geometry(
                             commands,
                             feature_ids,
-                            layer_id,
                             points,
                             converter,
-                            appearance,
                             |x, y| BillboardGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },
-                            batch_id,
+                            batch_index,
                         );
                         break;
                     }
-                    Appearance::Text(appearance) => {
+                    Appearance::Text(_appearance) => {
                         construct_points_geometry(
                             commands,
                             feature_ids,
-                            layer_id,
                             points,
                             converter,
-                            appearance,
                             |x, y| TextGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },
-                            batch_id,
+                            batch_index,
                         );
                         break;
                     }
@@ -315,51 +280,45 @@ fn handle_geometry(
 
             for one_appr in appearances {
                 match one_appr {
-                    Appearance::Point(appearance) => {
+                    Appearance::Point(_appearance) => {
                         construct_point_geometry(
                             commands,
                             feature_ids,
-                            layer_id,
                             point,
                             converter,
-                            appearance,
                             &|x, y| PointGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },
-                            batch_id,
+                            batch_index,
                         );
                         break;
                     }
-                    Appearance::Billboard(appearance) => {
+                    Appearance::Billboard(_appearance) => {
                         construct_point_geometry(
                             commands,
                             feature_ids,
-                            layer_id,
                             point,
                             converter,
-                            appearance,
                             &|x, y| BillboardGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },
-                            batch_id,
+                            batch_index,
                         );
                         break;
                     }
-                    Appearance::Text(appearance) => {
+                    Appearance::Text(_appearance) => {
                         construct_point_geometry(
                             commands,
                             feature_ids,
-                            layer_id,
                             point,
                             converter,
-                            appearance,
                             &|x, y| TextGeometry {
                                 coords: Vec3::new(x, y, 0.0 as FloatType),
                                 crs: CRS::Geographic,
                             },
-                            batch_id,
+                            batch_index,
                         );
                         break;
                     }
@@ -400,10 +359,8 @@ fn handle_geometry(
                     buf,
                     feature_ids,
                     geometry_type,
-                    layer_id,
                     geom,
                     converter,
-                    batch_id,
                     batch_index,
                     appearances,
                 );
@@ -414,15 +371,13 @@ fn handle_geometry(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_points_geometry<A: Component + Clone, G: Component, F>(
+fn construct_points_geometry<G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
-    layer_id: &str,
     points: &[Point<f32>],
     converter: &mut PosConverter,
-    appearance: &A,
     geometry: F,
-    batch_id: Option<&BatchId>,
+    batch_index: &BatchIndex,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -430,26 +385,22 @@ fn construct_points_geometry<A: Component + Clone, G: Component, F>(
         construct_point_geometry(
             commands,
             feature_ids,
-            layer_id,
             point,
             converter,
-            appearance,
             &geometry,
-            batch_id,
+            batch_index,
         );
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_point_geometry<A: Component + Clone, G: Component, F>(
+fn construct_point_geometry<G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
-    layer_id: &str,
     point: &Point<f32>,
     converter: &mut PosConverter,
-    appearance: &A,
     geometry: &F,
-    batch_id: Option<&BatchId>,
+    batch_index: &BatchIndex,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
@@ -458,15 +409,9 @@ fn construct_point_geometry<A: Component + Clone, G: Component, F>(
 
     let e = commands
         .spawn((
-            LayerId(layer_id.to_owned()),
-            BatchId(batch_id.unwrap().0),
-            FeatureId::default(),
+            BatchedFeatureMarker,
             geometry(x, y),
-            appearance.clone(),
-            // TODO: It can be removed if points is instanced or batched.
-            LODFeatureMarker,
-            // TODO: It can be removed if points is instanced or batched.
-            MVTFeatureMarker,
+            BatchIndex(batch_index.0),
         ))
         .id();
 

@@ -1,3 +1,4 @@
+import { Unimplemented } from "@navara/core";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -58,11 +59,11 @@ export class BatchedFeatureMesh<
       case "color":
         return this._batchedVertexColor;
       case "show":
-        throw new Error("unimplemented");
+        throw new Unimplemented();
       case "height":
-        throw new Error("unimplemented");
+        throw new Unimplemented();
       case "extruded_height":
-        throw new Error("unimplemented");
+        throw new Unimplemented();
     }
   }
 
@@ -84,6 +85,14 @@ export class BatchedFeatureMesh<
 
   // Compat for non-batched mesh. For example, GeoJSON's polyline and polygon aren't batched for now.
   _setFeatureColor(_color: Color) {
-    throw new Error("Unimplemented");
+    throw new Unimplemented();
+  }
+
+  _getFeatureColor(): Color {
+    throw new Unimplemented();
+  }
+
+  _setFrustumCulled(_culled: boolean): void {
+    throw new Unimplemented();
   }
 }

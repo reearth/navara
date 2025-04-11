@@ -4,9 +4,12 @@ import ThreeView, {
   PolylineMesh,
   PolygonMesh,
   BillboardMesh,
+  JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import { Color } from "three";
 import { FolderApi, Pane } from "tweakpane";
+
+import { TERRAIN_URLS } from "../../helpers/constants";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -16,6 +19,8 @@ const tileUrls = {
 };
 
 const UPDATED_FEATURE = new Set();
+
+const ENABLE_TERRAIN = false;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -32,6 +37,20 @@ export const run = async (view: ThreeView) => {
       max_zoom: 23,
     },
   });
+
+  if (ENABLE_TERRAIN) {
+    view.addLayer({
+      type: "terrain",
+      data: {
+        url: TERRAIN_URLS.gsi,
+      },
+      raster_terrain: {
+        max_zoom: 15,
+        min_zoom: 5,
+        elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+      },
+    });
+  }
 
   addGeoJSONLayer(pane, view);
   addHeliportLayer(pane, view);
@@ -305,6 +324,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       scale_by_distance: true,
       clamp_to_ground: true,
       id_property: "gml_id",
+      color: 0xff0000,
     },
   };
 
@@ -537,6 +557,47 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
   });
 };
 
+// Ref: https://maps.gsi.go.jp/help/pdf/vector/dataspec.pdf
+const ALLOWED_FT_CODE = [
+  // 人口100万人以上
+  "51301",
+  // 人口50万～100万人未満
+  "51302",
+  // 人口50万人未満
+  "51303",
+
+  // 都道府県所在地
+  "1401",
+  // 市役所・東京都の区役所
+  "1402",
+  // 町村役場・政令指定都市の区役所
+  "1403",
+
+  // 都道府県庁
+  "100",
+  // 市役所・東京都の区役所
+  "3205",
+  // 町村役場・政令指定都市の区役所
+  "3206",
+  // 広葉樹林
+  "6321",
+  // 針葉樹林
+  "6322",
+  // 温泉
+  "6331",
+];
+// Ref: https://maps.gsi.go.jp/help/pdf/vector/dataspec.pdf
+const ALLOWED_ANNO_CTG = [
+  // 市区町村
+  "110",
+  // 山名
+  "311",
+  // 都道府県庁
+  "621",
+  // 神社
+  "661",
+];
+
 const addSymbolLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "mvt",
@@ -547,7 +608,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
       color: 0xffffff,
       scale_by_distance: true,
       clamp_to_ground: true,
-      size: 30,
+      size: 20,
       center: {
         x: 0.5,
         y: 0,
@@ -576,8 +637,21 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
       if (UPDATED_FEATURE.has(evaluator.id)) return;
       UPDATED_FEATURE.add(evaluator.id);
 
+      const uniqueLabels = new Set();
       evaluator.evaluate((_batchId, property) => {
         const text = (property?.get("knj") ?? property?.get("name")) as string;
+        const ftCode = property?.get("ftCode") as string;
+        const annoCtg = property?.get("annoCtg") as string;
+
+        if (
+          !ALLOWED_FT_CODE.includes(ftCode) ||
+          (annoCtg && !ALLOWED_ANNO_CTG.includes(annoCtg))
+        )
+          return { text: "" };
+
+        if (uniqueLabels.has(text)) return { text: "" };
+
+        uniqueLabels.add(text);
 
         return {
           text,

@@ -1,7 +1,4 @@
-import type {
-  PolygonMesh as NavaraPolygonMesh,
-  PolygonMaterial,
-} from "@navara/engine";
+import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
 import { PolygonMesh } from "../../mesh";
@@ -17,8 +14,8 @@ export async function renderPolygon(
 
 export function processPolygonChanged(
   obj: PolygonMesh,
-  material: PolygonMaterial,
+  m: NavaraPolygonMesh,
   active: boolean,
 ) {
-  obj._update(material, active);
+  obj._update(m.material, active);
 }

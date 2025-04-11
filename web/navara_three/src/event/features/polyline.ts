@@ -1,7 +1,4 @@
-import {
-  PolylineMesh as NavaraPolylineMesh,
-  type PolylineMaterial,
-} from "@navara/engine";
+import { PolylineMesh as NavaraPolylineMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
 import { PolylineMesh } from "../../mesh";
@@ -17,8 +14,8 @@ export async function renderPolyline(
 
 export function processPolylineChanged(
   obj: PolylineMesh,
-  material: PolylineMaterial,
+  m: NavaraPolylineMesh,
   active: boolean,
 ) {
-  obj._update(material, active);
+  obj._update(m.material, active);
 }

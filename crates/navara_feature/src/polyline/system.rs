@@ -263,12 +263,7 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (
-            Entity,
-            &FeatureId,
-            &FeatureBatchId,
-            &GlobalBatchIdAndSelections,
-        ),
+        (Entity, &FeatureId, &GlobalBatchIdAndSelections),
         (With<BatchedFeature>, With<PolylineMarker>, With<Deleted>),
     >,
     mut buf: ResMut<BufferStore>,
@@ -276,9 +271,7 @@ pub fn remove_batched_feature(
     mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, feature_batch_id, global_batch_id_and_selections) in
-        &removed_features
-    {
+    for (feature_id, rendered_feature_id, global_batch_id_and_selections) in &removed_features {
         let Some(rendered_feature_id) = rendered_feature_id.0 else {
             continue;
         };
@@ -292,7 +285,6 @@ pub fn remove_batched_feature(
             &mut id_prop_table_res,
         );
         buf.remove(&global_batch_id_and_selections.handle);
-        batch_table_res.remove(&feature_batch_id.0, &mut id_prop_table_res);
 
         commands.entity(feature_id).despawn();
         commands.entity(rendered_feature_id).despawn();

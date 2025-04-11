@@ -95,7 +95,6 @@ fn generate_global_batch_id_and_selections(
 // TODO for GLB
 // - We could use TextureFragment to fetch GLB.
 // - However we might need to transform the position by the extension.
-// FIXME: Store BatchTable to Bevy Resource.
 #[allow(clippy::type_complexity)]
 pub fn construct_model_by_b3dm_layer(
     mut commands: Commands,

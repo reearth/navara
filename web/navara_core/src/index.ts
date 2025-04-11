@@ -5,3 +5,4 @@ export * from "./utils";
 export * from "./constants";
 export * from "./eventHandler";
 export * from "./batch";
+export * from "./error";

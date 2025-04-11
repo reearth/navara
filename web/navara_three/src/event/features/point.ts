@@ -1,22 +1,22 @@
-import {
-  PointMesh as NavaraPointMesh,
-  type PointMaterial,
-} from "@navara/engine";
+import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
-import { PointMesh } from "../../mesh/point";
+import type { BufferLoader } from "..";
+import { InstancedPointMesh } from "../../mesh";
 import type { CommonUniforms } from "../../uniforms";
 
 export async function renderPoint(
   m: NavaraPointMesh,
+  buf: BufferLoader,
   uniforms: CommonUniforms,
 ) {
-  return new PointMesh(m, uniforms);
+  return new InstancedPointMesh(m, buf, uniforms);
 }
 
 export function processPointChanged(
-  obj: PointMesh,
-  material: PointMaterial,
+  obj: InstancedPointMesh,
+  m: NavaraPointMesh,
+  buf: BufferLoader,
   active: boolean,
 ) {
-  obj._update(material, active);
+  obj._update(m, buf, active);
 }
