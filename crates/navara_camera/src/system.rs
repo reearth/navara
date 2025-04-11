@@ -320,7 +320,7 @@ fn handle_zoom(
 
 fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f32>) -> f32 {
     let camera_pos = transform.transform_point(Vec3::ZERO);
-    let direction_to_center = -camera_pos.normalize(); // 从相机指向椭球中心的单位向量
+    let direction_to_center = -camera_pos.normalize();
 
     let ray = Ray {
         origin: camera_pos,
