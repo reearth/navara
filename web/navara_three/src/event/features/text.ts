@@ -10,7 +10,7 @@ export async function renderText(
   buf: BufferLoader,
   uniforms: CommonUniforms,
 ) {
-  const textGroup = new InstancedTextMesh(m, buf, uniforms);
+  const textGroup = new InstancedTextMesh(m, buf, uniforms, { renderOrder: 1 });
 
   return textGroup;
 }

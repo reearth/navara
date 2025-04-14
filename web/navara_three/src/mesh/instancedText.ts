@@ -3,12 +3,17 @@ import { TextMesh as NavaraTextMesh } from "@navara/engine";
 import { setTransform, type BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 
-import { InstancedMesh } from "./instanced";
+import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { TextMesh } from "./text";
 
 export class InstancedTextMesh extends InstancedMesh<TextMesh> {
-  constructor(m: NavaraTextMesh, buf: BufferLoader, uniforms: CommonUniforms) {
-    super();
+  constructor(
+    m: NavaraTextMesh,
+    buf: BufferLoader,
+    uniforms: CommonUniforms,
+    options?: InstancedMeshOptions,
+  ) {
+    super(options);
 
     this.initMeshes(m, buf, uniforms);
   }
@@ -46,6 +51,7 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
       const selected = !!batchIdAndSel[batchIdIdx + 1];
 
       const mesh = new TextMesh(material, uniforms, batchId, selected);
+      mesh.renderOrder = this.renderOrder;
       mesh._updateTextByMaterial(material, active);
 
       setTransform(mesh, transform);

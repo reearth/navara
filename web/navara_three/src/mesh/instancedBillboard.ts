@@ -51,6 +51,7 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       const selected = !!batchIdAndSel[batchIdIdx + 1];
 
       const mesh = new BillboardMesh();
+      mesh.renderOrder = this.renderOrder;
 
       promises.push(
         mesh._init(material, uniforms, batchId, selected, active).then(() => {

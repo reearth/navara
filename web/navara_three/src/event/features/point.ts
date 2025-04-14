@@ -9,7 +9,7 @@ export async function renderPoint(
   buf: BufferLoader,
   uniforms: CommonUniforms,
 ) {
-  return new InstancedPointMesh(m, buf, uniforms);
+  return new InstancedPointMesh(m, buf, uniforms, { renderOrder: 1 });
 }
 
 export function processPointChanged(

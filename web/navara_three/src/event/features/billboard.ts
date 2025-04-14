@@ -11,7 +11,7 @@ export async function renderBillboard(
 ) {
   if (!m.material.url) return;
 
-  const mesh = new InstancedBillboardMesh();
+  const mesh = new InstancedBillboardMesh({ renderOrder: 1 });
   await mesh._init(m, buf, uniforms);
 
   return mesh;

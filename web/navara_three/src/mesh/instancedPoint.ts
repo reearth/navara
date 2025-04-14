@@ -3,12 +3,17 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 import { setTransform, type BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 
-import { InstancedMesh } from "./instanced";
+import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { PointMesh } from "./point";
 
 export class InstancedPointMesh extends InstancedMesh<PointMesh> {
-  constructor(m: NavaraPointMesh, buf: BufferLoader, uniforms: CommonUniforms) {
-    super();
+  constructor(
+    m: NavaraPointMesh,
+    buf: BufferLoader,
+    uniforms: CommonUniforms,
+    options?: InstancedMeshOptions,
+  ) {
+    super(options);
 
     this.initMeshes(m, buf, uniforms);
   }
@@ -46,6 +51,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
       const selected = !!batchIdAndSel[batchIdIdx + 1];
 
       const mesh = new PointMesh(material, uniforms, batchId, selected, active);
+      mesh.renderOrder = this.renderOrder;
 
       setTransform(mesh, transform);
       mesh.position.set(x, y, z);

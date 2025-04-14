@@ -2,8 +2,17 @@ import { Color, Mesh, Object3D } from "three";
 
 import { isFeatureMesh } from "./featureMesh";
 
+export type InstancedMeshOptions = {
+  renderOrder?: number;
+};
+
 // This is used for point related mesh like point, billboard and text.
 export class InstancedMesh<M extends Object3D> extends Mesh {
+  constructor(options?: InstancedMeshOptions) {
+    super();
+    this.renderOrder = options?.renderOrder ?? this.renderOrder;
+  }
+
   addWithBatchIndex(m: M, batchIndex: number) {
     m.userData.batchIndex = batchIndex;
     this.add(m);
