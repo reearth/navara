@@ -1,6 +1,6 @@
 use bevy_ecs::component::Component;
 use navara_core::{Aabb, Plane, WGS84_B_32};
-use navara_math::{FloatType, Quat, Transform, Vec3};
+use navara_math::{FloatType, Mat3, Quat, Transform, Vec3};
 
 #[derive(Component)]
 pub struct CameraMarker;
@@ -181,7 +181,7 @@ impl CameraInertia {
     }
 }
 
-#[derive(Component, Default, Clone)]
+#[derive(Component, Clone)]
 pub struct Orbit {
     pub quat: Quat,
     pub world_quat: Quat,
@@ -193,6 +193,26 @@ pub struct Orbit {
     pub local_forward: Vec3,
     pub local_position: Vec3,
     pub should_tilt: bool,
+}
+
+impl Default for Orbit {
+    fn default() -> Self {
+        let controller = CameraController::default();
+        let r = controller.minimum_zoom_distance * 3.;
+
+        Self {
+            quat: Quat::IDENTITY,
+            world_quat: Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z)),
+            default_world_quat: None,
+            local_up: Vec3::Z,
+            local_position: Vec3::NEG_Y * r,
+            local_forward: Vec3::Y,
+            vertical_axis: Vec3::NEG_X,
+            horizontal_axis: Vec3::Z,
+            pivot: Vec3::ZERO,
+            should_tilt: false,
+        }
+    }
 }
 
 impl Orbit {

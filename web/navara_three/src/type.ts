@@ -67,3 +67,11 @@ export type PickedFeature = {
 export type RenderFlag = {
   forceUpdate: boolean;
 };
+
+export type CameraPosition = {
+  longitude: number;
+  latitude: number;
+  altitude: number;
+  pitch: number;
+  heading: number;
+};
