@@ -2,8 +2,6 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
   PerspectiveCamera,
-  Sprite,
-  Group,
   Object3D,
   Mesh,
   Material,
@@ -11,10 +9,9 @@ import {
   RGBAFormat,
   Color,
 } from "three";
-import { Text } from "troika-three-text";
 
 import { BufferView } from "./bufferView";
-import { TextMesh, ModelMesh } from "./mesh";
+import { TextMesh, ModelMesh, InstancedMesh } from "./mesh";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
@@ -128,15 +125,10 @@ export class PickHelper extends CustomRenderPass {
 
   private togglePickable(picable: number) {
     for (const [_key, obj] of this._meshes) {
-      // point, billboard
-      if (obj instanceof Sprite) {
-        obj.material.userData.uPickable.value = picable;
-
-        // The frustum used for picking is only 1 pixel in size,
-        // For sprites, the bounding box used for frustum culling can be inaccurately determined.
-        obj.frustumCulled = picable < 0.5;
+      // point, billboard, text
+      if (obj instanceof InstancedMesh) {
+        obj.setPickable(picable);
       }
-
       // polygon, polyline
       else if (obj instanceof Mesh && "uPickable" in obj.material.userData) {
         obj.material.userData.uPickable.value = picable;
@@ -172,22 +164,8 @@ export class PickHelper extends CustomRenderPass {
     }
   }
 
-  private pickSprite(pickSet: Set<number>, obj: Sprite) {
-    const batchId = obj.userData.batchId;
-    const isPicked = pickSet.has(batchId);
-    if (isPicked) {
-      pickSet.delete(batchId);
-    }
-
-    if (obj.userData.isPicked !== isPicked) {
-      obj.userData.isPicked = isPicked;
-      if (isPicked) {
-        obj.userData.orgColor = obj.material.color.clone();
-        obj.material.color.set(this.highlightColor);
-      } else {
-        obj.material.color.set(obj.userData.orgColor);
-      }
-    }
+  private pickSprite(pickSet: Set<number>, obj: InstancedMesh<Object3D>) {
+    obj.pick(pickSet, this.highlightColor);
   }
 
   private pickModel(pickSet: Set<number>, obj: ModelMesh) {
@@ -260,32 +238,11 @@ export class PickHelper extends CustomRenderPass {
     obj.geometry.attributes.batchIdAndSel.needsUpdate = true;
   }
 
-  private pickText(pickSet: Set<number>, obj: Group) {
-    const batchId = obj.userData.batchId;
-    const isPicked = pickSet.has(batchId);
-    if (isPicked) {
-      pickSet.delete(batchId);
-    }
-
-    if (obj.userData.isPicked !== isPicked) {
-      obj.userData.isPicked = isPicked;
-
-      const txt = obj.children.find((item) => item instanceof Text) as Text;
-      if (isPicked) {
-        obj.userData.orgColor =
-          txt.color instanceof Color ? txt.color.clone() : txt.color;
-        txt.color = this.highlightColor;
-      } else {
-        txt.color = obj.userData.orgColor ?? txt.color;
-      }
-    }
-  }
-
   private toggleHighlight(pickArr: number[]) {
     const pickSet = new Set(pickArr);
     for (const [_key, obj] of this._meshes) {
       // point, billboard
-      if (obj instanceof Sprite) {
+      if (obj instanceof InstancedMesh) {
         this.pickSprite(pickSet, obj);
       }
 
@@ -297,11 +254,6 @@ export class PickHelper extends CustomRenderPass {
       // polygon, polyline
       else if (obj instanceof Mesh && obj.userData.batchIdAndSel) {
         this.pickMesh(pickSet, obj);
-      }
-
-      // text
-      else if (obj instanceof TextMesh) {
-        this.pickText(pickSet, obj);
       }
     }
   }

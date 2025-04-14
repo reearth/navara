@@ -1,15 +1,13 @@
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    system::{Commands, Query, Resource},
+    system::{Commands, Resource},
 };
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 use navara_math::Vec2;
 use rand::Rng;
-
-use crate::id::FeatureId;
 
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use std::collections::{HashMap, HashSet};
@@ -23,19 +21,10 @@ pub struct BatchedFeature {
 
 impl BatchedFeature {
     #[allow(clippy::too_many_arguments)]
-    pub fn despawn_recursively(
-        &self,
-        commands: &mut Commands,
-        features: &Query<&FeatureId>,
-    ) -> Vec<Entity> {
-        let mut removed = vec![];
+    pub fn despawn_recursively(&self, commands: &mut Commands) {
         for f in &self.features {
-            if let Some(rendered_feature_id) = features.get(*f).ok().and_then(|f| f.0) {
-                commands.entity(rendered_feature_id).insert(Deleted);
-                removed.push(rendered_feature_id);
-            }
             if let Some(mut e) = commands.get_entity(*f) {
-                e.insert(Deleted);
+                e.despawn();
             }
         }
         if let Some(e) = self.construct_polyline_feature {
@@ -44,7 +33,6 @@ impl BatchedFeature {
         if let Some(e) = self.construct_polygon_feature {
             commands.get_entity(e).as_mut().map(|e| e.insert(Deleted));
         }
-        removed
     }
 }
 

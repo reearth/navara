@@ -5,14 +5,15 @@ import type {
   PolylineMaterial,
   TextMaterial,
 } from "navara_wasm";
-import { Color, Mesh, Object3D, Sprite } from "three";
+import { Color, Mesh, Object3D } from "three";
 import invariant from "tiny-invariant";
 
 import type { FeatureHandler } from "../event";
 import {
+  InstancedMesh,
+  InstancedTextMesh,
   isFeatureMesh,
   ModelMesh,
-  TextMesh,
   type ModelMaterial,
 } from "../mesh";
 import {
@@ -103,6 +104,7 @@ export class FeatureEvaluator {
       this.featureId,
       (batchId: number, property: Map<string, unknown> | undefined) => {
         const evaluatedValues = f(batchId, property);
+
         const keys = Object.keys(
           evaluatedValues,
         ) as (keyof typeof evaluatedValues)[];
@@ -141,10 +143,7 @@ export class FeatureEvaluator {
   }
 
   private update() {
-    if (this.obj instanceof TextMesh) {
-      return this.apply(this.obj);
-    }
-    if (this.obj instanceof Sprite) {
+    if (this.obj instanceof InstancedMesh) {
       return this.apply(this.obj);
     }
     if (this.obj instanceof BatchedFeatureMesh) {
@@ -160,30 +159,38 @@ export class FeatureEvaluator {
   }
 
   private apply(
-    m: Mesh | BatchedFeatureMesh | TextMesh | Sprite,
+    m: Mesh | BatchedFeatureMesh | InstancedMesh<Object3D>,
     parent?: ModelMesh,
   ) {
     // FIXME(keiya01): Handle in web worker
     const batchIdAttr =
       "geometry" in m ? m.geometry.getAttribute("_batchid") : undefined;
     for (const target of this.result) {
-      if (m instanceof TextMesh) {
+      if (m instanceof InstancedMesh) {
         switch (target.attribute) {
           case "text": {
-            // TODO: Support instancing
-            const v = target.array[0];
+            if (!(m instanceof InstancedTextMesh)) continue;
+            for (let i = 0; i < target.array.length; i++) {
+              const v = target.array[i];
 
-            if (typeof v !== "string") continue;
-
-            m.setText(v);
+              m.setTextByNatchIndex(i, v as string);
+            }
             continue;
           }
           case "color": {
-            m.text?.material.color.set(
-              target.array[0] as number,
-              target.array[1] as number,
-              target.array[2] as number,
-            );
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const colorIdx = i * target.itemSize;
+
+              m.setFeatureColorByBatchIndex(
+                i,
+                new Color(
+                  target.array[colorIdx] as number,
+                  target.array[colorIdx + 1] as number,
+                  target.array[colorIdx + 2] as number,
+                ),
+              );
+            }
             continue;
           }
           default:

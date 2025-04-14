@@ -1,10 +1,23 @@
+import { Unimplemented } from "@navara/core";
 import type { Color } from "three";
 
+// Interface for feature's mesh.
 export class FeatureMesh {
-  // Compat for non-batched mesh. For example, GeoJSON's polyline and polygon aren't batched for now.
-  _setFeatureColor(_color: Color) {}
+  _setFeatureColor(_color: Color) {
+    throw new Unimplemented();
+  }
+  _getFeatureColor(): Color {
+    throw new Unimplemented();
+  }
+  _setFrustumCulled(_culled: boolean) {
+    throw new Unimplemented();
+  }
 }
 
 export const isFeatureMesh = (v: object): v is FeatureMesh => {
-  return "_setFeatureColor" in v;
+  return (
+    "_setFeatureColor" in v &&
+    "_getFeatureColor" in v &&
+    "_setFrustumCulled" in v
+  );
 };

@@ -438,18 +438,17 @@ impl App {
             }),
             RenderableFeature::Polyline {
                 feature_batch_id, ..
-            } => {
-                let batch_value = batch_table.get(feature_batch_id)?;
-                let batch_prop = batch_value.properties.as_ref()?;
-                let BatchProperty::Values(values) = batch_prop else {
-                    return None;
-                };
-                let serde_json::Value::Object(map) = values[*in_batch_id].clone() else {
-                    return None;
-                };
-                Some(map)
             }
-            RenderableFeature::Polygon {
+            | RenderableFeature::Polygon {
+                feature_batch_id, ..
+            }
+            | RenderableFeature::Point {
+                feature_batch_id, ..
+            }
+            | RenderableFeature::Billboard {
+                feature_batch_id, ..
+            }
+            | RenderableFeature::Text {
                 feature_batch_id, ..
             } => {
                 let batch_value = batch_table.get(feature_batch_id)?;

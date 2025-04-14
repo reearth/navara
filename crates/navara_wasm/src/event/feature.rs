@@ -4,8 +4,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     geometry::{
-        TransferableModelGeometry, TransferablePolygonGeometry, TransferablePolylineGeometry,
-        TransferableSingleGeometry,
+        TransferableModelGeometry, TransferablePointGeometry, TransferablePolygonGeometry,
+        TransferablePolylineGeometry,
     },
     Transform,
 };
@@ -22,7 +22,7 @@ pub struct PointMesh {
     pub material: PointMaterial,
     pub transform: Transform,
     #[wasm_bindgen(getter_with_clone)]
-    pub geometry: TransferableSingleGeometry,
+    pub geometry: TransferablePointGeometry,
     pub active: bool,
 }
 
@@ -33,7 +33,7 @@ pub struct BillboardMesh {
     pub material: BillboardMaterial,
     pub transform: Transform,
     #[wasm_bindgen(getter_with_clone)]
-    pub geometry: TransferableSingleGeometry,
+    pub geometry: TransferablePointGeometry,
     pub active: bool,
 }
 
@@ -44,7 +44,7 @@ pub struct TextMesh {
     pub material: TextMaterial,
     pub transform: Transform,
     #[wasm_bindgen(getter_with_clone)]
-    pub geometry: TransferableSingleGeometry,
+    pub geometry: TransferablePointGeometry,
     pub active: bool,
 }
 

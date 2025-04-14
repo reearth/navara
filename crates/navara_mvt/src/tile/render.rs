@@ -25,11 +25,10 @@ impl RenderedTile {
         let mut removed_features = vec![];
         if let Some(feature_ids) = self.feature_ids.take() {
             for feature_id in feature_ids {
-                if let Ok(batched_feature) = batched_features.get(feature_id) {
-                    let mut removed = batched_feature.despawn_recursively(commands, features);
-                    removed_features.append(&mut removed);
-                }
-                if let Some(feature_id) = features.get(feature_id).ok().and_then(|f| f.0) {
+                let batched_feature = batched_features.get(feature_id).unwrap();
+                batched_feature.despawn_recursively(commands);
+
+                if let Some(feature_id) = features.get(feature_id).unwrap().0 {
                     commands.entity(feature_id).insert(Deleted);
                     removed_features.push(feature_id);
                 }

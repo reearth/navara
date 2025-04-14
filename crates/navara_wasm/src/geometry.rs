@@ -212,32 +212,35 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
-pub struct TransferableSingleGeometry {
+pub struct TransferablePointGeometry {
     #[wasm_bindgen(getter_with_clone)]
-    pub batch_id: Option<u32>,
+    pub position: TransferableFloatAttribute,
     #[wasm_bindgen(getter_with_clone)]
-    pub selected: Option<u32>,
+    pub batch_id_and_sel: TransferableFloatAttribute,
+    #[wasm_bindgen(getter_with_clone)]
+    pub batch_index: TransferableUintAttribute,
 }
 
-impl From<TransferableSingleGeometry>
-    for navara_feature_component::render::TransferableSingleGeometry
+impl From<TransferablePointGeometry>
+    for navara_feature_component::render::TransferablePointGeometry
 {
-    fn from(val: TransferableSingleGeometry) -> Self {
-        navara_feature_component::render::TransferableSingleGeometry {
-            batch_id: val.batch_id,
-            selected: val.selected,
+    fn from(val: TransferablePointGeometry) -> Self {
+        navara_feature_component::render::TransferablePointGeometry {
+            position: val.position.into(),
+            batch_id_and_sel: val.batch_id_and_sel.into(),
+            batch_index: val.batch_index.into(),
         }
     }
 }
-impl<'a> From<&'a navara_feature_component::render::TransferableSingleGeometry>
-    for TransferableSingleGeometry
+
+impl<'a> From<&'a navara_feature_component::render::TransferablePointGeometry>
+    for TransferablePointGeometry
 {
-    fn from(
-        val: &'a navara_feature_component::render::TransferableSingleGeometry,
-    ) -> TransferableSingleGeometry {
-        TransferableSingleGeometry {
-            batch_id: val.batch_id,
-            selected: val.selected,
+    fn from(val: &'a navara_feature_component::render::TransferablePointGeometry) -> Self {
+        TransferablePointGeometry {
+            position: (&val.position).into(),
+            batch_id_and_sel: (&val.batch_id_and_sel).into(),
+            batch_index: (&val.batch_index).into(),
         }
     }
 }

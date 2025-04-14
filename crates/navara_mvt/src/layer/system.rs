@@ -98,7 +98,6 @@ pub fn construct_single_mvt(
             &mut buf,
             mvt_bin,
             &id_prop_sel_res,
-            &layer.layer_id,
             get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
             &layer.appearances,
             limit_layers,
@@ -109,21 +108,28 @@ pub fn construct_single_mvt(
                     ..Default::default()
                 };
                 let e = match v.geometry_type {
-                    ConstructedGeometryType::Point => commands.spawn((PointMarker, batched)).id(),
+                    ConstructedGeometryType::Point => commands
+                        .spawn((
+                            PointMarker,
+                            batched,
+                            v.feature_batch_id,
+                            v.global_batch_id_and_selections,
+                        ))
+                        .id(),
                     ConstructedGeometryType::Polyline => commands
                         .spawn((
                             PolylineMarker,
                             batched,
-                            v.feature_batch_id.unwrap(),
-                            v.global_batch_id_and_selections.unwrap(),
+                            v.feature_batch_id,
+                            v.global_batch_id_and_selections,
                         ))
                         .id(),
                     ConstructedGeometryType::Polygon => commands
                         .spawn((
                             PolygonMarker,
                             batched,
-                            v.feature_batch_id.unwrap(),
-                            v.global_batch_id_and_selections.unwrap(),
+                            v.feature_batch_id,
+                            v.global_batch_id_and_selections,
                         ))
                         .id(),
                 };
@@ -142,7 +148,7 @@ pub fn update_mvt_layer(
     mut layers: Query<&mut MvtLayer>,
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateMvtLayerMarker)>,
-    mut features: Query<&mut RenderableFeature>,
+    mut features: Query<&mut RenderableFeature, Without<Deleted>>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
@@ -239,8 +245,6 @@ pub fn delete_mvt_layer(
         Option<&RenderedSingleFeature>,
         Option<&LayerResources>,
     )>,
-    mut buf: ResMut<BufferStore>,
-    mut features: Query<&mut RenderableFeature>,
     feature_ids: Query<&FeatureId>,
     batched_features: Query<&BatchedFeature>,
     mut rendered_tiles: Query<&mut RenderedTile>,
@@ -252,18 +256,6 @@ pub fn delete_mvt_layer(
     batch_id: Query<&BatchId>,
 ) {
     for (e, d) in &deleted {
-        let entities = layer_store.get(&d.0);
-        if let Some(vec) = entities {
-            // delete RenderableFeature and related Buffers
-            for entity in vec {
-                if let Ok(mut feature) = features.get_mut(*entity) {
-                    feature.destroy(&mut buf, &mut batch_table, &mut id_prop_table_res);
-                }
-
-                commands.entity(*entity).insert(Deleted);
-            }
-        }
-
         // delete all entities with this layer id
         for (entity, l_id) in entities_with_layerid.iter() {
             if l_id.0 == d.0 {

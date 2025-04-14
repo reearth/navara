@@ -52,7 +52,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
-        geometry: TransferableSingleGeometry,
+        geometry: TransferablePointGeometry,
         feature_batch_id: u32,
         batch_length: u32,
     },
@@ -64,7 +64,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
-        geometry: TransferableSingleGeometry,
+        geometry: TransferablePointGeometry,
         feature_batch_id: u32,
         batch_length: u32,
     },
@@ -76,7 +76,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Entity,
         render_info: RenderInformation,
-        geometry: TransferableSingleGeometry,
+        geometry: TransferablePointGeometry,
         feature_batch_id: u32,
         batch_length: u32,
     },
@@ -167,14 +167,53 @@ impl RenderableFeature {
         id_prop_table_res: &mut IdPropertyTable,
     ) {
         match self {
-            RenderableFeature::Polyline { geometry, .. } => {
+            RenderableFeature::Point {
+                geometry,
+                feature_batch_id,
+                ..
+            } => {
                 geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+                batch_table_res.remove(feature_batch_id, id_prop_table_res);
             }
-            RenderableFeature::Polygon { geometry, .. } => {
+            RenderableFeature::Billboard {
+                geometry,
+                feature_batch_id,
+                ..
+            } => {
                 geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+                batch_table_res.remove(feature_batch_id, id_prop_table_res);
             }
-            RenderableFeature::Model { geometry, .. } => {
+            RenderableFeature::Text {
+                geometry,
+                feature_batch_id,
+                ..
+            } => {
                 geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+            }
+            RenderableFeature::Polyline {
+                geometry,
+                feature_batch_id,
+                ..
+            } => {
+                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+            }
+            RenderableFeature::Polygon {
+                geometry,
+                feature_batch_id,
+                ..
+            } => {
+                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+            }
+            RenderableFeature::Model {
+                geometry,
+                feature_batch_id,
+                ..
+            } => {
+                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
+                batch_table_res.remove(feature_batch_id, id_prop_table_res);
             }
             _ => (),
         }
@@ -280,14 +319,13 @@ impl TransferablePolylineGeometry {
                 .data,
         );
         if let Some(batch_id) = &self.batch_id_and_sel {
-            let Some(vec_ids) = buf.get_u32(&batch_id.data) else {
+            let Some(vec_ids) = buf.remove_f32(&batch_id.data) else {
                 return;
             };
 
             for i in (0..vec_ids.len()).step_by(batch_id.size as usize) {
-                batch_table.remove(&vec_ids[i], id_prop_table);
+                batch_table.remove(&(vec_ids[i] as u32), id_prop_table);
             }
-            buf.remove(&batch_id.data);
         }
         if let Some(batch_index) = &self.batch_index {
             buf.remove(&batch_index.data);
@@ -369,18 +407,67 @@ impl TransferablePolygonGeometry {
             buf.remove(&normal.data);
         }
         if let Some(batch_id) = &self.batch_id_and_sel {
-            let Some(vec_ids) = buf.get_u32(&batch_id.data) else {
+            let Some(vec_ids) = buf.remove_f32(&batch_id.data) else {
                 return;
             };
 
             for i in (0..vec_ids.len()).step_by(batch_id.size as usize) {
-                batch_table.remove(&vec_ids[i], id_prop_table);
+                batch_table.remove(&(vec_ids[i] as u32), id_prop_table);
             }
-            buf.remove(&batch_id.data);
         }
         if let Some(batch_index) = &self.batch_index {
             buf.remove(&batch_index.data);
         }
+    }
+}
+
+#[derive(Component, Clone, Debug, Default, PartialEq)]
+pub struct TransferablePointGeometry {
+    pub position: TransferableFloatAttribute,
+    pub batch_id_and_sel: TransferableFloatAttribute,
+    pub batch_index: TransferableUintAttribute,
+}
+
+impl TransferablePointGeometry {
+    pub fn with_buf(
+        buf: &mut BufferStore,
+        positions: Vec<f32>,
+        batch_indices: Vec<u32>,
+        batch_ids_and_sels: Vec<f32>,
+    ) -> Self {
+        Self {
+            position: TransferableFloatAttribute {
+                data: buf.new_f32(positions),
+                size: 3, // x, y, z for each point
+            },
+            batch_id_and_sel: TransferableFloatAttribute {
+                data: buf.new_f32(batch_ids_and_sels),
+                size: 2, // batch_id and selected status
+            },
+            batch_index: TransferableUintAttribute {
+                data: buf.new_u32(batch_indices),
+                size: 1,
+            },
+        }
+    }
+
+    pub fn remove_from_buf(
+        &mut self,
+        buf: &mut BufferStore,
+        batch_table: &mut BatchTable,
+        id_prop_table: &mut IdPropertyTable,
+    ) {
+        buf.remove(&self.position.data);
+
+        let Some(vec_ids) = buf.remove_f32(&self.batch_id_and_sel.data) else {
+            return;
+        };
+
+        for i in (0..vec_ids.len()).step_by(self.batch_id_and_sel.size as usize) {
+            batch_table.remove(&(vec_ids[i] as u32), id_prop_table);
+        }
+
+        buf.remove(&self.batch_index.data);
     }
 }
 

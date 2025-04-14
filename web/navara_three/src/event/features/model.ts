@@ -1,7 +1,4 @@
-import {
-  ModelMesh as NavaraModelMesh,
-  type ModelMaterial,
-} from "@navara/engine";
+import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
 import { ModelMesh } from "../../mesh/model";
@@ -45,8 +42,8 @@ export async function renderModel(
 
 export function processModelChanged(
   obj: ModelMesh,
-  material: ModelMaterial,
+  m: NavaraModelMesh,
   active: boolean,
 ) {
-  obj._update(material, active);
+  obj._update(m.material, active);
 }

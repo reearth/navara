@@ -26,7 +26,7 @@ import {
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { type Camera, Mesh, Material, Object3D, Texture, Sprite } from "three";
 
-import type { ViewEvents } from "..";
+import { type ViewEvents } from "..";
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
@@ -294,6 +294,7 @@ export function processEvent(
             meshes,
             drapedFeatureMaterials,
             renderFlag,
+            buf,
             viewEvents,
             featureHandler,
             updatedAt,
@@ -633,9 +634,15 @@ function processTextureFragmentRemoved(
   abortController?.abort();
 }
 
-export function setTransform(obj: Object3D, transform: Transform) {
+export function setTransform(
+  obj: Object3D,
+  transform: Transform,
+  keepPosition?: boolean,
+) {
   const { tx, ty, tz, qx, qy, qz, qw, sx, sy, sz } = transform;
-  obj.position.set(tx, ty, tz);
+  if (!keepPosition) {
+    obj.position.set(tx, ty, tz);
+  }
   obj.quaternion.set(qx, qy, qz, qw);
   obj.scale.set(sx, sy, sz);
 }

@@ -1,4 +1,4 @@
-import { PointMesh as NavaraPointMesh, PointMaterial } from "@navara/engine";
+import { PointMaterial as NavaraPointMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
@@ -10,25 +10,34 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class PointMesh extends Sprite implements FeatureMesh {
-  constructor(m: NavaraPointMesh, uniforms: CommonUniforms) {
+  constructor(
+    material: NavaraPointMaterial,
+    uniforms: CommonUniforms,
+    batchId: number,
+    selected: boolean,
+    active: boolean,
+  ) {
     super(new SpriteMaterial());
 
-    this.initMaterial(m, uniforms);
+    this.initMaterial(material, uniforms, batchId, selected, active);
   }
 
-  private initMaterial(m: NavaraPointMesh, uniforms: CommonUniforms) {
-    const meshMaterial = m.material;
-
+  private initMaterial(
+    meshMaterial: NavaraPointMaterial,
+    uniforms: CommonUniforms,
+    batchId: number,
+    selected: boolean,
+    active: boolean,
+  ) {
     const material = this.material;
 
-    material.userData.uPickable = {
+    this.userData.uPickable = {
       value: 0.0,
     };
-    const batchId = m.geometry.batch_id ?? 0;
 
     material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uBatchId = { value: batchId };
-      shader.uniforms.nvr_uPickable = material.userData.uPickable;
+      shader.uniforms.nvr_uPickable = this.userData.uPickable;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -83,15 +92,15 @@ export class PointMesh extends Sprite implements FeatureMesh {
     this.userData.batchId = batchId;
     this.userData.isPicked = false;
 
-    if (m.geometry.selected && uniforms?.highlightColor?.value) {
+    if (selected && uniforms?.highlightColor?.value) {
       material.color.set(uniforms.highlightColor.value);
       this.userData.isPicked = true;
     }
 
-    this._update(meshMaterial, m.active);
+    this._update(meshMaterial, active);
   }
 
-  _update(material: PointMaterial, active: boolean) {
+  _update(material: NavaraPointMaterial, active: boolean) {
     if (!this.material.userData.prev) {
       this.material.userData.prev = {};
     }
@@ -134,5 +143,13 @@ export class PointMesh extends Sprite implements FeatureMesh {
 
   _setFeatureColor(color: Color) {
     this.material.color.set(color);
+  }
+
+  _getFeatureColor() {
+    return this.material.color;
+  }
+
+  _setFrustumCulled(culled: boolean): void {
+    this.frustumCulled = culled;
   }
 }

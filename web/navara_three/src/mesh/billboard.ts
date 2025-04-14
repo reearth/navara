@@ -1,7 +1,4 @@
-import {
-  BillboardMaterial,
-  BillboardMesh as NavaraBillboardMesh,
-} from "@navara/engine";
+import { BillboardMaterial as NavaraBillboardMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import { Color, Sprite, SpriteMaterial } from "three";
@@ -18,25 +15,34 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     super(new SpriteMaterial());
   }
 
-  async _init(m: NavaraBillboardMesh, uniforms: CommonUniforms) {
-    await this.initMaterial(m, uniforms);
+  async _init(
+    material: NavaraBillboardMaterial,
+    uniforms: CommonUniforms,
+    batchId: number,
+    selected: boolean,
+    active: boolean,
+  ) {
+    await this.initMaterial(material, uniforms, batchId, selected, active);
   }
 
-  private async initMaterial(m: NavaraBillboardMesh, uniforms: CommonUniforms) {
-    invariant(m.material.url);
-
-    const meshMaterial = m.material;
+  private async initMaterial(
+    meshMaterial: NavaraBillboardMaterial,
+    uniforms: CommonUniforms,
+    batchId: number,
+    selected: boolean,
+    active: boolean,
+  ) {
+    invariant(meshMaterial.url);
 
     const material = this.material;
 
-    const batchId = m.geometry.batch_id ?? 0;
-    material.userData.uPickable = {
+    this.userData.uPickable = {
       value: 0.0,
     };
 
     material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uBatchId = { value: batchId };
-      shader.uniforms.nvr_uPickable = material.userData.uPickable;
+      shader.uniforms.nvr_uPickable = this.userData.uPickable;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
@@ -61,17 +67,17 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
 
     this.userData.batchId = batchId;
     this.userData.isPicked = false;
-    this.userData.color = m.material.color;
+    this.userData.color = meshMaterial.color;
 
-    if (m.geometry.selected && uniforms?.highlightColor?.value) {
+    if (selected && uniforms?.highlightColor?.value) {
       material.color.set(uniforms.highlightColor.value);
       this.userData.isPicked = true;
     }
 
-    await this._update(meshMaterial, m.active);
+    await this._update(meshMaterial, active);
   }
 
-  async _update(material: BillboardMaterial, active: boolean) {
+  async _update(material: NavaraBillboardMaterial, active: boolean) {
     if (!this.material.userData.prev) {
       this.material.userData.prev = {};
     }
@@ -125,5 +131,13 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
 
   _setFeatureColor(color: Color) {
     this.material.color.set(color);
+  }
+
+  _getFeatureColor() {
+    return this.material.color;
+  }
+
+  _setFrustumCulled(culled: boolean): void {
+    this.frustumCulled = culled;
   }
 }

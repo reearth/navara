@@ -1,4 +1,4 @@
-import type { TextMesh as NavaraTextMesh, TextMaterial } from "@navara/engine";
+import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
@@ -19,16 +19,21 @@ import { Text } from "troika-three-text";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
-export class TextMesh extends Group {
+import type { FeatureMesh } from "./featureMesh";
+
+export class TextMesh extends Group implements FeatureMesh {
   text: Text;
   background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
 
-  constructor(m: NavaraTextMesh, uniforms: CommonUniforms) {
+  constructor(
+    meshMaterial: NavaraTextMaterial,
+    uniforms: CommonUniforms,
+    batchId: number,
+    selected: boolean,
+  ) {
     super();
 
     this.text = new Text();
-
-    const meshMaterial = m.material;
 
     this.userData.scaleByDistance = {
       value: meshMaterial.scale_by_distance ? 1.0 : 0.0,
@@ -47,10 +52,10 @@ export class TextMesh extends Group {
         : undefined,
     };
     this.userData.borderWidth = {
-      value: m.material.border_width ?? 0.0,
+      value: meshMaterial.border_width ?? 0.0,
     };
     this.userData.cornerRadius = {
-      value: m.material.corner_radius ?? 0.0,
+      value: meshMaterial.corner_radius ?? 0.0,
     };
     this.userData.bgSize = {
       value: new Vector2(1.0, 1.0),
@@ -71,8 +76,8 @@ export class TextMesh extends Group {
     };
     this.userData.fov = uniforms?.fov;
     this.userData.screenHeightPx = uniforms?.screenHeightPx;
-    this.userData.isPicked = m.geometry.selected;
-    this.userData.batchId = m.geometry.batch_id ?? 0;
+    this.userData.isPicked = selected;
+    this.userData.batchId = batchId;
     this.userData.highlightColor = uniforms?.highlightColor?.value;
     this.visible = meshMaterial.show ?? true;
 
@@ -285,7 +290,7 @@ export class TextMesh extends Group {
   }
 
   _updateTextByMaterial(
-    material: TextMaterial,
+    material: NavaraTextMaterial,
     active: boolean,
     needRender?: () => void,
   ) {
@@ -294,44 +299,43 @@ export class TextMesh extends Group {
     }
     const prev = this.userData.prev;
 
-    const nextVisible = (material.show ?? true) && active;
-    if (prev.visible !== nextVisible) {
-      this.visible = nextVisible;
-      prev.visible = nextVisible;
-    }
-
     const txt = this.text;
 
     let bNeedUpdateBg = false;
     let bPaddingChanged = false;
 
-    if (material.text !== prev.text) {
-      prev.text = material.text;
-      txt.text = material.text ?? "";
+    const nextText = material.text;
+    if (nextText !== prev.text) {
+      prev.text = nextText;
+      txt.text = nextText ?? "";
       bNeedUpdateBg = true;
     }
 
     const nextCenterX = material.center?.x ?? 0;
     const nextCenterY = material.center?.y ?? 0;
-    if (
-      !material.center ||
-      nextCenterX !== prev.centerX ||
-      nextCenterY !== prev.centerY
-    ) {
-      this.userData.center.x = nextCenterX;
-      this.userData.center.y = nextCenterY;
+    if (nextCenterX !== prev.centerX || nextCenterY !== prev.centerY) {
       prev.centerX = nextCenterX;
       prev.centerY = nextCenterY;
+
+      const cx = nextCenterX;
+      const cy = nextCenterY;
+      txt.anchorX = Math.floor(cx * 100) + "%";
+      txt.anchorY = Math.floor((1 - cy) * 100) + "%";
+
       bNeedUpdateBg = true;
     }
 
+    const nextVisible = (material.show ?? true) && active && !!txt.text;
+    if (prev.visible !== nextVisible) {
+      this.visible = nextVisible;
+      prev.visible = nextVisible;
+    }
+
+    if (!nextVisible) return;
+
     const nextPaddingX = material.padding?.x ?? 0;
     const nextPaddingY = material.padding?.y ?? 0;
-    if (
-      !material.padding ||
-      material.padding.x !== prev.paddingX ||
-      material.padding.y !== prev.paddingY
-    ) {
+    if (nextPaddingX !== prev.paddingX || nextPaddingY !== prev.paddingY) {
       this.userData.padding.x = nextPaddingX;
       this.userData.padding.y = nextPaddingY;
       prev.paddingX = nextPaddingX;
@@ -403,11 +407,6 @@ export class TextMesh extends Group {
     }
 
     if (bNeedUpdateBg) {
-      const cx = this.userData.center.x;
-      const cy = this.userData.center.y;
-      txt.anchorX = Math.floor(cx * 100) + "%";
-      txt.anchorY = Math.floor((1 - cy) * 100) + "%";
-
       txt.sync(() => {
         this.updateBackground();
 
@@ -493,5 +492,20 @@ export class TextMesh extends Group {
     this.text.sync(() => {
       this.updateBackground();
     });
+  }
+
+  _setFeatureColor(color: Color): void {
+    this.text.material.color.set(color);
+  }
+
+  _getFeatureColor() {
+    return this.text.material.color;
+  }
+
+  _setFrustumCulled(culled: boolean): void {
+    this.text.frustumCulled = culled;
+    if (this.background) {
+      this.background.frustumCulled = culled;
+    }
   }
 }

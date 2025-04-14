@@ -3,11 +3,17 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
-    batch::{BatchTable, BatchedFeature, IdPropertySelections, IdPropertyTable},
+    batch::{
+        BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIdAndSelections,
+        IdPropertySelections, IdPropertyTable,
+    },
+    billboard::BillboardMarker,
     id::FeatureId,
+    point::PointMarker,
     polygon::PolygonMarker,
     polyline::PolylineMarker,
     render::RenderableFeature,
+    text::TextMarker,
 };
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -239,7 +245,6 @@ pub fn transfer_mesh(
                 &mut buf,
                 mvt_bin,
                 &id_prop_sel_res,
-                &layer.layer_id,
                 tile.coords,
                 &layer.appearances,
                 limit_layers,
@@ -250,28 +255,75 @@ pub fn transfer_mesh(
                 rendered_tile.feature_ids = Some(Vec::with_capacity(result.len()));
 
                 for v in result {
-                    let mut batched = BatchedFeature {
+                    let batched = BatchedFeature {
                         features: v.feature_ids,
                         ..Default::default()
                     };
                     let e = match v.geometry_type {
                         ConstructedGeometryType::Point => {
-                            // Point doesn't support batched feature, so manage each feature directly.
-                            rendered_tile
-                                .feature_ids
-                                .as_mut()
-                                .unwrap()
-                                .append(&mut batched.features);
-                            continue;
-                            // TODO: Support instancing
-                            // commands
-                            // .spawn((
-                            //     PointMarker,
-                            //     batched,
-                            //     MVTFeatureMarker,
-                            //     FeatureId::default(),
-                            // ))
-                            // .id()
+                            let Some(appearance) = layer.appearances.iter().find(|a| {
+                                matches!(
+                                    a,
+                                    Appearance::Point(_)
+                                        | Appearance::Billboard(_)
+                                        | Appearance::Text(_)
+                                )
+                            }) else {
+                                continue;
+                            };
+
+                            fn spawn<M: Component, A: Component>(
+                                commands: &mut Commands,
+                                batched: BatchedFeature,
+                                layer_id: String,
+                                marker: M,
+                                appearance: A,
+                                feature_batch_id: FeatureBatchId,
+                                global_batch_id_and_selections: GlobalBatchIdAndSelections,
+                            ) -> Entity {
+                                commands
+                                    .spawn((
+                                        marker,
+                                        batched,
+                                        FeatureId::default(),
+                                        MVTFeatureMarker,
+                                        LayerId(layer_id),
+                                        appearance,
+                                        feature_batch_id,
+                                        global_batch_id_and_selections,
+                                    ))
+                                    .id()
+                            }
+                            match appearance {
+                                Appearance::Point(appearance) => spawn(
+                                    &mut commands,
+                                    batched,
+                                    layer.layer_id.clone(),
+                                    PointMarker,
+                                    appearance.clone(),
+                                    v.feature_batch_id,
+                                    v.global_batch_id_and_selections,
+                                ),
+                                Appearance::Billboard(appearance) => spawn(
+                                    &mut commands,
+                                    batched,
+                                    layer.layer_id.clone(),
+                                    BillboardMarker,
+                                    appearance.clone(),
+                                    v.feature_batch_id,
+                                    v.global_batch_id_and_selections,
+                                ),
+                                Appearance::Text(appearance) => spawn(
+                                    &mut commands,
+                                    batched,
+                                    layer.layer_id.clone(),
+                                    TextMarker,
+                                    appearance.clone(),
+                                    v.feature_batch_id,
+                                    v.global_batch_id_and_selections,
+                                ),
+                                _ => continue,
+                            }
                         }
                         ConstructedGeometryType::Polyline => {
                             let Some(Appearance::Polyline(appearance)) = layer
@@ -289,8 +341,8 @@ pub fn transfer_mesh(
                                     MVTFeatureMarker,
                                     LayerId(layer.layer_id.clone()),
                                     appearance.clone(),
-                                    v.feature_batch_id.unwrap(),
-                                    v.global_batch_id_and_selections.unwrap(),
+                                    v.feature_batch_id,
+                                    v.global_batch_id_and_selections,
                                 ))
                                 .id()
                         }
@@ -310,8 +362,8 @@ pub fn transfer_mesh(
                                     MVTFeatureMarker,
                                     LayerId(layer.layer_id.clone()),
                                     appearance.clone(),
-                                    v.feature_batch_id.unwrap(),
-                                    v.global_batch_id_and_selections.unwrap(),
+                                    v.feature_batch_id,
+                                    v.global_batch_id_and_selections,
                                 ))
                                 .id()
                         }
