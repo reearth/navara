@@ -422,13 +422,13 @@ fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &Camera
     let heading_quat = Quat::from_axis_angle(target_dir, cc.heading.to_radians());
 
     // Set the orbit quaternion based on heading and rotation matrix
-    orbit.world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
+    let world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
 
     let cam_pos = -Vec3::Y * cc.position.z.max(1.0); // Ensure a minimum altitude of 1.0
 
-    let world_position = pivot + (orbit.world_quat * cam_pos);
-    let mut world_up = orbit.world_quat * orbit.local_up;
-    let mut world_forward = orbit.world_quat * orbit.local_forward;
+    let world_position = pivot + (world_quat * cam_pos);
+    let mut world_up = world_quat * orbit.local_up;
+    let mut world_forward = world_quat * orbit.local_forward;
 
     // Apply pitch (camera-local tilt around right axis)
     let camera_right = world_forward.cross(world_up).normalize_or_zero();
@@ -439,6 +439,8 @@ fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &Camera
 
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);
+
+    orbit.set_quat(transform, world_quat, Vec3::ZERO, false, None);
 }
 
 // TODO

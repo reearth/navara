@@ -16,6 +16,14 @@ export const run = async (view: ThreeView) => {
   axesHelper.scale.multiplyScalar(1e9);
   view.scene.add(axesHelper);
 
+  view.setCamera({
+    longitude: 138.73470764482283,
+    latitude: 35.3627947204036,
+    altitude: 100000,
+    heading: 0,
+    pitch: -90,
+  });
+
   view.addLayer({
     type: "tiles",
     data: { url: tileUrls.openstreetmap },
@@ -36,7 +44,7 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   const cameraParams = {
     longitude: 138.73470764482283,
     latitude: 35.3627947204036,
-    altitude: 10000,
+    altitude: 100000,
     heading: 0, // -180 to 180
     pitch: -90, // -180 to 0
   };
