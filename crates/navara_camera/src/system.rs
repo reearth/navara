@@ -11,34 +11,20 @@ use bevy_input::{
     ButtonInput,
 };
 use navara_core::{
-    ease_out_circ, east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Ellipsoid, Ray, WGS84_32,
+    ease_out_circ, east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Ellipsoid, Ray, CRS,
+    WGS84_32,
 };
 use navara_frame::FrameManager;
-use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10};
+use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3};
 use navara_window::Window;
 
-use crate::{helpers::get_pick_ray_from_camera, CameraController, CameraInertia};
+use crate::{helpers::get_pick_ray_from_camera, CameraChange, CameraController, CameraInertia};
 
 use super::{CameraFrustum, CameraMarker, Orbit};
 use navara_input::MouseMoveInput;
 
 pub fn startup(mut commands: Commands) {
-    let controller = CameraController::default();
-
-    let r = controller.minimum_zoom_distance * 3.;
-
-    let orbit = Orbit {
-        quat: Quat::IDENTITY,
-        world_quat: Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z)),
-        default_world_quat: None,
-        local_up: Vec3::Z,
-        local_position: Vec3::NEG_Y * r,
-        local_forward: Vec3::Y,
-        vertical_axis: Vec3::NEG_X,
-        horizontal_axis: Vec3::Z,
-        pivot: Vec3::ZERO,
-        should_tilt: false,
-    };
+    let orbit = Orbit::default();
 
     let transform = Transform::default();
 
@@ -78,6 +64,7 @@ pub fn update(
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
     mut _mp: EventReader<MouseMoveInput>,
+    mut cc: EventReader<CameraChange>,
     keys: Res<ButtonInput<KeyCode>>,
     frame: Res<FrameManager>,
 ) {
@@ -87,6 +74,12 @@ pub fn update(
     for (marker, mut transform, mut controller, mut inertia, frustum, mut orbit) in query.iter_mut()
     {
         if !controller.enabled {
+            continue;
+        }
+
+        let cc = cc.read().last();
+        if let Some(cc) = cc {
+            apply_camera_change(&mut transform, &mut orbit, cc);
             continue;
         }
 
@@ -326,9 +319,12 @@ fn handle_zoom(
 }
 
 fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f32>) -> f32 {
+    let camera_pos = transform.transform_point(Vec3::ZERO);
+    let direction_to_center = -camera_pos.normalize();
+
     let ray = Ray {
-        origin: transform.transform_point(Vec3::ZERO),
-        direction: transform.forward().normalize(),
+        origin: camera_pos,
+        direction: direction_to_center,
     };
     match ray_ellipsoid(&ray, ellipsoid) {
         i if i.start == f32::INFINITY => {
@@ -384,7 +380,7 @@ fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &Camer
 }
 
 fn needs_update(inertia: &CameraInertia, controller: &CameraController) -> bool {
-    inertia.spin_time <= controller.spin_duration || inertia.zoom_time <= controller.zoom_duration
+    inertia.spin_time < controller.spin_duration || inertia.zoom_time < controller.zoom_duration
 }
 
 fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &CameraController) {
@@ -394,6 +390,57 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
     if inertia.zoom_time < controller.zoom_duration {
         inertia.zoom_time += duration;
     }
+}
+
+/// Applies a camera change based on geographic position, heading, and pitch.
+///
+/// - `cc.position.xy`: longitude & latitude
+/// - `cc.position.z`: camera height above the ground point (along normal)
+/// - `cc.heading`: rotation around the local up axis (degrees)
+/// - `cc.pitch`: tilt around the camera's right axis (degrees)
+fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &CameraChange) {
+    *orbit = Orbit::default();
+
+    // Convert geographic coordinates to world-space pivot (ground point)
+    let pivot = CRS::Geographic.to_vec3(WGS84_32, cc.position, 0.0);
+    let target_dir = pivot.normalize_or_zero();
+
+    // Determine local right axis based on pivot normal
+    let right = if target_dir.abs_diff_eq(Vec3::Z, EPSILON3)
+        || target_dir.abs_diff_eq(-Vec3::Z, EPSILON3)
+    {
+        Vec3::X
+    } else {
+        target_dir.cross(Vec3::Z).normalize_or_zero()
+    };
+
+    // Local up axis
+    let up = right.cross(target_dir).normalize_or_zero();
+    let rot_mat = Mat3::from_cols(right, target_dir, up);
+
+    let default_quat = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
+    let heading_quat = Quat::from_axis_angle(target_dir, cc.heading.to_radians());
+
+    // Set the orbit quaternion based on heading and rotation matrix
+    let world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
+
+    let cam_pos = -Vec3::Y * cc.position.z.max(1.0); // Ensure a minimum altitude of 1.0
+
+    let world_position = pivot + (world_quat * cam_pos);
+    let mut world_up = world_quat * orbit.local_up;
+    let mut world_forward = world_quat * orbit.local_forward;
+
+    // Apply pitch (camera-local tilt around right axis)
+    let camera_right = world_forward.cross(world_up).normalize_or_zero();
+    let pitch_quat = Quat::from_axis_angle(camera_right, (cc.pitch + 90.0).to_radians());
+
+    world_forward = pitch_quat * world_forward;
+    world_up = pitch_quat * world_up;
+
+    transform.translation = world_position;
+    transform.look_to(world_forward, world_up);
+
+    orbit.set_quat(transform, world_quat, Vec3::ZERO, false, None);
 }
 
 // TODO
