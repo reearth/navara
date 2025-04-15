@@ -4,6 +4,10 @@ import {
 } from "@navara/engine";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
+import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
+import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
+import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
+import ShowVertex from "@shaders/glsl/chunks/show_vertex.glsl";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -136,6 +140,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
       shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
 
+      shader.defines = shader.defines || {};
+      shader.defines.USE_BATCH_SHOW = !!this.material.userData.showEnabled;
+
       // Use Replacer for method chaining (with side-effect free implementation)
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -148,6 +155,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform vec2 uMinMaxHeight;
   out vec2 nvr_vBatchIdAndSel;
   
+  ${ShowParsVertex}
+  
   ${BranchFreeTernary}
   `,
         )
@@ -157,6 +166,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
   #include <begin_vertex>
   transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
   nvr_vBatchIdAndSel = batchIdAndSel;
+  
+  ${ShowVertex}
   `,
         ).source;
 
@@ -171,7 +182,17 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform vec3 nvr_uHighlightColor;
   uniform float nvr_uPickable;
   in vec2 nvr_vBatchIdAndSel;
+  
+  ${ShowParsFragment}
+  
   ${Pick}
+  `,
+        )
+        .replace(
+          "void main() {",
+          `
+  void main() {
+    ${ShowFragment}
   `,
         )
         .replace(
@@ -274,5 +295,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   _setFeatureColor(color: Color): void {
     this.material.color.set(color);
+  }
+
+  _setFeatureShow(visible: boolean): void {
+    this.visible = visible;
   }
 }

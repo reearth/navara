@@ -150,6 +150,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
       nvr_uPickable: uPickable,
       nvr_uHighlightColor: uniforms.highlightColor,
     };
+
+    // Use the original shader files
     this.material.vertexShader = PolylineVertShader;
     this.material.fragmentShader = meshMaterial.clamp_to_ground
       ? GroundPolylineFragShader
@@ -162,6 +164,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     this.material.userData.color = meshMaterial.color;
     this.material.userData.uPickable = uPickable;
+
+    this.material.onBeforeCompile = (shader) => {
+      shader.defines = shader.defines || {};
+      shader.defines.USE_BATCH_SHOW = !!this.material.userData.showEnabled;
+    };
 
     this._update(meshMaterial, mesh.active);
   }
@@ -215,5 +222,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   _setFeatureColor(color: Color): void {
     this.material.uniforms.color.value.set(color);
+  }
+
+  _setFeatureShow(visible: boolean): void {
+    this.visible = visible;
   }
 }

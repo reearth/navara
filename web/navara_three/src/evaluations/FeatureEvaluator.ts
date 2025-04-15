@@ -5,7 +5,13 @@ import type {
   PolylineMaterial,
   TextMaterial,
 } from "navara_wasm";
-import { Color, Mesh, Object3D } from "three";
+import {
+  BufferGeometry,
+  Color,
+  Mesh,
+  Object3D,
+  type NormalBufferAttributes,
+} from "three";
 import invariant from "tiny-invariant";
 
 import type { FeatureHandler } from "../event";
@@ -39,7 +45,9 @@ export type EvaluatedValue = {
     ? Color
     : K extends "text"
       ? string
-      : number;
+      : K extends "show"
+        ? boolean
+        : number;
 };
 
 type AggregatedResultValue<K = EvaluatableMaterialProperty> = {
@@ -109,8 +117,12 @@ export class FeatureEvaluator {
           evaluatedValues,
         ) as (keyof typeof evaluatedValues)[];
         for (const key of keys) {
-          const v = evaluatedValues[key];
-          if (!v) continue;
+          let v = evaluatedValues[key];
+          if (v == null) continue;
+
+          if (typeof v === "boolean") {
+            v = Number(v);
+          }
 
           const array = getArray(v);
           if (!result.has(key)) {
@@ -193,6 +205,15 @@ export class FeatureEvaluator {
             }
             continue;
           }
+          case "show": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const visible =
+                (target.array[i * target.itemSize] as number) >= 0.5;
+              m.setFeatureShowByBatchIndex(i, visible);
+            }
+            continue;
+          }
           default:
             continue;
         }
@@ -222,6 +243,11 @@ export class FeatureEvaluator {
             );
             continue;
           }
+          case "show": {
+            const visible = (target.array[0] as number) >= 0.5;
+            featureMesh._setFeatureShow(visible);
+            continue;
+          }
           // TODO: Support others
           default:
             continue;
@@ -230,11 +256,20 @@ export class FeatureEvaluator {
 
       invariant(batchIdAttr);
 
+      // For batched meshes, get the appropriate attribute
       const targetAttr =
         m instanceof BatchedFeatureMesh
           ? m._getBatchedAttribute(target.attribute)
           : // For ModelMesh
-            m.geometry.getAttribute(target.attribute);
+            parent instanceof ModelMesh
+            ? parent._getBatchedAttribute(
+                target.attribute,
+                m as Mesh<
+                  BufferGeometry<NormalBufferAttributes>,
+                  ModelMaterial
+                >,
+              )
+            : m.geometry.getAttribute(target.attribute);
 
       if (!targetAttr) continue;
 

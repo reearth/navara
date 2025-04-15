@@ -133,8 +133,12 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     this.material.color.set(color);
   }
 
-  _getFeatureColor() {
+  _getFeatureColor(): Color {
     return this.material.color;
+  }
+
+  _setFeatureShow(visible: boolean): void {
+    this.visible = visible;
   }
 
   _setFrustumCulled(culled: boolean): void {

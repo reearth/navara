@@ -6,6 +6,8 @@
 
 in vec2 batchIdAndSel;
 
+#include chunks/show_pars_vertex;
+
 in vec3 start;
 in vec3 forward_offset;
 in vec3 start_normal;
@@ -36,6 +38,8 @@ void main() {
     vec3 ecEnd = ecStart + offset;
 
     nvr_vBatchIdAndSel = batchIdAndSel;
+    
+    #include chunks/show_vertex;
 
     vec3 forwardDirectionEC = normalize(offset);
 
