@@ -667,11 +667,13 @@ impl App {
         position: Vec<FloatType>,
         pitch: FloatType,
         heading: FloatType,
+        roll: FloatType,
     ) {
         self.app.world_mut().send_event(CameraChange {
             position: Vec3::new(position[0], position[1], position[2]),
             pitch,
             heading,
+            roll,
         });
     }
 }

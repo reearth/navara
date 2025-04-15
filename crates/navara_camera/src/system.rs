@@ -401,8 +401,11 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
 fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &CameraChange) {
     *orbit = Orbit::default();
 
+    let altitude = cc.position.z;
+    let ground_point = Vec3::new(cc.position.x, cc.position.y, 0.0);
+
     // Convert geographic coordinates to world-space pivot (ground point)
-    let pivot = CRS::Geographic.to_vec3(WGS84_32, cc.position, 0.0);
+    let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
     let target_dir = pivot.normalize_or_zero();
 
     // Determine local right axis based on pivot normal
@@ -419,12 +422,12 @@ fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &Camera
     let rot_mat = Mat3::from_cols(right, target_dir, up);
 
     let default_quat = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
-    let heading_quat = Quat::from_axis_angle(target_dir, cc.heading.to_radians());
+    let heading_quat = Quat::from_axis_angle(target_dir, -cc.heading.to_radians());
 
     // Set the orbit quaternion based on heading and rotation matrix
     let world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
 
-    let cam_pos = -Vec3::Y * cc.position.z.max(1.0); // Ensure a minimum altitude of 1.0
+    let cam_pos = -Vec3::Y * altitude.max(1.0); // Ensure a minimum altitude of 1.0
 
     let world_position = pivot + (world_quat * cam_pos);
     let mut world_up = world_quat * orbit.local_up;
@@ -436,6 +439,10 @@ fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &Camera
 
     world_forward = pitch_quat * world_forward;
     world_up = pitch_quat * world_up;
+
+    // Apply roll (rotation around forward vector)
+    let roll_quat = Quat::from_axis_angle(world_forward, cc.roll.to_radians());
+    world_up = roll_quat * world_up;
 
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);

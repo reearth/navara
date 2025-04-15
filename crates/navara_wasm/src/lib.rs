@@ -416,8 +416,9 @@ impl Core {
         position: Vec<FloatType>,
         pitch: FloatType,
         heading: FloatType,
+        roll: FloatType,
     ) {
-        self.app.change_camera(position, pitch, heading);
+        self.app.change_camera(position, pitch, heading, roll);
     }
 }
 
