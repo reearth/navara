@@ -22,35 +22,41 @@ import {
   ModelMesh,
   type ModelMaterial,
 } from "../mesh";
-import {
-  BatchedFeatureMesh,
-  type BatchedAttributeName,
-} from "../mesh/batchedFeature";
+import { BatchedFeatureMesh } from "../mesh/batchedFeature";
 import type { ExtractProperties } from "../type";
 import type { FeatureId } from "../types";
 
-export type EvaluatableMaterialProperty = keyof Pick<
-  ExtractProperties<
-    PointMaterial &
-      PolylineMaterial &
-      PolygonMaterial &
-      NavaraModelMaterial &
-      TextMaterial
-  >,
-  BatchedAttributeName | "text"
+type AvailableMaterialProperty = ExtractProperties<
+  PointMaterial &
+    PolylineMaterial &
+    PolygonMaterial &
+    NavaraModelMaterial &
+    TextMaterial
 >;
 
-export type EvaluatedValue = {
-  [K in EvaluatableMaterialProperty]: K extends "color"
-    ? Color
-    : K extends "text"
-      ? string
-      : K extends "show"
-        ? boolean
-        : number;
+export type EvaluatableMaterialProperty = {
+  color: AvailableMaterialProperty["color"];
+  show: AvailableMaterialProperty["show"];
+  extrudedHeight: AvailableMaterialProperty["extruded_height"];
+  height: AvailableMaterialProperty["height"];
+  text: AvailableMaterialProperty["text"];
 };
 
-type AggregatedResultValue<K = EvaluatableMaterialProperty> = {
+type EvaluatableMaterialPropertyKey = keyof EvaluatableMaterialProperty;
+
+type EvaluatedMaterialProperty = {
+  color: Color;
+  show: boolean;
+  extrudedHeight: number;
+  height: number;
+  text: string;
+};
+
+export type EvaluatedValue = {
+  [K in EvaluatableMaterialPropertyKey]: EvaluatedMaterialProperty[K];
+};
+
+type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
   attribute: K;
   itemSize: number;
   array: K extends "color"
@@ -101,7 +107,7 @@ export class FeatureEvaluator {
     ) => Partial<EvaluatedValue>,
   ) {
     const result = new Map<
-      EvaluatableMaterialProperty,
+      EvaluatableMaterialPropertyKey,
       {
         itemSize: number;
         array: string[] | number[];
@@ -132,7 +138,11 @@ export class FeatureEvaluator {
             });
           }
 
-          (result.get(key)?.array as any[]).push(...array);
+          // Use a more specific type instead of any
+          const resultArray = result.get(key)?.array as (string | number)[];
+          // Ensure array only contains strings or numbers
+          const typedArray = array as (string | number)[];
+          resultArray.push(...typedArray);
         }
       },
     );
@@ -246,6 +256,11 @@ export class FeatureEvaluator {
           case "show": {
             const visible = (target.array[0] as number) >= 0.5;
             featureMesh._setFeatureShow(visible);
+            continue;
+          }
+          case "extrudedHeight": {
+            const height = target.array[0] as number;
+            featureMesh._setFeatureExtrudedHeight(height);
             continue;
           }
           // TODO: Support others

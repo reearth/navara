@@ -3,6 +3,8 @@ import {
   PolygonMaterial,
 } from "@navara/engine";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_vertex.glsl";
+import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
@@ -117,6 +119,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.uMinMaxHeight = {
       value: uMinMaxHeights,
     };
+    material.userData.uAddExtrudedHeight = {
+      value: 0.0,
+    };
     material.userData.uClampToGround = {
       value: clampToGround,
     };
@@ -134,6 +139,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       if (material.userData.uMinMaxHeight.value) {
         shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       }
+      shader.uniforms.uAddExtrudedHeight = material.userData.uAddExtrudedHeight;
       if (material.userData.uClampToGround.value != null) {
         shader.uniforms.uClampToGround = material.userData.uClampToGround;
       }
@@ -142,6 +148,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
       shader.defines = shader.defines || {};
       shader.defines.USE_BATCH_SHOW = !!this.material.userData.showEnabled;
+      shader.defines.USE_BATCH_EXTRUDED_HEIGHT =
+        !!this.material.userData.extrudedHeightEnabled;
 
       // Use Replacer for method chaining (with side-effect free implementation)
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -156,6 +164,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   out vec2 nvr_vBatchIdAndSel;
   
   ${ShowParsVertex}
+  ${ExtrudedHeightParsVertex}
   
   ${BranchFreeTernary}
   `,
@@ -164,7 +173,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
           "#include <begin_vertex>",
           `
   #include <begin_vertex>
-  transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y);
+
+  ${ExtrudedHeightVertex}
+
+  transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + addExtrudedHeight);
+
   nvr_vBatchIdAndSel = batchIdAndSel;
   
   ${ShowVertex}
@@ -299,5 +312,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
+  }
+
+  _setFeatureExtrudedHeight(height: number): void {
+    this.material.userData.uAddExtrudedHeight.value = height;
   }
 }

@@ -235,6 +235,10 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     this.visible = visible;
   }
 
+  _setFeatureExtrudedHeight(_height: number): void {
+    throw new Unimplemented();
+  }
+
   _setFrustumCulled(culled: boolean): void {
     this.frustumCulled = culled;
   }
