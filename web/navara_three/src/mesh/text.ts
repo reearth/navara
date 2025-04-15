@@ -502,6 +502,10 @@ export class TextMesh extends Group implements FeatureMesh {
     return this.text.material.color;
   }
 
+  _setFeatureShow(visible: boolean): void {
+    this.visible = visible;
+  }
+
   _setFrustumCulled(culled: boolean): void {
     this.text.frustumCulled = culled;
     if (this.background) {

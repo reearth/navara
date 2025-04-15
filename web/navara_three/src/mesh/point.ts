@@ -149,6 +149,10 @@ export class PointMesh extends Sprite implements FeatureMesh {
     return this.material.color;
   }
 
+  _setFeatureShow(visible: boolean): void {
+    this.visible = visible;
+  }
+
   _setFrustumCulled(culled: boolean): void {
     this.frustumCulled = culled;
   }

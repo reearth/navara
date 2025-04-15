@@ -35,6 +35,15 @@ export class InstancedMesh<M extends Object3D> extends Mesh {
     mesh._setFeatureColor(color);
   }
 
+  setFeatureShowByBatchIndex(batchIndex: number, visible: boolean) {
+    const mesh = this.getMeshByBatchIndex(batchIndex);
+
+    if (!isFeatureMesh(mesh))
+      throw new Error(`Mesh doesn't support FeatureMesh`);
+
+    mesh._setFeatureShow(visible);
+  }
+
   setPickable(v: number) {
     for (const mesh of this.meshes()) {
       mesh.userData.uPickable.value = v;

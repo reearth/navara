@@ -19,6 +19,8 @@ in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
 in vec2 nvr_vBatchIdAndSel;
 
+#include chunks/show_pars_fragment;
+
 uniform vec3 color;
 uniform vec3 viewportAndPixelRatio;
 uniform sampler2D tGlobeDepth;
@@ -38,6 +40,8 @@ float readDepth(sampler2D depthSampler, vec2 coord) {
 
 
 void main() {
+    #include chunks/show_fragment;
+    
     vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
     float logDepthOrDepth = readDepth(tGlobeDepth, gl_FragCoord.xy / viewport.xy);
 
