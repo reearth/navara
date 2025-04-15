@@ -31,6 +31,7 @@ export const run = async (view: ThreeView) => {
     altitude: 302.0875327005024,
     heading: -64.41840149763287,
     pitch: -36.00000121921312,
+    roll: 0,
   });
 
   const pane = new Pane({
