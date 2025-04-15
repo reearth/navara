@@ -8,7 +8,11 @@ uniform vec3 nvr_uHighlightColor;
 
 in vec2 nvr_vBatchIdAndSel;
 
+#include chunks/show_pars_fragment;
+
 void main() {
+    #include chunks/show_fragment;
+    
     vec4 diffuseColor = vec4(color, 1.);
     #include <color_fragment>
 

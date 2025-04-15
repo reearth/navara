@@ -20,10 +20,18 @@ const tileUrls = {
 
 const UPDATED_FEATURE = new Set();
 
-const ENABLE_TERRAIN = false;
+const ENABLE_TERRAIN = true;
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  view.setCamera({
+    longitude: 139.75711454748298,
+    latitude: 35.67564356091717,
+    altitude: 302.0875327005024,
+    heading: -64.41840149763287,
+    pitch: -36.00000121921312,
+  });
 
   const pane = new Pane({
     title: "Parameters",
@@ -541,6 +549,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
 
         return {
           color: new Color(color),
+          show: measuredHeight > 60,
         };
       });
     });

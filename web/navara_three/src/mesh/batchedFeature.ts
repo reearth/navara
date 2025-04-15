@@ -59,7 +59,7 @@ export class BatchedFeatureMesh<
       case "color":
         return this._batchedVertexColor;
       case "show":
-        throw new Unimplemented();
+        return this._batchedVertexShow;
       case "height":
         throw new Unimplemented();
       case "extruded_height":
@@ -75,11 +75,28 @@ export class BatchedFeatureMesh<
       return this.geometry.attributes.color;
     } else {
       this.material.vertexColors = true;
-      this.geometry.setAttribute(
-        "color",
-        new BufferAttribute(new Float32Array(verCount * 3), 3),
-      );
-      return this.geometry.attributes.color;
+      const colorAttr = new BufferAttribute(new Float32Array(verCount * 3), 3);
+      this.geometry.setAttribute("color", colorAttr);
+      return colorAttr;
+    }
+  }
+
+  get _batchedVertexShow() {
+    const verCount = this.geometry.attributes._batchid?.array?.length ?? 0;
+    if (!verCount) return;
+
+    if (this.material.userData.showEnabled) {
+      return this.geometry.attributes.show as BufferAttribute;
+    } else {
+      // Enable show attribute
+      this.material.userData.showEnabled = true;
+
+      // Create show attribute with mesh's visible property as default
+      const attrShow = new Float32Array(verCount);
+
+      const showAttr = new BufferAttribute(attrShow, 1);
+      this.geometry.setAttribute("show", showAttr);
+      return showAttr;
     }
   }
 
@@ -90,6 +107,10 @@ export class BatchedFeatureMesh<
 
   _getFeatureColor(): Color {
     throw new Unimplemented();
+  }
+
+  _setFeatureShow(_visible: boolean): void {
+    this.visible = _visible;
   }
 
   _setFrustumCulled(_culled: boolean): void {
