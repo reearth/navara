@@ -1,3 +1,4 @@
+import { Unimplemented } from "@navara/core";
 import { PointMaterial as NavaraPointMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
@@ -155,5 +156,9 @@ export class PointMesh extends Sprite implements FeatureMesh {
 
   _setFrustumCulled(culled: boolean): void {
     this.frustumCulled = culled;
+  }
+
+  _setFeatureExtrudedHeight(_height: number): void {
+    throw new Unimplemented();
   }
 }

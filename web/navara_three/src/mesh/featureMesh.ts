@@ -12,6 +12,9 @@ export class FeatureMesh {
   _setFeatureShow(_visible: boolean) {
     throw new Unimplemented();
   }
+  _setFeatureExtrudedHeight(_height: number) {
+    throw new Unimplemented();
+  }
   _setFrustumCulled(_culled: boolean) {
     throw new Unimplemented();
   }
@@ -22,6 +25,7 @@ export const isFeatureMesh = (v: object): v is FeatureMesh => {
     "_setFeatureColor" in v &&
     "_getFeatureColor" in v &&
     "_setFeatureShow" in v &&
+    "_setFeatureExtrudedHeight" in v &&
     "_setFrustumCulled" in v
   );
 };

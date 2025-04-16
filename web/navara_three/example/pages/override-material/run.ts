@@ -20,7 +20,7 @@ const tileUrls = {
 
 const UPDATED_FEATURE = new Set();
 
-const ENABLE_TERRAIN = true;
+const ENABLE_TERRAIN = false;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -65,6 +65,7 @@ export const run = async (view: ThreeView) => {
   addHeliportLayer(pane, view);
   addRoadLayer(pane, view);
   addFireproofAreaLayer(pane, view);
+  addHeightControlDistrictLayer(pane, view);
   addBuildingModelLayer(pane, view);
   addSymbolLayer(pane, view);
 
@@ -495,6 +496,72 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
 
         return {
           color: new Color(color),
+        };
+      });
+    });
+  });
+};
+
+const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
+  const layerDescription: LayerDescription = {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/a2/81a1a7-03b8-4cf2-bb26-19103b32e255/13_tokyo_pref_2023_citygml_1_op_urf_HeightControlDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
+    },
+    polygon: {
+      height: 0,
+      extruded_height: 0,
+      clamp_to_ground: false,
+      use_ground_normals: true,
+      wireframe: false,
+      id_property: "gml_id",
+    },
+    vector_tile: {
+      max_zoom: 16,
+    },
+  };
+
+  const folder = pane.addFolder({
+    title: "Height control district",
+  });
+
+  let layer: Layer | undefined;
+  addToggleButton(folder, (isAdded) => {
+    if (isAdded) {
+      layer?.delete();
+      layer = undefined;
+      return;
+    }
+
+    layer = view.addLayer(layerDescription);
+    layer.on("featureUpdated", (evaluator) => {
+      if (UPDATED_FEATURE.has(evaluator.id)) return;
+      UPDATED_FEATURE.add(evaluator.id);
+
+      evaluator.evaluate((_batchId, property) => {
+        const attributes = JSON.parse(
+          (property?.get("attributes") as string) ?? "",
+        );
+        const minHeight = attributes["urf:minimumBuildingHeight"];
+        const maxHeight = attributes["urf:maximumBuildingHeight"];
+        const extrudedHeight = maxHeight ?? minHeight ?? 0;
+
+        const color = (() => {
+          if (extrudedHeight < 1) {
+            return 0x999999;
+          }
+          if (extrudedHeight < 10) {
+            return 0x00ff00;
+          }
+          if (extrudedHeight < 30) {
+            return 0xffff00;
+          }
+          return 0xff0000;
+        })();
+
+        return {
+          color: new Color(color),
+          extrudedHeight,
         };
       });
     });

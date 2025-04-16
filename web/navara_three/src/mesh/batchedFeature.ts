@@ -21,7 +21,7 @@ const BATCHED_ATTRIBUTE_NAMES = [
   "color",
   "show",
   "height",
-  "extruded_height",
+  "extrudedHeight",
 ] as const;
 
 export type BatchedAttributeName = (typeof BATCHED_ATTRIBUTE_NAMES)[number];
@@ -62,8 +62,8 @@ export class BatchedFeatureMesh<
         return this._batchedVertexShow;
       case "height":
         throw new Unimplemented();
-      case "extruded_height":
-        throw new Unimplemented();
+      case "extrudedHeight":
+        return this._batchedVertexExtrudedHeight;
     }
   }
 
@@ -100,6 +100,25 @@ export class BatchedFeatureMesh<
     }
   }
 
+  get _batchedVertexExtrudedHeight() {
+    const verCount = this.geometry.attributes._batchid?.array?.length ?? 0;
+    if (!verCount) return;
+
+    if (this.material.userData.extrudedHeightEnabled) {
+      return this.geometry.attributes.extrudedHeight as BufferAttribute;
+    } else {
+      // Enable extrudedHeight attribute
+      this.material.userData.extrudedHeightEnabled = true;
+
+      // Create extrudedHeight attribute with default value of 0
+      const attrExtrudedHeight = new Float32Array(verCount);
+
+      const extrudedHeightAttr = new BufferAttribute(attrExtrudedHeight, 1);
+      this.geometry.setAttribute("extrudedHeight", extrudedHeightAttr);
+      return extrudedHeightAttr;
+    }
+  }
+
   // Compat for non-batched mesh. For example, GeoJSON's polyline and polygon aren't batched for now.
   _setFeatureColor(_color: Color) {
     throw new Unimplemented();
@@ -111,6 +130,10 @@ export class BatchedFeatureMesh<
 
   _setFeatureShow(_visible: boolean): void {
     this.visible = _visible;
+  }
+
+  _setFeatureExtrudedHeight(_height: number): void {
+    throw new Unimplemented();
   }
 
   _setFrustumCulled(_culled: boolean): void {

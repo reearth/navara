@@ -1,3 +1,4 @@
+import { Unimplemented } from "@navara/core";
 import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
@@ -511,5 +512,9 @@ export class TextMesh extends Group implements FeatureMesh {
     if (this.background) {
       this.background.frustumCulled = culled;
     }
+  }
+
+  _setFeatureExtrudedHeight(_height: number): void {
+    throw new Unimplemented();
   }
 }
