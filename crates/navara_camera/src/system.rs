@@ -399,55 +399,111 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
 /// - `cc.heading`: rotation around the local up axis (degrees)
 /// - `cc.pitch`: tilt around the camera's right axis (degrees)
 fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &CameraChange) {
+    // Heading is inverted because positive rotation should be clockwise
+    let heading = -cc.heading.unwrap_or(0.0);
+    // Pitch is adjusted by +90° because we want -90° to point straight down
+    let pitch = cc.pitch.unwrap_or(-90.0) + 90.0;
+    let roll = cc.roll.unwrap_or(0.0);
+
+    // Reset orbit to default state before applying changes
     *orbit = Orbit::default();
 
-    let altitude = cc.position.z;
-    let ground_point = Vec3::new(cc.position.x, cc.position.y, 0.0);
+    // Calculate new world position and target direction
+    // This differs based on whether we have a new position or are using existing one
+    let (world_position, target_dir) = if let Some(pos) = cc.position {
+        let altitude = pos.z.max(1.0); // Ensure minimum altitude of 1.0 for stability
 
-    // Convert geographic coordinates to world-space pivot (ground point)
-    let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
-    let target_dir = pivot.normalize_or_zero();
+        // Create ground point (ignoring altitude for now)
+        let ground_point = Vec3::new(pos.x, pos.y, 0.0);
 
-    // Determine local right axis based on pivot normal
-    let right = if target_dir.abs_diff_eq(Vec3::Z, EPSILON3)
-        || target_dir.abs_diff_eq(-Vec3::Z, EPSILON3)
-    {
-        Vec3::X
+        // Convert geographic coordinates to world-space position
+        let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
+        let target_dir = pivot.normalize_or_zero();
+
+        // Calculate camera offset from ground point
+        let cam_offset = -Vec3::Y * altitude;
+        let world_quat = calculate_world_quat(target_dir, heading);
+
+        // Final world position is ground point plus camera offset
+        (pivot + (world_quat * cam_offset), target_dir)
     } else {
-        target_dir.cross(Vec3::Z).normalize_or_zero()
+        // When no position provided, use existing transform position
+        let mut position = transform.translation;
+        if position == Vec3::ZERO {
+            position = orbit.local_position; // Fallback to orbit's default position
+        }
+        (position, position.normalize_or_zero())
     };
 
-    // Local up axis
-    let up = right.cross(target_dir).normalize_or_zero();
-    let rot_mat = Mat3::from_cols(right, target_dir, up);
+    // Calculate orientation quaternion based on target direction
+    let world_quat = calculate_world_quat(target_dir, heading);
 
-    let default_quat = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
-    let heading_quat = Quat::from_axis_angle(target_dir, -cc.heading.to_radians());
+    // Apply pitch and roll rotations to forward and up vectors
+    let (world_forward, world_up) =
+        apply_orientation_changes(world_quat, orbit.local_forward, orbit.local_up, pitch, roll);
 
-    // Set the orbit quaternion based on heading and rotation matrix
-    let world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
-
-    let cam_pos = -Vec3::Y * altitude.max(1.0); // Ensure a minimum altitude of 1.0
-
-    let world_position = pivot + (world_quat * cam_pos);
-    let mut world_up = world_quat * orbit.local_up;
-    let mut world_forward = world_quat * orbit.local_forward;
-
-    // Apply pitch (camera-local tilt around right axis)
-    let camera_right = world_forward.cross(world_up).normalize_or_zero();
-    let pitch_quat = Quat::from_axis_angle(camera_right, (cc.pitch + 90.0).to_radians());
-
-    world_forward = pitch_quat * world_forward;
-    world_up = pitch_quat * world_up;
-
-    // Apply roll (rotation around forward vector)
-    let roll_quat = Quat::from_axis_angle(world_forward, cc.roll.to_radians());
-    world_up = roll_quat * world_up;
-
+    // Update transform with new position and orientation
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);
 
+    // Update orbit state with new quaternion
     orbit.set_quat(transform, world_quat, Vec3::ZERO, false, None);
+}
+
+/// Calculates the world rotation quaternion based on target direction and heading
+/// Handles special case when looking directly up/down (Z-axis)
+fn calculate_world_quat(target_dir: Vec3, heading: f32) -> Quat {
+    // Calculate right vector - special case when looking straight up/down
+    let right = if target_dir.abs_diff_eq(Vec3::Z, EPSILON3)
+        || target_dir.abs_diff_eq(-Vec3::Z, EPSILON3)
+    {
+        Vec3::X // Default right vector when looking straight up/down
+    } else {
+        target_dir.cross(Vec3::Z).normalize_or_zero() // Standard right vector
+    };
+
+    // Calculate up vector from right and target direction
+    let up = right.cross(target_dir).normalize_or_zero();
+
+    // Create rotation matrix from coordinate system axes
+    let rot_mat = Mat3::from_cols(right, target_dir, up);
+
+    // Default camera orientation (looking down negative Y axis)
+    let default_quat = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
+
+    // Create heading rotation around target direction
+    let heading_quat = Quat::from_axis_angle(target_dir, heading.to_radians());
+
+    // Combine rotations: heading × local rotation × default orientation
+    heading_quat * Quat::from_mat3(&rot_mat) * default_quat
+}
+
+/// Applies pitch and roll rotations to orientation vectors
+/// Returns modified forward and up vectors
+fn apply_orientation_changes(
+    world_quat: Quat,
+    local_forward: Vec3,
+    local_up: Vec3,
+    pitch: f32,
+    roll: f32,
+) -> (Vec3, Vec3) {
+    // Transform local vectors to world space
+    let mut world_up = world_quat * local_up;
+    let mut world_forward = world_quat * local_forward;
+
+    // Calculate camera right vector for pitch rotation
+    let camera_right = world_forward.cross(world_up).normalize_or_zero();
+
+    // Apply pitch rotation (tilt up/down around right axis)
+    let pitch_quat = Quat::from_axis_angle(camera_right, pitch.to_radians());
+    world_forward = pitch_quat * world_forward;
+    world_up = pitch_quat * world_up;
+
+    // Apply roll rotation (tilt side-to-side around forward axis)
+    let roll_quat = Quat::from_axis_angle(world_forward, roll.to_radians());
+    world_up = roll_quat * world_up;
+
+    (world_forward, world_up)
 }
 
 // TODO

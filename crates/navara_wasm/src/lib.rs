@@ -413,10 +413,10 @@ impl Core {
     #[wasm_bindgen(js_name = changeCamera)]
     pub fn change_camera(
         &mut self,
-        position: Vec<FloatType>,
-        pitch: FloatType,
-        heading: FloatType,
-        roll: FloatType,
+        position: Option<Vec<FloatType>>,
+        pitch: Option<FloatType>,
+        heading: Option<FloatType>,
+        roll: Option<FloatType>,
     ) {
         self.app.change_camera(position, pitch, heading, roll);
     }

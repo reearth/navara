@@ -664,13 +664,14 @@ impl App {
 
     pub fn change_camera(
         &mut self,
-        position: Vec<FloatType>,
-        pitch: FloatType,
-        heading: FloatType,
-        roll: FloatType,
+        position: Option<Vec<FloatType>>,
+        pitch: Option<FloatType>,
+        heading: Option<FloatType>,
+        roll: Option<FloatType>,
     ) {
+        let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().send_event(CameraChange {
-            position: Vec3::new(position[0], position[1], position[2]),
+            position: pos,
             pitch,
             heading,
             roll,

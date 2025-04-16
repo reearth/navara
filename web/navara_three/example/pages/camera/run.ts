@@ -17,12 +17,12 @@ export const run = async (view: ThreeView) => {
   view.scene.add(axesHelper);
 
   view.setCamera({
-    longitude: 138.73470764482283,
-    latitude: 35.3627947204036,
-    altitude: 100000,
-    heading: 0,
-    pitch: -90,
-    roll: 0,
+    longitude: 139.75711454748298,
+    latitude: 35.67564356091717,
+    altitude: 902.0,
+    heading: 64.41840149763287, // -180 to 180
+    pitch: -36.00000121921312, // -180 to 0
+    roll: 0, // -180 to 180
   });
 
   view.addLayer({
@@ -43,11 +43,11 @@ export const run = async (view: ThreeView) => {
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   const cameraParams = {
-    longitude: 138.73470764482283,
-    latitude: 35.3627947204036,
-    altitude: 100000,
-    heading: 0, // -180 to 180
-    pitch: -90, // -180 to 0
+    longitude: 139.75711454748298,
+    latitude: 35.67564356091717,
+    altitude: 902.0,
+    heading: 64.41840149763287, // -180 to 180
+    pitch: -36.00000121921312, // -180 to 0
     roll: 0, // -180 to 180
   };
   const folder = pane.addFolder({

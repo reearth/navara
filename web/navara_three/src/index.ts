@@ -662,11 +662,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   setCamera(cam: CameraPosition) {
-    const position = new Float32Array([
-      cam.longitude,
-      cam.latitude,
-      cam.altitude,
-    ]);
+    const position =
+      cam.longitude && cam.latitude && cam.altitude
+        ? new Float32Array([cam.longitude, cam.latitude, cam.altitude])
+        : null;
+
     this._core?.changeCamera(position, cam.pitch, cam.heading, cam.roll);
   }
 
