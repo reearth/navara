@@ -22,6 +22,7 @@ export const run = async (view: ThreeView) => {
     altitude: 100000,
     heading: 0,
     pitch: -90,
+    roll: 0,
   });
 
   view.addLayer({
@@ -47,6 +48,7 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
     altitude: 100000,
     heading: 0, // -180 to 180
     pitch: -90, // -180 to 0
+    roll: 0, // -180 to 180
   };
   const folder = pane.addFolder({
     title: "Change Camera",
@@ -60,6 +62,7 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
       altitude: cameraParams.altitude,
       heading: cameraParams.heading,
       pitch: cameraParams.pitch,
+      roll: cameraParams.roll,
     });
   };
 
@@ -75,5 +78,10 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   folder
     .addBinding(cameraParams, "heading", { min: -180.0, max: 180.0 })
     .on("change", changeFunc);
-  folder.addBinding(cameraParams, "pitch").on("change", changeFunc);
+  folder
+    .addBinding(cameraParams, "pitch", { min: -180.0, max: 0.0 })
+    .on("change", changeFunc);
+  folder
+    .addBinding(cameraParams, "roll", { min: -180.0, max: 180.0 })
+    .on("change", changeFunc);
 };

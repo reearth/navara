@@ -74,4 +74,5 @@ export type CameraPosition = {
   altitude: number;
   pitch: number;
   heading: number;
+  roll: number;
 };

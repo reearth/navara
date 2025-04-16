@@ -667,7 +667,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       cam.latitude,
       cam.altitude,
     ]);
-    this._core?.changeCamera(position, cam.pitch, cam.heading);
+    this._core?.changeCamera(position, cam.pitch, cam.heading, cam.roll);
   }
 
   private _startMainLoop() {
