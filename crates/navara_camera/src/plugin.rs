@@ -3,7 +3,7 @@ use navara_event_store::EventStore;
 use navara_math::Transform;
 use navara_window::WindowResizeEvent;
 
-use crate::{CameraChange, CameraFrustum};
+use crate::{CameraChange, CameraFrustum, CameraTranslate};
 
 use super::CameraMarker;
 use bevy_app::{PostUpdate, Startup, Update};
@@ -22,6 +22,7 @@ impl bevy_app::Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.add_systems(Startup, super::system::startup)
             .add_event::<CameraChange>()
+            .add_event::<CameraTranslate>()
             .add_systems(
                 Update,
                 (

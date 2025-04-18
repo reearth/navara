@@ -7,7 +7,7 @@ use bevy_ecs::{
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
-use navara_camera::CameraChange;
+use navara_camera::{CameraChange, CameraDirection, CameraTranslate};
 use navara_component::{Deleted, Rendered};
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
@@ -675,6 +675,12 @@ impl App {
             heading,
             roll,
         });
+    }
+
+    pub fn move_camera(&mut self, direction: CameraDirection, amount: FloatType) {
+        self.app
+            .world_mut()
+            .send_event(CameraTranslate { direction, amount });
     }
 }
 

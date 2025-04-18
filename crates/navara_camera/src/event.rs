@@ -8,3 +8,19 @@ pub struct CameraChange {
     pub heading: FloatType, // heading in degrees, -180 to 180
     pub roll: FloatType,    // roll in degrees, -180 to 180
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CameraDirection {
+    Forward,
+    Backward,
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Event)]
+pub struct CameraTranslate {
+    pub amount: FloatType,          // amount to move in meters
+    pub direction: CameraDirection, // direction to move in
+}

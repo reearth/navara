@@ -420,6 +420,11 @@ impl Core {
     ) {
         self.app.change_camera(position, pitch, heading, roll);
     }
+
+    #[wasm_bindgen(js_name = moveCamera)]
+    pub fn move_camera(&mut self, direction: CameraDirection, amount: FloatType) {
+        self.app.move_camera(direction.into(), amount);
+    }
 }
 
 #[wasm_bindgen(start)]

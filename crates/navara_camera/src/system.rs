@@ -18,7 +18,10 @@ use navara_frame::FrameManager;
 use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3};
 use navara_window::Window;
 
-use crate::{helpers::get_pick_ray_from_camera, CameraChange, CameraController, CameraInertia};
+use crate::{
+    helpers::get_pick_ray_from_camera, CameraChange, CameraController, CameraDirection,
+    CameraInertia, CameraTranslate,
+};
 
 use super::{CameraFrustum, CameraMarker, Orbit};
 use navara_input::MouseMoveInput;
@@ -65,6 +68,7 @@ pub fn update(
     mut mw: EventReader<MouseWheel>,
     mut _mp: EventReader<MouseMoveInput>,
     mut cc: EventReader<CameraChange>,
+    mut ct: EventReader<CameraTranslate>,
     keys: Res<ButtonInput<KeyCode>>,
     frame: Res<FrameManager>,
 ) {
@@ -82,6 +86,9 @@ pub fn update(
             apply_camera_change(&mut transform, &mut orbit, cc);
             continue;
         }
+
+        // Handle camera translation
+        handle_camera_translate(&mut transform, &mut orbit, &mut inertia, &mut ct);
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
         let _is_shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
@@ -130,6 +137,10 @@ pub fn update(
 
         if needs_update(&inertia, &controller) || window.is_changed() || marker.is_added() {
             commit(&mut transform, &mut orbit);
+        }
+
+        if inertia.translate_time < controller.translate_duration {
+            apply_camera_translate(&mut transform, &mut inertia, &controller)
         }
 
         after_inertia(&mut inertia, duration, &controller);
@@ -347,11 +358,11 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
 }
 
 fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
-    apply_move(orbit, inertia, controller);
+    apply_spin(orbit, inertia, controller);
     apply_zoom(orbit, inertia, controller);
 }
 
-fn apply_move(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
+fn apply_spin(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
     let t = inertia.spin_time / controller.spin_duration;
     if t > 1. {
         return;
@@ -389,6 +400,9 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
     }
     if inertia.zoom_time < controller.zoom_duration {
         inertia.zoom_time += duration;
+    }
+    if inertia.translate_time < controller.translate_duration {
+        inertia.translate_time += duration;
     }
 }
 
@@ -448,6 +462,60 @@ fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &Camera
     transform.look_to(world_forward, world_up);
 
     orbit.set_quat(transform, world_quat, Vec3::ZERO, false, None);
+}
+
+fn handle_camera_translate(
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    inertia: &mut CameraInertia,
+    ct: &mut EventReader<CameraTranslate>,
+) {
+    let Some(ct) = ct.read().last() else {
+        return;
+    };
+
+    // Get the camera's local forward, right, and up directions
+    let forward = transform.forward();
+    let right = transform.right();
+    let up = transform.up();
+
+    // Determine the movement direction vector based on the input direction
+    let dir_vec = match ct.direction {
+        CameraDirection::Forward => forward,
+        CameraDirection::Backward => -forward,
+        CameraDirection::Right => right,
+        CameraDirection::Left => -right,
+        CameraDirection::Up => up,
+        CameraDirection::Down => -up,
+    };
+
+    // Move the camera by the specified amount in the chosen direction
+    inertia.translate(dir_vec * ct.amount);
+
+    // Reapply the orbit rotation to maintain a consistent view orientation
+    let world = orbit.get_default_world_quat();
+    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+}
+
+fn apply_camera_translate(
+    transform: &mut Transform,
+    inertia: &mut CameraInertia,
+    controller: &CameraController,
+) {
+    let t = inertia.translate_time / controller.translate_duration;
+    if t > 1. {
+        return;
+    }
+    let next_trans = inertia.translate * (1. - ease_out_circ(t));
+    let next = transform.translation + next_trans;
+    let length = next.length();
+    if length >= controller.maximum_zoom_distance {
+        return;
+    }
+    if length <= controller.minimum_zoom_distance {
+        return;
+    }
+    transform.translation = next;
 }
 
 // TODO

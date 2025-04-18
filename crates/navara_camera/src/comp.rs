@@ -119,6 +119,7 @@ pub struct CameraController {
     pub enable_zoom: bool,
     pub enable_tilt: bool,
     pub enable_look: bool,
+    pub enable_translate: bool,
     pub minimum_zoom_distance: FloatType,
     pub maximum_zoom_distance: FloatType,
     pub spin_speed: FloatType,
@@ -126,6 +127,7 @@ pub struct CameraController {
     pub zoom_speed: FloatType,
     pub spin_duration: f32,
     pub zoom_duration: f32,
+    pub translate_duration: f32,
     pub inertia: FloatType,
     pub is_tilting: bool,
 }
@@ -144,6 +146,7 @@ impl Default for CameraController {
             enable_zoom: true,
             enable_tilt: true,
             enable_look: true,
+            enable_translate: true,
             minimum_zoom_distance: WGS84_B_32,
             maximum_zoom_distance: WGS84_B_32 * 10.0,
             spin_speed: 2.0,
@@ -151,6 +154,7 @@ impl Default for CameraController {
             zoom_speed: 0.6,
             spin_duration: 500.,
             zoom_duration: 100.,
+            translate_duration: 500.,
             inertia: 0.5,
             is_tilting: false,
         }
@@ -162,6 +166,7 @@ pub struct CameraInertia {
     pub spin: Vec3,
     pub spin_time: f32,
     pub translate: Vec3,
+    pub translate_time: f32,
     pub zoom: FloatType,
     pub zoom_time: f32,
     pub pan: Vec3,
@@ -172,12 +177,21 @@ impl CameraInertia {
         self.spin = v;
         self.spin_time = 0.;
         self.zoom = 0.;
+        self.translate = Vec3::ZERO;
     }
 
     pub fn zoom(&mut self, v: f32) {
         self.zoom = v;
         self.zoom_time = 0.;
         self.spin = Vec3::ZERO;
+        self.translate = Vec3::ZERO;
+    }
+
+    pub fn translate(&mut self, v: Vec3) {
+        self.translate = v;
+        self.translate_time = 0.;
+        self.spin = Vec3::ZERO;
+        self.zoom = 0.;
     }
 }
 
