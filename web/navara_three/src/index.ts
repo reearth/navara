@@ -1,5 +1,9 @@
 import { EventManager, EventHandler } from "@navara/core";
-import initCore, { Core, type TextureFragmentStatus } from "@navara/engine";
+import initCore, {
+  Core,
+  CameraDirection,
+  type TextureFragmentStatus,
+} from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
 import { EffectComposer, EffectPass } from "postprocessing";
 import {
@@ -668,6 +672,39 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       cam.altitude,
     ]);
     this._core?.changeCamera(position, cam.pitch, cam.heading, cam.roll);
+  }
+
+  moveCamera(move: string, amount: number) {
+    switch (move) {
+      case "Forward":
+        this._core?.moveCamera(CameraDirection.Forward, amount);
+        break;
+      case "Backward":
+        this._core?.moveCamera(CameraDirection.Backward, amount);
+        break;
+      case "Up":
+        this._core?.moveCamera(CameraDirection.Up, amount);
+        break;
+      case "Down":
+        this._core?.moveCamera(CameraDirection.Down, amount);
+        break;
+      case "Left":
+        this._core?.moveCamera(CameraDirection.Left, amount);
+        break;
+      case "Right":
+        this._core?.moveCamera(CameraDirection.Right, amount);
+        break;
+      default:
+        break;
+    }
+  }
+
+  moveCameraWithDirection(dir: number[], amount: number) {
+    if (dir.length !== 3) {
+      return;
+    }
+
+    this._core?.moveCameraWithDirection(new Float32Array(dir), amount);
   }
 
   private _startMainLoop() {
