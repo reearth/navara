@@ -19,7 +19,7 @@ use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EP
 use navara_window::Window;
 
 use crate::{
-    helpers::get_pick_ray_from_camera, CameraChange, CameraController, CameraDirection,
+    helpers::get_pick_ray_from_camera, CamDirType, CameraChange, CameraController, CameraDirection,
     CameraInertia, CameraTranslate,
 };
 
@@ -475,18 +475,19 @@ fn handle_camera_translate(
     };
 
     // Get the camera's local forward, right, and up directions
-    let forward = transform.forward();
-    let right = transform.right();
-    let up = transform.up();
+    let forward = transform.forward().as_vec3();
+    let right = transform.right().as_vec3();
+    let up = transform.up().as_vec3();
 
     // Determine the movement direction vector based on the input direction
     let dir_vec = match ct.direction {
-        CameraDirection::Forward => forward,
-        CameraDirection::Backward => -forward,
-        CameraDirection::Right => right,
-        CameraDirection::Left => -right,
-        CameraDirection::Up => up,
-        CameraDirection::Down => -up,
+        CamDirType::Standard(CameraDirection::Forward) => forward,
+        CamDirType::Standard(CameraDirection::Backward) => -forward,
+        CamDirType::Standard(CameraDirection::Right) => right,
+        CamDirType::Standard(CameraDirection::Left) => -right,
+        CamDirType::Standard(CameraDirection::Up) => up,
+        CamDirType::Standard(CameraDirection::Down) => -up,
+        CamDirType::Custom(dir) => dir.normalize_or_zero(),
     };
 
     // Move the camera by the specified amount in the chosen direction

@@ -19,8 +19,14 @@ pub enum CameraDirection {
     Down,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CamDirType {
+    Standard(CameraDirection), // Uses predefined directions (e.g., Forward, Left)
+    Custom(Vec3),              // Uses a custom Vec3 direction
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Event)]
 pub struct CameraTranslate {
-    pub amount: FloatType,          // amount to move in meters
-    pub direction: CameraDirection, // direction to move in
+    pub amount: FloatType,     // amount to move in meters
+    pub direction: CamDirType, // direction to move in
 }

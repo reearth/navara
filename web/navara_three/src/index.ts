@@ -699,6 +699,14 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
   }
 
+  moveCameraWithDirection(dir: number[], amount: number) {
+    if (dir.length !== 3) {
+      return;
+    }
+
+    this._core?.moveCameraWithDirection(new Float32Array(dir), amount);
+  }
+
   private _startMainLoop() {
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;
