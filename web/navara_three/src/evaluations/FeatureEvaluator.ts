@@ -5,13 +5,8 @@ import type {
   PolylineMaterial,
   TextMaterial,
 } from "navara_wasm";
-import {
-  BufferGeometry,
-  Color,
-  Mesh,
-  Object3D,
-  type NormalBufferAttributes,
-} from "three";
+import { BufferGeometry, Color, Mesh, Object3D } from "three";
+import type { NormalBufferAttributes } from "three";
 import invariant from "tiny-invariant";
 
 import type { FeatureHandler } from "../event";
@@ -21,8 +16,10 @@ import {
   isFeatureMesh,
   ModelMesh,
   type ModelMaterial,
+  BatchedFeatureMesh,
+  type ModelBatchedAttributeName,
+  type BatchedAttributeName,
 } from "../mesh";
-import { BatchedFeatureMesh } from "../mesh/batchedFeature";
 import type { ExtractProperties } from "../type";
 import type { FeatureId } from "../types";
 
@@ -69,6 +66,8 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
 export class FeatureEvaluator {
   private handler: FeatureHandler;
   private featureId: FeatureId;
+  private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
+  private batchIds = new Set<number>();
 
   // TODO: Need to support TSL
   obj: Object3D;
@@ -114,38 +113,56 @@ export class FeatureEvaluator {
       }
     >();
 
-    this.handler.readPropertiesFromFeature(
-      this.featureId,
-      (batchId: number, property: Map<string, unknown> | undefined) => {
-        const evaluatedValues = f(batchId, property);
+    const prepare = (
+      batchId: number,
+      property: Map<string, unknown> | undefined,
+    ) => {
+      const evaluatedValues = f(batchId, property);
 
-        const keys = Object.keys(
-          evaluatedValues,
-        ) as (keyof typeof evaluatedValues)[];
-        for (const key of keys) {
-          let v = evaluatedValues[key];
-          if (v == null) continue;
+      const keys = Object.keys(
+        evaluatedValues,
+      ) as (keyof typeof evaluatedValues)[];
+      for (const key of keys) {
+        let v = evaluatedValues[key];
+        if (v == null) continue;
 
-          if (typeof v === "boolean") {
-            v = Number(v);
-          }
-
-          const array = getArray(v);
-          if (!result.has(key)) {
-            result.set(key, {
-              itemSize: array.length,
-              array: [],
-            });
-          }
-
-          // Use a more specific type instead of any
-          const resultArray = result.get(key)?.array as (string | number)[];
-          // Ensure array only contains strings or numbers
-          const typedArray = array as (string | number)[];
-          resultArray.push(...typedArray);
+        if (typeof v === "boolean") {
+          v = Number(v);
         }
-      },
-    );
+
+        const array = getArray(v);
+        if (!result.has(key)) {
+          result.set(key, {
+            itemSize: array.length,
+            array: [],
+          });
+        }
+
+        // Use a more specific type instead of any
+        const resultArray = result.get(key)?.array as (string | number)[];
+        // Ensure array only contains strings or numbers
+        const typedArray = array as (string | number)[];
+        resultArray.push(...typedArray);
+      }
+    };
+
+    if (this.cachedBatchedProperties) {
+      for (const [batchId, property] of this.cachedBatchedProperties) {
+        prepare(batchId, property);
+      }
+    } else {
+      this.cachedBatchedProperties = new Map();
+      this.handler.readPropertiesFromFeature(
+        this.featureId,
+        (batchId: number, property: Map<string, unknown> | undefined) => {
+          if (property) {
+            this.cachedBatchedProperties?.set(batchId, property);
+          }
+          this.batchIds.add(batchId);
+          prepare(batchId, property);
+        },
+      );
+    }
 
     // Convert just an array into TypedArray
     for (const [k, v] of result) {
@@ -162,6 +179,8 @@ export class FeatureEvaluator {
     }
 
     this.update();
+
+    this.result.length = 0;
   }
 
   private update() {
@@ -270,35 +289,77 @@ export class FeatureEvaluator {
       }
 
       invariant(batchIdAttr);
+      invariant(this.cachedBatchedProperties);
 
-      // For batched meshes, get the appropriate attribute
-      const targetAttr =
-        m instanceof BatchedFeatureMesh
-          ? m._getBatchedAttribute(target.attribute)
-          : // For ModelMesh
-            parent instanceof ModelMesh
-            ? parent._getBatchedAttribute(
-                target.attribute,
-                m as Mesh<
-                  BufferGeometry<NormalBufferAttributes>,
-                  ModelMaterial
-                >,
-              )
-            : m.geometry.getAttribute(target.attribute);
+      const mesh =
+        parent instanceof ModelMesh
+          ? parent
+          : m instanceof BatchedFeatureMesh
+            ? m
+            : undefined;
+      invariant(mesh);
 
-      if (!targetAttr) continue;
+      const batchLength = this.batchIds.size;
+      if (mesh instanceof ModelMesh) {
+        mesh._initBatchDataTexture(
+          m as Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+          batchLength,
+        );
+      } else {
+        mesh?._initBatchDataTexture(batchLength);
+      }
 
-      const length = batchIdAttr.count / batchIdAttr.itemSize;
-      for (let i = 0; i < length; i++) {
-        const batchIdx = i * batchIdAttr.itemSize;
-        const batchId = batchIdAttr.array[batchIdx] * target.itemSize;
+      const updateBatchAttribute = (
+        batchId: number,
+        attribute: ModelBatchedAttributeName | BatchedAttributeName,
+        value: number | number[] | boolean,
+      ) => {
+        if (mesh instanceof ModelMesh) {
+          mesh._updateBatchAttribute(
+            m as Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+            batchId,
+            attribute as ModelBatchedAttributeName,
+            value,
+          );
+        } else {
+          mesh._updateBatchAttribute(
+            batchId,
+            attribute as ModelBatchedAttributeName,
+            value,
+          );
+        }
+      };
 
-        const attrIdx = i * targetAttr.itemSize;
-        for (let i = 0; i < target.itemSize; i++) {
-          const v = target.array[batchId + i];
-          if (!(typeof v === "number")) continue;
-          targetAttr.array[attrIdx + i] = v;
-          targetAttr.needsUpdate = true;
+      for (const [batchId, _property] of this.cachedBatchedProperties) {
+        switch (target.attribute) {
+          case "color": {
+            const colorIdx = batchId * target.itemSize;
+            const colorValues = [
+              target.array[colorIdx] as number,
+              target.array[colorIdx + 1] as number,
+              target.array[colorIdx + 2] as number,
+            ];
+            updateBatchAttribute(batchId, "color", colorValues);
+            break;
+          }
+          case "show": {
+            const showIdx = batchId * target.itemSize;
+            const visible = (target.array[showIdx] as number) >= 0.5;
+            updateBatchAttribute(batchId, "show", visible);
+            break;
+          }
+          case "height": {
+            const heightIdx = batchId * target.itemSize;
+            const height = target.array[heightIdx] as number;
+            updateBatchAttribute(batchId, "height", height);
+            break;
+          }
+          case "extrudedHeight": {
+            const heightIdx = batchId * target.itemSize;
+            const height = target.array[heightIdx] as number;
+            updateBatchAttribute(batchId, "extrudedHeight", height);
+            break;
+          }
         }
       }
     }

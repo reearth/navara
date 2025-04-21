@@ -1,9 +1,6 @@
 import ThreeView, {
   type LayerDescription,
   type Layer,
-  PolylineMesh,
-  PolygonMesh,
-  BillboardMesh,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import { Color } from "three";
@@ -270,57 +267,6 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
       });
     });
   }
-
-  // Advanced usage: You can override a feature's material directly.
-  for (const layerDescription of layerDescriptions) {
-    const featureType = (
-      Array.isArray(layerDescription.data.features)
-        ? layerDescription.data.features[0]
-        : layerDescription.data
-    ).geometry.type;
-    const folder = pane.addFolder({
-      title: `${featureType} GeoJSON by Material`,
-    });
-    let layer: Layer | undefined;
-    addToggleButton(folder, (isAdded) => {
-      if (isAdded) {
-        layer?.delete();
-        layer = undefined;
-        return;
-      }
-
-      layer = view.addLayer(layerDescription);
-      layer.on("featureUpdated", (evaluator) => {
-        // FIXME(keiya01): Handle this internally
-        if (UPDATED_FEATURE.has(evaluator.id)) return;
-        UPDATED_FEATURE.add(evaluator.id);
-
-        const property = evaluator.readFeatureProperties();
-        const num = property?.get("No") as number;
-
-        const [r, g, b] = calcColor(num);
-
-        const m = evaluator.obj;
-        switch (featureType) {
-          case "Point": {
-            if (!(m instanceof BillboardMesh)) return;
-            m.material.color.add(new Color(r, g, b));
-            break;
-          }
-          case "LineString": {
-            if (!(m instanceof PolylineMesh)) return;
-            m.color.add(new Color(r, g, b));
-            break;
-          }
-          case "Polygon": {
-            if (!(m instanceof PolygonMesh)) return;
-            m.material.color.add(new Color(r, g, b));
-            break;
-          }
-        }
-      });
-    });
-  }
 };
 
 const addHeliportLayer = (pane: Pane, view: ThreeView) => {
@@ -534,10 +480,10 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
     }
 
     layer = view.addLayer(layerDescription);
-    layer.on("featureUpdated", (evaluator) => {
-      if (UPDATED_FEATURE.has(evaluator.id)) return;
-      UPDATED_FEATURE.add(evaluator.id);
 
+    layer.on("featureUpdated", (evaluator) => {
+      // Use the new declarative API to update feature properties
+      // This will be called whenever a feature is updated
       evaluator.evaluate((_batchId, property) => {
         const attributes = JSON.parse(
           (property?.get("attributes") as string) ?? "",
@@ -546,26 +492,72 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
         const maxHeight = attributes["urf:maximumBuildingHeight"];
         const extrudedHeight = maxHeight ?? minHeight ?? 0;
 
-        const color = (() => {
+        const [color, scale] = (() => {
           if (extrudedHeight < 1) {
-            return 0x999999;
+            return [CHANGED_PARAMS_COLOR["< 1"], CHANGED_PARAMS_SCALE["< 1"]];
           }
           if (extrudedHeight < 10) {
-            return 0x00ff00;
+            return [CHANGED_PARAMS_COLOR["< 10"], CHANGED_PARAMS_SCALE["< 10"]];
           }
           if (extrudedHeight < 30) {
-            return 0xffff00;
+            return [CHANGED_PARAMS_COLOR["< 30"], CHANGED_PARAMS_SCALE["< 30"]];
           }
-          return 0xff0000;
+          return [CHANGED_PARAMS_COLOR[">= 30"], CHANGED_PARAMS_SCALE[">= 30"]];
         })();
 
         return {
           color: new Color(color),
-          extrudedHeight,
+          extrudedHeight: extrudedHeight * scale,
         };
       });
     });
   });
+
+  const onChange = () => {
+    layer?.forceUpdate();
+  };
+
+  const PARAMS_COLOR = {
+    "< 1": "#00ff00",
+    "< 10": "#ffff00",
+    "< 30": "#ff00ff",
+    ">= 30": "#ff0000",
+  };
+  const CHANGED_PARAMS_COLOR = { ...PARAMS_COLOR };
+
+  const colorFolder = folder.addFolder({ title: "Color", expanded: false });
+  for (const key of Object.keys(PARAMS_COLOR)) {
+    const k = key as keyof typeof PARAMS_COLOR;
+    const field = colorFolder
+      .addBinding(PARAMS_COLOR, k)
+      .on("change", ({ value }) => {
+        CHANGED_PARAMS_COLOR[k] = value;
+        onChange();
+      });
+    colorFolder.add(field);
+  }
+
+  const PARAMS_SCALE = {
+    "< 1": 1,
+    "< 10": 1,
+    "< 30": 1,
+    ">= 30": 1,
+  };
+  const CHANGED_PARAMS_SCALE = { ...PARAMS_SCALE };
+
+  const scaleFolder = folder.addFolder({ title: "Scale", expanded: false });
+  for (const key of Object.keys(PARAMS_SCALE)) {
+    const k = key as keyof typeof PARAMS_SCALE;
+    const field = scaleFolder
+      .addBinding(PARAMS_SCALE, k, {
+        min: 0,
+      })
+      .on("change", ({ value }) => {
+        CHANGED_PARAMS_SCALE[k] = value;
+        onChange();
+      });
+    scaleFolder.add(field);
+  }
 };
 
 const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
@@ -594,30 +586,28 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
       layer = undefined;
       return;
     }
+
     layer = view.addLayer(layerDescription);
     layer.on("featureUpdated", (evaluator) => {
-      if (UPDATED_FEATURE.has(evaluator.id)) return;
-      UPDATED_FEATURE.add(evaluator.id);
-
       evaluator.evaluate((_batchId, property) => {
         const measuredHeight = property?.get("bldg:measuredHeight") as number;
 
-        const color = (() => {
+        const [color, show] = (() => {
           if (measuredHeight < 30) {
-            return 0xffff00;
+            return [CHANGED_PARAMS_COLOR["< 30"], CHANGED_PARAMS_SHOW["< 30"]];
           }
           if (measuredHeight < 60) {
-            return 0x00ffff;
+            return [CHANGED_PARAMS_COLOR["< 60"], CHANGED_PARAMS_SHOW["< 60"]];
           }
           if (measuredHeight < 90) {
-            return 0xff00ff;
+            return [CHANGED_PARAMS_COLOR["< 90"], CHANGED_PARAMS_SHOW["< 90"]];
           }
-          return 0xff0000;
+          return [CHANGED_PARAMS_COLOR[">= 90"], CHANGED_PARAMS_SHOW[">= 90"]];
         })();
 
         return {
           color: new Color(color),
-          show: measuredHeight > 60,
+          show,
         };
       });
     });
@@ -632,6 +622,50 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
     //   });
     // });
   });
+
+  const onChange = () => {
+    layer?.forceUpdate();
+  };
+
+  const PARAMS_COLOR = {
+    "< 30": "#00ff00",
+    "< 60": "#ffff00",
+    "< 90": "#ff00ff",
+    ">= 90": "#ff0000",
+  };
+  const CHANGED_PARAMS_COLOR = { ...PARAMS_COLOR };
+
+  const colorFolder = folder.addFolder({ title: "Color", expanded: false });
+  for (const key of Object.keys(PARAMS_COLOR)) {
+    const k = key as keyof typeof PARAMS_COLOR;
+    const field = colorFolder
+      .addBinding(PARAMS_COLOR, k)
+      .on("change", ({ value }) => {
+        CHANGED_PARAMS_COLOR[k] = value;
+        onChange();
+      });
+    colorFolder.add(field);
+  }
+
+  const PARAMS_SHOW = {
+    "< 30": false,
+    "< 60": true,
+    "< 90": true,
+    ">= 90": true,
+  };
+  const CHANGED_PARAMS_SHOW = { ...PARAMS_SHOW };
+
+  const showFolder = folder.addFolder({ title: "Show", expanded: false });
+  for (const key of Object.keys(PARAMS_SHOW)) {
+    const k = key as keyof typeof PARAMS_SHOW;
+    const field = showFolder
+      .addBinding(PARAMS_SHOW, k)
+      .on("change", ({ value }) => {
+        CHANGED_PARAMS_SHOW[k] = value;
+        onChange();
+      });
+    showFolder.add(field);
+  }
 };
 
 // Ref: https://maps.gsi.go.jp/help/pdf/vector/dataspec.pdf

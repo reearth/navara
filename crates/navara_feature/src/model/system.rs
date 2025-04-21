@@ -208,7 +208,7 @@ pub fn update_height_by_terrain(
 #[allow(clippy::type_complexity)]
 pub fn remove_batched_feature(
     mut commands: Commands,
-    mut removed_renderable_features: Query<&mut RenderableFeature, With<Deleted>>,
+    mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
         (
             Entity,
@@ -254,6 +254,5 @@ pub fn remove_batched_feature(
 
         buf.remove(&model_bin.0);
         commands.entity(feature_id).despawn();
-        commands.entity(rendered_feature_id).despawn();
     }
 }

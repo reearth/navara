@@ -8,23 +8,27 @@ import {
   type NormalBufferAttributes,
 } from "three";
 
+import {
+  BATCHED_ATTRIBUTE_NAMES,
+  getBatchDataTexture,
+  initBatchDataTexture,
+  initBatchedMaterial,
+  updateBatchAttribute,
+  type BatchedAttributeName,
+  type BatchTextureConfig,
+} from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 
 export type BatchedFeatureAttributes<
   Attr extends NormalBufferAttributes = NormalBufferAttributes,
 > = {
   _batchid?: BufferAttribute;
-  color?: BufferAttribute;
 } & Attr;
 
-const BATCHED_ATTRIBUTE_NAMES = [
-  "color",
-  "show",
-  "height",
-  "extrudedHeight",
-] as const;
-
-export type BatchedAttributeName = (typeof BATCHED_ATTRIBUTE_NAMES)[number];
+export const FEATURE_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
+  rows: ["COLOR", "HEIGHT", "EXTRUDED_HEIGHT", "SHOW"],
+  batchLength: 0,
+};
 
 export class BatchedFeatureMesh<
     Buf extends
@@ -39,7 +43,7 @@ export class BatchedFeatureMesh<
   }
 
   _setBatchIndex(
-    batchIndex: Uint32Array | null | undefined,
+    batchIndex: Float32Array | null | undefined,
     size: number | null | undefined,
   ) {
     if (!batchIndex || !size) return;
@@ -52,88 +56,45 @@ export class BatchedFeatureMesh<
     );
   }
 
-  _getBatchedAttribute(
-    targetAttr: BatchedAttributeName,
-  ): BufferAttribute | undefined {
-    switch (targetAttr) {
-      case "color":
-        return this._batchedVertexColor;
-      case "show":
-        return this._batchedVertexShow;
-      case "height":
-        throw new Unimplemented();
-      case "extrudedHeight":
-        return this._batchedVertexExtrudedHeight;
-    }
+  _initBatchedMaterial() {
+    initBatchedMaterial(this.material, FEATURE_BATCH_TEXTURE_CONFIG);
   }
 
-  get _batchedVertexColor() {
-    const verCount = this.geometry.attributes._batchid?.array?.length ?? 0;
-    if (!verCount) return;
+  _initBatchDataTexture(batchLength: number): void {
+    const config: BatchTextureConfig = {
+      ...FEATURE_BATCH_TEXTURE_CONFIG,
+      batchLength: batchLength,
+    };
 
-    if (this.material.vertexColors) {
-      return this.geometry.attributes.color;
-    } else {
-      this.material.vertexColors = true;
-      const colorAttr = new BufferAttribute(new Float32Array(verCount * 3), 3);
-      this.geometry.setAttribute("color", colorAttr);
-      return colorAttr;
-    }
+    initBatchDataTexture(this.material, config);
   }
 
-  get _batchedVertexShow() {
-    const verCount = this.geometry.attributes._batchid?.array?.length ?? 0;
-    if (!verCount) return;
-
-    if (this.material.userData.showEnabled) {
-      return this.geometry.attributes.show as BufferAttribute;
-    } else {
-      // Enable show attribute
-      this.material.userData.showEnabled = true;
-
-      // Create show attribute with mesh's visible property as default
-      const attrShow = new Float32Array(verCount);
-
-      const showAttr = new BufferAttribute(attrShow, 1);
-      this.geometry.setAttribute("show", showAttr);
-      return showAttr;
-    }
+  _getBatchDataTexture() {
+    return getBatchDataTexture(this.material);
   }
 
-  get _batchedVertexExtrudedHeight() {
-    const verCount = this.geometry.attributes._batchid?.array?.length ?? 0;
-    if (!verCount) return;
-
-    if (this.material.userData.extrudedHeightEnabled) {
-      return this.geometry.attributes.extrudedHeight as BufferAttribute;
-    } else {
-      // Enable extrudedHeight attribute
-      this.material.userData.extrudedHeightEnabled = true;
-
-      // Create extrudedHeight attribute with default value of 0
-      const attrExtrudedHeight = new Float32Array(verCount);
-
-      const extrudedHeightAttr = new BufferAttribute(attrExtrudedHeight, 1);
-      this.geometry.setAttribute("extrudedHeight", extrudedHeightAttr);
-      return extrudedHeightAttr;
-    }
+  _updateBatchAttribute(
+    batchId: number,
+    attribute: BatchedAttributeName,
+    value: number | number[] | boolean,
+  ): void {
+    updateBatchAttribute(this.material, batchId, attribute, value);
   }
 
-  // Compat for non-batched mesh. For example, GeoJSON's polyline and polygon aren't batched for now.
-  _setFeatureColor(_color: Color) {
-    throw new Unimplemented();
+  _setFeatureColor(color: Color): void {
+    this._updateBatchAttribute(0, "color", color.toArray());
   }
 
   _getFeatureColor(): Color {
     throw new Unimplemented();
   }
 
-  _setFeatureShow(_visible: boolean): void {
-    this.visible = _visible;
+  _setFeatureShow(visible: boolean): void {
+    this._updateBatchAttribute(0, "show", visible);
   }
 
-  _setFeatureExtrudedHeight(_height: number): void {
-    throw new Unimplemented();
+  _setFeatureExtrudedHeight(height: number): void {
+    this._updateBatchAttribute(0, "extrudedHeight", height);
   }
 
   _setFrustumCulled(_culled: boolean): void {

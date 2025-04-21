@@ -2,7 +2,9 @@ pub mod feature;
 mod feature_event;
 pub mod worker;
 
-use feature_event::{RenderableFeatureAddedEvent, RenderableFeatureChangedEvent};
+use feature_event::{
+    RenderableFeatureAddedEvent, RenderableFeatureChangedEvent, RenderableFeatureRemovedEvent,
+};
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
 use serde::Serialize;
@@ -27,7 +29,7 @@ pub struct Events {
     pub worker_task_removed: Vec<EntityEvent>,
     pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
     pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
-    pub renderable_feature_removed: Vec<EntityEvent>,
+    pub renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
 }
 
 #[wasm_bindgen]

@@ -78,3 +78,30 @@ impl<'a>
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct RenderableFeatureRemovedEvent {
+    // Entity
+    pub ind: u32,
+    pub gen: u32,
+    pub bits: u64,
+
+    #[wasm_bindgen(getter_with_clone)]
+    pub layer_id: String,
+}
+
+impl<'a> From<navara_event_store::ReconstructableComponentEvent<&'a navara_layer::LayerId>>
+    for RenderableFeatureRemovedEvent
+{
+    fn from(
+        ev: navara_event_store::ReconstructableComponentEvent<&'a navara_layer::LayerId>,
+    ) -> Self {
+        Self {
+            ind: ev.ind,
+            gen: ev.gen,
+            bits: ev.bits,
+            layer_id: ev.comp.0.clone(),
+        }
+    }
+}

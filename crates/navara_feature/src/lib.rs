@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_app::{App, Plugin, PostUpdate, Update};
+use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
 use bevy_ecs::schedule::IntoSystemConfigs;
 use navara_feature_component::batch::{
     BatchTable, FeatureBatchIdMap, IdPropertySelections, IdPropertyTable,
@@ -24,6 +24,9 @@ impl Plugin for FeaturePlugin {
             .init_resource::<FeatureBatchIdMap>()
             .init_resource::<IdPropertyTable>()
             .init_resource::<IdPropertySelections>()
+            // Despawn RenderableFeature after removed event is sent.
+            // Otherwise removed event can reach to client.
+            .add_systems(PreUpdate, event::despawn)
             .add_systems(
                 Update,
                 (
