@@ -69,10 +69,10 @@ export type RenderFlag = {
 };
 
 export type CameraPosition = {
-  longitude: number;
-  latitude: number;
-  altitude: number;
-  pitch: number;
-  heading: number;
-  roll: number;
+  longitude?: number;
+  latitude?: number;
+  altitude?: number;
+  pitch?: number;
+  heading?: number;
+  roll?: number;
 };

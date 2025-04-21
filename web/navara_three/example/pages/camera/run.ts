@@ -17,12 +17,12 @@ export const run = async (view: ThreeView) => {
   view.scene.add(axesHelper);
 
   view.setCamera({
-    longitude: 138.73470764482283,
-    latitude: 35.3627947204036,
-    altitude: 100000,
-    heading: 0,
-    pitch: -90,
-    roll: 0,
+    longitude: 139.75711454748298,
+    latitude: 35.67564356091717,
+    altitude: 902.0,
+    heading: 64.41840149763287, // -180 to 180
+    pitch: -36.00000121921312, // -180 to 0
+    roll: 0, // -180 to 180
   });
 
   view.addLayer({
@@ -39,20 +39,22 @@ export const run = async (view: ThreeView) => {
   });
 
   addChangeCameraOption(pane, view);
+  addMoveCameraOption(pane, view);
+  addMoveCameraWithDirOption(pane, view);
 };
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   const cameraParams = {
-    longitude: 138.73470764482283,
-    latitude: 35.3627947204036,
-    altitude: 100000,
-    heading: 0, // -180 to 180
-    pitch: -90, // -180 to 0
+    longitude: 139.75711454748298,
+    latitude: 35.67564356091717,
+    altitude: 902.0,
+    heading: 64.41840149763287, // -180 to 180
+    pitch: -36.00000121921312, // -180 to 0
     roll: 0, // -180 to 180
   };
   const folder = pane.addFolder({
     title: "Change Camera",
-    expanded: true,
+    expanded: false,
   });
 
   const changeFunc = () => {
@@ -84,4 +86,69 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   folder
     .addBinding(cameraParams, "roll", { min: -180.0, max: 180.0 })
     .on("change", changeFunc);
+};
+
+const addMoveCameraOption = (pane: Pane, view: ThreeView) => {
+  const cameraParams = {
+    amount: 100,
+  };
+  const folder = pane.addFolder({
+    title: "Move Camera",
+    expanded: false,
+  });
+
+  const clickFunc = (move: string) => {
+    view.moveCamera(move, cameraParams.amount);
+  };
+
+  folder.addBinding(cameraParams, "amount");
+
+  folder.addButton({ title: "Forward", label: "" }).on("click", () => {
+    clickFunc("Forward");
+  });
+  folder.addButton({ title: "Backward", label: "" }).on("click", () => {
+    clickFunc("Backward");
+  });
+  folder.addButton({ title: "Up", label: "" }).on("click", () => {
+    clickFunc("Up");
+  });
+  folder.addButton({ title: "Down", label: "" }).on("click", () => {
+    clickFunc("Down");
+  });
+  folder.addButton({ title: "Left", label: "" }).on("click", () => {
+    clickFunc("Left");
+  });
+  folder.addButton({ title: "Right", label: "" }).on("click", () => {
+    clickFunc("Right");
+  });
+};
+
+const addMoveCameraWithDirOption = (pane: Pane, view: ThreeView) => {
+  const cameraParams = {
+    amount: 100,
+    dir_x: 0,
+    dir_y: 1,
+    dir_z: 0,
+  };
+
+  const folder = pane.addFolder({
+    title: "Move Camera With Direction",
+    expanded: false,
+  });
+
+  folder.addBinding(cameraParams, "amount");
+  folder.addBinding(cameraParams, "dir_x");
+  folder.addBinding(cameraParams, "dir_y");
+  folder.addBinding(cameraParams, "dir_z");
+
+  const clickFunc = () => {
+    view.moveCameraWithDirection(
+      [cameraParams.dir_x, cameraParams.dir_y, cameraParams.dir_z],
+      cameraParams.amount,
+    );
+  };
+
+  folder.addButton({ title: "Move", label: "" }).on("click", () => {
+    clickFunc();
+  });
 };

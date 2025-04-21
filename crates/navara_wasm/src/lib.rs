@@ -413,12 +413,22 @@ impl Core {
     #[wasm_bindgen(js_name = changeCamera)]
     pub fn change_camera(
         &mut self,
-        position: Vec<FloatType>,
-        pitch: FloatType,
-        heading: FloatType,
-        roll: FloatType,
+        position: Option<Vec<FloatType>>,
+        pitch: Option<FloatType>,
+        heading: Option<FloatType>,
+        roll: Option<FloatType>,
     ) {
         self.app.change_camera(position, pitch, heading, roll);
+    }
+
+    #[wasm_bindgen(js_name = moveCamera)]
+    pub fn move_camera(&mut self, direction: CameraDirection, amount: FloatType) {
+        self.app.move_camera(direction.into(), amount);
+    }
+
+    #[wasm_bindgen(js_name = moveCameraWithDirection)]
+    pub fn move_camera_with_direction(&mut self, direction: Vec<FloatType>, amount: FloatType) {
+        self.app.move_camera_with_direction(direction, amount);
     }
 }
 

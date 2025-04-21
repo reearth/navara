@@ -7,7 +7,7 @@ use bevy_ecs::{
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
-use navara_camera::CameraChange;
+use navara_camera::{CamDirType, CameraChange, CameraDirection, CameraTranslate};
 use navara_component::{Deleted, Rendered};
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
@@ -664,16 +664,34 @@ impl App {
 
     pub fn change_camera(
         &mut self,
-        position: Vec<FloatType>,
-        pitch: FloatType,
-        heading: FloatType,
-        roll: FloatType,
+        position: Option<Vec<FloatType>>,
+        pitch: Option<FloatType>,
+        heading: Option<FloatType>,
+        roll: Option<FloatType>,
     ) {
+        let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().send_event(CameraChange {
-            position: Vec3::new(position[0], position[1], position[2]),
+            position: pos,
             pitch,
             heading,
             roll,
+        });
+    }
+
+    pub fn move_camera(&mut self, direction: CameraDirection, amount: FloatType) {
+        self.app.world_mut().send_event(CameraTranslate {
+            direction: CamDirType::Standard(direction),
+            amount,
+        });
+    }
+
+    pub fn move_camera_with_direction(&mut self, direction: Vec<FloatType>, amount: FloatType) {
+        if direction.len() != 3 {
+            return;
+        }
+        self.app.world_mut().send_event(CameraTranslate {
+            direction: CamDirType::Custom(Vec3::new(direction[0], direction[1], direction[2])),
+            amount,
         });
     }
 }

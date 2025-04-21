@@ -18,7 +18,10 @@ use navara_frame::FrameManager;
 use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3};
 use navara_window::Window;
 
-use crate::{helpers::get_pick_ray_from_camera, CameraChange, CameraController, CameraInertia};
+use crate::{
+    helpers::get_pick_ray_from_camera, CamDirType, CameraChange, CameraController, CameraDirection,
+    CameraInertia, CameraTranslate,
+};
 
 use super::{CameraFrustum, CameraMarker, Orbit};
 use navara_input::MouseMoveInput;
@@ -65,6 +68,7 @@ pub fn update(
     mut mw: EventReader<MouseWheel>,
     mut _mp: EventReader<MouseMoveInput>,
     mut cc: EventReader<CameraChange>,
+    mut ct: EventReader<CameraTranslate>,
     keys: Res<ButtonInput<KeyCode>>,
     frame: Res<FrameManager>,
 ) {
@@ -82,6 +86,9 @@ pub fn update(
             apply_camera_change(&mut transform, &mut orbit, cc);
             continue;
         }
+
+        // Handle camera translation
+        handle_camera_translate(&mut transform, &mut orbit, &mut inertia, &mut ct);
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
         let _is_shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
@@ -130,6 +137,10 @@ pub fn update(
 
         if needs_update(&inertia, &controller) || window.is_changed() || marker.is_added() {
             commit(&mut transform, &mut orbit);
+        }
+
+        if inertia.translate_time < controller.translate_duration {
+            apply_camera_translate(&mut transform, &mut inertia, &controller)
         }
 
         after_inertia(&mut inertia, duration, &controller);
@@ -347,11 +358,11 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
 }
 
 fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
-    apply_move(orbit, inertia, controller);
+    apply_spin(orbit, inertia, controller);
     apply_zoom(orbit, inertia, controller);
 }
 
-fn apply_move(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
+fn apply_spin(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
     let t = inertia.spin_time / controller.spin_duration;
     if t > 1. {
         return;
@@ -390,6 +401,9 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
     if inertia.zoom_time < controller.zoom_duration {
         inertia.zoom_time += duration;
     }
+    if inertia.translate_time < controller.translate_duration {
+        inertia.translate_time += duration;
+    }
 }
 
 /// Applies a camera change based on geographic position, heading, and pitch.
@@ -399,55 +413,166 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
 /// - `cc.heading`: rotation around the local up axis (degrees)
 /// - `cc.pitch`: tilt around the camera's right axis (degrees)
 fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &CameraChange) {
+    // Heading is inverted because positive rotation should be clockwise
+    let heading = -cc.heading.unwrap_or(0.0);
+    // Pitch is adjusted by +90° because we want -90° to point straight down
+    let pitch = cc.pitch.unwrap_or(-90.0) + 90.0;
+    let roll = cc.roll.unwrap_or(0.0);
+
+    // Reset orbit to default state before applying changes
     *orbit = Orbit::default();
 
-    let altitude = cc.position.z;
-    let ground_point = Vec3::new(cc.position.x, cc.position.y, 0.0);
+    // Calculate new world position and target direction
+    // This differs based on whether we have a new position or are using existing one
+    let (world_position, target_dir) = if let Some(pos) = cc.position {
+        let altitude = pos.z.max(1.0); // Ensure minimum altitude of 1.0 for stability
 
-    // Convert geographic coordinates to world-space pivot (ground point)
-    let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
-    let target_dir = pivot.normalize_or_zero();
+        // Create ground point (ignoring altitude for now)
+        let ground_point = Vec3::new(pos.x, pos.y, 0.0);
 
-    // Determine local right axis based on pivot normal
-    let right = if target_dir.abs_diff_eq(Vec3::Z, EPSILON3)
-        || target_dir.abs_diff_eq(-Vec3::Z, EPSILON3)
-    {
-        Vec3::X
+        // Convert geographic coordinates to world-space position
+        let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
+        let target_dir = pivot.normalize_or_zero();
+
+        // Calculate camera offset from ground point
+        let cam_offset = -Vec3::Y * altitude;
+        let world_quat = calculate_world_quat(target_dir, heading);
+
+        // Final world position is ground point plus camera offset
+        (pivot + (world_quat * cam_offset), target_dir)
     } else {
-        target_dir.cross(Vec3::Z).normalize_or_zero()
+        // When no position provided, use existing transform position
+        let mut position = transform.translation;
+        if position == Vec3::ZERO {
+            position = orbit.local_position; // Fallback to orbit's default position
+        }
+        (position, position.normalize_or_zero())
     };
 
-    // Local up axis
-    let up = right.cross(target_dir).normalize_or_zero();
-    let rot_mat = Mat3::from_cols(right, target_dir, up);
+    // Calculate orientation quaternion based on target direction
+    let world_quat = calculate_world_quat(target_dir, heading);
 
-    let default_quat = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
-    let heading_quat = Quat::from_axis_angle(target_dir, -cc.heading.to_radians());
+    // Apply pitch and roll rotations to forward and up vectors
+    let (world_forward, world_up) =
+        apply_orientation_changes(world_quat, orbit.local_forward, orbit.local_up, pitch, roll);
 
-    // Set the orbit quaternion based on heading and rotation matrix
-    let world_quat = heading_quat * Quat::from_mat3(&rot_mat) * default_quat;
-
-    let cam_pos = -Vec3::Y * altitude.max(1.0); // Ensure a minimum altitude of 1.0
-
-    let world_position = pivot + (world_quat * cam_pos);
-    let mut world_up = world_quat * orbit.local_up;
-    let mut world_forward = world_quat * orbit.local_forward;
-
-    // Apply pitch (camera-local tilt around right axis)
-    let camera_right = world_forward.cross(world_up).normalize_or_zero();
-    let pitch_quat = Quat::from_axis_angle(camera_right, (cc.pitch + 90.0).to_radians());
-
-    world_forward = pitch_quat * world_forward;
-    world_up = pitch_quat * world_up;
-
-    // Apply roll (rotation around forward vector)
-    let roll_quat = Quat::from_axis_angle(world_forward, cc.roll.to_radians());
-    world_up = roll_quat * world_up;
-
+    // Update transform with new position and orientation
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);
 
+    // Update orbit state with new quaternion
     orbit.set_quat(transform, world_quat, Vec3::ZERO, false, None);
+}
+
+/// Calculates the world rotation quaternion based on target direction and heading
+/// Handles special case when looking directly up/down (Z-axis)
+fn calculate_world_quat(target_dir: Vec3, heading: f32) -> Quat {
+    // Calculate right vector - special case when looking straight up/down
+    let right = if target_dir.abs_diff_eq(Vec3::Z, EPSILON3)
+        || target_dir.abs_diff_eq(-Vec3::Z, EPSILON3)
+    {
+        Vec3::X // Default right vector when looking straight up/down
+    } else {
+        target_dir.cross(Vec3::Z).normalize_or_zero() // Standard right vector
+    };
+
+    // Calculate up vector from right and target direction
+    let up = right.cross(target_dir).normalize_or_zero();
+
+    // Create rotation matrix from coordinate system axes
+    let rot_mat = Mat3::from_cols(right, target_dir, up);
+
+    // Default camera orientation (looking down negative Y axis)
+    let default_quat = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
+
+    // Create heading rotation around target direction
+    let heading_quat = Quat::from_axis_angle(target_dir, heading.to_radians());
+
+    // Combine rotations: heading × local rotation × default orientation
+    heading_quat * Quat::from_mat3(&rot_mat) * default_quat
+}
+
+/// Applies pitch and roll rotations to orientation vectors
+/// Returns modified forward and up vectors
+fn apply_orientation_changes(
+    world_quat: Quat,
+    local_forward: Vec3,
+    local_up: Vec3,
+    pitch: f32,
+    roll: f32,
+) -> (Vec3, Vec3) {
+    // Transform local vectors to world space
+    let mut world_up = world_quat * local_up;
+    let mut world_forward = world_quat * local_forward;
+
+    // Calculate camera right vector for pitch rotation
+    let camera_right = world_forward.cross(world_up).normalize_or_zero();
+
+    // Apply pitch rotation (tilt up/down around right axis)
+    let pitch_quat = Quat::from_axis_angle(camera_right, pitch.to_radians());
+    world_forward = pitch_quat * world_forward;
+    world_up = pitch_quat * world_up;
+
+    // Apply roll rotation (tilt side-to-side around forward axis)
+    let roll_quat = Quat::from_axis_angle(world_forward, roll.to_radians());
+    world_up = roll_quat * world_up;
+
+    (world_forward, world_up)
+}
+
+fn handle_camera_translate(
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    inertia: &mut CameraInertia,
+    ct: &mut EventReader<CameraTranslate>,
+) {
+    let Some(ct) = ct.read().last() else {
+        return;
+    };
+
+    // Get the camera's local forward, right, and up directions
+    let forward = transform.forward().as_vec3();
+    let right = transform.right().as_vec3();
+    let up = transform.up().as_vec3();
+
+    // Determine the movement direction vector based on the input direction
+    let dir_vec = match ct.direction {
+        CamDirType::Standard(CameraDirection::Forward) => forward,
+        CamDirType::Standard(CameraDirection::Backward) => -forward,
+        CamDirType::Standard(CameraDirection::Right) => right,
+        CamDirType::Standard(CameraDirection::Left) => -right,
+        CamDirType::Standard(CameraDirection::Up) => up,
+        CamDirType::Standard(CameraDirection::Down) => -up,
+        CamDirType::Custom(dir) => dir.normalize_or_zero(),
+    };
+
+    // Move the camera by the specified amount in the chosen direction
+    inertia.translate(dir_vec * ct.amount);
+
+    // Reapply the orbit rotation to maintain a consistent view orientation
+    let world = orbit.get_default_world_quat();
+    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+}
+
+fn apply_camera_translate(
+    transform: &mut Transform,
+    inertia: &mut CameraInertia,
+    controller: &CameraController,
+) {
+    let t = inertia.translate_time / controller.translate_duration;
+    if t > 1. {
+        return;
+    }
+    let next_trans = inertia.translate * (1. - ease_out_circ(t));
+    let next = transform.translation + next_trans;
+    let length = next.length();
+    if length >= controller.maximum_zoom_distance {
+        return;
+    }
+    if length <= controller.minimum_zoom_distance {
+        return;
+    }
+    transform.translation = next;
 }
 
 // TODO
