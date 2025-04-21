@@ -25,7 +25,7 @@ impl Plugin for FeaturePlugin {
             .init_resource::<IdPropertyTable>()
             .init_resource::<IdPropertySelections>()
             // Despawn RenderableFeature after removed event is sent.
-            // Otherwise removed event can reach to client.
+            // Otherwise removed event can't reach to client.
             .add_systems(PreUpdate, event::despawn)
             .add_systems(
                 Update,
