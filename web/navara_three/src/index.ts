@@ -627,6 +627,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._defaultTextureOptions,
       this._renderFlag,
       this,
+      this.layersManager,
       updatedAt,
     );
     events?.free();
@@ -637,6 +638,19 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.emit("postUpdate", updatedAt);
 
     return true;
+  }
+
+  /**
+   * Process feature updates for all layers
+   * This is called after the main update loop to batch feature updates
+   */
+  private _forceFeatureUpdates(updatedAt: number) {
+    // Process updates for each layer
+    for (const layer of this.layersManager._layers.values()) {
+      if (layer._processFeatureUpdates(updatedAt)) {
+        this._renderFlag.forceUpdate = true;
+      }
+    }
   }
 
   private _render() {
@@ -711,6 +725,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;
       this._stats?.begin();
+
+      this._forceFeatureUpdates(time);
 
       if (this._update(time) || this._renderFlag.forceUpdate) this._render();
       this._renderFlag.forceUpdate = false;

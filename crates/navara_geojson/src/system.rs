@@ -4,6 +4,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
 };
 
+use navara_component::Deleted;
 use navara_core::CRS;
 
 use navara_feature_component::{
@@ -583,7 +584,7 @@ pub fn delete_geo_json_layer(
                     feature.destroy(&mut buf, &mut batch_table, &mut id_prop_table_res);
                 }
 
-                commands.entity(*entity).despawn();
+                commands.entity(*entity).insert(Deleted);
             }
         }
 

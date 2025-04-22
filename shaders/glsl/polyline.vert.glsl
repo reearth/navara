@@ -15,6 +15,7 @@ in vec4 end_normal_and_texture_coordinate_normalization_x;
 in vec4 right_normal_and_texture_coordinate_normalization_y;
 
 #include <color_pars_vertex>
+#include chunks/batch_texture_pars_vertex;
 
 uniform vec3 minMaxHeightAndWidth;
 uniform vec3 viewportAndPixelRatio;
@@ -33,13 +34,13 @@ out vec2 nvr_vBatchIdAndSel;
 void main() {
     #include <color_vertex>
 
+    #include chunks/batch_texture_vertex;
+
     vec3 ecStart = (modelViewMatrix * vec4(start, 1.0)).xyz;
     vec3 offset = normalMatrix * forward_offset;
     vec3 ecEnd = ecStart + offset;
 
     nvr_vBatchIdAndSel = batchIdAndSel;
-    
-    #include chunks/show_vertex;
 
     vec3 forwardDirectionEC = normalize(offset);
 

@@ -2,6 +2,8 @@ import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
+import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
+import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_vertex.glsl";
 import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.glsl";
@@ -9,7 +11,6 @@ import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
-import ShowVertex from "@shaders/glsl/chunks/show_vertex.glsl";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -90,7 +91,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
       );
     }
 
-    this._setBatchIndex(batchIndex, batchIndexSize);
+    if (batchIndex) {
+      this._setBatchIndex(Float32Array.from(batchIndex), batchIndexSize);
+    }
 
     geometry.setIndex(new BufferAttribute(indices, 1));
 
@@ -144,12 +147,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
         shader.uniforms.uClampToGround = material.userData.uClampToGround;
       }
 
-      shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
+      if (material.userData.batchDataTexture) {
+        shader.uniforms.batchDataTexture = material.userData.batchDataTexture;
+      }
 
-      shader.defines = shader.defines || {};
-      shader.defines.USE_BATCH_SHOW = !!this.material.userData.showEnabled;
-      shader.defines.USE_BATCH_EXTRUDED_HEIGHT =
-        !!this.material.userData.extrudedHeightEnabled;
+      shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
 
       // Use Replacer for method chaining (with side-effect free implementation)
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -165,6 +167,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   
   ${ShowParsVertex}
   ${ExtrudedHeightParsVertex}
+  ${BatchTextureParsVertex}
   
   ${BranchFreeTernary}
   `,
@@ -175,12 +178,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
   #include <begin_vertex>
 
   ${ExtrudedHeightVertex}
+  ${BatchTextureVertex}
 
   transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + addExtrudedHeight);
 
   nvr_vBatchIdAndSel = batchIdAndSel;
-  
-  ${ShowVertex}
   `,
         ).source;
 
@@ -256,6 +258,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     };
 
     this.material = material;
+
+    this._initBatchedMaterial();
 
     this._update(meshMaterial, mesh.active);
   }

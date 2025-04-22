@@ -22,12 +22,14 @@ import {
   ElevationDecoder,
   ReturnedTransferablePolygonBatchedFeature,
   ReturnedTransferablePolylineBatchedFeature,
+  RenderableFeatureRemovedEvent,
 } from "@navara/engine";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { type Camera, Mesh, Material, Object3D, Texture, Sprite } from "three";
 
 import { type ViewEvents } from "..";
 import { FEATURE_CONCURRENCY } from "../concurrency";
+import type { LayersManager } from "../layersManager";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
@@ -129,6 +131,7 @@ export function processEvent(
   textureOptions: TextureOptions,
   renderFlag: RenderFlag,
   viewEvents: EventHandler<ViewEvents>,
+  layersManager: LayersManager,
   updatedAt: number,
 ) {
   eventManager.pushEvents(event);
@@ -274,11 +277,17 @@ export function processEvent(
             drapedFeatureMaterials,
             featureHandler,
             viewEvents,
+            layersManager,
             updatedAt,
           );
           break;
         case "remove":
           {
+            const removed = event as RenderableFeatureRemovedEvent;
+            layersManager
+              .get(removed.layer_id)
+              ?._unregisterFeatureEvaluator(removed.bits);
+
             processObjectRemoved(
               scenes.main,
               meshes,
@@ -295,9 +304,6 @@ export function processEvent(
             drapedFeatureMaterials,
             renderFlag,
             buf,
-            viewEvents,
-            featureHandler,
-            updatedAt,
           );
           break;
       }

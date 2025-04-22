@@ -8,6 +8,7 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
+import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
   InstancedPointMesh,
@@ -67,6 +68,7 @@ export async function processRenderableFeatureAdded(
   drapedFeatureMaterials: Map<string, Material>,
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
+  layersManager: LayersManager,
   updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
@@ -116,13 +118,13 @@ export async function processRenderableFeatureAdded(
     featureHandler,
     obj,
     viewEvents,
+    layersManager,
     featureLayerId,
     ev.bits,
   );
   handleFeatureUpdatedEventByLayerId(
-    featureHandler,
-    obj,
     viewEvents,
+    layersManager,
     featureLayerId,
     ev.bits,
     updatedAt,
@@ -136,15 +138,11 @@ export async function processRenderableFeatureChanged(
   drapedFeatureMaterials: Map<string, Material>,
   renderFlag: RenderFlag,
   buf: BufferLoader,
-  viewEvents: EventHandler<ViewEvents>,
-  featureHandler: FeatureHandler,
-  updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
   if (!obj) return;
 
-  const featureLayerId = ev.layer_id;
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
   const active =
@@ -201,13 +199,4 @@ export async function processRenderableFeatureChanged(
 
     obj.updateMatrix();
   }
-
-  handleFeatureUpdatedEventByLayerId(
-    featureHandler,
-    obj,
-    viewEvents,
-    featureLayerId,
-    ev.bits,
-    updatedAt,
-  );
 }

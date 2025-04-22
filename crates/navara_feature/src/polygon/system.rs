@@ -361,6 +361,5 @@ pub fn remove_batched_feature(
         buf.remove(&global_batch_id_and_selections.handle);
 
         commands.entity(feature_id).despawn();
-        commands.entity(rendered_feature_id).despawn();
     }
 }

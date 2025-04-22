@@ -1,18 +1,18 @@
 import type { Layer, LayerEvent } from "./layer";
 
 export class LayersManager {
-  private layers = new Map<string, Layer>();
+  _layers = new Map<string, Layer>();
 
   add(l: Layer) {
-    this.layers.set(l.id, l);
+    this._layers.set(l.id, l);
     const deleteLayer = () => {
-      this.layers.delete(l.id);
+      this._layers.delete(l.id);
     };
     l.on("deleted", deleteLayer);
   }
 
   get(id: string) {
-    return this.layers.get(id);
+    return this._layers.get(id);
   }
 
   emitById<K extends keyof LayerEvent>(
@@ -20,7 +20,7 @@ export class LayersManager {
     id: string,
     ...args: Parameters<LayerEvent[K]>
   ) {
-    const l = this.layers.get(id);
+    const l = this._layers.get(id);
     if (!l) return;
     l.emit(k, ...args);
   }
@@ -29,7 +29,7 @@ export class LayersManager {
     k: K,
     ...args: Parameters<LayerEvent[K]>
   ) {
-    for (const l of this.layers.values()) {
+    for (const l of this._layers.values()) {
       l.emit(k, ...args);
     }
   }

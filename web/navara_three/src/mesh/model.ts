@@ -1,17 +1,19 @@
-import { Unimplemented, Unreachable } from "@navara/core";
+import { Unimplemented } from "@navara/core";
 import {
   ModelMaterial as NavaraModelMaterial,
   ModelMesh as NavaraModelMesh,
 } from "@navara/engine";
+import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
+import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
-import ShowVertex from "@shaders/glsl/chunks/show_vertex.glsl";
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  DataTexture,
   Group,
   Mesh,
   MeshPhysicalMaterial,
@@ -25,9 +27,23 @@ import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
+import {
+  getBatchDataTexture,
+  initBatchDataTexture,
+  initBatchedMaterial,
+  updateBatchAttribute,
+  type BatchTextureConfig,
+} from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
+
+export type ModelBatchedAttributeName = "color" | "show" | "height";
+
+export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
+  rows: ["COLOR", "HEIGHT", "SHOW"],
+  batchLength: 0,
+};
 
 export class ModelMesh extends Object3D implements FeatureMesh {
   constructor(
@@ -72,6 +88,39 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     this.userData.prev.visible = this.visible;
   }
 
+  _initBatchedMaterial(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+  ) {
+    initBatchedMaterial(mesh.material, MODEL_BATCH_TEXTURE_CONFIG);
+  }
+
+  _initBatchDataTexture(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    batchLength: number,
+  ): void {
+    const config: BatchTextureConfig = {
+      ...MODEL_BATCH_TEXTURE_CONFIG,
+      batchLength,
+    };
+
+    initBatchDataTexture(mesh.material, config);
+  }
+
+  _getBatchDataTexture(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+  ): DataTexture | undefined {
+    return getBatchDataTexture(mesh.material);
+  }
+
+  _updateBatchAttribute(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    batchId: number,
+    attribute: ModelBatchedAttributeName,
+    value: number | number[] | boolean,
+  ): void {
+    updateBatchAttribute(mesh.material, batchId, attribute, value);
+  }
+
   private overrideCesium3DTilesMaterial(
     meshMaterial: NavaraModelMaterial,
     batchIdAndSel: Uint32Array<ArrayBufferLike>,
@@ -85,11 +134,12 @@ export class ModelMesh extends Object3D implements FeatureMesh {
       const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
 
       if (internalBatchIds) {
-        for (let i = 0; i < internalBatchIds.length; i++) {
-          const internalBatchId = internalBatchIds[i];
+        let i = 0;
+        for (const internalBatchId of internalBatchIds) {
           attrBatchIdAndSel[i * 2] = batchIdAndSel[internalBatchId * 2] ?? 0;
           attrBatchIdAndSel[i * 2 + 1] =
             batchIdAndSel[internalBatchId * 2 + 1] ?? 0;
+          i++;
         }
       } else {
         for (let i = 0; i < vertCnt; i++) {
@@ -112,30 +162,42 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
       this.setMaterial(meshMaterial, mesh.material);
 
+      this._initBatchedMaterial(mesh);
+
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
         shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
         shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
 
-        shader.defines = shader.defines || {};
-        shader.defines.USE_BATCH_SHOW = !!mesh.material.userData.showEnabled;
+        if (mesh.material.userData.batchDataTexture) {
+          shader.uniforms.batchDataTexture =
+            mesh.material.userData.batchDataTexture;
+        }
 
         // Update vertex shader
-        shader.vertexShader = createReplacer(shader.vertexShader).replace(
-          "void main() {",
-          `
+        shader.vertexShader = createReplacer(shader.vertexShader)
+          .replace(
+            "void main() {",
+            `
                   in vec2 batchIdAndSel;
                   out vec2 nvr_vBatchIdAndSel;
                   
                   ${ShowParsVertex}
+                  ${BatchTextureParsVertex}
     
                   void main() {
                     nvr_vBatchIdAndSel = batchIdAndSel;
-                    
-                    ${ShowVertex}
-                  `,
-        ).source;
+              `,
+          )
+          .replace(
+            "#include <color_vertex>",
+            `
+                  #include <color_vertex>
+
+                  ${BatchTextureVertex}
+            `,
+          ).source;
 
         // Update fragment shader
         shader.fragmentShader = createReplacer(shader.fragmentShader)
@@ -241,75 +303,5 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
   _setFrustumCulled(culled: boolean): void {
     this.frustumCulled = culled;
-  }
-
-  /**
-   * Get the attribute for a specific batched attribute name
-   * Similar to BatchedFeatureMesh._getBatchedAttribute
-   */
-  _getBatchedAttribute(
-    targetAttr: string,
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-  ): BufferAttribute | undefined {
-    switch (targetAttr) {
-      case "color": {
-        return this._getBatchedColor(mesh);
-      }
-      case "show": {
-        return this._getBatchedShow(mesh);
-      }
-
-      default: {
-        throw new Unreachable();
-      }
-    }
-  }
-
-  /**
-   * Get or create the color attribute for batch color control
-   * Similar to BatchedFeatureMesh._batchedVertexColor
-   */
-  private _getBatchedColor(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-  ): BufferAttribute | undefined {
-    const vertCount = mesh.geometry.attributes._batchid?.array?.length ?? 0;
-    if (!vertCount) return;
-
-    if (mesh.material.vertexColors) {
-      return mesh.geometry.attributes.color as BufferAttribute;
-    } else {
-      // Enable vertex colors
-      mesh.material.vertexColors = true;
-
-      const colorAttr = new BufferAttribute(new Float32Array(vertCount * 3), 3);
-      mesh.geometry.setAttribute("color", colorAttr);
-
-      return colorAttr;
-    }
-  }
-
-  /**
-   * Get or create the show attribute for batch visibility control
-   * Similar to BatchedFeatureMesh._batchedVertexColor
-   */
-  private _getBatchedShow(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-  ): BufferAttribute | undefined {
-    const vertCount = mesh.geometry.attributes._batchid?.array?.length ?? 0;
-    if (!vertCount) return;
-
-    if (mesh.material.userData.showEnabled) {
-      const attr = mesh.geometry.attributes.show;
-      // Ensure it's a BufferAttribute
-      return attr instanceof BufferAttribute ? attr : undefined;
-    } else {
-      // Enable show attribute
-      mesh.material.userData.showEnabled = true;
-
-      const showAttr = new BufferAttribute(new Float32Array(vertCount), 1);
-      mesh.geometry.setAttribute("show", showAttr);
-
-      return showAttr;
-    }
   }
 }

@@ -35,7 +35,7 @@ pub struct Events<'a> {
         Vec<ReconstructableComponentEvent<(&'a RenderableFeature, &'a LayerId)>>,
     pub renderable_feature_changed:
         Vec<ReconstructableComponentEvent<(&'a RenderableFeature, &'a LayerId)>>,
-    pub renderable_feature_removed: Vec<EntityEvent>,
+    pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
 }
 
 impl<'a> Events<'a> {
@@ -128,8 +128,10 @@ impl<'a> Events<'a> {
         }
 
         for e in store.renderable_feature_removed.iter() {
-            events.renderable_feature_removed.push((*e).into());
-            is_changed = true;
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.renderable_feature_removed.push(e);
+                is_changed = true;
+            }
         }
 
         is_changed.then_some(events)

@@ -115,7 +115,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
       );
     }
 
-    this._setBatchIndex(batchIndex, batchIndexSize);
+    if (batchIndex) {
+      this._setBatchIndex(Float32Array.from(batchIndex), batchIndexSize);
+    }
 
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
@@ -151,7 +153,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       nvr_uHighlightColor: uniforms.highlightColor,
     };
 
-    // Use the original shader files
+    // Use the original shader files with modifications for batch texture
     this.material.vertexShader = PolylineVertShader;
     this.material.fragmentShader = meshMaterial.clamp_to_ground
       ? GroundPolylineFragShader
@@ -166,9 +168,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.userData.uPickable = uPickable;
 
     this.material.onBeforeCompile = (shader) => {
-      shader.defines = shader.defines || {};
-      shader.defines.USE_BATCH_SHOW = !!this.material.userData.showEnabled;
+      if (this.material.userData.batchDataTexture) {
+        shader.uniforms.batchDataTexture =
+          this.material.userData.batchDataTexture;
+      }
     };
+
+    this._initBatchedMaterial();
 
     this._update(meshMaterial, mesh.active);
   }
