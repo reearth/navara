@@ -148,14 +148,18 @@ pub fn construct_model_by_b3dm_layer(
             continue;
         };
 
-        let feature_batch_id = if batch_length > 0 { {
+        let feature_batch_id = if batch_length > 0 {
+            {
                 batch_table_res
                     .add(Some(BatchTableValue {
                         id_property_value: None,
                         properties: Some(BatchProperty::Cesium3dTileset(batch_table)),
                     }))
                     .unwrap_or(0)
-            } } else { 0 };
+            }
+        } else {
+            0
+        };
 
         let batch_length = global_batch_ids.len() / 2;
         let ids_handle = buf.new_u32(global_batch_ids);
@@ -333,14 +337,18 @@ pub fn construct_model_by_cesium3dtiles_layer(
             continue;
         };
 
-        let feature_batch_id = if batch_length > 0 { {
+        let feature_batch_id = if batch_length > 0 {
+            {
                 batch_table_res
                     .add(Some(BatchTableValue {
                         id_property_value: None,
                         properties: Some(BatchProperty::Cesium3dTileset(batch_table)),
                     }))
                     .unwrap_or(0)
-            } } else { 0 };
+            }
+        } else {
+            0
+        };
 
         let batch_length = global_batch_ids.len() / 2;
         let ids_handle = buf.new_u32(global_batch_ids);

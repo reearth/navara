@@ -13,7 +13,6 @@ pub struct TileCacheManager {
 
 impl TileCacheManager {
     pub fn has_same_rendered_tile(&self, handle: &TileHandle, target: &Entity) -> bool {
-        self.rendered_tile_caches
-            .get(handle) == Some(target)
+        self.rendered_tile_caches.get(handle) == Some(target)
     }
 }

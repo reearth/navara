@@ -90,9 +90,8 @@ pub fn traverse_tile(
     let data_requester = tile
         .data_requester_entity_id
         .and_then(|e| mvt_data_requester.get(e).ok());
-    let is_tile_ready = data_requester.is_some_and(|(_, data_requester)| {
-        tile.is_ready(&data_requester.status)
-    });
+    let is_tile_ready =
+        data_requester.is_some_and(|(_, data_requester)| tile.is_ready(&data_requester.status));
     let is_tile_failed = data_requester.is_some_and(|(_, data_requester)| {
         matches!(data_requester.status, DataRequesterStatus::Fail)
     });

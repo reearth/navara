@@ -65,12 +65,10 @@ pub fn transfer_batched_mesh(
     ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
-            || batched_feature
-                .construct_polyline_feature
-                .is_some_and(|c| {
-                    construct_polyline_feature_tasks.contains(c)
-                        && feature_id.as_ref().is_none_or(|f| f.0.is_none())
-                });
+            || batched_feature.construct_polyline_feature.is_some_and(|c| {
+                construct_polyline_feature_tasks.contains(c)
+                    && feature_id.as_ref().is_none_or(|f| f.0.is_none())
+            });
         if !needs_update {
             continue;
         }

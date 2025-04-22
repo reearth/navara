@@ -277,9 +277,9 @@ pub fn transfer_mesh(
         );
 
         if !should_render_terrain
-            || (terrain_layer.is_some_and(|t| {
-                t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z
-            }) || (!should_upsample_terrain && is_terrain_failed))
+            || (terrain_layer
+                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z)
+                || (!should_upsample_terrain && is_terrain_failed))
         {
             let triangles = tile_triangles_flat(
                 WGS84_32,
