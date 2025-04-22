@@ -68,9 +68,9 @@ pub fn transfer_batched_mesh(
         let needs_update = batched_feature.is_added()
             || batched_feature
                 .construct_polygon_feature
-                .map_or(false, |c: Entity| {
+                .is_some_and(|c: Entity| {
                     construct_polygon_feature_tasks.contains(c)
-                        && feature_id.as_ref().map_or(true, |f| f.0.is_none())
+                        && feature_id.as_ref().is_none_or(|f| f.0.is_none())
                 });
         if !needs_update {
             continue;

@@ -83,11 +83,7 @@ pub(crate) fn filter_requestable_data_requester(
             };
 
             // Check if this layer has same data requester.
-            if !tc
-                .requested_tile_caches
-                .get(&handle)
-                .map_or(false, |te| te == &e)
-            {
+            if tc.requested_tile_caches.get(&handle) != Some(&e) {
                 continue;
             }
             tc.requested_tile_caches.remove(&handle);

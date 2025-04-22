@@ -208,10 +208,10 @@ pub fn transfer_mesh(
         let needs_update = rendered_tile.is_added()
             || rendered_tile
                 .terrain_mesh_constructor
-                .map_or(false, |c| terrain_mesh_constructors.contains(c))
+                .is_some_and(|c| terrain_mesh_constructors.contains(c))
             || rendered_tile
                 .terrain_mesh_upsampler
-                .map_or(false, |c| terrain_mesh_upsamplers.contains(c));
+                .is_some_and(|c| terrain_mesh_upsamplers.contains(c));
         if !needs_update {
             continue;
         }
@@ -225,7 +225,7 @@ pub fn transfer_mesh(
 
         let should_render_terrain = terrain_layer.is_some();
         let should_compute_normal_from_vertex =
-            terrain_layer.map_or(false, |t| t.should_compute_normal_from_vertex);
+            terrain_layer.is_some_and(|t| t.should_compute_normal_from_vertex);
 
         let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
 
@@ -238,7 +238,7 @@ pub fn transfer_mesh(
                 .as_ref()
                 .and_then(|ids| ids.get(i))
                 .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
-                .map_or(false, |(_, tex)| tex.is_succeeded());
+                .is_some_and(|(_, tex)| tex.is_succeeded());
             let a = l.appearance().unwrap();
             shows.push(should_show && a.show);
             opacities.push(a.opacity.clamp(0., 1.));
@@ -277,9 +277,9 @@ pub fn transfer_mesh(
         );
 
         if !should_render_terrain
-            || (terrain_layer.map_or(false, |t| {
-                t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z
-            }) || (!should_upsample_terrain && is_terrain_failed))
+            || (terrain_layer
+                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z)
+                || (!should_upsample_terrain && is_terrain_failed))
         {
             let triangles = tile_triangles_flat(
                 WGS84_32,
@@ -643,7 +643,7 @@ pub fn update_mesh_material(
             let should_show = texture_fragment_entity_ids
                 .get(i)
                 .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
-                .map_or(false, |(_, tex)| tex.is_succeeded());
+                .is_some_and(|(_, tex)| tex.is_succeeded());
 
             let a = l.appearance().unwrap();
             let next_show = should_show && a.show;
