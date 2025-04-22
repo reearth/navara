@@ -51,7 +51,7 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    tiles: Query<(&MvtLayer, &LayerResources)>,
+    tiles: Query<(&MvtLayer, Ref<LayerResources>)>,
     camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
     mvt_data_requester: MvtDataRequesterQuery,
     changed_mvt_data_requester: ChangedMvtDataRequesterQuery,
@@ -89,7 +89,8 @@ pub fn update_tiles(
                 || camera.is_added()
                 || camera.is_changed()
                 || are_features_changed
-                || are_renderable_features_rendered;
+                || are_renderable_features_rendered
+                || resources.is_added();
             if !needs_update {
                 continue;
             }
