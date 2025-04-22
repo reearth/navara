@@ -121,7 +121,7 @@ impl RasterTile {
             && self
                 .texture_fragment_entity_ids
                 .as_ref()
-                .map_or(false, |ids| !ids.is_empty())
+                .is_some_and(|ids| !ids.is_empty())
             && data_requester_entity_id.is_none()
         {
             return ReadyState {
@@ -188,7 +188,7 @@ impl RasterTile {
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         let terrain_data_requester = self.get_terrain_data_requester(terrain_data_requesters);
-        terrain_data_requester.map_or(false, |s| {
+        terrain_data_requester.is_some_and(|s| {
             // If the status is failed and parent is succeeded, we need to upsample the terrain mesh.
             matches!(s.status, DataRequesterStatus::Success)
         })
@@ -200,7 +200,7 @@ impl RasterTile {
         texture_fragments: &TileTextureFragmentQuery,
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
-        self.get_parent_tile(qt).map_or(false, |p| {
+        self.get_parent_tile(qt).is_some_and(|p| {
             p.is_texture_ready(texture_fragments)
                 && (p.is_terrain_ready(terrain_data_requesters) || p.upsampled)
                 && p.cached_mesh_handle.is_some()
@@ -216,9 +216,9 @@ impl RasterTile {
     ) -> bool {
         let terrain_req = self.get_terrain_data_requester(terrain_data_requester);
         terrain_layer.is_some()
-            && (terrain_req.as_ref().map_or(false, |t| matches!(t.status, DataRequesterStatus::Fail))
+            && (terrain_req.as_ref().is_some_and(|t| matches!(t.status, DataRequesterStatus::Fail))
                 // If parent tile is upsampled, we don't need to wait failed request.
-                || (terrain_req.is_some() && self.get_parent_tile(qt).map_or(false, |t| t.upsampled)))
+                || (terrain_req.is_some() && self.get_parent_tile(qt).is_some_and(|t| t.upsampled)))
             && self.is_parent_ready(qt, texture_fragment, terrain_data_requester)
     }
 
@@ -265,19 +265,12 @@ impl RasterTile {
         parent: &RasterTile,
         upsamplable_geometry: UpsamplableTerrainGeometry,
     ) -> Option<ReturnedConstructedTerrainMesh> {
-        let region = match self.get_region(parent) {
-            Some(r) => r,
-            None => return None,
-        };
+        let region = self.get_region(parent)?;
 
-        let mut upsampled_mesh = match self
+        let mut upsampled_mesh = self
             .terrain_data
             .as_ref()
-            .and_then(|t| t.upsample(&region, upsamplable_geometry))
-        {
-            Some(u) => u,
-            None => return None,
-        };
+            .and_then(|t| t.upsample(&region, upsamplable_geometry))?;
 
         let (geometry, heights) = upsampled_mesh.construct_geometry(ellipsoid, &self.extent);
 
