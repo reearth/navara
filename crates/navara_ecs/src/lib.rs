@@ -408,10 +408,7 @@ impl App {
         let world = self.app.world_mut();
         let mut query = world.query::<&RenderableFeature>();
 
-        let batch_table = match world.get_resource::<BatchTable>() {
-            Some(batch_table) => batch_table,
-            None => return None,
-        };
+        let batch_table = world.get_resource::<BatchTable>()?;
 
         let renderable_feature = query.get(world, entity).ok()?;
 
@@ -524,10 +521,7 @@ impl App {
         let world = self.app.world_mut();
         let mut query = world.query::<&RenderableFeature>();
 
-        let batch_table = match world.get_resource::<BatchTable>() {
-            Some(batch_table) => batch_table,
-            None => return None,
-        };
+        let batch_table = world.get_resource::<BatchTable>()?;
 
         let renderable_feature = query.get(world, renderable_feature_entity).ok()?;
 

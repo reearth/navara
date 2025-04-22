@@ -115,7 +115,7 @@ fn mark_leaves(
         None => None,
     };
     let is_data_ready =
-        data_requester.map_or(false, |d| matches!(d.status, DataRequesterStatus::Success));
+        data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success));
     tile.state.is_data_loaded = is_data_ready;
 
     tile.state.touched = true;

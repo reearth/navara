@@ -28,7 +28,7 @@ pub(crate) fn request_texture_fragment(
         .as_ref()
         .and_then(|ids| ids.last())
     {
-        if texture_fragment.get(*e).map_or(false, |t| t.1.is_pending()) {
+        if texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending()) {
             return;
         }
     }

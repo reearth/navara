@@ -90,10 +90,10 @@ pub fn traverse_tile(
     let data_requester = tile
         .data_requester_entity_id
         .and_then(|e| mvt_data_requester.get(e).ok());
-    let is_tile_ready = data_requester.map_or(false, |(_, data_requester)| {
+    let is_tile_ready = data_requester.is_some_and(|(_, data_requester)| {
         tile.is_ready(&data_requester.status)
     });
-    let is_tile_failed = data_requester.map_or(false, |(_, data_requester)| {
+    let is_tile_failed = data_requester.is_some_and(|(_, data_requester)| {
         matches!(data_requester.status, DataRequesterStatus::Fail)
     });
 
@@ -316,7 +316,7 @@ pub fn traverse_tile(
                 }
 
                 // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
-                if are_active.map_or(false, |v| v != are_all_children_mesh_prepared) {
+                if are_active.is_some_and(|v| v != are_all_children_mesh_prepared) {
                     activate_all_renderable_features(
                         tc,
                         child,
