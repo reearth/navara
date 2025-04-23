@@ -111,6 +111,9 @@ export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
 
+// This is used to count concurrency while adding RenderableFeature to avoid occupying a worker process.
+let RENDERABLE_FEATURE_CONCURRENCY = 0;
+
 export function processEvent(
   eventManager: EventManager,
   scenes: Scenes,
@@ -252,7 +255,6 @@ export function processEvent(
     {
       add: {
         key: "renderable_feature_added",
-        max: FEATURE_CONCURRENCY,
       },
       remove: {
         key: "renderable_feature_removed",
@@ -279,6 +281,7 @@ export function processEvent(
             viewEvents,
             layersManager,
             updatedAt,
+            (v) => (RENDERABLE_FEATURE_CONCURRENCY += v),
           );
           break;
         case "remove":
@@ -312,7 +315,7 @@ export function processEvent(
       shouldProcess: ({ type, event }) => {
         switch (type) {
           case "add":
-            return true;
+            return RENDERABLE_FEATURE_CONCURRENCY < FEATURE_CONCURRENCY;
           case "remove":
             return true;
           case "change":

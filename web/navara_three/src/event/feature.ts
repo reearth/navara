@@ -70,11 +70,19 @@ export async function processRenderableFeatureAdded(
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   updatedAt: number,
+  onConcurrency: (v: number) => void,
 ) {
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
 
   const { point, billboard, text, polyline, polygon, model } = feature;
+
+  const useParallel = !!model;
+
+  if (useParallel) {
+    // Start parallel process
+    onConcurrency(1);
+  }
 
   const obj = await renderFeature(feature, buf, uniforms)?.then((r) => {
     const type = (() => {
@@ -88,6 +96,11 @@ export async function processRenderableFeatureAdded(
     }
     return r;
   });
+
+  if (useParallel) {
+    // End parallel process
+    onConcurrency(-1);
+  }
 
   if (!obj) return;
 
