@@ -23,7 +23,7 @@ use navara_math::Transform;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
-use navara_tile_component::{VectorTile, VectorTileQuadtree};
+use navara_tile_component::{TileCoordinates, VectorTile, VectorTileQuadtree};
 use navara_window::Window;
 
 use crate::{
@@ -260,7 +260,7 @@ pub fn transfer_mesh(
                         features: v.feature_ids,
                         ..Default::default()
                     };
-                    let e = match v.geometry_type {
+                    let mut e = match v.geometry_type {
                         ConstructedGeometryType::Point => {
                             let Some(appearance) = layer.appearances.iter().find(|a| {
                                 matches!(
@@ -273,27 +273,25 @@ pub fn transfer_mesh(
                                 continue;
                             };
 
-                            fn spawn<M: Component, A: Component>(
-                                commands: &mut Commands,
+                            fn spawn<'a, M: Component, A: Component>(
+                                commands: &'a mut Commands,
                                 batched: BatchedFeature,
                                 layer_id: String,
                                 marker: M,
                                 appearance: A,
                                 feature_batch_id: FeatureBatchId,
                                 global_batch_id_and_selections: GlobalBatchIdAndSelections,
-                            ) -> Entity {
-                                commands
-                                    .spawn((
-                                        marker,
-                                        batched,
-                                        FeatureId::default(),
-                                        MVTFeatureMarker,
-                                        LayerId(layer_id),
-                                        appearance,
-                                        feature_batch_id,
-                                        global_batch_id_and_selections,
-                                    ))
-                                    .id()
+                            ) -> EntityCommands<'a> {
+                                commands.spawn((
+                                    marker,
+                                    batched,
+                                    FeatureId::default(),
+                                    MVTFeatureMarker,
+                                    LayerId(layer_id),
+                                    appearance,
+                                    feature_batch_id,
+                                    global_batch_id_and_selections,
+                                ))
                             }
                             match appearance {
                                 Appearance::Point(appearance) => spawn(
@@ -332,20 +330,18 @@ pub fn transfer_mesh(
                                 .iter()
                                 .find(|a| matches!(a, Appearance::Polyline(_)))
                             else {
-                                return;
+                                continue;
                             };
-                            commands
-                                .spawn((
-                                    PolylineMarker,
-                                    batched,
-                                    FeatureId::default(),
-                                    MVTFeatureMarker,
-                                    LayerId(layer.layer_id.clone()),
-                                    appearance.clone(),
-                                    v.feature_batch_id,
-                                    v.global_batch_id_and_selections,
-                                ))
-                                .id()
+                            commands.spawn((
+                                PolylineMarker,
+                                batched,
+                                FeatureId::default(),
+                                MVTFeatureMarker,
+                                LayerId(layer.layer_id.clone()),
+                                appearance.clone(),
+                                v.feature_batch_id,
+                                v.global_batch_id_and_selections,
+                            ))
                         }
                         ConstructedGeometryType::Polygon => {
                             let Some(Appearance::Polygon(appearance)) = layer
@@ -353,24 +349,24 @@ pub fn transfer_mesh(
                                 .iter()
                                 .find(|a| matches!(a, Appearance::Polygon(_)))
                             else {
-                                return;
+                                continue;
                             };
-                            commands
-                                .spawn((
-                                    PolygonMarker,
-                                    batched,
-                                    FeatureId::default(),
-                                    MVTFeatureMarker,
-                                    LayerId(layer.layer_id.clone()),
-                                    appearance.clone(),
-                                    v.feature_batch_id,
-                                    v.global_batch_id_and_selections,
-                                ))
-                                .id()
+                            commands.spawn((
+                                PolygonMarker,
+                                batched,
+                                FeatureId::default(),
+                                MVTFeatureMarker,
+                                LayerId(layer.layer_id.clone()),
+                                appearance.clone(),
+                                v.feature_batch_id,
+                                v.global_batch_id_and_selections,
+                            ))
                         }
                     };
 
-                    rendered_tile.feature_ids.as_mut().unwrap().push(e);
+                    e.insert(Into::<TileCoordinates>::into(tile.coords));
+
+                    rendered_tile.feature_ids.as_mut().unwrap().push(e.id());
                 }
             }
         }

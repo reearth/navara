@@ -45,7 +45,7 @@ import type { Light } from "./light";
 import { PickHelper } from "./pickHelper";
 import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
-import type { Scenes } from "./scene";
+import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
 import {
@@ -131,6 +131,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _abortControllers: AbortControllers = new Map();
   private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
+  private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+
   private _buf: BufferLoader = {
     u8: (handle) => {
       const b = this._core?.getBufferU8(handle);
@@ -298,6 +300,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         options.container.appendChild(renderer.domElement);
       }
     }
+
+    this._texturizedSceneByTileCoordinates =
+      new TexturizedSceneByTileCoordinates(this.renderer);
 
     // Setup RenderTarget for depth buffer
     const { width = options.initialWidth, height = options.initialHeight } =
@@ -624,6 +629,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       events,
       this._uniforms,
       this._drapedFeatureMaterials,
+      this._texturizedSceneByTileCoordinates,
       this._defaultTextureOptions,
       this._renderFlag,
       this,

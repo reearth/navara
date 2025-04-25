@@ -10,6 +10,7 @@ pub struct PosConverter {
     size: f64,
     scale_x: f64,
     scale_y: f64,
+    extent: f32,
 }
 
 // The conversion method refers to:
@@ -22,6 +23,7 @@ impl PosConverter {
             size: 0.0,
             scale_x: 0.0,
             scale_y: 0.0,
+            extent: extent as f32,
         };
 
         converter.x0 = (extent as f64) * (xyz.x as f64);
@@ -33,7 +35,7 @@ impl PosConverter {
         converter
     }
 
-    pub fn project_point(&mut self, pt: &Coord<f32>) -> (FloatType, FloatType) {
+    pub fn project_point(&self, pt: &Coord<f32>) -> (FloatType, FloatType) {
         let x = (pt.x as f64 + self.x0) * self.scale_x - 180.0;
         let exp_value = f64::exp((1.0 - (pt.y as f64 + self.y0) * self.scale_y) * PI);
         let y = 360.0 / PI * (f64::atan(exp_value)) - 90.0;
@@ -41,7 +43,7 @@ impl PosConverter {
         (x as FloatType, y as FloatType)
     }
 
-    pub fn project_points(&mut self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
+    pub fn project_points(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
         let mut ret = Vec::new();
 
         for pt in points {
@@ -51,6 +53,21 @@ impl PosConverter {
             ret.push(0.0 as FloatType);
         }
 
+        ret
+    }
+
+    /// Construct points based on the extent center.
+    pub fn project_points_on_center(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
+        let mut ret = Vec::new();
+        for pt in points {
+            let x = pt.x - self.extent / 2.0;
+            let y = self.extent / 2.0 - pt.y; // Flip
+            let z = 0.0;
+
+            ret.push(x);
+            ret.push(y);
+            ret.push(z);
+        }
         ret
     }
 }

@@ -11,7 +11,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::RasterTileInternalMaterial;
+use navara_wasm_types::{RasterTileInternalMaterial, TileCoordinates};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -66,6 +66,7 @@ pub struct MeshAdded {
     #[wasm_bindgen(getter_with_clone)]
     pub material: RasterTileInternalMaterial,
     pub transform: Transform,
+    pub tile_coords: TileCoordinates,
 }
 
 #[wasm_bindgen]
@@ -243,6 +244,7 @@ impl
             &navara_mesh::Mesh,
             &navara_material::RasterTileInternalMaterial,
             &navara_math::Transform,
+            &navara_tile_component::TileCoordinates,
         )>,
     > for MeshAdded
 {
@@ -252,6 +254,7 @@ impl
             &navara_mesh::Mesh,
             &navara_material::RasterTileInternalMaterial,
             &navara_math::Transform,
+            &navara_tile_component::TileCoordinates,
         )>,
     ) -> Self {
         Self {
@@ -261,6 +264,7 @@ impl
             mesh: ev.comp.1.into(),
             material: ev.comp.2.into(),
             transform: ev.comp.3.into(),
+            tile_coords: ev.comp.4.into(),
         }
     }
 }

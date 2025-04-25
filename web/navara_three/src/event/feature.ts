@@ -4,6 +4,7 @@ import {
   type RenderableFeatureAddedEvent,
   type RenderableFeature,
   RenderableFeatureChangedEvent,
+  TileCoordinates,
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D, Material } from "three";
 
@@ -17,7 +18,7 @@ import {
   PolygonMesh,
   PolylineMesh,
 } from "../mesh";
-import type { Scenes } from "../scene";
+import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
@@ -38,6 +39,7 @@ export function renderFeature(
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
+  coords: TileCoordinates | undefined,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf, uniforms);
@@ -52,7 +54,7 @@ export function renderFeature(
     return renderPolyline(f.polyline, buf, uniforms);
   }
   if (f.polygon) {
-    return renderPolygon(f.polygon, buf, uniforms);
+    return renderPolygon(f.polygon, buf, uniforms, coords);
   }
   if (f.text) {
     return renderText(f.text, buf, uniforms);
@@ -66,6 +68,7 @@ export async function processRenderableFeatureAdded(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
+  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
@@ -77,6 +80,8 @@ export async function processRenderableFeatureAdded(
 
   const { point, billboard, text, polyline, polygon, model } = feature;
 
+  const coords = ev.tile_coords;
+
   const useParallel = !!model;
 
   if (useParallel) {
@@ -84,7 +89,7 @@ export async function processRenderableFeatureAdded(
     onConcurrency(1);
   }
 
-  const obj = await renderFeature(feature, buf, uniforms)?.then((r) => {
+  const obj = await renderFeature(feature, buf, uniforms, coords)?.then((r) => {
     const type = (() => {
       if (point || billboard || text) return "point";
       else if (model) return "model";
@@ -120,11 +125,19 @@ export async function processRenderableFeatureAdded(
 
   meshes.set(id, obj);
 
-  if (
-    (obj instanceof PolylineMesh || obj instanceof PolygonMesh) &&
-    obj.userData.draped
+  if (obj instanceof PolygonMesh && obj.userData.draped && coords) {
+    texturizedSceneByTileCoordinates.add(coords, obj);
+    obj.addEventListener("removed", () => {
+      texturizedSceneByTileCoordinates.remove(coords);
+    });
+  } else if (
+    (obj instanceof PolygonMesh && obj.userData.draped && !coords) ||
+    (obj instanceof PolylineMesh && obj.userData.draped)
   ) {
     drapedFeatureMaterials.set(id, obj.material);
+    obj.addEventListener("removed", () => {
+      drapedFeatureMaterials.delete(id);
+    });
   }
 
   handleFeatureCreatedEventByLayerId(
@@ -149,12 +162,15 @@ export async function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
   drapedFeatureMaterials: Map<string, Material>,
+  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   renderFlag: RenderFlag,
   buf: BufferLoader,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
   if (!obj) return;
+
+  const coords = ev.tile_coords;
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
@@ -178,13 +194,19 @@ export async function processRenderableFeatureChanged(
     processPolylineChanged(obj, polyline, active);
   }
   if (obj instanceof PolygonMesh && polygon) {
-    processPolygonChanged(obj, polygon, active);
+    processPolygonChanged(obj, polygon, active, coords);
   }
 
   // Handle a draped mesh
-  if (
-    (obj instanceof PolylineMesh || obj instanceof PolygonMesh) &&
-    obj.userData.draped != null
+  if (obj instanceof PolygonMesh && obj.userData.draped != null && coords) {
+    if (obj.userData.draped) {
+      texturizedSceneByTileCoordinates.requestUpdate(coords);
+    } else {
+      texturizedSceneByTileCoordinates.remove(coords);
+    }
+  } else if (
+    (obj instanceof PolygonMesh && obj.userData.draped != null && !coords) ||
+    (obj instanceof PolylineMesh && obj.userData.draped != null)
   ) {
     if (obj.userData.draped) {
       if (!drapedFeatureMaterials.has(id)) {

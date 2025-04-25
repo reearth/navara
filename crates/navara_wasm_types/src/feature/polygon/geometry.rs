@@ -5,13 +5,13 @@ use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
 #[wasm_bindgen]
 pub struct ConstructedPolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
-    pub extent: ExtentRadianF32,
     geometry: PolygonGeometry,
+    pub extent: Option<ExtentRadianF32>,
 }
 
 impl ConstructedPolygonGeometry {
-    pub fn new(extent: ExtentRadianF32, geometry: PolygonGeometry) -> Self {
-        Self { extent, geometry }
+    pub fn new(geometry: PolygonGeometry, extent: Option<ExtentRadianF32>) -> Self {
+        Self { geometry, extent }
     }
 }
 

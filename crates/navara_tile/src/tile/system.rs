@@ -15,8 +15,8 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
-    RasterTile, RasterTileQuadtree, Tile, TileMeshMarker, TileTerrainDataRequesterQuery,
-    TileTextureFragmentQuery,
+    RasterTile, RasterTileQuadtree, Tile, TileCoordinates, TileMeshMarker,
+    TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 use navara_worker::{
@@ -221,6 +221,8 @@ pub fn transfer_mesh(
         let scale = if is_root { 0.98 } else { 1. };
         let render_order = if is_root { -1 } else { 0 };
 
+        let tile_coordinates: TileCoordinates = tile.coords.into();
+
         let extent = tile.extent;
 
         let should_render_terrain = terrain_layer.is_some();
@@ -325,6 +327,7 @@ pub fn transfer_mesh(
                         marker: Default::default(),
                     },
                 },
+                tile_coordinates,
             ));
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
@@ -414,6 +417,7 @@ pub fn transfer_mesh(
                         marker: Default::default(),
                     },
                 },
+                tile_coordinates,
             ));
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
@@ -498,6 +502,7 @@ pub fn transfer_mesh(
                     marker: Default::default(),
                 },
             },
+            tile_coordinates,
         ));
 
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {

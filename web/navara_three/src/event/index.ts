@@ -3,8 +3,6 @@ import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
   isEntityEvent,
-  to_globe_gbuffer_id,
-  to_globe_id,
 } from "@navara/core";
 import {
   type Events,
@@ -31,7 +29,7 @@ import { type ViewEvents } from "..";
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { LayersManager } from "../layersManager";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
-import type { Scenes } from "../scene";
+import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import type { TextureOptions } from "../textures";
 import type {
@@ -131,6 +129,7 @@ export function processEvent(
   event: Events | undefined,
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
+  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   textureOptions: TextureOptions,
   renderFlag: RenderFlag,
   viewEvents: EventHandler<ViewEvents>,
@@ -174,17 +173,12 @@ export function processEvent(
             buf,
             loadedTexs,
             textureOptions,
+            texturizedSceneByTileCoordinates,
           );
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
-          processObjectRemoved(scenes.globe, meshes, event, to_globe_id);
-          processObjectRemoved(
-            scenes.globeGBuffer,
-            meshes,
-            event,
-            to_globe_gbuffer_id,
-          );
+          processObjectRemoved(scenes.globe, meshes, event);
           break;
         case "change":
           processMeshChanged(meshes, event, loadedTexs, textureOptions);
@@ -277,6 +271,7 @@ export function processEvent(
             buf,
             uniforms,
             drapedFeatureMaterials,
+            texturizedSceneByTileCoordinates,
             featureHandler,
             viewEvents,
             layersManager,
@@ -291,13 +286,7 @@ export function processEvent(
               .get(removed.layer_id)
               ?._unregisterFeatureEvaluator(removed.bits);
 
-            processObjectRemoved(
-              scenes.main,
-              meshes,
-              event,
-              undefined,
-              drapedFeatureMaterials,
-            );
+            processObjectRemoved(scenes.main, meshes, event);
           }
           break;
         case "change":
@@ -305,6 +294,7 @@ export function processEvent(
             event,
             meshes,
             drapedFeatureMaterials,
+            texturizedSceneByTileCoordinates,
             renderFlag,
             buf,
           );
@@ -425,16 +415,8 @@ function processObjectRemoved(
   parent: Object3D,
   meshes: MeshCache,
   obj: EntityEvent,
-  wrapId?: (id: string) => string,
-  drapedFeatureMaterials?: Map<string, Material>,
 ) {
-  let id = generate_id_from_entity(obj);
-  if (wrapId) {
-    id = wrapId(id);
-  }
-  if (drapedFeatureMaterials) {
-    drapedFeatureMaterials.delete(id);
-  }
+  const id = generate_id_from_entity(obj);
   const m = meshes.get(id);
   if (!m) return;
 
@@ -444,6 +426,8 @@ function processObjectRemoved(
   if (m instanceof Object3D) {
     disposeObject3D(m);
   }
+
+  m.dispatchEvent({ type: "removed" });
 
   // clear should after dispose, otherwise model's children will not be disposed
   m.clear();

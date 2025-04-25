@@ -18,7 +18,7 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, RasterTileQuadtree, TileMeshMarker,
+    sample_terrain_height_within_extent, RasterTileQuadtree, TileCoordinates, TileMeshMarker,
 };
 
 use navara_feature_component::{
@@ -46,6 +46,7 @@ pub fn transfer_batched_mesh(
             &FeatureBatchId,
             &GlobalBatchIdAndSelections,
             Option<&mut FeatureId>,
+            Option<&TileCoordinates>,
         ),
         With<PolygonMarker>,
     >,
@@ -63,6 +64,7 @@ pub fn transfer_batched_mesh(
         feature_batch_id,
         global_batch_ids,
         feature_id,
+        tile_coordinates,
     ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
@@ -82,6 +84,8 @@ pub fn transfer_batched_mesh(
                     ConstructPolygonBatchedFeatureMarker,
                     ConstructPolygonBatchedFeatureParameters {
                         batched_feature: batched_feature_entity,
+                        // If it uses `clamp_to_ground` and it is tile, it should be flat.
+                        flat: material.clamp_to_ground && tile_coordinates.is_some(),
                     },
                 ))
                 .id();
@@ -99,35 +103,44 @@ pub fn transfer_batched_mesh(
             min_max_heights: vec![0., 0.],
         });
 
-        let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
-        let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
+        let distance_to_center_from_ellipsoid_surface = match extent {
+            Some(extent) => {
+                let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+                WGS84_32
+                    .scale_to_geodetic_surface(aabb.center)
+                    .map(|surface_point| -aabb.center.distance(surface_point))
+            }
+            None => None,
+        };
 
-        let entity = commands
-            .spawn((
-                PolygonMarker,
-                layer_id.clone(),
-                RenderableFeature::Polygon {
-                    // TODO: Calculate coordinate to update transform
-                    coordinates: Vec3::new(0., 0., 0.),
-                    crs: CRS::Geocentric,
-                    material,
-                    geometry: geometry.clone(),
-                    transform: Transform::default(),
-                    feature_id: None,
-                    render_info: PolygonRenderInformation {
-                        should_recalculate_height: true,
-                        distance_to_center_from_ellipsoid_surface: -aabb
-                            .center
-                            .distance(surface_point.unwrap()),
-                        is_rendered: false,
-                    },
-                    extent: *extent,
-                    active: false,
-                    feature_batch_id: feature_batch_id.0,
-                    batch_length: global_batch_ids.batch_length,
+        let mut entity_cmd = commands.spawn((
+            PolygonMarker,
+            layer_id.clone(),
+            RenderableFeature::Polygon {
+                // TODO: Calculate coordinate to update transform
+                coordinates: Vec3::new(0., 0., 0.),
+                crs: CRS::Geocentric,
+                material,
+                geometry: geometry.clone(),
+                transform: Transform::default(),
+                feature_id: None,
+                render_info: PolygonRenderInformation {
+                    should_recalculate_height: true,
+                    distance_to_center_from_ellipsoid_surface,
+                    is_rendered: false,
                 },
-            ))
-            .id();
+                extent: *extent,
+                active: false,
+                feature_batch_id: feature_batch_id.0,
+                batch_length: global_batch_ids.batch_length,
+            },
+        ));
+
+        if let Some(coords) = tile_coordinates {
+            entity_cmd.insert(coords.clone());
+        }
+
+        let entity = entity_cmd.id();
 
         if let Some(mut feature_id) = feature_id {
             feature_id.0 = Some(entity);
@@ -204,12 +217,12 @@ pub fn transfer_mesh(
                         feature_id: Some(entity),
                         render_info: PolygonRenderInformation {
                             should_recalculate_height: true,
-                            distance_to_center_from_ellipsoid_surface: -aabb
-                                .center
-                                .distance(surface_point.unwrap()),
+                            distance_to_center_from_ellipsoid_surface: Some(
+                                -aabb.center.distance(surface_point.unwrap()),
+                            ),
                             is_rendered: false,
                         },
-                        extent,
+                        extent: Some(extent),
                         active: true,
                         feature_batch_id: batch_id.0.x as u32,
                         batch_length: 1,
@@ -292,6 +305,15 @@ pub fn update_height_by_terrain(
             } => {
                 render_info.should_recalculate_height = false;
 
+                let Some(distance_to_center_from_ellipsoid_surface) =
+                    render_info.distance_to_center_from_ellipsoid_surface
+                else {
+                    continue;
+                };
+                let Some(extent) = extent else {
+                    continue;
+                };
+
                 let (min_height, max_height) = if material.clamp_to_ground {
                     let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
                     (min, max)
@@ -304,7 +326,7 @@ pub fn update_height_by_terrain(
                     min_height,
                     max_height,
                     material.clamp_to_ground,
-                    render_info.distance_to_center_from_ellipsoid_surface,
+                    distance_to_center_from_ellipsoid_surface,
                 );
             }
             _ => unreachable!(),

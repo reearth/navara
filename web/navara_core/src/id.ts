@@ -1,17 +1,13 @@
-import type { EntityEvent } from "@navara/engine";
+import type { EntityEvent, TileCoordinates } from "@navara/engine";
 
 export function generate_id_from_entity(entity: EntityEvent) {
   return `${entity.ind}_${entity.gen}`;
 }
 
-export function to_globe_id(id: string) {
-  return `${id}_globe`;
-}
-
-export function to_globe_gbuffer_id(id: string) {
-  return `${id}_globe_gbuffer`;
-}
-
 export function isEntityEvent(v: unknown): v is EntityEvent {
   return !!v && typeof v === "object" && "ind" in v && "gen" in v;
+}
+
+export function tileCoordinatesAsString(v: TileCoordinates) {
+  return `${v.x}_${v.y}_${v.z}`;
 }

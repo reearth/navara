@@ -29,7 +29,7 @@ pub struct ModelRenderInformation {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonRenderInformation {
     pub should_recalculate_height: bool,
-    pub distance_to_center_from_ellipsoid_surface: FloatType,
+    pub distance_to_center_from_ellipsoid_surface: Option<FloatType>,
     pub is_rendered: bool,
 }
 
@@ -102,7 +102,7 @@ pub enum RenderableFeature {
         transform: Transform,
         feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
-        extent: Extent<f32, Radians>,
+        extent: Option<Extent<f32, Radians>>,
         feature_batch_id: u32,
         batch_length: u32,
     },

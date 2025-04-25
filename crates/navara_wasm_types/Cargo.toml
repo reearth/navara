@@ -21,3 +21,4 @@ navara_material = { path = "../navara_material" }
 navara_feature_component = { path = "../navara_feature_component" }
 navara_wasm_utils = { path = "../navara_wasm_utils" }
 navara_camera = { path = "../navara_camera" }
+navara_tile_component = { path = "../navara_tile_component" }

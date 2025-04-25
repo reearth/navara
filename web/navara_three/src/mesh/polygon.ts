@@ -1,6 +1,7 @@
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
+  TileCoordinates,
 } from "@navara/engine";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
@@ -42,10 +43,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
     mesh: NavaraPolygonMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
+    coords: TileCoordinates | undefined,
   ) {
     super(new BufferGeometry<Attributes>(), new MeshLambertMaterial());
     this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, uniforms);
+    this.initMaterial(mesh, uniforms, coords);
   }
 
   private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
@@ -101,18 +103,24 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.userData.batchIdSize = batchIdSize;
   }
 
-  private initMaterial(mesh: NavaraPolygonMesh, uniforms: CommonUniforms) {
+  private initMaterial(
+    mesh: NavaraPolygonMesh,
+    uniforms: CommonUniforms,
+    coords: TileCoordinates | undefined,
+  ) {
     const meshMaterial = mesh.material;
     const mcolor = meshMaterial.color;
 
     const clampToGround = meshMaterial.clamp_to_ground;
+    const isTexturized = !!coords;
+    const shouldClipByStencil = !isTexturized && clampToGround;
     const material = this.material;
     material.color.set(mcolor ?? 0);
     material.wireframe = !!meshMaterial.wireframe;
     material.stencilWrite = false;
-    material.colorWrite = !clampToGround;
-    material.depthWrite = !clampToGround;
-    material.depthTest = !clampToGround;
+    material.colorWrite = !shouldClipByStencil;
+    material.depthWrite = !shouldClipByStencil;
+    material.depthTest = !shouldClipByStencil;
     material.reflectivity = 0;
     material.vertexColors = false;
 
@@ -126,13 +134,16 @@ export class PolygonMesh extends BatchedFeatureMesh<
       value: 0.0,
     };
     material.userData.uClampToGround = {
-      value: clampToGround,
+      value: shouldClipByStencil,
     };
     material.userData.useGroundNormals = {
       value: !!meshMaterial.use_ground_normals,
     };
     material.userData.uPickable = {
       value: 0.0,
+    };
+    material.userData.uIsTexturized = {
+      value: isTexturized,
     };
 
     material.onBeforeCompile = (shader) => {
@@ -196,6 +207,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform sampler2D uGlobeNormal;
   uniform vec3 nvr_uHighlightColor;
   uniform float nvr_uPickable;
+  uniform bool uIsTexturized;
   in vec2 nvr_vBatchIdAndSel;
   
   ${ShowParsFragment}
@@ -237,7 +249,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
   vec3 outgoingLight;
-  if(uClampToGround && !useGroundNormals) {
+  if((uClampToGround && !useGroundNormals) || uIsTexturized) {
     // Without lighting
     outgoingLight = diffuseColor.xyz;
   } else {
@@ -261,10 +273,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     this._initBatchedMaterial();
 
-    this._update(meshMaterial, mesh.active);
+    this._update(meshMaterial, mesh.active, isTexturized);
   }
 
-  _update(material: PolygonMaterial, active: boolean) {
+  _update(material: PolygonMaterial, active: boolean, isTexturized: boolean) {
     if (!this.material.userData.prev) {
       this.material.userData.prev = {};
     }
@@ -300,6 +312,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.material.wireframe = next;
       this.material.userData.useGroundNormals.value = next;
       prev.useGroundNormals = next;
+    }
+
+    if (this.material.userData.uIsTexturized.value !== isTexturized) {
+      this.material.userData.uIsTexturized.value = isTexturized;
     }
 
     if (

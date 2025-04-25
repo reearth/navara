@@ -3,7 +3,7 @@ import type { ConstructedPolygonGeometry } from "@navara/engine";
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
 
 export class ConstructedPolygonGeometryLike {
-  extent: ExtentRadianF32Like;
+  extent: ExtentRadianF32Like | undefined;
   position: Float32Array;
   position_size: number;
   normal: Float32Array | undefined;
@@ -17,7 +17,8 @@ export class ConstructedPolygonGeometryLike {
   indices: Uint32Array;
 
   constructor(t: ConstructedPolygonGeometry) {
-    this.extent = new ExtentRadianF32Like(t.extent);
+    const extent = t.extent;
+    this.extent = extent ? new ExtentRadianF32Like(extent) : undefined;
     // Need to make a slice to avoid memory leak due to it's transferred.
     this.position = t.position().slice();
     this.position_size = t.position_size();
