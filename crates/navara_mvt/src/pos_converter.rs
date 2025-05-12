@@ -58,16 +58,19 @@ impl PosConverter {
 
     /// Construct points based on the extent center.
     pub fn project_points_on_center(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
-        let mut ret = Vec::new();
+        let half_extent = self.extent / 2.0;
+        let mut ret = Vec::with_capacity(points.len() * 3);
+
         for pt in points {
-            let x = pt.x - self.extent / 2.0;
-            let y = self.extent / 2.0 - pt.y; // Flip
+            let x = (pt.x - half_extent) / half_extent; // Xを [-1, 1] にスケーリング
+            let y = -(pt.y - half_extent) / half_extent; // Yを [-1, 1] にスケーリングしつつ反転
             let z = 0.0;
 
             ret.push(x);
             ret.push(y);
             ret.push(z);
         }
+
         ret
     }
 }

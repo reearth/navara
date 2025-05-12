@@ -119,8 +119,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.wireframe = !!meshMaterial.wireframe;
     material.stencilWrite = false;
     material.colorWrite = !shouldClipByStencil;
-    material.depthWrite = !shouldClipByStencil;
-    material.depthTest = !shouldClipByStencil;
+    material.depthWrite = !(isTexturized || clampToGround);
+    material.depthTest = !(isTexturized || clampToGround);
     material.reflectivity = 0;
     material.vertexColors = false;
 
@@ -137,7 +137,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       value: shouldClipByStencil,
     };
     material.userData.useGroundNormals = {
-      value: !!meshMaterial.use_ground_normals,
+      value: !isTexturized && !!meshMaterial.use_ground_normals,
     };
     material.userData.uPickable = {
       value: 0.0,
@@ -237,9 +237,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
   `,
         )
         .replace(
-          "vec4 diffuseColor = vec4( diffuse, opacity );",
+          "#include <color_fragment>",
           `
-  vec4 diffuseColor = vec4( diffuse, opacity );
+  #include <color_fragment>
+
   if(nvr_vBatchIdAndSel.y > 0.0) {
     diffuseColor.xyz = nvr_uHighlightColor.xyz;
   }
@@ -307,15 +308,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
       prev.max = max;
     }
 
-    if (prev.wireframe !== material.wireframe) {
-      const next = !!material.use_ground_normals;
-      this.material.wireframe = next;
-      this.material.userData.useGroundNormals.value = next;
-      prev.useGroundNormals = next;
-    }
-
     if (this.material.userData.uIsTexturized.value !== isTexturized) {
       this.material.userData.uIsTexturized.value = isTexturized;
+    }
+
+    if (prev.use_ground_normals !== material.use_ground_normals) {
+      const next = !!material.use_ground_normals;
+      this.material.userData.useGroundNormals.value = !isTexturized && next;
+      prev.useGroundNormals = next;
     }
 
     if (

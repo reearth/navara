@@ -113,8 +113,10 @@ pub fn tangent_direction(a: Vec3, b: Vec3, up: Vec3) -> Vec3 {
 mod test {
     use approx::assert_abs_diff_eq;
     use navara_core::LLE;
-    use navara_math::EPSILON10;
+    use navara_math::{Vec3, EPSILON10};
     use radians::Radians;
+
+    use crate::helpers::vec::UniqueWithDelta;
 
     use super::unique_with_delta_e;
 
@@ -163,6 +165,81 @@ mod test {
 
         let expects: Vec<LLE<f32, Radians>> =
             vec![input_vec[0], input_vec[2], input_vec[5], input_vec[6]];
+        let result = unique_with_delta_e(&input_vec, 1);
+        assert_lle_vec(result, expects);
+    }
+
+    #[test]
+    fn it_should_unique_vec3() {
+        fn assert_lle_vec(result: Vec<Vec3>, expects: Vec<Vec3>) {
+            assert_eq!(result.len(), expects.len());
+            for (i, r) in result.iter().enumerate() {
+                assert_abs_diff_eq!(r.x(), expects[i].x(), epsilon = EPSILON10);
+                assert_abs_diff_eq!(r.y(), expects[i].y(), epsilon = EPSILON10);
+                assert_abs_diff_eq!(r.z(), expects[i].z(), epsilon = EPSILON10);
+            }
+        }
+
+        let input_vec: Vec<Vec3> = vec![
+            Vec3::new(1.2345, 1.2345, 0.),
+            Vec3::new(1.234, 1.234, 0.),
+            Vec3::new(1.234, 1.234, 1.),
+            Vec3::new(1.23, 1.23, 0.),
+            Vec3::new(1.2, 1.2, 0.),
+            Vec3::new(1., 1., 0.),
+            Vec3::new(1., 0., 0.),
+            Vec3::new(0.1234, 0.1234, 0.),
+            Vec3::new(0.123, 0.123, 0.),
+            Vec3::new(0.12, 0.12, 0.),
+            Vec3::new(0.1, 0.1, 0.),
+            Vec3::new(-0.1234, -0.1234, 0.),
+            Vec3::new(-0.123, -0.123, 0.),
+            Vec3::new(-0.12, -0.12, 0.),
+            Vec3::new(-0.1, -0.1, 0.),
+        ];
+
+        let expects: Vec<Vec3> = vec![
+            input_vec[0],
+            input_vec[1],
+            input_vec[2],
+            input_vec[3],
+            input_vec[4],
+            input_vec[5],
+            input_vec[6],
+            input_vec[7],
+            input_vec[9],
+            input_vec[10],
+            input_vec[11],
+            input_vec[13],
+            input_vec[14],
+        ];
+        let result = unique_with_delta_e(&input_vec, 3);
+        assert_lle_vec(result, expects);
+
+        let expects: Vec<Vec3> = vec![
+            input_vec[0],
+            input_vec[2],
+            input_vec[4],
+            input_vec[5],
+            input_vec[6],
+            input_vec[7],
+            input_vec[9],
+            input_vec[10],
+            input_vec[11],
+            input_vec[13],
+            input_vec[14],
+        ];
+        let result = unique_with_delta_e(&input_vec, 2);
+        assert_lle_vec(result, expects);
+
+        let expects: Vec<Vec3> = vec![
+            input_vec[0],
+            input_vec[2],
+            input_vec[5],
+            input_vec[6],
+            input_vec[7],
+            input_vec[11],
+        ];
         let result = unique_with_delta_e(&input_vec, 1);
         assert_lle_vec(result, expects);
     }

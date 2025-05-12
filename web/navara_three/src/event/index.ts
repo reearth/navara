@@ -427,7 +427,7 @@ function processObjectRemoved(
     disposeObject3D(m);
   }
 
-  m.dispatchEvent({ type: "removed" });
+  m.dispatchEvent({ type: "removedFromWorld" } as any);
 
   // clear should after dispose, otherwise model's children will not be disposed
   m.clear();

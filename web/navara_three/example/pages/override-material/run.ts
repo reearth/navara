@@ -17,7 +17,7 @@ const tileUrls = {
 
 const UPDATED_FEATURE = new Set();
 
-const ENABLE_TERRAIN = false;
+const ENABLE_TERRAIN = true;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -333,7 +333,7 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
     polyline: {
       width: 3,
       height: 1,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
       id_property: "gml_id",
       use_ground_normals: true,
     },
@@ -397,7 +397,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       color: 0x00aaff,
       height: 10,
       extruded_height: 0,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
       use_ground_normals: true,
       wireframe: false,
       id_property: "gml_id",
@@ -457,7 +457,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
     polygon: {
       height: 0,
       extruded_height: 0,
-      clamp_to_ground: false,
+      clamp_to_ground: true,
       use_ground_normals: true,
       wireframe: false,
       id_property: "gml_id",

@@ -34,7 +34,7 @@ where
     while let Some(outer_node) = queue.pop_front() {
         let outer_ring = &outer_node.outer_ring;
 
-        let outer_ring = unique_with_delta_e(outer_ring, 10);
+        let outer_ring = unique_with_delta_e(outer_ring, 9);
         if outer_ring.len() < 3 {
             continue;
         }
@@ -46,7 +46,7 @@ where
 
         if let Some(holes_src) = &outer_node.holes {
             for hole_src in holes_src {
-                let hole_dst: Vec<_> = unique_with_delta_e(&hole_src.outer_ring, 10);
+                let hole_dst: Vec<_> = unique_with_delta_e(&hole_src.outer_ring, 9);
                 if hole_dst.len() > 2 {
                     let index = positions.len() as u32;
                     hole_indices.push(index);

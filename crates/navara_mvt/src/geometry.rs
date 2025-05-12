@@ -510,9 +510,9 @@ fn construct_polygon_geometry(
 ) {
     let LineString(outer) = polygon.exterior();
     let outer_vec = if flat {
-        converter.project_points(outer)
-    } else {
         converter.project_points_on_center(outer)
+    } else {
+        converter.project_points(outer)
     };
 
     let interiors = polygon.interiors();
@@ -523,12 +523,16 @@ fn construct_polygon_geometry(
     for LineString(hole) in interiors {
         holes.push(Hierarchy {
             outer_ring: if flat {
-                converter.project_points(hole)
-            } else {
                 converter.project_points_on_center(hole)
+            } else {
+                converter.project_points(hole)
             },
             holes: None,
-            expected_winding_order: WindingOrder::CounterClockwise,
+            expected_winding_order: if flat {
+                WindingOrder::Clockwise
+            } else {
+                WindingOrder::CounterClockwise
+            },
         });
     }
 
@@ -542,7 +546,11 @@ fn construct_polygon_geometry(
             hierarchy: Hierarchy {
                 outer_ring: outer_vec,
                 holes: Some(holes),
-                expected_winding_order: WindingOrder::Clockwise,
+                expected_winding_order: if flat {
+                    WindingOrder::CounterClockwise
+                } else {
+                    WindingOrder::Clockwise
+                },
             }
             .transfer(buf),
             crs: CRS::Geographic,

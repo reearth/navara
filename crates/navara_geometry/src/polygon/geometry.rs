@@ -74,14 +74,13 @@ pub fn create_flat_polygon_geometry(
 
     let mut combined_positions = vec![];
     let mut combined_indices = vec![];
-    let mut index_offset = 0;
 
     // Process each polygon
     for polygon in &polygons {
         // Get triangulation indices using earcut
-        let polygon_indices = polygon_resource.earcut(polygon);
+        let mut polygon_indices = polygon_resource.earcut(polygon);
         if polygon_indices.len() < 3 {
-            continue;
+            polygon_indices = vec![0, 1, 2];
         }
 
         // Add positions to the combined buffer
@@ -93,17 +92,9 @@ pub fn create_flat_polygon_geometry(
         }
 
         // Adjust and add indices to the combined buffer
-        if index_offset > 0 {
-            for idx in polygon_indices {
-                combined_indices.push((idx + positions_len) as u32);
-            }
-        } else {
-            for idx in polygon_indices {
-                combined_indices.push(idx as u32);
-            }
+        for idx in polygon_indices {
+            combined_indices.push((idx + positions_len) as u32);
         }
-
-        index_offset = combined_positions.len() as u32 / 3;
     }
 
     if combined_indices.is_empty() {

@@ -144,7 +144,7 @@ pub fn construct_flat_polygon(
     let mut combined_attributes = PolygonGeometryAttributes {
         position: FloatAttribute::new(vec![], 3),
         normal: None,
-        scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
+        scale_normal_and_cap: None,
         batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
         batch_index: Some(UintAttribute::new(vec![], 1)),
     };

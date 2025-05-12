@@ -17,6 +17,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  OrthographicCamera,
   RawShaderMaterial,
   RGBAFormat,
   Scene,
@@ -35,10 +36,14 @@ import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
 import type { TextureOptions } from "../textures";
 import type { MeshCache } from "../type";
 
+import { BatchedFeatureMesh } from "./batchedFeature";
+
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
 // TODO: Replace with one resource
 const GLOBE_COLOR = 0xffffff;
+
+const PREV_RENDERER_CLEAR_COLOR = new Color();
 
 export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
   renderer: WebGLRenderer;
@@ -50,6 +55,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     format: RGBAFormat,
   });
   gbufferMesh = new Mesh<BufferGeometry, RawShaderMaterial>();
+  private _camera: OrthographicCamera;
 
   constructor(
     mesh: MeshAdded,
@@ -59,7 +65,36 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     const coords = mesh.tile_coords;
     this.renderer = texturizedSceneByTileCoordinates.renderer;
     this.texturizedScene = texturizedSceneByTileCoordinates.get(coords);
+    this._camera = texturizedSceneByTileCoordinates.camera;
+
+    this.onBeforeRender = this._onBeforeRender;
   }
+
+  private _onBeforeRender = () => {
+    if (!this.visible) return;
+
+    if (this.texturizedScene.userData.removed) {
+      this.updateTexturizedSceneTextureVisibility(false);
+    }
+
+    if (this.texturizedScene.userData.needsUpdate) {
+      const currentRenderTarget = this.renderer.getRenderTarget();
+      const clearColor = this.renderer.getClearColor(PREV_RENDERER_CLEAR_COLOR);
+
+      this.renderer.setRenderTarget(this.texturizedSceneRenderTarget);
+      this.renderer.setClearColor(0x000, 0); // Transparent scene
+      this.renderer.clear();
+      this.renderer.render(this.texturizedScene, this._camera);
+
+      // Restore previous renderer settings.
+      this.renderer.setRenderTarget(currentRenderTarget);
+      this.renderer.setClearColor(clearColor, 1);
+
+      this.texturizedScene.userData.needsUpdate = false;
+
+      this.texturizedSceneRenderTarget.texture.needsUpdate = true;
+    }
+  };
 
   async _init(
     scenes: Scenes,
@@ -175,10 +210,15 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
           stencilWrite: false,
         });
 
+    m.userData.uPickable = {
+      value: 0,
+    };
+
     const maxTextures = textureOptions.maxTextures;
 
     m.onBeforeCompile = (shader) => {
       shader.uniforms.uShows = m.userData.shows;
+      shader.uniforms.uPickable = m.userData.uPickable;
       shader.uniforms.uColors = m.userData.colors;
       shader.uniforms.uOpacities = m.userData.opacities;
       shader.uniforms.uTextures = m.userData.textures;
@@ -193,6 +233,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
   uniform vec3 uColors[${maxTextures}];
   uniform float uOpacities[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
+  uniform float uPickable;
   // uniform sampler2D uTextures0;
   // uniform sampler2D uTextures1;
   
@@ -202,9 +243,28 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
         .replace(
           "#include <map_fragment>",
           `
-  ${generateMixOverlaidTexturesMacro(maxTextures)}
+  ${generateMixOverlaidTexturesMacro(
+    maxTextures,
+    (texColorVar, idx) => `
+    // Disable picking for the raster tile.
+    // Allow picking for texturizedScene because it's vector data.
+    if(uPickable > 0.) {
+      ${texColorVar}.xyz *= float(${maxTextures - 1} == ${idx});
+    }
+  `,
+  )}
   diffuseColor = sampledDiffuseColor;
   `,
+        )
+        .replace(
+          "#include <envmap_fragment>",
+          `
+if (uPickable > 0.) {
+  outgoingLight = diffuseColor.xyz;
+}
+
+  #include <envmap_fragment>
+`,
         );
     };
 
@@ -229,6 +289,50 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       this.setupTextureFragments(changedMaterial?.texture_fragments());
       this.setUniforms(changedMaterial, maxTextures);
       this.setupTextures(loadedTexes, textureOptions, maxTextures);
+
+      this._setupSceneObserver();
+    }
+  }
+
+  private _setupSceneObserver() {
+    if (this.texturizedScene.userData.childrenObserver) {
+      this.texturizedScene.removeEventListener(
+        "childadded",
+        this.texturizedScene.userData.childrenObserver,
+      );
+      this.texturizedScene.removeEventListener(
+        "childremoved",
+        this.texturizedScene.userData.childrenObserver,
+      );
+      this.texturizedScene.userData.childrenObserver = undefined;
+    }
+
+    const observer = () => {
+      if (this.texturizedScene.children.length === 0) {
+        this.updateTexturizedSceneTextureVisibility(false);
+      } else {
+        this.updateTexturizedSceneTextureVisibility(true);
+        this.texturizedScene.userData.needsUpdate = true;
+      }
+    };
+
+    this.texturizedScene.userData.childrenObserver = observer;
+
+    this.texturizedScene.addEventListener("childadded", observer);
+    this.texturizedScene.addEventListener("childremoved", observer);
+  }
+
+  private updateTexturizedSceneTextureVisibility(visible: boolean) {
+    if (!this.material || !this.material.userData) return;
+
+    const m = this.material;
+    const textures = m.userData.textures?.value;
+    if (!textures) return;
+
+    // Look for RenderTarget's texture to change visibility.
+    const lastIdx = textures.length - 1;
+    if (textures[lastIdx] === this.texturizedSceneRenderTarget.texture) {
+      m.userData.shows.value[lastIdx] = visible ? 1 : 0;
     }
   }
 
@@ -317,14 +421,20 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       return;
     }
 
-    if (textureFragments.length > maxTextures) {
+    if (textureFragments.length > maxTextures - 1) {
       console.error(
-        `Exceeded maximum textures: ${textureFragments.length} layers are provided. Maximum the number of textures is ${maxTextures}.`,
+        `Exceeded maximum textures: ${textureFragments.length} layers are provided. Maximum the number of textures is ${maxTextures - 1}.`,
       );
     }
 
     const textures = m.userData.textures.value;
+
+    // Setting tile textures
     for (let i = 0; i < textureFragments.length; i++) {
+      if (i >= maxTextures - 1) {
+        break;
+      }
+
       const textureFragment = textureFragments[i];
       const t = textureFragment ? loadedTexes.get(textureFragment) : undefined;
       if (!t) {
@@ -342,6 +452,46 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       }
 
       textures[i] = t;
+    }
+
+    // texturizedSceneRenderTarget should be added always due to GLSL spec.
+    const lastIndex = maxTextures - 1;
+    const texturizedSceneTexture = this.texturizedSceneRenderTarget.texture;
+    // Don't need it. If you want to set it, you need to consider the color space on picking scene.
+    // texturizedSceneTexture.colorSpace = SRGBColorSpace;
+    texturizedSceneTexture.minFilter =
+      textureOptions.minFilter as MinificationTextureFilter;
+    texturizedSceneTexture.magFilter =
+      textureOptions.magFilter as MagnificationTextureFilter;
+    texturizedSceneTexture.anisotropy = textureOptions.maxAnisotropy;
+    texturizedSceneTexture.generateMipmaps = textureOptions.useMipmaps;
+    texturizedSceneTexture.needsUpdate = true;
+
+    textures[lastIndex] = texturizedSceneTexture;
+
+    m.userData.shows.value[lastIndex] =
+      this.texturizedScene.children.length > 0 ? 1 : 0;
+    m.userData.colors.value[lastIndex] = new Color(0xffffff);
+    m.userData.opacities.value[lastIndex] = 1.0;
+  }
+
+  _togglePickable(pickable: number) {
+    if (pickable) {
+      this.material.color.setHex(0);
+    } else {
+      this.material.color.setHex(this.userData.tileOrigColor);
+    }
+    this.material.userData.uPickable.value = pickable;
+
+    let needsUpdate = false;
+    this.texturizedScene.traverse((obj) => {
+      if (obj instanceof BatchedFeatureMesh) {
+        obj._togglePickable(pickable);
+        needsUpdate = true;
+      }
+    });
+    if (needsUpdate) {
+      this.texturizedScene.userData.needsUpdate = true;
     }
   }
 }

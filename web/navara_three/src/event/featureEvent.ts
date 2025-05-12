@@ -27,6 +27,8 @@ export const handleFeatureCreatedEventByLayerId = (
 
   // Emit the evaluator
   viewEvents.emit("layer", "featureCreated", layerId, evaluator);
+
+  return layer;
 };
 
 export const handleFeatureUpdatedEventByLayerId = (

@@ -127,20 +127,17 @@ export async function processRenderableFeatureAdded(
 
   if (obj instanceof PolygonMesh && obj.userData.draped && coords) {
     texturizedSceneByTileCoordinates.add(coords, obj);
-    obj.addEventListener("removed", () => {
+    obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(coords);
     });
-  } else if (
-    (obj instanceof PolygonMesh && obj.userData.draped && !coords) ||
-    (obj instanceof PolylineMesh && obj.userData.draped)
-  ) {
+  } else if (obj instanceof PolygonMesh && obj.userData.draped && !coords) {
     drapedFeatureMaterials.set(id, obj.material);
-    obj.addEventListener("removed", () => {
+    obj.addEventListener("removedFromWorld", () => {
       drapedFeatureMaterials.delete(id);
     });
   }
 
-  handleFeatureCreatedEventByLayerId(
+  const layer = handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
     viewEvents,
@@ -155,6 +152,12 @@ export async function processRenderableFeatureAdded(
     ev.bits,
     updatedAt,
   );
+
+  layer?.on("afterFeatureUpdated", () => {
+    if (coords) {
+      texturizedSceneByTileCoordinates.requestUpdate(coords);
+    }
+  });
 }
 
 // TODO: Update material in this function.
@@ -205,8 +208,9 @@ export async function processRenderableFeatureChanged(
       texturizedSceneByTileCoordinates.remove(coords);
     }
   } else if (
-    (obj instanceof PolygonMesh && obj.userData.draped != null && !coords) ||
-    (obj instanceof PolylineMesh && obj.userData.draped != null)
+    obj instanceof PolygonMesh &&
+    obj.userData.draped != null &&
+    !coords
   ) {
     if (obj.userData.draped) {
       if (!drapedFeatureMaterials.has(id)) {
@@ -223,15 +227,15 @@ export async function processRenderableFeatureChanged(
       obj.material.colorWrite = true;
       drapedFeatureMaterials.delete(id);
     }
-
-    // Point, billboard and text should be handled by their mesh.
-    const transform = (polyline ?? polygon ?? model)?.transform;
-
-    // This should be handled after the asynchronous process to avoid a conflict.
-    if (transform) {
-      setTransform(obj, transform);
-    }
-
-    obj.updateMatrix();
   }
+
+  // Point, billboard and text should be handled by their mesh.
+  const transform = (polyline ?? polygon ?? model)?.transform;
+
+  // This should be handled after the asynchronous process to avoid a conflict.
+  if (transform) {
+    setTransform(obj, transform);
+  }
+
+  obj.updateMatrix();
 }
