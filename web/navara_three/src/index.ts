@@ -726,13 +726,17 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this._core?.moveCameraWithDirection(new Float32Array(dir), amount);
   }
 
-  flyTo(camPos: CameraPosition, duration?: number, maxHeight?: number) {
-    const position =
-      camPos.longitude != null &&
-      camPos.latitude != null &&
-      camPos.altitude != null
-        ? new Float32Array([camPos.longitude, camPos.latitude, camPos.altitude])
-        : null;
+  flyTo(
+    camPos: CameraPosition &
+      Required<Pick<CameraPosition, "longitude" | "latitude" | "altitude">>,
+    duration?: number,
+    maxHeight?: number,
+  ) {
+    const position = new Float32Array([
+      camPos.longitude,
+      camPos.latitude,
+      camPos.altitude,
+    ]);
 
     this._core?.flyTo(
       position,

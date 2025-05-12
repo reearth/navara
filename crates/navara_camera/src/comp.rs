@@ -1,8 +1,7 @@
 use bevy_ecs::component::Component;
-use navara_core::{lerp, Aabb, Plane, CRS, WGS84_32, WGS84_B_32};
+use navara_core::{adjust_angle_for_lerp, lerp, Aabb, Plane, CRS, WGS84_32, WGS84_B_32};
 use navara_math::{
-    negative_pi_to_pi, std_float::consts::PI, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3,
-    EPSILON10, TWO_PI,
+    negative_pi_to_pi, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, EPSILON10,
 };
 
 use crate::{
@@ -319,7 +318,7 @@ impl CameraFlight {
         let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
         let start = lle.deg();
 
-        self.set_start_inf(
+        self.set_start_options(
             start.lng.val(),
             start.lat.val(),
             start.height.val(),
@@ -328,7 +327,7 @@ impl CameraFlight {
             get_roll(transform),
         );
 
-        self.set_end_inf(
+        self.set_end_options(
             pos.x,
             pos.y,
             pos.z,
@@ -340,7 +339,7 @@ impl CameraFlight {
         self.start_fly(duration, max_height, frustum, transform);
     }
 
-    fn set_start_inf(
+    fn set_start_options(
         &mut self,
         lon: FloatType,
         lat: FloatType,
@@ -357,7 +356,7 @@ impl CameraFlight {
         self.start_options.roll = roll;
     }
 
-    fn set_end_inf(
+    fn set_end_options(
         &mut self,
         lon: FloatType,
         lat: FloatType,
@@ -433,9 +432,9 @@ impl CameraFlight {
         }
 
         self.start_options.heading =
-            Self::adjust_angle_for_lerp(self.start_options.heading, self.end_options.heading);
+            adjust_angle_for_lerp(self.start_options.heading, self.end_options.heading);
         self.start_options.roll =
-            Self::adjust_angle_for_lerp(self.start_options.roll, self.end_options.roll);
+            adjust_angle_for_lerp(self.start_options.roll, self.end_options.roll);
 
         self.time = 0.;
         self.duration = duration.unwrap_or(500.);
@@ -541,22 +540,6 @@ impl CameraFlight {
         } else {
             Box::new(move |t: FloatType| start_height * (1.0 - t) + end_height * t)
         }
-    }
-
-    // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/CameraFlightPath.js#L128
-    fn adjust_angle_for_lerp(start_angle: FloatType, end_angle: FloatType) -> FloatType {
-        let mut start_angle = start_angle;
-        if (start_angle - TWO_PI.to_degrees()).abs() < EPSILON10 {
-            start_angle = 0.;
-        }
-
-        if end_angle > start_angle + PI.to_degrees() {
-            start_angle += TWO_PI.to_degrees();
-        } else if end_angle < start_angle - PI.to_degrees() {
-            start_angle -= TWO_PI.to_degrees();
-        }
-
-        start_angle
     }
 }
 
