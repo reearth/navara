@@ -15,6 +15,7 @@ pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
     pub mesh_removed: Vec<EntityEvent>,
+    #[allow(clippy::type_complexity)]
     pub mesh_added: Vec<
         ComponentEvent<(
             &'a TileMeshMarker,
