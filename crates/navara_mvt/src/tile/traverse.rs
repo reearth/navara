@@ -10,9 +10,12 @@ use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_math::{FloatType, Transform};
 
-use navara_layer::MvtLayer;
+use navara_layer::{MvtLayer, TerrainLayer};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
-use navara_tile_component::{Tile, TileHandle, VectorTile, VectorTileQuadtree};
+use navara_tile_component::{
+    TerrainInformation, TerrainInformationQuadtree, Tile, TileHandle, VectorTile,
+    VectorTileQuadtree,
+};
 use navara_window::Window;
 
 use crate::{
@@ -52,6 +55,8 @@ pub fn traverse_tile(
     fog: &Fog,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
+    terrain_layer: &Option<&TerrainLayer>,
+    terrain_qt: &TerrainInformationQuadtree,
 ) -> TraversalResult {
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
@@ -65,7 +70,18 @@ pub fn traverse_tile(
     };
 
     match qt.qt.get_mut(handle) {
-        Some(tile) => begine_traverse_tile(ellipsoid, occluder, camera, tile),
+        Some(tile) => {
+            let terrain_into = terrain_qt.qt.get(handle).map_or_else(
+                || {
+                    let e = terrain_qt
+                        .qt
+                        .parent((tile.coords.x, tile.coords.y, tile.coords.z))?;
+                    terrain_qt.qt.get(e.handle())
+                },
+                Some,
+            );
+            begine_traverse_tile(ellipsoid, occluder, camera, tile, terrain_into);
+        }
         None => unreachable!(),
     };
 
@@ -99,7 +115,14 @@ pub fn traverse_tile(
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
     let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid);
-    let sse = tile.calc_sse(frustum, window, ellipsoid, 64., distance_from_camera, fog);
+    let sse = tile.calc_sse(
+        frustum,
+        window,
+        ellipsoid,
+        if terrain_layer.is_some() { 65. } else { 64. },
+        distance_from_camera,
+        fog,
+    );
 
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.sse = sse;
@@ -190,6 +213,8 @@ pub fn traverse_tile(
                 renderable_features,
                 fog,
                 meets_sse,
+                terrain_layer,
+                terrain_qt,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -533,7 +558,9 @@ fn begine_traverse_tile(
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
     tile: &mut VectorTile,
+    terrain_into: Option<&TerrainInformation>,
 ) {
+    tile.set_max_height(terrain_into.map(|t| t.max_height).unwrap_or(0.));
     tile.update_tile_occludee_point(ellipsoid, occluder);
 }
 

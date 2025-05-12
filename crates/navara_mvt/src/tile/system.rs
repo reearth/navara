@@ -23,7 +23,9 @@ use navara_math::Transform;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
-use navara_tile_component::{TileCoordinates, VectorTile, VectorTileQuadtree};
+use navara_tile_component::{
+    TerrainInformationQuadtree, TileCoordinates, VectorTile, VectorTileQuadtree,
+};
 use navara_window::Window;
 
 use crate::{
@@ -41,24 +43,26 @@ use super::{
     },
 };
 
-use navara_layer::{LayerId, LayerStore, MvtLayer};
+use navara_layer::{LayerId, LayerStore, MvtLayer, TerrainLayer};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
     mut qts: Query<&mut VectorTileQuadtree>,
+    terrain_qt: Res<TerrainInformationQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
     tiles: Query<(&MvtLayer, Ref<LayerResources>)>,
     camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
-    mvt_data_requester: MvtDataRequesterQuery,
-    changed_mvt_data_requester: ChangedMvtDataRequesterQuery,
+    mut mvt_data_requester: ParamSet<(MvtDataRequesterQuery, ChangedMvtDataRequesterQuery)>,
     occluder: Query<&EllipsoidalOccluder>,
     rendered_tiles: Query<&RenderedTile>,
-    features: Query<&FeatureId, With<MVTFeatureMarker>>,
-    changed_features: Query<&FeatureId, (With<MVTFeatureMarker>, Changed<FeatureId>)>,
+    mut features: ParamSet<(
+        Query<&FeatureId, With<MVTFeatureMarker>>,
+        Query<&FeatureId, (With<MVTFeatureMarker>, Changed<FeatureId>)>,
+    )>,
     mut renderable_features: ParamSet<(
         Query<&mut RenderableFeature>,
         // TODO: This detects all `RenderableFeature` that has `Rendered`, but this isn't efficient.
@@ -66,14 +70,22 @@ pub fn update_tiles(
         Query<(), (With<RenderableFeature>, Changed<Rendered>)>,
     )>,
     fogs: Query<&Fog>,
+    terrain_layer: Query<&TerrainLayer>,
 ) {
-    let is_data_requester_changed = !changed_mvt_data_requester.is_empty();
-    let are_features_changed = !changed_features.is_empty();
+    let is_data_requester_changed = !mvt_data_requester.p1().is_empty();
+    let are_features_changed = !features.p1().is_empty();
     let are_renderable_features_rendered = !renderable_features.p1().is_empty();
 
     let occluder = occluder.iter().next().unwrap();
 
     let fog = fogs.single();
+
+    // TODO: Think how to support multiple terrain layer.(Is it possible?)
+    let terrain_layer = terrain_layer.iter().next();
+
+    let mut renderable_features = renderable_features.p0();
+    let mvt_data_requester = mvt_data_requester.p0();
+    let features = features.p0();
 
     for (layer, resources) in &tiles {
         let Ok(mut qt) = qts.get_mut(resources.quadtree) else {
@@ -125,9 +137,11 @@ pub fn update_tiles(
                 &mvt_data_requester,
                 &rendered_tiles,
                 &features,
-                &mut renderable_features.p0(),
+                &mut renderable_features,
                 fog,
                 false,
+                &terrain_layer,
+                &terrain_qt,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
@@ -143,7 +157,7 @@ pub fn update_tiles(
                             &zero_tile_handle,
                             &rendered_tiles,
                             &features,
-                            &mut renderable_features.p0(),
+                            &mut renderable_features,
                         ),
                         Some(true)
                     ) {
@@ -152,7 +166,7 @@ pub fn update_tiles(
                             &zero_tile_handle,
                             &rendered_tiles,
                             &features,
-                            &mut renderable_features.p0(),
+                            &mut renderable_features,
                             true,
                         );
                     }
@@ -175,7 +189,7 @@ pub fn update_tiles(
                         &zero_tile_handle,
                         &rendered_tiles,
                         &features,
-                        &mut renderable_features.p0(),
+                        &mut renderable_features,
                         false,
                     );
                 }

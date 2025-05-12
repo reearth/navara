@@ -15,8 +15,8 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
-    RasterTile, RasterTileQuadtree, Tile, TileCoordinates, TileMeshMarker,
-    TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    RasterTile, RasterTileQuadtree, TerrainInformation, TerrainInformationQuadtree, Tile,
+    TileCoordinates, TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 use navara_worker::{
@@ -178,6 +178,7 @@ pub fn transfer_mesh(
     mut buf: ResMut<BufferStore>,
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<RasterTileQuadtree>,
+    mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     cached_martini: Res<CachedMartini>,
     mut rendered_tiles: Query<
         (Entity, &mut RenderedTile, &OrderByDistance),
@@ -220,6 +221,14 @@ pub fn transfer_mesh(
         let is_root = tile.is_root();
         let scale = if is_root { 0.98 } else { 1. };
         let render_order = if is_root { -1 } else { 0 };
+
+        if terrain_qt.qt.get(rendered_tile.tile_handle).is_none() {
+            terrain_qt
+                .qt
+                .initialize_leaf((tile.coords.x, tile.coords.y, tile.coords.z), &|_coords| {
+                    TerrainInformation::new()
+                });
+        }
 
         let tile_coordinates: TileCoordinates = tile.coords.into();
 
@@ -340,7 +349,12 @@ pub fn transfer_mesh(
 
         let terrain_layer = terrain_layer.unwrap();
 
-        fn postupdate_tile(tile: &mut RasterTile, max_height: FloatType, min_height: FloatType) {
+        fn postupdate_tile(
+            tile: &mut RasterTile,
+            terrain_info: &mut TerrainInformation,
+            max_height: FloatType,
+            min_height: FloatType,
+        ) {
             let terrain_data = tile
                 .terrain_data
                 .as_mut()
@@ -349,7 +363,9 @@ pub fn transfer_mesh(
             terrain_data.set_current_min_height(min_height);
             tile.max_height = max_height;
             tile.aabb
-                .update(tile.extent, min_height.min(0.), max_height)
+                .update(tile.extent, min_height.min(0.), max_height);
+
+            terrain_info.max_height = max_height;
         }
 
         if should_upsample_terrain {
@@ -426,7 +442,8 @@ pub fn transfer_mesh(
                 panic!("Mesh duplication error");
             };
             let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-            postupdate_tile(tile, max_height, min_height);
+            let terrain_info = terrain_qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+            postupdate_tile(tile, terrain_info, max_height, min_height);
 
             continue;
         }
@@ -512,7 +529,8 @@ pub fn transfer_mesh(
         };
 
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
-        postupdate_tile(tile, max_height, min_height);
+        let terrain_info = terrain_qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+        postupdate_tile(tile, terrain_info, max_height, min_height);
     }
 }
 
@@ -741,6 +759,7 @@ pub fn clear_caches(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<RasterTileQuadtree>,
+    mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
@@ -781,6 +800,8 @@ pub fn clear_caches(
             &mut buf,
             &terrain_data_requester,
         );
+
+        terrain_qt.qt.remove(rendered_tile.tile_handle);
     }
 
     let mut removed_handles = vec![];
