@@ -679,13 +679,18 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.layersManager.get(layerId)?.delete();
   }
 
-  setCamera(cam: CameraPosition) {
+  setCamera(camPos: CameraPosition) {
     const position =
-      cam.longitude && cam.latitude && cam.altitude
-        ? new Float32Array([cam.longitude, cam.latitude, cam.altitude])
+      camPos.longitude && camPos.latitude && camPos.altitude
+        ? new Float32Array([camPos.longitude, camPos.latitude, camPos.altitude])
         : null;
 
-    this._core?.changeCamera(position, cam.pitch, cam.heading, cam.roll);
+    this._core?.changeCamera(
+      position,
+      camPos.pitch,
+      camPos.heading,
+      camPos.roll,
+    );
   }
 
   moveCamera(move: string, amount: number) {
@@ -719,6 +724,24 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
 
     this._core?.moveCameraWithDirection(new Float32Array(dir), amount);
+  }
+
+  flyTo(camPos: CameraPosition, duration?: number, maxHeight?: number) {
+    const position =
+      camPos.longitude != null &&
+      camPos.latitude != null &&
+      camPos.altitude != null
+        ? new Float32Array([camPos.longitude, camPos.latitude, camPos.altitude])
+        : null;
+
+    this._core?.flyTo(
+      position,
+      camPos.pitch,
+      camPos.heading,
+      camPos.roll,
+      duration,
+      maxHeight,
+    );
   }
 
   private _startMainLoop() {
