@@ -1,4 +1,5 @@
 import { EventManager, EventHandler } from "@navara/core";
+import type { LatLngHeight } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -687,8 +688,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   setCamera(camPos: CameraPosition) {
     const position =
-      camPos.longitude && camPos.latitude && camPos.altitude
-        ? new Float32Array([camPos.longitude, camPos.latitude, camPos.altitude])
+      camPos.lng && camPos.lat && camPos.height
+        ? new Float32Array([camPos.lng, camPos.lat, camPos.height])
         : null;
 
     this._core?.changeCamera(
@@ -734,15 +735,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   flyTo(
     camPos: CameraPosition &
-      Required<Pick<CameraPosition, "longitude" | "latitude" | "altitude">>,
+      Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
     duration?: number,
     maxHeight?: number,
   ) {
-    const position = new Float32Array([
-      camPos.longitude,
-      camPos.latitude,
-      camPos.altitude,
-    ]);
+    const position = new Float32Array([camPos.lng, camPos.lat, camPos.height]);
 
     this._core?.flyTo(
       position,
@@ -754,8 +751,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
   }
 
-  lookAt(target: Vector3Tuple, offset: Vector3Tuple) {
-    this._core?.lookAt(new Float32Array(target), new Float32Array(offset));
+  lookAt(target: LatLngHeight, offset: Vector3) {
+    this._core?.lookAt(
+      new Float32Array([target.lng, target.lat, target.height]),
+      new Float32Array([offset.x, offset.y, offset.z]),
+    );
   }
 
   private _startMainLoop() {

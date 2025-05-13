@@ -1,5 +1,5 @@
 import ThreeView from "@navara/three";
-import { AxesHelper } from "three";
+import { AxesHelper, Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 const tileUrls = {
@@ -17,9 +17,9 @@ export const run = async (view: ThreeView) => {
   view.scene.add(axesHelper);
 
   view.setCamera({
-    longitude: 139.75711454748298,
-    latitude: 35.67564356091717,
-    altitude: 902.0,
+    lng: 139.75711454748298,
+    lat: 35.67564356091717,
+    height: 902.0,
     heading: 64.41840149763287, // -180 to 180
     pitch: -36.00000121921312, // -180 to 0
     roll: 0, // -180 to 180
@@ -61,9 +61,9 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
 
   const changeFunc = () => {
     view.setCamera({
-      longitude: cameraParams.longitude,
-      latitude: cameraParams.latitude,
-      altitude: cameraParams.altitude,
+      lng: cameraParams.longitude,
+      lat: cameraParams.latitude,
+      height: cameraParams.altitude,
       heading: cameraParams.heading,
       pitch: cameraParams.pitch,
       roll: cameraParams.roll,
@@ -168,9 +168,9 @@ const addFlyToOption = (pane: Pane, view: ThreeView) => {
   const clickFunc = () => {
     view.flyTo(
       {
-        longitude: cameraParams.longitude,
-        latitude: cameraParams.latitude,
-        altitude: cameraParams.altitude,
+        lng: cameraParams.longitude,
+        lat: cameraParams.latitude,
+        height: cameraParams.altitude,
         heading: cameraParams.heading,
         pitch: cameraParams.pitch,
         roll: cameraParams.roll,
@@ -210,8 +210,16 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
 
   const clickFunc = () => {
     view.lookAt(
-      [cameraParams.longitude, cameraParams.latitude, cameraParams.altitude],
-      [cameraParams.offset_x, cameraParams.offset_y, cameraParams.offset_z],
+      {
+        lat: cameraParams.latitude,
+        lng: cameraParams.longitude,
+        height: cameraParams.altitude,
+      },
+      new Vector3(
+        cameraParams.offset_x,
+        cameraParams.offset_y,
+        cameraParams.offset_z,
+      ),
     );
   };
 
