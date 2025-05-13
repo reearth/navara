@@ -23,9 +23,9 @@ export const run = async (view: ThreeView) => {
   await view.init();
 
   view.setCamera({
-    longitude: 139.75711454748298,
-    latitude: 35.67564356091717,
-    altitude: 302.0875327005024,
+    lng: 139.75711454748298,
+    lat: 35.67564356091717,
+    height: 302.0875327005024,
     heading: -64.41840149763287,
     pitch: -36.00000121921312,
     roll: 0,

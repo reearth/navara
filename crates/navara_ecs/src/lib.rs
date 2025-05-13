@@ -712,6 +712,13 @@ impl App {
             max_height,
         });
     }
+
+    pub fn look_at(&mut self, target: Vec<FloatType>, offset: Vec<FloatType>) {
+        self.app.world_mut().send_event(CameraEvent::LookAt {
+            target: Vec3::new(target[0], target[1], target[2]),
+            offset: Vec3::new(offset[0], offset[1], offset[2]),
+        });
+    }
 }
 
 fn get_prop_from_batch_table(

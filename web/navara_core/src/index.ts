@@ -6,3 +6,4 @@ export * from "./constants";
 export * from "./eventHandler";
 export * from "./batch";
 export * from "./error";
+export * from "./types";

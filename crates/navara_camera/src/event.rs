@@ -67,4 +67,8 @@ pub enum CameraEvent {
         duration: Option<FloatType>,            // duration in milliseconds(ms)
         max_height: Option<FloatType>,          // The maximum height at the peak of the flight.
     },
+    LookAt {
+        target: Vec3, // [longitude, latitude, altitude]
+        offset: Vec3, // The offset from the target in the local east-north-up reference frame centered at the target.
+    },
 }

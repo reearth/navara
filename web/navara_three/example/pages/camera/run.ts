@@ -1,5 +1,5 @@
 import ThreeView from "@navara/three";
-import { AxesHelper } from "three";
+import { AxesHelper, Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 const tileUrls = {
@@ -17,9 +17,9 @@ export const run = async (view: ThreeView) => {
   view.scene.add(axesHelper);
 
   view.setCamera({
-    longitude: 139.75711454748298,
-    latitude: 35.67564356091717,
-    altitude: 902.0,
+    lng: 139.75711454748298,
+    lat: 35.67564356091717,
+    height: 902.0,
     heading: 64.41840149763287, // -180 to 180
     pitch: -36.00000121921312, // -180 to 0
     roll: 0, // -180 to 180
@@ -42,6 +42,7 @@ export const run = async (view: ThreeView) => {
   addMoveCameraOption(pane, view);
   addMoveCameraWithDirOption(pane, view);
   addFlyToOption(pane, view);
+  addLookAtOption(pane, view);
 };
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
@@ -60,9 +61,9 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
 
   const changeFunc = () => {
     view.setCamera({
-      longitude: cameraParams.longitude,
-      latitude: cameraParams.latitude,
-      altitude: cameraParams.altitude,
+      lng: cameraParams.longitude,
+      lat: cameraParams.latitude,
+      height: cameraParams.altitude,
       heading: cameraParams.heading,
       pitch: cameraParams.pitch,
       roll: cameraParams.roll,
@@ -161,15 +162,15 @@ const addFlyToOption = (pane: Pane, view: ThreeView) => {
   };
   const folder = pane.addFolder({
     title: "Fly To",
-    expanded: true,
+    expanded: false,
   });
 
   const clickFunc = () => {
     view.flyTo(
       {
-        longitude: cameraParams.longitude,
-        latitude: cameraParams.latitude,
-        altitude: cameraParams.altitude,
+        lng: cameraParams.longitude,
+        lat: cameraParams.latitude,
+        height: cameraParams.altitude,
         heading: cameraParams.heading,
         pitch: cameraParams.pitch,
         roll: cameraParams.roll,
@@ -189,6 +190,47 @@ const addFlyToOption = (pane: Pane, view: ThreeView) => {
   folder.addBinding(cameraParams, "max_height");
 
   folder.addButton({ title: "Fly To", label: "" }).on("click", () => {
+    clickFunc();
+  });
+};
+
+const addLookAtOption = (pane: Pane, view: ThreeView) => {
+  const cameraParams = {
+    longitude: 138.7347,
+    latitude: 35.3627,
+    altitude: 0.0,
+    offset_x: 0.0,
+    offset_y: -10000.0,
+    offset_z: 10000.0,
+  };
+  const folder = pane.addFolder({
+    title: "Look At",
+    expanded: true,
+  });
+
+  const clickFunc = () => {
+    view.lookAt(
+      {
+        lat: cameraParams.latitude,
+        lng: cameraParams.longitude,
+        height: cameraParams.altitude,
+      },
+      new Vector3(
+        cameraParams.offset_x,
+        cameraParams.offset_y,
+        cameraParams.offset_z,
+      ),
+    );
+  };
+
+  folder.addBinding(cameraParams, "longitude", { min: -180.0, max: 180.0 });
+  folder.addBinding(cameraParams, "latitude", { min: -89.999, max: 89.999 });
+  folder.addBinding(cameraParams, "altitude", { min: 1, max: 19070256 });
+  folder.addBinding(cameraParams, "offset_x");
+  folder.addBinding(cameraParams, "offset_y");
+  folder.addBinding(cameraParams, "offset_z");
+
+  folder.addButton({ title: "Look At", label: "" }).on("click", () => {
     clickFunc();
   });
 };
