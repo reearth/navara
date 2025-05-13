@@ -1,12 +1,38 @@
 use bevy_ecs::event::Event;
 use navara_math::{FloatType, Vec3};
 
-#[derive(Debug, Clone, Copy, PartialEq, Event)]
-pub struct CameraChange {
-    pub position: Option<Vec3>,     // [longitude, latitude, altitude]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CameraOrientation {
     pub pitch: Option<FloatType>,   // pitch in degrees, -180 to 0
     pub heading: Option<FloatType>, // heading in degrees, -180 to 180
     pub roll: Option<FloatType>,    // roll in degrees, -180 to 180
+}
+
+impl Default for CameraOrientation {
+    fn default() -> Self {
+        Self {
+            pitch: Some(-90.0),
+            heading: Some(0.0),
+            roll: Some(0.0),
+        }
+    }
+}
+
+impl CameraOrientation {
+    pub fn get_heading(&self) -> FloatType {
+        self.heading
+            .unwrap_or(CameraOrientation::default().heading.unwrap())
+    }
+
+    pub fn get_pitch(&self) -> FloatType {
+        self.pitch
+            .unwrap_or(CameraOrientation::default().pitch.unwrap())
+    }
+
+    pub fn get_roll(&self) -> FloatType {
+        self.roll
+            .unwrap_or(CameraOrientation::default().roll.unwrap())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -26,7 +52,19 @@ pub enum CamDirType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Event)]
-pub struct CameraTranslate {
-    pub amount: FloatType,     // amount to move in meters
-    pub direction: CamDirType, // direction to move in
+pub enum CameraEvent {
+    Change {
+        position: Option<Vec3>,                 // [longitude, latitude, altitude]
+        orientation: Option<CameraOrientation>, // [pitch, heading, roll]
+    },
+    Translate {
+        amount: FloatType,     // amount to move in meters
+        direction: CamDirType, // direction to move in
+    },
+    FlyTo {
+        position: Option<Vec3>,                 // [longitude, latitude, altitude]
+        orientation: Option<CameraOrientation>, // [pitch, heading, roll]
+        duration: Option<FloatType>,            // duration in milliseconds(ms)
+        max_height: Option<FloatType>,          // The maximum height at the peak of the flight.
+    },
 }

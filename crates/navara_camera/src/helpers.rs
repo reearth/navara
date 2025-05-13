@@ -1,5 +1,7 @@
-use navara_core::Ray;
-use navara_math::{Transform, Vec2, Vec3};
+use navara_core::{east_north_up_to_fixed_frame, Ray, WGS84_32};
+use navara_math::{
+    zero_to_two_pi, EqualEpsilon, Quat, Transform, Vec2, Vec3, EPSILON3, PI_OVER_TWO, TWO_PI,
+};
 use navara_window::Window;
 
 use crate::CameraFrustum;
@@ -50,6 +52,59 @@ fn get_pick_ray_perspective(
         direction: (near_center + x_dir + y_dir - position)
             .as_vec3()
             .normalize_or_zero(),
+    }
+}
+
+// ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/Camera.js#L830
+pub fn get_pitch(transform: &Transform) -> f32 {
+    let ellipsoid = WGS84_32;
+    let camera_pos = transform.transform_point(Vec3::ZERO);
+
+    let enu_transform = east_north_up_to_fixed_frame(camera_pos, ellipsoid);
+    let enu_quat = Quat::from_mat4(&enu_transform);
+    let inverse = enu_quat.inverse();
+    let local_forward = (inverse * transform.forward().as_vec3()).normalize_or_zero();
+
+    (PI_OVER_TWO - local_forward.z.acos()).to_degrees()
+}
+
+// ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/Camera.js#L817C21-L817C30
+pub fn get_heading(transform: &Transform) -> f32 {
+    let ellipsoid = WGS84_32;
+    let camera_pos = transform.transform_point(Vec3::ZERO);
+
+    let enu_transform = east_north_up_to_fixed_frame(camera_pos, ellipsoid);
+    let enu_quat = Quat::from_mat4(&enu_transform);
+    let inverse = enu_quat.inverse();
+    let local_up = (inverse * transform.up().as_vec3()).normalize_or_zero();
+    let local_forward = (inverse * transform.forward().as_vec3()).normalize_or_zero();
+
+    let heading = if local_forward.z.abs().equal_diff_epsilon(1.0, EPSILON3) {
+        local_up.y.atan2(local_up.x) - PI_OVER_TWO
+    } else {
+        local_forward.y.atan2(local_forward.x) - PI_OVER_TWO
+    };
+
+    (TWO_PI - zero_to_two_pi(heading)).to_degrees()
+}
+
+// ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/Camera.js#L834
+pub fn get_roll(transform: &Transform) -> f32 {
+    let ellipsoid = WGS84_32;
+    let camera_pos = transform.transform_point(Vec3::ZERO);
+
+    let enu_transform = east_north_up_to_fixed_frame(camera_pos, ellipsoid);
+    let enu_quat = Quat::from_mat4(&enu_transform);
+    let inverse = enu_quat.inverse();
+    let local_up = (inverse * transform.up().as_vec3()).normalize_or_zero();
+    let local_forward = (inverse * transform.forward().as_vec3()).normalize_or_zero();
+    let local_right = (inverse * transform.right().as_vec3()).normalize_or_zero();
+
+    // Checks if the forward vector is nearly vertical (Z ≈ ±1).
+    if local_forward.z.abs().equal_diff_epsilon(1.0, EPSILON3) {
+        0.0
+    } else {
+        zero_to_two_pi((-local_right.z).atan2(local_up.z) + TWO_PI).to_degrees()
     }
 }
 

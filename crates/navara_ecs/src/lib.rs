@@ -7,7 +7,7 @@ use bevy_ecs::{
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
-use navara_camera::{CamDirType, CameraChange, CameraDirection, CameraTranslate};
+use navara_camera::{CamDirType, CameraDirection, CameraEvent, CameraOrientation};
 use navara_component::{Deleted, Rendered};
 use navara_core::ElevationDecoder;
 use navara_data_requester::DataRequester;
@@ -664,16 +664,18 @@ impl App {
         roll: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
-        self.app.world_mut().send_event(CameraChange {
+        self.app.world_mut().send_event(CameraEvent::Change {
             position: pos,
-            pitch,
-            heading,
-            roll,
+            orientation: Some(CameraOrientation {
+                pitch,
+                heading,
+                roll,
+            }),
         });
     }
 
     pub fn move_camera(&mut self, direction: CameraDirection, amount: FloatType) {
-        self.app.world_mut().send_event(CameraTranslate {
+        self.app.world_mut().send_event(CameraEvent::Translate {
             direction: CamDirType::Standard(direction),
             amount,
         });
@@ -683,9 +685,31 @@ impl App {
         if direction.len() != 3 {
             return;
         }
-        self.app.world_mut().send_event(CameraTranslate {
+        self.app.world_mut().send_event(CameraEvent::Translate {
             direction: CamDirType::Custom(Vec3::new(direction[0], direction[1], direction[2])),
             amount,
+        });
+    }
+
+    pub fn fly_to(
+        &mut self,
+        position: Option<Vec<FloatType>>,
+        pitch: Option<FloatType>,
+        heading: Option<FloatType>,
+        roll: Option<FloatType>,
+        duration: Option<FloatType>,
+        max_height: Option<FloatType>,
+    ) {
+        let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+        self.app.world_mut().send_event(CameraEvent::FlyTo {
+            position: pos,
+            orientation: Some(CameraOrientation {
+                pitch,
+                heading,
+                roll,
+            }),
+            duration,
+            max_height,
         });
     }
 }

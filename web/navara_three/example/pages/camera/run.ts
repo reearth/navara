@@ -41,6 +41,7 @@ export const run = async (view: ThreeView) => {
   addChangeCameraOption(pane, view);
   addMoveCameraOption(pane, view);
   addMoveCameraWithDirOption(pane, view);
+  addFlyToOption(pane, view);
 };
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
@@ -77,15 +78,9 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   folder
     .addBinding(cameraParams, "altitude", { min: 1, max: 19070256 })
     .on("change", changeFunc);
-  folder
-    .addBinding(cameraParams, "heading", { min: -180.0, max: 180.0 })
-    .on("change", changeFunc);
-  folder
-    .addBinding(cameraParams, "pitch", { min: -180.0, max: 0.0 })
-    .on("change", changeFunc);
-  folder
-    .addBinding(cameraParams, "roll", { min: -180.0, max: 180.0 })
-    .on("change", changeFunc);
+  folder.addBinding(cameraParams, "heading").on("change", changeFunc);
+  folder.addBinding(cameraParams, "pitch").on("change", changeFunc);
+  folder.addBinding(cameraParams, "roll").on("change", changeFunc);
 };
 
 const addMoveCameraOption = (pane: Pane, view: ThreeView) => {
@@ -149,6 +144,51 @@ const addMoveCameraWithDirOption = (pane: Pane, view: ThreeView) => {
   };
 
   folder.addButton({ title: "Move", label: "" }).on("click", () => {
+    clickFunc();
+  });
+};
+
+const addFlyToOption = (pane: Pane, view: ThreeView) => {
+  const cameraParams = {
+    longitude: 127.7,
+    latitude: 26.2,
+    altitude: 10000.0,
+    heading: 0, // -180 to 180
+    pitch: -90.0, // -180 to 0
+    roll: 0, // -180 to 180
+    duration: 2000,
+    max_height: 0,
+  };
+  const folder = pane.addFolder({
+    title: "Fly To",
+    expanded: true,
+  });
+
+  const clickFunc = () => {
+    view.flyTo(
+      {
+        longitude: cameraParams.longitude,
+        latitude: cameraParams.latitude,
+        altitude: cameraParams.altitude,
+        heading: cameraParams.heading,
+        pitch: cameraParams.pitch,
+        roll: cameraParams.roll,
+      },
+      cameraParams.duration,
+      cameraParams.max_height > 1 ? cameraParams.max_height : undefined,
+    );
+  };
+
+  folder.addBinding(cameraParams, "longitude", { min: -180.0, max: 180.0 });
+  folder.addBinding(cameraParams, "latitude", { min: -89.999, max: 89.999 });
+  folder.addBinding(cameraParams, "altitude", { min: 1, max: 19070256 });
+  folder.addBinding(cameraParams, "heading", { min: -180.0, max: 180.0 });
+  folder.addBinding(cameraParams, "pitch", { min: -180.0, max: 0.0 });
+  folder.addBinding(cameraParams, "roll", { min: -180.0, max: 180.0 });
+  folder.addBinding(cameraParams, "duration");
+  folder.addBinding(cameraParams, "max_height");
+
+  folder.addButton({ title: "Fly To", label: "" }).on("click", () => {
     clickFunc();
   });
 };
