@@ -9,6 +9,7 @@ use crate::{entity::ReconstructableEntity, geometry::TransferablePolygonGeometry
 pub struct ConstructPolygonBatchedFeatureParameters {
     #[wasm_bindgen(getter_with_clone)]
     pub batched_feature: ReconstructableEntity,
+    pub flat: bool,
 }
 
 impl<'a> From<&'a navara_worker::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureParameters>
@@ -19,6 +20,7 @@ impl<'a> From<&'a navara_worker::construct_polygon_batched_feature::ConstructPol
     ) -> ConstructPolygonBatchedFeatureParameters {
         ConstructPolygonBatchedFeatureParameters {
             batched_feature: ReconstructableEntity(val.batched_feature.to_bits()),
+            flat: val.flat,
         }
     }
 }
@@ -29,13 +31,13 @@ pub struct ConstructPolygonBatchedFeatureResult {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePolygonGeometry,
     #[wasm_bindgen(getter_with_clone)]
-    pub extent: ExtentRadianF32,
+    pub extent: Option<ExtentRadianF32>,
 }
 
 #[wasm_bindgen]
 impl ConstructPolygonBatchedFeatureResult {
     #[wasm_bindgen(constructor)]
-    pub fn new(geometry: TransferablePolygonGeometry, extent: ExtentRadianF32) -> Self {
+    pub fn new(geometry: TransferablePolygonGeometry, extent: Option<ExtentRadianF32>) -> Self {
         Self { geometry, extent }
     }
 }
@@ -46,7 +48,7 @@ impl From<ConstructPolygonBatchedFeatureResult>
     fn from(val: ConstructPolygonBatchedFeatureResult) -> Self {
         navara_worker::construct_polygon_batched_feature::ConstructPolygonBatchedFeatureResult {
             geometry: val.geometry.into(),
-            extent: val.extent.into(),
+            extent: val.extent.map(|e| e.into()),
         }
     }
 }
@@ -59,7 +61,7 @@ impl<'a>
     ) -> ConstructPolygonBatchedFeatureResult {
         ConstructPolygonBatchedFeatureResult {
             geometry: (&val.geometry).into(),
-            extent: (&val.extent).into(),
+            extent: val.extent.as_ref().map(|e| e.into()),
         }
     }
 }

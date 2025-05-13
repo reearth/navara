@@ -292,39 +292,38 @@ async function processConstructPolygonBatchedFeature(
   const promise = constructPolygonBatchedFeature(
     new TransferablePolygonBatchedFeatureLike(transferable),
     new PolygonMaterialLike(transferable.material),
+    params.flat,
   );
   workerPoolPromises.set(id, promise);
   const result = await promise;
   workerPoolPromises.delete(id);
 
-  if (
-    !result ||
-    !result.batch_id ||
-    !result.batch_index ||
-    !result.scale_normal_and_cap
-  )
-    return;
+  if (!result) return;
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
-  const batchId = bufHandler.newF32(result.batch_id);
-  const batchIndex = bufHandler.newU32(result.batch_index);
+  const batchId = result.batch_id
+    ? bufHandler.newF32(result.batch_id)
+    : undefined;
+  const batchIndex = result.batch_index
+    ? bufHandler.newU32(result.batch_index)
+    : undefined;
   const normal = result.normal ? bufHandler.newF32(result.normal) : undefined;
   const position = bufHandler.newF32(result.position);
-  const scaleNormalAndCap = bufHandler.newF32(result.scale_normal_and_cap);
+  const scaleNormalAndCap = result.scale_normal_and_cap
+    ? bufHandler.newF32(result.scale_normal_and_cap)
+    : undefined;
   const indices = bufHandler.newU32(result.indices);
-  if (!batchId || !batchIndex || !position || !scaleNormalAndCap || !indices) {
+  if (!position || !indices) {
     return;
   }
 
-  const transferableBatchId = new TransferableFloatAttribute(
-    batchId,
-    result.batch_id_size ?? 0,
-  );
-  const transferableBatchIndex = new TransferableUintAttribute(
-    batchIndex,
-    result.batch_index_size ?? 0,
-  );
+  const transferableBatchId = batchId
+    ? new TransferableFloatAttribute(batchId, result.batch_id_size ?? 0)
+    : undefined;
+  const transferableBatchIndex = batchIndex
+    ? new TransferableUintAttribute(batchIndex, result.batch_index_size ?? 0)
+    : undefined;
   const transferableNormal = normal
     ? new TransferableFloatAttribute(normal, result.normal_size ?? 0)
     : undefined;
@@ -332,10 +331,12 @@ async function processConstructPolygonBatchedFeature(
     position,
     result.position_size,
   );
-  const transferableScaleNormalAndCap = new TransferableFloatAttribute(
-    scaleNormalAndCap,
-    result.scale_normal_and_cap_size ?? 0,
-  );
+  const transferableScaleNormalAndCap = scaleNormalAndCap
+    ? new TransferableFloatAttribute(
+        scaleNormalAndCap,
+        result.scale_normal_and_cap_size ?? 0,
+      )
+    : undefined;
   const geometry = new TransferablePolygonGeometry(
     transferablePosition,
     transferableNormal,
@@ -345,15 +346,18 @@ async function processConstructPolygonBatchedFeature(
     indices,
   );
 
+  const extent = result.extent;
   const constructPolygonBatchedFeatureResult =
     new ConstructPolygonBatchedFeatureResult(
       geometry,
-      new ExtentRadianF32(
-        result.extent.west,
-        result.extent.south,
-        result.extent.east,
-        result.extent.north,
-      ),
+      extent
+        ? new ExtentRadianF32(
+            extent.west,
+            extent.south,
+            extent.east,
+            extent.north,
+          )
+        : undefined,
     );
 
   const delegatedTaskResult =

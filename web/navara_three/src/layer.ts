@@ -8,6 +8,7 @@ import type { FeatureId } from "./types";
 export type LayerEvent = {
   featureCreated: (evaluator: FeatureEvaluator) => void;
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
+  afterFeatureUpdated: () => void;
   deleted: () => void;
 };
 
@@ -67,6 +68,8 @@ export class Layer extends EventHandler<LayerEvent> {
     for (const evaluator of this.featureEvaluators.values()) {
       this.emit("featureUpdated", evaluator, updatedAt);
     }
+    this.emit("afterFeatureUpdated");
+
     return true;
   }
 

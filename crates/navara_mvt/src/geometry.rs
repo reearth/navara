@@ -197,30 +197,42 @@ fn handle_geometry(
 ) {
     match geom {
         Geometry::MultiPolygon(v) => {
-            if !appearances
+            let Some(Appearance::Polygon(appearance)) = appearances
                 .iter()
-                .any(|a| matches!(a, Appearance::Polygon(_)))
-            {
+                .find(|a| matches!(a, Appearance::Polygon(_)))
+            else {
                 return;
-            }
+            };
 
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
             let MultiPolygon(plgs) = v;
 
-            construct_polygons_geometry(commands, buf, feature_ids, plgs, batch_index, converter);
+            let flat = appearance.clamp_to_ground;
+
+            construct_polygons_geometry(
+                commands,
+                buf,
+                feature_ids,
+                plgs,
+                batch_index,
+                converter,
+                flat,
+            );
         }
         Geometry::Polygon(v) => {
-            if !appearances
+            let Some(Appearance::Polygon(appearance)) = appearances
                 .iter()
-                .any(|a| matches!(a, Appearance::Polygon(_)))
-            {
+                .find(|a| matches!(a, Appearance::Polygon(_)))
+            else {
                 return;
-            }
+            };
 
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
-            construct_polygon_geometry(commands, buf, feature_ids, v, batch_index, converter);
+            let flat = appearance.clamp_to_ground;
+
+            construct_polygon_geometry(commands, buf, feature_ids, v, batch_index, converter, flat);
         }
         Geometry::MultiPoint(v) => {
             *geometry_type = Some(ConstructedGeometryType::Point);
@@ -471,9 +483,18 @@ fn construct_polygons_geometry(
     polygons: &[Polygon<f32>],
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
+    flat: bool,
 ) {
     for polygon in polygons {
-        construct_polygon_geometry(commands, buf, feature_ids, polygon, batch_index, converter);
+        construct_polygon_geometry(
+            commands,
+            buf,
+            feature_ids,
+            polygon,
+            batch_index,
+            converter,
+            flat,
+        );
     }
 }
 
@@ -485,9 +506,14 @@ fn construct_polygon_geometry(
     polygon: &Polygon<f32>,
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
+    flat: bool,
 ) {
     let LineString(outer) = polygon.exterior();
-    let outer_vec = converter.project_points(outer);
+    let outer_vec = if flat {
+        converter.project_points_on_center(outer)
+    } else {
+        converter.project_points(outer)
+    };
 
     let interiors = polygon.interiors();
     let mut holes: Vec<Hierarchy> = Vec::new();
@@ -496,9 +522,17 @@ fn construct_polygon_geometry(
     // which is based on the origin being at the top-left.
     for LineString(hole) in interiors {
         holes.push(Hierarchy {
-            outer_ring: converter.project_points(hole),
+            outer_ring: if flat {
+                converter.project_points_on_center(hole)
+            } else {
+                converter.project_points(hole)
+            },
             holes: None,
-            expected_winding_order: WindingOrder::CounterClockwise,
+            expected_winding_order: if flat {
+                WindingOrder::Clockwise
+            } else {
+                WindingOrder::CounterClockwise
+            },
         });
     }
 
@@ -512,7 +546,11 @@ fn construct_polygon_geometry(
             hierarchy: Hierarchy {
                 outer_ring: outer_vec,
                 holes: Some(holes),
-                expected_winding_order: WindingOrder::Clockwise,
+                expected_winding_order: if flat {
+                    WindingOrder::CounterClockwise
+                } else {
+                    WindingOrder::Clockwise
+                },
             }
             .transfer(buf),
             crs: CRS::Geographic,

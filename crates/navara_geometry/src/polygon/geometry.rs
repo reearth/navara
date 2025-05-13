@@ -1,5 +1,5 @@
 use navara_core::{Ellipsoid, CRS, WGS84_32};
-use navara_math::{EqualEpsilon, FloatType, Vec3, EPSILON10, RADIANS_PER_DEGREE};
+use navara_math::{EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
 
 use crate::{helpers::vec::unpack_flatten_vec3, FloatAttribute};
 
@@ -46,6 +46,76 @@ impl Default for PolygonGeometryOptions {
 
 pub struct PolygonGeometryResult {
     pub geometry: PolygonGeometry,
+}
+
+/// Creates a flat polygon geometry from a polygon hierarchy in Cartesian coordinates.
+/// This function assumes the polygon is on a flat plane, not on an ellipsoid.
+pub fn create_flat_polygon_geometry(
+    options: PolygonGeometryOptions,
+    polygon_resource: &mut PolygonResource,
+) -> Option<PolygonGeometryResult> {
+    let polygon_hierarchy = &options.hierarchy;
+
+    let outer_positions = &polygon_hierarchy.outer_ring;
+    if outer_positions.len() < 3 {
+        return None;
+    }
+
+    // Simple projection for Cartesian coordinates - just extract x and y
+    let project_to_cartesian_2d = |positions: &[Vec3]| -> Vec<Vec2> {
+        positions.iter().map(|p| Vec2::new(p.x, p.y)).collect()
+    };
+
+    let (polygons, _) = polygons_from_hierarchy(polygon_hierarchy, project_to_cartesian_2d);
+
+    if polygons.is_empty() {
+        return None;
+    }
+
+    let mut combined_positions = vec![];
+    let mut combined_indices = vec![];
+
+    // Process each polygon
+    for polygon in &polygons {
+        // Get triangulation indices using earcut
+        let mut polygon_indices = polygon_resource.earcut(polygon);
+        if polygon_indices.len() < 3 {
+            polygon_indices = vec![0, 1, 2];
+        }
+
+        // Add positions to the combined buffer
+        let positions_len = combined_positions.len() / 3;
+        for position in &polygon.positions {
+            combined_positions.push(position.x);
+            combined_positions.push(position.y);
+            combined_positions.push(position.z);
+        }
+
+        // Adjust and add indices to the combined buffer
+        for idx in polygon_indices {
+            combined_indices.push((idx + positions_len) as u32);
+        }
+    }
+
+    if combined_indices.is_empty() {
+        return None;
+    }
+
+    // Create the final geometry with only position attribute
+    let combined_attributes = PolygonGeometryAttributes {
+        position: FloatAttribute::new(combined_positions, 3),
+        normal: None,
+        scale_normal_and_cap: None,
+        batch_id_and_sel: None,
+        batch_index: None,
+    };
+
+    Some(PolygonGeometryResult {
+        geometry: PolygonGeometry {
+            attributes: combined_attributes,
+            indices: combined_indices,
+        },
+    })
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/baaabaa49058067c855ad050be73a9cdfe9b6ac7/packages/engine/Source/Core/PolygonGeometry.js#L1278

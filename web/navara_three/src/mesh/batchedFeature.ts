@@ -8,6 +8,8 @@ import {
   type NormalBufferAttributes,
 } from "three";
 
+import type { CustomObject3DEventMap } from "../object3DEvent";
+
 import {
   BATCHED_ATTRIBUTE_NAMES,
   getBatchDataTexture,
@@ -34,8 +36,9 @@ export class BatchedFeatureMesh<
     Buf extends
       BufferGeometry<BatchedFeatureAttributes> = BufferGeometry<BatchedFeatureAttributes>,
     M extends Material = Material,
+    E extends CustomObject3DEventMap = CustomObject3DEventMap,
   >
-  extends Mesh<Buf, M>
+  extends Mesh<Buf, M, E>
   implements FeatureMesh
 {
   static _isBatchedAttributeName(v: string): v is BatchedAttributeName {
@@ -99,5 +102,9 @@ export class BatchedFeatureMesh<
 
   _setFrustumCulled(_culled: boolean): void {
     throw new Unimplemented();
+  }
+
+  _togglePickable(pickable: number) {
+    this.material.userData.uPickable.value = pickable;
   }
 }

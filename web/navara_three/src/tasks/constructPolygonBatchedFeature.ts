@@ -10,10 +10,11 @@ import { queueTask } from "./queueTask";
 export function constructPolygonBatchedFeature(
   transferableBatchedFeatureLike: TransferablePolygonBatchedFeatureLike,
   materialLike: PolygonMaterialLike,
+  flat: boolean,
 ): Promise<ConstructedPolygonGeometryLike | undefined> {
   return queueTask(
     "constructPolygonBatchedFeature",
-    [transferableBatchedFeatureLike, materialLike],
+    [transferableBatchedFeatureLike, materialLike, flat],
     {
       transfer: [
         transferableBatchedFeatureLike.batch_ids.buffer,

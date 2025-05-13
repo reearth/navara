@@ -11,3 +11,4 @@ export * from "./instancedPoint";
 export * from "./instancedBillboard";
 export * from "./instancedText";
 export * from "./batchTexture";
+export * from "./tile";

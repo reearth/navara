@@ -11,6 +11,18 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen(js_name = constructPolygonBatchedFeature)]
 pub fn construct_polygon_batched_feature(
+    features: TransferablePolygonBatchedFeature,
+    material: PolygonMaterial,
+    flat: bool,
+) -> Option<ConstructedPolygonGeometry> {
+    if flat {
+        construct_flat_polygon(features, material)
+    } else {
+        construct_polygon(features, material)
+    }
+}
+
+pub fn construct_polygon(
     mut features: TransferablePolygonBatchedFeature,
     material: PolygonMaterial,
 ) -> Option<ConstructedPolygonGeometry> {
@@ -117,7 +129,90 @@ pub fn construct_polygon_batched_feature(
     }
 
     Some(ConstructedPolygonGeometry::new(
-        (&combined_extent?).into(),
         PolygonGeometry::new(combined_attributes.into(), indices),
+        Some((&combined_extent?).into()),
+    ))
+}
+
+pub fn construct_flat_polygon(
+    mut features: TransferablePolygonBatchedFeature,
+    material: PolygonMaterial,
+) -> Option<ConstructedPolygonGeometry> {
+    let mut polygon_resource = PolygonResource::new();
+    let material: navara_material::PolygonMaterial = material.into();
+
+    let mut combined_attributes = PolygonGeometryAttributes {
+        position: FloatAttribute::new(vec![], 3),
+        normal: None,
+        scale_normal_and_cap: None,
+        batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
+        batch_index: Some(UintAttribute::new(vec![], 1)),
+    };
+    let mut indices = vec![];
+    let mut index_offset = 0;
+
+    for idx in 0..features.length {
+        let (transferable_hierarchy, batch_idx, batch_id) =
+            features.to_transferable_hierarchy_by_index(idx);
+        let geometry_hierarchy: Hierarchy = transferable_hierarchy.into();
+
+        let polygon_result_opt = navara_feature_component::polygon::construct_flat_polygon_feature(
+            geometry_hierarchy,
+            &material,
+            &mut polygon_resource,
+        );
+
+        let mut polygon_result = match polygon_result_opt {
+            Some(polygon_result) => polygon_result,
+            None => continue,
+        };
+
+        let position_length = polygon_result.geometry.attributes.position.data.len()
+            / polygon_result.geometry.attributes.position.size as usize;
+        if position_length == 0 {
+            continue;
+        }
+
+        combined_attributes
+            .position
+            .data
+            .append(&mut polygon_result.geometry.attributes.position.data);
+
+        let mut batch_ids = vec![];
+        let mut batch_indices = vec![];
+        for _i in 0..position_length {
+            batch_ids.push(batch_id.0.x as FloatType);
+            batch_ids.push(batch_id.0.y as FloatType);
+
+            batch_indices.push(batch_idx.0);
+        }
+
+        combined_attributes
+            .batch_id_and_sel
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut batch_ids);
+        combined_attributes
+            .batch_index
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut batch_indices);
+
+        if index_offset == 0 {
+            indices.append(&mut polygon_result.geometry.indices);
+        } else {
+            for i in polygon_result.geometry.indices {
+                indices.push(i + index_offset);
+            }
+        }
+
+        index_offset += position_length as u32;
+    }
+
+    Some(ConstructedPolygonGeometry::new(
+        PolygonGeometry::new(combined_attributes.into(), indices),
+        None,
     ))
 }

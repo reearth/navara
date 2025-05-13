@@ -11,7 +11,13 @@ import {
 } from "three";
 
 import { BufferView } from "./bufferView";
-import { TextMesh, ModelMesh, InstancedMesh } from "./mesh";
+import {
+  TextMesh,
+  ModelMesh,
+  InstancedMesh,
+  TileMesh,
+  BatchedFeatureMesh,
+} from "./mesh";
 import { CustomRenderPass } from "./renderPass";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
@@ -130,8 +136,8 @@ export class PickHelper extends CustomRenderPass {
         obj.setPickable(picable);
       }
       // polygon, polyline
-      else if (obj instanceof Mesh && "uPickable" in obj.material.userData) {
-        obj.material.userData.uPickable.value = picable;
+      else if (obj instanceof BatchedFeatureMesh) {
+        obj._togglePickable(picable);
       }
 
       // model
@@ -154,12 +160,8 @@ export class PickHelper extends CustomRenderPass {
         });
       }
       // tile
-      else if (obj instanceof Mesh && "tileOrigColor" in obj.userData) {
-        if (picable) {
-          obj.material.color.setHex(0);
-        } else {
-          obj.material.color.setHex(obj.userData.tileOrigColor);
-        }
+      else if (obj instanceof TileMesh) {
+        obj._togglePickable(picable);
       }
     }
   }

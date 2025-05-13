@@ -7,7 +7,7 @@ use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
-use navara_tile_component::TileMeshMarker;
+use navara_tile_component::{TileCoordinates, TileMeshMarker};
 use navara_worker::DelegatedWorkerTasksParameters;
 
 #[derive(Debug, Default)]
@@ -15,12 +15,14 @@ pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
     pub mesh_removed: Vec<EntityEvent>,
+    #[allow(clippy::type_complexity)]
     pub mesh_added: Vec<
         ComponentEvent<(
             &'a TileMeshMarker,
             &'a Mesh,
             &'a RasterTileInternalMaterial,
             &'a Transform,
+            &'a TileCoordinates,
         )>,
     >,
     pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a RasterTileInternalMaterial)>>,
@@ -31,10 +33,20 @@ pub struct Events<'a> {
     pub worker_task_delegated:
         Vec<ReconstructableComponentEvent<&'a DelegatedWorkerTasksParameters>>,
     pub worker_task_removed: Vec<EntityEvent>,
-    pub renderable_feature_added:
-        Vec<ReconstructableComponentEvent<(&'a RenderableFeature, &'a LayerId)>>,
-    pub renderable_feature_changed:
-        Vec<ReconstructableComponentEvent<(&'a RenderableFeature, &'a LayerId)>>,
+    pub renderable_feature_added: Vec<
+        ReconstructableComponentEvent<(
+            &'a RenderableFeature,
+            &'a LayerId,
+            Option<&'a TileCoordinates>,
+        )>,
+    >,
+    pub renderable_feature_changed: Vec<
+        ReconstructableComponentEvent<(
+            &'a RenderableFeature,
+            &'a LayerId,
+            Option<&'a TileCoordinates>,
+        )>,
+    >,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
 }
 
@@ -62,7 +74,7 @@ impl<'a> Events<'a> {
         }
 
         for e in store.mesh_added.iter() {
-            if let Some(e) = ComponentEvent::from_world_4(*e, world) {
+            if let Some(e) = ComponentEvent::from_world_5(*e, world) {
                 events.mesh_added.push(e);
                 is_changed = true;
             }
@@ -114,14 +126,14 @@ impl<'a> Events<'a> {
         }
 
         for e in store.renderable_feature_added.iter() {
-            if let Some(e) = ReconstructableComponentEvent::from_world_2(*e, world) {
+            if let Some(e) = ReconstructableComponentEvent::from_world_2_and_option(*e, world) {
                 events.renderable_feature_added.push(e);
                 is_changed = true;
             }
         }
 
         for e in store.renderable_feature_changed.iter() {
-            if let Some(e) = ReconstructableComponentEvent::from_world_2(*e, world) {
+            if let Some(e) = ReconstructableComponentEvent::from_world_2_and_option(*e, world) {
                 events.renderable_feature_changed.push(e);
                 is_changed = true;
             }

@@ -12,11 +12,14 @@ pub struct ConstructPolygonBatchedFeatureMarker;
 #[derive(Component, Clone, Debug, Serialize)]
 pub struct ConstructPolygonBatchedFeatureParameters {
     pub batched_feature: Entity,
+    /// If it's true, the polygon will be constructed in flat.
+    /// This is used to render the polygon as a texture.
+    pub flat: bool,
 }
 
 #[derive(Component, Clone, Debug)]
 pub struct ConstructPolygonBatchedFeatureResult {
-    pub extent: Extent<FloatType, Radians>,
+    pub extent: Option<Extent<FloatType, Radians>>,
     pub geometry: TransferablePolygonGeometry,
 }
 
