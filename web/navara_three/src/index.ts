@@ -754,6 +754,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
   }
 
+  lookAt(target: Vector3Tuple, offset: Vector3Tuple) {
+    this._core?.lookAt(new Float32Array(target), new Float32Array(offset));
+  }
+
   private _startMainLoop() {
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;

@@ -16,7 +16,7 @@ use navara_core::{
 };
 use navara_frame::FrameManager;
 use navara_math::{
-    EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3,
+    EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3, EPSILON6,
 };
 use navara_window::Window;
 
@@ -117,6 +117,10 @@ pub fn update(
 
                         flight.fly_to(&transform, frustum, pos, &orient, duration, max_height);
                     }
+                }
+                CameraEvent::LookAt { target, offset } => {
+                    apply_look_at(&mut transform, &mut orbit, target, offset);
+                    continue;
                 }
             }
         }
@@ -622,6 +626,35 @@ fn ray_ellipsoid_intersect(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> FloatT
         // TODO: Handle the case where intersection point couldn't find.
         _ => 1.,
     }
+}
+
+fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {
+    let ellipsoid = WGS84_32;
+    let world_target = CRS::Geographic.to_vec3(ellipsoid, *target, 0.0);
+
+    let enu_transform = east_north_up_to_fixed_frame(world_target, ellipsoid);
+    let offset_world = enu_transform.transform_vector3(*offset);
+
+    let camera_position = world_target + offset_world;
+
+    let forward = (world_target - camera_position).normalize();
+    let mut up = enu_transform.transform_vector3(Vec3::Z).normalize();
+
+    // Handle edge case where forward and up vectors are colinear (or nearly so)
+    if forward
+        .dot(up)
+        .clamp(-1.0, 1.0)
+        .abs()
+        .equal_diff_epsilon(1.0, EPSILON6)
+    {
+        up = enu_transform.transform_vector3(Vec3::Y).normalize();
+    }
+
+    transform.translation = camera_position;
+    transform.look_to(forward, up);
+
+    let world = orbit.get_default_world_quat();
+    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
 }
 
 // TODO
