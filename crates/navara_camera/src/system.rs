@@ -15,12 +15,15 @@ use navara_core::{
     WGS84_32,
 };
 use navara_frame::FrameManager;
-use navara_math::{EqualEpsilon, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3};
+use navara_math::{
+    EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3,
+};
 use navara_window::Window;
 
 use crate::{
-    helpers::get_pick_ray_from_camera, CamDirType, CameraChange, CameraController, CameraDirection,
-    CameraInertia, CameraTranslate,
+    helpers::{get_heading, get_pick_ray_from_camera, get_pitch, get_roll},
+    CamDirType, CameraController, CameraDirection, CameraEvent, CameraFlight, CameraInertia,
+    CameraOrientation,
 };
 
 use super::{CameraFrustum, CameraMarker, Orbit};
@@ -46,6 +49,7 @@ pub fn startup(mut commands: Commands) {
         ),
         CameraController::default(),
         CameraInertia::default(),
+        CameraFlight::default(),
     ));
 }
 
@@ -60,6 +64,7 @@ pub fn update(
             &mut CameraInertia,
             &CameraFrustum,
             &mut Orbit,
+            &mut CameraFlight,
         ),
         With<CameraMarker>,
     >,
@@ -67,28 +72,64 @@ pub fn update(
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
     mut _mp: EventReader<MouseMoveInput>,
-    mut cc: EventReader<CameraChange>,
-    mut ct: EventReader<CameraTranslate>,
+    mut ce: EventReader<CameraEvent>,
     keys: Res<ButtonInput<KeyCode>>,
     frame: Res<FrameManager>,
 ) {
     let updated_at = frame.updated_at();
     let last_updated_at = frame.last_updated_at();
     let duration = (updated_at - last_updated_at) as f32;
-    for (marker, mut transform, mut controller, mut inertia, frustum, mut orbit) in query.iter_mut()
+    for (marker, mut transform, mut controller, mut inertia, frustum, mut orbit, mut flight) in
+        query.iter_mut()
     {
         if !controller.enabled {
             continue;
         }
 
-        let cc = cc.read().last();
-        if let Some(cc) = cc {
-            apply_camera_change(&mut transform, &mut orbit, cc);
-            continue;
+        let ce = ce.read().last();
+        if let Some(ce) = ce {
+            match ce {
+                CameraEvent::Change {
+                    position,
+                    orientation,
+                } => {
+                    apply_camera_change(&mut transform, &mut orbit, position, orientation);
+                    continue;
+                }
+                CameraEvent::Translate { amount, direction } => {
+                    // Handle camera translation
+                    handle_camera_translate(
+                        &mut transform,
+                        &mut orbit,
+                        &mut inertia,
+                        amount,
+                        direction,
+                    );
+                }
+                CameraEvent::FlyTo {
+                    position,
+                    orientation,
+                    duration,
+                    max_height,
+                } => {
+                    if let Some(pos) = position {
+                        let orient = orientation.unwrap_or(CameraOrientation::default());
+
+                        flight.fly_to(&transform, frustum, pos, &orient, duration, max_height);
+                    }
+                }
+            }
         }
 
-        // Handle camera translation
-        handle_camera_translate(&mut transform, &mut orbit, &mut inertia, &mut ct);
+        if let Some((position, orientation)) = flight.update(duration) {
+            apply_camera_change(
+                &mut transform,
+                &mut orbit,
+                &Some(position),
+                &Some(orientation),
+            );
+            continue;
+        }
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
         let _is_shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
@@ -235,24 +276,7 @@ fn handle_tilt(
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
     // TODO: Support movement underground.
-    let point = match ray_ellipsoid(&ray, ellipsoid) {
-        i if i.start == f32::INFINITY => {
-            // Calculate an edge of ellipsoid
-            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
-            let forward = ellipsoid_vec3 * ray.direction;
-            let distance_to_edge = forward.dot(ray.origin);
-
-            if distance_to_edge.equal_epsilon(EPSILON10) {
-                1.
-            } else {
-                distance_to_edge
-            }
-        }
-        i if i.start != 0. => i.start,
-        i if i.end != 0. => i.end,
-        // TODO: Handle the case where intersection point couldn't find.
-        _ => 1.,
-    };
+    let point = ray_ellipsoid_intersect(&ray, ellipsoid);
     let center = ray.get_point(point);
     let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
 
@@ -337,24 +361,7 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
         origin: camera_pos,
         direction: direction_to_center,
     };
-    match ray_ellipsoid(&ray, ellipsoid) {
-        i if i.start == f32::INFINITY => {
-            // Calculate an edge of ellipsoid
-            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
-            let forward = ellipsoid_vec3 * ray.direction;
-            let distance_to_edge = forward.dot(ray.origin);
-
-            if distance_to_edge.equal_epsilon(EPSILON10) {
-                1.
-            } else {
-                distance_to_edge
-            }
-        }
-        i if i.start != 0. => i.start,
-        i if i.end != 0. => i.end,
-        // TODO: Handle the case where intersection point couldn't find.
-        _ => 1.,
-    }
+    ray_ellipsoid_intersect(&ray, ellipsoid)
 }
 
 fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
@@ -412,24 +419,44 @@ fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &Camera
 /// - `cc.position.z`: camera height above the ground point (along normal)
 /// - `cc.heading`: rotation around the local up axis (degrees)
 /// - `cc.pitch`: tilt around the camera's right axis (degrees)
-fn apply_camera_change(transform: &mut Transform, orbit: &mut Orbit, cc: &CameraChange) {
+fn apply_camera_change(
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    position: &Option<Vec3>,
+    orientation: &Option<CameraOrientation>,
+) {
+    let orient = orientation.unwrap_or_default();
+
     // Heading is inverted because positive rotation should be clockwise
-    let heading = -cc.heading.unwrap_or(0.0);
+    let heading = if orient.heading.is_some() {
+        -orient.get_heading()
+    } else {
+        -get_heading(transform)
+    };
+
     // Pitch is adjusted by +90° because we want -90° to point straight down
-    let pitch = cc.pitch.unwrap_or(-90.0) + 90.0;
-    let roll = cc.roll.unwrap_or(0.0);
+    let pitch = if orient.pitch.is_some() {
+        orient.get_pitch() + 90.0
+    } else {
+        get_pitch(transform) + 90.0
+    };
+
+    let roll = if orient.roll.is_some() {
+        orient.get_roll()
+    } else {
+        get_roll(transform)
+    };
 
     // Reset orbit to default state before applying changes
     *orbit = Orbit::default();
 
     // Calculate new world position and target direction
     // This differs based on whether we have a new position or are using existing one
-    let (world_position, target_dir) = if let Some(pos) = cc.position {
+    let (world_position, target_dir) = if let Some(pos) = position {
         let altitude = pos.z.max(1.0); // Ensure minimum altitude of 1.0 for stability
 
         // Create ground point (ignoring altitude for now)
         let ground_point = Vec3::new(pos.x, pos.y, 0.0);
-
         // Convert geographic coordinates to world-space position
         let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
         let target_dir = pivot.normalize_or_zero();
@@ -524,11 +551,12 @@ fn handle_camera_translate(
     transform: &mut Transform,
     orbit: &mut Orbit,
     inertia: &mut CameraInertia,
-    ct: &mut EventReader<CameraTranslate>,
+    amount: &f32,
+    direction: &CamDirType,
 ) {
-    let Some(ct) = ct.read().last() else {
+    if *amount < EPSILON3 {
         return;
-    };
+    }
 
     // Get the camera's local forward, right, and up directions
     let forward = transform.forward().as_vec3();
@@ -536,7 +564,7 @@ fn handle_camera_translate(
     let up = transform.up().as_vec3();
 
     // Determine the movement direction vector based on the input direction
-    let dir_vec = match ct.direction {
+    let dir_vec = match direction {
         CamDirType::Standard(CameraDirection::Forward) => forward,
         CamDirType::Standard(CameraDirection::Backward) => -forward,
         CamDirType::Standard(CameraDirection::Right) => right,
@@ -547,7 +575,7 @@ fn handle_camera_translate(
     };
 
     // Move the camera by the specified amount in the chosen direction
-    inertia.translate(dir_vec * ct.amount);
+    inertia.translate(dir_vec * amount);
 
     // Reapply the orbit rotation to maintain a consistent view orientation
     let world = orbit.get_default_world_quat();
@@ -573,6 +601,27 @@ fn apply_camera_translate(
         return;
     }
     transform.translation = next;
+}
+
+fn ray_ellipsoid_intersect(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> FloatType {
+    match ray_ellipsoid(ray, ellipsoid) {
+        i if i.start == f32::INFINITY => {
+            // Calculate an edge of ellipsoid
+            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
+            let forward = ellipsoid_vec3 * ray.direction;
+            let distance_to_edge = forward.dot(ray.origin);
+
+            if distance_to_edge.equal_epsilon(EPSILON10) {
+                1.
+            } else {
+                distance_to_edge
+            }
+        }
+        i if i.start != 0. => i.start,
+        i if i.end != 0. => i.end,
+        // TODO: Handle the case where intersection point couldn't find.
+        _ => 1.,
+    }
 }
 
 // TODO

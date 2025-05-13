@@ -1,6 +1,13 @@
 use bevy_ecs::component::Component;
-use navara_core::{Aabb, Plane, WGS84_B_32};
-use navara_math::{FloatType, Mat3, Quat, Transform, Vec3};
+use navara_core::{adjust_angle_for_lerp, lerp, Aabb, Plane, CRS, WGS84_32, WGS84_B_32};
+use navara_math::{
+    negative_pi_to_pi, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, EPSILON10,
+};
+
+use crate::{
+    helpers::{get_heading, get_pitch, get_roll},
+    CameraOrientation,
+};
 
 #[derive(Component)]
 pub struct CameraMarker;
@@ -273,6 +280,265 @@ impl Orbit {
             None => {
                 self.horizontal_axis = self.local_up;
             }
+        }
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct FlightOptions {
+    pub lon: FloatType,
+    pub lat: FloatType,
+    pub height: FloatType,
+    pub heading: FloatType,
+    pub pitch: FloatType,
+    pub roll: FloatType,
+}
+
+#[derive(Component, Default)]
+pub struct CameraFlight {
+    pub start_options: FlightOptions,
+    pub end_options: FlightOptions,
+
+    pub time: FloatType,
+    pub duration: FloatType,
+    pub max_height: FloatType,
+    height_function: Option<Box<dyn Fn(FloatType) -> FloatType + Send + Sync + 'static>>,
+}
+
+impl CameraFlight {
+    pub fn fly_to(
+        &mut self,
+        transform: &Transform,
+        frustum: &CameraFrustum,
+        pos: &Vec3,
+        orient: &CameraOrientation,
+        duration: &Option<FloatType>,
+        max_height: &Option<FloatType>,
+    ) {
+        let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
+        let start = lle.deg();
+
+        self.set_start_options(
+            start.lng.val(),
+            start.lat.val(),
+            start.height.val(),
+            get_heading(transform),
+            get_pitch(transform),
+            get_roll(transform),
+        );
+
+        self.set_end_options(
+            pos.x,
+            pos.y,
+            pos.z,
+            orient.get_heading(),
+            orient.get_pitch(),
+            orient.get_roll(),
+        );
+
+        self.start_fly(duration, max_height, frustum, transform);
+    }
+
+    fn set_start_options(
+        &mut self,
+        lon: FloatType,
+        lat: FloatType,
+        height: FloatType,
+        heading: FloatType,
+        pitch: FloatType,
+        roll: FloatType,
+    ) {
+        self.start_options.lon = lon;
+        self.start_options.lat = lat;
+        self.start_options.height = height;
+        self.start_options.heading = heading;
+        self.start_options.pitch = pitch;
+        self.start_options.roll = roll;
+    }
+
+    fn set_end_options(
+        &mut self,
+        lon: FloatType,
+        lat: FloatType,
+        height: FloatType,
+        heading: FloatType,
+        pitch: FloatType,
+        roll: FloatType,
+    ) {
+        self.end_options.lon = lon;
+        self.end_options.lat = lat;
+        self.end_options.height = height;
+        self.end_options.heading = heading;
+        self.end_options.pitch = pitch;
+        self.end_options.roll = roll;
+    }
+
+    fn options_changed(&mut self) -> bool {
+        let start_heading = negative_pi_to_pi(self.start_options.heading);
+        let end_heading = negative_pi_to_pi(self.end_options.heading);
+        let start_pitch = negative_pi_to_pi(self.start_options.pitch);
+        let end_pitch = negative_pi_to_pi(self.end_options.pitch);
+        let start_roll = negative_pi_to_pi(self.start_options.roll);
+        let end_roll = negative_pi_to_pi(self.end_options.roll);
+
+        if !start_heading.equal_diff_epsilon(end_heading, EPSILON10) {
+            return true;
+        }
+
+        if !start_pitch.equal_diff_epsilon(end_pitch, EPSILON10) {
+            return true;
+        }
+
+        if !start_roll.equal_diff_epsilon(end_roll, EPSILON10) {
+            return true;
+        }
+
+        if !self
+            .start_options
+            .lon
+            .equal_diff_epsilon(self.end_options.lon, EPSILON10)
+        {
+            return true;
+        }
+
+        if !self
+            .start_options
+            .lat
+            .equal_diff_epsilon(self.end_options.lat, EPSILON10)
+        {
+            return true;
+        }
+
+        if !self
+            .start_options
+            .height
+            .equal_diff_epsilon(self.end_options.height, EPSILON10)
+        {
+            return true;
+        }
+
+        false
+    }
+
+    fn start_fly(
+        &mut self,
+        duration: &Option<FloatType>,
+        max_height: &Option<FloatType>,
+        frustum: &CameraFrustum,
+        transform: &Transform,
+    ) {
+        if !self.options_changed() {
+            return;
+        }
+
+        self.start_options.heading =
+            adjust_angle_for_lerp(self.start_options.heading, self.end_options.heading);
+        self.start_options.roll =
+            adjust_angle_for_lerp(self.start_options.roll, self.end_options.roll);
+
+        self.time = 0.;
+        self.duration = duration.unwrap_or(500.);
+        if let Some(h) = max_height {
+            self.max_height = *h;
+        } else {
+            self.max_height = self.get_altitude(transform, frustum);
+        }
+
+        self.height_function = Some(Self::create_height_function(
+            self.start_options.height,
+            self.end_options.height,
+            self.max_height,
+        ));
+    }
+
+    pub fn is_flying(&self) -> bool {
+        self.time < self.duration
+    }
+
+    pub fn update(&mut self, delta_time: FloatType) -> Option<(Vec3, CameraOrientation)> {
+        if self.is_flying() {
+            self.time += delta_time;
+            if self.time > self.duration {
+                self.time = self.duration;
+            }
+
+            if let Some(f) = &self.height_function {
+                let t = self.time / self.duration;
+                let height = f(t);
+
+                let lon = lerp(self.start_options.lon, self.end_options.lon, t);
+                let lat = lerp(self.start_options.lat, self.end_options.lat, t);
+                let heading = lerp(self.start_options.heading, self.end_options.heading, t);
+                let pitch = lerp(self.start_options.pitch, self.end_options.pitch, t);
+                let roll = lerp(self.start_options.roll, self.end_options.roll, t);
+
+                let position = Vec3::new(lon, lat, height);
+                let orientation = CameraOrientation {
+                    pitch: Some(pitch),
+                    heading: Some(heading),
+                    roll: Some(roll),
+                };
+
+                return Some((position, orientation));
+            }
+        }
+
+        None
+    }
+
+    // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/CameraFlightPath.js#L22
+    fn get_altitude(&self, transform: &Transform, frustum: &CameraFrustum) -> FloatType {
+        let cam_start = transform.translation;
+        let cam_end = CRS::Geographic.to_vec3(
+            WGS84_32,
+            Vec3::new(
+                self.end_options.lon,
+                self.end_options.lat,
+                self.end_options.height,
+            ),
+            0.0,
+        );
+        let diff = cam_end - cam_start;
+
+        let up = transform.up().as_vec3();
+        let right = transform.right().as_vec3();
+
+        let dx = (up * diff.dot(up)).length();
+        let dy = (right * diff.dot(right)).length();
+
+        let tan_theta = (0.5 * frustum.fov).tan();
+        let near = frustum.near;
+        let top = near * tan_theta;
+        let right = frustum.aspect_ratio * top;
+
+        let controller = CameraController::default();
+        (dx * near / right)
+            .max(dy * near / top)
+            .min(controller.maximum_zoom_distance)
+    }
+
+    // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/CameraFlightPath.js#L75
+    fn create_height_function(
+        start_height: FloatType,
+        end_height: FloatType,
+        option_altitude: FloatType,
+    ) -> Box<dyn Fn(FloatType) -> FloatType + Send + Sync + 'static> {
+        let altitude = option_altitude;
+        let max_height = start_height.max(end_height);
+
+        if max_height < altitude {
+            let power = 4.0;
+            let factor = 1000.0;
+
+            let s = -((altitude - start_height) * factor).powf(1.0 / power);
+            let e = ((altitude - end_height) * factor).powf(1.0 / power);
+
+            Box::new(move |t: FloatType| {
+                let x = t * (e - s) + s;
+                -x.powf(power) / factor + altitude
+            })
+        } else {
+            Box::new(move |t: FloatType| start_height * (1.0 - t) + end_height * t)
         }
     }
 }

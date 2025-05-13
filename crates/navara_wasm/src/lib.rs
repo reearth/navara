@@ -430,6 +430,20 @@ impl Core {
     pub fn move_camera_with_direction(&mut self, direction: Vec<FloatType>, amount: FloatType) {
         self.app.move_camera_with_direction(direction, amount);
     }
+
+    #[wasm_bindgen(js_name = flyTo)]
+    pub fn fly_to(
+        &mut self,
+        position: Option<Vec<FloatType>>,
+        pitch: Option<FloatType>,
+        heading: Option<FloatType>,
+        roll: Option<FloatType>,
+        duration: Option<FloatType>,
+        max_height: Option<FloatType>,
+    ) {
+        self.app
+            .fly_to(position, pitch, heading, roll, duration, max_height);
+    }
 }
 
 #[wasm_bindgen(start)]
