@@ -8,4 +8,5 @@ mod system;
 
 pub use comp::*;
 pub use event::*;
+pub use helpers::*;
 pub use plugin::CameraPlugin;

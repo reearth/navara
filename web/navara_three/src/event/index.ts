@@ -23,7 +23,7 @@ import {
   RenderableFeatureRemovedEvent,
 } from "@navara/engine";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { type Camera, Mesh, Material, Object3D, Texture, Sprite } from "three";
+import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
 import { type ViewEvents } from "..";
 import { FEATURE_CONCURRENCY } from "../concurrency";
@@ -50,6 +50,7 @@ import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
+import { ThreeViewCamera } from "../camera";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -115,7 +116,7 @@ let RENDERABLE_FEATURE_CONCURRENCY = 0;
 export function processEvent(
   eventManager: EventManager,
   scenes: Scenes,
-  camera: Camera,
+  camera: ThreeViewCamera,
   meshes: MeshCache,
   abortControllers: AbortControllers,
   buf: BufferLoader,
@@ -393,11 +394,13 @@ export function processEvent(
 }
 
 function processCameraTransformUpdated(
-  camera: Camera,
+  camera: ThreeViewCamera,
   transform: Transform | undefined,
 ) {
   if (!transform) return;
-  setTransform(camera, transform); // disable temporarily
+  setTransform(camera.innerCam, transform); // disable temporarily
+
+  camera.updateStatus();
 }
 
 function processObjectTransformUpdated(

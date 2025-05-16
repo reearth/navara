@@ -63,6 +63,7 @@ import { isWorker } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+import { ThreeViewCamera } from "./camera";
 
 export * from "./type";
 export * from "./types";
@@ -107,7 +108,7 @@ export type ViewEvents = {
 };
 
 export default class ThreeView extends EventHandler<ViewEvents> {
-  camera: PerspectiveCamera;
+  camera: ThreeViewCamera;
   renderer: WebGLRenderer;
   control?: { update: () => void; get target(): Vector3 | undefined };
 
@@ -356,7 +357,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     };
 
     if (options.camera) {
-      this.camera = options.camera;
+      this.camera = new ThreeViewCamera(options.camera);
     } else {
       const { width = options.initialWidth, height = options.initialHeight } =
         this._getCanvasSize() ?? {};
@@ -364,13 +365,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         throw new Error("Must provide initialWidth and initialHeight");
       }
 
-      const camera = new PerspectiveCamera(50, width / height);
-      camera.far = 1e8; // 100,000 km
-      camera.near = 1;
+      const camera = new ThreeViewCamera(50, width / height, 1, 1e8);
       const earthRadius = 6371000;
-      camera.position.set(0, 0, earthRadius * 3);
-      camera.up.set(0, 0, 1);
-      camera.lookAt(0, 0, 0);
+      camera.innerCam.position.set(0, 0, earthRadius * 3);
+      camera.innerCam.up.set(0, 0, 1);
+      camera.innerCam.lookAt(0, 0, 0);
       this.camera = camera;
     }
 
@@ -384,7 +383,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     this._renderPass = new CustomRenderPass(
       this._scenes,
-      this.camera,
+      this.camera.innerCam,
       this._meshes,
       this._globeGBufferRenderTarget,
       this._drapedFeatureMaterials,
@@ -394,7 +393,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     // AA
     const aaEffect = selectAntialiasEffect(options.antialias);
     if (aaEffect) {
-      const aaPass = new EffectPass(this.camera, aaEffect);
+      const aaPass = new EffectPass(this.camera.innerCam, aaEffect);
       this._effectComposer.addPass(aaPass);
     }
 
@@ -457,7 +456,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         value: options.picking?.highlightColor ?? new Color(0x00ffff),
       },
       // TODO: Need to sync `fov` with WASM side
-      fov: { value: (this.camera.fov * Math.PI) / 180 },
+      fov: { value: (this.camera.innerCam.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
     };
 
@@ -499,7 +498,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._pickHelper = new PickHelper(
         this.renderer.domElement,
         this.renderer,
-        this.camera,
+        this.camera.innerCam,
         this._scenes,
         this._meshes,
         this._drapedFeatureMaterials,
@@ -518,6 +517,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const size = new Vector2();
     this.renderer.getSize(size);
     this.resize(size.width, size.height, this.renderer.getPixelRatio());
+
+    this.camera.core = this._core;
   }
 
   dispose() {
@@ -551,8 +552,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const h = typeof height === "number" ? height : canvas?.height;
     if (typeof w !== "number" || typeof h !== "number") return;
 
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.camera.innerCam.aspect = w / h;
+    this.camera.innerCam.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this._effectComposer.setSize(w, h);
     this._globeGBufferRenderTarget.setSize(
@@ -576,9 +577,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     // TODO: Need to get this value from WASM side, and near, far as well.
     // const fovY = 0.7245411;
     const fovY = 1;
-    const top = this.camera.near * Math.tan(0.5 * fovY);
+    const top = this.camera.innerCam.near * Math.tan(0.5 * fovY);
     const bottom = -top;
-    const right = this.camera.aspect * top;
+    const right = this.camera.innerCam.aspect * top;
     const left = -right;
 
     this._uniforms.viewportAndPixelRatio.value = [
@@ -586,17 +587,20 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       viewport?.height ?? 0,
       pixelRatio,
     ];
-    this._uniforms.frustumNearFar.value = [this.camera.near, this.camera.far];
+    this._uniforms.frustumNearFar.value = [
+      this.camera.innerCam.near,
+      this.camera.innerCam.far,
+    ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
       this._globeGBufferRenderTarget.depthTexture;
     this._uniforms.tGlobeNormal.value =
       this._globeGBufferRenderTarget.textures[0];
     this._uniforms.inverseProjectionMatrix.value =
-      this.camera.projectionMatrixInverse;
+      this.camera.innerCam.projectionMatrixInverse;
 
     // TODO: Need to sync `fov` with WASM side
-    this._uniforms.fov.value = (this.camera.fov * Math.PI) / 180;
+    this._uniforms.fov.value = (this.camera.innerCam.fov * Math.PI) / 180;
     this._uniforms.screenHeightPx.value = viewport?.height ?? 0;
   }
 
@@ -640,7 +644,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     events?.free();
 
     this.control?.update();
-    this.camera.updateMatrixWorld();
+    this.camera.innerCam.updateMatrixWorld();
 
     this.emit("postUpdate", updatedAt);
 

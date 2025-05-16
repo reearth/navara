@@ -449,6 +449,33 @@ impl Core {
     pub fn look_at(&mut self, target: Vec<FloatType>, offset: Vec<FloatType>) {
         self.app.look_at(target, offset);
     }
+
+    #[wasm_bindgen(js_name = getCameraStatus)]
+    pub fn get_camera_status(&mut self) -> CameraStatus {
+        self.app.get_camera_status().into()
+    }
+
+    #[wasm_bindgen(js_name = getCameraPositionLLE)]
+    pub fn get_camera_position_lle(&mut self) -> Option<Vec<FloatType>> {
+        self.app.get_camera_position_lle()
+    }
+
+    #[wasm_bindgen(js_name = getCameraPositionECEF)]
+    pub fn get_camera_position_ecef(&mut self) -> Option<Vec<FloatType>> {
+        self.app.get_camera_position_ecef()
+    }
+
+    #[wasm_bindgen(js_name = getCameraOrientation)]
+    pub fn get_camera_orientation(&mut self) -> Option<CameraOrientation> {
+        if let Some((heading, pitch, roll)) = self.app.get_camera_orientation() {
+            return Some(CameraOrientation {
+                heading,
+                pitch,
+                roll,
+            });
+        }
+        None
+    }
 }
 
 #[wasm_bindgen(start)]

@@ -119,6 +119,14 @@ impl CameraFrustum {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum CameraStatus {
+    Idle,
+    MoveStart,
+    Move,
+    MoveEnd,
+}
+
 #[derive(Component)]
 pub struct CameraController {
     pub enabled: bool,
@@ -137,6 +145,7 @@ pub struct CameraController {
     pub translate_duration: f32,
     pub inertia: FloatType,
     pub is_tilting: bool,
+    pub status: CameraStatus,
 }
 
 impl CameraController {
@@ -164,6 +173,7 @@ impl Default for CameraController {
             translate_duration: 500.,
             inertia: 0.5,
             is_tilting: false,
+            status: CameraStatus::Idle,
         }
     }
 }
@@ -314,7 +324,7 @@ impl CameraFlight {
         orient: &CameraOrientation,
         duration: &Option<FloatType>,
         max_height: &Option<FloatType>,
-    ) {
+    ) -> bool {
         let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
         let start = lle.deg();
 
@@ -336,7 +346,7 @@ impl CameraFlight {
             orient.get_roll(),
         );
 
-        self.start_fly(duration, max_height, frustum, transform);
+        self.start_fly(duration, max_height, frustum, transform)
     }
 
     fn set_start_options(
@@ -426,9 +436,9 @@ impl CameraFlight {
         max_height: &Option<FloatType>,
         frustum: &CameraFrustum,
         transform: &Transform,
-    ) {
+    ) -> bool {
         if !self.options_changed() {
-            return;
+            return false;
         }
 
         self.start_options.heading =
@@ -449,17 +459,25 @@ impl CameraFlight {
             self.end_options.height,
             self.max_height,
         ));
+
+        true
     }
 
     pub fn is_flying(&self) -> bool {
         self.time < self.duration
     }
 
-    pub fn update(&mut self, delta_time: FloatType) -> Option<(Vec3, CameraOrientation)> {
+    pub fn update(
+        &mut self,
+        controller: &mut CameraController,
+        delta_time: FloatType,
+    ) -> Option<(Vec3, CameraOrientation)> {
         if self.is_flying() {
+            controller.status = CameraStatus::Move;
             self.time += delta_time;
             if self.time > self.duration {
                 self.time = self.duration;
+                controller.status = CameraStatus::MoveEnd;
             }
 
             if let Some(f) = &self.height_function {
