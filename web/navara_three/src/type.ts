@@ -6,7 +6,7 @@ import type {
   TileLayerDescription,
   MvtLayerDescription,
 } from "@navara/engine";
-import type { LatLngHeight } from "@navara/core";
+
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D } from "three";
 
@@ -67,10 +67,4 @@ export type PickedFeature = {
 
 export type RenderFlag = {
   forceUpdate: boolean;
-};
-
-export type CameraPosition = Partial<LatLngHeight> & {
-  pitch?: number;
-  heading?: number;
-  roll?: number;
 };

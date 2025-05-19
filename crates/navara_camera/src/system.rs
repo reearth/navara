@@ -23,7 +23,7 @@ use navara_window::Window;
 use crate::{
     helpers::{get_heading, get_pick_ray_from_camera, get_pitch, get_roll},
     CamDirType, CameraController, CameraDirection, CameraEvent, CameraFlight, CameraInertia,
-    CameraOrientation,
+    CameraOrientation, CameraStatus,
 };
 
 use super::{CameraFrustum, CameraMarker, Orbit};
@@ -86,46 +86,12 @@ pub fn update(
             continue;
         }
 
-        let ce = ce.read().last();
-        if let Some(ce) = ce {
-            match ce {
-                CameraEvent::Change {
-                    position,
-                    orientation,
-                } => {
-                    apply_camera_change(&mut transform, &mut orbit, position, orientation);
-                    continue;
-                }
-                CameraEvent::Translate { amount, direction } => {
-                    // Handle camera translation
-                    handle_camera_translate(
-                        &mut transform,
-                        &mut orbit,
-                        &mut inertia,
-                        amount,
-                        direction,
-                    );
-                }
-                CameraEvent::FlyTo {
-                    position,
-                    orientation,
-                    duration,
-                    max_height,
-                } => {
-                    if let Some(pos) = position {
-                        let orient = orientation.unwrap_or(CameraOrientation::default());
-
-                        flight.fly_to(&transform, frustum, pos, &orient, duration, max_height);
-                    }
-                }
-                CameraEvent::LookAt { target, offset } => {
-                    apply_look_at(&mut transform, &mut orbit, target, offset);
-                    continue;
-                }
-            }
+        if controller.status == CameraStatus::MoveEnd {
+            controller.status = CameraStatus::Idle;
         }
 
-        if let Some((position, orientation)) = flight.update(duration) {
+        // flying
+        if let Some((position, orientation)) = flight.update(&mut controller, duration) {
             apply_camera_change(
                 &mut transform,
                 &mut orbit,
@@ -135,11 +101,26 @@ pub fn update(
             continue;
         }
 
+        // Handle camera events (Change, Translate, FlyTo, LookAt)
+        let ce = ce.read().last();
+        if let Some(ce) = ce {
+            process_camera_event(
+                ce,
+                &mut transform,
+                &mut orbit,
+                &mut controller,
+                &mut inertia,
+                frustum,
+                &mut flight,
+            );
+            continue;
+        }
+
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
         let _is_shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
 
         // Handle rotations and movements
-        handle_orbit_spin(
+        if handle_orbit_spin(
             &transform,
             &mut orbit,
             &mut controller,
@@ -147,15 +128,30 @@ pub fn update(
             &mb,
             &mut mm,
             is_ctrl,
-        );
-        handle_zoom(
+        ) {
+            if controller.status == CameraStatus::Idle {
+                controller.status = CameraStatus::MoveStart;
+            }
+
+            commit(&mut transform, &mut orbit);
+            continue;
+        }
+
+        if handle_zoom(
             &transform,
             &mut orbit,
             &controller,
             &mut inertia,
             &mut mw,
             is_ctrl,
-        );
+        ) {
+            if controller.status == CameraStatus::Idle {
+                controller.status = CameraStatus::MoveStart;
+            }
+
+            commit(&mut transform, &mut orbit);
+            continue;
+        }
         // handle_free_rotation(
         //     &mut transform,
         //     &controller,
@@ -165,7 +161,7 @@ pub fn update(
         //     &mut mm,
         //     is_shift,
         // );
-        handle_tilt(
+        if handle_tilt(
             &window,
             &mut orbit,
             &mut inertia,
@@ -175,7 +171,14 @@ pub fn update(
             is_ctrl,
             &transform,
             frustum,
-        );
+        ) {
+            if controller.status == CameraStatus::Idle {
+                controller.status = CameraStatus::MoveStart;
+            }
+
+            commit(&mut transform, &mut orbit);
+            continue;
+        }
 
         // Apply inertia
         apply_inertia(&mut orbit, &mut inertia, &controller);
@@ -188,7 +191,52 @@ pub fn update(
             apply_camera_translate(&mut transform, &mut inertia, &controller)
         }
 
-        after_inertia(&mut inertia, duration, &controller);
+        after_inertia(&mut inertia, duration, &mut controller);
+    }
+}
+
+fn process_camera_event(
+    ce: &CameraEvent,
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    controller: &mut CameraController,
+    inertia: &mut CameraInertia,
+    frustum: &CameraFrustum,
+    flight: &mut CameraFlight,
+) {
+    match ce {
+        CameraEvent::Change {
+            position,
+            orientation,
+        } => {
+            apply_camera_change(transform, orbit, position, orientation);
+        }
+        CameraEvent::Translate { amount, direction } => {
+            // Handle camera translation
+            let start = handle_camera_translate(transform, orbit, inertia, amount, direction);
+
+            if start {
+                controller.status = CameraStatus::MoveStart
+            }
+        }
+        CameraEvent::FlyTo {
+            position,
+            orientation,
+            duration,
+            max_height,
+        } => {
+            if let Some(pos) = position {
+                let orient = orientation.unwrap_or(CameraOrientation::default());
+
+                let start = flight.fly_to(transform, frustum, pos, &orient, duration, max_height);
+                if start {
+                    controller.status = CameraStatus::MoveStart
+                }
+            }
+        }
+        CameraEvent::LookAt { target, offset } => {
+            apply_look_at(transform, orbit, target, offset);
+        }
     }
 }
 
@@ -217,17 +265,17 @@ fn handle_orbit_spin(
     mb: &Res<ButtonInput<MouseButton>>,
     mm: &mut EventReader<MouseMotion>,
     is_ctrl: bool,
-) {
+) -> bool {
     if !controller.enable_spin
         || !mb.pressed(MouseButton::Left)
         || is_ctrl
         || mb.pressed(MouseButton::Right)
     {
-        return;
+        return false;
     }
 
     if mm.is_empty() {
-        return;
+        return false;
     }
 
     controller.reset_mode();
@@ -240,10 +288,11 @@ fn handle_orbit_spin(
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
 
     let Some(spin) = rotate(mm, controller, ratio * 1.5, ratio) else {
-        return;
+        return false;
     };
 
     inertia.spin(spin);
+    true
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
@@ -258,7 +307,7 @@ fn handle_tilt(
     is_ctrl: bool,
     transform: &Transform,
     frustum: &CameraFrustum,
-) {
+) -> bool {
     let ellipsoid = WGS84_32;
 
     // TODO: Check whether picking point from terrain or center. If the camera is nearby ground, it should be picked by terrain.
@@ -268,11 +317,11 @@ fn handle_tilt(
     if !controller.enable_tilt
         || ((!is_ctrl || !mb.pressed(MouseButton::Left)) && !mb.pressed(MouseButton::Right))
     {
-        return;
+        return false;
     }
 
     if mm.is_empty() {
-        return;
+        return false;
     }
 
     controller.is_tilting = true;
@@ -297,7 +346,7 @@ fn handle_tilt(
     );
 
     let Some(mut spin) = rotate(mm, controller, 1., 1.) else {
-        return;
+        return false;
     };
 
     if spin.x.abs() > spin.y.abs() {
@@ -307,6 +356,7 @@ fn handle_tilt(
     }
 
     inertia.spin(spin);
+    true
 }
 
 fn rotate(
@@ -335,15 +385,15 @@ fn handle_zoom(
     inertia: &mut CameraInertia,
     mw: &mut EventReader<MouseWheel>,
     is_ctrl: bool,
-) {
+) -> bool {
     if !controller.enable_zoom || mw.is_empty() || is_ctrl {
-        return;
+        return false;
     }
 
     let zoom = if let Some(ev) = mw.read().last() {
         ev.y
     } else {
-        return;
+        return false;
     };
 
     let world = orbit.get_default_world_quat();
@@ -355,6 +405,7 @@ fn handle_zoom(
     let d = zoom * controller.zoom_speed * dist * 0.0025;
 
     inertia.zoom(d);
+    true
 }
 
 fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f32>) -> f32 {
@@ -405,16 +456,51 @@ fn needs_update(inertia: &CameraInertia, controller: &CameraController) -> bool 
     inertia.spin_time < controller.spin_duration || inertia.zoom_time < controller.zoom_duration
 }
 
-fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &CameraController) {
-    if inertia.spin_time < controller.spin_duration {
-        inertia.spin_time += duration;
+fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &mut CameraController) {
+    fn update_time(current_time: &mut f32, duration: f32, max_duration: f32) -> CameraStatus {
+        *current_time += duration;
+        if *current_time < max_duration {
+            CameraStatus::Move
+        } else {
+            CameraStatus::MoveEnd
+        }
     }
-    if inertia.zoom_time < controller.zoom_duration {
-        inertia.zoom_time += duration;
-    }
-    if inertia.translate_time < controller.translate_duration {
-        inertia.translate_time += duration;
-    }
+
+    let spin_status = if inertia.spin_time < controller.spin_duration {
+        update_time(&mut inertia.spin_time, duration, controller.spin_duration)
+    } else {
+        CameraStatus::Idle
+    };
+
+    let zoom_status = if inertia.zoom_time < controller.zoom_duration {
+        update_time(&mut inertia.zoom_time, duration, controller.zoom_duration)
+    } else {
+        CameraStatus::Idle
+    };
+
+    let trans_status = if inertia.translate_time < controller.translate_duration {
+        update_time(
+            &mut inertia.translate_time,
+            duration,
+            controller.translate_duration,
+        )
+    } else {
+        CameraStatus::Idle
+    };
+
+    controller.status = if [spin_status, zoom_status, trans_status]
+        .iter()
+        .any(|&s| s == CameraStatus::Move)
+    {
+        CameraStatus::Move
+    } else if [spin_status, zoom_status, trans_status]
+        .iter()
+        .any(|&s| s == CameraStatus::MoveEnd)
+    {
+        CameraStatus::MoveEnd
+    } else {
+        CameraStatus::Idle
+    };
 }
 
 /// Applies a camera change based on geographic position, heading, and pitch.
@@ -557,9 +643,9 @@ fn handle_camera_translate(
     inertia: &mut CameraInertia,
     amount: &f32,
     direction: &CamDirType,
-) {
+) -> bool {
     if *amount < EPSILON3 {
-        return;
+        return false;
     }
 
     // Get the camera's local forward, right, and up directions
@@ -584,6 +670,8 @@ fn handle_camera_translate(
     // Reapply the orbit rotation to maintain a consistent view orientation
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+
+    true
 }
 
 fn apply_camera_translate(
