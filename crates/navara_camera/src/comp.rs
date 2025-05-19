@@ -119,7 +119,7 @@ impl CameraFrustum {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CameraStatus {
     Idle,
     MoveStart,

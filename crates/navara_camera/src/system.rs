@@ -86,8 +86,11 @@ pub fn update(
             continue;
         }
 
-        controller.status = CameraStatus::Idle;
+        if controller.status == CameraStatus::MoveEnd {
+            controller.status = CameraStatus::Idle;
+        }
 
+        // flying
         if let Some((position, orientation)) = flight.update(&mut controller, duration) {
             apply_camera_change(
                 &mut transform,
@@ -98,6 +101,7 @@ pub fn update(
             continue;
         }
 
+        // Handle camera events (Change, Translate, FlyTo, LookAt)
         let ce = ce.read().last();
         if let Some(ce) = ce {
             process_camera_event(
@@ -125,7 +129,10 @@ pub fn update(
             &mut mm,
             is_ctrl,
         ) {
-            controller.status = CameraStatus::MoveStart;
+            if controller.status == CameraStatus::Idle {
+                controller.status = CameraStatus::MoveStart;
+            }
+
             commit(&mut transform, &mut orbit);
             continue;
         }
@@ -138,7 +145,10 @@ pub fn update(
             &mut mw,
             is_ctrl,
         ) {
-            controller.status = CameraStatus::MoveStart;
+            if controller.status == CameraStatus::Idle {
+                controller.status = CameraStatus::MoveStart;
+            }
+
             commit(&mut transform, &mut orbit);
             continue;
         }
@@ -162,7 +172,10 @@ pub fn update(
             &transform,
             frustum,
         ) {
-            controller.status = CameraStatus::MoveStart;
+            if controller.status == CameraStatus::Idle {
+                controller.status = CameraStatus::MoveStart;
+            }
+
             commit(&mut transform, &mut orbit);
             continue;
         }
@@ -444,33 +457,50 @@ fn needs_update(inertia: &CameraInertia, controller: &CameraController) -> bool 
 }
 
 fn after_inertia(inertia: &mut CameraInertia, duration: f32, controller: &mut CameraController) {
-    if inertia.spin_time < controller.spin_duration {
-        inertia.spin_time += duration;
-
-        if inertia.spin_time < controller.spin_duration {
-            controller.status = CameraStatus::Move;
+    fn update_time(current_time: &mut f32, duration: f32, max_duration: f32) -> CameraStatus {
+        *current_time += duration;
+        if *current_time < max_duration {
+            CameraStatus::Move
         } else {
-            controller.status = CameraStatus::MoveEnd;
+            CameraStatus::MoveEnd
         }
     }
-    if inertia.zoom_time < controller.zoom_duration {
-        inertia.zoom_time += duration;
 
-        if inertia.zoom_time < controller.zoom_duration {
-            controller.status = CameraStatus::Move;
-        } else {
-            controller.status = CameraStatus::MoveEnd;
-        }
-    }
-    if inertia.translate_time < controller.translate_duration {
-        inertia.translate_time += duration;
+    let spin_status = if inertia.spin_time < controller.spin_duration {
+        update_time(&mut inertia.spin_time, duration, controller.spin_duration)
+    } else {
+        CameraStatus::Idle
+    };
 
-        if inertia.translate_time < controller.translate_duration {
-            controller.status = CameraStatus::Move;
-        } else {
-            controller.status = CameraStatus::MoveEnd;
-        }
-    }
+    let zoom_status = if inertia.zoom_time < controller.zoom_duration {
+        update_time(&mut inertia.zoom_time, duration, controller.zoom_duration)
+    } else {
+        CameraStatus::Idle
+    };
+
+    let trans_status = if inertia.translate_time < controller.translate_duration {
+        update_time(
+            &mut inertia.translate_time,
+            duration,
+            controller.translate_duration,
+        )
+    } else {
+        CameraStatus::Idle
+    };
+
+    controller.status = if [spin_status, zoom_status, trans_status]
+        .iter()
+        .any(|&s| s == CameraStatus::Move)
+    {
+        CameraStatus::Move
+    } else if [spin_status, zoom_status, trans_status]
+        .iter()
+        .any(|&s| s == CameraStatus::MoveEnd)
+    {
+        CameraStatus::MoveEnd
+    } else {
+        CameraStatus::Idle
+    };
 }
 
 /// Applies a camera change based on geographic position, heading, and pitch.

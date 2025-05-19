@@ -1,5 +1,5 @@
 import { EventManager, EventHandler } from "@navara/core";
-import type { LatLngHeight } from "@navara/core";
+import type { LatLngHeight, CameraPosition } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -56,7 +56,6 @@ import {
   type PickedFeature,
   type WorkerPoolPromises,
   type RenderFlag,
-  type CameraPosition,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";

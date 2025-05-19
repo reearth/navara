@@ -1,7 +1,7 @@
 import { EventHandler } from "@navara/core/src/eventHandler";
 import { PerspectiveCamera } from "three";
 import { Core, CameraStatus } from "@navara/engine";
-import { type CRSTypes, type CameraPositionByCRS } from "./type";
+import { type CRSTypes, type CameraPositionByCRS } from "@navara/core";
 
 export type CameraEvent = {
   movestart: () => void;
