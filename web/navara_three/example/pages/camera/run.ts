@@ -33,6 +33,17 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  view.camera.on("movestart", () => {
+    console.log("camera movestart");
+  });
+  view.camera.on("move", () => {
+    const position = view.camera.getPosition("geographic");
+    console.log("camera move", position);
+  });
+  view.camera.on("moveend", () => {
+    console.log("camera moveend");
+  });
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,

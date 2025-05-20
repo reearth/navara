@@ -3,13 +3,16 @@
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    query::Without,
+    query::{With, Without},
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
-use navara_camera::{CamDirType, CameraDirection, CameraEvent, CameraOrientation};
+use navara_camera::{
+    get_heading, get_pitch, get_roll, CamDirType, CameraController, CameraDirection, CameraEvent,
+    CameraMarker, CameraOrientation, CameraStatus,
+};
 use navara_component::{Deleted, Rendered};
-use navara_core::ElevationDecoder;
+use navara_core::{ElevationDecoder, CRS, WGS84_32};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -22,7 +25,7 @@ use navara_feature_component::{
 use navara_frame::FrameManager;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId, MvtLayer};
 use navara_material::{PolygonMaterial, PolylineMaterial};
-use navara_math::{FloatType, Vec3};
+use navara_math::{FloatType, Transform, Vec3};
 use navara_mvt::MvtLayerResources;
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
@@ -741,6 +744,60 @@ impl App {
             target: Vec3::new(target[0], target[1], target[2]),
             offset: Vec3::new(offset[0], offset[1], offset[2]),
         });
+    }
+
+    pub fn get_camera_status(&mut self) -> CameraStatus {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<&CameraController, With<CameraMarker>>();
+
+        if let Some(cam_ctrl) = query.iter(world).next() {
+            return cam_ctrl.status;
+        }
+
+        CameraStatus::Idle
+    }
+
+    pub fn get_camera_position_lle(&mut self) -> Option<Vec<FloatType>> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<&Transform, With<CameraMarker>>();
+
+        if let Some(transform) = query.iter(world).next() {
+            let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
+            let start = lle.deg();
+            return Some(vec![start.lng.val(), start.lat.val(), start.height.val()]);
+        }
+
+        None
+    }
+
+    pub fn get_camera_position_ecef(&mut self) -> Option<Vec<FloatType>> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<&Transform, With<CameraMarker>>();
+
+        if let Some(transform) = query.iter(world).next() {
+            return Some(vec![
+                transform.translation.x,
+                transform.translation.y,
+                transform.translation.z,
+            ]);
+        }
+
+        None
+    }
+
+    pub fn get_camera_orientation(&mut self) -> Option<(FloatType, FloatType, FloatType)> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<&Transform, With<CameraMarker>>();
+
+        if let Some(transform) = query.iter(world).next() {
+            return Some((
+                get_heading(transform),
+                get_pitch(transform),
+                get_roll(transform),
+            ));
+        }
+
+        None
     }
 }
 
