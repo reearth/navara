@@ -21,6 +21,7 @@ import {
   ReturnedTransferablePolygonBatchedFeature,
   ReturnedTransferablePolylineBatchedFeature,
   RenderableFeatureRemovedEvent,
+  VectorTileState,
 } from "@navara/engine";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Material, Object3D, Texture, Sprite } from "three";
@@ -37,6 +38,7 @@ import type {
   MeshCache,
   WorkerPoolPromises,
   RenderFlag,
+  TileMapByHandle,
 } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
@@ -87,6 +89,7 @@ export type TileHandler = {
   getTile: (handle: bigint) => TransferableTile | undefined;
   getParentTile: (handle: bigint) => TransferableTile | undefined;
   getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
+  getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
 };
 
 export type FeatureHandler = {
@@ -131,6 +134,7 @@ export function processEvent(
   uniforms: CommonUniforms,
   drapedFeatureMaterials: Map<string, Material>,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
+  tileMapByHandle: TileMapByHandle,
   textureOptions: TextureOptions,
   renderFlag: RenderFlag,
   viewEvents: EventHandler<ViewEvents>,
@@ -172,9 +176,11 @@ export function processEvent(
             meshes,
             event,
             buf,
+            tileHandler,
             loadedTexs,
             textureOptions,
             texturizedSceneByTileCoordinates,
+            tileMapByHandle,
           );
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
@@ -182,7 +188,13 @@ export function processEvent(
           processObjectRemoved(scenes.globe, meshes, event);
           break;
         case "change":
-          processMeshChanged(meshes, event, loadedTexs, textureOptions);
+          processMeshChanged(
+            meshes,
+            event,
+            loadedTexs,
+            textureOptions,
+            tileMapByHandle,
+          );
           break;
       }
     },

@@ -33,6 +33,10 @@ pub struct VectorTile {
     pub distance_from_camera: FloatType,
     pub sse: FloatType,
     pub were_children_rendered: bool,
+    /// Check this tile is actually rendered in the rendering engine, not selected.
+    pub is_rendered: bool,
+    /// This tile should be used to show the parent tile instead of the child tile if the child tile is still preparing.
+    pub ready_parent_tile_handle: Option<TileHandle>,
 }
 
 impl Clone for VectorTile {
@@ -52,6 +56,8 @@ impl Clone for VectorTile {
             distance_from_camera: 0.,
             sse: 0.,
             were_children_rendered: false,
+            is_rendered: false,
+            ready_parent_tile_handle: None,
         }
     }
 }
@@ -74,6 +80,8 @@ impl VectorTile {
             distance_from_camera: 0.,
             sse: 0.,
             were_children_rendered: false,
+            is_rendered: false,
+            ready_parent_tile_handle: None,
         }
     }
 

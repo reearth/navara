@@ -1,10 +1,12 @@
 #![doc = include_str!("../README.md")]
 mod attribute;
+mod camera;
 mod entity;
 mod event;
 mod geometry;
 mod input;
 mod types;
+mod vector_tile;
 
 use entity::ReconstructableEntity;
 use feature::{
@@ -22,11 +24,13 @@ use polygon::TransferablePolygonBatchedFeature;
 use polyline::TransferablePolylineBatchedFeature;
 use wasm_bindgen::prelude::*;
 
+pub use camera::*;
 pub use event::*;
 pub use input::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
 pub use types::*;
+pub use vector_tile::*;
 use worker::DelegatedWorkerTasksResult;
 
 #[wasm_bindgen]
@@ -285,6 +289,21 @@ impl Core {
     #[wasm_bindgen(js_name = getParentTile)]
     pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<TransferableTile> {
         self.app.get_parent_tile(handle).map(|v| v.into())
+    }
+
+    #[wasm_bindgen(js_name = getVectorTileStates)]
+    pub fn get_vector_tile_states(&mut self, handle: TileHandle) -> Vec<VectorTileState> {
+        let tiles = self.app.get_vector_tiles(handle);
+        let mut res = vec![];
+        for (layer_id, tile) in tiles {
+            res.push(VectorTileState {
+                layer_id,
+                ready_parent_tile_handle: tile.ready_parent_tile_handle,
+                is_rendered: tile.is_rendered,
+            });
+        }
+
+        res
     }
 
     #[wasm_bindgen(js_name = getTileElevationDecoder)]

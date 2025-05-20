@@ -56,6 +56,8 @@ pub fn traverse_tile(
     fog: &Fog,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
+    // This is used to show parent's texture if child's texture isn't ready.
+    ready_parent_tile_handle: Option<TileHandle>,
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
@@ -119,16 +121,34 @@ pub fn traverse_tile(
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
+    // If this tile has a terrain and it's prepared, request a texture for this tile.
+    // It means terrain is rendered first, then the texture is prepared lazily.
+    if terrain_layer.is_some()
+        && !meets_sse_ancestors
+        && is_renderable
+        && !tile_ready_state.is_texture_ready
+    {
+        let tile = qt.qt.get_mut(handle).unwrap();
+        request_texture_fragment(
+            command,
+            tile,
+            tiles,
+            handle,
+            texture_fragment,
+            Priority::High,
+        );
+    }
+
     if meets_sse || meets_sse_ancestors {
         if !meets_sse_ancestors {
             prepare_tile_resource(
                 command,
-                tile,
+                qt,
                 buf,
-                tiles,
                 terrain_layer,
                 handle,
                 tc,
+                tiles,
                 texture_fragment,
                 terrain_data_requester,
                 if is_renderable {
@@ -157,6 +177,12 @@ pub fn traverse_tile(
 
     if let Some(children) = RasterTile::traversable_children(qt, handle) {
         let mut any_children_rendered = false;
+
+        let ready_parent_tile_handle = if tile_ready_state.is_texture_ready {
+            Some(handle)
+        } else {
+            ready_parent_tile_handle
+        };
 
         // Tile has several states to switch LOD smoothly.
         // 1. RenderedTile component is spawned if a tile is selected.
@@ -190,6 +216,7 @@ pub fn traverse_tile(
                 meshes,
                 fog,
                 meets_sse,
+                ready_parent_tile_handle,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -267,7 +294,7 @@ pub fn traverse_tile(
                         Some(t) => t,
                         None => unreachable!(),
                     };
-                    spawn_tile_entity(command, tc, frame, tile, handle);
+                    spawn_tile_entity(command, tc, frame, tile, handle, ready_parent_tile_handle);
                 }
             }
 
@@ -299,20 +326,18 @@ pub fn traverse_tile(
     }
 
     // Avoid to request or render new tile while waiting for parent tile is activated.
-
     if !is_renderable {
         if meets_sse_ancestors {
             return TraversalResult::NotFound;
         }
-        let tile = qt.qt.get_mut(handle).unwrap();
         prepare_tile_resource(
             command,
-            tile,
+            qt,
             buf,
-            tiles,
             terrain_layer,
             handle,
             tc,
+            tiles,
             texture_fragment,
             terrain_data_requester,
             Priority::Extreme,
@@ -342,11 +367,13 @@ pub fn spawn_tile_entity(
     frame: &FrameManager,
     tile: &mut RasterTile,
     tile_handle: TileHandle,
+    ready_parent_tile_handle: Option<TileHandle>,
 ) {
     tile.rendered_at = frame.rendered_frame();
     tc.is_updated_in_this_frame = true;
 
-    if tc.rendered_tile_caches.contains_key(&tile_handle) {
+    if let Some(tile) = tc.rendered_tile_caches.get_mut(&tile_handle) {
+        tile.ready_parent_tile_handle = ready_parent_tile_handle;
         return;
     }
 
@@ -364,6 +391,7 @@ pub fn spawn_tile_entity(
         tile_handle,
         RenderedTileCache {
             rendered_tile_entity: e.id(),
+            ready_parent_tile_handle,
             mesh_entity: None,
             mesh_prepared: false,
         },
@@ -375,26 +403,38 @@ pub fn spawn_tile_entity(
 #[allow(clippy::too_many_arguments)]
 pub fn prepare_tile_resource(
     commands: &mut Commands,
-    tile: &mut RasterTile,
+    qt: &mut RasterTileQuadtree,
     buf: &mut BufferStore,
-    tiles: &Query<(&TilesLayer, &Order)>,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
+    tiles: &Query<(&TilesLayer, &Order)>,
     texture_fragment: &TileTextureFragmentQuery,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
 ) {
-    request_terrain_data(
-        commands,
-        tile,
-        buf,
-        terrain_layer,
-        handle,
-        terrain_data_requester,
-        priority,
-    );
-    request_texture_fragment(commands, tile, tiles, handle, texture_fragment, priority);
+    let tile = qt.qt.get_mut(handle).unwrap();
+    if terrain_layer.is_some() {
+        request_terrain_data(
+            commands,
+            tile,
+            buf,
+            terrain_layer,
+            handle,
+            terrain_data_requester,
+            priority,
+        );
+    } else {
+        // If this tile doesn't have terrain, request just a texture.
+        request_texture_fragment(
+            commands,
+            tile,
+            tiles,
+            handle,
+            texture_fragment,
+            Priority::High,
+        );
+    }
 
     if !tc.requested_tile_caches.contains(&handle) {
         tc.requested_tile_caches.insert(handle);

@@ -24,7 +24,7 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
-    TerrainInformationQuadtree, TileCoordinates, VectorTile, VectorTileQuadtree,
+    OverscaledTileHandle, TerrainInformationQuadtree, VectorTile, VectorTileQuadtree,
 };
 use navara_window::Window;
 
@@ -102,7 +102,8 @@ pub fn update_tiles(
                 || camera.is_changed()
                 || are_features_changed
                 || are_renderable_features_rendered
-                || resources.is_added();
+                || resources.is_added()
+                || terrain_qt.is_changed();
             if !needs_update {
                 continue;
             }
@@ -121,6 +122,19 @@ pub fn update_tiles(
                 }
             };
             let zero_tile_handle = zero_tile.handle();
+            let is_rendered = matches!(
+                are_all_renderable_features_active(
+                    &tc,
+                    &zero_tile_handle,
+                    &rendered_tiles,
+                    &features,
+                    &mut renderable_features,
+                ),
+                Some(true)
+            );
+
+            qt.qt.get_mut(zero_tile_handle).unwrap().is_rendered = false;
+
             match traverse_tile(
                 &mut commands,
                 layer,
@@ -142,6 +156,7 @@ pub fn update_tiles(
                 false,
                 &terrain_layer,
                 &terrain_qt,
+                is_rendered.then_some(zero_tile_handle),
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(
@@ -151,25 +166,16 @@ pub fn update_tiles(
                         &frame,
                         zero_tile_handle,
                     );
-                    if matches!(
-                        are_all_renderable_features_active(
-                            &tc,
-                            &zero_tile_handle,
-                            &rendered_tiles,
-                            &features,
-                            &mut renderable_features,
-                        ),
-                        Some(true)
-                    ) {
-                        activate_all_renderable_features(
-                            &tc,
-                            &zero_tile_handle,
-                            &rendered_tiles,
-                            &features,
-                            &mut renderable_features,
-                            true,
-                        );
-                    }
+                    activate_all_renderable_features(
+                        &tc,
+                        &zero_tile_handle,
+                        &rendered_tiles,
+                        &features,
+                        &mut renderable_features,
+                        true,
+                    );
+
+                    qt.qt.get_mut(zero_tile_handle).unwrap().is_rendered = is_rendered;
                 }
                 TraversalResult::NotFound => {
                     prepare_tile_resource(
@@ -378,7 +384,7 @@ pub fn transfer_mesh(
                         }
                     };
 
-                    e.insert(Into::<TileCoordinates>::into(tile.coords));
+                    e.insert(OverscaledTileHandle::new(rendered_tile.tile_handle));
 
                     rendered_tile.feature_ids.as_mut().unwrap().push(e.id());
                 }

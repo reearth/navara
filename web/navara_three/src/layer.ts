@@ -1,9 +1,8 @@
-import { EventHandler } from "@navara/core/src/eventHandler";
+import { EventHandler, type FeatureId } from "@navara/core";
 import type { Core } from "navara_wasm";
 
 import { FeatureEvaluator } from "./evaluations/FeatureEvaluator";
 import type { LayerDescription } from "./type";
-import type { FeatureId } from "./types";
 
 export type LayerEvent = {
   featureCreated: (evaluator: FeatureEvaluator) => void;

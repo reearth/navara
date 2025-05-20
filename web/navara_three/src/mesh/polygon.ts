@@ -1,7 +1,7 @@
+import type { TileHandle } from "@navara/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
-  TileCoordinates,
 } from "@navara/engine";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
@@ -43,11 +43,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
     mesh: NavaraPolygonMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
-    coords: TileCoordinates | undefined,
+    tileHandle: TileHandle | undefined,
   ) {
     super(new BufferGeometry<Attributes>(), new MeshLambertMaterial());
     this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, uniforms, coords);
+    this.initMaterial(mesh, uniforms, tileHandle);
   }
 
   private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
@@ -106,21 +106,22 @@ export class PolygonMesh extends BatchedFeatureMesh<
   private initMaterial(
     mesh: NavaraPolygonMesh,
     uniforms: CommonUniforms,
-    coords: TileCoordinates | undefined,
+    tileHandle: TileHandle | undefined,
   ) {
     const meshMaterial = mesh.material;
     const mcolor = meshMaterial.color;
 
     const clampToGround = meshMaterial.clamp_to_ground;
-    const isTexturized = !!coords;
+    // This mesh should be texturized if it uses clamp-to-ground.
+    const isTexturized = !!tileHandle;
     const shouldClipByStencil = !isTexturized && clampToGround;
     const material = this.material;
     material.color.set(mcolor ?? 0);
     material.wireframe = !!meshMaterial.wireframe;
     material.stencilWrite = false;
     material.colorWrite = !shouldClipByStencil;
-    material.depthWrite = !(isTexturized || clampToGround);
-    material.depthTest = !(isTexturized || clampToGround);
+    material.depthWrite = !clampToGround;
+    material.depthTest = !clampToGround;
     material.reflectivity = 0;
     material.vertexColors = false;
 

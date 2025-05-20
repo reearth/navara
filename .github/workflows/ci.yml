@@ -40,7 +40,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml') }}
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.83.0
+          toolchain: 1.86.0
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
       - name: Install deps for cargo

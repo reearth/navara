@@ -15,10 +15,10 @@ export const generateMixOverlaidTexturesMacro = (
     result += `
   // Process texture ${i}
   if (uShows[${i}] == 1) {
-    vec4 texColor${i} = texture2D(uTextures[${i}], vUv) * vec4(uColors[${i}], 1.0);
-    float alpha${i} = texColor${i}.a * uOpacities[${i}];
-
+    vec4 texColor${i} = vec4(0.);
+    
     ${insert?.(`texColor${i}`, i) ?? ""}
+    float alpha${i} = texColor${i}.a * uOpacities[${i}];
     
     if (alpha${i} > 0.01) {
       // Blend based on alpha value

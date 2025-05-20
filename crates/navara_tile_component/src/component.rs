@@ -1,35 +1,26 @@
 use bevy_ecs::component::Component;
-use navara_core::TileXYZ;
 
 use crate::TileHandle;
 
 #[derive(Debug, Default, Component)]
-pub struct TileMeshMarker(pub TileHandle);
+pub struct TileMeshMarker {
+    pub handle: TileHandle,
+    pub ready_parent_tile_handle: Option<TileHandle>,
+}
 
-/// Handle the tile coordinates as a component.
-/// You should use [`TileXYZ`] for general use case.
 #[derive(Debug, Clone, Component)]
-pub struct TileCoordinates {
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
+pub struct OverscaledTileHandle {
+    pub handle: TileHandle,
+    /// TODO: Support overscaled zoom in vector tile format like MVT.
     /// How much it is overscaled
     pub overscaled: usize,
 }
 
-impl TileCoordinates {
-    fn new(x: usize, y: usize, z: usize) -> Self {
+impl OverscaledTileHandle {
+    pub fn new(handle: TileHandle) -> Self {
         Self {
-            x,
-            y,
-            z,
+            handle,
             overscaled: 0,
         }
-    }
-}
-
-impl From<TileXYZ> for TileCoordinates {
-    fn from(value: TileXYZ) -> Self {
-        TileCoordinates::new(value.x, value.y, value.z)
     }
 }

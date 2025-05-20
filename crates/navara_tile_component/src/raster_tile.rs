@@ -125,17 +125,16 @@ impl RasterTile {
             && data_requester_entity_id.is_none()
         {
             return ReadyState {
-                is_tile_ready: is_texture_loaded,
+                is_tile_ready: true,
                 is_texture_ready: is_texture_loaded,
                 ..Default::default()
             };
         }
 
         let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
-        let should_upsample =
-            self.should_upsampling(
-                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
-            ) && self.is_upsamplable(qt, texture_fragment, terrain_data_requester, terrain_layer);
+        let should_upsample = self.should_upsampling(
+            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+        ) && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
 
         // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
         let should_be_rendered_without_terrain = !self.should_upsampling(
@@ -147,8 +146,8 @@ impl RasterTile {
         );
 
         ReadyState {
-            is_tile_ready: is_texture_loaded
-                && (is_terrain_ready || (should_upsample || should_be_rendered_without_terrain)),
+            is_tile_ready: (is_terrain_ready
+                || (should_upsample || should_be_rendered_without_terrain)),
             // || terrain_layer.map_or(false, |l| self.coords.z > l.max_z))
             is_texture_ready: is_texture_loaded,
             is_terrain_ready,
@@ -197,12 +196,10 @@ impl RasterTile {
     pub fn is_parent_ready(
         &self,
         qt: &RasterTileQuadtree,
-        texture_fragments: &TileTextureFragmentQuery,
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         self.get_parent_tile(qt).is_some_and(|p| {
-            p.is_texture_ready(texture_fragments)
-                && (p.is_terrain_ready(terrain_data_requesters) || p.upsampled)
+            (p.is_terrain_ready(terrain_data_requesters) || p.upsampled)
                 && p.cached_mesh_handle.is_some()
         })
     }
@@ -210,7 +207,6 @@ impl RasterTile {
     pub fn is_upsamplable(
         &self,
         qt: &RasterTileQuadtree,
-        texture_fragment: &TileTextureFragmentQuery,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
@@ -219,7 +215,7 @@ impl RasterTile {
             && (terrain_req.as_ref().is_some_and(|t| matches!(t.status, DataRequesterStatus::Fail))
                 // If parent tile is upsampled, we don't need to wait failed request.
                 || (terrain_req.is_some() && self.get_parent_tile(qt).is_some_and(|t| t.upsampled)))
-            && self.is_parent_ready(qt, texture_fragment, terrain_data_requester)
+            && self.is_parent_ready(qt, terrain_data_requester)
     }
 
     pub fn should_upsampling(&self, max_zoom: usize) -> bool {

@@ -14,6 +14,8 @@ use navara_tile_component::{TileHandle, TileMeshMarker};
 /// These values are removed and added frequently,so we should use this cache structure.
 pub struct RenderedTileCache {
     pub mesh_entity: Option<Entity>,
+    /// This tile should be used to show the parent tile instead of the child tile if the child tile is still preparing.
+    pub ready_parent_tile_handle: Option<TileHandle>,
     pub rendered_tile_entity: Entity,
     /// This is used to check if the mesh is prepared in client side.
     /// Because sometimes rendering engine needs to do some preparation asynchronously.

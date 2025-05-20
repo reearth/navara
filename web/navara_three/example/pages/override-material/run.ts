@@ -394,7 +394,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       url: "https://assets.cms.plateau.reearth.io/assets/d9/5ce2d6-0aa8-4a17-a86a-028c2dc2b817/13_tokyo_pref_2023_citygml_1_op_urf_FirePreventionDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
     },
     polygon: {
-      color: 0x00aaff,
+      color: 0xffffff,
       height: 10,
       extruded_height: 0,
       clamp_to_ground: true,
@@ -422,22 +422,19 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
 
     layer = view.addLayer(layerDescription);
     layer.on("featureUpdated", (evaluator) => {
-      if (UPDATED_FEATURE.has(evaluator.id)) return;
-      UPDATED_FEATURE.add(evaluator.id);
-
       evaluator.evaluate((_batchId, property) => {
         const functionType = property?.get("urf_function") as string;
 
         const color = (() => {
           // Fireproof area
           if (functionType === "防火地域") {
-            return 0x0000ff;
+            return CHANGED_PARAMS_COLOR["防火地域"];
           }
           // Semi-fireproof area
           if (functionType === "準防火地域") {
-            return 0x00ff00;
+            return CHANGED_PARAMS_COLOR["準防火地域"];
           }
-          return 0xff0000;
+          return CHANGED_PARAMS_COLOR["その他"];
         })();
 
         return {
@@ -446,6 +443,29 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       });
     });
   });
+
+  const onChange = () => {
+    layer?.forceUpdate();
+  };
+
+  const PARAMS_COLOR = {
+    防火地域: "#0000ff",
+    準防火地域: "#00ff00",
+    その他: "#ff0000",
+  };
+  const CHANGED_PARAMS_COLOR = { ...PARAMS_COLOR };
+
+  const colorFolder = folder.addFolder({ title: "Color", expanded: false });
+  for (const key of Object.keys(PARAMS_COLOR)) {
+    const k = key as keyof typeof PARAMS_COLOR;
+    const field = colorFolder
+      .addBinding(PARAMS_COLOR, k)
+      .on("change", ({ value }) => {
+        CHANGED_PARAMS_COLOR[k] = value;
+        onChange();
+      });
+    colorFolder.add(field);
+  }
 };
 
 const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
@@ -457,8 +477,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
     polygon: {
       height: 0,
       extruded_height: 0,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      clamp_to_ground: false,
       wireframe: false,
       id_property: "gml_id",
     },
@@ -490,11 +509,11 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
         );
         const minHeight = attributes["urf:minimumBuildingHeight"];
         const maxHeight = attributes["urf:maximumBuildingHeight"];
-        const extrudedHeight = maxHeight ?? minHeight ?? 0;
+        const extrudedHeight = Math.max(maxHeight ?? minHeight ?? 0, 1);
 
         const [color, scale] = (() => {
-          if (extrudedHeight < 1) {
-            return [CHANGED_PARAMS_COLOR["< 1"], CHANGED_PARAMS_SCALE["< 1"]];
+          if (extrudedHeight <= 1) {
+            return [CHANGED_PARAMS_COLOR["< 1"], CHANGED_PARAMS_SCALE["<= 1"]];
           }
           if (extrudedHeight < 10) {
             return [CHANGED_PARAMS_COLOR["< 10"], CHANGED_PARAMS_SCALE["< 10"]];
@@ -538,7 +557,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
   }
 
   const PARAMS_SCALE = {
-    "< 1": 1,
+    "<= 1": 1,
     "< 10": 1,
     "< 30": 1,
     ">= 30": 1,

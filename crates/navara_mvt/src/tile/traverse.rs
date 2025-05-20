@@ -57,38 +57,29 @@ pub fn traverse_tile(
     meets_sse_ancestors: bool,
     terrain_layer: &Option<&TerrainLayer>,
     terrain_qt: &TerrainInformationQuadtree,
+    ready_parent_tile_handle: Option<TileHandle>,
 ) -> TraversalResult {
+    let tile = qt.qt.get_mut(handle).unwrap();
+    tile.ready_parent_tile_handle = ready_parent_tile_handle;
+    tile.is_rendered = false;
+
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
-    match qt.qt.get(handle) {
-        Some(tile) => {
-            if tile.coords.z > vector_tile_appearance.max_zoom {
-                return TraversalResult::NotFound;
-            }
-        }
-        None => unreachable!(),
-    };
+    if tile.coords.z > vector_tile_appearance.max_zoom {
+        return TraversalResult::NotFound;
+    }
 
-    match qt.qt.get_mut(handle) {
-        Some(tile) => {
-            let terrain_into = terrain_qt.qt.get(handle).map_or_else(
-                || {
-                    let e = terrain_qt
-                        .qt
-                        .parent((tile.coords.x, tile.coords.y, tile.coords.z))?;
-                    terrain_qt.qt.get(e.handle())
-                },
-                Some,
-            );
-            begine_traverse_tile(ellipsoid, occluder, camera, tile, terrain_into);
-        }
-        None => unreachable!(),
-    };
-
-    let tile = match qt.qt.get(handle) {
-        Some(tile) => tile,
-        None => unreachable!(),
-    };
+    // Reference the terrain information from the raster tile process.
+    let terrain_info = terrain_qt.qt.get(handle).map_or_else(
+        || {
+            let e = terrain_qt
+                .qt
+                .parent((tile.coords.x, tile.coords.y, tile.coords.z))?;
+            terrain_qt.qt.get(e.handle())
+        },
+        Some,
+    );
+    begine_traverse_tile(ellipsoid, occluder, camera, tile, terrain_info);
 
     let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
     if is_culled_by_frustum {
@@ -124,7 +115,6 @@ pub fn traverse_tile(
         fog,
     );
 
-    let tile = qt.qt.get_mut(handle).unwrap();
     tile.sse = sse;
     tile.distance_from_camera = distance_from_camera;
     tile.visited_at = frame.rendered_frame();
@@ -179,6 +169,23 @@ pub fn traverse_tile(
     }
 
     if let Some(children) = VectorTile::traversable_children(qt, handle) {
+        let are_feature_activated = matches!(
+            are_all_renderable_features_active(
+                tc,
+                &handle,
+                rendered_tiles,
+                features,
+                renderable_features,
+            ),
+            Some(true)
+        );
+
+        let ready_parent_tile_handle = if are_feature_activated {
+            Some(handle)
+        } else {
+            ready_parent_tile_handle
+        };
+
         let mut any_children_rendered = false;
 
         // Tile has several states to switch LOD smoothly.
@@ -215,6 +222,7 @@ pub fn traverse_tile(
                 meets_sse,
                 terrain_layer,
                 terrain_qt,
+                ready_parent_tile_handle,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -324,9 +332,13 @@ pub fn traverse_tile(
                     renderable_features,
                 );
 
+                let tile = qt.qt.get_mut(*child).unwrap();
+                tile.is_rendered = are_all_children_mesh_prepared;
+
                 // If this child is not renderable, skip rendering this child.
                 if prepared_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
                     if matches!(are_active, Some(true)) {
+                        tile.is_rendered = false;
                         activate_all_renderable_features(
                             tc,
                             child,
@@ -419,7 +431,7 @@ pub fn traverse_tile(
     TraversalResult::TileRendered
 }
 
-fn get_renderable_feature<'a>(
+pub fn get_renderable_feature<'a>(
     tc: &TileCacheManager,
     handle: &TileHandle,
     rendered_tiles: &Query<&RenderedTile>,
@@ -489,7 +501,7 @@ pub fn are_all_renderable_features_active(
         .and_then(|id| renderable_features.get(id).ok().map(|r| r.is_active()))
 }
 
-fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeature>>) -> bool {
+pub fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeature>>) -> bool {
     renderable_features
         .map(|rs| rs.iter().all(|r| r.is_rendered()))
         .unwrap_or(false)

@@ -1,3 +1,4 @@
+import type { TileHandle } from "@navara/core";
 import type {
   B3dmLayerDescription,
   Cesium3dTilesLayerDescription,
@@ -6,9 +7,10 @@ import type {
   TileLayerDescription,
   MvtLayerDescription,
 } from "@navara/engine";
-
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D } from "three";
+
+import type { TileMesh } from "./mesh";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
@@ -56,6 +58,9 @@ export type Cesium3dTilesLayer = Layer<
 export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
+
+// Make a reference of TileMesh by TileHandle.
+export type TileMapByHandle = Map<TileHandle, TileMesh>;
 
 export type AbortControllers = Map<string, AbortController>;
 

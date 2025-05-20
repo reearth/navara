@@ -5,7 +5,7 @@ use navara_core::{TileXYZ, WGS84_32};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
-use navara_geometry::tile_triangles_flat;
+use navara_geometry::{tile_triangles_flat, uv_transform};
 use navara_material::RasterTileInternalMaterial;
 use navara_math::{FloatType, Transform, Vec3};
 
@@ -16,7 +16,7 @@ use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
     RasterTile, RasterTileQuadtree, TerrainInformation, TerrainInformationQuadtree, Tile,
-    TileCoordinates, TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 use navara_worker::{
@@ -30,6 +30,8 @@ use navara_worker::{
     },
     WorkerTaskCompleted,
 };
+
+use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     event::MeshPreparedEvent,
@@ -115,6 +117,13 @@ pub fn update_tiles(
         }
     };
     let zero_tile_handle = zero_tile.handle();
+
+    let is_texture_ready = qt
+        .qt
+        .get_mut(zero_tile_handle)
+        .unwrap()
+        .is_texture_ready(&texture_fragment);
+
     match traverse_tile(
         &mut commands,
         tiles,
@@ -134,6 +143,7 @@ pub fn update_tiles(
         &mut meshes,
         fog,
         false,
+        is_texture_ready.then_some(zero_tile_handle),
     ) {
         TraversalResult::TileRendered => {
             spawn_tile_entity(
@@ -142,6 +152,7 @@ pub fn update_tiles(
                 &frame,
                 qt.qt.get_mut(zero_tile_handle).unwrap(),
                 zero_tile_handle,
+                None,
             );
             if tc.is_rendered_tile_prepared(&zero_tile_handle) {
                 tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, true);
@@ -150,15 +161,24 @@ pub fn update_tiles(
         TraversalResult::NotFound => {
             prepare_tile_resource(
                 &mut commands,
-                qt.qt.get_mut(zero_tile.handle()).unwrap(),
+                &mut qt,
                 &mut buf,
-                tiles,
                 &terrain_layer,
-                zero_tile.handle(),
+                zero_tile_handle,
                 &mut tc,
+                tiles,
                 &texture_fragment,
                 &terrain_data_requester,
                 Priority::Extreme,
+            );
+            let tile = qt.qt.get_mut(zero_tile_handle).unwrap();
+            request_texture_fragment(
+                &mut commands,
+                tile,
+                tiles,
+                zero_tile_handle,
+                &texture_fragment,
+                Priority::High,
             );
         }
         TraversalResult::ChildrenMeshesPrepared => {
@@ -222,6 +242,11 @@ pub fn transfer_mesh(
         let scale = if is_root { 0.98 } else { 1. };
         let render_order = if is_root { -1 } else { 0 };
 
+        let ready_parent_tile = tc
+            .rendered_tile_caches
+            .get(&rendered_tile.tile_handle)
+            .and_then(|t| t.ready_parent_tile_handle);
+
         if terrain_qt.qt.get(rendered_tile.tile_handle).is_none() {
             terrain_qt
                 .qt
@@ -229,8 +254,6 @@ pub fn transfer_mesh(
                     TerrainInformation::new()
                 });
         }
-
-        let tile_coordinates: TileCoordinates = tile.coords.into();
 
         let extent = tile.extent;
 
@@ -278,14 +301,10 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = tile.should_upsampling(
-            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
-        ) && tile.is_upsamplable(
-            &qt,
-            &texture_fragment,
-            &terrain_data_requester,
-            &terrain_layer,
-        );
+        let should_upsample_terrain =
+            tile.should_upsampling(
+                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            ) && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain
             || (terrain_layer
@@ -321,7 +340,10 @@ pub fn transfer_mesh(
             attach_rendered(&mut commands, rendered_tile_id);
 
             let e = commands.spawn((
-                TileMeshMarker(rendered_tile.tile_handle),
+                TileMeshMarker {
+                    handle: rendered_tile.tile_handle,
+                    ready_parent_tile_handle: ready_parent_tile,
+                },
                 MeshBundle {
                     mesh: Mesh {
                         vertices: vhandle,
@@ -329,6 +351,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
+                        uv_transform: Default::default(),
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -336,7 +359,6 @@ pub fn transfer_mesh(
                         marker: Default::default(),
                     },
                 },
-                tile_coordinates,
             ));
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
@@ -418,7 +440,10 @@ pub fn transfer_mesh(
             attach_rendered(&mut commands, rendered_tile_id);
 
             let e = commands.spawn((
-                TileMeshMarker(rendered_tile.tile_handle),
+                TileMeshMarker {
+                    handle: rendered_tile.tile_handle,
+                    ready_parent_tile_handle: ready_parent_tile,
+                },
                 MeshBundle {
                     mesh: Mesh {
                         vertices: vhandle,
@@ -426,6 +451,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
+                        uv_transform: Default::default(),
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -433,7 +459,6 @@ pub fn transfer_mesh(
                         marker: Default::default(),
                     },
                 },
-                tile_coordinates,
             ));
 
             if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
@@ -504,7 +529,10 @@ pub fn transfer_mesh(
         attach_rendered(&mut commands, rendered_tile_id);
 
         let e = commands.spawn((
-            TileMeshMarker(rendered_tile.tile_handle),
+            TileMeshMarker {
+                handle: rendered_tile.tile_handle,
+                ready_parent_tile_handle: ready_parent_tile,
+            },
             MeshBundle {
                 mesh: Mesh {
                     vertices: vhandle,
@@ -512,6 +540,7 @@ pub fn transfer_mesh(
                     uvs: uvshandle,
                     active: false,
                     render_order,
+                    uv_transform: Default::default(),
                 },
                 material: appearance,
                 object: ObjectBundle {
@@ -519,7 +548,6 @@ pub fn transfer_mesh(
                     marker: Default::default(),
                 },
             },
-            tile_coordinates,
         ));
 
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
@@ -618,8 +646,12 @@ pub fn update_mesh_material(
         RemovedComponents<TilesLayer>,
     )>,
     mut appearances: Query<
-        &mut RasterTileInternalMaterial,
-        (With<TileMeshMarker>, Without<Deleted>),
+        (
+            &mut TileMeshMarker,
+            &mut Mesh,
+            &mut RasterTileInternalMaterial,
+        ),
+        Without<Deleted>,
     >,
 ) {
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
@@ -637,20 +669,50 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let texture_fragment_entity_ids = match &tile.texture_fragment_entity_ids {
-            Some(texture_fragment_entity_ids) => texture_fragment_entity_ids,
-            None => &vec![],
-        };
-
-        let Some(appearance) = tc
-            .rendered_tile_caches
-            .get(&rendered_tile.tile_handle)
-            .and_then(|r| appearances.get(r.mesh_entity?).ok())
+        let Some(cached_rendered_tile) = tc.rendered_tile_caches.get(&rendered_tile.tile_handle)
         else {
             continue;
         };
 
-        let mut needs_update = are_tile_layers_removed;
+        let texture_fragment_entity_ids = match &tile.texture_fragment_entity_ids {
+            Some(texture_fragment_entity_ids) => texture_fragment_entity_ids,
+            // Use a parent texture if this tile hasn't been prepared yet.
+            None => &vec![],
+        };
+
+        let mut parent_z = None;
+        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment) {
+            texture_fragment_entity_ids
+        } else {
+            // Use the parent tile if this tile doesn't have a tile.
+            match cached_rendered_tile
+                .ready_parent_tile_handle
+                .and_then(|h| qt.qt.get(h))
+                .and_then(|parent_tile| {
+                    parent_tile
+                        .texture_fragment_entity_ids
+                        .as_ref()
+                        .map(|v| (v, parent_tile.coords.z))
+                }) {
+                Some((v, parent_z_)) => {
+                    parent_z = Some(parent_z_);
+                    v
+                }
+                None => texture_fragment_entity_ids,
+            }
+        };
+
+        let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile
+            .mesh_entity
+            .and_then(|e| appearances.get(e).ok())
+        else {
+            continue;
+        };
+
+        let mut needs_update = are_tile_layers_removed
+            // If it has a different parent tile, it should be updated.
+            || tile_mesh_marker.ready_parent_tile_handle
+                != cached_rendered_tile.ready_parent_tile_handle;
 
         let prev_texture_fragments = &appearance.texture_fragments;
         let prev_shows = &appearance.shows;
@@ -691,13 +753,22 @@ pub fn update_mesh_material(
             continue;
         }
 
-        let Some(mut appearance) = tc
-            .rendered_tile_caches
-            .get(&rendered_tile.tile_handle)
-            .and_then(|r| appearances.get_mut(r.mesh_entity?).ok())
+        let Some((mut tile_mesh_marker, mut mesh, mut appearance)) = cached_rendered_tile
+            .mesh_entity
+            .and_then(|e| appearances.get_mut(e).ok())
         else {
             continue;
         };
+
+        tile_mesh_marker.ready_parent_tile_handle = cached_rendered_tile.ready_parent_tile_handle;
+
+        match parent_z {
+            Some(parent_z) => {
+                mesh.uv_transform = uv_transform(tile.coords, parent_z);
+            }
+            None => mesh.uv_transform = Default::default(),
+        }
+
         appearance.texture_fragments = Some(texture_fragment_entity_ids.clone());
 
         appearance.shows = shows;

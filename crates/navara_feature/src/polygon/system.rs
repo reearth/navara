@@ -18,7 +18,7 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, RasterTileQuadtree, TileCoordinates, TileMeshMarker,
+    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileMeshMarker,
 };
 
 use navara_feature_component::{
@@ -46,7 +46,7 @@ pub fn transfer_batched_mesh(
             &FeatureBatchId,
             &GlobalBatchIdAndSelections,
             Option<&mut FeatureId>,
-            Option<&TileCoordinates>,
+            Option<&OverscaledTileHandle>,
         ),
         With<PolygonMarker>,
     >,
