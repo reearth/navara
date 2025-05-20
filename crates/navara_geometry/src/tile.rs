@@ -77,7 +77,7 @@ pub struct OrthoCamTransform {
 ///
 /// * Parent tile coordinates are x,y ∈ [-1, +1] ... width=2, height=2
 /// * XYZ coordinate system (origin at top-left) is used.
-/// 
+///
 /// This function calculates the parameters needed to zoom an orthographic camera
 /// to a specific subtile within a parent tile. The camera will be positioned
 /// so that the subtile fills the entire view.
@@ -91,22 +91,22 @@ pub fn ortho_camera_transform(child: TileXYZ, parent_z: usize) -> OrthoCamTransf
 
     let dz = z_c - parent_z; // Level difference
     let div = 1u32 << dz; // Parent divided into 2^dz parts
-    
+
     // Calculate the relative position of the child tile within the parent
     let rel_x = x_c as u32 % div; // Relative x index within parent
     let rel_y = y_c as u32 % div; // Relative y index within parent
-    
+
     // Calculate the size of each subtile
     let full_min = -1.0;
     let full_max = 1.0;
     let half_size = (full_max - full_min) / div as f32;
-    
+
     // Calculate the boundaries of the subtile
     // For XYZ coordinate system (origin at top-left), we need to adjust the y-coordinate
     // In XYZ, y increases downward, but in the camera space, y increases upward
     let left = full_min + rel_x as f32 * half_size;
     let right = left + half_size;
-    
+
     // For y-coordinate, we need to invert the y-axis
     // In XYZ, (0,0) is top-left, but in the example, iy=0 is bottom and iy=1 is top
     // So we need to flip the y-coordinate

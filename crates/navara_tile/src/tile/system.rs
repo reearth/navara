@@ -710,9 +710,8 @@ pub fn update_mesh_material(
         };
 
         let mut needs_update = are_tile_layers_removed
-            || 
             // If it has a different parent tile, it should be updated.
-            tile_mesh_marker.ready_parent_tile_handle
+            || tile_mesh_marker.ready_parent_tile_handle
                 != cached_rendered_tile.ready_parent_tile_handle;
 
         let prev_texture_fragments = &appearance.texture_fragments;
