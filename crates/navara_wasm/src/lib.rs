@@ -463,6 +463,11 @@ impl Core {
         self.app
             .fly_to(position, pitch, heading, roll, duration, max_height);
     }
+
+    #[wasm_bindgen(js_name = lookAt)]
+    pub fn look_at(&mut self, target: Vec<FloatType>, offset: Vec<FloatType>) {
+        self.app.look_at(target, offset);
+    }
 }
 
 #[wasm_bindgen(start)]
