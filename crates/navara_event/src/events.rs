@@ -7,7 +7,7 @@ use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
-use navara_tile_component::{TileCoordinates, TileMeshMarker};
+use navara_tile_component::{OverscaledTileHandle, TileMeshMarker};
 use navara_worker::DelegatedWorkerTasksParameters;
 
 #[derive(Debug, Default)]
@@ -22,10 +22,10 @@ pub struct Events<'a> {
             &'a Mesh,
             &'a RasterTileInternalMaterial,
             &'a Transform,
-            &'a TileCoordinates,
         )>,
     >,
-    pub mesh_updated: Vec<ComponentEvent<(&'a Mesh, &'a RasterTileInternalMaterial)>>,
+    pub mesh_updated:
+        Vec<ComponentEvent<(&'a TileMeshMarker, &'a Mesh, &'a RasterTileInternalMaterial)>>,
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
@@ -37,14 +37,14 @@ pub struct Events<'a> {
         ReconstructableComponentEvent<(
             &'a RenderableFeature,
             &'a LayerId,
-            Option<&'a TileCoordinates>,
+            Option<&'a OverscaledTileHandle>,
         )>,
     >,
     pub renderable_feature_changed: Vec<
         ReconstructableComponentEvent<(
             &'a RenderableFeature,
             &'a LayerId,
-            Option<&'a TileCoordinates>,
+            Option<&'a OverscaledTileHandle>,
         )>,
     >,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
@@ -74,14 +74,14 @@ impl<'a> Events<'a> {
         }
 
         for e in store.mesh_added.iter() {
-            if let Some(e) = ComponentEvent::from_world_5(*e, world) {
+            if let Some(e) = ComponentEvent::from_world_4(*e, world) {
                 events.mesh_added.push(e);
                 is_changed = true;
             }
         }
 
         for e in store.mesh_updated.iter() {
-            if let Some(e) = ComponentEvent::from_world_2(*e, world) {
+            if let Some(e) = ComponentEvent::from_world_3(*e, world) {
                 events.mesh_updated.push(e);
                 is_changed = true;
             }

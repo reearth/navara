@@ -1,3 +1,4 @@
+use navara_tile_component::TileHandle;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -39,19 +40,15 @@ impl From<TileXYZ> for navara_core::TileXYZ {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Copy, Serialize)]
-pub struct TileCoordinates {
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
+pub struct OverscaledTileHandle {
+    pub handle: TileHandle,
     pub overscaled: usize,
 }
 
-impl From<&navara_tile_component::TileCoordinates> for TileCoordinates {
-    fn from(d: &navara_tile_component::TileCoordinates) -> Self {
-        TileCoordinates {
-            x: d.x,
-            y: d.y,
-            z: d.z,
+impl From<&navara_tile_component::OverscaledTileHandle> for OverscaledTileHandle {
+    fn from(d: &navara_tile_component::OverscaledTileHandle) -> Self {
+        OverscaledTileHandle {
+            handle: d.handle,
             overscaled: d.overscaled,
         }
     }

@@ -1,4 +1,4 @@
-use navara_wasm_types::TileCoordinates;
+use navara_wasm_types::OverscaledTileHandle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -16,7 +16,7 @@ pub struct RenderableFeatureAddedEvent {
     pub feature: RenderableFeature,
     #[wasm_bindgen(getter_with_clone)]
     pub layer_id: String,
-    pub tile_coords: Option<TileCoordinates>,
+    pub overscaled_tile_handle: Option<OverscaledTileHandle>,
 }
 
 impl<'a>
@@ -24,7 +24,7 @@ impl<'a>
         navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
             &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::TileCoordinates>,
+            Option<&'a navara_tile_component::OverscaledTileHandle>,
         )>,
     > for RenderableFeatureAddedEvent
 {
@@ -32,7 +32,7 @@ impl<'a>
         ev: navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
             &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::TileCoordinates>,
+            Option<&'a navara_tile_component::OverscaledTileHandle>,
         )>,
     ) -> Self {
         Self {
@@ -41,7 +41,7 @@ impl<'a>
             bits: ev.bits,
             feature: RenderableFeature::from(ev.comp.0),
             layer_id: ev.comp.1 .0.clone(),
-            tile_coords: ev.comp.2.map(|v| v.into()),
+            overscaled_tile_handle: ev.comp.2.map(|v| v.into()),
         }
     }
 }
@@ -58,7 +58,7 @@ pub struct RenderableFeatureChangedEvent {
     pub feature: RenderableFeature,
     #[wasm_bindgen(getter_with_clone)]
     pub layer_id: String,
-    pub tile_coords: Option<TileCoordinates>,
+    pub overscaled_tile_handle: Option<OverscaledTileHandle>,
 }
 
 impl<'a>
@@ -66,7 +66,7 @@ impl<'a>
         navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
             &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::TileCoordinates>,
+            Option<&'a navara_tile_component::OverscaledTileHandle>,
         )>,
     > for RenderableFeatureChangedEvent
 {
@@ -74,7 +74,7 @@ impl<'a>
         ev: navara_event_store::ReconstructableComponentEvent<(
             &'a navara_feature_component::render::RenderableFeature,
             &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::TileCoordinates>,
+            Option<&'a navara_tile_component::OverscaledTileHandle>,
         )>,
     ) -> Self {
         Self {
@@ -83,7 +83,7 @@ impl<'a>
             bits: ev.bits,
             feature: RenderableFeature::from(ev.comp.0),
             layer_id: ev.comp.1 .0.clone(),
-            tile_coords: ev.comp.2.map(|v| v.into()),
+            overscaled_tile_handle: ev.comp.2.map(|v| v.into()),
         }
     }
 }

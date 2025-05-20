@@ -1,7 +1,5 @@
-import type {
-  PolygonMesh as NavaraPolygonMesh,
-  TileCoordinates,
-} from "@navara/engine";
+import type { TileHandle } from "@navara/core";
+import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
 import { PolygonMesh } from "../../mesh";
@@ -11,16 +9,16 @@ export async function renderPolygon(
   mesh: NavaraPolygonMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  coords: TileCoordinates | undefined,
+  tileHandle: TileHandle | undefined,
 ) {
-  return new PolygonMesh(mesh, buf, uniforms, coords);
+  return new PolygonMesh(mesh, buf, uniforms, tileHandle);
 }
 
 export function processPolygonChanged(
   obj: PolygonMesh,
   m: NavaraPolygonMesh,
   active: boolean,
-  coords: TileCoordinates | undefined,
+  tileHandle: TileHandle | undefined,
 ) {
-  obj._update(m.material, active, !!coords);
+  obj._update(m.material, active, !!tileHandle);
 }

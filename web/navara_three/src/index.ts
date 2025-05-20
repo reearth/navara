@@ -56,6 +56,7 @@ import {
   type WorkerPoolPromises,
   type RenderFlag,
   type CameraPosition,
+  type TileMapByHandle,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";
@@ -64,7 +65,6 @@ import { isWorker } from "./utils";
 import WorkerURL from "./worker?url&worker";
 
 export * from "./type";
-export * from "./types";
 export * from "./constants";
 export * from "./light";
 export * from "./antialias";
@@ -132,6 +132,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+  private _tileMapByHandle: TileMapByHandle = new Map();
 
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -211,6 +212,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     },
     getTileElevationDecoder: (handle) => {
       return this._core?.getTileElevationDecoder(handle);
+    },
+    getVectorTileStates: (handle) => {
+      return this._core?.getVectorTileStates(handle);
     },
   };
   private _workerTaskHandler: WorkerTaskHandler = {
@@ -630,6 +634,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._uniforms,
       this._drapedFeatureMaterials,
       this._texturizedSceneByTileCoordinates,
+      this._tileMapByHandle,
       this._defaultTextureOptions,
       this._renderFlag,
       this,

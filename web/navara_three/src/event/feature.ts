@@ -1,10 +1,9 @@
-import type { EventHandler } from "@navara/core";
+import type { EventHandler, TileHandle } from "@navara/core";
 import { generate_id_from_entity } from "@navara/core";
 import {
   type RenderableFeatureAddedEvent,
   type RenderableFeature,
   RenderableFeatureChangedEvent,
-  TileCoordinates,
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D, Material } from "three";
 
@@ -39,7 +38,7 @@ export function renderFeature(
   f: RenderableFeature,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  coords: TileCoordinates | undefined,
+  tileHandle: TileHandle | undefined,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf, uniforms);
@@ -54,7 +53,7 @@ export function renderFeature(
     return renderPolyline(f.polyline, buf, uniforms);
   }
   if (f.polygon) {
-    return renderPolygon(f.polygon, buf, uniforms, coords);
+    return renderPolygon(f.polygon, buf, uniforms, tileHandle);
   }
   if (f.text) {
     return renderText(f.text, buf, uniforms);
@@ -80,7 +79,9 @@ export async function processRenderableFeatureAdded(
 
   const { point, billboard, text, polyline, polygon, model } = feature;
 
-  const coords = ev.tile_coords;
+  const overscaledTileHandle = ev.overscaled_tile_handle;
+
+  const tileHandle = overscaledTileHandle?.handle;
 
   const useParallel = !!model;
 
@@ -89,18 +90,20 @@ export async function processRenderableFeatureAdded(
     onConcurrency(1);
   }
 
-  const obj = await renderFeature(feature, buf, uniforms, coords)?.then((r) => {
-    const type = (() => {
-      if (point || billboard || text) return "point";
-      else if (model) return "model";
-      else if (polyline) return "polyline";
-      else if (polygon) return "polygon";
-    })();
-    if (type) {
-      featureHandler.markFeatureIsRendered(type, ev.bits);
-    }
-    return r;
-  });
+  const obj = await renderFeature(feature, buf, uniforms, tileHandle)?.then(
+    (r) => {
+      const type = (() => {
+        if (point || billboard || text) return "point";
+        else if (model) return "model";
+        else if (polyline) return "polyline";
+        else if (polygon) return "polygon";
+      })();
+      if (type) {
+        featureHandler.markFeatureIsRendered(type, ev.bits);
+      }
+      return r;
+    },
+  );
 
   if (useParallel) {
     // End parallel process
@@ -125,19 +128,18 @@ export async function processRenderableFeatureAdded(
 
   meshes.set(id, obj);
 
-  if (obj instanceof PolygonMesh && obj.userData.draped && coords) {
-    texturizedSceneByTileCoordinates.add(coords, obj);
+  if (obj instanceof PolygonMesh && obj.userData.draped && tileHandle) {
     obj.addEventListener("removedFromWorld", () => {
-      texturizedSceneByTileCoordinates.remove(coords);
+      texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
     });
-  } else if (obj instanceof PolygonMesh && obj.userData.draped && !coords) {
+  } else if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
     drapedFeatureMaterials.set(id, obj.material);
     obj.addEventListener("removedFromWorld", () => {
       drapedFeatureMaterials.delete(id);
     });
   }
 
-  const layer = handleFeatureCreatedEventByLayerId(
+  handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
     viewEvents,
@@ -152,12 +154,6 @@ export async function processRenderableFeatureAdded(
     ev.bits,
     updatedAt,
   );
-
-  layer?.on("afterFeatureUpdated", () => {
-    if (coords) {
-      texturizedSceneByTileCoordinates.requestUpdate(coords);
-    }
-  });
 }
 
 // TODO: Update material in this function.
@@ -173,7 +169,10 @@ export async function processRenderableFeatureChanged(
   const obj = meshes.get(id);
   if (!obj) return;
 
-  const coords = ev.tile_coords;
+  const layerId = ev.layer_id;
+
+  const overscaledTileHandle = ev.overscaled_tile_handle;
+  const tileHandle = overscaledTileHandle?.handle;
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
@@ -197,20 +196,22 @@ export async function processRenderableFeatureChanged(
     processPolylineChanged(obj, polyline, active);
   }
   if (obj instanceof PolygonMesh && polygon) {
-    processPolygonChanged(obj, polygon, active, coords);
+    processPolygonChanged(obj, polygon, active, tileHandle);
   }
 
   // Handle a draped mesh
-  if (obj instanceof PolygonMesh && obj.userData.draped != null && coords) {
+  if (obj instanceof PolygonMesh && obj.userData.draped != null && tileHandle) {
     if (obj.userData.draped) {
-      texturizedSceneByTileCoordinates.requestUpdate(coords);
+      if (obj.visible) {
+        texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
+      }
     } else {
-      texturizedSceneByTileCoordinates.remove(coords);
+      texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
     }
   } else if (
     obj instanceof PolygonMesh &&
     obj.userData.draped != null &&
-    !coords
+    !tileHandle
   ) {
     if (obj.userData.draped) {
       if (!drapedFeatureMaterials.has(id)) {

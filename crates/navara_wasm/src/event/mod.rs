@@ -11,7 +11,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{RasterTileInternalMaterial, TileCoordinates};
+use navara_wasm_types::{RasterTileInternalMaterial, Vec2};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -62,11 +62,11 @@ pub struct MeshAdded {
     pub ind: u32,
     pub gen: u32,
     pub tile_handle: TileHandle,
+    pub ready_parent_tile_handle: Option<TileHandle>,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
     pub material: RasterTileInternalMaterial,
     pub transform: Transform,
-    pub tile_coords: TileCoordinates,
 }
 
 #[wasm_bindgen]
@@ -74,6 +74,7 @@ pub struct MeshAdded {
 pub struct MeshChanged {
     pub ind: u32,
     pub gen: u32,
+    pub ready_parent_tile_handle: Option<TileHandle>,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
     pub material: RasterTileInternalMaterial,
@@ -87,6 +88,14 @@ pub struct Mesh {
     pub indices: i32,  // handle
     pub active: bool,
     pub render_order: i32,
+    pub uv_transform: TileUvTransform,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct TileUvTransform {
+    pub offset: Vec2,
+    pub scale: Vec2,
 }
 
 #[wasm_bindgen]
@@ -244,7 +253,6 @@ impl
             &navara_mesh::Mesh,
             &navara_material::RasterTileInternalMaterial,
             &navara_math::Transform,
-            &navara_tile_component::TileCoordinates,
         )>,
     > for MeshAdded
 {
@@ -254,17 +262,16 @@ impl
             &navara_mesh::Mesh,
             &navara_material::RasterTileInternalMaterial,
             &navara_math::Transform,
-            &navara_tile_component::TileCoordinates,
         )>,
     ) -> Self {
         Self {
             ind: ev.ind,
             gen: ev.gen,
-            tile_handle: ev.comp.0 .0,
+            tile_handle: ev.comp.0.handle,
+            ready_parent_tile_handle: ev.comp.0.ready_parent_tile_handle,
             mesh: ev.comp.1.into(),
             material: ev.comp.2.into(),
             transform: ev.comp.3.into(),
-            tile_coords: ev.comp.4.into(),
         }
     }
 }
@@ -272,6 +279,7 @@ impl
 impl
     From<
         navara_event_store::ComponentEvent<(
+            &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
             &navara_material::RasterTileInternalMaterial,
         )>,
@@ -279,6 +287,7 @@ impl
 {
     fn from(
         ev: navara_event_store::ComponentEvent<(
+            &navara_tile_component::TileMeshMarker,
             &navara_mesh::Mesh,
             &navara_material::RasterTileInternalMaterial,
         )>,
@@ -286,8 +295,9 @@ impl
         Self {
             ind: ev.ind,
             gen: ev.gen,
-            mesh: ev.comp.0.into(),
-            material: ev.comp.1.into(),
+            ready_parent_tile_handle: ev.comp.0.ready_parent_tile_handle,
+            mesh: ev.comp.1.into(),
+            material: ev.comp.2.into(),
         }
     }
 }
@@ -300,6 +310,16 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             indices: m.indices,
             active: m.active,
             render_order: m.render_order,
+            uv_transform: (&m.uv_transform).into(),
+        }
+    }
+}
+
+impl<'a> From<&'a navara_geometry::TileUvTransform> for TileUvTransform {
+    fn from(m: &'a navara_geometry::TileUvTransform) -> Self {
+        Self {
+            offset: m.offset.into(),
+            scale: m.scale.into(),
         }
     }
 }

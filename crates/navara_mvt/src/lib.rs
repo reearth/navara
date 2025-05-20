@@ -10,6 +10,8 @@ mod layer;
 mod pos_converter;
 mod tile;
 
+pub use layer::*;
+
 pub struct MvtPlugin;
 
 impl Plugin for MvtPlugin {
