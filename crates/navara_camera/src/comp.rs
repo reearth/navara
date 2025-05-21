@@ -128,6 +128,50 @@ pub enum CameraStatus {
 }
 
 #[derive(Component)]
+pub struct CameraStatusMngr {
+    pub status: CameraStatus,
+}
+
+impl Default for CameraStatusMngr {
+    fn default() -> Self {
+        Self {
+            status: CameraStatus::Idle,
+        }
+    }
+}
+
+impl CameraStatusMngr {
+    pub fn update(&mut self, st: &CameraStatus) {
+        match self.status {
+            CameraStatus::Idle => {
+                if *st == CameraStatus::MoveStart || *st == CameraStatus::Move {
+                    self.status = CameraStatus::MoveStart;
+                }
+            }
+            CameraStatus::MoveStart => {
+                if *st == CameraStatus::MoveEnd {
+                    self.status = CameraStatus::MoveEnd;
+                } else if *st == CameraStatus::Move {
+                    self.status = CameraStatus::Move;
+                }
+            }
+            CameraStatus::Move => {
+                if *st == CameraStatus::MoveEnd || *st == CameraStatus::Idle {
+                    self.status = CameraStatus::MoveEnd;
+                }
+            }
+            CameraStatus::MoveEnd => {
+                if *st == CameraStatus::Idle {
+                    self.status = CameraStatus::Idle;
+                } else {
+                    self.status = CameraStatus::MoveStart;
+                }
+            }
+        }
+    }
+}
+
+#[derive(Component)]
 pub struct CameraController {
     pub enabled: bool,
     pub enable_spin: bool,
@@ -145,7 +189,6 @@ pub struct CameraController {
     pub translate_duration: f32,
     pub inertia: FloatType,
     pub is_tilting: bool,
-    pub status: CameraStatus,
 }
 
 impl CameraController {
@@ -173,7 +216,6 @@ impl Default for CameraController {
             translate_duration: 500.,
             inertia: 0.5,
             is_tilting: false,
-            status: CameraStatus::Idle,
         }
     }
 }
@@ -209,6 +251,16 @@ impl CameraInertia {
         self.translate_time = 0.;
         self.spin = Vec3::ZERO;
         self.zoom = 0.;
+    }
+
+    pub fn stop_all(&mut self, controller: &CameraController) {
+        self.spin = Vec3::ZERO;
+        self.zoom = 0.;
+        self.translate = Vec3::ZERO;
+
+        self.spin_time = controller.spin_duration;
+        self.translate_time = controller.translate_duration;
+        self.zoom_time = controller.zoom_duration;
     }
 }
 
@@ -467,17 +519,11 @@ impl CameraFlight {
         self.time < self.duration
     }
 
-    pub fn update(
-        &mut self,
-        controller: &mut CameraController,
-        delta_time: FloatType,
-    ) -> Option<(Vec3, CameraOrientation)> {
+    pub fn update(&mut self, delta_time: FloatType) -> Option<(Vec3, CameraOrientation)> {
         if self.is_flying() {
-            controller.status = CameraStatus::Move;
             self.time += delta_time;
             if self.time > self.duration {
                 self.time = self.duration;
-                controller.status = CameraStatus::MoveEnd;
             }
 
             if let Some(f) = &self.height_function {

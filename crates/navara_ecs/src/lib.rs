@@ -8,8 +8,8 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    get_heading, get_pitch, get_roll, CamDirType, CameraController, CameraDirection, CameraEvent,
-    CameraMarker, CameraOrientation, CameraStatus,
+    get_heading, get_pitch, get_roll, CamDirType, CameraDirection, CameraEvent, CameraMarker,
+    CameraOrientation, CameraStatus, CameraStatusMngr,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{ElevationDecoder, CRS, WGS84_32};
@@ -748,10 +748,10 @@ impl App {
 
     pub fn get_camera_status(&mut self) -> CameraStatus {
         let world = self.app.world_mut();
-        let mut query = world.query_filtered::<&CameraController, With<CameraMarker>>();
+        let mut query = world.query_filtered::<&CameraStatusMngr, With<CameraMarker>>();
 
-        if let Some(cam_ctrl) = query.iter(world).next() {
-            return cam_ctrl.status;
+        if let Some(st_mngr) = query.iter(world).next() {
+            return st_mngr.status;
         }
 
         CameraStatus::Idle
