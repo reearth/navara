@@ -37,8 +37,8 @@ export const run = async (view: ThreeView) => {
     console.log("camera movestart");
   });
   view.camera.on("move", () => {
-    const position = view.camera.getPosition("geographic");
-    console.log("camera move", position);
+    // const position = view.camera.getPosition("geographic");
+    console.log("camera move");
   });
   view.camera.on("moveend", () => {
     console.log("camera moveend");
