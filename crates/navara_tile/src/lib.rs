@@ -8,7 +8,6 @@ use bevy_ecs::schedule::IntoSystemConfigs;
 use navara_tile_component::{CachedMartini, RasterTileQuadtree, TerrainInformationQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 
-pub mod terrain;
 pub mod tile;
 
 pub struct TilePlugin;
@@ -23,7 +22,6 @@ impl Plugin for TilePlugin {
             .add_systems(
                 PreUpdate,
                 (
-                    terrain::system::begine_terrain_layer,
                     tile::system::handle_prepared_mesh_event,
                     tile::system::handle_tile_worker_task_completed,
                     tile::system::add_order_to_tiles_layer,

@@ -14,9 +14,9 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
-    CachedMartini, ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery,
-    RasterTile, RasterTileQuadtree, TerrainInformation, TerrainInformationQuadtree, Tile,
-    TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, RasterTile,
+    RasterTileQuadtree, TerrainInformation, TerrainInformationQuadtree, Tile, TileMeshMarker,
+    TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 use navara_worker::{
@@ -199,7 +199,6 @@ pub fn transfer_mesh(
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<RasterTileQuadtree>,
     mut terrain_qt: ResMut<TerrainInformationQuadtree>,
-    cached_martini: Res<CachedMartini>,
     mut rendered_tiles: Query<
         (Entity, &mut RenderedTile, &OrderByDistance),
         Or<(Added<RenderedTile>, Without<Rendered>)>,
@@ -222,6 +221,8 @@ pub fn transfer_mesh(
 
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
+
+    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size);
 
     for (rendered_tile_id, mut rendered_tile, order) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>()
@@ -369,8 +370,6 @@ pub fn transfer_mesh(
             continue;
         }
 
-        let terrain_layer = terrain_layer.unwrap();
-
         fn postupdate_tile(
             tile: &mut RasterTile,
             terrain_info: &mut TerrainInformation,
@@ -475,10 +474,6 @@ pub fn transfer_mesh(
 
         let terrain_req = terrain_req.unwrap();
 
-        let martini_id = cached_martini
-            .get(&terrain_layer.appearance.as_ref().unwrap().tile_size)
-            .expect("It must be initialized when terrain layer is added");
-
         let terrain_mesh_constructor_id = match rendered_tile.terrain_mesh_constructor {
             Some(e) => e,
             None => {
@@ -487,7 +482,7 @@ pub fn transfer_mesh(
                         ConstructTerrainMeshWorkerTaskBundle::new(
                             ConstructTerrainMeshMarker,
                             ConstructTerrainMeshParameters {
-                                martini_id: *martini_id,
+                                tile_size: tile_size.unwrap(),
                                 bytes_handle: terrain_req.handle,
                                 tile_handle: rendered_tile.tile_handle,
                             },

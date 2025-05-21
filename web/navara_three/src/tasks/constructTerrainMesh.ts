@@ -1,6 +1,5 @@
 import {
   ReturnedConstructedTerrainMeshLike,
-  TransferableMartiniLike,
   TransferableRasterDEMDataLike,
   TransferableTileLike,
 } from "@navara/core";
@@ -12,13 +11,13 @@ export function constructTerrainMesh(
   bytes: Uint8Array,
   tileLike: TransferableTileLike,
   rasterDEMDataLike: TransferableRasterDEMDataLike,
-  martiniLike: TransferableMartiniLike,
+  size: number,
 ): Promise<{
   result: ReturnedConstructedTerrainMeshLike;
 }> {
   return queueTask(
     "constructTerrainMesh",
-    [bytes, tileLike, rasterDEMDataLike, martiniLike],
-    { transfer: [bytes.buffer, martiniLike.coords.buffer] },
+    [bytes, tileLike, rasterDEMDataLike, size],
+    { transfer: [bytes.buffer] },
   );
 }

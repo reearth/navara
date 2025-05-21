@@ -27,6 +27,7 @@ import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
 import { type ViewEvents } from "..";
+import { ThreeViewCamera } from "../camera";
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { LayersManager } from "../layersManager";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
@@ -52,7 +53,6 @@ import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
-import { ThreeViewCamera } from "../camera";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
