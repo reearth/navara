@@ -151,7 +151,9 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                if (is_tile_meshes_empty || !material.clamp_to_ground)
+                    && !render_info.should_recalculate_height
+                {
                     continue;
                 }
                 if !material.show || !active {

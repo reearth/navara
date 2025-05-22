@@ -40,10 +40,7 @@ export class TexturizedSceneByTileCoordinates {
 
   add(handle: TileHandle, layerId: string, mesh: Mesh, fromParent = false) {
     const scenes = this.get(handle);
-    const sceneIdx = scenes.children.findIndex(
-      (o) => o.userData.layerId === layerId,
-    );
-    let scene = sceneIdx >= 0 ? scenes.children[sceneIdx] : undefined;
+    let scene = scenes.children.find((o) => o.userData.layerId === layerId);
     if (!scene) {
       scene = new Scene();
       scene.userData.layerId = layerId;
@@ -65,6 +62,8 @@ export class TexturizedSceneByTileCoordinates {
 
   addFromParentScene(handle: TileHandle, layerId: string, parentScene: Scene) {
     for (const child of parentScene.children) {
+      if (child.userData.fromParent) continue;
+
       const m = child as BatchedFeatureMesh;
       const nm = new Mesh(m.geometry, m.material);
       // Mark this mesh as inherited from the parent.
