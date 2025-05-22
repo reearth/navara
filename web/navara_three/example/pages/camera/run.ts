@@ -1,6 +1,6 @@
 import ThreeView from "@navara/three";
 import { AxesHelper, Vector3 } from "three";
-import { Pane } from "tweakpane";
+import { Pane, FolderApi } from "tweakpane";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -54,6 +54,7 @@ export const run = async (view: ThreeView) => {
   addMoveCameraWithDirOption(pane, view);
   addFlyToOption(pane, view);
   addLookAtOption(pane, view);
+  addRotateOption(pane, view);
 };
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
@@ -216,7 +217,7 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
   };
   const folder = pane.addFolder({
     title: "Look At",
-    expanded: true,
+    expanded: false,
   });
 
   const clickFunc = () => {
@@ -243,5 +244,68 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
 
   folder.addButton({ title: "Look At", label: "" }).on("click", () => {
     clickFunc();
+  });
+};
+
+const addRotateOption = (pane: Pane, view: ThreeView) => {
+  const cameraParams = {
+    axis_x: 0.0,
+    axis_y: 0.0,
+    axis_z: 0.0,
+    angle_deg: 0.1,
+  };
+  const folder = pane.addFolder({
+    title: "Rotate",
+    expanded: true,
+  });
+
+  folder.addBinding(cameraParams, "axis_x");
+  folder.addBinding(cameraParams, "axis_y");
+  folder.addBinding(cameraParams, "axis_z");
+  folder.addBinding(cameraParams, "angle_deg");
+
+  const clickFunc = () => {
+    view.rotateAroundAxis(
+      new Vector3(
+        cameraParams.axis_x,
+        cameraParams.axis_y,
+        cameraParams.axis_z,
+      ),
+      cameraParams.angle_deg,
+    );
+  };
+
+  folder.addButton({ title: "Rotate", label: "" }).on("click", () => {
+    clickFunc();
+  });
+
+  let isAnimating = false;
+  const animateFunc = () => {
+    if (isAnimating) {
+      clickFunc();
+    }
+    requestAnimationFrame(animateFunc);
+  };
+  animateFunc();
+
+  addToggleButton(folder, "Animate", "Stop", (title: string) => {
+    isAnimating = title === "Animate";
+  });
+};
+
+const addToggleButton = (
+  folder: FolderApi,
+  titleA: string,
+  titleB: string,
+  f: (title: string) => void,
+) => {
+  const button = folder.addButton({
+    title: titleA,
+    label: "",
+  });
+
+  button.on("click", () => {
+    f(button.title);
+    button.title = button.title === titleA ? titleB : titleA;
   });
 };

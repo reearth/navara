@@ -71,4 +71,8 @@ pub enum CameraEvent {
         target: Vec3, // [longitude, latitude, altitude]
         offset: Vec3, // The offset from the target in the local east-north-up reference frame centered at the target.
     },
+    RotateAroundAxis {
+        axis: Option<Vec3>, // The axis of rotation in the world coordinate system.
+        angle: FloatType,   // The angle to rotate around the axis in degrees.
+    },
 }

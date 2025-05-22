@@ -495,6 +495,11 @@ impl Core {
         }
         None
     }
+
+    #[wasm_bindgen(js_name = rotateAroundAxis)]
+    pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
+        self.app.rotate_around_axis(axis, angle);
+    }
 }
 
 #[wasm_bindgen(start)]

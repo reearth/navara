@@ -96,8 +96,6 @@ pub fn update(
             continue;
         }
 
-        let mut status = CameraStatus::Idle;
-
         // flying
         if let Some((position, orientation)) = flight.update(duration) {
             apply_camera_change(
@@ -107,7 +105,7 @@ pub fn update(
                 &Some(orientation),
             );
 
-            status = if flight.is_flying() {
+            let status = if flight.is_flying() {
                 CameraStatus::Move
             } else {
                 CameraStatus::MoveEnd
@@ -119,17 +117,22 @@ pub fn update(
         // Handle camera events (Change, Translate, FlyTo, LookAt)
         let ce = ce.read().last();
         if let Some(ce) = ce {
-            process_camera_event(
+            let start_anim = process_camera_event(
+                &window,
                 ce,
                 &mut transform,
                 &mut orbit,
-                &mut status,
                 &mut inertia,
                 frustum,
                 &mut flight,
+                &st_mngr.status,
             );
-            st_mngr.update(&status);
-            continue;
+
+            if matches!(ce, CameraEvent::FlyTo { .. }) && start_anim {
+                st_mngr.update(&CameraStatus::Move);
+                inertia.stop_all(&controller);
+                continue;
+            }
         }
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
@@ -187,22 +190,22 @@ pub fn update(
             apply_camera_translate(&mut transform, &mut inertia, &controller)
         }
 
-        status = after_inertia(&mut inertia, duration, &mut controller);
+        let status = after_inertia(&mut inertia, duration, &mut controller);
         st_mngr.update(&status);
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_camera_event(
+    window: &Window,
     ce: &CameraEvent,
     transform: &mut Transform,
     orbit: &mut Orbit,
-    status: &mut CameraStatus,
     inertia: &mut CameraInertia,
     frustum: &CameraFrustum,
     flight: &mut CameraFlight,
-) {
-    *status = CameraStatus::Idle;
-
+    status: &CameraStatus,
+) -> bool {
     match ce {
         CameraEvent::Change {
             position,
@@ -212,11 +215,7 @@ fn process_camera_event(
         }
         CameraEvent::Translate { amount, direction } => {
             // Handle camera translation
-            let start = handle_camera_translate(transform, orbit, inertia, amount, direction);
-
-            if start {
-                *status = CameraStatus::MoveStart
-            }
+            return handle_camera_translate(transform, orbit, inertia, amount, direction);
         }
         CameraEvent::FlyTo {
             position,
@@ -227,16 +226,20 @@ fn process_camera_event(
             if let Some(pos) = position {
                 let orient = orientation.unwrap_or(CameraOrientation::default());
 
-                let start = flight.fly_to(transform, frustum, pos, &orient, duration, max_height);
-                if start {
-                    *status = CameraStatus::MoveStart
-                }
+                return flight.fly_to(transform, frustum, pos, &orient, duration, max_height);
             }
         }
         CameraEvent::LookAt { target, offset } => {
             apply_look_at(transform, orbit, target, offset);
         }
+        CameraEvent::RotateAroundAxis { axis, angle } => {
+            if *status == CameraStatus::Idle || *status == CameraStatus::MoveEnd {
+                rotate_around_axis(window, transform, orbit, frustum, axis, angle);
+            }
+        }
     }
+
+    false
 }
 
 fn commit(transform: &mut Transform, orbit: &mut Orbit) {
@@ -291,6 +294,35 @@ fn handle_orbit_spin(
     };
 
     inertia.spin(spin);
+}
+
+fn rotate_around_axis(
+    window: &Window,
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    frustum: &CameraFrustum,
+    axis: &Option<Vec3>,
+    angle: &FloatType,
+) {
+    let axis = if let Some(ax) = axis {
+        ax.normalize_or_zero()
+    } else {
+        let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
+        let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
+        let point = ray_ellipsoid_intersect(&ray, WGS84_32);
+        let center = ray.get_point(point);
+
+        center.normalize_or_zero()
+    };
+
+    let rotation = Quat::from_axis_angle(axis, angle.to_radians());
+
+    let position = transform.translation;
+    transform.translation = rotation * position;
+    transform.rotation = rotation * transform.rotation;
+
+    let world = orbit.get_default_world_quat();
+    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
