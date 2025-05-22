@@ -4,13 +4,13 @@ use navara_tile_component::TileHandle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-use crate::{entity::ReconstructableEntity, geometry::TransferableGeometry};
+use crate::geometry::TransferableGeometry;
 
 #[wasm_bindgen]
 #[derive(Clone, Debug, Serialize)]
 pub struct ConstructTerrainMeshParameters {
     #[wasm_bindgen(getter_with_clone)]
-    pub martini_id: ReconstructableEntity,
+    pub tile_size: u32,
     pub bytes_handle: Handle,
     pub tile_handle: TileHandle,
 }
@@ -22,7 +22,7 @@ impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshPar
         val: &'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshParameters,
     ) -> ConstructTerrainMeshParameters {
         ConstructTerrainMeshParameters {
-            martini_id: ReconstructableEntity(val.martini_id.to_bits()),
+            tile_size: val.tile_size,
             bytes_handle: val.bytes_handle,
             tile_handle: val.tile_handle,
         }

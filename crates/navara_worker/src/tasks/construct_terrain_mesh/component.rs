@@ -1,4 +1,4 @@
-use bevy_ecs::{component::Component, entity::Entity};
+use bevy_ecs::component::Component;
 use navara_buffer_store::Handle;
 use navara_geometry::TransferableGeometry;
 use navara_math::FloatType;
@@ -12,7 +12,7 @@ pub struct ConstructTerrainMeshMarker;
 
 #[derive(Component, Clone, Debug, Serialize)]
 pub struct ConstructTerrainMeshParameters {
-    pub martini_id: Entity,
+    pub tile_size: u32,
     pub bytes_handle: Handle,
     pub tile_handle: TileHandle,
 }

@@ -1,7 +1,6 @@
 import {
   generate_id_from_entity,
   PolygonMaterialLike,
-  TransferableMartiniLike,
   TransferablePolygonBatchedFeatureLike,
   TransferableRasterDEMDataLike,
   TransferableTileLike,
@@ -129,20 +128,6 @@ async function processConstructTerrainMesh(
     return;
   }
 
-  const martini = (() => {
-    const martini = tileHandler.getMartini(params.martini_id);
-    if (!martini) return;
-    const martiniLike = new TransferableMartiniLike(
-      martini.transfer_coords(),
-      martini.size,
-    );
-    martini.free();
-    return martiniLike;
-  })();
-  if (!martini) {
-    return;
-  }
-
   const tile = tileHandler.getTile(params.tile_handle);
   if (!tile) {
     return;
@@ -157,7 +142,7 @@ async function processConstructTerrainMesh(
     bytes,
     new TransferableTileLike(tile),
     new TransferableRasterDEMDataLike(elevationDecoder),
-    martini,
+    params.tile_size,
   );
   workerPoolPromises.set(id, promise);
   const { result } = await promise;

@@ -15,6 +15,15 @@ pub struct WorkerPlugin;
 
 impl bevy_app::Plugin for WorkerPlugin {
     fn build(&self, app: &mut bevy_app::App) {
+        #[cfg(not(feature = "delegated_worker"))]
+        {
+            use bevy_app::PreUpdate;
+            app.add_event::<WorkerTaskCompletedEvent>().add_systems(
+                PreUpdate,
+                tasks::construct_terrain_mesh::system::setup_martini,
+            );
+        }
+
         app.add_event::<WorkerTaskCompletedEvent>().add_systems(
             Update,
             (

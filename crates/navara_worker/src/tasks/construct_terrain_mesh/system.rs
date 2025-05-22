@@ -13,12 +13,29 @@ use navara_tile_component::{MartiniComponent, TileQuadtree};
 use super::{ConstructTerrainMeshParameters, ConstructTerrainMeshResult};
 use crate::WorkerTaskMarker;
 
+// #[cfg(not(feature = "delegated_worker"))]
+pub fn setup_martini(
+    mut commands: Commands,
+    mut cached_martini: ResMut<CachedMartini>,
+    layers: Query<&TerrainLayer, Added<TerrainLayer>>,
+) {
+    for layer in layers.iter() {
+        let size = layer.appearance.as_ref().unwrap().tile_size;
+        if cached_martini.get(&size).is_some() {
+            continue;
+        }
+
+        cached_martini.insert(size, commands.spawn(MartiniComponent::new(size + 1)).id());
+    }
+}
+
 #[allow(clippy::type_complexity)]
 #[cfg(not(feature = "delegated_worker"))]
 pub(crate) fn construct_terrain_mesh(
     mut commands: Commands,
     qt: Res<TileQuadtree>,
     mut buf: ResMut<BufferStore>,
+    cached_martini: Res<CachedMartini>,
     constructors: Query<
         (Entity, &ConstructTerrainMeshParameters),
         (
@@ -43,7 +60,11 @@ pub(crate) fn construct_terrain_mesh(
             Some(t) => t,
             None => continue,
         };
-        let mut martini = martini_components.get_mut(constructor.martini_id).unwrap();
+
+        let martini_id = cached_martini
+            .get(constructor.tile_size)
+            .expect("It must be initialized when terrain layer is added");
+        let mut martini = martini_components.get_mut(martini_id).unwrap();
 
         let returned = tile.terrain_data.as_ref().unwrap().construct_terrain_mesh(
             WGS84_32,
