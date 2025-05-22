@@ -804,10 +804,7 @@ impl App {
         let axis = axis.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app
             .world_mut()
-            .send_event(CameraEvent::RotateAroundAxis {
-                axis,
-                angle,
-            });
+            .send_event(CameraEvent::RotateAroundAxis { axis, angle });
     }
 }
 
