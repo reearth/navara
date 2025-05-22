@@ -170,6 +170,7 @@ pub fn transfer_mesh(
             }
             geometry.attributes.batch_id_and_sel = Some(FloatAttribute::new(batch_id_vec, 2));
 
+            let clamp_to_ground = material.clamp_to_ground;
             let entity = commands
                 .spawn((
                     PolylineMarker,
@@ -183,7 +184,7 @@ pub fn transfer_mesh(
                         transform: Transform::default(),
                         feature_id: Some(entity),
                         render_info: PolylineRenderInformation {
-                            should_recalculate_height: true,
+                            should_recalculate_height: clamp_to_ground,
                             is_rendered: false,
                         },
                         extent,

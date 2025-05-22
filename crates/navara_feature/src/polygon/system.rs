@@ -201,6 +201,7 @@ pub fn transfer_mesh(
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
+            let clamp_to_ground = material.clamp_to_ground;
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
             let entity = commands
                 .spawn((
@@ -218,7 +219,7 @@ pub fn transfer_mesh(
                         transform: Transform::default(),
                         feature_id: Some(entity),
                         render_info: PolygonRenderInformation {
-                            should_recalculate_height: true,
+                            should_recalculate_height: clamp_to_ground,
                             distance_to_center_from_ellipsoid_surface: Some(
                                 -aabb.center.distance(surface_point.unwrap()),
                             ),

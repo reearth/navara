@@ -179,7 +179,7 @@ pub fn transfer_mesh(
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
                         is_rendered: false,
-                        should_recalculate_height: true,
+                        should_recalculate_height: material.clamp_to_ground,
                     },
                     geometry: TransferablePointGeometry::with_buf(
                         &mut buf,
