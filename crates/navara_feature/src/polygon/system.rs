@@ -113,6 +113,7 @@ pub fn transfer_batched_mesh(
             None => None,
         };
 
+        let clamp_to_ground = material.clamp_to_ground;
         let mut entity_cmd = commands.spawn((
             PolygonMarker,
             layer_id.clone(),
@@ -128,6 +129,7 @@ pub fn transfer_batched_mesh(
                     should_recalculate_height: true,
                     distance_to_center_from_ellipsoid_surface,
                     is_rendered: false,
+                    should_be_texturized: clamp_to_ground && tile_coordinates.is_some(),
                 },
                 extent: *extent,
                 active: false,
@@ -199,6 +201,7 @@ pub fn transfer_mesh(
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
             let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
+            let clamp_to_ground = material.clamp_to_ground;
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
             let entity = commands
                 .spawn((
@@ -216,11 +219,12 @@ pub fn transfer_mesh(
                         transform: Transform::default(),
                         feature_id: Some(entity),
                         render_info: PolygonRenderInformation {
-                            should_recalculate_height: true,
+                            should_recalculate_height: clamp_to_ground,
                             distance_to_center_from_ellipsoid_surface: Some(
                                 -aabb.center.distance(surface_point.unwrap()),
                             ),
                             is_rendered: false,
+                            should_be_texturized: false,
                         },
                         extent: Some(extent),
                         active: true,
@@ -287,7 +291,11 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                if (is_tile_meshes_empty
+                    || !material.clamp_to_ground
+                    || render_info.should_be_texturized)
+                    && !render_info.should_recalculate_height
+                {
                     continue;
                 }
                 if !material.show || !active {

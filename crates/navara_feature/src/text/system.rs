@@ -179,7 +179,7 @@ pub fn transfer_mesh(
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
                         is_rendered: false,
-                        should_recalculate_height: true,
+                        should_recalculate_height: material.clamp_to_ground,
                     },
                     geometry: TransferablePointGeometry::with_buf(
                         &mut buf,
@@ -228,7 +228,9 @@ pub fn update_height_by_terrain_for_batched(
                 active,
                 ..
             } => {
-                if is_tile_meshes_empty && !render_info.should_recalculate_height {
+                if (is_tile_meshes_empty || !material.clamp_to_ground)
+                    && !render_info.should_recalculate_height
+                {
                     continue;
                 }
                 if !material.show || !active {
