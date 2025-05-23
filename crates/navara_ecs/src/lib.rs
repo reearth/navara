@@ -799,6 +799,13 @@ impl App {
 
         None
     }
+
+    pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
+        let axis = axis.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+        self.app
+            .world_mut()
+            .send_event(CameraEvent::RotateAroundAxis { axis, angle });
+    }
 }
 
 fn get_prop_from_batch_table(

@@ -766,6 +766,15 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
   }
 
+  rotateAroundAxis(axis: Vector3, angle: number) {
+    const isZero = axis.x === 0 && axis.y === 0 && axis.z === 0;
+
+    this._core?.rotateAroundAxis(
+      isZero ? undefined : new Float32Array([axis.x, axis.y, axis.z]),
+      angle,
+    );
+  }
+
   private _startMainLoop() {
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;
