@@ -252,7 +252,7 @@ const addRotateOption = (pane: Pane, view: ThreeView) => {
     axis_x: 0.0,
     axis_y: 0.0,
     axis_z: 0.0,
-    angle_deg: 0.1,
+    angle_rad: 0.002,
   };
   const folder = pane.addFolder({
     title: "Rotate",
@@ -262,7 +262,7 @@ const addRotateOption = (pane: Pane, view: ThreeView) => {
   folder.addBinding(cameraParams, "axis_x");
   folder.addBinding(cameraParams, "axis_y");
   folder.addBinding(cameraParams, "axis_z");
-  folder.addBinding(cameraParams, "angle_deg");
+  folder.addBinding(cameraParams, "angle_rad");
 
   const clickFunc = () => {
     view.rotateAroundAxis(
@@ -271,7 +271,7 @@ const addRotateOption = (pane: Pane, view: ThreeView) => {
         cameraParams.axis_y,
         cameraParams.axis_z,
       ),
-      cameraParams.angle_deg,
+      cameraParams.angle_rad,
     );
   };
 

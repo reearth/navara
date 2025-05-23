@@ -73,6 +73,6 @@ pub enum CameraEvent {
     },
     RotateAroundAxis {
         axis: Option<Vec3>, // The axis of rotation in the world coordinate system.
-        angle: FloatType,   // The angle to rotate around the axis in degrees.
+        angle: FloatType,   // The angle to rotate around the axis in radians.
     },
 }

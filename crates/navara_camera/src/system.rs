@@ -315,7 +315,7 @@ fn rotate_around_axis(
         center.normalize_or_zero()
     };
 
-    let rotation = Quat::from_axis_angle(axis, angle.to_radians());
+    let rotation = Quat::from_axis_angle(axis, *angle);
 
     let position = transform.translation;
     transform.translation = rotation * position;
