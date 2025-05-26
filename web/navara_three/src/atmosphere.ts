@@ -104,7 +104,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     }
   }
 
-  async init() {
+  private async init() {
     if (!this.textures) {
       this.textures = await new PrecomputedTexturesLoader()
         .setTypeFromRenderer(this.renderer)
@@ -126,7 +126,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.emit("_needsUpdate");
   }
 
-  addAerialPerspective() {
+  private addAerialPerspective() {
     if (this.pass) return;
 
     this.effect = new AerialPerspectiveEffect(this.camera, {
@@ -144,11 +144,15 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.effectComposer.addPass(this.pass);
   }
 
-  removeAerialPerspectiveRelated() {
+  // Remove resources related to the aerial perspective.
+  private removeAerialPerspectiveRelated() {
     this.removeAerialPerspective();
     this.removeSky();
     this.removeSkyLightProbe();
     if (this.sunLightObj) {
+      // SunDirectionalLight calculates the sun color from the transmittance texture automatically whenever `transmittanceTexture` is there.
+      // `transmittanceTexture` is no longer necessary when the aerial perspective is disabled. And it allows to specify the sun color.
+      // https://github.com/takram-design-engineering/three-geospatial/blob/2b5e0ac70d961015b11b6d892c0eccecea48b7f6/packages/atmosphere/src/SunDirectionalLight.ts#L67-L69
       this.sunLightObj.transmittanceTexture = null;
       this.sunLightObj.color.copy(this.options.sunLightColor);
     }
@@ -157,21 +161,23 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.emit("_needsUpdate");
   }
 
-  remove() {
+  // Dispose all objects related to atmosphere.
+  dispose() {
     this.removeAerialPerspective();
     this.removeSky();
     this.removeSkyLightProbe();
     this.removeSunLight();
+    this.removeAmbientLight();
   }
 
-  removeAerialPerspective() {
+  private removeAerialPerspective() {
     if (!this.pass) return;
     this.effectComposer.removePass(this.pass);
     this.pass = undefined;
     this.effect = undefined;
   }
 
-  addSky() {
+  private addSky() {
     if (this.skyMesh || !this.options.sky) return;
 
     const skyMaterial = new SkyMaterial({
@@ -187,13 +193,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.scene.add(this.skyMesh);
   }
 
-  removeSky() {
+  private removeSky() {
     if (!this.skyMesh) return;
     this.scene.remove(this.skyMesh);
     this.skyMesh = undefined;
   }
 
-  addSkyLightProbe() {
+  private addSkyLightProbe() {
     if (this.skyLightProbe) return;
 
     this.skyLightProbe = new SkyLightProbe();
@@ -204,13 +210,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.scene.add(this.skyLightProbe);
   }
 
-  removeSkyLightProbe() {
+  private removeSkyLightProbe() {
     if (!this.skyLightProbe) return;
     this.scene.remove(this.skyLightProbe);
     this.skyLightProbe = undefined;
   }
 
-  addSunLight() {
+  private addSunLight() {
     if (this.sunLightObj || !this.options.sunLight) return;
 
     this.sunLightObj = new SunDirectionalLight({ distance: 300 });
@@ -239,13 +245,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.scene.add(this.sunLightObj.target);
   }
 
-  removeSunLight() {
+  private removeSunLight() {
     if (!this.sunLightObj) return;
     this.scene.remove(this.sunLightObj);
     this.sunLightObj = undefined;
   }
 
-  addAmbientLight() {
+  private addAmbientLight() {
     if (this.ambientLightObj || !this.options.ambientLight) return;
 
     this.ambientLightObj = new AmbientLight(
@@ -256,13 +262,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.scene.add(this.ambientLightObj);
   }
 
-  removeAmbientLight() {
+  private removeAmbientLight() {
     if (!this.ambientLightObj) return;
     this.scene.remove(this.ambientLightObj);
     this.ambientLightObj = undefined;
   }
 
-  update() {
+  _update() {
     // Camera related
     const position = this.camera.position;
     if (this.options.sunLight) {
@@ -503,9 +509,5 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.effect.transmittance = v;
     this.needsUpdate = true;
     this.emit("_needsUpdate");
-  }
-
-  dispose() {
-    this.remove();
   }
 }

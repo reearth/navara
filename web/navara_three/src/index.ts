@@ -134,7 +134,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   atmosphere: Atmosphere;
   control?: { update: () => void; get target(): Vector3 | undefined };
 
-  // Effect
+  // Effects
   toneMappingEffect: ToneMapping;
   lensFlareEffect: Effect<LensFlareEffect>;
   ditheringEffect: Effect<DitheringEffect>;
@@ -714,7 +714,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   private _render() {
-    this.atmosphere.update();
+    this.atmosphere._update();
 
     this._effectComposer.render();
     this._pickHelper?.renderDebugCanvas();

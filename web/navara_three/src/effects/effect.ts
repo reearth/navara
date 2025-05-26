@@ -22,8 +22,8 @@ export class Effect<
   E extends PostProcessingEffect,
   O extends EffectOptions = EffectOptions,
 > extends EventHandler<EffectEvents> {
-  composer: EffectComposer;
-  camera: Camera;
+  private composer: EffectComposer;
+  private camera: Camera;
   protected effect: E;
   private pass: EffectPass;
   protected options: O;
