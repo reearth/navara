@@ -2,6 +2,7 @@ import path from "path";
 
 import { defineConfig } from "vite";
 import glsl from "vite-plugin-glsl";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
 import { commonConfig } from "../vite.config.common";
 
@@ -10,7 +11,18 @@ export default defineConfig((env) => {
   return {
     ...common,
     base: "./",
-    plugins: [...common.plugins, glsl()],
+    plugins: [
+      ...common.plugins,
+      glsl(),
+      viteStaticCopy({
+        targets: [
+          {
+            src: path.resolve(__dirname, "./assets"),
+            dest: "./",
+          },
+        ],
+      }),
+    ],
     worker: {
       plugins: () => [...common.plugins],
     },

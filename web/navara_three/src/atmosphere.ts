@@ -108,7 +108,12 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.textures) {
       this.textures = await new PrecomputedTexturesLoader()
         .setTypeFromRenderer(this.renderer)
-        .loadAsync(new URL("../assets/atmosphere", import.meta.url).toString());
+        .loadAsync(
+          new URL(
+            `${import.meta.env.BASE_URL}assets/atmosphere`,
+            import.meta.url,
+          ).toString(),
+        );
     }
 
     this.addAerialPerspective();
