@@ -53,13 +53,13 @@ pub fn update_tiles(
     frame: Res<FrameManager>,
     window: Res<Window>,
     mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Added<TilesLayer>>)>,
-    terrain_layer: Query<&TerrainLayer>,
-    camera: Query<(Ref<Transform>, &CameraFrustum), With<CameraMarker>>,
+    mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
+    camera: Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
     texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     changed_terrain_data_requester: ChangedTileTerrainDataRequesterQuery,
-    occluder: Query<&EllipsoidalOccluder>,
+    occluder: Query<Ref<EllipsoidalOccluder>>,
     mut meshes_set: ParamSet<(
         // All meshes
         Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
@@ -79,10 +79,12 @@ pub fn update_tiles(
     let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
     let is_mesh_changed = !meshes_set.p1().is_empty();
     let is_tile_layer_added = !tiles_set.p1().is_empty();
+    let is_terrain_layer_added = !terrain_layer_set.p1().is_empty();
 
     let mut meshes = meshes_set.p0();
 
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
+    let terrain_layer = terrain_layer_set.p0();
     let terrain_layer = terrain_layer.iter().next();
 
     let occluder = occluder.iter().next().unwrap();
@@ -96,7 +98,10 @@ pub fn update_tiles(
         || tc.is_updated_in_this_frame
         || camera.is_added()
         || camera.is_changed()
-        || is_tile_layer_added;
+        || frustum.is_changed()
+        || occluder.is_changed()
+        || is_tile_layer_added
+        || is_terrain_layer_added;
     if !needs_update {
         return;
     }
@@ -134,12 +139,12 @@ pub fn update_tiles(
         &mut buf,
         &frame,
         &camera,
-        frustum,
+        &frustum,
         &texture_fragment,
         &terrain_data_requester,
         &window,
         &WGS84_32,
-        occluder,
+        &occluder,
         &mut meshes,
         fog,
         false,

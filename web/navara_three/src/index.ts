@@ -6,7 +6,11 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer, EffectPass } from "postprocessing";
+import {
+  DitheringEffect,
+  LensFlareEffect,
+} from "@takram/three-geospatial-effects";
+import { EffectComposer, EffectPass, ToneMappingEffect } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -19,18 +23,22 @@ import {
   Material,
   NearestFilter,
   DepthTexture,
-  DirectionalLight,
-  AmbientLight,
   Color,
-  type Vector3Tuple,
   HalfFloatType,
   LinearFilter,
 } from "three";
 import invariant from "tiny-invariant";
 
 import { selectAntialiasEffect, type Antialias } from "./antialias";
+import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
+import {
+  Effect,
+  ToneMapping,
+  type EffectOptions,
+  type ToneMappingOptions,
+} from "./effects";
 import {
   processEvent,
   type BufferLoader,
@@ -65,12 +73,22 @@ import { isWorker } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
+export {
+  DitheringEffect,
+  LensFlareEffect,
+} from "@takram/three-geospatial-effects";
+
 export * from "./type";
 export * from "./constants";
 export * from "./light";
 export * from "./antialias";
 export * from "./mesh";
 export * from "./layer";
+export {
+  ToneMappingMode,
+  type ToneMappingOptions,
+  type EffectOptions,
+} from "./effects";
 
 export type Options = {
   container?: HTMLElement;
@@ -86,12 +104,16 @@ export type Options = {
   renderer?: WebGLRenderer;
   antialias?: Antialias;
   light?: Light;
+  atmosphere?: AtmosphereOptions;
   backgroundColor?: number;
   picking?: Picking;
   // The number of samples for MSAA.
   multisampling?: number;
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
   halfFloat?: boolean;
+  toneMapping?: ToneMappingOptions;
+  lensFlare?: EffectOptions;
+  dithering?: EffectOptions;
 };
 
 export type ViewEvents = {
@@ -109,7 +131,13 @@ export type ViewEvents = {
 export default class ThreeView extends EventHandler<ViewEvents> {
   camera: ThreeViewCamera;
   renderer: WebGLRenderer;
+  atmosphere: Atmosphere;
   control?: { update: () => void; get target(): Vector3 | undefined };
+
+  // Effect
+  toneMappingEffect: ToneMapping;
+  lensFlareEffect: Effect<LensFlareEffect>;
+  ditheringEffect: Effect<DitheringEffect>;
 
   private _scenes: Scenes;
   private _effectComposer: EffectComposer;
@@ -368,18 +396,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         throw new Error("Must provide initialWidth and initialHeight");
       }
 
-      const camera = new ThreeViewCamera(50, width / height, 1, 1e8);
-      const earthRadius = 6371000;
-      camera.innerCam.position.set(0, 0, earthRadius * 3);
-      camera.innerCam.up.set(0, 0, 1);
-      camera.innerCam.lookAt(0, 0, 0);
-      this.camera = camera;
+      this.camera = new ThreeViewCamera(50, width / height, 100, 1e8);
     }
 
     // Setup render pass
     this._effectComposer = new EffectComposer(this.renderer, {
       stencilBuffer: true,
-      frameBufferType: options.halfFloat ? HalfFloatType : undefined,
+      frameBufferType: HalfFloatType,
       multisampling: options.multisampling,
     });
     this._effectComposer.setSize(width, height);
@@ -400,28 +423,38 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._effectComposer.addPass(aaPass);
     }
 
-    // TODO: Replace it with the aerial perspective.
-    // Light
-    const light = options.light;
-    if (light?.ambient?.enabled ?? true) {
-      const ambientLight = new AmbientLight(
-        light?.ambient?.color ?? 0xffffff,
-        light?.ambient?.intensity ?? 1,
-      );
-      this.scene.add(ambientLight);
-    }
-    if (light?.sun?.enabled ?? true) {
-      const directionalLight = new DirectionalLight(
-        light?.sun?.color ?? 0xffffff,
-        light?.sun?.intensity ?? 3,
-      );
-      directionalLight.position.set(
-        ...(light?.sun?.position
-          ? light.sun.position.toArray()
-          : ([1, 5, 3] as Vector3Tuple)),
-      );
-      this.scene.add(directionalLight);
-    }
+    this.atmosphere = new Atmosphere(
+      this.effectComposer,
+      this.scene,
+      this.renderer,
+      this.camera.innerCam,
+      options.atmosphere,
+    );
+    this.atmosphere.on("_needsUpdate", this.forceUpdate);
+
+    // Effects
+    // Order is important. Effect class adds the effect in it's constructor.
+    this.lensFlareEffect = new Effect(
+      this._effectComposer,
+      this.camera.innerCam,
+      LensFlareEffect,
+      options.lensFlare,
+    );
+    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
+    this.toneMappingEffect = new ToneMapping(
+      this._effectComposer,
+      this.camera.innerCam,
+      ToneMappingEffect,
+      options.toneMapping,
+    );
+    this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
+    this.ditheringEffect = new Effect(
+      this._effectComposer,
+      this.camera.innerCam,
+      DitheringEffect,
+      options.dithering,
+    );
+    this.ditheringEffect.on("_needsUpdate", this.forceUpdate);
 
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
@@ -483,6 +516,18 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   get effectComposer() {
     return this._effectComposer;
   }
+
+  get toneMappingExposure() {
+    return this.renderer.toneMappingExposure;
+  }
+  set toneMappingExposure(v: number) {
+    this.renderer.toneMappingExposure = v;
+    this.forceUpdate();
+  }
+
+  private forceUpdate = () => {
+    this._renderFlag.forceUpdate = true;
+  };
 
   async init() {
     if (this._core) return;
@@ -669,6 +714,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   private _render() {
+    this.atmosphere.update();
+
     this._effectComposer.render();
     this._pickHelper?.renderDebugCanvas();
   }
