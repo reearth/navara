@@ -10,10 +10,11 @@ import { Effect, type EffectOptions } from "./effect";
 export { ToneMappingMode } from "postprocessing";
 
 export type ToneMappingOptions = {
-  mode: ToneMappingMode;
+  mode?: ToneMappingMode;
 } & EffectOptions;
 
-export const DEFAULT_TONE_MAPPING_OPTIONS: ToneMappingOptions = {
+export const DEFAULT_TONE_MAPPING_OPTIONS: Required<ToneMappingOptions> = {
+  enabled: false,
   mode: ToneMappingMode.AGX,
 };
 

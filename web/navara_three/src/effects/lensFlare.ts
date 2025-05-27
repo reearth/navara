@@ -10,10 +10,11 @@ import { Effect, type EffectOptions } from "./effect";
 export { ToneMappingMode } from "postprocessing";
 
 export type LensFlareOptions = {
-  intensity: number;
+  intensity?: number;
 } & EffectOptions;
 
-export const DEFAULT_LENS_FLARE_OPTIONS: LensFlareOptions = {
+export const DEFAULT_LENS_FLARE_OPTIONS: Required<LensFlareOptions> = {
+  enabled: false,
   intensity: lensFlareEffectOptionsDefaults.intensity,
 };
 

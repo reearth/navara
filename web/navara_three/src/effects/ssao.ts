@@ -7,13 +7,14 @@ import { Pass, type EffectOptions } from "./effect";
 export { ToneMappingMode } from "postprocessing";
 
 export type SSAOOptions = {
-  samples: number;
-  radius: number;
-  intensity: number;
-  color: Color;
+  samples?: number;
+  radius?: number;
+  intensity?: number;
+  color?: Color;
 } & EffectOptions;
 
-export const DEFAULT_SSAO_OPTIONS: SSAOOptions = {
+export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
+  enabled: false,
   samples: 16,
   radius: 5,
   intensity: 1,
