@@ -71,6 +71,7 @@ pub struct BillboardMaterial {
     pub scale_by_distance: Option<bool>,
     pub clamp_to_ground: Option<bool>,
     pub depth_test: Option<bool>,
+    pub alpha_test: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
 }
@@ -88,6 +89,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
             id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
@@ -104,6 +106,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            alpha_test: Some(value.alpha_test),
             id_property: Some(value.id_property.clone()),
         }
     }

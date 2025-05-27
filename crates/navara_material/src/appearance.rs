@@ -99,6 +99,7 @@ pub struct BillboardMaterial {
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+    pub alpha_test: f32,
     pub id_property: String,
 }
 
@@ -114,6 +115,7 @@ impl Default for BillboardMaterial {
             url: "".to_string(),
             scale_by_distance: true,
             depth_test: true,
+            alpha_test: 0.1,
             id_property: "".to_string(),
         }
     }
