@@ -2,10 +2,12 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
 } from "@navara/three";
-import { Color } from "three";
+import { Color, LightProbe, SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+
+import { SH_COEFFICIENTS } from "./consts";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -61,6 +63,7 @@ export const run = async (view: ThreeView) => {
   addTileControl(view, pane);
   addDateControl(view, pane);
   addAtmosphereControl(view, pane);
+  addIBLControl(view, pane);
   addEffectsControl(view, pane);
 };
 
@@ -231,6 +234,47 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   });
   folder.addBinding(PARAMS, "transmittance").on("change", (v) => {
     view.atmosphere.transmittance = v.value;
+  });
+};
+
+// Advanced
+const addIBLControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    enable: false,
+    sh: "debug",
+    intensity: 1,
+  };
+
+  const sh = new SphericalHarmonics3();
+  sh.coefficients = SH_COEFFICIENTS.debug;
+  const lightProbe = new LightProbe(sh);
+
+  const folder = pane.addFolder({
+    title: "Image-based lighting",
+  });
+
+  folder.addBinding(PARAMS, "enable").on("change", (v) => {
+    if (v.value) {
+      view.scene.add(lightProbe);
+    } else {
+      view.scene.remove(lightProbe);
+    }
+    view.forceUpdate();
+  });
+  folder
+    .addBinding(PARAMS, "sh", {
+      options: Object.fromEntries(
+        Object.entries(SH_COEFFICIENTS).map(([k]) => [k, k]),
+      ),
+    })
+    .on("change", (v) => {
+      sh.coefficients =
+        SH_COEFFICIENTS[v.value as keyof typeof SH_COEFFICIENTS];
+      view.forceUpdate();
+    });
+  folder.addBinding(PARAMS, "intensity").on("change", (v) => {
+    lightProbe.intensity = v.value;
+    view.forceUpdate();
   });
 };
 
