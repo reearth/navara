@@ -54,6 +54,8 @@ export const run = async (view: ThreeView) => {
     title: "Parameters",
     expanded: true,
   });
+  pane.element.style.maxHeight = "98vh";
+  pane.element.style.overflow = "scroll";
 
   addCameraControl(view, pane);
   addTileControl(view, pane);
@@ -238,13 +240,20 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     toneMappingMode: ToneMappingMode.AGX,
     toneMappingExposure: 10,
     lensFlare: true,
+    lensFlareIntensity: 0.005,
     dithering: true,
+    ssao: true,
+    ssaoSamples: 16,
+    ssaoRadius: 5,
+    ssaoIntensity: 1,
   };
 
   view.toneMappingEffect.enabled = PARAMS.toneMapping;
   view.toneMappingExposure = PARAMS.toneMappingExposure;
   view.lensFlareEffect.enabled = PARAMS.lensFlare;
+  view.lensFlareEffect.intensity = PARAMS.lensFlareIntensity;
   view.ditheringEffect.enabled = PARAMS.dithering;
+  view.ssaoEffect.enabled = PARAMS.ssao;
 
   const folder = pane.addFolder({
     title: "Effects",
@@ -268,7 +277,24 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "lensFlare").on("change", (v) => {
     view.lensFlareEffect.enabled = v.value;
   });
+  folder
+    .addBinding(PARAMS, "lensFlareIntensity", { step: 0.001 })
+    .on("change", (v) => {
+      view.lensFlareEffect.intensity = v.value;
+    });
   folder.addBinding(PARAMS, "dithering").on("change", (v) => {
     view.ditheringEffect.enabled = v.value;
+  });
+  folder.addBinding(PARAMS, "ssao").on("change", (v) => {
+    view.ssaoEffect.enabled = v.value;
+  });
+  folder.addBinding(PARAMS, "ssaoSamples").on("change", (v) => {
+    view.ssaoEffect.samples = v.value;
+  });
+  folder.addBinding(PARAMS, "ssaoRadius").on("change", (v) => {
+    view.ssaoEffect.radius = v.value;
+  });
+  folder.addBinding(PARAMS, "ssaoIntensity").on("change", (v) => {
+    view.ssaoEffect.intensity = v.value;
   });
 };

@@ -1,7 +1,7 @@
 import {
   EffectComposer,
   ToneMappingMode,
-  type ToneMappingEffect,
+  ToneMappingEffect,
 } from "postprocessing";
 import type { Camera } from "three";
 
@@ -21,10 +21,9 @@ export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
   constructor(
     composer: EffectComposer,
     camera: Camera,
-    effectConstructor: new () => ToneMappingEffect,
     options?: ToneMappingOptions,
   ) {
-    super(composer, camera, effectConstructor, options);
+    super(composer, camera, ToneMappingEffect, options);
 
     this.effect.mode = this.mode;
   }
