@@ -127,15 +127,17 @@ pub enum CameraStatus {
     MoveEnd,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct CameraStatusMngr {
     pub status: CameraStatus,
+    pub last_event: String,
 }
 
 impl Default for CameraStatusMngr {
     fn default() -> Self {
         Self {
             status: CameraStatus::Idle,
+            last_event: String::new(),
         }
     }
 }

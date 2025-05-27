@@ -1,3 +1,4 @@
+import type { CameraPosition } from "@navara/core";
 import ThreeView from "@navara/three";
 import { AxesHelper, Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -8,6 +9,18 @@ const tileUrls = {
   gsiSeamlessphoto:
     "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
 };
+
+const gCameraParams = {
+  longitude: 139.75711454748298,
+  latitude: 35.67564356091717,
+  altitude: 902.0,
+  heading: 64.41840149763287, // -180 to 180
+  pitch: -36.00000121921312, // -180 to 0
+  roll: 0, // -180 to 180
+};
+
+let gCameraParamsPane: FolderApi | undefined = undefined;
+let gIgnoreChange = false;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -34,14 +47,25 @@ export const run = async (view: ThreeView) => {
   });
 
   view.camera.on("movestart", () => {
-    console.log("camera movestart");
+    // console.log("camera movestart");
   });
   view.camera.on("move", () => {
-    // const position = view.camera.getPosition("geographic");
-    console.log("camera move");
+    // console.log("camera move");
+    const position = view.camera.getPosition("geographic");
+    updateCameraParamsToPane(position);
   });
   view.camera.on("moveend", () => {
-    console.log("camera moveend");
+    // console.log("camera moveend");
+  });
+  view.camera.on("idle", () => {
+    const position = view.camera.getPosition("geographic");
+    const statusObj = view.camera.curStatus;
+
+    // Avoid recursive call, if the change in camera.position is caused by calling view.setCamera,
+    // do not update the camera information on the GUI again.
+    if (statusObj && statusObj.last_event != "change") {
+      updateCameraParamsToPane(position);
+    }
   });
 
   const pane = new Pane({
@@ -58,20 +82,19 @@ export const run = async (view: ThreeView) => {
 };
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
-  const cameraParams = {
-    longitude: 139.75711454748298,
-    latitude: 35.67564356091717,
-    altitude: 902.0,
-    heading: 64.41840149763287, // -180 to 180
-    pitch: -36.00000121921312, // -180 to 0
-    roll: 0, // -180 to 180
-  };
+  const cameraParams = gCameraParams;
+
   const folder = pane.addFolder({
     title: "Change Camera",
     expanded: false,
   });
 
+  gCameraParamsPane = folder;
+
   const changeFunc = () => {
+    if (gIgnoreChange) {
+      return;
+    }
     view.setCamera({
       lng: cameraParams.longitude,
       lat: cameraParams.latitude,
@@ -208,8 +231,8 @@ const addFlyToOption = (pane: Pane, view: ThreeView) => {
 
 const addLookAtOption = (pane: Pane, view: ThreeView) => {
   const cameraParams = {
-    longitude: 138.7347,
-    latitude: 35.3627,
+    longitude: 138.7306671143,
+    latitude: 35.3624725342,
     altitude: 0.0,
     offset_x: 0.0,
     offset_y: -10000.0,
@@ -308,4 +331,32 @@ const addToggleButton = (
     f(button.title);
     button.title = button.title === titleA ? titleB : titleA;
   });
+};
+
+const updateCameraParamsToPane = (position: CameraPosition | undefined) => {
+  const cameraParams = gCameraParams;
+
+  if (position && position.lng) {
+    cameraParams.longitude = position.lng;
+  }
+  if (position && position.lat) {
+    cameraParams.latitude = position.lat;
+  }
+  if (position && position.height) {
+    cameraParams.altitude = position.height;
+  }
+
+  if (position && position.heading) {
+    cameraParams.heading = position.heading;
+  }
+  if (position && position.pitch) {
+    cameraParams.pitch = position.pitch;
+  }
+  if (position && position.roll) {
+    cameraParams.roll = position.roll;
+  }
+
+  gIgnoreChange = true;
+  gCameraParamsPane?.refresh();
+  gIgnoreChange = false;
 };

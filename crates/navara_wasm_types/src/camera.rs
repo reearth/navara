@@ -57,6 +57,13 @@ impl From<navara_camera::CameraStatus> for CameraStatus {
 }
 
 #[wasm_bindgen]
+pub struct CameraStatusObj {
+    pub status: CameraStatus,
+    #[wasm_bindgen(getter_with_clone)]
+    pub last_event: Option<String>,
+}
+
+#[wasm_bindgen]
 pub struct CameraOrientation {
     pub heading: FloatType,
     pub pitch: FloatType,

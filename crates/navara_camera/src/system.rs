@@ -125,7 +125,7 @@ pub fn update(
                 &mut inertia,
                 frustum,
                 &mut flight,
-                &st_mngr.status,
+                &mut st_mngr,
             );
 
             if matches!(ce, CameraEvent::FlyTo { .. }) && start_anim {
@@ -147,6 +147,7 @@ pub fn update(
             &mb,
             &mut mm,
             is_ctrl,
+            &mut st_mngr,
         );
 
         handle_zoom(
@@ -156,6 +157,7 @@ pub fn update(
             &mut inertia,
             &mut mw,
             is_ctrl,
+            &mut st_mngr,
         );
 
         // handle_free_rotation(
@@ -177,6 +179,7 @@ pub fn update(
             is_ctrl,
             &transform,
             frustum,
+            &mut st_mngr,
         );
 
         // Apply inertia
@@ -204,7 +207,7 @@ fn process_camera_event(
     inertia: &mut CameraInertia,
     frustum: &CameraFrustum,
     flight: &mut CameraFlight,
-    status: &CameraStatus,
+    st_mngr: &mut CameraStatusMngr,
 ) -> bool {
     match ce {
         CameraEvent::Change {
@@ -212,9 +215,10 @@ fn process_camera_event(
             orientation,
         } => {
             apply_camera_change(transform, orbit, position, orientation);
+            st_mngr.last_event = "change".to_string();
         }
         CameraEvent::Translate { amount, direction } => {
-            // Handle camera translation
+            st_mngr.last_event = "translate".to_string();
             return handle_camera_translate(transform, orbit, inertia, amount, direction);
         }
         CameraEvent::FlyTo {
@@ -225,15 +229,17 @@ fn process_camera_event(
         } => {
             if let Some(pos) = position {
                 let orient = orientation.unwrap_or(CameraOrientation::default());
-
+                st_mngr.last_event = "fly".to_string();
                 return flight.fly_to(transform, frustum, pos, &orient, duration, max_height);
             }
         }
         CameraEvent::LookAt { target, offset } => {
+            st_mngr.last_event = "lookat".to_string();
             apply_look_at(transform, orbit, target, offset);
         }
         CameraEvent::RotateAroundAxis { axis, angle } => {
-            if *status == CameraStatus::Idle || *status == CameraStatus::MoveEnd {
+            if st_mngr.status == CameraStatus::Idle || st_mngr.status == CameraStatus::MoveEnd {
+                st_mngr.last_event = "rotate".to_string();
                 rotate_around_axis(window, transform, orbit, frustum, axis, angle);
             }
         }
@@ -259,6 +265,7 @@ fn commit(transform: &mut Transform, orbit: &mut Orbit) {
     transform.look_to(world_forward, world_up);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_orbit_spin(
     transform: &Transform,
     orbit: &mut Orbit,
@@ -267,6 +274,7 @@ fn handle_orbit_spin(
     mb: &Res<ButtonInput<MouseButton>>,
     mm: &mut EventReader<MouseMotion>,
     is_ctrl: bool,
+    st_mngr: &mut CameraStatusMngr,
 ) {
     if !controller.enable_spin
         || !mb.pressed(MouseButton::Left)
@@ -293,6 +301,7 @@ fn handle_orbit_spin(
         return;
     };
 
+    st_mngr.last_event = "spin".to_string();
     inertia.spin(spin);
 }
 
@@ -337,6 +346,7 @@ fn handle_tilt(
     is_ctrl: bool,
     transform: &Transform,
     frustum: &CameraFrustum,
+    st_mngr: &mut CameraStatusMngr,
 ) {
     let ellipsoid = WGS84_32;
 
@@ -385,6 +395,7 @@ fn handle_tilt(
         spin.x = 0.;
     }
 
+    st_mngr.last_event = "tilt".to_string();
     inertia.spin(spin);
 }
 
@@ -414,6 +425,7 @@ fn handle_zoom(
     inertia: &mut CameraInertia,
     mw: &mut EventReader<MouseWheel>,
     is_ctrl: bool,
+    st_mngr: &mut CameraStatusMngr,
 ) {
     if !controller.enable_zoom || mw.is_empty() || is_ctrl {
         return;
@@ -433,6 +445,7 @@ fn handle_zoom(
     let dist = distance_from_ellipsoid_surface.max(0.);
     let d = zoom * controller.zoom_speed * dist * 0.0025;
 
+    st_mngr.last_event = "zoom".to_string();
     inertia.zoom(d);
 }
 

@@ -752,10 +752,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   setCamera(camPos: CameraPosition) {
-    const position =
-      camPos.lng && camPos.lat && camPos.height
-        ? new Float32Array([camPos.lng, camPos.lat, camPos.height])
-        : null;
+    const values = [camPos.lng, camPos.lat, camPos.height].map((v) =>
+      typeof v === "number" && Number.isFinite(v) ? v : NaN,
+    );
+
+    const position = values.every((v) => !isNaN(v))
+      ? new Float32Array(values as number[])
+      : null;
 
     this._core?.changeCamera(
       position,
