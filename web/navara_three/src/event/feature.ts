@@ -90,8 +90,8 @@ export async function processRenderableFeatureAdded(
     onConcurrency(1);
   }
 
-  const obj = await renderFeature(feature, buf, uniforms, tileHandle)?.then(
-    (r) => {
+  const obj = await renderFeature(feature, buf, uniforms, tileHandle)
+    ?.then((r) => {
       const type = (() => {
         if (point || billboard || text) return "point";
         else if (model) return "model";
@@ -102,13 +102,13 @@ export async function processRenderableFeatureAdded(
         featureHandler.markFeatureIsRendered(type, ev.bits);
       }
       return r;
-    },
-  );
-
-  if (useParallel) {
-    // End parallel process
-    onConcurrency(-1);
-  }
+    })
+    .finally(() => {
+      if (useParallel) {
+        // End parallel process
+        onConcurrency(-1);
+      }
+    });
 
   if (!obj) return;
 

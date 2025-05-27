@@ -1,0 +1,1 @@
+These assets are used for atmosphere effect. These are copied from [takram-design-engineering/three-geospatial/packages/atmosphere/assets](https://github.com/takram-design-engineering/three-geospatial/tree/main/packages/atmosphere/assets).

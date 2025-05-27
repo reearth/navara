@@ -3,6 +3,7 @@ import path, { resolve } from "path";
 
 import { defineConfig } from "vite";
 import glsl from "vite-plugin-glsl";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
 import tsconfig from "vite-tsconfig-paths";
 
@@ -11,12 +12,21 @@ import { commonConfig } from "../vite.config.common";
 const pages = readdirSync(resolve(__dirname, "example/pages"));
 
 export default defineConfig((env) => {
+  console.log(resolve(__dirname, "./assets"));
   const common = commonConfig("NavaraExample", env);
   return {
     envPrefix: "NAVARA",
     plugins: [
       glsl(),
       tsconfig(),
+      viteStaticCopy({
+        targets: [
+          {
+            src: resolve(__dirname, "./assets"),
+            dest: "./",
+          },
+        ],
+      }),
       createMpaPlugin({
         template: "example/template.html",
         pages: pages.map((page) => {

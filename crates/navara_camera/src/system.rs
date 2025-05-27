@@ -40,7 +40,7 @@ pub fn startup(mut commands: Commands) {
         transform,
         CameraFrustum::new(
             &transform,
-            1.,
+            100.,
             1e8,
             // This is for frustum culling, so need to organize
             Angle::new(50.).rad().val(),
@@ -790,7 +790,10 @@ fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, of
 
 #[allow(clippy::type_complexity)]
 pub fn update_frustum(
-    mut query: Query<(&mut CameraFrustum, &Transform), Or<(Added<Transform>, Changed<Transform>)>>,
+    mut query: Query<
+        (&mut CameraFrustum, &Transform),
+        Or<(Added<Transform>, Changed<Transform>, Changed<Orbit>)>,
+    >,
 ) {
     for (mut frustum, transform) in query.iter_mut() {
         frustum.update_sse_denominator();
