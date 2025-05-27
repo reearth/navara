@@ -6,11 +6,8 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
-import {
-  DitheringEffect,
-  LensFlareEffect,
-} from "@takram/three-geospatial-effects";
-import { EffectComposer, EffectPass, ToneMappingEffect } from "postprocessing";
+import { DitheringEffect } from "@takram/three-geospatial-effects";
+import { EffectComposer, EffectPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -35,8 +32,12 @@ import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
   Effect,
+  LensFlare,
+  SSAO,
   ToneMapping,
   type EffectOptions,
+  type LensFlareOptions,
+  type SSAOOptions,
   type ToneMappingOptions,
 } from "./effects";
 import {
@@ -112,8 +113,9 @@ export type Options = {
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
   halfFloat?: boolean;
   toneMapping?: ToneMappingOptions;
-  lensFlare?: EffectOptions;
+  lensFlare?: LensFlareOptions;
   dithering?: EffectOptions;
+  ssao?: SSAOOptions;
 };
 
 export type ViewEvents = {
@@ -136,8 +138,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   // Effects
   toneMappingEffect: ToneMapping;
-  lensFlareEffect: Effect<LensFlareEffect>;
+  lensFlareEffect: LensFlare;
   ditheringEffect: Effect<DitheringEffect>;
+  ssaoEffect: SSAO;
 
   private _scenes: Scenes;
   private _effectComposer: EffectComposer;
@@ -434,20 +437,27 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
-    this.lensFlareEffect = new Effect(
+    this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
-      LensFlareEffect,
       options.lensFlare,
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
-      ToneMappingEffect,
       options.toneMapping,
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
+    this.ssaoEffect = new SSAO(
+      this._effectComposer,
+      this.scene,
+      this.camera.innerCam,
+      width,
+      height,
+      options.ssao,
+    );
+    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.ditheringEffect = new Effect(
       this._effectComposer,
       this.camera.innerCam,

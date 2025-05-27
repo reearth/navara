@@ -1,7 +1,7 @@
 import {
   EffectComposer,
   ToneMappingMode,
-  type ToneMappingEffect,
+  ToneMappingEffect,
 } from "postprocessing";
 import type { Camera } from "three";
 
@@ -10,10 +10,11 @@ import { Effect, type EffectOptions } from "./effect";
 export { ToneMappingMode } from "postprocessing";
 
 export type ToneMappingOptions = {
-  mode: ToneMappingMode;
+  mode?: ToneMappingMode;
 } & EffectOptions;
 
-export const DEFAULT_TONE_MAPPING_OPTIONS: ToneMappingOptions = {
+export const DEFAULT_TONE_MAPPING_OPTIONS: Required<ToneMappingOptions> = {
+  enabled: false,
   mode: ToneMappingMode.AGX,
 };
 
@@ -21,10 +22,9 @@ export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
   constructor(
     composer: EffectComposer,
     camera: Camera,
-    effectConstructor: new () => ToneMappingEffect,
     options?: ToneMappingOptions,
   ) {
-    super(composer, camera, effectConstructor, options);
+    super(composer, camera, ToneMappingEffect, options);
 
     this.effect.mode = this.mode;
   }
