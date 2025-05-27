@@ -246,6 +246,7 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     ssaoSamples: 16,
     ssaoRadius: 5,
     ssaoIntensity: 1,
+    ssaoColor: "#000000",
   };
 
   view.toneMappingEffect.enabled = PARAMS.toneMapping;
@@ -296,5 +297,8 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
   });
   folder.addBinding(PARAMS, "ssaoIntensity").on("change", (v) => {
     view.ssaoEffect.intensity = v.value;
+  });
+  folder.addBinding(PARAMS, "ssaoColor").on("change", (v) => {
+    view.ssaoEffect.color = new Color(v.value);
   });
 };

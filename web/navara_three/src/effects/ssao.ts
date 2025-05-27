@@ -1,6 +1,6 @@
 import { N8AOPostPass } from "n8ao";
 import { EffectComposer } from "postprocessing";
-import type { Camera, Scene } from "three";
+import { Color, type Camera, type Scene } from "three";
 
 import { Pass, type EffectOptions } from "./effect";
 
@@ -10,12 +10,14 @@ export type SSAOOptions = {
   samples: number;
   radius: number;
   intensity: number;
+  color: Color;
 } & EffectOptions;
 
 export const DEFAULT_SSAO_OPTIONS: SSAOOptions = {
   samples: 16,
   radius: 5,
   intensity: 1,
+  color: new Color(0),
 };
 
 export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
@@ -35,6 +37,8 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     this.radius = radius;
     const intensity = this.intensity;
     this.intensity = intensity;
+    const color = this.color;
+    this.color = color;
 
     this.pass.configuration.gammaCorrection = false;
   }
@@ -63,6 +67,15 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.intensity === v) return;
     this.options.intensity = v;
     this.pass.configuration.intensity = v;
+    this.emit("_needsUpdate");
+  }
+  get color() {
+    return this.options.color ?? DEFAULT_SSAO_OPTIONS.color;
+  }
+  set color(v: Color) {
+    if (this.options.color === v) return;
+    this.options.color = v;
+    this.pass.configuration.color = v;
     this.emit("_needsUpdate");
   }
 }
