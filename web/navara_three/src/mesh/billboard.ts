@@ -108,6 +108,12 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       prev.depthTest = nextDepthTest;
     }
 
+    const nextAlphaTest = material.alpha_test;
+    if (prev.alphaTest !== nextAlphaTest) {
+      this.material.alphaTest = nextAlphaTest ?? 0;
+      prev.alphaTest = nextAlphaTest;
+    }
+
     const nextVisible = (material.show ?? true) && active;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
