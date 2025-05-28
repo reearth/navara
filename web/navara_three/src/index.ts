@@ -535,7 +535,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.forceUpdate();
   }
 
-  private forceUpdate = () => {
+  forceUpdate = () => {
     this._renderFlag.forceUpdate = true;
   };
 
