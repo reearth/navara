@@ -1,6 +1,6 @@
 import { type CRSTypes, type CameraPositionByCRS } from "@navara/core";
 import { EventHandler } from "@navara/core/src/eventHandler";
-import { Core, CameraStatus } from "@navara/engine";
+import { Core, CameraStatus, CameraStatusType } from "@navara/engine";
 import { PerspectiveCamera } from "three";
 
 export type CameraEvent = {
@@ -12,6 +12,7 @@ export type CameraEvent = {
 export class ThreeViewCamera extends EventHandler<CameraEvent> {
   private _camera: PerspectiveCamera;
   private _core: Core | undefined;
+  private _status: CameraStatus | undefined;
 
   constructor(cam: PerspectiveCamera);
   constructor(fov: number, aspect: number, near: number, far: number);
@@ -39,18 +40,27 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
   }
 
   updateStatus() {
-    switch (this._core?.getCameraStatus()) {
-      case CameraStatus.MoveStart:
-        this.emit("movestart");
-        break;
-      case CameraStatus.Move:
-        this.emit("move");
-        break;
-      case CameraStatus.MoveEnd:
-        this.emit("moveend");
-        break;
-      default:
-        break;
+    this._status = this._core?.getCameraStatus();
+    if (!this._status) {
+      return;
+    }
+
+    for (const val of this._status.status) {
+      switch (val) {
+        case CameraStatusType.MoveStart:
+          this.emit("movestart");
+          break;
+        case CameraStatusType.Moving:
+          this.emit("move");
+          break;
+        case CameraStatusType.MoveEnd:
+        case CameraStatusType.LookAt:
+        case CameraStatusType.Rotate:
+          this.emit("moveend");
+          break;
+        default:
+          break;
+      }
     }
   }
 

@@ -27,33 +27,33 @@ impl From<CameraDirection> for navara_camera::CameraDirection {
 
 #[wasm_bindgen]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum CameraStatus {
-    Idle,
+pub enum CameraStatusType {
+    Change,
+    LookAt,
+    Rotate,
+
     MoveStart,
-    Move,
+    Moving,
     MoveEnd,
 }
 
-impl From<CameraStatus> for navara_camera::CameraStatus {
-    fn from(st: CameraStatus) -> Self {
+impl From<navara_camera::CameraStatusType> for CameraStatusType {
+    fn from(st: navara_camera::CameraStatusType) -> Self {
         match st {
-            CameraStatus::Idle => navara_camera::CameraStatus::Idle,
-            CameraStatus::MoveStart => navara_camera::CameraStatus::MoveStart,
-            CameraStatus::Move => navara_camera::CameraStatus::Move,
-            CameraStatus::MoveEnd => navara_camera::CameraStatus::MoveEnd,
+            navara_camera::CameraStatusType::Change => CameraStatusType::Change,
+            navara_camera::CameraStatusType::LookAt => CameraStatusType::LookAt,
+            navara_camera::CameraStatusType::Rotate => CameraStatusType::Rotate,
+            navara_camera::CameraStatusType::MoveStart => CameraStatusType::MoveStart,
+            navara_camera::CameraStatusType::Moving => CameraStatusType::Moving,
+            navara_camera::CameraStatusType::MoveEnd => CameraStatusType::MoveEnd,
         }
     }
 }
 
-impl From<navara_camera::CameraStatus> for CameraStatus {
-    fn from(st: navara_camera::CameraStatus) -> Self {
-        match st {
-            navara_camera::CameraStatus::Idle => CameraStatus::Idle,
-            navara_camera::CameraStatus::MoveStart => CameraStatus::MoveStart,
-            navara_camera::CameraStatus::Move => CameraStatus::Move,
-            navara_camera::CameraStatus::MoveEnd => CameraStatus::MoveEnd,
-        }
-    }
+#[wasm_bindgen]
+pub struct CameraStatus {
+    #[wasm_bindgen(getter_with_clone)]
+    pub status: Vec<CameraStatusType>,
 }
 
 #[wasm_bindgen]

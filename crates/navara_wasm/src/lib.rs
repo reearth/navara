@@ -470,8 +470,17 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = getCameraStatus)]
-    pub fn get_camera_status(&mut self) -> CameraStatus {
-        self.app.get_camera_status().into()
+    pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
+        if let Some(cam_st) = self.app.get_camera_status() {
+            let mut status: Vec<CameraStatusType> = vec![];
+            cam_st.status.iter().for_each(|st| {
+                status.push((*st).into());
+            });
+
+            Some(CameraStatus { status })
+        } else {
+            None
+        }
     }
 
     #[wasm_bindgen(js_name = getCameraPositionLLE)]

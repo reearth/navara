@@ -752,8 +752,14 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   setCamera(camPos: CameraPosition) {
+    function checkFinite(value: number | undefined): value is number {
+      return Number.isFinite(value) && value != null;
+    }
+
     const position =
-      camPos.lng && camPos.lat && camPos.height
+      checkFinite(camPos.lng) &&
+      checkFinite(camPos.lat) &&
+      checkFinite(camPos.height)
         ? new Float32Array([camPos.lng, camPos.lat, camPos.height])
         : null;
 
