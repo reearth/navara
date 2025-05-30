@@ -47,21 +47,15 @@ export const run = async (view: ThreeView) => {
   });
 
   view.camera.on("movestart", () => {
-    // console.log("camera movestart");
+    console.log("movestart");
   });
   view.camera.on("move", () => {
-    // console.log("camera move");
+    console.log("move");
     const position = view.camera.getPosition("geographic");
     updateCameraParamsToPane(position);
   });
   view.camera.on("moveend", () => {
-    // console.log("camera moveend");
-  });
-  view.camera.on("rotate", () => {
-    const position = view.camera.getPosition("geographic");
-    updateCameraParamsToPane(position);
-  });
-  view.camera.on("lookat", () => {
+    console.log("moveend");
     const position = view.camera.getPosition("geographic");
     updateCameraParamsToPane(position);
   });

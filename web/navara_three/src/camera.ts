@@ -7,9 +7,6 @@ export type CameraEvent = {
   movestart: () => void;
   move: () => void;
   moveend: () => void;
-  change: () => void;
-  lookat: () => void;
-  rotate: () => void;
 };
 
 export class ThreeViewCamera extends EventHandler<CameraEvent> {
@@ -50,15 +47,6 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
 
     for (const val of this._status.status) {
       switch (val) {
-        case CameraStatusType.Change:
-          this.emit("change");
-          break;
-        case CameraStatusType.LookAt:
-          this.emit("lookat");
-          break;
-        case CameraStatusType.Rotate:
-          this.emit("rotate");
-          break;
         case CameraStatusType.MoveStart:
           this.emit("movestart");
           break;
@@ -66,6 +54,8 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
           this.emit("move");
           break;
         case CameraStatusType.MoveEnd:
+        case CameraStatusType.LookAt:
+        case CameraStatusType.Rotate:
           this.emit("moveend");
           break;
         default:
