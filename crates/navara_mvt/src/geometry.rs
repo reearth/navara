@@ -1,5 +1,4 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
-use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon};
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
@@ -17,7 +16,10 @@ use navara_feature_component::{
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_math::{FloatType, Vec3};
-use navara_parser::mvt;
+use navara_parser::mvt::{
+    self,
+    geometry::{CoordinateStorage, FlatCoordinateStorage3D, Geometry, GeometryIterator},
+};
 
 use crate::pos_converter::PosConverter;
 
@@ -54,12 +56,19 @@ pub fn construct_geometry(
     let reader = mvt::MvtReader::new(mvt_bin).ok()?;
     let layer_names = reader.get_layer_names().ok()?;
 
+    let flat = appearances.iter().any(|a| {
+        let Appearance::Polygon(a) = a else {
+            return false;
+        };
+        a.clamp_to_ground
+    });
+
     for (index, name) in layer_names.iter().enumerate() {
         let extent = reader.get_extent(index);
-        let mut converter = PosConverter::new(xyz, extent);
-        let features = match reader.get_features(index) {
-            Ok(f) => f,
-            Err(_) => continue,
+        let converter = PosConverter::new(xyz, extent, flat);
+        let features = match reader.get_features_iter(index, converter) {
+            Some(f) => f,
+            None => continue,
         };
 
         if let Some(ll) = limit_layers {
@@ -76,26 +85,15 @@ pub fn construct_geometry(
         let feature_batch_id = batch_table.init_values().unwrap_or(0);
         let mut global_batch_id_and_selections: Vec<u32> = vec![];
 
-        for feature in features {
-            let geom = feature.get_geometry();
+        for mut feature in features {
             let props = feature
                 .properties
-                .as_ref()
-                .and_then(|props| serde_json::to_value(props).ok())
+                .take()
+                .map(serde_json::Value::Object)
                 .unwrap_or(serde_json::Value::Null);
-            let id_prop = get_id_property(geom, appearances);
+            let geom = feature.geometry;
 
             let batch_idx = BatchIndex((global_batch_id_and_selections.len() / 2) as u32);
-
-            let batch_id = batch_table
-                .add_id_prop(id_prop, &props, id_prop_table_res)
-                .unwrap_or(0);
-
-            batch_table.add_values(feature_batch_id, props);
-
-            global_batch_id_and_selections.push(batch_id);
-            global_batch_id_and_selections
-                .push(batch_table.get_selection(&batch_id, id_prop_sel_res));
 
             handle_geometry(
                 commands,
@@ -103,11 +101,19 @@ pub fn construct_geometry(
                 &mut feature_ids,
                 &mut geometry_type,
                 geom,
-                &mut converter,
                 // For batched feature
                 &batch_idx,
                 appearances,
             );
+
+            let id_prop = get_id_property(geometry_type.as_ref(), appearances);
+            let batch_id = batch_table
+                .add_id_prop(id_prop, &props, id_prop_table_res)
+                .unwrap_or(0);
+            batch_table.add_values(feature_batch_id, props);
+            global_batch_id_and_selections.push(batch_id);
+            global_batch_id_and_selections
+                .push(batch_table.get_selection(&batch_id, id_prop_sel_res));
         }
 
         if feature_ids.is_empty() {
@@ -130,58 +136,39 @@ pub fn construct_geometry(
     Some(result)
 }
 
-fn get_id_property(geom: &Geometry<f32>, appearances: &[Appearance]) -> Option<String> {
-    match geom {
-        Geometry::MultiPolygon(_) | Geometry::Polygon(_) => {
+fn get_id_property(
+    geom: Option<&ConstructedGeometryType>,
+    appearances: &[Appearance],
+) -> Option<String> {
+    match geom? {
+        ConstructedGeometryType::Polygon => {
             match appearances
                 .iter()
                 .find(|a| matches!(a, Appearance::Polygon(_)))
             {
-                Some(Appearance::Polygon(a)) => {
-                    return Some(a.id_property.clone());
-                }
-                _ => {
-                    return None;
-                }
-            };
+                Some(Appearance::Polygon(a)) => Some(a.id_property.clone()),
+                _ => None,
+            }
         }
-        Geometry::MultiPoint(_) | Geometry::Point(_) => {
+        ConstructedGeometryType::Point => {
             match appearances
                 .iter()
                 .find(|a| matches!(a, Appearance::Point(_)))
             {
-                Some(Appearance::Point(a)) => {
-                    return Some(a.id_property.clone());
-                }
-                _ => {
-                    return None;
-                }
-            };
+                Some(Appearance::Point(a)) => Some(a.id_property.clone()),
+                _ => None,
+            }
         }
-        Geometry::MultiLineString(_) | Geometry::LineString(_) => {
+        ConstructedGeometryType::Polyline => {
             match appearances
                 .iter()
                 .find(|a| matches!(a, Appearance::Polyline(_)))
             {
-                Some(Appearance::Polyline(a)) => {
-                    return Some(a.id_property.clone());
-                }
-                _ => {
-                    return None;
-                }
-            };
-        }
-        Geometry::GeometryCollection(geoms) => {
-            for geom in &geoms.0 {
-                if let Some(id) = get_id_property(geom, appearances) {
-                    return Some(id);
-                }
+                Some(Appearance::Polyline(a)) => Some(a.id_property.clone()),
+                _ => None,
             }
         }
-        _ => {}
-    };
-
-    None
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -190,218 +177,102 @@ fn handle_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     geometry_type: &mut Option<ConstructedGeometryType>,
-    geom: &Geometry<f32>,
-    converter: &mut PosConverter,
+    geoms: GeometryIterator<'_, FlatCoordinateStorage3D, PosConverter>,
     batch_index: &BatchIndex,
     appearances: &[Appearance],
 ) {
-    match geom {
-        Geometry::MultiPolygon(v) => {
-            let Some(Appearance::Polygon(appearance)) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polygon(_)))
-            else {
-                return;
-            };
-
-            *geometry_type = Some(ConstructedGeometryType::Polygon);
-
-            let MultiPolygon(plgs) = v;
-
-            let flat = appearance.clamp_to_ground;
-
-            construct_polygons_geometry(
-                commands,
-                buf,
-                feature_ids,
-                plgs,
-                batch_index,
-                converter,
-                flat,
-            );
-        }
-        Geometry::Polygon(v) => {
-            let Some(Appearance::Polygon(appearance)) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polygon(_)))
-            else {
-                return;
-            };
-
-            *geometry_type = Some(ConstructedGeometryType::Polygon);
-
-            let flat = appearance.clamp_to_ground;
-
-            construct_polygon_geometry(commands, buf, feature_ids, v, batch_index, converter, flat);
-        }
-        Geometry::MultiPoint(v) => {
-            *geometry_type = Some(ConstructedGeometryType::Point);
-
-            let MultiPoint(points) = v;
-
-            for one_appr in appearances {
-                match one_appr {
-                    Appearance::Point(_appearance) => {
-                        construct_points_geometry(
-                            commands,
-                            feature_ids,
-                            points,
-                            converter,
-                            |x, y| PointGeometry {
-                                coords: Vec3::new(x, y, 0.0 as FloatType),
-                                crs: CRS::Geographic,
-                            },
-                            batch_index,
-                        );
-                        break;
-                    }
-                    Appearance::Billboard(_appearance) => {
-                        construct_points_geometry(
-                            commands,
-                            feature_ids,
-                            points,
-                            converter,
-                            |x, y| BillboardGeometry {
-                                coords: Vec3::new(x, y, 0.0 as FloatType),
-                                crs: CRS::Geographic,
-                            },
-                            batch_index,
-                        );
-                        break;
-                    }
-                    Appearance::Text(_appearance) => {
-                        construct_points_geometry(
-                            commands,
-                            feature_ids,
-                            points,
-                            converter,
-                            |x, y| TextGeometry {
-                                coords: Vec3::new(x, y, 0.0 as FloatType),
-                                crs: CRS::Geographic,
-                            },
-                            batch_index,
-                        );
-                        break;
-                    }
-                    _ => {}
+    for geom in geoms {
+        let Ok(geom) = geom else {
+            continue;
+        };
+        match geom {
+            Geometry::Polygon { exterior, holes } => {
+                let Some(Appearance::Polygon(appearance)) = appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Polygon(_)))
+                else {
+                    return;
                 };
-            }
-        }
-        Geometry::Point(point) => {
-            *geometry_type = Some(ConstructedGeometryType::Point);
 
-            for one_appr in appearances {
-                match one_appr {
-                    Appearance::Point(_appearance) => {
-                        construct_point_geometry(
-                            commands,
-                            feature_ids,
-                            point,
-                            converter,
-                            &|x, y| PointGeometry {
-                                coords: Vec3::new(x, y, 0.0 as FloatType),
-                                crs: CRS::Geographic,
-                            },
-                            batch_index,
-                        );
-                        break;
-                    }
-                    Appearance::Billboard(_appearance) => {
-                        construct_point_geometry(
-                            commands,
-                            feature_ids,
-                            point,
-                            converter,
-                            &|x, y| BillboardGeometry {
-                                coords: Vec3::new(x, y, 0.0 as FloatType),
-                                crs: CRS::Geographic,
-                            },
-                            batch_index,
-                        );
-                        break;
-                    }
-                    Appearance::Text(_appearance) => {
-                        construct_point_geometry(
-                            commands,
-                            feature_ids,
-                            point,
-                            converter,
-                            &|x, y| TextGeometry {
-                                coords: Vec3::new(x, y, 0.0 as FloatType),
-                                crs: CRS::Geographic,
-                            },
-                            batch_index,
-                        );
-                        break;
-                    }
-                    _ => {}
-                };
-            }
-        }
-        Geometry::MultiLineString(v) => {
-            if !appearances
-                .iter()
-                .any(|a| matches!(a, Appearance::Polyline(_)))
-            {
-                return;
-            }
+                *geometry_type = Some(ConstructedGeometryType::Polygon);
 
-            *geometry_type = Some(ConstructedGeometryType::Polyline);
+                let flat = appearance.clamp_to_ground;
 
-            let MultiLineString(lines) = v;
-
-            construct_lines_geometry(commands, buf, feature_ids, lines, batch_index, converter);
-        }
-        Geometry::LineString(line) => {
-            if !appearances
-                .iter()
-                .any(|a| matches!(a, Appearance::Polyline(_)))
-            {
-                return;
-            }
-
-            *geometry_type = Some(ConstructedGeometryType::Polyline);
-
-            construct_line_geometry(commands, buf, feature_ids, line, batch_index, converter);
-        }
-        Geometry::GeometryCollection(geoms) => {
-            for geom in &geoms.0 {
-                handle_geometry(
+                construct_polygon_geometry(
                     commands,
                     buf,
                     feature_ids,
-                    geometry_type,
-                    geom,
-                    converter,
+                    exterior,
+                    holes,
                     batch_index,
-                    appearances,
+                    flat,
                 );
             }
-        }
-        _ => {}
-    };
-}
+            Geometry::Point { x, y } => {
+                *geometry_type = Some(ConstructedGeometryType::Point);
 
-#[allow(clippy::too_many_arguments)]
-fn construct_points_geometry<G: Component, F>(
-    commands: &mut Commands,
-    feature_ids: &mut Vec<Entity>,
-    points: &[Point<f32>],
-    converter: &mut PosConverter,
-    geometry: F,
-    batch_index: &BatchIndex,
-) where
-    F: Fn(FloatType, FloatType) -> G,
-{
-    for point in points {
-        construct_point_geometry(
-            commands,
-            feature_ids,
-            point,
-            converter,
-            &geometry,
-            batch_index,
-        );
+                for one_appr in appearances {
+                    match one_appr {
+                        Appearance::Point(_appearance) => {
+                            construct_point_geometry(
+                                commands,
+                                feature_ids,
+                                x,
+                                y,
+                                &|x, y| PointGeometry {
+                                    coords: Vec3::new(x, y, 0.0 as FloatType),
+                                    crs: CRS::Geographic,
+                                },
+                                batch_index,
+                            );
+                            break;
+                        }
+                        Appearance::Billboard(_appearance) => {
+                            construct_point_geometry(
+                                commands,
+                                feature_ids,
+                                x,
+                                y,
+                                &|x, y| BillboardGeometry {
+                                    coords: Vec3::new(x, y, 0.0 as FloatType),
+                                    crs: CRS::Geographic,
+                                },
+                                batch_index,
+                            );
+                            break;
+                        }
+                        Appearance::Text(_appearance) => {
+                            construct_point_geometry(
+                                commands,
+                                feature_ids,
+                                x,
+                                y,
+                                &|x, y| TextGeometry {
+                                    coords: Vec3::new(x, y, 0.0 as FloatType),
+                                    crs: CRS::Geographic,
+                                },
+                                batch_index,
+                            );
+                            break;
+                        }
+                        _ => {}
+                    };
+                }
+            }
+            Geometry::LineString(line) => {
+                if !appearances
+                    .iter()
+                    .any(|a| matches!(a, Appearance::Polyline(_)))
+                {
+                    return;
+                }
+
+                *geometry_type = Some(ConstructedGeometryType::Polyline);
+
+                construct_line_geometry(commands, buf, feature_ids, line, batch_index);
+            }
+            _ => {}
+        };
     }
 }
 
@@ -409,16 +280,13 @@ fn construct_points_geometry<G: Component, F>(
 fn construct_point_geometry<G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
-    point: &Point<f32>,
-    converter: &mut PosConverter,
+    x: f32,
+    y: f32,
     geometry: &F,
     batch_index: &BatchIndex,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
-    let Point(pt) = point;
-    let (x, y) = converter.project_point(pt);
-
     let e = commands
         .spawn((
             BatchedFeatureMarker,
@@ -431,34 +299,14 @@ fn construct_point_geometry<G: Component, F>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_lines_geometry(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    feature_ids: &mut Vec<Entity>,
-    lines: &[LineString<f32>],
-    batch_index: &BatchIndex,
-    converter: &mut PosConverter,
-) -> usize {
-    let mut count = 0;
-    for line in lines {
-        construct_line_geometry(commands, buf, feature_ids, line, batch_index, converter);
-        count += line.0.len();
-    }
-
-    count
-}
-
-#[allow(clippy::too_many_arguments)]
 fn construct_line_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    line: &LineString<f32>,
+    line: FlatCoordinateStorage3D,
     batch_index: &BatchIndex,
-    converter: &mut PosConverter,
 ) {
-    let LineString(points) = line;
-    let geo_points = converter.project_points(points);
+    let geo_points = line.into_transformed_vec();
 
     if geo_points.is_empty() {
         return;
@@ -476,57 +324,25 @@ fn construct_line_geometry(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn construct_polygons_geometry(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    feature_ids: &mut Vec<Entity>,
-    polygons: &[Polygon<f32>],
-    batch_index: &BatchIndex,
-    converter: &mut PosConverter,
-    flat: bool,
-) {
-    for polygon in polygons {
-        construct_polygon_geometry(
-            commands,
-            buf,
-            feature_ids,
-            polygon,
-            batch_index,
-            converter,
-            flat,
-        );
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
 fn construct_polygon_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    polygon: &Polygon<f32>,
+    exterior: FlatCoordinateStorage3D,
+    holes: Vec<FlatCoordinateStorage3D>,
     batch_index: &BatchIndex,
-    converter: &mut PosConverter,
     flat: bool,
 ) {
-    let LineString(outer) = polygon.exterior();
-    let outer_vec = if flat {
-        converter.project_points_on_center(outer)
-    } else {
-        converter.project_points(outer)
-    };
+    let outer_vec = exterior.into_transformed_vec();
 
-    let interiors = polygon.interiors();
+    let interiors = holes;
     let mut holes: Vec<Hierarchy> = Vec::new();
 
     // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
     // which is based on the origin being at the top-left.
-    for LineString(hole) in interiors {
+    for hole in interiors {
         holes.push(Hierarchy {
-            outer_ring: if flat {
-                converter.project_points_on_center(hole)
-            } else {
-                converter.project_points(hole)
-            },
+            outer_ring: hole.into_transformed_vec(),
             holes: None,
             expected_winding_order: if flat {
                 WindingOrder::Clockwise

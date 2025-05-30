@@ -219,7 +219,10 @@ pub fn transfer_mesh(
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
-    mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance), Without<Rendered>>,
+    mut rendered_tiles: Query<
+        (Entity, &mut RenderedTile, &OrderByDistance),
+        (Without<Rendered>, Added<RenderedTile>),
+    >,
     mvt_data_requester: MvtDataRequesterQuery,
 ) {
     for (layer, resources) in &layers {
@@ -242,11 +245,6 @@ pub fn transfer_mesh(
         for (rendered_tile_id, mut rendered_tile, _) in
             rendered_tiles.iter_mut().sort::<&OrderByDistance>()
         {
-            let needs_update = rendered_tile.is_added();
-            if !needs_update {
-                continue;
-            }
-
             if !tc.has_same_rendered_tile(&rendered_tile.tile_handle, &rendered_tile_id) {
                 continue;
             }
@@ -400,11 +398,16 @@ pub fn clear_caches(
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
-    mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
+    mut rendered_tiles: Query<(
+        Entity,
+        &mut RenderedTile,
+        &OrderByDistance,
+        Option<&Rendered>,
+    )>,
     batched_features: Query<&BatchedFeature>,
     features: Query<&FeatureId>,
 ) {
-    for (rendered_tile_entity_id, mut rendered_tile, _) in
+    for (rendered_tile_entity_id, mut rendered_tile, _, rendered) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>().rev()
     {
         for (layer, resources) in &layers {

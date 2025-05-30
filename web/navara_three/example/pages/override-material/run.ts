@@ -62,6 +62,7 @@ export const run = async (view: ThreeView) => {
   addHeliportLayer(pane, view);
   addRoadLayer(pane, view);
   addFireproofAreaLayer(pane, view);
+  addLandUseLayer(pane, view);
   addHeightControlDistrictLayer(pane, view);
   addBuildingModelLayer(pane, view);
   addSymbolLayer(pane, view);
@@ -466,6 +467,86 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       });
     colorFolder.add(field);
   }
+};
+
+const addLandUseLayer = (pane: Pane, view: ThreeView) => {
+  const layerDescription: LayerDescription = {
+    type: "mvt",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/{z}/{x}/{y}.mvt",
+    },
+    polygon: {
+      color: 0x00aaff,
+      height: 10,
+      extruded_height: 0,
+      clamp_to_ground: true,
+      use_ground_normals: true,
+      wireframe: false,
+      id_property: "gml_id",
+    },
+    vector_tile: {
+      max_zoom: 16,
+    },
+  };
+
+  const folder = pane.addFolder({
+    title: "Land use",
+  });
+
+  let layer: Layer | undefined;
+  addToggleButton(folder, (isAdded) => {
+    if (isAdded) {
+      layer?.delete();
+      layer = undefined;
+      return;
+    }
+
+    layer = view.addLayer(layerDescription);
+    // layer.on("featureUpdated", (evaluator) => {
+    //   evaluator.evaluate((_batchId, property) => {
+    //     const functionType = property?.get("urf_function") as string;
+
+    //     const color = (() => {
+    //       // Fireproof area
+    //       if (functionType === "防火地域") {
+    //         return CHANGED_PARAMS_COLOR["防火地域"];
+    //       }
+    //       // Semi-fireproof area
+    //       if (functionType === "準防火地域") {
+    //         return CHANGED_PARAMS_COLOR["準防火地域"];
+    //       }
+    //       return CHANGED_PARAMS_COLOR["その他"];
+    //     })();
+
+    //     return {
+    //       color: new Color(color),
+    //     };
+    //   });
+    // });
+  });
+
+  // const onChange = () => {
+  //   layer?.forceUpdate();
+  // };
+
+  // const PARAMS_COLOR = {
+  //   防火地域: "#0000ff",
+  //   準防火地域: "#00ff00",
+  //   その他: "#ff0000",
+  // };
+  // const CHANGED_PARAMS_COLOR = { ...PARAMS_COLOR };
+
+  // const colorFolder = folder.addFolder({ title: "Color", expanded: false });
+  // for (const key of Object.keys(PARAMS_COLOR)) {
+  //   const k = key as keyof typeof PARAMS_COLOR;
+  //   const field = colorFolder
+  //     .addBinding(PARAMS_COLOR, k)
+  //     .on("change", ({ value }) => {
+  //       CHANGED_PARAMS_COLOR[k] = value;
+  //       onChange();
+  //     });
+  //   colorFolder.add(field);
+  // }
 };
 
 const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {

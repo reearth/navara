@@ -1,9 +1,10 @@
 use geo_types::Coord;
 use navara_core::TileXYZ;
 use navara_math::FloatType;
+use navara_parser::mvt::{geometry::CoordinateTransform, tile::GeomType};
 use std::f64::consts::PI;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct PosConverter {
     x0: f64,
     y0: f64,
@@ -11,12 +12,13 @@ pub struct PosConverter {
     scale_x: f64,
     scale_y: f64,
     extent: f32,
+    flat: bool,
 }
 
 // The conversion method refers to:
 // https://github.com/mapbox/vector-tile-js/blob/main/index.js#L135 (toGeoJSON(x, y, z) )
 impl PosConverter {
-    pub fn new(xyz: TileXYZ, extent: u32) -> Self {
+    pub fn new(xyz: TileXYZ, extent: u32, flat: bool) -> Self {
         let mut converter = Self {
             x0: 0.0,
             y0: 0.0,
@@ -24,6 +26,7 @@ impl PosConverter {
             scale_x: 0.0,
             scale_y: 0.0,
             extent: extent as f32,
+            flat,
         };
 
         converter.x0 = (extent as f64) * (xyz.x as f64);
@@ -43,34 +46,28 @@ impl PosConverter {
         (x as FloatType, y as FloatType)
     }
 
-    pub fn project_points(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
-        let mut ret = Vec::new();
-
-        for pt in points {
-            let (x, y) = self.project_point(pt);
-            ret.push(x);
-            ret.push(y);
-            ret.push(0.0 as FloatType);
-        }
-
-        ret
-    }
-
-    /// Construct points based on the extent center.
-    pub fn project_points_on_center(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
+    /// Construct a point based on the extent center.
+    pub fn project_point_on_center(&self, pt: &Coord<f32>) -> (FloatType, FloatType) {
         let half_extent = self.extent / 2.0;
-        let mut ret = Vec::with_capacity(points.len() * 3);
+        let x = (pt.x - half_extent) / half_extent; // Xを [-1, 1] にスケーリング
+        let y = -(pt.y - half_extent) / half_extent; // Yを [-1, 1] にスケーリングしつつ反転
 
-        for pt in points {
-            let x = (pt.x - half_extent) / half_extent; // Xを [-1, 1] にスケーリング
-            let y = -(pt.y - half_extent) / half_extent; // Yを [-1, 1] にスケーリングしつつ反転
-            let z = 0.0;
+        (x as FloatType, y as FloatType)
+    }
+}
 
-            ret.push(x);
-            ret.push(y);
-            ret.push(z);
-        }
+impl CoordinateTransform for PosConverter {
+    type Output = (f32, f32, f32);
 
-        ret
+    #[inline]
+    fn transform(&self, x: f32, y: f32, geom_type: &GeomType) -> Self::Output {
+        let flat_geom_type = matches!(geom_type, GeomType::Polygon);
+        let (x, y) = if self.flat && flat_geom_type {
+            self.project_point_on_center(&Coord { x, y })
+        } else {
+            self.project_point(&Coord { x, y })
+        };
+
+        (x, y, 0.)
     }
 }

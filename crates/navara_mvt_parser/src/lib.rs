@@ -3,8 +3,10 @@ pub use mvt_reader::{Reader as MvtReader, *};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use geo_types::Geometry;
-    use mvt_reader::{tile, Message, Tile};
+    use mvt_reader::{
+        geometry::{FlatCoordinateStorage, Geometry, IdentityTransform},
+        tile, Message, Tile,
+    };
 
     fn create_mock_mvt_data() -> Vec<u8> {
         let mut tile = Tile { layers: Vec::new() };
@@ -103,27 +105,30 @@ mod tests {
         let extent = reader.get_extent(0);
         assert_eq!(extent, 4096);
 
-        let rslt_features = reader.get_features(0);
-        assert!(rslt_features.is_ok(), "mvt_reader get_features error");
+        let rslt_features =
+            reader.get_features_iter::<FlatCoordinateStorage, _>(0, IdentityTransform);
+        assert!(rslt_features.is_some(), "mvt_reader get_features error");
 
-        let features = rslt_features.unwrap();
-        assert_eq!(features.len(), 3);
+        let mut features = rslt_features.unwrap();
 
-        let geom_point = features[0].get_geometry();
+        let mut feature = features.next().unwrap();
+        let geom_point = feature.geometry.next().unwrap().unwrap();
         assert!(
-            matches!(geom_point, Geometry::MultiPoint(_)),
+            matches!(geom_point, Geometry::Point { .. }),
             "The geometry is not a MultiPoint."
         );
 
-        let geom_line = features[1].get_geometry();
+        let mut feature = features.next().unwrap();
+        let geom_line = feature.geometry.next().unwrap().unwrap();
         assert!(
             matches!(geom_line, Geometry::LineString(_)),
             "The geometry is not a LineString."
         );
 
-        let geom_polygon = features[2].get_geometry();
+        let mut feature = features.next().unwrap();
+        let geom_polygon = feature.geometry.next().unwrap().unwrap();
         assert!(
-            matches!(geom_polygon, Geometry::MultiPolygon(_)),
+            matches!(geom_polygon, Geometry::Polygon { .. }),
             "The geometry is not a MultiPolygon."
         );
     }

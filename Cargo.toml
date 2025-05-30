@@ -20,7 +20,7 @@ approx = "0.5.1"
 url = "2.5.3"
 binrw = { version = "0.14.1", default-features = false }
 serde = { version = "1.0.218", features = ["derive"] }
-serde_json = { version = "1.0.139", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.140", features = ["preserve_order"] }
 nanoid = "0.4"
 cfg-if = "1.0.0"
 radians = "0.3.1"

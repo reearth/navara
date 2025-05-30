@@ -61,6 +61,7 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   inscatter: true,
   transmittance: true,
 };
+DEFAULT_ATMOSPHERE_OPTIONS.date.setHours(8);
 
 export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private effectComposer: EffectComposer;
