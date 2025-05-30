@@ -1,19 +1,21 @@
 import { type CRSTypes, type CameraPositionByCRS } from "@navara/core";
 import { EventHandler } from "@navara/core/src/eventHandler";
-import { Core, CameraStatus, CameraStatusObj } from "@navara/engine";
+import { Core, CameraStatus, CameraStatusType } from "@navara/engine";
 import { PerspectiveCamera } from "three";
 
 export type CameraEvent = {
   movestart: () => void;
   move: () => void;
   moveend: () => void;
-  idle: () => void;
+  change: () => void;
+  lookat: () => void;
+  rotate: () => void;
 };
 
 export class ThreeViewCamera extends EventHandler<CameraEvent> {
   private _camera: PerspectiveCamera;
   private _core: Core | undefined;
-  private _statusObj: CameraStatusObj | undefined;
+  private _status: CameraStatus | undefined;
 
   constructor(cam: PerspectiveCamera);
   constructor(fov: number, aspect: number, near: number, far: number);
@@ -40,31 +42,35 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     this._core = core;
   }
 
-  get curStatus(): CameraStatusObj | undefined {
-    return this._statusObj;
-  }
-
   updateStatus() {
-    this._statusObj = this._core?.getCameraStatusObj();
-    if (!this._statusObj) {
+    this._status = this._core?.getCameraStatus();
+    if (!this._status) {
       return;
     }
 
-    switch (this._statusObj.status) {
-      case CameraStatus.MoveStart:
-        this.emit("movestart");
-        break;
-      case CameraStatus.Move:
-        this.emit("move");
-        break;
-      case CameraStatus.MoveEnd:
-        this.emit("moveend");
-        break;
-      case CameraStatus.Idle:
-        this.emit("idle");
-        break;
-      default:
-        break;
+    for (const val of this._status.status) {
+      switch (val) {
+        case CameraStatusType.Change:
+          this.emit("change");
+          break;
+        case CameraStatusType.LookAt:
+          this.emit("lookat");
+          break;
+        case CameraStatusType.Rotate:
+          this.emit("rotate");
+          break;
+        case CameraStatusType.MoveStart:
+          this.emit("movestart");
+          break;
+        case CameraStatusType.Moving:
+          this.emit("move");
+          break;
+        case CameraStatusType.MoveEnd:
+          this.emit("moveend");
+          break;
+        default:
+          break;
+      }
     }
   }
 

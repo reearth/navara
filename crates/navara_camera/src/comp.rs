@@ -120,57 +120,19 @@ impl CameraFrustum {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum CameraStatus {
-    Idle,
+pub enum CameraStatusType {
+    Change,
+    LookAt,
+    Rotate,
+
     MoveStart,
-    Move,
+    Moving,
     MoveEnd,
 }
 
-#[derive(Component, Clone)]
-pub struct CameraStatusMngr {
-    pub status: CameraStatus,
-    pub last_event: String,
-}
-
-impl Default for CameraStatusMngr {
-    fn default() -> Self {
-        Self {
-            status: CameraStatus::Idle,
-            last_event: String::new(),
-        }
-    }
-}
-
-impl CameraStatusMngr {
-    pub fn update(&mut self, st: &CameraStatus) {
-        match self.status {
-            CameraStatus::Idle => {
-                if *st == CameraStatus::MoveStart || *st == CameraStatus::Move {
-                    self.status = CameraStatus::MoveStart;
-                }
-            }
-            CameraStatus::MoveStart => {
-                if *st == CameraStatus::MoveEnd {
-                    self.status = CameraStatus::MoveEnd;
-                } else if *st == CameraStatus::Move {
-                    self.status = CameraStatus::Move;
-                }
-            }
-            CameraStatus::Move => {
-                if *st == CameraStatus::MoveEnd || *st == CameraStatus::Idle {
-                    self.status = CameraStatus::MoveEnd;
-                }
-            }
-            CameraStatus::MoveEnd => {
-                if *st == CameraStatus::Idle {
-                    self.status = CameraStatus::Idle;
-                } else {
-                    self.status = CameraStatus::MoveStart;
-                }
-            }
-        }
-    }
+#[derive(Component, Clone, Default)]
+pub struct CameraStatus {
+    pub status: Vec<CameraStatusType>,
 }
 
 #[derive(Component)]
@@ -222,7 +184,7 @@ impl Default for CameraController {
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct CameraInertia {
     pub spin: Vec3,
     pub spin_time: f32,
@@ -231,6 +193,20 @@ pub struct CameraInertia {
     pub zoom: FloatType,
     pub zoom_time: f32,
     pub pan: Vec3,
+}
+
+impl Default for CameraInertia {
+    fn default() -> Self {
+        Self {
+            spin: Vec3::ZERO,
+            spin_time: 500.,
+            translate: Vec3::ZERO,
+            translate_time: 500.,
+            zoom: 0.,
+            zoom_time: 100.,
+            pan: Vec3::ZERO,
+        }
+    }
 }
 
 impl CameraInertia {

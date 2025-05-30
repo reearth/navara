@@ -57,15 +57,13 @@ export const run = async (view: ThreeView) => {
   view.camera.on("moveend", () => {
     // console.log("camera moveend");
   });
-  view.camera.on("idle", () => {
+  view.camera.on("rotate", () => {
     const position = view.camera.getPosition("geographic");
-    const statusObj = view.camera.curStatus;
-
-    // Avoid recursive call, if the change in camera.position is caused by calling view.setCamera,
-    // do not update the camera information on the GUI again.
-    if (statusObj && statusObj.last_event != "change") {
-      updateCameraParamsToPane(position);
-    }
+    updateCameraParamsToPane(position);
+  });
+  view.camera.on("lookat", () => {
+    const position = view.camera.getPosition("geographic");
+    updateCameraParamsToPane(position);
   });
 
   const pane = new Pane({

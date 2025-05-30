@@ -469,13 +469,15 @@ impl Core {
         self.app.look_at(target, offset);
     }
 
-    #[wasm_bindgen(js_name = getCameraStatusObj)]
-    pub fn get_camera_status_obj(&mut self) -> Option<CameraStatusObj> {
-        if let Some(st_mngr) = self.app.get_camera_status() {
-            Some(CameraStatusObj {
-                status: st_mngr.status.into(),
-                last_event: Some(st_mngr.last_event.clone()),
-            })
+    #[wasm_bindgen(js_name = getCameraStatus)]
+    pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
+        if let Some(cam_st) = self.app.get_camera_status() {
+            let mut status: Vec<CameraStatusType> = vec![];
+            cam_st.status.iter().for_each(|st| {
+                status.push((*st).into());
+            });
+
+            Some(CameraStatus { status })
         } else {
             None
         }
