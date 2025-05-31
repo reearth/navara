@@ -2,17 +2,22 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
 use navara_component::Priority;
-use navara_data_requester::DataRequesterStatus;
+use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_math::Vec3;
 use navara_parser::cesium3dtiles::tileset::Refine;
 use navara_window::Window;
 use url::Url;
 
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
+use crate::{
+    b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::url::uri_inherit_query_params,
+    glb::RenderedCesium3dTileContentGlbMarker, Cesium3dTilesMetadataDataRequesterMarker,
+    RenderedCesium3dTileContent,
+};
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
@@ -125,7 +130,11 @@ fn mark_leaves(
         return TraversalResult::Selected;
     }
 
-    // TODO: Support children from URL.
+    // children from URL.
+    if tile.uri.is_some() && !tile.is_renderable_content {
+        return TraversalResult::Selected;
+    }
+
     if let Some(tile_meta_children) = &tile_meta.children {
         if tile.children.is_none() {
             tile.children = Some(Vec::with_capacity(tile_meta_children.len()));
@@ -230,28 +239,65 @@ fn mark_rendered_tiles(
     }
 
     let leaf = state.touched && state.leaf;
-    if (leaf || !tile.state.are_all_children_loaded) && tile.is_renderable_content {
-        if state.is_data_loaded {
-            let is_visible = state.is_visible;
-            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
-            if is_visible {
-                *rendered_tiles_count += 1;
+    if leaf || !tile.state.are_all_children_loaded {
+        if tile.is_renderable_content {
+            if state.is_data_loaded {
+                let is_visible = state.is_visible;
+                update_or_spawn_rendered_tile(
+                    commands,
+                    layer_id,
+                    base_url,
+                    rendered_tiles,
+                    tile,
+                    is_visible,
+                );
+                if is_visible {
+                    *rendered_tiles_count += 1;
+                }
+            } else if state.is_visible {
+                request_tile_content(
+                    commands,
+                    buf,
+                    base_url,
+                    tile,
+                    requesters,
+                    if tile.state.are_all_children_loaded {
+                        Priority::Low
+                    } else {
+                        Priority::Medium
+                    },
+                );
+
+                tile.state.is_data_loaded = true;
+            } else {
+                toggle_rendered_tile_visible(rendered_tiles, tile, false);
             }
-        } else if state.is_visible {
-            request_tile_content(
-                commands,
-                buf,
-                base_url,
-                tile,
-                requesters,
-                if tile.state.are_all_children_loaded {
-                    Priority::Low
-                } else {
-                    Priority::Medium
+        } else if tile.uri.is_some() && tile.data_requester_id.is_none() {
+            let tile_url = match tile.make_content_url(base_url) {
+                Ok(Some((url, _))) => match Url::parse(&url) {
+                    Ok(u) => uri_inherit_query_params(u, base_url),
+                    Err(e) => {
+                        error!("Failed to parse URL: {}", e);
+                        return;
+                    }
                 },
-            );
-        } else {
-            toggle_rendered_tile_visible(rendered_tiles, tile, false);
+                Ok(None) => {
+                    error!("Tile content URL is None for tile: {:?}", tile);
+                    return;
+                }
+                Err(e) => {
+                    error!("Failed to make content URL: {}", e);
+                    return;
+                }
+            };
+
+            let entity = commands.spawn((
+                Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                Priority::Medium,
+                DataRequester::from_store(tile_url.to_string(), buf, DataRequesterExtension::Json),
+            ));
+
+            tile.data_requester_id = Some(entity.id());
         }
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
@@ -315,6 +361,7 @@ fn toggle_rendered_tile_visible(
 fn update_or_spawn_rendered_tile(
     commands: &mut Commands,
     layer_id: Entity,
+    base_url: &Url,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     tile: &mut Cesium3dTileContent,
     visible: bool,
@@ -324,22 +371,62 @@ fn update_or_spawn_rendered_tile(
     }
 
     if visible {
-        tile.rendered_tile_id = Some(
-            commands
+        let (tile_url, extension) = match tile.make_content_url(base_url) {
+            Ok(Some((url, extension))) => match Url::parse(&url) {
+                Ok(u) => (uri_inherit_query_params(u, base_url), extension),
+                Err(e) => {
+                    error!("Failed to parse URL: {}", e);
+                    return;
+                }
+            },
+            Ok(None) => {
+                error!("Tile content URL is None for tile: {:?}", tile);
+                return;
+            }
+            Err(e) => {
+                error!("Failed to make content URL: {}", e);
+                return;
+            }
+        };
+
+        let tile_order = TileOrderByDistance {
+            distance_from_camera: tile.state.distance_from_camera,
+            sse: tile.state.sse,
+        };
+
+        let marker_entity = match extension {
+            navara_data_requester::DataRequesterExtension::Glb => commands
                 .spawn((
-                    RenderedCesium3dTileContentB3dmMarker,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
+                    RenderedCesium3dTileContentGlbMarker,
+                    tile_order,
                     RenderedCesium3dTileContent {
                         layer_id,
                         feature_id: None,
                         data_requester_id: tile.data_requester_id.unwrap(),
                         is_visible: true,
+                        url: Some(tile_url.to_string()),
                     },
                 ))
                 .id(),
-        );
+            navara_data_requester::DataRequesterExtension::B3dm => commands
+                .spawn((
+                    RenderedCesium3dTileContentB3dmMarker,
+                    tile_order,
+                    RenderedCesium3dTileContent {
+                        layer_id,
+                        feature_id: None,
+                        data_requester_id: tile.data_requester_id.unwrap(),
+                        is_visible: true,
+                        url: None,
+                    },
+                ))
+                .id(),
+            _ => {
+                error!("Unsupported tile content type: {:?}", extension);
+                return;
+            }
+        };
+
+        tile.rendered_tile_id = Some(marker_entity);
     }
 }

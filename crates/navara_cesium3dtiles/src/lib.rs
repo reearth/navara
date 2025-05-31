@@ -4,6 +4,7 @@ use bevy_app::{App, Plugin, Update};
 
 mod b3dm;
 mod cesium3dtiles;
+mod glb;
 
 use bevy_ecs::schedule::IntoSystemConfigs;
 pub use cesium3dtiles::*;
@@ -30,6 +31,7 @@ impl Plugin for Cesium3dTilesPlugin {
                 cesium3dtiles::system::traverse_cesium_3d_tiles_tree,
                 cesium3dtiles::data_requester::systems::filter_requestable_data_requester,
                 b3dm::system::construct_model_by_cesium3dtiles_layer,
+                glb::system::construct_model_by_cesium3dtiles_layer,
                 b3dm::system::remove_invisible_rendered_tiles,
                 cesium3dtiles::system::delete_cesium3dtiles_layer,
                 cesium3dtiles::system::update_cesium3dtiles_layer,

@@ -24,5 +24,6 @@ navara_geometry = { path = "../navara_geometry" }
 navara_camera = { path = "../navara_camera" }
 navara_window = { path = "../navara_window" }
 navara_component = { path = "../navara_component" }
+navara_glb = { path = "../navara_glb" }
 url.workspace = true
 serde_json.workspace = true

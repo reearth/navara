@@ -36,7 +36,7 @@ pub fn transfer_mesh(
             Entity,
             &LayerId,
             &FeatureBatchId,
-            &GlobalBatchIdAndSelections,
+            Option<&GlobalBatchIdAndSelections>,
             Option<&mut FeatureId>,
             &ModelGeometry,
             &ModelMaterial,
@@ -111,14 +111,16 @@ pub fn transfer_mesh(
                 },
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
-                    batch_id_and_selected_status: Some(TransferableFloatAttribute {
-                        data: global_batch_ids.handle,
-                        size: 2,
+                    batch_id_and_selected_status: global_batch_ids.as_ref().map(|g| {
+                        TransferableFloatAttribute {
+                            data: g.handle,
+                            size: 2,
+                        }
                     }),
                 },
                 feature_batch_id: feature_batch_id.0,
                 active: true,
-                batch_length: global_batch_ids.batch_length,
+                batch_length: global_batch_ids.as_ref().map_or(0, |g| g.batch_length),
             },
         ));
 
@@ -128,7 +130,9 @@ pub fn transfer_mesh(
 
         layer_store.add(layer_id.0.clone(), entity.id());
 
-        feature_batch_id_map.add(entity.id(), global_batch_ids.clone());
+        if let Some(global_batch_ids) = global_batch_ids {
+            feature_batch_id_map.add(entity.id(), global_batch_ids.clone());
+        }
     }
 }
 
@@ -151,9 +155,7 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty || !material.clamp_to_ground)
-                    && !render_info.should_recalculate_height
-                {
+                if is_tile_meshes_empty && !render_info.should_recalculate_height {
                     continue;
                 }
                 if !material.show || !active {

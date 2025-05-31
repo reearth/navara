@@ -54,6 +54,7 @@ pub enum DataRequesterExtension {
     Png,
     Json,
     B3dm,
+    Glb,
     Mvt,
 }
 
@@ -64,6 +65,7 @@ impl DataRequesterExtension {
             "png" => Self::Png,
             "json" => Self::Json,
             "b3dm" => Self::B3dm,
+            "glb" => Self::Glb,
             "mvt" => Self::Mvt,
             _ => unimplemented!("{}", v),
         }
@@ -74,6 +76,7 @@ impl DataRequesterExtension {
         match self {
             Self::Png => "png".to_string(),
             Self::Json => "json".to_string(),
+            Self::Glb => "glb".to_string(),
             Self::B3dm => "b3dm".to_string(),
             Self::Mvt => "mvt".to_string(),
         }
@@ -83,6 +86,7 @@ impl DataRequesterExtension {
         match url.path() {
             v if v.ends_with("json") => Self::Json,
             v if v.ends_with("b3dm") => Self::B3dm,
+            v if v.ends_with("glb") => Self::Glb,
             v if v.ends_with("png") => Self::Png,
             v => unimplemented!("The extension of {} isn't supported", v),
         }
