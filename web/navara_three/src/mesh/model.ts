@@ -74,7 +74,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     const meshMaterial = m.material;
 
     // For Cesium 3D Tiles
-    if (batchIdAndSel) {
+    if (batchIdAndSelectedStatus && batchIdAndSel) {
       this.overrideCesium3DTilesMaterial(
         meshMaterial,
         batchIdAndSel,
