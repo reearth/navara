@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
-use navara_core::{Aabb, Extent, LngLat};
+use navara_core::{Aabb, Extent, LngLat, Obb};
 use navara_data_requester::DataRequesterExtension;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_layer::Cesium3dTilesLayer;
@@ -57,7 +57,7 @@ impl Cesium3dTilesTree {
 #[derive(Debug)]
 pub struct Cesium3dTileContent {
     // This URI might be just path, so keep using string.
-    pub uri: String,
+    pub uri: Option<String>,
     pub data_requester_id: Option<Entity>,
     pub rendered_tile_id: Option<Entity>,
     pub children: Option<Vec<Cesium3dTileContent>>,
@@ -71,13 +71,11 @@ pub struct Cesium3dTileContent {
 
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
-        let content = match &tile.content {
-            Some(c) => c,
-            None => unimplemented!("TODO: Support multiple contents"),
-        };
+        //info!("OVERALL: {:?}", tile);
+
         let bv = &tile.bounding_volume;
-        let bounding_volume = match (bv.region, bv.sphere) {
-            (Some([west, south, east, north, min_height, max_height]), _) => {
+        let bounding_volume = match (bv.region, bv.box_, bv.sphere) {
+            (Some([west, south, east, north, min_height, max_height]), _, _) => {
                 Some(Aabb::from_extent_f32(
                     Extent::from_points(&[
                         LngLat::new(south as FloatType, west as FloatType),
@@ -87,17 +85,41 @@ impl Cesium3dTileContent {
                     max_height as FloatType,
                 ))
             }
+            (_, Some(box_), _) => {
+                let box_: [f32; 12] = [
+                    box_[0] as f32,
+                    box_[1] as f32,
+                    box_[2] as f32,
+                    box_[3] as f32,
+                    box_[4] as f32,
+                    box_[5] as f32,
+                    box_[6] as f32,
+                    box_[7] as f32,
+                    box_[8] as f32,
+                    box_[9] as f32,
+                    box_[10] as f32,
+                    box_[11] as f32,
+                ];
+
+                Some(Obb::from_points(&box_).into_aabb())
+            }
             // TODO: Support making bounding volume from the sphere
-            (_, Some(_)) => None,
+            (_, _, Some(_)) => None,
             _ => None,
         };
+
         let default_refine = Refine::Replace;
+
+        let uri = tile.content.as_ref().map(|c| c.uri.clone());
+
+        let is_renderable_content = check_if_renderable_content(&uri);
+
         Self {
-            uri: content.uri.clone(),
+            uri,
             data_requester_id: None,
             rendered_tile_id: None,
             children: None,
-            is_renderable_content: !content.uri.ends_with(".json"),
+            is_renderable_content,
             bounding_volume,
             refine: match tile
                 .refine
@@ -114,10 +136,13 @@ impl Cesium3dTileContent {
     pub fn make_content_url(
         &self,
         base_url: &Url,
-    ) -> Result<(String, DataRequesterExtension), ParseError> {
-        let url = base_url.join(&self.uri)?;
+    ) -> Result<Option<(String, DataRequesterExtension)>, ParseError> {
+        let url = match &self.uri {
+            Some(uri) => base_url.join(uri)?,
+            None => return Ok(None),
+        };
         let extension = DataRequesterExtension::from_url(&url);
-        Ok((url.to_string(), extension))
+        Ok(Some((url.to_string(), extension)))
     }
 
     pub fn reset_state(&mut self) {
@@ -175,4 +200,34 @@ pub struct RenderedCesium3dTileContent {
     pub feature_id: Option<Entity>,
     pub data_requester_id: Entity,
     pub is_visible: bool,
+    pub url: Option<String>,
+}
+
+fn check_if_renderable_content(uri: &Option<String>) -> bool {
+    uri.as_ref()
+        .map(|u| {
+            let is_json = u.ends_with(".json") || u.contains(".json?");
+            !is_json
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_if_renderable_content() {
+        let uri = Some("https://example.com/model.glb".to_string());
+        assert!(check_if_renderable_content(&uri));
+
+        let uri = Some("https://example.com/model.json".to_string());
+        assert!(!check_if_renderable_content(&uri));
+
+        let uri = Some("https://example.com/model.json?param=value".to_string());
+        assert!(!check_if_renderable_content(&uri));
+
+        let uri = None;
+        assert!(!check_if_renderable_content(&uri));
+    }
 }
