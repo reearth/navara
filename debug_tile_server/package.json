@@ -3,12 +3,12 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.8",
+    "@hono/node-server": "^1.14.3",
     "canvas": "^3.1.0",
-    "hono": "^4.7.2"
+    "hono": "^4.7.11"
   },
   "devDependencies": {
-    "@types/node": "^22.13.5",
-    "tsx": "^4.19.3"
+    "@types/node": "^22.15.29",
+    "tsx": "^4.19.4"
   }
 }
