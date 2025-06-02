@@ -95,7 +95,7 @@ pub fn remove_relation(
     worker_tasks: Query<&WorkerTaskDelegateeMarker, With<Deleted>>,
 ) {
     for m in &worker_tasks {
-        let Some(mut e) = commands.get_entity(m.0) else {
+        let Ok(mut e) = commands.get_entity(m.0) else {
             continue;
         };
         e.insert(Deleted);

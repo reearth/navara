@@ -1,4 +1,4 @@
-use bevy_ecs::system::Resource;
+use bevy_ecs::prelude::Resource;
 use navara_math::FloatType;
 use std::collections::HashMap;
 

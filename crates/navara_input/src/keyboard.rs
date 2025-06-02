@@ -20,6 +20,7 @@ impl KeyboardInput {
             state: self.state,
             window: win,
             repeat: false,
+            text: None,
         }
     }
 }

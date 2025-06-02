@@ -31,7 +31,7 @@ pub fn despawn(
     removed: Query<Entity, (With<RenderableFeature>, With<Deleted>)>,
 ) {
     for e in &removed {
-        if let Some(mut e) = commands.get_entity(e) {
+        if let Ok(mut e) = commands.get_entity(e) {
             e.despawn();
         }
     }
