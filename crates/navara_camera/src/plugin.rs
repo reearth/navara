@@ -11,7 +11,7 @@ use bevy_ecs::{
     entity::Entity,
     event::EventReader,
     query::{Added, Changed, Or},
-    schedule::IntoSystemConfigs,
+    schedule::IntoScheduleConfigs,
     system::{Query, ResMut},
 };
 

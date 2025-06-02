@@ -11,7 +11,7 @@ rust-version = "1.83.0"
 
 [workspace.dependencies]
 bevy_app = "0.16.1"
-bevy_ecs = "0.16.1"
+bevy_ecs = { version = "0.16.1", features = ["serialize"] }
 bevy_input = "0.16.1"
 bevy_log = "0.16.1"
 bevy_math = "0.16.1"

@@ -1,5 +1,5 @@
 use bevy_ecs::entity::Entity;
-use bevy_ecs::system::Resource;
+use bevy_ecs::prelude::Resource;
 use std::collections::HashMap;
 
 /// A store to preserve a relation between layer id and a feature's entity.

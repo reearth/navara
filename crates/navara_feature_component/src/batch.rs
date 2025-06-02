@@ -1,8 +1,4 @@
-use bevy_ecs::{
-    component::Component,
-    entity::Entity,
-    system::{Commands, Resource},
-};
+use bevy_ecs::{component::Component, entity::Entity, prelude::Resource, system::Commands};
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
@@ -23,15 +19,15 @@ impl BatchedFeature {
     #[allow(clippy::too_many_arguments)]
     pub fn despawn_recursively(&self, commands: &mut Commands) {
         for f in &self.features {
-            if let Some(mut e) = commands.get_entity(*f) {
+            if let Ok(mut e) = commands.get_entity(*f) {
                 e.despawn();
             }
         }
         if let Some(e) = self.construct_polyline_feature {
-            commands.get_entity(e).as_mut().map(|e| e.insert(Deleted));
+            let _ = commands.get_entity(e).as_mut().map(|e| e.insert(Deleted));
         }
         if let Some(e) = self.construct_polygon_feature {
-            commands.get_entity(e).as_mut().map(|e| e.insert(Deleted));
+            let _ = commands.get_entity(e).as_mut().map(|e| e.insert(Deleted));
         }
     }
 }

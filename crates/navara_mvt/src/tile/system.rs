@@ -78,7 +78,7 @@ pub fn update_tiles(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let fog = fogs.single();
+    let fog = fogs.single().unwrap();
 
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer.iter().next();

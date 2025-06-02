@@ -4,7 +4,7 @@ pub mod data_requester;
 pub mod texture_fragment;
 
 use bevy_app::{App, Plugin, PreUpdate, Update};
-use bevy_ecs::schedule::IntoSystemConfigs;
+use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_tile_component::{CachedMartini, RasterTileQuadtree, TerrainInformationQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 

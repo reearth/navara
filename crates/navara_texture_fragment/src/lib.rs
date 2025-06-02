@@ -6,7 +6,7 @@ use bevy_ecs::{
     entity::Entity,
     event::{Event, EventReader},
     query::{Added, With, Without},
-    schedule::IntoSystemConfigs,
+    schedule::IntoScheduleConfigs,
     system::{Commands, Query, ResMut},
 };
 
