@@ -4,7 +4,8 @@ pub use mvt_reader::{Reader as MvtReader, *};
 mod tests {
     use super::*;
     use geo_types::Geometry;
-    use mvt_reader::{tile, Message, Tile};
+    use mvt_reader::{tile, Tile};
+    use prost::Message;
 
     fn create_mock_mvt_data() -> Vec<u8> {
         let mut tile = Tile { layers: Vec::new() };
