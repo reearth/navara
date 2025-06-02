@@ -89,8 +89,8 @@ pub fn update_tiles(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let fog = fogs.single();
-    let (camera, frustum) = camera.single();
+    let fog = fogs.single().unwrap();
+    let (camera, frustum) = camera.single().unwrap();
 
     let needs_update = is_texture_fragment_changed
         || is_data_requester_changed

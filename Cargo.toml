@@ -10,22 +10,22 @@ members = [
 rust-version = "1.83.0"
 
 [workspace.dependencies]
-bevy_app = "0.15.3"
-bevy_ecs = "0.15.3"
-bevy_input = "0.15.3"
-bevy_log = "0.15.3"
-bevy_math = "0.15.3"
-bevy_transform = "0.15.3"
+bevy_app = "0.16.1"
+bevy_ecs = { version = "0.16.1", features = ["serialize"] }
+bevy_input = "0.16.1"
+bevy_log = "0.16.1"
+bevy_math = "0.16.1"
+bevy_transform = "0.16.1"
 approx = "0.5.1"
-url = "2.5.3"
-binrw = { version = "0.14.1", default-features = false }
-serde = { version = "1.0.218", features = ["derive"] }
-serde_json = { version = "1.0.139", default-features = false, features = ["alloc"] }
+url = "2.5.4"
+binrw = { version = "0.15.0", default-features = false }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
 nanoid = "0.4"
 cfg-if = "1.0.0"
 radians = "0.3.1"
 itertools = "0.14.0"
-geo-types = "0.7.15"
+geo-types = "0.7.16"
 instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
 fxhash = "0.2.1"
 

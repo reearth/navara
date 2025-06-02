@@ -5,7 +5,7 @@ mod system;
 mod tasks;
 
 use bevy_app::Update;
-use bevy_ecs::schedule::IntoSystemConfigs;
+use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use component::*;
 pub use delegated_task::*;
 pub use event::*;

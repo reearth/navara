@@ -2,7 +2,7 @@
 
 mod model;
 
-use bevy_ecs::{entity::Entity, system::Resource};
+use bevy_ecs::{entity::Entity, prelude::Resource};
 
 pub use model::*;
 
