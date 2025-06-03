@@ -449,7 +449,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._effectComposer,
       this.camera.innerCam,
       options.antialias,
-      4, // Antialias effect is applied lazily, so need to set an index to keep the order.
     );
     this.aaEffect.on("_needsUpdate", this.forceUpdate);
 
