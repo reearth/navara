@@ -181,9 +181,14 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     sky: true,
     sun: true,
     moon: true,
+    stars: true,
     sunLight: true,
     sunLightColor: "#FFFFFF",
     sunLightIntensity: 1,
+    moonScale: 1,
+    moonIntensity: 1,
+    starsPointSize: 1,
+    starsRadianceScale: 10,
     ambientLight: false,
     ambientLightColor: "#FFFFFF",
     ambientLightIntensity: 1,
@@ -208,11 +213,26 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "moon").on("change", (v) => {
     view.atmosphere.moon = v.value;
   });
+  folder.addBinding(PARAMS, "stars").on("change", (v) => {
+    view.atmosphere.stars = v.value;
+  });
   folder.addBinding(PARAMS, "sunLight").on("change", (v) => {
     view.atmosphere.sunLight = v.value;
   });
   folder.addBinding(PARAMS, "sunLightColor").on("change", (v) => {
     view.atmosphere.sunLightColor = new Color(v.value);
+  });
+  folder.addBinding(PARAMS, "moonScale").on("change", (v) => {
+    view.atmosphere.moonScale = v.value;
+  });
+  folder.addBinding(PARAMS, "moonIntensity").on("change", (v) => {
+    view.atmosphere.moonIntensity = v.value;
+  });
+  folder.addBinding(PARAMS, "starsPointSize").on("change", (v) => {
+    view.atmosphere.starsPointSize = v.value;
+  });
+  folder.addBinding(PARAMS, "starsRadianceScale").on("change", (v) => {
+    view.atmosphere.starsRadianceScale = v.value;
   });
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
     view.atmosphere.sunLightIntensity = v.value;

@@ -17,6 +17,7 @@ import {
   PolygonMesh,
   PolylineMesh,
 } from "../mesh";
+import { FEATURE_RENDER_ORDER } from "../renderOrder";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
@@ -120,7 +121,7 @@ export async function processRenderableFeatureAdded(
     setTransform(obj, transform);
   }
 
-  obj.renderOrder = 1;
+  obj.renderOrder = FEATURE_RENDER_ORDER;
 
   if (!obj.userData.draped) {
     scenes.main.add(obj);
