@@ -1,0 +1,3 @@
+export const FEATURE_RENDER_ORDER = 1;
+export const SKY_RENDER_ORDER = 100;
+export const STARS_RENDER_ORDER = SKY_RENDER_ORDER + 1;

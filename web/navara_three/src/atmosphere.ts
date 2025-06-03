@@ -1,6 +1,7 @@
 import { EventHandler } from "@navara/core";
 import {
   AerialPerspectiveEffect,
+  getECIToECEFRotationMatrix,
   getMoonDirectionECEF,
   getSunDirectionECEF,
   PrecomputedTexturesLoader,
@@ -16,11 +17,16 @@ import {
   Mesh,
   PlaneGeometry,
   Vector3,
+  Matrix4,
   type PerspectiveCamera,
   type Scene,
   type WebGLRenderer,
 } from "three";
 import invariant from "tiny-invariant";
+
+import { ATMOSPHERE_ASSETS_URL } from "./constants";
+import { DEFAULT_STARS_OPTIONS, Stars, type StarsOptions } from "./mesh";
+import { SKY_RENDER_ORDER } from "./renderOrder";
 
 export type AtmosphereEvents = {
   _needsUpdate: () => void;
@@ -29,14 +35,24 @@ export type AtmosphereEvents = {
 export type AtmosphereOptions = {
   aerialPerspective?: boolean;
   sky?: boolean;
+
+  stars?: boolean;
+  starsPointSize?: StarsOptions["pointSize"];
+  starsRadianceScale?: StarsOptions["radianceScale"];
+
   sun?: boolean;
-  moon?: boolean;
   sunLight?: boolean;
   sunLightColor?: Color;
   sunLightIntensity?: number;
+
+  moon?: boolean;
+  moonScale?: number;
+  moonIntensity?: number;
+
   ambientLight?: boolean;
   ambientLightColor?: Color;
   ambientLightIntensity?: number;
+
   date?: Date;
   photometric?: boolean;
   inscatter?: boolean;
@@ -45,14 +61,26 @@ export type AtmosphereOptions = {
 
 const DEFAULT_LIGHT_COLOR = new Color(0xffffff);
 
+// https://github.com/takram-design-engineering/three-geospatial/blob/2536eb9ea9ff6690d304aa744a777c2f11b06178/packages/atmosphere/src/SkyMaterial.ts#L53
+const BASE_MOON_ANGULAR_RADIUS = 0.0045;
+
 export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   aerialPerspective: true,
   sky: true,
+
+  stars: true,
+  starsPointSize: DEFAULT_STARS_OPTIONS.pointSize,
+  starsRadianceScale: DEFAULT_STARS_OPTIONS.radianceScale,
+
   sun: true,
-  moon: true,
   sunLight: true,
   sunLightColor: DEFAULT_LIGHT_COLOR.clone(),
   sunLightIntensity: 1,
+
+  moon: true,
+  moonScale: 1,
+  moonIntensity: 1,
+
   ambientLight: false,
   ambientLightColor: DEFAULT_LIGHT_COLOR.clone(),
   ambientLightIntensity: 1,
@@ -70,6 +98,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
   private sunDirection = new Vector3();
   private moonDirection = new Vector3();
+  private rotationMatrix = new Matrix4();
 
   private textures?: PrecomputedTextures;
 
@@ -80,6 +109,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private skyLightProbe?: SkyLightProbe;
   private sunLightObj?: SunDirectionalLight;
   private ambientLightObj?: AmbientLight;
+  private starsMesh?: Stars;
 
   private options: Required<AtmosphereOptions>;
   private needsUpdate = false;
@@ -104,20 +134,25 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     }
   }
 
+  onUpdate = () => {
+    this.needsUpdate = true;
+    this.emit("_needsUpdate");
+  };
+
+  async initTextures() {
+    if (this.textures) return;
+    this.textures = await new PrecomputedTexturesLoader()
+      .setTypeFromRenderer(this.renderer)
+      .loadAsync(ATMOSPHERE_ASSETS_URL);
+  }
+
   private async init() {
-    if (!this.textures) {
-      this.textures = await new PrecomputedTexturesLoader()
-        .setTypeFromRenderer(this.renderer)
-        .loadAsync(
-          new URL(
-            `${import.meta.env.BASE_URL}assets/atmosphere`,
-            import.meta.url,
-          ).toString(),
-        );
-    }
+    await this.initTextures();
+    invariant(this.textures);
 
     this.addAerialPerspective();
     this.addSky();
+    this.addStars();
     this.addSkyLightProbe();
     this.addSunLight();
 
@@ -127,8 +162,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
         this.textures.transmittanceTexture;
     }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   private addAerialPerspective() {
@@ -152,7 +186,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   // Remove resources related to the aerial perspective.
   private removeAerialPerspectiveRelated() {
     this.removeAerialPerspective();
-    this.removeSky();
     this.removeSkyLightProbe();
     if (this.sunLightObj) {
       // SunDirectionalLight calculates the sun color from the transmittance texture automatically whenever `transmittanceTexture` is there.
@@ -162,14 +195,14 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.sunLightObj.color.copy(this.options.sunLightColor);
     }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   // Dispose all objects related to atmosphere.
   dispose() {
     this.removeAerialPerspective();
     this.removeSky();
+    this.removeStars();
     this.removeSkyLightProbe();
     this.removeSunLight();
     this.removeAmbientLight();
@@ -182,7 +215,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.effect = undefined;
   }
 
-  private addSky() {
+  private async addSky() {
     if (this.skyMesh || !this.options.sky) return;
 
     const skyMaterial = new SkyMaterial({
@@ -191,8 +224,14 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     });
     this.skyMesh = new Mesh(new PlaneGeometry(2, 2), skyMaterial);
     this.skyMesh.frustumCulled = false;
+    this.skyMesh.renderOrder = SKY_RENDER_ORDER;
 
+    this.moonScale = this.options.moonScale;
+    this.moonIntensity = this.options.moonIntensity;
+
+    await this.initTextures();
     invariant(this.textures);
+
     Object.assign(skyMaterial, this.textures);
 
     this.scene.add(this.skyMesh);
@@ -204,12 +243,39 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.skyMesh = undefined;
   }
 
-  private addSkyLightProbe() {
+  private async addStars() {
+    if (this.starsMesh || !this.options.stars) return;
+
+    const starsMesh = await Stars.fromUrl();
+    if (!starsMesh) return;
+
+    this.starsMesh = starsMesh;
+
+    await this.initTextures();
+    invariant(this.textures);
+
+    Object.assign(this.starsMesh.material, this.textures);
+
+    this.starsMesh.addEventListener("_needsUpdate", this.onUpdate);
+
+    this.scene.add(this.starsMesh);
+  }
+
+  private removeStars() {
+    if (!this.starsMesh) return;
+    this.starsMesh.removeEventListener("_needsUpdate", this.onUpdate);
+    this.scene.remove(this.starsMesh);
+    this.starsMesh = undefined;
+  }
+
+  private async addSkyLightProbe() {
     if (this.skyLightProbe) return;
 
     this.skyLightProbe = new SkyLightProbe();
 
+    await this.initTextures();
     invariant(this.textures);
+
     this.skyLightProbe.irradianceTexture = this.textures.irradianceTexture;
 
     this.scene.add(this.skyLightProbe);
@@ -221,14 +287,16 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.skyLightProbe = undefined;
   }
 
-  private addSunLight() {
+  private async addSunLight() {
     if (this.sunLightObj || !this.options.sunLight) return;
 
     this.sunLightObj = new SunDirectionalLight({ distance: 300 });
     this.sunLightObj.intensity = this.options.sunLightIntensity;
 
     if (this.aerialPerspective) {
+      await this.initTextures();
       invariant(this.textures);
+
       this.sunLightObj.transmittanceTexture =
         this.textures.transmittanceTexture;
     } else {
@@ -276,44 +344,56 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   _update() {
     // Camera related
     const position = this.camera.position;
-    if (this.options.sunLight) {
+    if (this.sunLight) {
       this.sunLightObj?.target.position.copy(position);
+    }
+    if (this.aerialPerspective) {
+      this.skyLightProbe?.position.copy(position);
     }
 
     if (this.needsUpdate) {
       getSunDirectionECEF(this.options.date, this.sunDirection);
+      getMoonDirectionECEF(this.options.date, this.moonDirection);
+      getECIToECEFRotationMatrix(this.options.date, this.rotationMatrix);
 
       // Sun light
-      if (this.options.sunLight) {
+      if (this.sunLight) {
         this.sunLightObj?.sunDirection.copy(this.sunDirection);
       }
-    }
 
-    if (this.options.aerialPerspective) {
-      this.skyLightProbe?.position.copy(position);
-
-      if (this.needsUpdate) {
+      if (this.aerialPerspective) {
         // Sun
         this.effect?.sunDirection.copy(this.sunDirection);
         this.skyLightProbe?.sunDirection.copy(this.sunDirection);
-        if (this.sky) {
-          this.skyMesh?.material.sunDirection.copy(this.sunDirection);
-        }
 
         // Moon
-        getMoonDirectionECEF(this.options.date, this.moonDirection);
         this.effect?.moonDirection.copy(this.moonDirection);
-        if (this.options.moon) {
+      }
+
+      // Sky
+      if (this.sky) {
+        if (this.sun) {
+          this.skyMesh?.material.sunDirection.copy(this.sunDirection);
+        }
+        if (this.moon) {
           this.skyMesh?.material.moonDirection.copy(this.moonDirection);
         }
       }
 
-      this.skyLightProbe?.update();
+      // Stars
+      if (this.stars) {
+        this.starsMesh?.material.sunDirection.copy(this.sunDirection);
+        this.starsMesh?.setRotationFromMatrix(this.rotationMatrix);
+      }
     }
 
     this.needsUpdate = false;
 
-    if (this.options.sunLight) {
+    if (this.aerialPerspective) {
+      this.skyLightProbe?.update();
+    }
+
+    if (this.sunLight) {
       this.sunLightObj?.update();
     }
   }
@@ -334,8 +414,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.removeAerialPerspectiveRelated();
     }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get sky() {
@@ -346,13 +425,52 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.options.sky = v;
 
     if (v) {
-      this.addSky();
+      this.addSky().then(this.onUpdate);
     } else {
       this.removeSky();
+      this.onUpdate();
     }
+  }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+  get stars() {
+    return this.options.stars;
+  }
+  set stars(v: boolean) {
+    if (this.options.stars === v) return;
+    this.options.stars = v;
+
+    if (v) {
+      this.addStars().then(this.onUpdate);
+    } else {
+      this.removeStars();
+      this.onUpdate();
+    }
+  }
+
+  get starsPointSize() {
+    return this.options.starsPointSize;
+  }
+  set starsPointSize(v: number) {
+    if (this.options.starsPointSize === v) return;
+    this.options.starsPointSize = v;
+
+    if (!this.starsMesh) return;
+    this.starsMesh.pointSize = v;
+
+    this.onUpdate();
+  }
+
+  get starsRadianceScale() {
+    return this.options.starsRadianceScale;
+  }
+  set starsRadianceScale(v: number) {
+    if (this.options.starsRadianceScale === v) return;
+    this.options.starsRadianceScale = v;
+
+    if (!this.starsMesh) return;
+    this.starsMesh.radianceScale = v;
+
+    this.onUpdate();
   }
 
   get sun() {
@@ -366,8 +484,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.skyMesh.material.sun = v;
     }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get sunLight() {
@@ -378,13 +495,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.options.sunLight = v;
 
     if (v) {
-      this.addSunLight();
+      this.addSunLight().then(this.onUpdate);
     } else {
       this.removeSunLight();
+      this.onUpdate();
     }
-
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
   }
 
   get sunLightColor() {
@@ -397,8 +512,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.sunLightObj) return;
     this.sunLightObj.color.copy(this.options.sunLightColor);
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get sunLightIntensity() {
@@ -411,8 +525,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.sunLightObj) return;
     this.sunLightObj.intensity = this.options.sunLightIntensity;
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get ambientLight() {
@@ -428,8 +541,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.removeAmbientLight();
     }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get ambientLightColor() {
@@ -441,8 +553,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.ambientLightObj?.color.copy(this.options.ambientLightColor);
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get ambientLightIntensity() {
@@ -455,8 +566,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.ambientLightObj) return;
     this.ambientLightObj.intensity = this.options.ambientLightIntensity;
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get moon() {
@@ -470,8 +580,42 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.skyMesh.material.moon = v;
     }
 
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
+  }
+
+  get moonScale() {
+    return this.options.moonScale;
+  }
+  set moonScale(v: number) {
+    if (this.options.moonScale === v) return;
+    this.options.moonScale = v;
+
+    if (!this.skyMesh) return;
+    this.skyMesh.material.moonAngularRadius =
+      BASE_MOON_ANGULAR_RADIUS * this.options.moonScale;
+
+    if (this.effect) {
+      this.effect.moonAngularRadius = this.skyMesh.material.lunarRadianceScale;
+    }
+
+    this.onUpdate();
+  }
+
+  get moonIntensity() {
+    return this.options.moonIntensity;
+  }
+  set moonIntensity(v: number) {
+    if (this.options.moonIntensity === v) return;
+    this.options.moonIntensity = v;
+
+    if (!this.skyMesh) return;
+    this.skyMesh.material.lunarRadianceScale = this.options.moonIntensity;
+
+    if (this.effect) {
+      this.effect.lunarRadianceScale = this.skyMesh.material.lunarRadianceScale;
+    }
+
+    this.onUpdate();
   }
 
   get date() {
@@ -479,8 +623,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
   set date(v: Date) {
     this.options.date = v;
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get photometric() {
@@ -490,8 +633,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.effect) return;
     this.options.photometric = v;
     this.effect.photometric = v;
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get inscatter() {
@@ -501,8 +643,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.effect) return;
     this.options.inscatter = v;
     this.effect.inscatter = v;
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 
   get transmittance() {
@@ -512,7 +653,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (!this.effect) return;
     this.options.transmittance = v;
     this.effect.transmittance = v;
-    this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.onUpdate();
   }
 }

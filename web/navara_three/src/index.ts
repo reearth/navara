@@ -419,13 +419,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
     this._effectComposer.addPass(this._renderPass);
 
-    // AA
-    const aaEffect = selectAntialiasEffect(options.antialias);
-    if (aaEffect) {
-      const aaPass = new EffectPass(this.camera.innerCam, aaEffect);
-      this._effectComposer.addPass(aaPass);
-    }
-
     this.atmosphere = new Atmosphere(
       this.effectComposer,
       this.scene,
@@ -465,6 +458,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       options.dithering,
     );
     this.ditheringEffect.on("_needsUpdate", this.forceUpdate);
+
+    // AA
+    const aaEffect = selectAntialiasEffect(options.antialias);
+    if (aaEffect) {
+      const aaPass = new EffectPass(this.camera.innerCam, aaEffect);
+      this._effectComposer.addPass(aaPass);
+    }
 
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);

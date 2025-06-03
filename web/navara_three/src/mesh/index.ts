@@ -12,3 +12,4 @@ export * from "./instancedBillboard";
 export * from "./instancedText";
 export * from "./batchTexture";
 export * from "./tile";
+export * from "./stars";

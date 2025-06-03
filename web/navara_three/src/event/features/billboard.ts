@@ -2,6 +2,7 @@ import type { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import { InstancedBillboardMesh } from "../../mesh";
+import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { CommonUniforms } from "../../uniforms";
 
 export async function renderBillboard(
@@ -11,7 +12,9 @@ export async function renderBillboard(
 ) {
   if (!m.material.url) return;
 
-  const mesh = new InstancedBillboardMesh({ renderOrder: 1 });
+  const mesh = new InstancedBillboardMesh({
+    renderOrder: FEATURE_RENDER_ORDER,
+  });
   await mesh._init(m, buf, uniforms);
 
   return mesh;
