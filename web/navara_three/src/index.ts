@@ -6,8 +6,7 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initializeWorkerPool } from "@navara/worker";
-import { DitheringEffect } from "@takram/three-geospatial-effects";
-import { EffectComposer, EffectPass } from "postprocessing";
+import { EffectComposer } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -26,15 +25,15 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { selectAntialiasEffect, type Antialias } from "./antialias";
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
-  Effect,
+  Antialias,
   LensFlare,
   SSAO,
   ToneMapping,
+  type AntialiasOptions,
   type EffectOptions,
   type LensFlareOptions,
   type SSAOOptions,
@@ -82,14 +81,9 @@ export {
 export * from "./type";
 export * from "./constants";
 export * from "./light";
-export * from "./antialias";
 export * from "./mesh";
 export * from "./layer";
-export {
-  ToneMappingMode,
-  type ToneMappingOptions,
-  type EffectOptions,
-} from "./effects";
+export * from "./effects";
 
 export type Options = {
   container?: HTMLElement;
@@ -103,7 +97,7 @@ export type Options = {
   globeScene?: Scene;
   camera?: PerspectiveCamera;
   renderer?: WebGLRenderer;
-  antialias?: Antialias;
+  antialias?: AntialiasOptions;
   light?: Light;
   atmosphere?: AtmosphereOptions;
   backgroundColor?: number;
@@ -139,8 +133,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   // Effects
   toneMappingEffect: ToneMapping;
   lensFlareEffect: LensFlare;
-  ditheringEffect: Effect<DitheringEffect>;
   ssaoEffect: SSAO;
+  aaEffect: Antialias;
 
   private _scenes: Scenes;
   private _effectComposer: EffectComposer;
@@ -430,6 +424,15 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
+    this.ssaoEffect = new SSAO(
+      this._effectComposer,
+      this.scene,
+      this.camera.innerCam,
+      width,
+      height,
+      options.ssao,
+    );
+    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
@@ -442,29 +445,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       options.toneMapping,
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
-    this.ssaoEffect = new SSAO(
-      this._effectComposer,
-      this.scene,
-      this.camera.innerCam,
-      width,
-      height,
-      options.ssao,
-    );
-    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
-    this.ditheringEffect = new Effect(
+    this.aaEffect = new Antialias(
       this._effectComposer,
       this.camera.innerCam,
-      DitheringEffect,
-      options.dithering,
+      options.antialias,
+      4, // Antialias effect is applied lazily, so need to set an index to keep the order.
     );
-    this.ditheringEffect.on("_needsUpdate", this.forceUpdate);
-
-    // AA
-    const aaEffect = selectAntialiasEffect(options.antialias);
-    if (aaEffect) {
-      const aaPass = new EffectPass(this.camera.innerCam, aaEffect);
-      this._effectComposer.addPass(aaPass);
-    }
+    this.aaEffect.on("_needsUpdate", this.forceUpdate);
 
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);

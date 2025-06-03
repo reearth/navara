@@ -63,6 +63,7 @@ export const run = async (view: ThreeView) => {
   addTileControl(view, pane);
   addDateControl(view, pane);
   addAtmosphereControl(view, pane);
+  addAAControl(view, pane);
   addIBLControl(view, pane);
   addEffectsControl(view, pane);
 };
@@ -257,6 +258,53 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   });
 };
 
+const addAAControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    enable: false,
+    effect: "smaa",
+    quality: "medium",
+    edgeDetectionMode: "color",
+  } as const;
+
+  view.aaEffect.enabled = PARAMS.enable;
+  view.aaEffect.effect = PARAMS.effect;
+  view.aaEffect.quality = PARAMS.quality;
+  view.aaEffect.edgeDetectionMode = PARAMS.edgeDetectionMode;
+
+  const folder = pane.addFolder({
+    title: "Antialias",
+  });
+
+  folder.addBinding(PARAMS, "enable").on("change", (v) => {
+    view.aaEffect.enabled = v.value;
+  });
+  folder
+    .addBinding(PARAMS, "effect", {
+      options: Object.fromEntries(["smaa", "fxaa"].map((k) => [k, k])),
+    })
+    .on("change", (v) => {
+      view.aaEffect.effect = v.value;
+    });
+  folder
+    .addBinding(PARAMS, "quality", {
+      options: Object.fromEntries(
+        ["ultra", "high", "medium", "low"].map((k) => [k, k]),
+      ),
+    })
+    .on("change", (v) => {
+      view.aaEffect.quality = v.value;
+    });
+  folder
+    .addBinding(PARAMS, "edgeDetectionMode", {
+      options: Object.fromEntries(
+        ["depth", "luma", "color"].map((k) => [k, k]),
+      ),
+    })
+    .on("change", (v) => {
+      view.aaEffect.edgeDetectionMode = v.value;
+    });
+};
+
 // Advanced
 const addIBLControl = (view: ThreeView, pane: Pane) => {
   const PARAMS = {
@@ -317,7 +365,6 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
   view.toneMappingExposure = PARAMS.toneMappingExposure;
   view.lensFlareEffect.enabled = PARAMS.lensFlare;
   view.lensFlareEffect.intensity = PARAMS.lensFlareIntensity;
-  view.ditheringEffect.enabled = PARAMS.dithering;
   view.ssaoEffect.enabled = PARAMS.ssao;
 
   const folder = pane.addFolder({
@@ -347,9 +394,6 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     .on("change", (v) => {
       view.lensFlareEffect.intensity = v.value;
     });
-  folder.addBinding(PARAMS, "dithering").on("change", (v) => {
-    view.ditheringEffect.enabled = v.value;
-  });
   folder.addBinding(PARAMS, "ssao").on("change", (v) => {
     view.ssaoEffect.enabled = v.value;
   });
