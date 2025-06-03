@@ -5,18 +5,25 @@ export function registerInputEvents(
   core: Core,
   element: HTMLElement,
 ): () => void {
+  let mouseEvent:
+    | {
+        type: "mousedown" | "mouseup";
+        button: number;
+      }
+    | undefined;
   const mousedown = (event: MouseEvent) => {
-    core.input({
+    mouseEvent = {
       type: "mousedown",
       button: event.button,
-    });
+    };
+    core.input(mouseEvent);
   };
-
-  const mouseup = (event: MouseEvent) => {
+  const mouseup = () => {
     core.input({
+      ...(mouseEvent ?? {}),
       type: "mouseup",
-      button: event.button,
     });
+    mouseEvent = undefined;
   };
 
   const mousemove = (event: MouseEvent) => {
@@ -48,13 +55,21 @@ export function registerInputEvents(
   const keyup = (event: KeyboardEvent) => {
     core.input({
       type: "keyup",
-      key_code: event.code,
-      key: event.key,
+      key_code: event?.code,
+      key: event?.key,
+    });
+  };
+  // This is used to emit a key up event without any params.
+  const keyupEmpty = () => {
+    core.input({
+      type: "keyup",
     });
   };
 
   element.addEventListener("mousedown", mousedown);
   element.addEventListener("mouseup", mouseup);
+  element.addEventListener("mouseleave", mouseup);
+  element.addEventListener("mouseleave", keyupEmpty);
   element.addEventListener("mousemove", mousemove);
   element.addEventListener("wheel", wheel);
   document.addEventListener("keydown", keydown);
@@ -63,6 +78,8 @@ export function registerInputEvents(
   return () => {
     element.removeEventListener("mousedown", mousedown);
     element.removeEventListener("mouseup", mouseup);
+    element.removeEventListener("mouseleave", mouseup);
+    element.removeEventListener("mouseleave", keyupEmpty);
     element.removeEventListener("mousemove", mousemove);
     element.removeEventListener("wheel", wheel);
     document.removeEventListener("keydown", keydown);
