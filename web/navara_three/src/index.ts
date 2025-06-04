@@ -413,15 +413,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
     this._effectComposer.addPass(this._renderPass);
 
-    this.atmosphere = new Atmosphere(
-      this.effectComposer,
-      this.scene,
-      this.renderer,
-      this.camera.innerCam,
-      options.atmosphere,
-    );
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
-
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
     this.ssaoEffect = new SSAO(
@@ -449,8 +440,18 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._effectComposer,
       this.camera.innerCam,
       options.antialias,
+      3, // Antialias effect is applied lazily, so need to set an index to keep the order.
     );
     this.aaEffect.on("_needsUpdate", this.forceUpdate);
+
+    this.atmosphere = new Atmosphere(
+      this.effectComposer,
+      this.scene,
+      this.renderer,
+      this.camera.innerCam,
+      options.atmosphere,
+    );
+    this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
