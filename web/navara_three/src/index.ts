@@ -5,6 +5,7 @@ import initCore, {
   CameraDirection,
   type TextureFragmentStatus,
 } from "@navara/engine";
+import initApi from "@navara/engine-api";
 import { initializeWorkerPool } from "@navara/worker";
 import { EffectComposer } from "postprocessing";
 import {
@@ -532,6 +533,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
 
     await initCore();
+    await initApi();
 
     this._core = new Core(newId());
     this._core.start();

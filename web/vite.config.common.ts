@@ -28,7 +28,7 @@ function watchPackages(packageNames: string[]): PluginOption {
 
 export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
-    watchPackages(["navara_wasm", "navara_wasm_worker"]),
+    watchPackages(["navara_wasm", "navara_wasm_worker", "navara_wasm_api"]),
     tsconfig(),
     dts({ rollupTypes: true }),
   ],
@@ -37,6 +37,7 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
     alias: {
       "@navara/engine": "navara_wasm",
       "@navara/engine-worker": "navara_wasm_worker",
+      "@navara/engine-api": "navara_wasm_api",
     },
   },
   build: {
@@ -48,7 +49,7 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
     outDir: "dist",
     emptyOutDir: false,
     rollupOptions: {
-      external: ["@navara/engine", "@navara/engine-worker"],
+      external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-api"],
     },
     watch:
       env.mode === "watch"

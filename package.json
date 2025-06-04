@@ -39,6 +39,7 @@
     "eslint-config-reearth": "^0.3.8",
     "navara_wasm": "workspace:*",
     "navara_wasm_worker": "workspace:*",
+    "navara_wasm_api": "workspace:*",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",

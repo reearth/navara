@@ -1,6 +1,7 @@
 extend = [
     { path = "makes/rust.toml" },
     { path = "makes/rust-worker.toml" },
+    { path = "makes/rust-api.toml" },
     { path = "makes/web.toml" },
 ]
 
@@ -13,10 +14,10 @@ PROJ_NAME = "navara"
 
 [tasks.prepare]
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
-run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "install-deps-web"] }
+run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api","install-deps-web"] }
 
 [tasks.build-dev]
-run_task = { name = ["build-dev-rust", "build-dev-rust-worker"] }
+run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api"] }
 
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
@@ -37,13 +38,13 @@ run_task = { name = ["format-rust", "format-web"], parallel = true }
 run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
 
 [tasks.build-example]
-run_task = { name = ["build-rust", "build-rust-worker", "build-web-example"] }
+run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build-web-example"] }
 
 [tasks.build]
-run_task = { name = ["build-rust", "build-rust-worker", "build-web"] }
+run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build-web"] }
 
 [tasks.watch]
-run_task = { name = ["watch-rust", "watch-rust-worker"], parallel = true }
+run_task = { name = ["watch-rust", "watch-rust-worker", "watch-rust-api"], parallel = true }
 
 [tasks.doc]
 run_task = { name = ["doc-rust"] }
