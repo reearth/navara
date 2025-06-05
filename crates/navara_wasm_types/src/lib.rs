@@ -12,6 +12,7 @@ mod texture_fragment;
 mod tile;
 mod unit;
 mod view;
+mod coords;
 
 pub use appearance::*;
 pub use attribute::*;
@@ -26,3 +27,4 @@ pub use texture_fragment::*;
 pub use tile::*;
 pub use unit::*;
 pub use view::*;
+pub use coords::*;

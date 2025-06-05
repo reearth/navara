@@ -11,3 +11,4 @@ crate-type = ["cdylib", "rlib"]
 wasm-bindgen.workspace = true
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
+navara_wasm_types = { path = "../navara_wasm_types" }

@@ -23,5 +23,7 @@
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/three": "^0.176.0"
+  }
 }

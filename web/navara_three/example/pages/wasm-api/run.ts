@@ -49,7 +49,7 @@ export const run = async (view: ThreeView) => {
     }
 
     const pos = geodeticToVector3(lng, lat, 1000000);
-    sphere.position.set(pos[0], pos[1], pos[2]);
+    sphere.position.set(pos.x, pos.y, pos.z);
 
     view.forceUpdate();
     requestAnimationFrame(animateFunc);
