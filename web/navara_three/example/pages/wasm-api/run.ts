@@ -1,6 +1,6 @@
 import ThreeView from "@navara/three";
 import { AxesHelper, SphereGeometry, MeshPhongMaterial, Mesh } from "three";
-import { geodeticToVector3 } from "@navara/three_api";
+import { initNavaraApi, geodeticToVector3 } from "@navara/three_api";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -11,6 +11,7 @@ const tileUrls = {
 
 export const run = async (view: ThreeView) => {
   await view.init();
+  await initNavaraApi();
 
   view.addLayer({
     type: "tiles",
