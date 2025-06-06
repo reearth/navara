@@ -71,8 +71,6 @@ pub struct Cesium3dTileContent {
 
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
-        //info!("OVERALL: {:?}", tile);
-
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.box_, bv.sphere) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
