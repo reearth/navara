@@ -2,6 +2,7 @@
 mod appearance;
 mod attribute;
 mod camera;
+mod coords;
 mod crs;
 mod extent;
 mod feature;
@@ -12,11 +13,11 @@ mod texture_fragment;
 mod tile;
 mod unit;
 mod view;
-mod coords;
 
 pub use appearance::*;
 pub use attribute::*;
 pub use camera::*;
+pub use coords::*;
 pub use crs::*;
 pub use extent::*;
 pub use feature::*;
@@ -27,4 +28,3 @@ pub use texture_fragment::*;
 pub use tile::*;
 pub use unit::*;
 pub use view::*;
-pub use coords::*;
