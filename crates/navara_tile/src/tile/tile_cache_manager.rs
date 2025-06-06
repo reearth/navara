@@ -1,7 +1,8 @@
 use bevy_ecs::{
     entity::Entity,
+    prelude::Resource,
     query::{With, Without},
-    system::{Query, Resource},
+    system::Query,
 };
 use fxhash::{FxHashMap, FxHashSet};
 use navara_component::Deleted;

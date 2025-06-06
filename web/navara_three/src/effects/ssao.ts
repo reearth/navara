@@ -40,16 +40,23 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     this.intensity = intensity;
     const color = this.color;
     this.color = color;
+  }
 
+  protected onAdded(): void {
+    if (!this.pass) return;
     this.pass.configuration.gammaCorrection = false;
   }
+
   get samples() {
     return this.options.samples ?? DEFAULT_SSAO_OPTIONS.samples;
   }
   set samples(v: number) {
     if (this.options.samples === v) return;
     this.options.samples = v;
+
+    if (!this.pass) return;
     this.pass.configuration.aoSamples = v;
+
     this.emit("_needsUpdate");
   }
   get radius() {
@@ -58,7 +65,10 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
   set radius(v: number) {
     if (this.options.radius === v) return;
     this.options.radius = v;
+
+    if (!this.pass) return;
     this.pass.configuration.aoRadius = v;
+
     this.emit("_needsUpdate");
   }
   get intensity() {
@@ -67,7 +77,10 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
   set intensity(v: number) {
     if (this.options.intensity === v) return;
     this.options.intensity = v;
+
+    if (!this.pass) return;
     this.pass.configuration.intensity = v;
+
     this.emit("_needsUpdate");
   }
   get color() {
@@ -76,7 +89,10 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
   set color(v: Color) {
     if (this.options.color === v) return;
     this.options.color = v;
+
+    if (!this.pass) return;
     this.pass.configuration.color = v;
+
     this.emit("_needsUpdate");
   }
 }

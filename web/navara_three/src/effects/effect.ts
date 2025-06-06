@@ -24,19 +24,19 @@ export class Pass<
   O extends EffectOptions = EffectOptions,
 > extends EventHandler<EffectEvents> {
   private composer: EffectComposer;
-  protected pass: P;
+  protected pass?: P;
   protected options: O;
+  // TODO: Update the index dynamically.
+  index?: number;
 
-  constructor(composer: EffectComposer, pass: P, options?: O) {
+  constructor(composer: EffectComposer, pass?: P, options?: O, index?: number) {
     super();
 
     this.composer = composer;
-    this.pass = pass;
     this.options = { ...(options ?? {}) } as O;
+    this.index = index;
 
-    this.composer.addPass(this.pass);
-
-    this.pass.enabled = this.enabled;
+    this.set(pass);
   }
 
   get enabled() {
@@ -45,8 +45,26 @@ export class Pass<
   set enabled(v: boolean) {
     if (this.options.enabled === v) return;
     this.options.enabled = v;
+
+    if (!this.pass) return;
     this.pass.enabled = v;
+
     this.emit("_needsUpdate");
+  }
+
+  protected onAdded() {}
+
+  protected set(pass?: P) {
+    if (this.pass) {
+      this.composer.removePass(this.pass);
+    }
+
+    this.pass = pass;
+    if (this.pass) {
+      this.composer.addPass(this.pass, this.index);
+      this.pass.enabled = this.enabled;
+      this.onAdded();
+    }
   }
 }
 

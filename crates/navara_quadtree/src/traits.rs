@@ -5,7 +5,7 @@ use num::PrimInt;
 use crate::{child_coords, utils::to_int, Coords, QuadLeafHandle};
 
 #[cfg(feature = "bevy")]
-pub trait Resource: bevy_ecs::system::Resource {}
+pub trait Resource: bevy_ecs::prelude::Resource {}
 #[cfg(not(feature = "bevy"))]
 pub trait Resource {}
 

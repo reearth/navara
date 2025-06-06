@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_ecs::{event::Event, system::Resource};
+use bevy_ecs::{event::Event, prelude::Resource};
 
 use navara_math::FloatType;
 

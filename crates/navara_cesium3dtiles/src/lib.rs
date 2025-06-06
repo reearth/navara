@@ -6,7 +6,7 @@ mod b3dm;
 mod cesium3dtiles;
 mod glb;
 
-use bevy_ecs::schedule::IntoSystemConfigs;
+use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use cesium3dtiles::*;
 
 pub struct Cesium3dTilesPlugin;

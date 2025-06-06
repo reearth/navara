@@ -6,7 +6,7 @@ use bevy_ecs::{
     entity::Entity,
     event::EventReader,
     query::{Added, With, Without},
-    schedule::IntoSystemConfigs,
+    schedule::IntoScheduleConfigs,
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::{BufferStore, BufferStoreFailedEvent, BufferStoreLoadedEvent, Handle};

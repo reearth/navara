@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
-use bevy_ecs::schedule::IntoSystemConfigs;
+use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_feature_component::batch::{
     BatchTable, FeatureBatchIdMap, IdPropertySelections, IdPropertyTable,
 };

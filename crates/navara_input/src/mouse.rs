@@ -1,7 +1,8 @@
 use bevy_ecs::{
     entity::Entity,
     event::{Event, EventReader, EventWriter},
-    system::{ResMut, Resource},
+    prelude::Resource,
+    system::ResMut,
 };
 
 use bevy_input::{mouse::MouseMotion, ButtonState};
@@ -79,7 +80,7 @@ pub fn trigger_mouse_motion_event(
         res.x = event.x;
         res.y = event.y;
         if delta_x != 0.0 || delta_y != 0.0 {
-            motion.send(MouseMotion {
+            motion.write(MouseMotion {
                 delta: Vec2::new(delta_x, delta_y),
             });
         }

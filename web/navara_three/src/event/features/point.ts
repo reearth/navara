@@ -2,6 +2,7 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import { InstancedPointMesh } from "../../mesh";
+import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { CommonUniforms } from "../../uniforms";
 
 export async function renderPoint(
@@ -9,7 +10,9 @@ export async function renderPoint(
   buf: BufferLoader,
   uniforms: CommonUniforms,
 ) {
-  return new InstancedPointMesh(m, buf, uniforms, { renderOrder: 1 });
+  return new InstancedPointMesh(m, buf, uniforms, {
+    renderOrder: FEATURE_RENDER_ORDER,
+  });
 }
 
 export function processPointChanged(

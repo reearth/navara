@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use bevy_app::{Plugin, PreUpdate};
-use bevy_ecs::system::{ResMut, Resource};
+use bevy_ecs::{prelude::Resource, system::ResMut};
 
 pub struct FramePlugin;
 

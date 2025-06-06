@@ -63,6 +63,7 @@ export const run = async (view: ThreeView) => {
   addTileControl(view, pane);
   addDateControl(view, pane);
   addAtmosphereControl(view, pane);
+  addAAControl(view, pane);
   addIBLControl(view, pane);
   addEffectsControl(view, pane);
 };
@@ -181,9 +182,14 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     sky: true,
     sun: true,
     moon: true,
+    stars: true,
     sunLight: true,
     sunLightColor: "#FFFFFF",
     sunLightIntensity: 1,
+    moonScale: 1,
+    moonIntensity: 1,
+    starsPointSize: 1,
+    starsRadianceScale: 10,
     ambientLight: false,
     ambientLightColor: "#FFFFFF",
     ambientLightIntensity: 1,
@@ -208,11 +214,26 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "moon").on("change", (v) => {
     view.atmosphere.moon = v.value;
   });
+  folder.addBinding(PARAMS, "stars").on("change", (v) => {
+    view.atmosphere.stars = v.value;
+  });
   folder.addBinding(PARAMS, "sunLight").on("change", (v) => {
     view.atmosphere.sunLight = v.value;
   });
   folder.addBinding(PARAMS, "sunLightColor").on("change", (v) => {
     view.atmosphere.sunLightColor = new Color(v.value);
+  });
+  folder.addBinding(PARAMS, "moonScale").on("change", (v) => {
+    view.atmosphere.moonScale = v.value;
+  });
+  folder.addBinding(PARAMS, "moonIntensity").on("change", (v) => {
+    view.atmosphere.moonIntensity = v.value;
+  });
+  folder.addBinding(PARAMS, "starsPointSize").on("change", (v) => {
+    view.atmosphere.starsPointSize = v.value;
+  });
+  folder.addBinding(PARAMS, "starsRadianceScale").on("change", (v) => {
+    view.atmosphere.starsRadianceScale = v.value;
   });
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
     view.atmosphere.sunLightIntensity = v.value;
@@ -235,6 +256,53 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "transmittance").on("change", (v) => {
     view.atmosphere.transmittance = v.value;
   });
+};
+
+const addAAControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    enable: false,
+    effect: "smaa",
+    quality: "medium",
+    edgeDetectionMode: "color",
+  } as const;
+
+  view.aaEffect.enabled = PARAMS.enable;
+  view.aaEffect.effect = PARAMS.effect;
+  view.aaEffect.quality = PARAMS.quality;
+  view.aaEffect.edgeDetectionMode = PARAMS.edgeDetectionMode;
+
+  const folder = pane.addFolder({
+    title: "Antialias",
+  });
+
+  folder.addBinding(PARAMS, "enable").on("change", (v) => {
+    view.aaEffect.enabled = v.value;
+  });
+  folder
+    .addBinding(PARAMS, "effect", {
+      options: Object.fromEntries(["smaa", "fxaa"].map((k) => [k, k])),
+    })
+    .on("change", (v) => {
+      view.aaEffect.effect = v.value;
+    });
+  folder
+    .addBinding(PARAMS, "quality", {
+      options: Object.fromEntries(
+        ["ultra", "high", "medium", "low"].map((k) => [k, k]),
+      ),
+    })
+    .on("change", (v) => {
+      view.aaEffect.quality = v.value;
+    });
+  folder
+    .addBinding(PARAMS, "edgeDetectionMode", {
+      options: Object.fromEntries(
+        ["depth", "luma", "color"].map((k) => [k, k]),
+      ),
+    })
+    .on("change", (v) => {
+      view.aaEffect.edgeDetectionMode = v.value;
+    });
 };
 
 // Advanced
@@ -297,7 +365,6 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
   view.toneMappingExposure = PARAMS.toneMappingExposure;
   view.lensFlareEffect.enabled = PARAMS.lensFlare;
   view.lensFlareEffect.intensity = PARAMS.lensFlareIntensity;
-  view.ditheringEffect.enabled = PARAMS.dithering;
   view.ssaoEffect.enabled = PARAMS.ssao;
 
   const folder = pane.addFolder({
@@ -327,9 +394,6 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     .on("change", (v) => {
       view.lensFlareEffect.intensity = v.value;
     });
-  folder.addBinding(PARAMS, "dithering").on("change", (v) => {
-    view.ditheringEffect.enabled = v.value;
-  });
   folder.addBinding(PARAMS, "ssao").on("change", (v) => {
     view.ssaoEffect.enabled = v.value;
   });

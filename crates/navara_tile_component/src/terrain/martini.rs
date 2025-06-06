@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy_ecs::{component::Component, entity::Entity, system::Resource};
+use bevy_ecs::{component::Component, entity::Entity, prelude::Resource};
 
 #[derive(Component)]
 pub struct MartiniComponent {
