@@ -6,21 +6,16 @@ import {
   degreeToRadian,
   radianToDegree,
   LLE,
-} from "../../helpers/constants";
+} from "@navara/three_api";
 
-const tileUrls = {
-  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-  gsiSeamlessphoto:
-    "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-};
+import { TILE_URLS } from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
   await view.init();
 
   view.addLayer({
     type: "tiles",
-    data: { url: tileUrls.openstreetmap },
+    data: { url: TILE_URLS.openstreetmap },
     raster_tile: {
       max_zoom: 23,
     },
@@ -54,7 +49,9 @@ export const run = async (view: ThreeView) => {
       latStep = -latStep;
     }
 
-    const pos = geodeticToVector3(new LLE(lat, lng, 1000000));
+    const pos = geodeticToVector3(
+      new LLE(degreeToRadian(lat), degreeToRadian(lng), 1000000),
+    );
     sphere.position.set(pos.x, pos.y, pos.z);
 
     view.forceUpdate();
@@ -64,7 +61,11 @@ export const run = async (view: ThreeView) => {
 
   // vector3ToGeodetic
   const pos = geodeticToVector3(
-    new LLE(35.67564356091717, 139.75711454748298, 1000000),
+    new LLE(
+      degreeToRadian(35.67564356091717),
+      degreeToRadian(139.75711454748298),
+      1000000,
+    ),
   );
   const lle = vector3ToGeodetic(pos);
   console.log(`lng: ${lle.lng}, lat: ${lle.lat}, height: ${lle.height}`);

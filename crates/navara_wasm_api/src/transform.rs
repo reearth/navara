@@ -6,7 +6,7 @@ use navara_wasm_types::{Vec3 as Vec3Wasm, LLE};
 
 #[wasm_bindgen(js_name = geodeticToXyz)]
 pub fn geodetic_to_ecef(lle: LLE) -> Vec3Wasm {
-    let lle_pt = Vec3::new(lle.lng, lle.lat, lle.height);
+    let lle_pt = Vec3::new(lle.lng.to_degrees(), lle.lat.to_degrees(), lle.height);
 
     let ecef_pt = CRS::Geographic.to_vec3(WGS84_32, lle_pt, 0.0);
 
