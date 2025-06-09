@@ -42,6 +42,9 @@ importers:
       navara_wasm:
         specifier: workspace:*
         version: link:web/wasm/navara_engine
+      navara_wasm_api:
+        specifier: workspace:*
+        version: link:web/wasm/navara_engine_api
       navara_wasm_worker:
         specifier: workspace:*
         version: link:web/wasm/navara_engine_worker
@@ -71,6 +74,9 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/three_api':
+        specifier: workspace:*
+        version: link:../navara_three_api
       '@navara/worker':
         specifier: workspace:*
         version: link:../navara_worker
@@ -115,6 +121,15 @@ importers:
         specifier: ^1.12.1
         version: 1.12.1(@microsoft/api-extractor@7.52.8(@types/node@22.15.29))(postcss@8.5.3)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.29)(terser@5.39.0))
 
+  web/navara_three_api:
+    devDependencies:
+      '@types/three':
+        specifier: ^0.176.0
+        version: 0.176.0
+      three:
+        specifier: ^0.177.0
+        version: 0.177.0
+
   web/navara_worker:
     dependencies:
       '@navara/core':
@@ -125,6 +140,8 @@ importers:
         version: 9.3.2
 
   web/wasm/navara_engine: {}
+
+  web/wasm/navara_engine_api: {}
 
   web/wasm/navara_engine_worker: {}
 

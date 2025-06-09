@@ -2,6 +2,7 @@
 mod appearance;
 mod attribute;
 mod camera;
+mod coords;
 mod crs;
 mod extent;
 mod feature;
@@ -16,6 +17,7 @@ mod view;
 pub use appearance::*;
 pub use attribute::*;
 pub use camera::*;
+pub use coords::*;
 pub use crs::*;
 pub use extent::*;
 pub use feature::*;

@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@navara/core": "workspace:*",
+    "@navara/three_api": "workspace:*",
     "@navara/worker": "workspace:*",
     "postprocessing": "^6.37.3",
     "stats.js": "^0.17.0",
