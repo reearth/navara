@@ -8,16 +8,14 @@ import initApi, {
 } from "@navara/engine-api";
 import { Vector3 } from "three";
 
+export { LLE } from "@navara/engine-api";
+
 export async function initNavaraApi() {
   await initApi();
 }
 
-export function geodeticToVector3(
-  lng: number,
-  lat: number,
-  height: number,
-): Vector3 {
-  const pos = geodeticToXyz(new LLE(lat, lng, height));
+export function geodeticToVector3(lle: LLE): Vector3 {
+  const pos = geodeticToXyz(lle);
   return new Vector3(pos.x, pos.y, pos.z);
 }
 

@@ -5,7 +5,8 @@ import {
   vector3ToGeodetic,
   degreeToRadian,
   radianToDegree,
-} from "@navara/three_api";
+  LLE,
+} from "../../helpers/constants";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -53,7 +54,7 @@ export const run = async (view: ThreeView) => {
       latStep = -latStep;
     }
 
-    const pos = geodeticToVector3(lng, lat, 1000000);
+    const pos = geodeticToVector3(new LLE(lat, lng, 1000000));
     sphere.position.set(pos.x, pos.y, pos.z);
 
     view.forceUpdate();
@@ -62,7 +63,9 @@ export const run = async (view: ThreeView) => {
   animateFunc();
 
   // vector3ToGeodetic
-  const pos = geodeticToVector3(139.75711454748298, 35.67564356091717, 1000000);
+  const pos = geodeticToVector3(
+    new LLE(35.67564356091717, 139.75711454748298, 1000000),
+  );
   const lle = vector3ToGeodetic(pos);
   console.log(`lng: ${lle.lng}, lat: ${lle.lat}, height: ${lle.height}`);
 

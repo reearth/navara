@@ -30,11 +30,10 @@ impl<'a> From<&'a LLE> for navara_core::LLE<FloatType, Radians> {
 
 impl From<navara_core::LLE<FloatType, Radians>> for LLE {
     fn from(val: navara_core::LLE<FloatType, Radians>) -> Self {
-        let deg_val = val.deg();
         LLE {
-            lat: deg_val.lat.val(),
-            lng: deg_val.lng.val(),
-            height: deg_val.height.val(),
+            lat: val.lat.val(),
+            lng: val.lng.val(),
+            height: val.height.val(),
         }
     }
 }
