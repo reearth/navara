@@ -17,7 +17,7 @@ export { ToneMappingMode } from "postprocessing";
 export type EdgeDetectionMode = "color" | "depth" | "luma";
 
 export type AntialiasOptions = {
-  enabled: boolean;
+  enabled?: boolean;
   effect?: "fxaa" | "smaa";
   quality?: Quality;
   // Using `color` might blur a texture, but `depth` has no effect on a mesh that has no depth.
@@ -86,7 +86,6 @@ export class Antialias extends Pass<EffectPass, AntialiasOptions> {
     composer: EffectComposer,
     camera: Camera,
     options?: AntialiasOptions,
-    index?: number,
   ) {
     const effect = selectAntialiasEffect(options);
     let pass;
@@ -94,7 +93,7 @@ export class Antialias extends Pass<EffectPass, AntialiasOptions> {
       pass = new EffectPass(camera, effect);
     }
 
-    super(composer, pass, options, index);
+    super(composer, pass, options);
 
     this._effect = effect;
     this.camera = camera;
@@ -109,7 +108,7 @@ export class Antialias extends Pass<EffectPass, AntialiasOptions> {
   }
 
   get enabled() {
-    return this.options.enabled;
+    return !!this.options.enabled;
   }
   set enabled(v: boolean) {
     if (this.options.enabled === v) return;

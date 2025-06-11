@@ -72,4 +72,5 @@ export type PickedFeature = {
 
 export type RenderFlag = {
   forceUpdate: boolean;
+  animation: boolean;
 };

@@ -10,6 +10,7 @@ import {
   SunDirectionalLight,
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
+import type { CloudsEffectChangeEvent } from "@takram/three-clouds";
 import { EffectPass, type EffectComposer } from "postprocessing";
 import {
   AmbientLight,
@@ -24,7 +25,13 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { ATMOSPHERE_ASSETS_URL } from "./constants";
+import {
+  ATMOSPHERE_ASSETS_URL,
+  CLOUD_ASSETS_URL,
+  STARS_ASSETS_URL,
+  STBN_URL,
+} from "./constants";
+import { Clouds, DEFAULT_CLOUDS_OPTIONS, type CloudsOptions } from "./effects";
 import { DEFAULT_STARS_OPTIONS, Stars, type StarsOptions } from "./mesh";
 import { SKY_RENDER_ORDER } from "./renderOrder";
 
@@ -34,9 +41,11 @@ export type AtmosphereEvents = {
 
 export type AtmosphereOptions = {
   aerialPerspective?: boolean;
+  atmosphereAssetsUrl?: string;
   sky?: boolean;
 
   stars?: boolean;
+  starsAssetsUrl?: string;
   starsPointSize?: StarsOptions["pointSize"];
   starsRadianceScale?: StarsOptions["radianceScale"];
 
@@ -53,10 +62,18 @@ export type AtmosphereOptions = {
   ambientLightColor?: Color;
   ambientLightIntensity?: number;
 
+  clouds?: boolean;
+  cloudsAssetsUrl?: CloudsOptions["assetsUrl"];
+  stbnUrl?: CloudsOptions["stbnUrl"];
+  cloudsQualityPreset?: CloudsOptions["qualityPreset"];
+  cloudsLocalWeatherVelocity?: CloudsOptions["localWeatherVelocity"];
+
   date?: Date;
   photometric?: boolean;
   inscatter?: boolean;
   transmittance?: boolean;
+
+  index?: number | null | undefined;
 };
 
 const DEFAULT_LIGHT_COLOR = new Color(0xffffff);
@@ -66,9 +83,11 @@ const BASE_MOON_ANGULAR_RADIUS = 0.0045;
 
 export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   aerialPerspective: true,
+  atmosphereAssetsUrl: ATMOSPHERE_ASSETS_URL,
   sky: true,
 
   stars: true,
+  starsAssetsUrl: STARS_ASSETS_URL,
   starsPointSize: DEFAULT_STARS_OPTIONS.pointSize,
   starsRadianceScale: DEFAULT_STARS_OPTIONS.radianceScale,
 
@@ -81,6 +100,12 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   moonScale: 1,
   moonIntensity: 1,
 
+  clouds: true,
+  cloudsAssetsUrl: CLOUD_ASSETS_URL,
+  stbnUrl: STBN_URL,
+  cloudsQualityPreset: DEFAULT_CLOUDS_OPTIONS.qualityPreset,
+  cloudsLocalWeatherVelocity: DEFAULT_CLOUDS_OPTIONS.localWeatherVelocity,
+
   ambientLight: false,
   ambientLightColor: DEFAULT_LIGHT_COLOR.clone(),
   ambientLightIntensity: 1,
@@ -88,6 +113,8 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   photometric: true,
   inscatter: true,
   transmittance: true,
+
+  index: null,
 };
 
 export class Atmosphere extends EventHandler<AtmosphereEvents> {
@@ -104,6 +131,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
   private effect?: AerialPerspectiveEffect;
   private pass?: EffectPass;
+
+  private cloudsEffect?: Clouds;
 
   private skyMesh?: Mesh<PlaneGeometry, SkyMaterial>;
   private skyLightProbe?: SkyLightProbe;
@@ -143,7 +172,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (this.textures) return;
     this.textures = await new PrecomputedTexturesLoader()
       .setTypeFromRenderer(this.renderer)
-      .loadAsync(ATMOSPHERE_ASSETS_URL);
+      .loadAsync(this.options.atmosphereAssetsUrl);
   }
 
   private async init() {
@@ -151,6 +180,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     invariant(this.textures);
 
     this.addAerialPerspective();
+    this.addClouds();
     this.addSky();
     this.addStars();
     this.addSkyLightProbe();
@@ -166,13 +196,17 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
 
   private addAerialPerspective() {
-    if (this.pass) return;
+    if (this.pass) {
+      this.pass.enabled = true;
+      return;
+    }
 
     this.effect = new AerialPerspectiveEffect(this.camera, {
       irradianceScale: 2 / Math.PI,
       photometric: this.options.photometric,
       inscatter: this.options.inscatter,
       transmittance: this.options.transmittance,
+      // sky: true,
     });
 
     invariant(this.textures);
@@ -180,13 +214,57 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.pass = new EffectPass(this.camera, this.effect);
 
-    this.effectComposer.addPass(this.pass);
+    this.effectComposer.addPass(this.pass, this.index);
+  }
+
+  private addClouds() {
+    if (this.cloudsEffect || !this.clouds) return;
+
+    this.cloudsEffect = new Clouds(this.effectComposer, this.camera, {
+      enabled: this.clouds,
+      index: this.index ? this.index : undefined,
+      qualityPreset: this.cloudsQualityPreset,
+      localWeatherVelocity: this.cloudsLocalWeatherVelocity,
+      assetsUrl: this.options.cloudsAssetsUrl,
+      stbnUrl: this.options.stbnUrl,
+    });
+
+    this.cloudsEffect.inner.events.addEventListener(
+      "change",
+      (event: CloudsEffectChangeEvent) => {
+        if (!this.effect || !this.cloudsEffect) return;
+        switch (event.property) {
+          case "atmosphereOverlay":
+            this.effect.overlay = this.cloudsEffect.inner.atmosphereOverlay;
+            break;
+          case "atmosphereShadow":
+            this.effect.shadow = this.cloudsEffect.inner.atmosphereShadow;
+            break;
+          case "atmosphereShadowLength":
+            this.effect.shadowLength =
+              this.cloudsEffect.inner.atmosphereShadowLength;
+            break;
+        }
+      },
+    );
+
+    invariant(this.textures);
+    Object.assign(this.cloudsEffect.inner, this.textures);
+  }
+
+  private removeClouds() {
+    if (!this.cloudsEffect) return;
+    this.cloudsEffect.dispose();
   }
 
   // Remove resources related to the aerial perspective.
-  private removeAerialPerspectiveRelated() {
-    this.removeAerialPerspective();
-    this.removeSkyLightProbe();
+  private disableAerialPerspectiveRelated() {
+    if (this.pass) {
+      this.pass.enabled = false;
+    }
+    if (this.skyLightProbe) {
+      this.skyLightProbe.visible = false;
+    }
     if (this.sunLightObj) {
       // SunDirectionalLight calculates the sun color from the transmittance texture automatically whenever `transmittanceTexture` is there.
       // `transmittanceTexture` is no longer necessary when the aerial perspective is disabled. And it allows to specify the sun color.
@@ -201,6 +279,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   // Dispose all objects related to atmosphere.
   dispose() {
     this.removeAerialPerspective();
+    this.removeClouds();
     this.removeSky();
     this.removeStars();
     this.removeSkyLightProbe();
@@ -246,7 +325,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private async addStars() {
     if (this.starsMesh || !this.options.stars) return;
 
-    const starsMesh = await Stars.fromUrl();
+    const starsMesh = await Stars.fromUrl(this.options.starsAssetsUrl);
     if (!starsMesh) return;
 
     this.starsMesh = starsMesh;
@@ -269,16 +348,16 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
 
   private async addSkyLightProbe() {
-    if (this.skyLightProbe) return;
+    if (!this.skyLightProbe) {
+      this.skyLightProbe = new SkyLightProbe();
+      this.scene.add(this.skyLightProbe);
+    }
 
-    this.skyLightProbe = new SkyLightProbe();
+    this.skyLightProbe.visible = true;
 
     await this.initTextures();
     invariant(this.textures);
-
     this.skyLightProbe.irradianceTexture = this.textures.irradianceTexture;
-
-    this.scene.add(this.skyLightProbe);
   }
 
   private removeSkyLightProbe() {
@@ -288,9 +367,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
 
   private async addSunLight() {
-    if (this.sunLightObj || !this.options.sunLight) return;
+    if (!this.options.sunLight) return;
 
-    this.sunLightObj = new SunDirectionalLight({ distance: 300 });
+    if (!this.sunLightObj) {
+      this.sunLightObj = new SunDirectionalLight({ distance: 300 });
+    }
+
+    this.sunLightObj.visible = true;
     this.sunLightObj.intensity = this.options.sunLightIntensity;
 
     if (this.aerialPerspective) {
@@ -385,6 +468,10 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
         this.starsMesh?.material.sunDirection.copy(this.sunDirection);
         this.starsMesh?.setRotationFromMatrix(this.rotationMatrix);
       }
+
+      if (this.clouds) {
+        this.cloudsEffect?.inner.sunDirection.copy(this.sunDirection);
+      }
     }
 
     this.needsUpdate = false;
@@ -397,6 +484,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.sunLightObj?.update();
     }
   }
+
+  // Aerial perspective
 
   get aerialPerspective() {
     return this.options.aerialPerspective;
@@ -411,11 +500,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (v) {
       this.init();
     } else {
-      this.removeAerialPerspectiveRelated();
+      this.disableAerialPerspectiveRelated();
     }
 
     this.onUpdate();
   }
+
+  // Sky
 
   get sky() {
     return this.options.sky;
@@ -431,6 +522,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.onUpdate();
     }
   }
+
+  // Stars
 
   get stars() {
     return this.options.stars;
@@ -472,6 +565,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.onUpdate();
   }
+
+  // Sun
 
   get sun() {
     return this.options.sun;
@@ -528,6 +623,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.onUpdate();
   }
 
+  // Ambient light
+
   get ambientLight() {
     return this.options.ambientLight;
   }
@@ -568,6 +665,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.onUpdate();
   }
+
+  // Moon
 
   get moon() {
     return this.options.moon;
@@ -618,6 +717,58 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.onUpdate();
   }
 
+  // Clouds
+
+  get clouds() {
+    return this.options.clouds;
+  }
+
+  set clouds(v: boolean) {
+    if (this.options.clouds === v) {
+      return;
+    }
+
+    this.options.clouds = v;
+
+    if (v && !this.cloudsEffect) {
+      this.addClouds();
+    }
+
+    if (!this.cloudsEffect) return;
+
+    this.cloudsEffect.enabled = v;
+
+    this.onUpdate();
+  }
+
+  get cloudsQualityPreset() {
+    return this.options.cloudsQualityPreset;
+  }
+  set cloudsQualityPreset(v: Required<CloudsOptions>["qualityPreset"]) {
+    this.options.cloudsQualityPreset = v;
+
+    if (!this.cloudsEffect) return;
+    this.cloudsEffect.qualityPreset = v;
+
+    this.onUpdate();
+  }
+
+  get cloudsLocalWeatherVelocity() {
+    return this.options.cloudsLocalWeatherVelocity;
+  }
+  set cloudsLocalWeatherVelocity(
+    v: Required<CloudsOptions>["localWeatherVelocity"],
+  ) {
+    this.options.cloudsLocalWeatherVelocity = v;
+
+    if (!this.cloudsEffect) return;
+    this.cloudsEffect.localWeatherVelocity = v;
+
+    this.onUpdate();
+  }
+
+  // Others
+
   get date() {
     return this.options.date;
   }
@@ -654,5 +805,9 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.options.transmittance = v;
     this.effect.transmittance = v;
     this.onUpdate();
+  }
+
+  get index() {
+    return this.options.index ?? undefined;
   }
 }
