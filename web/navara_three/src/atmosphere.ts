@@ -74,6 +74,7 @@ export type AtmosphereOptions = {
   transmittance?: boolean;
 
   index?: number | null | undefined;
+  cloudsIndex?: number | null | undefined;
 };
 
 const DEFAULT_LIGHT_COLOR = new Color(0xffffff);
@@ -115,6 +116,7 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   transmittance: true,
 
   index: null,
+  cloudsIndex: null,
 };
 
 export class Atmosphere extends EventHandler<AtmosphereEvents> {
@@ -222,7 +224,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.cloudsEffect = new Clouds(this.effectComposer, this.camera, {
       enabled: this.clouds,
-      index: this.index ? this.index : undefined,
+      index: this.cloudsIndex,
       qualityPreset: this.cloudsQualityPreset,
       localWeatherVelocity: this.cloudsLocalWeatherVelocity,
       assetsUrl: this.options.cloudsAssetsUrl,
@@ -809,5 +811,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
   get index() {
     return this.options.index ?? undefined;
+  }
+  get cloudsIndex() {
+    return this.options.cloudsIndex ?? undefined;
   }
 }

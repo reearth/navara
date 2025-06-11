@@ -425,32 +425,32 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.scene,
       this.renderer,
       this.camera.innerCam,
-      { index: 1, ...options.atmosphere },
+      { index: 1, cloudsIndex: 2, ...options.atmosphere },
     );
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
     this.ssaoEffect = new SSAO(
       this._effectComposer,
       this.scene,
       this.camera.innerCam,
       width,
       height,
-      { index: 2, ...options.ssao },
+      { index: 3, ...options.ssao },
     );
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
+    this.atmosphere.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 3, ...options.lensFlare },
+      { index: 4, ...options.lensFlare },
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 4, ...options.toneMapping },
+      { index: 5, ...options.toneMapping },
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
     this.aaEffect = new Antialias(this._effectComposer, this.camera.innerCam, {
-      index: 5,
+      index: 6,
       ...(options.antialias ?? {}),
     });
     this.aaEffect.on("_needsUpdate", this.forceUpdate);
