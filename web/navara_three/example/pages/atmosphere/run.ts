@@ -1,8 +1,9 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
+  type CloudsOptions,
 } from "@navara/three";
-import { Color, LightProbe, SphericalHarmonics3 } from "three";
+import { Color, LightProbe, SphericalHarmonics3, Vector2 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -183,6 +184,7 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     sun: true,
     moon: true,
     stars: true,
+    clouds: true,
     sunLight: true,
     sunLightColor: "#FFFFFF",
     sunLightIntensity: 1,
@@ -190,6 +192,8 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     moonIntensity: 1,
     starsPointSize: 1,
     starsRadianceScale: 10,
+    cloudsQualityPreset: "medium",
+    cloudsAnimation: false,
     ambientLight: false,
     ambientLightColor: "#FFFFFF",
     ambientLightIntensity: 1,
@@ -197,6 +201,8 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     inscatter: true,
     transmittance: true,
   };
+
+  view.atmosphere.clouds = PARAMS.clouds;
 
   const folder = pane.addFolder({
     title: "Atmosphere",
@@ -213,6 +219,9 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   });
   folder.addBinding(PARAMS, "moon").on("change", (v) => {
     view.atmosphere.moon = v.value;
+  });
+  folder.addBinding(PARAMS, "clouds").on("change", (v) => {
+    view.atmosphere.clouds = v.value;
   });
   folder.addBinding(PARAMS, "stars").on("change", (v) => {
     view.atmosphere.stars = v.value;
@@ -237,6 +246,22 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   });
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
     view.atmosphere.sunLightIntensity = v.value;
+  });
+  folder
+    .addBinding(PARAMS, "cloudsQualityPreset", {
+      options: Object.fromEntries(
+        ["ultra", "high", "medium", "low"].map((v) => [v, v]),
+      ),
+    })
+    .on("change", (v) => {
+      view.atmosphere.cloudsQualityPreset =
+        v.value as Required<CloudsOptions>["qualityPreset"];
+    });
+  const localWeatherVelocity = new Vector2();
+  folder.addBinding(PARAMS, "cloudsAnimation").on("change", (v) => {
+    localWeatherVelocity.x = v.value ? 0.01 : 0;
+    view.atmosphere.cloudsLocalWeatherVelocity = localWeatherVelocity;
+    view.animation = v.value;
   });
   folder.addBinding(PARAMS, "ambientLight").on("change", (v) => {
     view.atmosphere.ambientLight = v.value;

@@ -15,6 +15,7 @@ export type LensFlareOptions = {
 
 export const DEFAULT_LENS_FLARE_OPTIONS: Required<LensFlareOptions> = {
   enabled: false,
+  index: null,
   intensity: lensFlareEffectOptionsDefaults.intensity,
 };
 
@@ -25,15 +26,20 @@ export class LensFlare extends Effect<LensFlareEffect, LensFlareOptions> {
     options?: LensFlareOptions,
   ) {
     super(composer, camera, LensFlareEffect, options);
+  }
 
+  protected onAdded(): void {
+    if (!this.effect) return;
     this.effect.intensity = this.intensity;
   }
+
   get intensity() {
     return this.options.intensity ?? DEFAULT_LENS_FLARE_OPTIONS.intensity;
   }
   set intensity(v: number) {
     if (this.options.intensity === v) return;
     this.options.intensity = v;
+    if (!this.effect) return;
     this.effect.intensity = v;
     this.emit("_needsUpdate");
   }

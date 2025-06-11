@@ -103,9 +103,12 @@ export type Options = {
   atmosphere?: AtmosphereOptions;
   backgroundColor?: number;
   picking?: Picking;
+  // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
+  animation?: boolean;
   // The number of samples for MSAA.
   multisampling?: number;
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
+  // Default=true
   halfFloat?: boolean;
   toneMapping?: ToneMappingOptions;
   lensFlare?: LensFlareOptions;
@@ -151,6 +154,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _disposed = false;
   private _renderFlag: RenderFlag = {
     forceUpdate: false,
+    animation: false,
   };
   private _uniforms: CommonUniforms;
 
@@ -400,7 +404,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     // Setup render pass
     this._effectComposer = new EffectComposer(this.renderer, {
       stencilBuffer: true,
-      frameBufferType: HalfFloatType,
+      frameBufferType: (options.halfFloat ?? true) ? HalfFloatType : undefined,
       multisampling: options.multisampling,
     });
     this._effectComposer.setSize(width, height);
@@ -416,43 +420,40 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
+    this.atmosphere = new Atmosphere(
+      this.effectComposer,
+      this.scene,
+      this.renderer,
+      this.camera.innerCam,
+      { index: 1, cloudsIndex: 2, ...options.atmosphere },
+    );
+    this.atmosphere.on("_needsUpdate", this.forceUpdate);
     this.ssaoEffect = new SSAO(
       this._effectComposer,
       this.scene,
       this.camera.innerCam,
       width,
       height,
-      options.ssao,
+      { index: 3, ...options.ssao },
     );
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
-      options.lensFlare,
+      { index: 3, ...options.lensFlare }, // Index must be same with SSAO.
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
-      options.toneMapping,
+      { index: 5, ...options.toneMapping },
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
-    this.aaEffect = new Antialias(
-      this._effectComposer,
-      this.camera.innerCam,
-      options.antialias,
-      3, // Antialias effect is applied lazily, so need to set an index to keep the order.
-    );
+    this.aaEffect = new Antialias(this._effectComposer, this.camera.innerCam, {
+      index: 6,
+      ...(options.antialias ?? {}),
+    });
     this.aaEffect.on("_needsUpdate", this.forceUpdate);
-
-    this.atmosphere = new Atmosphere(
-      this.effectComposer,
-      this.scene,
-      this.renderer,
-      this.camera.innerCam,
-      options.atmosphere,
-    );
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
@@ -505,6 +506,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
     });
+
+    this._renderFlag.animation = !!options.animation;
   }
 
   get scene() {
@@ -834,7 +837,12 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
       this._forceFeatureUpdates(time);
 
-      if (this._update(time) || this._renderFlag.forceUpdate) this._render();
+      if (
+        this._update(time) ||
+        this._renderFlag.forceUpdate ||
+        this._renderFlag.animation
+      )
+        this._render();
       this._renderFlag.forceUpdate = false;
 
       this._stats?.end();
@@ -890,6 +898,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
 
     return [];
+  }
+
+  get animation() {
+    return this._renderFlag.animation;
+  }
+  set animation(v: boolean) {
+    this._renderFlag.animation = v;
   }
 }
 

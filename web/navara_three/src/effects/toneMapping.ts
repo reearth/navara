@@ -11,11 +11,13 @@ export { ToneMappingMode } from "postprocessing";
 
 export type ToneMappingOptions = {
   mode?: ToneMappingMode;
+  index: number | undefined;
 } & EffectOptions;
 
 export const DEFAULT_TONE_MAPPING_OPTIONS: Required<ToneMappingOptions> = {
   enabled: false,
   mode: ToneMappingMode.AGX,
+  index: undefined,
 };
 
 export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
@@ -25,7 +27,9 @@ export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
     options?: ToneMappingOptions,
   ) {
     super(composer, camera, ToneMappingEffect, options);
-
+  }
+  protected onAdded(): void {
+    if (!this.effect) return;
     this.effect.mode = this.mode;
   }
   get mode() {
@@ -34,6 +38,7 @@ export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
   set mode(v: ToneMappingMode) {
     if (this.options.mode === v) return;
     this.options.mode = v;
+    if (!this.effect) return;
     this.effect.mode = v;
     this.emit("_needsUpdate");
   }

@@ -19,9 +19,15 @@ export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
   radius: 5,
   intensity: 1,
   color: new Color(0),
+  index: null,
 };
 
 export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
+  scene: Scene;
+  camera: Camera;
+  width: number;
+  height: number;
+
   constructor(
     composer: EffectComposer,
     scene: Scene,
@@ -30,7 +36,19 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     height: number,
     options?: SSAOOptions,
   ) {
-    super(composer, new N8AOPostPass(scene, camera, width, height), options);
+    const pass = options?.enabled
+      ? new N8AOPostPass(scene, camera, width, height)
+      : undefined;
+    super(composer, pass, options);
+
+    this.scene = scene;
+    this.camera = camera;
+    this.width = width;
+    this.height = height;
+  }
+
+  protected onAdded(): void {
+    if (!this.pass) return;
 
     const samples = this.samples;
     this.samples = samples;
@@ -40,11 +58,17 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     this.intensity = intensity;
     const color = this.color;
     this.color = color;
+
+    this.pass.configuration.gammaCorrection = false;
   }
 
-  protected onAdded(): void {
-    if (!this.pass) return;
-    this.pass.configuration.gammaCorrection = false;
+  protected onMounted(): void {
+    this.pass = new N8AOPostPass(
+      this.scene,
+      this.camera,
+      this.width,
+      this.height,
+    );
   }
 
   get samples() {
