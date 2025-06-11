@@ -247,8 +247,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
               this.cloudsEffect.inner.atmosphereShadowLength;
             break;
         }
+        this.onUpdate();
       },
     );
+
+    this.cloudsEffect.on("_needsUpdate", this.onUpdate);
 
     invariant(this.textures);
     Object.assign(this.cloudsEffect.inner, this.textures);
@@ -257,6 +260,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private removeClouds() {
     if (!this.cloudsEffect) return;
     this.cloudsEffect.dispose();
+    this.cloudsEffect = undefined;
   }
 
   // Remove resources related to the aerial perspective.
@@ -500,12 +504,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.options.aerialPerspective = v;
 
     if (v) {
-      this.init();
+      this.init().then(this.onUpdate);
     } else {
       this.disableAerialPerspectiveRelated();
+      this.onUpdate();
     }
-
-    this.onUpdate();
   }
 
   // Sky
@@ -732,13 +735,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.options.clouds = v;
 
-    if (v && !this.cloudsEffect) {
+    if (v) {
       this.addClouds();
+    } else {
+      this.removeClouds();
     }
-
-    if (!this.cloudsEffect) return;
-
-    this.cloudsEffect.enabled = v;
 
     this.onUpdate();
   }

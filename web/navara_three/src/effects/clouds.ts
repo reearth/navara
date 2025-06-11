@@ -43,6 +43,7 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   localWeatherVelocity: new Vector2(),
 };
 
+// TODO: Clouds are constructed temporally, so rendering a frame depends on a request might not be a good way.
 export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   effect: CloudsEffect;
   constructor(
@@ -75,28 +76,35 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     this.effect.qualityPreset = this.qualityPreset;
     this.effect.localWeatherVelocity.copy(this.localWeatherVelocity);
 
-    new TextureLoader().load(
-      `${this.options.assetsUrl}/local_weather.png`,
-      this.onLocalWeatherLoad,
-    );
-    new (createData3DTextureLoaderClass(parseUint8Array, {
-      width: CLOUD_SHAPE_TEXTURE_SIZE,
-      height: CLOUD_SHAPE_TEXTURE_SIZE,
-      depth: CLOUD_SHAPE_TEXTURE_SIZE,
-    }))().load(`${this.options.assetsUrl}/shape.bin`, this.onShapeLoad);
-    new (createData3DTextureLoaderClass(parseUint8Array, {
-      width: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
-      height: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
-      depth: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
-    }))().load(
-      `${this.options.assetsUrl}/shape_detail.bin`,
-      this.onShapeDetailLoad,
-    );
-    new TextureLoader().load(
-      `${this.options.assetsUrl}/turbulence.png`,
-      this.onTurbulenceLoad,
-    );
-    new STBNLoader().load(this.options.stbnUrl, this.onSTBNLoad);
+    this.loadAll().then(() => {
+      this.emit("_needsUpdate");
+    });
+  }
+
+  loadAll() {
+    return Promise.all([
+      new TextureLoader()
+        .loadAsync(`${this.options.assetsUrl}/local_weather.png`)
+        .then(this.onLocalWeatherLoad),
+      new (createData3DTextureLoaderClass(parseUint8Array, {
+        width: CLOUD_SHAPE_TEXTURE_SIZE,
+        height: CLOUD_SHAPE_TEXTURE_SIZE,
+        depth: CLOUD_SHAPE_TEXTURE_SIZE,
+      }))()
+        .loadAsync(`${this.options.assetsUrl}/shape.bin`)
+        .then(this.onShapeLoad),
+      new (createData3DTextureLoaderClass(parseUint8Array, {
+        width: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
+        height: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
+        depth: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
+      }))()
+        .loadAsync(`${this.options.assetsUrl}/shape_detail.bin`)
+        .then(this.onShapeDetailLoad),
+      new TextureLoader()
+        .loadAsync(`${this.options.assetsUrl}/turbulence.png`)
+        .then(this.onTurbulenceLoad),
+      new STBNLoader().loadAsync(this.options.stbnUrl).then(this.onSTBNLoad),
+    ]);
   }
 
   onLocalWeatherLoad = (texture: Texture): void => {
