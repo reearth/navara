@@ -11,7 +11,7 @@ export { ToneMappingMode } from "postprocessing";
 
 export type ToneMappingOptions = {
   mode?: ToneMappingMode;
-  index: number | undefined,
+  index: number | undefined;
 } & EffectOptions;
 
 export const DEFAULT_TONE_MAPPING_OPTIONS: Required<ToneMappingOptions> = {
