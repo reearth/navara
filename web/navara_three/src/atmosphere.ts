@@ -101,7 +101,7 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   moonScale: 1,
   moonIntensity: 1,
 
-  clouds: true,
+  clouds: false,
   cloudsAssetsUrl: CLOUD_ASSETS_URL,
   stbnUrl: STBN_URL,
   cloudsQualityPreset: DEFAULT_CLOUDS_OPTIONS.qualityPreset,
