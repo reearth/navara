@@ -7,7 +7,7 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer } from "postprocessing";
+import { EffectComposer, NormalPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -73,11 +73,6 @@ import { isWorker } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
-
-export {
-  DitheringEffect,
-  LensFlareEffect,
-} from "@takram/three-geospatial-effects";
 
 export * from "./type";
 export * from "./constants";
@@ -401,6 +396,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.camera = new ThreeViewCamera(50, width / height, 100, 1e8);
     }
 
+    const combinedScene = new Scene();
+    combinedScene.add(this._scenes.main);
+    combinedScene.add(this._scenes.globe);
+    combinedScene.add(this._scenes.world);
+
     // Setup render pass
     this._effectComposer = new EffectComposer(this.renderer, {
       stencilBuffer: true,
@@ -418,6 +418,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
     this._effectComposer.addPass(this._renderPass);
 
+    const normalPass = new NormalPass(combinedScene, this.camera.innerCam);
+    this._effectComposer.addPass(normalPass);
+
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
     this.atmosphere = new Atmosphere(
@@ -425,32 +428,33 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.scene,
       this.renderer,
       this.camera.innerCam,
-      { index: 1, cloudsIndex: 2, ...options.atmosphere },
+      normalPass,
+      { index: 2, cloudsIndex: 3, ...options.atmosphere },
     );
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
     this.ssaoEffect = new SSAO(
       this._effectComposer,
-      this.scene,
+      combinedScene,
       this.camera.innerCam,
       width,
       height,
-      { index: 3, ...options.ssao },
+      { index: 4, ...options.ssao },
     );
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 3, ...options.lensFlare }, // Index must be same with SSAO.
+      { index: 5, ...options.lensFlare }, // Index must be same with SSAO.
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 5, ...options.toneMapping },
+      { index: 6, ...options.toneMapping },
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
     this.aaEffect = new Antialias(this._effectComposer, this.camera.innerCam, {
-      index: 6,
+      index: 7,
       ...(options.antialias ?? {}),
     });
     this.aaEffect.on("_needsUpdate", this.forceUpdate);

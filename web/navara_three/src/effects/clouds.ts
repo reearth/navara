@@ -1,6 +1,7 @@
 import {
   CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
   CLOUD_SHAPE_TEXTURE_SIZE,
+  CloudLayer,
   CloudsEffect,
   type CloudsQualityPreset,
 } from "@takram/three-clouds";
@@ -32,6 +33,14 @@ export type CloudsOptions = {
   stbnUrl?: string;
   qualityPreset?: CloudsQualityPreset;
   localWeatherVelocity?: Vector2;
+  coverage?: number;
+  lightShaft?: boolean | null | undefined;
+
+  // Whether enabling the shadow for all layers or not.
+  shadows?: boolean;
+  shadowCascadeCount?: number;
+  shadowMapSize?: Vector2;
+  shadowFarScale?: number;
 } & EffectOptions;
 
 export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
@@ -41,6 +50,13 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   stbnUrl: STBN_URL,
   qualityPreset: "medium",
   localWeatherVelocity: new Vector2(),
+  coverage: 0.25,
+  lightShaft: null,
+
+  shadows: true,
+  shadowCascadeCount: 3,
+  shadowMapSize: new Vector2(512, 512),
+  shadowFarScale: 0.00025,
 };
 
 // TODO: Clouds are constructed temporally, so rendering a frame depends on a request might not be a good way.
@@ -71,14 +87,29 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   protected onAdded() {
     if (!this.effect) return;
 
-    // TODO: This is a workaround. It should be handled in the library itself.
-    this.effect.cloudsPass.currentMaterial.defines.USE_LOGDEPTHBUF = "1";
     this.effect.qualityPreset = this.qualityPreset;
     this.effect.localWeatherVelocity.copy(this.localWeatherVelocity);
+
+    if (this.options.lightShaft != null) {
+      this.effect.lightShafts = this.lightShaft;
+    }
+    this.effect.coverage = this.coverage;
+
+    this.effect.shadow.farScale = this.shadowFarScale;
+    this.effect.shadow.mapSize = this.shadowMapSize;
+    this.effect.shadow.cascadeCount = this.shadowCascadeCount;
+
+    this.forEachLayers((l) => {
+      l.shadow = this.shadows;
+    });
 
     this.loadAll().then(() => {
       this.emit("_needsUpdate");
     });
+  }
+
+  private forEachLayers(cb: (l: CloudLayer) => void) {
+    this.effect.cloudLayers.forEach(cb);
   }
 
   loadAll() {
@@ -173,6 +204,68 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   set localWeatherVelocity(v: Vector2) {
     this.options.localWeatherVelocity = v;
     this.effect.localWeatherVelocity.copy(v);
+
+    this.emit("_needsUpdate");
+  }
+
+  get coverage() {
+    return this.options.coverage;
+  }
+  set coverage(v: number) {
+    this.options.coverage = v;
+    this.effect.coverage = v;
+
+    this.emit("_needsUpdate");
+  }
+
+  get lightShaft() {
+    return !!this.options.lightShaft;
+  }
+  set lightShaft(v: boolean) {
+    this.options.lightShaft = v;
+    this.effect.lightShafts = v;
+
+    this.emit("_needsUpdate");
+  }
+
+  get shadows() {
+    return this.options.shadows;
+  }
+  set shadows(v: boolean) {
+    this.options.shadows = v;
+    this.forEachLayers((l) => {
+      l.shadow = v;
+    });
+
+    this.emit("_needsUpdate");
+  }
+
+  get shadowCascadeCount() {
+    return this.options.shadowCascadeCount;
+  }
+  set shadowCascadeCount(v: number) {
+    this.options.shadowCascadeCount = v;
+    this.effect.shadow.cascadeCount = v;
+
+    this.emit("_needsUpdate");
+  }
+
+  get shadowMapSize() {
+    return this.options.shadowMapSize;
+  }
+  set shadowMapSize(v: Vector2) {
+    this.options.shadowMapSize = v;
+    this.effect.shadow.mapSize = v;
+
+    this.emit("_needsUpdate");
+  }
+
+  get shadowFarScale() {
+    return this.options.shadowFarScale;
+  }
+  set shadowFarScale(v: number) {
+    this.options.shadowFarScale = v;
+    this.effect.shadow.farScale = v;
 
     this.emit("_needsUpdate");
   }

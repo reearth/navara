@@ -3,7 +3,7 @@ import ThreeView, {
   ToneMappingMode,
   type CloudsOptions,
 } from "@navara/three";
-import { Color, LightProbe, SphericalHarmonics3, Vector2 } from "three";
+import { Color, LightProbe, SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -64,6 +64,7 @@ export const run = async (view: ThreeView) => {
   addTileControl(view, pane);
   addDateControl(view, pane);
   addAtmosphereControl(view, pane);
+  addCloudsControl(view, pane);
   addAAControl(view, pane);
   addIBLControl(view, pane);
   addEffectsControl(view, pane);
@@ -184,7 +185,6 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     sun: true,
     moon: true,
     stars: true,
-    clouds: true,
     sunLight: true,
     sunLightColor: "#FFFFFF",
     sunLightIntensity: 1,
@@ -192,8 +192,6 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     moonIntensity: 1,
     starsPointSize: 1,
     starsRadianceScale: 10,
-    cloudsQualityPreset: "medium",
-    cloudsAnimation: false,
     ambientLight: false,
     ambientLightColor: "#FFFFFF",
     ambientLightIntensity: 1,
@@ -201,8 +199,6 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     inscatter: true,
     transmittance: true,
   };
-
-  view.atmosphere.clouds = PARAMS.clouds;
 
   const folder = pane.addFolder({
     title: "Atmosphere",
@@ -219,9 +215,6 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   });
   folder.addBinding(PARAMS, "moon").on("change", (v) => {
     view.atmosphere.moon = v.value;
-  });
-  folder.addBinding(PARAMS, "clouds").on("change", (v) => {
-    view.atmosphere.clouds = v.value;
   });
   folder.addBinding(PARAMS, "stars").on("change", (v) => {
     view.atmosphere.stars = v.value;
@@ -247,22 +240,6 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
     view.atmosphere.sunLightIntensity = v.value;
   });
-  folder
-    .addBinding(PARAMS, "cloudsQualityPreset", {
-      options: Object.fromEntries(
-        ["ultra", "high", "medium", "low"].map((v) => [v, v]),
-      ),
-    })
-    .on("change", (v) => {
-      view.atmosphere.cloudsQualityPreset =
-        v.value as Required<CloudsOptions>["qualityPreset"];
-    });
-  const localWeatherVelocity = new Vector2();
-  folder.addBinding(PARAMS, "cloudsAnimation").on("change", (v) => {
-    localWeatherVelocity.x = v.value ? 0.01 : 0;
-    view.atmosphere.cloudsLocalWeatherVelocity = localWeatherVelocity;
-    view.animation = v.value;
-  });
   folder.addBinding(PARAMS, "ambientLight").on("change", (v) => {
     view.atmosphere.ambientLight = v.value;
   });
@@ -281,6 +258,89 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "transmittance").on("change", (v) => {
     view.atmosphere.transmittance = v.value;
   });
+};
+
+const addCloudsControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    enable: true,
+    cloudsCoverage: 0.25,
+    cloudsQualityPreset: "medium",
+    cloudsAnimation: false,
+    cloudsLightShaft: false,
+    cloudsShadows: true,
+    cloudsShadowCascadeCount: 3,
+    cloudsShadowMapSize: 512,
+  };
+
+  view.atmosphere.clouds = PARAMS.enable;
+
+  const folder = pane.addFolder({
+    title: "Clouds",
+  });
+
+  folder.addBinding(PARAMS, "enable").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    if (v.value) {
+      view.atmosphere.cloudsEffect.coverage = PARAMS.cloudsCoverage;
+    } else {
+      view.atmosphere.cloudsEffect.coverage = 0;
+    }
+  });
+  folder.addBinding(PARAMS, "cloudsCoverage").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    view.atmosphere.cloudsEffect.coverage = v.value;
+  });
+  folder
+    .addBinding(PARAMS, "cloudsQualityPreset", {
+      options: Object.fromEntries(
+        ["ultra", "high", "medium", "low"].map((v) => [v, v]),
+      ),
+    })
+    .on("change", (v) => {
+      if (view.atmosphere.cloudsEffect) {
+        view.atmosphere.cloudsEffect.qualityPreset =
+          v.value as Required<CloudsOptions>["qualityPreset"];
+      }
+    });
+  folder.addBinding(PARAMS, "cloudsAnimation").on("change", (v) => {
+    if (view.atmosphere.cloudsEffect) {
+      view.atmosphere.cloudsEffect.localWeatherVelocity.x = v.value ? 0.001 : 0;
+      view.forceUpdate();
+    }
+    view.animation = v.value;
+  });
+  folder.addBinding(PARAMS, "cloudsLightShaft").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    view.atmosphere.cloudsEffect.lightShaft = v.value;
+  });
+  folder.addBinding(PARAMS, "cloudsShadows").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    view.atmosphere.cloudsEffect.shadows = v.value;
+  });
+  folder
+    .addBinding(PARAMS, "cloudsShadowCascadeCount", {
+      options: Object.fromEntries(
+        [...new Array(4)].map((_, i) => [`${i + 1}`, i + 1]),
+      ),
+    })
+    .on("change", (v) => {
+      if (!view.atmosphere.cloudsEffect) return;
+      view.atmosphere.cloudsEffect.shadowCascadeCount = v.value;
+    });
+  folder
+    .addBinding(PARAMS, "cloudsShadowMapSize", {
+      options: {
+        "128": 128,
+        "256": 256,
+        "512": 512,
+        "1024": 1024,
+      },
+    })
+    .on("change", (v) => {
+      if (!view.atmosphere.cloudsEffect) return;
+      view.atmosphere.cloudsEffect.shadowMapSize.set(v.value, v.value);
+      view.forceUpdate();
+    });
 };
 
 const addAAControl = (view: ThreeView, pane: Pane) => {
