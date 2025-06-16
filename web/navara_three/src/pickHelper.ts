@@ -49,18 +49,11 @@ export class PickHelper extends CustomRenderPass {
     scenes: Scenes,
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
-    globeGBufferRenderTarget: WebGLRenderTarget,
     highlightColor: Color,
     onPickCallback: (pickArr: number[]) => number[],
     options?: PickHelperOptions,
   ) {
-    super(
-      scenes,
-      camera,
-      meshes,
-      globeGBufferRenderTarget,
-      drapedFeatureMaterials,
-    );
+    super(scenes, camera, meshes, drapedFeatureMaterials);
 
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {
@@ -268,16 +261,7 @@ export class PickHelper extends CustomRenderPass {
 
     this.togglePickable(1);
 
-    this._renderer.setRenderTarget(this._globeGBufferRenderTarget);
-    this._renderer.clear();
-    this._renderer.render(this._scenes.globeGBuffer, this.camera);
-
-    this._renderer.setRenderTarget(target);
-    this._renderer.clear();
-    this._renderer.render(this._scenes.globe, this.camera);
-
-    this._renderDrapedMesh(this._renderer);
-    this._renderer.render(this._scenes.main, this.camera);
+    this.render(this._renderer, target, null);
 
     this.togglePickable(0);
 

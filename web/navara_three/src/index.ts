@@ -7,7 +7,7 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer, NormalPass } from "postprocessing";
+import { EffectComposer, NormalPass, CopyPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -15,11 +15,7 @@ import {
   Vector3,
   Texture,
   Vector2,
-  WebGLRenderTarget,
-  FloatType,
   Material,
-  NearestFilter,
-  DepthTexture,
   Color,
   HalfFloatType,
   LinearFilter,
@@ -138,7 +134,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _scenes: Scenes;
   private _effectComposer: EffectComposer;
   private _renderPass: CustomRenderPass;
-  private _globeGBufferRenderTarget: WebGLRenderTarget;
   // Store draped feature's materials
   private _drapedFeatureMaterials = new Map<string, Material>();
 
@@ -338,24 +333,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const { width = options.initialWidth, height = options.initialHeight } =
       this._getCanvasSize() ?? {};
     invariant(width && height);
-    const pixelRatio = this.renderer.getPixelRatio();
-    const scaledWidth = width * pixelRatio;
-    const scaledHeight = height * pixelRatio;
-    this._globeGBufferRenderTarget = new WebGLRenderTarget(
-      scaledWidth,
-      scaledHeight,
-      {
-        count: 1,
-      },
-    );
-    this._globeGBufferRenderTarget.depthTexture = new DepthTexture(
-      scaledWidth,
-      scaledHeight,
-    );
-    const normalBuffer = this._globeGBufferRenderTarget.textures[0];
-    normalBuffer.magFilter = NearestFilter;
-    normalBuffer.minFilter = NearestFilter;
-    normalBuffer.type = FloatType;
 
     let scene: Scene;
     if (options.scene) {
@@ -374,13 +351,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const main = new Scene();
     const drapedFeaturesScene = new Scene();
 
-    const globeGBufferScene = new Scene();
-
     this._scenes = {
       world: scene,
       main,
       globe: globeScene,
-      globeGBuffer: globeGBufferScene,
       drapedFeatures: drapedFeaturesScene,
     };
 
@@ -413,13 +387,19 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._scenes,
       this.camera.innerCam,
       this._meshes,
-      this._globeGBufferRenderTarget,
       this._drapedFeatureMaterials,
     );
     this._effectComposer.addPass(this._renderPass);
 
+    // NEXT: これを消したい。
+    // 1. [x] globeGbuffer関連の変数を消す
+    // 2. [ ] それぞれのMaterialから直接、normalBufferを返すようにする
+    // 3. [ ] NormalCopyPassを実装してpackRGBAした上で、AerialPerspectiveに渡す
     const normalPass = new NormalPass(combinedScene, this.camera.innerCam);
     this._effectComposer.addPass(normalPass);
+
+    const copyPass = new CopyPass();
+    this._effectComposer.addPass(copyPass);
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
@@ -429,7 +409,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.renderer,
       this.camera.innerCam,
       normalPass,
-      { index: 2, cloudsIndex: 3, ...options.atmosphere },
+      { index: 3, cloudsIndex: 4, ...options.atmosphere },
     );
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
     this.ssaoEffect = new SSAO(
@@ -438,23 +418,23 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.camera.innerCam,
       width,
       height,
-      { index: 4, ...options.ssao },
+      { index: 5, ...options.ssao },
     );
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 5, ...options.lensFlare }, // Index must be same with SSAO.
+      { index: 6, ...options.lensFlare }, // Index must be same with SSAO.
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 6, ...options.toneMapping },
+      { index: 7, ...options.toneMapping },
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
     this.aaEffect = new Antialias(this._effectComposer, this.camera.innerCam, {
-      index: 7,
+      index: 8,
       ...(options.antialias ?? {}),
     });
     this.aaEffect.on("_needsUpdate", this.forceUpdate);
@@ -530,6 +510,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.forceUpdate();
   }
 
+  get globeDepthTexture() {
+    return this._renderPass._globeDepthCopyPass.texture;
+  }
+
   forceUpdate = () => {
     this._renderFlag.forceUpdate = true;
   };
@@ -556,7 +540,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this._scenes,
         this._meshes,
         this._drapedFeatureMaterials,
-        this._globeGBufferRenderTarget,
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
         // {
@@ -587,8 +570,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._pickHelper.dispose();
     }
 
-    this._globeGBufferRenderTarget.dispose();
-
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -610,10 +591,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.camera.innerCam.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this._effectComposer.setSize(w, h);
-    this._globeGBufferRenderTarget.setSize(
-      w * (pixelRatio ?? 1),
-      h * (pixelRatio ?? 1),
-    );
     if (pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
@@ -647,9 +624,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
-      this._globeGBufferRenderTarget.depthTexture;
-    this._uniforms.tGlobeNormal.value =
-      this._globeGBufferRenderTarget.textures[0];
+      this._renderPass._globeDepthCopyPass.texture;
+    // NEXT: Handle normal map
+    // this._uniforms.tGlobeNormal.value =
+    //   this._globeGBufferRenderTarget.textures[0];
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.innerCam.projectionMatrixInverse;
 

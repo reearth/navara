@@ -43,7 +43,7 @@ void main() {
     #include chunks/show_fragment;
     
     vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
-    float logDepthOrDepth = readDepth(tGlobeDepth, gl_FragCoord.xy / viewport.xy);
+    float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, gl_FragCoord.xy / viewport.xy));
 
     // Discard sky
     if (logDepthOrDepth == 1.0) {
@@ -57,6 +57,7 @@ void main() {
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;
     float depthFromCamera = linearDepth + near;
     float z_ndc = -1. * depthFromCamera;
+
 
     // Transform to clip coordinates
     vec4 clipCoords = vec4(

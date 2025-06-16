@@ -156,6 +156,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (this.options.aerialPerspective) {
       this.init();
     }
+    this.addAmbientLight();
   }
 
   onUpdate = () => {

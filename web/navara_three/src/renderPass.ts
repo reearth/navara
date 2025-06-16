@@ -1,4 +1,4 @@
-import { RenderPass } from "postprocessing";
+import { RenderPass, DepthCopyPass } from "postprocessing";
 import {
   AlwaysStencilFunc,
   BackSide,
@@ -8,8 +8,11 @@ import {
   KeepStencilOp,
   Material,
   NotEqualStencilFunc,
+  RGBADepthPacking,
+  Texture,
   WebGLRenderTarget,
   ZeroStencilOp,
+  type DepthPackingStrategies,
   type PerspectiveCamera,
   type Scene,
   type WebGLRenderer,
@@ -22,23 +25,27 @@ export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
   protected _drapedFeatureMaterials: Map<string, Material>;
-  protected _globeGBufferRenderTarget: WebGLRenderTarget;
   protected _meshes: MeshCache;
+  _globeDepthCopyPass: DepthCopyPass;
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
     meshes: MeshCache,
-    globeGBufferRenderTarget: WebGLRenderTarget,
     drapedFeatureMaterials: Map<string, Material>,
   ) {
     super();
 
+    this.needsDepthTexture = true;
+
     this.clearPass.setClearFlags(true, true, true);
+
+    this._globeDepthCopyPass = new DepthCopyPass({
+      depthPacking: RGBADepthPacking,
+    });
 
     this._scenes = scenes;
     this._camera = camera;
     this._meshes = meshes;
-    this._globeGBufferRenderTarget = globeGBufferRenderTarget;
     this._drapedFeatureMaterials = drapedFeatureMaterials;
   }
 
@@ -51,16 +58,15 @@ export class CustomRenderPass extends RenderPass {
 
   render(
     renderer: WebGLRenderer,
-    inputBuffer: WebGLRenderTarget,
-    outputBuffer: WebGLRenderTarget,
+    inputBuffer: WebGLRenderTarget | null,
+    outputBuffer: WebGLRenderTarget | null,
   ) {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
-    renderer.setRenderTarget(this._globeGBufferRenderTarget);
-    renderer.clear();
-    renderer.render(this._scenes.globeGBuffer, this._camera);
+    const renderTarget = this.renderToScreen ? null : inputBuffer;
 
-    renderer.setRenderTarget(this.renderToScreen ? null : inputBuffer);
+    renderer.setRenderTarget(renderTarget);
+    renderer.clear();
 
     if (this.clearPass.enabled) {
       this.clearPass.render(renderer, inputBuffer, outputBuffer);
@@ -68,11 +74,27 @@ export class CustomRenderPass extends RenderPass {
 
     this._renderWithWorld(renderer, this._scenes.globe);
 
+    this._globeDepthCopyPass.render(renderer, inputBuffer, outputBuffer);
+
+    // Set actual renderTarget again because it's set to inputBuffer in `_globeDepthCopyPass`.
+    renderer.setRenderTarget(renderTarget);
+
     if (shouldDrapeByStencilTest) {
       this._renderDrapedMesh(renderer);
     }
 
     this._renderWithWorld(renderer, this._scenes.main);
+  }
+
+  setSize(width: number, height: number) {
+    this._globeDepthCopyPass.setSize(width, height);
+  }
+
+  setDepthTexture(
+    depthTexture: Texture,
+    depthPacking?: DepthPackingStrategies,
+  ): void {
+    this._globeDepthCopyPass.setDepthTexture(depthTexture, depthPacking);
   }
 
   // Drape a feature on the terrain by stencil test.
