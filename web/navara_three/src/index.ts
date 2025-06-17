@@ -906,6 +906,16 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   set animation(v: boolean) {
     this._renderFlag.animation = v;
   }
+
+  get screenSize() {
+    const size = new Vector2();
+    this.renderer.getSize(size);
+    return size;
+  }
+
+  get pixelRatio() {
+    return this.renderer.getPixelRatio();
+  }
 }
 
 function newId() {

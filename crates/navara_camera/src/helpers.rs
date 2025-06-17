@@ -1,6 +1,7 @@
-use navara_core::{east_north_up_to_fixed_frame, Ray, WGS84_32};
+use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Ellipsoid, Ray, WGS84_32};
 use navara_math::{
-    zero_to_two_pi, EqualEpsilon, Quat, Transform, Vec2, Vec3, EPSILON3, PI_OVER_TWO, TWO_PI,
+    zero_to_two_pi, EqualEpsilon, FloatType, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3,
+    PI_OVER_TWO, TWO_PI,
 };
 use navara_window::Window;
 
@@ -14,6 +15,27 @@ pub fn get_pick_ray_from_camera(
     position_2d: Vec2,
 ) -> Ray {
     get_pick_ray_perspective(window, camera_transform, frustum, position_2d)
+}
+
+pub fn ray_ellipsoid_intersect(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<FloatType> {
+    match ray_ellipsoid(ray, ellipsoid) {
+        i if i.start == f32::INFINITY => {
+            // Calculate an edge of ellipsoid
+            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
+            let forward = ellipsoid_vec3 * ray.direction;
+            let distance_to_edge = forward.dot(ray.origin);
+
+            if distance_to_edge.equal_epsilon(EPSILON10) {
+                Some(1.)
+            } else {
+                None
+            }
+        }
+        i if i.start != 0. => Some(i.start),
+        i if i.end != 0. => Some(i.end),
+        // TODO: Handle the case where intersection point couldn't find.
+        _ => None,
+    }
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/Camera.js#L2946
@@ -31,11 +53,10 @@ fn get_pick_ray_perspective(
     let forward = camera_transform.forward().as_dvec3();
     let right = camera_transform.right().as_dvec3();
     let up = camera_transform.up().as_dvec3();
-    //
 
     let position_2d = position_2d.as_dvec2();
 
-    let tan_phi = (frustum.fov_y as f64 * 0.5).tan();
+    let tan_phi = (frustum.fov as f64 * 0.5).tan();
     let tan_theta = frustum.aspect_ratio as f64 * tan_phi;
     let near = frustum.near as f64;
 
