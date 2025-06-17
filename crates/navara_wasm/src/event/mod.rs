@@ -5,13 +5,13 @@ pub mod worker;
 use feature_event::{
     RenderableFeatureAddedEvent, RenderableFeatureChangedEvent, RenderableFeatureRemovedEvent,
 };
-use navara_math::FloatType;
+
 use navara_tile_component::TileHandle;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{RasterTileInternalMaterial, Vec2};
+use navara_wasm_types::{RasterTileInternalMaterial, Transform, Vec2};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -38,22 +38,6 @@ pub struct ObjectTransformEvent {
     pub ind: u32,
     pub gen: u32,
     pub transform: Transform,
-}
-
-// TODO: Use TypedArray to avoid unnecessary clone.
-#[wasm_bindgen]
-#[derive(Debug, Clone, Copy, Serialize)]
-pub struct Transform {
-    pub tx: FloatType,
-    pub ty: FloatType,
-    pub tz: FloatType,
-    pub qx: FloatType,
-    pub qy: FloatType,
-    pub qz: FloatType,
-    pub qw: FloatType,
-    pub sx: FloatType,
-    pub sy: FloatType,
-    pub sz: FloatType,
 }
 
 #[wasm_bindgen]
@@ -225,23 +209,6 @@ impl<'a> From<navara_event_store::ComponentEvent<&'a navara_math::Transform>>
             ind: ev.ind,
             gen: ev.gen,
             transform: ev.comp.into(),
-        }
-    }
-}
-
-impl<'a> From<&'a navara_math::Transform> for Transform {
-    fn from(t: &'a navara_math::Transform) -> Self {
-        Self {
-            tx: t.translation.x,
-            ty: t.translation.y,
-            tz: t.translation.z,
-            qx: t.rotation.x,
-            qy: t.rotation.y,
-            qz: t.rotation.z,
-            qw: t.rotation.w,
-            sx: t.scale.x,
-            sy: t.scale.y,
-            sz: t.scale.z,
         }
     }
 }

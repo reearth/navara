@@ -11,17 +11,16 @@ use bevy_input::{
     ButtonInput,
 };
 use navara_core::{
-    ease_out_circ, east_north_up_to_fixed_frame, ray_ellipsoid, Angle, Ellipsoid, Ray, CRS,
-    WGS84_32,
+    ease_out_circ, east_north_up_to_fixed_frame, Angle, Ellipsoid, Ray, CRS, WGS84_32,
 };
 use navara_frame::FrameManager;
-use navara_math::{
-    EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3, EPSILON6,
-};
+use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON3, EPSILON6};
 use navara_window::Window;
 
 use crate::{
-    helpers::{get_heading, get_pick_ray_from_camera, get_pitch, get_roll},
+    helpers::{
+        get_heading, get_pick_ray_from_camera, get_pitch, get_roll, ray_ellipsoid_intersect,
+    },
     CamDirType, CameraController, CameraDirection, CameraEvent, CameraFlight, CameraInertia,
     CameraOrientation, CameraStatus, CameraStatusType,
 };
@@ -344,10 +343,12 @@ fn rotate_around_axis(
     } else {
         let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
         let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
-        let point = ray_ellipsoid_intersect(&ray, WGS84_32);
-        let center = ray.get_point(point);
-
-        center.normalize_or_zero()
+        if let Some(point) = ray_ellipsoid_intersect(&ray, WGS84_32) {
+            let center = ray.get_point(point);
+            center.normalize_or_zero()
+        } else {
+            return; // No intersection found, cannot rotate
+        }
     };
 
     let rotation = Quat::from_axis_angle(axis, *angle);
@@ -396,7 +397,11 @@ fn handle_tilt(
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
     // TODO: Support movement underground.
-    let point = ray_ellipsoid_intersect(&ray, ellipsoid);
+    let Some(point) = ray_ellipsoid_intersect(&ray, ellipsoid) else {
+        // No intersection found, cannot tilt
+        return;
+    };
+
     let center = ray.get_point(point);
     let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
 
@@ -492,7 +497,7 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
         origin: camera_pos,
         direction: direction_to_center,
     };
-    ray_ellipsoid_intersect(&ray, ellipsoid)
+    ray_ellipsoid_intersect(&ray, ellipsoid).unwrap_or(0.)
 }
 
 fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
@@ -763,27 +768,6 @@ fn apply_camera_translate(
         return;
     }
     transform.translation = next;
-}
-
-fn ray_ellipsoid_intersect(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> FloatType {
-    match ray_ellipsoid(ray, ellipsoid) {
-        i if i.start == f32::INFINITY => {
-            // Calculate an edge of ellipsoid
-            let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
-            let forward = ellipsoid_vec3 * ray.direction;
-            let distance_to_edge = forward.dot(ray.origin);
-
-            if distance_to_edge.equal_epsilon(EPSILON10) {
-                1.
-            } else {
-                distance_to_edge
-            }
-        }
-        i if i.start != 0. => i.start,
-        i if i.end != 0. => i.end,
-        // TODO: Handle the case where intersection point couldn't find.
-        _ => 1.,
-    }
 }
 
 fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {

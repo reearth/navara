@@ -3,6 +3,7 @@ import type { LatLngHeight, CameraPosition } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
+  Window as NavaraWindow,
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
@@ -164,6 +165,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private _tileMapByHandle: TileMapByHandle = new Map();
+
+  private _window: NavaraWindow | undefined;
 
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -616,6 +619,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
+    this._setWindow(w, h, pixelRatio ?? 1);
+
     this.emit("resize");
   };
 
@@ -905,6 +910,19 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
   set animation(v: boolean) {
     this._renderFlag.animation = v;
+  }
+
+  get window() {
+    return this._window;
+  }
+
+  _setWindow(w: number, h: number, p: number) {
+    if (!this._window) {
+      this._window = new NavaraWindow(0, 0, 0);
+    }
+    this._window.width = w;
+    this._window.height = h;
+    this._window.pixel_ratio = p;
   }
 }
 
