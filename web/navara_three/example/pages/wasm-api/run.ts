@@ -97,19 +97,17 @@ const testScreenToWorld = (view: ThreeView) => {
   let ball: Mesh | undefined = undefined;
 
   const onMouseMove = (event: MouseEvent) => {
-    if (view.window) {
-      const rect = view.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const pos = convertScreenPos(view, x, y);
+    const rect = view.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const pos = convertScreenPos(view, x, y);
 
-      if (!ball) {
-        ball = placeOneBall(view, pos);
-      } else {
-        if (pos) {
-          ball.position.set(pos.x, pos.y, pos.z);
-          view.forceUpdate();
-        }
+    if (!ball) {
+      ball = placeOneBall(view, pos);
+    } else {
+      if (pos) {
+        ball.position.set(pos.x, pos.y, pos.z);
+        view.forceUpdate();
       }
     }
   };
@@ -118,22 +116,15 @@ const testScreenToWorld = (view: ThreeView) => {
 };
 
 const convertScreenPos = (view: ThreeView, x: number, y: number) => {
-  if (!view.camera || !view.window) {
-    console.error("View camera or window is not initialized.");
+  if (!view.camera) {
+    console.error("View camera is not initialized.");
     return;
   }
 
-  console.log({
-    _window: view.window,
-    constructor: view.window?.constructor?.name,
-    prototype: Object.getPrototypeOf(view.window),
-  });
+  const screenSize = view.screenSize;
+  const pixelRatio = view.pixelRatio;
 
-  const win = new NavaraWindow(
-    view.window.width,
-    view.window.height,
-    view.window.pixel_ratio,
-  );
+  const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
 
   const pos = convertScreenToWorld(
     win,
