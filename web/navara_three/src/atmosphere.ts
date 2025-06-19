@@ -100,7 +100,7 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   ambientLight: false,
   ambientLightColor: DEFAULT_LIGHT_COLOR.clone(),
   ambientLightIntensity: 1,
-  date: new Date().setHours(8),
+  date: new Date(),
   photometric: true,
   inscatter: true,
   transmittance: true,

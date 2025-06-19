@@ -77,6 +77,7 @@ export * from "./light";
 export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
+export * from "./shaders";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -495,7 +496,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   get scenes() {
     // TODO: Publish `drapedFeatures`. Need to expose `_drapedFeatureMaterials` as well.
-    return this._scenes as Omit<Scenes, "drapedFeatures">;
+    return this._scenes as Omit<Scenes, "globe" | "drapedFeatures">;
   }
 
   get effectComposer() {
@@ -551,9 +552,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
         this.effectComposer.inputBuffer,
-        {
-          debug: true,
-        },
+        // {
+        //   debug: true,
+        // },
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
