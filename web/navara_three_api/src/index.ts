@@ -4,6 +4,11 @@ import initApi, {
   angleToRadian,
   angleToDegree,
   screenToWorld,
+  geodeticSurfaceNormal as nvGeodeticSurfaceNormal,
+  eastNorthUpToFixedFrame as nvEastNorthUpToFixedFrame,
+  northEastDownToFixedFrame as nvNorthEastDownToFixedFrame,
+  northUpEastToFixedFrame as nvNorthUpEastToFixedFrame,
+  northWestUpToFixedFrame as nvNorthWestUpToFixedFrame,
   LLE,
   Vec3,
   Vec2,
@@ -11,7 +16,7 @@ import initApi, {
   Transform,
   CameraFrustum,
 } from "@navara/engine-api";
-import { Vector3, Vector2, PerspectiveCamera } from "three";
+import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
 export { LLE, Transform, CameraFrustum, Window } from "@navara/engine-api";
 
@@ -76,4 +81,37 @@ export function convertScreenToWorld(
     return undefined;
   }
   return new Vector3(pos.x, pos.y, pos.z);
+}
+
+export function geodeticSurfaceNormal(lle: LLE): Vector3 {
+  const pos = nvGeodeticSurfaceNormal(lle);
+  return new Vector3(pos.x, pos.y, pos.z);
+}
+
+export function eastNorthUpToFixedFrame(origin: Vector3): Matrix4 {
+  const vec3 = new Vec3(origin.x, origin.y, origin.z);
+  const arr = nvEastNorthUpToFixedFrame(vec3);
+  const matrix = new Matrix4().fromArray(arr);
+  return matrix;
+}
+
+export function northEastDownToFixedFrame(origin: Vector3): Matrix4 {
+  const vec3 = new Vec3(origin.x, origin.y, origin.z);
+  const arr = nvNorthEastDownToFixedFrame(vec3);
+  const matrix = new Matrix4().fromArray(arr);
+  return matrix;
+}
+
+export function northUpEastToFixedFrame(origin: Vector3): Matrix4 {
+  const vec3 = new Vec3(origin.x, origin.y, origin.z);
+  const arr = nvNorthUpEastToFixedFrame(vec3);
+  const matrix = new Matrix4().fromArray(arr);
+  return matrix;
+}
+
+export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
+  const vec3 = new Vec3(origin.x, origin.y, origin.z);
+  const arr = nvNorthWestUpToFixedFrame(vec3);
+  const matrix = new Matrix4().fromArray(arr);
+  return matrix;
 }

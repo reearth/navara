@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 
 use navara_camera::{get_pick_ray_from_camera, ray_ellipsoid_intersect};
-use navara_core::{CRS, WGS84_32};
+use navara_core::{xyz_to_vec3, CRS, WGS84_32};
 use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
     CameraFrustum, Transform, Vec2 as Vec2Wasm, Vec3 as Vec3Wasm, Window, LLE,
@@ -68,4 +68,35 @@ pub fn screen_to_world(
         intersect_pt.y,
         intersect_pt.z,
     ))
+}
+
+#[wasm_bindgen(js_name = geodeticSurfaceNormal)]
+pub fn geodetic_surface_normal(lle: LLE) -> Vec3Wasm {
+    let normal = WGS84_32.geodetic_surface_normal_from_lle((&lle).into());
+    let normal_vec3 = xyz_to_vec3(normal).normalize();
+    normal_vec3.into()
+}
+
+#[wasm_bindgen(js_name = eastNorthUpToFixedFrame)]
+pub fn east_north_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
+    let mat4 = navara_core::east_north_up_to_fixed_frame(origin.into(), WGS84_32);
+    mat4.to_cols_array().to_vec()
+}
+
+#[wasm_bindgen(js_name = northEastDownToFixedFrame)]
+pub fn north_east_down_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
+    let mat4 = navara_core::north_east_down_to_fixed_frame(origin.into(), WGS84_32);
+    mat4.to_cols_array().to_vec()
+}
+
+#[wasm_bindgen(js_name = northUpEastToFixedFrame)]
+pub fn north_up_east_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
+    let mat4 = navara_core::north_up_east_to_fixed_frame(origin.into(), WGS84_32);
+    mat4.to_cols_array().to_vec()
+}
+
+#[wasm_bindgen(js_name = northWestUpToFixedFrame)]
+pub fn north_west_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
+    let mat4 = navara_core::north_west_up_to_fixed_frame(origin.into(), WGS84_32);
+    mat4.to_cols_array().to_vec()
 }

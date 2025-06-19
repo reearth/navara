@@ -6,6 +6,8 @@ import {
   Mesh,
   Vector2,
   Vector3,
+  Object3D,
+  ArrowHelper,
 } from "three";
 import {
   geodeticToVector3,
@@ -13,11 +15,28 @@ import {
   degreeToRadian,
   radianToDegree,
   convertScreenToWorld,
+  geodeticSurfaceNormal,
+  eastNorthUpToFixedFrame,
+  northEastDownToFixedFrame,
+  northUpEastToFixedFrame,
+  northWestUpToFixedFrame,
   Window as NavaraWindow,
   LLE,
 } from "@navara/three_api";
 
 import { TILE_URLS } from "../../helpers/constants";
+import { Pane } from "tweakpane";
+import { initializeGltfLoader } from "@navara/three";
+
+const gPaneParams = {
+  convertScreenToWorld: true,
+
+  moveDistance: 0,
+
+  transform: "eastNorthUp",
+};
+
+let gModel: Object3D | undefined = undefined;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -34,8 +53,11 @@ export const run = async (view: ThreeView) => {
   axesHelper.scale.multiplyScalar(1e9);
   view.scene.add(axesHelper);
 
+  addCtrlPanel();
   addRunningObject(view);
   testScreenToWorld(view);
+
+  await addTestModel(view);
 
   // vector3ToGeodetic
   const pos = geodeticToVector3(
@@ -97,13 +119,17 @@ const testScreenToWorld = (view: ThreeView) => {
   let ball: Mesh | undefined = undefined;
 
   const onMouseMove = (event: MouseEvent) => {
+    if (!gPaneParams.convertScreenToWorld) {
+      return;
+    }
+
     const rect = view.renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     const pos = convertScreenPos(view, x, y);
 
     if (!ball) {
-      ball = placeOneBall(view, pos);
+      ball = placeOneBall(view, pos, 0x00ff00);
     } else {
       if (pos) {
         ball.position.set(pos.x, pos.y, pos.z);
@@ -138,11 +164,12 @@ const convertScreenPos = (view: ThreeView, x: number, y: number) => {
 const placeOneBall = (
   view: ThreeView,
   pos: Vector3 | undefined,
+  color: number,
 ): Mesh | undefined => {
   if (pos) {
     const geometry = new SphereGeometry(200000);
     const material = new MeshPhongMaterial({
-      color: 0x00ff00,
+      color: color,
       emissive: 0x072534,
       specular: 0x111111,
       shininess: 30,
@@ -153,5 +180,144 @@ const placeOneBall = (
     sphere.position.set(pos.x, pos.y, pos.z);
 
     return sphere;
+  }
+};
+
+const addTestModel = async (view: ThreeView) => {
+  const loader = initializeGltfLoader();
+  const model = await loader.loadAsync(
+    "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+  );
+  if (model.scene) {
+    view.scene.add(model.scene);
+
+    const pos = geodeticToVector3(
+      new LLE(degreeToRadian(35.3624725342), degreeToRadian(138.7306671143), 0),
+    );
+    const normal = geodeticSurfaceNormal(
+      new LLE(degreeToRadian(35.3624725342), degreeToRadian(138.7306671143), 0),
+    );
+
+    model.scene.position.set(pos.x, pos.y, pos.z);
+    model.scene.scale.set(300000, 300000, 300000);
+
+    const arrowHelper = new ArrowHelper(normal, pos, 6000000, 0xffffff);
+    view.scene.add(arrowHelper);
+
+    gModel = model.scene;
+    gModel.userData.origin = pos;
+    gModel.userData.normal = normal;
+
+    // Add model's own coordinate axes with arrows
+    const xAxis = new ArrowHelper(
+      new Vector3(1, 0, 0),
+      new Vector3(0, 0, 0),
+      5,
+      0xff0000,
+    );
+    const yAxis = new ArrowHelper(
+      new Vector3(0, 1, 0),
+      new Vector3(0, 0, 0),
+      5,
+      0x00ff00,
+    );
+    const zAxis = new ArrowHelper(
+      new Vector3(0, 0, 1),
+      new Vector3(0, 0, 0),
+      5,
+      0x0000ff,
+    );
+    gModel.add(xAxis);
+    gModel.add(yAxis);
+    gModel.add(zAxis);
+
+    onTransformChange();
+  }
+};
+
+const addCtrlPanel = () => {
+  const pane = new Pane({
+    title: "Parameters",
+    expanded: true,
+  });
+
+  pane.addBinding(gPaneParams, "convertScreenToWorld");
+
+  const fNormal = pane.addFolder({
+    title: "SurfaceNormal",
+    expanded: true,
+  });
+
+  fNormal
+    .addBinding(gPaneParams, "moveDistance", { min: 0.0, max: 4000000.0 })
+    .on("change", onMoveDistanceChange);
+
+  const fTransform = pane.addFolder({
+    title: "Transform",
+    expanded: true,
+  });
+
+  fTransform
+    .addBinding(gPaneParams, "transform", {
+      options: {
+        eastNorthUp: "eastNorthUp",
+        northEastDown: "northEastDown",
+        northUpEast: "northUpEast",
+        northWestUp: "northWestUp",
+      },
+    })
+    .on("change", onTransformChange);
+};
+
+const onMoveDistanceChange = () => {
+  if (gModel && gModel.userData.normal && gModel.userData.origin) {
+    const normal = gModel.userData.normal;
+    const pos = gModel.userData.origin;
+
+    // Move the model along the surface normal
+    const newPos = new Vector3(
+      pos.x + normal.x * gPaneParams.moveDistance,
+      pos.y + normal.y * gPaneParams.moveDistance,
+      pos.z + normal.z * gPaneParams.moveDistance,
+    );
+
+    gModel.position.set(newPos.x, newPos.y, newPos.z);
+  }
+};
+
+const onTransformChange = () => {
+  if (!gModel || !gModel.userData.origin) {
+    return;
+  }
+
+  gModel.position.set(0, 0, 0);
+  gModel.rotation.set(0, 0, 0);
+  gModel.scale.set(300000, 300000, 300000);
+
+  let transformMatrix;
+  switch (gPaneParams.transform) {
+    case "eastNorthUp":
+      transformMatrix = eastNorthUpToFixedFrame(gModel.userData.origin);
+      break;
+    case "northEastDown":
+      transformMatrix = northEastDownToFixedFrame(gModel.userData.origin);
+      break;
+    case "northUpEast":
+      transformMatrix = northUpEastToFixedFrame(gModel.userData.origin);
+      break;
+    case "northWestUp":
+      transformMatrix = northWestUpToFixedFrame(gModel.userData.origin);
+      break;
+    default:
+      transformMatrix = eastNorthUpToFixedFrame(gModel.userData.origin);
+  }
+
+  gModel.applyMatrix4(transformMatrix);
+
+  if (gModel.userData.normal) {
+    const moveOffset = gModel.userData.normal
+      .clone()
+      .multiplyScalar(gPaneParams.moveDistance);
+    gModel.position.add(moveOffset);
   }
 };

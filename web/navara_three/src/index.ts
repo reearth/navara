@@ -85,6 +85,7 @@ export * from "./light";
 export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
+export * from "./event/loaders";
 
 export type Options = {
   container?: HTMLElement;
