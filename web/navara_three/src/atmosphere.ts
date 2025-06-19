@@ -11,7 +11,7 @@ import {
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
 import type { CloudsEffectChangeEvent } from "@takram/three-clouds";
-import { EffectPass, NormalPass, type EffectComposer } from "postprocessing";
+import { EffectPass, type EffectComposer } from "postprocessing";
 import {
   AmbientLight,
   Color,
@@ -20,8 +20,8 @@ import {
   Vector3,
   Matrix4,
   type PerspectiveCamera,
-  type Scene,
   type WebGLRenderer,
+  Texture,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -29,6 +29,7 @@ import { ATMOSPHERE_ASSETS_URL, STARS_ASSETS_URL } from "./constants";
 import { Clouds, DEFAULT_CLOUDS_OPTIONS, type CloudsOptions } from "./effects";
 import { DEFAULT_STARS_OPTIONS, Stars, type StarsOptions } from "./mesh";
 import { SKY_RENDER_ORDER } from "./renderOrder";
+import type { Scenes } from "./scene";
 
 export type AtmosphereEvents = {
   _needsUpdate: () => void;
@@ -99,7 +100,7 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   ambientLight: false,
   ambientLightColor: DEFAULT_LIGHT_COLOR.clone(),
   ambientLightIntensity: 1,
-  date: new Date(),
+  date: new Date().setHours(8),
   photometric: true,
   inscatter: true,
   transmittance: true,
@@ -112,7 +113,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   cloudsEffect?: Clouds;
 
   private effectComposer: EffectComposer;
-  private scene: Scene;
+  private scenes: Scenes;
   private renderer: WebGLRenderer;
   private camera: PerspectiveCamera;
 
@@ -131,32 +132,36 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private ambientLightObj?: AmbientLight;
   private starsMesh?: Stars;
 
-  private normalPass: NormalPass;
+  private normalBuffer: Texture;
 
   private options: Required<AtmosphereOptions>;
   private needsUpdate = false;
 
   constructor(
     effectComposer: EffectComposer,
-    scene: Scene,
+    scenes: Scenes,
     renderer: WebGLRenderer,
     camera: PerspectiveCamera,
-    normalPass: NormalPass,
+    normalBuffer: Texture,
     options: AtmosphereOptions = {},
   ) {
     super();
 
     this.effectComposer = effectComposer;
-    this.scene = scene;
+    this.scenes = scenes;
     this.renderer = renderer;
     this.camera = camera;
     this.options = { ...DEFAULT_ATMOSPHERE_OPTIONS, ...options };
-    this.normalPass = normalPass;
+    this.normalBuffer = normalBuffer;
 
     if (this.options.aerialPerspective) {
       this.init();
+    } else {
+      this.addSunLight();
     }
     this.addAmbientLight();
+
+    this.onUpdate();
   }
 
   onUpdate = () => {
@@ -202,6 +207,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       photometric: this.options.photometric,
       inscatter: this.options.inscatter,
       transmittance: this.options.transmittance,
+      octEncodedNormal: true,
     });
 
     invariant(this.textures);
@@ -250,7 +256,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     if (this.effect) {
       this.effect.sunIrradiance = true;
       this.effect.skyIrradiance = true;
-      this.effect.normalBuffer = this.normalPass.texture;
+      this.effect.normalBuffer = this.normalBuffer;
     }
 
     invariant(this.textures);
@@ -328,12 +334,12 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     Object.assign(skyMaterial, this.textures);
 
-    this.scene.add(this.skyMesh);
+    this.scenes.post.add(this.skyMesh);
   }
 
   private removeSky() {
     if (!this.skyMesh) return;
-    this.scene.remove(this.skyMesh);
+    this.scenes.post.remove(this.skyMesh);
     this.skyMesh = undefined;
   }
 
@@ -352,20 +358,20 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.starsMesh.addEventListener("_needsUpdate", this.onUpdate);
 
-    this.scene.add(this.starsMesh);
+    this.scenes.post.add(this.starsMesh);
   }
 
   private removeStars() {
     if (!this.starsMesh) return;
     this.starsMesh.removeEventListener("_needsUpdate", this.onUpdate);
-    this.scene.remove(this.starsMesh);
+    this.scenes.post.remove(this.starsMesh);
     this.starsMesh = undefined;
   }
 
   private async addSkyLightProbe() {
     if (!this.skyLightProbe) {
       this.skyLightProbe = new SkyLightProbe();
-      this.scene.add(this.skyLightProbe);
+      this.scenes.world.add(this.skyLightProbe);
     }
 
     this.skyLightProbe.visible = true;
@@ -377,7 +383,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
   private removeSkyLightProbe() {
     if (!this.skyLightProbe) return;
-    this.scene.remove(this.skyLightProbe);
+    this.scenes.world.remove(this.skyLightProbe);
     this.skyLightProbe = undefined;
   }
 
@@ -412,13 +418,14 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.sunLightObj.shadow.mapSize.height = 2048;
     this.sunLightObj.shadow.normalBias = 1;
 
-    this.scene.add(this.sunLightObj);
-    this.scene.add(this.sunLightObj.target);
+    this.scenes.world.add(this.sunLightObj);
+    this.scenes.world.add(this.sunLightObj.target);
   }
 
   private removeSunLight() {
     if (!this.sunLightObj) return;
-    this.scene.remove(this.sunLightObj);
+    this.scenes.world.remove(this.sunLightObj);
+    this.scenes.world.remove(this.sunLightObj.target);
     this.sunLightObj = undefined;
   }
 
@@ -430,12 +437,12 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       this.options.ambientLightIntensity,
     );
 
-    this.scene.add(this.ambientLightObj);
+    this.scenes.world.add(this.ambientLightObj);
   }
 
   private removeAmbientLight() {
     if (!this.ambientLightObj) return;
-    this.scene.remove(this.ambientLightObj);
+    this.scenes.world.remove(this.ambientLightObj);
     this.ambientLightObj = undefined;
   }
 

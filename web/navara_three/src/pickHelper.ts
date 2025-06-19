@@ -51,9 +51,10 @@ export class PickHelper extends CustomRenderPass {
     drapedFeatureMaterials: Map<string, Material>,
     highlightColor: Color,
     onPickCallback: (pickArr: number[]) => number[],
+    inputBuffer: WebGLRenderTarget,
     options?: PickHelperOptions,
   ) {
-    super(scenes, camera, meshes, drapedFeatureMaterials);
+    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer);
 
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {

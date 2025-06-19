@@ -342,7 +342,6 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     if (mat.wireframe) {
       return new MeshBasicMaterial({
         color: GLOBE_COLOR,
-        transparent: true,
         wireframe: true,
         stencilWrite: false,
       });
@@ -351,12 +350,10 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     const m = mat.should_compute_normal_from_vertex
       ? new MeshLambertMaterial({
           color: GLOBE_COLOR,
-          transparent: true,
           stencilWrite: false,
         })
       : new MeshBasicMaterial({
           color: GLOBE_COLOR,
-          transparent: true,
           stencilWrite: false,
         });
 
@@ -413,8 +410,6 @@ vUv = vUv * uScale + uOffset;
   uniform float uOpacities[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
   uniform float uPickable;
-  // uniform sampler2D uTextures0;
-  // uniform sampler2D uTextures1;
   
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;

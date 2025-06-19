@@ -14,6 +14,7 @@ import {
 } from "three";
 
 import type { BufferLoader } from "../event";
+import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
 
 import {
@@ -155,9 +156,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     // Use the original shader files with modifications for batch texture
     this.material.vertexShader = PolylineVertShader;
-    this.material.fragmentShader = meshMaterial.clamp_to_ground
-      ? GroundPolylineFragShader
-      : PolylineFragShader;
+    this.material.fragmentShader =
+      `${packing}\n` +
+      (meshMaterial.clamp_to_ground
+        ? GroundPolylineFragShader
+        : PolylineFragShader);
 
     this.material.depthTest = false;
     this.material.visible = !!meshMaterial.show;

@@ -33,6 +33,8 @@ uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
 uniform vec3 nvr_uHighlightColor;
 
+layout(location = 1) out vec4 normalBuffer;
+
 float readDepth(sampler2D depthSampler, vec2 coord) {
     float fragCoordZ = texture( depthSampler, coord ).r;
     return fragCoordZ;
@@ -103,7 +105,7 @@ void main() {
     #include <emissivemap_fragment>
 
     vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
-    vec3 mapN = unpackRGBToNormal(texture2D( uGlobeNormal, uv ).xyz);
+    vec3 mapN = unpackVec2ToNormal(texture2D( uGlobeNormal, uv ).xy);
     // TODO: Support scaling normal. It's used to emphasis the shadow.
     // mapN.xy *= scaledNormal;
     vec3 normal = normalize( mapN );
@@ -125,4 +127,11 @@ void main() {
     #include <opaque_fragment>
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
+
+
+    normalBuffer = vec4(
+        packNormalToVec2(normal),
+        0.0,
+        0.0
+    );
 }

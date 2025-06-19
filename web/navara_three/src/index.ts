@@ -7,7 +7,7 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer, NormalPass, CopyPass } from "postprocessing";
+import { EffectComposer } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -49,6 +49,7 @@ import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
+import { overrideMaterialsForMRT } from "./material";
 import { PickHelper } from "./pickHelper";
 import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
@@ -76,6 +77,11 @@ export * from "./light";
 export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
+
+// NOTE:
+// This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
+// Currently, Navara requires two buffers, so your shader must output them.
+overrideMaterialsForMRT();
 
 export type Options = {
   container?: HTMLElement;
@@ -356,6 +362,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       main,
       globe: globeScene,
       drapedFeatures: drapedFeaturesScene,
+      post: new Scene(),
     };
 
     if (options.camera) {
@@ -381,6 +388,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       frameBufferType: (options.halfFloat ?? true) ? HalfFloatType : undefined,
       multisampling: options.multisampling,
     });
+
     this._effectComposer.setSize(width, height);
 
     this._renderPass = new CustomRenderPass(
@@ -388,53 +396,44 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.camera.innerCam,
       this._meshes,
       this._drapedFeatureMaterials,
+      this.effectComposer.inputBuffer,
     );
     this._effectComposer.addPass(this._renderPass);
-
-    // NEXT: これを消したい。
-    // 1. [x] globeGbuffer関連の変数を消す
-    // 2. [ ] それぞれのMaterialから直接、normalBufferを返すようにする
-    // 3. [ ] NormalCopyPassを実装してpackRGBAした上で、AerialPerspectiveに渡す
-    const normalPass = new NormalPass(combinedScene, this.camera.innerCam);
-    this._effectComposer.addPass(normalPass);
-
-    const copyPass = new CopyPass();
-    this._effectComposer.addPass(copyPass);
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
     this.atmosphere = new Atmosphere(
       this.effectComposer,
-      this.scene,
+      this._scenes,
       this.renderer,
       this.camera.innerCam,
-      normalPass,
-      { index: 3, cloudsIndex: 4, ...options.atmosphere },
+      this._renderPass.gbufferRenderTarget.textures[1],
+      { index: 1, cloudsIndex: 2, ...options.atmosphere },
     );
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
+    this.lensFlareEffect = new LensFlare(
+      this._effectComposer,
+      this.camera.innerCam,
+      { index: 3, ...options.lensFlare }, // Index must be same with SSAO.
+    );
+    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.ssaoEffect = new SSAO(
       this._effectComposer,
       combinedScene,
       this.camera.innerCam,
       width,
       height,
-      { index: 5, ...options.ssao },
+      { index: 4, ...options.ssao },
     );
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
-    this.lensFlareEffect = new LensFlare(
-      this._effectComposer,
-      this.camera.innerCam,
-      { index: 6, ...options.lensFlare }, // Index must be same with SSAO.
-    );
-    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 7, ...options.toneMapping },
+      { index: 5, ...options.toneMapping },
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
     this.aaEffect = new Antialias(this._effectComposer, this.camera.innerCam, {
-      index: 8,
+      index: 6,
       ...(options.antialias ?? {}),
     });
     this.aaEffect.on("_needsUpdate", this.forceUpdate);
@@ -494,8 +493,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this._renderFlag.animation = !!options.animation;
   }
 
-  get scene() {
-    return this._scenes.world;
+  get scenes() {
+    // TODO: Publish `drapedFeatures`. Need to expose `_drapedFeatureMaterials` as well.
+    return this._scenes as Omit<Scenes, "drapedFeatures">;
   }
 
   get effectComposer() {
@@ -511,7 +511,15 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   get globeDepthTexture() {
-    return this._renderPass._globeDepthCopyPass.texture;
+    return this._renderPass.globeDepthCopyPass.texture;
+  }
+
+  get globeNormalTexture() {
+    return this._renderPass.globeNormalCopyPass.texture;
+  }
+
+  get normalTexture() {
+    return this._renderPass.gbufferRenderTarget.textures[1];
   }
 
   forceUpdate = () => {
@@ -542,9 +550,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this._drapedFeatureMaterials,
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
-        // {
-        //   debug: true,
-        // },
+        this.effectComposer.inputBuffer,
+        {
+          debug: true,
+        },
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
@@ -624,10 +633,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
-      this._renderPass._globeDepthCopyPass.texture;
-    // NEXT: Handle normal map
-    // this._uniforms.tGlobeNormal.value =
-    //   this._globeGBufferRenderTarget.textures[0];
+      this._renderPass.globeDepthCopyPass.texture;
+    this._uniforms.tGlobeNormal.value =
+      this._renderPass.globeNormalCopyPass.texture;
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.innerCam.projectionMatrixInverse;
 

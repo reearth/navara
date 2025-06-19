@@ -408,9 +408,9 @@ const addIBLControl = (view: ThreeView, pane: Pane) => {
 
   folder.addBinding(PARAMS, "enable").on("change", (v) => {
     if (v.value) {
-      view.scene.add(lightProbe);
+      view.scenes.world.add(lightProbe);
     } else {
-      view.scene.remove(lightProbe);
+      view.scenes.world.remove(lightProbe);
     }
     view.forceUpdate();
   });
