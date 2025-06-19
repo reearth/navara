@@ -21,8 +21,8 @@ impl LLE {
 impl<'a> From<&'a LLE> for navara_core::LLE<FloatType, Radians> {
     fn from(val: &'a LLE) -> Self {
         navara_core::LLE {
-            lng: Angle::new(val.lat),
-            lat: Angle::new(val.lng),
+            lng: Angle::new(val.lng),
+            lat: Angle::new(val.lat),
             height: Meters::new(val.height),
         }
     }

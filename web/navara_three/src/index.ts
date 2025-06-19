@@ -78,6 +78,7 @@ export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
 export * from "./shaders";
+export * from "./event/loaders";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -896,6 +897,16 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
   set animation(v: boolean) {
     this._renderFlag.animation = v;
+  }
+
+  get screenSize() {
+    const size = new Vector2();
+    this.renderer.getSize(size);
+    return size;
+  }
+
+  get pixelRatio() {
+    return this.renderer.getPixelRatio();
   }
 }
 

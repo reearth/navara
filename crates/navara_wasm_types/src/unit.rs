@@ -9,6 +9,14 @@ pub struct Vec2 {
     pub y: FloatType,
 }
 
+#[wasm_bindgen]
+impl Vec2 {
+    #[wasm_bindgen(constructor)]
+    pub fn new(x: FloatType, y: FloatType) -> Self {
+        Self { x, y }
+    }
+}
+
 impl From<navara_math::Vec2> for Vec2 {
     fn from(v: navara_math::Vec2) -> Self {
         Self { x: v.x, y: v.y }

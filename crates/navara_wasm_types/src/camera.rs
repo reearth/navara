@@ -1,4 +1,5 @@
-use navara_math::FloatType;
+use navara_math::{FloatType, Quat, Vec3};
+use serde::Serialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
@@ -61,4 +62,99 @@ pub struct CameraOrientation {
     pub heading: FloatType,
     pub pitch: FloatType,
     pub roll: FloatType,
+}
+
+// TODO: Use TypedArray to avoid unnecessary clone.
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Transform {
+    pub tx: FloatType,
+    pub ty: FloatType,
+    pub tz: FloatType,
+    pub qx: FloatType,
+    pub qy: FloatType,
+    pub qz: FloatType,
+    pub qw: FloatType,
+    pub sx: FloatType,
+    pub sy: FloatType,
+    pub sz: FloatType,
+}
+
+#[wasm_bindgen]
+impl Transform {
+    #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        tx: FloatType,
+        ty: FloatType,
+        tz: FloatType,
+        qx: FloatType,
+        qy: FloatType,
+        qz: FloatType,
+        qw: FloatType,
+        sx: FloatType,
+        sy: FloatType,
+        sz: FloatType,
+    ) -> Self {
+        Self {
+            tx,
+            ty,
+            tz,
+            qx,
+            qy,
+            qz,
+            qw,
+            sx,
+            sy,
+            sz,
+        }
+    }
+}
+
+impl<'a> From<&'a navara_math::Transform> for Transform {
+    fn from(t: &'a navara_math::Transform) -> Self {
+        Self {
+            tx: t.translation.x,
+            ty: t.translation.y,
+            tz: t.translation.z,
+            qx: t.rotation.x,
+            qy: t.rotation.y,
+            qz: t.rotation.z,
+            qw: t.rotation.w,
+            sx: t.scale.x,
+            sy: t.scale.y,
+            sz: t.scale.z,
+        }
+    }
+}
+
+impl<'a> From<&'a Transform> for navara_math::Transform {
+    fn from(t: &'a Transform) -> Self {
+        navara_math::Transform {
+            translation: Vec3::new(t.tx, t.ty, t.tz),
+            rotation: Quat::from_xyzw(t.qx, t.qy, t.qz, t.qw),
+            scale: Vec3::new(t.sx, t.sy, t.sz),
+        }
+    }
+}
+
+#[wasm_bindgen]
+pub struct CameraFrustum {
+    pub near: FloatType,
+    pub far: FloatType,
+    pub fov: FloatType,
+    pub aspect_ratio: FloatType,
+}
+
+#[wasm_bindgen]
+impl CameraFrustum {
+    #[wasm_bindgen(constructor)]
+    pub fn new(near: FloatType, far: FloatType, fov: FloatType, aspect_ratio: FloatType) -> Self {
+        Self {
+            near,
+            far,
+            fov,
+            aspect_ratio,
+        }
+    }
 }
