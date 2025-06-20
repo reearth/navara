@@ -17,7 +17,6 @@ import {
   type WebGLRenderer,
 } from "three";
 
-import { ENABLE_NORMAL_BUFFER_OUTPUT } from "./constants/renderModes";
 import { NormalCopyPass, RenderTargetCopyPass } from "./passes";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
@@ -104,10 +103,8 @@ export class CustomRenderPass extends RenderPass {
 
     this._renderWithWorld(renderer, this._scenes.globe);
 
-    if (ENABLE_NORMAL_BUFFER_OUTPUT) {
-      // Set normal texture for copy pass
-      this.globeNormalCopyPass.render(renderer, null, null);
-    }
+    // Set normal texture for copy pass
+    this.globeNormalCopyPass.render(renderer, null, null);
 
     this.globeDepthCopyPass.render(renderer, null, null);
 
