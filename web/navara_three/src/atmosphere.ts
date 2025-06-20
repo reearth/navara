@@ -59,6 +59,7 @@ export type AtmosphereOptions = {
   ambientLightIntensity?: number;
 
   clouds?: boolean;
+  cloudsShadow?: boolean;
   cloudsOptions?: CloudsOptions;
 
   date?: Date;
@@ -95,6 +96,7 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   moonIntensity: 1,
 
   clouds: false,
+  cloudsShadow: true,
   cloudsOptions: DEFAULT_CLOUDS_OPTIONS,
 
   ambientLight: false,
@@ -219,7 +221,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
 
   private addClouds() {
-    if (this.cloudsEffect || !this.clouds) return;
+    if (this.cloudsEffect || !this.clouds || !this.effect) return;
 
     this.cloudsEffect = new Clouds(this.effectComposer, this.camera, {
       ...this.options.cloudsOptions,
@@ -236,6 +238,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
             this.effect.overlay = this.cloudsEffect.inner.atmosphereOverlay;
             break;
           case "atmosphereShadow":
+            if (!this.cloudsShadow) break;
             this.effect.shadow = this.cloudsEffect.inner.atmosphereShadow;
             break;
           case "atmosphereShadowLength":
@@ -806,5 +809,18 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
   get cloudsIndex() {
     return this.options.cloudsIndex ?? undefined;
+  }
+
+  get cloudsShadow() {
+    return this.options.cloudsShadow;
+  }
+
+  set cloudsShadow(v: boolean) {
+    if (!this.effect || !this.cloudsEffect) return;
+    if (v) {
+      this.effect.shadow = this.cloudsEffect.inner.atmosphereShadow;
+    } else {
+      this.effect.shadow = null;
+    }
   }
 }

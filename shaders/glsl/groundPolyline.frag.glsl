@@ -56,20 +56,33 @@ void main() {
 
     float near = frustumNearFar.x;
     float far = frustumNearFar.y;
+
+    vec2 screenCoords = (gl_FragCoord.xy / viewport) * 2.0 - 1.0;
+
+    #ifdef USE_LOGDEPTHBUF
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;
     float depthFromCamera = linearDepth + near;
     float z_ndc = -1. * depthFromCamera;
-
-
     // Transform to clip coordinates
     vec4 clipCoords = vec4(
-        (gl_FragCoord.xy / viewport) * 2.0 - 1.0,
+        screenCoords,
         z_ndc,
         1.0
     );
     // Transform to eye coordinates
     vec4 eyeCoordinate = inverseProjectionMatrix * clipCoords;
     eyeCoordinate.w = 1.0 / depthFromCamera;
+    #else // USE_LOGDEPTHBUF
+    // Transform to clip coordinates
+    vec4 clipCoords = vec4(
+        screenCoords,
+        logDepthOrDepth * 2. - 1.,
+        1.0
+    );
+    // Transform to eye coordinates
+    vec4 eyeCoordinate = inverseProjectionMatrix * clipCoords;
+    #endif // USE_LOGDEPTHBUF
+
     eyeCoordinate /= eyeCoordinate.w;
 
     float halfMaxWidth = v_startPlaneNormalEcAndHalfWidth.w * nvr_metersPerPixel(eyeCoordinate, viewportAndPixelRatio, frustumNearFar, frustumRatio);

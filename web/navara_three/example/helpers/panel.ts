@@ -61,6 +61,7 @@ export const addCtrlPanel = (
     corner_radius: 0.0,
     center: { x: 0, y: 0 },
     padding: { x: 0, y: 0 },
+    transparent: false,
   };
 
   pane
@@ -264,6 +265,10 @@ export const addCtrlPanel = (
         material.padding.y = paneParams.padding.y;
       }
 
+      if ("transparent" in material) {
+        material.transparent = paneParams.transparent;
+      }
+
       view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
@@ -430,6 +435,11 @@ function createParamCtrl(
       paneParams.padding.x = material.padding.x;
       paneParams.padding.y = material.padding.y;
       f.addBinding(paneParams, "padding").on("change", changeFunc);
+    }
+
+    if ("transparent" in material) {
+      paneParams.transparent = material.transparent;
+      f.addBinding(paneParams, "transparent").on("change", changeFunc);
     }
 
     return f;

@@ -315,7 +315,7 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
   });
   folder.addBinding(PARAMS, "cloudsShadows").on("change", (v) => {
     if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsEffect.shadows = v.value;
+    view.atmosphere.cloudsShadow = v.value;
   });
   folder
     .addBinding(PARAMS, "cloudsShadowCascadeCount", {

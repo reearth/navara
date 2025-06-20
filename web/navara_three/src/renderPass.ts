@@ -31,12 +31,18 @@ export class CustomRenderPass extends RenderPass {
   private copyPass: RenderTargetCopyPass;
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
+
+  private debugNormalCopyPass?: NormalCopyPass;
+
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
     inputBuffer: WebGLRenderTarget,
+    options?: {
+      debugNormal: boolean;
+    },
   ) {
     super();
 
@@ -64,6 +70,13 @@ export class CustomRenderPass extends RenderPass {
     this.globeNormalCopyPass.setNormalTexture(
       this.gbufferRenderTarget.textures[1],
     );
+    if (options?.debugNormal) {
+      this.debugNormalCopyPass = new NormalCopyPass();
+      this.debugNormalCopyPass.unpackNormal = true;
+      this.debugNormalCopyPass.setNormalTexture(
+        this.gbufferRenderTarget.textures[1],
+      );
+    }
   }
 
   // Render the scene with world scene that includes user setting object like a light.
@@ -107,8 +120,13 @@ export class CustomRenderPass extends RenderPass {
 
     this._renderWithWorld(renderer, this._scenes.main);
 
+    this.debugNormalCopyPass?.render(renderer, null, null);
+
     const finalTarget = this.renderToScreen ? null : inputBuffer;
 
+    if (this.debugNormalCopyPass) {
+      this.copyPass.setTexture(this.debugNormalCopyPass.texture);
+    }
     this.copyPass.render(renderer, finalTarget, null);
 
     this._renderWithWorld(renderer, this._scenes.post);
@@ -124,6 +142,7 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.setSize(width, height);
     this.globeDepthCopyPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
+    this.debugNormalCopyPass?.setSize(width, height);
   }
 
   // Drape a feature on the terrain by stencil test.

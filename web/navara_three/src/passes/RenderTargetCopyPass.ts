@@ -10,11 +10,13 @@ import {
 
 const fragmentShader = `
 uniform sampler2D color;
+uniform sampler2D depth;
 
 varying vec2 vUv;
 
 void main() {
   gl_FragColor = texture2D(color, vUv);
+  gl_FragDepth = texture2D(color, vUv).r;
 }
 `;
 
@@ -67,6 +69,10 @@ export class RenderTargetCopyPass extends Pass {
 
   setTexture(texture: Texture): void {
     this._material.uniforms.color.value = texture;
+  }
+
+  setDepthTexture(texture: Texture): void {
+    this._material.uniforms.depth.value = texture;
   }
 
   render(

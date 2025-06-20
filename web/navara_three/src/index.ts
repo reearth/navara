@@ -79,6 +79,7 @@ export * from "./layer";
 export * from "./effects";
 export * from "./shaders";
 export * from "./event/loaders";
+export * from "./material";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -113,6 +114,7 @@ export type Options = {
   lensFlare?: LensFlareOptions;
   dithering?: EffectOptions;
   ssao?: SSAOOptions;
+  logarithmicDepthBuffer?: boolean;
 };
 
 export type ViewEvents = {
@@ -309,7 +311,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       const renderer = new WebGLRenderer({
         // If it's true, some noise will happen. So use other AA algorithm instead.
         antialias: false,
-        logarithmicDepthBuffer: true,
+        logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? true,
         canvas: options.canvas,
         stencil: true,
       });
@@ -399,6 +401,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._meshes,
       this._drapedFeatureMaterials,
       this.effectComposer.inputBuffer,
+      // { debugNormal: true },
     );
     this._effectComposer.addPass(this._renderPass);
 

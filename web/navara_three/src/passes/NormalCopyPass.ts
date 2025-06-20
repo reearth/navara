@@ -11,14 +11,22 @@ import {
   type WebGLRenderer,
 } from "three";
 
+import { packing } from "../shaders";
+
 const fragmentShader = `
 #include <packing>
+
+${packing}
 
 uniform sampler2D tNormal;
 varying vec2 vUv;
 
 void main() {
+  #ifdef UNPACK_NORMAL
+  gl_FragColor = vec4(unpackVec2ToNormal(texture2D(tNormal, vUv).xy), 1.0);
+  #else
   gl_FragColor = texture2D(tNormal, vUv);
+  #endif
 }
 `;
 
@@ -45,6 +53,9 @@ export class NormalCopyPass extends Pass {
       toneMapped: false,
       depthWrite: false,
       depthTest: false,
+      defines: {
+        UNPACK_NORMAL: false,
+      },
     });
 
     this._autoResize = autoResize;
@@ -76,6 +87,14 @@ export class NormalCopyPass extends Pass {
 
   set autoResize(value: boolean) {
     this._autoResize = value;
+  }
+
+  set unpackNormal(v: boolean) {
+    if (v) {
+      this._material.defines.UNPACK_NORMAL = "1";
+    } else {
+      delete this._material.defines.UNPACK_NORMAL;
+    }
   }
 
   setNormalTexture(texture: Texture): void {

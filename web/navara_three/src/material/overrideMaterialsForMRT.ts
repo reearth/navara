@@ -1,7 +1,7 @@
 // Ref: https://github.com/takram-design-engineering/three-geospatial/blob/main/packages/effects/src/setupMaterialsForGeometryPass.ts
 
 import { packing } from "@takram/three-geospatial/shaders";
-import { ShaderLib, type ShaderLibShader } from "three";
+import { ShaderLib, ShaderMaterial, type ShaderLibShader } from "three";
 
 import { createReplacer } from "../utils";
 
@@ -10,6 +10,10 @@ const SETUP = Symbol("SETUP");
 declare module "three" {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface ShaderLibShader {
+    [SETUP]?: boolean;
+  }
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+  interface ShaderMaterial {
     [SETUP]?: boolean;
   }
 }
@@ -112,7 +116,7 @@ function injectGBuffer(
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
-        /}\s*$/m, // Assume the last curly brace is of main()
+        /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
           outputBuffer1 = ${outputBuffer1};
         }
@@ -124,10 +128,137 @@ function injectGBuffer(
   return shader;
 }
 
+function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
+  if (shader[SETUP] === true) {
+    return shader;
+  }
+
+  shader.vertexShader = /* glsl */ `
+    varying vec3 vViewPosition;
+    ${
+      createReplacer(shader.vertexShader).replace(
+        /}\s*$/,
+        `
+        vViewPosition = -mvPosition.xyz;
+      }
+    `,
+      ).source
+    }
+  `;
+
+  shader.fragmentShader = /* glsl */ `
+    layout(location = 1) out vec4 outputBuffer1;
+
+    varying vec3 vViewPosition;
+  
+    ${packing}
+
+    ${
+      createReplacer(shader.fragmentShader).replace(
+        /}\s*$/, // Assume the last curly brace is of main()
+        /* glsl */ `
+          // Flat shading
+          vec3 fdx = dFdx( vViewPosition );
+	        vec3 fdy = dFdy( vViewPosition );
+	        vec3 normal = normalize( cross( fdx, fdy ) );
+          outputBuffer1 = vec4(
+            packNormalToVec2(normal),
+            0.0,
+            0.0
+          );
+        }
+      `,
+      ).source
+    }
+  `;
+
+  shader[SETUP] = true;
+
+  return shader;
+}
+
 export function overrideMaterialsForMRT(): void {
   injectGBuffer(ShaderLib.lambert);
   injectGBuffer(ShaderLib.phong);
   injectGBuffer(ShaderLib.basic, { type: "basic" });
   injectGBuffer(ShaderLib.standard, { type: "physical" });
   injectGBuffer(ShaderLib.physical, { type: "physical" });
+  injectGBufferToSpriteMaterial(ShaderLib.sprite);
+}
+
+// TODO: Use a parser to handle this.
+function injectGBufferToShaderMaterial(
+  shader: ShaderMaterial,
+  normalVariableName = "normal",
+): ShaderLibShader {
+  if (shader[SETUP] === true) {
+    return shader;
+  }
+
+  // Vertex shader
+  const common = "#include <common>";
+
+  const logdepthParsVert = "#include <logdepthbuf_pars_vertex>";
+  const logdepthVert = "#include <logdepthbuf_vertex>";
+
+  shader.vertexShader = /* glsl */ `
+    ${shader.vertexShader.includes(common) ? "" : common}
+    ${shader.vertexShader.includes(logdepthParsVert) ? "" : logdepthParsVert}
+
+    ${
+      createReplacer(shader.vertexShader).replace(
+        /}\s*$/, // Assume the last curly brace is of main()
+        /* glsl */ `
+          ${shader.vertexShader.includes(logdepthVert) ? "" : logdepthVert}
+        }
+      `,
+      ).source
+    }
+  `;
+
+  // Fragment shader
+  const logdepthParsFrag = "#include <logdepthbuf_pars_fragment>";
+  const logdepthFrag = "#include <logdepthbuf_fragment>";
+  const outputBuffer1 = /* glsl */ `
+          vec4(
+            packNormalToVec2(${normalVariableName}),
+            0.0,
+            0.0
+          );
+        `;
+  shader.fragmentShader = /* glsl */ `
+    layout(location = 1) out vec4 outputBuffer1;
+
+    ${packing}
+
+    ${shader.fragmentShader.includes(logdepthParsFrag) ? "" : logdepthParsFrag}
+
+    ${
+      createReplacer(shader.fragmentShader).replace(
+        /}\s*$/, // Assume the last curly brace is of main()
+        /* glsl */ `
+          ${shader.fragmentShader.includes(logdepthFrag) ? "" : logdepthFrag}
+
+          outputBuffer1 = ${outputBuffer1};
+        }
+      `,
+      ).source
+    }
+  `;
+
+  shader[SETUP] = true;
+
+  return shader;
+}
+
+// NOTE that this function just overrides ShaderMaterial roughly, so it might fail.
+// You must have `normal` variable in your shader.
+// This function inject following things.
+// - Normal buffer output.
+// - `logdepthbuf` modules.
+export function overrideShaderMaterialForMRT(
+  material: ShaderMaterial,
+  normalVariableName?: string,
+) {
+  injectGBufferToShaderMaterial(material, normalVariableName);
 }
