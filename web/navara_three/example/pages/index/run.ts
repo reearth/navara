@@ -74,6 +74,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 1,
       scale_by_distance: true,
       clamp_to_ground: true,
+      transparent: false,
       depth_test: true,
     },
   },
@@ -108,6 +109,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       scale_by_distance: true,
       clamp_to_ground: true,
       depth_test: true,
+      transparent: false,
       url: "/example.png",
     },
   },
@@ -466,7 +468,7 @@ export const run = async (view: ThreeView) => {
 
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
-  view.scene.add(axesHelper);
+  view.scenes.post.add(axesHelper);
 
   // For debug
   // view.addLayer({

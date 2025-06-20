@@ -10,10 +10,10 @@ export type Scenes = {
   main: Scene;
   // Render only globe.
   globe: Scene;
-  // Render only globe for G-Buffer.
-  globeGBuffer: Scene;
   // Render only draped features
   drapedFeatures: Scene;
+  // Render this scene at last. This scene should not be handled in MRT.
+  post: Scene;
 };
 
 export class SceneGroup extends Group {}

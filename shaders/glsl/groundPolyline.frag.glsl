@@ -33,6 +33,8 @@ uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
 uniform vec3 nvr_uHighlightColor;
 
+layout(location = 1) out vec4 normalBuffer;
+
 float readDepth(sampler2D depthSampler, vec2 coord) {
     float fragCoordZ = texture( depthSampler, coord ).r;
     return fragCoordZ;
@@ -43,7 +45,7 @@ void main() {
     #include chunks/show_fragment;
     
     vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
-    float logDepthOrDepth = readDepth(tGlobeDepth, gl_FragCoord.xy / viewport.xy);
+    float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, gl_FragCoord.xy / viewport.xy));
 
     // Discard sky
     if (logDepthOrDepth == 1.0) {
@@ -54,19 +56,33 @@ void main() {
 
     float near = frustumNearFar.x;
     float far = frustumNearFar.y;
+
+    vec2 screenCoords = (gl_FragCoord.xy / viewport) * 2.0 - 1.0;
+
+    #ifdef USE_LOGDEPTHBUF
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;
     float depthFromCamera = linearDepth + near;
     float z_ndc = -1. * depthFromCamera;
-
     // Transform to clip coordinates
     vec4 clipCoords = vec4(
-        (gl_FragCoord.xy / viewport) * 2.0 - 1.0,
+        screenCoords,
         z_ndc,
         1.0
     );
     // Transform to eye coordinates
     vec4 eyeCoordinate = inverseProjectionMatrix * clipCoords;
     eyeCoordinate.w = 1.0 / depthFromCamera;
+    #else // USE_LOGDEPTHBUF
+    // Transform to clip coordinates
+    vec4 clipCoords = vec4(
+        screenCoords,
+        logDepthOrDepth * 2. - 1.,
+        1.0
+    );
+    // Transform to eye coordinates
+    vec4 eyeCoordinate = inverseProjectionMatrix * clipCoords;
+    #endif // USE_LOGDEPTHBUF
+
     eyeCoordinate /= eyeCoordinate.w;
 
     float halfMaxWidth = v_startPlaneNormalEcAndHalfWidth.w * nvr_metersPerPixel(eyeCoordinate, viewportAndPixelRatio, frustumNearFar, frustumRatio);
@@ -102,7 +118,7 @@ void main() {
     #include <emissivemap_fragment>
 
     vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
-    vec3 mapN = unpackRGBToNormal(texture2D( uGlobeNormal, uv ).xyz);
+    vec3 mapN = unpackVec2ToNormal(texture2D( uGlobeNormal, uv ).xy);
     // TODO: Support scaling normal. It's used to emphasis the shadow.
     // mapN.xy *= scaledNormal;
     vec3 normal = normalize( mapN );
@@ -124,4 +140,11 @@ void main() {
     #include <opaque_fragment>
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
+
+
+    normalBuffer = vec4(
+        packNormalToVec2(normal),
+        0.0,
+        0.0
+    );
 }

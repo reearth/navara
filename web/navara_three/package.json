@@ -30,12 +30,12 @@
     "@navara/core": "workspace:*",
     "@navara/three_api": "workspace:*",
     "@navara/worker": "workspace:*",
-    "@takram/three-atmosphere": "^0.11.2",
-    "@takram/three-clouds": "^0.2.2",
-    "@takram/three-geospatial": "^0.2.1",
-    "@takram/three-geospatial-effects": "^0.3.1",
+    "@takram/three-atmosphere": "^0.12.0",
+    "@takram/three-clouds": "^0.3.0",
+    "@takram/three-geospatial": "^0.2.2",
+    "@takram/three-geospatial-effects": "^0.3.2",
     "n8ao": "^1.10.0",
-    "postprocessing": "^6.37.3",
+    "postprocessing": "^6.37.4",
     "stats.js": "^0.17.0",
     "three-stdlib": "^2.36.0",
     "troika-three-text": "^0.52.4"
@@ -47,8 +47,8 @@
     "ajv": "^8.17.1",
     "three": "^0.177.0",
     "tweakpane": "^4.0.5",
-    "vite-plugin-glsl": "^1.4.2",
-    "vite-plugin-static-copy": "^3.0.0",
+    "vite-plugin-glsl": "^1.5.0",
+    "vite-plugin-static-copy": "^3.0.2",
     "vite-plugin-virtual-mpa": "^1.12.1"
   }
 }

@@ -71,13 +71,16 @@ export class PointMesh extends Sprite implements FeatureMesh {
           "#include <fog_fragment>",
           `
           #include <fog_fragment>
+
           float alpha = nvr_circle_alpha(sprite_uv);
           if (alpha == 0.) {
             discard;
           }
-          
-          gl_FragColor.a = alpha;
-          
+
+          #ifdef USE_AA
+            gl_FragColor.a = alpha;
+          #endif // USE_AA
+
           if (nvr_uPickable > 0.0 && alpha > 0.0) {
             vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
             gl_FragColor = vec4(pickColor.xyz, 1.0);
@@ -118,6 +121,15 @@ export class PointMesh extends Sprite implements FeatureMesh {
     if (prev.depthTest !== nextDepthTest) {
       this.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    const nextTransparent = !!material.transparent;
+    if (prev.transparent !== nextTransparent) {
+      this.material.transparent = nextTransparent;
+      this.material.defines ??= {};
+      this.material.defines.USE_AA = nextTransparent;
+      prev.transparent = nextTransparent;
+      this.material.needsUpdate = true;
     }
 
     const nextVisible = (material.show ?? true) && active;

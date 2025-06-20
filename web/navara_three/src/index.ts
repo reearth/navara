@@ -15,11 +15,7 @@ import {
   Vector3,
   Texture,
   Vector2,
-  WebGLRenderTarget,
-  FloatType,
   Material,
-  NearestFilter,
-  DepthTexture,
   Color,
   HalfFloatType,
   LinearFilter,
@@ -53,6 +49,7 @@ import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
+import { overrideMaterialsForMRT } from "./material";
 import { PickHelper } from "./pickHelper";
 import type { Picking } from "./picking";
 import { CustomRenderPass } from "./renderPass";
@@ -74,18 +71,20 @@ import { isWorker } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
-export {
-  DitheringEffect,
-  LensFlareEffect,
-} from "@takram/three-geospatial-effects";
-
 export * from "./type";
 export * from "./constants";
 export * from "./light";
 export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
+export * from "./shaders";
 export * from "./event/loaders";
+export * from "./material";
+
+// NOTE:
+// This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
+// Currently, Navara requires two buffers, so your shader must output them.
+overrideMaterialsForMRT();
 
 export type Options = {
   container?: HTMLElement;
@@ -115,6 +114,7 @@ export type Options = {
   lensFlare?: LensFlareOptions;
   dithering?: EffectOptions;
   ssao?: SSAOOptions;
+  logarithmicDepthBuffer?: boolean;
 };
 
 export type ViewEvents = {
@@ -138,13 +138,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   // Effects
   toneMappingEffect: ToneMapping;
   lensFlareEffect: LensFlare;
+  // Enabling SSAO with clouds causes a performance issue. You should avoid using both.
   ssaoEffect: SSAO;
   aaEffect: Antialias;
 
   private _scenes: Scenes;
   private _effectComposer: EffectComposer;
   private _renderPass: CustomRenderPass;
-  private _globeGBufferRenderTarget: WebGLRenderTarget;
   // Store draped feature's materials
   private _drapedFeatureMaterials = new Map<string, Material>();
 
@@ -312,7 +312,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       const renderer = new WebGLRenderer({
         // If it's true, some noise will happen. So use other AA algorithm instead.
         antialias: false,
-        logarithmicDepthBuffer: true,
+        logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? true,
         canvas: options.canvas,
         stencil: true,
       });
@@ -344,24 +344,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const { width = options.initialWidth, height = options.initialHeight } =
       this._getCanvasSize() ?? {};
     invariant(width && height);
-    const pixelRatio = this.renderer.getPixelRatio();
-    const scaledWidth = width * pixelRatio;
-    const scaledHeight = height * pixelRatio;
-    this._globeGBufferRenderTarget = new WebGLRenderTarget(
-      scaledWidth,
-      scaledHeight,
-      {
-        count: 1,
-      },
-    );
-    this._globeGBufferRenderTarget.depthTexture = new DepthTexture(
-      scaledWidth,
-      scaledHeight,
-    );
-    const normalBuffer = this._globeGBufferRenderTarget.textures[0];
-    normalBuffer.magFilter = NearestFilter;
-    normalBuffer.minFilter = NearestFilter;
-    normalBuffer.type = FloatType;
 
     let scene: Scene;
     if (options.scene) {
@@ -380,14 +362,12 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const main = new Scene();
     const drapedFeaturesScene = new Scene();
 
-    const globeGBufferScene = new Scene();
-
     this._scenes = {
       world: scene,
       main,
       globe: globeScene,
-      globeGBuffer: globeGBufferScene,
       drapedFeatures: drapedFeaturesScene,
+      post: new Scene(),
     };
 
     if (options.camera) {
@@ -402,20 +382,27 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.camera = new ThreeViewCamera(50, width / height, 100, 1e8);
     }
 
+    const combinedScene = new Scene();
+    combinedScene.add(this._scenes.main);
+    combinedScene.add(this._scenes.globe);
+    combinedScene.add(this._scenes.world);
+
     // Setup render pass
     this._effectComposer = new EffectComposer(this.renderer, {
       stencilBuffer: true,
       frameBufferType: (options.halfFloat ?? true) ? HalfFloatType : undefined,
       multisampling: options.multisampling,
     });
+
     this._effectComposer.setSize(width, height);
 
     this._renderPass = new CustomRenderPass(
       this._scenes,
       this.camera.innerCam,
       this._meshes,
-      this._globeGBufferRenderTarget,
       this._drapedFeatureMaterials,
+      this.effectComposer.inputBuffer,
+      // { debugNormal: true },
     );
     this._effectComposer.addPass(this._renderPass);
 
@@ -423,27 +410,28 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     // Order is important. Effect class adds the effect in it's constructor.
     this.atmosphere = new Atmosphere(
       this.effectComposer,
-      this.scene,
+      this._scenes,
       this.renderer,
       this.camera.innerCam,
+      this._renderPass.gbufferRenderTarget.textures[1],
       { index: 1, cloudsIndex: 2, ...options.atmosphere },
     );
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
-    this.ssaoEffect = new SSAO(
-      this._effectComposer,
-      this.scene,
-      this.camera.innerCam,
-      width,
-      height,
-      { index: 3, ...options.ssao },
-    );
-    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
       { index: 3, ...options.lensFlare }, // Index must be same with SSAO.
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
+    this.ssaoEffect = new SSAO(
+      this._effectComposer,
+      combinedScene,
+      this.camera.innerCam,
+      width,
+      height,
+      { index: 4, ...options.ssao },
+    );
+    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
       this._effectComposer,
       this.camera.innerCam,
@@ -511,8 +499,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this._renderFlag.animation = !!options.animation;
   }
 
-  get scene() {
-    return this._scenes.world;
+  get scenes() {
+    // TODO: Publish `drapedFeatures`. Need to expose `_drapedFeatureMaterials` as well.
+    return this._scenes as Omit<Scenes, "globe" | "drapedFeatures">;
   }
 
   get effectComposer() {
@@ -525,6 +514,18 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   set toneMappingExposure(v: number) {
     this.renderer.toneMappingExposure = v;
     this.forceUpdate();
+  }
+
+  get globeDepthTexture() {
+    return this._renderPass.globeDepthCopyPass.texture;
+  }
+
+  get globeNormalTexture() {
+    return this._renderPass.globeNormalCopyPass.texture;
+  }
+
+  get normalTexture() {
+    return this._renderPass.gbufferRenderTarget.textures[1];
   }
 
   forceUpdate = () => {
@@ -553,9 +554,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this._scenes,
         this._meshes,
         this._drapedFeatureMaterials,
-        this._globeGBufferRenderTarget,
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
+        this.effectComposer.inputBuffer,
         // {
         //   debug: true,
         // },
@@ -584,8 +585,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this._pickHelper.dispose();
     }
 
-    this._globeGBufferRenderTarget.dispose();
-
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -607,10 +606,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.camera.innerCam.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this._effectComposer.setSize(w, h);
-    this._globeGBufferRenderTarget.setSize(
-      w * (pixelRatio ?? 1),
-      h * (pixelRatio ?? 1),
-    );
     if (pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
@@ -644,9 +639,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
-      this._globeGBufferRenderTarget.depthTexture;
+      this._renderPass.globeDepthCopyPass.texture;
     this._uniforms.tGlobeNormal.value =
-      this._globeGBufferRenderTarget.textures[0];
+      this._renderPass.globeNormalCopyPass.texture;
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.innerCam.projectionMatrixInverse;
 

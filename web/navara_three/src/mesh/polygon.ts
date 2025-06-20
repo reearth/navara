@@ -228,7 +228,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
           `
   if(uClampToGround) {
     vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
-    vec3 mapN = unpackRGBToNormal(texture2D( uGlobeNormal, uv ).xyz);
+    vec3 mapN = unpackVec2ToNormal(texture2D( uGlobeNormal, uv ).xy);
     // TODO: Support scaling normal. It's used to emphasis the shadow.
     // mapN.xy *= scaledNormal;
     normal = normalize( mapN );

@@ -49,18 +49,12 @@ export class PickHelper extends CustomRenderPass {
     scenes: Scenes,
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
-    globeGBufferRenderTarget: WebGLRenderTarget,
     highlightColor: Color,
     onPickCallback: (pickArr: number[]) => number[],
+    inputBuffer: WebGLRenderTarget,
     options?: PickHelperOptions,
   ) {
-    super(
-      scenes,
-      camera,
-      meshes,
-      globeGBufferRenderTarget,
-      drapedFeatureMaterials,
-    );
+    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer);
 
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {
@@ -129,41 +123,45 @@ export class PickHelper extends CustomRenderPass {
     }
   }
 
-  private togglePickable(picable: number) {
+  private togglePickable(pickable: number) {
     for (const [_key, obj] of this._meshes) {
       // point, billboard, text
       if (obj instanceof InstancedMesh) {
-        obj.setPickable(picable);
+        obj.setPickable(pickable);
       }
       // polygon, polyline
       else if (obj instanceof BatchedFeatureMesh) {
-        obj._togglePickable(picable);
+        obj._togglePickable(pickable);
       }
 
       // model
       else if (obj instanceof ModelMesh) {
         this.traverseModel(obj, (mesh: Mesh) => {
           if ("userData" in mesh.material && mesh.material.userData.uPickable) {
-            mesh.material.userData.uPickable.value = picable;
+            mesh.material.userData.uPickable.value = pickable;
           }
         });
       }
       // text
       else if (obj instanceof TextMesh) {
-        obj.userData.uPickable.value = picable;
+        obj.userData.uPickable.value = pickable;
 
         obj.children.forEach((item) => {
           // The frustum used for picking is only 1 pixel in size,
           // and both the text and its background dynamically change positions,
           // they risk being incorrectly culled. Therefore, frustumCulled must be set to false
-          item.frustumCulled = picable < 0.5;
+          item.frustumCulled = pickable < 0.5;
         });
       }
       // tile
       else if (obj instanceof TileMesh) {
-        obj._togglePickable(picable);
+        obj._togglePickable(pickable);
       }
     }
+
+    // Since SkyMesh renders fullscreen quad plane, and it shows just black, this scene should be invisible.
+    // We should support picking in this scene in the future.
+    this._scenes.post.visible = !pickable;
   }
 
   private pickSprite(pickSet: Set<number>, obj: InstancedMesh<Object3D>) {
@@ -268,16 +266,7 @@ export class PickHelper extends CustomRenderPass {
 
     this.togglePickable(1);
 
-    this._renderer.setRenderTarget(this._globeGBufferRenderTarget);
-    this._renderer.clear();
-    this._renderer.render(this._scenes.globeGBuffer, this.camera);
-
-    this._renderer.setRenderTarget(target);
-    this._renderer.clear();
-    this._renderer.render(this._scenes.globe, this.camera);
-
-    this._renderDrapedMesh(this._renderer);
-    this._renderer.render(this._scenes.main, this.camera);
+    this.render(this._renderer, target, null);
 
     this.togglePickable(0);
 

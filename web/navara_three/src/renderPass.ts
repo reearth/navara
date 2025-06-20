@@ -1,20 +1,23 @@
-import { RenderPass } from "postprocessing";
+import { RenderPass, DepthCopyPass } from "postprocessing";
 import {
   AlwaysStencilFunc,
   BackSide,
   DecrementWrapStencilOp,
+  DepthTexture,
   FrontSide,
   IncrementWrapStencilOp,
   KeepStencilOp,
   Material,
   NotEqualStencilFunc,
+  RGBADepthPacking,
+  Scene,
   WebGLRenderTarget,
   ZeroStencilOp,
   type PerspectiveCamera,
-  type Scene,
   type WebGLRenderer,
 } from "three";
 
+import { NormalCopyPass, RenderTargetCopyPass } from "./passes";
 import type { Scenes } from "./scene";
 import type { MeshCache } from "./type";
 
@@ -22,24 +25,57 @@ export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
   protected _drapedFeatureMaterials: Map<string, Material>;
-  protected _globeGBufferRenderTarget: WebGLRenderTarget;
   protected _meshes: MeshCache;
+  gbufferRenderTarget: WebGLRenderTarget;
+  private copyPass: RenderTargetCopyPass;
+  globeDepthCopyPass: DepthCopyPass;
+  globeNormalCopyPass: NormalCopyPass;
+
+  private debugNormalCopyPass?: NormalCopyPass;
+
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
     meshes: MeshCache,
-    globeGBufferRenderTarget: WebGLRenderTarget,
     drapedFeatureMaterials: Map<string, Material>,
+    inputBuffer: WebGLRenderTarget,
+    options?: {
+      debugNormal: boolean;
+    },
   ) {
     super();
+
+    this.needsDepthTexture = true;
 
     this.clearPass.setClearFlags(true, true, true);
 
     this._scenes = scenes;
     this._camera = camera;
     this._meshes = meshes;
-    this._globeGBufferRenderTarget = globeGBufferRenderTarget;
     this._drapedFeatureMaterials = drapedFeatureMaterials;
+
+    this.gbufferRenderTarget = inputBuffer.clone();
+    this.gbufferRenderTarget.textures.push(
+      this.gbufferRenderTarget.texture.clone(),
+    );
+
+    this.copyPass = new RenderTargetCopyPass(this.gbufferRenderTarget);
+
+    this.globeDepthCopyPass = new DepthCopyPass({
+      depthPacking: RGBADepthPacking,
+    });
+
+    this.globeNormalCopyPass = new NormalCopyPass();
+    this.globeNormalCopyPass.setNormalTexture(
+      this.gbufferRenderTarget.textures[1],
+    );
+    if (options?.debugNormal) {
+      this.debugNormalCopyPass = new NormalCopyPass();
+      this.debugNormalCopyPass.unpackNormal = true;
+      this.debugNormalCopyPass.setNormalTexture(
+        this.gbufferRenderTarget.textures[1],
+      );
+    }
   }
 
   // Render the scene with world scene that includes user setting object like a light.
@@ -51,28 +87,59 @@ export class CustomRenderPass extends RenderPass {
 
   render(
     renderer: WebGLRenderer,
-    inputBuffer: WebGLRenderTarget,
-    outputBuffer: WebGLRenderTarget,
+    inputBuffer: WebGLRenderTarget | null,
+    _outputBuffer: WebGLRenderTarget | null,
   ) {
     const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
 
-    renderer.setRenderTarget(this._globeGBufferRenderTarget);
-    renderer.clear();
-    renderer.render(this._scenes.globeGBuffer, this._camera);
-
-    renderer.setRenderTarget(this.renderToScreen ? null : inputBuffer);
+    const renderTarget = this.gbufferRenderTarget;
 
     if (this.clearPass.enabled) {
-      this.clearPass.render(renderer, inputBuffer, outputBuffer);
+      this.clearPass.render(renderer, inputBuffer, null);
     }
 
+    renderer.setRenderTarget(renderTarget);
+    renderer.clear();
+
     this._renderWithWorld(renderer, this._scenes.globe);
+
+    // Set normal texture for copy pass
+    this.globeNormalCopyPass.render(renderer, null, null);
+
+    this.globeDepthCopyPass.render(renderer, null, null);
+
+    // Set actual renderTarget again because it's changed in copy passes
+    renderer.setRenderTarget(renderTarget);
 
     if (shouldDrapeByStencilTest) {
       this._renderDrapedMesh(renderer);
     }
 
     this._renderWithWorld(renderer, this._scenes.main);
+
+    this.debugNormalCopyPass?.render(renderer, null, null);
+
+    const finalTarget = this.renderToScreen ? null : inputBuffer;
+
+    if (this.debugNormalCopyPass) {
+      this.copyPass.setTexture(this.debugNormalCopyPass.texture);
+    }
+    this.copyPass.render(renderer, finalTarget, null);
+
+    this._renderWithWorld(renderer, this._scenes.post);
+  }
+
+  setDepthTexture(depthTexture: DepthTexture): void {
+    this.gbufferRenderTarget.depthTexture = depthTexture;
+    this.globeDepthCopyPass.setDepthTexture(depthTexture);
+    this.copyPass.setDepthTexture(depthTexture);
+  }
+
+  setSize(width: number, height: number) {
+    this.gbufferRenderTarget.setSize(width, height);
+    this.globeDepthCopyPass.setSize(width, height);
+    this.globeNormalCopyPass.setSize(width, height);
+    this.debugNormalCopyPass?.setSize(width, height);
   }
 
   // Drape a feature on the terrain by stencil test.

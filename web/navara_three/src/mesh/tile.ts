@@ -1,7 +1,5 @@
 import { generate_id_from_entity, type TileHandle } from "@navara/core";
 import { orthoCameraTransform } from "@navara/engine";
-import GBufferGlobeFragShader from "@shaders/glsl/gbufferGlobe.frag.glsl";
-import GBufferGlobeVertShader from "@shaders/glsl/gbufferGlobe.vert.glsl";
 import type {
   MeshAdded,
   Mesh as EventMesh,
@@ -14,12 +12,10 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  GLSL3,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
-  RawShaderMaterial,
   RGBAFormat,
   SRGBColorSpace,
   Texture,
@@ -69,7 +65,6 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
 
   // Next: Resolution should be updated according to `overscaled` value.
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
-  gbufferMesh = new Mesh<BufferGeometry, RawShaderMaterial>();
 
   constructor(
     mesh: MeshAdded,
@@ -271,12 +266,6 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       tileMapByHandle,
       mesh.ready_parent_tile_handle,
     );
-
-    const removed = () => {
-      this.gbufferMesh.removeFromParent();
-      this.removeEventListener("removed", removed);
-    };
-    this.addEventListener("removed", removed);
   }
 
   private async createMesh(
@@ -347,22 +336,12 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     if (transform) setTransform(this, transform);
     scenes.globe.add(this);
     meshes.set(id, this);
-
-    this.gbufferMesh.material = new RawShaderMaterial({
-      vertexShader: GBufferGlobeVertShader,
-      fragmentShader: GBufferGlobeFragShader,
-      glslVersion: GLSL3,
-    });
-    this.gbufferMesh.geometry = geometry;
-    this.gbufferMesh.visible = false;
-    scenes.globeGBuffer.add(this.gbufferMesh);
   }
 
   private initMaterial(mat: RasterTileInternalMaterial): TileMaterial {
     if (mat.wireframe) {
       return new MeshBasicMaterial({
         color: GLOBE_COLOR,
-        transparent: true,
         wireframe: true,
         stencilWrite: false,
       });
@@ -371,12 +350,10 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     const m = mat.should_compute_normal_from_vertex
       ? new MeshLambertMaterial({
           color: GLOBE_COLOR,
-          transparent: true,
           stencilWrite: false,
         })
       : new MeshBasicMaterial({
           color: GLOBE_COLOR,
-          transparent: true,
           stencilWrite: false,
         });
 
@@ -433,8 +410,6 @@ vUv = vUv * uScale + uOffset;
   uniform float uOpacities[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
   uniform float uPickable;
-  // uniform sampler2D uTextures0;
-  // uniform sampler2D uTextures1;
   
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;
@@ -494,7 +469,6 @@ if (uPickable > 0.) {
 
     // TODO: Support hide entire globe.
     this.visible = active;
-    this.gbufferMesh.visible = active;
 
     if (active) {
       // Update UV transform if available in the mesh

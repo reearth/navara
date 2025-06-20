@@ -1,14 +1,4 @@
-import ThreeView from "@navara/three";
-import {
-  AxesHelper,
-  SphereGeometry,
-  MeshPhongMaterial,
-  Mesh,
-  Vector2,
-  Vector3,
-  Object3D,
-  ArrowHelper,
-} from "three";
+import ThreeView, { initializeGltfLoader } from "@navara/three";
 import {
   geodeticToVector3,
   vector3ToGeodetic,
@@ -23,10 +13,19 @@ import {
   Window as NavaraWindow,
   LLE,
 } from "@navara/three_api";
+import {
+  AxesHelper,
+  SphereGeometry,
+  MeshPhongMaterial,
+  Mesh,
+  Vector2,
+  Vector3,
+  Object3D,
+  ArrowHelper,
+} from "three";
+import { Pane } from "tweakpane";
 
 import { TILE_URLS } from "../../helpers/constants";
-import { Pane } from "tweakpane";
-import { initializeGltfLoader } from "@navara/three";
 
 const gPaneParams = {
   convertScreenToWorld: true,
@@ -51,7 +50,7 @@ export const run = async (view: ThreeView) => {
 
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
-  view.scene.add(axesHelper);
+  view.scenes.main.add(axesHelper);
 
   addCtrlPanel();
   addRunningObject(view);
@@ -89,7 +88,7 @@ const addRunningObject = (view: ThreeView) => {
   });
 
   const sphere = new Mesh(geometry, material);
-  view.scene.add(sphere);
+  view.scenes.main.add(sphere);
 
   let lng = 0.0;
   let lat = 0.0;
@@ -176,7 +175,7 @@ const placeOneBall = (
     });
 
     const sphere = new Mesh(geometry, material);
-    view.scene.add(sphere);
+    view.scenes.main.add(sphere);
     sphere.position.set(pos.x, pos.y, pos.z);
 
     return sphere;
@@ -189,7 +188,7 @@ const addTestModel = async (view: ThreeView) => {
     "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
   );
   if (model.scene) {
-    view.scene.add(model.scene);
+    view.scenes.main.add(model.scene);
 
     const pos = geodeticToVector3(
       new LLE(degreeToRadian(35.3624725342), degreeToRadian(138.7306671143), 0),
@@ -202,7 +201,7 @@ const addTestModel = async (view: ThreeView) => {
     model.scene.scale.set(300000, 300000, 300000);
 
     const arrowHelper = new ArrowHelper(normal, pos, 6000000, 0xffffff);
-    view.scene.add(arrowHelper);
+    view.scenes.main.add(arrowHelper);
 
     gModel = model.scene;
     gModel.userData.origin = pos;

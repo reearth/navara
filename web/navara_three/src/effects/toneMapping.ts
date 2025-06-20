@@ -11,13 +11,12 @@ export { ToneMappingMode } from "postprocessing";
 
 export type ToneMappingOptions = {
   mode?: ToneMappingMode;
-  index: number | undefined;
 } & EffectOptions;
 
 export const DEFAULT_TONE_MAPPING_OPTIONS: Required<ToneMappingOptions> = {
   enabled: false,
   mode: ToneMappingMode.AGX,
-  index: undefined,
+  index: null,
 };
 
 export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
