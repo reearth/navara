@@ -35,6 +35,11 @@ export type CloudsOptions = {
   localWeatherVelocity?: Vector2;
   coverage?: number;
   lightShaft?: boolean | null | undefined;
+  resolutionScale?: number;
+
+  maxIterationCount?: number;
+  minStepSize?: number;
+  maxStepSize?: number;
 
   // Whether enabling the shadow for all layers or not.
   shadows?: boolean;
@@ -43,6 +48,7 @@ export type CloudsOptions = {
   shadowFarScale?: number;
 } & EffectOptions;
 
+// Default value is based on the medium preset.
 export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   enabled: false,
   index: null,
@@ -52,6 +58,11 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   localWeatherVelocity: new Vector2(),
   coverage: 0.25,
   lightShaft: null,
+  resolutionScale: 1,
+
+  maxIterationCount: 500,
+  minStepSize: 100,
+  maxStepSize: 1000,
 
   shadows: true,
   shadowCascadeCount: 3,
@@ -89,6 +100,7 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
 
     this.effect.qualityPreset = this.qualityPreset;
     this.effect.localWeatherVelocity.copy(this.localWeatherVelocity);
+    this.effect.resolutionScale = this.resolutionScale;
 
     if (this.options.lightShaft != null) {
       this.effect.lightShafts = this.lightShaft;
@@ -225,6 +237,42 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     this.options.lightShaft = v;
     this.effect.lightShafts = v;
 
+    this.emit("_needsUpdate");
+  }
+
+  get resolutionScale() {
+    return this.options.resolutionScale;
+  }
+  set resolutionScale(v: number) {
+    this.options.resolutionScale = v;
+    this.effect.resolutionScale = v;
+    this.emit("_needsUpdate");
+  }
+
+  get maxIterationCount() {
+    return this.options.maxIterationCount;
+  }
+  set maxIterationCount(v: number) {
+    this.options.maxIterationCount = v;
+    this.effect.clouds.maxIterationCount = v;
+    this.emit("_needsUpdate");
+  }
+
+  get minStepSize() {
+    return this.options.minStepSize;
+  }
+  set minStepSize(v: number) {
+    this.options.minStepSize = v;
+    this.effect.clouds.minStepSize = v;
+    this.emit("_needsUpdate");
+  }
+
+  get maxStepSize() {
+    return this.options.maxStepSize;
+  }
+  set maxStepSize(v: number) {
+    this.options.maxStepSize = v;
+    this.effect.clouds.maxStepSize = v;
     this.emit("_needsUpdate");
   }
 

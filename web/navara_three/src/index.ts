@@ -138,6 +138,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   // Effects
   toneMappingEffect: ToneMapping;
   lensFlareEffect: LensFlare;
+  // Enabling SSAO with clouds causes a performance issue. You should avoid using both.
   ssaoEffect: SSAO;
   aaEffect: Antialias;
 

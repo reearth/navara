@@ -263,13 +263,17 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
 const addCloudsControl = (view: ThreeView, pane: Pane) => {
   const PARAMS = {
     enable: true,
-    cloudsCoverage: 0.25,
-    cloudsQualityPreset: "medium",
-    cloudsAnimation: false,
-    cloudsLightShaft: false,
-    cloudsShadows: true,
-    cloudsShadowCascadeCount: 3,
-    cloudsShadowMapSize: 512,
+    coverage: 0.25,
+    qualityPreset: "medium",
+    animation: false,
+    lightShaft: false,
+    shadows: true,
+    shadowCascadeCount: 3,
+    shadowMapSize: 512,
+    resolutionScale: 1,
+    maxIterationCount: 500,
+    minStepSize: 50,
+    maxStepSize: 1000,
   };
 
   view.atmosphere.clouds = PARAMS.enable;
@@ -281,17 +285,17 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "enable").on("change", (v) => {
     if (!view.atmosphere.cloudsEffect) return;
     if (v.value) {
-      view.atmosphere.cloudsEffect.coverage = PARAMS.cloudsCoverage;
+      view.atmosphere.cloudsEffect.coverage = PARAMS.coverage;
     } else {
       view.atmosphere.cloudsEffect.coverage = 0;
     }
   });
-  folder.addBinding(PARAMS, "cloudsCoverage").on("change", (v) => {
+  folder.addBinding(PARAMS, "coverage").on("change", (v) => {
     if (!view.atmosphere.cloudsEffect) return;
     view.atmosphere.cloudsEffect.coverage = v.value;
   });
   folder
-    .addBinding(PARAMS, "cloudsQualityPreset", {
+    .addBinding(PARAMS, "qualityPreset", {
       options: Object.fromEntries(
         ["ultra", "high", "medium", "low"].map((v) => [v, v]),
       ),
@@ -302,23 +306,43 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
           v.value as Required<CloudsOptions>["qualityPreset"];
       }
     });
-  folder.addBinding(PARAMS, "cloudsAnimation").on("change", (v) => {
+  folder
+    .addBinding(PARAMS, "resolutionScale", {
+      options: [1, 0.5, 0.25].map((v) => ({ text: v.toString(), value: v })),
+    })
+    .on("change", (v) => {
+      if (!view.atmosphere.cloudsEffect) return;
+      view.atmosphere.cloudsEffect.resolutionScale = v.value;
+    });
+  folder.addBinding(PARAMS, "maxIterationCount").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    view.atmosphere.cloudsEffect.maxIterationCount = v.value;
+  });
+  folder.addBinding(PARAMS, "minStepSize").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    view.atmosphere.cloudsEffect.minStepSize = v.value;
+  });
+  folder.addBinding(PARAMS, "maxStepSize").on("change", (v) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    view.atmosphere.cloudsEffect.maxStepSize = v.value;
+  });
+  folder.addBinding(PARAMS, "animation").on("change", (v) => {
     if (view.atmosphere.cloudsEffect) {
       view.atmosphere.cloudsEffect.localWeatherVelocity.x = v.value ? 0.001 : 0;
       view.forceUpdate();
     }
     view.animation = v.value;
   });
-  folder.addBinding(PARAMS, "cloudsLightShaft").on("change", (v) => {
+  folder.addBinding(PARAMS, "lightShaft").on("change", (v) => {
     if (!view.atmosphere.cloudsEffect) return;
     view.atmosphere.cloudsEffect.lightShaft = v.value;
   });
-  folder.addBinding(PARAMS, "cloudsShadows").on("change", (v) => {
+  folder.addBinding(PARAMS, "shadows").on("change", (v) => {
     if (!view.atmosphere.cloudsEffect) return;
     view.atmosphere.cloudsShadow = v.value;
   });
   folder
-    .addBinding(PARAMS, "cloudsShadowCascadeCount", {
+    .addBinding(PARAMS, "shadowCascadeCount", {
       options: Object.fromEntries(
         [...new Array(4)].map((_, i) => [`${i + 1}`, i + 1]),
       ),
@@ -328,7 +352,7 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
       view.atmosphere.cloudsEffect.shadowCascadeCount = v.value;
     });
   folder
-    .addBinding(PARAMS, "cloudsShadowMapSize", {
+    .addBinding(PARAMS, "shadowMapSize", {
       options: {
         "128": 128,
         "256": 256,
@@ -439,7 +463,7 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     lensFlare: true,
     lensFlareIntensity: 0.005,
     dithering: true,
-    ssao: true,
+    ssao: false,
     ssaoSamples: 16,
     ssaoRadius: 5,
     ssaoIntensity: 1,
