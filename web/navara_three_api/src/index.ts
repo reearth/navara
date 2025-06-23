@@ -9,16 +9,28 @@ import initApi, {
   northEastDownToFixedFrame as nvNorthEastDownToFixedFrame,
   northUpEastToFixedFrame as nvNorthUpEastToFixedFrame,
   northWestUpToFixedFrame as nvNorthWestUpToFixedFrame,
+  getPlaneFromPointNormal as nvGetPlaneFromPointNormal,
+  getPickRay as nvGetPickRay,
+  getRayPlaneIntersection as nvGetRayPlaneIntersection,
+  getHeightFromEllipsoid as nvGetHeightFromEllipsoid,
   LLE,
   Vec3,
   Vec2,
   Window,
   Transform,
   CameraFrustum,
+  Plane,
+  Ray,
 } from "@navara/engine-api";
 import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
-export { LLE, Transform, CameraFrustum, Window } from "@navara/engine-api";
+export {
+  LLE,
+  Transform,
+  CameraFrustum,
+  Window,
+  Plane,
+} from "@navara/engine-api";
 
 export async function initNavaraApi() {
   await initApi();
@@ -114,4 +126,61 @@ export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
   const arr = nvNorthWestUpToFixedFrame(vec3);
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
+}
+
+export function getPlaneFromPointNormal(
+  point: Vector3,
+  normal: Vector3,
+): Plane {
+  const pointVec3 = new Vec3(point.x, point.y, point.z);
+  const normalVec3 = new Vec3(normal.x, normal.y, normal.z);
+
+  return nvGetPlaneFromPointNormal(pointVec3, normalVec3);
+}
+
+export function getPickRay(
+  window: Window,
+  camera: PerspectiveCamera,
+  vec2: Vector2,
+): Ray {
+  window.width = window.width * window.pixel_ratio;
+  window.height = window.height * window.pixel_ratio;
+
+  const transform = new Transform(
+    camera.position.x,
+    camera.position.y,
+    camera.position.z,
+    camera.quaternion.x,
+    camera.quaternion.y,
+    camera.quaternion.z,
+    camera.quaternion.w,
+    camera.scale.x,
+    camera.scale.y,
+    camera.scale.z,
+  );
+
+  const frustum = new CameraFrustum(
+    camera.near,
+    camera.far,
+    angleToRadian(camera.fov),
+    camera.aspect,
+  );
+
+  return nvGetPickRay(window, transform, frustum, new Vec2(vec2.x, vec2.y));
+}
+
+export function getRayPlaneIntersection(
+  ray: Ray,
+  plane: Plane,
+): Vector3 | undefined {
+  const result = nvGetRayPlaneIntersection(ray, plane);
+  if (result) {
+    return new Vector3(result.x, result.y, result.z);
+  }
+  return undefined;
+}
+
+export function getHeightFromEllipsoid(point: Vector3): number {
+  const vec3 = new Vec3(point.x, point.y, point.z);
+  return nvGetHeightFromEllipsoid(vec3);
 }

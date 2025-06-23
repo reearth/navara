@@ -10,6 +10,10 @@ import {
   northEastDownToFixedFrame,
   northUpEastToFixedFrame,
   northWestUpToFixedFrame,
+  getPlaneFromPointNormal,
+  getHeightFromEllipsoid,
+  getPickRay,
+  getRayPlaneIntersection,
   Window as NavaraWindow,
   LLE,
 } from "@navara/three_api";
@@ -22,13 +26,14 @@ import {
   Vector3,
   Object3D,
   ArrowHelper,
+  CylinderGeometry,
 } from "three";
 import { Pane } from "tweakpane";
 
 import { TILE_URLS } from "../../helpers/constants";
 
 const gPaneParams = {
-  convertScreenToWorld: true,
+  convertScreenToWorld: false,
 
   moveDistance: 0,
 
@@ -55,6 +60,7 @@ export const run = async (view: ThreeView) => {
   addCtrlPanel();
   addRunningObject(view);
   testScreenToWorld(view);
+  testRayPlane(view);
 
   await addTestModel(view);
 
@@ -319,4 +325,121 @@ const onTransformChange = () => {
       .multiplyScalar(gPaneParams.moveDistance);
     gModel.position.add(moveOffset);
   }
+};
+
+const testRayPlane = (view: ThreeView) => {
+  let center: Vector3 | undefined = undefined;
+  let radius: number | undefined = undefined;
+  let height: number | undefined = undefined;
+  let normal: Vector3 | undefined = undefined;
+  let btmDist: number | undefined = undefined;
+  let cylinder: Mesh | undefined = undefined;
+  let bMouseMoved = false;
+
+  const onMouseDown = (_e: MouseEvent) => {
+    bMouseMoved = false;
+  };
+  const onMouseMove = (event: MouseEvent) => {
+    bMouseMoved = true;
+
+    const rect = view.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const screenSize = view.screenSize;
+    const pixelRatio = view.pixelRatio;
+
+    if (center && normal && !radius) {
+      const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+      const ray = getPickRay(win, view.camera.innerCam, new Vector2(x, y));
+
+      const btmPlane = getPlaneFromPointNormal(center, normal);
+      const intersectPt = getRayPlaneIntersection(ray, btmPlane);
+      if (intersectPt) {
+        btmDist = intersectPt.distanceTo(center);
+        if (cylinder) {
+          cylinder.scale.set(btmDist, 1, btmDist);
+        }
+      }
+      return;
+    }
+
+    if (center && normal && radius) {
+      const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+      const ray = getPickRay(win, view.camera.innerCam, new Vector2(x, y));
+      const rayDir = new Vector3(
+        ray.direction.x,
+        ray.direction.y,
+        ray.direction.z,
+      );
+      const planeNormal = rayDir.cross(normal).cross(normal).normalize();
+      const plane = getPlaneFromPointNormal(center, planeNormal);
+      const intersectPt = getRayPlaneIntersection(ray, plane);
+      if (intersectPt) {
+        height = getHeightFromEllipsoid(intersectPt);
+        if (cylinder) {
+          cylinder.scale.set(radius, Math.max(1, height), radius);
+        }
+      }
+    }
+  };
+  const onMouseUp = (event: MouseEvent) => {
+    if (bMouseMoved) {
+      return;
+    }
+
+    const rect = view.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const pos = convertScreenPos(view, x, y);
+
+    if (!center && pos) {
+      center = pos;
+
+      const lle = vector3ToGeodetic(pos);
+      normal = geodeticSurfaceNormal(lle);
+
+      cylinder = makeCylinder(view, center);
+      return;
+    }
+
+    if (!radius && btmDist && pos) {
+      radius = btmDist;
+      return;
+    }
+
+    center = undefined;
+    radius = undefined;
+    normal = undefined;
+    cylinder = undefined;
+  };
+
+  view.renderer.domElement.addEventListener("mousedown", onMouseDown);
+  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
+  view.renderer.domElement.addEventListener("mouseup", onMouseUp);
+};
+
+const makeCylinder = (view: ThreeView, center: Vector3): Mesh => {
+  const geometry = new CylinderGeometry(
+    1, // top radius
+    1, // bottom radius
+    1, // height
+    32, // radial segments
+    1, // height segments
+    false, // open ended
+    0, // theta start
+    Math.PI * 2, // theta length
+  );
+  geometry.translate(0, 0.5, 0);
+
+  const material = new MeshPhongMaterial({
+    color: 0xffff00,
+  });
+
+  const cylinder = new Mesh(geometry, material);
+  view.scenes.main.add(cylinder);
+
+  const transformMatrix = northUpEastToFixedFrame(center);
+  cylinder.applyMatrix4(transformMatrix);
+
+  return cylinder;
 };
