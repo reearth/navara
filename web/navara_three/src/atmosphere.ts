@@ -11,6 +11,7 @@ import {
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
 import type { CloudsEffectChangeEvent } from "@takram/three-clouds";
+import { STBNLoader } from "@takram/three-geospatial";
 import { EffectPass, type EffectComposer } from "postprocessing";
 import {
   AmbientLight,
@@ -25,7 +26,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { ATMOSPHERE_ASSETS_URL, STARS_ASSETS_URL } from "./constants";
+import { ATMOSPHERE_ASSETS_URL, STARS_ASSETS_URL, STBN_URL } from "./constants";
 import { Clouds, DEFAULT_CLOUDS_OPTIONS, type CloudsOptions } from "./effects";
 import { DEFAULT_STARS_OPTIONS, Stars, type StarsOptions } from "./mesh";
 import { SKY_RENDER_ORDER } from "./renderOrder";
@@ -38,6 +39,7 @@ export type AtmosphereEvents = {
 export type AtmosphereOptions = {
   aerialPerspective?: boolean;
   atmosphereAssetsUrl?: string;
+  stbnUrl?: string;
   sky?: boolean;
 
   stars?: boolean;
@@ -79,6 +81,7 @@ const BASE_MOON_ANGULAR_RADIUS = 0.0045;
 export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   aerialPerspective: true,
   atmosphereAssetsUrl: ATMOSPHERE_ASSETS_URL,
+  stbnUrl: STBN_URL,
   sky: true,
 
   stars: true,
@@ -240,6 +243,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
           case "atmosphereShadow":
             if (!this.cloudsShadow) break;
             this.effect.shadow = this.cloudsEffect.inner.atmosphereShadow;
+            // Denoise shadow artifact.
+            new STBNLoader().load(this.options.stbnUrl, (data) => {
+              if (!this.effect) return;
+              this.effect.stbnTexture = data;
+            });
             break;
           case "atmosphereShadowLength":
             this.effect.shadowLength =

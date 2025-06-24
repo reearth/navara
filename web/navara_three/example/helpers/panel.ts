@@ -1,6 +1,12 @@
 import type { LayerDescription } from "@navara/three";
 import type ThreeView from "@navara/three";
-import { Pane } from "tweakpane";
+import {
+  FolderApi,
+  Pane,
+  TpChangeEvent,
+  type BindingParams,
+  type InputBindingApi,
+} from "tweakpane";
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
@@ -499,4 +505,35 @@ function getMaterialOptions(layer: MaterialLayerDescription) {
   });
 
   return ret;
+}
+
+export type FieldsApis<Params extends object> = Record<
+  keyof Params,
+  InputBindingApi
+>;
+
+export type FolderField<Params extends object> = {
+  [K in keyof Params]: {
+    name: K;
+    params?: BindingParams;
+    onMount?: (apis: FieldsApis<Params>) => void;
+    onChange: (v: TpChangeEvent<Params[K]>, apis: FieldsApis<Params>) => void;
+  };
+}[keyof Params];
+
+export type FolderFields<Params extends object> = FolderField<Params>[];
+
+export function addFieldsToFolder<Params extends object>(
+  folder: FolderApi,
+  params: Params,
+  fields: FolderFields<Params>,
+) {
+  const fieldsApis = {} as FieldsApis<Params>;
+  fields.forEach((field) => {
+    const api = folder
+      .addBinding(params, field.name, field.params)
+      .on("change", (v) => field.onChange(v, fieldsApis));
+    fieldsApis[field.name] = api as InputBindingApi;
+  });
+  fields.forEach((field) => field.onMount?.(fieldsApis));
 }

@@ -2,6 +2,8 @@ declare module "n8ao" {
   import { type Pass } from "postprocessing";
   import { type Camera, type Scene } from "three";
 
+  export type QualityMode = "Low" | "Medium" | "High" | "Ultra";
+
   export class N8AOPostPass extends Pass {
     // Ref: https://github.com/N8python/n8ao/blob/9d6c776cf670e8f78bd91249c77775a2cd7ac984/src/N8AOPostPass.js#L53-L70
     readonly configuration: Partial<{
@@ -23,5 +25,6 @@ declare module "n8ao" {
     }>;
     constructor(scene: Scene, camera: Camera, width?: number, height?: number);
     setSize(width: number, height: number): void;
+    setQualityMode(mode: QualityMode): void;
   }
 }
