@@ -1,12 +1,21 @@
 import ThreeView, {
+  DEFAULT_CLOUDS_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
   type CloudsOptions,
+  type SSAOQualityMode,
 } from "@navara/three";
+import type { TextureChannel } from "@takram/three-clouds";
 import { Color, LightProbe, SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { addCameraControl, addDateControl } from "../../helpers/control";
+import {
+  addFieldsToFolder,
+  type FieldsApis,
+  type FolderFields,
+} from "../../helpers/panel";
 
 import { SH_COEFFICIENTS } from "./consts";
 
@@ -70,37 +79,6 @@ export const run = async (view: ThreeView) => {
   addEffectsControl(view, pane);
 };
 
-const addCameraControl = (view: ThreeView, pane: Pane) => {
-  pane
-    .addButton({
-      title: "Globe view",
-    })
-    .on("click", () => {
-      view.setCamera({
-        lng: 90,
-        lat: 0.1,
-        height: 12600000,
-        heading: 0,
-        pitch: -90,
-        roll: 0,
-      });
-    });
-  pane
-    .addButton({
-      title: "Tokyo view",
-    })
-    .on("click", () => {
-      view.setCamera({
-        lng: 139.75711454748298,
-        lat: 35.67564356091717,
-        height: 902.0,
-        heading: 64.41840149763287, // -180 to 180
-        pitch: -36.00000121921312, // -180 to 0
-        roll: 0, // -180 to 180
-      });
-    });
-};
-
 const addTileControl = (view: ThreeView, pane: Pane) => {
   const PARAMS = {
     type: TILE_URLS.gsiSeamlessphoto,
@@ -131,50 +109,6 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
         },
         raster_tile: {},
       });
-    });
-};
-
-const addDateControl = (view: ThreeView, pane: Pane) => {
-  const date = new Date();
-  date.setHours(8);
-
-  view.atmosphere.date = date;
-
-  const PARAMS = {
-    year: date.getFullYear(),
-    month: date.getMonth() + 1,
-    hour: date.getHours(),
-  };
-
-  const onChangeDate = () => {
-    view.atmosphere.date = date;
-  };
-
-  const folder = pane.addFolder({
-    title: "Date",
-  });
-
-  folder
-    .addBinding(PARAMS, "year", {
-      min: 1900,
-      max: date.getFullYear(),
-      step: 1,
-    })
-    .on("change", (v) => {
-      date.setFullYear(v.value);
-      onChangeDate();
-    });
-  folder
-    .addBinding(PARAMS, "month", { min: 1, max: 12, step: 1 })
-    .on("change", (v) => {
-      date.setMonth(v.value - 1);
-      onChangeDate();
-    });
-  folder
-    .addBinding(PARAMS, "hour", { min: 0, max: 23, step: 1 })
-    .on("change", (v) => {
-      date.setHours(v.value);
-      onChangeDate();
     });
 };
 
@@ -261,110 +195,665 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
 };
 
 const addCloudsControl = (view: ThreeView, pane: Pane) => {
-  const PARAMS = {
+  const BASE_PARAMS = {
     enable: true,
-    coverage: 0.25,
-    qualityPreset: "medium",
+    coverage: DEFAULT_CLOUDS_OPTIONS.coverage,
+    qualityPreset: DEFAULT_CLOUDS_OPTIONS.qualityPreset,
     animation: false,
-    lightShaft: false,
-    shadows: true,
-    shadowCascadeCount: 3,
-    shadowMapSize: 512,
-    resolutionScale: 1,
-    maxIterationCount: 500,
-    minStepSize: 50,
+    lightShafts: !!DEFAULT_CLOUDS_OPTIONS.lightShafts,
+
+    // Processing
+    resolutionScale: DEFAULT_CLOUDS_OPTIONS.resolutionScale,
+    maxIterationCount: 50,
+    minStepSize: 100,
     maxStepSize: 1000,
   };
+  const SHADOW_PARAMS = {
+    shadows: DEFAULT_CLOUDS_OPTIONS.shadows,
+    shadowCascadeCount: DEFAULT_CLOUDS_OPTIONS.shadowCascadeCount,
+    shadowMapSize: DEFAULT_CLOUDS_OPTIONS.shadowMapSize.x,
+  };
+  const HAZE_PARAMS = {
+    haze: DEFAULT_CLOUDS_OPTIONS.haze,
+    hazeDensityScale: DEFAULT_CLOUDS_OPTIONS.hazeDensityScale,
+    hazeExponent: DEFAULT_CLOUDS_OPTIONS.hazeExponent,
+    hazeScatteringCoefficient: DEFAULT_CLOUDS_OPTIONS.hazeScatteringCoefficient,
+    hazeAbsorptionCoefficient: DEFAULT_CLOUDS_OPTIONS.hazeAbsorptionCoefficient,
+  };
+  const WEATHER_AND_SHAPE_PARAMS = {
+    localWeatherRepeat: DEFAULT_CLOUDS_OPTIONS.localWeatherRepeat.x,
+    localWeatherOffset: DEFAULT_CLOUDS_OPTIONS.localWeatherOffset,
+    shapeRepeat: DEFAULT_CLOUDS_OPTIONS.shapeRepeat.x,
+    shapeOffset: DEFAULT_CLOUDS_OPTIONS.shapeOffset,
+    shapeDetailRepeat: DEFAULT_CLOUDS_OPTIONS.shapeDetailRepeat.x,
+    shapeDetailOffset: DEFAULT_CLOUDS_OPTIONS.shapeDetailOffset,
+    turbulenceRepeat: DEFAULT_CLOUDS_OPTIONS.turbulenceRepeat.x,
+    turbulenceDisplacement: DEFAULT_CLOUDS_OPTIONS.turbulenceDisplacement,
+  };
+  const SCATTERING_PARAMS = {
+    scatteringCoefficient: DEFAULT_CLOUDS_OPTIONS.scatteringCoefficient,
+    absorptionCoefficient: DEFAULT_CLOUDS_OPTIONS.absorptionCoefficient,
+    scatterAnisotropy1: DEFAULT_CLOUDS_OPTIONS.scatterAnisotropy1,
+    scatterAnisotropy2: DEFAULT_CLOUDS_OPTIONS.scatterAnisotropy2,
+    scatterAnisotropyMix: DEFAULT_CLOUDS_OPTIONS.scatterAnisotropyMix,
+    skyIrradianceScale: DEFAULT_CLOUDS_OPTIONS.skyIrradianceScale,
+    groundIrradianceScale: DEFAULT_CLOUDS_OPTIONS.groundIrradianceScale,
+    powderScale: DEFAULT_CLOUDS_OPTIONS.powderScale,
+    powderExponent: DEFAULT_CLOUDS_OPTIONS.powderExponent,
+  };
+  const CLOUD_LAYERS_PARAMS = {
+    index: 0,
+    channel: "r",
+    altitude: 0,
+    height: 0,
+    densityScale: 0,
+    shapeAmount: 0,
+    shapeDetailAmount: 0,
+    weatherExponent: 0,
+    shapeAlteringBias: 0,
+    coverageFilterWidth: 0,
+    shadow: false,
+    expTerm: 0,
+    exponent: 0,
+    linearTerm: 0,
+    constantTerm: 0,
+  };
 
-  view.atmosphere.clouds = PARAMS.enable;
+  view.atmosphere.clouds = BASE_PARAMS.enable;
+
+  const baseFields: FolderFields<typeof BASE_PARAMS> = [
+    {
+      name: "enable",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        if (v.value) {
+          view.atmosphere.cloudsEffect.coverage = BASE_PARAMS.coverage;
+        } else {
+          view.atmosphere.cloudsEffect.coverage = 0;
+        }
+      },
+    },
+    {
+      name: "coverage",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.coverage = v.value;
+      },
+    },
+    {
+      name: "qualityPreset",
+      params: {
+        options: Object.fromEntries(
+          ["ultra", "high", "medium", "low"].map((v) => [v, v]),
+        ),
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.qualityPreset =
+          v.value as Required<CloudsOptions>["qualityPreset"];
+      },
+    },
+    {
+      name: "animation",
+      onChange: (v) => {
+        if (view.atmosphere.cloudsEffect) {
+          view.atmosphere.cloudsEffect.localWeatherVelocity.x = v.value
+            ? 0.001
+            : 0;
+          view.forceUpdate();
+        }
+        view.animation = v.value;
+      },
+    },
+    {
+      name: "lightShafts",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.lightShafts = v.value;
+      },
+    },
+
+    // Processing
+    {
+      name: "resolutionScale",
+      params: {
+        options: [1, 0.5, 0.25].map((v) => ({ text: v.toString(), value: v })),
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.resolutionScale = v.value;
+      },
+    },
+    {
+      name: "maxIterationCount",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.maxIterationCount = v.value;
+      },
+    },
+    {
+      name: "minStepSize",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.minStepSize = v.value;
+      },
+    },
+    {
+      name: "maxStepSize",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.maxStepSize = v.value;
+      },
+    },
+  ];
+  const shadowFields: FolderFields<typeof SHADOW_PARAMS> = [
+    // Shadow
+    {
+      name: "shadows",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsShadow = v.value;
+      },
+    },
+    {
+      name: "shadowCascadeCount",
+      params: {
+        options: Object.fromEntries(
+          [...new Array(4)].map((_, i) => [`${i + 1}`, i + 1]),
+        ),
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.shadowCascadeCount = v.value;
+      },
+    },
+    {
+      name: "shadowMapSize",
+      params: {
+        options: {
+          "128": 128,
+          "256": 256,
+          "512": 512,
+          "1024": 1024,
+        },
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.shadowMapSize.set(v.value, v.value);
+        view.forceUpdate();
+      },
+    },
+  ];
+  const hazeFields: FolderFields<typeof HAZE_PARAMS> = [
+    // Haze
+    {
+      name: "haze",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.haze = v.value;
+      },
+    },
+    {
+      name: "hazeDensityScale",
+      params: {
+        min: 0,
+        step: 3e-5,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.hazeDensityScale = v.value;
+      },
+    },
+    {
+      name: "hazeExponent",
+      params: {
+        min: 0,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.hazeExponent = v.value;
+      },
+    },
+    {
+      name: "hazeScatteringCoefficient",
+      params: {
+        min: 0,
+        max: 5,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.hazeScatteringCoefficient = v.value;
+      },
+    },
+    {
+      name: "hazeAbsorptionCoefficient",
+      params: {
+        min: 0,
+        max: 5,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.hazeAbsorptionCoefficient = v.value;
+      },
+    },
+  ];
+
+  const weatherAndShapeFields: FolderFields<typeof WEATHER_AND_SHAPE_PARAMS> = [
+    // Weather and shape
+    {
+      name: "localWeatherRepeat",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.localWeatherRepeat.setScalar(v.value);
+        view.forceUpdate();
+      },
+    },
+    {
+      name: "localWeatherOffset",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.localWeatherOffset = v.value;
+      },
+    },
+    {
+      name: "shapeRepeat",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.shapeRepeat.setScalar(v.value);
+        view.forceUpdate();
+      },
+    },
+    {
+      name: "shapeOffset",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.shapeOffset = v.value;
+      },
+    },
+    {
+      name: "shapeDetailRepeat",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.shapeDetailRepeat.setScalar(v.value);
+        view.forceUpdate();
+      },
+    },
+    {
+      name: "shapeDetailOffset",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.shapeDetailOffset = v.value;
+      },
+    },
+    {
+      name: "turbulenceRepeat",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.turbulenceRepeat.setScalar(v.value);
+        view.forceUpdate();
+      },
+    },
+    {
+      name: "turbulenceDisplacement",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.turbulenceDisplacement = v.value;
+      },
+    },
+  ];
+  const scatteringFields: FolderFields<typeof SCATTERING_PARAMS> = [
+    // Scattering
+    {
+      name: "scatteringCoefficient",
+      params: {
+        min: 0,
+        max: 5,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.scatteringCoefficient = v.value;
+      },
+    },
+    {
+      name: "absorptionCoefficient",
+      params: {
+        min: 0,
+        max: 5,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.absorptionCoefficient = v.value;
+      },
+    },
+    {
+      name: "scatterAnisotropy1",
+      params: {
+        min: 0,
+        max: 1,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.scatterAnisotropy1 = v.value;
+      },
+    },
+    {
+      name: "scatterAnisotropy2",
+      params: {
+        min: -1,
+        max: 0,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.scatterAnisotropy2 = v.value;
+      },
+    },
+    {
+      name: "scatterAnisotropyMix",
+      params: {
+        min: 0,
+        max: 1,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.scatterAnisotropyMix = v.value;
+      },
+    },
+    {
+      name: "skyIrradianceScale",
+      params: {
+        min: 0,
+        max: 5,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.skyIrradianceScale = v.value;
+      },
+    },
+    {
+      name: "groundIrradianceScale",
+      params: {
+        min: 0,
+        max: 10,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.groundIrradianceScale = v.value;
+      },
+    },
+    {
+      name: "powderScale",
+      params: {
+        min: 0,
+        max: 1,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.powderScale = v.value;
+      },
+    },
+    {
+      name: "powderExponent",
+      params: {
+        min: 1,
+        max: 1000,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.powderExponent = v.value;
+      },
+    },
+  ];
+
+  const onChangeCloudLayerIndex = (
+    idx: number,
+    apis: FieldsApis<typeof CLOUD_LAYERS_PARAMS>,
+  ) => {
+    if (!view.atmosphere.cloudsEffect) return;
+    const layer = view.atmosphere.cloudsEffect.cloudLayers[idx];
+    apis.channel.controller.value.rawValue = layer.channel;
+    apis.altitude.controller.value.rawValue = layer.altitude;
+    apis.height.controller.value.rawValue = layer.height;
+    apis.densityScale.controller.value.rawValue = layer.densityScale;
+    apis.shapeAmount.controller.value.rawValue = layer.shapeAmount;
+    apis.shapeDetailAmount.controller.value.rawValue = layer.shapeDetailAmount;
+    apis.weatherExponent.controller.value.rawValue = layer.weatherExponent;
+    apis.shapeAlteringBias.controller.value.rawValue = layer.shapeAlteringBias;
+    apis.coverageFilterWidth.controller.value.rawValue =
+      layer.coverageFilterWidth;
+    apis.shadow.controller.value.rawValue = layer.shadow;
+    apis.expTerm.controller.value.rawValue = layer.expTerm;
+    apis.exponent.controller.value.rawValue = layer.exponent;
+    apis.linearTerm.controller.value.rawValue = layer.linearTerm;
+    apis.constantTerm.controller.value.rawValue = layer.constantTerm;
+  };
+  const cloudLayersFields: FolderFields<typeof CLOUD_LAYERS_PARAMS> = [
+    // Scattering
+    {
+      name: "index",
+      params: {
+        options: [0, 1, 2, 3].map((v) => ({ text: `${v}`, value: v })),
+      },
+      onMount: (apis) =>
+        onChangeCloudLayerIndex(CLOUD_LAYERS_PARAMS.index, apis),
+      onChange: (v, apis) => onChangeCloudLayerIndex(v.value, apis),
+    },
+    {
+      name: "channel",
+      params: {
+        options: ["r", "g", "b", "a"].map((v) => ({ text: v, value: v })),
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].channel = v.value as TextureChannel;
+      },
+    },
+    {
+      name: "altitude",
+      params: {
+        step: 20,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].altitude = v.value;
+      },
+    },
+    {
+      name: "height",
+      params: {
+        step: 20,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].height = v.value;
+      },
+    },
+    {
+      name: "densityScale",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].densityScale = v.value;
+      },
+    },
+    {
+      name: "shapeAmount",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].shapeAmount = v.value;
+      },
+    },
+    {
+      name: "shapeDetailAmount",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].shapeDetailAmount = v.value;
+      },
+    },
+    {
+      name: "weatherExponent",
+      params: {
+        min: 0,
+        max: 3,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].weatherExponent = v.value;
+      },
+    },
+    {
+      name: "shapeAlteringBias",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].shapeAlteringBias = v.value;
+      },
+    },
+    {
+      name: "coverageFilterWidth",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].coverageFilterWidth = v.value;
+      },
+    },
+    {
+      name: "shadow",
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].shadow = v.value;
+      },
+    },
+    {
+      name: "expTerm",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].expTerm = v.value;
+      },
+    },
+    {
+      name: "exponent",
+      params: {
+        min: 0,
+        max: 10,
+        step: 0.02,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].exponent = v.value;
+      },
+    },
+    {
+      name: "linearTerm",
+      params: {
+        min: -2,
+        max: 2,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].linearTerm = v.value;
+      },
+    },
+    {
+      name: "constantTerm",
+      params: {
+        min: -2,
+        max: 2,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        if (!view.atmosphere.cloudsEffect) return;
+        view.atmosphere.cloudsEffect.cloudLayers[
+          CLOUD_LAYERS_PARAMS.index
+        ].constantTerm = v.value;
+      },
+    },
+  ];
 
   const folder = pane.addFolder({
     title: "Clouds",
   });
 
-  folder.addBinding(PARAMS, "enable").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    if (v.value) {
-      view.atmosphere.cloudsEffect.coverage = PARAMS.coverage;
-    } else {
-      view.atmosphere.cloudsEffect.coverage = 0;
-    }
-  });
-  folder.addBinding(PARAMS, "coverage").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsEffect.coverage = v.value;
-  });
-  folder
-    .addBinding(PARAMS, "qualityPreset", {
-      options: Object.fromEntries(
-        ["ultra", "high", "medium", "low"].map((v) => [v, v]),
-      ),
-    })
-    .on("change", (v) => {
-      if (view.atmosphere.cloudsEffect) {
-        view.atmosphere.cloudsEffect.qualityPreset =
-          v.value as Required<CloudsOptions>["qualityPreset"];
-      }
-    });
-  folder
-    .addBinding(PARAMS, "resolutionScale", {
-      options: [1, 0.5, 0.25].map((v) => ({ text: v.toString(), value: v })),
-    })
-    .on("change", (v) => {
-      if (!view.atmosphere.cloudsEffect) return;
-      view.atmosphere.cloudsEffect.resolutionScale = v.value;
-    });
-  folder.addBinding(PARAMS, "maxIterationCount").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsEffect.maxIterationCount = v.value;
-  });
-  folder.addBinding(PARAMS, "minStepSize").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsEffect.minStepSize = v.value;
-  });
-  folder.addBinding(PARAMS, "maxStepSize").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsEffect.maxStepSize = v.value;
-  });
-  folder.addBinding(PARAMS, "animation").on("change", (v) => {
-    if (view.atmosphere.cloudsEffect) {
-      view.atmosphere.cloudsEffect.localWeatherVelocity.x = v.value ? 0.001 : 0;
-      view.forceUpdate();
-    }
-    view.animation = v.value;
-  });
-  folder.addBinding(PARAMS, "lightShaft").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsEffect.lightShaft = v.value;
-  });
-  folder.addBinding(PARAMS, "shadows").on("change", (v) => {
-    if (!view.atmosphere.cloudsEffect) return;
-    view.atmosphere.cloudsShadow = v.value;
-  });
-  folder
-    .addBinding(PARAMS, "shadowCascadeCount", {
-      options: Object.fromEntries(
-        [...new Array(4)].map((_, i) => [`${i + 1}`, i + 1]),
-      ),
-    })
-    .on("change", (v) => {
-      if (!view.atmosphere.cloudsEffect) return;
-      view.atmosphere.cloudsEffect.shadowCascadeCount = v.value;
-    });
-  folder
-    .addBinding(PARAMS, "shadowMapSize", {
-      options: {
-        "128": 128,
-        "256": 256,
-        "512": 512,
-        "1024": 1024,
-      },
-    })
-    .on("change", (v) => {
-      if (!view.atmosphere.cloudsEffect) return;
-      view.atmosphere.cloudsEffect.shadowMapSize.set(v.value, v.value);
-      view.forceUpdate();
-    });
+  addFieldsToFolder(folder, BASE_PARAMS, baseFields);
+  addFieldsToFolder(
+    folder.addFolder({ title: "Shadow", expanded: false }),
+    SHADOW_PARAMS,
+    shadowFields,
+  );
+  addFieldsToFolder(
+    folder.addFolder({ title: "Haze", expanded: false }),
+    HAZE_PARAMS,
+    hazeFields,
+  );
+  addFieldsToFolder(
+    folder.addFolder({ title: "Weather and shape", expanded: false }),
+    WEATHER_AND_SHAPE_PARAMS,
+    weatherAndShapeFields,
+  );
+  addFieldsToFolder(
+    folder.addFolder({ title: "Scattering", expanded: false }),
+    SCATTERING_PARAMS,
+    scatteringFields,
+  );
+  addFieldsToFolder(
+    folder.addFolder({ title: "Cloud layers", expanded: false }),
+    CLOUD_LAYERS_PARAMS,
+    cloudLayersFields,
+  );
 };
 
 const addAAControl = (view: ThreeView, pane: Pane) => {
@@ -464,6 +953,8 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     lensFlareIntensity: 0.005,
     dithering: true,
     ssao: false,
+    ssaoHalfRes: true,
+    ssaoQuality: "Medium",
     ssaoSamples: 16,
     ssaoRadius: 5,
     ssaoIntensity: 1,
@@ -506,6 +997,19 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "ssao").on("change", (v) => {
     view.ssaoEffect.enabled = v.value;
   });
+  folder.addBinding(PARAMS, "ssaoHalfRes").on("change", (v) => {
+    view.ssaoEffect.halfRes = v.value;
+  });
+  folder
+    .addBinding(PARAMS, "ssaoQuality", {
+      options: ["Ultra", "High", "Medium", "Low"].map((v) => ({
+        text: v,
+        value: v,
+      })),
+    })
+    .on("change", (v) => {
+      view.ssaoEffect.quality = v.value as SSAOQualityMode;
+    });
   folder.addBinding(PARAMS, "ssaoSamples").on("change", (v) => {
     view.ssaoEffect.samples = v.value;
   });
