@@ -122,11 +122,27 @@ impl<F: Float + One<F>> Ellipsoid<F> {
         let y_surface = n * lat.cos() * lon.sin();
         let z_surface = (n * (F::one() - e2)) * lat.sin();
 
-        // Calculate the distance from the surface of ellipsoid as height
+        // Calculate the signed distance from the surface of ellipsoid as height
         let dx = x - x_surface;
         let dy = y - y_surface;
         let dz = z - z_surface;
-        let h = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
+        let distance = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
+
+        // Determine if point is inside or outside the ellipsoid
+        // Use the ellipsoid equation: (x/a)² + (y/a)² + (z/b)² compared to 1
+        let normalized_x = x / a;
+        let normalized_y = y / a;
+        let normalized_z = z / b;
+        let ellipsoid_value = normalized_x.powi(2) + normalized_y.powi(2) + normalized_z.powi(2);
+
+        // Use sign of (ellipsoid_value - 1) to determine inside/outside
+        // If (ellipsoid_value - 1) < 0, point is inside; if > 0, point is outside
+        let diff = ellipsoid_value - F::one();
+        let h = if diff.is_sign_negative() {
+            -distance // Inside ellipsoid: negative height
+        } else {
+            distance // Outside ellipsoid: positive height
+        };
 
         LLE {
             lat: Rad::new(lat),

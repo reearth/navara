@@ -18,7 +18,15 @@ import initApi, {
 } from "@navara/engine-api";
 import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
-export { LLE, Transform, CameraFrustum, Window } from "@navara/engine-api";
+export {
+  LLE,
+  Transform,
+  CameraFrustum,
+  Window,
+  Plane,
+} from "@navara/engine-api";
+
+export * from "./intersection";
 
 export async function initNavaraApi() {
   await initApi();

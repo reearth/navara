@@ -61,13 +61,7 @@ pub fn screen_to_world(
         return None;
     };
 
-    let intersect_pt = ray.get_point(point);
-
-    Some(Vec3Wasm::new(
-        intersect_pt.x,
-        intersect_pt.y,
-        intersect_pt.z,
-    ))
+    Some(ray.get_point(point).into())
 }
 
 #[wasm_bindgen(js_name = geodeticSurfaceNormal)]
