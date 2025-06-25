@@ -27,6 +27,7 @@ export {
 } from "@navara/engine-api";
 
 export * from "./intersection";
+export * from "./distance";
 
 export async function initNavaraApi() {
   await initApi();

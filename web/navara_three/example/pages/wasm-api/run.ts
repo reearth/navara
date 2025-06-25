@@ -14,6 +14,8 @@ import {
   getHeightFromEllipsoid,
   getPickRay,
   getRayPlaneIntersection,
+  getSurfaceDistance,
+  interpolateGeodeticPoints,
   Window as NavaraWindow,
   LLE,
 } from "@navara/three_api";
@@ -22,28 +24,42 @@ import {
   SphereGeometry,
   MeshPhongMaterial,
   Mesh,
+  TubeGeometry,
+  CatmullRomCurve3,
   Vector2,
   Vector3,
   Object3D,
   ArrowHelper,
   CylinderGeometry,
 } from "three";
-import { Pane } from "tweakpane";
-
+import { Pane, FolderApi } from "tweakpane";
+import type { Nullable } from "@navara/core";
 import { TILE_URLS } from "../../helpers/constants";
 
+const LINE_POINT_COUNT = 20;
 const gPaneParams = {
   convertScreenToWorld: false,
-
   moveDistance: 0,
-
   transform: "eastNorthUp",
+
+  lngStart: 138.7306671143,
+  latStart: 35.3624725342,
+  lngEnd: 86.925,
+  latEnd: 27.9881,
+  distance: 0,
 };
 
-let gModel: Object3D | undefined = undefined;
+let gModel: Nullable<Object3D> = undefined;
+let gPolylineMesh: Nullable<Mesh> = undefined;
+let gLastCameraDistance = 0;
+let gPolylinePoints: Vector3[] = [];
+let gView: Nullable<ThreeView> = undefined;
+let gFolderDist: Nullable<FolderApi> = null;
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  gView = view;
 
   view.addLayer({
     type: "tiles",
@@ -57,6 +73,8 @@ export const run = async (view: ThreeView) => {
   axesHelper.scale.multiplyScalar(1e9);
   view.scenes.main.add(axesHelper);
 
+  createPolylineMesh(view);
+  addCameraListener(view);
   addCtrlPanel();
   addRunningObject(view);
   testScreenToWorld(view);
@@ -82,6 +100,8 @@ export const run = async (view: ThreeView) => {
   // radianToDegree
   const degree = radianToDegree(radian);
   console.log(`radian ${radian} to degree: ${degree}`);
+
+  onDistPosChange();
 };
 
 const addRunningObject = (view: ThreeView) => {
@@ -272,6 +292,25 @@ const addCtrlPanel = () => {
       },
     })
     .on("change", onTransformChange);
+
+  gFolderDist = pane.addFolder({
+    title: "Distance",
+    expanded: true,
+  });
+
+  gFolderDist
+    .addBinding(gPaneParams, "lngStart", { min: -180.0, max: 180.0 })
+    .on("change", onDistPosChange);
+  gFolderDist
+    .addBinding(gPaneParams, "latStart", { min: -90.0, max: 90.0 })
+    .on("change", onDistPosChange);
+  gFolderDist
+    .addBinding(gPaneParams, "lngEnd", { min: -180.0, max: 180.0 })
+    .on("change", onDistPosChange);
+  gFolderDist
+    .addBinding(gPaneParams, "latEnd", { min: -90.0, max: 90.0 })
+    .on("change", onDistPosChange);
+  gFolderDist.addBinding(gPaneParams, "distance");
 };
 
 const onMoveDistanceChange = () => {
@@ -442,4 +481,124 @@ const makeCylinder = (view: ThreeView, center: Vector3): Mesh => {
   cylinder.applyMatrix4(transformMatrix);
 
   return cylinder;
+};
+
+const onDistPosChange = () => {
+  gPaneParams.distance = getSurfaceDistance(
+    new LLE(
+      degreeToRadian(gPaneParams.latStart),
+      degreeToRadian(gPaneParams.lngStart),
+      0,
+    ),
+    new LLE(
+      degreeToRadian(gPaneParams.latEnd),
+      degreeToRadian(gPaneParams.lngEnd),
+      0,
+    ),
+  );
+  gFolderDist?.refresh();
+
+  const points = interpolateGeodeticPoints(
+    new LLE(
+      degreeToRadian(gPaneParams.latStart),
+      degreeToRadian(gPaneParams.lngStart),
+      0,
+    ),
+    new LLE(
+      degreeToRadian(gPaneParams.latEnd),
+      degreeToRadian(gPaneParams.lngEnd),
+      0,
+    ),
+    LINE_POINT_COUNT,
+  );
+
+  // Update polyline mesh
+  if (gPolylineMesh) {
+    const curvePoints = [];
+    for (const point of points) {
+      if (point) {
+        const pos = geodeticToVector3(new LLE(point.lat, point.lng, 1000));
+        curvePoints.push(pos);
+      }
+    }
+
+    // Store points and update geometry
+    if (curvePoints.length >= 2 && gView) {
+      gPolylinePoints = curvePoints;
+      updatePolylineMesh(gView, curvePoints);
+    }
+  }
+};
+
+const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
+  if (!gPolylineMesh || !view.camera) return;
+
+  // Calculate appropriate tube radius based on camera distance to keep visual thickness constant
+  const centerPoint = curvePoints[Math.floor(curvePoints.length / 2)];
+  const cameraDistance = view.camera.innerCam.position.distanceTo(centerPoint);
+
+  // Store current distance for camera change detection
+  gLastCameraDistance = cameraDistance;
+
+  const visualThickness = 0.002; // How thick the line appears on screen
+  const finalRadius = cameraDistance * visualThickness;
+
+  // Set reasonable bounds to prevent extremely thin or thick tubes
+  const minRadius = 10;
+  const maxRadius = 100000;
+  const clampedRadius = Math.max(minRadius, Math.min(maxRadius, finalRadius));
+
+  const curve = new CatmullRomCurve3(curvePoints);
+  curve.tension = 0.5; // Adjust tension for smoother curves (0-1)
+
+  // Use more segments for smoother geometry
+  const tubularSegments = Math.max(64, curvePoints.length * 4); // More segments along the curve
+  const radialSegments = 16; // More radial segments for rounder cross-section
+
+  const newGeometry = new TubeGeometry(
+    curve,
+    tubularSegments,
+    clampedRadius,
+    radialSegments,
+    false,
+  );
+
+  gPolylineMesh.geometry.dispose();
+  gPolylineMesh.geometry = newGeometry;
+};
+
+const addCameraListener = (view: ThreeView) => {
+  // Update tube thickness when camera moves
+  view.camera.on("move", () => {
+    if (!gPolylineMesh || !view.camera || gPolylinePoints.length === 0) return;
+
+    const centerPoint = gPolylinePoints[Math.floor(gPolylinePoints.length / 2)];
+    const currentDistance =
+      view.camera.innerCam.position.distanceTo(centerPoint);
+
+    // Only update if camera distance changed significantly (more than 10%)
+    if (gLastCameraDistance > 0) {
+      const distanceChange =
+        Math.abs(currentDistance - gLastCameraDistance) / gLastCameraDistance;
+      if (distanceChange > 0.1) {
+        updatePolylineMesh(view, gPolylinePoints);
+      }
+    }
+  });
+};
+
+const createPolylineMesh = (view: ThreeView) => {
+  // Create initial points for the curve
+  const points = Array.from({ length: LINE_POINT_COUNT }, () => new Vector3(0, 0, 0));
+
+  // Create curve and tube geometry
+  const curve = new CatmullRomCurve3(points);
+  curve.tension = 0.5; // Adjust tension for smoother curves
+  const geometry = new TubeGeometry(curve, 64, 1, 16, false); // More segments for initial geometry
+  const material = new MeshPhongMaterial({
+    color: 0x00ffff,
+  });
+
+  gPolylineMesh = new Mesh(geometry, material);
+  view.scenes.main.add(gPolylineMesh);
 };
