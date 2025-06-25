@@ -589,7 +589,10 @@ const addCameraListener = (view: ThreeView) => {
 
 const createPolylineMesh = (view: ThreeView) => {
   // Create initial points for the curve
-  const points = Array.from({ length: LINE_POINT_COUNT }, () => new Vector3(0, 0, 0));
+  const points = Array.from(
+    { length: LINE_POINT_COUNT },
+    () => new Vector3(0, 0, 0),
+  );
 
   // Create curve and tube geometry
   const curve = new CatmullRomCurve3(points);
