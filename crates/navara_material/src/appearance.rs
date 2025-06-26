@@ -373,6 +373,7 @@ pub struct RasterTileMaterial {
     pub max_sse: f32,
     pub max_zoom: usize,
     pub wireframe: bool,
+    pub tms: bool,
     pub should_compute_normal_from_vertex: Option<bool>,
 }
 
@@ -388,6 +389,7 @@ impl Default for RasterTileMaterial {
             max_sse: 2.,
             max_zoom: 20,
             wireframe: false,
+            tms: false,
             should_compute_normal_from_vertex: None,
         }
     }

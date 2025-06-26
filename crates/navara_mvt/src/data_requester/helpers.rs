@@ -30,7 +30,7 @@ pub(crate) fn request_mvt_data(
         .spawn((
             MvtDataRequesterMarker(handle),
             DataRequester::from_store(
-                tile_url(&layer.data.as_ref().unwrap().url, &tile.coords),
+                tile_url(&layer.data.as_ref().unwrap().url, &tile.coords, false),
                 buf,
                 DataRequesterExtension::Mvt,
             ),

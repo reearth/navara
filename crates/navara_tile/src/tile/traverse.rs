@@ -126,7 +126,6 @@ pub fn traverse_tile(
     if terrain_layer.is_some()
         && !meets_sse_ancestors
         && is_renderable
-        && !tile_ready_state.is_texture_ready
     {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_texture_fragment(
