@@ -1,11 +1,9 @@
 use navara_wasm_utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
-mod distance;
 mod intersection;
 mod transform;
 
-pub use distance::*;
 pub use intersection::*;
 pub use transform::*;
 

@@ -14,10 +14,9 @@ import {
   getHeightFromEllipsoid,
   getPickRay,
   getRayPlaneIntersection,
-  getSurfaceDistance,
-  interpolateGeodeticPoints,
   Window as NavaraWindow,
   LLE,
+  EllipsoidGeodesic,
 } from "@navara/three_api";
 import {
   AxesHelper,
@@ -36,7 +35,6 @@ import { Pane, FolderApi } from "tweakpane";
 import type { Nullable } from "@navara/core";
 import { TILE_URLS } from "../../helpers/constants";
 
-const LINE_POINT_COUNT = 20;
 const gPaneParams = {
   convertScreenToWorld: false,
   moveDistance: 0,
@@ -484,7 +482,7 @@ const makeCylinder = (view: ThreeView, center: Vector3): Mesh => {
 };
 
 const onDistPosChange = () => {
-  gPaneParams.distance = getSurfaceDistance(
+  const ellipGeo = new EllipsoidGeodesic(
     new LLE(
       degreeToRadian(gPaneParams.latStart),
       degreeToRadian(gPaneParams.lngStart),
@@ -496,20 +494,14 @@ const onDistPosChange = () => {
       0,
     ),
   );
+
+  gPaneParams.distance = ellipGeo.distance;
+
   gFolderDist?.refresh();
 
-  const points = interpolateGeodeticPoints(
-    new LLE(
-      degreeToRadian(gPaneParams.latStart),
-      degreeToRadian(gPaneParams.lngStart),
-      0,
-    ),
-    new LLE(
-      degreeToRadian(gPaneParams.latEnd),
-      degreeToRadian(gPaneParams.lngEnd),
-      0,
-    ),
-    LINE_POINT_COUNT,
+  const LINE_POINT_COUNT = 20;
+  const points = ellipGeo.interpolateGeodeticPoints(
+    ellipGeo.distance / LINE_POINT_COUNT,
   );
 
   // Update polyline mesh
@@ -589,10 +581,7 @@ const addCameraListener = (view: ThreeView) => {
 
 const createPolylineMesh = (view: ThreeView) => {
   // Create initial points for the curve
-  const points = Array.from(
-    { length: LINE_POINT_COUNT },
-    () => new Vector3(0, 0, 0),
-  );
+  const points = Array.from({ length: 2 }, () => new Vector3(0, 0, 0));
 
   // Create curve and tube geometry
   const curve = new CatmullRomCurve3(points);
