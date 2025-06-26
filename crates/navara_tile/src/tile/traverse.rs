@@ -123,11 +123,7 @@ pub fn traverse_tile(
 
     // If this tile has a terrain and it's prepared, request a texture for this tile.
     // It means terrain is rendered first, then the texture is prepared lazily.
-    if terrain_layer.is_some()
-        && !meets_sse_ancestors
-        && is_renderable
-        && !tile_ready_state.is_texture_ready
-    {
+    if terrain_layer.is_some() && !meets_sse_ancestors && is_renderable {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_texture_fragment(
             command,
