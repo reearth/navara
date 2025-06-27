@@ -24,6 +24,7 @@ export {
   CameraFrustum,
   Window,
   Plane,
+  EllipsoidGeodesic,
 } from "@navara/engine-api";
 
 export * from "./intersection";

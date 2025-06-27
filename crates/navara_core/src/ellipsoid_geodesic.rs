@@ -10,7 +10,7 @@ pub struct EllipsoidGeodesic {
     pub distance: f32,
     pub start_heading: f32,
     pub end_heading: f32,
-    constants: VincentyDirectFormulaConstants,
+    pub constants: VincentyDirectFormulaConstants,
 }
 
 impl EllipsoidGeodesic {
@@ -31,6 +31,24 @@ impl EllipsoidGeodesic {
             distance: inverse_formula_result.distance,
             start_heading: inverse_formula_result.start_heading,
             end_heading: inverse_formula_result.end_heading,
+        }
+    }
+
+    pub fn from(
+        start: LLE<f32, Radians>,
+        end: LLE<f32, Radians>,
+        distance: f32,
+        start_heading: f32,
+        end_heading: f32,
+        constants: VincentyDirectFormulaConstants,
+    ) -> Self {
+        Self {
+            start,
+            end,
+            distance,
+            start_heading,
+            end_heading,
+            constants,
         }
     }
 
@@ -256,7 +274,8 @@ fn compute_c(f: f64, cosine_squared_alpha: f64) -> f64 {
     (f * cosine_squared_alpha * (4. + f * (4. - 3. * cosine_squared_alpha))) / 16.
 }
 
-struct VincentyDirectFormulaConstants {
+#[derive(Clone)]
+pub struct VincentyDirectFormulaConstants {
     f: f32,
     cosine_heading: f32,
     sine_heading: f32,
