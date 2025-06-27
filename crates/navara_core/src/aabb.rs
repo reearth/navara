@@ -85,7 +85,7 @@ impl Aabb {
         let center = LLE {
             lng: Angle::new((sw.lng.val() + ne.lng.val()) / 2.),
             lat: Angle::new((sw.lat.val() + ne.lat.val()) / 2.),
-            height: Meters::new(max_height + min_height / 2.),
+            height: Meters::new((max_height + min_height) / 2.),
         };
 
         // Max
