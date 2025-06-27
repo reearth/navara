@@ -45,10 +45,12 @@ const gPaneParams = {
   lngEnd: 86.925,
   latEnd: 27.9881,
   distance: 0,
+  interpolate: 0,
 };
 
 let gModel: Nullable<Object3D> = undefined;
 let gPolylineMesh: Nullable<Mesh> = undefined;
+let gInterBall: Nullable<Mesh> = undefined;
 let gLastCameraDistance = 0;
 let gPolylinePoints: Vector3[] = [];
 let gView: Nullable<ThreeView> = undefined;
@@ -99,20 +101,17 @@ export const run = async (view: ThreeView) => {
   const degree = radianToDegree(radian);
   console.log(`radian ${radian} to degree: ${degree}`);
 
+  gInterBall = placeOneBall(view, new Vector3(0, 0, 0), 0xff0000);
   onDistPosChange();
 };
 
 const addRunningObject = (view: ThreeView) => {
-  const geometry = new SphereGeometry(500000);
-  const material = new MeshPhongMaterial({
-    color: 0xffffff,
-    emissive: 0x072534,
-    specular: 0x111111,
-    shininess: 30,
-  });
+  const sphere = placeOneBall(view, new Vector3(0, 0, 0), 0xffffff);
+  if (!sphere) {
+    return;
+  }
 
-  const sphere = new Mesh(geometry, material);
-  view.scenes.main.add(sphere);
+  sphere.scale.set(300000, 300000, 300000);
 
   let lng = 0.0;
   let lat = 0.0;
@@ -154,6 +153,7 @@ const testScreenToWorld = (view: ThreeView) => {
     if (!ball) {
       ball = placeOneBall(view, pos, 0x00ff00);
     } else {
+      ball.scale.set(100000, 100000, 100000);
       if (pos) {
         ball.position.set(pos.x, pos.y, pos.z);
         view.forceUpdate();
@@ -190,7 +190,7 @@ const placeOneBall = (
   color: number,
 ): Mesh | undefined => {
   if (pos) {
-    const geometry = new SphereGeometry(200000);
+    const geometry = new SphereGeometry(1);
     const material = new MeshPhongMaterial({
       color: color,
       emissive: 0x072534,
@@ -224,7 +224,14 @@ const addTestModel = async (view: ThreeView) => {
     model.scene.position.set(pos.x, pos.y, pos.z);
     model.scene.scale.set(300000, 300000, 300000);
 
-    const arrowHelper = new ArrowHelper(normal, pos, 6000000, 0xffffff);
+    const arrowHelper = new ArrowHelper(
+      normal,
+      pos,
+      5000000,
+      0xffffff,
+      400000,
+      70000,
+    );
     view.scenes.main.add(arrowHelper);
 
     gModel = model.scene;
@@ -309,6 +316,13 @@ const addCtrlPanel = () => {
     .addBinding(gPaneParams, "latEnd", { min: -90.0, max: 90.0 })
     .on("change", onDistPosChange);
   gFolderDist.addBinding(gPaneParams, "distance");
+  gFolderDist
+    .addBinding(gPaneParams, "interpolate", {
+      min: 0.0,
+      max: 1.0,
+      step: 0.001,
+    })
+    .on("change", onDistPosChange);
 };
 
 const onMoveDistanceChange = () => {
@@ -500,9 +514,7 @@ const onDistPosChange = () => {
   gFolderDist?.refresh();
 
   const LINE_POINT_COUNT = 20;
-  const points = ellipGeo.interpolateGeodeticPoints(
-    ellipGeo.distance / LINE_POINT_COUNT,
-  );
+  const points = ellipGeo.interpolateGeodeticPoints(LINE_POINT_COUNT);
 
   // Update polyline mesh
   if (gPolylineMesh) {
@@ -518,6 +530,14 @@ const onDistPosChange = () => {
     if (curvePoints.length >= 2 && gView) {
       gPolylinePoints = curvePoints;
       updatePolylineMesh(gView, curvePoints);
+
+      // update interpolated point
+      const interDist = gPaneParams.distance * gPaneParams.interpolate;
+      const interPoint = ellipGeo.interpolateDistance(interDist);
+      const pos = geodeticToVector3(
+        new LLE(interPoint.lat, interPoint.lng, 1000),
+      );
+      gInterBall?.position.set(pos.x, pos.y, pos.z);
     }
   }
 };
@@ -557,6 +577,9 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
 
   gPolylineMesh.geometry.dispose();
   gPolylineMesh.geometry = newGeometry;
+
+  const ballRadius = clampedRadius * 2;
+  gInterBall?.scale.set(ballRadius, ballRadius, ballRadius);
 };
 
 const addCameraListener = (view: ThreeView) => {

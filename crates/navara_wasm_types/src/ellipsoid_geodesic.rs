@@ -35,12 +35,8 @@ impl EllipsoidGeodesic {
     }
 
     #[wasm_bindgen(js_name = "interpolateGeodeticPoints")]
-    pub fn interpolate_geodetic_points(&self, granularity: f32) -> Vec<LLE> {
-        if granularity == 0.0 {
-            return vec![self.start.clone(), self.end.clone()];
-        }
-
-        if self.distance < granularity {
+    pub fn interpolate_geodetic_points(&self, points_num: f32) -> Vec<LLE> {
+        if points_num < 2.0 {
             return vec![self.start.clone(), self.end.clone()];
         }
 
@@ -50,7 +46,7 @@ impl EllipsoidGeodesic {
         let ellipsoid_line =
             navara_core::EllipsoidGeodesic::new(start_lle, end_lle, &navara_core::WGS84_32);
 
-        let segments = (self.distance / granularity).ceil() as usize;
+        let segments = (points_num - 1.0).round() as usize;
         let interpoint_distance = self.distance / segments as f32;
         let mut distance_from_start = interpoint_distance;
         let points_to_add = segments - 1;
@@ -66,5 +62,18 @@ impl EllipsoidGeodesic {
 
         result.push(self.end.clone());
         result
+    }
+
+    #[wasm_bindgen(js_name = "interpolateDistance")]
+    pub fn interpolate_distance(&self, distance: f32) -> LLE {
+        let start_lle: navara_core::LLE<f32, navara_core::Radians> = (&self.start).into();
+        let end_lle: navara_core::LLE<f32, navara_core::Radians> = (&self.end).into();
+
+        let ellipsoid_line =
+            navara_core::EllipsoidGeodesic::new(start_lle, end_lle, &navara_core::WGS84_32);
+
+        ellipsoid_line
+            .interpolate_distance(&navara_core::WGS84_32, distance)
+            .into()
     }
 }
