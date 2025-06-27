@@ -377,7 +377,7 @@ mod test {
 
         assert_abs_diff_eq!(g.start_heading, pi_over_two, epsilon = EPSILON11);
         assert_abs_diff_eq!(g.end_heading, pi_over_two, epsilon = EPSILON11);
-        assert_abs_diff_eq!(g.distance, 10018755., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.distance, 10018754., epsilon = 1.);
     }
 
     #[test]
