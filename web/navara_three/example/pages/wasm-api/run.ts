@@ -513,8 +513,9 @@ const onDistPosChange = () => {
 
   gFolderDist?.refresh();
 
-  const LINE_POINT_COUNT = 20;
-  const points = ellipGeo.interpolateGeodeticPoints(LINE_POINT_COUNT);
+  const points = ellipGeo.interpolateGeodeticPoints(
+    gPaneParams.distance * 0.01,
+  );
 
   // Update polyline mesh
   if (gPolylineMesh) {
