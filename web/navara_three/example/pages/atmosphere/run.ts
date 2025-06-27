@@ -3,6 +3,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
   type CloudsOptions,
+  type LayerDescription,
   type SSAOQualityMode,
 } from "@navara/three";
 import type { TextureChannel } from "@takram/three-clouds";
@@ -71,6 +72,7 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addTileControl(view, pane);
+  addCloudsTilesControl(view, pane);
   addDateControl(view, pane);
   addAtmosphereControl(view, pane);
   addCloudsControl(view, pane);
@@ -89,7 +91,9 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
     data: {
       url: PARAMS.type,
     },
-    raster_tile: {},
+    raster_tile: {
+      max_zoom: 18,
+    },
   });
 
   const folder = pane.addFolder({
@@ -110,6 +114,61 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
         raster_tile: {},
       });
     });
+};
+
+const addCloudsTilesControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    show: true,
+  };
+
+  const description: LayerDescription = {
+    type: "tiles",
+    data: {
+      url: "/data/blue-marble-clouds/{z}/{x}/{y}.webp",
+    },
+    raster_tile: {
+      max_zoom: 6,
+    },
+  };
+
+  const cloudsTilesLayer = view.addLayer(description);
+
+  const folder = pane.addFolder({
+    title: "CloudsTiles",
+  });
+
+  const transitionTile = () => {
+    const position = view.camera.getPosition();
+    if (!position?.height) return;
+    const targetHeight = 35e6;
+    const opacity = Math.min(1, position.height / targetHeight);
+    cloudsTilesLayer.update({
+      ...description,
+      raster_tile: {
+        ...description.raster_tile,
+        opacity,
+      },
+    });
+  };
+
+  view.camera.on("move", transitionTile);
+
+  const fields: FolderFields<typeof PARAMS> = [
+    {
+      name: "show",
+      onChange: (v) => {
+        cloudsTilesLayer.update({
+          ...description,
+          raster_tile: {
+            ...description.raster_tile,
+            show: v.value,
+          },
+        });
+      },
+    },
+  ];
+
+  addFieldsToFolder(folder, PARAMS, fields);
 };
 
 const addAtmosphereControl = (view: ThreeView, pane: Pane) => {

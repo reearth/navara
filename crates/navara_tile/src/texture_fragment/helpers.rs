@@ -3,6 +3,7 @@ use bevy_ecs::system::{Commands, Query};
 use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
+use navara_material::Appearance;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
     RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
@@ -50,7 +51,12 @@ pub(crate) fn request_texture_fragment(
         };
     }
 
-    let url = tile_url(next_tile.data.as_ref().unwrap().url.as_str(), &leaf.coords);
+    let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
+    let url = tile_url(
+        next_tile.data.as_ref().unwrap().url.as_str(),
+        &leaf.coords,
+        tms,
+    );
     let entity = commands.spawn((
         TileTextureFragmentMarker(handle),
         TextureFragment::new(url),

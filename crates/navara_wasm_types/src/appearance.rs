@@ -492,6 +492,7 @@ pub struct RasterTileMaterial {
     pub max_zoom: Option<usize>,
     pub max_sse: Option<f32>,
     pub wireframe: Option<bool>,
+    pub tms: Option<bool>,
     pub should_compute_normal_from_vertex: Option<bool>,
 }
 
@@ -507,6 +508,7 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             max_sse: val.max_sse.unwrap_or(default.max_sse),
             should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
+            tms: val.tms.unwrap_or(default.tms),
         }
     }
 }
@@ -521,6 +523,7 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             max_sse: Some(value.max_sse),
             should_compute_normal_from_vertex: value.should_compute_normal_from_vertex,
             wireframe: Some(value.wireframe),
+            tms: Some(value.tms),
         }
     }
 }

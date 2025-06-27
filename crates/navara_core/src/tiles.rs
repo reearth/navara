@@ -79,9 +79,14 @@ pub fn web_mercator_world_pos_to_lnglat<F: Float + Two<F>>(x: F, y: F) -> LngLat
     }
 }
 
-pub fn tile_url(s: &str, xyz: &TileXYZ) -> String {
+pub fn tile_url(s: &str, xyz: &TileXYZ, tms: bool) -> String {
+    let y = if tms {
+        2usize.pow(xyz.z as u32) - 1 - xyz.y
+    } else {
+        xyz.y
+    };
     s.replace("{x}", &xyz.x.to_string())
-        .replace("{y}", &xyz.y.to_string())
+        .replace("{y}", &y.to_string())
         .replace("{z}", &xyz.z.to_string())
 }
 

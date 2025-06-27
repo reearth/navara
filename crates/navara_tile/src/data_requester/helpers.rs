@@ -26,7 +26,7 @@ pub(crate) fn request_terrain_data(
         return;
     }
     if let Some(t) = terrain_layer {
-        let url = tile_url(t.data.as_ref().unwrap().url.as_str(), &tile.coords);
+        let url = tile_url(t.data.as_ref().unwrap().url.as_str(), &tile.coords, false);
         let mut terrain_data = match &t.terrain_type {
             TerrainDataType::RasterDEM => {
                 RasterDEMData::new(t.appearance.as_ref().unwrap().elevation_decoder)
