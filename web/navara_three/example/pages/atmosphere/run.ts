@@ -1,3 +1,4 @@
+import { EventHandler } from "@navara/core";
 import ThreeView, {
   DEFAULT_CLOUDS_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
@@ -71,8 +72,8 @@ export const run = async (view: ThreeView) => {
   pane.element.style.overflow = "scroll";
 
   addCameraControl(view, pane);
-  addTileControl(view, pane);
-  addCloudsTilesControl(view, pane);
+  const tileBinding = addTileControl(view, pane);
+  addCloudsTilesControl(view, pane, tileBinding);
   addDateControl(view, pane);
   addAtmosphereControl(view, pane);
   addCloudsControl(view, pane);
@@ -100,6 +101,8 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
     title: "RasterTile",
   });
 
+  const tileChangeBinding = new EventHandler();
+
   folder
     .addBinding(PARAMS, "type", {
       options: TILE_URLS,
@@ -113,10 +116,17 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
         },
         raster_tile: {},
       });
+      tileChangeBinding.emit("change");
     });
+
+  return tileChangeBinding;
 };
 
-const addCloudsTilesControl = (view: ThreeView, pane: Pane) => {
+const addCloudsTilesControl = (
+  view: ThreeView,
+  pane: Pane,
+  tileChangeBinding: EventHandler,
+) => {
   const PARAMS = {
     show: true,
   };
@@ -131,7 +141,7 @@ const addCloudsTilesControl = (view: ThreeView, pane: Pane) => {
     },
   };
 
-  const cloudsTilesLayer = view.addLayer(description);
+  let cloudsTilesLayer = view.addLayer(description);
 
   const folder = pane.addFolder({
     title: "CloudsTiles",
@@ -169,6 +179,11 @@ const addCloudsTilesControl = (view: ThreeView, pane: Pane) => {
   ];
 
   addFieldsToFolder(folder, PARAMS, fields);
+
+  tileChangeBinding.on("change", () => {
+    cloudsTilesLayer.delete();
+    cloudsTilesLayer = view.addLayer(description);
+  });
 };
 
 const addAtmosphereControl = (view: ThreeView, pane: Pane) => {

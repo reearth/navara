@@ -605,30 +605,27 @@ pub fn delete_layer(
         commands.entity(e).despawn();
     }
 
-    for rendered_tile in &mut rendered_tiles {
-        let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+    let mut deleted_layers = Vec::with_capacity(deleted.iter().len());
+    for (i, (_, layer, _)) in layers.iter().sort::<&Order>().enumerate() {
         for (_, u) in &deleted {
             let layer_id = u.0.clone();
-            let mut is_removed = false;
-            for (i, (_, layer, _)) in layers.iter().sort::<&Order>().enumerate() {
-                if layer.layer_id != layer_id {
-                    continue;
-                }
-
-                if let Some(Some(e)) = tile
-                    .texture_fragment_entity_ids
-                    .as_mut()
-                    .and_then(|ids| (ids.len() > i).then(|| ids.remove(i)))
-                {
-                    commands.entity(e).insert(Deleted);
-                }
-                is_removed = true;
-
-                break;
+            if layer.layer_id != layer_id {
+                continue;
             }
+            deleted_layers.push(i);
+        }
+    }
 
-            if is_removed {
-                break;
+    for rendered_tile in &mut rendered_tiles {
+        let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
+        for (removed_idx, idx) in deleted_layers.iter().enumerate() {
+            let target_idx = idx - removed_idx;
+            if let Some(Some(e)) = tile
+                .texture_fragment_entity_ids
+                .as_mut()
+                .and_then(|ids| (ids.len() > target_idx).then(|| ids.remove(target_idx)))
+            {
+                commands.entity(e).insert(Deleted);
             }
         }
     }
