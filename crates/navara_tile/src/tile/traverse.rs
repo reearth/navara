@@ -70,7 +70,7 @@ pub fn traverse_tile(
     };
 
     match qt.qt.get_mut(handle) {
-        Some(tile) => begine_traverse_tile(ellipsoid, occluder, camera, tile),
+        Some(tile) => begine_traverse_tile(ellipsoid, occluder, camera, frame, tile),
         None => unreachable!(),
     };
 
@@ -111,7 +111,6 @@ pub fn traverse_tile(
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.sse = sse;
     tile.distance_from_camera = distance_from_camera;
-    tile.visited_at = frame.rendered_frame();
 
     let were_children_rendered = tile.were_children_rendered;
 
@@ -136,7 +135,7 @@ pub fn traverse_tile(
     }
 
     if meets_sse || meets_sse_ancestors {
-        if !meets_sse_ancestors {
+        if meets_sse {
             prepare_tile_resource(
                 command,
                 qt,
@@ -160,7 +159,7 @@ pub fn traverse_tile(
             && !were_children_rendered
         {
             // Avoid to return an inactivated tile when meets SSE from ancestors.
-            if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
+            if !meets_sse && !tc.is_rendered_tile_activated(&handle, meshes) {
                 return TraversalResult::NotFound;
             }
             return TraversalResult::TileRendered;
@@ -267,13 +266,16 @@ pub fn traverse_tile(
             }
         }
 
+        // Avoid rendering children if children were rendered at last frame.
+        let allow_updating_state_of_children = !meets_sse && !meets_sse_ancestors;
+
         if any_children_rendered {
-            if are_all_children_activated && !meets_sse && !meets_sse_ancestors {
+            if are_all_children_activated && allow_updating_state_of_children {
                 let tile = qt.qt.get_mut(handle).unwrap();
                 tile.were_children_rendered = true;
             }
 
-            if !meets_sse && !meets_sse_ancestors {
+            if allow_updating_state_of_children {
                 for (i, child) in children.iter().enumerate() {
                     // If this child is not renderable, skip rendering this child.
                     if hidden_children_indices.contains(&i) {
@@ -308,7 +310,7 @@ pub fn traverse_tile(
             if meets_sse_ancestors && are_all_children_activated {
                 return TraversalResult::ChildrenMeshesPrepared;
             }
-            if !meets_sse && !meets_sse_ancestors {
+            if allow_updating_state_of_children {
                 if are_all_children_prepared {
                     return TraversalResult::ChildrenMeshesPrepared;
                 }
@@ -321,8 +323,8 @@ pub fn traverse_tile(
         }
     }
 
-    // Avoid to request or render new tile while waiting for parent tile is activated.
     if !is_renderable {
+        // Avoid to request or render new tile while waiting for parent tile is activated.
         if meets_sse_ancestors {
             return TraversalResult::NotFound;
         }
@@ -441,8 +443,10 @@ fn begine_traverse_tile(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
+    frame: &FrameManager,
     tile: &mut RasterTile,
 ) {
+    tile.visited_at = frame.rendered_frame();
     tile.update_tile_occludee_point(ellipsoid, occluder);
 }
 
