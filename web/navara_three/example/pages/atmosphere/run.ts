@@ -152,13 +152,11 @@ const addCloudsTilesControl = (
     if (!position?.height) return;
     const targetHeight = 35e6;
     const opacity = Math.min(1, position.height / targetHeight);
-    cloudsTilesLayer.update({
-      ...description,
-      raster_tile: {
-        ...description.raster_tile,
-        opacity,
-      },
-    });
+
+    if (!description.raster_tile) return;
+    description.raster_tile.opacity = opacity;
+
+    cloudsTilesLayer.update(description);
   };
 
   view.camera.on("move", transitionTile);
@@ -168,13 +166,9 @@ const addCloudsTilesControl = (
     {
       name: "show",
       onChange: (v) => {
-        cloudsTilesLayer.update({
-          ...description,
-          raster_tile: {
-            ...description.raster_tile,
-            show: v.value,
-          },
-        });
+        if (!description.raster_tile) return;
+        description.raster_tile.show = v.value;
+        cloudsTilesLayer.update(description);
       },
     },
   ];
