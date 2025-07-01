@@ -162,6 +162,7 @@ const addCloudsTilesControl = (
   };
 
   view.camera.on("move", transitionTile);
+  view.camera.on("moveend", transitionTile);
 
   const fields: FolderFields<typeof PARAMS> = [
     {
