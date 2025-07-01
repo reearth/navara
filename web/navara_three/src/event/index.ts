@@ -410,7 +410,7 @@ function processCameraTransformUpdated(
   transform: Transform | undefined,
 ) {
   if (!transform) return;
-  setTransform(camera.innerCam, transform); // disable temporarily
+  setTransform(camera.innerCam, transform);
 
   camera.updateStatus();
 }

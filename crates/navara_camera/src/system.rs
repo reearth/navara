@@ -96,7 +96,9 @@ pub fn update(
         }
 
         let is_cam_moving = is_camera_moving(&inertia, &controller);
-        cam_st.status.clear();
+        if cam_st.initialized {
+            cam_st.status.clear();
+        }
 
         // flying
         if let Some((position, orientation)) = flight.update(duration) {
@@ -187,6 +189,14 @@ pub fn update(
         }
 
         after_inertia(&mut inertia, duration, &mut controller, &mut cam_st);
+
+        if !cam_st.initialized {
+            cam_st.initialized = true;
+            // Set initial camera move status if camera status is empty.
+            if cam_st.status.is_empty() {
+                cam_st.status.push(CameraStatusType::MoveEnd);
+            }
+        }
     }
 }
 

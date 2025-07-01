@@ -132,6 +132,7 @@ pub enum CameraStatusType {
 
 #[derive(Component, Clone, Default)]
 pub struct CameraStatus {
+    pub(super) initialized: bool,
     pub status: Vec<CameraStatusType>,
 }
 

@@ -1,6 +1,9 @@
 export class EventHandler<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends Record<string, (...args: any[]) => unknown>,
+  T extends Record<string, (...args: any[]) => unknown> = Record<
+    string,
+    (...args: any[]) => unknown
+  >,
   K extends keyof T = keyof T,
 > {
   events: { [E in K]?: Set<T[E]> } = {};
