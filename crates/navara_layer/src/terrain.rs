@@ -11,6 +11,16 @@ pub struct TerrainLayer {
     pub appearance: Option<RasterTerrainMaterial>,
 }
 
+impl TerrainLayer {
+    pub fn is_over_max_zoom(&self, z: usize) -> bool {
+        z >= self.appearance.as_ref().unwrap().max_zoom
+    }
+
+    pub fn is_over_min_zoom(&self, z: usize) -> bool {
+        z >= self.appearance.as_ref().unwrap().min_zoom
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum TerrainDataType {
     RasterDEM,

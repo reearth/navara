@@ -31,7 +31,7 @@ export const run = async (view: ThreeView) => {
     },
     raster_terrain: {
       max_zoom: 15,
-      min_zoom: 5,
+      min_zoom: 6,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
@@ -87,15 +87,18 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
     type: TILE_URLS.gsiSeamlessphoto,
   };
 
-  let layer = view.addLayer({
+  const description: LayerDescription = {
     type: "tiles",
     data: {
       url: PARAMS.type,
     },
     raster_tile: {
       max_zoom: 18,
+      min_zoom: 2,
     },
-  });
+  };
+
+  let layer = view.addLayer(description);
 
   const folder = pane.addFolder({
     title: "RasterTile",
@@ -110,11 +113,10 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
     .on("change", (v) => {
       layer.delete();
       layer = view.addLayer({
-        type: "tiles",
+        ...description,
         data: {
           url: v.value,
         },
-        raster_tile: {},
       });
       tileChangeBinding.emit("change");
     });
@@ -138,6 +140,7 @@ const addCloudsTilesControl = (
     },
     raster_tile: {
       max_zoom: 6,
+      min_zoom: 2,
     },
   };
 
@@ -155,7 +158,6 @@ const addCloudsTilesControl = (
 
     if (!description.raster_tile) return;
     description.raster_tile.opacity = opacity;
-
     cloudsTilesLayer.update(description);
   };
 

@@ -38,18 +38,25 @@ pub(crate) fn request_texture_fragment(
         .texture_fragment_entity_ids
         .as_ref()
         .map_or(0, |ids| ids.len());
-    let Some((mut next_tile, _)) = tiles.iter().nth(idx) else {
+
+    let mut next_tile = None;
+
+    // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions.
+    for (next, _) in tiles.iter().skip(idx) {
+        if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
+            leaf.texture_fragment_entity_ids
+                .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+                .push(None);
+            next_tile = None;
+        } else {
+            next_tile = Some(next);
+            break;
+        }
+    }
+
+    let Some(next_tile) = next_tile else {
         return;
     };
-
-    if next_tile.is_over_z(leaf.coords.z) {
-        leaf.texture_fragment_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-            .push(None);
-        if let Some((next, _)) = tiles.iter().nth(idx + 1) {
-            next_tile = next;
-        };
-    }
 
     let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
     let url = tile_url(

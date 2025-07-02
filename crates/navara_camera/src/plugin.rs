@@ -11,7 +11,6 @@ use bevy_ecs::{
     entity::Entity,
     event::EventReader,
     query::{Added, Changed, Or},
-    schedule::IntoScheduleConfigs,
     system::{Query, ResMut},
 };
 
@@ -22,14 +21,8 @@ impl bevy_app::Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.add_systems(Startup, super::system::startup)
             .add_event::<CameraEvent>()
-            .add_systems(
-                Update,
-                (
-                    handle_resize,
-                    (super::system::update, super::system::update_frustum).chain(),
-                ),
-            )
-            .add_systems(PostUpdate, commit);
+            .add_systems(Update, (handle_resize, super::system::update))
+            .add_systems(PostUpdate, (commit, super::system::update_frustum));
     }
 }
 

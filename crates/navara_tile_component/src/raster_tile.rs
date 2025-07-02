@@ -116,8 +116,12 @@ impl RasterTile {
             .as_ref()
             .and_then(|t| t.data_requester_entity_id());
 
+        let use_terrain = terrain_layer
+            .map(|l| l.is_over_min_zoom(self.coords.z))
+            .unwrap_or(false);
+
         // This means a terrain isn't used.
-        if terrain_layer.is_none()
+        if !use_terrain
             && self
                 .texture_fragment_entity_ids
                 .as_ref()

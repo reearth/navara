@@ -30,6 +30,7 @@ pub struct TileCacheManager {
     pub requested_tile_caches: FxHashSet<TileHandle>,
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
+    pub prev_layers_len: usize,
 }
 
 impl TileCacheManager {

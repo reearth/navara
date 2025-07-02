@@ -52,7 +52,7 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Added<TilesLayer>>)>,
+    mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Changed<TilesLayer>>)>,
     mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
     camera: Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
     texture_fragment: TileTextureFragmentQuery,
@@ -92,6 +92,11 @@ pub fn update_tiles(
     let fog = fogs.single().unwrap();
     let (camera, frustum) = camera.single().unwrap();
 
+    // Since TilesLayer is added asynchronously, we need to check if it's changed at last frame by ourself.
+    let tiles = &tiles_set.p0();
+    let tiles_len = tiles.iter().len();
+    let is_layers_len_changed = tiles_len != tc.prev_layers_len;
+
     let needs_update = is_texture_fragment_changed
         || is_data_requester_changed
         || is_mesh_changed
@@ -101,15 +106,15 @@ pub fn update_tiles(
         || frustum.is_changed()
         || occluder.is_changed()
         || is_tile_layer_added
-        || is_terrain_layer_added;
+        || is_terrain_layer_added
+        || is_layers_len_changed;
     if !needs_update {
         return;
     }
 
-    let tiles = &tiles_set.p0();
-
     tc.is_updated_in_this_frame = true;
     tc.last_rendered_frame = frame.rendered_frame();
+    tc.prev_layers_len = tiles_len;
 
     let zero_tile = match qt.qt.zero() {
         Some(z) => z,
