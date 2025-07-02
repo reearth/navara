@@ -6,6 +6,10 @@
 
 __TODO__
 
+## Architecture
+
+![Architecture diagram](./assets/architecture.png)
+
 ## Development
 
 ### Install toolchains
@@ -48,6 +52,12 @@ cargo make dev
 ```
 
 An error is displayed in the Web browser, but this is because the compilation of WASM has not been completed. Wait a little and when the compilation of WASM is completed, reload the page and it will be displayed correctly.
+
+### Setup your Claude
+
+If you add Claude MCP, then Claude can handle multiple tasks concurrency.
+
+`claude mcp add claude-mcp path/to/claude -- mcp serve`
 
 ## License
 
