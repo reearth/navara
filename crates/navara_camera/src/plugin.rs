@@ -26,8 +26,10 @@ impl bevy_app::Plugin for CameraPlugin {
                 Update,
                 (
                     handle_resize,
-                    (super::system::update, super::system::update_frustum).chain(),
-                ),
+                    super::system::update,
+                    super::system::update_frustum,
+                )
+                    .chain(),
             )
             .add_systems(PostUpdate, commit);
     }

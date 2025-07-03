@@ -61,7 +61,7 @@ pub fn traverse_tile(
 ) -> TraversalResult {
     match qt.qt.get(handle) {
         Some(tile) => {
-            let has_no_tile = tiles.iter().all(|t| t.0.is_over_z(tile.coords.z));
+            let has_no_tile = tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
             if has_no_tile {
                 return TraversalResult::NotFound;
             }
@@ -116,13 +116,14 @@ pub fn traverse_tile(
 
     // TODO: Replace with one resource
     let max_sse = tiles.iter().next().unwrap().0.appearance().unwrap().max_sse;
-    let meets_sse = sse <= max_sse;
+    let is_over_min_z = tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z));
+    let meets_sse = sse <= max_sse && is_over_min_z;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     // If this tile has a terrain and it's prepared, request a texture for this tile.
     // It means terrain is rendered first, then the texture is prepared lazily.
-    if terrain_layer.is_some() && !meets_sse_ancestors && is_renderable {
+    if terrain_layer.is_some() && is_renderable {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_texture_fragment(
             command,
@@ -135,7 +136,7 @@ pub fn traverse_tile(
     }
 
     if meets_sse || meets_sse_ancestors {
-        if meets_sse {
+        if !meets_sse_ancestors {
             prepare_tile_resource(
                 command,
                 qt,
@@ -159,7 +160,7 @@ pub fn traverse_tile(
             && !were_children_rendered
         {
             // Avoid to return an inactivated tile when meets SSE from ancestors.
-            if !meets_sse && !tc.is_rendered_tile_activated(&handle, meshes) {
+            if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
                 return TraversalResult::NotFound;
             }
             return TraversalResult::TileRendered;
@@ -328,18 +329,20 @@ pub fn traverse_tile(
         if meets_sse_ancestors {
             return TraversalResult::NotFound;
         }
-        prepare_tile_resource(
-            command,
-            qt,
-            buf,
-            terrain_layer,
-            handle,
-            tc,
-            tiles,
-            texture_fragment,
-            terrain_data_requester,
-            Priority::Extreme,
-        );
+        if is_over_min_z {
+            prepare_tile_resource(
+                command,
+                qt,
+                buf,
+                terrain_layer,
+                handle,
+                tc,
+                tiles,
+                texture_fragment,
+                terrain_data_requester,
+                Priority::Extreme,
+            );
+        }
         return TraversalResult::NotFound;
     }
 
@@ -412,7 +415,7 @@ pub fn prepare_tile_resource(
     priority: Priority,
 ) {
     let tile = qt.qt.get_mut(handle).unwrap();
-    if terrain_layer.is_some() {
+    if matches!(terrain_layer, Some(l) if l.is_over_min_zoom(tile.coords.z)) {
         request_terrain_data(
             commands,
             tile,
