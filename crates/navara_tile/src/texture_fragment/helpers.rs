@@ -41,7 +41,8 @@ pub(crate) fn request_texture_fragment(
 
     let mut next_tile = None;
 
-    // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions.
+    // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions,
+    // since selected tile has multiple layers.
     for (next, _) in tiles.iter().skip(idx) {
         if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
             leaf.texture_fragment_entity_ids
