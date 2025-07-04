@@ -169,11 +169,7 @@ const testScreenToWorld = (view: ThreeView) => {
     if (gMouseBall) {
       if (pos) {
         const lle = vector3ToGeodetic(pos);
-        const height = view.sampleTerrainHeight({
-          lat: lle.lat,
-          lng: lle.lng,
-          height: 0,
-        });
+        const height = view.sampleTerrainHeight(lle);
 
         const newPos = geodeticToVector3(
           new LLE(lle.lat, lle.lng, height ?? 0),
@@ -714,11 +710,7 @@ const testSampleTerrainHeight = (view: ThreeView) => {
     if (pos) {
       const lle = vector3ToGeodetic(pos);
 
-      const height = view.sampleTerrainHeight({
-        lat: lle.lat,
-        lng: lle.lng,
-        height: 0,
-      });
+      const height = view.sampleTerrainHeight(lle);
 
       gPaneParams.sampleLng = radianToDegree(lle.lng);
       gPaneParams.sampleLat = radianToDegree(lle.lat);
@@ -742,11 +734,7 @@ const onRegisterChange = () => {
 
   if (gPaneParams.fujiRegistered) {
     gFujiUnregister = gView?.addTerrainHeightEvent(
-      {
-        lat: degreeToRadian(gFujiPos[0]),
-        lng: degreeToRadian(gFujiPos[1]),
-        height: 0,
-      },
+      new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
       (height) => {
         gPaneParams.fujiHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -771,11 +759,7 @@ const onRegisterChange = () => {
 
   if (gPaneParams.kitaRegistered) {
     gKitaUnregister = gView?.addTerrainHeightEvent(
-      {
-        lat: degreeToRadian(gKitaPos[0]),
-        lng: degreeToRadian(gKitaPos[1]),
-        height: 0,
-      },
+      new LLE(degreeToRadian(gKitaPos[0]), degreeToRadian(gKitaPos[1]), 0),
       (height) => {
         gPaneParams.kitaHeight = height ?? 0;
         gFolderHeightEvent?.refresh();

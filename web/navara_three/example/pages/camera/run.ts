@@ -3,6 +3,7 @@ import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { AxesHelper, Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { LLE } from "@navara/three_api";
 
 const gCameraParams = {
   longitude: 139.75711454748298,
@@ -243,11 +244,11 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
 
   const clickFunc = () => {
     view.lookAt(
-      {
-        lat: cameraParams.latitude,
-        lng: cameraParams.longitude,
-        height: cameraParams.altitude,
-      },
+      new LLE(
+        cameraParams.latitude,
+        cameraParams.longitude,
+        cameraParams.altitude,
+      ),
       new Vector3(
         cameraParams.offset_x,
         cameraParams.offset_y,

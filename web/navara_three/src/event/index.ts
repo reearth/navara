@@ -152,7 +152,7 @@ export function processEvent(
   );
 
   eventManager.forEachStack("update_sample_terrain_height", (ev) =>
-    viewEvents.emit("sample_terrain_height_received", ev),
+    viewEvents.emit("_sample_terrain_height_received", ev),
   );
 
   eventManager.processTransactionEvents(
