@@ -3,6 +3,8 @@ import type { LatLngHeight, CameraPosition } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
+  LLE,
+  type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
@@ -127,6 +129,7 @@ export type ViewEvents = {
   ) => void;
   preUpdate: (t: number) => void;
   postUpdate: (t: number) => void;
+  sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
 };
 
 export default class ThreeView extends EventHandler<ViewEvents> {
@@ -815,6 +818,36 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       new Float32Array([target.lng, target.lat, target.height]),
       new Float32Array([offset.x, offset.y, offset.z]),
     );
+  }
+
+  sampleTerrainHeight(pos: LatLngHeight): number | undefined {
+    const lle = new LLE(pos.lat, pos.lng, 0);
+    return this._core?.sampleTerrainHeight(lle);
+  }
+
+  addTerrainHeightEvent(
+    pos: LatLngHeight,
+    cb: (height: number) => void,
+  ): () => void {
+    if (!this._core) {
+      return () => {};
+    }
+
+    const lle = new LLE(pos.lat, pos.lng, 0);
+    const entityBits = this._core.registerSampleTerrainHeightEvent(lle);
+
+    const callFunc = (ev: TerrainHeightUpdatedEvent) => {
+      if (ev.bits === entityBits) {
+        cb(ev.height ?? 0);
+      }
+    };
+
+    this.on("sample_terrain_height_received", callFunc);
+
+    return () => {
+      this._core?.unregisterSampleTerrainHeightEvent(entityBits);
+      this.off("sample_terrain_height_received", callFunc);
+    };
   }
 
   rotateAroundAxis(axis: Vector3, angle: number) {

@@ -51,7 +51,7 @@ impl EllipsoidGeodesic {
         let granularity = granularity.unwrap_or(9999.0);
 
         if granularity == 0.0 || self.distance < granularity {
-            return vec![self.start.clone(), self.end.clone()];
+            return vec![self.start, self.end];
         }
 
         let ellipsoid_line = self.inner();
@@ -61,7 +61,7 @@ impl EllipsoidGeodesic {
         let mut distance_from_start = interpoint_distance;
         let points_to_add = segments - 1;
 
-        let mut result = vec![self.start.clone()];
+        let mut result = vec![self.start];
 
         for _ in 0..points_to_add {
             let interpolated_cartographic =
@@ -70,7 +70,7 @@ impl EllipsoidGeodesic {
             distance_from_start += interpoint_distance;
         }
 
-        result.push(self.end.clone());
+        result.push(self.end);
         result
     }
 

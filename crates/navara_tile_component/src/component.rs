@@ -1,4 +1,6 @@
 use bevy_ecs::component::Component;
+use navara_core::{Radians, LLE};
+use navara_math::FloatType;
 
 use crate::TileHandle;
 
@@ -23,4 +25,10 @@ impl OverscaledTileHandle {
             overscaled: 0,
         }
     }
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct TerrainHeightObserver {
+    pub lle: LLE<FloatType, Radians>,
+    pub height: Option<FloatType>,
 }

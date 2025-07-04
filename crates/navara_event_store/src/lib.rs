@@ -22,6 +22,7 @@ pub struct EventStore {
     pub renderable_feature_added: Vec<Entity>,
     pub renderable_feature_changed: Vec<Entity>,
     pub renderable_feature_removed: Vec<Entity>,
+    pub update_sample_terrain_height: Vec<Entity>,
 }
 
 impl EventStore {
@@ -40,5 +41,6 @@ impl EventStore {
         self.renderable_feature_added.clear();
         self.renderable_feature_changed.clear();
         self.renderable_feature_removed.clear();
+        self.update_sample_terrain_height.clear();
     }
 }

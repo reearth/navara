@@ -509,6 +509,21 @@ impl Core {
     pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
         self.app.rotate_around_axis(axis, angle);
     }
+
+    #[wasm_bindgen(js_name = sampleTerrainHeight)]
+    pub fn sample_terrain_height(&mut self, lle: LLE) -> Option<FloatType> {
+        self.app.sample_terrain_height((&lle).into())
+    }
+
+    #[wasm_bindgen(js_name = registerSampleTerrainHeightEvent)]
+    pub fn register_sample_terrain_height_event(&mut self, lle: LLE) -> u64 {
+        self.app.add_terrain_height_observer((&lle).into())
+    }
+
+    #[wasm_bindgen(js_name = unregisterSampleTerrainHeightEvent)]
+    pub fn unregister_sample_terrain_height_event(&mut self, bits: u64) {
+        self.app.remove_terrain_height_observer(bits);
+    }
 }
 
 #[wasm_bindgen(start)]

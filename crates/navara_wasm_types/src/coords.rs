@@ -1,9 +1,10 @@
 use navara_core::{Angle, Meters, Radians};
 use navara_math::FloatType;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 pub struct LLE {
     pub lat: FloatType,
     pub lng: FloatType,

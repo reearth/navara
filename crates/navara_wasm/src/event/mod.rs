@@ -11,7 +11,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{RasterTileInternalMaterial, Transform, Vec2};
+use navara_wasm_types::{RasterTileInternalMaterial, Transform, Vec2, LLE};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -30,6 +30,7 @@ pub struct Events {
     pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
     pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
     pub renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
+    pub update_sample_terrain_height: Vec<TerrainHeightUpdatedEvent>,
 }
 
 #[wasm_bindgen]
@@ -130,6 +131,16 @@ pub struct TextureFragmentRequestedEvent {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
+pub struct TerrainHeightUpdatedEvent {
+    pub ind: u32,
+    pub gen: u32,
+    pub bits: u64,
+    pub lle: LLE,
+    pub height: Option<f64>,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
 pub struct EntityEvent {
     pub ind: u32,
     pub gen: u32,
@@ -188,6 +199,11 @@ impl From<navara_event::Events<'_>> for Events {
                 .into_iter()
                 .map(|ev| ev.into())
                 .collect(),
+            update_sample_terrain_height: ev
+                .update_sample_terrain_height
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
         }
     }
 }
@@ -197,6 +213,28 @@ impl From<navara_event_store::EntityEvent> for EntityEvent {
         Self {
             ind: ev.ind,
             gen: ev.gen,
+        }
+    }
+}
+
+impl<'a>
+    From<
+        navara_event_store::ReconstructableComponentEvent<
+            &'a navara_tile_component::TerrainHeightObserver,
+        >,
+    > for TerrainHeightUpdatedEvent
+{
+    fn from(
+        ev: navara_event_store::ReconstructableComponentEvent<
+            &'a navara_tile_component::TerrainHeightObserver,
+        >,
+    ) -> Self {
+        Self {
+            ind: ev.ind,
+            gen: ev.gen,
+            bits: ev.bits,
+            lle: ev.comp.lle.into(),
+            height: ev.comp.height.map(|h| h as f64),
         }
     }
 }

@@ -151,6 +151,10 @@ export function processEvent(
     processObjectTransformUpdated(meshes, ev),
   );
 
+  eventManager.forEachStack("update_sample_terrain_height", (ev) =>
+    viewEvents.emit("sample_terrain_height_received", ev),
+  );
+
   eventManager.processTransactionEvents(
     "meshEvent",
     {

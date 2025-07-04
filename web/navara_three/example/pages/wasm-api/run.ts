@@ -1,4 +1,7 @@
-import ThreeView, { initializeGltfLoader } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  initializeGltfLoader,
+} from "@navara/three";
 import {
   geodeticToVector3,
   vector3ToGeodetic,
@@ -33,19 +36,28 @@ import {
 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 import type { Nullable } from "@navara/core";
-import { TILE_URLS } from "../../helpers/constants";
+import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 
 const gPaneParams = {
   convertScreenToWorld: false,
   moveDistance: 0,
   transform: "eastNorthUp",
 
-  lngStart: 138.7306671143,
-  latStart: 35.3624725342,
+  lngStart: 127.6809,
+  latStart: 26.2124,
   lngEnd: 86.925,
   latEnd: 27.9881,
   distance: 0,
   interpolate: 0,
+
+  sampleLng: 0,
+  sampleLat: 0,
+  sampleTerrainHeight: 0,
+
+  fujiHeight: 0,
+  fujiRegistered: true,
+  kitaHeight: 0,
+  kitaRegistered: true,
 };
 
 let gModel: Nullable<Object3D> = undefined;
@@ -55,6 +67,10 @@ let gLastCameraDistance = 0;
 let gPolylinePoints: Vector3[] = [];
 let gView: Nullable<ThreeView> = undefined;
 let gFolderDist: Nullable<FolderApi> = null;
+let gFolderSample: Nullable<FolderApi> = null;
+let gFolderHeightEvent: Nullable<FolderApi> = null;
+let gFujiUnregister: Nullable<() => void> = null;
+let gKitaUnregister: Nullable<() => void> = null;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -62,11 +78,23 @@ export const run = async (view: ThreeView) => {
   gView = view;
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_URLS.openstreetmap },
-    raster_tile: {
-      max_zoom: 23,
+    type: "terrain",
+    data: {
+      url: TERRAIN_URLS.gsi,
     },
+    raster_terrain: {
+      max_zoom: 15,
+      min_zoom: 5,
+      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TILE_URLS.openstreetmap,
+    },
+    raster_tile: {},
   });
 
   const axesHelper = new AxesHelper(5);
@@ -79,30 +107,13 @@ export const run = async (view: ThreeView) => {
   addRunningObject(view);
   testScreenToWorld(view);
   testRayPlane(view);
+  testSampleTerrainHeight(view);
 
   await addTestModel(view);
 
-  // vector3ToGeodetic
-  const pos = geodeticToVector3(
-    new LLE(
-      degreeToRadian(35.67564356091717),
-      degreeToRadian(139.75711454748298),
-      1000000,
-    ),
-  );
-  const lle = vector3ToGeodetic(pos);
-  console.log(`lng: ${lle.lng}, lat: ${lle.lat}, height: ${lle.height}`);
-
-  // degreeToRadian
-  const radian = degreeToRadian(180);
-  console.log(`180 degrees to radian: ${radian}`);
-
-  // radianToDegree
-  const degree = radianToDegree(radian);
-  console.log(`radian ${radian} to degree: ${degree}`);
-
   gInterBall = placeOneBall(view, new Vector3(0, 0, 0), 0xff0000);
   onDistPosChange();
+  onRegisterChange();
 };
 
 const addRunningObject = (view: ThreeView) => {
@@ -215,10 +226,10 @@ const addTestModel = async (view: ThreeView) => {
     view.scenes.main.add(model.scene);
 
     const pos = geodeticToVector3(
-      new LLE(degreeToRadian(35.3624725342), degreeToRadian(138.7306671143), 0),
+      new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
     );
     const normal = geodeticSurfaceNormal(
-      new LLE(degreeToRadian(35.3624725342), degreeToRadian(138.7306671143), 0),
+      new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
     );
 
     model.scene.position.set(pos.x, pos.y, pos.z);
@@ -323,6 +334,30 @@ const addCtrlPanel = () => {
       step: 0.001,
     })
     .on("change", onDistPosChange);
+
+  gFolderSample = pane.addFolder({
+    title: "SampleTerrainHeight",
+    expanded: true,
+  });
+  gFolderSample.addBinding(gPaneParams, "sampleLng", { label: "Longitude" });
+  gFolderSample.addBinding(gPaneParams, "sampleLat", { label: "Latitude" });
+  gFolderSample.addBinding(gPaneParams, "sampleTerrainHeight", {
+    label: "Height",
+  });
+
+  gFolderHeightEvent = pane.addFolder({
+    title: "TerrainHeightEvent",
+    expanded: true,
+  });
+  gFolderHeightEvent.addBinding(gPaneParams, "fujiHeight", { label: "富士山" });
+  gFolderHeightEvent
+    .addBinding(gPaneParams, "fujiRegistered", { label: "register" })
+    .on("change", onRegisterChange);
+  gFolderHeightEvent.addBlade({ view: "separator" });
+  gFolderHeightEvent.addBinding(gPaneParams, "kitaHeight", { label: "北岳" });
+  gFolderHeightEvent
+    .addBinding(gPaneParams, "kitaRegistered", { label: "register" })
+    .on("change", onRegisterChange);
 };
 
 const onMoveDistanceChange = () => {
@@ -617,4 +652,68 @@ const createPolylineMesh = (view: ThreeView) => {
 
   gPolylineMesh = new Mesh(geometry, material);
   view.scenes.main.add(gPolylineMesh);
+};
+
+const testSampleTerrainHeight = (view: ThreeView) => {
+  const onMouseMove = (event: MouseEvent) => {
+    const rect = view.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const pos = convertScreenPos(view, x, y);
+    if (pos) {
+      const lle = vector3ToGeodetic(pos);
+
+      const height = view.sampleTerrainHeight({
+        lat: lle.lat,
+        lng: lle.lng,
+        height: 0,
+      });
+
+      gPaneParams.sampleLng = radianToDegree(lle.lng);
+      gPaneParams.sampleLat = radianToDegree(lle.lat);
+      gPaneParams.sampleTerrainHeight = height ?? 0;
+      gFolderSample?.refresh();
+    }
+  };
+
+  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
+};
+
+const onRegisterChange = () => {
+  if (gFujiUnregister) {
+    gFujiUnregister();
+    gFujiUnregister = null;
+  }
+  if (gKitaUnregister) {
+    gKitaUnregister();
+    gKitaUnregister = null;
+  }
+
+  if (gPaneParams.fujiRegistered) {
+    gFujiUnregister = gView?.addTerrainHeightEvent(
+      {
+        lat: degreeToRadian(35.3624725342),
+        lng: degreeToRadian(138.7306671143),
+        height: 0,
+      },
+      (height) => {
+        gPaneParams.fujiHeight = height ?? 0;
+        gFolderHeightEvent?.refresh();
+      },
+    );
+  }
+
+  if (gPaneParams.kitaRegistered) {
+    gKitaUnregister = gView?.addTerrainHeightEvent(
+      {
+        lat: degreeToRadian(35.6744),
+        lng: degreeToRadian(138.2392),
+        height: 0,
+      },
+      (height) => {
+        gPaneParams.kitaHeight = height ?? 0;
+        gFolderHeightEvent?.refresh();
+      },
+    );
+  }
 };
