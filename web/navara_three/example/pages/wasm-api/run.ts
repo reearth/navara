@@ -60,8 +60,13 @@ const gPaneParams = {
   kitaRegistered: true,
 };
 
-let gModel: Nullable<Object3D> = undefined;
+const gFujiPos = [35.3624725342, 138.7306671143];
+const gKitaPos = [35.6744, 138.2392];
+
+let gModelNormal: Nullable<Object3D> = undefined;
+let gModelFuji: Nullable<Object3D> = undefined;
 let gPolylineMesh: Nullable<Mesh> = undefined;
+let gMouseBall: Nullable<Mesh> = undefined;
 let gInterBall: Nullable<Mesh> = undefined;
 let gLastCameraDistance = 0;
 let gPolylinePoints: Vector3[] = [];
@@ -109,8 +114,10 @@ export const run = async (view: ThreeView) => {
   testRayPlane(view);
   testSampleTerrainHeight(view);
 
-  await addTestModel(view);
+  await addTestModelForNormal(view);
+  await addTestModelForTerrainHeight(view);
 
+  gMouseBall = placeOneBall(view, new Vector3(0, 0, 0), 0x00ff00);
   gInterBall = placeOneBall(view, new Vector3(0, 0, 0), 0xff0000);
   onDistPosChange();
   onRegisterChange();
@@ -149,8 +156,6 @@ const addRunningObject = (view: ThreeView) => {
 };
 
 const testScreenToWorld = (view: ThreeView) => {
-  let ball: Mesh | undefined = undefined;
-
   const onMouseMove = (event: MouseEvent) => {
     if (!gPaneParams.convertScreenToWorld) {
       return;
@@ -161,12 +166,20 @@ const testScreenToWorld = (view: ThreeView) => {
     const y = event.clientY - rect.top;
     const pos = convertScreenPos(view, x, y);
 
-    if (!ball) {
-      ball = placeOneBall(view, pos, 0x00ff00);
-    } else {
-      ball.scale.set(100000, 100000, 100000);
+    if (gMouseBall) {
       if (pos) {
-        ball.position.set(pos.x, pos.y, pos.z);
+        const lle = vector3ToGeodetic(pos);
+        const height = view.sampleTerrainHeight({
+          lat: lle.lat,
+          lng: lle.lng,
+          height: 0,
+        });
+
+        const newPos = geodeticToVector3(
+          new LLE(lle.lat, lle.lng, height ?? 0),
+        );
+
+        gMouseBall.position.set(newPos.x, newPos.y, newPos.z);
         view.forceUpdate();
       }
     }
@@ -217,7 +230,7 @@ const placeOneBall = (
   }
 };
 
-const addTestModel = async (view: ThreeView) => {
+const addTestModelForNormal = async (view: ThreeView) => {
   const loader = initializeGltfLoader();
   const model = await loader.loadAsync(
     "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
@@ -245,35 +258,62 @@ const addTestModel = async (view: ThreeView) => {
     );
     view.scenes.main.add(arrowHelper);
 
-    gModel = model.scene;
-    gModel.userData.origin = pos;
-    gModel.userData.normal = normal;
+    gModelNormal = model.scene;
+    gModelNormal.userData.origin = pos;
+    gModelNormal.userData.normal = normal;
 
     // Add model's own coordinate axes with arrows
-    const xAxis = new ArrowHelper(
-      new Vector3(1, 0, 0),
-      new Vector3(0, 0, 0),
-      5,
-      0xff0000,
-    );
-    const yAxis = new ArrowHelper(
-      new Vector3(0, 1, 0),
-      new Vector3(0, 0, 0),
-      5,
-      0x00ff00,
-    );
-    const zAxis = new ArrowHelper(
-      new Vector3(0, 0, 1),
-      new Vector3(0, 0, 0),
-      5,
-      0x0000ff,
-    );
-    gModel.add(xAxis);
-    gModel.add(yAxis);
-    gModel.add(zAxis);
+    addAxisToModel(gModelNormal);
 
     onTransformChange();
   }
+};
+
+const addTestModelForTerrainHeight = async (view: ThreeView) => {
+  const loader = initializeGltfLoader();
+  const model = await loader.loadAsync(
+    "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+  );
+  if (model.scene) {
+    view.scenes.main.add(model.scene);
+
+    const pos = geodeticToVector3(
+      new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
+    );
+
+    model.scene.scale.set(200, 200, 200);
+
+    gModelFuji = model.scene;
+
+    addAxisToModel(gModelFuji);
+
+    const transformMatrix = northUpEastToFixedFrame(pos);
+    gModelFuji.applyMatrix4(transformMatrix);
+  }
+};
+
+const addAxisToModel = (model: Object3D) => {
+  const xAxis = new ArrowHelper(
+    new Vector3(1, 0, 0),
+    new Vector3(0, 0, 0),
+    5,
+    0xff0000,
+  );
+  const yAxis = new ArrowHelper(
+    new Vector3(0, 1, 0),
+    new Vector3(0, 0, 0),
+    5,
+    0x00ff00,
+  );
+  const zAxis = new ArrowHelper(
+    new Vector3(0, 0, 1),
+    new Vector3(0, 0, 0),
+    5,
+    0x0000ff,
+  );
+  model.add(xAxis);
+  model.add(yAxis);
+  model.add(zAxis);
 };
 
 const addCtrlPanel = () => {
@@ -361,9 +401,13 @@ const addCtrlPanel = () => {
 };
 
 const onMoveDistanceChange = () => {
-  if (gModel && gModel.userData.normal && gModel.userData.origin) {
-    const normal = gModel.userData.normal;
-    const pos = gModel.userData.origin;
+  if (
+    gModelNormal &&
+    gModelNormal.userData.normal &&
+    gModelNormal.userData.origin
+  ) {
+    const normal = gModelNormal.userData.normal;
+    const pos = gModelNormal.userData.origin;
 
     // Move the model along the surface normal
     const newPos = new Vector3(
@@ -372,44 +416,44 @@ const onMoveDistanceChange = () => {
       pos.z + normal.z * gPaneParams.moveDistance,
     );
 
-    gModel.position.set(newPos.x, newPos.y, newPos.z);
+    gModelNormal.position.set(newPos.x, newPos.y, newPos.z);
   }
 };
 
 const onTransformChange = () => {
-  if (!gModel || !gModel.userData.origin) {
+  if (!gModelNormal || !gModelNormal.userData.origin) {
     return;
   }
 
-  gModel.position.set(0, 0, 0);
-  gModel.rotation.set(0, 0, 0);
-  gModel.scale.set(300000, 300000, 300000);
+  gModelNormal.position.set(0, 0, 0);
+  gModelNormal.rotation.set(0, 0, 0);
+  gModelNormal.scale.set(300000, 300000, 300000);
 
   let transformMatrix;
   switch (gPaneParams.transform) {
     case "eastNorthUp":
-      transformMatrix = eastNorthUpToFixedFrame(gModel.userData.origin);
+      transformMatrix = eastNorthUpToFixedFrame(gModelNormal.userData.origin);
       break;
     case "northEastDown":
-      transformMatrix = northEastDownToFixedFrame(gModel.userData.origin);
+      transformMatrix = northEastDownToFixedFrame(gModelNormal.userData.origin);
       break;
     case "northUpEast":
-      transformMatrix = northUpEastToFixedFrame(gModel.userData.origin);
+      transformMatrix = northUpEastToFixedFrame(gModelNormal.userData.origin);
       break;
     case "northWestUp":
-      transformMatrix = northWestUpToFixedFrame(gModel.userData.origin);
+      transformMatrix = northWestUpToFixedFrame(gModelNormal.userData.origin);
       break;
     default:
-      transformMatrix = eastNorthUpToFixedFrame(gModel.userData.origin);
+      transformMatrix = eastNorthUpToFixedFrame(gModelNormal.userData.origin);
   }
 
-  gModel.applyMatrix4(transformMatrix);
+  gModelNormal.applyMatrix4(transformMatrix);
 
-  if (gModel.userData.normal) {
-    const moveOffset = gModel.userData.normal
+  if (gModelNormal.userData.normal) {
+    const moveOffset = gModelNormal.userData.normal
       .clone()
       .multiplyScalar(gPaneParams.moveDistance);
-    gModel.position.add(moveOffset);
+    gModelNormal.position.add(moveOffset);
   }
 };
 
@@ -582,8 +626,12 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
   if (!gPolylineMesh || !view.camera) return;
 
   // Calculate appropriate tube radius based on camera distance to keep visual thickness constant
-  const centerPoint = curvePoints[Math.floor(curvePoints.length / 2)];
-  const cameraDistance = view.camera.innerCam.position.distanceTo(centerPoint);
+  const centerPoint = new Vector3(0, 0, 0);
+  const polarRadius = 6356752;
+
+  // The calculation used to estimate the distance from the camera to the ground surface.
+  const cameraDistance =
+    view.camera.innerCam.position.distanceTo(centerPoint) - polarRadius;
 
   // Store current distance for camera change detection
   gLastCameraDistance = cameraDistance;
@@ -614,8 +662,11 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
   gPolylineMesh.geometry.dispose();
   gPolylineMesh.geometry = newGeometry;
 
-  const ballRadius = clampedRadius * 2;
-  gInterBall?.scale.set(ballRadius, ballRadius, ballRadius);
+  const intBallRadius = clampedRadius * 2;
+  gInterBall?.scale.set(intBallRadius, intBallRadius, intBallRadius);
+
+  const mouseBallRadius = clampedRadius * 3;
+  gMouseBall?.scale.set(mouseBallRadius, mouseBallRadius, mouseBallRadius);
 };
 
 const addCameraListener = (view: ThreeView) => {
@@ -692,13 +743,28 @@ const onRegisterChange = () => {
   if (gPaneParams.fujiRegistered) {
     gFujiUnregister = gView?.addTerrainHeightEvent(
       {
-        lat: degreeToRadian(35.3624725342),
-        lng: degreeToRadian(138.7306671143),
+        lat: degreeToRadian(gFujiPos[0]),
+        lng: degreeToRadian(gFujiPos[1]),
         height: 0,
       },
       (height) => {
         gPaneParams.fujiHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
+
+        if (gModelFuji) {
+          gModelFuji.position.set(0, 0, 0);
+          gModelFuji.rotation.set(0, 0, 0);
+
+          const pos = geodeticToVector3(
+            new LLE(
+              degreeToRadian(gFujiPos[0]),
+              degreeToRadian(gFujiPos[1]),
+              gPaneParams.fujiHeight,
+            ),
+          );
+          const transformMatrix = northUpEastToFixedFrame(pos);
+          gModelFuji.applyMatrix4(transformMatrix);
+        }
       },
     );
   }
@@ -706,8 +772,8 @@ const onRegisterChange = () => {
   if (gPaneParams.kitaRegistered) {
     gKitaUnregister = gView?.addTerrainHeightEvent(
       {
-        lat: degreeToRadian(35.6744),
-        lng: degreeToRadian(138.2392),
+        lat: degreeToRadian(gKitaPos[0]),
+        lng: degreeToRadian(gKitaPos[1]),
         height: 0,
       },
       (height) => {

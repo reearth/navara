@@ -11,7 +11,6 @@ use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 pub mod terrain;
 pub mod tile;
 
-
 pub struct TilePlugin;
 
 impl Plugin for TilePlugin {
