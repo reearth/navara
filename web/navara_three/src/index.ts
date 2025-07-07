@@ -1,5 +1,5 @@
 import { EventManager, EventHandler } from "@navara/core";
-import type { CameraPosition } from "@navara/core";
+import type { CameraPosition, Nullable } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -121,7 +121,7 @@ export type Options = {
 
 export type ViewEvents = {
   resize: () => void;
-  pick: (info: PickedFeature) => void;
+  pick: (info: Nullable<PickedFeature>) => void;
   layer: <K extends keyof LayerEvent>(
     k: K,
     layerId: string,
@@ -912,6 +912,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
           properties: prop,
         };
         this.emit("pick", pickedFeature);
+      } else {
+        const emptyFeature: PickedFeature = {
+          properties: new Map<string, unknown>(),
+        };
+        this.emit("pick", emptyFeature);
       }
 
       // for highlight
@@ -921,6 +926,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       }
     } else {
       this._core?.clearPickingStatus();
+      this.emit("pick", null);
     }
 
     return [];
