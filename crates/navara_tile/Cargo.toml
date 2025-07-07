@@ -25,5 +25,6 @@ navara_mock = { path = "../navara_mock" }
 navara_worker = { path = "../navara_worker" }
 navara_frame = { path = "../navara_frame" }
 navara_fog = { path = "../navara_fog" }
+navara_event_store = { path = "../navara_event_store" }
 instant.workspace = true
 fxhash.workspace = true

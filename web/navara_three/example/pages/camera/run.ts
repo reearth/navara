@@ -1,14 +1,9 @@
 import type { CameraPosition } from "@navara/core";
-import ThreeView from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { AxesHelper, Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
-
-const tileUrls = {
-  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-  gsiSeamlessphoto:
-    "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-};
+import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { LLE } from "@navara/three_api";
 
 const gCameraParams = {
   longitude: 139.75711454748298,
@@ -39,11 +34,23 @@ export const run = async (view: ThreeView) => {
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: tileUrls.openstreetmap },
-    raster_tile: {
-      max_zoom: 23,
+    type: "terrain",
+    data: {
+      url: TERRAIN_URLS.gsi,
     },
+    raster_terrain: {
+      max_zoom: 15,
+      min_zoom: 5,
+      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TILE_URLS.openstreetmap,
+    },
+    raster_tile: {},
   });
 
   view.camera.on("movestart", () => {
@@ -237,11 +244,11 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
 
   const clickFunc = () => {
     view.lookAt(
-      {
-        lat: cameraParams.latitude,
-        lng: cameraParams.longitude,
-        height: cameraParams.altitude,
-      },
+      new LLE(
+        cameraParams.latitude,
+        cameraParams.longitude,
+        cameraParams.altitude,
+      ),
       new Vector3(
         cameraParams.offset_x,
         cameraParams.offset_y,

@@ -7,7 +7,7 @@ use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
-use navara_tile_component::{OverscaledTileHandle, TileMeshMarker};
+use navara_tile_component::{OverscaledTileHandle, TerrainHeightObserver, TileMeshMarker};
 use navara_worker::DelegatedWorkerTasksParameters;
 
 #[derive(Debug, Default)]
@@ -48,6 +48,7 @@ pub struct Events<'a> {
         )>,
     >,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
+    pub update_sample_terrain_height: Vec<ReconstructableComponentEvent<&'a TerrainHeightObserver>>,
 }
 
 impl<'a> Events<'a> {
@@ -142,6 +143,13 @@ impl<'a> Events<'a> {
         for e in store.renderable_feature_removed.iter() {
             if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
                 events.renderable_feature_removed.push(e);
+                is_changed = true;
+            }
+        }
+
+        for e in store.update_sample_terrain_height.iter() {
+            if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
+                events.update_sample_terrain_height.push(e);
                 is_changed = true;
             }
         }

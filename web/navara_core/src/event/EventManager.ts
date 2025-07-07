@@ -75,6 +75,7 @@ export class EventManager {
     renderable_feature_removed: [],
     texture_fragment_removed: [],
     texture_fragment_requested: [],
+    update_sample_terrain_height: [],
     worker_task_delegated: [],
     worker_task_removed: [],
   };

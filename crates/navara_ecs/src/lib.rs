@@ -4,6 +4,7 @@ use bevy_ecs::{
     component::Component,
     entity::Entity,
     query::{With, Without},
+    system::SystemState,
     world::{EntityRef, Mut},
 };
 use navara_buffer_store::{BufferStore, Handle};
@@ -12,7 +13,7 @@ use navara_camera::{
     CameraOrientation, CameraStatus,
 };
 use navara_component::{Deleted, Rendered};
-use navara_core::{ElevationDecoder, CRS, WGS84_32};
+use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -30,7 +31,9 @@ use navara_mvt::MvtLayerResources;
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
-    MartiniComponent, RasterTile, RasterTileQuadtree, TileHandle, VectorTile, VectorTileQuadtree,
+    compute_terrain_height_at_point, MartiniComponent, RasterTile, RasterTileQuadtree,
+    TerrainHeightObserver, TileHandle, TileTerrainDataRequesterQuery, VectorTile,
+    VectorTileQuadtree,
 };
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
@@ -805,6 +808,48 @@ impl App {
         self.app
             .world_mut()
             .send_event(CameraEvent::RotateAroundAxis { axis, angle });
+    }
+
+    pub fn sample_terrain_height(&mut self, lle: LLE<FloatType, Radians>) -> Option<FloatType> {
+        let world = self.app.world_mut();
+
+        let _ = world.get_resource::<RasterTileQuadtree>()?;
+        let _ = world.get_resource::<BufferStore>()?;
+
+        let result = world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
+            world.resource_scope(|world, mut buf: Mut<BufferStore>| {
+                let mut state: SystemState<TileTerrainDataRequesterQuery> = SystemState::new(world);
+                let query = state.get(world);
+
+                compute_terrain_height_at_point(
+                    &mut qt,
+                    &mut buf,
+                    &query,
+                    &LngLat::new(lle.lat.val(), lle.lng.val()),
+                )
+            })
+        });
+
+        result
+    }
+
+    pub fn add_terrain_height_observer(&mut self, lle: LLE<FloatType, Radians>) -> u64 {
+        let world = self.app.world_mut();
+
+        let e_id = world
+            .commands()
+            .spawn(TerrainHeightObserver { lle, height: None })
+            .id();
+
+        e_id.to_bits()
+    }
+
+    pub fn remove_terrain_height_observer(&mut self, bits: u64) {
+        let world = self.app.world_mut();
+        let entity = Entity::from_bits(bits);
+        if world.get_entity(entity).is_ok() {
+            world.commands().entity(entity).despawn();
+        }
     }
 }
 

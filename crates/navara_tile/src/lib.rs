@@ -8,6 +8,7 @@ use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_tile_component::{CachedMartini, RasterTileQuadtree, TerrainInformationQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 
+pub mod terrain;
 pub mod tile;
 
 pub struct TilePlugin;
@@ -39,6 +40,7 @@ impl Plugin for TilePlugin {
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
                     tile::system::clear_caches,
+                    terrain::system::update_height_observers,
                 )
                     .chain(),
             );

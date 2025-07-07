@@ -59,6 +59,22 @@ impl EqualEpsilon<FloatType> for FloatType {
     }
 }
 
+impl EqualEpsilon<Option<FloatType>> for Option<FloatType> {
+    fn equal_epsilon(&self, f: FloatType) -> bool {
+        match self {
+            Some(value) => value.abs() <= f,
+            None => false,
+        }
+    }
+    fn equal_diff_epsilon(&self, other: Option<FloatType>, epsilon: FloatType) -> bool {
+        match (self, other) {
+            (Some(x), Some(y)) => (x - y).abs() <= epsilon,
+            (None, None) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct AbsDiffEqVec3(pub Vec3);
 

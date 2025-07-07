@@ -1,6 +1,7 @@
-import type { LatLngHeight } from "./geo";
-
-export type CameraPosition = Partial<LatLngHeight> & {
+export type CameraPosition = {
+  lat: number;
+  lng: number;
+  height: number;
   pitch?: number;
   heading?: number;
   roll?: number;
