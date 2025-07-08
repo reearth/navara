@@ -4,6 +4,7 @@ import initApi, {
   angleToRadian,
   angleToDegree,
   screenToWorld,
+  worldToScreen,
   geodeticSurfaceNormal as nvGeodeticSurfaceNormal,
   eastNorthUpToFixedFrame as nvEastNorthUpToFixedFrame,
   northEastDownToFixedFrame as nvNorthEastDownToFixedFrame,
@@ -123,4 +124,45 @@ export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
   const arr = nvNorthWestUpToFixedFrame(vec3);
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
+}
+
+export function convertWorldToScreen(
+  window: Window,
+  camera: PerspectiveCamera,
+  worldPos: Vector3,
+): Vector2 | undefined {
+  window.width = window.width * window.pixel_ratio;
+  window.height = window.height * window.pixel_ratio;
+
+  const transform = new Transform(
+    camera.position.x,
+    camera.position.y,
+    camera.position.z,
+    camera.quaternion.x,
+    camera.quaternion.y,
+    camera.quaternion.z,
+    camera.quaternion.w,
+    camera.scale.x,
+    camera.scale.y,
+    camera.scale.z,
+  );
+
+  const frustum = new CameraFrustum(
+    camera.near,
+    camera.far,
+    angleToRadian(camera.fov),
+    camera.aspect,
+  );
+
+  const screenPos = worldToScreen(
+    window,
+    transform,
+    frustum,
+    new Vec3(worldPos.x, worldPos.y, worldPos.z),
+  );
+
+  if (!screenPos) {
+    return undefined;
+  }
+  return new Vector2(screenPos.x, screenPos.y);
 }

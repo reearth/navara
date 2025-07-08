@@ -1,6 +1,7 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   initializeGltfLoader,
+  type PickedFeature,
 } from "@navara/three";
 import {
   geodeticToVector3,
@@ -8,6 +9,7 @@ import {
   degreeToRadian,
   radianToDegree,
   convertScreenToWorld,
+  convertWorldToScreen,
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
   northEastDownToFixedFrame,
@@ -37,9 +39,12 @@ import {
 import { Pane, FolderApi } from "tweakpane";
 import type { Nullable } from "@navara/core";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { addCameraControl } from "../../helpers/control";
+import { FloatingDialog } from "./dialog";
 
 const gPaneParams = {
   convertScreenToWorld: false,
+  extrudeCylinder: false,
   moveDistance: 0,
   transform: "eastNorthUp",
 
@@ -76,6 +81,10 @@ let gFolderSample: Nullable<FolderApi> = null;
 let gFolderHeightEvent: Nullable<FolderApi> = null;
 let gFujiUnregister: Nullable<() => void> = null;
 let gKitaUnregister: Nullable<() => void> = null;
+let gPickedFeature: Nullable<PickedFeature> = null;
+let gPickedPos: Nullable<Vector3> = null;
+
+const gPopup = new FloatingDialog();
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -102,19 +111,59 @@ export const run = async (view: ThreeView) => {
     raster_tile: {},
   });
 
+  view.addLayer({
+    type: "cesium3dtiles",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+    },
+    model: {
+      show: true,
+      id_property: "gml_id",
+      color: 0xffffff,
+      metalness: 0,
+      roughness: 1,
+    },
+  });
+
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
   view.scenes.main.add(axesHelper);
 
+  const pane = new Pane({
+    title: "Parameters",
+    expanded: true,
+  });
+
+  addCameraControl(view, pane);
+
+  // Create polyline between two points on elipsoid surface
   createPolylineMesh(view);
+
+  // adjust the polyline width based on camera distance
   addCameraListener(view);
-  addCtrlPanel();
+
+  // initialize the control panel
+  addCtrlPanel(pane);
+
+  // create a ball running on the surface
   addRunningObject(view);
+
+  // add a ball following mouse position
   testScreenToWorld(view);
+
+  // extrude a cylinder from the elipsoid surface
   testRayPlane(view);
+
+  // sample terrain height at mouse position
   testSampleTerrainHeight(view);
 
+  // handle pick event and pop up information
+  testShowModelInfo(view);
+
+  // add a model for testing surface normal
   await addTestModelForNormal(view);
+
+  // add a model for testing terrain height
   await addTestModelForTerrainHeight(view);
 
   gMouseBall = placeOneBall(view, new Vector3(0, 0, 0), 0x00ff00);
@@ -312,13 +361,9 @@ const addAxisToModel = (model: Object3D) => {
   model.add(zAxis);
 };
 
-const addCtrlPanel = () => {
-  const pane = new Pane({
-    title: "Parameters",
-    expanded: true,
-  });
-
+const addCtrlPanel = (pane: Pane) => {
   pane.addBinding(gPaneParams, "convertScreenToWorld");
+  pane.addBinding(gPaneParams, "extrudeCylinder");
 
   const fNormal = pane.addFolder({
     title: "SurfaceNormal",
@@ -509,7 +554,7 @@ const testRayPlane = (view: ThreeView) => {
     }
   };
   const onMouseUp = (event: MouseEvent) => {
-    if (bMouseMoved) {
+    if (bMouseMoved || !gPaneParams.extrudeCylinder) {
       return;
     }
 
@@ -682,6 +727,8 @@ const addCameraListener = (view: ThreeView) => {
         updatePolylineMesh(view, gPolylinePoints);
       }
     }
+
+    updatePopup();
   });
 };
 
@@ -765,5 +812,68 @@ const onRegisterChange = () => {
         gFolderHeightEvent?.refresh();
       },
     );
+  }
+};
+
+const testShowModelInfo = (view: ThreeView) => {
+  view.on("pick", (event) => {
+    if (!event) {
+      gPickedPos = null;
+      gPickedFeature = null;
+      updatePopup();
+      return;
+    }
+
+    const x = event.properties.get("_x");
+    const y = event.properties.get("_y");
+    const z = event.properties.get("_zmax");
+
+    if (
+      typeof x !== "number" ||
+      typeof y !== "number" ||
+      typeof z !== "number"
+    ) {
+      gPickedPos = null;
+      gPickedFeature = null;
+      updatePopup();
+      return;
+    }
+
+    gPickedPos = geodeticToVector3(
+      new LLE(degreeToRadian(y), degreeToRadian(x), z),
+    );
+
+    gPickedFeature = event;
+
+    updatePopup();
+  });
+};
+
+const updatePopup = () => {
+  if (gView && gPickedFeature && gPickedPos) {
+    const screenSize = gView.screenSize;
+    const pixelRatio = gView.pixelRatio;
+
+    const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+    const screenPos = convertWorldToScreen(
+      win,
+      gView.camera.innerCam,
+      gPickedPos,
+    );
+
+    if (screenPos) {
+      gPopup.updateMessages([
+        `name: ${gPickedFeature.properties.get("gml:name") ?? "N/A"}`,
+        `address: ${gPickedFeature.properties.get("bldg:address") ?? "N/A"}`,
+        `class: ${gPickedFeature.properties.get("bldg:class") ?? "N/A"}`,
+        `usage: ${gPickedFeature.properties.get("bldg:usage") ?? "N/A"}`,
+      ]);
+      gPopup.updatePosition(screenPos.x, screenPos.y);
+      gPopup.show();
+    } else {
+      gPopup.hide();
+    }
+  } else {
+    gPopup.hide();
   }
 };

@@ -94,3 +94,75 @@ pub fn north_west_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
     let mat4 = navara_core::north_west_up_to_fixed_frame(origin.into(), WGS84_32);
     mat4.to_cols_array().to_vec()
 }
+
+#[wasm_bindgen(js_name = worldToScreen)]
+pub fn world_to_screen(
+    window: Window,
+    transform: Transform,
+    frustum: CameraFrustum,
+    world_pos: Vec3Wasm,
+) -> Option<Vec2Wasm> {
+    let window: navara_window::Window = (&window).into();
+    let transform: navara_math::Transform = (&transform).into();
+    let frustum: navara_camera::CameraFrustum = navara_camera::CameraFrustum::new(
+        &transform,
+        frustum.near,
+        frustum.far,
+        frustum.fov,
+        frustum.aspect_ratio,
+        0.0,
+    );
+
+    let world_pos: Vec3 = world_pos.into();
+
+    let camera_pos = transform.transform_point(Vec3::ZERO);
+    let forward = transform.forward().as_vec3();
+    let right = transform.right().as_vec3();
+    let up = transform.up().as_vec3();
+
+    // Vector from camera to world position
+    let to_world = world_pos - camera_pos;
+
+    // Check if point is behind camera
+    let distance_along_forward = to_world.dot(forward);
+    if distance_along_forward <= frustum.near as f32 {
+        return None;
+    }
+
+    // Project to camera's near plane
+    let scale = frustum.near as f32 / distance_along_forward;
+    let near_point = camera_pos + forward * frustum.near as f32;
+    let projected_point = camera_pos + to_world * scale;
+
+    // Get offset from near plane center
+    let offset = projected_point - near_point;
+
+    // Convert to camera coordinates
+    let x_offset = offset.dot(right);
+    let y_offset = offset.dot(up);
+
+    // Calculate screen coordinates using perspective projection
+    let tan_phi = (frustum.fov * 0.5).tan();
+    let tan_theta = frustum.aspect_ratio * tan_phi;
+
+    let near = frustum.near;
+    let x_ndc = x_offset / (near * tan_theta);
+    let y_ndc = y_offset / (near * tan_phi);
+
+    // Check if point is within view frustum
+    if x_ndc.abs() > 1.0 || y_ndc.abs() > 1.0 {
+        return None;
+    }
+
+    // Convert NDC to screen coordinates
+    let width = window.raw_width();
+    let height = window.raw_height();
+
+    let screen_x = (x_ndc + 1.0) * width * 0.5;
+    let screen_y = height - ((y_ndc + 1.0) * height * 0.5);
+
+    Some(Vec2Wasm {
+        x: screen_x,
+        y: screen_y,
+    })
+}
