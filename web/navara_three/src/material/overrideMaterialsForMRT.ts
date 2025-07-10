@@ -184,6 +184,7 @@ export function overrideMaterialsForMRT(): void {
   injectGBuffer(ShaderLib.standard, { type: "physical" });
   injectGBuffer(ShaderLib.physical, { type: "physical" });
   injectGBufferToSpriteMaterial(ShaderLib.sprite);
+  injectGBufferToSpriteMaterial(ShaderLib.points);
 }
 
 // TODO: Use a parser to handle this.

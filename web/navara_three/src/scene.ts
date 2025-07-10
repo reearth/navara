@@ -13,7 +13,10 @@ export type Scenes = {
   // Render only draped features
   drapedFeatures: Scene;
   // Render this scene at last. This scene should not be handled in MRT.
-  post: Scene;
+  postRender: Scene;
+  // Render this scene after the atmosphere effect. This scene should not be handled in MRT.
+  // It is useful to render a transparent mesh.
+  postAtmosphere: Scene;
 };
 
 export class SceneGroup extends Group {}

@@ -161,7 +161,7 @@ export class PickHelper extends CustomRenderPass {
 
     // Since SkyMesh renders fullscreen quad plane, and it shows just black, this scene should be invisible.
     // We should support picking in this scene in the future.
-    this._scenes.post.visible = !pickable;
+    this._scenes.postRender.visible = !pickable;
   }
 
   private pickSprite(pickSet: Set<number>, obj: InstancedMesh<Object3D>) {
