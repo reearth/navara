@@ -126,7 +126,7 @@ export class CustomRenderPass extends RenderPass {
     }
     this.copyPass.render(renderer, finalTarget, null);
 
-    this._renderWithWorld(renderer, this._scenes.post);
+    this._renderWithWorld(renderer, this._scenes.postRender);
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {

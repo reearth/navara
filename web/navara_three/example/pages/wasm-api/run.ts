@@ -1,3 +1,4 @@
+import type { Nullable } from "@navara/core";
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   initializeGltfLoader,
@@ -37,9 +38,10 @@ import {
   CylinderGeometry,
 } from "three";
 import { Pane, FolderApi } from "tweakpane";
-import type { Nullable } from "@navara/core";
+
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
+
 import { FloatingDialog } from "./dialog";
 
 const gPaneParams = {

@@ -468,7 +468,7 @@ export const run = async (view: ThreeView) => {
 
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.post.add(axesHelper);
+  view.scenes.postRender.add(axesHelper);
 
   // For debug
   // view.addLayer({

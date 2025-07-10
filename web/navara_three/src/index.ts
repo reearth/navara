@@ -9,7 +9,7 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer } from "postprocessing";
+import { EffectComposer, RenderPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -82,6 +82,7 @@ export * from "./effects";
 export * from "./shaders";
 export * from "./event/loaders";
 export * from "./material";
+export { SnowMesh, RainMesh } from "./mesh";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -127,8 +128,17 @@ export type ViewEvents = {
     layerId: string,
     ...args: Parameters<LayerEvent[K]>
   ) => void;
+  /** Emitted before an update process happens */
   preUpdate: (t: number) => void;
+  /**
+   * Emitted after an update process happened only when any states are changed.
+   * */
   postUpdate: (t: number) => void;
+  /**
+   * Emitted after a rendering process happened.
+   * Enabling `animation` flag emits this event every frame.
+   * */
+  postRender: (t: number) => void;
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
 };
 
@@ -370,7 +380,8 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       main,
       globe: globeScene,
       drapedFeatures: drapedFeaturesScene,
-      post: new Scene(),
+      postRender: new Scene(),
+      postAtmosphere: new Scene(),
     };
 
     if (options.camera) {
@@ -420,19 +431,27 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       { index: 1, cloudsIndex: 2, ...options.atmosphere },
     );
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
+
+    const postAtmosphereRenderPass = new RenderPass(
+      this.scenes.postAtmosphere,
+      this.camera.innerCam,
+    );
+    postAtmosphereRenderPass.clear = false;
+    this._effectComposer.addPass(postAtmosphereRenderPass);
+
     this.ssaoEffect = new SSAO(
       this._effectComposer,
       combinedScene,
       this.camera.innerCam,
       width,
       height,
-      { index: 3, ...options.ssao },
+      { index: 4, ...options.ssao },
     );
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.lensFlareEffect = new LensFlare(
       this._effectComposer,
       this.camera.innerCam,
-      { index: 3, ...options.lensFlare }, // Index must be same with SSAO.
+      { index: 4, ...options.lensFlare }, // Index must be same with SSAO.
     );
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.toneMappingEffect = new ToneMapping(
@@ -502,6 +521,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this._renderFlag.animation = !!options.animation;
   }
 
+  /**
+   * Low level API to access Three.js Scene.
+   * It means you decided to depend on Three.js.
+   */
   get scenes() {
     // TODO: Publish `drapedFeatures`. Need to expose `_drapedFeatureMaterials` as well.
     return this._scenes as Omit<Scenes, "globe" | "drapedFeatures">;
@@ -714,11 +737,13 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
   }
 
-  private _render() {
+  private _render(updatedAt: number) {
     this.atmosphere._update();
 
     this._effectComposer.render();
     this._pickHelper?.renderDebugCanvas();
+
+    this.emit("postRender", updatedAt);
   }
 
   addLayer(l: LayerDescription) {
@@ -868,7 +893,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this._renderFlag.forceUpdate ||
         this._renderFlag.animation
       )
-        this._render();
+        this._render(time);
       this._renderFlag.forceUpdate = false;
 
       this._stats?.end();

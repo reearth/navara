@@ -122,7 +122,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private renderer: WebGLRenderer;
   private camera: PerspectiveCamera;
 
-  private sunDirection = new Vector3();
+  sunDirection = new Vector3();
   private moonDirection = new Vector3();
   private rotationMatrix = new Matrix4();
 
@@ -345,12 +345,12 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     Object.assign(skyMaterial, this.textures);
 
-    this.scenes.post.add(this.skyMesh);
+    this.scenes.postRender.add(this.skyMesh);
   }
 
   private removeSky() {
     if (!this.skyMesh) return;
-    this.scenes.post.remove(this.skyMesh);
+    this.scenes.postRender.remove(this.skyMesh);
     this.skyMesh = undefined;
   }
 
@@ -369,13 +369,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.starsMesh.addEventListener("_needsUpdate", this.onUpdate);
 
-    this.scenes.post.add(this.starsMesh);
+    this.scenes.postRender.add(this.starsMesh);
   }
 
   private removeStars() {
     if (!this.starsMesh) return;
     this.starsMesh.removeEventListener("_needsUpdate", this.onUpdate);
-    this.scenes.post.remove(this.starsMesh);
+    this.scenes.postRender.remove(this.starsMesh);
     this.starsMesh = undefined;
   }
 
