@@ -9,7 +9,7 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer, RenderPass } from "postprocessing";
+import { EffectComposer, RenderPass, CopyPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -438,6 +438,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
     postAtmosphereRenderPass.clear = false;
     this._effectComposer.addPass(postAtmosphereRenderPass);
+
+    // Workaround when no effect is set.
+    this._effectComposer.addPass(new CopyPass());
 
     this.ssaoEffect = new SSAO(
       this._effectComposer,
