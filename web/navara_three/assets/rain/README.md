@@ -10,17 +10,17 @@ You can get the texture from [DB](https://cave.cs.columbia.edu/repository/Rain).
 <summary>Script</summary>
 
 ```js
-import fs from 'fs/promises';
-import path from 'path';
-import sharp from 'sharp';
-import { fileURLToPath } from 'url';
+import fs from "fs/promises";
+import path from "path";
+import sharp from "sharp";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const ROOT_DIR = path.join(__dirname, 'point_light_database');
-const CAMERA_ANGLES = ['00', '20', '40', '60', '80'];
-const SIZES = ['size16'];
-const OUTPUT_DIR = path.join(__dirname, 'output');
+const ROOT_DIR = path.join(__dirname, "point_light_database");
+const CAMERA_ANGLES = ["00", "20", "40", "60", "80"];
+const SIZES = ["size16"];
+const OUTPUT_DIR = path.join(__dirname, "output");
 
 // PATTERN: cv{CAM}_v{VERT}_h{HORZ}_osc{N}.png
 const FILENAME_REGEX = /^cv(-?\d+)_v(-?\d+)_h(-?\d+)_osc(\d+)\.png$/;
@@ -36,7 +36,7 @@ async function collectImages(sizePath) {
         const match = file.match(FILENAME_REGEX);
         if (!match) {
           throw new Error("Unexpected" + file);
-        };
+        }
 
         const [, camAngle, v, h, osc] = match;
         const key = `osc${osc}`;
@@ -49,10 +49,10 @@ async function collectImages(sizePath) {
         fileMap.get(cam).set(lightKey.key, {
           filepath: path.join(camDir, file),
           v: lightKey.v,
-          h: lightKey.h
+          h: lightKey.h,
         });
       }
-    } catch(e) {
+    } catch (e) {
       console.warn(`⚠️ Skipped missing: ${camDir}: `, e);
     }
   }
@@ -65,7 +65,7 @@ async function processSize(size) {
   const oscMap = await collectImages(sizePath);
 
   for (const [osc, camMap] of oscMap.entries()) {
-    const sortedCams = CAMERA_ANGLES.filter(c => camMap.has(c));
+    const sortedCams = CAMERA_ANGLES.filter((c) => camMap.has(c));
     const lightSet = new Set();
 
     for (const cam of sortedCams) {
@@ -75,8 +75,8 @@ async function processSize(size) {
     }
 
     const sortedLightKeys = Array.from(lightSet)
-      .map(str => {
-        const [v, h] = str.split('_').map(Number);
+      .map((str) => {
+        const [v, h] = str.split("_").map(Number);
         return { key: `v${v}_h${h}`, v, h };
       })
       .sort((a, b) => a.v - b.v || a.h - b.h);
@@ -92,10 +92,14 @@ async function processSize(size) {
         cellImages.push(sharp(cell.filepath).ensureAlpha());
       }
 
-      const imageBuffers = await Promise.all(cellImages.map(img => img.toBuffer()));
-      const imageMetas = await Promise.all(imageBuffers.map(buf => sharp(buf).metadata()));
-      const rowHeight = Math.max(...imageMetas.map(m => m.height));
-      console.log(cam, rowHeight)
+      const imageBuffers = await Promise.all(
+        cellImages.map((img) => img.toBuffer()),
+      );
+      const imageMetas = await Promise.all(
+        imageBuffers.map((buf) => sharp(buf).metadata()),
+      );
+      const rowHeight = Math.max(...imageMetas.map((m) => m.height));
+      console.log(cam, rowHeight);
       rowHeights.push(rowHeight);
 
       const totalWidth = imageMetas.reduce((acc, m) => acc + m.width, 0);
@@ -112,8 +116,8 @@ async function processSize(size) {
           width: totalWidth,
           height: rowHeight,
           channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0 }
-        }
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        },
       })
         .composite(composites)
         .png()
@@ -122,11 +126,11 @@ async function processSize(size) {
       rowBuffers.push({ buffer: row, width: totalWidth, height: rowHeight });
     }
 
-    const finalWidth = Math.max(...rowBuffers.map(r => r.width));
+    const finalWidth = Math.max(...rowBuffers.map((r) => r.width));
     const finalHeight = rowBuffers.reduce((acc, r) => acc + r.height, 0);
 
     let yOffset = 0;
-    const finalComposites = rowBuffers.map(r => {
+    const finalComposites = rowBuffers.map((r) => {
       const top = yOffset;
       yOffset += r.height;
       return { input: r.buffer, top, left: 0 };
@@ -137,8 +141,8 @@ async function processSize(size) {
         width: finalWidth,
         height: finalHeight,
         channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
-      }
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
     })
       .composite(finalComposites)
       .webp({ quality: 90 })
@@ -158,7 +162,6 @@ async function main() {
 }
 
 main().catch(console.error);
-
 ```
 
 </details>
