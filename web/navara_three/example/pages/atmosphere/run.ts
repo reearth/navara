@@ -11,6 +11,7 @@ import type { TextureChannel } from "@takram/three-clouds";
 import { Color, LightProbe, SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
+import { DEFAULT_ATMOSPHERE_OPTIONS } from "../../../src/atmosphere";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import {
@@ -200,9 +201,9 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     ambientLight: false,
     ambientLightColor: "#FFFFFF",
     ambientLightIntensity: 1,
-    photometric: true,
     inscatter: true,
     transmittance: true,
+    irradiance: false,
   };
 
   const folder = pane.addFolder({
@@ -254,14 +255,14 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
   folder.addBinding(PARAMS, "ambientLightIntensity").on("change", (v) => {
     view.atmosphere.ambientLightIntensity = v.value;
   });
-  folder.addBinding(PARAMS, "photometric").on("change", (v) => {
-    view.atmosphere.photometric = v.value;
-  });
   folder.addBinding(PARAMS, "inscatter").on("change", (v) => {
     view.atmosphere.inscatter = v.value;
   });
   folder.addBinding(PARAMS, "transmittance").on("change", (v) => {
     view.atmosphere.transmittance = v.value;
+  });
+  folder.addBinding(PARAMS, "irradiance").on("change", (v) => {
+    view.atmosphere.irradiance = v.value;
   });
 };
 
@@ -280,7 +281,7 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     maxStepSize: 1000,
   };
   const SHADOW_PARAMS = {
-    shadows: DEFAULT_CLOUDS_OPTIONS.shadows,
+    shadows: DEFAULT_ATMOSPHERE_OPTIONS.cloudsShadow,
     shadowCascadeCount: DEFAULT_CLOUDS_OPTIONS.shadowCascadeCount,
     shadowMapSize: DEFAULT_CLOUDS_OPTIONS.shadowMapSize.x,
   };
@@ -307,8 +308,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     scatterAnisotropy1: DEFAULT_CLOUDS_OPTIONS.scatterAnisotropy1,
     scatterAnisotropy2: DEFAULT_CLOUDS_OPTIONS.scatterAnisotropy2,
     scatterAnisotropyMix: DEFAULT_CLOUDS_OPTIONS.scatterAnisotropyMix,
-    skyIrradianceScale: DEFAULT_CLOUDS_OPTIONS.skyIrradianceScale,
-    groundIrradianceScale: DEFAULT_CLOUDS_OPTIONS.groundIrradianceScale,
+    skyLightScale: DEFAULT_CLOUDS_OPTIONS.skyLightScale,
+    groundBounceScale: DEFAULT_CLOUDS_OPTIONS.groundBounceScale,
     powderScale: DEFAULT_CLOUDS_OPTIONS.powderScale,
     powderExponent: DEFAULT_CLOUDS_OPTIONS.powderExponent,
   };
@@ -630,25 +631,25 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
       },
     },
     {
-      name: "skyIrradianceScale",
+      name: "skyLightScale",
       params: {
         min: 0,
         max: 5,
       },
       onChange: (v) => {
         if (!view.atmosphere.cloudsEffect) return;
-        view.atmosphere.cloudsEffect.skyIrradianceScale = v.value;
+        view.atmosphere.cloudsEffect.skyLightScale = v.value;
       },
     },
     {
-      name: "groundIrradianceScale",
+      name: "groundBounceScale",
       params: {
         min: 0,
         max: 10,
       },
       onChange: (v) => {
         if (!view.atmosphere.cloudsEffect) return;
-        view.atmosphere.cloudsEffect.groundIrradianceScale = v.value;
+        view.atmosphere.cloudsEffect.groundBounceScale = v.value;
       },
     },
     {

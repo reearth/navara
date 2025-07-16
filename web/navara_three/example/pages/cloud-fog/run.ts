@@ -60,6 +60,8 @@ export const run = async (view: ThreeView) => {
   view.toneMappingEffect.enabled = true;
   view.toneMappingExposure = 10;
   view.atmosphere.clouds = true;
+  view.atmosphere.irradiance = true;
+  view.atmosphere.cloudsShadow = true;
 
   const pane = new Pane({
     title: "Parameters",

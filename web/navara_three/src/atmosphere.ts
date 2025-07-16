@@ -61,13 +61,19 @@ export type AtmosphereOptions = {
   ambientLightIntensity?: number;
 
   clouds?: boolean;
+  // Need to enable `irradiance` as well.
   cloudsShadow?: boolean;
   cloudsOptions?: CloudsOptions;
 
   date?: Date;
-  photometric?: boolean;
   inscatter?: boolean;
   transmittance?: boolean;
+
+  // This is used to light a material in the post-processing stage.
+  // Note that:
+  // - It doesn't support transparency.
+  // - Enable this flag when rendering clouds with shadows.
+  irradiance?: boolean;
 
   index?: number | null | undefined;
   cloudsIndex?: number | null | undefined;
@@ -99,16 +105,16 @@ export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
   moonIntensity: 1,
 
   clouds: false,
-  cloudsShadow: true,
+  cloudsShadow: false,
   cloudsOptions: DEFAULT_CLOUDS_OPTIONS,
 
   ambientLight: false,
   ambientLightColor: DEFAULT_LIGHT_COLOR.clone(),
   ambientLightIntensity: 1,
   date: new Date(),
-  photometric: true,
   inscatter: true,
   transmittance: true,
+  irradiance: false,
 
   index: null,
   cloudsIndex: null,
@@ -209,9 +215,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
     this.effect = new AerialPerspectiveEffect(this.camera, {
       irradianceScale: 2 / Math.PI,
-      photometric: this.options.photometric,
       inscatter: this.options.inscatter,
       transmittance: this.options.transmittance,
+      sunLight: this.options.irradiance,
+      skyLight: this.options.irradiance,
+      normalBuffer: this.normalBuffer,
       octEncodedNormal: true,
     });
 
@@ -263,12 +271,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     );
 
     this.cloudsEffect.on("_needsUpdate", this.onUpdate);
-
-    if (this.effect) {
-      this.effect.sunIrradiance = true;
-      this.effect.skyIrradiance = true;
-      this.effect.normalBuffer = this.normalBuffer;
-    }
 
     invariant(this.textures);
     Object.assign(this.cloudsEffect.inner, this.textures);
@@ -782,16 +784,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.onUpdate();
   }
 
-  get photometric() {
-    return this.options.photometric;
-  }
-  set photometric(v: boolean) {
-    if (!this.effect) return;
-    this.options.photometric = v;
-    this.effect.photometric = v;
-    this.onUpdate();
-  }
-
   get inscatter() {
     return this.options.inscatter;
   }
@@ -812,6 +804,17 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.onUpdate();
   }
 
+  get irradiance() {
+    return this.options.irradiance;
+  }
+  set irradiance(v: boolean) {
+    if (!this.effect) return;
+    this.options.irradiance = v;
+    this.effect.sunLight = v;
+    this.effect.skyLight = v;
+    this.onUpdate();
+  }
+
   get index() {
     return this.options.index ?? undefined;
   }
@@ -824,7 +827,10 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
 
   set cloudsShadow(v: boolean) {
+    this.options.cloudsShadow = v;
+
     if (!this.effect || !this.cloudsEffect) return;
+
     if (v) {
       this.effect.shadow = this.cloudsEffect.inner.atmosphereShadow;
     } else {
