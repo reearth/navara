@@ -28,6 +28,9 @@ export const run = async (view: ThreeView) => {
 
   view.atmosphere.date = date;
 
+  view.atmosphere.irradiance = true;
+  view.atmosphere.cloudsShadow = true;
+
   view.atmosphere.clouds = true;
   if (view.atmosphere.cloudsEffect) {
     view.atmosphere.cloudsEffect.localWeatherVelocity = new Vector2(

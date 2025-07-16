@@ -8,7 +8,7 @@ import {
   type CloudsQualityPreset,
 } from "@takram/three-clouds";
 import {
-  createData3DTextureLoaderClass,
+  DataTextureLoader,
   parseUint8Array,
   STBNLoader,
 } from "@takram/three-geospatial";
@@ -75,8 +75,8 @@ export type CloudsOptions = {
   scatterAnisotropy1?: number;
   scatterAnisotropy2?: number;
   scatterAnisotropyMix?: number;
-  skyIrradianceScale?: number;
-  groundIrradianceScale?: number;
+  skyLightScale?: number;
+  groundBounceScale?: number;
   powderScale?: number;
   powderExponent?: number;
 
@@ -124,8 +124,8 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   scatterAnisotropy1: 0.7,
   scatterAnisotropy2: -0.2,
   scatterAnisotropyMix: 0.5,
-  skyIrradianceScale: 1,
-  groundIrradianceScale: 1,
+  skyLightScale: 1,
+  groundBounceScale: 1,
   powderScale: 0.8,
   powderExponent: 150,
 
@@ -213,8 +213,8 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     this.scatterAnisotropy1 = this.options.scatterAnisotropy1;
     this.scatterAnisotropy2 = this.options.scatterAnisotropy2;
     this.scatterAnisotropyMix = this.options.scatterAnisotropyMix;
-    this.skyIrradianceScale = this.options.skyIrradianceScale;
-    this.groundIrradianceScale = this.options.groundIrradianceScale;
+    this.skyLightScale = this.options.skyLightScale;
+    this.groundBounceScale = this.options.groundBounceScale;
     this.powderScale = this.options.powderScale;
     this.powderExponent = this.options.powderExponent;
 
@@ -254,18 +254,18 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
       new TextureLoader()
         .loadAsync(`${this.options.assetsUrl}/local_weather.png`)
         .then(this.onLocalWeatherLoad),
-      new (createData3DTextureLoaderClass(parseUint8Array, {
+      new DataTextureLoader(Data3DTexture, parseUint8Array, {
         width: CLOUD_SHAPE_TEXTURE_SIZE,
         height: CLOUD_SHAPE_TEXTURE_SIZE,
         depth: CLOUD_SHAPE_TEXTURE_SIZE,
-      }))()
+      })
         .loadAsync(`${this.options.assetsUrl}/shape.bin`)
         .then(this.onShapeLoad),
-      new (createData3DTextureLoaderClass(parseUint8Array, {
+      new DataTextureLoader(Data3DTexture, parseUint8Array, {
         width: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
         height: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
         depth: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
-      }))()
+      })
         .loadAsync(`${this.options.assetsUrl}/shape_detail.bin`)
         .then(this.onShapeDetailLoad),
       new TextureLoader()
@@ -589,19 +589,19 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     this.emit("_needsUpdate");
   }
 
-  get skyIrradianceScale() {
-    return this.effect.skyIrradianceScale;
+  get skyLightScale() {
+    return this.effect.skyLightScale;
   }
-  set skyIrradianceScale(v: number) {
-    this.effect.skyIrradianceScale = v;
+  set skyLightScale(v: number) {
+    this.effect.skyLightScale = v;
     this.emit("_needsUpdate");
   }
 
-  get groundIrradianceScale() {
-    return this.effect.groundIrradianceScale;
+  get groundBounceScale() {
+    return this.effect.groundBounceScale;
   }
-  set groundIrradianceScale(v: number) {
-    this.effect.groundIrradianceScale = v;
+  set groundBounceScale(v: number) {
+    this.effect.groundBounceScale = v;
     this.emit("_needsUpdate");
   }
 
