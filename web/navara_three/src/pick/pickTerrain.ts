@@ -38,6 +38,7 @@ export class TerrainPicker {
     );
   }
 
+  // Ref: https://github.com/mrdoob/three.js/blob/f38421e7bf5bc37aac7d4ebbe66ad0cc15550c39/src/renderers/shaders/ShaderChunk/packing.glsl.js#L56-L58
   private _unpackRGBAToDepth(rgba: Uint8Array): number {
     // Constants
     const UnpackDownscale = 255 / 256; // 0..1 -> fraction (excluding 1)
@@ -104,8 +105,6 @@ export class TerrainPicker {
         }
       `,
       fragmentShader: `
-        #include <packing>
-        
         uniform sampler2D tDepth;
         uniform vec2 samplePos;
         varying vec2 vUv;
