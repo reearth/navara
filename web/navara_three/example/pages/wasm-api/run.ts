@@ -215,20 +215,12 @@ const testScreenToWorld = (view: ThreeView) => {
     const rect = view.renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    const pos = convertScreenPos(view, x, y);
 
-    if (gMouseBall) {
-      if (pos) {
-        const lle = vector3ToGeodetic(pos);
-        const height = view.sampleTerrainHeight(lle);
+    const pos = view.pickTerrainPosition(x, y);
 
-        const newPos = geodeticToVector3(
-          new LLE(lle.lat, lle.lng, height ?? 0),
-        );
-
-        gMouseBall.position.set(newPos.x, newPos.y, newPos.z);
-        view.forceUpdate();
-      }
+    if (gMouseBall && pos) {
+      gMouseBall.position.set(pos.x, pos.y, pos.z);
+      view.forceUpdate();
     }
   };
 

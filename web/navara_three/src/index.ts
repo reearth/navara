@@ -52,8 +52,8 @@ import { Layer, type LayerEvent } from "./layer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
-import { PickHelper } from "./pickHelper";
-import type { Picking } from "./picking";
+import { PickHelper } from "./pick/pickHelper";
+import type { Picking } from "./pick/picking";
 import { CustomRenderPass } from "./renderPass";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { RendererStats } from "./stats";
@@ -72,6 +72,7 @@ import { isWorker } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+import { TerrainPicker } from "./pick/pickTerrain";
 
 export * from "./type";
 export * from "./constants";
@@ -290,6 +291,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   };
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
+  private _terrainPicker: TerrainPicker;
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
 
@@ -313,6 +315,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
 
     this._options = options;
+
+    // Initialize terrain picker
+    this._terrainPicker = new TerrainPicker();
 
     // disable right-click
     options.canvas?.addEventListener("contextmenu", (e) => {
@@ -612,6 +617,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     if (this._pickHelper) {
       this._pickHelper.dispose();
+    }
+
+    if (this._terrainPicker) {
+      this._terrainPicker.dispose();
     }
 
     this.renderer.setAnimationLoop(null);
@@ -975,6 +984,16 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   get pixelRatio() {
     return this.renderer.getPixelRatio();
+  }
+
+  pickTerrainPosition(x: number, y: number): Nullable<Vector3> {
+    return this._terrainPicker.pick(
+      x,
+      y,
+      this.renderer,
+      this.globeDepthTexture,
+      this.camera.innerCam,
+    );
   }
 }
 
