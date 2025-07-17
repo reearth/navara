@@ -16,7 +16,79 @@ import {
 
 import type { Nullable } from "@navara/core";
 
+class DepthPickPass {
+  private quad: Mesh;
+  private scene: Scene;
+  private camera: OrthographicCamera;
+  private sampleTarget: WebGLRenderTarget;
+  private material: ShaderMaterial;
+
+  constructor() {
+    // Create reusable resources
+    this.material = new ShaderMaterial({
+      uniforms: {
+        tDepth: { value: null },
+        samplePos: { value: new Vector2() },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDepth;
+        uniform vec2 samplePos;
+        varying vec2 vUv;
+        
+        void main() {
+          vec4 depthColor = texture2D(tDepth, samplePos);
+          gl_FragColor = depthColor;
+        }
+      `,
+    });
+
+    const geometry = new PlaneGeometry(2, 2);
+    this.quad = new Mesh(geometry, this.material);
+
+    this.scene = new Scene();
+    this.scene.add(this.quad);
+
+    this.camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.sampleTarget = new WebGLRenderTarget(1, 1, { format: RGBAFormat });
+  }
+
+  update(depthTexture: Texture, samplePos: Vector2) {
+    this.material.uniforms.tDepth.value = depthTexture;
+    this.material.uniforms.samplePos.value.copy(samplePos);
+  }
+
+  render(renderer: WebGLRenderer): Uint8Array {
+    renderer.setRenderTarget(this.sampleTarget);
+    renderer.render(this.scene, this.camera);
+    renderer.setRenderTarget(null);
+
+    // Read the pixel
+    const pixels = new Uint8Array(4);
+    renderer.readRenderTargetPixels(this.sampleTarget, 0, 0, 1, 1, pixels);
+
+    return pixels;
+  }
+
+  dispose() {
+    this.quad.geometry.dispose();
+    this.material.dispose();
+    this.sampleTarget.dispose();
+  }
+}
+
 export class TerrainPicker {
+  private depthPickPass: DepthPickPass;
+
+  constructor() {
+    this.depthPickPass = new DepthPickPass();
+  }
   pick(
     x: number,
     y: number,
@@ -86,61 +158,19 @@ export class TerrainPicker {
       Math.min(height - 1, Math.floor(y * pixelRatio)),
     );
 
-    // Create a 1x1 render target to sample a single pixel
-    const sampleTarget = new WebGLRenderTarget(1, 1, { format: RGBAFormat });
+    // Update the depth pick pass with current parameters
+    const samplePos = new Vector2(clampedX / width, 1.0 - clampedY / height); // Flip Y
+    this.depthPickPass.update(depthTexture, samplePos);
 
-    // Create a simple quad shader to sample the depth texture at the specific pixel
-    const material = new ShaderMaterial({
-      uniforms: {
-        tDepth: { value: depthTexture },
-        samplePos: {
-          value: new Vector2(clampedX / width, 1.0 - clampedY / height), // Flip Y
-        },
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D tDepth;
-        uniform vec2 samplePos;
-        varying vec2 vUv;
-        
-        void main() {
-          vec4 depthColor = texture2D(tDepth, samplePos);
-          gl_FragColor = depthColor;
-        }
-      `,
-    });
-
-    // Create a simple plane geometry
-    const geometry = new PlaneGeometry(2, 2);
-    const mesh = new Mesh(geometry, material);
-
-    // Render to the sample target
-    const scene = new Scene();
-    scene.add(mesh);
-
-    const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-    renderer.setRenderTarget(sampleTarget);
-    renderer.render(scene, camera);
-    renderer.setRenderTarget(null);
-
-    // Read the pixel
-    const pixels = new Uint8Array(4);
-    renderer.readRenderTargetPixels(sampleTarget, 0, 0, 1, 1, pixels);
-
-    // Clean up
-    geometry.dispose();
-    material.dispose();
-    sampleTarget.dispose();
+    // Render and get pixels
+    const pixels = this.depthPickPass.render(renderer);
 
     // Unpack RGBA to depth using the same formula as the shader
     return this._unpackRGBAToDepth(pixels);
+  }
+
+  dispose() {
+    this.depthPickPass.dispose();
   }
 
   private _reconstructWorldPosition(

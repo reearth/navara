@@ -291,6 +291,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   };
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
+  private _terrainPicker: TerrainPicker;
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
 
@@ -314,6 +315,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
 
     this._options = options;
+
+    // Initialize terrain picker
+    this._terrainPicker = new TerrainPicker();
 
     // disable right-click
     options.canvas?.addEventListener("contextmenu", (e) => {
@@ -613,6 +617,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     if (this._pickHelper) {
       this._pickHelper.dispose();
+    }
+
+    if (this._terrainPicker) {
+      this._terrainPicker.dispose();
     }
 
     this.renderer.setAnimationLoop(null);
@@ -979,8 +987,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   }
 
   pickTerrainPosition(x: number, y: number): Nullable<Vector3> {
-    const picker = new TerrainPicker();
-    return picker.pick(
+    return this._terrainPicker.pick(
       x,
       y,
       this.renderer,
