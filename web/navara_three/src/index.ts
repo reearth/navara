@@ -52,8 +52,8 @@ import { Layer, type LayerEvent } from "./layer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
-import { PickHelper } from "./pickHelper";
-import type { Picking } from "./picking";
+import { PickHelper } from "./pick/pickHelper";
+import type { Picking } from "./pick/picking";
 import { CustomRenderPass } from "./renderPass";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { RendererStats } from "./stats";
@@ -72,6 +72,7 @@ import { isWorker } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+import { TerrainPicker } from "./pick/pickTerrain";
 
 export * from "./type";
 export * from "./constants";
@@ -975,6 +976,17 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   get pixelRatio() {
     return this.renderer.getPixelRatio();
+  }
+
+  pickTerrainPosition(x: number, y: number): Nullable<Vector3> {
+    const picker = new TerrainPicker();
+    return picker.pick(
+      x,
+      y,
+      this.renderer,
+      this.globeDepthTexture,
+      this.camera.innerCam,
+    );
   }
 }
 

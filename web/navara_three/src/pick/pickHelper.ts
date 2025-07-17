@@ -10,17 +10,17 @@ import {
   Color,
 } from "three";
 
-import { BufferView } from "./bufferView";
+import { BufferView } from "../bufferView";
 import {
   TextMesh,
   ModelMesh,
   InstancedMesh,
   TileMesh,
   BatchedFeatureMesh,
-} from "./mesh";
-import { CustomRenderPass } from "./renderPass";
-import type { Scenes } from "./scene";
-import type { MeshCache } from "./type";
+} from "../mesh";
+import { CustomRenderPass } from "../renderPass";
+import type { Scenes } from "../scene";
+import type { MeshCache } from "../type";
 
 export type PickHelperOptions = {
   debug: boolean;
