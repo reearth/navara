@@ -11,12 +11,13 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{RasterTileInternalMaterial, Transform, Vec2, LLE};
+use navara_wasm_types::{CameraFrustum, RasterTileInternalMaterial, Transform, Vec2, LLE};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
 pub struct Events {
     pub camera_transform_updated: Option<Transform>,
+    pub camera_frustum_updated: Option<CameraFrustum>,
     pub object_transform_updated: Vec<ObjectTransformEvent>,
     pub mesh_removed: Vec<EntityEvent>,
     pub mesh_added: Vec<MeshAdded>,
@@ -150,6 +151,7 @@ impl From<navara_event::Events<'_>> for Events {
     fn from(ev: navara_event::Events) -> Self {
         Self {
             camera_transform_updated: ev.camera_transform_updated.map(|ev| ev.into()),
+            camera_frustum_updated: ev.camera_frustum_updated.map(|ev| ev.into()),
             object_transform_updated: ev
                 .object_transform_updated
                 .into_iter()

@@ -100,4 +100,28 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
 
     return undefined;
   }
+
+  set fov(val: number) {
+    if (val < 1 || val > 180) {
+      return;
+    }
+
+    this._core?.setFrustum(val, undefined, undefined);
+  }
+
+  set near(val: number) {
+    if (val <= 0) {
+      return;
+    }
+
+    this._core?.setFrustum(undefined, val, undefined);
+  }
+
+  set far(val: number) {
+    if (val <= this._camera.near) {
+      return;
+    }
+
+    this._core?.setFrustum(undefined, undefined, val);
+  }
 }

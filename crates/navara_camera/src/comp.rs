@@ -14,7 +14,7 @@ pub struct CameraMarker;
 
 // TODO: Support orthogonal camera.
 /// Frustum for perspective camera.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct CameraFrustum {
     pub near: FloatType,
     pub far: FloatType,

@@ -1,9 +1,9 @@
+use navara_core::Angle;
 use navara_event_store::EventStore;
-
 use navara_math::Transform;
 use navara_window::WindowResizeEvent;
 
-use crate::{CameraEvent, CameraFrustum};
+use crate::{CameraEvent, CameraFrustum, FrustumEvent};
 
 use super::CameraMarker;
 use bevy_app::{PostUpdate, Startup, Update};
@@ -22,10 +22,12 @@ impl bevy_app::Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.add_systems(Startup, super::system::startup)
             .add_event::<CameraEvent>()
+            .add_event::<FrustumEvent>()
             .add_systems(
                 Update,
                 (
                     handle_resize,
+                    handle_frustum_setting,
                     super::system::update,
                     super::system::update_frustum,
                 )
@@ -62,6 +64,33 @@ fn handle_resize(
         for (_, mut frustum) in &mut camera {
             frustum.aspect_ratio = w.width / w.height;
             frustum.update_sse_denominator();
+        }
+    }
+}
+
+fn handle_frustum_setting(
+    mut events: ResMut<EventStore>,
+    mut camera: Query<(Entity, &CameraMarker, &mut CameraFrustum, &Transform)>,
+    mut ev: EventReader<FrustumEvent>,
+) {
+    for event in ev.read() {
+        for (e, _, mut frustum, transform) in &mut camera {
+            if let Some(fov) = event.fov {
+                frustum.fov = Angle::new(fov).rad().val();
+            }
+
+            if let Some(near) = event.near {
+                frustum.near = near;
+            }
+
+            if let Some(far) = event.far {
+                frustum.far = far;
+            }
+
+            frustum.update_sse_denominator();
+            frustum.update_planes(transform);
+
+            events.camera_frustum_updated = Some(e);
         }
     }
 }

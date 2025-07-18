@@ -139,6 +139,7 @@ impl<'a> From<&'a Transform> for navara_math::Transform {
 }
 
 #[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct CameraFrustum {
     pub near: FloatType,
     pub far: FloatType,
@@ -155,6 +156,17 @@ impl CameraFrustum {
             far,
             fov,
             aspect_ratio,
+        }
+    }
+}
+
+impl<'a> From<&'a navara_camera::CameraFrustum> for CameraFrustum {
+    fn from(t: &'a navara_camera::CameraFrustum) -> Self {
+        Self {
+            near: t.near,
+            far: t.far,
+            fov: t.fov,
+            aspect_ratio: t.aspect_ratio,
         }
     }
 }

@@ -65,6 +65,10 @@ const gPaneParams = {
   fujiRegistered: true,
   kitaHeight: 0,
   kitaRegistered: true,
+
+  fov: 50,
+  near: 100,
+  far: 100000000,
 };
 
 const gFujiPos = [35.3624725342, 138.7306671143];
@@ -361,7 +365,7 @@ const addCtrlPanel = (pane: Pane) => {
 
   const fNormal = pane.addFolder({
     title: "SurfaceNormal",
-    expanded: true,
+    expanded: false,
   });
 
   fNormal
@@ -370,7 +374,7 @@ const addCtrlPanel = (pane: Pane) => {
 
   const fTransform = pane.addFolder({
     title: "Transform",
-    expanded: true,
+    expanded: false,
   });
 
   fTransform
@@ -386,7 +390,7 @@ const addCtrlPanel = (pane: Pane) => {
 
   gFolderDist = pane.addFolder({
     title: "Distance",
-    expanded: true,
+    expanded: false,
   });
 
   gFolderDist
@@ -412,7 +416,7 @@ const addCtrlPanel = (pane: Pane) => {
 
   gFolderSample = pane.addFolder({
     title: "SampleTerrainHeight",
-    expanded: true,
+    expanded: false,
   });
   gFolderSample.addBinding(gPaneParams, "sampleLng", { label: "Longitude" });
   gFolderSample.addBinding(gPaneParams, "sampleLat", { label: "Latitude" });
@@ -422,7 +426,7 @@ const addCtrlPanel = (pane: Pane) => {
 
   gFolderHeightEvent = pane.addFolder({
     title: "TerrainHeightEvent",
-    expanded: true,
+    expanded: false,
   });
   gFolderHeightEvent.addBinding(gPaneParams, "fujiHeight", { label: "富士山" });
   gFolderHeightEvent
@@ -433,6 +437,14 @@ const addCtrlPanel = (pane: Pane) => {
   gFolderHeightEvent
     .addBinding(gPaneParams, "kitaRegistered", { label: "register" })
     .on("change", onRegisterChange);
+
+  const fFrustum = pane.addFolder({
+    title: "Frustum",
+    expanded: true,
+  });
+  fFrustum.addBinding(gPaneParams, "fov").on("change", onFovChange);
+  fFrustum.addBinding(gPaneParams, "near").on("change", onNearChange);
+  fFrustum.addBinding(gPaneParams, "far").on("change", onFarChange);
 };
 
 const onMoveDistanceChange = () => {
@@ -869,5 +881,23 @@ const updatePopup = () => {
     }
   } else {
     gPopup.hide();
+  }
+};
+
+const onFovChange = () => {
+  if (gView && gView.camera) {
+    gView.camera.fov = gPaneParams.fov;
+  }
+};
+
+const onNearChange = () => {
+  if (gView && gView.camera) {
+    gView.camera.near = gPaneParams.near;
+  }
+};
+
+const onFarChange = () => {
+  if (gView && gView.camera) {
+    gView.camera.far = gPaneParams.far;
   }
 };
