@@ -38,16 +38,13 @@ export const run = async (view: ThreeView) => {
 
   view.atmosphere.date = date;
 
-  view.atmosphere.irradiance = true;
-  view.atmosphere.cloudsShadow = true;
+  view.aerialPerspective.irradiance = true;
 
-  view.atmosphere.clouds = true;
-  if (view.atmosphere.cloudsEffect) {
-    view.atmosphere.cloudsEffect.localWeatherVelocity = new Vector2(
-      0.005,
-      0.001,
-    );
-    view.atmosphere.cloudsEffect.coverage = 0.3;
+  view.cloudsEffect.enabled = true;
+  view.cloudsEffect.shadows = true;
+  if (view.cloudsEffect) {
+    view.cloudsEffect.localWeatherVelocity = new Vector2(0.005, 0.001);
+    view.cloudsEffect.coverage = 0.3;
   }
 
   view.toneMappingEffect.enabled = true;

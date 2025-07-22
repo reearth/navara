@@ -23,7 +23,6 @@ export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
   radius: null,
   intensity: 1,
   color: new Color(0),
-  index: null,
   halfRes: false,
   quality: "Medium",
 };

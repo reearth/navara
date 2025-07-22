@@ -1,5 +1,4 @@
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import invariant from "tiny-invariant";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -59,9 +58,9 @@ export const run = async (view: ThreeView) => {
 
   view.toneMappingEffect.enabled = true;
   view.toneMappingExposure = 10;
-  view.atmosphere.clouds = true;
-  view.atmosphere.irradiance = true;
-  view.atmosphere.cloudsShadow = true;
+  view.cloudsEffect.enabled = true;
+  view.aerialPerspective.irradiance = true;
+  view.cloudsEffect.shadows = true;
 
   const pane = new Pane({
     title: "Parameters",
@@ -76,25 +75,23 @@ export const run = async (view: ThreeView) => {
 };
 
 const addCloudFogControl = (view: ThreeView, pane: Pane) => {
-  invariant(view.atmosphere.cloudsEffect);
-
   const PARAMS = {
     height: 2000,
     density: 0.01,
   };
 
-  view.atmosphere.cloudsEffect.coverage = 0.3;
-  view.atmosphere.cloudsEffect.cloudLayers[3].altitude = 0;
-  view.atmosphere.cloudsEffect.cloudLayers[3].height = PARAMS.height;
-  view.atmosphere.cloudsEffect.cloudLayers[3].densityScale = 0.05;
-  view.atmosphere.cloudsEffect.cloudLayers[3].shapeAmount = 0.2;
-  view.atmosphere.cloudsEffect.cloudLayers[3].shapeDetailAmount = 0;
-  view.atmosphere.cloudsEffect.cloudLayers[3].shapeAlteringBias = 0.5;
-  view.atmosphere.cloudsEffect.cloudLayers[3].coverageFilterWidth = 1;
-  view.atmosphere.cloudsEffect.cloudLayers[3].expTerm = 0;
-  view.atmosphere.cloudsEffect.cloudLayers[3].exponent = 0;
-  view.atmosphere.cloudsEffect.cloudLayers[3].constantTerm = PARAMS.density;
-  view.atmosphere.cloudsEffect.cloudLayers[3].linearTerm = 0;
+  view.cloudsEffect.coverage = 0.3;
+  view.cloudsEffect.cloudLayers[3].altitude = 0;
+  view.cloudsEffect.cloudLayers[3].height = PARAMS.height;
+  view.cloudsEffect.cloudLayers[3].densityScale = 0.05;
+  view.cloudsEffect.cloudLayers[3].shapeAmount = 0.2;
+  view.cloudsEffect.cloudLayers[3].shapeDetailAmount = 0;
+  view.cloudsEffect.cloudLayers[3].shapeAlteringBias = 0.5;
+  view.cloudsEffect.cloudLayers[3].coverageFilterWidth = 1;
+  view.cloudsEffect.cloudLayers[3].expTerm = 0;
+  view.cloudsEffect.cloudLayers[3].exponent = 0;
+  view.cloudsEffect.cloudLayers[3].constantTerm = PARAMS.density;
+  view.cloudsEffect.cloudLayers[3].linearTerm = 0;
 
   const folderFields: FolderFields<typeof PARAMS> = [
     {
@@ -103,8 +100,7 @@ const addCloudFogControl = (view: ThreeView, pane: Pane) => {
         step: 100,
       },
       onChange: (v) => {
-        invariant(view.atmosphere.cloudsEffect);
-        view.atmosphere.cloudsEffect.cloudLayers[3].height = v.value;
+        view.cloudsEffect.cloudLayers[3].height = v.value;
       },
     },
     {
@@ -115,8 +111,7 @@ const addCloudFogControl = (view: ThreeView, pane: Pane) => {
         step: 0.001,
       },
       onChange: (v) => {
-        invariant(view.atmosphere.cloudsEffect);
-        view.atmosphere.cloudsEffect.cloudLayers[3].constantTerm = v.value;
+        view.cloudsEffect.cloudLayers[3].constantTerm = v.value;
       },
     },
   ];
