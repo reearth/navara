@@ -57,13 +57,17 @@ fn commit(
 }
 
 fn handle_resize(
-    mut camera: Query<(&CameraMarker, &mut CameraFrustum)>,
+    mut events: ResMut<EventStore>,
+    mut camera: Query<(Entity, &CameraMarker, &mut CameraFrustum)>,
     mut ev: EventReader<WindowResizeEvent>,
 ) {
     for w in ev.read() {
-        for (_, mut frustum) in &mut camera {
+        for (e, _, mut frustum) in &mut camera {
             frustum.aspect_ratio = w.width / w.height;
             frustum.update_sse_denominator();
+
+            // Emit camera frustum updated event when aspect ratio changes
+            events.camera_frustum_updated = Some(e);
         }
     }
 }
