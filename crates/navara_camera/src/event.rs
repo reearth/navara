@@ -76,3 +76,10 @@ pub enum CameraEvent {
         angle: FloatType,   // The angle to rotate around the axis in radians.
     },
 }
+
+#[derive(Event)]
+pub struct FrustumEvent {
+    pub fov: Option<FloatType>,  // field of view in degrees
+    pub near: Option<FloatType>, // near clipping plane distance
+    pub far: Option<FloatType>,  // far clipping plane distance
+}

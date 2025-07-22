@@ -9,6 +9,7 @@ pub use model::*;
 #[derive(Debug, Default, Resource)]
 pub struct EventStore {
     pub camera_transform_updated: Option<Entity>,
+    pub camera_frustum_updated: Option<Entity>,
     pub object_transform_updated: Vec<Entity>,
     pub mesh_removed: Vec<Entity>,
     pub mesh_added: Vec<Entity>,
@@ -28,6 +29,7 @@ pub struct EventStore {
 impl EventStore {
     pub fn clear(&mut self) {
         self.camera_transform_updated = None;
+        self.camera_frustum_updated = None;
         self.object_transform_updated.clear();
         self.mesh_removed.clear();
         self.mesh_added.clear();

@@ -10,6 +10,7 @@ import {
   type EntityEvent,
   type ObjectTransformEvent,
   type DataRequestEvent,
+  type CameraFrustum,
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
   DataRequesterRemovedEvent,
@@ -53,6 +54,8 @@ import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
+
+import { radianToDegree } from "@navara/three_api";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -145,6 +148,10 @@ export function processEvent(
 
   eventManager.forEachStack("camera_transform_updated", (ev) =>
     processCameraTransformUpdated(camera, ev),
+  );
+
+  eventManager.forEachStack("camera_frustum_updated", (ev) =>
+    processCameraFrustumUpdated(camera, ev),
   );
 
   eventManager.forEachStack("object_transform_updated", (ev) =>
@@ -417,6 +424,18 @@ function processCameraTransformUpdated(
   setTransform(camera.innerCam, transform);
 
   camera.updateStatus();
+}
+
+function processCameraFrustumUpdated(
+  camera: ThreeViewCamera,
+  frustum: CameraFrustum | undefined,
+) {
+  if (!frustum) return;
+
+  camera.innerCam.near = frustum.near;
+  camera.innerCam.far = frustum.far;
+  camera.innerCam.fov = radianToDegree(frustum.fov);
+  camera.innerCam.updateProjectionMatrix();
 }
 
 function processObjectTransformUpdated(

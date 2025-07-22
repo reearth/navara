@@ -398,7 +398,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         throw new Error("Must provide initialWidth and initialHeight");
       }
 
-      this.camera = new ThreeViewCamera(50, width / height, 100, 1e8);
+      this.camera = new ThreeViewCamera();
     }
 
     const combinedScene = new Scene();
