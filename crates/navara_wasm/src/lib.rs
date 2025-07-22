@@ -524,6 +524,16 @@ impl Core {
     pub fn unregister_sample_terrain_height_event(&mut self, bits: u64) {
         self.app.remove_terrain_height_observer(bits);
     }
+
+    #[wasm_bindgen(js_name = setFrustum)]
+    pub fn set_frustum(
+        &mut self,
+        fov: Option<FloatType>,
+        near: Option<FloatType>,
+        far: Option<FloatType>,
+    ) {
+        self.app.set_frustum(fov, near, far);
+    }
 }
 
 #[wasm_bindgen(start)]

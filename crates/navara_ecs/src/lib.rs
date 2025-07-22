@@ -10,7 +10,7 @@ use bevy_ecs::{
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
     get_heading, get_pitch, get_roll, CamDirType, CameraDirection, CameraEvent, CameraMarker,
-    CameraOrientation, CameraStatus,
+    CameraOrientation, CameraStatus, FrustumEvent,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_32};
@@ -850,6 +850,17 @@ impl App {
         if world.get_entity(entity).is_ok() {
             world.commands().entity(entity).despawn();
         }
+    }
+
+    pub fn set_frustum(
+        &mut self,
+        fov: Option<FloatType>,
+        near: Option<FloatType>,
+        far: Option<FloatType>,
+    ) {
+        self.app
+            .world_mut()
+            .send_event(FrustumEvent { fov, near, far });
     }
 }
 

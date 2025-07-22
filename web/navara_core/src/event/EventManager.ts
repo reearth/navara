@@ -64,6 +64,7 @@ const defaultGenerateEventId = <
 export class EventManager {
   stacks: EventsStacks = {
     camera_transform_updated: [],
+    camera_frustum_updated: [],
     data_requested: [],
     data_requester_removed: [],
     mesh_added: [],

@@ -59,8 +59,9 @@ import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { CustomRenderPass } from "./passes";
-import { PickHelper } from "./pickHelper";
-import type { Picking } from "./picking";
+import { PickHelper } from "./pick/pickHelper";
+import type { Picking } from "./pick/picking";
+import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
@@ -301,6 +302,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   };
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
+  private _terrainPicker: TerrainPicker;
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
 
@@ -324,6 +326,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     }
 
     this._options = options;
+
+    // Initialize terrain picker
+    this._terrainPicker = new TerrainPicker();
 
     // disable right-click
     options.canvas?.addEventListener("contextmenu", (e) => {
@@ -378,7 +383,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         throw new Error("Must provide initialWidth and initialHeight");
       }
 
-      this.camera = new ThreeViewCamera(50, width / height, 100, 1e8);
+      this.camera = new ThreeViewCamera();
     }
 
     // Setup render pass orchestrator
@@ -629,6 +634,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     if (this._pickHelper) {
       this._pickHelper.dispose();
+    }
+
+    if (this._terrainPicker) {
+      this._terrainPicker.dispose();
     }
 
     this.renderer.setAnimationLoop(null);
@@ -994,6 +1003,16 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   get pixelRatio() {
     return this.renderer.getPixelRatio();
+  }
+
+  pickTerrainPosition(x: number, y: number): Nullable<Vector3> {
+    return this._terrainPicker.pick(
+      x,
+      y,
+      this.renderer,
+      this.globeDepthTexture,
+      this.camera.innerCam,
+    );
   }
 }
 
