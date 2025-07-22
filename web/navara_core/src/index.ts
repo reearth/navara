@@ -7,3 +7,5 @@ export * from "./eventHandler";
 export * from "./batch";
 export * from "./error";
 export * from "./types";
+export * from "./namedIndexMap";
+export * from "./observed";

@@ -139,8 +139,8 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
 
   const resetScenes = () => {
     if (!selectedMesh) return;
-    view.scenes.postRender.remove(selectedMesh);
-    view.scenes.postAtmosphere.remove(selectedMesh);
+    view.scenes.opaque.remove(selectedMesh);
+    view.scenes.transparent.remove(selectedMesh);
   };
 
   const folderFields: FolderFields<typeof PARAMS> = [
@@ -175,9 +175,9 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         }
 
         if (PARAMS.renderAsAtmosphere) {
-          view.scenes.postAtmosphere.add(selectedMesh);
+          view.scenes.transparent.add(selectedMesh);
         } else {
-          view.scenes.postRender.add(selectedMesh);
+          view.scenes.opaque.add(selectedMesh);
         }
       },
     },
@@ -201,9 +201,9 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         resetScenes();
 
         if (v.value) {
-          view.scenes.postAtmosphere.add(selectedMesh);
+          view.scenes.transparent.add(selectedMesh);
         } else {
-          view.scenes.postRender.add(selectedMesh);
+          view.scenes.opaque.add(selectedMesh);
         }
       },
     },

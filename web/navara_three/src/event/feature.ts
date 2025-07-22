@@ -124,7 +124,7 @@ export async function processRenderableFeatureAdded(
   obj.renderOrder = FEATURE_RENDER_ORDER;
 
   if (!obj.userData.draped) {
-    scenes.main.add(obj);
+    scenes.mrt.add(obj);
   }
 
   meshes.set(id, obj);

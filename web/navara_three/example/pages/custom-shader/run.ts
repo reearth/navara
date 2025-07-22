@@ -97,7 +97,7 @@ export const run = async (view: ThreeView) => {
   cubes.position.set(position.x, position.y, position.z);
   cubes.scale.set(1500, 1500, 1500);
 
-  view.scenes.main.add(cubes);
+  view.scenes.mrt.add(cubes);
 
   view.on("preUpdate", (t) => {
     updateCubes(cubes, t * 0.001, 10);

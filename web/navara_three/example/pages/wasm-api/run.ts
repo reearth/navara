@@ -129,7 +129,7 @@ export const run = async (view: ThreeView) => {
 
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.main.add(axesHelper);
+  view.scenes.opaque.add(axesHelper);
 
   const pane = new Pane({
     title: "Parameters",
@@ -270,7 +270,7 @@ const placeOneBall = (
     });
 
     const sphere = new Mesh(geometry, material);
-    view.scenes.main.add(sphere);
+    view.scenes.mrt.add(sphere);
     sphere.position.set(pos.x, pos.y, pos.z);
 
     return sphere;
@@ -283,7 +283,7 @@ const addTestModelForNormal = async (view: ThreeView) => {
     "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
   );
   if (model.scene) {
-    view.scenes.main.add(model.scene);
+    view.scenes.mrt.add(model.scene);
 
     const pos = geodeticToVector3(
       new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
@@ -303,7 +303,7 @@ const addTestModelForNormal = async (view: ThreeView) => {
       400000,
       70000,
     );
-    view.scenes.main.add(arrowHelper);
+    view.scenes.mrt.add(arrowHelper);
 
     gModelNormal = model.scene;
     gModelNormal.userData.origin = pos;
@@ -322,7 +322,7 @@ const addTestModelForTerrainHeight = async (view: ThreeView) => {
     "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
   );
   if (model.scene) {
-    view.scenes.main.add(model.scene);
+    view.scenes.mrt.add(model.scene);
 
     const pos = geodeticToVector3(
       new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
@@ -609,7 +609,7 @@ const makeCylinder = (view: ThreeView, center: Vector3): Mesh => {
   });
 
   const cylinder = new Mesh(geometry, material);
-  view.scenes.main.add(cylinder);
+  view.scenes.mrt.add(cylinder);
 
   const transformMatrix = northUpEastToFixedFrame(center);
   cylinder.applyMatrix4(transformMatrix);
@@ -747,7 +747,7 @@ const createPolylineMesh = (view: ThreeView) => {
   });
 
   gPolylineMesh = new Mesh(geometry, material);
-  view.scenes.main.add(gPolylineMesh);
+  view.scenes.mrt.add(gPolylineMesh);
 };
 
 const testSampleTerrainHeight = (view: ThreeView) => {

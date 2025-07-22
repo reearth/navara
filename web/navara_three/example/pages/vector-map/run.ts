@@ -16,7 +16,7 @@ export const run = async (view: ThreeView) => {
 
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.main.add(axesHelper);
+  view.scenes.opaque.add(axesHelper);
 
   view.addLayer({
     type: "tiles",

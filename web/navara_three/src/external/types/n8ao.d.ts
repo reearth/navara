@@ -24,6 +24,7 @@ declare module "n8ao" {
       colorMultiply: boolean;
     }>;
     constructor(scene: Scene, camera: Camera, width?: number, height?: number);
+    autoDetectTransparency: boolean;
     setSize(width: number, height: number): void;
     setQualityMode(mode: QualityMode): void;
   }
