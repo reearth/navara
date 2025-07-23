@@ -504,6 +504,22 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       postAtmosphereRenderPass,
     );
 
+    // TODO: Pass depth buffer, not a scene.
+    const combinedScene = new Scene();
+    combinedScene.add(this._scenes.globe);
+    combinedScene.add(this._scenes.mrt);
+    combinedScene.add(this._scenes.opaque);
+    combinedScene.add(this._scenes.light);
+    this.ssaoEffect = new SSAO(
+      combinedScene,
+      this.camera.innerCam,
+      width,
+      height,
+      options.ssao,
+    );
+    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass("ssao", this.ssaoEffect.rawPass);
+
     this.lensFlareEffect = new LensFlare(
       this.camera.innerCam,
       options.lensFlare,
@@ -514,21 +530,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.lensFlareEffect.rawPass,
     );
 
-    const combinedScene = new Scene();
-    combinedScene.add(this._scenes.mrt);
-    combinedScene.add(this._scenes.opaque);
-    combinedScene.add(this._scenes.globe);
-    combinedScene.add(this._scenes.light);
-
-    this.ssaoEffect = new SSAO(
-      combinedScene,
-      this.camera.innerCam,
-      width,
-      height,
-      options.ssao,
-    );
-    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass("ssao", this.ssaoEffect.rawPass);
     this.toneMappingEffect = new ToneMapping(
       this.camera.innerCam,
       options.toneMapping,
