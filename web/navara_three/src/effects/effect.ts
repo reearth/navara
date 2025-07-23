@@ -18,12 +18,6 @@ export type EffectEvents = {
   _needsUpdate: () => void;
 };
 
-export type NamedPass = {
-  name: string;
-  insertBefore?: string;
-  insertAfter?: string;
-};
-
 export class Pass<
   P extends PostProcessingPass,
   E extends PostProcessingEffect | unknown,
