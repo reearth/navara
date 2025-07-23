@@ -7,6 +7,7 @@ export type CameraEvent = {
   movestart: () => void;
   move: () => void;
   moveend: () => void;
+  frustumChanged: () => void;
 };
 
 export class ThreeViewCamera extends EventHandler<CameraEvent> {

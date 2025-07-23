@@ -516,6 +516,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     const combinedScene = new Scene();
     combinedScene.add(this._scenes.mrt);
+    combinedScene.add(this._scenes.opaque);
     combinedScene.add(this._scenes.globe);
     combinedScene.add(this._scenes.light);
 
@@ -548,6 +549,12 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
     // Workaround when no effect is set.
     this.renderPassOrchestrator.addPass("finalCopy", new CopyPass());
+
+    this.camera.on("frustumChanged", () => {
+      this.renderPassOrchestrator.effectComposer.setMainCamera(
+        this.camera.innerCam,
+      );
+    });
   }
 
   /**

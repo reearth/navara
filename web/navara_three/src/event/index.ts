@@ -24,6 +24,7 @@ import {
   RenderableFeatureRemovedEvent,
   VectorTileState,
 } from "@navara/engine";
+import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
@@ -54,8 +55,6 @@ import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
-
-import { radianToDegree } from "@navara/three_api";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -436,6 +435,7 @@ function processCameraFrustumUpdated(
   camera.innerCam.far = frustum.far;
   camera.innerCam.fov = radianToDegree(frustum.fov);
   camera.innerCam.updateProjectionMatrix();
+  camera.emit("frustumChanged");
 }
 
 function processObjectTransformUpdated(
