@@ -1,11 +1,16 @@
-import { StarsGeometry, StarsMaterial } from "@takram/three-atmosphere";
-import { Points, type Object3DEventMap } from "three";
+import { EventHandler } from "@navara/core";
+import {
+  StarsGeometry,
+  StarsMaterial,
+  type PrecomputedTextures,
+} from "@takram/three-atmosphere";
+import { Points, Matrix4, Vector3 } from "three";
 
 import { STARS_ASSETS_URL } from "../constants";
 import { STARS_RENDER_ORDER } from "../renderOrder";
 
-export type StarsEvents = Object3DEventMap & {
-  _needsUpdate: object;
+export type StarsEvents = {
+  _needsUpdate: () => void;
 };
 
 export type StarsOptions = {
@@ -20,20 +25,23 @@ export const DEFAULT_STARS_OPTIONS: Required<StarsOptions> = {
   background: true,
 };
 
-export class Stars extends Points<StarsGeometry, StarsMaterial, StarsEvents> {
+export class Stars extends EventHandler<StarsEvents> {
+  raw: Points<StarsGeometry, StarsMaterial>;
   options: Required<StarsOptions>;
+
   constructor(data: ArrayBuffer, options?: StarsOptions) {
-    super(
+    super();
+    this.raw = new Points(
       new StarsGeometry(data),
       new StarsMaterial({ depthTest: true, depthWrite: false }),
     );
-    this.frustumCulled = false;
-    this.renderOrder = STARS_RENDER_ORDER;
+    this.raw.frustumCulled = false;
+    this.raw.renderOrder = STARS_RENDER_ORDER;
     this.options = { ...DEFAULT_STARS_OPTIONS, ...(options ?? {}) };
 
-    this.material.pointSize = this.options.pointSize;
-    this.material.radianceScale = this.options.radianceScale;
-    this.material.background = this.options.background;
+    this.raw.material.pointSize = this.options.pointSize;
+    this.raw.material.radianceScale = this.options.radianceScale;
+    this.raw.material.background = this.options.background;
   }
 
   static async fromUrl(url = STARS_ASSETS_URL, options?: StarsOptions) {
@@ -44,13 +52,25 @@ export class Stars extends Points<StarsGeometry, StarsMaterial, StarsEvents> {
     return new Stars(arrayBuffer, options);
   }
 
+  setTextures(textures: PrecomputedTextures) {
+    Object.assign(this.raw.material, textures);
+  }
+
+  setRotationFromMatrix(matrix: Matrix4) {
+    this.raw.setRotationFromMatrix(matrix);
+  }
+
+  updateSunDirection(sunDirection: Vector3) {
+    this.raw.material.sunDirection.copy(sunDirection);
+  }
+
   get pointSize() {
     return this.options.pointSize;
   }
   set pointSize(v: number) {
     this.options.pointSize = v;
-    this.material.pointSize = v;
-    this.dispatchEvent({ type: "_needsUpdate" });
+    this.raw.material.pointSize = v;
+    this.emit("_needsUpdate");
   }
 
   get radianceScale() {
@@ -58,8 +78,8 @@ export class Stars extends Points<StarsGeometry, StarsMaterial, StarsEvents> {
   }
   set radianceScale(v: number) {
     this.options.radianceScale = v;
-    this.material.radianceScale = v;
-    this.dispatchEvent({ type: "_needsUpdate" });
+    this.raw.material.radianceScale = v;
+    this.emit("_needsUpdate");
   }
 
   get background() {
@@ -67,7 +87,7 @@ export class Stars extends Points<StarsGeometry, StarsMaterial, StarsEvents> {
   }
   set background(v: boolean) {
     this.options.background = v;
-    this.material.background = v;
-    this.dispatchEvent({ type: "_needsUpdate" });
+    this.raw.material.background = v;
+    this.emit("_needsUpdate");
   }
 }

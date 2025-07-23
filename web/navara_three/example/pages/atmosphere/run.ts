@@ -213,46 +213,49 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     view.aerialPerspective.enabled = v.value;
   });
   folder.addBinding(PARAMS, "sky").on("change", (v) => {
-    view.atmosphere.sky = v.value;
+    // NEXT
+    // view.skyMesh?.sky = v.value;
   });
   folder.addBinding(PARAMS, "sun").on("change", (v) => {
-    view.atmosphere.sun = v.value;
+    view.skyMesh.sun = v.value;
   });
   folder.addBinding(PARAMS, "moon").on("change", (v) => {
-    view.atmosphere.moon = v.value;
+    view.skyMesh.moon = v.value;
   });
   folder.addBinding(PARAMS, "stars").on("change", (v) => {
-    view.atmosphere.stars = v.value;
+    // NEXT
+    // view.stars = v.value;
   });
   folder.addBinding(PARAMS, "sunLight").on("change", (v) => {
-    view.atmosphere.sunLight = v.value;
+    // view.sunLight = v.value;
   });
   folder.addBinding(PARAMS, "sunLightColor").on("change", (v) => {
-    view.atmosphere.sunLightColor = new Color(v.value);
+    view.sunLightObj.color = new Color(v.value);
   });
   folder.addBinding(PARAMS, "moonScale").on("change", (v) => {
-    view.atmosphere.moonScale = v.value;
+    view.skyMesh.moonScale = v.value;
   });
   folder.addBinding(PARAMS, "moonIntensity").on("change", (v) => {
-    view.atmosphere.moonIntensity = v.value;
+    view.skyMesh.moonIntensity = v.value;
   });
   folder.addBinding(PARAMS, "starsPointSize").on("change", (v) => {
-    view.atmosphere.starsPointSize = v.value;
+    view.starsMesh.pointSize = v.value;
   });
   folder.addBinding(PARAMS, "starsRadianceScale").on("change", (v) => {
-    view.atmosphere.starsRadianceScale = v.value;
+    view.starsMesh.radianceScale = v.value;
   });
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
-    view.atmosphere.sunLightIntensity = v.value;
+    view.sunLightObj.intensity = v.value;
   });
   folder.addBinding(PARAMS, "ambientLight").on("change", (v) => {
-    view.atmosphere.ambientLight = v.value;
+    // Next
+    // view.ambientLight = v.value;
   });
   folder.addBinding(PARAMS, "ambientLightColor").on("change", (v) => {
-    view.atmosphere.ambientLightColor = new Color(v.value);
+    view.ambientLightObj.color = new Color(v.value);
   });
   folder.addBinding(PARAMS, "ambientLightIntensity").on("change", (v) => {
-    view.atmosphere.ambientLightIntensity = v.value;
+    view.ambientLightObj.intensity = v.value;
   });
   folder.addBinding(PARAMS, "inscatter").on("change", (v) => {
     view.aerialPerspective.inscatter = v.value;
@@ -924,6 +927,7 @@ const addAAControl = (view: ThreeView, pane: Pane) => {
   } as const;
 
   view.smaaEffect.enabled = PARAMS.enable;
+  // NEXT
   // view.aaEffect.effect = PARAMS.effect;
   view.smaaEffect.quality = PARAMS.quality;
   view.smaaEffect.edgeDetectionMode = PARAMS.edgeDetectionMode;

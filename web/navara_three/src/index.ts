@@ -27,6 +27,10 @@ import invariant from "tiny-invariant";
 import { Atmosphere } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
+import { STARS_ASSETS_URL } from "./constants";
+import { LayerView, type MeshLayerConstructor } from "./core";
+import { LayerHandle } from "./core/LayerHandle";
+import { Registries } from "./core/Registries";
 import {
   SMAA,
   LensFlare,
@@ -54,9 +58,17 @@ import {
 } from "./event";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
+import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
+import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
+import {
+  AtmosphereAmbientLight,
+  AtmosphereSkyLightProbe,
+  AtmosphereSunLight,
+} from "./lights";
 import { overrideMaterialsForMRT } from "./material";
+import { SkyMesh, Stars, DEFAULT_STARS_OPTIONS } from "./mesh";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { CustomRenderPass } from "./passes";
 import { PickHelper } from "./pick/pickHelper";
@@ -67,12 +79,13 @@ import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
-  type LayerDescription,
+  type LayerDescription as ActualLayerDescription,
   type MeshCache,
   type PickedFeature,
   type WorkerPoolPromises,
   type RenderFlag,
   type TileMapByHandle,
+  type MeshLayerDeclarationDescription,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";
@@ -89,7 +102,9 @@ export * from "./effects";
 export * from "./shaders";
 export * from "./event/loaders";
 export * from "./material";
-export { SnowMesh, RainMesh } from "./mesh";
+export * from "./core";
+export * from "./layers";
+export * from "./abstracs";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -107,7 +122,27 @@ export type Options = {
   camera?: PerspectiveCamera;
   antialias?: AntialiasOptions;
   light?: Light;
-  atmosphere?: Atmosphere;
+  atmosphere?: {
+    aerialPerspective?: boolean;
+    atmosphereAssetsUrl?: string;
+    stbnUrl?: string;
+    sky?: boolean;
+    stars?: boolean;
+    starsAssetsUrl?: string;
+    starsPointSize?: number;
+    starsRadianceScale?: number;
+    sun?: boolean;
+    sunLight?: boolean;
+    sunLightColor?: Color;
+    sunLightIntensity?: number;
+    moon?: boolean;
+    moonScale?: number;
+    moonIntensity?: number;
+    ambientLight?: boolean;
+    ambientLightColor?: Color;
+    ambientLightIntensity?: number;
+    date?: Date;
+  };
   aerialPerspective?: AerialPerspectiveOptions;
   clouds?: CloudsOptions;
   backgroundColor?: number;
@@ -148,12 +183,24 @@ export type ViewEvents = {
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
 };
 
-export default class ThreeView extends EventHandler<ViewEvents> {
+export default class ThreeView<
+  CustomLayerDescription extends object = object,
+  LayerDescription extends ActualLayerDescription =
+    | ActualLayerDescription
+    | CustomLayerDescription,
+> extends EventHandler<ViewEvents> {
   camera: ThreeViewCamera;
   renderer: WebGLRenderer;
   control?: { update: () => void; get target(): Vector3 | undefined };
 
   atmosphere!: Atmosphere;
+
+  // Atmosphere objects - managed independently
+  skyMesh!: SkyMesh;
+  skyLightProbe!: AtmosphereSkyLightProbe;
+  sunLightObj!: AtmosphereSunLight;
+  ambientLightObj!: AtmosphereAmbientLight;
+  starsMesh!: Stars;
 
   // Effects
   aerialPerspective!: AerialPerspective;
@@ -306,6 +353,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
 
+  // Registry support
+  private registries: Registries;
+
   constructor(options: Options = {}) {
     super();
 
@@ -444,9 +494,20 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       maxTextures: Math.max(this.renderer.capabilities.maxTextures, 8),
     };
 
+    // Set up Registry
+    const layerView = new LayerView(
+      this._scenes,
+      this.camera.innerCam,
+      this.atmosphere,
+    );
+    this.registries = new Registries(layerView);
+
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
     });
+
+    // Register built-in mesh types
+    this.registerBuiltInMeshes();
 
     this._renderFlag.animation = !!options.animation;
   }
@@ -463,13 +524,16 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
     this.renderPassOrchestrator.addPass("mainRender", this._renderPass);
 
-    this.atmosphere = new Atmosphere(
-      this._scenes,
-      this.renderer,
-      this.camera.innerCam,
-      options.atmosphere,
-    );
+    this.atmosphere = new Atmosphere(this.renderer, {
+      aerialPerspective: options.atmosphere?.aerialPerspective,
+      atmosphereAssetsUrl: options.atmosphere?.atmosphereAssetsUrl,
+      stbnUrl: options.atmosphere?.stbnUrl,
+      date: options.atmosphere?.date,
+    });
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
+
+    // Initialize atmosphere objects independently
+    this.initializeAtmosphereObjects(options.atmosphere ?? {});
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
@@ -556,6 +620,103 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this.camera.innerCam,
       );
     });
+  }
+
+  private async initializeAtmosphereObjects(
+    atmosphereOptions: NonNullable<Options["atmosphere"]>,
+  ) {
+    const DEFAULT_LIGHT_COLOR = new Color(0xffffff);
+
+    const defaults = {
+      sky: true,
+      stars: true,
+      starsAssetsUrl: STARS_ASSETS_URL,
+      starsPointSize: DEFAULT_STARS_OPTIONS.pointSize,
+      starsRadianceScale: DEFAULT_STARS_OPTIONS.radianceScale,
+      sun: true,
+      sunLight: true,
+      sunLightColor: DEFAULT_LIGHT_COLOR.clone(),
+      sunLightIntensity: 1,
+      moon: true,
+      moonScale: 1,
+      moonIntensity: 1,
+      ambientLight: false,
+      ambientLightColor: DEFAULT_LIGHT_COLOR.clone(),
+      ambientLightIntensity: 1,
+    };
+
+    const options = { ...defaults, ...atmosphereOptions };
+
+    // Initialize atmosphere textures first
+    await this.atmosphere.init();
+
+    // Create sky mesh
+    if (options.sky) {
+      this.skyMesh = new SkyMesh({
+        sun: options.sun,
+        moon: options.moon,
+        moonScale: options.moonScale,
+        moonIntensity: options.moonIntensity,
+      });
+
+      if (this.atmosphere.textures) {
+        this.skyMesh.setTextures(this.atmosphere.textures);
+      }
+
+      this.skyMesh.setShadowLengthHandler(this.atmosphere._shadowLength);
+      this.skyMesh.on("_needsUpdate", this.forceUpdate);
+      this._scenes.opaque.add(this.skyMesh.raw);
+    }
+
+    // Create stars
+    if (options.stars) {
+      this.starsMesh = await Stars.fromUrl(options.starsAssetsUrl, {
+        pointSize: options.starsPointSize,
+        radianceScale: options.starsRadianceScale,
+      });
+
+      if (this.starsMesh && this.atmosphere.textures) {
+        this.starsMesh.setTextures(this.atmosphere.textures);
+        this.starsMesh.on("_needsUpdate", this.forceUpdate);
+        this._scenes.opaque.add(this.starsMesh.raw);
+      }
+    }
+
+    // Create sky light probe
+    if (this.atmosphere.aerialPerspective) {
+      this.skyLightProbe = new AtmosphereSkyLightProbe();
+      if (this.atmosphere.textures) {
+        this.skyLightProbe.setTextures(this.atmosphere.textures);
+      }
+      this._scenes.light.add(this.skyLightProbe.raw);
+    }
+
+    // Create sun light
+    if (options.sunLight) {
+      this.sunLightObj = new AtmosphereSunLight({
+        intensity: options.sunLightIntensity,
+        color: options.sunLightColor,
+      });
+
+      if (this.atmosphere.textures) {
+        this.sunLightObj.setTextures(
+          this.atmosphere.textures,
+          this.atmosphere.aerialPerspective,
+        );
+      }
+
+      this._scenes.light.add(this.sunLightObj.raw);
+      this._scenes.light.add(this.sunLightObj.target);
+    }
+
+    // Create ambient light
+    if (options.ambientLight) {
+      this.ambientLightObj = new AtmosphereAmbientLight({
+        color: options.ambientLightColor,
+        intensity: options.ambientLightIntensity,
+      });
+      this._scenes.light.add(this.ambientLightObj.raw);
+    }
   }
 
   /**
@@ -767,7 +928,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
    */
   private _forceFeatureUpdates(updatedAt: number) {
     // Process updates for each layer
-    for (const layer of this.layersManager._layers.values()) {
+    for (const layer of this.layersManager.getResourceLayers()) {
       if (layer._processFeatureUpdates(updatedAt)) {
         this._renderFlag.forceUpdate = true;
       }
@@ -776,6 +937,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   private _render(updatedAt: number) {
     this.atmosphere._update();
+    this._updateAtmosphereObjects();
     this.aerialPerspective._update();
     this.cloudsEffect._update();
 
@@ -785,7 +947,46 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.emit("postRender", updatedAt);
   }
 
-  addLayer(l: LayerDescription) {
+  private _updateAtmosphereObjects() {
+    const position = this.camera.innerCam.position;
+    const sunDirection = this.atmosphere.getSunDirection();
+    const moonDirection = this.atmosphere.getMoonDirection();
+    const rotationMatrix = this.atmosphere.getRotationMatrix();
+
+    // Update sun light
+    if (this.sunLightObj) {
+      this.sunLightObj.updateSunDirection(sunDirection);
+      this.sunLightObj.updateTargetPosition(position);
+      this.sunLightObj.update();
+    }
+
+    // Update sky light probe
+    if (this.skyLightProbe) {
+      this.skyLightProbe.updateSunDirection(sunDirection);
+      this.skyLightProbe.updatePosition(position);
+      this.skyLightProbe.update();
+    }
+
+    // Update sky mesh
+    if (this.skyMesh) {
+      this.skyMesh.updateSunDirection(sunDirection);
+      this.skyMesh.updateMoonDirection(moonDirection);
+    }
+
+    // Update stars
+    if (this.starsMesh) {
+      this.starsMesh.updateSunDirection(sunDirection);
+      this.starsMesh.setRotationFromMatrix(rotationMatrix);
+    }
+  }
+
+  addLayer(l: LayerDescription): Layer | LayerHandle {
+    // Check if this is a mesh layer
+    if (l.type === "mesh") {
+      return this.addMeshLayer(l as MeshLayerDeclarationDescription);
+    }
+
+    // Existing resource layer process
     const layerId = this._core?.addLayer(l);
     invariant(layerId);
     invariant(this._core);
@@ -804,6 +1005,44 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   deleteLayerById(layerId: string) {
     invariant(this._core);
     this.layersManager.get(layerId)?.delete();
+  }
+
+  private registerBuiltInMeshes(): void {
+    this.registries.mesh.register("rain", RainMeshLayer);
+    this.registries.mesh.register("snow", SnowMeshLayer);
+  }
+
+  private addMeshLayer(config: MeshLayerDeclarationDescription): LayerHandle {
+    // Find which mesh type from config
+    const meshType = this.registries.mesh.findMeshType(config);
+    if (!meshType) {
+      throw new Error("No mesh type specified in configuration");
+    }
+
+    // Extract layer config and mesh-specific config
+    const { type, ...meshConfigs } = config;
+    const flatConfig = { ...config, ...meshConfigs };
+
+    // Create mesh layer instance
+    const meshLayer = this.registries.mesh.create(meshType, flatConfig);
+
+    // Initialize the mesh
+    meshLayer.onCreate();
+
+    // Set up update listener
+    this.on("postRender", meshLayer.onRenderUpdate);
+
+    const l = new LayerHandle(meshLayer);
+
+    // Store the mesh layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l;
+  }
+
+  registerMesh(name: string, meshClass: MeshLayerConstructor): void {
+    this.registries.mesh.register(name, meshClass);
   }
 
   setCamera(camPos: CameraPosition) {

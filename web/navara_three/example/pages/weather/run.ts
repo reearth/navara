@@ -1,7 +1,9 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  RainMesh,
-  SnowMesh,
+  LayerHandle,
+  RainMeshLayer,
+  SnowMeshLayer,
+  ThreeVec3,
 } from "@navara/three";
 import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import { Vector2 } from "three";
@@ -30,14 +32,11 @@ export const run = async (view: ThreeView) => {
 
   view.aerialPerspective.irradiance = true;
 
-  view.cloudsEffect.enabled = true;
+  view.cloudsEffect.localWeatherVelocity = new Vector2(0.005, 0.001);
+  view.cloudsEffect.coverage = 0.35;
+  view.cloudsEffect.absorptionCoefficient = 15;
+  view.cloudsEffect.lightShafts = true;
   view.cloudsEffect.shadows = true;
-  if (view.cloudsEffect) {
-    view.cloudsEffect.localWeatherVelocity = new Vector2(0.005, 0.001);
-    view.cloudsEffect.coverage = 0.35;
-    view.cloudsEffect.absorptionCoefficient = 15;
-    view.cloudsEffect.lightShafts = false;
-  }
 
   view.toneMappingEffect.enabled = true;
   view.toneMappingExposure = 10;
@@ -100,8 +99,30 @@ export const run = async (view: ThreeView) => {
 };
 
 const addWeatherControl = (view: ThreeView, pane: Pane) => {
-  const rain = new RainMesh({ opacity: 1 });
-  const snow = new SnowMesh({ opacity: 1 });
+  const position = geodeticToVector3(
+    new LLE(
+      degreeToRadian(35.67564356091717),
+      degreeToRadian(139.74511454748298),
+      10,
+    ),
+  );
+
+  const rain = view.addLayer({
+    type: "mesh",
+    visible: false,
+    position: ThreeVec3.fromRaw(position),
+    rain: {
+      opacity: 1,
+    },
+  }) as LayerHandle<RainMeshLayer>;
+  const snow = view.addLayer({
+    type: "mesh",
+    visible: false,
+    position: ThreeVec3.fromRaw(position),
+    snow: {
+      opacity: 1,
+    },
+  }) as LayerHandle<SnowMeshLayer>;
 
   type WeatherType = "sunny" | "rainy" | "snowy";
 
@@ -111,34 +132,10 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
     renderAsAtmosphere: false,
   };
 
-  const position = geodeticToVector3(
-    new LLE(
-      degreeToRadian(35.67564356091717),
-      degreeToRadian(139.74511454748298),
-      10,
-    ),
-  );
-
-  view.on("postRender", (t) => {
-    switch (PARAMS.weather) {
-      case "rainy": {
-        rain.update(t, view.camera.innerCam, view.atmosphere.sunDirection);
-        break;
-      }
-      case "snowy": {
-        snow.update(t, view.camera.innerCam);
-        break;
-      }
-    }
-  });
-
-  let selectedMesh: RainMesh | SnowMesh | null = null;
-
-  const resetScenes = () => {
-    if (!selectedMesh) return;
-    view.scenes.opaque.remove(selectedMesh);
-    view.scenes.transparent.remove(selectedMesh);
-  };
+  let selectedLayer:
+    | LayerHandle<RainMeshLayer>
+    | LayerHandle<SnowMeshLayer>
+    | null = null;
 
   const folderFields: FolderFields<typeof PARAMS> = [
     {
@@ -150,57 +147,50 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         })),
       },
       onChange: (v) => {
-        resetScenes();
         switch (v.value) {
           case "sunny": {
-            selectedMesh = null;
+            selectedLayer = null;
             break;
           }
           case "rainy": {
-            selectedMesh = rain;
+            selectedLayer = rain;
             break;
           }
           case "snowy": {
-            selectedMesh = snow;
+            selectedLayer = snow;
             break;
           }
         }
-        if (!selectedMesh) return;
 
-        if (!PARAMS.followCamera) {
-          selectedMesh.position.copy(position);
-        }
+        rain.visible = false;
+        snow.visible = false;
 
-        if (PARAMS.renderAsAtmosphere) {
-          view.scenes.transparent.add(selectedMesh);
-        } else {
-          view.scenes.opaque.add(selectedMesh);
-        }
+        if (!selectedLayer) return;
+
+        selectedLayer.visible = true;
       },
     },
     {
       name: "followCamera",
       onChange: (v) => {
-        rain.followCamera = v.value;
-        snow.followCamera = v.value;
+        rain.update({
+          rain: {
+            followCamera: v.value,
+          },
+        });
+        snow.update({
+          snow: {
+            followCamera: v.value,
+          },
+        });
 
         if (!v.value) {
-          rain.position.copy(position);
-          snow.position.copy(position);
-        }
-      },
-    },
-    {
-      name: "renderAsAtmosphere",
-      onChange: (v) => {
-        if (!selectedMesh) return;
-
-        resetScenes();
-
-        if (v.value) {
-          view.scenes.transparent.add(selectedMesh);
-        } else {
-          view.scenes.opaque.add(selectedMesh);
+          rain.update({
+            position: ThreeVec3.fromRaw(position),
+          });
+          snow.update({
+            position: ThreeVec3.fromRaw(position),
+          });
         }
       },
     },
@@ -215,15 +205,15 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
 
   const RAIN_PARAMS = {
     opacity: 1.0,
-    particleCount: rain.particleCount,
-    speed: rain.speed,
-    color: rain.color,
-    width: rain.width,
-    height: rain.height,
-    areaWidth: rain.areaWidth,
-    areaHeight: rain.areaHeight,
-    maxHeight: rain.maxHeight,
-    diffuse: rain.diffuse,
+    particleCount: rain.ref?.particleCount,
+    speed: rain.ref?.speed,
+    color: rain.ref?.color,
+    width: rain.ref?.width,
+    height: rain.ref?.height,
+    areaWidth: rain.ref?.areaWidth,
+    areaHeight: rain.ref?.areaHeight,
+    maxHeight: rain.ref?.maxHeight,
+    diffuse: rain.ref?.diffuse,
   };
 
   const rainFolderFields: FolderFields<typeof RAIN_PARAMS> = [
@@ -234,7 +224,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         max: 1,
       },
       onChange: (v) => {
-        rain.opacity = v.value;
+        rain.update({
+          rain: {
+            opacity: v.value,
+          },
+        });
       },
     },
     {
@@ -243,7 +237,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        rain.particleCount = v.value;
+        rain.update({
+          rain: {
+            particleCount: v.value,
+          },
+        });
       },
     },
     {
@@ -252,7 +250,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        rain.speed = v.value;
+        rain.update({
+          rain: {
+            speed: v.value,
+          },
+        });
       },
     },
     {
@@ -264,7 +266,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         },
       },
       onChange: (v) => {
-        rain.color = v.value;
+        rain.update({
+          rain: {
+            color: v.value,
+          },
+        });
       },
     },
     {
@@ -273,7 +279,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        rain.width = v.value;
+        rain.update({
+          rain: {
+            width: v.value,
+          },
+        });
       },
     },
     {
@@ -282,7 +292,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        rain.height = v.value;
+        rain.update({
+          rain: {
+            height: v.value,
+          },
+        });
       },
     },
     {
@@ -291,7 +305,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 100,
       },
       onChange: (v) => {
-        rain.areaWidth = v.value;
+        rain.update({
+          rain: {
+            areaWidth: v.value,
+          },
+        });
       },
     },
     {
@@ -300,7 +318,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 100,
       },
       onChange: (v) => {
-        rain.areaHeight = v.value;
+        rain.update({
+          rain: {
+            areaHeight: v.value,
+          },
+        });
       },
     },
     {
@@ -309,13 +331,21 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 100,
       },
       onChange: (v) => {
-        rain.maxHeight = v.value;
+        rain.update({
+          rain: {
+            maxHeight: v.value,
+          },
+        });
       },
     },
     {
       name: "diffuse",
       onChange: (v) => {
-        rain.diffuse = v.value;
+        rain.update({
+          rain: {
+            diffuse: v.value,
+          },
+        });
       },
     },
   ];
@@ -329,19 +359,19 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
 
   const SNOW_PARAMS = {
     opacity: 1.0,
-    particleCount: snow.particleCount,
-    speed: snow.speed,
-    size: snow.size,
-    color: snow.color,
-    areaWidth: snow.areaWidth,
-    areaHeight: snow.areaHeight,
-    maxHeight: snow.maxHeight,
-    xMovementStrength: snow.xMovementStrength,
-    xMovementSpeed: snow.xMovementSpeed,
-    yMovementStrength: snow.yMovementStrength,
-    yMovementSpeed: snow.yMovementSpeed,
-    zMovementStrength: snow.zMovementStrength,
-    zMovementSpeed: snow.zMovementSpeed,
+    particleCount: snow.ref?.particleCount,
+    speed: snow.ref?.speed,
+    size: snow.ref?.size,
+    color: snow.ref?.color,
+    areaWidth: snow.ref?.areaWidth,
+    areaHeight: snow.ref?.areaHeight,
+    maxHeight: snow.ref?.maxHeight,
+    xMovementStrength: snow.ref?.xMovementStrength,
+    xMovementSpeed: snow.ref?.xMovementSpeed,
+    yMovementStrength: snow.ref?.yMovementStrength,
+    yMovementSpeed: snow.ref?.yMovementSpeed,
+    zMovementStrength: snow.ref?.zMovementStrength,
+    zMovementSpeed: snow.ref?.zMovementSpeed,
   };
 
   const snowFolderFields: FolderFields<typeof SNOW_PARAMS> = [
@@ -352,7 +382,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         max: 1,
       },
       onChange: (v) => {
-        snow.opacity = v.value;
+        snow.update({
+          snow: {
+            opacity: v.value,
+          },
+        });
       },
     },
     {
@@ -361,7 +395,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.particleCount = v.value;
+        snow.update({
+          snow: {
+            particleCount: v.value,
+          },
+        });
       },
     },
     {
@@ -370,7 +408,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.speed = v.value;
+        snow.update({
+          snow: {
+            speed: v.value,
+          },
+        });
       },
     },
     {
@@ -379,7 +421,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.size = v.value;
+        snow.update({
+          snow: {
+            size: v.value,
+          },
+        });
       },
     },
     {
@@ -391,7 +437,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         },
       },
       onChange: (v) => {
-        snow.color = v.value;
+        snow.update({
+          snow: {
+            color: v.value,
+          },
+        });
       },
     },
     {
@@ -400,7 +450,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 100,
       },
       onChange: (v) => {
-        snow.areaWidth = v.value;
+        snow.update({
+          snow: {
+            areaWidth: v.value,
+          },
+        });
       },
     },
     {
@@ -409,7 +463,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 100,
       },
       onChange: (v) => {
-        snow.areaHeight = v.value;
+        snow.update({
+          snow: {
+            areaHeight: v.value,
+          },
+        });
       },
     },
     {
@@ -418,7 +476,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 100,
       },
       onChange: (v) => {
-        snow.maxHeight = v.value;
+        snow.update({
+          snow: {
+            maxHeight: v.value,
+          },
+        });
       },
     },
     {
@@ -427,7 +489,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.xMovementStrength = v.value;
+        snow.update({
+          snow: {
+            xMovementStrength: v.value,
+          },
+        });
       },
     },
     {
@@ -436,7 +502,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.xMovementSpeed = v.value;
+        snow.update({
+          snow: {
+            xMovementSpeed: v.value,
+          },
+        });
       },
     },
     {
@@ -445,7 +515,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.yMovementStrength = v.value;
+        snow.update({
+          snow: {
+            yMovementStrength: v.value,
+          },
+        });
       },
     },
     {
@@ -454,7 +528,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.yMovementSpeed = v.value;
+        snow.update({
+          snow: {
+            yMovementSpeed: v.value,
+          },
+        });
       },
     },
     {
@@ -463,7 +541,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.zMovementStrength = v.value;
+        snow.update({
+          snow: {
+            zMovementStrength: v.value,
+          },
+        });
       },
     },
     {
@@ -472,7 +554,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        snow.zMovementSpeed = v.value;
+        snow.update({
+          snow: {
+            zMovementSpeed: v.value,
+          },
+        });
       },
     },
   ];
