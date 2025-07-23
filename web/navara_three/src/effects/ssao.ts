@@ -1,6 +1,5 @@
 import type { Nullable } from "@navara/core";
 import { N8AOPostPass, type QualityMode } from "n8ao";
-import { EffectComposer } from "postprocessing";
 import { Color, type Camera, type Scene } from "three";
 
 import { Pass, type EffectOptions } from "./effect";
@@ -24,29 +23,25 @@ export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
   radius: null,
   intensity: 1,
   color: new Color(0),
-  index: null,
   halfRes: false,
   quality: "Medium",
 };
 
-export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
+export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
   scene: Scene;
   camera: Camera;
   width: number;
   height: number;
 
   constructor(
-    composer: EffectComposer,
     scene: Scene,
     camera: Camera,
     width: number,
     height: number,
     options?: SSAOOptions,
   ) {
-    const pass = options?.enabled
-      ? new N8AOPostPass(scene, camera, width, height)
-      : undefined;
-    super(composer, pass, options);
+    const pass = new N8AOPostPass(scene, camera, width, height);
+    super(pass, options);
 
     this.scene = scene;
     this.camera = camera;
@@ -54,8 +49,8 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     this.height = height;
   }
 
-  protected onAdded(): void {
-    if (!this.pass) return;
+  protected onMounted(): void {
+    if (!this.rawPass) return;
 
     const quality = this.quality;
     this.quality = quality;
@@ -75,16 +70,9 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     const color = this.color;
     this.color = color;
 
-    this.pass.configuration.gammaCorrection = false;
-  }
-
-  protected onMounted(): void {
-    this.pass = new N8AOPostPass(
-      this.scene,
-      this.camera,
-      this.width,
-      this.height,
-    );
+    this.rawPass.configuration.gammaCorrection = false;
+    // Navara manages transparency.
+    this.rawPass.autoDetectTransparency = false;
   }
 
   get quality() {
@@ -94,8 +82,8 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.quality === v) return;
     this.options.quality = v;
 
-    if (!this.pass) return;
-    this.pass.setQualityMode(v);
+    if (!this.rawPass) return;
+    this.rawPass.setQualityMode(v);
 
     this.emit("_needsUpdate");
   }
@@ -106,8 +94,8 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.halfRes === v) return;
     this.options.halfRes = v;
 
-    if (!this.pass) return;
-    this.pass.configuration.halfRes = v;
+    if (!this.rawPass) return;
+    this.rawPass.configuration.halfRes = v;
 
     this.emit("_needsUpdate");
   }
@@ -118,8 +106,9 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.samples === v) return;
     this.options.samples = v;
 
-    if (!this.pass) return;
-    this.pass.configuration.aoSamples = v ?? this.pass.configuration.aoSamples;
+    if (!this.rawPass) return;
+    this.rawPass.configuration.aoSamples =
+      v ?? this.rawPass.configuration.aoSamples;
 
     this.emit("_needsUpdate");
   }
@@ -130,8 +119,9 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.radius === v) return;
     this.options.radius = v;
 
-    if (!this.pass) return;
-    this.pass.configuration.aoRadius = v ?? this.pass.configuration.aoRadius;
+    if (!this.rawPass) return;
+    this.rawPass.configuration.aoRadius =
+      v ?? this.rawPass.configuration.aoRadius;
 
     this.emit("_needsUpdate");
   }
@@ -142,8 +132,8 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.intensity === v) return;
     this.options.intensity = v;
 
-    if (!this.pass) return;
-    this.pass.configuration.intensity = v;
+    if (!this.rawPass) return;
+    this.rawPass.configuration.intensity = v;
 
     this.emit("_needsUpdate");
   }
@@ -154,8 +144,8 @@ export class SSAO extends Pass<N8AOPostPass, SSAOOptions> {
     if (this.options.color === v) return;
     this.options.color = v;
 
-    if (!this.pass) return;
-    this.pass.configuration.color = v;
+    if (!this.rawPass) return;
+    this.rawPass.configuration.color = v;
 
     this.emit("_needsUpdate");
   }

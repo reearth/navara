@@ -28,18 +28,15 @@ export const run = async (view: ThreeView) => {
 
   view.atmosphere.date = date;
 
-  view.atmosphere.irradiance = true;
-  view.atmosphere.cloudsShadow = true;
+  view.aerialPerspective.irradiance = true;
 
-  view.atmosphere.clouds = true;
-  if (view.atmosphere.cloudsEffect) {
-    view.atmosphere.cloudsEffect.localWeatherVelocity = new Vector2(
-      0.005,
-      0.001,
-    );
-    view.atmosphere.cloudsEffect.coverage = 0.35;
-    view.atmosphere.cloudsEffect.absorptionCoefficient = 15;
-    view.atmosphere.cloudsEffect.lightShafts = false;
+  view.cloudsEffect.enabled = true;
+  view.cloudsEffect.shadows = true;
+  if (view.cloudsEffect) {
+    view.cloudsEffect.localWeatherVelocity = new Vector2(0.005, 0.001);
+    view.cloudsEffect.coverage = 0.35;
+    view.cloudsEffect.absorptionCoefficient = 15;
+    view.cloudsEffect.lightShafts = false;
   }
 
   view.toneMappingEffect.enabled = true;
@@ -139,8 +136,8 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
 
   const resetScenes = () => {
     if (!selectedMesh) return;
-    view.scenes.postRender.remove(selectedMesh);
-    view.scenes.postAtmosphere.remove(selectedMesh);
+    view.scenes.opaque.remove(selectedMesh);
+    view.scenes.transparent.remove(selectedMesh);
   };
 
   const folderFields: FolderFields<typeof PARAMS> = [
@@ -175,9 +172,9 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         }
 
         if (PARAMS.renderAsAtmosphere) {
-          view.scenes.postAtmosphere.add(selectedMesh);
+          view.scenes.transparent.add(selectedMesh);
         } else {
-          view.scenes.postRender.add(selectedMesh);
+          view.scenes.opaque.add(selectedMesh);
         }
       },
     },
@@ -201,9 +198,9 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         resetScenes();
 
         if (v.value) {
-          view.scenes.postAtmosphere.add(selectedMesh);
+          view.scenes.transparent.add(selectedMesh);
         } else {
-          view.scenes.postRender.add(selectedMesh);
+          view.scenes.opaque.add(selectedMesh);
         }
       },
     },

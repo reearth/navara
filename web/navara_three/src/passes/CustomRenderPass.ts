@@ -17,9 +17,10 @@ import {
   type WebGLRenderer,
 } from "three";
 
-import { NormalCopyPass, RenderTargetCopyPass } from "./passes";
-import type { Scenes } from "./scene";
-import type { MeshCache } from "./type";
+import type { Scenes } from "../scene";
+import type { MeshCache } from "../type";
+
+import { NormalCopyPass, RenderTargetCopyPass } from ".";
 
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
@@ -79,10 +80,10 @@ export class CustomRenderPass extends RenderPass {
   }
 
   // Render the scene with world scene that includes user setting object like a light.
-  protected _renderWithWorld(renderer: WebGLRenderer, scene: Scene) {
-    scene.add(this._scenes.world);
+  protected _renderWithLight(renderer: WebGLRenderer, scene: Scene) {
+    scene.add(this._scenes.light);
     renderer.render(scene, this._camera);
-    scene.remove(this._scenes.world);
+    scene.remove(this._scenes.light);
   }
 
   render(
@@ -101,7 +102,7 @@ export class CustomRenderPass extends RenderPass {
     renderer.setRenderTarget(renderTarget);
     renderer.clear();
 
-    this._renderWithWorld(renderer, this._scenes.globe);
+    this._renderWithLight(renderer, this._scenes.globe);
 
     // Set normal texture for copy pass
     this.globeNormalCopyPass.render(renderer, null, null);
@@ -115,7 +116,7 @@ export class CustomRenderPass extends RenderPass {
       this._renderDrapedMesh(renderer);
     }
 
-    this._renderWithWorld(renderer, this._scenes.main);
+    this._renderWithLight(renderer, this._scenes.mrt);
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 
@@ -126,7 +127,7 @@ export class CustomRenderPass extends RenderPass {
     }
     this.copyPass.render(renderer, finalTarget, null);
 
-    this._renderWithWorld(renderer, this._scenes.postRender);
+    this._renderWithLight(renderer, this._scenes.opaque);
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {
@@ -147,7 +148,7 @@ export class CustomRenderPass extends RenderPass {
   // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
   // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
   protected _renderDrapedMesh(renderer: WebGLRenderer) {
-    const drapedFeaturesScene = this._scenes.drapedFeatures;
+    const drapedFeaturesScene = this._scenes.draped;
 
     for (const [k, m] of this._drapedFeatureMaterials) {
       if (this._meshes.get(k)?.visible === false || !m.visible) continue;
@@ -168,13 +169,13 @@ export class CustomRenderPass extends RenderPass {
 
       drapedFeaturesScene.add(mesh);
 
-      this._renderWithWorld(renderer, drapedFeaturesScene);
+      this._renderWithLight(renderer, drapedFeaturesScene);
 
       // Front face
       m.side = FrontSide;
       m.stencilZFail = DecrementWrapStencilOp;
 
-      this._renderWithWorld(renderer, drapedFeaturesScene);
+      this._renderWithLight(renderer, drapedFeaturesScene);
 
       // Final
       m.stencilFunc = NotEqualStencilFunc;
@@ -185,7 +186,7 @@ export class CustomRenderPass extends RenderPass {
       m.colorWrite = true;
       m.depthTest = false;
 
-      this._renderWithWorld(renderer, drapedFeaturesScene);
+      this._renderWithLight(renderer, drapedFeaturesScene);
 
       drapedFeaturesScene.remove(mesh);
 

@@ -2,9 +2,9 @@ import type { Nullable } from "@navara/core";
 import {
   CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
   CLOUD_SHAPE_TEXTURE_SIZE,
-  CloudLayer as CloudLayerImpl,
   CloudLayers,
   CloudsEffect,
+  type CloudsEffectChangeEvent,
   type CloudsQualityPreset,
 } from "@takram/three-clouds";
 import {
@@ -12,7 +12,6 @@ import {
   parseUint8Array,
   STBNLoader,
 } from "@takram/three-geospatial";
-import { EffectComposer, EffectPass } from "postprocessing";
 import {
   Data3DTexture,
   LinearFilter,
@@ -26,11 +25,13 @@ import {
   Vector3,
   type Camera,
 } from "three";
+import invariant from "tiny-invariant";
 
+import type { Atmosphere } from "../atmosphere";
 import { CloudLayer, type CloudLayerOptions } from "../clouds";
 import { CLOUD_ASSETS_URL, STBN_URL } from "../constants";
 
-import { Pass, type EffectOptions } from "./effect";
+import { Effect, type EffectOptions } from "./effect";
 
 export type CloudsOptions = {
   assetsUrl?: string;
@@ -47,6 +48,7 @@ export type CloudsOptions = {
   resolutionScale?: number;
 
   // Whether enabling the shadow for all layers or not.
+  // Need to enable `Atmosphere.irradiance` as well.
   shadows?: boolean;
   shadowCascadeCount?: number;
   shadowMapSize?: Vector2;
@@ -86,7 +88,6 @@ export type CloudsOptions = {
 // Default value is based on the medium preset.
 export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   enabled: false,
-  index: null,
   assetsUrl: CLOUD_ASSETS_URL,
   stbnUrl: STBN_URL,
   qualityPreset: "medium",
@@ -132,58 +133,27 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   cloudLayers: null,
 };
 
-export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
-  effect: CloudsEffect;
+export class Clouds extends Effect<CloudsEffect, Required<CloudsOptions>> {
+  atmosphere: Atmosphere;
   private _cloudLayers: CloudLayer[] = [];
 
-  constructor(
-    composer: EffectComposer,
-    camera: Camera,
-    options?: CloudsOptions,
-  ) {
-    const effect = new CloudsEffect(camera);
-    const pass = new EffectPass(camera, effect);
-
-    super(composer, pass, {
+  constructor(camera: Camera, atmosphere: Atmosphere, options?: CloudsOptions) {
+    super(camera, new CloudsEffect(camera), {
       ...DEFAULT_CLOUDS_OPTIONS,
       ...(options ?? {}),
     });
 
-    this.effect = effect;
+    this.atmosphere = atmosphere;
 
-    this.initializeCloudLayers(options?.cloudLayers ?? undefined);
+    this.atmosphere._enableShadows.value = this.shadows;
 
-    this.onAdded();
+    this.init();
   }
 
-  initializeCloudLayers(options?: CloudLayerOptions[]) {
-    const layers = [
-      new CloudLayer(CloudLayers.DEFAULT[0], options?.[0]),
-      new CloudLayer(CloudLayers.DEFAULT[1], options?.[1]),
-      new CloudLayer(CloudLayers.DEFAULT[2], options?.[2]),
-      new CloudLayer(CloudLayers.DEFAULT[3], options?.[3]),
-    ];
+  init() {
+    if (!this.rawEffect) return;
 
-    for (let i = 0; i < 4; i++) {
-      const layer = layers[i];
-      // Propagate
-      layer.on("_needsUpdate", () => {
-        this.effect.cloudLayers[i].set(layer.impl);
-        this.emit("_needsUpdate");
-      });
-    }
-
-    this.effect.cloudLayers.set(layers.map((l) => l.impl));
-
-    this._cloudLayers = layers;
-  }
-
-  get inner() {
-    return this.effect;
-  }
-
-  protected onAdded() {
-    if (!this.effect) return;
+    this.initializeCloudLayers(this.options?.cloudLayers ?? undefined);
 
     // Processing
     this.qualityPreset = this.options.qualityPreset;
@@ -230,23 +200,92 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     if (this.options.lightShafts != null) {
       this.lightShafts = this.options.lightShafts;
     }
-    this.effect.coverage = this.options.coverage;
+    this.coverage = this.options.coverage;
 
-    this.effect.shadow.farScale = this.options.shadowFarScale;
-    this.effect.shadow.mapSize = this.options.shadowMapSize;
-    this.effect.shadow.cascadeCount = this.options.shadowCascadeCount;
-
-    this.forEachLayers((l) => {
-      l.shadow = this.shadows;
-    });
+    this.shadowFarScale = this.options.shadowFarScale;
+    this.shadowMapSize = this.options.shadowMapSize;
+    this.shadowCascadeCount = this.options.shadowCascadeCount;
 
     this.loadAll().then(() => {
       this.emit("_needsUpdate");
     });
+
+    this.inner.events.addEventListener(
+      "change",
+      (event: CloudsEffectChangeEvent) => {
+        if (!this.rawEffect || !this.atmosphere) return;
+        switch (event.property) {
+          case "atmosphereOverlay":
+            this.atmosphere._overlay.value = this.rawEffect.atmosphereOverlay;
+            break;
+          case "atmosphereShadow":
+            if (!this.shadows) break;
+            this.atmosphere._shadow.value = this.inner.atmosphereShadow;
+            // Denoise shadow artifact.
+            new STBNLoader().load(this.options.stbnUrl, (data) => {
+              if (!this.rawEffect) return;
+              this.rawEffect.stbnTexture = data;
+            });
+            break;
+          case "atmosphereShadowLength":
+            this.atmosphere._shadowLength.value =
+              this.inner.atmosphereShadowLength;
+            break;
+        }
+        this.atmosphere.onUpdate();
+      },
+    );
+
+    this.atmosphere.on("_textureLoaded", this.onTextureLoaded);
+    this.atmosphere.on("_disposed", this.onDisposed);
   }
 
-  private forEachLayers(cb: (l: CloudLayerImpl) => void) {
-    this.effect.cloudLayers.forEach(cb);
+  private onTextureLoaded = () => {
+    invariant(this.atmosphere.textures);
+    Object.assign(this.rawEffect, this.atmosphere.textures);
+    this.atmosphere.off("_textureLoaded", this.onTextureLoaded);
+  };
+
+  private onDisposed = () => {
+    this.dispose();
+    this.atmosphere?.off("_disposed", this.onDisposed);
+  };
+
+  _update() {
+    this.inner.sunDirection.copy(this.atmosphere.sunDirection);
+  }
+
+  dispose() {
+    this.atmosphere._overlay.value = null;
+    this.atmosphere._shadow.value = null;
+    this.atmosphere._shadowLength.value = null;
+    super.dispose();
+  }
+
+  initializeCloudLayers(options?: CloudLayerOptions[]) {
+    const layers = [
+      new CloudLayer(CloudLayers.DEFAULT[0], options?.[0]),
+      new CloudLayer(CloudLayers.DEFAULT[1], options?.[1]),
+      new CloudLayer(CloudLayers.DEFAULT[2], options?.[2]),
+      new CloudLayer(CloudLayers.DEFAULT[3], options?.[3]),
+    ];
+
+    for (let i = 0; i < 4; i++) {
+      const layer = layers[i];
+      // Propagate
+      layer.on("_needsUpdate", () => {
+        this.rawEffect.cloudLayers[i].set(layer.impl);
+        this.emit("_needsUpdate");
+      });
+    }
+
+    this.rawEffect.cloudLayers.set(layers.map((l) => l.impl));
+
+    this._cloudLayers = layers;
+  }
+
+  get inner() {
+    return this.rawEffect;
   }
 
   loadAll() {
@@ -282,7 +321,7 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     texture.wrapT = RepeatWrapping;
     texture.colorSpace = NoColorSpace;
     texture.needsUpdate = true;
-    this.effect.localWeatherTexture = texture;
+    this.rawEffect.localWeatherTexture = texture;
   };
 
   onShapeLoad = (texture: Data3DTexture): void => {
@@ -294,7 +333,7 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     texture.wrapR = RepeatWrapping;
     texture.colorSpace = NoColorSpace;
     texture.needsUpdate = true;
-    this.effect.shapeTexture = texture;
+    this.rawEffect.shapeTexture = texture;
   };
 
   onShapeDetailLoad = (texture: Data3DTexture): void => {
@@ -306,7 +345,7 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     texture.wrapR = RepeatWrapping;
     texture.colorSpace = NoColorSpace;
     texture.needsUpdate = true;
-    this.effect.shapeDetailTexture = texture;
+    this.rawEffect.shapeDetailTexture = texture;
   };
 
   onTurbulenceLoad = (texture: Texture): void => {
@@ -316,45 +355,45 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
     texture.wrapT = RepeatWrapping;
     texture.colorSpace = NoColorSpace;
     texture.needsUpdate = true;
-    this.effect.turbulenceTexture = texture;
+    this.rawEffect.turbulenceTexture = texture;
   };
 
   onSTBNLoad = (texture: Data3DTexture): void => {
-    this.effect.stbnTexture = texture;
+    this.rawEffect.stbnTexture = texture;
   };
 
   get qualityPreset() {
-    return this.effect.qualityPreset;
+    return this.rawEffect.qualityPreset;
   }
   set qualityPreset(v: CloudsQualityPreset) {
-    this.effect.qualityPreset = v;
+    this.rawEffect.qualityPreset = v;
 
     this.emit("_needsUpdate");
   }
 
   get localWeatherVelocity() {
-    return this.effect.localWeatherVelocity;
+    return this.rawEffect.localWeatherVelocity;
   }
   set localWeatherVelocity(v: Vector2) {
-    this.effect.localWeatherVelocity.copy(v);
+    this.rawEffect.localWeatherVelocity.copy(v);
 
     this.emit("_needsUpdate");
   }
 
   get coverage() {
-    return this.effect.coverage;
+    return this.rawEffect.coverage;
   }
   set coverage(v: number) {
-    this.effect.coverage = v;
+    this.rawEffect.coverage = v;
 
     this.emit("_needsUpdate");
   }
 
   get lightShafts() {
-    return !!this.effect.lightShafts;
+    return !!this.rawEffect.lightShafts;
   }
   set lightShafts(v: boolean) {
-    this.effect.lightShafts = v;
+    this.rawEffect.lightShafts = v;
 
     this.emit("_needsUpdate");
   }
@@ -362,34 +401,34 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   // Processing
 
   get resolutionScale() {
-    return this.effect.resolutionScale;
+    return this.rawEffect.resolutionScale;
   }
   set resolutionScale(v: number) {
-    this.effect.resolutionScale = v;
+    this.rawEffect.resolutionScale = v;
     this.emit("_needsUpdate");
   }
 
   get maxIterationCount() {
-    return this.effect.clouds.maxIterationCount;
+    return this.rawEffect.clouds.maxIterationCount;
   }
   set maxIterationCount(v: number) {
-    this.effect.clouds.maxIterationCount = v;
+    this.rawEffect.clouds.maxIterationCount = v;
     this.emit("_needsUpdate");
   }
 
   get minStepSize() {
-    return this.effect.clouds.minStepSize;
+    return this.rawEffect.clouds.minStepSize;
   }
   set minStepSize(v: number) {
-    this.effect.clouds.minStepSize = v;
+    this.rawEffect.clouds.minStepSize = v;
     this.emit("_needsUpdate");
   }
 
   get maxStepSize() {
-    return this.effect.clouds.maxStepSize;
+    return this.rawEffect.clouds.maxStepSize;
   }
   set maxStepSize(v: number) {
-    this.effect.clouds.maxStepSize = v;
+    this.rawEffect.clouds.maxStepSize = v;
     this.emit("_needsUpdate");
   }
 
@@ -400,36 +439,34 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   }
   set shadows(v: boolean) {
     this.options.shadows = v;
-    this.forEachLayers((l) => {
-      l.shadow = v;
-    });
+    this.atmosphere._enableShadows.value = v;
 
     this.emit("_needsUpdate");
   }
 
   get shadowCascadeCount() {
-    return this.effect.shadow.cascadeCount;
+    return this.rawEffect.shadow.cascadeCount;
   }
   set shadowCascadeCount(v: number) {
-    this.effect.shadow.cascadeCount = v;
+    this.rawEffect.shadow.cascadeCount = v;
 
     this.emit("_needsUpdate");
   }
 
   get shadowMapSize() {
-    return this.effect.shadow.mapSize;
+    return this.rawEffect.shadow.mapSize;
   }
   set shadowMapSize(v: Vector2) {
-    this.effect.shadow.mapSize = v;
+    this.rawEffect.shadow.mapSize = v;
 
     this.emit("_needsUpdate");
   }
 
   get shadowFarScale() {
-    return this.effect.shadow.farScale;
+    return this.rawEffect.shadow.farScale;
   }
   set shadowFarScale(v: number) {
-    this.effect.shadow.farScale = v;
+    this.rawEffect.shadow.farScale = v;
 
     this.emit("_needsUpdate");
   }
@@ -437,46 +474,46 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   // Haze
 
   get haze() {
-    return this.effect.haze;
+    return this.rawEffect.haze;
   }
   set haze(v: boolean) {
-    this.effect.haze = v;
+    this.rawEffect.haze = v;
 
     this.emit("_needsUpdate");
   }
 
   get hazeDensityScale() {
-    return this.effect.clouds.hazeDensityScale;
+    return this.rawEffect.clouds.hazeDensityScale;
   }
   set hazeDensityScale(v: number) {
-    this.effect.clouds.hazeDensityScale = v;
+    this.rawEffect.clouds.hazeDensityScale = v;
 
     this.emit("_needsUpdate");
   }
 
   get hazeExponent() {
-    return this.effect.clouds.hazeExponent;
+    return this.rawEffect.clouds.hazeExponent;
   }
   set hazeExponent(v: number) {
-    this.effect.clouds.hazeExponent = v;
+    this.rawEffect.clouds.hazeExponent = v;
 
     this.emit("_needsUpdate");
   }
 
   get hazeScatteringCoefficient() {
-    return this.effect.clouds.hazeScatteringCoefficient;
+    return this.rawEffect.clouds.hazeScatteringCoefficient;
   }
   set hazeScatteringCoefficient(v: number) {
-    this.effect.clouds.hazeScatteringCoefficient = v;
+    this.rawEffect.clouds.hazeScatteringCoefficient = v;
 
     this.emit("_needsUpdate");
   }
 
   get hazeAbsorptionCoefficient() {
-    return this.effect.clouds.hazeAbsorptionCoefficient;
+    return this.rawEffect.clouds.hazeAbsorptionCoefficient;
   }
   set hazeAbsorptionCoefficient(v: number) {
-    this.effect.clouds.hazeAbsorptionCoefficient = v;
+    this.rawEffect.clouds.hazeAbsorptionCoefficient = v;
 
     this.emit("_needsUpdate");
   }
@@ -484,140 +521,140 @@ export class Clouds extends Pass<EffectPass, Required<CloudsOptions>> {
   // Weather and shape
 
   get localWeatherRepeat() {
-    return this.effect.localWeatherRepeat;
+    return this.rawEffect.localWeatherRepeat;
   }
   set localWeatherRepeat(v: Vector2) {
-    this.effect.localWeatherRepeat.copy(v);
+    this.rawEffect.localWeatherRepeat.copy(v);
     this.emit("_needsUpdate");
   }
 
   get localWeatherOffset() {
-    return this.effect.localWeatherOffset;
+    return this.rawEffect.localWeatherOffset;
   }
   set localWeatherOffset(v: Vector2) {
-    this.effect.localWeatherOffset.copy(v);
+    this.rawEffect.localWeatherOffset.copy(v);
     this.emit("_needsUpdate");
   }
 
   get shapeRepeat() {
-    return this.effect.shapeRepeat;
+    return this.rawEffect.shapeRepeat;
   }
   set shapeRepeat(v: Vector3) {
-    this.effect.shapeRepeat.copy(v);
+    this.rawEffect.shapeRepeat.copy(v);
     this.emit("_needsUpdate");
   }
 
   get shapeOffset() {
-    return this.effect.shapeOffset;
+    return this.rawEffect.shapeOffset;
   }
   set shapeOffset(v: Vector3) {
-    this.effect.shapeOffset.copy(v);
+    this.rawEffect.shapeOffset.copy(v);
     this.emit("_needsUpdate");
   }
 
   get shapeDetailRepeat() {
-    return this.effect.shapeDetailRepeat;
+    return this.rawEffect.shapeDetailRepeat;
   }
   set shapeDetailRepeat(v: Vector3) {
-    this.effect.shapeDetailRepeat.copy(v);
+    this.rawEffect.shapeDetailRepeat.copy(v);
     this.emit("_needsUpdate");
   }
 
   get shapeDetailOffset() {
-    return this.effect.shapeDetailOffset;
+    return this.rawEffect.shapeDetailOffset;
   }
   set shapeDetailOffset(v: Vector3) {
-    this.effect.shapeDetailOffset.copy(v);
+    this.rawEffect.shapeDetailOffset.copy(v);
     this.emit("_needsUpdate");
   }
 
   get turbulenceRepeat() {
-    return this.effect.turbulenceRepeat;
+    return this.rawEffect.turbulenceRepeat;
   }
   set turbulenceRepeat(v: Vector2) {
-    this.effect.turbulenceRepeat.copy(v);
+    this.rawEffect.turbulenceRepeat.copy(v);
     this.emit("_needsUpdate");
   }
 
   get turbulenceDisplacement() {
-    return this.effect.turbulenceDisplacement;
+    return this.rawEffect.turbulenceDisplacement;
   }
   set turbulenceDisplacement(v: number) {
-    this.effect.turbulenceDisplacement = v;
+    this.rawEffect.turbulenceDisplacement = v;
     this.emit("_needsUpdate");
   }
 
   // Scattering
 
   get scatteringCoefficient() {
-    return this.effect.scatteringCoefficient;
+    return this.rawEffect.scatteringCoefficient;
   }
   set scatteringCoefficient(v: number) {
-    this.effect.scatteringCoefficient = v;
+    this.rawEffect.scatteringCoefficient = v;
     this.emit("_needsUpdate");
   }
 
   get absorptionCoefficient() {
-    return this.effect.absorptionCoefficient;
+    return this.rawEffect.absorptionCoefficient;
   }
   set absorptionCoefficient(v: number) {
-    this.effect.absorptionCoefficient = v;
+    this.rawEffect.absorptionCoefficient = v;
     this.emit("_needsUpdate");
   }
 
   get scatterAnisotropy1() {
-    return this.effect.scatterAnisotropy1;
+    return this.rawEffect.scatterAnisotropy1;
   }
   set scatterAnisotropy1(v: number) {
-    this.effect.scatterAnisotropy1 = v;
+    this.rawEffect.scatterAnisotropy1 = v;
     this.emit("_needsUpdate");
   }
 
   get scatterAnisotropy2() {
-    return this.effect.scatterAnisotropy2;
+    return this.rawEffect.scatterAnisotropy2;
   }
   set scatterAnisotropy2(v: number) {
-    this.effect.scatterAnisotropy2 = v;
+    this.rawEffect.scatterAnisotropy2 = v;
     this.emit("_needsUpdate");
   }
 
   get scatterAnisotropyMix() {
-    return this.effect.scatterAnisotropyMix;
+    return this.rawEffect.scatterAnisotropyMix;
   }
   set scatterAnisotropyMix(v: number) {
-    this.effect.scatterAnisotropyMix = v;
+    this.rawEffect.scatterAnisotropyMix = v;
     this.emit("_needsUpdate");
   }
 
   get skyLightScale() {
-    return this.effect.skyLightScale;
+    return this.rawEffect.skyLightScale;
   }
   set skyLightScale(v: number) {
-    this.effect.skyLightScale = v;
+    this.rawEffect.skyLightScale = v;
     this.emit("_needsUpdate");
   }
 
   get groundBounceScale() {
-    return this.effect.groundBounceScale;
+    return this.rawEffect.groundBounceScale;
   }
   set groundBounceScale(v: number) {
-    this.effect.groundBounceScale = v;
+    this.rawEffect.groundBounceScale = v;
     this.emit("_needsUpdate");
   }
 
   get powderScale() {
-    return this.effect.powderScale;
+    return this.rawEffect.powderScale;
   }
   set powderScale(v: number) {
-    this.effect.powderScale = v;
+    this.rawEffect.powderScale = v;
     this.emit("_needsUpdate");
   }
 
   get powderExponent() {
-    return this.effect.powderExponent;
+    return this.rawEffect.powderExponent;
   }
   set powderExponent(v: number) {
-    this.effect.powderExponent = v;
+    this.rawEffect.powderExponent = v;
     this.emit("_needsUpdate");
   }
 

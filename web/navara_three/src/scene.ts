@@ -4,19 +4,19 @@ import { OrthographicCamera, Scene, WebGLRenderer, Mesh, Group } from "three";
 import type { BatchedFeatureMesh } from "./mesh";
 
 export type Scenes = {
-  // Render world that includes user setting object like light
-  world: Scene;
-  // Render general mesh that doesn't need to handle special case.
-  main: Scene;
+  // Render light in all scenes.
+  light: Group;
+  // Render general mesh to MRT. The mesh added to this scene needs a normal buffer.
+  mrt: Scene;
   // Render only globe.
   globe: Scene;
-  // Render only draped features
-  drapedFeatures: Scene;
+  // Render only draped mesh on the globe
+  draped: Scene;
   // Render this scene at last. This scene should not be handled in MRT.
-  postRender: Scene;
+  opaque: Scene;
   // Render this scene after the atmosphere effect. This scene should not be handled in MRT.
   // It is useful to render a transparent mesh.
-  postAtmosphere: Scene;
+  transparent: Scene;
 };
 
 export class SceneGroup extends Group {}

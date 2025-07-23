@@ -18,7 +18,7 @@ import {
   TileMesh,
   BatchedFeatureMesh,
 } from "../mesh";
-import { CustomRenderPass } from "../renderPass";
+import { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
@@ -161,7 +161,7 @@ export class PickHelper extends CustomRenderPass {
 
     // Since SkyMesh renders fullscreen quad plane, and it shows just black, this scene should be invisible.
     // We should support picking in this scene in the future.
-    this._scenes.postRender.visible = !pickable;
+    this._scenes.opaque.visible = !pickable;
   }
 
   private pickSprite(pickSet: Set<number>, obj: InstancedMesh<Object3D>) {

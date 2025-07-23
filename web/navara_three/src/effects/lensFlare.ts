@@ -2,7 +2,6 @@ import {
   LensFlareEffect,
   lensFlareEffectOptionsDefaults,
 } from "@takram/three-geospatial-effects";
-import { EffectComposer } from "postprocessing";
 import type { Camera } from "three";
 
 import { Effect, type EffectOptions } from "./effect";
@@ -15,22 +14,17 @@ export type LensFlareOptions = {
 
 export const DEFAULT_LENS_FLARE_OPTIONS: Required<LensFlareOptions> = {
   enabled: false,
-  index: null,
   intensity: lensFlareEffectOptionsDefaults.intensity,
 };
 
 export class LensFlare extends Effect<LensFlareEffect, LensFlareOptions> {
-  constructor(
-    composer: EffectComposer,
-    camera: Camera,
-    options?: LensFlareOptions,
-  ) {
-    super(composer, camera, LensFlareEffect, options);
+  constructor(camera: Camera, options?: LensFlareOptions) {
+    super(camera, new LensFlareEffect(), options);
   }
 
-  protected onAdded(): void {
-    if (!this.effect) return;
-    this.effect.intensity = this.intensity;
+  protected onMounted(): void {
+    if (!this.rawEffect) return;
+    this.rawEffect.intensity = this.intensity;
   }
 
   get intensity() {
@@ -39,8 +33,8 @@ export class LensFlare extends Effect<LensFlareEffect, LensFlareOptions> {
   set intensity(v: number) {
     if (this.options.intensity === v) return;
     this.options.intensity = v;
-    if (!this.effect) return;
-    this.effect.intensity = v;
+    if (!this.rawEffect) return;
+    this.rawEffect.intensity = v;
     this.emit("_needsUpdate");
   }
 }

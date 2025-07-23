@@ -310,7 +310,7 @@ export function processEvent(
               .get(removed.layer_id)
               ?._unregisterFeatureEvaluator(removed.bits);
 
-            processObjectRemoved(scenes.main, meshes, event);
+            processObjectRemoved(scenes.mrt, meshes, event);
           }
           break;
         case "change":

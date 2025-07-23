@@ -9,7 +9,7 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { EffectComposer, RenderPass, CopyPass } from "postprocessing";
+import { RenderPass, CopyPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -19,24 +19,29 @@ import {
   Vector2,
   Material,
   Color,
-  HalfFloatType,
   LinearFilter,
+  Group,
 } from "three";
 import invariant from "tiny-invariant";
 
-import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
+import { Atmosphere } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
-  Antialias,
+  SMAA,
   LensFlare,
   SSAO,
   ToneMapping,
+  AerialPerspective,
   type AntialiasOptions,
   type EffectOptions,
   type LensFlareOptions,
   type SSAOOptions,
   type ToneMappingOptions,
+  Clouds,
+  type CloudsOptions,
+  FXAA,
+  type AerialPerspectiveOptions,
 } from "./effects";
 import {
   processEvent,
@@ -52,9 +57,11 @@ import { Layer, type LayerEvent } from "./layer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
+import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
+import { CustomRenderPass } from "./passes";
 import { PickHelper } from "./pick/pickHelper";
 import type { Picking } from "./pick/picking";
-import { CustomRenderPass } from "./renderPass";
+import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
@@ -72,7 +79,6 @@ import { isWorker } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
-import { TerrainPicker } from "./pick/pickTerrain";
 
 export * from "./type";
 export * from "./constants";
@@ -98,13 +104,12 @@ export type Options = {
   initialPixelRatio?: number;
   disableAutoResize?: boolean;
   debug?: boolean;
-  scene?: Scene;
-  globeScene?: Scene;
   camera?: PerspectiveCamera;
-  renderer?: WebGLRenderer;
   antialias?: AntialiasOptions;
   light?: Light;
-  atmosphere?: AtmosphereOptions;
+  atmosphere?: Atmosphere;
+  aerialPerspective?: AerialPerspectiveOptions;
+  clouds?: CloudsOptions;
   backgroundColor?: number;
   picking?: Picking;
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
@@ -146,19 +151,25 @@ export type ViewEvents = {
 export default class ThreeView extends EventHandler<ViewEvents> {
   camera: ThreeViewCamera;
   renderer: WebGLRenderer;
-  atmosphere: Atmosphere;
   control?: { update: () => void; get target(): Vector3 | undefined };
 
+  atmosphere!: Atmosphere;
+
   // Effects
-  toneMappingEffect: ToneMapping;
-  lensFlareEffect: LensFlare;
+  aerialPerspective!: AerialPerspective;
+  cloudsEffect!: Clouds;
+  toneMappingEffect!: ToneMapping;
+  lensFlareEffect!: LensFlare;
   // Enabling SSAO with clouds causes a performance issue. You should avoid using both.
-  ssaoEffect: SSAO;
-  aaEffect: Antialias;
+  ssaoEffect!: SSAO;
+  smaaEffect!: SMAA;
+  fxaaEffect!: FXAA;
+
+  // Public access to render pass orchestrator for flexible pass management
+  renderPassOrchestrator: RenderPassOrchestrator;
 
   private _scenes: Scenes;
-  private _effectComposer: EffectComposer;
-  private _renderPass: CustomRenderPass;
+  private _renderPass!: CustomRenderPass;
   // Store draped feature's materials
   private _drapedFeatureMaterials = new Map<string, Material>();
 
@@ -324,69 +335,43 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       e.preventDefault();
     });
 
-    if (options.renderer) {
-      this.renderer = options.renderer;
-    } else {
-      const renderer = new WebGLRenderer({
-        // If it's true, some noise will happen. So use other AA algorithm instead.
-        antialias: false,
-        logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? true,
-        canvas: options.canvas,
-        stencil: true,
-      });
-      renderer.info.autoReset = false;
-      renderer.autoClearStencil = false;
-      renderer.autoClearColor = false;
-      renderer.autoClearDepth = false;
-      this.renderer = renderer;
+    const renderer = new WebGLRenderer({
+      // If it's true, some noise will happen. So use other AA algorithm instead.
+      antialias: false,
+      logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? true,
+      canvas: options.canvas,
+      stencil: true,
+    });
+    renderer.info.autoReset = false;
+    renderer.autoClearStencil = false;
+    renderer.autoClearColor = false;
+    renderer.autoClearDepth = false;
+    this.renderer = renderer;
 
-      const { width = options.initialWidth, height = options.initialHeight } =
-        this._getCanvasSize() ?? {};
-      invariant(width && height);
+    const { width = options.initialWidth, height = options.initialHeight } =
+      this._getCanvasSize() ?? {};
+    invariant(width && height);
 
-      if (typeof options?.initialPixelRatio === "number" || !isWorker()) {
-        const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
-        renderer.setPixelRatio(options.initialPixelRatio ?? defaultPixelRatio);
-      }
+    if (typeof options?.initialPixelRatio === "number" || !isWorker()) {
+      const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
+      renderer.setPixelRatio(options.initialPixelRatio ?? defaultPixelRatio);
+    }
 
-      renderer.setSize(width, height, !isWorker());
-      if (options.container) {
-        options.container.appendChild(renderer.domElement);
-      }
+    renderer.setSize(width, height, !isWorker());
+    if (options.container) {
+      options.container.appendChild(renderer.domElement);
     }
 
     this._texturizedSceneByTileCoordinates =
       new TexturizedSceneByTileCoordinates(this.renderer);
 
-    // Setup RenderTarget for depth buffer
-    const { width = options.initialWidth, height = options.initialHeight } =
-      this._getCanvasSize() ?? {};
-    invariant(width && height);
-
-    let scene: Scene;
-    if (options.scene) {
-      scene = options.scene;
-    } else {
-      scene = new Scene();
-    }
-
-    let globeScene: Scene;
-    if (options.globeScene) {
-      globeScene = options.globeScene;
-    } else {
-      globeScene = new Scene();
-    }
-
-    const main = new Scene();
-    const drapedFeaturesScene = new Scene();
-
     this._scenes = {
-      world: scene,
-      main,
-      globe: globeScene,
-      drapedFeatures: drapedFeaturesScene,
-      postRender: new Scene(),
-      postAtmosphere: new Scene(),
+      light: new Group(),
+      mrt: new Scene(),
+      globe: new Scene(),
+      draped: new Scene(),
+      opaque: new Scene(),
+      transparent: new Scene(),
     };
 
     if (options.camera) {
@@ -401,78 +386,15 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       this.camera = new ThreeViewCamera();
     }
 
-    const combinedScene = new Scene();
-    combinedScene.add(this._scenes.main);
-    combinedScene.add(this._scenes.globe);
-    combinedScene.add(this._scenes.world);
-
-    // Setup render pass
-    this._effectComposer = new EffectComposer(this.renderer, {
-      stencilBuffer: true,
-      frameBufferType: (options.halfFloat ?? true) ? HalfFloatType : undefined,
+    // Setup render pass orchestrator
+    this.renderPassOrchestrator = new RenderPassOrchestrator(this.renderer, {
+      halfFloat: options.halfFloat ?? true,
       multisampling: options.multisampling,
     });
 
-    this._effectComposer.setSize(width, height);
+    this.renderPassOrchestrator.setSize(width, height);
 
-    this._renderPass = new CustomRenderPass(
-      this._scenes,
-      this.camera.innerCam,
-      this._meshes,
-      this._drapedFeatureMaterials,
-      this.effectComposer.inputBuffer,
-      // { debugNormal: true },
-    );
-    this._effectComposer.addPass(this._renderPass);
-
-    // Effects
-    // Order is important. Effect class adds the effect in it's constructor.
-    this.atmosphere = new Atmosphere(
-      this.effectComposer,
-      this._scenes,
-      this.renderer,
-      this.camera.innerCam,
-      this._renderPass.gbufferRenderTarget.textures[1],
-      { index: 1, cloudsIndex: 2, ...options.atmosphere },
-    );
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
-
-    const postAtmosphereRenderPass = new RenderPass(
-      this.scenes.postAtmosphere,
-      this.camera.innerCam,
-    );
-    postAtmosphereRenderPass.clear = false;
-    this._effectComposer.addPass(postAtmosphereRenderPass);
-
-    // Workaround when no effect is set.
-    this._effectComposer.addPass(new CopyPass());
-
-    this.ssaoEffect = new SSAO(
-      this._effectComposer,
-      combinedScene,
-      this.camera.innerCam,
-      width,
-      height,
-      { index: 4, ...options.ssao },
-    );
-    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
-    this.lensFlareEffect = new LensFlare(
-      this._effectComposer,
-      this.camera.innerCam,
-      { index: 4, ...options.lensFlare }, // Index must be same with SSAO.
-    );
-    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
-    this.toneMappingEffect = new ToneMapping(
-      this._effectComposer,
-      this.camera.innerCam,
-      { index: 5, ...options.toneMapping },
-    );
-    this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
-    this.aaEffect = new Antialias(this._effectComposer, this.camera.innerCam, {
-      index: 6,
-      ...(options.antialias ?? {}),
-    });
-    this.aaEffect.on("_needsUpdate", this.forceUpdate);
+    this.initializePasses(width, height, options);
 
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
@@ -529,6 +451,105 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this._renderFlag.animation = !!options.animation;
   }
 
+  initializePasses(width: number, height: number, options: Options) {
+    // Add main render pass
+    this._renderPass = new CustomRenderPass(
+      this._scenes,
+      this.camera.innerCam,
+      this._meshes,
+      this._drapedFeatureMaterials,
+      this.renderPassOrchestrator.effectComposer.inputBuffer,
+      // { debugNormal: true },
+    );
+    this.renderPassOrchestrator.addPass("mainRender", this._renderPass);
+
+    this.atmosphere = new Atmosphere(
+      this._scenes,
+      this.renderer,
+      this.camera.innerCam,
+      options.atmosphere,
+    );
+    this.atmosphere.on("_needsUpdate", this.forceUpdate);
+
+    // Effects
+    // Order is important. Effect class adds the effect in it's constructor.
+    this.aerialPerspective = new AerialPerspective(
+      this.atmosphere,
+      this.camera.innerCam,
+      this._renderPass.gbufferRenderTarget.textures[1],
+      options.aerialPerspective,
+    );
+    this.aerialPerspective.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass(
+      "atmosphere",
+      this.aerialPerspective.rawPass,
+    );
+
+    this.cloudsEffect = new Clouds(
+      this.camera.innerCam,
+      this.atmosphere,
+      options.clouds,
+    );
+    this.cloudsEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass("clouds", this.cloudsEffect.rawPass);
+
+    // Add post-atmosphere pass
+    const postAtmosphereRenderPass = new RenderPass(
+      this.scenes.transparent,
+      this.camera.innerCam,
+    );
+    postAtmosphereRenderPass.clear = false;
+    this.renderPassOrchestrator.addPass(
+      "postAtmosphere",
+      postAtmosphereRenderPass,
+    );
+
+    this.lensFlareEffect = new LensFlare(
+      this.camera.innerCam,
+      options.lensFlare,
+    );
+    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass(
+      "lensFlare",
+      this.lensFlareEffect.rawPass,
+    );
+
+    const combinedScene = new Scene();
+    combinedScene.add(this._scenes.mrt);
+    combinedScene.add(this._scenes.globe);
+    combinedScene.add(this._scenes.light);
+
+    this.ssaoEffect = new SSAO(
+      combinedScene,
+      this.camera.innerCam,
+      width,
+      height,
+      options.ssao,
+    );
+    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass("ssao", this.ssaoEffect.rawPass);
+    this.toneMappingEffect = new ToneMapping(
+      this.camera.innerCam,
+      options.toneMapping,
+    );
+    this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass(
+      "toneMapping",
+      this.toneMappingEffect.rawPass,
+    );
+    this.smaaEffect = new SMAA(this.camera.innerCam, options.antialias);
+    this.smaaEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass("smaa", this.smaaEffect.rawPass);
+
+    this.fxaaEffect = new FXAA(this.camera.innerCam, options.antialias);
+    this.fxaaEffect.enabled = false;
+    this.fxaaEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass("fxaa", this.fxaaEffect.rawPass);
+
+    // Workaround when no effect is set.
+    this.renderPassOrchestrator.addPass("finalCopy", new CopyPass());
+  }
+
   /**
    * Low level API to access Three.js Scene.
    * It means you decided to depend on Three.js.
@@ -536,10 +557,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   get scenes() {
     // TODO: Publish `drapedFeatures`. Need to expose `_drapedFeatureMaterials` as well.
     return this._scenes as Omit<Scenes, "globe" | "drapedFeatures">;
-  }
-
-  get effectComposer() {
-    return this._effectComposer;
   }
 
   get toneMappingExposure() {
@@ -590,7 +607,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this._drapedFeatureMaterials,
         this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
-        this.effectComposer.inputBuffer,
+        this.renderPassOrchestrator.effectComposer.inputBuffer,
         // {
         //   debug: true,
         // },
@@ -643,7 +660,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.camera.innerCam.aspect = w / h;
     this.camera.innerCam.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
-    this._effectComposer.setSize(w, h);
+    this.renderPassOrchestrator.setSize(w, h);
     if (pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
@@ -751,8 +768,10 @@ export default class ThreeView extends EventHandler<ViewEvents> {
 
   private _render(updatedAt: number) {
     this.atmosphere._update();
+    this.aerialPerspective._update();
+    this.cloudsEffect._update();
 
-    this._effectComposer.render();
+    this.renderPassOrchestrator.render();
     this._pickHelper?.renderDebugCanvas();
 
     this.emit("postRender", updatedAt);
