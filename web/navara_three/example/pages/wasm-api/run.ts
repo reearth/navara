@@ -244,11 +244,7 @@ const convertScreenPos = (view: ThreeView, x: number, y: number) => {
 
   const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
 
-  const pos = convertScreenToWorld(
-    win,
-    view.camera.innerCam,
-    new Vector2(x, y),
-  );
+  const pos = convertScreenToWorld(win, view.camera.raw, new Vector2(x, y));
 
   return pos;
 };
@@ -529,7 +525,7 @@ const testRayPlane = (view: ThreeView) => {
 
     if (center && normal && !radius) {
       const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
-      const ray = getPickRay(win, view.camera.innerCam, new Vector2(x, y));
+      const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
 
       const btmPlane = getPlaneFromPointNormal(center, normal);
       const intersectPt = getRayPlaneIntersection(ray, btmPlane);
@@ -544,7 +540,7 @@ const testRayPlane = (view: ThreeView) => {
 
     if (center && normal && radius) {
       const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
-      const ray = getPickRay(win, view.camera.innerCam, new Vector2(x, y));
+      const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
       const rayDir = new Vector3(
         ray.direction.x,
         ray.direction.y,
@@ -680,7 +676,7 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
 
   // The calculation used to estimate the distance from the camera to the ground surface.
   const cameraDistance =
-    view.camera.innerCam.position.distanceTo(centerPoint) - polarRadius;
+    view.camera.raw.position.distanceTo(centerPoint) - polarRadius;
 
   // Store current distance for camera change detection
   gLastCameraDistance = cameraDistance;
@@ -724,8 +720,7 @@ const addCameraListener = (view: ThreeView) => {
     if (!gPolylineMesh || !view.camera || gPolylinePoints.length === 0) return;
 
     const centerPoint = gPolylinePoints[Math.floor(gPolylinePoints.length / 2)];
-    const currentDistance =
-      view.camera.innerCam.position.distanceTo(centerPoint);
+    const currentDistance = view.camera.raw.position.distanceTo(centerPoint);
 
     // Only update if camera distance changed significantly (more than 10%)
     if (gLastCameraDistance > 0) {
@@ -863,11 +858,7 @@ const updatePopup = () => {
     const pixelRatio = gView.pixelRatio;
 
     const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
-    const screenPos = convertWorldToScreen(
-      win,
-      gView.camera.innerCam,
-      gPickedPos,
-    );
+    const screenPos = convertWorldToScreen(win, gView.camera.raw, gPickedPos);
 
     if (screenPos) {
       gPopup.updateMessages([

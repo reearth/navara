@@ -11,21 +11,18 @@ export type CameraEvent = {
 };
 
 export class ThreeViewCamera extends EventHandler<CameraEvent> {
-  private _camera: PerspectiveCamera;
+  raw: PerspectiveCamera;
+
   private _core: Core | undefined;
   private _status: CameraStatus | undefined;
 
   constructor(cam?: PerspectiveCamera) {
     super();
     if (cam instanceof PerspectiveCamera) {
-      this._camera = cam;
+      this.raw = cam;
     } else {
-      this._camera = new PerspectiveCamera();
+      this.raw = new PerspectiveCamera();
     }
-  }
-
-  get innerCam(): PerspectiveCamera {
-    return this._camera;
   }
 
   set core(core: Core | undefined) {
@@ -111,7 +108,7 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
   }
 
   set far(val: number) {
-    if (val <= this._camera.near) {
+    if (val <= this.raw.near) {
       return;
     }
 
