@@ -106,7 +106,6 @@ export * from "./event/loaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
-export * from "./abstracs";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).

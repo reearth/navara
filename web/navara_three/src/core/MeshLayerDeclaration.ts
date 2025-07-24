@@ -1,7 +1,7 @@
 import { Object3D } from "three";
 
-import type { ThreeVec3 } from "../abstracs/vec3";
 import type { Scenes } from "../scene";
+import type { LayerPosition } from "../type";
 
 import {
   LayerDeclaration,
@@ -13,12 +13,11 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
   type: "mesh";
-  position?: ThreeVec3;
+  position?: LayerPosition;
 } & LayerDeclarationConfig;
 
-export type MeshLayerUpdate = {
-  position?: ThreeVec3;
-} & LayerDeclarationConfigUpdate;
+export type MeshLayerUpdate = Pick<MeshLayerConfig, "position"> &
+  LayerDeclarationConfigUpdate;
 
 type PassKey = keyof Pick<Scenes, "opaque" | "transparent">;
 
@@ -38,7 +37,7 @@ export abstract class MeshLayerDeclaration<
   Instance extends
     MeshBaseInstance<InstanceObj> = MeshBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
-  public position?: ThreeVec3;
+  public position?: LayerPosition;
   private prevPassKey?: PassKey;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
@@ -67,8 +66,8 @@ export abstract class MeshLayerDeclaration<
   async onCreate() {
     this._instance = this.createMesh();
 
-    if (this.position && this.raw) {
-      this.raw.position.copy(this.position._raw);
+    if (this.position) {
+      this.raw?.position.copy(this.position);
     }
 
     this._instance.visible = this.visible;
@@ -101,7 +100,7 @@ export abstract class MeshLayerDeclaration<
 
     if (updates.position !== undefined) {
       this.position = updates.position;
-      this.raw?.position.copy(updates.position._raw);
+      this.raw?.position.copy(updates.position);
     }
 
     this.onPassKeyChange();

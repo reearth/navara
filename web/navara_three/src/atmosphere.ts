@@ -44,8 +44,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
 
   textures?: PrecomputedTextures;
 
-  // Removed object management - these are now handled externally
-
   // Variables that come from Clouds.
   /**
    * @private
@@ -96,7 +94,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.emit("_textureLoaded");
   }
 
-  // Initialize textures for external objects to use
   async init() {
     await this.initTextures();
   }

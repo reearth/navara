@@ -18,8 +18,10 @@ import type {
   SunLightLayerConfig,
   SkyLightProbeLayerConfig,
   AmbientLightLayerConfig,
-} from "./layers";
-import type { TileMesh } from "./mesh";
+} from "../layers";
+import type { TileMesh } from "../mesh";
+
+export * from "./unit";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 

@@ -1,5 +1,7 @@
 import { Light } from "three";
 
+import type { LayerPosition } from "../type";
+
 import {
   LayerDeclaration,
   type BaseInstance,
@@ -10,6 +12,7 @@ import type { ViewContext } from "./ViewContext";
 
 export type LightLayerConfig = {
   type: "light";
+  position?: LayerPosition;
 } & LayerDeclarationConfig;
 
 export type LightLayerUpdate = LayerDeclarationConfigUpdate;
@@ -30,8 +33,11 @@ export abstract class LightLayerDeclaration<
   Instance extends
     LightBaseInstance<InstanceObj> = LightBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
+  public position?: LayerPosition;
+
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
+    this.position = config.position;
   }
 
   abstract createLight(): Instance;
@@ -53,6 +59,10 @@ export abstract class LightLayerDeclaration<
 
     if (this._instance) {
       this._instance.visible = this.visible;
+    }
+
+    if (this.position) {
+      this.raw?.position.copy(this.position);
     }
 
     // Add to scene

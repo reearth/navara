@@ -3,7 +3,6 @@ import ThreeView, {
   LayerHandle,
   RainMeshLayer,
   SnowMeshLayer,
-  ThreeVec3,
 } from "@navara/three";
 import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import { Vector2 } from "three";
@@ -113,7 +112,7 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
   const rain = view.addLayer<RainMeshLayer>({
     type: "mesh",
     visible: false,
-    position: ThreeVec3.fromRaw(position),
+    position: position,
     rain: {
       opacity: 1,
     },
@@ -121,7 +120,7 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
   const snow = view.addLayer<SnowMeshLayer>({
     type: "mesh",
     visible: false,
-    position: ThreeVec3.fromRaw(position),
+    position: position,
     snow: {
       opacity: 1,
     },
@@ -189,10 +188,10 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
 
         if (!v.value) {
           rain.update({
-            position: ThreeVec3.fromRaw(position),
+            position: position,
           });
           snow.update({
-            position: ThreeVec3.fromRaw(position),
+            position: position,
           });
         }
       },
