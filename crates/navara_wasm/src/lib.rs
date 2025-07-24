@@ -27,6 +27,7 @@ use wasm_bindgen::prelude::*;
 pub use camera::*;
 pub use event::*;
 pub use input::*;
+pub use navara_wasm_idl::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
 pub use types::*;
