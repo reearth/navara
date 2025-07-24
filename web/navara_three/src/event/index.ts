@@ -420,7 +420,7 @@ function processCameraTransformUpdated(
   transform: Transform | undefined,
 ) {
   if (!transform) return;
-  setTransform(camera.innerCam, transform);
+  setTransform(camera.raw, transform);
 
   camera.updateStatus();
 }
@@ -431,10 +431,10 @@ function processCameraFrustumUpdated(
 ) {
   if (!frustum) return;
 
-  camera.innerCam.near = frustum.near;
-  camera.innerCam.far = frustum.far;
-  camera.innerCam.fov = radianToDegree(frustum.fov);
-  camera.innerCam.updateProjectionMatrix();
+  camera.raw.near = frustum.near;
+  camera.raw.far = frustum.far;
+  camera.raw.fov = radianToDegree(frustum.fov);
+  camera.raw.updateProjectionMatrix();
   camera.emit("frustumChanged");
 }
 

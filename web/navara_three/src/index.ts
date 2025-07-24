@@ -453,7 +453,7 @@ export default class ThreeView<
         value: options.picking?.highlightColor ?? new Color(0x00ffff),
       },
       // TODO: Need to sync `fov` with WASM side
-      fov: { value: (this.camera.innerCam.fov * Math.PI) / 180 },
+      fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
     };
 
@@ -468,7 +468,7 @@ export default class ThreeView<
     // Set up Registry
     const viewContext = new ViewContext(
       this._scenes,
-      this.camera.innerCam,
+      this.camera.raw,
       this.atmosphere,
     );
     this.registries = new Registries(viewContext);
@@ -487,7 +487,7 @@ export default class ThreeView<
     // Add main render pass
     this._renderPass = new CustomRenderPass(
       this._scenes,
-      this.camera.innerCam,
+      this.camera.raw,
       this._meshes,
       this._drapedFeatureMaterials,
       this.renderPassOrchestrator.effectComposer.inputBuffer,
@@ -505,7 +505,7 @@ export default class ThreeView<
     // Order is important. Effect class adds the effect in it's constructor.
     this.aerialPerspective = new AerialPerspective(
       this.atmosphere,
-      this.camera.innerCam,
+      this.camera.raw,
       this._renderPass.gbufferRenderTarget.textures[1],
       options.aerialPerspective,
     );
@@ -516,7 +516,7 @@ export default class ThreeView<
     );
 
     this.cloudsEffect = new Clouds(
-      this.camera.innerCam,
+      this.camera.raw,
       this.atmosphere,
       options.clouds,
     );
@@ -526,7 +526,7 @@ export default class ThreeView<
     // Add post-atmosphere pass
     const postAtmosphereRenderPass = new RenderPass(
       this.scenes.transparent,
-      this.camera.innerCam,
+      this.camera.raw,
     );
     postAtmosphereRenderPass.clear = false;
     this.renderPassOrchestrator.addPass(
@@ -534,10 +534,7 @@ export default class ThreeView<
       postAtmosphereRenderPass,
     );
 
-    this.lensFlareEffect = new LensFlare(
-      this.camera.innerCam,
-      options.lensFlare,
-    );
+    this.lensFlareEffect = new LensFlare(this.camera.raw, options.lensFlare);
     this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
     this.renderPassOrchestrator.addPass(
       "lensFlare",
@@ -552,7 +549,7 @@ export default class ThreeView<
     combinedScene.add(this._scenes.light);
     this.ssaoEffect = new SSAO(
       combinedScene,
-      this.camera.innerCam,
+      this.camera.raw,
       width,
       height,
       options.ssao,
@@ -561,7 +558,7 @@ export default class ThreeView<
     this.renderPassOrchestrator.addPass("ssao", this.ssaoEffect.rawPass);
 
     this.toneMappingEffect = new ToneMapping(
-      this.camera.innerCam,
+      this.camera.raw,
       options.toneMapping,
     );
     this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
@@ -569,11 +566,11 @@ export default class ThreeView<
       "toneMapping",
       this.toneMappingEffect.rawPass,
     );
-    this.smaaEffect = new SMAA(this.camera.innerCam, options.antialias);
+    this.smaaEffect = new SMAA(this.camera.raw, options.antialias);
     this.smaaEffect.on("_needsUpdate", this.forceUpdate);
     this.renderPassOrchestrator.addPass("smaa", this.smaaEffect.rawPass);
 
-    this.fxaaEffect = new FXAA(this.camera.innerCam, options.antialias);
+    this.fxaaEffect = new FXAA(this.camera.raw, options.antialias);
     this.fxaaEffect.on("_needsUpdate", this.forceUpdate);
     this.renderPassOrchestrator.addPass("fxaa", this.fxaaEffect.rawPass);
 
@@ -581,9 +578,7 @@ export default class ThreeView<
     this.renderPassOrchestrator.addPass("finalCopy", new CopyPass());
 
     this.camera.on("frustumChanged", () => {
-      this.renderPassOrchestrator.effectComposer.setMainCamera(
-        this.camera.innerCam,
-      );
+      this.renderPassOrchestrator.effectComposer.setMainCamera(this.camera.raw);
     });
   }
 
@@ -643,7 +638,7 @@ export default class ThreeView<
       this._pickHelper = new PickHelper(
         this.renderer.domElement,
         this.renderer,
-        this.camera.innerCam,
+        this.camera.raw,
         this._scenes,
         this._meshes,
         this._drapedFeatureMaterials,
@@ -699,8 +694,8 @@ export default class ThreeView<
     const h = typeof height === "number" ? height : canvas?.height;
     if (typeof w !== "number" || typeof h !== "number") return;
 
-    this.camera.innerCam.aspect = w / h;
-    this.camera.innerCam.updateProjectionMatrix();
+    this.camera.raw.aspect = w / h;
+    this.camera.raw.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this.renderPassOrchestrator.setSize(w, h);
     if (pixelRatio) {
@@ -720,9 +715,9 @@ export default class ThreeView<
     // TODO: Need to get this value from WASM side, and near, far as well.
     // const fovY = 0.7245411;
     const fovY = 1;
-    const top = this.camera.innerCam.near * Math.tan(0.5 * fovY);
+    const top = this.camera.raw.near * Math.tan(0.5 * fovY);
     const bottom = -top;
-    const right = this.camera.innerCam.aspect * top;
+    const right = this.camera.raw.aspect * top;
     const left = -right;
 
     this._uniforms.viewportAndPixelRatio.value = [
@@ -731,8 +726,8 @@ export default class ThreeView<
       pixelRatio,
     ];
     this._uniforms.frustumNearFar.value = [
-      this.camera.innerCam.near,
-      this.camera.innerCam.far,
+      this.camera.raw.near,
+      this.camera.raw.far,
     ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
@@ -740,10 +735,10 @@ export default class ThreeView<
     this._uniforms.tGlobeNormal.value =
       this._renderPass.globeNormalCopyPass.texture;
     this._uniforms.inverseProjectionMatrix.value =
-      this.camera.innerCam.projectionMatrixInverse;
+      this.camera.raw.projectionMatrixInverse;
 
     // TODO: Need to sync `fov` with WASM side
-    this._uniforms.fov.value = (this.camera.innerCam.fov * Math.PI) / 180;
+    this._uniforms.fov.value = (this.camera.raw.fov * Math.PI) / 180;
     this._uniforms.screenHeightPx.value = viewport?.height ?? 0;
   }
 
@@ -788,7 +783,7 @@ export default class ThreeView<
     events?.free();
 
     this.control?.update();
-    this.camera.innerCam.updateMatrixWorld();
+    this.camera.raw.updateMatrixWorld();
 
     this.emit("postUpdate", updatedAt);
 
@@ -1186,7 +1181,7 @@ export default class ThreeView<
       y,
       this.renderer,
       this.globeDepthTexture,
-      this.camera.innerCam,
+      this.camera.raw,
     );
   }
 }
