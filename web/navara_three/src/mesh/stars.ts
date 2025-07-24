@@ -14,14 +14,16 @@ export type StarsEvents = {
 };
 
 export type StarsOptions = {
+  visible?: boolean;
   pointSize?: number;
-  radianceScale?: number;
+  intensity?: number;
   background?: boolean;
 };
 
 export const DEFAULT_STARS_OPTIONS: Required<StarsOptions> = {
+  visible: true,
   pointSize: 1,
-  radianceScale: 10,
+  intensity: 10,
   background: true,
 };
 
@@ -40,11 +42,23 @@ export class Stars extends EventHandler<StarsEvents> {
     this.options = { ...DEFAULT_STARS_OPTIONS, ...(options ?? {}) };
 
     this.raw.material.pointSize = this.options.pointSize;
-    this.raw.material.radianceScale = this.options.radianceScale;
+    this.raw.material.intensity = this.options.intensity;
     this.raw.material.background = this.options.background;
   }
 
-  static async fromUrl(url = STARS_ASSETS_URL, options?: StarsOptions) {
+  static fromUrl(url = STARS_ASSETS_URL, options?: StarsOptions) {
+    const instance = new Stars(new ArrayBuffer(0), options);
+    fetch(url)
+      .then(async (r) => {
+        const arrayBuffer = await r.arrayBuffer();
+        if (!arrayBuffer) return;
+        instance.raw.geometry.copy(new StarsGeometry(arrayBuffer));
+      })
+      .catch(console.error);
+    return instance;
+  }
+
+  static async fromUrlAsync(url = STARS_ASSETS_URL, options?: StarsOptions) {
     const arrayBuffer = await fetch(url)
       .then((r) => r.arrayBuffer())
       .catch(console.error);
@@ -64,6 +78,16 @@ export class Stars extends EventHandler<StarsEvents> {
     this.raw.material.sunDirection.copy(sunDirection);
   }
 
+  get visible() {
+    return this.options.visible;
+  }
+
+  set visible(v: boolean) {
+    this.options.visible = v;
+    this.raw.visible = v;
+    this.emit("_needsUpdate");
+  }
+
   get pointSize() {
     return this.options.pointSize;
   }
@@ -73,12 +97,12 @@ export class Stars extends EventHandler<StarsEvents> {
     this.emit("_needsUpdate");
   }
 
-  get radianceScale() {
-    return this.options.radianceScale;
+  get intensity() {
+    return this.options.intensity;
   }
-  set radianceScale(v: number) {
-    this.options.radianceScale = v;
-    this.raw.material.radianceScale = v;
+  set intensity(v: number) {
+    this.options.intensity = v;
+    this.raw.material.intensity = v;
     this.emit("_needsUpdate");
   }
 

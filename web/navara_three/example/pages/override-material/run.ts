@@ -22,6 +22,8 @@ const ENABLE_TERRAIN = true;
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   view.setCamera({
     lng: 139.75711454748298,
     lat: 35.67564356091717,
@@ -239,6 +241,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
 
   // General usage: You can evaluate the color according to a feature property.
   for (const layerDescription of layerDescriptions) {
+    if (!("data" in layerDescription)) continue;
     const folder = pane.addFolder({
       title: `${(Array.isArray(layerDescription.data.features) ? layerDescription.data.features[0] : layerDescription.data).geometry.type} GeoJSON`,
     });

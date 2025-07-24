@@ -41,7 +41,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     options?: SSAOOptions,
   ) {
     const pass = new N8AOPostPass(scene, camera, width, height);
-    super(pass, options);
+    super(pass, null, { ...DEFAULT_SSAO_OPTIONS, ...options });
 
     this.scene = scene;
     this.camera = camera;

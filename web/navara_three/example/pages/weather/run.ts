@@ -16,6 +16,8 @@ import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   view.setCamera({
     lng: 139.7371145474829,
     lat: 35.67564356091717,
@@ -107,22 +109,22 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
     ),
   );
 
-  const rain = view.addLayer({
+  const rain = view.addLayer<RainMeshLayer>({
     type: "mesh",
     visible: false,
     position: ThreeVec3.fromRaw(position),
     rain: {
       opacity: 1,
     },
-  }) as LayerHandle<RainMeshLayer>;
-  const snow = view.addLayer({
+  });
+  const snow = view.addLayer<SnowMeshLayer>({
     type: "mesh",
     visible: false,
     position: ThreeVec3.fromRaw(position),
     snow: {
       opacity: 1,
     },
-  }) as LayerHandle<SnowMeshLayer>;
+  });
 
   type WeatherType = "sunny" | "rainy" | "snowy";
 

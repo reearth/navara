@@ -8,6 +8,8 @@ import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   view.addLayer({
     type: "tiles",
     data: {

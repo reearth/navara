@@ -20,14 +20,12 @@ export type AtmosphereEvents = {
 };
 
 export type AtmosphereOptions = {
-  aerialPerspective?: boolean;
   atmosphereAssetsUrl?: string;
   stbnUrl?: string;
   date?: Date;
 };
 
 export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
-  aerialPerspective: true,
   atmosphereAssetsUrl: ATMOSPHERE_ASSETS_URL,
   stbnUrl: STBN_URL,
   date: new Date(),
@@ -84,6 +82,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.emit("_needsUpdate");
   };
 
+  // TODO: Add an option to disable loading textures.
   async initTextures() {
     if (this.textures) return;
 
@@ -130,11 +129,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     }
 
     this.needsUpdate = false;
-  }
-
-  // Getters for basic properties
-  get aerialPerspective() {
-    return !!this.options.aerialPerspective;
   }
 
   get date() {

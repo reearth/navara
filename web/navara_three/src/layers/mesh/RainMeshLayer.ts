@@ -1,7 +1,7 @@
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
-  LayerView,
+  ViewContext,
 } from "../../core";
 import { DefaultRainConfig, RainMesh, type RainConfig } from "../../mesh";
 
@@ -24,7 +24,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
 > {
   private config: RainMeshLayerConfig;
 
-  constructor(view: LayerView, config: RainMeshLayerConfig) {
+  constructor(view: ViewContext, config: RainMeshLayerConfig) {
     super(view, config);
     this.config = config;
   }
@@ -33,7 +33,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
     return this.config.rain?.followCamera ? "transparent" : "opaque";
   }
 
-  createMesh(): RainMesh {
+  createMesh() {
     const rainConfig: Partial<RainConfig> = {
       particleCount:
         this.config.rain?.particleCount ?? DefaultRainConfig.particleCount,
@@ -65,6 +65,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
     if (this.config.rain && updates.rain && this.instance) {
       Object.assign(this.config.rain, updates.rain);
       this.instance.updateConfig(updates.rain);
+      this.emit("_needsUpdate");
     }
   }
 
@@ -76,11 +77,6 @@ export class RainMeshLayer extends MeshLayerDeclaration<
         this.view.atmosphere.sunDirection,
       );
     }
-  }
-
-  animate(_deltaTime: number): void {
-    // Rain mesh handles animation through its update method
-    // No separate animation step needed
   }
 
   protected disposeMesh(): void {

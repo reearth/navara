@@ -10,7 +10,7 @@ import {
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
-  { type: "terrain" }
+  { type: "terrain" } | { type: "mesh" } | { type: "light" }
 >;
 
 export const addCtrlPanel = (

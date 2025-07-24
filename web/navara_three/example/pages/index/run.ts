@@ -466,6 +466,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
   view.scenes.opaque.add(axesHelper);

@@ -1,8 +1,5 @@
 import { EventHandler } from "@navara/core";
-import {
-  SunDirectionalLight,
-  type PrecomputedTextures,
-} from "@takram/three-atmosphere";
+import { SunDirectionalLight } from "@takram/three-atmosphere";
 import { Color, Texture, Vector3 } from "three";
 
 export type SunLightEvents = {
@@ -12,6 +9,7 @@ export type SunLightEvents = {
 export type SunLightOptions = {
   distance?: number;
   color?: Color;
+  applyColor?: boolean;
   intensity?: number;
   castShadow?: boolean;
   shadowMapSize?: number;
@@ -29,6 +27,7 @@ export type SunLightOptions = {
 const DEFAULT_SUN_LIGHT_OPTIONS: Required<SunLightOptions> = {
   distance: 300,
   color: new Color(0xffffff),
+  applyColor: false,
   intensity: 1,
   castShadow: true,
   shadowMapSize: 2048,
@@ -43,8 +42,9 @@ const DEFAULT_SUN_LIGHT_OPTIONS: Required<SunLightOptions> = {
   shadowNormalBias: 1,
 };
 
-export class AtmosphereSunLight extends EventHandler<SunLightEvents> {
+export class SunLight extends EventHandler<SunLightEvents> {
   raw: SunDirectionalLight;
+  private transmittanceTexture: Texture | null = null;
   private options: SunLightOptions;
 
   constructor(options: SunLightOptions = {}) {
@@ -84,20 +84,14 @@ export class AtmosphereSunLight extends EventHandler<SunLightEvents> {
       this.options.shadowNormalBias ?? this.raw.shadow.normalBias;
   }
 
-  setTextures(textures: PrecomputedTextures, useTransmittance = true) {
-    if (useTransmittance) {
-      this.raw.transmittanceTexture = textures.transmittanceTexture;
-    } else {
-      this.raw.transmittanceTexture = null;
-      this.raw.color.copy(this.color);
-    }
-  }
-
   updateSunDirection(sunDirection: Vector3) {
     this.raw.sunDirection.copy(sunDirection);
   }
 
   updateTargetPosition(position: Vector3) {
+    if (this.applyColor) {
+      return;
+    }
     this.raw.target.position.copy(position);
   }
 
@@ -121,7 +115,20 @@ export class AtmosphereSunLight extends EventHandler<SunLightEvents> {
     return this.raw.color;
   }
   set color(v: Color) {
+    this.options.color = v;
     this.raw.color.copy(v);
+    this.emit("_needsUpdate");
+  }
+
+  get applyColor() {
+    return this.options.applyColor ?? DEFAULT_SUN_LIGHT_OPTIONS.applyColor;
+  }
+  set applyColor(v: boolean) {
+    this.options.applyColor = v;
+    this.raw.transmittanceTexture = v ? null : this.transmittanceTexture;
+    if (v) {
+      this.color = this.options.color ?? DEFAULT_SUN_LIGHT_OPTIONS.color;
+    }
     this.emit("_needsUpdate");
   }
 
@@ -134,6 +141,7 @@ export class AtmosphereSunLight extends EventHandler<SunLightEvents> {
   }
 
   setTransmittanceTexture(texture: Texture) {
+    this.transmittanceTexture = texture;
     this.raw.transmittanceTexture = texture;
   }
 

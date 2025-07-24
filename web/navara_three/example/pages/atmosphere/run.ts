@@ -6,6 +6,12 @@ import ThreeView, {
   type CloudsOptions,
   type LayerDescription,
   type SSAOQualityMode,
+  SkyMeshLayer,
+  StarsLayer,
+  LayerHandle,
+  SunLightLayer,
+  AmbientLightLayer,
+  SkyLightProbeLayer,
 } from "@navara/three";
 import type { TextureChannel } from "@takram/three-clouds";
 import { Color, LightProbe, SphericalHarmonics3 } from "three";
@@ -23,6 +29,52 @@ import { SH_COEFFICIENTS } from "./consts";
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  const defaultLayers = view.addDefaultAtmosphereLayers();
+
+  // Cast to specific layer types for easier access and updates
+  const skyLayer = defaultLayers.sky;
+  const starsLayer = defaultLayers.stars;
+  const sunLightLayer = defaultLayers.sun;
+  const skyLightProbeLayer = defaultLayers.skyLightProbe;
+
+  // Customize the default layers with specific configurations
+  skyLayer.update({
+    sky: {
+      sun: true,
+      moon: true,
+      moonScale: 1,
+      moonIntensity: 1,
+    },
+  });
+
+  starsLayer.update({
+    stars: {
+      pointSize: 1,
+      intensity: 10,
+      background: true,
+    },
+  });
+
+  sunLightLayer.update({
+    sun: {
+      intensity: 1,
+      color: 0xffffff,
+      distance: 300,
+      castShadow: true,
+      shadowMapSize: 2048,
+    },
+  });
+
+  // Add an additional ambient light layer
+  const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLayer({
+    type: "light",
+    visible: false,
+    ambient: {
+      intensity: 1,
+      color: 0xffffff,
+    },
+  });
 
   view.addLayer({
     type: "terrain",
@@ -75,7 +127,15 @@ export const run = async (view: ThreeView) => {
   const tileBinding = addTileControl(view, pane);
   addCloudsTilesControl(view, pane, tileBinding);
   addDateControl(view, pane);
-  addAtmosphereControl(view, pane);
+  addAtmosphereControl(
+    view,
+    pane,
+    skyLayer,
+    starsLayer,
+    sunLightLayer,
+    ambientLightLayer,
+    skyLightProbeLayer,
+  );
   addCloudsControl(view, pane);
   addAAControl(view, pane);
   addIBLControl(view, pane);
@@ -183,7 +243,15 @@ const addCloudsTilesControl = (
   });
 };
 
-const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
+const addAtmosphereControl = (
+  view: ThreeView,
+  pane: Pane,
+  skyLayer: LayerHandle<SkyMeshLayer>,
+  starsLayer: LayerHandle<StarsLayer>,
+  sunLightLayer: LayerHandle<SunLightLayer>,
+  ambientLightLayer: LayerHandle<AmbientLightLayer>,
+  _skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
+) => {
   const PARAMS = {
     aerialPerspective: true,
     sky: true,
@@ -191,14 +259,15 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     moon: true,
     stars: true,
     sunLight: true,
-    sunLightColor: "#FFFFFF",
+    sunLightColor: 0xffffff,
+    sunApplyLightColor: false,
     sunLightIntensity: 1,
     moonScale: 1,
     moonIntensity: 1,
     starsPointSize: 1,
     starsRadianceScale: 10,
     ambientLight: false,
-    ambientLightColor: "#FFFFFF",
+    ambientLightColor: 0xffffff,
     ambientLightIntensity: 1,
     inscatter: true,
     transmittance: true,
@@ -213,49 +282,55 @@ const addAtmosphereControl = (view: ThreeView, pane: Pane) => {
     view.aerialPerspective.enabled = v.value;
   });
   folder.addBinding(PARAMS, "sky").on("change", (v) => {
-    // NEXT
-    // view.skyMesh?.sky = v.value;
+    skyLayer.visible = v.value;
   });
   folder.addBinding(PARAMS, "sun").on("change", (v) => {
-    view.skyMesh.sun = v.value;
+    skyLayer.update({ sky: { sun: v.value } });
   });
   folder.addBinding(PARAMS, "moon").on("change", (v) => {
-    view.skyMesh.moon = v.value;
+    skyLayer.update({ sky: { moon: v.value } });
   });
   folder.addBinding(PARAMS, "stars").on("change", (v) => {
-    // NEXT
-    // view.stars = v.value;
+    starsLayer.visible = v.value;
   });
   folder.addBinding(PARAMS, "sunLight").on("change", (v) => {
-    // view.sunLight = v.value;
+    sunLightLayer.visible = v.value;
   });
-  folder.addBinding(PARAMS, "sunLightColor").on("change", (v) => {
-    view.sunLightObj.color = new Color(v.value);
+  folder
+    .addBinding(PARAMS, "sunLightColor", { color: { type: "int" } })
+    .on("change", (v) => {
+      sunLightLayer.update({ sun: { color: v.value } });
+    });
+  folder.addBinding(PARAMS, "sunApplyLightColor").on("change", (v) => {
+    sunLightLayer.update({ sun: { applyColor: v.value } });
   });
   folder.addBinding(PARAMS, "moonScale").on("change", (v) => {
-    view.skyMesh.moonScale = v.value;
+    skyLayer.update({ sky: { moonScale: v.value } });
   });
   folder.addBinding(PARAMS, "moonIntensity").on("change", (v) => {
-    view.skyMesh.moonIntensity = v.value;
+    skyLayer.update({ sky: { moonIntensity: v.value } });
   });
   folder.addBinding(PARAMS, "starsPointSize").on("change", (v) => {
-    view.starsMesh.pointSize = v.value;
+    starsLayer.update({ stars: { pointSize: v.value } });
   });
   folder.addBinding(PARAMS, "starsRadianceScale").on("change", (v) => {
-    view.starsMesh.radianceScale = v.value;
+    starsLayer.update({ stars: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
-    view.sunLightObj.intensity = v.value;
+    sunLightLayer.update({ sun: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "ambientLight").on("change", (v) => {
-    // Next
-    // view.ambientLight = v.value;
+    ambientLightLayer.visible = v.value;
   });
-  folder.addBinding(PARAMS, "ambientLightColor").on("change", (v) => {
-    view.ambientLightObj.color = new Color(v.value);
-  });
+  folder
+    .addBinding(PARAMS, "ambientLightColor", { color: { type: "int" } })
+    .on("change", (v) => {
+      ambientLightLayer.update({
+        ambient: { color: v.value },
+      });
+    });
   folder.addBinding(PARAMS, "ambientLightIntensity").on("change", (v) => {
-    view.ambientLightObj.intensity = v.value;
+    ambientLightLayer.update({ ambient: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "inscatter").on("change", (v) => {
     view.aerialPerspective.inscatter = v.value;

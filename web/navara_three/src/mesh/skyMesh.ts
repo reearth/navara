@@ -13,6 +13,7 @@ export type SkyMeshEvents = {
 };
 
 export type SkyMeshOptions = {
+  visible?: boolean;
   sun?: boolean;
   moon?: boolean;
   moonScale?: number;
@@ -35,8 +36,8 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
     this.options = options;
 
     const skyMaterial = new SkyMaterial({
-      sun: options.sun,
-      moon: options.moon,
+      sun: options.sun ?? true,
+      moon: options.moon ?? true,
     });
 
     this.raw = new Mesh(new PlaneGeometry(2, 2), skyMaterial);
@@ -74,6 +75,16 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
     if (this.options.moonIntensity !== undefined) {
       this.moonIntensity = this.options.moonIntensity;
     }
+  }
+
+  get visible() {
+    return !!this.options.visible;
+  }
+
+  set visible(v: boolean) {
+    this.options.visible = v;
+    this.raw.visible = v;
+    this.emit("_needsUpdate");
   }
 
   get sun() {

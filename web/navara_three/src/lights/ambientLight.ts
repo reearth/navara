@@ -1,5 +1,5 @@
 import { EventHandler } from "@navara/core";
-import { AmbientLight, Color } from "three";
+import { AmbientLight as AmbientLightImpl, Color } from "three";
 
 export type AmbientLightEvents = {
   _needsUpdate: () => void;
@@ -15,8 +15,8 @@ const DEFAULT_AMBIENT_LIGHT_OPTIONS: Required<AmbientLightOptions> = {
   intensity: 1,
 };
 
-export class AtmosphereAmbientLight extends EventHandler<AmbientLightEvents> {
-  raw: AmbientLight;
+export class AmbientLight extends EventHandler<AmbientLightEvents> {
+  raw: AmbientLightImpl;
   private options: AmbientLightOptions;
 
   constructor(options: AmbientLightOptions = {}) {
@@ -24,7 +24,7 @@ export class AtmosphereAmbientLight extends EventHandler<AmbientLightEvents> {
 
     this.options = { ...DEFAULT_AMBIENT_LIGHT_OPTIONS, ...options };
 
-    this.raw = new AmbientLight(this.options.color, this.options.intensity);
+    this.raw = new AmbientLightImpl(this.options.color, this.options.intensity);
   }
 
   get color() {
@@ -40,6 +40,14 @@ export class AtmosphereAmbientLight extends EventHandler<AmbientLightEvents> {
   }
   set intensity(v: number) {
     this.raw.intensity = v;
+    this.emit("_needsUpdate");
+  }
+
+  get visible() {
+    return this.raw.visible;
+  }
+  set visible(v: boolean) {
+    this.raw.visible = v;
     this.emit("_needsUpdate");
   }
 }

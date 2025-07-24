@@ -1,13 +1,13 @@
 import { LayerRegistry } from "./LayerRegistry";
-import type { LayerView } from "./LayerView";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
 } from "./MeshLayerDeclaration";
+import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConstructor<
   TConfig extends MeshLayerConfig = MeshLayerConfig,
-> = new (view: LayerView, config: TConfig) => MeshLayerDeclaration;
+> = new (view: ViewContext, config: TConfig) => MeshLayerDeclaration;
 
 export class MeshLayerRegistry extends LayerRegistry<
   MeshLayerConstructor,

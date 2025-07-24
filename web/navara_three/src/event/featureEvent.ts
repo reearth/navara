@@ -3,6 +3,7 @@ import { type Object3D } from "three";
 
 import type { ViewEvents } from "..";
 import { FeatureEvaluator } from "../evaluations";
+import { Layer } from "../layer";
 import { LayersManager } from "../layersManager";
 
 import type { FeatureHandler } from ".";
@@ -21,7 +22,7 @@ export const handleFeatureCreatedEventByLayerId = (
   const evaluator = new FeatureEvaluator(handler, featureId, obj);
 
   // Register the feature evaluator with the layer if it exists
-  if (layer) {
+  if (layer && layer instanceof Layer) {
     layer._registerFeatureEvaluator(featureId, evaluator);
   }
 
@@ -43,6 +44,7 @@ export const handleFeatureUpdatedEventByLayerId = (
   if (!layer) return;
 
   // Get the existing evaluator or create a new one
+  if (!(layer instanceof Layer)) return;
   const evaluator = layer._getFeatureEvaluator(featureId);
   if (!evaluator) return;
 

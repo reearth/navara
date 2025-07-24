@@ -13,5 +13,13 @@ export {
   MeshLayerRegistry,
   type MeshLayerConstructor,
 } from "./MeshLayerRegistry";
+export {
+  LightLayerDeclaration,
+  type LightLayerConfig,
+} from "./LightLayerDeclaration";
+export {
+  LightLayerRegistry,
+  type LightLayerConstructor,
+} from "./LightLayerRegistry";
 export { LayerHandle } from "./LayerHandle";
-export * from "./LayerView";
+export * from "./ViewContext";

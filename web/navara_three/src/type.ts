@@ -10,7 +10,15 @@ import type {
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D } from "three";
 
-import type { RainMeshLayerConfig, SnowMeshLayerConfig } from "./layers";
+import type {
+  RainMeshLayerConfig,
+  SnowMeshLayerConfig,
+  SkyMeshLayerConfig,
+  StarsLayerConfig,
+  SunLightLayerConfig,
+  SkyLightProbeLayerConfig,
+  AmbientLightLayerConfig,
+} from "./layers";
 import type { TileMesh } from "./mesh";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
@@ -23,11 +31,19 @@ export type LayerDescription =
   | B3dmLayer
   | Cesium3dTilesLayer
   | MvtLayer
-  | MeshLayerDeclarationDescription;
+  | MeshLayerDeclarationDescription
+  | LightLayerDeclarationDescription;
 
 export type MeshLayerDeclarationDescription =
   | RainMeshLayerConfig
-  | SnowMeshLayerConfig;
+  | SnowMeshLayerConfig
+  | SkyMeshLayerConfig
+  | StarsLayerConfig;
+
+export type LightLayerDeclarationDescription =
+  | SunLightLayerConfig
+  | SkyLightProbeLayerConfig
+  | AmbientLightLayerConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";

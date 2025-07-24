@@ -1,6 +1,6 @@
 import { EventHandler } from "@navara/core";
 import {
-  SkyLightProbe,
+  SkyLightProbe as SkyLightProbeImpl,
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
 import { Vector3 } from "three";
@@ -10,15 +10,16 @@ export type SkyLightProbeEvents = {
 };
 
 // Add any specific options if needed in the future
-export type SkyLightProbeOptions = object;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export type SkyLightProbeOptions = {};
 
-export class AtmosphereSkyLightProbe extends EventHandler<SkyLightProbeEvents> {
-  raw: SkyLightProbe;
+export class SkyLightProbe extends EventHandler<SkyLightProbeEvents> {
+  raw: SkyLightProbeImpl;
 
   constructor(_options: SkyLightProbeOptions = {}) {
     super();
 
-    this.raw = new SkyLightProbe();
+    this.raw = new SkyLightProbeImpl();
   }
 
   setTextures(textures: PrecomputedTextures) {

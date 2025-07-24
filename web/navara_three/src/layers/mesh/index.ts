@@ -8,3 +8,13 @@ export {
   type SnowMeshLayerConfig,
   type SnowMeshLayerUpdate,
 } from "./SnowMeshLayer";
+export {
+  SkyMeshLayer,
+  type SkyMeshLayerConfig,
+  type SkyMeshLayerUpdate,
+} from "./SkyMeshLayer";
+export {
+  StarsLayer,
+  type StarsLayerConfig,
+  type StarsLayerUpdate,
+} from "./StarsLayer";

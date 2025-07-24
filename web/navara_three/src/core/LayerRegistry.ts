@@ -1,4 +1,4 @@
-import type { LayerView } from "./LayerView";
+import type { ViewContext } from "./ViewContext";
 
 /**
  * Base abstract class for all registry types in the Navara system.
@@ -11,7 +11,7 @@ export abstract class LayerRegistry<
 > {
   protected registry = new Map<string, TConstructor>();
 
-  constructor(public view: LayerView) {}
+  constructor(public view: ViewContext) {}
 
   /**
    * Register a new type with the given name and constructor
