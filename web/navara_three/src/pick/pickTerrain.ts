@@ -1,3 +1,4 @@
+import type { Nullable } from "@navara/core";
 import {
   WebGLRenderer,
   WebGLRenderTarget,
@@ -13,8 +14,6 @@ import {
   Mesh,
   OrthographicCamera,
 } from "three";
-
-import type { Nullable } from "@navara/core";
 
 class DepthPickPass {
   private quad: Mesh;

@@ -1,18 +1,23 @@
-import type { Layer, LayerEvent } from "./layer";
+import { LayerHandle } from "./core";
+import { Layer, type LayerEvent } from "./layer";
 
 export class LayersManager {
-  _layers = new Map<string, Layer>();
+  private layers = new Map<string, Layer | LayerHandle>();
 
-  add(l: Layer) {
-    this._layers.set(l.id, l);
+  add(l: Layer | LayerHandle) {
+    this.layers.set(l.id, l);
     const deleteLayer = () => {
-      this._layers.delete(l.id);
+      this.layers.delete(l.id);
     };
-    l.on("deleted", deleteLayer);
+    if (l instanceof LayerHandle) {
+      l.on("deleted", deleteLayer);
+    } else {
+      l.on("deleted", deleteLayer);
+    }
   }
 
   get(id: string) {
-    return this._layers.get(id);
+    return this.layers.get(id);
   }
 
   emitById<K extends keyof LayerEvent>(
@@ -20,17 +25,28 @@ export class LayersManager {
     id: string,
     ...args: Parameters<LayerEvent[K]>
   ) {
-    const l = this._layers.get(id);
+    const l = this.layers.get(id);
     if (!l) return;
-    l.emit(k, ...args);
+    if (l instanceof Layer) {
+      l.emit(k, ...args);
+    }
   }
 
   emitAll<K extends keyof LayerEvent>(
     k: K,
     ...args: Parameters<LayerEvent[K]>
   ) {
-    for (const l of this._layers.values()) {
-      l.emit(k, ...args);
+    for (const l of this.layers.values()) {
+      if (l instanceof Layer) {
+        l.emit(k, ...args);
+      }
+    }
+  }
+
+  *getResourceLayers() {
+    for (const l of this.layers.values()) {
+      if (!(l instanceof Layer)) continue;
+      yield l;
     }
   }
 }

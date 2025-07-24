@@ -24,6 +24,8 @@ import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   view.setCamera({
     lng: 139.8093261719,
     lat: 35.6374092102,

@@ -37,6 +37,8 @@ export class Pass<
 
     this.options = { ...(options ?? {}) } as O;
 
+    this.enabled = this.options.enabled ?? DEFAULT_EFFECT_OPTIONS.enabled;
+
     this.onMounted();
   }
 
@@ -44,7 +46,6 @@ export class Pass<
     return this.options.enabled ?? DEFAULT_EFFECT_OPTIONS.enabled;
   }
   set enabled(v: boolean) {
-    if (this.options.enabled === v) return;
     this.options.enabled = v;
     this.rawPass.enabled = v;
 

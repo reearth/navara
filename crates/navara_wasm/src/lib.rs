@@ -178,7 +178,7 @@ impl Core {
 
     #[wasm_bindgen(js_name = addLayer)]
     pub fn add_layer(&mut self, layer: JsValue) -> String {
-        let layer_id = nanoid!();
+        let layer_id = generate_id();
         // TODO: Improve an undesirable cloning the layer.
         if let Some(ld) = LayerDescription::from(layer.clone()) {
             if let Some(layer_type) = ld.r#type {
@@ -534,6 +534,11 @@ impl Core {
     ) {
         self.app.set_frustum(fov, near, far);
     }
+}
+
+#[wasm_bindgen(js_name = generateId)]
+pub fn generate_id() -> String {
+    nanoid!()
 }
 
 #[wasm_bindgen(start)]

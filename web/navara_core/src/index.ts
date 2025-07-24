@@ -9,3 +9,4 @@ export * from "./error";
 export * from "./types";
 export * from "./namedIndexMap";
 export * from "./observed";
+export * from "./abstracts";

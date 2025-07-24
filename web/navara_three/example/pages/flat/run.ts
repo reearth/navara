@@ -10,6 +10,8 @@ const tileUrls = {
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   view.addLayer({
     type: "tiles",
     data: { url: tileUrls.openstreetmap },

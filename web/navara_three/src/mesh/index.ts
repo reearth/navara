@@ -15,3 +15,4 @@ export * from "./tile";
 export * from "./stars";
 export * from "./snow";
 export * from "./rain";
+export * from "./skyMesh";

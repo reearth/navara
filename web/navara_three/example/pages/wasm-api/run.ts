@@ -95,6 +95,8 @@ const gPopup = new FloatingDialog();
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addDefaultAtmosphereLayers();
+
   gView = view;
 
   view.addLayer({

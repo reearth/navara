@@ -43,7 +43,7 @@ export type RainConfig = {
   maxHeight: number;
 };
 
-const defaultConfig: RainConfig = {
+export const DefaultRainConfig: RainConfig = {
   particleCount: 10000,
   speed: 0.001,
   color: 0xffffff,
@@ -283,7 +283,7 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
   private readonly baseMatrix4 = new Matrix4();
 
   constructor(config: Partial<RainConfig> = {}) {
-    const fullConfig = { ...defaultConfig, ...config };
+    const fullConfig = { ...DefaultRainConfig, ...config };
     const geometry = createGeometry(fullConfig);
     const material = new RainMaterial();
 

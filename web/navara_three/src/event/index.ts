@@ -28,7 +28,7 @@ import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
-import { type ViewEvents } from "..";
+import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { LayersManager } from "../layersManager";
@@ -305,9 +305,9 @@ export function processEvent(
         case "remove":
           {
             const removed = event as RenderableFeatureRemovedEvent;
-            layersManager
-              .get(removed.layer_id)
-              ?._unregisterFeatureEvaluator(removed.bits);
+            (
+              layersManager.get(removed.layer_id) as Layer
+            )?._unregisterFeatureEvaluator(removed.bits);
 
             processObjectRemoved(scenes.mrt, meshes, event);
           }

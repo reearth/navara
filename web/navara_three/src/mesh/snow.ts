@@ -9,7 +9,7 @@ import {
   Vector3,
   type WebGLProgramParametersWithUniforms,
   Matrix4,
-  PerspectiveCamera,
+  Camera,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -171,7 +171,7 @@ export type SnowConfig = {
   opacity: number;
 };
 
-const defaultConfig: SnowConfig = {
+export const DefaultSnowConfig: SnowConfig = {
   particleCount: 30000,
   areaWidth: 500,
   areaHeight: 1000,
@@ -201,7 +201,7 @@ export class SnowMesh extends Points<BufferGeometry, PointsMaterial> {
   private readonly baseMatrix4 = new Matrix4();
 
   constructor(config: Partial<SnowConfig> = {}) {
-    const fullConfig = { ...defaultConfig, ...config };
+    const fullConfig = { ...DefaultSnowConfig, ...config };
     const geometry = new BufferGeometry();
     const material = new SnowPointsMaterial();
 
@@ -459,6 +459,7 @@ export class SnowMesh extends Points<BufferGeometry, PointsMaterial> {
       this.areaHeight = newConfig.areaHeight;
     if (newConfig.speed !== undefined) this.speed = newConfig.speed;
     if (newConfig.size !== undefined) this.size = newConfig.size;
+    if (newConfig.opacity !== undefined) this.opacity = newConfig.opacity;
     if (newConfig.color !== undefined) this.color = newConfig.color;
     if (newConfig.xMovementStrength !== undefined)
       this.xMovementStrength = newConfig.xMovementStrength;
@@ -480,7 +481,7 @@ export class SnowMesh extends Points<BufferGeometry, PointsMaterial> {
     return { ...this._config };
   }
 
-  update(time: number, camera: PerspectiveCamera) {
+  update(time: number, camera: Camera) {
     this.updateTime(time);
 
     if (this.maxHeight !== Infinity) {

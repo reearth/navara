@@ -20,12 +20,13 @@ export type AerialPerspectiveOptions = {
   irradiance?: boolean;
 } & EffectOptions;
 
-export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AerialPerspectiveOptions> = {
-  enabled: true,
-  inscatter: true,
-  transmittance: true,
-  irradiance: false,
-};
+export const DEFAULT_AERIAL_PERSPECTIVE_OPTIONS: Required<AerialPerspectiveOptions> =
+  {
+    enabled: true,
+    inscatter: true,
+    transmittance: true,
+    irradiance: false,
+  };
 
 export class AerialPerspective extends Effect<
   AerialPerspectiveEffect,
@@ -39,18 +40,19 @@ export class AerialPerspective extends Effect<
     atmosphere: Atmosphere,
     camera: PerspectiveCamera,
     normalBuffer: Texture,
-    options: AerialPerspectiveOptions = {},
+    _options: AerialPerspectiveOptions = {},
   ) {
     const effect = new AerialPerspectiveEffect(camera, {
       albedoScale: 2 / Math.PI,
       normalBuffer: normalBuffer,
       octEncodedNormal: true,
     });
+    const options = { ...DEFAULT_AERIAL_PERSPECTIVE_OPTIONS, ..._options };
     super(camera, effect, options);
 
     this.atmosphere = atmosphere;
 
-    this.options = { ...DEFAULT_ATMOSPHERE_OPTIONS, ...options };
+    this.options = options;
 
     this.init();
 
@@ -110,7 +112,9 @@ export class AerialPerspective extends Effect<
   }
 
   get inscatter() {
-    return this.options.inscatter ?? DEFAULT_ATMOSPHERE_OPTIONS.inscatter;
+    return (
+      this.options.inscatter ?? DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.inscatter
+    );
   }
   set inscatter(v: boolean) {
     if (!this.rawEffect) return;
@@ -121,7 +125,8 @@ export class AerialPerspective extends Effect<
 
   get transmittance() {
     return (
-      this.options.transmittance ?? DEFAULT_ATMOSPHERE_OPTIONS.transmittance
+      this.options.transmittance ??
+      DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.transmittance
     );
   }
   set transmittance(v: boolean) {
@@ -132,7 +137,9 @@ export class AerialPerspective extends Effect<
   }
 
   get irradiance() {
-    return this.options.irradiance ?? DEFAULT_ATMOSPHERE_OPTIONS.irradiance;
+    return (
+      this.options.irradiance ?? DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.irradiance
+    );
   }
   set irradiance(v: boolean) {
     if (!this.rawEffect) return;

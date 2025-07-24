@@ -24,9 +24,17 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { Atmosphere } from "./atmosphere";
+import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
+import {
+  LayerDeclaration,
+  ViewContext,
+  type MeshLayerConstructor,
+  type LightLayerConstructor,
+} from "./core";
+import { LayerHandle } from "./core/LayerHandle";
+import { Registries } from "./core/Registries";
 import {
   SMAA,
   LensFlare,
@@ -54,6 +62,11 @@ import {
 } from "./event";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
+import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
+import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
+import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
+import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
+import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
@@ -67,12 +80,14 @@ import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
-  type LayerDescription,
+  type LayerDescription as ActualLayerDescription,
   type MeshCache,
   type PickedFeature,
   type WorkerPoolPromises,
   type RenderFlag,
   type TileMapByHandle,
+  type MeshLayerDeclarationDescription,
+  type LightLayerDeclarationDescription,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";
@@ -89,7 +104,8 @@ export * from "./effects";
 export * from "./shaders";
 export * from "./event/loaders";
 export * from "./material";
-export { SnowMesh, RainMesh } from "./mesh";
+export * from "./core";
+export * from "./layers";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -107,7 +123,7 @@ export type Options = {
   camera?: PerspectiveCamera;
   antialias?: AntialiasOptions;
   light?: Light;
-  atmosphere?: Atmosphere;
+  atmosphere?: AtmosphereOptions;
   aerialPerspective?: AerialPerspectiveOptions;
   clouds?: CloudsOptions;
   backgroundColor?: number;
@@ -148,7 +164,9 @@ export type ViewEvents = {
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
 };
 
-export default class ThreeView extends EventHandler<ViewEvents> {
+export default class ThreeView<
+  LayerDescription extends ActualLayerDescription = ActualLayerDescription,
+> extends EventHandler<ViewEvents> {
   camera: ThreeViewCamera;
   renderer: WebGLRenderer;
   control?: { update: () => void; get target(): Vector3 | undefined };
@@ -306,6 +324,9 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
 
+  // Registry support
+  private registries: Registries;
+
   constructor(options: Options = {}) {
     super();
 
@@ -444,9 +465,20 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       maxTextures: Math.max(this.renderer.capabilities.maxTextures, 8),
     };
 
+    // Set up Registry
+    const viewContext = new ViewContext(
+      this._scenes,
+      this.camera.innerCam,
+      this.atmosphere,
+    );
+    this.registries = new Registries(viewContext);
+
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
     });
+
+    // Register built-in layers
+    this.registerBuiltIns();
 
     this._renderFlag.animation = !!options.animation;
   }
@@ -463,13 +495,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     );
     this.renderPassOrchestrator.addPass("mainRender", this._renderPass);
 
-    this.atmosphere = new Atmosphere(
-      this._scenes,
-      this.renderer,
-      this.camera.innerCam,
-      options.atmosphere,
-    );
+    this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
+
+    // Initialize atmosphere objects independently
+    this.initializeAtmosphereObjects();
 
     // Effects
     // Order is important. Effect class adds the effect in it's constructor.
@@ -504,6 +534,16 @@ export default class ThreeView extends EventHandler<ViewEvents> {
       postAtmosphereRenderPass,
     );
 
+    this.lensFlareEffect = new LensFlare(
+      this.camera.innerCam,
+      options.lensFlare,
+    );
+    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
+    this.renderPassOrchestrator.addPass(
+      "lensFlare",
+      this.lensFlareEffect.rawPass,
+    );
+
     // TODO: Pass depth buffer, not a scene.
     const combinedScene = new Scene();
     combinedScene.add(this._scenes.globe);
@@ -520,16 +560,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
     this.renderPassOrchestrator.addPass("ssao", this.ssaoEffect.rawPass);
 
-    this.lensFlareEffect = new LensFlare(
-      this.camera.innerCam,
-      options.lensFlare,
-    );
-    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass(
-      "lensFlare",
-      this.lensFlareEffect.rawPass,
-    );
-
     this.toneMappingEffect = new ToneMapping(
       this.camera.innerCam,
       options.toneMapping,
@@ -544,7 +574,6 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.renderPassOrchestrator.addPass("smaa", this.smaaEffect.rawPass);
 
     this.fxaaEffect = new FXAA(this.camera.innerCam, options.antialias);
-    this.fxaaEffect.enabled = false;
     this.fxaaEffect.on("_needsUpdate", this.forceUpdate);
     this.renderPassOrchestrator.addPass("fxaa", this.fxaaEffect.rawPass);
 
@@ -556,6 +585,11 @@ export default class ThreeView extends EventHandler<ViewEvents> {
         this.camera.innerCam,
       );
     });
+  }
+
+  private async initializeAtmosphereObjects() {
+    // Initialize atmosphere textures first
+    await this.atmosphere.init();
   }
 
   /**
@@ -767,7 +801,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
    */
   private _forceFeatureUpdates(updatedAt: number) {
     // Process updates for each layer
-    for (const layer of this.layersManager._layers.values()) {
+    for (const layer of this.layersManager.getResourceLayers()) {
       if (layer._processFeatureUpdates(updatedAt)) {
         this._renderFlag.forceUpdate = true;
       }
@@ -785,7 +819,24 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     this.emit("postRender", updatedAt);
   }
 
-  addLayer(l: LayerDescription) {
+  addLayer<L = unknown>(
+    l: LayerDescription,
+  ): L extends LayerDeclaration ? LayerHandle<L> : Layer {
+    // Check if this is a mesh layer
+    if (l.type === "mesh") {
+      return this.addMeshLayer(
+        l as MeshLayerDeclarationDescription,
+      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
+    }
+
+    // Check if this is a light layer
+    if (l.type === "light") {
+      return this.addLightLayer(
+        l as LightLayerDeclarationDescription,
+      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
+    }
+
+    // Existing resource layer process
     const layerId = this._core?.addLayer(l);
     invariant(layerId);
     invariant(this._core);
@@ -793,7 +844,7 @@ export default class ThreeView extends EventHandler<ViewEvents> {
     const layer = new Layer(layerId, this._core);
     this.layersManager.add(layer);
 
-    return layer;
+    return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
   }
 
   updateLayerById(layerId: string, l: LayerDescription) {
@@ -804,6 +855,122 @@ export default class ThreeView extends EventHandler<ViewEvents> {
   deleteLayerById(layerId: string) {
     invariant(this._core);
     this.layersManager.get(layerId)?.delete();
+  }
+
+  private registerBuiltIns(): void {
+    this.registerBuiltInMeshes();
+    this.registerBuiltInLights();
+  }
+
+  private registerBuiltInMeshes(): void {
+    this.registerMesh("rain", RainMeshLayer);
+    this.registerMesh("snow", SnowMeshLayer);
+    this.registerMesh("sky", SkyMeshLayer);
+    this.registerMesh("stars", StarsLayer);
+  }
+
+  private registerBuiltInLights(): void {
+    this.registerLight("sun", SunLightLayer);
+    this.registerLight("ambient", AmbientLightLayer);
+    this.registerLight("skyLightProbe", SkyLightProbeLayer);
+  }
+
+  private addMeshLayer(config: MeshLayerDeclarationDescription): LayerHandle {
+    // Find which mesh type from config
+    const meshType = this.registries.mesh.findMeshType(config);
+    if (!meshType) {
+      throw new Error("No mesh type specified in configuration");
+    }
+
+    // Extract layer config and mesh-specific config
+    const { type, ...meshConfigs } = config;
+    const flatConfig = { ...config, ...meshConfigs };
+
+    // Create mesh layer instance
+    const meshLayer = this.registries.mesh.create(meshType, flatConfig);
+
+    // Initialize the mesh
+    meshLayer.onCreate();
+
+    // Set up update listener
+    if (meshLayer.update) {
+      this.on("postRender", meshLayer.update.bind(meshLayer));
+    }
+
+    // Trigger re-render
+    meshLayer.on("_needsUpdate", this.forceUpdate);
+
+    const l = new LayerHandle(meshLayer);
+
+    // Store the mesh layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l;
+  }
+
+  private addLightLayer(config: LightLayerDeclarationDescription): LayerHandle {
+    // Find which light type from config
+    const lightType = this.registries.light.findLightType(config);
+    if (!lightType) {
+      throw new Error("No light type specified in configuration");
+    }
+
+    // Extract layer config and light-specific config
+    const { type, ...lightConfigs } = config;
+    const flatConfig = { ...config, ...lightConfigs };
+
+    // Create light layer instance
+    const lightLayer = this.registries.light.create(lightType, flatConfig);
+
+    // Initialize the light
+    lightLayer.onCreate();
+
+    // Set up update listener if the layer has an update method
+    if (lightLayer.update) {
+      this.on("postRender", lightLayer.update.bind(lightLayer));
+    }
+
+    // Trigger re-render
+    lightLayer.on("_needsUpdate", this.forceUpdate);
+
+    const l = new LayerHandle(lightLayer);
+
+    // Store the light layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l;
+  }
+
+  registerMesh(name: string, meshClass: MeshLayerConstructor): void {
+    this.registries.mesh.register(name, meshClass);
+  }
+
+  registerLight(name: string, lightClass: LightLayerConstructor): void {
+    this.registries.light.register(name, lightClass);
+  }
+
+  // TODO: Handle this in plugin system.
+  addDefaultAtmosphereLayers() {
+    return {
+      sky: this.addLayer<SkyMeshLayer>({
+        type: "mesh",
+        sky: {},
+      } as LayerDescription),
+      stars: this.addLayer<StarsLayer>({
+        type: "mesh",
+        stars: {},
+      } as LayerDescription),
+      skyLightProbe: this.addLayer<SkyLightProbeLayer>({
+        type: "light",
+        skyLightProbe: {},
+      } as LayerDescription),
+      sun: this.addLayer<SunLightLayer>({
+        type: "light",
+        sun: {},
+      } as LayerDescription),
+    };
   }
 
   setCamera(camPos: CameraPosition) {
