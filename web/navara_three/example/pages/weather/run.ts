@@ -34,6 +34,7 @@ export const run = async (view: ThreeView) => {
 
   view.aerialPerspective.irradiance = true;
 
+  view.cloudsEffect.enabled = true;
   view.cloudsEffect.localWeatherVelocity = new Vector2(0.005, 0.001);
   view.cloudsEffect.coverage = 0.35;
   view.cloudsEffect.absorptionCoefficient = 15;
