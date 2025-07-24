@@ -18,7 +18,7 @@ export type SSAOOptions = {
 } & EffectOptions;
 
 export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
-  enabled: false,
+  enabled: true,
   samples: null,
   radius: null,
   intensity: 1,
@@ -79,7 +79,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     return this.options.quality ?? DEFAULT_SSAO_OPTIONS.quality;
   }
   set quality(v: QualityMode) {
-    if (this.options.quality === v) return;
     this.options.quality = v;
 
     if (!this.rawPass) return;
@@ -91,7 +90,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     return this.options.halfRes ?? !!DEFAULT_SSAO_OPTIONS.halfRes;
   }
   set halfRes(v: boolean) {
-    if (this.options.halfRes === v) return;
     this.options.halfRes = v;
 
     if (!this.rawPass) return;
@@ -103,7 +101,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     return this.options.samples ?? DEFAULT_SSAO_OPTIONS.samples;
   }
   set samples(v: Nullable<number>) {
-    if (this.options.samples === v) return;
     this.options.samples = v;
 
     if (!this.rawPass) return;
@@ -116,7 +113,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     return this.options.radius ?? DEFAULT_SSAO_OPTIONS.radius;
   }
   set radius(v: Nullable<number>) {
-    if (this.options.radius === v) return;
     this.options.radius = v;
 
     if (!this.rawPass) return;
@@ -129,7 +125,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     return this.options.intensity ?? DEFAULT_SSAO_OPTIONS.intensity;
   }
   set intensity(v: number) {
-    if (this.options.intensity === v) return;
     this.options.intensity = v;
 
     if (!this.rawPass) return;
@@ -141,7 +136,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     return this.options.color ?? DEFAULT_SSAO_OPTIONS.color;
   }
   set color(v: Color) {
-    if (this.options.color === v) return;
     this.options.color = v;
 
     if (!this.rawPass) return;

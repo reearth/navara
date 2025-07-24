@@ -8,7 +8,7 @@ import type {
   MvtLayerDescription,
 } from "@navara/engine";
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
-import type { Mesh, Sprite, Object3D } from "three";
+import type { Mesh, Sprite, Object3D, Material } from "three";
 
 import type {
   RainMeshLayerConfig,
@@ -19,6 +19,18 @@ import type {
   SkyLightProbeLayerConfig,
   AmbientLightLayerConfig,
 } from "../layers";
+import type {
+  AerialPerspectiveConfig,
+  CloudsConfig,
+  FinalCopyPassConfig,
+  FXAAConfig,
+  LensFlareConfig,
+  MRTPassConfig,
+  SMAAConfig,
+  SSAOConfig,
+  ToneMappingConfig,
+  TransparentPassConfig,
+} from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
 export * from "./unit";
@@ -34,7 +46,8 @@ export type LayerDescription =
   | Cesium3dTilesLayer
   | MvtLayer
   | MeshLayerDeclarationDescription
-  | LightLayerDeclarationDescription;
+  | LightLayerDeclarationDescription
+  | EffectLayerDeclarationDescription;
 
 export type MeshLayerDeclarationDescription =
   | RainMeshLayerConfig
@@ -46,6 +59,18 @@ export type LightLayerDeclarationDescription =
   | SunLightLayerConfig
   | SkyLightProbeLayerConfig
   | AmbientLightLayerConfig;
+
+export type EffectLayerDeclarationDescription =
+  | AerialPerspectiveConfig
+  | CloudsConfig
+  | FinalCopyPassConfig
+  | FXAAConfig
+  | LensFlareConfig
+  | MRTPassConfig
+  | SMAAConfig
+  | SSAOConfig
+  | ToneMappingConfig
+  | TransparentPassConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";
@@ -82,6 +107,7 @@ export type Cesium3dTilesLayer = Layer<
 export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
+export type DrapedMaterialCache = Map<string, Material>;
 
 // Make a reference of TileMesh by TileHandle.
 export type TileMapByHandle = Map<TileHandle, TileMesh>;

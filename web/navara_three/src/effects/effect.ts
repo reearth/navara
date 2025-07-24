@@ -42,6 +42,10 @@ export class Pass<
     this.onMounted();
   }
 
+  get raw() {
+    return this.rawPass;
+  }
+
   get enabled() {
     return this.options.enabled ?? DEFAULT_EFFECT_OPTIONS.enabled;
   }
@@ -54,6 +58,13 @@ export class Pass<
       // I'm not sure why we need this cast, but it is necessary actually.
       ...([] as Parameters<Ev["_needsUpdate"]>),
     );
+  }
+
+  get visible() {
+    return this.enabled;
+  }
+  set visible(v: boolean) {
+    this.enabled = v;
   }
 
   protected onMounted() {}

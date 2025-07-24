@@ -1,7 +1,7 @@
+import { EffectLayerRegistry } from "./EffectLayerRegistry";
 import { LightLayerRegistry } from "./LightLayerRegistry";
 import { MeshLayerRegistry } from "./MeshLayerRegistry";
 import type { ViewContext } from "./ViewContext";
-// import { EffectRegistry } from "./EffectRegistry"; // TODO: Uncomment when needed
 // import { ResourceRegistry } from "./ResourceRegistry"; // TODO: Implement when needed
 
 /**
@@ -12,7 +12,7 @@ import type { ViewContext } from "./ViewContext";
 export class Registries {
   mesh: MeshLayerRegistry;
   light: LightLayerRegistry;
-  // effect: EffectRegistry; // TODO: Uncomment when needed
+  effect: EffectLayerRegistry;
   // resource: ResourceRegistry; // TODO: Implement when needed
   // pass: PassRegistry; // TODO: Implement when needed
   // material: MaterialRegistry; // TODO: Implement when needed
@@ -21,7 +21,7 @@ export class Registries {
   constructor(view: ViewContext) {
     this.mesh = new MeshLayerRegistry(view);
     this.light = new LightLayerRegistry(view);
-    // this.effect = new EffectRegistry(); // TODO: Uncomment when needed
+    this.effect = new EffectLayerRegistry(view);
   }
 
   /**
@@ -37,6 +37,10 @@ export class Registries {
         registeredCount: this.light.size(),
         types: this.light.getRegisteredTypes(),
       },
+      effect: {
+        registeredCount: this.effect.size(),
+        types: this.effect.getRegisteredTypes(),
+      },
       // TODO: Add other registries when implemented
     };
   }
@@ -47,6 +51,7 @@ export class Registries {
   clearAll(): void {
     this.mesh.clear();
     this.light.clear();
+    this.effect.clear();
     // TODO: Clear other registries when implemented
   }
 }

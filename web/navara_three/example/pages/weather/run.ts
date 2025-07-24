@@ -8,6 +8,7 @@ import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
+import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
@@ -15,7 +16,14 @@ import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  const defaultEffects = view.addDefaultEffectLayers();
   view.addDefaultAtmosphereLayers();
+
+  // Add clouds effect layer explicitly
+  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+    type: "effect",
+    clouds: {},
+  });
 
   view.setCamera({
     lng: 139.7371145474829,
@@ -31,16 +39,22 @@ export const run = async (view: ThreeView) => {
 
   view.atmosphere.date = date;
 
-  view.aerialPerspective.irradiance = true;
+  defaultEffects.aerialPerspective.update({
+    aerialPerspective: {
+      irradiance: true,
+    },
+  });
 
-  view.cloudsEffect.enabled = true;
-  view.cloudsEffect.localWeatherVelocity = new Vector2(0.005, 0.001);
-  view.cloudsEffect.coverage = 0.35;
-  view.cloudsEffect.absorptionCoefficient = 15;
-  view.cloudsEffect.lightShafts = true;
-  view.cloudsEffect.shadows = true;
+  cloudsLayer.update({
+    clouds: {
+      localWeatherVelocity: new Vector2(0.005, 0.001),
+      coverage: 0.35,
+      absorptionCoefficient: 15,
+      lightShafts: true,
+      shadows: true,
+    },
+  });
 
-  view.toneMappingEffect.enabled = true;
   view.toneMappingExposure = 10;
 
   view.addLayer({

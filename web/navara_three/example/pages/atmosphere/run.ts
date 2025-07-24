@@ -17,6 +17,10 @@ import type { TextureChannel } from "@takram/three-clouds";
 import { Color, LightProbe, SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
+import type {
+  AerialPerspectiveEffectLayer,
+  CloudsEffectLayer,
+} from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import {
@@ -27,44 +31,25 @@ import {
 
 import { SH_COEFFICIENTS } from "./consts";
 
+type DefaultEffects = ReturnType<ThreeView["addDefaultEffectLayers"]>;
+
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  const defaultEffects = view.addDefaultEffectLayers();
   const defaultLayers = view.addDefaultAtmosphereLayers();
+
+  // Add clouds effect layer explicitly
+  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+    type: "effect",
+    clouds: {},
+  });
 
   // Cast to specific layer types for easier access and updates
   const skyLayer = defaultLayers.sky;
   const starsLayer = defaultLayers.stars;
   const sunLightLayer = defaultLayers.sun;
   const skyLightProbeLayer = defaultLayers.skyLightProbe;
-
-  // Customize the default layers with specific configurations
-  skyLayer.update({
-    sky: {
-      sun: true,
-      moon: true,
-      moonScale: 1,
-      moonIntensity: 1,
-    },
-  });
-
-  starsLayer.update({
-    stars: {
-      pointSize: 1,
-      intensity: 10,
-      background: true,
-    },
-  });
-
-  sunLightLayer.update({
-    sun: {
-      intensity: 1,
-      color: 0xffffff,
-      distance: 300,
-      castShadow: true,
-      shadowMapSize: 2048,
-    },
-  });
 
   // Add an additional ambient light layer
   const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLayer({
@@ -128,18 +113,18 @@ export const run = async (view: ThreeView) => {
   addCloudsTilesControl(view, pane, tileBinding);
   addDateControl(view, pane);
   addAtmosphereControl(
-    view,
     pane,
     skyLayer,
     starsLayer,
     sunLightLayer,
     ambientLightLayer,
     skyLightProbeLayer,
+    defaultEffects.aerialPerspective,
   );
-  addCloudsControl(view, pane);
-  addAAControl(view, pane);
+  addCloudsControl(view, pane, cloudsLayer);
+  addAAControl(pane, defaultEffects);
   addIBLControl(view, pane);
-  addEffectsControl(view, pane);
+  addEffectsControl(view, pane, defaultEffects);
 };
 
 const addTileControl = (view: ThreeView, pane: Pane) => {
@@ -244,13 +229,13 @@ const addCloudsTilesControl = (
 };
 
 const addAtmosphereControl = (
-  view: ThreeView,
   pane: Pane,
   skyLayer: LayerHandle<SkyMeshLayer>,
   starsLayer: LayerHandle<StarsLayer>,
   sunLightLayer: LayerHandle<SunLightLayer>,
   ambientLightLayer: LayerHandle<AmbientLightLayer>,
   _skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
+  aerialPerspectiveLayer: LayerHandle<AerialPerspectiveEffectLayer>,
 ) => {
   const PARAMS = {
     aerialPerspective: true,
@@ -279,7 +264,9 @@ const addAtmosphereControl = (
   });
 
   folder.addBinding(PARAMS, "aerialPerspective").on("change", (v) => {
-    view.aerialPerspective.enabled = v.value;
+    aerialPerspectiveLayer.update({
+      visible: v.value,
+    });
   });
   folder.addBinding(PARAMS, "sky").on("change", (v) => {
     skyLayer.visible = v.value;
@@ -333,17 +320,33 @@ const addAtmosphereControl = (
     ambientLightLayer.update({ ambient: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "inscatter").on("change", (v) => {
-    view.aerialPerspective.inscatter = v.value;
+    aerialPerspectiveLayer.update({
+      aerialPerspective: {
+        inscatter: v.value,
+      },
+    });
   });
   folder.addBinding(PARAMS, "transmittance").on("change", (v) => {
-    view.aerialPerspective.transmittance = v.value;
+    aerialPerspectiveLayer.update({
+      aerialPerspective: {
+        transmittance: v.value,
+      },
+    });
   });
   folder.addBinding(PARAMS, "irradiance").on("change", (v) => {
-    view.aerialPerspective.irradiance = v.value;
+    aerialPerspectiveLayer.update({
+      aerialPerspective: {
+        irradiance: v.value,
+      },
+    });
   });
 };
 
-const addCloudsControl = (view: ThreeView, pane: Pane) => {
+const addCloudsControl = (
+  view: ThreeView,
+  pane: Pane,
+  cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
+) => {
   const BASE_PARAMS = {
     enable: true,
     coverage: DEFAULT_CLOUDS_OPTIONS.coverage,
@@ -408,25 +411,25 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     constantTerm: 0,
   };
 
-  view.cloudsEffect.enabled = BASE_PARAMS.enable;
+  const cloudsLayer = cloudsLayerHandle.getLayer().instance;
 
   const baseFields: FolderFields<typeof BASE_PARAMS> = [
     {
       name: "enable",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
+        if (!cloudsLayer) return;
         if (v.value) {
-          view.cloudsEffect.coverage = BASE_PARAMS.coverage;
+          cloudsLayer.coverage = BASE_PARAMS.coverage;
         } else {
-          view.cloudsEffect.coverage = 0;
+          cloudsLayer.coverage = 0;
         }
       },
     },
     {
       name: "coverage",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.coverage = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.coverage = v.value;
       },
     },
     {
@@ -437,16 +440,16 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         ),
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.qualityPreset =
+        if (!cloudsLayer) return;
+        cloudsLayer.qualityPreset =
           v.value as Required<CloudsOptions>["qualityPreset"];
       },
     },
     {
       name: "animation",
       onChange: (v) => {
-        if (view.cloudsEffect) {
-          view.cloudsEffect.localWeatherVelocity.x = v.value ? 0.001 : 0;
+        if (cloudsLayer) {
+          cloudsLayer.localWeatherVelocity.x = v.value ? 0.001 : 0;
           view.forceUpdate();
         }
         view.animation = v.value;
@@ -455,8 +458,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     {
       name: "lightShafts",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.lightShafts = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.lightShafts = v.value;
       },
     },
 
@@ -467,29 +470,29 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         options: [1, 0.5, 0.25].map((v) => ({ text: v.toString(), value: v })),
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.resolutionScale = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.resolutionScale = v.value;
       },
     },
     {
       name: "maxIterationCount",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.maxIterationCount = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.maxIterationCount = v.value;
       },
     },
     {
       name: "minStepSize",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.minStepSize = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.minStepSize = v.value;
       },
     },
     {
       name: "maxStepSize",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.maxStepSize = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.maxStepSize = v.value;
       },
     },
   ];
@@ -498,8 +501,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     {
       name: "shadows",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shadows = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.shadows = v.value;
       },
     },
     {
@@ -510,8 +513,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         ),
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shadowCascadeCount = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.shadowCascadeCount = v.value;
       },
     },
     {
@@ -525,8 +528,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         },
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shadowMapSize.set(v.value, v.value);
+        if (!cloudsLayer) return;
+        cloudsLayer.shadowMapSize.set(v.value, v.value);
         view.forceUpdate();
       },
     },
@@ -536,8 +539,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     {
       name: "haze",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.haze = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.haze = v.value;
       },
     },
     {
@@ -547,8 +550,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 3e-5,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.hazeDensityScale = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.hazeDensityScale = v.value;
       },
     },
     {
@@ -557,8 +560,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         min: 0,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.hazeExponent = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.hazeExponent = v.value;
       },
     },
     {
@@ -568,8 +571,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 5,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.hazeScatteringCoefficient = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.hazeScatteringCoefficient = v.value;
       },
     },
     {
@@ -579,8 +582,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 5,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.hazeAbsorptionCoefficient = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.hazeAbsorptionCoefficient = v.value;
       },
     },
   ];
@@ -590,61 +593,61 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     {
       name: "localWeatherRepeat",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.localWeatherRepeat.setScalar(v.value);
+        if (!cloudsLayer) return;
+        cloudsLayer.localWeatherRepeat.setScalar(v.value);
         view.forceUpdate();
       },
     },
     {
       name: "localWeatherOffset",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.localWeatherOffset = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.localWeatherOffset = v.value;
       },
     },
     {
       name: "shapeRepeat",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shapeRepeat.setScalar(v.value);
+        if (!cloudsLayer) return;
+        cloudsLayer.shapeRepeat.setScalar(v.value);
         view.forceUpdate();
       },
     },
     {
       name: "shapeOffset",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shapeOffset = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.shapeOffset = v.value;
       },
     },
     {
       name: "shapeDetailRepeat",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shapeDetailRepeat.setScalar(v.value);
+        if (!cloudsLayer) return;
+        cloudsLayer.shapeDetailRepeat.setScalar(v.value);
         view.forceUpdate();
       },
     },
     {
       name: "shapeDetailOffset",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.shapeDetailOffset = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.shapeDetailOffset = v.value;
       },
     },
     {
       name: "turbulenceRepeat",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.turbulenceRepeat.setScalar(v.value);
+        if (!cloudsLayer) return;
+        cloudsLayer.turbulenceRepeat.setScalar(v.value);
         view.forceUpdate();
       },
     },
     {
       name: "turbulenceDisplacement",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.turbulenceDisplacement = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.turbulenceDisplacement = v.value;
       },
     },
   ];
@@ -657,8 +660,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 5,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.scatteringCoefficient = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.scatteringCoefficient = v.value;
       },
     },
     {
@@ -668,8 +671,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 5,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.absorptionCoefficient = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.absorptionCoefficient = v.value;
       },
     },
     {
@@ -679,8 +682,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 1,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.scatterAnisotropy1 = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.scatterAnisotropy1 = v.value;
       },
     },
     {
@@ -690,8 +693,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 0,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.scatterAnisotropy2 = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.scatterAnisotropy2 = v.value;
       },
     },
     {
@@ -701,8 +704,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 1,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.scatterAnisotropyMix = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.scatterAnisotropyMix = v.value;
       },
     },
     {
@@ -712,8 +715,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 5,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.skyLightScale = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.skyLightScale = v.value;
       },
     },
     {
@@ -723,8 +726,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 10,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.groundBounceScale = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.groundBounceScale = v.value;
       },
     },
     {
@@ -734,8 +737,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 1,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.powderScale = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.powderScale = v.value;
       },
     },
     {
@@ -745,8 +748,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         max: 1000,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.powderExponent = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.powderExponent = v.value;
       },
     },
   ];
@@ -755,8 +758,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
     idx: number,
     apis: FieldsApis<typeof CLOUD_LAYERS_PARAMS>,
   ) => {
-    if (!view.cloudsEffect) return;
-    const layer = view.cloudsEffect.cloudLayers[idx];
+    if (!cloudsLayer) return;
+    const layer = cloudsLayer.cloudLayers[idx];
     apis.channel.controller.value.rawValue = layer.channel;
     apis.altitude.controller.value.rawValue = layer.altitude;
     apis.height.controller.value.rawValue = layer.height;
@@ -790,8 +793,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         options: ["r", "g", "b", "a"].map((v) => ({ text: v, value: v })),
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].channel =
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].channel =
           v.value as TextureChannel;
       },
     },
@@ -801,9 +804,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 20,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].altitude =
-          v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].altitude = v.value;
       },
     },
     {
@@ -812,9 +814,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 20,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].height =
-          v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].height = v.value;
       },
     },
     {
@@ -825,8 +826,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].densityScale =
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].densityScale =
           v.value;
       },
     },
@@ -838,8 +839,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].shapeAmount =
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].shapeAmount =
           v.value;
       },
     },
@@ -851,10 +852,9 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[
-          CLOUD_LAYERS_PARAMS.index
-        ].shapeDetailAmount = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].shapeDetailAmount =
+          v.value;
       },
     },
     {
@@ -865,10 +865,9 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[
-          CLOUD_LAYERS_PARAMS.index
-        ].weatherExponent = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].weatherExponent =
+          v.value;
       },
     },
     {
@@ -879,10 +878,9 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[
-          CLOUD_LAYERS_PARAMS.index
-        ].shapeAlteringBias = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].shapeAlteringBias =
+          v.value;
       },
     },
     {
@@ -893,18 +891,16 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[
-          CLOUD_LAYERS_PARAMS.index
-        ].coverageFilterWidth = v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].coverageFilterWidth =
+          v.value;
       },
     },
     {
       name: "shadow",
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].shadow =
-          v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].shadow = v.value;
       },
     },
     {
@@ -915,9 +911,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].expTerm =
-          v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].expTerm = v.value;
       },
     },
     {
@@ -928,9 +923,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.02,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].exponent =
-          v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].exponent = v.value;
       },
     },
     {
@@ -941,9 +935,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].linearTerm =
-          v.value;
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].linearTerm = v.value;
       },
     },
     {
@@ -954,8 +947,8 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
         step: 0.01,
       },
       onChange: (v) => {
-        if (!view.cloudsEffect) return;
-        view.cloudsEffect.cloudLayers[CLOUD_LAYERS_PARAMS.index].constantTerm =
+        if (!cloudsLayer) return;
+        cloudsLayer.cloudLayers[CLOUD_LAYERS_PARAMS.index].constantTerm =
           v.value;
       },
     },
@@ -993,7 +986,7 @@ const addCloudsControl = (view: ThreeView, pane: Pane) => {
   );
 };
 
-const addAAControl = (view: ThreeView, pane: Pane) => {
+const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
   const PARAMS = {
     enable: false,
     effect: "smaa",
@@ -1001,18 +994,20 @@ const addAAControl = (view: ThreeView, pane: Pane) => {
     edgeDetectionMode: "color",
   } as const;
 
-  view.smaaEffect.enabled = PARAMS.enable;
-  // NEXT
-  // view.aaEffect.effect = PARAMS.effect;
-  view.smaaEffect.quality = PARAMS.quality;
-  view.smaaEffect.edgeDetectionMode = PARAMS.edgeDetectionMode;
+  defaultEffects.smaa.update({
+    visible: PARAMS.enable,
+    smaa: {
+      quality: PARAMS.quality,
+      edgeDetectionMode: PARAMS.edgeDetectionMode,
+    },
+  });
 
   const folder = pane.addFolder({
     title: "Antialias",
   });
 
   folder.addBinding(PARAMS, "enable").on("change", (v) => {
-    view.smaaEffect.enabled = v.value;
+    defaultEffects.smaa.update({ visible: v.value });
   });
   folder
     .addBinding(PARAMS, "effect", {
@@ -1028,7 +1023,7 @@ const addAAControl = (view: ThreeView, pane: Pane) => {
       ),
     })
     .on("change", (v) => {
-      view.smaaEffect.quality = v.value;
+      defaultEffects.smaa.update({ smaa: { quality: v.value } });
     });
   folder
     .addBinding(PARAMS, "edgeDetectionMode", {
@@ -1037,7 +1032,7 @@ const addAAControl = (view: ThreeView, pane: Pane) => {
       ),
     })
     .on("change", (v) => {
-      view.smaaEffect.edgeDetectionMode = v.value;
+      defaultEffects.smaa.update({ smaa: { edgeDetectionMode: v.value } });
     });
 };
 
@@ -1082,7 +1077,11 @@ const addIBLControl = (view: ThreeView, pane: Pane) => {
   });
 };
 
-const addEffectsControl = (view: ThreeView, pane: Pane) => {
+const addEffectsControl = (
+  view: ThreeView,
+  pane: Pane,
+  defaultEffects: DefaultEffects,
+) => {
   const PARAMS = {
     toneMapping: true,
     toneMappingMode: ToneMappingMode.AGX,
@@ -1099,25 +1098,32 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
     ssaoColor: "#000000",
   };
 
-  view.toneMappingEffect.enabled = PARAMS.toneMapping;
+  defaultEffects.toneMapping.update({
+    visible: PARAMS.toneMapping,
+    toneMapping: { mode: PARAMS.toneMappingMode },
+  });
   view.toneMappingExposure = PARAMS.toneMappingExposure;
-  view.lensFlareEffect.enabled = PARAMS.lensFlare;
-  view.lensFlareEffect.intensity = PARAMS.lensFlareIntensity;
-  view.ssaoEffect.enabled = PARAMS.ssao;
+  defaultEffects.lensFlare.update({
+    visible: PARAMS.lensFlare,
+    lensFlare: { intensity: PARAMS.lensFlareIntensity },
+  });
+  defaultEffects.ssao.update({ visible: PARAMS.ssao });
 
   const folder = pane.addFolder({
     title: "Effects",
   });
 
   folder.addBinding(PARAMS, "toneMapping").on("change", (v) => {
-    view.toneMappingEffect.enabled = v.value;
+    defaultEffects.toneMapping.update({ visible: v.value });
   });
   folder
     .addBinding(PARAMS, "toneMappingMode", {
       options: ToneMappingMode,
     })
     .on("change", (v) => {
-      view.toneMappingEffect.mode = Number(v.value);
+      defaultEffects.toneMapping.update({
+        toneMapping: { mode: Number(v.value) },
+      });
     });
   folder
     .addBinding(PARAMS, "toneMappingExposure", { min: 0, max: 20, steps: 1 })
@@ -1125,18 +1131,18 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
       view.toneMappingExposure = v.value;
     });
   folder.addBinding(PARAMS, "lensFlare").on("change", (v) => {
-    view.lensFlareEffect.enabled = v.value;
+    defaultEffects.lensFlare.update({ visible: v.value });
   });
   folder
     .addBinding(PARAMS, "lensFlareIntensity", { step: 0.001 })
     .on("change", (v) => {
-      view.lensFlareEffect.intensity = v.value;
+      defaultEffects.lensFlare.update({ lensFlare: { intensity: v.value } });
     });
   folder.addBinding(PARAMS, "ssao").on("change", (v) => {
-    view.ssaoEffect.enabled = v.value;
+    defaultEffects.ssao.update({ visible: v.value });
   });
   folder.addBinding(PARAMS, "ssaoHalfRes").on("change", (v) => {
-    view.ssaoEffect.halfRes = v.value;
+    defaultEffects.ssao.update({ ssao: { halfRes: v.value } });
   });
   folder
     .addBinding(PARAMS, "ssaoQuality", {
@@ -1146,18 +1152,20 @@ const addEffectsControl = (view: ThreeView, pane: Pane) => {
       })),
     })
     .on("change", (v) => {
-      view.ssaoEffect.quality = v.value as SSAOQualityMode;
+      defaultEffects.ssao.update({
+        ssao: { quality: v.value as SSAOQualityMode },
+      });
     });
   folder.addBinding(PARAMS, "ssaoSamples").on("change", (v) => {
-    view.ssaoEffect.samples = v.value;
+    defaultEffects.ssao.update({ ssao: { samples: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoRadius").on("change", (v) => {
-    view.ssaoEffect.radius = v.value;
+    defaultEffects.ssao.update({ ssao: { radius: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoIntensity").on("change", (v) => {
-    view.ssaoEffect.intensity = v.value;
+    defaultEffects.ssao.update({ ssao: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoColor").on("change", (v) => {
-    view.ssaoEffect.color = new Color(v.value);
+    defaultEffects.ssao.update({ ssao: { color: new Color(v.value) } });
   });
 };

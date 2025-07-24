@@ -68,16 +68,23 @@ export class AerialPerspective extends Effect<
     this.transmittance = !!this.options.transmittance;
     this.irradiance = !!this.options.irradiance;
 
-    this.atmosphere.on("_textureLoaded", () => {
-      invariant(this.atmosphere.textures);
-      Object.assign(this.rawEffect, this.atmosphere.textures);
-    });
+    if (this.atmosphere.textures) {
+      this.onTextureLoaded();
+    } else {
+      this.atmosphere.on("_textureLoaded", this.onTextureLoaded);
+    }
 
     this.atmosphere._overlay.on("changed", this.onOverlayChanged);
     this.atmosphere._shadow.on("changed", this.onShadowChanged);
     this.atmosphere._shadowLength.on("changed", this.onShadowLengthChanged);
     this.atmosphere._enableShadows.on("changed", this.onEnableShadowChanged);
   }
+
+  onTextureLoaded = () => {
+    invariant(this.atmosphere.textures);
+    Object.assign(this.rawEffect, this.atmosphere.textures);
+    this.atmosphere.off("_textureLoaded", this.onTextureLoaded);
+  };
 
   onOverlayChanged = (v: AtmosphereOverlay | null) => {
     this.rawEffect.overlay = v;

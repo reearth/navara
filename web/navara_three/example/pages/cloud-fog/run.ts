@@ -1,6 +1,11 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  LayerHandle,
+  Clouds,
+} from "@navara/three";
 import { Pane } from "tweakpane";
 
+import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
@@ -8,7 +13,14 @@ import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  const defaultEffects = view.addDefaultEffectLayers();
   view.addDefaultAtmosphereLayers();
+
+  // Add clouds effect layer explicitly
+  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+    type: "effect",
+    clouds: {},
+  });
 
   view.addLayer({
     type: "tiles",
@@ -58,11 +70,14 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  view.toneMappingEffect.enabled = true;
+  defaultEffects.toneMapping.update({ visible: true });
   view.toneMappingExposure = 10;
-  view.cloudsEffect.enabled = true;
-  view.aerialPerspective.irradiance = true;
-  view.cloudsEffect.shadows = true;
+  defaultEffects.aerialPerspective.update({
+    aerialPerspective: {
+      irradiance: true,
+    },
+  });
+  cloudsLayer.update({ clouds: { shadows: true } });
 
   const pane = new Pane({
     title: "Parameters",
@@ -73,27 +88,34 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addDateControl(view, pane);
-  addCloudFogControl(view, pane);
+  addCloudFogControl(pane, cloudsLayer);
 };
 
-const addCloudFogControl = (view: ThreeView, pane: Pane) => {
+const addCloudFogControl = (
+  pane: Pane,
+  cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
+) => {
   const PARAMS = {
     height: 2000,
     density: 0.01,
   };
 
-  view.cloudsEffect.coverage = 0.3;
-  view.cloudsEffect.cloudLayers[3].altitude = 0;
-  view.cloudsEffect.cloudLayers[3].height = PARAMS.height;
-  view.cloudsEffect.cloudLayers[3].densityScale = 0.05;
-  view.cloudsEffect.cloudLayers[3].shapeAmount = 0.2;
-  view.cloudsEffect.cloudLayers[3].shapeDetailAmount = 0;
-  view.cloudsEffect.cloudLayers[3].shapeAlteringBias = 0.5;
-  view.cloudsEffect.cloudLayers[3].coverageFilterWidth = 1;
-  view.cloudsEffect.cloudLayers[3].expTerm = 0;
-  view.cloudsEffect.cloudLayers[3].exponent = 0;
-  view.cloudsEffect.cloudLayers[3].constantTerm = PARAMS.density;
-  view.cloudsEffect.cloudLayers[3].linearTerm = 0;
+  const cloudsLayer = cloudsLayerHandle.getLayer().instance as Clouds;
+
+  if (cloudsLayer) {
+    cloudsLayer.coverage = 0.3;
+    cloudsLayer.cloudLayers[3].altitude = 0;
+    cloudsLayer.cloudLayers[3].height = PARAMS.height;
+    cloudsLayer.cloudLayers[3].densityScale = 0.05;
+    cloudsLayer.cloudLayers[3].shapeAmount = 0.2;
+    cloudsLayer.cloudLayers[3].shapeDetailAmount = 0;
+    cloudsLayer.cloudLayers[3].shapeAlteringBias = 0.5;
+    cloudsLayer.cloudLayers[3].coverageFilterWidth = 1;
+    cloudsLayer.cloudLayers[3].expTerm = 0;
+    cloudsLayer.cloudLayers[3].exponent = 0;
+    cloudsLayer.cloudLayers[3].constantTerm = PARAMS.density;
+    cloudsLayer.cloudLayers[3].linearTerm = 0;
+  }
 
   const folderFields: FolderFields<typeof PARAMS> = [
     {
@@ -102,7 +124,9 @@ const addCloudFogControl = (view: ThreeView, pane: Pane) => {
         step: 100,
       },
       onChange: (v) => {
-        view.cloudsEffect.cloudLayers[3].height = v.value;
+        if (cloudsLayer) {
+          cloudsLayer.cloudLayers[3].height = v.value;
+        }
       },
     },
     {
@@ -113,7 +137,9 @@ const addCloudFogControl = (view: ThreeView, pane: Pane) => {
         step: 0.001,
       },
       onChange: (v) => {
-        view.cloudsEffect.cloudLayers[3].constantTerm = v.value;
+        if (cloudsLayer) {
+          cloudsLayer.cloudLayers[3].constantTerm = v.value;
+        }
       },
     },
   ];

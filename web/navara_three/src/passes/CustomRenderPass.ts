@@ -1,4 +1,4 @@
-import { RenderPass, DepthCopyPass } from "postprocessing";
+import { DepthCopyPass } from "postprocessing";
 import {
   AlwaysStencilFunc,
   BackSide,
@@ -17,6 +17,7 @@ import {
   type WebGLRenderer,
 } from "three";
 
+import { RenderPass } from "../effects";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
