@@ -5,3 +5,5 @@ export * from "./ssao";
 export * from "./aa";
 export * from "./clouds";
 export * from "./aerialPerspective";
+export * from "./render";
+export * from "./copy";

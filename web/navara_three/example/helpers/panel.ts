@@ -10,7 +10,10 @@ import {
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
-  { type: "terrain" } | { type: "mesh" } | { type: "light" }
+  | { type: "terrain" }
+  | { type: "mesh" }
+  | { type: "light" }
+  | { type: "effect" }
 >;
 
 export const addCtrlPanel = (
@@ -286,7 +289,7 @@ export const addCtrlPanel = (
 
 function createParamCtrl(
   pane: Pane,
-  paneParams: any,
+  paneParams: Record<string, any>,
   layer: MaterialLayerDescription | undefined,
   changeFunc: () => void,
 ) {

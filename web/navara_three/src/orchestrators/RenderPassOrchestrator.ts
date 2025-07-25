@@ -89,7 +89,7 @@ export class RenderPassOrchestrator {
   ): void {
     const namedPass: NamedPass = { name, pass };
     const targetIndex = this.passMap.insertAfter(targetName, namedPass);
-    this.effectComposer.addPass(pass, targetIndex + 1);
+    this.effectComposer.addPass(pass, targetIndex);
   }
 
   /**

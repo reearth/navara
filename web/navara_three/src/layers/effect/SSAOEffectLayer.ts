@@ -1,0 +1,85 @@
+import { Scene } from "three";
+
+import {
+  EffectLayerDeclaration,
+  type EffectLayerConfig,
+  type EffectLayerUpdate,
+} from "../../core/EffectLayerDeclaration";
+import type { ViewContext } from "../../core/ViewContext";
+import { SSAO, type SSAOOptions } from "../../effects";
+
+type LayerDescription = {
+  ssao?: Omit<SSAOOptions, "enabled">;
+};
+
+export type SSAOConfig = LayerDescription & EffectLayerConfig;
+
+export type SSAOUpdate = LayerDescription & EffectLayerUpdate;
+
+export class SSAOEffectLayer extends EffectLayerDeclaration<
+  SSAOConfig,
+  SSAOUpdate,
+  SSAO
+> {
+  static key = "ssao";
+  static insertAfter = ["lensFlare"];
+
+  private config: SSAOConfig;
+
+  constructor(view: ViewContext, config: SSAOConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  createPass() {
+    // TODO: Pass depth buffer, not a scene.
+    // This matches the existing implementation in ThreeView
+    const combinedScene = new Scene();
+    combinedScene.add(this.view.scenes.globe);
+    combinedScene.add(this.view.scenes.mrt);
+    combinedScene.add(this.view.scenes.opaque);
+    combinedScene.add(this.view.scenes.light);
+
+    const pass = new SSAO(
+      combinedScene,
+      this.view.camera,
+      this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientWidth,
+      this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientHeight,
+      {
+        ...this.config.ssao,
+        enabled: this.config.visible ?? true,
+      },
+    );
+
+    return pass;
+  }
+
+  onUpdateConfig(updates: SSAOUpdate): void {
+    super.onUpdateConfig(updates);
+
+    if (!this.instance) return;
+    Object.assign(this.config, updates);
+
+    const config = updates.ssao;
+    if (!config) return;
+
+    if (config.samples !== undefined) {
+      this.instance.samples = config.samples;
+    }
+    if (config.radius !== undefined) {
+      this.instance.radius = config.radius;
+    }
+    if (config.intensity !== undefined) {
+      this.instance.intensity = config.intensity;
+    }
+    if (config.color !== undefined) {
+      this.instance.color = config.color;
+    }
+    if (config.halfRes !== undefined) {
+      this.instance.halfRes = config.halfRes ?? false;
+    }
+    if (config.quality !== undefined) {
+      this.instance.quality = config.quality;
+    }
+  }
+}

@@ -236,7 +236,12 @@ export class Clouds extends Effect<CloudsEffect, Required<CloudsOptions>> {
       },
     );
 
-    this.atmosphere.on("_textureLoaded", this.onTextureLoaded);
+    if (this.atmosphere.textures) {
+      this.onTextureLoaded();
+    } else {
+      this.atmosphere.on("_textureLoaded", this.onTextureLoaded);
+    }
+
     this.atmosphere.on("_disposed", this.onDisposed);
   }
 

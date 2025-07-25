@@ -9,7 +9,6 @@ import initCore, {
 } from "@navara/engine";
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
-import { RenderPass, CopyPass } from "postprocessing";
 import {
   PerspectiveCamera,
   Scene,
@@ -17,7 +16,6 @@ import {
   Vector3,
   Texture,
   Vector2,
-  Material,
   Color,
   LinearFilter,
   Group,
@@ -32,23 +30,17 @@ import {
   ViewContext,
   type MeshLayerConstructor,
   type LightLayerConstructor,
+  type EffectLayerConstructor,
 } from "./core";
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
 import {
-  SMAA,
-  LensFlare,
-  SSAO,
-  ToneMapping,
-  AerialPerspective,
   type AntialiasOptions,
   type EffectOptions,
   type LensFlareOptions,
   type SSAOOptions,
   type ToneMappingOptions,
-  Clouds,
   type CloudsOptions,
-  FXAA,
   type AerialPerspectiveOptions,
 } from "./effects";
 import {
@@ -63,6 +55,18 @@ import {
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
+import {
+  CloudsEffectLayer,
+  FXAAEffectLayer,
+  LensFlareEffectLayer,
+  MRTPassEffectLayer,
+  SMAAEffectLayer,
+  SSAOEffectLayer,
+  ToneMappingEffectLayer,
+  TransparentPassEffectLayer,
+} from "./layers/effect";
+import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
+import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
 import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
 import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
 import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
@@ -71,7 +75,6 @@ import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
-import { CustomRenderPass } from "./passes";
 import { PickHelper } from "./pick/pickHelper";
 import type { Picking } from "./pick/picking";
 import { TerrainPicker } from "./pick/pickTerrain";
@@ -88,6 +91,8 @@ import {
   type TileMapByHandle,
   type MeshLayerDeclarationDescription,
   type LightLayerDeclarationDescription,
+  type EffectLayerDeclarationDescription,
+  type DrapedMaterialCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker } from "./utils";
@@ -157,6 +162,11 @@ export type ViewEvents = {
    * */
   postUpdate: (t: number) => void;
   /**
+   * Emitted before a rendering process happened.
+   * Enabling `animation` flag emits this event every frame.
+   * */
+  preRender: (t: number) => void;
+  /**
    * Emitted after a rendering process happened.
    * Enabling `animation` flag emits this event every frame.
    * */
@@ -171,25 +181,19 @@ export default class ThreeView<
   renderer: WebGLRenderer;
   control?: { update: () => void; get target(): Vector3 | undefined };
 
-  atmosphere!: Atmosphere;
+  atmosphere: Atmosphere;
 
-  // Effects
-  aerialPerspective!: AerialPerspective;
-  cloudsEffect!: Clouds;
-  toneMappingEffect!: ToneMapping;
-  lensFlareEffect!: LensFlare;
-  // Enabling SSAO with clouds causes a performance issue. You should avoid using both.
-  ssaoEffect!: SSAO;
-  smaaEffect!: SMAA;
-  fxaaEffect!: FXAA;
+  // Layers
+  mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
+  transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
+  finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
 
   // Public access to render pass orchestrator for flexible pass management
   renderPassOrchestrator: RenderPassOrchestrator;
 
   private _scenes: Scenes;
-  private _renderPass!: CustomRenderPass;
   // Store draped feature's materials
-  private _drapedFeatureMaterials = new Map<string, Material>();
+  private _drapedFeatureMaterials: DrapedMaterialCache = new Map();
 
   private _core: Core | undefined;
   private _options: Options;
@@ -415,8 +419,6 @@ export default class ThreeView<
 
     this.renderPassOrchestrator.setSize(width, height);
 
-    this.initializePasses(width, height, options);
-
     // Background color
     this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
 
@@ -465,11 +467,20 @@ export default class ThreeView<
       maxTextures: Math.max(this.renderer.capabilities.maxTextures, 8),
     };
 
+    this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
+    this.atmosphere.on("_needsUpdate", this.forceUpdate);
+
     // Set up Registry
     const viewContext = new ViewContext(
       this._scenes,
       this.camera.raw,
       this.atmosphere,
+      this.layersManager,
+      this.renderPassOrchestrator,
+      {
+        meshes: this._meshes,
+        drapedMaterials: this._drapedFeatureMaterials,
+      },
     );
     this.registries = new Registries(viewContext);
 
@@ -481,110 +492,34 @@ export default class ThreeView<
     this.registerBuiltIns();
 
     this._renderFlag.animation = !!options.animation;
-  }
-
-  initializePasses(width: number, height: number, options: Options) {
-    // Add main render pass
-    this._renderPass = new CustomRenderPass(
-      this._scenes,
-      this.camera.raw,
-      this._meshes,
-      this._drapedFeatureMaterials,
-      this.renderPassOrchestrator.effectComposer.inputBuffer,
-      // { debugNormal: true },
-    );
-    this.renderPassOrchestrator.addPass("mainRender", this._renderPass);
-
-    this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
-
-    // Initialize atmosphere objects independently
-    this.initializeAtmosphereObjects();
-
-    // Effects
-    // Order is important. Effect class adds the effect in it's constructor.
-    this.aerialPerspective = new AerialPerspective(
-      this.atmosphere,
-      this.camera.raw,
-      this._renderPass.gbufferRenderTarget.textures[1],
-      options.aerialPerspective,
-    );
-    this.aerialPerspective.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass(
-      "atmosphere",
-      this.aerialPerspective.rawPass,
-    );
-
-    this.cloudsEffect = new Clouds(
-      this.camera.raw,
-      this.atmosphere,
-      options.clouds,
-    );
-    this.cloudsEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass("clouds", this.cloudsEffect.rawPass);
-
-    // Add post-atmosphere pass
-    const postAtmosphereRenderPass = new RenderPass(
-      this.scenes.transparent,
-      this.camera.raw,
-    );
-    postAtmosphereRenderPass.clear = false;
-    this.renderPassOrchestrator.addPass(
-      "postAtmosphere",
-      postAtmosphereRenderPass,
-    );
-
-    this.lensFlareEffect = new LensFlare(this.camera.raw, options.lensFlare);
-    this.lensFlareEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass(
-      "lensFlare",
-      this.lensFlareEffect.rawPass,
-    );
-
-    // TODO: Pass depth buffer, not a scene.
-    const combinedScene = new Scene();
-    combinedScene.add(this._scenes.globe);
-    combinedScene.add(this._scenes.mrt);
-    combinedScene.add(this._scenes.opaque);
-    combinedScene.add(this._scenes.light);
-    this.ssaoEffect = new SSAO(
-      combinedScene,
-      this.camera.raw,
-      width,
-      height,
-      options.ssao,
-    );
-    this.ssaoEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass("ssao", this.ssaoEffect.rawPass);
-
-    this.toneMappingEffect = new ToneMapping(
-      this.camera.raw,
-      options.toneMapping,
-    );
-    this.toneMappingEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass(
-      "toneMapping",
-      this.toneMappingEffect.rawPass,
-    );
-    this.smaaEffect = new SMAA(this.camera.raw, options.antialias);
-    this.smaaEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass("smaa", this.smaaEffect.rawPass);
-
-    this.fxaaEffect = new FXAA(this.camera.raw, options.antialias);
-    this.fxaaEffect.on("_needsUpdate", this.forceUpdate);
-    this.renderPassOrchestrator.addPass("fxaa", this.fxaaEffect.rawPass);
-
-    // Workaround when no effect is set.
-    this.renderPassOrchestrator.addPass("finalCopy", new CopyPass());
 
     this.camera.on("frustumChanged", () => {
       this.renderPassOrchestrator.effectComposer.setMainCamera(this.camera.raw);
     });
   }
 
-  private async initializeAtmosphereObjects() {
-    // Initialize atmosphere textures first
+  async initializeRenderPass() {
+    // Initialize atmosphere
     await this.atmosphere.init();
+
+    this.mrtPassLayer = this.addLayer<MRTPassEffectLayer>({
+      type: "effect",
+      mrt: {},
+    } as LayerDescription);
+    this.transparentPassLayer = this.addLayer<TransparentPassEffectLayer>({
+      type: "effect",
+      transparent: {},
+    } as LayerDescription);
+    this.finalPassLayer = this.addLayer<FinalCopyEffectLayer>({
+      type: "effect",
+      final: {},
+    } as LayerDescription);
+  }
+
+  private get renderPass() {
+    const instance = this.mrtPassLayer.getLayer().instance;
+    invariant(instance);
+    return instance;
   }
 
   /**
@@ -605,15 +540,15 @@ export default class ThreeView<
   }
 
   get globeDepthTexture() {
-    return this._renderPass.globeDepthCopyPass.texture;
+    return this.renderPass.globeDepthCopyPass.texture;
   }
 
   get globeNormalTexture() {
-    return this._renderPass.globeNormalCopyPass.texture;
+    return this.renderPass.globeNormalCopyPass.texture;
   }
 
   get normalTexture() {
-    return this._renderPass.gbufferRenderTarget.textures[1];
+    return this.renderPass.gbufferRenderTarget.textures[1];
   }
 
   forceUpdate = () => {
@@ -651,6 +586,8 @@ export default class ThreeView<
       );
       this._pickHelper.enablePick(this._options.picking?.enable ?? true);
     }
+
+    await this.initializeRenderPass();
 
     this._startMainLoop();
 
@@ -731,9 +668,9 @@ export default class ThreeView<
     ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
-      this._renderPass.globeDepthCopyPass.texture;
+      this.renderPass.globeDepthCopyPass.texture;
     this._uniforms.tGlobeNormal.value =
-      this._renderPass.globeNormalCopyPass.texture;
+      this.renderPass.globeNormalCopyPass.texture;
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.raw.projectionMatrixInverse;
 
@@ -805,8 +742,8 @@ export default class ThreeView<
 
   private _render(updatedAt: number) {
     this.atmosphere._update();
-    this.aerialPerspective._update();
-    this.cloudsEffect._update();
+
+    this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
     this._pickHelper?.renderDebugCanvas();
@@ -828,6 +765,13 @@ export default class ThreeView<
     if (l.type === "light") {
       return this.addLightLayer(
         l as LightLayerDeclarationDescription,
+      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
+    }
+
+    // Check if this is an effect layer
+    if (l.type === "effect") {
+      return this.addEffectLayer(
+        l as EffectLayerDeclarationDescription,
       ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
     }
 
@@ -855,6 +799,7 @@ export default class ThreeView<
   private registerBuiltIns(): void {
     this.registerBuiltInMeshes();
     this.registerBuiltInLights();
+    this.registerBuiltInEffects();
   }
 
   private registerBuiltInMeshes(): void {
@@ -868,6 +813,24 @@ export default class ThreeView<
     this.registerLight("sun", SunLightLayer);
     this.registerLight("ambient", AmbientLightLayer);
     this.registerLight("skyLightProbe", SkyLightProbeLayer);
+  }
+
+  private registerBuiltInEffects(): void {
+    this.registerEffect("mrt", MRTPassEffectLayer);
+
+    this.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
+    this.registerEffect("clouds", CloudsEffectLayer);
+    this.registerEffect("lensFlare", LensFlareEffectLayer);
+    this.registerEffect("ssao", SSAOEffectLayer);
+
+    // TODO: Curve out opaque pass from MRT pass.
+    // this.registerEffect("opaque", OpaquePassEffectLayer);
+    this.registerEffect("transparent", TransparentPassEffectLayer);
+
+    this.registerEffect("toneMapping", ToneMappingEffectLayer);
+    this.registerEffect("smaa", SMAAEffectLayer);
+    this.registerEffect("fxaa", FXAAEffectLayer);
+    this.registerEffect("final", FinalCopyEffectLayer);
   }
 
   private addMeshLayer(config: MeshLayerDeclarationDescription): LayerHandle {
@@ -889,7 +852,7 @@ export default class ThreeView<
 
     // Set up update listener
     if (meshLayer.update) {
-      this.on("postRender", meshLayer.update.bind(meshLayer));
+      this.on("preRender", meshLayer.update.bind(meshLayer));
     }
 
     // Trigger re-render
@@ -923,7 +886,7 @@ export default class ThreeView<
 
     // Set up update listener if the layer has an update method
     if (lightLayer.update) {
-      this.on("postRender", lightLayer.update.bind(lightLayer));
+      this.on("preRender", lightLayer.update.bind(lightLayer));
     }
 
     // Trigger re-render
@@ -938,12 +901,52 @@ export default class ThreeView<
     return l;
   }
 
+  private addEffectLayer(
+    config: EffectLayerDeclarationDescription,
+  ): LayerHandle {
+    // Find which effect type from config
+    const effectType = this.registries.effect.findEffectType(config);
+    if (!effectType) {
+      throw new Error("No effect type specified in configuration");
+    }
+
+    // Extract layer config and effect-specific config
+    const { type, ...effectConfigs } = config;
+    const flatConfig = { ...config, ...effectConfigs };
+
+    // Create effect layer instance
+    const effectLayer = this.registries.effect.create(effectType, flatConfig);
+
+    // Initialize the effect
+    effectLayer.onCreate();
+
+    // Set up update listener if the layer has an update method
+    if (effectLayer.update) {
+      this.on("preRender", effectLayer.update.bind(effectLayer));
+    }
+
+    // Trigger re-render
+    effectLayer.on("_needsUpdate", this.forceUpdate);
+
+    const l = new LayerHandle(effectLayer);
+
+    // Store the effect layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l;
+  }
+
   registerMesh(name: string, meshClass: MeshLayerConstructor): void {
     this.registries.mesh.register(name, meshClass);
   }
 
   registerLight(name: string, lightClass: LightLayerConstructor): void {
     this.registries.light.register(name, lightClass);
+  }
+
+  registerEffect(name: string, effectClass: EffectLayerConstructor): void {
+    this.registries.effect.register(name, effectClass);
   }
 
   // TODO: Handle this in plugin system.
@@ -966,6 +969,36 @@ export default class ThreeView<
         sun: {},
       } as LayerDescription),
     };
+  }
+
+  addDefaultEffectLayers() {
+    return {
+      aerialPerspective: this.addLayer<AerialPerspectiveEffectLayer>({
+        type: "effect",
+        aerialPerspective: {},
+      } as LayerDescription),
+      lensFlare: this.addLayer<LensFlareEffectLayer>({
+        type: "effect",
+        lensFlare: {},
+      } as LayerDescription),
+      ssao: this.addLayer<SSAOEffectLayer>({
+        type: "effect",
+        ssao: {},
+      } as LayerDescription),
+      toneMapping: this.addLayer<ToneMappingEffectLayer>({
+        type: "effect",
+        toneMapping: {},
+      } as LayerDescription),
+      smaa: this.addLayer<SMAAEffectLayer>({
+        type: "effect",
+        smaa: {},
+      } as LayerDescription),
+    };
+  }
+
+  // Debug helper to see effect pass order
+  getEffectOrder(): string[] {
+    return this.renderPassOrchestrator.getPassNames();
   }
 
   setCamera(camPos: CameraPosition) {

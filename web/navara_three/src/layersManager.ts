@@ -1,4 +1,4 @@
-import { LayerHandle } from "./core";
+import { EffectLayerDeclaration, LayerHandle } from "./core";
 import { Layer, type LayerEvent } from "./layer";
 
 export class LayersManager {
@@ -47,6 +47,17 @@ export class LayersManager {
     for (const l of this.layers.values()) {
       if (!(l instanceof Layer)) continue;
       yield l;
+    }
+  }
+
+  *getEffectLayers(): Generator<LayerHandle<EffectLayerDeclaration>> {
+    for (const handle of this.layers.values()) {
+      if (!(handle instanceof LayerHandle)) continue;
+
+      const layer = handle.getLayer();
+      if (!(layer instanceof EffectLayerDeclaration)) continue;
+
+      yield handle as LayerHandle<EffectLayerDeclaration>;
     }
   }
 }
