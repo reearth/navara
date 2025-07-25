@@ -10,7 +10,10 @@ import {
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
-  { type: "terrain" } | { type: "mesh" } | { type: "light" }
+  | { type: "terrain" }
+  | { type: "mesh" }
+  | { type: "light" }
+  | { type: "effect" }
 >;
 
 export const addCtrlPanel = (
@@ -175,7 +178,7 @@ export const addCtrlPanel = (
     const layerId = layerIds[paneParams.layer];
     const layer = layerMap.get(layerId);
     if (layer && paneParams.material in layer) {
-      const material = layer[paneParams.material as keyof typeof layer] as any;
+      const material = layer[paneParams.material as keyof typeof layer];
 
       material.show = paneParams.show;
 
@@ -277,7 +280,7 @@ export const addCtrlPanel = (
 
       view.updateLayerById(layerId, {
         type: layer.type,
-        data: (layer as any).data,
+        data: layer.data,
         [paneParams.material]: material,
       });
     }
@@ -294,7 +297,7 @@ function createParamCtrl(
     return undefined;
   }
 
-  const material = layer[paneParams.material as keyof typeof layer] as any;
+  const material = layer[paneParams.material as keyof typeof layer];
   if (material) {
     const f = pane.addFolder({
       title: "",
@@ -306,14 +309,11 @@ function createParamCtrl(
 
     if ("color" in material) {
       paneParams.color = "#" + material.color.toString(16).padStart(6, "0");
-      f.addBinding(paneParams, "color", { color: { type: "int" } }).on(
-        "change",
-        (ev) => {
-          if (ev.last) {
-            changeFunc();
-          }
-        },
-      );
+      f.addBinding(paneParams, "color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
     }
 
     if ("opacity" in material) {
@@ -401,9 +401,7 @@ function createParamCtrl(
     if ("background_color" in material) {
       paneParams.background_color =
         "#" + material.background_color.toString(16).padStart(6, "0");
-      f.addBinding(paneParams, "background_color", {
-        color: { type: "int" },
-      }).on("change", (ev) => {
+      f.addBinding(paneParams, "background_color").on("change", (ev) => {
         if (ev.last) {
           changeFunc();
         }
@@ -413,14 +411,11 @@ function createParamCtrl(
     if ("border_color" in material) {
       paneParams.border_color =
         "#" + material.border_color.toString(16).padStart(6, "0");
-      f.addBinding(paneParams, "border_color", { color: { type: "int" } }).on(
-        "change",
-        (ev) => {
-          if (ev.last) {
-            changeFunc();
-          }
-        },
-      );
+      f.addBinding(paneParams, "border_color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
     }
 
     if ("border_width" in material) {
