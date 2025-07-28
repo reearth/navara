@@ -30,7 +30,7 @@ export class SnowMeshLayer extends MeshLayerDeclaration<
   }
 
   getPassKey(): "opaque" | "transparent" {
-    return this.config.snow?.followCamera ? "transparent" : "opaque";
+    return this.instance?.followCamera ? "transparent" : "opaque";
   }
 
   createMesh() {
@@ -40,13 +40,13 @@ export class SnowMeshLayer extends MeshLayerDeclaration<
   }
 
   onUpdateConfig(updates: SnowMeshLayerUpdate): void {
-    super.onUpdateConfig(updates);
-
     if (this.config.snow && updates.snow && this.instance) {
       Object.assign(this.config.snow, updates.snow);
       this.instance.updateConfig(updates.snow);
       this.emit("_needsUpdate");
     }
+
+    super.onUpdateConfig(updates);
   }
 
   update(time: number): void {

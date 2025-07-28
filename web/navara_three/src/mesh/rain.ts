@@ -8,18 +8,14 @@ import {
   Float32BufferAttribute,
   Mesh,
   ShaderMaterial,
-  TextureLoader,
   Uint16BufferAttribute,
   Uniform,
   Vector3,
-  MathUtils,
   Matrix4,
-  Texture,
   Vector2,
   Color,
+  UniformsLib,
 } from "three";
-
-import { RAIN_ASSETS_URL } from "../constants";
 
 export type RainConfig = {
   particleCount: number;
@@ -31,12 +27,10 @@ export type RainConfig = {
   height: number;
   radius: number;
   opacity: number;
-  /** Raindrop texture URL */
-  standardAssetUrl: string;
-  /** Diffused raindrop texture URL */
-  diffuseAssetUrl: string;
-  /** Use a diffused raindrop texture */
-  diffuse: boolean;
+  /** Maximum alpha value for the lit side of raindrops */
+  alphaMax: number;
+  /** Minimum alpha value for the shadowed side of raindrops */
+  alphaMin: number;
   /** The mesh follows a camera. It takes an effect that looks like the mesh is rendered infinitely. */
   followCamera: boolean;
   /** Opacity is reduced in proportion to the maximum height and the camera height. */
@@ -49,128 +43,15 @@ export const DefaultRainConfig: RainConfig = {
   color: 0xffffff,
   areaWidth: 500,
   areaHeight: 1000,
-  width: 0.5,
+  width: 0.3,
   height: 50,
   radius: 10,
   opacity: 0.5,
-  // Raindrop is modeled by https://www.cs.columbia.edu/CAVE/publications/pdfs/Garg_TOG06.pdf.
-  // The texture references https://cave.cs.columbia.edu/repository/Rain.
-  standardAssetUrl: `${RAIN_ASSETS_URL}/raindrop_size16_osc5.webp`,
-  diffuseAssetUrl: `${RAIN_ASSETS_URL}/raindrop_size16_osc0.webp`,
-  diffuse: false,
+  alphaMax: 0.5,
+  alphaMin: 0.05,
   followCamera: false,
   maxHeight: 3000,
 };
-
-const RAINDROP_IMAGE_WIDTH = 1184;
-const RAINDROP_IMAGE_HEIGHT = 1804;
-const RAINDROP_IMAGE_VERTICAL_SIZES = [525, 494, 405, 272, 108];
-const RAINDROP_IMAGE_HORIZONTAL_SIZE = 16;
-
-// Camera angles in degrees
-const CAMERA_ANGLES = [0, 20, 40, 60, 80];
-// Light angles in degrees (horizontal)
-const LIGHT_ANGLES_H = [10, 30, 50, 70, 90, 110, 130, 150, 170];
-// Light angles in degrees (vertical) - includes negative angles
-const LIGHT_ANGLES_V = [-90, -70, -50, -30, -10, 10, 30, 50, 70, 90];
-
-/**
- * Find the closest value in an array and return its index
- * @param target Target value to find
- * @param array Array to search in
- * @returns Index of closest value
- */
-function findClosestIndex(target: number, array: readonly number[]): number {
-  return array.reduce((prev, curr, index) => {
-    return Math.abs(curr - target) < Math.abs(array[prev] - target)
-      ? index
-      : prev;
-  }, 0);
-}
-
-/**
- * Calculate angles from camera and light direction vectors
- * @param cameraDirection Direction from raindrop to camera (normalized)
- * @param lightDirection Direction from raindrop to light source (normalized)
- * @param rainDirection Direction of rain fall (default: downward)
- * @returns Object containing camera angle and light angles
- */
-function calculateAnglesFromDirections(
-  cameraDirection: Vector3,
-  lightDirection: Vector3,
-  rainDirection: Vector3 = new Vector3(0, -1, 0),
-): { cameraAngle: number; lightAngleH: number; lightAngleV: number } {
-  // Calculate camera angle (angle between camera direction and rain direction)
-  const cameraAngle =
-    Math.acos(Math.abs(cameraDirection.dot(rainDirection))) * MathUtils.RAD2DEG;
-
-  // Calculate light angles relative to camera coordinate system
-  // Create a coordinate system where Y is up (opposite of rain direction)
-  const up = rainDirection.clone().negate();
-  const right = new Vector3().crossVectors(up, cameraDirection).normalize();
-  const forward = new Vector3().crossVectors(right, up).normalize();
-
-  // Project light direction onto the camera coordinate system
-  const lightH = lightDirection.dot(right);
-  const lightV = lightDirection.dot(up);
-  const lightF = lightDirection.dot(forward);
-
-  // Calculate horizontal angle (azimuth)
-  const lightAngleH = Math.atan2(lightH, lightF) * MathUtils.RAD2DEG;
-
-  // Calculate vertical angle (elevation)
-  const lightAngleV = Math.asin(lightV) * MathUtils.RAD2DEG;
-
-  return {
-    cameraAngle: Math.abs(cameraAngle),
-    lightAngleH: Math.abs(lightAngleH),
-    lightAngleV,
-  };
-}
-
-/**
- * Calculate texture coordinates for a raindrop based on camera angle and light angle
- * @param cameraAngle Camera angle in degrees (0-80)
- * @param lightAngleH Horizontal light angle in degrees (10-170)
- * @param lightAngleV Vertical light angle in degrees (-90 to 90)
- * @returns Object containing UV scale and offset for texture sampling
- */
-function calculateRaindropTextureCoords(
-  cameraAngle: number,
-  lightAngleH: number,
-  lightAngleV: number,
-): { uvScale: Vector2; uvOffset: Vector2 } {
-  // Find closest camera angle
-  const cameraIndex = findClosestIndex(cameraAngle, CAMERA_ANGLES);
-
-  // Find closest horizontal light angle
-  const lightHIndex = findClosestIndex(lightAngleH, LIGHT_ANGLES_H);
-
-  // Find closest vertical light angle
-  const lightVIndex = findClosestIndex(lightAngleV, LIGHT_ANGLES_V);
-
-  // Calculate column index based on vertical and horizontal light angles
-  const columnIndex = lightVIndex * LIGHT_ANGLES_H.length + lightHIndex;
-
-  // Calculate UV coordinates
-  const uvScaleX = RAINDROP_IMAGE_HORIZONTAL_SIZE / RAINDROP_IMAGE_WIDTH;
-  const uvScaleY =
-    RAINDROP_IMAGE_VERTICAL_SIZES[cameraIndex] / RAINDROP_IMAGE_HEIGHT;
-
-  const uvOffsetX =
-    (columnIndex * RAINDROP_IMAGE_HORIZONTAL_SIZE) / RAINDROP_IMAGE_WIDTH;
-
-  // Calculate Y offset based on camera angle
-  let uvOffsetY = 0;
-  for (let i = 0; i < cameraIndex; i++) {
-    uvOffsetY += RAINDROP_IMAGE_VERTICAL_SIZES[i] / RAINDROP_IMAGE_HEIGHT;
-  }
-
-  return {
-    uvScale: new Vector2(uvScaleX, uvScaleY),
-    uvOffset: new Vector2(uvOffsetX, uvOffsetY),
-  };
-}
 
 class RainMaterial extends ShaderMaterial {
   public uniforms: {
@@ -181,13 +62,14 @@ class RainMaterial extends ShaderMaterial {
     areaHeight: Uniform<number>;
     size: Uniform<Vector2>;
     opacity: Uniform<number>;
-    texture0: Uniform<Texture | null>;
-    uvScale: Uniform<Vector2>;
-    uvOffset: Uniform<Vector2>;
+    alphaMax: Uniform<number>;
+    alphaMin: Uniform<number>;
     meshOffset: Uniform<Vector3>;
     bounds: Uniform<Vector3>;
     cameraRight: Uniform<Vector3>;
     cameraUp: Uniform<Vector3>;
+    xAxisBase: Uniform<Vector3>;
+    yAxisBase: Uniform<Vector3>;
     followCamera: Uniform<boolean>;
   };
 
@@ -199,26 +81,26 @@ class RainMaterial extends ShaderMaterial {
       depthWrite: false,
       depthTest: false,
       side: DoubleSide,
+      lights: true,
+      defines: {},
     });
 
     this.uniforms = {
+      ...UniformsLib.common,
+      ...UniformsLib.lights,
       time: new Uniform(0),
       speed: new Uniform(2.0),
       color: new Uniform(new Color()),
       areaWidth: new Uniform(20.0),
       areaHeight: new Uniform(20.0),
       size: new Uniform(new Vector2(0.01, 0.5)),
-      opacity: new Uniform(1.0),
-      texture0: new Uniform(null),
-      uvScale: new Uniform(
-        new Vector2(
-          RAINDROP_IMAGE_HORIZONTAL_SIZE / RAINDROP_IMAGE_WIDTH,
-          RAINDROP_IMAGE_VERTICAL_SIZES[0] / RAINDROP_IMAGE_HEIGHT,
-        ),
-      ),
-      uvOffset: new Uniform(new Vector2(0.0, 0.0)),
+      opacity: new Uniform(0.5),
+      alphaMax: new Uniform(0.3),
+      alphaMin: new Uniform(0.01),
       cameraRight: new Uniform(new Vector3(1.0, 0.0, 0.0)),
       cameraUp: new Uniform(new Vector3(0.0, 1.0, 0.0)),
+      xAxisBase: new Uniform(new Vector3(1.0, 0.0, 0.0)),
+      yAxisBase: new Uniform(new Vector3(0.0, 1.0, 0.0)),
       meshOffset: new Uniform(new Vector3(0.0, 0.0, 0.0)),
       bounds: new Uniform(new Vector3(0, 0, 0)),
       followCamera: new Uniform(false),
@@ -230,7 +112,6 @@ const createGeometry = (config: RainConfig): BufferGeometry => {
   const { particleCount, radius } = config;
   const index: number[] = [];
   const vertices: number[] = [];
-  const uvs: number[] = [];
   const offsets: number[] = [];
   const indices: number[] = [];
 
@@ -246,7 +127,6 @@ const createGeometry = (config: RainConfig): BufferGeometry => {
       index.push(i);
       vertices.push(px, py, pz);
     }
-    uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
     offsets.push(-1, -1, 1, -1, 1, 1, -1, 1);
     const vertexIndex = i * 4;
     indices.push(
@@ -263,7 +143,6 @@ const createGeometry = (config: RainConfig): BufferGeometry => {
   geometry.setIndex(indices);
   geometry.setAttribute("index", new Uint16BufferAttribute(index, 1));
   geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
-  geometry.setAttribute("uv", new Uint16BufferAttribute(uvs, 2));
   geometry.setAttribute("offset", new Float32BufferAttribute(offsets, 2));
 
   return geometry;
@@ -274,7 +153,6 @@ const DUMMY_VECTOR3 = new Vector3();
 export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
   private readonly _config: RainConfig;
   private readonly _material: RainMaterial;
-  private readonly _textureLoader: TextureLoader;
   private _lastCameraPosition: Vector3 | null = null;
   private readonly _cameraOffset: Vector3 = new Vector3();
   private readonly xAxisBase = new Vector3();
@@ -291,11 +169,9 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
 
     this._config = fullConfig;
     this._material = material;
-    this._textureLoader = new TextureLoader();
     this.frustumCulled = false;
 
     this.updateUniforms();
-    this.loadTexture();
   }
 
   private updateUniforms() {
@@ -307,6 +183,8 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
       this._config.height,
     );
     this._material.uniforms.opacity.value = this._config.opacity;
+    this._material.uniforms.alphaMax.value = this._config.alphaMax;
+    this._material.uniforms.alphaMin.value = this._config.alphaMin;
     this._material.uniforms.followCamera.value = this._config.followCamera;
 
     this.updateBounds();
@@ -418,35 +296,22 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     return this._config.opacity;
   }
 
-  set standardAssetUrl(value: string) {
-    this._config.standardAssetUrl = value;
-    if (!this._config.diffuse) {
-      this.loadTexture();
-    }
+  set alphaMax(value: number) {
+    this._config.alphaMax = value;
+    this._material.uniforms.alphaMax.value = value;
   }
 
-  get standardAssetUrl(): string {
-    return this._config.standardAssetUrl;
+  get alphaMax(): number {
+    return this._config.alphaMax;
   }
 
-  set diffuseAssetUrl(value: string) {
-    this._config.diffuseAssetUrl = value;
-    if (this._config.diffuse) {
-      this.loadTexture();
-    }
+  set alphaMin(value: number) {
+    this._config.alphaMin = value;
+    this._material.uniforms.alphaMin.value = value;
   }
 
-  get diffuseAssetUrl(): string {
-    return this._config.diffuseAssetUrl;
-  }
-
-  set diffuse(value: boolean) {
-    this._config.diffuse = value;
-    this.loadTexture(); // Reload texture when diffuse mode changes
-  }
-
-  get diffuse(): boolean {
-    return this._config.diffuse;
+  get alphaMin(): number {
+    return this._config.alphaMin;
   }
 
   set followCamera(value: boolean) {
@@ -472,20 +337,6 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     return this._config.maxHeight;
   }
 
-  private async loadTexture(): Promise<void> {
-    // Choose texture based on diffuse mode
-    const textureUrl = this._config.diffuse
-      ? this._config.diffuseAssetUrl
-      : this._config.standardAssetUrl;
-
-    try {
-      const texture = await this._textureLoader.loadAsync(textureUrl);
-      this._material.uniforms.texture0.value = texture;
-    } catch (error) {
-      console.error("Failed to load texture:", error);
-    }
-  }
-
   updateConfig(newConfig: Partial<RainConfig>) {
     if (newConfig.particleCount !== undefined)
       this.particleCount = newConfig.particleCount;
@@ -498,11 +349,8 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     if (newConfig.height !== undefined) this.height = newConfig.height;
     if (newConfig.radius !== undefined) this.radius = newConfig.radius;
     if (newConfig.opacity !== undefined) this.opacity = newConfig.opacity;
-    if (newConfig.standardAssetUrl !== undefined)
-      this.standardAssetUrl = newConfig.standardAssetUrl;
-    if (newConfig.diffuseAssetUrl !== undefined)
-      this.diffuseAssetUrl = newConfig.diffuseAssetUrl;
-    if (newConfig.diffuse !== undefined) this.diffuse = newConfig.diffuse;
+    if (newConfig.alphaMax !== undefined) this.alphaMax = newConfig.alphaMax;
+    if (newConfig.alphaMin !== undefined) this.alphaMin = newConfig.alphaMin;
     if (newConfig.followCamera !== undefined)
       this.followCamera = newConfig.followCamera;
     if (newConfig.maxHeight !== undefined) this.maxHeight = newConfig.maxHeight;
@@ -512,48 +360,12 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     return { ...this._config };
   }
 
-  setTexture(texture: Texture) {
-    this._material.uniforms.texture0.value = texture;
-  }
-
-  updateTextureCoordinates(
-    cameraAngle: number,
-    lightAngleH: number,
-    lightAngleV: number,
-  ) {
-    const coords = calculateRaindropTextureCoords(
-      cameraAngle,
-      lightAngleH,
-      lightAngleV,
-    );
-    this._material.uniforms.uvScale.value.copy(coords.uvScale);
-    this._material.uniforms.uvOffset.value.copy(coords.uvOffset);
-  }
-
-  updateTextureCoordinatesFromDirections(
-    cameraDirection: Vector3,
-    lightDirection: Vector3,
-    rainDirection?: Vector3,
-  ) {
-    const angles = calculateAnglesFromDirections(
-      cameraDirection,
-      lightDirection,
-      rainDirection,
-    );
-    this.updateTextureCoordinates(
-      angles.cameraAngle,
-      angles.lightAngleH,
-      angles.lightAngleV,
-    );
-  }
-
   /**
-   *
-   * @param time
-   * @param camera
-   * @param lightDirection Raindrop texture is changed depending on the light direction.
+   * Update the rain mesh
+   * @param time Current time
+   * @param camera Camera instance
    */
-  update(time: number, camera: Camera, lightDirection?: Vector3) {
+  update(time: number, camera: Camera) {
     this.updateTime(time);
 
     if (this.maxHeight !== Infinity) {
@@ -581,6 +393,10 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     );
 
     this.setRotationFromMatrix(basis);
+
+    // Update axis vectors for light direction transformation in shader
+    this._material.uniforms.xAxisBase.value.copy(this.xAxisBase);
+    this._material.uniforms.yAxisBase.value.copy(this.yAxisBase);
 
     // If follow camera mode is enabled, update rain mesh position to follow camera
     if (this._config.followCamera) {
@@ -631,24 +447,6 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
       // Reset camera tracking when followCamera is disabled
       this._lastCameraPosition = null;
       this._cameraOffset.set(0, 0, 0);
-    }
-
-    // If dynamic angles mode is enabled, calculate angles automatically
-    if (lightDirection) {
-      const cameraDirectionToModel = new Vector3();
-      if (this.followCamera) {
-        camera.getWorldDirection(cameraDirectionToModel);
-      } else {
-        cameraDirectionToModel
-          .subVectors(this.position, camera.position)
-          .normalize();
-      }
-
-      const lightDirectionToModel = lightDirection.clone().negate().normalize();
-      this.updateTextureCoordinatesFromDirections(
-        cameraDirectionToModel,
-        lightDirectionToModel,
-      );
     }
   }
 
