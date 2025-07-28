@@ -1,19 +1,43 @@
-uniform sampler2D texture0;
+#include <common>
+#include <lights_pars_begin>
+
+#include chunks/simple_lights;
+
 uniform float opacity;
-uniform vec2 uvScale;
-uniform vec2 uvOffset;
+uniform float alphaMax;
+uniform float alphaMin;
+uniform vec3 color;
 
 varying vec2 vUv;
-varying vec3 vColor;
+varying float vLocalX;
+varying vec3 vLocalLightDirection;
 
 void main() {
-  vec2 transformedUv = vec2(
-    uvOffset.x + vUv.x * uvScale.x,
-    uvOffset.y + (1.0 - vUv.y) * uvScale.y
-  );
-  float value = texture(texture0, transformedUv).r;
+  // Core idea: one billboard, two virtual sides using local X coordinate
+  // Create pseudo-normal that flips based on which side of the quad we're on
+  float k = 0.8; // Small tilt so normal isn't exactly forward
+  vec3 geometryNormal = normalize(vec3(sin(vLocalX) * k, 0.0, 1.0));
+  
+  // Calculate dot product with local-space light direction
+  float NL = clamp(dot(geometryNormal, normalize(vLocalLightDirection)), 0.0, 1.0);
 
-  vec4 diffuseColor = vec4(vColor, value * opacity);
+  // Get light color from Three.js lighting system using ShaderChunk
+  vec3 lightColor = getDirLightColor();
 
-  gl_FragColor = diffuseColor;
+  float alpha = mix(alphaMin, alphaMax, NL);
+
+  // Apply base opacity
+  alpha = clamp(alpha * opacity, 0.0, 1.0);
+  
+  // Discard pixels with very low alpha for soft edges
+  if (alpha < 0.001) discard;
+
+  vec3 irradiance = getIrradiance(geometryNormal);
+
+  lightColor += irradiance;
+  lightColor *= alpha;
+
+  vec3 finalColor = color * lightColor;
+
+  gl_FragColor = vec4(finalColor, alpha);
 }
