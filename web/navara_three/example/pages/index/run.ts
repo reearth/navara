@@ -355,6 +355,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clamp_to_ground: true,
       use_ground_normals: true,
       wireframe: false,
+      outline_color: 0xff0000,
+      outline_width: 2,
+      outline_show: true,
+      surface_show: true,
     },
   },
   {

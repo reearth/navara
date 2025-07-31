@@ -319,6 +319,11 @@ pub struct PolygonMaterial {
     pub __internal__: Option<PolygonInternalMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
+
+    pub surface_show: Option<bool>,
+    pub outline_show: Option<bool>,
+    pub outline_color: Option<u32>,
+    pub outline_width: Option<f32>,
 }
 
 #[wasm_bindgen]
@@ -335,6 +340,10 @@ impl PolygonMaterial {
         wireframe: Option<bool>,
         __internal__: Option<PolygonInternalMaterial>,
         id_property: Option<String>,
+        surface_show: Option<bool>,
+        outline_show: Option<bool>,
+        outline_color: Option<u32>,
+        outline_width: Option<f32>,
     ) -> Self {
         Self {
             show,
@@ -346,6 +355,10 @@ impl PolygonMaterial {
             wireframe,
             __internal__,
             id_property,
+            surface_show,
+            outline_show,
+            outline_color,
+            outline_width,
         }
     }
 }
@@ -363,6 +376,10 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             wireframe: val.wireframe.unwrap_or(default.wireframe),
             internal: val.__internal__.map(|v| v.into()),
             id_property: val.id_property.unwrap_or(default.id_property),
+            surface_show: val.surface_show.unwrap_or(default.surface_show),
+            outline_show: val.outline_show.unwrap_or(default.outline_show),
+            outline_color: val.outline_color.unwrap_or(default.outline_color),
+            outline_width: val.outline_width.unwrap_or(default.outline_width),
         }
     }
 }
@@ -378,6 +395,10 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             wireframe: Some(value.wireframe),
             __internal__: value.internal.as_ref().map(|v| v.into()),
             id_property: Some(value.id_property.clone()),
+            surface_show: Some(value.surface_show),
+            outline_show: Some(value.outline_show),
+            outline_color: Some(value.outline_color),
+            outline_width: Some(value.outline_width),
         }
     }
 }
@@ -393,6 +414,10 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             wireframe: Some(value.wireframe),
             __internal__: value.internal.map(|v| v.into()),
             id_property: Some(value.id_property),
+            surface_show: Some(value.surface_show),
+            outline_show: Some(value.outline_show),
+            outline_color: Some(value.outline_color),
+            outline_width: Some(value.outline_width),
         }
     }
 }

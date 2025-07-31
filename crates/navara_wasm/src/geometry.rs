@@ -212,6 +212,42 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
+pub struct TransferablePolygonOutlineGeometry {
+    #[wasm_bindgen(getter_with_clone)]
+    pub position: Option<TransferableFloatAttribute>,
+}
+
+#[wasm_bindgen]
+impl TransferablePolygonOutlineGeometry {
+    #[wasm_bindgen(constructor)]
+    pub fn new(position: Option<TransferableFloatAttribute>) -> Self {
+        Self { position }
+    }
+}
+
+impl From<TransferablePolygonOutlineGeometry>
+    for navara_feature_component::render::TransferablePolygonOutlineGeometry
+{
+    fn from(val: TransferablePolygonOutlineGeometry) -> Self {
+        navara_feature_component::render::TransferablePolygonOutlineGeometry {
+            position: val.position.map(|p| p.into()),
+        }
+    }
+}
+impl<'a> From<&'a navara_feature_component::render::TransferablePolygonOutlineGeometry>
+    for TransferablePolygonOutlineGeometry
+{
+    fn from(
+        val: &'a navara_feature_component::render::TransferablePolygonOutlineGeometry,
+    ) -> TransferablePolygonOutlineGeometry {
+        TransferablePolygonOutlineGeometry {
+            position: val.position.as_ref().map(|p| p.into()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
 pub struct TransferablePointGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub position: TransferableFloatAttribute,

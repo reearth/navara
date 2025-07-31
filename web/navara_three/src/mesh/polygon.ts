@@ -290,7 +290,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       prev.color = next;
     }
 
-    const next = (material.show ?? true) && active;
+    const next =
+      (material.show ?? true) && (material.surface_show ?? true) && active;
     if (prev.visible !== next) {
       this.visible = next;
       prev.visible = next;

@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 use crate::{
     geometry::{
         TransferableModelGeometry, TransferablePointGeometry, TransferablePolygonGeometry,
-        TransferablePolylineGeometry,
+        TransferablePolygonOutlineGeometry, TransferablePolylineGeometry,
     },
     Transform,
 };
@@ -66,6 +66,8 @@ pub struct PolygonMesh {
     pub material: PolygonMaterial,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePolygonGeometry,
+    #[wasm_bindgen(getter_with_clone)]
+    pub outline_geometry: Option<TransferablePolygonOutlineGeometry>,
     pub transform: Transform,
     pub active: bool,
 }
@@ -165,6 +167,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
             navara_feature_component::render::RenderableFeature::Polygon {
                 material,
                 geometry,
+                outline_geometry,
                 transform,
                 active,
                 ..
@@ -172,6 +175,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 polygon: Some(PolygonMesh {
                     material: material.into(),
                     geometry: geometry.into(),
+                    outline_geometry: outline_geometry.as_ref().map(|og| og.into()),
                     transform: transform.into(),
                     active: *active,
                 }),

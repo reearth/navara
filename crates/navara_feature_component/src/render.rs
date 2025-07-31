@@ -100,6 +100,7 @@ pub enum RenderableFeature {
         active: bool,
         material: PolygonMaterial,
         geometry: TransferablePolygonGeometry,
+        outline_geometry: Option<TransferablePolygonOutlineGeometry>,
         transform: Transform,
         feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
@@ -202,11 +203,16 @@ impl RenderableFeature {
             }
             RenderableFeature::Polygon {
                 geometry,
+                outline_geometry,
                 feature_batch_id,
                 ..
             } => {
                 geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
                 batch_table_res.remove(feature_batch_id, id_prop_table_res);
+
+                if let Some(outline_geometry) = outline_geometry {
+                    outline_geometry.remove_from_buf(buf);
+                }
             }
             RenderableFeature::Model {
                 geometry,
@@ -418,6 +424,35 @@ impl TransferablePolygonGeometry {
         }
         if let Some(batch_index) = &self.batch_index {
             buf.remove(&batch_index.data);
+        }
+    }
+}
+
+#[derive(Component, Clone, Debug, Default, PartialEq)]
+pub struct TransferablePolygonOutlineGeometry {
+    pub position: Option<TransferableFloatAttribute>,
+}
+
+impl TransferablePolygonOutlineGeometry {
+    pub fn with_buf(
+        buf: &mut BufferStore,
+        geo: navara_geometry::PolygonOutlineGeometry,
+    ) -> TransferablePolygonOutlineGeometry {
+        let position = TransferableFloatAttribute {
+            data: buf.new_f32(geo.position.data),
+            size: geo.position.size,
+        };
+
+        TransferablePolygonOutlineGeometry {
+            position: Some(position),
+        }
+    }
+}
+
+impl TransferablePolygonOutlineGeometry {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
+        if let Some(position) = &self.position {
+            buf.remove(&position.data);
         }
     }
 }

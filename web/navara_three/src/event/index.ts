@@ -465,6 +465,11 @@ function processObjectRemoved(
     disposeObject3D(m);
   }
 
+  if (m.userData?.outlineObj) {
+    m.userData.outlineObj.clear();
+    parent.remove(m.userData.outlineObj);
+  }
+
   m.dispatchEvent({ type: "removedFromWorld" } as any);
 
   // clear should after dispose, otherwise model's children will not be disposed

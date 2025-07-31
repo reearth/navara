@@ -48,6 +48,11 @@ pub struct PolygonGeometryResult {
     pub geometry: PolygonGeometry,
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PolygonOutlineGeometry {
+    pub position: FloatAttribute,
+}
+
 /// Creates a flat polygon geometry from a polygon hierarchy in Cartesian coordinates.
 /// This function assumes the polygon is on a flat plane, not on an ellipsoid.
 pub fn create_flat_polygon_geometry(

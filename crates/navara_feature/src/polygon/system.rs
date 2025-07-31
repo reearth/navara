@@ -11,7 +11,10 @@ use navara_feature_component::{
     batch::{
         BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIdAndSelections, IdPropertyTable,
     },
-    polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
+    polygon::{
+        construct_polygon_feature, create_outline_geometry, PolygonGeometry, PolygonMarker,
+        UpdatePolygon,
+    },
 };
 use navara_geometry::{FloatAttribute, Hierarchy, PolygonResource};
 use navara_layer::{LayerId, LayerStore};
@@ -25,7 +28,10 @@ use navara_feature_component::{
     batch::BatchId,
     batch::BatchedFeature,
     id::FeatureId,
-    render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry},
+    render::{
+        PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry,
+        TransferablePolygonOutlineGeometry,
+    },
     BatchedFeatureMarker,
 };
 use navara_worker::construct_polygon_batched_feature::{
@@ -123,6 +129,7 @@ pub fn transfer_batched_mesh(
                 crs: CRS::Geocentric,
                 material,
                 geometry: geometry.clone(),
+                outline_geometry: None,
                 transform: Transform::default(),
                 feature_id: None,
                 render_info: PolygonRenderInformation {
@@ -177,6 +184,10 @@ pub fn transfer_mesh(
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polygon {
         let geometry_hierarchy =
             Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
+
+        let outline_geometry =
+            create_outline_geometry(&geometry_hierarchy, material.extruded_height);
+
         let (extent_opt, polygon_result_opt) = construct_polygon_feature(
             geometry_hierarchy,
             &geometry.crs,
@@ -216,6 +227,10 @@ pub fn transfer_mesh(
                             &mut buf,
                             polygon_result.geometry,
                         ),
+                        outline_geometry: Some(TransferablePolygonOutlineGeometry::with_buf(
+                            &mut buf,
+                            outline_geometry,
+                        )),
                         transform: Transform::default(),
                         feature_id: Some(entity),
                         render_info: PolygonRenderInformation {
