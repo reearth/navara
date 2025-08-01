@@ -1,3 +1,4 @@
+import type { EventHandler } from "@navara/core";
 import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
@@ -13,6 +14,7 @@ import {
   UniformsLib,
 } from "three";
 
+import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
@@ -41,10 +43,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, uniforms);
+    this.initMaterial(mesh, uniforms, viewEvents);
   }
 
   private initGeometry(mesh: NavaraPolylineMesh, buf: BufferLoader) {
@@ -127,7 +130,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.userData.batchIdSize = batchIdSize;
   }
 
-  private initMaterial(mesh: NavaraPolylineMesh, uniforms: CommonUniforms) {
+  private initMaterial(
+    mesh: NavaraPolylineMesh,
+    uniforms: CommonUniforms,
+    viewEvents: EventHandler<ViewEvents>,
+  ) {
     const meshMaterial = mesh.material;
 
     const [minHeight, maxHeight] = meshMaterial.__internal__
@@ -136,6 +143,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
     const uPickable = {
       value: 0.0,
     };
+
+    this.castShadow = !!meshMaterial.cast_shadow;
+    this.receiveShadow = !!meshMaterial.receive_shadow;
 
     this.material.uniforms = {
       ...UniformsLib["lights"],
@@ -176,6 +186,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
           this.material.userData.batchDataTexture;
       }
     };
+    viewEvents.emit("_csmMounted", this.material);
 
     this._initBatchedMaterial();
 
@@ -222,6 +233,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
     if (prev.visible !== next) {
       this.visible = next;
       prev.visible = next;
+    }
+
+    if (this.castShadow !== material.cast_shadow) {
+      this.castShadow = !!material.cast_shadow;
+    }
+    if (this.receiveShadow !== material.receive_shadow) {
+      this.receiveShadow = !!material.receive_shadow;
     }
   }
 

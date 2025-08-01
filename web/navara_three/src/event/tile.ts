@@ -1,7 +1,9 @@
 import { generate_id_from_entity } from "@navara/core";
+import type { EventHandler } from "@navara/core";
 import { type MeshAdded, MeshChanged } from "@navara/engine";
 import { Texture } from "three";
 
+import type { ViewEvents } from "..";
 import { TileMesh } from "../mesh";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
@@ -19,6 +21,7 @@ export async function processMeshAdded(
   textureOptions: TextureOptions,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   tileMapByHandle: TileMapByHandle,
+  viewEvents: EventHandler<ViewEvents>,
 ) {
   const m = new TileMesh(
     mesh,
@@ -35,6 +38,7 @@ export async function processMeshAdded(
     loadedTexes,
     textureOptions,
     tileMapByHandle,
+    viewEvents,
   );
 }
 

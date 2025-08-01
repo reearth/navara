@@ -1,4 +1,8 @@
-import { generate_id_from_entity, type TileHandle } from "@navara/core";
+import {
+  generate_id_from_entity,
+  type TileHandle,
+  type EventHandler,
+} from "@navara/core";
 import { orthoCameraTransform } from "@navara/engine";
 import type {
   MeshAdded,
@@ -25,6 +29,7 @@ import {
   type MinificationTextureFilter,
 } from "three";
 
+import type { ViewEvents } from "..";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
 import type {
@@ -252,6 +257,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     await this.createMesh(
       scenes,
@@ -265,6 +271,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       textureOptions,
       tileMapByHandle,
       mesh.ready_parent_tile_handle,
+      viewEvents,
     );
   }
 
@@ -280,6 +287,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
     readyParentTileHandle: TileHandle | undefined,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     let position = buf.f32(mesh.vertices);
     let indices = buf.u32(mesh.indices);
@@ -308,7 +316,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
 
     this.geometry = geometry;
 
-    this.material = this.initMaterial(mat);
+    this.material = this.initMaterial(mat, viewEvents);
 
     if (!this.material.userData.uvTransform) {
       this.material.userData.uvTransform = {
@@ -330,6 +338,9 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     );
     this.setupTextures(loadedTexes, textureOptions, maxTextures);
 
+    this.castShadow = !!mat.cast_shadow;
+    this.receiveShadow = !!mat.receive_shadow;
+
     this.visible = false;
     this.renderOrder = mesh.render_order;
     this.userData.tileOrigColor = GLOBE_COLOR;
@@ -338,7 +349,10 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     meshes.set(id, this);
   }
 
-  private initMaterial(mat: RasterTileInternalMaterial): TileMaterial {
+  private initMaterial(
+    mat: RasterTileInternalMaterial,
+    viewEvents: EventHandler<ViewEvents>,
+  ): TileMaterial {
     if (mat.wireframe) {
       return new MeshBasicMaterial({
         color: GLOBE_COLOR,
@@ -360,6 +374,9 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     m.userData.uPickable = {
       value: 0,
     };
+
+    m.defines ??= {};
+    m.defines.USE_UV = 1;
 
     const maxTextures = this.maxTextures;
 
@@ -451,6 +468,8 @@ if (uPickable > 0.) {
         );
     };
 
+    viewEvents.emit("_csmMounted", m);
+
     return m;
   }
 
@@ -485,6 +504,13 @@ if (uPickable > 0.) {
       this.setupTextures(loadedTexes, textureOptions, maxTextures);
 
       this._setupSceneObserver();
+    }
+
+    if (this.castShadow !== changedMaterial.cast_shadow) {
+      this.castShadow = !!changedMaterial.cast_shadow;
+    }
+    if (this.receiveShadow !== changedMaterial.receive_shadow) {
+      this.receiveShadow = !!changedMaterial.receive_shadow;
     }
   }
 

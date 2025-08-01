@@ -1,4 +1,4 @@
-import { Unimplemented } from "@navara/core";
+import { EventHandler, Unimplemented } from "@navara/core";
 import {
   ModelMaterial as NavaraModelMaterial,
   ModelMesh as NavaraModelMesh,
@@ -6,6 +6,10 @@ import {
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
+import ShadowMapDepthFragment from "@shaders/glsl/chunks/shadowmap_depth_fragment.glsl";
+import ShadowMapDepthParsFragment from "@shaders/glsl/chunks/shadowmap_depth_pars_fragment.glsl";
+import ShadowMapDepthParsVertex from "@shaders/glsl/chunks/shadowmap_depth_pars_vertex.glsl";
+import ShadowMapDepthVertex from "@shaders/glsl/chunks/shadowmap_depth_vertex.glsl";
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
@@ -19,10 +23,12 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
+  RGBADepthPacking,
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
 } from "three";
 
+import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
@@ -51,16 +57,18 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     m: NavaraModelMesh,
     uniforms: CommonUniforms,
     buf: BufferLoader,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     super();
     this.add(rawScene);
-    this.init(m, uniforms, buf);
+    this.init(m, uniforms, buf, viewEvents);
   }
 
   private init(
     m: NavaraModelMesh,
     uniforms: CommonUniforms,
     buf: BufferLoader,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     const batchIdAndSelectedStatus = m.geometry.batch_id_and_selected_status;
     const dataSize = batchIdAndSelectedStatus?.size ?? 0;
@@ -80,6 +88,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
         batchIdAndSel,
         dataSize,
         uniforms,
+        viewEvents,
       );
     }
 
@@ -126,6 +135,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     batchIdAndSel: Uint32Array<ArrayBufferLike>,
     dataSize: number,
     uniforms: CommonUniforms,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     this.traverseMesh((mesh) => {
       const vertCnt = mesh.geometry.attributes?.position?.count;
@@ -155,12 +165,15 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
       const mcolor = meshMaterial.color;
 
+      mesh.castShadow = !!meshMaterial.cast_shadow;
+      mesh.receiveShadow = !!meshMaterial.receive_shadow;
+
       mesh.material.userData.color = mcolor;
       mesh.material.userData.uPickable = {
         value: 0.0,
       };
 
-      this.setMaterial(meshMaterial, mesh.material);
+      this.setMaterial(meshMaterial, mesh);
 
       this._initBatchedMaterial(mesh);
 
@@ -185,6 +198,8 @@ export class ModelMesh extends Object3D implements FeatureMesh {
                   
                   ${ShowParsVertex}
                   ${BatchTextureParsVertex}
+
+                  ${ShadowMapDepthParsVertex}
     
                   void main() {
                     nvr_vBatchIdAndSel = batchIdAndSel;
@@ -197,6 +212,13 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
                   ${BatchTextureVertex}
             `,
+          )
+          .replace(
+            "#include <clipping_planes_vertex>",
+            `
+    #include <clipping_planes_vertex>
+    ${ShadowMapDepthVertex}
+    `,
           ).source;
 
         // Update fragment shader
@@ -211,8 +233,12 @@ export class ModelMesh extends Object3D implements FeatureMesh {
                   ${ShowParsFragment}
                   
                   ${Pick}
+
+                  ${ShadowMapDepthParsFragment}
+
                   void main() {
                     ${ShowFragment}
+                    ${ShadowMapDepthFragment}
                   `,
           )
           .replace(
@@ -236,7 +262,33 @@ export class ModelMesh extends Object3D implements FeatureMesh {
                   `,
           ).source;
       };
+
+      this.initDepthMaterial(mesh);
+
+      viewEvents.emit("_csmMounted", mesh.material);
     });
+  }
+
+  /**
+   * Override a material that is used to generate a shadow map.
+   */
+  initDepthMaterial(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+  ) {
+    mesh.customDepthMaterial = mesh.material.clone();
+    mesh.customDepthMaterial.needsUpdate = true;
+
+    mesh.customDepthMaterial.userData = mesh.material.userData;
+
+    const origin = mesh.material;
+
+    mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
+      origin.onBeforeCompile(shader, renderer);
+
+      shader.defines = { ...origin.defines };
+      shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
+      shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
+    };
   }
 
   _update(material: NavaraModelMaterial, active: boolean) {
@@ -247,28 +299,39 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     }
 
     this.traverseMesh((m) => {
-      this.setMaterial(material, m.material);
+      this.setMaterial(material, m);
     });
   }
 
-  private setMaterial(src: NavaraModelMaterial, dist: ModelMaterial) {
-    if (!dist.userData.prev) {
-      dist.userData.prev = {};
+  private setMaterial(
+    src: NavaraModelMaterial,
+    dist: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+  ) {
+    const distMaterial = dist.material;
+
+    if (!distMaterial.userData.prev) {
+      distMaterial.userData.prev = {};
     }
-    if (dist.userData.prev.color !== src.color) {
+    if (distMaterial.userData.prev.color !== src.color) {
       const next = src.color ?? 0;
-      dist.color.set(next);
-      dist.userData.prev.color = next;
+      distMaterial.color.set(next);
+      distMaterial.userData.prev.color = next;
     }
-    if (dist.userData.prev.metalness !== src.metalness) {
+    if (distMaterial.userData.prev.metalness !== src.metalness) {
       const next = src.metalness ?? 0;
-      dist.metalness = next;
-      dist.userData.prev.metalness = next;
+      distMaterial.metalness = next;
+      distMaterial.userData.prev.metalness = next;
     }
-    if (dist.userData.prev.roughness !== src.roughness) {
+    if (distMaterial.userData.prev.roughness !== src.roughness) {
       const next = src.roughness ?? 0;
-      dist.roughness = next;
-      dist.userData.prev.roughness = next;
+      distMaterial.roughness = next;
+      distMaterial.userData.prev.roughness = next;
+    }
+    if (dist.castShadow !== src.cast_shadow) {
+      dist.castShadow = !!src.cast_shadow;
+    }
+    if (dist.receiveShadow !== src.receive_shadow) {
+      dist.receiveShadow = !!src.receive_shadow;
     }
   }
 
