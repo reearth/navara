@@ -30,7 +30,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
   }
 
   getPassKey(): "opaque" | "transparent" {
-    return this.config.rain?.followCamera ? "transparent" : "opaque";
+    return this.instance?.followCamera ? "transparent" : "opaque";
   }
 
   createMesh() {
@@ -45,37 +45,29 @@ export class RainMeshLayer extends MeshLayerDeclaration<
       height: this.config.rain?.height ?? DefaultRainConfig.height,
       radius: this.config.rain?.radius ?? DefaultRainConfig.radius,
       opacity: this.config.rain?.opacity ?? DefaultRainConfig.opacity,
-      diffuse: this.config.rain?.diffuse ?? DefaultRainConfig.diffuse,
+      alphaMax: this.config.rain?.alphaMax ?? DefaultRainConfig.alphaMax,
+      alphaMin: this.config.rain?.alphaMin ?? DefaultRainConfig.alphaMin,
       followCamera:
         this.config.rain?.followCamera ?? DefaultRainConfig.followCamera,
       maxHeight: this.config.rain?.maxHeight ?? DefaultRainConfig.maxHeight,
-      standardAssetUrl:
-        this.config.rain?.standardAssetUrl ??
-        DefaultRainConfig.standardAssetUrl,
-      diffuseAssetUrl:
-        this.config.rain?.diffuseAssetUrl ?? DefaultRainConfig.diffuseAssetUrl,
     };
 
     return new RainMesh(rainConfig);
   }
 
   onUpdateConfig(updates: RainMeshLayerUpdate): void {
-    super.onUpdateConfig(updates);
-
     if (this.config.rain && updates.rain && this.instance) {
       Object.assign(this.config.rain, updates.rain);
       this.instance.updateConfig(updates.rain);
       this.emit("_needsUpdate");
     }
+
+    super.onUpdateConfig(updates);
   }
 
   update(time: number): void {
     if (this.instance) {
-      this.instance.update(
-        time,
-        this.view.camera,
-        this.view.atmosphere.sunDirection,
-      );
+      this.instance.update(time, this.view.camera);
     }
   }
 

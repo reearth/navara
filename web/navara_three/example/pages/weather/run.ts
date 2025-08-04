@@ -220,7 +220,7 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
   // Rain
 
   const RAIN_PARAMS = {
-    opacity: 1.0,
+    opacity: rain.ref?.opacity,
     particleCount: rain.ref?.particleCount,
     speed: rain.ref?.speed,
     color: rain.ref?.color,
@@ -229,7 +229,8 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
     areaWidth: rain.ref?.areaWidth,
     areaHeight: rain.ref?.areaHeight,
     maxHeight: rain.ref?.maxHeight,
-    diffuse: rain.ref?.diffuse,
+    alphaMax: rain.ref?.alphaMax,
+    alphaMin: rain.ref?.alphaMin,
   };
 
   const rainFolderFields: FolderFields<typeof RAIN_PARAMS> = [
@@ -355,11 +356,31 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       },
     },
     {
-      name: "diffuse",
+      name: "alphaMax",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
       onChange: (v) => {
         rain.update({
           rain: {
-            diffuse: v.value,
+            alphaMax: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "alphaMin",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rain.update({
+          rain: {
+            alphaMin: v.value,
           },
         });
       },
@@ -374,7 +395,7 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
   // Snow
 
   const SNOW_PARAMS = {
-    opacity: 1.0,
+    opacity: snow.ref?.opacity,
     particleCount: snow.ref?.particleCount,
     speed: snow.ref?.speed,
     size: snow.ref?.size,

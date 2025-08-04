@@ -36,11 +36,6 @@ export class RenderPassOrchestrator {
   private passMap = new NamedIndexMap<NamedPass>();
 
   constructor(renderer: WebGLRenderer, options: RenderPassOrchestratorOptions) {
-    const combinedScene = new Scene();
-    combinedScene.add(this.scenes.mrt);
-    combinedScene.add(this.scenes.globe);
-    combinedScene.add(this.lights);
-
     // Setup render pass
     this.effectComposer = new EffectComposer(renderer, {
       stencilBuffer: true,
