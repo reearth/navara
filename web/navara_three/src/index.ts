@@ -389,8 +389,10 @@ export default class ThreeView<
     this.renderer = renderer;
 
     renderer.shadowMap.enabled = !!options.shadow;
-    renderer.shadowMap.autoUpdate = false;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
+
+    // Update shadow map manually in CustomRenderPass.
+    renderer.shadowMap.autoUpdate = false;
 
     const { width = options.initialWidth, height = options.initialHeight } =
       this._getCanvasSize() ?? {};
@@ -478,6 +480,8 @@ export default class ThreeView<
       screenHeightPx: { value: height },
     };
 
+    // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
+    // TODO: Allow to change this value dynamically.
     const NUM_CASCADED_SHADOW_MAPS = 6;
 
     this._defaultTextureOptions = {
