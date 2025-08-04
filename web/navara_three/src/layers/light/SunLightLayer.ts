@@ -9,6 +9,10 @@ import {
 import { SunLight, type SunLightOptions } from "../../lights";
 
 type LayerDescription = {
+  /**
+   * Sun light configuration options. Includes all CSM (Cascaded Shadow Maps) settings.
+   * Color is specified as a number (hex value) instead of THREE.Color instance.
+   */
   sun?: Omit<SunLightOptions, "color"> & { color?: number };
 };
 

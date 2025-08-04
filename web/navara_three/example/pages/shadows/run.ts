@@ -171,6 +171,7 @@ const addViewShadowControl = (
       name: "shadowLambda",
       params: {
         min: 0,
+        max: 1,
       },
       onChange: (v) => {
         sun.update({

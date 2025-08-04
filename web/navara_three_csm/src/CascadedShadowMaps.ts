@@ -28,13 +28,54 @@ const frustumScratch = /*#__PURE__*/ new FrustumCorners();
 const boxScratch = /*#__PURE__*/ new Box3();
 
 export type CascadedShadowMapsOptions = {
+  /**
+   * Number of shadow cascades. More cascades provide better shadow quality
+   * distribution but require more GPU resources.
+   * @default 4
+   */
   cascadeCount?: number;
+  /**
+   * Resolution of shadow maps (one per cascade). Higher values provide better
+   * shadow quality but require more GPU memory.
+   * @default 2048
+   */
   mapSize?: number;
+  /**
+   * Frustum far plane distance. Shadows will not be visible farther than this
+   * distance from the camera.
+   * @default 5000
+   */
   far?: number;
+  /**
+   * Defines the split scheme for the camera frustum:
+   * - "uniform": Linear split distribution
+   * - "logarithmic": Logarithmic split distribution (better for large scenes)
+   * - "practical": Hybrid approach balancing quality and performance (recommended)
+   * @default "practical"
+   */
   mode?: FrustumSplitMode;
+  /**
+   * Lambda parameter for "practical" split mode. Controls the blend between
+   * uniform (0.0) and logarithmic (1.0) split schemes.
+   * @default 0.5
+   */
   lambda?: number;
+  /**
+   * Defines how far the shadow camera is positioned behind the cascade frustum.
+   * Larger values help prevent shadow clipping but may reduce precision.
+   * @default 200
+   */
   margin?: number;
+  /**
+   * Enables smooth transitions between shadow cascades to reduce visible seams.
+   * @default true
+   */
   fade?: boolean;
+  /**
+   * Disables cutting off the last cascade at the far plane, providing better
+   * shadow coverage for distant objects.
+   * @default false
+   */
   disableLastCascadeCutoff?: boolean;
 };
 
