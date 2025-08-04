@@ -8,8 +8,6 @@ use crate::{ElevationDecoder, TextureFragment, Vec2};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: Option<bool>,
-    pub cast_shadow: Option<bool>,
-    pub receive_shadow: Option<bool>,
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
@@ -27,8 +25,6 @@ impl From<PointMaterial> for navara_material::PointMaterial {
         let default = navara_material::PointMaterial::default();
         navara_material::PointMaterial {
             show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             size: val.size.unwrap_or(default.size),
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
@@ -45,8 +41,6 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
     fn from(value: &'a navara_material::PointMaterial) -> PointMaterial {
         PointMaterial {
             show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
             size: Some(value.size),
             color: Some(value.color),
             center: Some(value.center.into()),
@@ -71,8 +65,6 @@ pub struct NearFar {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
     pub show: Option<bool>,
-    pub cast_shadow: Option<bool>,
-    pub receive_shadow: Option<bool>,
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
@@ -93,8 +85,6 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
         let default = navara_material::BillboardMaterial::default();
         navara_material::BillboardMaterial {
             show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             size: val.size.unwrap_or(default.size),
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
@@ -113,8 +103,6 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
     fn from(value: &'a navara_material::BillboardMaterial) -> BillboardMaterial {
         BillboardMaterial {
             show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
             size: Some(value.size),
             color: Some(value.color),
             center: Some(value.center.into()),
@@ -134,8 +122,6 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMaterial {
     pub show: Option<bool>,
-    pub cast_shadow: Option<bool>,
-    pub receive_shadow: Option<bool>,
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
@@ -161,8 +147,6 @@ impl From<TextMaterial> for navara_material::TextMaterial {
         let default = navara_material::TextMaterial::default();
         navara_material::TextMaterial {
             show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             size: val.size.unwrap_or(default.size),
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
@@ -185,8 +169,6 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
     fn from(value: &'a navara_material::TextMaterial) -> TextMaterial {
         TextMaterial {
             show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
             size: Some(value.size),
             color: Some(value.color),
             center: Some(value.center.into()),

@@ -43,8 +43,6 @@ impl Appearance {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PointMaterial {
     pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
     pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
@@ -62,8 +60,6 @@ impl Default for PointMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            cast_shadow: false,
-            receive_shadow: false,
             size: 0.1,
             color: 0xffffff,
             center: Vec2::new(0.5, 0.),
@@ -97,8 +93,6 @@ impl PointMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct BillboardMaterial {
     pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
     pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
@@ -118,8 +112,6 @@ impl Default for BillboardMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            cast_shadow: false,
-            receive_shadow: false,
             size: 0.1,
             color: 0xffffff,
             center: Vec2::new(0.5, 0.),
@@ -155,8 +147,6 @@ impl BillboardMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct TextMaterial {
     pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
     pub size: FloatType,
     pub color: u32,
     pub center: Vec2,
@@ -179,8 +169,6 @@ impl Default for TextMaterial {
     fn default() -> Self {
         Self {
             show: true,
-            cast_shadow: false,
-            receive_shadow: false,
             size: 10.0,
             color: 0xffffff,
             center: Vec2::new(0.5, 0.),
