@@ -4,6 +4,7 @@
 
 import {
   Box3,
+  Color,
   Matrix4,
   Object3D,
   Vector2,
@@ -338,7 +339,7 @@ export class CascadedShadowMaps {
   // Proxy properties for cascaded lights:
 
   get intensity(): number {
-    return this.directionalLights.mainLight.shadow.intensity;
+    return this.directionalLights.mainLight.intensity;
   }
 
   set intensity(value: number) {
@@ -346,7 +347,35 @@ export class CascadedShadowMaps {
       const lights = this.directionalLights.cascadedLights;
       // eslint-disable-next-line @typescript-eslint/prefer-for-of
       for (let i = 0; i < lights.length; ++i) {
+        lights[i].intensity = value;
+      }
+    }
+  }
+
+  get shadowIntensity(): number {
+    return this.directionalLights.mainLight.shadow.intensity;
+  }
+
+  set shadowIntensity(value: number) {
+    if (value !== this.shadowIntensity) {
+      const lights = this.directionalLights.cascadedLights;
+      // eslint-disable-next-line @typescript-eslint/prefer-for-of
+      for (let i = 0; i < lights.length; ++i) {
         lights[i].shadow.intensity = value;
+      }
+    }
+  }
+
+  get color(): Color {
+    return this.directionalLights.mainLight.color;
+  }
+
+  set color(value: Color) {
+    if (value !== this.color) {
+      const lights = this.directionalLights.cascadedLights;
+      // eslint-disable-next-line @typescript-eslint/prefer-for-of
+      for (let i = 0; i < lights.length; ++i) {
+        lights[i].color = value;
       }
     }
   }

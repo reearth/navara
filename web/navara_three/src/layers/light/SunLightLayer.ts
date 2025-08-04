@@ -104,6 +104,15 @@ export class SunLightLayer extends LightLayerDeclaration<
       if (updates.sun.shadowFade !== undefined) {
         this.instance.shadowFade = updates.sun.shadowFade;
       }
+      if (updates.sun.shadowIntensity !== undefined) {
+        this.instance.shadowIntensity = updates.sun.shadowIntensity;
+      }
+      if (updates.sun.shadowBias !== undefined) {
+        this.instance.shadowBias = updates.sun.shadowBias;
+      }
+      if (updates.sun.shadowNormalBias !== undefined) {
+        this.instance.shadowNormalBias = updates.sun.shadowNormalBias;
+      }
       if (updates.sun.debugCSMHelper !== undefined) {
         this.instance.debugCSMHelper = updates.sun.debugCSMHelper;
       }

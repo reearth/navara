@@ -4,6 +4,7 @@ import ThreeView, {
   LayerHandle,
   SunLightLayer,
   type Cesium3dTilesLayer,
+  type ShadowMode,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
@@ -21,6 +22,8 @@ export async function run() {
   // Add atmosphere layers
   const defaultLayers = view.addDefaultAtmosphereLayers();
   view.addDefaultEffectLayers();
+
+  view.toneMappingExposure = 10;
 
   // Add terrain layer
   view.addLayer({
@@ -40,7 +43,7 @@ export async function run() {
   // Add tile layer
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.openstreetmap },
+    data: { url: TILE_URLS.gsiSeamlessphoto },
     raster_tile: {
       color: 0xffffff,
       max_zoom: 18,
@@ -52,13 +55,28 @@ export async function run() {
 
   addCameraControl(view, pane);
   addDateControl(view, pane);
-  addViewShadowControl(pane, defaultLayers.sun);
+  addViewShadowControl(view, defaultLayers.sun, pane);
   addBuildingModelControl(view, pane);
 }
 
-const addViewShadowControl = (pane: Pane, sun: LayerHandle<SunLightLayer>) => {
+const addViewShadowControl = (
+  view: ThreeView,
+  sun: LayerHandle<SunLightLayer>,
+  pane: Pane,
+) => {
   const PARAMS = {
     shadow: true,
+    shadowCascadeCount: 4,
+    shadowFade: true,
+    shadowMapSize: 2048,
+    shadowFar: 5e4,
+    shadowMode: "practical",
+    shadowLambda: 0.8,
+    shadowMargin: 5000,
+    shadowIntensity: 1,
+    shadowBias: 0.0001,
+    shadowNormalBias: 0,
+    shadowMapViewers: false,
   };
 
   sun.update({
@@ -76,6 +94,150 @@ const addViewShadowControl = (pane: Pane, sun: LayerHandle<SunLightLayer>) => {
             castShadow: v.value,
           },
         });
+      },
+    },
+    {
+      name: "shadowCascadeCount",
+      params: {
+        min: 0,
+        max: 6,
+        step: 1,
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowCascadeCount: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowFade",
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowFade: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowMapSize",
+      params: {
+        options: Object.fromEntries(
+          [1024, 2048, 4096, 8192].map((k) => [k, k]),
+        ),
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowMapSize: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowFar",
+      params: {
+        min: 0,
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowFar: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowMode",
+      params: {
+        options: Object.fromEntries(
+          (["logarithmic", "practical", "uniform"] as ShadowMode[]).map((k) => [
+            k,
+            k,
+          ]),
+        ),
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowMode: v.value as ShadowMode,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowLambda",
+      params: {
+        min: 0,
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowLambda: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowMargin",
+      params: {
+        min: 0,
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowMargin: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowIntensity",
+      params: {
+        min: 0,
+        max: 1,
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowIntensity: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowBias",
+      params: {
+        min: 0,
+        step: 0.0001,
+        max: 0.001,
+      },
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowBias: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowNormalBias",
+      params: {},
+      onChange: (v) => {
+        sun.update({
+          sun: {
+            shadowNormalBias: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "shadowMapViewers",
+      params: {},
+      onChange: (v) => {
+        view.shadowMapViewersEnabled = v.value;
       },
     },
   ];

@@ -9,7 +9,6 @@ export type SunLightEvents = {
 };
 
 export type ShadowMode = "uniform" | "logarithmic" | "practical";
-export type ShadowQuality = "low" | "medium" | "high";
 
 export type SunLightOptions = {
   distance?: number;
@@ -18,7 +17,6 @@ export type SunLightOptions = {
   intensity?: number;
   // Enhanced CSM shadow options
   castShadow?: boolean;
-  shadowQuality?: ShadowQuality;
   // Advanced CSM options
   shadowCascadeCount?: number;
   shadowMapSize?: number;
@@ -27,6 +25,9 @@ export type SunLightOptions = {
   shadowLambda?: number;
   shadowMargin?: number;
   shadowFade?: boolean;
+  shadowIntensity?: number;
+  shadowBias?: number;
+  shadowNormalBias?: number;
   debugCSMHelper?: boolean;
 };
 
@@ -37,13 +38,15 @@ const DEFAULT_SUN_LIGHT_OPTIONS: Required<SunLightOptions> = {
   intensity: 1,
   castShadow: true,
   shadowMapSize: 2048,
-  shadowQuality: "medium",
   shadowCascadeCount: 4,
   shadowFar: 5e4,
   shadowMode: "practical",
-  shadowLambda: 0.5,
-  shadowMargin: 5e4,
+  shadowLambda: 0.8,
+  shadowMargin: 5000,
   shadowFade: true,
+  shadowIntensity: 1,
+  shadowBias: 0.0001,
+  shadowNormalBias: 0,
   debugCSMHelper: false,
 };
 
@@ -138,10 +141,11 @@ export class SunLight extends EventHandler<SunLightEvents> {
     this.csm.directionalLights.direction.copy(this.raw.sunDirection);
 
     // Set light properties to match current sun light
-    this.csm.directionalLights.cascadedLights.forEach((light) => {
-      light.intensity = this.intensity;
-      light.color.copy(this.color);
-    });
+    this.csm.intensity =
+      this.options.intensity ?? DEFAULT_SUN_LIGHT_OPTIONS.intensity;
+    this.csm.shadowIntensity =
+      this.options.shadowIntensity ?? DEFAULT_SUN_LIGHT_OPTIONS.shadowIntensity;
+    this.csm.color.copy(this.options.color ?? DEFAULT_SUN_LIGHT_OPTIONS.color);
 
     // Setup CSM helper for debug visualization
     if (this.options.debugCSMHelper) {
@@ -230,9 +234,15 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set intensity(v: number) {
     this.raw.intensity = v;
-    this.csm.directionalLights.cascadedLights.forEach((light) => {
-      light.intensity = this.intensity;
-    });
+    this.csm.intensity = this.intensity;
+    this.emit("_needsUpdate");
+  }
+
+  get shadowIntensity() {
+    return this.csm.shadowIntensity;
+  }
+  set shadowIntensity(v: number) {
+    this.csm.shadowIntensity = v;
     this.emit("_needsUpdate");
   }
 
@@ -242,9 +252,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set color(v: Color) {
     this.options.color = v;
     this.raw.color.copy(v);
-    this.csm.directionalLights.cascadedLights.forEach((light) => {
-      light.color.copy(this.color);
-    });
+    this.csm.color.copy(this.color);
     this.emit("_needsUpdate");
   }
 
@@ -280,6 +288,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowMapSize(v: number) {
     this.options.shadowMapSize = v;
+    this.csm.mapSize = v;
 
     this.emit("_needsUpdate");
   }
@@ -289,6 +298,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowFar(v: number) {
     this.options.shadowFar = v;
+    this.csm.far = v;
 
     this.emit("_needsUpdate");
   }
@@ -301,6 +311,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowCascadeCount(v: number) {
     this.options.shadowCascadeCount = v;
+    this.csm.cascadeCount = v;
 
     this.emit("_needsUpdate");
   }
@@ -309,6 +320,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowMode(v: ShadowMode) {
     this.options.shadowMode = v;
+    this.csm.mode = v;
 
     this.emit("_needsUpdate");
   }
@@ -317,6 +329,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowLambda(v: number) {
     this.options.shadowLambda = v;
+    this.csm.lambda = v;
 
     this.emit("_needsUpdate");
   }
@@ -325,6 +338,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowMargin(v: number) {
     this.options.shadowMargin = v;
+    this.csm.margin = v;
 
     this.emit("_needsUpdate");
   }
@@ -333,6 +347,28 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set shadowFade(v: boolean) {
     this.options.shadowFade = v;
+    this.csm.fade = v;
+
+    this.emit("_needsUpdate");
+  }
+  get shadowBias() {
+    return this.options.shadowBias ?? DEFAULT_SUN_LIGHT_OPTIONS.shadowBias;
+  }
+  set shadowBias(v: number) {
+    this.options.shadowBias = v;
+    this.csm.bias = v;
+
+    this.emit("_needsUpdate");
+  }
+  get shadowNormalBias() {
+    return (
+      this.options.shadowNormalBias ??
+      DEFAULT_SUN_LIGHT_OPTIONS.shadowNormalBias
+    );
+  }
+  set shadowNormalBias(v: number) {
+    this.options.shadowNormalBias = v;
+    this.csm.normalBias = v;
 
     this.emit("_needsUpdate");
   }

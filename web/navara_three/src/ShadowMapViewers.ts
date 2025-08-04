@@ -16,7 +16,15 @@ export class ShadowMapViewers {
   render(renderer: WebGLRenderer) {
     if (!this.enabled || !renderer.shadowMap.enabled) return;
 
-    if (this.viewers.length) {
+    // Create shadow map viewers for debugging
+    const csm = this.lights.children.find(
+      (c) => c instanceof CascadedDirectionalLights,
+    );
+
+    if (
+      this.viewers.length &&
+      csm?.cascadedLights.length === this.viewers.length
+    ) {
       this.viewers.forEach((viewer) => {
         if (viewer) {
           viewer.render(renderer);
@@ -24,10 +32,9 @@ export class ShadowMapViewers {
       });
       return;
     }
-    // Create shadow map viewers for debugging
-    const csm = this.lights.children.find(
-      (c) => c instanceof CascadedDirectionalLights,
-    );
+
+    this.viewers.length = 0;
+
     if (!csm) return;
     const lights = csm.cascadedLights;
     lights.forEach((light, i) => {

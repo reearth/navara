@@ -114,6 +114,7 @@ export * from "./event/loaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
+export * from "./lights";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
