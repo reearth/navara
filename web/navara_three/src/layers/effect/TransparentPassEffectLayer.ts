@@ -1,3 +1,5 @@
+import { Group, Scene } from "three";
+
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -22,14 +24,38 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
   static key = "transparent";
   static insertAfter = ["ssao", "clouds", "atmosphere"];
 
+  light = new Group();
+  lightsSyncMap = new Map();
+
   createPass(): RenderPass {
     // Create render pass for transparent objects
-    const scene = this.view.scenes.transparent;
+    const scene = new Scene();
+    scene.add(this.light);
+    scene.add(this.view.scenes.transparent);
+
     const camera = this.view.camera;
 
     const pass = new RenderPass(scene, camera);
     pass.clear = false;
 
+    this.view.scenes.light.addEventListener("childadded", ({ child }) => {
+      const cloned = child.clone();
+      this.lightsSyncMap.set(child.id, cloned);
+      this.light.add(cloned);
+    });
+    this.view.scenes.light.addEventListener("childremoved", ({ child }) => {
+      this.light.remove(this.lightsSyncMap.get(child.id));
+    });
+
     return pass;
+  }
+
+  update(_time: number): void {
+    // Sync lights
+    let i = 0;
+    for (const child of this.view.scenes.light.children) {
+      this.light.children[i].copy(child);
+      i++;
+    }
   }
 }

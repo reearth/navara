@@ -1,17 +1,23 @@
 import { eastNorthUpToFixedFrame, vector3ToGeodetic } from "@navara/three_api";
+import SimpleLightShaderChunk from "@shaders/glsl/chunks/simple_lights.glsl";
 import {
   BufferGeometry,
   CanvasTexture,
   Float32BufferAttribute,
   Points,
-  PointsMaterial,
   Uniform,
   Vector3,
   type WebGLProgramParametersWithUniforms,
   Matrix4,
   Camera,
+  ShaderMaterial,
+  ShaderChunk,
+  UniformsLib,
+  Color,
 } from "three";
 import invariant from "tiny-invariant";
+
+import { createReplacer } from "../utils";
 
 const createSnowflakeTexture = (): CanvasTexture => {
   const canvas = document.createElement("canvas");
@@ -31,8 +37,8 @@ const createSnowflakeTexture = (): CanvasTexture => {
   return new CanvasTexture(canvas);
 };
 
-class SnowPointsMaterial extends PointsMaterial {
-  public uniforms: {
+class SnowPointsMaterial extends ShaderMaterial {
+  public uniforms: (typeof UniformsLib)["points"] & {
     areaWidth: Uniform<number>;
     areaHeight: Uniform<number>;
     speed: Uniform<number>;
@@ -49,16 +55,26 @@ class SnowPointsMaterial extends PointsMaterial {
     followCamera: Uniform<boolean>;
   };
 
+  isPointsMaterial = true;
+
+  color = new Color(0xffffff);
+  map = createSnowflakeTexture();
+  size = 0.05;
+  fog = true;
+  sizeAttenuation = true;
+
   constructor() {
     super({
-      color: 0xffffff,
-      size: 0.05,
-      map: createSnowflakeTexture(),
+      vertexShader: ShaderChunk.points_vert,
+      fragmentShader: ShaderChunk.points_frag,
       transparent: true,
       depthWrite: false,
+      lights: true,
     });
 
     this.uniforms = {
+      ...UniformsLib.points,
+      ...UniformsLib.lights,
       areaWidth: new Uniform(20),
       areaHeight: new Uniform(20),
       speed: new Uniform(0.05),
@@ -92,9 +108,10 @@ class SnowPointsMaterial extends PointsMaterial {
     shader.uniforms.bounds = this.uniforms.bounds;
     shader.uniforms.followCamera = this.uniforms.followCamera;
 
-    shader.vertexShader = shader.vertexShader.replace(
-      "uniform float size;",
-      `uniform float size;
+    shader.vertexShader = createReplacer(shader.vertexShader)
+      .replace(
+        "uniform float size;",
+        `uniform float size;
          uniform float speed;
          uniform float areaWidth;
          uniform float areaHeight;
@@ -109,11 +126,10 @@ class SnowPointsMaterial extends PointsMaterial {
          uniform vec3 meshOffset;
          uniform vec3 bounds;
          uniform bool followCamera;`,
-    );
-
-    shader.vertexShader = shader.vertexShader.replace(
-      "#include <begin_vertex>",
-      `#include <begin_vertex>
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
          
          // Add time-based falling motion
          transformed.y = areaHeight * (fract(transformed.y - time * speed) - 0.3);
@@ -144,7 +160,28 @@ class SnowPointsMaterial extends PointsMaterial {
            
            transformed = offsetPos;
          }`,
-    );
+      ).source;
+
+    shader.fragmentShader = createReplacer(shader.fragmentShader)
+      .replace(
+        "#include <common>",
+        `
+#include <common>
+#include <lights_pars_begin>
+${SimpleLightShaderChunk}
+`,
+      )
+      .replace(
+        "outgoingLight = diffuseColor.rgb",
+        `
+vec3 lightColor = getDirLightColor();
+vec3 irradiance = getIrradiance(vec3(0.0, 0.0, -1.0));
+
+lightColor += irradiance;
+
+outgoingLight = diffuseColor.rgb * lightColor;
+`,
+      ).source;
   }
 }
 
@@ -190,7 +227,7 @@ export const DefaultSnowConfig: SnowConfig = {
   opacity: 1,
 };
 
-export class SnowMesh extends Points<BufferGeometry, PointsMaterial> {
+export class SnowMesh extends Points<BufferGeometry, SnowPointsMaterial> {
   private readonly _config: SnowConfig;
   private readonly _material: SnowPointsMaterial;
   private readonly _lastCameraPosition: Vector3;
