@@ -42,7 +42,6 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
       const cloned = child.clone(true);
       this.lightsSyncMap.set(child.id, cloned);
       this.light.add(cloned);
-      console.log(cloned);
     });
     this.view.scenes.light.addEventListener("childremoved", ({ child }) => {
       this.light.remove(this.lightsSyncMap.get(child.id));
