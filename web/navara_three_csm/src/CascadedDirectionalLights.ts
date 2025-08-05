@@ -56,4 +56,20 @@ export class CascadedDirectionalLights extends Object3D {
       this.cascadedLights[i].dispose();
     }
   }
+
+  copy(source: this, _recursive?: boolean): this {
+    super.copy(source, false);
+
+    this.cascadedLights.length = 0;
+    this.clear();
+
+    for (const l of source.cascadedLights) {
+      const cloned = l.clone();
+      this.add(cloned);
+      this.add(cloned.target);
+      this.cascadedLights.push(cloned);
+    }
+
+    return this;
+  }
 }

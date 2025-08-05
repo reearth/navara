@@ -168,9 +168,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
 
       if (!this.applyColor) {
         // Sync sun light color calculated dynamically.
-        this.csm.directionalLights.cascadedLights.forEach((light) => {
-          light.color.copy(this.color);
-        });
+        this.csm.color = this.color;
       }
     }
 

@@ -39,12 +39,14 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
     pass.clear = false;
 
     this.view.scenes.light.addEventListener("childadded", ({ child }) => {
-      const cloned = child.clone();
+      const cloned = child.clone(true);
       this.lightsSyncMap.set(child.id, cloned);
       this.light.add(cloned);
+      console.log(cloned);
     });
     this.view.scenes.light.addEventListener("childremoved", ({ child }) => {
       this.light.remove(this.lightsSyncMap.get(child.id));
+      this.lightsSyncMap.delete(child.id);
     });
 
     return pass;
@@ -54,7 +56,7 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
     // Sync lights
     let i = 0;
     for (const child of this.view.scenes.light.children) {
-      this.light.children[i].copy(child);
+      this.light.children[i].copy(child, true);
       i++;
     }
   }
