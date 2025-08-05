@@ -51,6 +51,7 @@ pub struct PolygonGeometryResult {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonOutlineGeometry {
     pub position: FloatAttribute,
+    pub skip_indices: Vec<u32>, // [a,b ..] segments (a, a+1), (b, b+1) will be skipped
 }
 
 /// Creates a flat polygon geometry from a polygon hierarchy in Cartesian coordinates.

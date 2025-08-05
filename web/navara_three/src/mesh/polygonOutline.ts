@@ -4,16 +4,47 @@ import {
   PolygonMaterial,
 } from "@navara/engine";
 import { Color } from "three";
-import { Line2, LineGeometry, LineMaterial } from "three-stdlib";
+import {
+  Line2,
+  LineGeometry,
+  LineMaterial,
+  LineSegmentsGeometry,
+} from "three-stdlib";
 
 import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
 
 import type { FeatureMesh } from "./featureMesh";
 
+class NvLineGeometry extends LineGeometry {
+  setPositions(
+    array: Float32Array,
+    skipIdx: Uint32Array = new Uint32Array(),
+  ): this {
+    const positions: number[] = [];
+    const skipSet = new Set(skipIdx);
+
+    for (let i = 0; i < array.length - 3; i += 3) {
+      const currentIndex = i / 3;
+      if (skipSet.has(currentIndex)) {
+        continue;
+      }
+
+      // segment start
+      positions.push(array[i], array[i + 1], array[i + 2]);
+      // segment end
+      positions.push(array[i + 3], array[i + 4], array[i + 5]);
+    }
+
+    const points = new Float32Array(positions);
+    LineSegmentsGeometry.prototype.setPositions.call(this, points);
+    return this;
+  }
+}
+
 export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   constructor(mesh: NavaraPolygonMesh, buf: BufferLoader) {
-    super(new LineGeometry(), new LineMaterial());
+    super(new NvLineGeometry(), new LineMaterial());
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh);
   }
@@ -28,9 +59,13 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       return;
     }
 
+    const skipIdx = g.skip_indices
+      ? (buf.removeU32(g.skip_indices) ?? undefined)
+      : undefined;
+
     // Convert position buffer to Line2 format
-    const lineGeometry = this.geometry as LineGeometry;
-    lineGeometry.setPositions(position);
+    const lineGeometry = this.geometry as NvLineGeometry;
+    lineGeometry.setPositions(position, skipIdx);
 
     // Essential for Line2 rendering
     this.computeLineDistances();

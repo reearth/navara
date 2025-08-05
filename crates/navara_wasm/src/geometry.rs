@@ -215,13 +215,18 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
 pub struct TransferablePolygonOutlineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub position: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub skip_indices: Option<Handle>,
 }
 
 #[wasm_bindgen]
 impl TransferablePolygonOutlineGeometry {
     #[wasm_bindgen(constructor)]
-    pub fn new(position: Option<TransferableFloatAttribute>) -> Self {
-        Self { position }
+    pub fn new(position: Option<TransferableFloatAttribute>, skip_indices: Option<Handle>) -> Self {
+        Self {
+            position,
+            skip_indices,
+        }
     }
 }
 
@@ -231,6 +236,7 @@ impl From<TransferablePolygonOutlineGeometry>
     fn from(val: TransferablePolygonOutlineGeometry) -> Self {
         navara_feature_component::render::TransferablePolygonOutlineGeometry {
             position: val.position.map(|p| p.into()),
+            skip_indices: val.skip_indices,
         }
     }
 }
@@ -242,6 +248,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonOutlineGe
     ) -> TransferablePolygonOutlineGeometry {
         TransferablePolygonOutlineGeometry {
             position: val.position.as_ref().map(|p| p.into()),
+            skip_indices: val.skip_indices,
         }
     }
 }

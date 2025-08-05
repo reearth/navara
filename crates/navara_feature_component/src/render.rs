@@ -431,6 +431,7 @@ impl TransferablePolygonGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePolygonOutlineGeometry {
     pub position: Option<TransferableFloatAttribute>,
+    pub skip_indices: Option<Handle>,
 }
 
 impl TransferablePolygonOutlineGeometry {
@@ -443,8 +444,11 @@ impl TransferablePolygonOutlineGeometry {
             size: geo.position.size,
         };
 
+        let skip_indices = buf.new_u32(geo.skip_indices);
+
         TransferablePolygonOutlineGeometry {
             position: Some(position),
+            skip_indices: Some(skip_indices),
         }
     }
 }
@@ -453,6 +457,10 @@ impl TransferablePolygonOutlineGeometry {
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
         if let Some(position) = &self.position {
             buf.remove(&position.data);
+        }
+
+        if let Some(skip_indices) = &self.skip_indices {
+            buf.remove(skip_indices);
         }
     }
 }

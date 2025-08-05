@@ -2,6 +2,7 @@
 
 import { packing } from "@takram/three-geospatial/shaders";
 import { ShaderLib, ShaderMaterial, type ShaderLibShader } from "three";
+import { LineMaterial } from "three-stdlib";
 
 import { createReplacer } from "../utils";
 
@@ -265,7 +266,7 @@ export function overrideShaderMaterialForMRT(
 }
 
 // LineMaterial MRT Support following injectGBufferToSpriteMaterial pattern
-function injectGBufferToLineMaterial(lineMaterial: any) {
+function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   if (lineMaterial[SETUP] === true) {
     return lineMaterial;
   }
@@ -320,6 +321,6 @@ function injectGBufferToLineMaterial(lineMaterial: any) {
 }
 
 // Enhanced overrideShaderMaterialForMRT that detects and handles LineMaterial
-export function overrideLineMaterialForMRT(material: any): void {
+export function overrideLineMaterialForMRT(material: LineMaterial): void {
   injectGBufferToLineMaterial(material);
 }

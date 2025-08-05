@@ -7,6 +7,7 @@ export async function renderPolygonOutline(
   mesh: NavaraPolygonMesh,
   buf: BufferLoader,
 ) {
+  // console.log(mesh.outline_geometry?.position);
   return new PolygonOutlineMesh(mesh, buf);
 }
 

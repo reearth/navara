@@ -49,12 +49,13 @@ fn get_outline_top_down(
     geometry_hierarchy: &Hierarchy,
     height: FloatType,
     outline_positions: &mut Vec<Vec3>,
+    skip_indices: &mut Vec<u32>,
 ) {
     let ring = &(geometry_hierarchy.outer_ring);
     let positions = interpolate_ring_segments(ring, height);
     if !positions.is_empty() {
         outline_positions.extend(positions);
-        outline_positions.push(Vec3::new(f32::NAN, f32::NAN, f32::NAN)); // Add a NaN to separate the outlines
+        skip_indices.push(outline_positions.len() as u32 - 1);
     }
 
     if let Some(holes) = &(geometry_hierarchy.holes) {
@@ -63,14 +64,18 @@ fn get_outline_top_down(
             let positions = interpolate_ring_segments(ring, height);
             if !positions.is_empty() {
                 outline_positions.extend(positions);
-                outline_positions.push(Vec3::new(f32::NAN, f32::NAN, f32::NAN));
-                // Add a NaN to separate the outlines
+                skip_indices.push(outline_positions.len() as u32 - 1);
             }
         }
     }
 }
 
-fn get_side_outline(ring: &[f32], height: FloatType, outline_positions: &mut Vec<Vec3>) {
+fn get_side_outline(
+    ring: &[f32],
+    height: FloatType,
+    outline_positions: &mut Vec<Vec3>,
+    skip_indices: &mut Vec<u32>,
+) {
     for i in 0..(ring.len() / 3 - 1) {
         let pi = i * 3;
         let v = Vec3::new(ring[pi], ring[pi + 1], ring[pi + 2]);
@@ -83,7 +88,7 @@ fn get_side_outline(ring: &[f32], height: FloatType, outline_positions: &mut Vec
 
         outline_positions.push(world_pos1);
         outline_positions.push(world_pos2);
-        outline_positions.push(Vec3::new(f32::NAN, f32::NAN, f32::NAN)); // Add a NaN to separate the outlines
+        skip_indices.push(outline_positions.len() as u32 - 1);
     }
 }
 
@@ -92,18 +97,34 @@ pub fn create_outline_geometry(
     height: Option<FloatType>,
 ) -> PolygonOutlineGeometry {
     let mut outline_positions = vec![];
+    let mut skip_indices = vec![];
 
-    get_outline_top_down(geometry_hierarchy, 0.0, &mut outline_positions);
+    get_outline_top_down(
+        geometry_hierarchy,
+        0.0,
+        &mut outline_positions,
+        &mut skip_indices,
+    );
     if let Some(height) = height {
-        get_outline_top_down(geometry_hierarchy, height, &mut outline_positions);
+        get_outline_top_down(
+            geometry_hierarchy,
+            height,
+            &mut outline_positions,
+            &mut skip_indices,
+        );
 
         let outer_ring = &(geometry_hierarchy.outer_ring);
-        get_side_outline(outer_ring, height, &mut outline_positions);
+        get_side_outline(
+            outer_ring,
+            height,
+            &mut outline_positions,
+            &mut skip_indices,
+        );
 
         if let Some(holes) = &(geometry_hierarchy.holes) {
             for hole in holes {
                 let ring = &(hole.outer_ring);
-                get_side_outline(ring, height, &mut outline_positions);
+                get_side_outline(ring, height, &mut outline_positions, &mut skip_indices);
             }
         }
     }
@@ -116,6 +137,7 @@ pub fn create_outline_geometry(
                 .collect(),
             3,
         ),
+        skip_indices,
     }
 }
 

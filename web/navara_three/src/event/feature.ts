@@ -149,6 +149,11 @@ export async function processRenderableFeatureAdded(
     scenes.mrt.add(outline);
 
     obj.userData.outlineObj = outline;
+
+    obj.addEventListener("removedFromWorld", () => {
+      obj.userData.outlineObj.clear();
+      obj.userData.outlineObj.removeFromParent();
+    });
   }
 
   handleFeatureCreatedEventByLayerId(
