@@ -1,5 +1,5 @@
 import type ThreeView from "@navara/three";
-import type { Pane } from "tweakpane";
+import type { InputBindingApi, Pane } from "tweakpane";
 
 export const addDateControl = (view: ThreeView, pane: Pane) => {
   const date = new Date();
@@ -7,10 +7,14 @@ export const addDateControl = (view: ThreeView, pane: Pane) => {
 
   view.atmosphere.date = date;
 
+  const hour = date.getHours();
+
   const PARAMS = {
     year: date.getFullYear(),
     month: date.getMonth() + 1,
     hour: date.getHours(),
+    minutesOfDay: hour * 60,
+    animation: false,
   };
 
   const onChangeDate = () => {
@@ -43,6 +47,39 @@ export const addDateControl = (view: ThreeView, pane: Pane) => {
       date.setHours(v.value);
       onChangeDate();
     });
+
+  const updateMinutesOfDay = (value: number) => {
+    date.setHours(Math.floor(value / 60));
+    date.setMinutes(value % 60);
+    onChangeDate();
+  };
+  const maxMinutesOfDay = 24 * 60;
+  const minutesOfDay = folder
+    .addBinding(PARAMS, "minutesOfDay", {
+      min: 0,
+      max: maxMinutesOfDay,
+      step: 1,
+    })
+    .on("change", (v) => {
+      updateMinutesOfDay(v.value);
+    });
+  let animationId: number | undefined;
+  folder.addBinding(PARAMS, "animation").on("change", (v) => {
+    if (!v.value) {
+      animationId && cancelAnimationFrame(animationId);
+      return;
+    }
+    const run = () => {
+      const value = minutesOfDay.controller
+        .value as InputBindingApi<number>["controller"]["value"];
+      value.rawValue += 1;
+      if (value.rawValue >= maxMinutesOfDay) {
+        value.rawValue = 0;
+      }
+      animationId = requestAnimationFrame(run);
+    };
+    run();
+  });
 };
 
 export const addCameraControl = (view: ThreeView, pane: Pane) => {

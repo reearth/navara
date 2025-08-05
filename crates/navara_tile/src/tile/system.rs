@@ -290,11 +290,20 @@ pub fn transfer_mesh(
             colors.push(a.color);
         }
 
+        let (cast_shadow, receive_shadow) = terrain_layer
+            .and_then(|l| l.appearance.as_ref())
+            .map_or((false, false), |appearance| {
+                (appearance.cast_shadow, appearance.receive_shadow)
+            });
+
         let appearance = RasterTileInternalMaterial {
             shows,
             opacities,
             colors,
             texture_fragments: texture_fragment_entity_ids.clone(),
+            // TODO: It should be a part of a terrain material.
+            cast_shadow: Some(cast_shadow),
+            receive_shadow: Some(receive_shadow),
             // TODO: Replace with one resource
             should_compute_normal_from_vertex: Some(should_compute_normal_from_vertex),
             // TODO: Replace with one resource

@@ -74,6 +74,7 @@ export const run = async (view: ThreeView) => {
       max_zoom: 15,
       min_zoom: 5,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+      receive_shadow: true,
     },
   });
 
@@ -88,6 +89,8 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
+      cast_shadow: true,
+      receive_shadow: true,
     },
   });
 
@@ -403,12 +406,12 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
     areaWidth: snow.ref?.areaWidth,
     areaHeight: snow.ref?.areaHeight,
     maxHeight: snow.ref?.maxHeight,
-    xMovementStrength: snow.ref?.xMovementStrength,
-    xMovementSpeed: snow.ref?.xMovementSpeed,
-    yMovementStrength: snow.ref?.yMovementStrength,
-    yMovementSpeed: snow.ref?.yMovementSpeed,
-    zMovementStrength: snow.ref?.zMovementStrength,
-    zMovementSpeed: snow.ref?.zMovementSpeed,
+    xMovementStrength: snow.ref?.movementStrength.x ?? 0,
+    xMovementSpeed: snow.ref?.movementSpeed.x ?? 0,
+    yMovementStrength: snow.ref?.movementStrength.y ?? 0,
+    yMovementSpeed: snow.ref?.movementSpeed.y ?? 0,
+    zMovementStrength: snow.ref?.movementStrength.z ?? 0,
+    zMovementSpeed: snow.ref?.movementSpeed.z ?? 0,
   };
 
   const snowFolderFields: FolderFields<typeof SNOW_PARAMS> = [
@@ -528,7 +531,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         snow.update({
           snow: {
-            xMovementStrength: v.value,
+            movementStrength: {
+              x: v.value,
+              y: SNOW_PARAMS.yMovementStrength,
+              z: SNOW_PARAMS.zMovementStrength,
+            },
           },
         });
       },
@@ -541,7 +548,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         snow.update({
           snow: {
-            xMovementSpeed: v.value,
+            movementSpeed: {
+              x: v.value,
+              y: SNOW_PARAMS.yMovementSpeed,
+              z: SNOW_PARAMS.zMovementSpeed,
+            },
           },
         });
       },
@@ -554,7 +565,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         snow.update({
           snow: {
-            yMovementStrength: v.value,
+            movementStrength: {
+              x: SNOW_PARAMS.xMovementStrength,
+              y: v.value,
+              z: SNOW_PARAMS.zMovementStrength,
+            },
           },
         });
       },
@@ -567,7 +582,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         snow.update({
           snow: {
-            yMovementSpeed: v.value,
+            movementSpeed: {
+              x: SNOW_PARAMS.xMovementSpeed,
+              y: v.value,
+              z: SNOW_PARAMS.zMovementSpeed,
+            },
           },
         });
       },
@@ -580,7 +599,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         snow.update({
           snow: {
-            zMovementStrength: v.value,
+            movementStrength: {
+              x: SNOW_PARAMS.xMovementStrength,
+              y: SNOW_PARAMS.yMovementStrength,
+              z: v.value,
+            },
           },
         });
       },
@@ -593,7 +616,11 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         snow.update({
           snow: {
-            zMovementSpeed: v.value,
+            movementSpeed: {
+              x: SNOW_PARAMS.xMovementSpeed,
+              y: SNOW_PARAMS.yMovementSpeed,
+              z: v.value,
+            },
           },
         });
       },

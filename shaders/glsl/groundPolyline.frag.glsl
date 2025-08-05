@@ -11,6 +11,7 @@
 
 #include <lights_pars_begin>
 #include <lights_lambert_pars_fragment>
+#include <shadowmap_pars_fragment>
 
 in vec4 v_startPlaneNormalEcAndHalfWidth;
 in vec3 v_endPlaneNormalEc;
@@ -18,6 +19,7 @@ in vec4 v_rightPlaneEC; // Technically can compute distance for this here
 in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
 in vec2 nvr_vBatchIdAndSel;
+in vec3 vNormal;
 
 #include chunks/show_pars_fragment;
 
@@ -109,7 +111,6 @@ void main() {
         diffuseColor = vec4(nvr_uHighlightColor.xyz, 1.0);
     }
 
-
     ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
 	vec3 totalEmissiveRadiance = vec3(1.);
 
@@ -117,11 +118,16 @@ void main() {
     #include <specularmap_fragment>
     #include <emissivemap_fragment>
 
-    vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
-    vec3 mapN = unpackVec2ToNormal(texture2D( uGlobeNormal, uv ).xy);
-    // TODO: Support scaling normal. It's used to emphasis the shadow.
-    // mapN.xy *= scaledNormal;
-    vec3 normal = normalize( mapN );
+    vec3 normal;
+    if(useGroundNormals) {
+        vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
+        vec3 mapN = unpackVec2ToNormal(texture2D( uGlobeNormal, uv ).xy);
+        // TODO: Support scaling normal. It's used to emphasis the shadow.
+        // mapN.xy *= scaledNormal;
+        normal = normalize( mapN );
+    } else {
+        normal = vNormal;
+    }
 
     // accumulation
 	#include <lights_lambert_fragment>
@@ -129,18 +135,11 @@ void main() {
 	#include <lights_fragment_maps>
 	#include <lights_fragment_end>
 
-    vec3 outgoingLight; 
-    if(!useGroundNormals) {
-        // Without lighting
-        outgoingLight = diffuseColor.xyz;
-    } else {
-        outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
-    }
+    vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
 
     #include <opaque_fragment>
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
-
 
     normalBuffer = vec4(
         packNormalToVec2(normal),

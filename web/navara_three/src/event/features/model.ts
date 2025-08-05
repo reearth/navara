@@ -1,4 +1,6 @@
+import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
+import type { ViewEvents } from "@navara/three";
 
 import type { BufferLoader } from "../";
 import { ModelMesh } from "../../mesh/model";
@@ -9,6 +11,7 @@ export async function renderModel(
   m: NavaraModelMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
+  viewEvents: EventHandler<ViewEvents>,
 ) {
   const loader = initializeGltfLoader();
 
@@ -35,7 +38,7 @@ export async function renderModel(
     return;
   }
 
-  const scene = new ModelMesh(rawScene, m, uniforms, buf);
+  const scene = new ModelMesh(rawScene, m, uniforms, buf, viewEvents);
 
   return scene;
 }

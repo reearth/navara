@@ -1,6 +1,6 @@
 import { Light } from "three";
 
-import type { LayerPosition } from "../type";
+import type { LayerVector3 } from "../type";
 
 import {
   LayerDeclaration,
@@ -12,7 +12,7 @@ import type { ViewContext } from "./ViewContext";
 
 export type LightLayerConfig = {
   type: "light";
-  position?: LayerPosition;
+  position?: LayerVector3;
 } & LayerDeclarationConfig;
 
 export type LightLayerUpdate = LayerDeclarationConfigUpdate;
@@ -33,7 +33,7 @@ export abstract class LightLayerDeclaration<
   Instance extends
     LightBaseInstance<InstanceObj> = LightBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
-  public position?: LayerPosition;
+  public position?: LayerVector3;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);

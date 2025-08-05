@@ -1,7 +1,7 @@
 import { Object3D } from "three";
 
 import type { Scenes } from "../scene";
-import type { LayerPosition } from "../type";
+import type { LayerVector3 } from "../type";
 
 import {
   LayerDeclaration,
@@ -13,7 +13,7 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
   type: "mesh";
-  position?: LayerPosition;
+  position?: LayerVector3;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<MeshLayerConfig, "position"> &
@@ -37,7 +37,7 @@ export abstract class MeshLayerDeclaration<
   Instance extends
     MeshBaseInstance<InstanceObj> = MeshBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
-  public position?: LayerPosition;
+  public position?: LayerVector3;
   private prevPassKey?: PassKey;
 
   constructor(view: ViewContext, config: Config = {} as Config) {

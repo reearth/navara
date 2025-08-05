@@ -17,6 +17,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import type { LayerVector3 } from "../type";
 import { createReplacer } from "../utils";
 
 const createSnowflakeTexture = (): CanvasTexture => {
@@ -43,12 +44,8 @@ class SnowPointsMaterial extends ShaderMaterial {
     areaHeight: Uniform<number>;
     speed: Uniform<number>;
     time: Uniform<number>;
-    xMovementStrength: Uniform<number>;
-    xMovementSpeed: Uniform<number>;
-    zMovementStrength: Uniform<number>;
-    zMovementSpeed: Uniform<number>;
-    yMovementStrength: Uniform<number>;
-    yMovementSpeed: Uniform<number>;
+    movementStrength: Uniform<Vector3>;
+    movementSpeed: Uniform<Vector3>;
     cameraPosition: Uniform<Vector3>;
     meshOffset: Uniform<Vector3>;
     bounds: Uniform<Vector3>;
@@ -79,12 +76,8 @@ class SnowPointsMaterial extends ShaderMaterial {
       areaHeight: new Uniform(20),
       speed: new Uniform(0.05),
       time: new Uniform(0),
-      xMovementStrength: new Uniform(2),
-      xMovementSpeed: new Uniform(0.5),
-      yMovementStrength: new Uniform(1),
-      yMovementSpeed: new Uniform(0.3),
-      zMovementStrength: new Uniform(2),
-      zMovementSpeed: new Uniform(0.2),
+      movementStrength: new Uniform(new Vector3()),
+      movementSpeed: new Uniform(new Vector3()),
       cameraPosition: new Uniform(new Vector3()),
       meshOffset: new Uniform(new Vector3()),
       bounds: new Uniform(new Vector3()),
@@ -97,12 +90,8 @@ class SnowPointsMaterial extends ShaderMaterial {
     shader.uniforms.areaWidth = this.uniforms.areaWidth;
     shader.uniforms.areaHeight = this.uniforms.areaHeight;
     shader.uniforms.speed = this.uniforms.speed;
-    shader.uniforms.xMovementStrength = this.uniforms.xMovementStrength;
-    shader.uniforms.xMovementSpeed = this.uniforms.xMovementSpeed;
-    shader.uniforms.yMovementStrength = this.uniforms.yMovementStrength;
-    shader.uniforms.yMovementSpeed = this.uniforms.yMovementSpeed;
-    shader.uniforms.zMovementStrength = this.uniforms.zMovementStrength;
-    shader.uniforms.zMovementSpeed = this.uniforms.zMovementSpeed;
+    shader.uniforms.movementStrength = this.uniforms.movementStrength;
+    shader.uniforms.movementSpeed = this.uniforms.movementSpeed;
     shader.uniforms.cameraPosition = this.uniforms.cameraPosition;
     shader.uniforms.meshOffset = this.uniforms.meshOffset;
     shader.uniforms.bounds = this.uniforms.bounds;
@@ -115,12 +104,8 @@ class SnowPointsMaterial extends ShaderMaterial {
          uniform float speed;
          uniform float areaWidth;
          uniform float areaHeight;
-         uniform float xMovementStrength;
-         uniform float xMovementSpeed;
-         uniform float zMovementStrength;
-         uniform float zMovementSpeed;
-         uniform float yMovementStrength;
-         uniform float yMovementSpeed;
+         uniform vec3 movementStrength;
+         uniform vec3 movementSpeed;
          attribute float particleIndex;
          uniform float time;
          uniform vec3 meshOffset;
@@ -137,15 +122,15 @@ class SnowPointsMaterial extends ShaderMaterial {
          transformed.xz *= areaWidth;
          
          // Add horizontal X movement
-         float xMovement = xMovementStrength * sin(time * xMovementSpeed + particleIndex * 0.3);
+         float xMovement = movementStrength.x * sin(time * movementSpeed.x + particleIndex * 0.3);
          transformed.x += xMovement;
   
          // Add vertical movement
-         float yMovement = yMovementStrength * cos(time * yMovementSpeed + particleIndex * 0.2);
+         float yMovement = movementStrength.y * cos(time * movementSpeed.y + particleIndex * 0.2);
          transformed.y += yMovement;
   
          // Add horizontal Z movement
-         float zMovement = zMovementStrength * sin(time * zMovementSpeed + particleIndex * 0.1);
+         float zMovement = movementStrength.z * sin(time * movementSpeed.z + particleIndex * 0.1);
          transformed.z += zMovement;
          
          // Apply infinite scrolling when followCamera is enabled
@@ -195,12 +180,8 @@ export type SnowConfig = {
   speed: number;
   size: number;
   color: number;
-  xMovementStrength: number;
-  xMovementSpeed: number;
-  zMovementStrength: number;
-  zMovementSpeed: number;
-  yMovementStrength: number;
-  yMovementSpeed: number;
+  movementStrength: LayerVector3;
+  movementSpeed: LayerVector3;
   /** The mesh follows a camera. It takes an effect that looks like the mesh is rendered infinitely. */
   followCamera: boolean;
   /** Opacity is reduced in proportion to the maximum height and the camera height. */
@@ -216,12 +197,16 @@ export const DefaultSnowConfig: SnowConfig = {
   speed: 0.00005,
   size: 3,
   color: 0xffffff,
-  xMovementStrength: 50,
-  xMovementSpeed: 0.0005,
-  yMovementStrength: 20,
-  yMovementSpeed: 0.0002,
-  zMovementStrength: 50,
-  zMovementSpeed: 0.0005,
+  movementStrength: {
+    x: 50,
+    y: 20,
+    z: 50,
+  },
+  movementSpeed: {
+    x: 0.0005,
+    y: 0.0002,
+    z: 0.0005,
+  },
   followCamera: true,
   maxHeight: 3000,
   opacity: 1,
@@ -293,12 +278,8 @@ export class SnowMesh extends Points<BufferGeometry, SnowPointsMaterial> {
       speed,
       size,
       color,
-      xMovementStrength,
-      xMovementSpeed,
-      zMovementStrength,
-      zMovementSpeed,
-      yMovementStrength,
-      yMovementSpeed,
+      movementStrength,
+      movementSpeed,
       radius,
       followCamera,
     } = this._config;
@@ -306,12 +287,8 @@ export class SnowMesh extends Points<BufferGeometry, SnowPointsMaterial> {
     this._material.uniforms.areaHeight.value = areaHeight;
     this._material.uniforms.areaWidth.value = areaWidth;
     this._material.uniforms.speed.value = speed;
-    this._material.uniforms.xMovementStrength.value = xMovementStrength;
-    this._material.uniforms.xMovementSpeed.value = xMovementSpeed;
-    this._material.uniforms.yMovementStrength.value = yMovementStrength;
-    this._material.uniforms.yMovementSpeed.value = yMovementSpeed;
-    this._material.uniforms.zMovementStrength.value = zMovementStrength;
-    this._material.uniforms.zMovementSpeed.value = zMovementSpeed;
+    this._material.uniforms.movementStrength.value.copy(movementStrength);
+    this._material.uniforms.movementSpeed.value.copy(movementSpeed);
     this._material.uniforms.bounds.value.set(
       areaWidth * radius,
       areaHeight,
@@ -401,58 +378,22 @@ export class SnowMesh extends Points<BufferGeometry, SnowPointsMaterial> {
     return this._config.color;
   }
 
-  set xMovementStrength(value: number) {
-    this._config.xMovementStrength = value;
-    this._material.uniforms.xMovementStrength.value = value;
+  set movementStrength(value: LayerVector3) {
+    this._config.movementStrength = value;
+    this._material.uniforms.movementStrength.value.copy(value);
   }
 
-  get xMovementStrength(): number {
-    return this._config.xMovementStrength;
+  get movementStrength(): LayerVector3 {
+    return this._config.movementStrength;
   }
 
-  set xMovementSpeed(value: number) {
-    this._config.xMovementSpeed = value;
-    this._material.uniforms.xMovementSpeed.value = value;
+  set movementSpeed(value: LayerVector3) {
+    this._config.movementSpeed = value;
+    this._material.uniforms.movementSpeed.value.copy(value);
   }
 
-  get xMovementSpeed(): number {
-    return this._config.xMovementSpeed;
-  }
-
-  set yMovementStrength(value: number) {
-    this._config.yMovementStrength = value;
-    this._material.uniforms.yMovementStrength.value = value;
-  }
-
-  get yMovementStrength(): number {
-    return this._config.yMovementStrength;
-  }
-
-  set yMovementSpeed(value: number) {
-    this._config.yMovementSpeed = value;
-    this._material.uniforms.yMovementSpeed.value = value;
-  }
-
-  get yMovementSpeed(): number {
-    return this._config.yMovementSpeed;
-  }
-
-  set zMovementStrength(value: number) {
-    this._config.zMovementStrength = value;
-    this._material.uniforms.zMovementStrength.value = value;
-  }
-
-  get zMovementStrength(): number {
-    return this._config.zMovementStrength;
-  }
-
-  set zMovementSpeed(value: number) {
-    this._config.zMovementSpeed = value;
-    this._material.uniforms.zMovementSpeed.value = value;
-  }
-
-  get zMovementSpeed(): number {
-    return this._config.zMovementSpeed;
+  get movementSpeed(): LayerVector3 {
+    return this._config.movementSpeed;
   }
 
   set followCamera(value: boolean) {
@@ -498,18 +439,10 @@ export class SnowMesh extends Points<BufferGeometry, SnowPointsMaterial> {
     if (newConfig.size !== undefined) this.size = newConfig.size;
     if (newConfig.opacity !== undefined) this.opacity = newConfig.opacity;
     if (newConfig.color !== undefined) this.color = newConfig.color;
-    if (newConfig.xMovementStrength !== undefined)
-      this.xMovementStrength = newConfig.xMovementStrength;
-    if (newConfig.xMovementSpeed !== undefined)
-      this.xMovementSpeed = newConfig.xMovementSpeed;
-    if (newConfig.yMovementStrength !== undefined)
-      this.yMovementStrength = newConfig.yMovementStrength;
-    if (newConfig.yMovementSpeed !== undefined)
-      this.yMovementSpeed = newConfig.yMovementSpeed;
-    if (newConfig.zMovementStrength !== undefined)
-      this.zMovementStrength = newConfig.zMovementStrength;
-    if (newConfig.zMovementSpeed !== undefined)
-      this.zMovementSpeed = newConfig.zMovementSpeed;
+    if (newConfig.movementStrength !== undefined)
+      this.movementStrength = newConfig.movementStrength;
+    if (newConfig.movementSpeed !== undefined)
+      this.movementSpeed = newConfig.movementSpeed;
     if (newConfig.followCamera !== undefined)
       this.followCamera = newConfig.followCamera;
   }

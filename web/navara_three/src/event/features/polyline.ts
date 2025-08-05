@@ -1,4 +1,6 @@
+import type { EventHandler } from "@navara/core";
 import { PolylineMesh as NavaraPolylineMesh } from "@navara/engine";
+import type { ViewEvents } from "@navara/three";
 
 import type { BufferLoader } from "../";
 import { PolylineMesh } from "../../mesh";
@@ -8,8 +10,9 @@ export async function renderPolyline(
   mesh: NavaraPolylineMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
+  viewEvents: EventHandler<ViewEvents>,
 ) {
-  return new PolylineMesh(mesh, buf, uniforms);
+  return new PolylineMesh(mesh, buf, uniforms, viewEvents);
 }
 
 export function processPolylineChanged(

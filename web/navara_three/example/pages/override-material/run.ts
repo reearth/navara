@@ -23,7 +23,13 @@ const ENABLE_TERRAIN = true;
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  defaultAtmospheres.sun.update({
+    sun: {
+      intensity: 1,
+      castShadow: true,
+    },
+  });
 
   view.setCamera({
     lng: 139.75711454748298,
@@ -57,12 +63,13 @@ export const run = async (view: ThreeView) => {
         max_zoom: 15,
         min_zoom: 5,
         elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+        cast_shadow: true,
+        receive_shadow: true,
       },
     });
   }
 
   addDateControl(view, pane);
-
   addGeoJSONLayer(pane, view);
   addHeliportLayer(pane, view);
   addRoadLayer(pane, view);
@@ -486,6 +493,8 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
       clamp_to_ground: false,
       wireframe: false,
       id_property: "gml_id",
+      // cast_shadow: true,
+      // receive_shadow: true,
     },
     vector_tile: {
       max_zoom: 16,
@@ -597,6 +606,8 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
+      cast_shadow: true,
+      receive_shadow: true,
     },
   };
 
