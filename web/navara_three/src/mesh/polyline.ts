@@ -21,6 +21,7 @@ import {
   BatchedFeatureMesh,
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
+import type { DefaultBatchAttributeValues } from "./batchTexture";
 
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
@@ -227,6 +228,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   get color() {
     return this.material.uniforms.color.value;
+  }
+
+  _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
+    return {
+      color: this.color,
+    };
   }
 
   _setFeatureColor(color: Color): void {

@@ -41,7 +41,7 @@ export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 export type ModelBatchedAttributeName = "color" | "show" | "height";
 
 export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
-  rows: ["COLOR", "HEIGHT", "SHOW"],
+  rows: ["COLOR_SHOW", "HEIGHT"],
   batchLength: 0,
 };
 
@@ -118,7 +118,9 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     attribute: ModelBatchedAttributeName,
     value: number | number[] | boolean,
   ): void {
-    updateBatchAttribute(mesh.material, batchId, attribute, value);
+    updateBatchAttribute(mesh.material, batchId, attribute, value, {
+      color: mesh.material.color,
+    });
   }
 
   private overrideCesium3DTilesMaterial(

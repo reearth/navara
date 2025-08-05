@@ -27,6 +27,7 @@ import {
   BatchedFeatureMesh,
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
+import type { DefaultBatchAttributeValues } from "./batchTexture";
 
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
@@ -325,6 +326,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.material.userData.uClampToGround.value = material.clamp_to_ground;
     }
     this.userData.draped = material.clamp_to_ground;
+  }
+
+  _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
+    return {
+      color: this.material.color,
+    };
   }
 
   _setFeatureColor(color: Color): void {

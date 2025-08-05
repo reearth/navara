@@ -7,6 +7,7 @@ import { Color } from "three";
 import { FolderApi, Pane } from "tweakpane";
 
 import { TERRAIN_URLS } from "../../helpers/constants";
+import { addDateControl } from "../../helpers/control";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -59,6 +60,8 @@ export const run = async (view: ThreeView) => {
       },
     });
   }
+
+  addDateControl(view, pane);
 
   addGeoJSONLayer(pane, view);
   addHeliportLayer(pane, view);

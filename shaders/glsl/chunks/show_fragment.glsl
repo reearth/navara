@@ -1,4 +1,4 @@
-#ifdef USE_BATCH_SHOW
+#ifdef USE_BATCH_COLOR_SHOW
 // Discard fragment if show is false (0.0)
 if (nvr_vShow < 0.5) {
     discard;
