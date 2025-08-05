@@ -1,4 +1,4 @@
-import type { TileHandle } from "@navara/core";
+import type { EventHandler, TileHandle } from "@navara/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
@@ -9,6 +9,10 @@ import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_vertex.glsl";
 import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
+import ShadowMapDepthFragment from "@shaders/glsl/chunks/shadowmap_depth_fragment.glsl";
+import ShadowMapDepthParsFragment from "@shaders/glsl/chunks/shadowmap_depth_pars_fragment.glsl";
+import ShadowMapDepthParsVertex from "@shaders/glsl/chunks/shadowmap_depth_pars_vertex.glsl";
+import ShadowMapDepthVertex from "@shaders/glsl/chunks/shadowmap_depth_vertex.glsl";
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
@@ -17,8 +21,10 @@ import {
   BufferGeometry,
   Color,
   MeshLambertMaterial,
+  RGBADepthPacking,
 } from "three";
 
+import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
@@ -44,10 +50,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     buf: BufferLoader,
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     super(new BufferGeometry<Attributes>(), new MeshLambertMaterial());
     this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, uniforms, tileHandle);
+    this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
+    this.initDepthMaterial();
   }
 
   private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
@@ -107,9 +115,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
     mesh: NavaraPolygonMesh,
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
+    viewEvents: EventHandler<ViewEvents>,
   ) {
     const meshMaterial = mesh.material;
     const mcolor = meshMaterial.color;
+
+    this.castShadow = !!meshMaterial.cast_shadow;
+    this.receiveShadow = !!meshMaterial.receive_shadow;
 
     const clampToGround = meshMaterial.clamp_to_ground;
     // This mesh should be texturized if it uses clamp-to-ground.
@@ -182,6 +194,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
   ${BatchTextureParsVertex}
   
   ${BranchFreeTernary}
+
+  ${ShadowMapDepthParsVertex}
   `,
         )
         .replace(
@@ -195,6 +209,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
   transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + addExtrudedHeight);
 
   nvr_vBatchIdAndSel = batchIdAndSel;
+  `,
+        )
+        .replace(
+          "#include <clipping_planes_vertex>",
+          `
+  #include <clipping_planes_vertex>
+  ${ShadowMapDepthVertex}
   `,
         ).source;
 
@@ -214,6 +235,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
   ${ShowParsFragment}
   
   ${Pick}
+
+  ${ShadowMapDepthParsFragment}
   `,
         )
         .replace(
@@ -221,6 +244,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
           `
   void main() {
     ${ShowFragment}
+    ${ShadowMapDepthFragment}
   `,
         )
         .replace(
@@ -271,11 +295,33 @@ export class PolygonMesh extends BatchedFeatureMesh<
         ).source;
     };
 
+    viewEvents.emit("_csmMounted", material);
+
     this.material = material;
 
     this._initBatchedMaterial();
 
     this._update(meshMaterial, mesh.active, isTexturized);
+  }
+
+  /**
+   * Override a material that is used to generate a shadow map.
+   */
+  initDepthMaterial() {
+    this.customDepthMaterial = this.material.clone();
+    this.customDepthMaterial.needsUpdate = true;
+
+    this.customDepthMaterial.userData = this.material.userData;
+
+    const origin = this.material;
+
+    this.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
+      origin.onBeforeCompile(shader, renderer);
+
+      shader.defines = { ...origin.defines };
+      shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
+      shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
+    };
   }
 
   _update(material: PolygonMaterial, active: boolean, isTexturized: boolean) {
@@ -300,6 +346,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
       const next = !!material.wireframe;
       this.material.wireframe = next;
       prev.wireframe = next;
+    }
+
+    if (this.castShadow !== material.cast_shadow) {
+      this.castShadow = !!material.cast_shadow;
+    }
+    if (this.receiveShadow !== material.receive_shadow) {
+      this.receiveShadow = !!material.receive_shadow;
     }
 
     const [min, max] = material.__internal__?.min_max_heights ?? [];

@@ -1,1 +1,1 @@
-export type LayerPosition = { x: number; y: number; z: number };
+export type LayerVector3 = { x: number; y: number; z: number };

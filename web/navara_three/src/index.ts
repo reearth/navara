@@ -19,6 +19,8 @@ import {
   Color,
   LinearFilter,
   Group,
+  Material,
+  PCFSoftShadowMap,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -79,6 +81,7 @@ import { PickHelper } from "./pick/pickHelper";
 import type { Picking } from "./pick/picking";
 import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
+import { ShadowMapViewers } from "./ShadowMapViewers";
 import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
 import {
@@ -111,6 +114,10 @@ export * from "./event/loaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
+export * from "./lights";
+
+// CSM exports for advanced users
+export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -145,6 +152,8 @@ export type Options = {
   dithering?: EffectOptions;
   ssao?: SSAOOptions;
   logarithmicDepthBuffer?: boolean;
+  // It must be passed when instantiated.
+  shadow?: boolean;
 };
 
 export type ViewEvents = {
@@ -172,6 +181,11 @@ export type ViewEvents = {
    * */
   postRender: (t: number) => void;
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
+  /**
+   * This event injects a shader code for CSM. The shader code only executed when the shadow is enabled.
+   * You should pass a material that needs the shadow when it's initialized.
+   */
+  _csmMounted: (material: Material) => void;
 };
 
 export default class ThreeView<
@@ -327,6 +341,7 @@ export default class ThreeView<
   private _terrainPicker: TerrainPicker;
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
+  private shadowMapViewers: ShadowMapViewers;
 
   // Registry support
   private registries: Registries;
@@ -372,6 +387,12 @@ export default class ThreeView<
     renderer.autoClearColor = false;
     renderer.autoClearDepth = false;
     this.renderer = renderer;
+
+    renderer.shadowMap.enabled = !!options.shadow;
+    this.renderer.shadowMap.type = PCFSoftShadowMap;
+
+    // Update shadow map manually in CustomRenderPass.
+    renderer.shadowMap.autoUpdate = false;
 
     const { width = options.initialWidth, height = options.initialHeight } =
       this._getCanvasSize() ?? {};
@@ -459,12 +480,18 @@ export default class ThreeView<
       screenHeightPx: { value: height },
     };
 
+    // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
+    // TODO: Allow to change this value dynamically.
+    const NUM_CASCADED_SHADOW_MAPS = 6;
+
     this._defaultTextureOptions = {
       maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
       magFilter: LinearFilter,
       minFilter: LinearFilter,
       useMipmaps: true,
-      maxTextures: Math.max(this.renderer.capabilities.maxTextures, 8),
+      maxTextures:
+        Math.max(this.renderer.capabilities.maxTextures, 8) -
+        NUM_CASCADED_SHADOW_MAPS,
     };
 
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
@@ -496,6 +523,8 @@ export default class ThreeView<
     this.camera.on("frustumChanged", () => {
       this.renderPassOrchestrator.effectComposer.setMainCamera(this.camera.raw);
     });
+
+    this.shadowMapViewers = new ShadowMapViewers(this.scenes.light);
   }
 
   async initializeRenderPass() {
@@ -514,6 +543,11 @@ export default class ThreeView<
       type: "effect",
       final: {},
     } as LayerDescription);
+
+    // Set up CSM material mounting listener
+    this.on("_csmMounted", (material: Material) => {
+      this.setupCSMForMaterial(material);
+    });
   }
 
   private get renderPass() {
@@ -748,6 +782,8 @@ export default class ThreeView<
     this.renderPassOrchestrator.render();
     this._pickHelper?.renderDebugCanvas();
 
+    this.shadowMapViewers.render(this.renderer);
+
     this.emit("postRender", updatedAt);
   }
 
@@ -793,6 +829,7 @@ export default class ThreeView<
 
   deleteLayerById(layerId: string) {
     invariant(this._core);
+
     this.layersManager.get(layerId)?.delete();
   }
 
@@ -947,6 +984,33 @@ export default class ThreeView<
 
   registerEffect(name: string, effectClass: EffectLayerConstructor): void {
     this.registries.effect.register(name, effectClass);
+  }
+
+  /**
+   * Find the sun light layer in the current layers
+   */
+  private findSunLightLayer(): SunLightLayer | null {
+    // Look through registered layers for sun light layer
+    for (const layer of this.layersManager.getDeclarationLayers()) {
+      const layerInstance = layer.getLayer();
+      // Check if it's a SunLightLayer
+      if (layerInstance instanceof SunLightLayer) {
+        return layerInstance;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Setup CSM for a single material
+   */
+  private setupCSMForMaterial(material: Material): void {
+    const sunLightLayer = this.findSunLightLayer();
+    if (!sunLightLayer) {
+      return;
+    }
+
+    sunLightLayer.setupMaterialForShadows(material);
   }
 
   // TODO: Handle this in plugin system.
@@ -1206,6 +1270,16 @@ export default class ThreeView<
 
   get pixelRatio() {
     return this.renderer.getPixelRatio();
+  }
+
+  /**
+   * Display shadow map on the left side of your screen.
+   */
+  get shadowMapViewersEnabled() {
+    return this.shadowMapViewers.enabled;
+  }
+  set shadowMapViewersEnabled(v: boolean) {
+    this.shadowMapViewers.enabled = v;
   }
 
   pickTerrainPosition(x: number, y: number): Nullable<Vector3> {

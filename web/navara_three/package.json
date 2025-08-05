@@ -29,6 +29,7 @@
   "dependencies": {
     "@navara/core": "workspace:*",
     "@navara/three_api": "workspace:*",
+    "@navara/three_csm": "workspace:*",
     "@navara/worker": "workspace:*",
     "@takram/three-atmosphere": "^0.13.2",
     "@takram/three-clouds": "^0.4.2",

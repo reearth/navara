@@ -24,7 +24,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
     fn from(val: PointMaterial) -> Self {
         let default = navara_material::PointMaterial::default();
         navara_material::PointMaterial {
-            show: val.show.unwrap_or(true),
+            show: val.show.unwrap_or(default.show),
             size: val.size.unwrap_or(default.size),
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
@@ -192,6 +192,8 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
     pub show: Option<bool>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     pub color: Option<u32>,
     pub width: Option<f32>,
     pub clamp_to_ground: Option<bool>,
@@ -209,6 +211,8 @@ impl PolylineMaterial {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         show: Option<bool>,
+        cast_shadow: Option<bool>,
+        receive_shadow: Option<bool>,
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
         use_ground_normals: Option<bool>,
@@ -219,6 +223,8 @@ impl PolylineMaterial {
     ) -> Self {
         Self {
             show,
+            cast_shadow,
+            receive_shadow,
             color,
             clamp_to_ground,
             use_ground_normals,
@@ -234,7 +240,9 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
         let default = navara_material::PolylineMaterial::default();
         navara_material::PolylineMaterial {
-            show: val.show.unwrap_or(true),
+            show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             color: val.color.unwrap_or(default.color),
             width: val.width.unwrap_or(default.width),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
@@ -249,6 +257,8 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
     fn from(value: &'a navara_material::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             width: Some(value.width),
             clamp_to_ground: Some(value.clamp_to_ground),
@@ -264,6 +274,8 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
     fn from(value: navara_material::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             width: Some(value.width),
             clamp_to_ground: Some(value.clamp_to_ground),
@@ -309,6 +321,8 @@ impl From<navara_material::PolylineInternalMaterial> for PolylineInternalMateria
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonMaterial {
     pub show: Option<bool>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     pub color: Option<u32>,
     pub clamp_to_ground: Option<bool>,
     pub use_ground_normals: Option<bool>,
@@ -327,6 +341,8 @@ impl PolygonMaterial {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         show: Option<bool>,
+        cast_shadow: Option<bool>,
+        receive_shadow: Option<bool>,
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
         use_ground_normals: Option<bool>,
@@ -338,6 +354,8 @@ impl PolygonMaterial {
     ) -> Self {
         Self {
             show,
+            cast_shadow,
+            receive_shadow,
             color,
             clamp_to_ground,
             use_ground_normals,
@@ -355,6 +373,8 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
         let default = navara_material::PolygonMaterial::default();
         navara_material::PolygonMaterial {
             show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             color: val.color.unwrap_or(default.color),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
@@ -370,6 +390,8 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
     fn from(value: &'a navara_material::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
             use_ground_normals: Some(value.use_ground_normals),
@@ -385,6 +407,8 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
     fn from(value: navara_material::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
             use_ground_normals: Some(value.use_ground_normals),
@@ -430,6 +454,8 @@ impl From<navara_material::PolygonInternalMaterial> for PolygonInternalMaterial 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMaterial {
     pub show: Option<bool>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
     pub size: Option<f32>,
@@ -449,6 +475,8 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
         let default = navara_material::ModelMaterial::default();
         navara_material::ModelMaterial {
             show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             url: val.url.unwrap_or(default.url),
             size: val.size.unwrap_or(default.size),
             height: val.height.unwrap_or(default.height),
@@ -468,6 +496,8 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
     fn from(value: &'a navara_material::ModelMaterial) -> ModelMaterial {
         ModelMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             url: Some(value.url.clone()),
             size: Some(value.size),
             height: Some(value.height),
@@ -541,6 +571,8 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub opacities: Vec<f32>,
     texture_fragments: Option<Vec<Option<TextureFragment>>>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     pub should_compute_normal_from_vertex: Option<bool>,
     pub wireframe: bool,
 }
@@ -572,6 +604,8 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                     })
                     .collect()
             }),
+            cast_shadow: m.cast_shadow,
+            receive_shadow: m.receive_shadow,
             should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
             wireframe: m.wireframe,
         }
@@ -582,6 +616,8 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorTileMaterial {
     pub show: Option<bool>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     pub max_zoom: Option<usize>,
     pub max_sse: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
@@ -593,6 +629,8 @@ impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
         let default = navara_material::VectorTileMaterial::default();
         navara_material::VectorTileMaterial {
             show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             max_sse: val.max_sse.unwrap_or(default.max_sse),
             layers: val.layers.clone(),
@@ -603,6 +641,8 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
     fn from(value: &'a navara_material::VectorTileMaterial) -> VectorTileMaterial {
         VectorTileMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             max_zoom: Some(value.max_zoom),
             max_sse: Some(value.max_sse),
             layers: value.layers.clone(),
@@ -614,6 +654,8 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     pub segments: Option<usize>,
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
@@ -626,7 +668,9 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
     fn from(val: RasterTerrainMaterial) -> Self {
         let default = navara_material::RasterTerrainMaterial::default();
         navara_material::RasterTerrainMaterial {
-            show: val.show.unwrap_or(true),
+            show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             segments: val.segments.unwrap_or(default.segments),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
@@ -644,6 +688,8 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
     fn from(value: &'a navara_material::RasterTerrainMaterial) -> RasterTerrainMaterial {
         RasterTerrainMaterial {
             show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
             segments: Some(value.segments),
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),

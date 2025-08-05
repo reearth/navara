@@ -191,6 +191,7 @@ export function processEvent(
             textureOptions,
             texturizedSceneByTileCoordinates,
             tileMapByHandle,
+            viewEvents,
           );
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
