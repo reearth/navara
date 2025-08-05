@@ -19,12 +19,12 @@ vec2 getBatchTextureCoord(float batchId, float rowIndex) {
   return vec2(u, v);
 }
 
-#ifdef USE_COLOR
-vec3 getBatchColor(float batchId) {
-  vec2 uv = getBatchTextureCoord(batchId, BATCHED_TEXTURE_ROW_COLOR);
+#ifdef USE_BATCH_COLOR_SHOW
+vec4 getBatchColorShow(float batchId) {
+  vec2 uv = getBatchTextureCoord(batchId, BATCHED_TEXTURE_ROW_COLOR_SHOW);
 
   vec4 data = texture2D(batchDataTexture, uv);
-  return data.rgb;
+  return data;
 }
 #endif
 
@@ -43,15 +43,6 @@ float getBatchExtrudedHeight(float batchId) {
   
   vec4 data = texture2D(batchDataTexture, uv);
   return decodeRGBAToFloat(data);
-}
-#endif
-
-#ifdef USE_BATCH_SHOW
-float getBatchShow(float batchId) {
-  vec2 uv = getBatchTextureCoord(batchId, BATCHED_TEXTURE_ROW_SHOW);
-  
-  vec4 data = texture2D(batchDataTexture, uv);
-  return data.r;
 }
 #endif
 #endif // USE_BATCH_TEXTURE

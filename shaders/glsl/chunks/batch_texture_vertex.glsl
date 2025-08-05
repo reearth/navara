@@ -1,14 +1,10 @@
 #ifdef USE_BATCH_TEXTURE
   float batchId = _batchid;
 
-  #ifdef USE_BATCH_SHOW
-    float showFlag = getBatchShow(batchId);
-    nvr_vShow = showFlag;
-  #endif
-
-  #ifdef USE_COLOR
-    vec3 batchColor = getBatchColor(batchId);
-    vColor.rgb = batchColor;
+  #ifdef USE_BATCH_COLOR_SHOW
+    vec4 batchColor = getBatchColorShow(batchId);
+    vColor.rgb = batchColor.rgb;
+    nvr_vShow = batchColor.a;
   #endif
 
   #ifdef USE_BATCH_EXTRUDED_HEIGHT
