@@ -33,6 +33,13 @@ export class CustomRenderPass extends RenderPass {
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
 
+  // Used to render only the shadow map
+  private shadowScene = new Scene();
+  private dummyShadowRenderTarget = new WebGLRenderTarget(1, 1, {
+    depthBuffer: false,
+    stencilBuffer: false,
+  });
+
   private debugNormalCopyPass?: NormalCopyPass;
 
   constructor(
@@ -100,8 +107,18 @@ export class CustomRenderPass extends RenderPass {
       this.clearPass.render(renderer, inputBuffer, null);
     }
 
+    // Render shadow map
+    if (renderer.shadowMap.enabled) {
+      renderer.setRenderTarget(this.dummyShadowRenderTarget);
+      this.shadowScene.add(this._scenes.globe);
+      this.shadowScene.add(this._scenes.mrt);
+      this.shadowScene.add(this._scenes.opaque);
+      renderer.shadowMap.needsUpdate = true;
+      this._renderWithLight(renderer, this.shadowScene);
+      this.shadowScene.clear();
+    }
+
     renderer.setRenderTarget(renderTarget);
-    renderer.clear();
 
     this._renderWithLight(renderer, this._scenes.globe);
 

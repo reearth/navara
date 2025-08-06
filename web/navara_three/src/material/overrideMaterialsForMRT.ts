@@ -108,7 +108,9 @@ function injectGBuffer(
           );
         `;
   shader.fragmentShader = /* glsl */ `
-    layout(location = 1) out vec4 outputBuffer1;
+    #ifndef USE_SHADOWMAP_DEPTH
+      layout(location = 1) out vec4 outputBuffer1;
+    #endif
 
     #if !defined(USE_ENVMAP)
       uniform float reflectivity;
@@ -119,7 +121,9 @@ function injectGBuffer(
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
-          outputBuffer1 = ${outputBuffer1};
+          #ifndef USE_SHADOWMAP_DEPTH
+            outputBuffer1 = ${outputBuffer1};
+          #endif
         }
       `,
       ).source
@@ -229,7 +233,9 @@ function injectGBufferToShaderMaterial(
           );
         `;
   shader.fragmentShader = /* glsl */ `
-    layout(location = 1) out vec4 outputBuffer1;
+    #ifndef USE_SHADOWMAP_DEPTH
+      layout(location = 1) out vec4 outputBuffer1;
+    #endif
 
     ${packing}
 
@@ -241,7 +247,9 @@ function injectGBufferToShaderMaterial(
         /* glsl */ `
           ${shader.fragmentShader.includes(logdepthFrag) ? "" : logdepthFrag}
 
-          outputBuffer1 = ${outputBuffer1};
+          #ifndef USE_SHADOWMAP_DEPTH
+            outputBuffer1 = ${outputBuffer1};
+          #endif
         }
       `,
       ).source

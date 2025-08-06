@@ -14,7 +14,9 @@ in vec3 start_normal;
 in vec4 end_normal_and_texture_coordinate_normalization_x;
 in vec4 right_normal_and_texture_coordinate_normalization_y;
 
+#include <common>
 #include <color_pars_vertex>
+#include <shadowmap_pars_vertex>
 #include chunks/batch_texture_pars_vertex;
 
 uniform vec3 minMaxHeightAndWidth;
@@ -29,9 +31,11 @@ out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
 out vec3 vViewPosition;
 out vec2 nvr_vBatchIdAndSel;
+out vec3 vNormal;
 
 
 void main() {
+    #include <begin_vertex>
     #include <color_vertex>
 
     #include chunks/batch_texture_vertex;
@@ -80,6 +84,10 @@ void main() {
     vec3 height = heightNormal * nvr_branchFreeTernary(dot(diff, heightNormal) > 0., minMaxHeightAndWidth.y, minMaxHeightAndWidth.x);
     positionEC.xyz += height;
 
+    vec3 transformedNormal = vec3( heightNormal );
+
+	#include <normal_vertex>
+
     // upOrDown = cross(forwardDirectionEC, normalEC);
     // upOrDown = float(v_texcoordNormalizationAndStartEcYZ.y > 1.0 || v_texcoordNormalizationAndStartEcYZ.y < 0.0) * upOrDown;
     // positionEC.xyz += upOrDown;
@@ -101,4 +109,7 @@ void main() {
     positionEC.xyz += lineWidth * normalEC;
     gl_Position = projectionMatrix * positionEC;
     vViewPosition = -positionEC.xyz;
+
+    #include <worldpos_vertex>
+    #include <shadowmap_vertex>
 }

@@ -68,6 +68,9 @@ importers:
       '@navara/three_api':
         specifier: workspace:*
         version: link:../navara_three_api
+      '@navara/three_csm':
+        specifier: workspace:*
+        version: link:../navara_three_csm
       '@navara/worker':
         specifier: workspace:*
         version: link:../navara_worker
@@ -128,6 +131,15 @@ importers:
         version: 1.12.1(@microsoft/api-extractor@7.52.8(@types/node@24.0.14))(postcss@8.5.6)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.14)(terser@5.43.1))
 
   web/navara_three_api:
+    devDependencies:
+      '@types/three':
+        specifier: ^0.177.0
+        version: 0.177.0
+      three:
+        specifier: ^0.177.0
+        version: 0.177.0
+
+  web/navara_three_csm:
     devDependencies:
       '@types/three':
         specifier: ^0.177.0

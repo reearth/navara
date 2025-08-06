@@ -3,8 +3,10 @@ import ThreeView, {
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
 import { AxesHelper } from "three";
+import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { addDateControl } from "../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
@@ -359,6 +361,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       outline_width: 2,
       outline_show: true,
       surface_show: true,
+      cast_shadow: true,
+      receive_shadow: true,
     },
   },
   {
@@ -385,6 +389,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
+      cast_shadow: true,
+      receive_shadow: true,
     },
   },
   {
@@ -398,6 +404,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
+      cast_shadow: true,
+      receive_shadow: true,
     },
   },
   {
@@ -470,7 +478,13 @@ const geoLayersDef: MaterialLayerDescription[] = [
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  defaultAtmospheres.sun.update({
+    sun: {
+      intensity: 1,
+      castShadow: true,
+    },
+  });
 
   const axesHelper = new AxesHelper(5);
   axesHelper.scale.multiplyScalar(1e9);
@@ -504,8 +518,22 @@ export const run = async (view: ThreeView) => {
         terrainType === "mapbox"
           ? MAPBOX_ELEVATION_DECODER()
           : JAPAN_GSI_ELEVATION_DECODER(),
+      cast_shadow: true,
+      receive_shadow: true,
     },
   });
 
-  addCtrlPanel(geoLayersDef, view);
+  const pane = new Pane({
+    title: "Parameters",
+    expanded: true,
+  });
+  pane.element.style.position = "absolute";
+  pane.element.style.width = "340px";
+  pane.element.style.right = "0px";
+
+  addDateControl(view, pane);
+
+  const materialCtrl = pane.addFolder({ title: "material" });
+
+  addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
 };

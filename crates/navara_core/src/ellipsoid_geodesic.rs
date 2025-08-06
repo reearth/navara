@@ -1,7 +1,7 @@
 use navara_math::EPSILON12;
 use radians::{Angle, Radians};
 
-use crate::{Ellipsoid, Meters, LLE};
+use crate::{Ellipsoid, Meters, LLE, WGS84_FE_32};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/16696798115dbc7412453f3ea589f3f42a666315/packages/engine/Source/Core/EllipsoidGeodesic.js
 pub struct EllipsoidGeodesic {
@@ -143,7 +143,7 @@ fn vincenty_inverse_formula(
     first: &LLE<f32, Radians>,
     second: &LLE<f32, Radians>,
 ) -> VincentyInverseFormulaResult {
-    let eff = (a - b) / a;
+    let eff = WGS84_FE_32;
     let l = (second.lng.val() - first.lng.val()) as f64;
 
     let u1 = ((1. - eff) * first.lat.tan()).atan();

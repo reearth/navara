@@ -1,11 +1,10 @@
-import { DataTexture, FloatType, Material, RGBAFormat } from "three";
+import { Color, DataTexture, FloatType, Material, RGBAFormat } from "three";
 import invariant from "tiny-invariant";
 
 export const BATCH_TEXTURE_ROW = [
-  "COLOR", // R=colorR, G=colorG, B=colorB, A=NONE
+  "COLOR_SHOW", // R=colorR, G=colorG, B=colorB, A=NONE
   "HEIGHT", // R,G,B,A=height as RGBA
   "EXTRUDED_HEIGHT", // R,G,B,A=extrudedHeight as RGBA
-  "SHOW", // R=show, G=NONE, B=NONE, A=NONE
 ] as const;
 
 export type BatchTextureRowKey = (typeof BATCH_TEXTURE_ROW)[number];
@@ -16,8 +15,8 @@ export type BatchTextureConfig = {
 };
 
 export const BATCHED_ATTRIBUTE_NAMES = [
-  "color", // R=colorR, G=colorG, B=colorB, A=NONE
-  "show", // R=show, G=NONE, B=NONE, A=NONE
+  "color", // R=colorR, G=colorG, B=colorB, A=show
+  "show", // Use alpha channel of color texel.
   "height", // R,G,B,A=Encoded height as RGBA
   "extrudedHeight", // R,G,B,A=Encoded extruded height as RGBA
 ] as const;
@@ -99,11 +98,16 @@ export function getBatchDataTexture(
   return material.userData.batchDataTexture?.value;
 }
 
+export type DefaultBatchAttributeValues = {
+  color: Color;
+};
+
 export function updateBatchAttribute(
   material: Material,
   batchId: number,
   attribute: BatchedAttributeName,
   value: number | number[] | boolean,
+  defaultValues: DefaultBatchAttributeValues,
 ): void {
   const texture = getBatchDataTexture(material);
   if (!texture) return;
@@ -114,17 +118,47 @@ export function updateBatchAttribute(
   switch (attribute) {
     case "color": {
       if (!(value instanceof Array)) return;
-      if (!material.vertexColors) {
+      if (material.defines) {
         material.vertexColors = true;
+        material.defines.USE_BATCH_COLOR_SHOW = true;
         material.needsUpdate = true;
       }
 
-      const rowIndex = getRowIndex(material, "COLOR");
+      material.userData._batchColorTouched = true;
+
+      const rowIndex = getRowIndex(material, "COLOR_SHOW");
 
       const baseIndex = batchId * 4 + rowIndex * textureWidth;
       data[baseIndex] = value[0]; // R
       data[baseIndex + 1] = value[1]; // G
       data[baseIndex + 2] = value[2]; // B
+      if (!material.userData._batchShowTouched) {
+        data[baseIndex + 3] = material.visible ? 1 : 0; // A: Default show
+      }
+      break;
+    }
+    case "show": {
+      if (typeof value !== "boolean") return;
+      if (material.defines) {
+        material.vertexColors = true;
+        material.defines.USE_BATCH_COLOR_SHOW = true;
+        material.needsUpdate = true;
+      }
+
+      material.userData._batchShowTouched = true;
+
+      // Reuse color texel.
+      const rowIndex = getRowIndex(material, "COLOR_SHOW");
+      if (rowIndex < 0) return;
+
+      const baseIndex = batchId * 4 + rowIndex * textureWidth;
+      if (!material.userData._batchColorTouched) {
+        const color = defaultValues.color;
+        data[baseIndex] = color.r; // R
+        data[baseIndex + 1] = color.g; // G
+        data[baseIndex + 2] = color.b; // B
+      }
+      data[baseIndex + 3] = value ? 1.0 : 0.0; // A
       break;
     }
     case "height": {
@@ -165,21 +199,6 @@ export function updateBatchAttribute(
       data[baseIndex + 1] = encodedHeight[1]; // G
       data[baseIndex + 2] = encodedHeight[2]; // B
       data[baseIndex + 3] = encodedHeight[3]; // A
-      break;
-    }
-    case "show": {
-      if (typeof value !== "boolean") return;
-      if (material.defines) {
-        material.defines.USE_BATCH_SHOW = true;
-        material.needsUpdate = true;
-      }
-
-      const rowIndex = getRowIndex(material, "SHOW");
-      if (rowIndex < 0) return;
-
-      const baseIndex = batchId * 4 + rowIndex * textureWidth;
-      data[baseIndex] = value ? 1.0 : 0.0; // R
-      // G, B, A are unnecessary
       break;
     }
   }

@@ -38,6 +38,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
     const skyMaterial = new SkyMaterial({
       sun: options.sun ?? true,
       moon: options.moon ?? true,
+      depthWrite: false,
     });
 
     this.raw = new Mesh(new PlaneGeometry(2, 2), skyMaterial);

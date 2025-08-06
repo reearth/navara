@@ -26,7 +26,13 @@ export const run = async (view: ThreeView) => {
   await view.init();
 
   const defaultEffects = view.addDefaultEffectLayers();
-  view.addDefaultAtmosphereLayers();
+  const defaultLayers = view.addDefaultAtmosphereLayers();
+
+  defaultLayers.sun.update({
+    sun: {
+      castShadow: true,
+    },
+  });
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -81,6 +87,7 @@ export const run = async (view: ThreeView) => {
       max_zoom: 15,
       min_zoom: 5,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+      receive_shadow: true,
     },
   });
 
@@ -93,6 +100,7 @@ export const run = async (view: ThreeView) => {
   );
 
   const cubes = new MarchingCubes(50, hatchingMaterial);
+  cubes.castShadow = true;
 
   const position = geodeticToVector3(
     new LLE(

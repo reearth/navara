@@ -208,6 +208,8 @@ impl TextMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PolylineMaterial {
     pub show: bool,
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
     pub color: u32,
     pub width: f32,
     pub clamp_to_ground: bool,
@@ -221,6 +223,8 @@ impl Default for PolylineMaterial {
     fn default() -> Self {
         Self {
             show: true,
+            cast_shadow: false,
+            receive_shadow: false,
             color: 0xffffff,
             width: 1.,
             clamp_to_ground: true,
@@ -248,6 +252,8 @@ pub struct PolylineInternalMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PolygonMaterial {
     pub show: bool,
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
     pub color: u32,
     pub clamp_to_ground: bool,
     pub use_ground_normals: bool,
@@ -267,6 +273,8 @@ impl Default for PolygonMaterial {
     fn default() -> Self {
         Self {
             show: true,
+            cast_shadow: false,
+            receive_shadow: false,
             color: 0xffffff,
             clamp_to_ground: true,
             use_ground_normals: false,
@@ -299,6 +307,8 @@ pub struct PolygonInternalMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct ModelMaterial {
     pub show: bool,
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
     pub url: String,
     pub size: FloatType,
     pub height: FloatType,
@@ -315,6 +325,8 @@ impl Default for ModelMaterial {
     fn default() -> Self {
         Self {
             show: true,
+            cast_shadow: false,
+            receive_shadow: false,
             size: 1.,
             clamp_to_ground: true,
             height: 1.,
@@ -357,6 +369,8 @@ impl ModelMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct VectorTileMaterial {
     pub show: bool,
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
     pub max_sse: f32,
     pub max_zoom: usize,
     pub layers: Option<Vec<String>>,
@@ -366,6 +380,8 @@ impl Default for VectorTileMaterial {
     fn default() -> Self {
         Self {
             show: true,
+            cast_shadow: false,
+            receive_shadow: false,
             max_sse: 2.,
             max_zoom: 20,
             layers: None,
@@ -413,6 +429,8 @@ pub struct RasterTileInternalMaterial {
     pub colors: Vec<u32>,
     pub opacities: Vec<f32>,
     pub texture_fragments: Option<Vec<Option<Entity>>>,
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
     pub should_compute_normal_from_vertex: Option<bool>,
     pub wireframe: bool,
 }
@@ -420,6 +438,8 @@ pub struct RasterTileInternalMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct RasterTerrainMaterial {
     pub show: bool,
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
     pub segments: usize,
     pub max_zoom: usize,
     pub min_zoom: usize,
@@ -432,6 +452,8 @@ impl Default for RasterTerrainMaterial {
     fn default() -> Self {
         Self {
             show: true,
+            cast_shadow: false,
+            receive_shadow: false,
             segments: 64,
             max_zoom: 20,
             min_zoom: 0,

@@ -19,6 +19,7 @@ export type MaterialLayerDescription = Exclude<
 export const addCtrlPanel = (
   layers: MaterialLayerDescription[],
   view: ThreeView,
+  paneInput?: Pane,
 ) => {
   const layerMap = new Map<string, MaterialLayerDescription>();
   layers.forEach((layer) => {
@@ -28,20 +29,25 @@ export const addCtrlPanel = (
     }
   });
 
-  const pane = new Pane({
-    title: "Parameters",
-    expanded: true,
-  });
-  pane.element.style.position = "absolute";
-  pane.element.style.width = "340px";
-  pane.element.style.right = "0px";
-
   const layerIds = Array.from(layerMap.keys());
   const layerDeleted = layerIds.map(() => 0);
 
   const layerIdOptions: Record<string, number> = {};
   for (let i = 0; i < layerIds.length; i++) {
     layerIdOptions["layer" + (i + 1)] = i;
+  }
+
+  let pane: Pane;
+  if (paneInput) {
+    pane = paneInput;
+  } else {
+    pane = new Pane({
+      title: "Parameters",
+      expanded: true,
+    });
+    pane.element.style.position = "absolute";
+    pane.element.style.width = "340px";
+    pane.element.style.right = "0px";
   }
 
   const paneParams = {

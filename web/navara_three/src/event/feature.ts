@@ -44,6 +44,7 @@ export function renderFeature(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
+  viewEvents: EventHandler<ViewEvents>,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf, uniforms);
@@ -52,13 +53,13 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf, uniforms);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms);
+    return renderModel(f.model, buf, uniforms, viewEvents);
   }
   if (f.polyline) {
-    return renderPolyline(f.polyline, buf, uniforms);
+    return renderPolyline(f.polyline, buf, uniforms, viewEvents);
   }
   if (f.polygon) {
-    return renderPolygon(f.polygon, buf, uniforms, tileHandle);
+    return renderPolygon(f.polygon, buf, uniforms, tileHandle, viewEvents);
   }
   if (f.text) {
     return renderText(f.text, buf, uniforms);
@@ -95,7 +96,13 @@ export async function processRenderableFeatureAdded(
     onConcurrency(1);
   }
 
-  const obj = await renderFeature(feature, buf, uniforms, tileHandle)
+  const obj = await renderFeature(
+    feature,
+    buf,
+    uniforms,
+    tileHandle,
+    viewEvents,
+  )
     ?.then((r) => {
       const type = (() => {
         if (point || billboard || text) return "point";
