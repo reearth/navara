@@ -8,36 +8,29 @@ uniform float alphaMax;
 uniform float alphaMin;
 uniform vec3 color;
 
-varying vec2 vUv;
-varying float vLocalX;
 varying vec3 vLocalLightDirection;
+varying vec3 vNormal;
 
 void main() {
-  // Core idea: one billboard, two virtual sides using local X coordinate
-  // Create pseudo-normal that flips based on which side of the quad we're on
-  float k = 0.8; // Small tilt so normal isn't exactly forward
-  vec3 geometryNormal = normalize(vec3(sin(vLocalX) * k, 0.0, 1.0));
+  vec3 geometryNormal = vNormal;
   
   // Calculate dot product with local-space light direction
   float NL = clamp(dot(geometryNormal, normalize(vLocalLightDirection)), 0.0, 1.0);
 
   // Get light color from Three.js lighting system using ShaderChunk
-  vec3 lightColor = getDirLightColor();
+  vec3 lightColor = NL * getDirLightColor();
 
   float alpha = mix(alphaMin, alphaMax, NL);
 
   // Apply base opacity
   alpha = clamp(alpha * opacity, 0.0, 1.0);
-  
-  // Discard pixels with very low alpha for soft edges
-  if (alpha < 0.001) discard;
 
   vec3 irradiance = getIrradiance(geometryNormal);
 
-  lightColor += irradiance;
-  lightColor *= alpha;
+  vec3 direct = lightColor * BRDF_Lambert(color);
+  vec3 indirect = irradiance * BRDF_Lambert(color);
 
-  vec3 finalColor = color * lightColor;
+  vec3 finalColor = direct + indirect;
 
   gl_FragColor = vec4(finalColor, alpha);
 }

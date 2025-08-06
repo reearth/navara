@@ -5,7 +5,7 @@ import ThreeView, {
   SnowMeshLayer,
 } from "@navara/three";
 import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
-import { Vector2 } from "three";
+import { Vector2, Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import type { CloudsEffectLayer } from "../../../src/layers/effect";
@@ -28,7 +28,7 @@ export const run = async (view: ThreeView) => {
   view.setCamera({
     lng: 139.7371145474829,
     lat: 35.67564356091717,
-    height: 502.0,
+    height: 402.0,
     heading: 64.41840149763287, // -180 to 180
     pitch: -16.00000121921312, // -180 to 0
     roll: 0, // -180 to 180
@@ -114,7 +114,31 @@ export const run = async (view: ThreeView) => {
   });
 
   addDateControl(view, pane);
+  addCameraControl(view, pane);
   addWeatherControl(view, pane);
+};
+
+const addCameraControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    autoRotation: false,
+  };
+  const folder = pane.addFolder({
+    title: "Camera",
+  });
+
+  let frameId: number;
+  folder.addBinding(PARAMS, "autoRotation").on("change", (v) => {
+    if (!v.value) {
+      cancelAnimationFrame(frameId);
+      return;
+    }
+
+    const animateFunc = () => {
+      view.rotateAroundAxis(new Vector3(0, 0, 0), 0.002);
+      frameId = requestAnimationFrame(animateFunc);
+    };
+    animateFunc();
+  });
 };
 
 const addWeatherControl = (view: ThreeView, pane: Pane) => {

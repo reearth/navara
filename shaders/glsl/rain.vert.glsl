@@ -12,15 +12,13 @@ uniform float areaHeight;
 uniform vec2 size;
 uniform vec3 cameraRight;
 uniform vec3 cameraUp;
-uniform vec3 xAxisBase;
-uniform vec3 yAxisBase;
 uniform vec3 meshOffset;
 uniform vec3 bounds;
 uniform bool followCamera;
 
 varying vec3 vColor;
-varying float vLocalX;
 varying vec3 vLocalLightDirection;
+varying vec3 vNormal;
 
 void main() {
   vColor = color;
@@ -43,13 +41,7 @@ void main() {
     transformed = offsetPos;
   }
   
-  // Pass local X coordinate to fragment shader for side determination
-  vLocalX = offset.x;
-  
-  // Transform light direction to billboard local space using Three.js lighting
-  // Use xAxisBase and yAxisBase for accurate light transformation (updated with camera movement)
-  vec3 zAxisBase = normalize(cross(xAxisBase, yAxisBase));
-  
+  // TODO: Support other light types.
   // Get light direction from Three.js directional light
   vec3 lightDirection = vec3(0.0, 1.0, 0.0); // Default fallback
   #if ( NUM_DIR_LIGHTS > 0 )
@@ -57,14 +49,15 @@ void main() {
   #endif
   
   // Create transformation matrix from world space to billboard local space
-  vLocalLightDirection = vec3(
-    dot(lightDirection, xAxisBase),    // X component in local space
-    dot(lightDirection, yAxisBase),    // Y component in local space
-    dot(lightDirection, zAxisBase)     // Z component in local space
-  );
+  vLocalLightDirection = lightDirection;
   
   // Create billboard quad using pre-calculated camera vectors
   vec3 worldPos = transformed + cameraRight * offset.x * size.x + cameraUp * offset.y * size.y;
   
   gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
+
+  // Core idea: one billboard, two virtual sides using local X coordinate
+  // Create pseudo-normal that flips based on which side of the quad we're on
+  float k = 0.8; // Small tilt so normal isn't exactly forward
+  vNormal = normalize(vec3(sin(offset.x) * k, 0.0, 1.0)) * normalMatrix;
 }

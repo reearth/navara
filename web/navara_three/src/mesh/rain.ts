@@ -68,8 +68,6 @@ class RainMaterial extends ShaderMaterial {
     bounds: Uniform<Vector3>;
     cameraRight: Uniform<Vector3>;
     cameraUp: Uniform<Vector3>;
-    xAxisBase: Uniform<Vector3>;
-    yAxisBase: Uniform<Vector3>;
     followCamera: Uniform<boolean>;
   };
 
@@ -99,8 +97,6 @@ class RainMaterial extends ShaderMaterial {
       alphaMin: new Uniform(0.01),
       cameraRight: new Uniform(new Vector3(1.0, 0.0, 0.0)),
       cameraUp: new Uniform(new Vector3(0.0, 1.0, 0.0)),
-      xAxisBase: new Uniform(new Vector3(1.0, 0.0, 0.0)),
-      yAxisBase: new Uniform(new Vector3(0.0, 1.0, 0.0)),
       meshOffset: new Uniform(new Vector3(0.0, 0.0, 0.0)),
       bounds: new Uniform(new Vector3(0, 0, 0)),
       followCamera: new Uniform(false),
@@ -393,10 +389,6 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     );
 
     this.setRotationFromMatrix(basis);
-
-    // Update axis vectors for light direction transformation in shader
-    this._material.uniforms.xAxisBase.value.copy(this.xAxisBase);
-    this._material.uniforms.yAxisBase.value.copy(this.yAxisBase);
 
     // If follow camera mode is enabled, update rain mesh position to follow camera
     if (this._config.followCamera) {
