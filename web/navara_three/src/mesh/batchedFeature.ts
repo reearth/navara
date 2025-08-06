@@ -18,6 +18,7 @@ import {
   updateBatchAttribute,
   type BatchedAttributeName,
   type BatchTextureConfig,
+  type DefaultBatchAttributeValues,
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 
@@ -28,7 +29,7 @@ export type BatchedFeatureAttributes<
 } & Attr;
 
 export const FEATURE_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
-  rows: ["COLOR", "HEIGHT", "EXTRUDED_HEIGHT", "SHOW"],
+  rows: ["COLOR_SHOW", "HEIGHT", "EXTRUDED_HEIGHT"],
   batchLength: 0,
 };
 
@@ -81,7 +82,17 @@ export class BatchedFeatureMesh<
     attribute: BatchedAttributeName,
     value: number | number[] | boolean,
   ): void {
-    updateBatchAttribute(this.material, batchId, attribute, value);
+    updateBatchAttribute(
+      this.material,
+      batchId,
+      attribute,
+      value,
+      this._getDefaultBatchAttributeValues(),
+    );
+  }
+
+  _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
+    throw new Unimplemented();
   }
 
   _setFeatureColor(color: Color): void {
