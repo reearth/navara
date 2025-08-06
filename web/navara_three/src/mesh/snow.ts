@@ -159,12 +159,14 @@ ${SimpleLightShaderChunk}
       .replace(
         "outgoingLight = diffuseColor.rgb",
         `
-vec3 lightColor = getDirLightColor();
+float snowReflectivity = 0.2;
+vec3 lightColor = snowReflectivity * getDirLightColor();
 vec3 irradiance = getIrradiance(vec3(0.0, 0.0, -1.0));
 
-lightColor += irradiance;
+vec3 direct = lightColor * BRDF_Lambert(diffuseColor.rgb);
+vec3 indirect = irradiance * BRDF_Lambert(diffuseColor.rgb);
 
-outgoingLight = diffuseColor.rgb * lightColor;
+outgoingLight = direct + indirect;
 `,
       ).source;
   }

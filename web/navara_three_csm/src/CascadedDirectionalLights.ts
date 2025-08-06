@@ -1,9 +1,12 @@
 import {
+  Color,
   DirectionalLight,
   Object3D,
   Vector3,
   type ColorRepresentation,
 } from "three";
+
+const DEFAULT_LIGHT_COLOR = new Color(0xffffff);
 
 export class CascadedDirectionalLights extends Object3D {
   readonly mainLight: DirectionalLight;
@@ -34,6 +37,8 @@ export class CascadedDirectionalLights extends Object3D {
       const mainLight = this.mainLight;
       for (let i = count; i < value; ++i) {
         const light = mainLight.clone(); // Clones the shadow parameters as well.
+        // Avoid accumulating that lighting color.
+        light.color.copy(DEFAULT_LIGHT_COLOR);
         this.add(light);
         this.add(light.target);
         this.cascadedLights[i] = light;
