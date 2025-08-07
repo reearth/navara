@@ -12,8 +12,7 @@ type LayerDescription = {
 
 export type RainMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type RainMeshLayerUpdate = MeshLayerUpdate &
-  LayerDescription;
+export type RainMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
 export class RainMeshLayer extends MeshLayerDeclaration<
   RainMeshLayerConfig,

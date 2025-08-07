@@ -19,7 +19,10 @@ export type MeshLayerConfig = {
   rotation?: LayerVector3;
 } & LayerDeclarationConfig;
 
-export type MeshLayerUpdate = Pick<MeshLayerConfig, "position" | "scale" | "rotation"> &
+export type MeshLayerUpdate = Pick<
+  MeshLayerConfig,
+  "position" | "scale" | "rotation"
+> &
   LayerDeclarationConfigUpdate;
 
 type PassKey = keyof Pick<Scenes, "opaque" | "transparent">;
@@ -132,7 +135,11 @@ export abstract class MeshLayerDeclaration<
 
     if (updates.rotation !== undefined) {
       this.rotation = updates.rotation;
-      this.raw?.rotation.set(updates.rotation.x, updates.rotation.y, updates.rotation.z);
+      this.raw?.rotation.set(
+        updates.rotation.x,
+        updates.rotation.y,
+        updates.rotation.z,
+      );
     }
 
     this.onPassKeyChange();

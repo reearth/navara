@@ -28,8 +28,7 @@ type LayerDescription = {
 
 export type SphereMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type SphereMeshLayerUpdate = MeshLayerUpdate &
-  LayerDescription;
+export type SphereMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
 export class SphereMeshLayer extends MeshLayerDeclaration<
   SphereMeshLayerConfig,

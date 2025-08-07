@@ -12,8 +12,7 @@ type LayerDescription = {
 
 export type SnowMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type SnowMeshLayerUpdate = MeshLayerUpdate &
-  LayerDescription;
+export type SnowMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
 export class SnowMeshLayer extends MeshLayerDeclaration<
   SnowMeshLayerConfig,
