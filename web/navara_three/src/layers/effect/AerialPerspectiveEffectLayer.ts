@@ -38,12 +38,12 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
 
   createPass() {
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    invariant(mrtPass?.instance);
+    invariant(mrtPass?.raw);
 
     const pass = new AerialPerspective(
       this.view.atmosphere,
       this.view.camera,
-      mrtPass.instance.gbufferRenderTarget.textures[1],
+      mrtPass.raw.gbufferRenderTarget.textures[1],
       {
         ...this.config.aerialPerspective,
         enabled: this.config.visible ?? true,
@@ -56,24 +56,24 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: AerialPerspectiveUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
     Object.assign(this.config, updates);
 
     const config = updates.aerialPerspective;
     if (!config) return;
 
     if (config.inscatter !== undefined) {
-      this.instance.inscatter = config.inscatter;
+      this._instance.inscatter = config.inscatter;
     }
     if (config.transmittance !== undefined) {
-      this.instance.transmittance = config.transmittance;
+      this._instance.transmittance = config.transmittance;
     }
     if (config.irradiance !== undefined) {
-      this.instance.irradiance = config.irradiance;
+      this._instance.irradiance = config.irradiance;
     }
   }
 
   update(_time: number): void {
-    this.instance?._update();
+    this._instance?._update();
   }
 }

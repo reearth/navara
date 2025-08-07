@@ -41,14 +41,14 @@ export class ToneMappingEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: ToneMappingUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
     Object.assign(this.config, updates);
 
     const config = updates.toneMapping;
     if (!config) return;
 
     if (config.mode !== undefined) {
-      this.instance.mode = config.mode;
+      this._instance.mode = config.mode;
     }
   }
 }

@@ -54,7 +54,7 @@ export class LayersManager {
     for (const handle of this.layers.values()) {
       if (!(handle instanceof LayerHandle)) continue;
 
-      const layer = handle.getLayer();
+      const layer = handle.ref;
       if (!(layer instanceof EffectLayerDeclaration)) continue;
 
       yield handle as LayerHandle<EffectLayerDeclaration>;

@@ -1,4 +1,4 @@
-import { EventHandler } from "@navara/core";
+import { EventHandler, type BaseEventMap } from "@navara/core";
 import { generateId } from "navara_wasm";
 
 import type { ViewContext } from "./ViewContext";
@@ -25,12 +25,13 @@ export abstract class LayerDeclaration<
   UpdateConfig extends
     LayerDeclarationConfigUpdate = LayerDeclarationConfigUpdate,
   Instance extends BaseInstance = BaseInstance,
-> extends EventHandler<LayerDeclarationEvents> {
+  CustomEvent extends BaseEventMap = BaseEventMap,
+> extends EventHandler<LayerDeclarationEvents & CustomEvent> {
   public readonly id: string;
   public readonly sort?: number;
 
   protected view: ViewContext;
-  protected _instance: Instance | null = null;
+  protected _instance: Instance | undefined;
 
   private _visible?: boolean;
 
@@ -48,13 +49,19 @@ export abstract class LayerDeclaration<
   onUpdateConfig(updates: UpdateConfig) {
     if (updates.visible !== undefined) {
       this._visible = updates.visible;
-      if (this.instance) {
-        this.instance.visible = updates.visible;
+      if (this._instance) {
+        this._instance.visible = updates.visible;
       }
     }
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    this.emit("_needsUpdate");
   }
 
-  abstract onDestroy(): void;
+  onDestroy(): void {
+    this._instance = undefined;
+  }
 
   get visible() {
     return !!this._visible;
@@ -63,13 +70,5 @@ export abstract class LayerDeclaration<
   set visible(v: boolean) {
     this._visible = v;
     this.onUpdateConfig({ visible: v } as UpdateConfig);
-  }
-
-  get instance(): Instance | null {
-    return this._instance;
-  }
-
-  set instance(v: Instance | null) {
-    this._instance = v;
   }
 }

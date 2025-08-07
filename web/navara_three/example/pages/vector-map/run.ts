@@ -2,7 +2,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
-import { AxesHelper } from "three";
+import { Vector3 } from "three";
 
 const terrainUrls = {
   gsi: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
@@ -16,9 +16,13 @@ export const run = async (view: ThreeView) => {
 
   view.addDefaultAtmosphereLayers();
 
-  const axesHelper = new AxesHelper(5);
-  axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.opaque.add(axesHelper);
+  view.addLayer({
+    type: "mesh",
+    axesHelper: {
+      size: 5,
+    },
+    scale: new Vector3().setScalar(1e9),
+  });
 
   view.addLayer({
     type: "tiles",

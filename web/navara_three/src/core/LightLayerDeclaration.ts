@@ -15,7 +15,8 @@ export type LightLayerConfig = {
   position?: LayerVector3;
 } & LayerDeclarationConfig;
 
-export type LightLayerUpdate = LayerDeclarationConfigUpdate;
+export type LightLayerUpdate = Pick<LightLayerConfig, "position"> &
+  LayerDeclarationConfigUpdate;
 
 export type LightBaseInstance<Instance extends object = object> =
   Instance extends Light
@@ -29,7 +30,7 @@ export type LightBaseInstance<Instance extends object = object> =
 export abstract class LightLayerDeclaration<
   Config extends LightLayerConfig = LightLayerConfig,
   UpdateConfig extends LightLayerUpdate = LightLayerUpdate,
-  InstanceObj extends object = object,
+  InstanceObj extends Light | { raw: Light } = Light | { raw: Light },
   Instance extends
     LightBaseInstance<InstanceObj> = LightBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
@@ -43,18 +44,22 @@ export abstract class LightLayerDeclaration<
   abstract createLight(): Instance;
 
   get raw() {
-    if (!this._instance) return null;
+    if (!this._instance) return;
 
     if (this._instance instanceof Light) {
-      return this._instance;
+      return this._instance as Instance extends Light ? Instance : never;
     }
     if ("raw" in this._instance) {
-      return this._instance.raw;
+      return this._instance.raw as Instance extends {
+        raw: infer Raw extends Light;
+      }
+        ? Raw
+        : never;
     }
-    return null;
+    return;
   }
 
-  async onCreate() {
+  onCreate() {
     this._instance = this.createLight();
 
     if (this._instance) {
@@ -80,7 +85,7 @@ export abstract class LightLayerDeclaration<
       this.raw.parent.remove(this.raw);
     }
 
-    this._instance = null;
+    this._instance = undefined;
   }
 
   update?(time: number): void;

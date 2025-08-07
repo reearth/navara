@@ -14,13 +14,14 @@ import ThreeView, {
   SkyLightProbeLayer,
 } from "@navara/three";
 import type { TextureChannel } from "@takram/three-clouds";
-import { Color, LightProbe, SphericalHarmonics3 } from "three";
+import { Color, SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import type {
   AerialPerspectiveEffectLayer,
   CloudsEffectLayer,
 } from "../../../src/layers/effect";
+import type { LightProbeLayer } from "../../../src/layers/light/LightProbeLayer";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import {
@@ -411,7 +412,7 @@ const addCloudsControl = (
     constantTerm: 0,
   };
 
-  const cloudsLayer = cloudsLayerHandle.getLayer().instance;
+  const cloudsLayer = cloudsLayerHandle.ref.raw;
 
   const baseFields: FolderFields<typeof BASE_PARAMS> = [
     {
@@ -1046,18 +1047,25 @@ const addIBLControl = (view: ThreeView, pane: Pane) => {
 
   const sh = new SphericalHarmonics3();
   sh.coefficients = SH_COEFFICIENTS.debug;
-  const lightProbe = new LightProbe(sh);
+
+  // Create the light probe layer but keep it hidden initially
+  const lightProbeLayer = view.addLayer<LightProbeLayer>({
+    type: "light",
+    lightProbe: {
+      sh: sh,
+      intensity: PARAMS.intensity,
+    },
+    visible: false,
+  });
 
   const folder = pane.addFolder({
     title: "Image-based lighting",
   });
 
   folder.addBinding(PARAMS, "enable").on("change", (v) => {
-    if (v.value) {
-      view.scenes.light.add(lightProbe);
-    } else {
-      view.scenes.light.remove(lightProbe);
-    }
+    lightProbeLayer.update({
+      visible: v.value,
+    });
     view.forceUpdate();
   });
   folder
@@ -1069,10 +1077,19 @@ const addIBLControl = (view: ThreeView, pane: Pane) => {
     .on("change", (v) => {
       sh.coefficients =
         SH_COEFFICIENTS[v.value as keyof typeof SH_COEFFICIENTS];
+      lightProbeLayer.update({
+        lightProbe: {
+          sh: sh,
+        },
+      });
       view.forceUpdate();
     });
   folder.addBinding(PARAMS, "intensity").on("change", (v) => {
-    lightProbe.intensity = v.value;
+    lightProbeLayer.update({
+      lightProbe: {
+        intensity: v.value,
+      },
+    });
     view.forceUpdate();
   });
 };

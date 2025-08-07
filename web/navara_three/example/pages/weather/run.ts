@@ -247,17 +247,17 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
   // Rain
 
   const RAIN_PARAMS = {
-    opacity: rain.ref?.opacity,
-    particleCount: rain.ref?.particleCount,
-    speed: rain.ref?.speed,
-    color: rain.ref?.color,
-    width: rain.ref?.width,
-    height: rain.ref?.height,
-    areaWidth: rain.ref?.areaWidth,
-    areaHeight: rain.ref?.areaHeight,
-    maxHeight: rain.ref?.maxHeight,
-    alphaMax: rain.ref?.alphaMax,
-    alphaMin: rain.ref?.alphaMin,
+    opacity: rain.ref?.raw?.opacity,
+    particleCount: rain.ref?.raw?.particleCount,
+    speed: rain.ref?.raw?.speed,
+    color: rain.ref?.raw?.color,
+    width: rain.ref?.raw?.width,
+    height: rain.ref?.raw?.height,
+    areaWidth: rain.ref?.raw?.areaWidth,
+    areaHeight: rain.ref?.raw?.areaHeight,
+    maxHeight: rain.ref?.raw?.maxHeight,
+    alphaMax: rain.ref?.raw?.alphaMax,
+    alphaMin: rain.ref?.raw?.alphaMin,
   };
 
   const rainFolderFields: FolderFields<typeof RAIN_PARAMS> = [
@@ -422,20 +422,20 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
   // Snow
 
   const SNOW_PARAMS = {
-    opacity: snow.ref?.opacity,
-    particleCount: snow.ref?.particleCount,
-    speed: snow.ref?.speed,
-    size: snow.ref?.size,
-    color: snow.ref?.color,
-    areaWidth: snow.ref?.areaWidth,
-    areaHeight: snow.ref?.areaHeight,
-    maxHeight: snow.ref?.maxHeight,
-    xMovementStrength: snow.ref?.movementStrength.x ?? 0,
-    xMovementSpeed: snow.ref?.movementSpeed.x ?? 0,
-    yMovementStrength: snow.ref?.movementStrength.y ?? 0,
-    yMovementSpeed: snow.ref?.movementSpeed.y ?? 0,
-    zMovementStrength: snow.ref?.movementStrength.z ?? 0,
-    zMovementSpeed: snow.ref?.movementSpeed.z ?? 0,
+    opacity: snow.ref?.raw?.opacity,
+    particleCount: snow.ref?.raw?.particleCount,
+    speed: snow.ref?.raw?.speed,
+    size: snow.ref?.raw?.size,
+    color: snow.ref?.raw?.color,
+    areaWidth: snow.ref?.raw?.areaWidth,
+    areaHeight: snow.ref?.raw?.areaHeight,
+    maxHeight: snow.ref?.raw?.maxHeight,
+    xMovementStrength: snow.ref?.raw?.movementStrength.x ?? 0,
+    xMovementSpeed: snow.ref?.raw?.movementSpeed.x ?? 0,
+    yMovementStrength: snow.ref?.raw?.movementStrength.y ?? 0,
+    yMovementSpeed: snow.ref?.raw?.movementSpeed.y ?? 0,
+    zMovementStrength: snow.ref?.raw?.movementStrength.z ?? 0,
+    zMovementSpeed: snow.ref?.raw?.movementSpeed.z ?? 0,
   };
 
   const snowFolderFields: FolderFields<typeof SNOW_PARAMS> = [
