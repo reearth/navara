@@ -130,8 +130,8 @@ export const run = async (view: ThreeView) => {
     type: "mesh",
     axesHelper: {
       size: 5,
-      scale: 1e9,
     },
+    scale: new Vector3().setScalar(1e9),
   });
 
   const pane = new Pane({
@@ -308,7 +308,10 @@ const addTestModelForNormal = (view: ThreeView) => {
 
     // Add axes when model loads
     gModelNormalHandle.ref.on("load", () => {
-      if (gModelNormalHandle?.ref?.raw && gModelNormalHandle.ref.raw.children.length > 0) {
+      if (
+        gModelNormalHandle?.ref?.raw &&
+        gModelNormalHandle.ref.raw.children.length > 0
+      ) {
         addAxisToModel(gModelNormalHandle.ref.raw.children[0] as Group);
         onTransformChange();
       }
@@ -338,7 +341,10 @@ const addTestModelForTerrainHeight = (view: ThreeView) => {
 
   // Apply the transform matrix after model loads
   gModelFujiHandle.ref.on("load", () => {
-    if (gModelFujiHandle?.ref?.raw && gModelFujiHandle.ref.raw.children.length > 0) {
+    if (
+      gModelFujiHandle?.ref?.raw &&
+      gModelFujiHandle.ref.raw.children.length > 0
+    ) {
       // Reset position first since we're applying the matrix
       gModelFujiHandle.update({ position: { x: 0, y: 0, z: 0 } });
       gModelFujiHandle.ref.raw.applyMatrix4(transformMatrix);
@@ -481,7 +487,10 @@ const onMoveDistanceChange = () => {
 };
 
 const onTransformChange = () => {
-  if (!gModelNormalHandle?.ref?.raw || !gModelNormalHandle.ref.raw.userData.origin) {
+  if (
+    !gModelNormalHandle?.ref?.raw ||
+    !gModelNormalHandle.ref.raw.userData.origin
+  ) {
     return;
   }
 
@@ -489,7 +498,7 @@ const onTransformChange = () => {
   gModelNormalHandle.update({
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
-    scale: { x: 300000, y: 300000, z: 300000 }
+    scale: { x: 300000, y: 300000, z: 300000 },
   });
 
   let transformMatrix;
@@ -833,7 +842,7 @@ const onRegisterChange = () => {
           // Reset position and rotation using update()
           gModelFujiHandle.update({
             position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 }
+            rotation: { x: 0, y: 0, z: 0 },
           });
 
           const pos = geodeticToVector3(

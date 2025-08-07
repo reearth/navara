@@ -27,8 +27,8 @@ export const run = async (view: ThreeView) => {
     type: "mesh",
     axesHelper: {
       size: 5,
-      scale: 1e9,
     },
+    scale: new Vector3().setScalar(1e9),
   });
 
   view.setCamera({

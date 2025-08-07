@@ -37,7 +37,6 @@ type MarchingCubesLayerDescription = {
     enableUvs?: boolean;
     enableColors?: boolean;
     transformMatrix?: Matrix4;
-    scale?: number | Vector3;
   };
 };
 
@@ -82,14 +81,6 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
       cubes.applyMatrix4(cfg.transformMatrix);
     }
 
-    if (cfg.scale) {
-      if (typeof cfg.scale === "number") {
-        cubes.scale.setScalar(cfg.scale);
-      } else {
-        cubes.scale.copy(cfg.scale);
-      }
-    }
-
     // Setup shadow if needed
     if (cubes.castShadow || cubes.receiveShadow) {
       this.view.emit("_csmMounted", cfg.material);
@@ -108,14 +99,6 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
 
       if (cfg.receiveShadow !== undefined) {
         this._instance.receiveShadow = cfg.receiveShadow;
-      }
-
-      if (cfg.scale !== undefined) {
-        if (typeof cfg.scale === "number") {
-          this._instance.scale.setScalar(cfg.scale);
-        } else {
-          this._instance.scale.copy(cfg.scale);
-        }
       }
 
       this.emit("_needsUpdate");
@@ -236,9 +219,9 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
       material: hatchingMaterial,
       castShadow: true,
       transformMatrix: matrix,
-      scale: new Vector3(1500, 1500, 1500),
     },
     position: { x: position.x, y: position.y, z: position.z },
+    scale: new Vector3().setScalar(1500),
   });
 
   // Get the MarchingCubes instance for animation

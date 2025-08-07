@@ -9,7 +9,6 @@ import {
 type LayerDescription = {
   axesHelper?: {
     size?: number;
-    scale?: number;
   };
 };
 
@@ -35,10 +34,8 @@ export class AxesHelperLayer extends MeshLayerDeclaration<
 
   createMesh(): AxesHelper {
     const size = this.config.axesHelper?.size ?? 5;
-    const scale = this.config.axesHelper?.scale ?? 1e9;
 
     const axesHelper = new AxesHelper(size);
-    axesHelper.scale.multiplyScalar(scale);
 
     return axesHelper;
   }
@@ -48,10 +45,6 @@ export class AxesHelperLayer extends MeshLayerDeclaration<
       if (updates.axesHelper.size !== undefined) {
         // AxesHelper doesn't support dynamic size updates, would need to recreate
         this.recreate();
-      }
-      if (updates.axesHelper.scale !== undefined) {
-        this._instance.scale.setScalar(updates.axesHelper.scale);
-        this.emit("_needsUpdate");
       }
     }
 

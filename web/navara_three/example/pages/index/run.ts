@@ -2,6 +2,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
+import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -485,8 +486,8 @@ export const run = async (view: ThreeView) => {
     type: "mesh",
     axesHelper: {
       size: 5,
-      scale: 1e9,
     },
+    scale: new Vector3().setScalar(1e9),
   });
 
   // For debug
