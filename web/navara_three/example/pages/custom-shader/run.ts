@@ -107,10 +107,6 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
     super.onUpdateConfig(updates);
   }
 
-  getMarchingCubes() {
-    return this._instance;
-  }
-
   protected disposeMesh(): void {
     if (this._instance) {
       if (this._instance.geometry) {
@@ -225,13 +221,13 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
   });
 
   // Get the MarchingCubes instance for animation
-  const cubes = marchingCubesLayer.ref.getMarchingCubes();
+  const cubes = marchingCubesLayer.ref.raw;
 
-  if (cubes) {
-    view.on("preUpdate", (t) => {
+  view.on("preUpdate", (t) => {
+    if (cubes) {
       updateCubes(cubes, t * 0.001, 10);
-    });
-  }
+    }
+  });
 };
 
 // Ref: https://github.com/mrdoob/three.js/blob/master/examples/webgl_marchingcubes.html
