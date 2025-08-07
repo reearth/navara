@@ -24,8 +24,8 @@ export class LayerHandle<
     this.layer.onUpdateConfig(updates);
   }
 
-  get ref(): T["instance"] {
-    return this.layer.instance;
+  get ref(): T {
+    return this.layer;
   }
 
   delete(): void {
@@ -46,9 +46,5 @@ export class LayerHandle<
 
   get sort(): number | undefined {
     return this.layer.sort;
-  }
-
-  getLayer(): T {
-    return this.layer;
   }
 }

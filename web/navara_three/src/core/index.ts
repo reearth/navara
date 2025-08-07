@@ -7,6 +7,7 @@ export {
 } from "./LayerDeclaration";
 export {
   MeshLayerDeclaration,
+  type MeshLayerUpdate,
   type MeshLayerConfig,
 } from "./MeshLayerDeclaration";
 export {
@@ -15,6 +16,7 @@ export {
 } from "./MeshLayerRegistry";
 export {
   LightLayerDeclaration,
+  type LightLayerUpdate,
   type LightLayerConfig,
 } from "./LightLayerDeclaration";
 export {
@@ -23,6 +25,7 @@ export {
 } from "./LightLayerRegistry";
 export {
   EffectLayerDeclaration,
+  type EffectLayerUpdate,
   type EffectLayerConfig,
 } from "./EffectLayerDeclaration";
 export {

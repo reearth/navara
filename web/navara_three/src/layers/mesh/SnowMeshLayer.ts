@@ -2,6 +2,7 @@ import {
   ViewContext,
   MeshLayerDeclaration,
   type MeshLayerConfig,
+  type MeshLayerUpdate,
 } from "../../core";
 import { SnowMesh, type SnowConfig } from "../../mesh";
 
@@ -11,10 +12,7 @@ type LayerDescription = {
 
 export type SnowMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type SnowMeshLayerUpdate = Pick<
-  MeshLayerConfig,
-  "position" | "visible"
-> &
+export type SnowMeshLayerUpdate = MeshLayerUpdate &
   LayerDescription;
 
 export class SnowMeshLayer extends MeshLayerDeclaration<
@@ -30,7 +28,7 @@ export class SnowMeshLayer extends MeshLayerDeclaration<
   }
 
   getPassKey(): "opaque" | "transparent" {
-    return this.instance?.followCamera ? "transparent" : "opaque";
+    return this._instance?.followCamera ? "transparent" : "opaque";
   }
 
   createMesh() {
@@ -40,9 +38,9 @@ export class SnowMeshLayer extends MeshLayerDeclaration<
   }
 
   onUpdateConfig(updates: SnowMeshLayerUpdate): void {
-    if (this.config.snow && updates.snow && this.instance) {
+    if (this.config.snow && updates.snow && this._instance) {
       Object.assign(this.config.snow, updates.snow);
-      this.instance.updateConfig(updates.snow);
+      this._instance.updateConfig(updates.snow);
       this.emit("_needsUpdate");
     }
 
@@ -50,13 +48,13 @@ export class SnowMeshLayer extends MeshLayerDeclaration<
   }
 
   update(time: number): void {
-    this.instance?.update(time, this.view.camera);
+    this._instance?.update(time, this.view.camera);
   }
 
   protected disposeMesh(): void {
-    if (this.instance) {
-      this.instance.dispose();
-      this.instance = null;
+    if (this._instance) {
+      this._instance.dispose();
+      this._instance = undefined;
     }
   }
 }

@@ -4,6 +4,7 @@ import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
+  type LightLayerUpdate,
 } from "../../core";
 import { AmbientLight, type AmbientLightOptions } from "../../lights";
 
@@ -15,8 +16,7 @@ type LayerDescription = {
 
 export type AmbientLightLayerConfig = LightLayerConfig & LayerDescription;
 
-export type AmbientLightLayerUpdate = Pick<LightLayerConfig, "visible"> &
-  LayerDescription;
+export type AmbientLightLayerUpdate = LightLayerUpdate & LayerDescription;
 
 export class AmbientLightLayer extends LightLayerDeclaration<
   AmbientLightLayerConfig,
@@ -52,22 +52,18 @@ export class AmbientLightLayer extends LightLayerDeclaration<
   onUpdateConfig(updates: AmbientLightLayerUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (this.config.ambient && updates.ambient && this.instance) {
+    if (this.config.ambient && updates.ambient && this._instance) {
       Object.assign(this.config.ambient, updates.ambient);
 
       // Update intensity
       if (updates.ambient.intensity !== undefined) {
-        this.instance.intensity = updates.ambient.intensity;
+        this._instance.intensity = updates.ambient.intensity;
       }
 
       // Update color
       if (updates.ambient.color !== undefined) {
-        this.instance.color = new Color(updates.ambient.color);
+        this._instance.color = new Color(updates.ambient.color);
       }
     }
-  }
-
-  getAmbientLight(): AmbientLight | null {
-    return this.instance;
   }
 }

@@ -5,6 +5,7 @@ import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
+  type LightLayerUpdate,
 } from "../../core";
 import { SunLight, type SunLightOptions } from "../../lights";
 
@@ -18,8 +19,7 @@ type LayerDescription = {
 
 export type SunLightLayerConfig = LightLayerConfig & LayerDescription;
 
-export type SunLightLayerUpdate = Pick<LightLayerConfig, "visible"> &
-  LayerDescription;
+export type SunLightLayerUpdate = LightLayerUpdate & LayerDescription;
 
 export class SunLightLayer extends LightLayerDeclaration<
   SunLightLayerConfig,
@@ -66,81 +66,81 @@ export class SunLightLayer extends LightLayerDeclaration<
   onUpdateConfig(updates: SunLightLayerUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (this.config.sun && updates.sun && this.instance) {
+    if (this.config.sun && updates.sun && this._instance) {
       Object.assign(this.config.sun, updates.sun);
 
       // Update intensity
       if (updates.sun.intensity !== undefined) {
-        this.instance.intensity = updates.sun.intensity;
+        this._instance.intensity = updates.sun.intensity;
       }
 
       // Update color
       if (updates.sun.color !== undefined) {
-        this.instance.color = new Color(updates.sun.color);
+        this._instance.color = new Color(updates.sun.color);
       }
 
       if (updates.sun.applyColor !== undefined) {
-        this.instance.applyColor = updates.sun.applyColor;
+        this._instance.applyColor = updates.sun.applyColor;
       }
 
       // Shadow
       if (updates.sun.castShadow !== undefined) {
-        this.instance.castShadow = updates.sun.castShadow;
+        this._instance.castShadow = updates.sun.castShadow;
       }
       if (updates.sun.shadowMapSize !== undefined) {
-        this.instance.shadowMapSize = updates.sun.shadowMapSize;
+        this._instance.shadowMapSize = updates.sun.shadowMapSize;
       }
       if (updates.sun.shadowFar !== undefined) {
-        this.instance.shadowFar = updates.sun.shadowFar;
+        this._instance.shadowFar = updates.sun.shadowFar;
       }
       if (updates.sun.shadowCascadeCount !== undefined) {
-        this.instance.shadowCascadeCount = updates.sun.shadowCascadeCount;
+        this._instance.shadowCascadeCount = updates.sun.shadowCascadeCount;
       }
       if (updates.sun.shadowMode !== undefined) {
-        this.instance.shadowMode = updates.sun.shadowMode;
+        this._instance.shadowMode = updates.sun.shadowMode;
       }
       if (updates.sun.shadowLambda !== undefined) {
-        this.instance.shadowLambda = updates.sun.shadowLambda;
+        this._instance.shadowLambda = updates.sun.shadowLambda;
       }
       if (updates.sun.shadowMargin !== undefined) {
-        this.instance.shadowMargin = updates.sun.shadowMargin;
+        this._instance.shadowMargin = updates.sun.shadowMargin;
       }
       if (updates.sun.shadowFade !== undefined) {
-        this.instance.shadowFade = updates.sun.shadowFade;
+        this._instance.shadowFade = updates.sun.shadowFade;
       }
       if (updates.sun.shadowIntensity !== undefined) {
-        this.instance.shadowIntensity = updates.sun.shadowIntensity;
+        this._instance.shadowIntensity = updates.sun.shadowIntensity;
       }
       if (updates.sun.shadowBias !== undefined) {
-        this.instance.shadowBias = updates.sun.shadowBias;
+        this._instance.shadowBias = updates.sun.shadowBias;
       }
       if (updates.sun.shadowNormalBias !== undefined) {
-        this.instance.shadowNormalBias = updates.sun.shadowNormalBias;
+        this._instance.shadowNormalBias = updates.sun.shadowNormalBias;
       }
       if (updates.sun.debugCSMHelper !== undefined) {
-        this.instance.debugCSMHelper = updates.sun.debugCSMHelper;
+        this._instance.debugCSMHelper = updates.sun.debugCSMHelper;
       }
     }
   }
 
-  async onCreate() {
-    await super.onCreate();
+  onCreate() {
+    super.onCreate();
 
     // Add initial lights to scene
     this.updateSceneLights();
   }
 
   update(_time: number): void {
-    if (!this.instance) return;
+    if (!this._instance) return;
 
     // Update sun direction from atmosphere
-    this.instance.updateSunDirection(this.view.atmosphere.sunDirection);
+    this._instance.updateSunDirection(this.view.atmosphere.sunDirection);
 
     // Update position to camera position for proper lighting.
     const cameraPosition = this.view.camera.position;
-    this.instance.updateTargetPosition(cameraPosition);
+    this._instance.updateTargetPosition(cameraPosition);
 
-    this.instance.update();
+    this._instance.update();
   }
 
   onDestroy(): void {
@@ -153,17 +153,17 @@ export class SunLightLayer extends LightLayerDeclaration<
    * Update scene lights based on current CSM state
    */
   private updateSceneLights(): void {
-    if (!this.instance) return;
+    if (!this._instance) return;
 
     // Remove existing lights first
     this.removeLightsFromScene();
 
     // Add appropriate lights to scene
-    const sceneLights = this.instance.getSceneLights();
+    const sceneLights = this._instance.getSceneLights();
     this.view.scenes.light.add(sceneLights);
 
     // Add CSM helper if available and enabled
-    const helper = this.instance.getSceneHelper();
+    const helper = this._instance.getSceneHelper();
     if (helper) {
       this.view.scenes.opaque.add(helper);
     }
@@ -173,14 +173,14 @@ export class SunLightLayer extends LightLayerDeclaration<
    * Remove all lights and helpers from scene
    */
   private removeLightsFromScene(): void {
-    if (!this.instance) return;
+    if (!this._instance) return;
 
     // Remove CSM lights
-    const sceneLights = this.instance.getCSM().directionalLights;
+    const sceneLights = this._instance.getCSM().directionalLights;
     sceneLights.removeFromParent();
 
     // Remove CSM helper
-    const helper = this.instance.getSceneHelper();
+    const helper = this._instance.getSceneHelper();
     if (helper) {
       helper.removeFromParent();
     }
@@ -191,37 +191,33 @@ export class SunLightLayer extends LightLayerDeclaration<
     }
   }
 
-  getSunLight(): SunLight | null {
-    return this.instance;
-  }
-
   // CSM Coordination Methods
 
   /**
    * Setup a material for CSM shadows
    */
   setupMaterialForShadows(material: Material): void {
-    this.instance?.setupMaterialForCSM(material);
+    this._instance?.setupMaterialForCSM(material);
   }
 
   /**
    * Remove a material from CSM shadows
    */
   removeMaterialFromShadows(material: Material): void {
-    this.instance?.removeMaterialFromCSM(material);
+    this._instance?.removeMaterialFromCSM(material);
   }
 
   /**
    * Get CSM instance for advanced usage
    */
   getCSM() {
-    return this.instance?.getCSM();
+    return this._instance?.getCSM();
   }
 
   /**
    * Get CSM helper for debug visualization
    */
   getCSMHelper() {
-    return this.instance?.getCSMHelper();
+    return this._instance?.getCSMHelper();
   }
 }

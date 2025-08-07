@@ -1,7 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
-  Clouds,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
@@ -100,7 +99,7 @@ const addCloudFogControl = (
     density: 0.01,
   };
 
-  const cloudsLayer = cloudsLayerHandle.getLayer().instance as Clouds;
+  const cloudsLayer = cloudsLayerHandle.ref.raw;
 
   if (cloudsLayer) {
     cloudsLayer.coverage = 0.3;

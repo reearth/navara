@@ -1,8 +1,13 @@
 import type { Nullable } from "@navara/core";
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  initializeGltfLoader,
+  type LayerHandle,
   type PickedFeature,
+  type SphereMeshLayer,
+  type TubeMeshLayer,
+  type CylinderMeshLayer,
+  type GLTFModelLayer,
+  type LayerVector3,
 } from "@navara/three";
 import {
   geodeticToVector3,
@@ -24,23 +29,11 @@ import {
   LLE,
   EllipsoidGeodesic,
 } from "@navara/three_api";
-import {
-  AxesHelper,
-  SphereGeometry,
-  MeshPhongMaterial,
-  Mesh,
-  TubeGeometry,
-  CatmullRomCurve3,
-  Vector2,
-  Vector3,
-  Object3D,
-  ArrowHelper,
-  CylinderGeometry,
-} from "three";
+import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
-import { addCameraControl } from "../../helpers/control";
+import { addCameraControl, addDateControl } from "../../helpers/control";
 
 import { FloatingDialog } from "./dialog";
 
@@ -74,13 +67,13 @@ const gPaneParams = {
 const gFujiPos = [35.3624725342, 138.7306671143];
 const gKitaPos = [35.6744, 138.2392];
 
-let gModelNormal: Nullable<Object3D> = undefined;
-let gModelFuji: Nullable<Object3D> = undefined;
-let gPolylineMesh: Nullable<Mesh> = undefined;
+let gModelNormalHandle: Nullable<LayerHandle<GLTFModelLayer>> = undefined;
+let gModelFujiHandle: Nullable<LayerHandle<GLTFModelLayer>> = undefined;
+let gPolylineLayer: Nullable<LayerHandle<TubeMeshLayer>> = undefined;
 let gMouseBall: Nullable<Mesh> = undefined;
 let gInterBall: Nullable<Mesh> = undefined;
 let gLastCameraDistance = 0;
-let gPolylinePoints: Vector3[] = [];
+let gPolylinePoints: LayerVector3[] = [];
 let gView: Nullable<ThreeView> = undefined;
 let gFolderDist: Nullable<FolderApi> = null;
 let gFolderSample: Nullable<FolderApi> = null;
@@ -133,9 +126,13 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  const axesHelper = new AxesHelper(5);
-  axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.opaque.add(axesHelper);
+  view.addLayer({
+    type: "mesh",
+    axesHelper: {
+      size: 5,
+      scale: 1e9,
+    },
+  });
 
   const pane = new Pane({
     title: "Parameters",
@@ -143,6 +140,8 @@ export const run = async (view: ThreeView) => {
   });
 
   addCameraControl(view, pane);
+
+  addDateControl(view, pane);
 
   // Create polyline between two points on elipsoid surface
   createPolylineMesh(view);
@@ -169,10 +168,10 @@ export const run = async (view: ThreeView) => {
   testShowModelInfo(view);
 
   // add a model for testing surface normal
-  await addTestModelForNormal(view);
+  addTestModelForNormal(view);
 
   // add a model for testing terrain height
-  await addTestModelForTerrainHeight(view);
+  addTestModelForTerrainHeight(view);
 
   gMouseBall = placeOneBall(view, new Vector3(0, 0, 0), 0x00ff00);
   gInterBall = placeOneBall(view, new Vector3(0, 0, 0), 0xff0000);
@@ -255,82 +254,97 @@ const placeOneBall = (
   color: number,
 ): Mesh | undefined => {
   if (pos) {
-    const geometry = new SphereGeometry(1);
-    const material = new MeshPhongMaterial({
-      color: color,
-      emissive: 0x072534,
-      specular: 0x111111,
-      shininess: 30,
+    const sphereLayer = view.addLayer<SphereMeshLayer>({
+      type: "mesh",
+      sphere: {
+        radius: 1,
+        color: color,
+        emissive: 0x072534,
+      },
+      position: { x: pos.x, y: pos.y, z: pos.z },
     });
 
-    const sphere = new Mesh(geometry, material);
-    view.scenes.mrt.add(sphere);
-    sphere.position.set(pos.x, pos.y, pos.z);
-
-    return sphere;
+    // sphereLayer is a LayerHandle for mesh layers
+    return sphereLayer.ref.raw;
   }
 };
 
-const addTestModelForNormal = async (view: ThreeView) => {
-  const loader = initializeGltfLoader();
-  const model = await loader.loadAsync(
-    "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+const addTestModelForNormal = (view: ThreeView) => {
+  const pos = geodeticToVector3(
+    new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
   );
-  if (model.scene) {
-    view.scenes.mrt.add(model.scene);
+  const normal = geodeticSurfaceNormal(
+    new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
+  );
 
-    const pos = geodeticToVector3(
-      new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
-    );
-    const normal = geodeticSurfaceNormal(
-      new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
-    );
+  // Add GLTF model using GLTFModelLayer with URL
+  const modelLayer = view.addLayer<GLTFModelLayer>({
+    type: "mesh",
+    gltfModel: {
+      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      scale: { x: 300000, y: 300000, z: 300000 },
+    },
+    position: { x: pos.x, y: pos.y, z: pos.z },
+  });
 
-    model.scene.position.set(pos.x, pos.y, pos.z);
-    model.scene.scale.set(300000, 300000, 300000);
+  // Add arrow helper
+  view.addLayer({
+    type: "mesh",
+    arrowHelper: {
+      direction: normal,
+      origin: pos,
+      length: 5000000,
+      color: 0xffffff,
+      headLength: 400000,
+      headWidth: 70000,
+    },
+  });
 
-    const arrowHelper = new ArrowHelper(
-      normal,
-      pos,
-      5000000,
-      0xffffff,
-      400000,
-      70000,
-    );
-    view.scenes.mrt.add(arrowHelper);
+  // Store reference to the model layer handle
+  gModelNormalHandle = modelLayer;
+  if (gModelNormalHandle.ref && gModelNormalHandle.ref.raw) {
+    gModelNormalHandle.ref.raw.userData.origin = pos;
+    gModelNormalHandle.ref.raw.userData.normal = normal;
 
-    gModelNormal = model.scene;
-    gModelNormal.userData.origin = pos;
-    gModelNormal.userData.normal = normal;
-
-    // Add model's own coordinate axes with arrows
-    addAxisToModel(gModelNormal);
-
-    onTransformChange();
+    // Add axes when model loads
+    gModelNormalHandle.ref.on("load", () => {
+      if (gModelNormalHandle?.ref?.raw && gModelNormalHandle.ref.raw.children.length > 0) {
+        addAxisToModel(gModelNormalHandle.ref.raw.children[0] as Group);
+        onTransformChange();
+      }
+    });
   }
 };
 
-const addTestModelForTerrainHeight = async (view: ThreeView) => {
-  const loader = initializeGltfLoader();
-  const model = await loader.loadAsync(
-    "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+const addTestModelForTerrainHeight = (view: ThreeView) => {
+  const pos = geodeticToVector3(
+    new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
   );
-  if (model.scene) {
-    view.scenes.mrt.add(model.scene);
 
-    const pos = geodeticToVector3(
-      new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
-    );
+  const transformMatrix = northUpEastToFixedFrame(pos);
 
-    model.scene.scale.set(200, 200, 200);
+  // Add the model using GLTFModelLayer with URL
+  const modelLayer = view.addLayer<GLTFModelLayer>({
+    type: "mesh",
+    gltfModel: {
+      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      scale: 200,
+    },
+    position: pos,
+  });
 
-    gModelFuji = model.scene;
+  // Store reference to the model layer handle
+  gModelFujiHandle = modelLayer;
 
-    addAxisToModel(gModelFuji);
-
-    const transformMatrix = northUpEastToFixedFrame(pos);
-    gModelFuji.applyMatrix4(transformMatrix);
-  }
+  // Apply the transform matrix after model loads
+  gModelFujiHandle.ref.on("load", () => {
+    if (gModelFujiHandle?.ref?.raw && gModelFujiHandle.ref.raw.children.length > 0) {
+      // Reset position first since we're applying the matrix
+      gModelFujiHandle.update({ position: { x: 0, y: 0, z: 0 } });
+      gModelFujiHandle.ref.raw.applyMatrix4(transformMatrix);
+      addAxisToModel(gModelFujiHandle.ref.raw.children[0] as Group);
+    }
+  });
 };
 
 const addAxisToModel = (model: Object3D) => {
@@ -447,12 +461,12 @@ const addCtrlPanel = (pane: Pane) => {
 
 const onMoveDistanceChange = () => {
   if (
-    gModelNormal &&
-    gModelNormal.userData.normal &&
-    gModelNormal.userData.origin
+    gModelNormalHandle?.ref?.raw &&
+    gModelNormalHandle.ref.raw.userData.normal &&
+    gModelNormalHandle.ref.raw.userData.origin
   ) {
-    const normal = gModelNormal.userData.normal;
-    const pos = gModelNormal.userData.origin;
+    const normal = gModelNormalHandle.ref.raw.userData.normal;
+    const pos = gModelNormalHandle.ref.raw.userData.origin;
 
     // Move the model along the surface normal
     const newPos = new Vector3(
@@ -461,44 +475,61 @@ const onMoveDistanceChange = () => {
       pos.z + normal.z * gPaneParams.moveDistance,
     );
 
-    gModelNormal.position.set(newPos.x, newPos.y, newPos.z);
+    // Use update() method instead of direct manipulation
+    gModelNormalHandle.update({ position: newPos });
   }
 };
 
 const onTransformChange = () => {
-  if (!gModelNormal || !gModelNormal.userData.origin) {
+  if (!gModelNormalHandle?.ref?.raw || !gModelNormalHandle.ref.raw.userData.origin) {
     return;
   }
 
-  gModelNormal.position.set(0, 0, 0);
-  gModelNormal.rotation.set(0, 0, 0);
-  gModelNormal.scale.set(300000, 300000, 300000);
+  // Reset position, rotation, and scale using update()
+  gModelNormalHandle.update({
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 300000, y: 300000, z: 300000 }
+  });
 
   let transformMatrix;
   switch (gPaneParams.transform) {
     case "eastNorthUp":
-      transformMatrix = eastNorthUpToFixedFrame(gModelNormal.userData.origin);
+      transformMatrix = eastNorthUpToFixedFrame(
+        gModelNormalHandle.ref.raw.userData.origin,
+      );
       break;
     case "northEastDown":
-      transformMatrix = northEastDownToFixedFrame(gModelNormal.userData.origin);
+      transformMatrix = northEastDownToFixedFrame(
+        gModelNormalHandle.ref.raw.userData.origin,
+      );
       break;
     case "northUpEast":
-      transformMatrix = northUpEastToFixedFrame(gModelNormal.userData.origin);
+      transformMatrix = northUpEastToFixedFrame(
+        gModelNormalHandle.ref.raw.userData.origin,
+      );
       break;
     case "northWestUp":
-      transformMatrix = northWestUpToFixedFrame(gModelNormal.userData.origin);
+      transformMatrix = northWestUpToFixedFrame(
+        gModelNormalHandle.ref.raw.userData.origin,
+      );
       break;
     default:
-      transformMatrix = eastNorthUpToFixedFrame(gModelNormal.userData.origin);
+      transformMatrix = eastNorthUpToFixedFrame(
+        gModelNormalHandle.ref.raw.userData.origin,
+      );
   }
 
-  gModelNormal.applyMatrix4(transformMatrix);
+  gModelNormalHandle.ref.raw.applyMatrix4(transformMatrix);
 
-  if (gModelNormal.userData.normal) {
-    const moveOffset = gModelNormal.userData.normal
+  if (gModelNormalHandle.ref.raw.userData.normal) {
+    const moveOffset = gModelNormalHandle.ref.raw.userData.normal
       .clone()
       .multiplyScalar(gPaneParams.moveDistance);
-    gModelNormal.position.add(moveOffset);
+    // Get current position and add offset
+    const currentPos = gModelNormalHandle.ref.raw.position.clone();
+    currentPos.add(moveOffset);
+    gModelNormalHandle.update({ position: currentPos });
   }
 };
 
@@ -593,28 +624,31 @@ const testRayPlane = (view: ThreeView) => {
   view.renderer.domElement.addEventListener("mouseup", onMouseUp);
 };
 
-const makeCylinder = (view: ThreeView, center: Vector3): Mesh => {
-  const geometry = new CylinderGeometry(
-    1, // top radius
-    1, // bottom radius
-    1, // height
-    32, // radial segments
-    1, // height segments
-    false, // open ended
-    0, // theta start
-    Math.PI * 2, // theta length
-  );
-  geometry.translate(0, 0.5, 0);
-
-  const material = new MeshPhongMaterial({
-    color: 0xffff00,
+const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
+  const cylinderLayer = view.addLayer<CylinderMeshLayer>({
+    type: "mesh",
+    cylinder: {
+      radiusTop: 1,
+      radiusBottom: 1,
+      height: 1,
+      radialSegments: 32,
+      heightSegments: 1,
+      openEnded: false,
+      thetaStart: 0,
+      thetaLength: Math.PI * 2,
+      color: 0xffff00,
+    },
   });
 
-  const cylinder = new Mesh(geometry, material);
-  view.scenes.mrt.add(cylinder);
+  const cylinder = cylinderLayer.ref.raw;
 
-  const transformMatrix = northUpEastToFixedFrame(center);
-  cylinder.applyMatrix4(transformMatrix);
+  if (cylinder) {
+    // Translate the cylinder so its base is at the origin
+    cylinder.geometry.translate(0, 0.5, 0);
+
+    const transformMatrix = northUpEastToFixedFrame(center);
+    cylinder.applyMatrix4(transformMatrix);
+  }
 
   return cylinder;
 };
@@ -642,8 +676,8 @@ const onDistPosChange = () => {
   );
 
   // Update polyline mesh
-  if (gPolylineMesh) {
-    const curvePoints = [];
+  if (gPolylineLayer) {
+    const curvePoints: LayerVector3[] = [];
     for (const point of points) {
       if (point) {
         const pos = geodeticToVector3(new LLE(point.lat, point.lng, 1000));
@@ -654,7 +688,10 @@ const onDistPosChange = () => {
     // Store points and update geometry
     if (curvePoints.length >= 2 && gView) {
       gPolylinePoints = curvePoints;
-      updatePolylineMesh(gView, curvePoints);
+      requestAnimationFrame(() => {
+        if (!gView) return;
+        updatePolylineMesh(gView, curvePoints);
+      });
 
       // update interpolated point
       const interDist = gPaneParams.distance * gPaneParams.interpolate;
@@ -667,8 +704,8 @@ const onDistPosChange = () => {
   }
 };
 
-const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
-  if (!gPolylineMesh || !view.camera) return;
+const updatePolylineMesh = (view: ThreeView, curvePoints: LayerVector3[]) => {
+  if (!gPolylineLayer) return;
 
   // Calculate appropriate tube radius based on camera distance to keep visual thickness constant
   const centerPoint = new Vector3(0, 0, 0);
@@ -689,23 +726,20 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
   const maxRadius = 100000;
   const clampedRadius = Math.max(minRadius, Math.min(maxRadius, finalRadius));
 
-  const curve = new CatmullRomCurve3(curvePoints);
-  curve.tension = 0.5; // Adjust tension for smoother curves (0-1)
-
   // Use more segments for smoother geometry
   const tubularSegments = Math.max(64, curvePoints.length * 4); // More segments along the curve
   const radialSegments = 16; // More radial segments for rounder cross-section
 
-  const newGeometry = new TubeGeometry(
-    curve,
-    tubularSegments,
-    clampedRadius,
-    radialSegments,
-    false,
-  );
-
-  gPolylineMesh.geometry.dispose();
-  gPolylineMesh.geometry = newGeometry;
+  // Update the tube layer using layer.update()
+  gPolylineLayer.update({
+    tube: {
+      points: curvePoints,
+      tubularSegments: tubularSegments,
+      radius: clampedRadius,
+      radialSegments: radialSegments,
+      tension: 0.5,
+    },
+  });
 
   const intBallRadius = clampedRadius * 2;
   gInterBall?.scale.set(intBallRadius, intBallRadius, intBallRadius);
@@ -717,7 +751,7 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: Vector3[]) => {
 const addCameraListener = (view: ThreeView) => {
   // Update tube thickness when camera moves
   view.camera.on("move", () => {
-    if (!gPolylineMesh || !view.camera || gPolylinePoints.length === 0) return;
+    if (!gPolylineLayer || !view.camera || gPolylinePoints.length === 0) return;
 
     const centerPoint = gPolylinePoints[Math.floor(gPolylinePoints.length / 2)];
     const currentDistance = view.camera.raw.position.distanceTo(centerPoint);
@@ -737,18 +771,24 @@ const addCameraListener = (view: ThreeView) => {
 
 const createPolylineMesh = (view: ThreeView) => {
   // Create initial points for the curve
-  const points = Array.from({ length: 2 }, () => new Vector3(0, 0, 0));
+  const points: LayerVector3[] = Array.from({ length: 2 }, () => ({
+    x: 0,
+    y: 0,
+    z: 0,
+  }));
 
-  // Create curve and tube geometry
-  const curve = new CatmullRomCurve3(points);
-  curve.tension = 0.5; // Adjust tension for smoother curves
-  const geometry = new TubeGeometry(curve, 64, 1, 16, false); // More segments for initial geometry
-  const material = new MeshPhongMaterial({
-    color: 0x00ffff,
+  gPolylineLayer = view.addLayer<TubeMeshLayer>({
+    type: "mesh",
+    tube: {
+      points: points,
+      tubularSegments: 64,
+      radius: 1,
+      radialSegments: 16,
+      closed: false,
+      tension: 0.5,
+      color: 0x00ffff,
+    },
   });
-
-  gPolylineMesh = new Mesh(geometry, material);
-  view.scenes.mrt.add(gPolylineMesh);
 };
 
 const testSampleTerrainHeight = (view: ThreeView) => {
@@ -789,9 +829,12 @@ const onRegisterChange = () => {
         gPaneParams.fujiHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
 
-        if (gModelFuji) {
-          gModelFuji.position.set(0, 0, 0);
-          gModelFuji.rotation.set(0, 0, 0);
+        if (gModelFujiHandle?.ref?.raw) {
+          // Reset position and rotation using update()
+          gModelFujiHandle.update({
+            position: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 }
+          });
 
           const pos = geodeticToVector3(
             new LLE(
@@ -801,7 +844,7 @@ const onRegisterChange = () => {
             ),
           );
           const transformMatrix = northUpEastToFixedFrame(pos);
-          gModelFuji.applyMatrix4(transformMatrix);
+          gModelFujiHandle.ref.raw.applyMatrix4(transformMatrix);
         }
       },
     );

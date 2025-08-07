@@ -1,3 +1,4 @@
+import type { BaseEventMap } from "@navara/core";
 import { Object3D } from "three";
 
 import type { Scenes } from "../scene";
@@ -14,9 +15,11 @@ import type { ViewContext } from "./ViewContext";
 export type MeshLayerConfig = {
   type: "mesh";
   position?: LayerVector3;
+  scale?: LayerVector3;
+  rotation?: LayerVector3;
 } & LayerDeclarationConfig;
 
-export type MeshLayerUpdate = Pick<MeshLayerConfig, "position"> &
+export type MeshLayerUpdate = Pick<MeshLayerConfig, "position" | "scale" | "rotation"> &
   LayerDeclarationConfigUpdate;
 
 type PassKey = keyof Pick<Scenes, "opaque" | "transparent">;
@@ -28,21 +31,28 @@ export type MeshBaseInstance<Instance extends object = object> =
           raw: infer Raw extends Object3D;
         }
       ? Instance & { raw: Raw } & BaseInstance
-      : BaseInstance;
+      : Instance & BaseInstance;
 
 export abstract class MeshLayerDeclaration<
   Config extends MeshLayerConfig = MeshLayerConfig,
   UpdateConfig extends MeshLayerUpdate = MeshLayerUpdate,
-  InstanceObj extends object = object,
+  InstanceObj extends Object3D | { raw: Object3D } =
+    | Object3D
+    | { raw: Object3D },
+  CustomEvent extends BaseEventMap = BaseEventMap,
   Instance extends
     MeshBaseInstance<InstanceObj> = MeshBaseInstance<InstanceObj>,
-> extends LayerDeclaration<Config, UpdateConfig, Instance> {
+> extends LayerDeclaration<Config, UpdateConfig, Instance, CustomEvent> {
   public position?: LayerVector3;
+  public scale?: LayerVector3;
+  public rotation?: LayerVector3;
   private prevPassKey?: PassKey;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
     this.position = config.position;
+    this.scale = config.scale;
+    this.rotation = config.rotation;
   }
 
   protected getPassKey(): PassKey {
@@ -52,22 +62,34 @@ export abstract class MeshLayerDeclaration<
   abstract createMesh(): Instance;
 
   get raw() {
-    if (!this._instance) return null;
+    if (!this._instance) return;
 
     if (this._instance instanceof Object3D) {
-      return this._instance;
+      return this._instance as Instance extends Object3D ? Instance : never;
     }
     if ("raw" in this._instance) {
-      return this._instance.raw;
+      return this._instance.raw as Instance extends {
+        raw: infer Raw extends Object3D;
+      }
+        ? Raw
+        : never;
     }
-    return null;
+    return;
   }
 
-  async onCreate() {
+  onCreate() {
     this._instance = this.createMesh();
 
     if (this.position) {
       this.raw?.position.copy(this.position);
+    }
+
+    if (this.scale) {
+      this.raw?.scale.copy(this.scale);
+    }
+
+    if (this.rotation) {
+      this.raw?.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
     }
 
     this._instance.visible = this.visible;
@@ -103,6 +125,16 @@ export abstract class MeshLayerDeclaration<
       this.raw?.position.copy(updates.position);
     }
 
+    if (updates.scale !== undefined) {
+      this.scale = updates.scale;
+      this.raw?.scale.copy(updates.scale);
+    }
+
+    if (updates.rotation !== undefined) {
+      this.rotation = updates.rotation;
+      this.raw?.rotation.set(updates.rotation.x, updates.rotation.y, updates.rotation.z);
+    }
+
     this.onPassKeyChange();
   }
 
@@ -120,8 +152,7 @@ export abstract class MeshLayerDeclaration<
     if (this.raw && this.raw.parent) {
       this.raw.parent.remove(this.raw);
     }
-
-    this._instance = null;
+    super.onDestroy();
   }
 
   update?(time: number): void;

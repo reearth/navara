@@ -2,6 +2,7 @@ import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   ViewContext,
+  type MeshLayerUpdate,
 } from "../../core";
 import { DefaultRainConfig, RainMesh, type RainConfig } from "../../mesh";
 
@@ -11,10 +12,7 @@ type LayerDescription = {
 
 export type RainMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type RainMeshLayerUpdate = Pick<
-  MeshLayerConfig,
-  "position" | "visible"
-> &
+export type RainMeshLayerUpdate = MeshLayerUpdate &
   LayerDescription;
 
 export class RainMeshLayer extends MeshLayerDeclaration<
@@ -30,7 +28,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
   }
 
   getPassKey(): "opaque" | "transparent" {
-    return this.instance?.followCamera ? "transparent" : "opaque";
+    return this._instance?.followCamera ? "transparent" : "opaque";
   }
 
   createMesh() {
@@ -56,9 +54,9 @@ export class RainMeshLayer extends MeshLayerDeclaration<
   }
 
   onUpdateConfig(updates: RainMeshLayerUpdate): void {
-    if (this.config.rain && updates.rain && this.instance) {
+    if (this.config.rain && updates.rain && this._instance) {
       Object.assign(this.config.rain, updates.rain);
-      this.instance.updateConfig(updates.rain);
+      this._instance.updateConfig(updates.rain);
       this.emit("_needsUpdate");
     }
 
@@ -66,19 +64,19 @@ export class RainMeshLayer extends MeshLayerDeclaration<
   }
 
   update(time: number): void {
-    if (this.instance) {
-      this.instance.update(time, this.view.camera);
+    if (this._instance) {
+      this._instance.update(time, this.view.camera);
     }
   }
 
   protected disposeMesh(): void {
-    if (this.instance) {
-      this.instance.dispose();
-      this.instance = null;
+    if (this._instance) {
+      this._instance.dispose();
+      this._instance = undefined;
     }
   }
 
-  getRainMesh(): RainMesh | null {
-    return this.instance;
+  getRainMesh(): RainMesh | undefined {
+    return this._instance;
   }
 }

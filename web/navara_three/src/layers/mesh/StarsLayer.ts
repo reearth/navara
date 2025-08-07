@@ -4,6 +4,7 @@ import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   ViewContext,
+  type MeshLayerUpdate,
 } from "../../core";
 import { Stars, type StarsOptions } from "../../mesh";
 
@@ -15,8 +16,7 @@ type LayerDescription = {
 
 export type StarsLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type StarsLayerUpdate = Pick<MeshLayerConfig, "position" | "visible"> &
-  LayerDescription;
+export type StarsLayerUpdate = MeshLayerUpdate & LayerDescription;
 
 export class StarsLayer extends MeshLayerDeclaration<
   StarsLayerConfig,
@@ -94,8 +94,8 @@ export class StarsLayer extends MeshLayerDeclaration<
       // Stars class doesn't have a dispose method, but cleanup will be handled externally
       this._stars = null;
     }
-    if (this.instance) {
-      this.instance = null;
+    if (this._instance) {
+      this._instance = undefined;
     }
   }
 

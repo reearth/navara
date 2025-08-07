@@ -51,7 +51,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: MRTPassUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
 
     Object.assign(this.config, updates);
 

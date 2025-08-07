@@ -6,6 +6,7 @@ import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
+  type LightLayerUpdate,
 } from "../../core";
 import { SkyLightProbe, type SkyLightProbeOptions } from "../../lights";
 
@@ -15,8 +16,7 @@ type LayerDescription = {
 
 export type SkyLightProbeLayerConfig = LightLayerConfig & LayerDescription;
 
-export type SkyLightProbeLayerUpdate = Pick<LightLayerConfig, "visible"> &
-  LayerDescription;
+export type SkyLightProbeLayerUpdate = LightLayerUpdate & LayerDescription;
 
 export class SkyLightProbeLayer extends LightLayerDeclaration<
   SkyLightProbeLayerConfig,
@@ -54,7 +54,7 @@ export class SkyLightProbeLayer extends LightLayerDeclaration<
   onUpdateConfig(updates: SkyLightProbeLayerUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (this.config.skyLightProbe && updates.skyLightProbe && this.instance) {
+    if (this.config.skyLightProbe && updates.skyLightProbe && this._instance) {
       Object.assign(this.config.skyLightProbe, updates.skyLightProbe);
       // SkyLightProbe doesn't have many runtime configurable properties
       // Most configuration happens during construction
@@ -62,19 +62,15 @@ export class SkyLightProbeLayer extends LightLayerDeclaration<
   }
 
   update(_time: number): void {
-    if (!this.instance) return;
+    if (!this._instance) return;
 
     // Update sky light probe with current atmosphere state
-    this.instance.updateSunDirection(this.view.atmosphere.sunDirection);
+    this._instance.updateSunDirection(this.view.atmosphere.sunDirection);
 
     // Update position to camera position for proper lighting
     const cameraPosition = this.view.camera.position;
-    this.instance.updatePosition(cameraPosition);
+    this._instance.updatePosition(cameraPosition);
 
-    this.instance.update();
-  }
-
-  getSkyLightProbe(): SkyLightProbe | null {
-    return this.instance;
+    this._instance.update();
   }
 }

@@ -1,6 +1,9 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   overrideShaderMaterialForMRT,
+  MeshLayerDeclaration,
+  type MeshLayerConfig,
+  type ViewContext,
 } from "@navara/three";
 import {
   degreeToRadian,
@@ -15,14 +18,130 @@ import {
   UniformsUtils,
   Vector2,
   Vector3,
+  Matrix4,
+  Material,
   type ShaderLibShader,
 } from "three";
-import { MarchingCubes, ToonShaderHatching } from "three-stdlib";
+import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 
 import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 
-export const run = async (view: ThreeView) => {
+// Custom MarchingCubesLayer definition
+type MarchingCubesLayerDescription = {
+  marchingCubes?: {
+    resolution?: number;
+    material: Material;
+    castShadow?: boolean;
+    receiveShadow?: boolean;
+    enableUvs?: boolean;
+    enableColors?: boolean;
+    transformMatrix?: Matrix4;
+    scale?: number | Vector3;
+  };
+};
+
+export type MarchingCubesLayerConfig = MeshLayerConfig &
+  MarchingCubesLayerDescription;
+
+export type MarchingCubesLayerUpdate = Pick<
+  MeshLayerConfig,
+  "position" | "visible"
+> &
+  MarchingCubesLayerDescription;
+
+export class MarchingCubesLayer extends MeshLayerDeclaration<
+  MarchingCubesLayerConfig,
+  MarchingCubesLayerUpdate,
+  MarchingCubes
+> {
+  private config: MarchingCubesLayerConfig;
+
+  constructor(view: ViewContext, config: MarchingCubesLayerConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  createMesh(): MarchingCubes {
+    const cfg = this.config.marchingCubes;
+    if (!cfg?.material) {
+      throw new Error("MarchingCubes requires a material");
+    }
+
+    const cubes = new MarchingCubes(
+      cfg.resolution ?? 50,
+      cfg.material,
+      cfg.enableUvs ?? false,
+      cfg.enableColors ?? false,
+    );
+
+    cubes.castShadow = cfg.castShadow ?? false;
+    cubes.receiveShadow = cfg.receiveShadow ?? false;
+
+    if (cfg.transformMatrix) {
+      cubes.applyMatrix4(cfg.transformMatrix);
+    }
+
+    if (cfg.scale) {
+      if (typeof cfg.scale === "number") {
+        cubes.scale.setScalar(cfg.scale);
+      } else {
+        cubes.scale.copy(cfg.scale);
+      }
+    }
+
+    // Setup shadow if needed
+    if (cubes.castShadow || cubes.receiveShadow) {
+      this.view.emit("_csmMounted", cfg.material);
+    }
+
+    return cubes;
+  }
+
+  onUpdateConfig(updates: MarchingCubesLayerUpdate): void {
+    if (updates.marchingCubes && this._instance) {
+      const cfg = updates.marchingCubes;
+
+      if (cfg.castShadow !== undefined) {
+        this._instance.castShadow = cfg.castShadow;
+      }
+
+      if (cfg.receiveShadow !== undefined) {
+        this._instance.receiveShadow = cfg.receiveShadow;
+      }
+
+      if (cfg.scale !== undefined) {
+        if (typeof cfg.scale === "number") {
+          this._instance.scale.setScalar(cfg.scale);
+        } else {
+          this._instance.scale.copy(cfg.scale);
+        }
+      }
+
+      this.emit("_needsUpdate");
+    }
+
+    super.onUpdateConfig(updates);
+  }
+
+  getMarchingCubes() {
+    return this._instance;
+  }
+
+  protected disposeMesh(): void {
+    if (this._instance) {
+      if (this._instance.geometry) {
+        this._instance.geometry.dispose();
+      }
+      this._instance = undefined;
+    }
+  }
+}
+
+export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
+  // Register custom MarchingCubesLayer
+  view.registerMesh("marchingCubes", MarchingCubesLayer);
+
   await view.init();
 
   const defaultEffects = view.addDefaultEffectLayers();
@@ -99,9 +218,6 @@ export const run = async (view: ThreeView) => {
     new Color("#000"),
   );
 
-  const cubes = new MarchingCubes(50, hatchingMaterial);
-  cubes.castShadow = true;
-
   const position = geodeticToVector3(
     new LLE(
       degreeToRadian(35.67564356091717),
@@ -111,16 +227,28 @@ export const run = async (view: ThreeView) => {
   );
 
   const matrix = eastNorthUpToFixedFrame(position);
-  cubes.applyMatrix4(matrix);
 
-  cubes.position.set(position.x, position.y, position.z);
-  cubes.scale.set(1500, 1500, 1500);
-
-  view.scenes.mrt.add(cubes);
-
-  view.on("preUpdate", (t) => {
-    updateCubes(cubes, t * 0.001, 10);
+  // Use the custom MarchingCubesLayer
+  const marchingCubesLayer = view.addLayer<MarchingCubesLayer>({
+    type: "mesh",
+    marchingCubes: {
+      resolution: 50,
+      material: hatchingMaterial,
+      castShadow: true,
+      transformMatrix: matrix,
+      scale: new Vector3(1500, 1500, 1500),
+    },
+    position: { x: position.x, y: position.y, z: position.z },
   });
+
+  // Get the MarchingCubes instance for animation
+  const cubes = marchingCubesLayer.ref.getMarchingCubes();
+
+  if (cubes) {
+    view.on("preUpdate", (t) => {
+      updateCubes(cubes, t * 0.001, 10);
+    });
+  }
 };
 
 // Ref: https://github.com/mrdoob/three.js/blob/master/examples/webgl_marchingcubes.html

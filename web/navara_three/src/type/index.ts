@@ -15,9 +15,17 @@ import type {
   SnowMeshLayerConfig,
   SkyMeshLayerConfig,
   StarsLayerConfig,
+  BoxMeshLayerConfig,
+  SphereMeshLayerConfig,
+  CylinderMeshLayerConfig,
+  PlaneMeshLayerConfig,
+  GLTFModelLayerConfig,
+  AxesHelperLayerConfig,
+  ArrowHelperLayerConfig,
   SunLightLayerConfig,
   SkyLightProbeLayerConfig,
   AmbientLightLayerConfig,
+  LightProbeLayerConfig,
 } from "../layers";
 import type {
   AerialPerspectiveConfig,
@@ -53,12 +61,20 @@ export type MeshLayerDeclarationDescription =
   | RainMeshLayerConfig
   | SnowMeshLayerConfig
   | SkyMeshLayerConfig
-  | StarsLayerConfig;
+  | StarsLayerConfig
+  | BoxMeshLayerConfig
+  | SphereMeshLayerConfig
+  | CylinderMeshLayerConfig
+  | PlaneMeshLayerConfig
+  | GLTFModelLayerConfig
+  | AxesHelperLayerConfig
+  | ArrowHelperLayerConfig;
 
 export type LightLayerDeclarationDescription =
   | SunLightLayerConfig
   | SkyLightProbeLayerConfig
-  | AmbientLightLayerConfig;
+  | AmbientLightLayerConfig
+  | LightProbeLayerConfig;
 
 export type EffectLayerDeclarationDescription =
   | AerialPerspectiveConfig
