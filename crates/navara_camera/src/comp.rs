@@ -153,13 +153,6 @@ pub struct CameraController {
     pub zoom_duration: f32,
     pub translate_duration: f32,
     pub inertia: FloatType,
-    pub is_tilting: bool,
-}
-
-impl CameraController {
-    pub fn reset_mode(&mut self) {
-        self.is_tilting = false;
-    }
 }
 
 impl Default for CameraController {
@@ -180,7 +173,6 @@ impl Default for CameraController {
             zoom_duration: 100.,
             translate_duration: 500.,
             inertia: 0.5,
-            is_tilting: false,
         }
     }
 }
@@ -245,16 +237,19 @@ impl CameraInertia {
 
 #[derive(Component, Clone)]
 pub struct Orbit {
-    pub quat: Quat,
-    pub world_quat: Quat,
+    pub horizon_quat: Quat,
+    pub vertical_quat: Quat,
     pub default_world_quat: Option<Quat>,
+    pub world_quat: Quat,
+    pub tilt_quat: Quat,
     pub pivot: Vec3,
     pub horizontal_axis: Vec3,
     pub vertical_axis: Vec3,
     pub local_up: Vec3,
+    pub tilt_horizontal_axis: Vec3,
     pub local_forward: Vec3,
     pub local_position: Vec3,
-    pub should_tilt: bool,
+    pub tilting: bool,
 }
 
 impl Default for Orbit {
@@ -263,16 +258,19 @@ impl Default for Orbit {
         let r = controller.minimum_zoom_distance * 3.;
 
         Self {
-            quat: Quat::IDENTITY,
+            horizon_quat: Quat::IDENTITY,
+            vertical_quat: Quat::IDENTITY,
             world_quat: Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z)),
+            tilt_quat: Quat::IDENTITY,
             default_world_quat: None,
             local_up: Vec3::Z,
+            tilt_horizontal_axis: Vec3::Z,
             local_position: Vec3::NEG_Y * r,
             local_forward: Vec3::Y,
             vertical_axis: Vec3::NEG_X,
             horizontal_axis: Vec3::Z,
             pivot: Vec3::ZERO,
-            should_tilt: false,
+            tilting: false,
         }
     }
 }
@@ -285,16 +283,15 @@ impl Orbit {
         }
     }
 
-    pub fn set_quat(
-        &mut self,
-        transform: &Transform,
-        world: Quat,
-        center: Vec3,
-        tilt: bool,
-        fixed_horizon_axis: Option<Vec3>,
-    ) {
-        self.quat = Quat::IDENTITY;
+    pub fn set_quat(&mut self, transform: &Transform, world: Quat, center: Vec3, tilt: bool) {
+        self.horizon_quat = Quat::IDENTITY;
+        self.vertical_quat = Quat::IDENTITY;
         self.world_quat = world;
+        self.tilting = tilt;
+
+        if tilt {
+            self.tilt_quat = world;
+        }
 
         self.pivot = center;
 
@@ -304,24 +301,56 @@ impl Orbit {
 
         let direction = position - center;
 
-        self.local_up = inverse * transform.up().as_vec3();
         self.local_forward = if tilt {
             inverse * -direction.normalize_or_zero()
         } else {
             inverse * transform.forward().as_vec3()
         };
-        self.local_position = inverse * direction;
 
+        self.local_position = inverse * direction;
         self.vertical_axis = inverse * transform.right().as_vec3();
 
-        match fixed_horizon_axis {
-            Some(a) => {
-                self.horizontal_axis = a;
-            }
-            None => {
-                self.horizontal_axis = self.local_up;
-            }
+        if tilt {
+            self.local_up = Vec3::Z;
+            self.horizontal_axis = Vec3::Z;
+            return;
         }
+
+        if self.tilt_quat == Quat::IDENTITY {
+            return;
+        }
+
+        self.horizontal_axis = inverse * self.tilt_horizontal_axis;
+        self.local_up = self.vertical_axis.cross(self.local_forward).normalize();
+
+        let orthogonal_forward = self.horizontal_axis.cross(self.vertical_axis).normalize();
+        let forwards_dot = orthogonal_forward.dot(self.local_forward);
+        if forwards_dot < 0. {
+            self.horizontal_axis *= -1.;
+        }
+    }
+
+    pub fn update_horizontal_axis_on_tilt(&mut self, transform: &Transform) {
+        if !self.tilting {
+            return;
+        }
+
+        let z_base = Vec3::Z;
+        let z_cam = transform.up().as_vec3();
+
+        // Get difference between camera z axis and base z axis.
+        let axis = z_base.cross(z_cam);
+        let axis_len2 = axis.length_squared();
+
+        // Calculate an angle.
+        let dot = z_base.dot(z_cam).clamp(-1.0, 1.0);
+        let angle = axis_len2.sqrt().atan2(dot);
+
+        // Make a quaternion to rotate around.
+        let normalized_axis = axis / axis_len2.sqrt();
+        let q = Quat::from_axis_angle(normalized_axis, angle);
+
+        self.tilt_horizontal_axis = q * z_base;
     }
 }
 
