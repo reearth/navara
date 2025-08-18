@@ -2,7 +2,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
-import { AxesHelper } from "three";
+import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -482,9 +482,13 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  const axesHelper = new AxesHelper(5);
-  axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.opaque.add(axesHelper);
+  view.addLayer({
+    type: "mesh",
+    axesHelper: {
+      size: 5,
+    },
+    scale: new Vector3().setScalar(1e9),
+  });
 
   // For debug
   // view.addLayer({

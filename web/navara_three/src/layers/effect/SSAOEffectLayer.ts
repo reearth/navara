@@ -57,29 +57,29 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: SSAOUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
     Object.assign(this.config, updates);
 
     const config = updates.ssao;
     if (!config) return;
 
     if (config.samples !== undefined) {
-      this.instance.samples = config.samples;
+      this._instance.samples = config.samples;
     }
     if (config.radius !== undefined) {
-      this.instance.radius = config.radius;
+      this._instance.radius = config.radius;
     }
     if (config.intensity !== undefined) {
-      this.instance.intensity = config.intensity;
+      this._instance.intensity = config.intensity;
     }
     if (config.color !== undefined) {
-      this.instance.color = config.color;
+      this._instance.color = config.color;
     }
     if (config.halfRes !== undefined) {
-      this.instance.halfRes = config.halfRes ?? false;
+      this._instance.halfRes = config.halfRes ?? false;
     }
     if (config.quality !== undefined) {
-      this.instance.quality = config.quality;
+      this._instance.quality = config.quality;
     }
   }
 }

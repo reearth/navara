@@ -41,14 +41,14 @@ export class LensFlareEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: LensFlareUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
     Object.assign(this.config, updates);
 
     const config = updates.lensFlare;
     if (!config) return;
 
     if (config.intensity !== undefined) {
-      this.instance.intensity = config.intensity;
+      this._instance.intensity = config.intensity;
     }
   }
 }

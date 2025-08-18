@@ -41,17 +41,17 @@ export class SMAAEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: SMAAUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
     Object.assign(this.config, updates);
 
     const config = updates.smaa;
     if (!config) return;
 
     if (config.quality !== undefined) {
-      this.instance.quality = config.quality;
+      this._instance.quality = config.quality;
     }
     if (config.edgeDetectionMode !== undefined) {
-      this.instance.edgeDetectionMode = config.edgeDetectionMode;
+      this._instance.edgeDetectionMode = config.edgeDetectionMode;
     }
   }
 }

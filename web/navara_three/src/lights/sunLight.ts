@@ -294,6 +294,7 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set visible(v: boolean) {
     this.raw.visible = v;
+    this.csm.directionalLights.visible = v;
     this.emit("_needsUpdate");
   }
 
