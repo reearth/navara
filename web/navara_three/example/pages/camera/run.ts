@@ -21,7 +21,7 @@ let gIgnoreChange = false;
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.atmosphere.date.setHours(8)
+  view.atmosphere.date.setHours(8);
 
   view.addDefaultAtmosphereLayers();
 

@@ -9,7 +9,8 @@ pub fn update_camera_transform(r: FloatType) -> (Vec3, LLE<FloatType, Radians>) 
         ..Default::default()
     };
     let mut camera_transform = Transform::from_translation(Vec3::ZERO);
-    camera_transform.translation = orbit.vertical_quat * orbit.horizon_quat * Vec3::new(0.0, r, 0.0);
+    camera_transform.translation =
+        orbit.vertical_quat * orbit.horizon_quat * Vec3::new(0.0, r, 0.0);
     camera_transform = camera_transform.looking_at(Vec3::ZERO, Vec3::Y);
 
     let camera_pos = camera_transform.transform_point(Vec3::ZERO);
