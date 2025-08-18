@@ -243,10 +243,10 @@ pub struct Orbit {
     pub world_quat: Quat,
     pub tilt_quat: Quat,
     pub pivot: Vec3,
-    pub horizontal_axis: Vec3,
-    pub vertical_axis: Vec3,
+    pub horizontal_rotation_axis: Vec3,
+    pub vertical_rotation_axis: Vec3,
     pub local_up: Vec3,
-    pub tilt_horizontal_axis: Vec3,
+    pub tilt_horizontal_rotation_axis: Vec3,
     pub local_forward: Vec3,
     pub local_position: Vec3,
     pub tilting: bool,
@@ -264,11 +264,11 @@ impl Default for Orbit {
             tilt_quat: Quat::IDENTITY,
             default_world_quat: None,
             local_up: Vec3::Z,
-            tilt_horizontal_axis: Vec3::Z,
+            tilt_horizontal_rotation_axis: Vec3::Z,
             local_position: Vec3::NEG_Y * r,
             local_forward: Vec3::Y,
-            vertical_axis: Vec3::NEG_X,
-            horizontal_axis: Vec3::Z,
+            vertical_rotation_axis: Vec3::NEG_X,
+            horizontal_rotation_axis: Vec3::Z,
             pivot: Vec3::ZERO,
             tilting: false,
         }
@@ -311,35 +311,41 @@ impl Orbit {
 
         if tilt {
             self.local_up = Vec3::Z;
-            self.horizontal_axis = Vec3::Z;
+            self.horizontal_rotation_axis = Vec3::Z;
 
             if self.local_up.dot(self.local_forward).abs() >= 0.99999 {
                 self.local_up = inverse * transform.up().as_vec3();
-                self.vertical_axis = self.local_forward.cross(self.local_up);
+                self.vertical_rotation_axis = self.local_forward.cross(self.local_up);
             } else {
-                self.vertical_axis = inverse * transform.right().as_vec3();
+                self.vertical_rotation_axis = inverse * transform.right().as_vec3();
             };
 
             return;
         } else {
-            self.vertical_axis = inverse * transform.right().as_vec3();
+            self.vertical_rotation_axis = inverse * transform.right().as_vec3();
         }
 
         if self.tilt_quat == Quat::IDENTITY {
             return;
         }
 
-        self.horizontal_axis = inverse * self.tilt_horizontal_axis;
-        self.local_up = self.vertical_axis.cross(self.local_forward).normalize();
+        self.horizontal_rotation_axis = inverse * self.tilt_horizontal_rotation_axis;
+        self.local_up = self
+            .vertical_rotation_axis
+            .cross(self.local_forward)
+            .normalize();
 
-        let orthogonal_forward = self.horizontal_axis.cross(self.vertical_axis).normalize();
+        let orthogonal_forward = self
+            .horizontal_rotation_axis
+            .cross(self.vertical_rotation_axis)
+            .normalize();
         let forwards_dot = orthogonal_forward.dot(self.local_forward);
         if forwards_dot < 0. {
-            self.horizontal_axis *= -1.;
+            self.horizontal_rotation_axis *= -1.;
         }
     }
 
-    pub fn update_horizontal_axis_on_tilt(&mut self, transform: &Transform) {
+    pub fn update_horizontal_rotation_axis_on_tilt(&mut self, transform: &Transform) {
         if !self.tilting {
             return;
         }
@@ -359,7 +365,7 @@ impl Orbit {
         let normalized_axis = axis / axis_len2.sqrt();
         let q = Quat::from_axis_angle(normalized_axis, angle);
 
-        self.tilt_horizontal_axis = q * z_base;
+        self.tilt_horizontal_rotation_axis = q * z_base;
     }
 }
 

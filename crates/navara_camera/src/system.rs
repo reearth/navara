@@ -192,7 +192,7 @@ pub fn update(
 
         after_inertia(&mut inertia, duration, &mut controller, &mut cam_st);
 
-        orbit.update_horizontal_axis_on_tilt(&transform);
+        orbit.update_horizontal_rotation_axis_on_tilt(&transform);
 
         if !cam_st.initialized {
             cam_st.initialized = true;
@@ -368,7 +368,7 @@ fn rotate_around_axis(
 
     orbit.tilt_quat = rotation;
     orbit.tilting = true;
-    orbit.update_horizontal_axis_on_tilt(transform);
+    orbit.update_horizontal_rotation_axis_on_tilt(transform);
 
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
@@ -526,9 +526,9 @@ fn apply_spin(
 
     next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
 
-    orbit.horizon_quat *= Quat::from_axis_angle(orbit.horizontal_axis, next.x);
+    orbit.horizon_quat *= Quat::from_axis_angle(orbit.horizontal_rotation_axis, next.x);
 
-    let vertical_delta = Quat::from_axis_angle(orbit.vertical_axis, next.y);
+    let vertical_delta = Quat::from_axis_angle(orbit.vertical_rotation_axis, next.y);
 
     let inverse = orbit.world_quat.inverse();
 
