@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy_ecs::{
     change_detection::DetectChanges,
     event::EventReader,
@@ -178,7 +180,7 @@ pub fn update(
         );
 
         // Apply inertia
-        apply_inertia(&mut orbit, &mut inertia, &controller);
+        apply_inertia(&mut orbit, &mut inertia, &controller, &transform);
 
         if needs_update(&inertia, &controller) || window.is_changed() || marker.is_added() {
             commit(&mut transform, &mut orbit);
@@ -189,6 +191,8 @@ pub fn update(
         }
 
         after_inertia(&mut inertia, duration, &mut controller, &mut cam_st);
+
+        orbit.update_horizontal_rotation_axis_on_tilt(&transform);
 
         if !cam_st.initialized {
             cam_st.initialized = true;
@@ -280,13 +284,10 @@ fn is_camera_moving(inertia: &CameraInertia, controller: &CameraController) -> b
 }
 
 fn commit(transform: &mut Transform, orbit: &mut Orbit) {
-    let rotated_local_position = orbit.quat * orbit.local_position;
-    let rotated_local_up = orbit.quat * orbit.local_up;
-    let rotated_local_forward = if orbit.should_tilt {
-        orbit.local_forward
-    } else {
-        orbit.quat * orbit.local_forward
-    };
+    let quat = orbit.horizon_quat * orbit.vertical_quat;
+    let rotated_local_position = quat * orbit.local_position;
+    let rotated_local_up = quat * orbit.local_up;
+    let rotated_local_forward = quat * orbit.local_forward;
 
     let world_position = orbit.pivot + (orbit.world_quat * rotated_local_position);
     let world_up = orbit.world_quat * rotated_local_up;
@@ -320,10 +321,8 @@ fn handle_orbit_spin(
         return;
     }
 
-    controller.reset_mode();
-
     let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false);
 
     let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
 
@@ -367,8 +366,12 @@ fn rotate_around_axis(
     transform.translation = rotation * position;
     transform.rotation = rotation * transform.rotation;
 
+    orbit.tilt_quat = rotation;
+    orbit.tilting = true;
+    orbit.update_horizontal_rotation_axis_on_tilt(transform);
+
     let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false);
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
@@ -402,8 +405,6 @@ fn handle_tilt(
         return;
     }
 
-    controller.is_tilting = true;
-
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
     // TODO: Support movement underground.
@@ -419,23 +420,11 @@ fn handle_tilt(
         orbit.default_world_quat = Some(orbit.world_quat);
     }
 
-    orbit.set_quat(
-        transform,
-        Quat::from_mat4(&enu_transform),
-        center,
-        true,
-        Some(Vec3::Z),
-    );
+    orbit.set_quat(transform, Quat::from_mat4(&enu_transform), center, true);
 
-    let Some(mut spin) = rotate(mm, controller, 1., 1.) else {
+    let Some(spin) = rotate(mm, controller, 1., 1.) else {
         return;
     };
-
-    if spin.x.abs() > spin.y.abs() {
-        spin.y = 0.;
-    } else {
-        spin.x = 0.;
-    }
 
     if !is_cam_moving {
         cam_st.status.push(CameraStatusType::MoveStart);
@@ -485,7 +474,7 @@ fn handle_zoom(
     };
 
     let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false);
 
     let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
 
@@ -510,20 +499,56 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
     ray_ellipsoid_intersect(&ray, ellipsoid).unwrap_or(0.)
 }
 
-fn apply_inertia(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
-    apply_spin(orbit, inertia, controller);
+fn apply_inertia(
+    orbit: &mut Orbit,
+    inertia: &mut CameraInertia,
+    controller: &CameraController,
+    transform: &Transform,
+) {
+    apply_spin(orbit, inertia, controller, transform);
     apply_zoom(orbit, inertia, controller);
 }
 
-fn apply_spin(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
+const MAX_SPIN_ANGLE: f32 = PI / 30.;
+
+fn apply_spin(
+    orbit: &mut Orbit,
+    inertia: &mut CameraInertia,
+    controller: &CameraController,
+    transform: &Transform,
+) {
     let t = inertia.spin_time / controller.spin_duration;
-    if t > 1. {
+    if t > 1.0 {
         return;
     }
-    let next = inertia.spin * (1. - ease_out_circ(t));
-    let vertical = Quat::from_axis_angle(orbit.vertical_axis, next.y);
-    let horizontal = Quat::from_axis_angle(orbit.horizontal_axis, next.x);
-    orbit.quat *= horizontal * vertical;
+
+    let mut next = inertia.spin * (1.0 - ease_out_circ(t));
+
+    next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
+
+    orbit.horizon_quat *= Quat::from_axis_angle(orbit.horizontal_rotation_axis, next.x);
+
+    let vertical_delta = Quat::from_axis_angle(orbit.vertical_rotation_axis, next.y);
+
+    let inverse = orbit.world_quat.inverse();
+
+    let local_camera_forward = inverse * transform.forward().as_vec3();
+
+    let next_vert_quat = orbit.vertical_quat * vertical_delta;
+    let next_up = next_vert_quat * Vec3::Z;
+    let next_forward = next_vert_quat * local_camera_forward;
+    let next_align = next_forward.dot(next_up);
+
+    // Restrict the vertical rotation near the poles.
+    if next_align.abs() > 0.995 {
+        let y = inertia.spin.y;
+        let is_vertical_rotation_skipped =
+            (next_align < 0. && y < 0.) || (next_align > 0. && y > 0.);
+        if is_vertical_rotation_skipped {
+            return;
+        }
+    }
+    orbit.vertical_quat = next_vert_quat;
 }
 
 fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &CameraController) {
@@ -663,7 +688,7 @@ fn apply_camera_change(
     transform.look_to(world_forward, world_up);
 
     // Update orbit state with new quaternion
-    orbit.set_quat(transform, world_quat, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world_quat, Vec3::ZERO, false);
 }
 
 /// Calculates the world rotation quaternion based on target direction and heading
@@ -754,7 +779,7 @@ fn handle_camera_translate(
 
     // Reapply the orbit rotation to maintain a consistent view orientation
     let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false);
 
     true
 }
@@ -806,7 +831,7 @@ fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, of
     transform.look_to(forward, up);
 
     let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false, None);
+    orbit.set_quat(transform, world, Vec3::ZERO, false);
 }
 
 // TODO
