@@ -367,7 +367,7 @@ fn rotate_around_axis(
     transform.rotation = rotation * transform.rotation;
 
     orbit.tilt_quat = rotation;
-
+    orbit.tilting = true;
     orbit.update_horizontal_axis_on_tilt(transform);
 
     let world = orbit.get_default_world_quat();
