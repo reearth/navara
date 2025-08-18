@@ -530,7 +530,9 @@ fn apply_spin(
 
     let vertical_delta = Quat::from_axis_angle(orbit.vertical_axis, next.y);
 
-    let local_camera_forward = orbit.world_quat.inverse() * transform.forward();
+    let inverse = orbit.world_quat.inverse();
+
+    let local_camera_forward = inverse * transform.forward().as_vec3();
 
     let next_vert_quat = orbit.vertical_quat * vertical_delta;
     let next_up = next_vert_quat * Vec3::Z;

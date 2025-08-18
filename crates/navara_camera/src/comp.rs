@@ -308,12 +308,21 @@ impl Orbit {
         };
 
         self.local_position = inverse * direction;
-        self.vertical_axis = inverse * transform.right().as_vec3();
 
         if tilt {
             self.local_up = Vec3::Z;
             self.horizontal_axis = Vec3::Z;
+
+            if self.local_up.dot(self.local_forward).abs() >= 0.99999 {
+                self.local_up = inverse * transform.up().as_vec3();
+                self.vertical_axis = self.local_forward.cross(self.local_up);
+            } else {
+                self.vertical_axis = inverse * transform.right().as_vec3();
+            };
+
             return;
+        } else {
+            self.vertical_axis = inverse * transform.right().as_vec3();
         }
 
         if self.tilt_quat == Quat::IDENTITY {
