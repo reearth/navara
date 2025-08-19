@@ -1,9 +1,8 @@
-import { Unimplemented } from "@navara/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
-import { Color } from "three";
+import { Color, InstancedBufferAttribute } from "three";
 import {
   Line2,
   LineGeometry,
@@ -13,8 +12,10 @@ import {
 
 import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
-
 import type { FeatureMesh } from "./featureMesh";
+import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import type { EventHandler } from "@navara/core";
+import type { ViewEvents } from "@navara/three";
 
 class NvLineGeometry extends LineGeometry {
   setPositions(
@@ -43,10 +44,16 @@ class NvLineGeometry extends LineGeometry {
 }
 
 export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
-  constructor(mesh: NavaraPolygonMesh, buf: BufferLoader) {
+  private resizeEventUnsubscribe?: () => void;
+
+  constructor(
+    mesh: NavaraPolygonMesh,
+    buf: BufferLoader,
+    viewEvents: EventHandler<ViewEvents>,
+  ) {
     super(new NvLineGeometry(), new LineMaterial());
     this.initGeometry(mesh, buf);
-    this.initMaterial(mesh);
+    this.initMaterial(mesh, viewEvents);
   }
 
   private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
@@ -59,6 +66,10 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       return;
     }
 
+    const scale_normal_and_cap = g.scale_normal_and_cap
+      ? buf.removeF32(g.scale_normal_and_cap.data)
+      : undefined;
+
     const skipIdx = g.skip_indices
       ? (buf.removeU32(g.skip_indices) ?? undefined)
       : undefined;
@@ -67,11 +78,68 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     const lineGeometry = this.geometry as NvLineGeometry;
     lineGeometry.setPositions(position, skipIdx);
 
-    // Essential for Line2 rendering
-    this.computeLineDistances();
+    // Add scale_normal_and_cap attributes if available
+    if (g.scale_normal_and_cap && scale_normal_and_cap) {
+      const size = g.scale_normal_and_cap.size;
+      this.initScaleNormalCapAttributes(
+        scale_normal_and_cap,
+        skipIdx,
+        size,
+        lineGeometry,
+      );
+    }
+
+    // Store for later use
+    this.userData.hasScaleNormalAndCap = !!scale_normal_and_cap;
+
+    // this.computeLineDistances();
   }
 
-  private initMaterial(mesh: NavaraPolygonMesh) {
+  private initScaleNormalCapAttributes(
+    scale_normal_and_cap: Float32Array<ArrayBufferLike>,
+    skipIdx: Uint32Array<ArrayBufferLike> | undefined,
+    size: number,
+    lineGeometry: LineGeometry,
+  ) {
+    // Create separate arrays for start and end points of line segments
+    const scaleDataStart: number[] = [];
+    const scaleDataEnd: number[] = [];
+    const skipSet = new Set(skipIdx ?? []);
+
+    for (let i = 0; i < scale_normal_and_cap.length / size - 1; i++) {
+      if (skipSet.has(i)) {
+        continue;
+      }
+
+      // For each line segment, add start and end scale normal data
+      const startIdx = i * size;
+      const endIdx = (i + 1) * size;
+
+      // Start point data
+      for (let j = 0; j < size; j++) {
+        scaleDataStart.push(scale_normal_and_cap[startIdx + j]);
+      }
+
+      // End point data
+      for (let j = 0; j < size; j++) {
+        scaleDataEnd.push(scale_normal_and_cap[endIdx + j]);
+      }
+    }
+
+    lineGeometry.setAttribute(
+      "scaleNormalAndCapStart",
+      new InstancedBufferAttribute(new Float32Array(scaleDataStart), size),
+    );
+    lineGeometry.setAttribute(
+      "scaleNormalAndCapEnd",
+      new InstancedBufferAttribute(new Float32Array(scaleDataEnd), size),
+    );
+  }
+
+  private initMaterial(
+    mesh: NavaraPolygonMesh,
+    viewEvents: EventHandler<ViewEvents>,
+  ) {
     const meshMaterial = mesh.material;
     const material = this.material as LineMaterial;
 
@@ -79,7 +147,67 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     material.color.set(meshMaterial.outline_color ?? 0xffffff);
     material.linewidth = meshMaterial.outline_width ?? 1;
 
-    material.resolution.set(1200, 760);
+    const resizeHandler = (w: number, h: number) => {
+      material.resolution.set(w, h);
+    };
+
+    viewEvents.on("resize", resizeHandler);
+    this.resizeEventUnsubscribe = () => viewEvents.off("resize", resizeHandler);
+
+    // Set up height adjustment uniforms
+    const uMinMaxHeights = meshMaterial.__internal__?.min_max_heights;
+    material.userData.uMinMaxHeight = {
+      value: uMinMaxHeights,
+    };
+    material.userData.uAddExtrudedHeight = {
+      value: 0.0,
+    };
+
+    // Add shader modification for height adjustment
+    if (this.userData.hasScaleNormalAndCap) {
+      material.onBeforeCompile = (shader) => {
+        // Add uniforms
+        shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
+        shader.uniforms.uAddExtrudedHeight =
+          material.userData.uAddExtrudedHeight;
+
+        // Add attribute declaration and uniforms
+        shader.vertexShader = shader.vertexShader.replace(
+          "attribute vec3 instanceEnd;",
+          `
+          attribute vec3 instanceEnd;
+          attribute vec4 scaleNormalAndCapStart;
+          attribute vec4 scaleNormalAndCapEnd;
+          uniform vec2 uMinMaxHeight;
+          uniform float uAddExtrudedHeight;
+          ${BranchFreeTernary}
+          `,
+        );
+
+        // Apply height adjustment to instanceStart and instanceEnd
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
+            `
+          // Apply height adjustment to start point
+          vec3 adjustedInstanceStart = instanceStart;
+
+          adjustedInstanceStart.xyz += scaleNormalAndCapStart.xyz * nvr_branchFreeTernary(scaleNormalAndCapStart.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
+          vec4 start = modelViewMatrix * vec4( adjustedInstanceStart, 1.0 );
+          `,
+          )
+          .replace(
+            "vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );",
+            `
+          // Apply height adjustment to end point  
+          vec3 adjustedInstanceEnd = instanceEnd;
+
+          adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(scaleNormalAndCapEnd.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
+          vec4 end = modelViewMatrix * vec4( adjustedInstanceEnd, 1.0 );
+          `,
+          );
+      };
+    }
 
     // Apply MRT compatibility
     overrideLineMaterialForMRT(material);
@@ -116,6 +244,16 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       lineMaterial.linewidth = nextWidth;
       prev.width = nextWidth;
     }
+
+    // Update height values for shader-based adjustment
+    if (this.userData.hasScaleNormalAndCap) {
+      const [min, max] = material.__internal__?.min_max_heights ?? [];
+      if (prev.min !== min || prev.max !== max) {
+        lineMaterial.userData.uMinMaxHeight.value = [min, max];
+        prev.min = min;
+        prev.max = max;
+      }
+    }
   }
 
   _setFeatureColor(color: Color) {
@@ -134,12 +272,21 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     this.frustumCulled = culled;
   }
 
-  _setFeatureExtrudedHeight(_height: number): void {
-    throw new Unimplemented();
+  _setFeatureExtrudedHeight(height: number): void {
+    if (this.userData.hasScaleNormalAndCap) {
+      (this.material as LineMaterial).userData.uAddExtrudedHeight.value =
+        height;
+    }
   }
 
   // Utility method to update resolution (should be called when renderer size changes)
   updateResolution(width: number, height: number): void {
     (this.material as LineMaterial).resolution.set(width, height);
+  }
+
+  // Clean up event listeners when the object is destroyed
+  dispose(): void {
+    this.resizeEventUnsubscribe?.();
+    this.resizeEventUnsubscribe = undefined;
   }
 }

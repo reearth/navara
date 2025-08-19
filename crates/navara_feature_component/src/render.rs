@@ -431,23 +431,34 @@ impl TransferablePolygonGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePolygonOutlineGeometry {
     pub position: Option<TransferableFloatAttribute>,
+    pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub skip_indices: Option<Handle>,
 }
 
 impl TransferablePolygonOutlineGeometry {
     pub fn with_buf(
         buf: &mut BufferStore,
-        geo: navara_geometry::PolygonOutlineGeometry,
+        geo: Option<navara_geometry::PolygonOutlineGeometry>,
     ) -> TransferablePolygonOutlineGeometry {
+        let Some(geo) = geo else {
+            return TransferablePolygonOutlineGeometry::default();
+        };
+
         let position = TransferableFloatAttribute {
             data: buf.new_f32(geo.position.data),
             size: geo.position.size,
+        };
+
+        let scale_normal_and_cap = TransferableFloatAttribute {
+            data: buf.new_f32(geo.scale_normal_and_cap.data),
+            size: geo.scale_normal_and_cap.size,
         };
 
         let skip_indices = buf.new_u32(geo.skip_indices);
 
         TransferablePolygonOutlineGeometry {
             position: Some(position),
+            scale_normal_and_cap: Some(scale_normal_and_cap),
             skip_indices: Some(skip_indices),
         }
     }
@@ -457,6 +468,10 @@ impl TransferablePolygonOutlineGeometry {
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
         if let Some(position) = &self.position {
             buf.remove(&position.data);
+        }
+
+        if let Some(scale_normal_and_cap) = &self.scale_normal_and_cap {
+            buf.remove(&scale_normal_and_cap.data);
         }
 
         if let Some(skip_indices) = &self.skip_indices {

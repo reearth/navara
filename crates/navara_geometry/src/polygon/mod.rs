@@ -6,5 +6,6 @@ mod types;
 
 pub use attributes::*;
 pub use geometry::*;
+pub use helpers::*;
 pub use resource::*;
 pub use types::*;

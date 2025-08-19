@@ -157,7 +157,7 @@ export type Options = {
 };
 
 export type ViewEvents = {
-  resize: () => void;
+  resize: (w: number, h: number) => void;
   pick: (info: Nullable<PickedFeature>) => void;
   layer: <K extends keyof LayerEvent>(
     k: K,
@@ -675,7 +675,7 @@ export default class ThreeView<
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
-    this.emit("resize");
+    this.emit("resize", w, h);
   };
 
   private _updateUniforms() {

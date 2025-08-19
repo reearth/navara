@@ -152,7 +152,7 @@ export async function processRenderableFeatureAdded(
   }
 
   if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
-    const outline = await renderPolygonOutline(polygon, buf);
+    const outline = await renderPolygonOutline(polygon, buf, viewEvents);
     scenes.mrt.add(outline);
 
     obj.userData.outlineObj = outline;

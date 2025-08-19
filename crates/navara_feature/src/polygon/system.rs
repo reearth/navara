@@ -11,10 +11,7 @@ use navara_feature_component::{
     batch::{
         BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIdAndSelections, IdPropertyTable,
     },
-    polygon::{
-        construct_polygon_feature, create_outline_geometry, PolygonGeometry, PolygonMarker,
-        UpdatePolygon,
-    },
+    polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
 };
 use navara_geometry::{FloatAttribute, Hierarchy, PolygonResource};
 use navara_layer::{LayerId, LayerStore};
@@ -185,9 +182,6 @@ pub fn transfer_mesh(
         let geometry_hierarchy =
             Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
 
-        let outline_geometry =
-            create_outline_geometry(&geometry_hierarchy, material.extruded_height);
-
         let (extent_opt, polygon_result_opt) = construct_polygon_feature(
             geometry_hierarchy,
             &geometry.crs,
@@ -195,9 +189,17 @@ pub fn transfer_mesh(
             &mut polygon_resource,
         );
         if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
+            let aabb = Aabb::from_extent_f32(extent, 0., 0.);
+            let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
+
             let mut material = material.clone();
             material.internal = Some(PolygonInternalMaterial {
-                min_max_heights: vec![0., 0.],
+                min_max_heights: calc_min_max_height(
+                    material.height,
+                    material.extruded_height.unwrap_or(0.),
+                    material.clamp_to_ground,
+                    -aabb.center.distance(surface_point.unwrap()),
+                ),
             });
 
             let pos_cnt = polygon_result.geometry.attributes.position.data.len()
@@ -208,9 +210,6 @@ pub fn transfer_mesh(
             }
             polygon_result.geometry.attributes.batch_id_and_sel =
                 Some(FloatAttribute::new(batch_id_vec, 2));
-
-            let aabb = Aabb::from_extent_f32(extent, 0., 0.);
-            let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
             let clamp_to_ground = material.clamp_to_ground;
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
@@ -229,7 +228,8 @@ pub fn transfer_mesh(
                         ),
                         outline_geometry: Some(TransferablePolygonOutlineGeometry::with_buf(
                             &mut buf,
-                            outline_geometry,
+                            polygon_result.outline,
+                            // Some(outline_geom),
                         )),
                         transform: Transform::default(),
                         feature_id: Some(entity),
