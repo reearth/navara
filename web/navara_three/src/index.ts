@@ -69,10 +69,19 @@ import {
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
+import { ArrowHelperLayer } from "./layers/helpers/ArrowHelperLayer";
+import { AxesHelperLayer } from "./layers/helpers/AxesHelperLayer";
+import { LightProbeLayer } from "./layers/light/LightProbeLayer";
+import { BoxMeshLayer } from "./layers/mesh/BoxMeshLayer";
+import { CylinderMeshLayer } from "./layers/mesh/CylinderMeshLayer";
+import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
+import { PlaneMeshLayer } from "./layers/mesh/PlaneMeshLayer";
 import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
 import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
 import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
+import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
+import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
@@ -189,7 +198,13 @@ export type ViewEvents = {
 };
 
 export default class ThreeView<
-  LayerDescription extends ActualLayerDescription = ActualLayerDescription,
+  CustomLayerDescriptions extends Record<string, unknown> = Record<
+    string,
+    unknown
+  >,
+  LayerDescription extends ActualLayerDescription | CustomLayerDescriptions =
+    | ActualLayerDescription
+    | CustomLayerDescriptions,
 > extends EventHandler<ViewEvents> {
   camera: ThreeViewCamera;
   renderer: WebGLRenderer;
@@ -508,6 +523,7 @@ export default class ThreeView<
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
       },
+      this,
     );
     this.registries = new Registries(viewContext);
 
@@ -524,7 +540,7 @@ export default class ThreeView<
       this.renderPassOrchestrator.effectComposer.setMainCamera(this.camera.raw);
     });
 
-    this.shadowMapViewers = new ShadowMapViewers(this.scenes.light);
+    this.shadowMapViewers = new ShadowMapViewers(this._scenes.light);
   }
 
   async initializeRenderPass() {
@@ -551,18 +567,9 @@ export default class ThreeView<
   }
 
   private get renderPass() {
-    const instance = this.mrtPassLayer.getLayer().instance;
+    const instance = this.mrtPassLayer.ref.raw;
     invariant(instance);
     return instance;
-  }
-
-  /**
-   * Low level API to access Three.js Scene.
-   * It means you decided to depend on Three.js.
-   */
-  get scenes() {
-    // TODO: Publish `drapedFeatures`. Need to expose `_drapedFeatureMaterials` as well.
-    return this._scenes as Omit<Scenes, "globe" | "drapedFeatures">;
   }
 
   get toneMappingExposure() {
@@ -844,12 +851,21 @@ export default class ThreeView<
     this.registerMesh("snow", SnowMeshLayer);
     this.registerMesh("sky", SkyMeshLayer);
     this.registerMesh("stars", StarsLayer);
+    this.registerMesh("box", BoxMeshLayer);
+    this.registerMesh("sphere", SphereMeshLayer);
+    this.registerMesh("cylinder", CylinderMeshLayer);
+    this.registerMesh("tube", TubeMeshLayer);
+    this.registerMesh("plane", PlaneMeshLayer);
+    this.registerMesh("gltfModel", GLTFModelLayer);
+    this.registerMesh("axesHelper", AxesHelperLayer);
+    this.registerMesh("arrowHelper", ArrowHelperLayer);
   }
 
   private registerBuiltInLights(): void {
     this.registerLight("sun", SunLightLayer);
     this.registerLight("ambient", AmbientLightLayer);
     this.registerLight("skyLightProbe", SkyLightProbeLayer);
+    this.registerLight("lightProbe", LightProbeLayer);
   }
 
   private registerBuiltInEffects(): void {
@@ -992,7 +1008,7 @@ export default class ThreeView<
   private findSunLightLayer(): SunLightLayer | null {
     // Look through registered layers for sun light layer
     for (const layer of this.layersManager.getDeclarationLayers()) {
-      const layerInstance = layer.getLayer();
+      const layerInstance = layer.ref;
       // Check if it's a SunLightLayer
       if (layerInstance instanceof SunLightLayer) {
         return layerInstance;

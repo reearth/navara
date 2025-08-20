@@ -18,3 +18,33 @@ export {
   type StarsLayerConfig,
   type StarsLayerUpdate,
 } from "./StarsLayer";
+export {
+  BoxMeshLayer,
+  type BoxMeshLayerConfig,
+  type BoxMeshLayerUpdate,
+} from "./BoxMeshLayer";
+export {
+  SphereMeshLayer,
+  type SphereMeshLayerConfig,
+  type SphereMeshLayerUpdate,
+} from "./SphereMeshLayer";
+export {
+  CylinderMeshLayer,
+  type CylinderMeshLayerConfig,
+  type CylinderMeshLayerUpdate,
+} from "./CylinderMeshLayer";
+export {
+  PlaneMeshLayer,
+  type PlaneMeshLayerConfig,
+  type PlaneMeshLayerUpdate,
+} from "./PlaneMeshLayer";
+export {
+  GLTFModelLayer,
+  type GLTFModelLayerConfig,
+  type GLTFModelLayerUpdate,
+} from "./GLTFModelLayer";
+export {
+  TubeMeshLayer,
+  type TubeMeshLayerConfig,
+  type TubeMeshLayerUpdate,
+} from "./TubeMeshLayer";

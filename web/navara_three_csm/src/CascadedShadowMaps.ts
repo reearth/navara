@@ -413,11 +413,7 @@ export class CascadedShadowMaps {
 
   set color(value: Color) {
     if (value !== this.color) {
-      const lights = this.directionalLights.cascadedLights;
-      // eslint-disable-next-line @typescript-eslint/prefer-for-of
-      for (let i = 0; i < lights.length; ++i) {
-        lights[i].color = value;
-      }
+      this.directionalLights.mainLight.color.copy(value);
     }
   }
 

@@ -6,8 +6,8 @@ use cfg_if::cfg_if;
 pub use bevy_math::{
     swizzles::*, DMat2 as RawDMat2, DMat3 as RawDMat3, DMat4 as RawDMat4, DQuat as RawDQuat,
     DVec2 as RawDVec2, DVec3 as RawDVec3, DVec4 as RawDVec4, Dir2 as RawDir2, Dir3A as RawDir3,
-    Mat2 as RawMat2, Mat3 as RawMat3, Mat4 as RawMat4, Quat as RawQuat, Vec2 as RawVec2,
-    Vec3 as RawVec3, Vec4 as RawVec4,
+    EulerRot as RawEulerRot, Mat2 as RawMat2, Mat3 as RawMat3, Mat4 as RawMat4, Quat as RawQuat,
+    Vec2 as RawVec2, Vec3 as RawVec3, Vec4 as RawVec4,
 };
 
 use crate::{FloatType, EPSILON10};
@@ -18,6 +18,7 @@ cfg_if! {
         pub type Vec3 = RawDVec3;
         pub type Vec2 = RawDVec2;
         pub type Quat = RawDQuat;
+        pub type EulerRot = RawEulerRot;
         pub type Dir2 = RawDir2;
         pub type Dir3 = RawDir3;
         pub type Mat4 = RawDMat4;
@@ -28,6 +29,7 @@ cfg_if! {
         pub type Vec3 = RawVec3;
         pub type Vec2 = RawVec2;
         pub type Quat = RawQuat;
+        pub type EulerRot = RawEulerRot;
         pub type Dir2 = RawDir2;
         pub type Dir3 = RawDir3;
         pub type Mat4 = RawMat4;

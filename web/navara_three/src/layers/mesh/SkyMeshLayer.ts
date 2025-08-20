@@ -4,6 +4,7 @@ import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   ViewContext,
+  type MeshLayerUpdate,
 } from "../../core";
 import { SkyMesh, type SkyMeshOptions } from "../../mesh";
 
@@ -13,8 +14,7 @@ type LayerDescription = {
 
 export type SkyMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type SkyMeshLayerUpdate = Pick<MeshLayerConfig, "position" | "visible"> &
-  LayerDescription;
+export type SkyMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
 export class SkyMeshLayer extends MeshLayerDeclaration<
   SkyMeshLayerConfig,
@@ -93,8 +93,8 @@ export class SkyMeshLayer extends MeshLayerDeclaration<
       this._skyMesh.dispose();
       this._skyMesh = null;
     }
-    if (this.instance) {
-      this.instance = null;
+    if (this._instance) {
+      this._instance = undefined;
     }
   }
 

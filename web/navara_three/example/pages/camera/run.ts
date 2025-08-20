@@ -1,7 +1,7 @@
 import type { CameraPosition } from "@navara/core";
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { LLE } from "@navara/three_api";
-import { AxesHelper, Vector3 } from "three";
+import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -21,11 +21,17 @@ let gIgnoreChange = false;
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.atmosphere.date.setHours(8);
+
   view.addDefaultAtmosphereLayers();
 
-  const axesHelper = new AxesHelper(5);
-  axesHelper.scale.multiplyScalar(1e9);
-  view.scenes.opaque.add(axesHelper);
+  view.addLayer({
+    type: "mesh",
+    axesHelper: {
+      size: 5,
+    },
+    scale: new Vector3().setScalar(1e9),
+  });
 
   view.setCamera({
     lng: 139.75711454748298,

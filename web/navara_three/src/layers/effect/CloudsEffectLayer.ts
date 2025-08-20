@@ -41,7 +41,7 @@ export class CloudsEffectLayer extends EffectLayerDeclaration<
   onUpdateConfig(updates: CloudsUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (!this.instance) return;
+    if (!this._instance) return;
     Object.assign(this.config, updates);
 
     const config = updates.clouds;
@@ -49,123 +49,123 @@ export class CloudsEffectLayer extends EffectLayerDeclaration<
 
     // Update all possible cloud properties
     if (config.qualityPreset !== undefined) {
-      this.instance.qualityPreset = config.qualityPreset;
+      this._instance.qualityPreset = config.qualityPreset;
     }
     if (config.localWeatherVelocity !== undefined) {
-      this.instance.localWeatherVelocity = config.localWeatherVelocity;
+      this._instance.localWeatherVelocity = config.localWeatherVelocity;
     }
     if (config.coverage !== undefined) {
-      this.instance.coverage = config.coverage;
+      this._instance.coverage = config.coverage;
     }
     if (config.lightShafts !== undefined && config.lightShafts !== null) {
-      this.instance.lightShafts = config.lightShafts;
+      this._instance.lightShafts = config.lightShafts;
     }
     if (config.resolutionScale !== undefined) {
-      this.instance.resolutionScale = config.resolutionScale;
+      this._instance.resolutionScale = config.resolutionScale;
     }
     if (
       config.maxIterationCount !== undefined &&
       config.maxIterationCount !== null
     ) {
-      this.instance.maxIterationCount = config.maxIterationCount;
+      this._instance.maxIterationCount = config.maxIterationCount;
     }
     if (config.minStepSize !== undefined && config.minStepSize !== null) {
-      this.instance.minStepSize = config.minStepSize;
+      this._instance.minStepSize = config.minStepSize;
     }
     if (config.maxStepSize !== undefined && config.maxStepSize !== null) {
-      this.instance.maxStepSize = config.maxStepSize;
+      this._instance.maxStepSize = config.maxStepSize;
     }
 
     // Shadow properties
     if (config.shadows !== undefined) {
-      this.instance.shadows = config.shadows;
+      this._instance.shadows = config.shadows;
     }
     if (config.shadowCascadeCount !== undefined) {
-      this.instance.shadowCascadeCount = config.shadowCascadeCount;
+      this._instance.shadowCascadeCount = config.shadowCascadeCount;
     }
     if (config.shadowMapSize !== undefined) {
-      this.instance.shadowMapSize = config.shadowMapSize;
+      this._instance.shadowMapSize = config.shadowMapSize;
     }
     if (config.shadowFarScale !== undefined) {
-      this.instance.shadowFarScale = config.shadowFarScale;
+      this._instance.shadowFarScale = config.shadowFarScale;
     }
 
     // Haze properties
     if (config.haze !== undefined) {
-      this.instance.haze = config.haze;
+      this._instance.haze = config.haze;
     }
     if (config.hazeDensityScale !== undefined) {
-      this.instance.hazeDensityScale = config.hazeDensityScale;
+      this._instance.hazeDensityScale = config.hazeDensityScale;
     }
     if (config.hazeExponent !== undefined) {
-      this.instance.hazeExponent = config.hazeExponent;
+      this._instance.hazeExponent = config.hazeExponent;
     }
     if (config.hazeScatteringCoefficient !== undefined) {
-      this.instance.hazeScatteringCoefficient =
+      this._instance.hazeScatteringCoefficient =
         config.hazeScatteringCoefficient;
     }
     if (config.hazeAbsorptionCoefficient !== undefined) {
-      this.instance.hazeAbsorptionCoefficient =
+      this._instance.hazeAbsorptionCoefficient =
         config.hazeAbsorptionCoefficient;
     }
 
     // Weather and shape properties
     if (config.localWeatherRepeat !== undefined) {
-      this.instance.localWeatherRepeat = config.localWeatherRepeat;
+      this._instance.localWeatherRepeat = config.localWeatherRepeat;
     }
     if (config.localWeatherOffset !== undefined) {
-      this.instance.localWeatherOffset = config.localWeatherOffset;
+      this._instance.localWeatherOffset = config.localWeatherOffset;
     }
     if (config.shapeRepeat !== undefined) {
-      this.instance.shapeRepeat = config.shapeRepeat;
+      this._instance.shapeRepeat = config.shapeRepeat;
     }
     if (config.shapeOffset !== undefined) {
-      this.instance.shapeOffset = config.shapeOffset;
+      this._instance.shapeOffset = config.shapeOffset;
     }
     if (config.shapeDetailRepeat !== undefined) {
-      this.instance.shapeDetailRepeat = config.shapeDetailRepeat;
+      this._instance.shapeDetailRepeat = config.shapeDetailRepeat;
     }
     if (config.shapeDetailOffset !== undefined) {
-      this.instance.shapeDetailOffset = config.shapeDetailOffset;
+      this._instance.shapeDetailOffset = config.shapeDetailOffset;
     }
     if (config.turbulenceRepeat !== undefined) {
-      this.instance.turbulenceRepeat = config.turbulenceRepeat;
+      this._instance.turbulenceRepeat = config.turbulenceRepeat;
     }
     if (config.turbulenceDisplacement !== undefined) {
-      this.instance.turbulenceDisplacement = config.turbulenceDisplacement;
+      this._instance.turbulenceDisplacement = config.turbulenceDisplacement;
     }
 
     // Scattering properties
     if (config.scatteringCoefficient !== undefined) {
-      this.instance.scatteringCoefficient = config.scatteringCoefficient;
+      this._instance.scatteringCoefficient = config.scatteringCoefficient;
     }
     if (config.absorptionCoefficient !== undefined) {
-      this.instance.absorptionCoefficient = config.absorptionCoefficient;
+      this._instance.absorptionCoefficient = config.absorptionCoefficient;
     }
     if (config.scatterAnisotropy1 !== undefined) {
-      this.instance.scatterAnisotropy1 = config.scatterAnisotropy1;
+      this._instance.scatterAnisotropy1 = config.scatterAnisotropy1;
     }
     if (config.scatterAnisotropy2 !== undefined) {
-      this.instance.scatterAnisotropy2 = config.scatterAnisotropy2;
+      this._instance.scatterAnisotropy2 = config.scatterAnisotropy2;
     }
     if (config.scatterAnisotropyMix !== undefined) {
-      this.instance.scatterAnisotropyMix = config.scatterAnisotropyMix;
+      this._instance.scatterAnisotropyMix = config.scatterAnisotropyMix;
     }
     if (config.skyLightScale !== undefined) {
-      this.instance.skyLightScale = config.skyLightScale;
+      this._instance.skyLightScale = config.skyLightScale;
     }
     if (config.groundBounceScale !== undefined) {
-      this.instance.groundBounceScale = config.groundBounceScale;
+      this._instance.groundBounceScale = config.groundBounceScale;
     }
     if (config.powderScale !== undefined) {
-      this.instance.powderScale = config.powderScale;
+      this._instance.powderScale = config.powderScale;
     }
     if (config.powderExponent !== undefined) {
-      this.instance.powderExponent = config.powderExponent;
+      this._instance.powderExponent = config.powderExponent;
     }
   }
 
   update(_time: number): void {
-    this.instance?._update();
+    this._instance?._update();
   }
 }
