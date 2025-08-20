@@ -120,4 +120,4 @@ export const addHidePaneKeyShortcut = (pane: Pane) => {
     pane.element.style.display =
       pane.element.style.display === "none" ? "block" : "none";
   });
-}
+};
