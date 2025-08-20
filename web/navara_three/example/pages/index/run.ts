@@ -359,7 +359,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       wireframe: false,
       outline_color: 0x00ff00,
       outline_width: 3,
-      outline_show: true,
+      outline_show: false,
       surface_show: true,
       cast_shadow: true,
       receive_shadow: true,
