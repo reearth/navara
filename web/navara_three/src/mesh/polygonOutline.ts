@@ -38,6 +38,9 @@ class NvLineGeometry extends LineGeometry {
     }
 
     const points = new Float32Array(positions);
+
+    // This function is used to override LineGeometry's setPositions,
+    // so we don't call super.setPositions.
     LineSegmentsGeometry.prototype.setPositions.call(this, points);
     return this;
   }
@@ -88,11 +91,6 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         lineGeometry,
       );
     }
-
-    // Store for later use
-    this.userData.hasScaleNormalAndCap = !!scale_normal_and_cap;
-
-    // this.computeLineDistances();
   }
 
   private initScaleNormalCapAttributes(
@@ -141,7 +139,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     viewEvents: EventHandler<ViewEvents>,
   ) {
     const meshMaterial = mesh.material;
-    const material = this.material as LineMaterial;
+    const material = this.material;
 
     // Set basic material properties
     material.color.set(meshMaterial.outline_color ?? 0xffffff);
@@ -163,51 +161,47 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       value: 0.0,
     };
 
-    // Add shader modification for height adjustment
-    if (this.userData.hasScaleNormalAndCap) {
-      material.onBeforeCompile = (shader) => {
-        // Add uniforms
-        shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
-        shader.uniforms.uAddExtrudedHeight =
-          material.userData.uAddExtrudedHeight;
+    material.onBeforeCompile = (shader) => {
+      // Add uniforms
+      shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
+      shader.uniforms.uAddExtrudedHeight = material.userData.uAddExtrudedHeight;
 
-        // Add attribute declaration and uniforms
-        shader.vertexShader = shader.vertexShader.replace(
-          "attribute vec3 instanceEnd;",
+      // Add attribute declaration and uniforms
+      shader.vertexShader = shader.vertexShader.replace(
+        "attribute vec3 instanceEnd;",
+        `
+        attribute vec3 instanceEnd;
+        attribute vec4 scaleNormalAndCapStart;
+        attribute vec4 scaleNormalAndCapEnd;
+        uniform vec2 uMinMaxHeight;
+        uniform float uAddExtrudedHeight;
+        ${BranchFreeTernary}
+        `,
+      );
+
+      // Apply height adjustment to instanceStart and instanceEnd
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
           `
-          attribute vec3 instanceEnd;
-          attribute vec4 scaleNormalAndCapStart;
-          attribute vec4 scaleNormalAndCapEnd;
-          uniform vec2 uMinMaxHeight;
-          uniform float uAddExtrudedHeight;
-          ${BranchFreeTernary}
-          `,
+        // Apply height adjustment to start point
+        vec3 adjustedInstanceStart = instanceStart;
+
+        adjustedInstanceStart.xyz += scaleNormalAndCapStart.xyz * nvr_branchFreeTernary(scaleNormalAndCapStart.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
+        vec4 start = modelViewMatrix * vec4( adjustedInstanceStart, 1.0 );
+        `,
+        )
+        .replace(
+          "vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );",
+          `
+        // Apply height adjustment to end point  
+        vec3 adjustedInstanceEnd = instanceEnd;
+
+        adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(scaleNormalAndCapEnd.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
+        vec4 end = modelViewMatrix * vec4( adjustedInstanceEnd, 1.0 );
+        `,
         );
-
-        // Apply height adjustment to instanceStart and instanceEnd
-        shader.vertexShader = shader.vertexShader
-          .replace(
-            "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
-            `
-          // Apply height adjustment to start point
-          vec3 adjustedInstanceStart = instanceStart;
-
-          adjustedInstanceStart.xyz += scaleNormalAndCapStart.xyz * nvr_branchFreeTernary(scaleNormalAndCapStart.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
-          vec4 start = modelViewMatrix * vec4( adjustedInstanceStart, 1.0 );
-          `,
-          )
-          .replace(
-            "vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );",
-            `
-          // Apply height adjustment to end point  
-          vec3 adjustedInstanceEnd = instanceEnd;
-
-          adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(scaleNormalAndCapEnd.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
-          vec4 end = modelViewMatrix * vec4( adjustedInstanceEnd, 1.0 );
-          `,
-          );
-      };
-    }
+    };
 
     // Apply MRT compatibility
     overrideLineMaterialForMRT(material);
@@ -221,7 +215,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       this.userData.prev = {};
     }
     const prev = this.userData.prev;
-    const lineMaterial = this.material as LineMaterial;
+    const lineMaterial = this.material;
 
     // Update color
     if (prev.color !== material.outline_color) {
@@ -246,13 +240,11 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     }
 
     // Update height values for shader-based adjustment
-    if (this.userData.hasScaleNormalAndCap) {
-      const [min, max] = material.__internal__?.min_max_heights ?? [];
-      if (prev.min !== min || prev.max !== max) {
-        lineMaterial.userData.uMinMaxHeight.value = [min, max];
-        prev.min = min;
-        prev.max = max;
-      }
+    const [min, max] = material.__internal__?.min_max_heights ?? [];
+    if (prev.min !== min || prev.max !== max) {
+      lineMaterial.userData.uMinMaxHeight.value = [min, max];
+      prev.min = min;
+      prev.max = max;
     }
   }
 
@@ -273,15 +265,12 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   }
 
   _setFeatureExtrudedHeight(height: number): void {
-    if (this.userData.hasScaleNormalAndCap) {
-      (this.material as LineMaterial).userData.uAddExtrudedHeight.value =
-        height;
-    }
+    this.material.userData.uAddExtrudedHeight.value = height;
   }
 
   // Utility method to update resolution (should be called when renderer size changes)
   updateResolution(width: number, height: number): void {
-    (this.material as LineMaterial).resolution.set(width, height);
+    this.material.resolution.set(width, height);
   }
 
   // Clean up event listeners when the object is destroyed

@@ -111,4 +111,19 @@ export const addCameraControl = (view: ThreeView, pane: Pane) => {
         roll: 0, // -180 to 180
       });
     });
+
+  pane
+    .addButton({
+      title: "Fuji view",
+    })
+    .on("click", () => {
+      view.setCamera({
+        lng: 138.7306518555,
+        lat: 35.272277832,
+        height: 30000,
+        heading: 0,
+        pitch: -70,
+        roll: 0,
+      });
+    });
 };

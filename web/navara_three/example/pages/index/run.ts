@@ -6,7 +6,7 @@ import { AxesHelper } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
-import { addDateControl } from "../../helpers/control";
+import { addDateControl, addCameraControl } from "../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
@@ -451,28 +451,28 @@ const geoLayersDef: MaterialLayerDescription[] = [
       max_zoom: 16,
     },
   },
-  // {
-  //   type: "mvt",
-  //   data: {
-  //     // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
-  //     // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/{z}/{x}/{y}.mvt",
-  //     // url: "https://assets.cms.plateau.reearth.io/assets/c7/a9681c-bf92-4496-a367-f4d2dcf35aec/13101_chiyoda-ku_pref_2023_citygml_1_op_tran_mvt_lod1/{z}/{x}/{y}.mvt",
-  //     url: "https://assets.cms.plateau.reearth.io/assets/a2/81a1a7-03b8-4cf2-bb26-19103b32e255/13_tokyo_pref_2023_citygml_1_op_urf_HeightControlDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
-  //   },
-  //   polygon: {
-  //     color: 0x00aaff,
-  //     height: 10,
-  //     extruded_height: 0,
-  //     clamp_to_ground: true,
-  //     use_ground_normals: true,
-  //     wireframe: false,
-  //     id_property: "gml_id",
-  //   },
-  //   vector_tile: {
-  //     max_zoom: 16,
-  //     layers: ["HeightControlDistrict"],
-  //   },
-  // },
+  {
+    type: "mvt",
+    data: {
+      // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/{z}/{x}/{y}.mvt",
+      // url: "https://assets.cms.plateau.reearth.io/assets/c7/a9681c-bf92-4496-a367-f4d2dcf35aec/13101_chiyoda-ku_pref_2023_citygml_1_op_tran_mvt_lod1/{z}/{x}/{y}.mvt",
+      url: "https://assets.cms.plateau.reearth.io/assets/a2/81a1a7-03b8-4cf2-bb26-19103b32e255/13_tokyo_pref_2023_citygml_1_op_urf_HeightControlDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
+    },
+    polygon: {
+      color: 0x00aaff,
+      height: 10,
+      extruded_height: 0,
+      clamp_to_ground: true,
+      use_ground_normals: true,
+      wireframe: false,
+      id_property: "gml_id",
+    },
+    vector_tile: {
+      max_zoom: 16,
+      layers: ["HeightControlDistrict"],
+    },
+  },
 ];
 
 export const run = async (view: ThreeView) => {
@@ -531,18 +531,10 @@ export const run = async (view: ThreeView) => {
   pane.element.style.width = "340px";
   pane.element.style.right = "0px";
 
+  addCameraControl(view, pane);
   addDateControl(view, pane);
 
   const materialCtrl = pane.addFolder({ title: "material" });
 
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
-
-  view.setCamera({
-    lng: 138.7306671143,
-    lat: 35.3624725342,
-    height: 50000.0,
-    heading: 0, // -180 to 180
-    pitch: -90, // -180 to 0
-    roll: 0, // -180 to 180
-  });
 };

@@ -10,7 +10,6 @@ export async function renderPolygonOutline(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
 ) {
-  // console.log(mesh.outline_geometry?.position);
   return new PolygonOutlineMesh(mesh, buf, viewEvents);
 }
 

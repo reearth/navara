@@ -334,9 +334,13 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
 
+    /// Currently, this property is supported only in GeoJSON.
     pub surface_show: Option<bool>,
+    /// Currently, this property is supported only in GeoJSON.
     pub outline_show: Option<bool>,
+    /// Currently, this property is supported only in GeoJSON.
     pub outline_color: Option<u32>,
+    /// Currently, this property is supported only in GeoJSON.
     pub outline_width: Option<f32>,
 }
 

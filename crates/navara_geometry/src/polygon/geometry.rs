@@ -157,7 +157,9 @@ fn outlines_from_hierarchy(
         let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32);
         scale_normal_cap.extend(s_n_c);
 
+        // top end index
         skip_indices.push((positions.len() / 3 + poss.len() / 3 / 2 - 1) as u32);
+        // bottom end index
         skip_indices.push((positions.len() / 3 + poss.len() / 3 - 1) as u32);
         positions.extend(poss);
 
@@ -175,7 +177,9 @@ fn outlines_from_hierarchy(
                 let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32);
                 scale_normal_cap.extend(s_n_c);
 
+                // top end index
                 skip_indices.push((positions.len() / 3 + poss.len() / 3 / 2 - 1) as u32);
+                // bottom end index
                 skip_indices.push((positions.len() / 3 + poss.len() / 3 - 1) as u32);
                 positions.extend(poss);
 

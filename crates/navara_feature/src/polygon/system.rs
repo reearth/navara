@@ -229,7 +229,6 @@ pub fn transfer_mesh(
                         outline_geometry: Some(TransferablePolygonOutlineGeometry::with_buf(
                             &mut buf,
                             polygon_result.outline,
-                            // Some(outline_geom),
                         )),
                         transform: Transform::default(),
                         feature_id: Some(entity),
