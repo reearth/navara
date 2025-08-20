@@ -212,6 +212,58 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
+pub struct TransferablePolygonOutlineGeometry {
+    #[wasm_bindgen(getter_with_clone)]
+    pub position: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub skip_indices: Option<Handle>,
+}
+
+#[wasm_bindgen]
+impl TransferablePolygonOutlineGeometry {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        position: Option<TransferableFloatAttribute>,
+        scale_normal_and_cap: Option<TransferableFloatAttribute>,
+        skip_indices: Option<Handle>,
+    ) -> Self {
+        Self {
+            position,
+            scale_normal_and_cap,
+            skip_indices,
+        }
+    }
+}
+
+impl From<TransferablePolygonOutlineGeometry>
+    for navara_feature_component::render::TransferablePolygonOutlineGeometry
+{
+    fn from(val: TransferablePolygonOutlineGeometry) -> Self {
+        navara_feature_component::render::TransferablePolygonOutlineGeometry {
+            position: val.position.map(|p| p.into()),
+            scale_normal_and_cap: val.scale_normal_and_cap.map(|p| p.into()),
+            skip_indices: val.skip_indices,
+        }
+    }
+}
+impl<'a> From<&'a navara_feature_component::render::TransferablePolygonOutlineGeometry>
+    for TransferablePolygonOutlineGeometry
+{
+    fn from(
+        val: &'a navara_feature_component::render::TransferablePolygonOutlineGeometry,
+    ) -> TransferablePolygonOutlineGeometry {
+        TransferablePolygonOutlineGeometry {
+            position: val.position.as_ref().map(|p| p.into()),
+            scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|p| p.into()),
+            skip_indices: val.skip_indices,
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
 pub struct TransferablePointGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub position: TransferableFloatAttribute,

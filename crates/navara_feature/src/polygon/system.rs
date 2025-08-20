@@ -25,7 +25,10 @@ use navara_feature_component::{
     batch::BatchId,
     batch::BatchedFeature,
     id::FeatureId,
-    render::{PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry},
+    render::{
+        PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry,
+        TransferablePolygonOutlineGeometry,
+    },
     BatchedFeatureMarker,
 };
 use navara_worker::construct_polygon_batched_feature::{
@@ -123,6 +126,7 @@ pub fn transfer_batched_mesh(
                 crs: CRS::Geocentric,
                 material,
                 geometry: geometry.clone(),
+                outline_geometry: None,
                 transform: Transform::default(),
                 feature_id: None,
                 render_info: PolygonRenderInformation {
@@ -177,6 +181,7 @@ pub fn transfer_mesh(
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polygon {
         let geometry_hierarchy =
             Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
+
         let (extent_opt, polygon_result_opt) = construct_polygon_feature(
             geometry_hierarchy,
             &geometry.crs,
@@ -184,9 +189,17 @@ pub fn transfer_mesh(
             &mut polygon_resource,
         );
         if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
+            let aabb = Aabb::from_extent_f32(extent, 0., 0.);
+            let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
+
             let mut material = material.clone();
             material.internal = Some(PolygonInternalMaterial {
-                min_max_heights: vec![0., 0.],
+                min_max_heights: calc_min_max_height(
+                    material.height,
+                    material.extruded_height.unwrap_or(0.),
+                    material.clamp_to_ground,
+                    -aabb.center.distance(surface_point.unwrap()),
+                ),
             });
 
             let pos_cnt = polygon_result.geometry.attributes.position.data.len()
@@ -197,9 +210,6 @@ pub fn transfer_mesh(
             }
             polygon_result.geometry.attributes.batch_id_and_sel =
                 Some(FloatAttribute::new(batch_id_vec, 2));
-
-            let aabb = Aabb::from_extent_f32(extent, 0., 0.);
-            let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
 
             let clamp_to_ground = material.clamp_to_ground;
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
@@ -216,6 +226,10 @@ pub fn transfer_mesh(
                             &mut buf,
                             polygon_result.geometry,
                         ),
+                        outline_geometry: Some(TransferablePolygonOutlineGeometry::with_buf(
+                            &mut buf,
+                            polygon_result.outline,
+                        )),
                         transform: Transform::default(),
                         feature_id: Some(entity),
                         render_info: PolygonRenderInformation {

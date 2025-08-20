@@ -5,8 +5,8 @@ use crate::{helpers::vec::unpack_flatten_vec3, FloatAttribute};
 
 use super::{
     helpers::{
-        compute_wall_geometry, create_geometry_from_positions, polygons_from_hierarchy,
-        project_to_2d, scale_to_geodetic_height_extruded,
+        compute_outline_positions, compute_wall_geometry, create_geometry_from_positions,
+        polygons_from_hierarchy, project_to_2d, scale_to_geodetic_height_extruded,
     },
     types::Polygon,
     HierarchyVec3, PolygonGeometryAttributes, PolygonResource, WindingOrder,
@@ -46,6 +46,14 @@ impl Default for PolygonGeometryOptions {
 
 pub struct PolygonGeometryResult {
     pub geometry: PolygonGeometry,
+    pub outline: Option<PolygonOutlineGeometry>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PolygonOutlineGeometry {
+    pub position: FloatAttribute,
+    pub scale_normal_and_cap: FloatAttribute,
+    pub skip_indices: Vec<u32>, // [a,b ..] segments (a, a+1), (b, b+1) will be skipped
 }
 
 /// Creates a flat polygon geometry from a polygon hierarchy in Cartesian coordinates.
@@ -115,7 +123,81 @@ pub fn create_flat_polygon_geometry(
             attributes: combined_attributes,
             indices: combined_indices,
         },
+        outline: None,
     })
+}
+
+fn create_side_outline(
+    ring: &[Vec3],
+    positions: &mut Vec<f32>,
+    skip_indices: &mut Vec<u32>,
+    scale_normal_cap: &mut Vec<f32>,
+) {
+    for p in ring {
+        let mut side_seg = vec![p.x, p.y, p.z, p.x, p.y, p.z];
+        let s_n_c = scale_to_geodetic_height_extruded(&mut side_seg, WGS84_32);
+        scale_normal_cap.extend(s_n_c);
+
+        positions.extend(side_seg);
+        skip_indices.push((positions.len() / 3 - 1) as u32);
+    }
+}
+
+fn outlines_from_hierarchy(
+    hierarchies: &[HierarchyVec3],
+    granularity: f32,
+) -> PolygonOutlineGeometry {
+    let mut positions = vec![];
+    let mut skip_indices = vec![];
+    let mut scale_normal_cap = vec![];
+
+    for hierarchy in hierarchies {
+        let outer_ring = &(hierarchy.outer_ring);
+        let mut poss = compute_outline_positions(WGS84_32, outer_ring, granularity);
+        let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32);
+        scale_normal_cap.extend(s_n_c);
+
+        // top end index
+        skip_indices.push((positions.len() / 3 + poss.len() / 3 / 2 - 1) as u32);
+        // bottom end index
+        skip_indices.push((positions.len() / 3 + poss.len() / 3 - 1) as u32);
+        positions.extend(poss);
+
+        create_side_outline(
+            outer_ring,
+            &mut positions,
+            &mut skip_indices,
+            &mut scale_normal_cap,
+        );
+
+        if let Some(holes_src) = &(hierarchy.holes) {
+            for hole_src in holes_src {
+                let mut poss =
+                    compute_outline_positions(WGS84_32, &hole_src.outer_ring, granularity);
+                let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32);
+                scale_normal_cap.extend(s_n_c);
+
+                // top end index
+                skip_indices.push((positions.len() / 3 + poss.len() / 3 / 2 - 1) as u32);
+                // bottom end index
+                skip_indices.push((positions.len() / 3 + poss.len() / 3 - 1) as u32);
+                positions.extend(poss);
+
+                create_side_outline(
+                    &(hole_src.outer_ring),
+                    &mut positions,
+                    &mut skip_indices,
+                    &mut scale_normal_cap,
+                );
+            }
+        }
+    }
+
+    PolygonOutlineGeometry {
+        position: FloatAttribute::new(positions, 3),
+        scale_normal_and_cap: FloatAttribute::new(scale_normal_cap, 4),
+        skip_indices,
+    }
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/baaabaa49058067c855ad050be73a9cdfe9b6ac7/packages/engine/Source/Core/PolygonGeometry.js#L1278
@@ -138,6 +220,8 @@ pub fn create_polygon_geometry(
     if hierarchies.is_empty() {
         return None;
     }
+
+    let outline_geometry = outlines_from_hierarchy(&hierarchies, granularity);
 
     let mut geometries = vec![];
 
@@ -218,6 +302,7 @@ pub fn create_polygon_geometry(
             attributes: combined_attributes,
             indices,
         },
+        outline: Some(outline_geometry),
     })
 }
 

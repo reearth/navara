@@ -6,7 +6,7 @@ import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
-import { addDateControl } from "../../helpers/control";
+import { addDateControl, addCameraControl } from "../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
@@ -357,6 +357,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clamp_to_ground: true,
       use_ground_normals: true,
       wireframe: false,
+      outline_color: 0x00ff00,
+      outline_width: 3,
+      outline_show: false,
+      surface_show: true,
       cast_shadow: true,
       receive_shadow: true,
     },
@@ -531,6 +535,7 @@ export const run = async (view: ThreeView) => {
   pane.element.style.width = "340px";
   pane.element.style.right = "0px";
 
+  addCameraControl(view, pane);
   addDateControl(view, pane);
 
   const materialCtrl = pane.addFolder({ title: "material" });

@@ -32,6 +32,10 @@ import { renderPoint, processPointChanged } from "./features/point";
 import { renderPolygon, processPolygonChanged } from "./features/polygon";
 import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
+import {
+  renderPolygonOutline,
+  processPolygonOutlineChanged,
+} from "./features/polygonOutline";
 
 import { setTransform, type BufferLoader, type FeatureHandler } from ".";
 
@@ -147,6 +151,19 @@ export async function processRenderableFeatureAdded(
     });
   }
 
+  if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
+    const outline = await renderPolygonOutline(polygon, buf, viewEvents);
+    outline.renderOrder = FEATURE_RENDER_ORDER;
+    scenes.mrt.add(outline);
+
+    obj.userData.outlineObj = outline;
+
+    obj.addEventListener("removedFromWorld", () => {
+      obj.userData.outlineObj.clear();
+      obj.userData.outlineObj.removeFromParent();
+    });
+  }
+
   handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
@@ -205,6 +222,10 @@ export async function processRenderableFeatureChanged(
   }
   if (obj instanceof PolygonMesh && polygon) {
     processPolygonChanged(obj, polygon, active, tileHandle);
+
+    if (obj.userData.outlineObj) {
+      processPolygonOutlineChanged(obj.userData.outlineObj, polygon, active);
+    }
   }
 
   // Handle a draped mesh

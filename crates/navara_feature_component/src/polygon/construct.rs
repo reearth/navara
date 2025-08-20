@@ -1,3 +1,5 @@
+use core::f32;
+
 use navara_core::{Extent, Radians, CRS, WGS84_32};
 use navara_geometry::{
     create_flat_polygon_geometry, create_polygon_geometry, Hierarchy, HierarchyVec3,
@@ -18,7 +20,7 @@ pub fn construct_polygon_feature(
         expected_winding_order: geometry_hierarchy.expected_winding_order,
         ..Default::default()
     };
-    let ring = geometry_hierarchy.outer_ring;
+    let ring: Vec<f32> = geometry_hierarchy.outer_ring;
     for i in 0..(ring.len() / 3) {
         let i = i * 3;
         let v = Vec3::new(ring[i], ring[i + 1], ring[i + 2]);

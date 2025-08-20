@@ -77,6 +77,11 @@ export const addCtrlPanel = (
     center: { x: 0, y: 0 },
     padding: { x: 0, y: 0 },
     transparent: false,
+
+    outline_color: "#ffffff",
+    outline_show: true,
+    outline_width: 1,
+    surface_show: true,
   };
 
   pane
@@ -284,6 +289,25 @@ export const addCtrlPanel = (
         material.transparent = paneParams.transparent;
       }
 
+      if ("outline_color" in material) {
+        material.outline_color = parseInt(
+          paneParams.outline_color.replace("#", ""),
+          16,
+        );
+      }
+
+      if ("outline_show" in material) {
+        material.outline_show = paneParams.outline_show;
+      }
+
+      if ("outline_width" in material) {
+        material.outline_width = paneParams.outline_width;
+      }
+
+      if ("surface_show" in material) {
+        material.surface_show = paneParams.surface_show;
+      }
+
       view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
@@ -457,6 +481,33 @@ function createParamCtrl(
       f.addBinding(paneParams, "transparent").on("change", changeFunc);
     }
 
+    if ("outline_color" in material) {
+      paneParams.outline_color =
+        "#" + material.outline_color.toString(16).padStart(6, "0");
+      f.addBinding(paneParams, "outline_color").on("change", (ev) => {
+        if (ev.last) {
+          changeFunc();
+        }
+      });
+    }
+
+    if ("outline_show" in material) {
+      paneParams.outline_show = material.outline_show;
+      f.addBinding(paneParams, "outline_show").on("change", changeFunc);
+    }
+
+    if ("outline_width" in material) {
+      paneParams.outline_width = material.outline_width;
+      f.addBinding(paneParams, "outline_width", { min: 0, max: 20 }).on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("surface_show" in material) {
+      paneParams.surface_show = material.surface_show;
+      f.addBinding(paneParams, "surface_show").on("change", changeFunc);
+    }
     return f;
   }
 

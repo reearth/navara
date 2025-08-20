@@ -289,6 +289,44 @@ pub fn compute_wall_geometry(
     (edge_positions, indices)
 }
 
+pub fn compute_outline_positions(
+    ellipsoid: Ellipsoid<FloatType>,
+    positions: &[Vec3],
+    granularity: FloatType,
+) -> Vec<f32> {
+    let length = positions.len();
+    let min_distance = chord_length(granularity, ellipsoid.semi_major_axis());
+
+    let mut edge_positions = vec![];
+
+    for i in 0..length {
+        let p1 = positions[i];
+        let p2 = positions[(i + 1) % length];
+
+        // For geodesic arc type
+        let subdivided_positions = subdivide_line(p1, p2, min_distance);
+
+        for idx in 0..subdivided_positions.len() / 3 {
+            let i = idx * 3;
+            let x = subdivided_positions[i];
+            let y = subdivided_positions[i + 1];
+            let z = subdivided_positions[i + 2];
+
+            edge_positions.push(x);
+            edge_positions.push(y);
+            edge_positions.push(z);
+        }
+    }
+
+    edge_positions.push(edge_positions[0]);
+    edge_positions.push(edge_positions[1]);
+    edge_positions.push(edge_positions[2]);
+
+    edge_positions.extend_from_within(..);
+
+    edge_positions
+}
+
 pub fn calculate_wall_indices(top_bottom_positions: &[FloatType]) -> Vec<u32> {
     let length = top_bottom_positions.len() / 6;
     let mut indices = vec![];

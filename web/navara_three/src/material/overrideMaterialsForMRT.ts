@@ -2,6 +2,7 @@
 
 import { packing } from "@takram/three-geospatial/shaders";
 import { ShaderLib, ShaderMaterial, type ShaderLibShader } from "three";
+import { LineMaterial } from "three-stdlib";
 
 import { createReplacer } from "../utils";
 
@@ -270,4 +271,64 @@ export function overrideShaderMaterialForMRT(
   normalVariableName?: string,
 ) {
   injectGBufferToShaderMaterial(material, normalVariableName);
+}
+
+// LineMaterial MRT Support following injectGBufferToSpriteMaterial pattern
+function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
+  if (lineMaterial[SETUP] === true) {
+    return lineMaterial;
+  }
+
+  // Check if this is actually a LineMaterial from three-stdlib
+  if (
+    !lineMaterial.fragmentShader ||
+    !lineMaterial.fragmentShader.includes("vLineDistance")
+  ) {
+    return lineMaterial;
+  }
+
+  // LineMaterial already has proper vertex shader setup, so we only modify fragment shader
+
+  lineMaterial.fragmentShader = /* glsl */ `
+    layout(location = 1) out vec4 outputBuffer1;
+
+    ${packing}
+
+    ${
+      createReplacer(lineMaterial.fragmentShader)
+        .replace(
+          "void main() {",
+          /* glsl */ `
+          void main() {
+            // Calculate screen-space normal for Line2 MRT compatibility
+            vec3 fdx = dFdx(gl_FragCoord.xyz);
+            vec3 fdy = dFdy(gl_FragCoord.xyz);
+            vec3 normal = normalize(cross(fdx, fdy));
+            
+            // Ensure normal faces camera (positive Z in screen space)
+            if (normal.z < 0.0) normal = -normal;
+        `,
+        )
+        .replace(
+          /}\s*$/, // Assume the last curly brace is of main()
+          /* glsl */ `
+          outputBuffer1 = vec4(
+            packNormalToVec2(normal),
+            0.0,
+            0.0
+          );
+        }
+      `,
+        ).source
+    }
+  `;
+
+  lineMaterial[SETUP] = true;
+
+  return lineMaterial;
+}
+
+// Enhanced overrideShaderMaterialForMRT that detects and handles LineMaterial
+export function overrideLineMaterialForMRT(material: LineMaterial): void {
+  injectGBufferToLineMaterial(material);
 }

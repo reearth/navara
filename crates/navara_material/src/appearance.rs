@@ -262,6 +262,11 @@ pub struct PolygonMaterial {
     pub wireframe: bool,
     pub internal: Option<PolygonInternalMaterial>,
     pub id_property: String,
+
+    pub surface_show: bool,
+    pub outline_show: bool,
+    pub outline_color: u32,
+    pub outline_width: f32,
 }
 
 impl Default for PolygonMaterial {
@@ -278,6 +283,10 @@ impl Default for PolygonMaterial {
             wireframe: false,
             internal: None,
             id_property: "".to_string(),
+            surface_show: true,
+            outline_show: true,
+            outline_color: 0xffffff,
+            outline_width: 1.,
         }
     }
 }
