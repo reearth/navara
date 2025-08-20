@@ -127,3 +127,12 @@ export const addCameraControl = (view: ThreeView, pane: Pane) => {
       });
     });
 };
+
+export const addHidePaneKeyShortcut = (pane: Pane) => {
+  // Hide the pane for taking a screenshot.
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    pane.element.style.display =
+      pane.element.style.display === "none" ? "block" : "none";
+  });
+};

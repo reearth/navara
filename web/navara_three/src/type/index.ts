@@ -26,6 +26,7 @@ import type {
   SkyLightProbeLayerConfig,
   AmbientLightLayerConfig,
   LightProbeLayerConfig,
+  TubeMeshLayerConfig,
 } from "../layers";
 import type {
   AerialPerspectiveConfig,
@@ -65,6 +66,7 @@ export type MeshLayerDeclarationDescription =
   | BoxMeshLayerConfig
   | SphereMeshLayerConfig
   | CylinderMeshLayerConfig
+  | TubeMeshLayerConfig
   | PlaneMeshLayerConfig
   | GLTFModelLayerConfig
   | AxesHelperLayerConfig

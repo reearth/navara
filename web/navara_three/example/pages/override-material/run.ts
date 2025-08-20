@@ -2,12 +2,14 @@ import ThreeView, {
   type LayerDescription,
   type Layer,
   JAPAN_GSI_ELEVATION_DECODER,
+  LightProbeLayer,
 } from "@navara/three";
-import { Color } from "three";
+import { Color, SphericalHarmonics3 } from "three";
 import { FolderApi, Pane } from "tweakpane";
 
 import { TERRAIN_URLS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
+import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -28,6 +30,7 @@ export const run = async (view: ThreeView) => {
     sun: {
       intensity: 1,
       castShadow: true,
+      shadowIntensity: 4,
     },
   });
 
@@ -68,6 +71,16 @@ export const run = async (view: ThreeView) => {
       },
     });
   }
+
+  const sh = new SphericalHarmonics3();
+  sh.coefficients = SH_COEFFICIENTS.satellite;
+  view.addLayer<LightProbeLayer>({
+    type: "light",
+    lightProbe: {
+      sh: sh,
+      intensity: 1,
+    },
+  });
 
   addDateControl(view, pane);
   addGeoJSONLayer(pane, view);
@@ -608,6 +621,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
       roughness: 1,
       cast_shadow: true,
       receive_shadow: true,
+      height: -50,
     },
   };
 

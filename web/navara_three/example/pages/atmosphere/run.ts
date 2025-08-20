@@ -23,14 +23,17 @@ import type {
 } from "../../../src/layers/effect";
 import type { LightProbeLayer } from "../../../src/layers/light/LightProbeLayer";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
-import { addCameraControl, addDateControl } from "../../helpers/control";
+import {
+  addCameraControl,
+  addDateControl,
+  addHidePaneKeyShortcut,
+} from "../../helpers/control";
 import {
   addFieldsToFolder,
   type FieldsApis,
   type FolderFields,
 } from "../../helpers/panel";
-
-import { SH_COEFFICIENTS } from "./consts";
+import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 type DefaultEffects = ReturnType<ThreeView["addDefaultEffectLayers"]>;
 
@@ -52,6 +55,12 @@ export const run = async (view: ThreeView) => {
   const sunLightLayer = defaultLayers.sun;
   const skyLightProbeLayer = defaultLayers.skyLightProbe;
 
+  sunLightLayer.update({
+    sun: {
+      castShadow: true,
+    },
+  });
+
   // Add an additional ambient light layer
   const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLayer({
     type: "light",
@@ -71,6 +80,8 @@ export const run = async (view: ThreeView) => {
       max_zoom: 15,
       min_zoom: 6,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+      cast_shadow: true,
+      receive_shadow: true,
     },
   });
 
@@ -85,6 +96,9 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
+      cast_shadow: true,
+      receive_shadow: true,
+      height: -50,
     },
   });
 
@@ -99,6 +113,9 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
+      cast_shadow: true,
+      receive_shadow: true,
+      height: -50,
     },
   });
 
@@ -108,6 +125,8 @@ export const run = async (view: ThreeView) => {
   });
   pane.element.style.maxHeight = "98vh";
   pane.element.style.overflow = "scroll";
+
+  addHidePaneKeyShortcut(pane);
 
   addCameraControl(view, pane);
   const tileBinding = addTileControl(view, pane);
