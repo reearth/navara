@@ -282,8 +282,8 @@ const addTestModelForNormal = (view: ThreeView) => {
     type: "mesh",
     gltfModel: {
       url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
-      scale: { x: 300000, y: 300000, z: 300000 },
     },
+    scale: { x: 300000, y: 300000, z: 300000 },
     position: { x: pos.x, y: pos.y, z: pos.z },
   });
 
@@ -331,8 +331,8 @@ const addTestModelForTerrainHeight = (view: ThreeView) => {
     type: "mesh",
     gltfModel: {
       url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
-      scale: 200,
     },
+    scale: new Vector3().setScalar(200),
     position: pos,
   });
 
@@ -789,7 +789,7 @@ const createPolylineMesh = (view: ThreeView) => {
   gPolylineLayer = view.addLayer<TubeMeshLayer>({
     type: "mesh",
     tube: {
-      points: points,
+      points,
       tubularSegments: 64,
       radius: 1,
       radialSegments: 16,

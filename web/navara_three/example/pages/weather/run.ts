@@ -10,7 +10,7 @@ import { Pane } from "tweakpane";
 
 import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
-import { addDateControl } from "../../helpers/control";
+import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 export const run = async (view: ThreeView) => {
@@ -47,11 +47,16 @@ export const run = async (view: ThreeView) => {
 
   cloudsLayer.update({
     clouds: {
+      qualityPreset: "high",
       localWeatherVelocity: new Vector2(0.005, 0.001),
-      coverage: 0.35,
-      absorptionCoefficient: 15,
+      coverage: 0.45,
+      absorptionCoefficient: 5,
       lightShafts: true,
       shadows: true,
+      haze: true,
+      hazeDensityScale: 0.0003,
+      hazeExponent: 0.002,
+      hazeAbsorptionCoefficient: 1.5,
     },
   });
 
@@ -91,6 +96,7 @@ export const run = async (view: ThreeView) => {
       roughness: 1,
       cast_shadow: true,
       receive_shadow: true,
+      height: -50,
     },
   });
 
@@ -105,6 +111,7 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
+      height: -50,
     },
   });
 
@@ -112,6 +119,8 @@ export const run = async (view: ThreeView) => {
     title: "Parameters",
     expanded: true,
   });
+
+  addHidePaneKeyShortcut(pane);
 
   addDateControl(view, pane);
   addCameraControl(view, pane);

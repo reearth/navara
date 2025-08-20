@@ -198,13 +198,13 @@ export type ViewEvents = {
 };
 
 export default class ThreeView<
-  CustomLayerDescriptions extends Record<string, unknown> = Record<
-    string,
-    unknown
-  >,
-  LayerDescription extends ActualLayerDescription | CustomLayerDescriptions =
-    | ActualLayerDescription
-    | CustomLayerDescriptions,
+  CustomLayerDescriptions extends
+    | Record<string, unknown>
+    | undefined = undefined,
+  LayerDescription extends
+    ActualLayerDescription = CustomLayerDescriptions extends undefined
+    ? ActualLayerDescription
+    : ActualLayerDescription | CustomLayerDescriptions,
 > extends EventHandler<ViewEvents> {
   camera: ThreeViewCamera;
   renderer: WebGLRenderer;
