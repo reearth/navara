@@ -37,6 +37,7 @@ import type {
   MRTPassConfig,
   SMAAConfig,
   SSAOConfig,
+  SSRConfig,
   ToneMappingConfig,
   TransparentPassConfig,
 } from "../layers/effect";
@@ -87,6 +88,7 @@ export type EffectLayerDeclarationDescription =
   | MRTPassConfig
   | SMAAConfig
   | SSAOConfig
+  | SSRConfig
   | ToneMappingConfig
   | TransparentPassConfig;
 

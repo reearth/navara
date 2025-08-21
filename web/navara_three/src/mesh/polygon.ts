@@ -357,6 +357,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.receiveShadow = !!material.receive_shadow;
     }
 
+    if (prev.reflectivity !== material.reflectivity) {
+      const next = material.reflectivity ?? 0;
+      this.material.reflectivity = next;
+      prev.reflectivity = next;
+    }
+
     const [min, max] = material.__internal__?.min_max_heights ?? [];
     if (prev.min !== min || prev.max !== max) {
       this.material.userData.uMinMaxHeight.value = [min, max];

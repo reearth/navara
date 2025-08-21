@@ -6,5 +6,6 @@ export * from "./LensFlareEffectLayer";
 export * from "./MRTPassEffectLayer";
 export * from "./SMAAEffectLayer";
 export * from "./SSAOEffectLayer";
+export * from "./SSREffectLayer";
 export * from "./ToneMappingEffectLayer";
 export * from "./TransparentPassEffectLayer";

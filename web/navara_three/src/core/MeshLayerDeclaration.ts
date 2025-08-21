@@ -25,7 +25,7 @@ export type MeshLayerUpdate = Pick<
 > &
   LayerDeclarationConfigUpdate;
 
-type PassKey = keyof Pick<Scenes, "opaque" | "transparent">;
+type PassKey = keyof Pick<Scenes, "opaque" | "transparent" | "mrt">;
 
 export type MeshBaseInstance<Instance extends object = object> =
   Instance extends Object3D
