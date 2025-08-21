@@ -385,6 +385,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       const uvT = m.userData.uvTransform;
       shader.uniforms.uOffset = { value: uvT.offset };
       shader.uniforms.uScale = { value: uvT.scale };
+      shader.uniforms.reflectivity = { value: 0 };
 
       shader.uniforms.uShows = m.userData.shows;
       shader.uniforms.uPickable = m.userData.uPickable;
