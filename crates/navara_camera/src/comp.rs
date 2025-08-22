@@ -250,6 +250,9 @@ pub struct Orbit {
     pub local_forward: Vec3,
     pub local_position: Vec3,
     pub tilting: bool,
+    // Fixed rotation axis and pivot for consistent rotation
+    pub fixed_rotation_axis: Option<Vec3>,
+    pub fixed_rotation_pivot: Option<Vec3>,
 }
 
 impl Default for Orbit {
@@ -271,6 +274,8 @@ impl Default for Orbit {
             horizontal_rotation_axis: Vec3::Z,
             pivot: Vec3::ZERO,
             tilting: false,
+            fixed_rotation_axis: None,
+            fixed_rotation_pivot: None,
         }
     }
 }

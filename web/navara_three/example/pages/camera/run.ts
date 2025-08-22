@@ -3,7 +3,7 @@ import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { LLE } from "@navara/three_api";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
-
+import { addDateControl, addCameraControl } from "../../helpers/control";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 
 const gCameraParams = {
@@ -80,6 +80,9 @@ export const run = async (view: ThreeView) => {
     title: "Parameters",
     expanded: true,
   });
+
+  addDateControl(view, pane);
+  addCameraControl(view, pane);
 
   addChangeCameraOption(pane, view);
   addMoveCameraOption(pane, view);
