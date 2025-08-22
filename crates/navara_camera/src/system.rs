@@ -393,6 +393,20 @@ fn get_fixed_rotation_axis_and_pivot(
     }
 }
 
+/// Compute the signed angle (in radians) to rotate `v_from` onto `v_to` around a given `axis`.
+///
+/// The angle is positive if the rotation from `v_from` to `v_to` follows the right-hand rule
+/// around `axis`, and negative otherwise. Both input vectors and the axis are normalized
+/// internally. The result is in the range [-π, π].
+fn signed_angle_around(v_from: Vec3, v_to: Vec3, axis: Vec3) -> f32 {
+    let from_n = v_from.normalize_or_zero();
+    let to_n = v_to.normalize_or_zero();
+    let ax_n = axis.normalize_or_zero();
+    let s = from_n.cross(to_n).dot(ax_n);
+    let c = from_n.dot(to_n).clamp(-1.0, 1.0);
+    s.atan2(c)
+}
+
 fn rotate_around_axis(
     window: &Window,
     transform: &mut Transform,
@@ -401,20 +415,25 @@ fn rotate_around_axis(
     axis: &Option<Vec3>,
     angle: &FloatType,
 ) {
+    if angle.abs() < EPSILON6 {
+        return;
+    }
+
     // If a rotation axis is specified, rotate around that axis with the Vec3::ZERO as the pivot.
     if let Some(axis) = axis {
-        let rotation = Quat::from_axis_angle(axis.normalize_or_zero(), *angle);
+        let a = axis.normalize_or_zero();
+        if a.length_squared() == 0.0 {
+            return;
+        }
 
-        let position = transform.translation;
-        transform.translation = rotation * position;
-        transform.rotation = rotation * transform.rotation;
+        let rotation = Quat::from_axis_angle(a, *angle);
+
+        transform.translation = rotation * transform.translation;
+        transform.rotation = (rotation * transform.rotation).normalize();
 
         orbit.tilt_quat = rotation;
         orbit.tilting = true;
         orbit.update_horizontal_rotation_axis_on_tilt(transform);
-
-        let world = orbit.get_default_world_quat();
-        orbit.set_quat(transform, world, Vec3::ZERO, false);
 
         return;
     }
@@ -422,29 +441,52 @@ fn rotate_around_axis(
     // If no rotation axis is specified, obtain the intersection of the screen center and the ground surface as the pivot,
     // and use the surface normal at the intersection point as the rotation axis.
     let (axis, pivot_point) = get_fixed_rotation_axis_and_pivot(window, transform, frustum, orbit);
+    if axis.length_squared() == 0.0 {
+        return;
+    }
 
     let rotation = Quat::from_axis_angle(axis, *angle);
+    let old_pos = transform.translation;
+    let offset = old_pos - pivot_point;
 
-    // Rotate around the pivot point
-    let camera_position = transform.translation;
-    let offset_from_pivot = camera_position - pivot_point;
-    let rotated_offset = rotation * offset_from_pivot;
-    let new_position = pivot_point + rotated_offset;
+    // Check if camera is nearly on the rotation axis (singular case)
+    let is_singular =
+        offset.length_squared() == 0.0 || axis.dot(offset.normalize_or_zero()).abs() > 0.9999;
 
-    transform.translation = new_position;
+    // Update position
+    transform.translation = pivot_point + rotation * offset;
 
-    let fwd: navara_math::RawVec3 = (pivot_point - new_position).normalize_or_zero();
+    if is_singular {
+        // Singular case: just rotate orientation
+        transform.rotation = (rotation * transform.rotation).normalize();
+    } else {
+        // Normal case: look at pivot point while preserving roll
+        let old_forward = (pivot_point - old_pos).normalize_or_zero();
+        let old_up = transform.up().as_vec3();
 
-    // Use a stable up vector - the surface normal at the pivot point
-    let stable_up = pivot_point.normalize_or_zero();
-    transform.look_to(fwd, stable_up);
+        // Project `axis` onto the plane orthogonal to `old_forward` and normalize it.
+        // (i.e. the component of `axis` perpendicular to the viewing direction,
+        //      used as a stable reference "up" vector relative to the forward direction)
+        let up_ref = (axis - old_forward * old_forward.dot(axis)).normalize_or_zero();
+        let roll = if up_ref.length_squared() > EPSILON6 {
+            signed_angle_around(up_ref, old_up, old_forward)
+        } else {
+            0.0
+        };
+
+        // Look at pivot with roll compensation
+        let new_forward = (pivot_point - transform.translation).normalize_or_zero();
+        transform.look_to(new_forward, axis);
+
+        if roll.abs() > EPSILON6 {
+            let roll_rotation = Quat::from_axis_angle(new_forward, roll);
+            transform.rotation = (roll_rotation * transform.rotation).normalize();
+        }
+    }
 
     orbit.tilt_quat = rotation;
     orbit.tilting = true;
     orbit.update_horizontal_rotation_axis_on_tilt(transform);
-
-    let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false);
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
