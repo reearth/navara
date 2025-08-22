@@ -4,6 +4,7 @@ import { Pane } from "tweakpane";
 import type { SSREffectLayer } from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
+import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 import { type ReflectiveBoxLayerConfig } from "./layers";
 
@@ -70,7 +71,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   });
 
   // Add water polygons using GeoJSON with reflection
-  view.addLayer({
+  const polygonLayer = view.addLayer({
     type: "geojson",
     data: {
       type: "Feature",
@@ -95,6 +96,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
       use_ground_normals: true,
       wireframe: false,
       reflectivity: 0.5,
+      roughness: 0.2,
       receive_shadow: true,
       outline_show: false,
     },
@@ -110,117 +112,253 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   addDateControl(view, pane);
 
   // SSR controls
-  const ssrFolder = pane.addFolder({ title: "SSR Settings" });
+  addSSRControls(ssrLayer, pane);
 
-  ssrFolder
-    .addBinding({ visible: ssrLayer.visible }, "visible")
-    .on("change", (ev) => {
-      ssrLayer.visible = ev.value;
-    });
+  // Water polygon controls
+  addWaterControls(polygonLayer, pane);
+};
 
+const addSSRControls = (
+  ssrLayer: ReturnType<typeof ThreeView.prototype.addLayer<SSREffectLayer>>,
+  pane: Pane,
+) => {
   const ssrParams = {
-    resolutionScale: ssrLayer.ref.raw?.resolutionScale,
-    iterations: ssrLayer.ref.raw?.iterations,
-    binarySearchIterations: ssrLayer.ref.raw?.binarySearchIterations,
-    pixelZSize: ssrLayer.ref.raw?.pixelZSize,
-    pixelStride: ssrLayer.ref.raw?.pixelStride,
-    pixelStrideZCutoff: ssrLayer.ref.raw?.pixelStrideZCutoff,
-    maxRayDistance: ssrLayer.ref.raw?.maxRayDistance,
-    screenEdgeFadeStart: ssrLayer.ref.raw?.screenEdgeFadeStart,
-    eyeFadeStart: ssrLayer.ref.raw?.eyeFadeStart,
-    eyeFadeEnd: ssrLayer.ref.raw?.eyeFadeEnd,
-    jitter: ssrLayer.ref.raw?.jitter,
-    roughness: ssrLayer.ref.raw?.roughness,
+    visible: ssrLayer.visible,
+    resolutionScale: ssrLayer.ref.raw?.resolutionScale ?? 0.5,
+    iterations: ssrLayer.ref.raw?.iterations ?? 16,
+    binarySearchIterations: ssrLayer.ref.raw?.binarySearchIterations ?? 4,
+    pixelZSize: ssrLayer.ref.raw?.pixelZSize ?? 0.1,
+    pixelStride: ssrLayer.ref.raw?.pixelStride ?? 16,
+    pixelStrideZCutoff: ssrLayer.ref.raw?.pixelStrideZCutoff ?? 10,
+    maxRayDistance: ssrLayer.ref.raw?.maxRayDistance ?? 200,
+    screenEdgeFadeStart: ssrLayer.ref.raw?.screenEdgeFadeStart ?? 0.9,
+    eyeFadeStart: ssrLayer.ref.raw?.eyeFadeStart ?? 0.4,
+    eyeFadeEnd: ssrLayer.ref.raw?.eyeFadeEnd ?? 0.8,
+    jitter: ssrLayer.ref.raw?.jitter ?? 0,
+    roughness: ssrLayer.ref.raw?.roughness ?? 0.1,
+    useConeTracing: ssrLayer.ref.raw?.useConeTracing ?? false,
+    coneTracingFadeStart: ssrLayer.ref.raw?.coneTracingFadeStart ?? 0,
+    coneTracingFadeEnd: ssrLayer.ref.raw?.coneTracingFadeEnd ?? 0,
+    coneTracingMaxDistance: ssrLayer.ref.raw?.coneTracingMaxDistance ?? 0,
+    coneTracingIteration: ssrLayer.ref.raw?.coneTracingIteration ?? 0,
   };
 
-  ssrFolder
-    .addBinding(ssrParams, "resolutionScale", { min: 0.1, max: 1, step: 0.1 })
-    .on("change", (ev) => {
-      ssrParams.resolutionScale = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
+  const fields: FolderFields<typeof ssrParams> = [
+    {
+      name: "visible",
+      onChange: (v) => {
+        ssrLayer.visible = v.value;
+      },
+    },
+    {
+      name: "resolutionScale",
+      params: { min: 0.1, max: 1, step: 0.1 },
+      onChange: (v) => {
+        ssrParams.resolutionScale = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "iterations",
+      params: { min: 1, step: 1 },
+      onChange: (v) => {
+        ssrParams.iterations = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "binarySearchIterations",
+      params: { min: 0, step: 1 },
+      onChange: (v) => {
+        ssrParams.binarySearchIterations = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "pixelZSize",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.pixelZSize = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "pixelStride",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.pixelStride = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "pixelStrideZCutoff",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.pixelStrideZCutoff = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "maxRayDistance",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.maxRayDistance = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "screenEdgeFadeStart",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.screenEdgeFadeStart = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "eyeFadeStart",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.eyeFadeStart = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "eyeFadeEnd",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.eyeFadeEnd = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "jitter",
+      params: { min: 0, max: 1 },
+      onChange: (v) => {
+        ssrParams.jitter = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "roughness",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.roughness = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "useConeTracing",
+      onChange: (v) => {
+        ssrParams.useConeTracing = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "coneTracingFadeStart",
+      params: { min: 0, max: 1 },
+      onChange: (v) => {
+        ssrParams.coneTracingFadeStart = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "coneTracingFadeEnd",
+      params: { min: 0, max: 1 },
+      onChange: (v) => {
+        ssrParams.coneTracingFadeEnd = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "coneTracingMaxDistance",
+      params: { min: 0 },
+      onChange: (v) => {
+        ssrParams.coneTracingMaxDistance = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "coneTracingIteration",
+      params: { min: 0, step: 1 },
+      onChange: (v) => {
+        ssrParams.coneTracingIteration = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+  ];
 
-  ssrFolder
-    .addBinding(ssrParams, "iterations", { min: 1 })
-    .on("change", (ev) => {
-      ssrParams.iterations = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
+  addFieldsToFolder(
+    pane.addFolder({ title: "SSR Settings" }),
+    ssrParams,
+    fields,
+  );
+};
 
-  ssrFolder
-    .addBinding(ssrParams, "binarySearchIterations", {
-      min: 0,
-      step: 1,
-    })
-    .on("change", (ev) => {
-      ssrParams.binarySearchIterations = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
+const addWaterControls = (
+  polygonLayer: ReturnType<typeof ThreeView.prototype.addLayer>,
+  pane: Pane,
+) => {
+  // Store the layer description object
+  const layerDescription = {
+    type: "geojson" as const,
+    data: {
+      type: "Feature" as const,
+      geometry: {
+        coordinates: [
+          [
+            [139.64114960199845, 35.77501909535009],
+            [139.64114960199845, 35.6170718697025],
+            [139.90177394130632, 35.6170718697025],
+            [139.90177394130632, 35.77501909535009],
+            [139.64114960199845, 35.77501909535009],
+          ],
+        ],
+        type: "Polygon" as const,
+      },
+    },
+    polygon: {
+      color: 0x355161,
+      height: 55,
+      extruded_height: 1,
+      clamp_to_ground: false,
+      use_ground_normals: true,
+      wireframe: false,
+      reflectivity: 0.5,
+      roughness: 0.2,
+      receive_shadow: true,
+      outline_show: false,
+    },
+  };
 
-  ssrFolder
-    .addBinding(ssrParams, "pixelZSize", { min: 0 })
-    .on("change", (ev) => {
-      ssrParams.pixelZSize = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
+  const waterParams = {
+    reflectivity: layerDescription.polygon.reflectivity,
+    roughness: layerDescription.polygon.roughness,
+  };
 
-  ssrFolder
-    .addBinding(ssrParams, "pixelStride", { min: 0 })
-    .on("change", (ev) => {
-      ssrParams.pixelStride = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
+  const fields: FolderFields<typeof waterParams> = [
+    {
+      name: "reflectivity",
+      params: { min: 0, max: 1, step: 0.01 },
+      onChange: (v) => {
+        waterParams.reflectivity = v.value;
+        layerDescription.polygon.reflectivity = v.value;
+        polygonLayer.update(layerDescription);
+      },
+    },
+    {
+      name: "roughness",
+      params: { min: 0, max: 1, step: 0.01 },
+      onChange: (v) => {
+        waterParams.roughness = v.value;
+        layerDescription.polygon.roughness = v.value;
+        polygonLayer.update(layerDescription);
+      },
+    },
+  ];
 
-  ssrFolder
-    .addBinding(ssrParams, "pixelStrideZCutoff", {
-      min: 0,
-    })
-    .on("change", (ev) => {
-      ssrParams.pixelStrideZCutoff = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
-
-  ssrFolder
-    .addBinding(ssrParams, "maxRayDistance", { min: 0 })
-    .on("change", (ev) => {
-      ssrParams.maxRayDistance = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
-
-  ssrFolder
-    .addBinding(ssrParams, "screenEdgeFadeStart", {
-      min: 0,
-    })
-    .on("change", (ev) => {
-      ssrParams.screenEdgeFadeStart = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
-
-  ssrFolder
-    .addBinding(ssrParams, "eyeFadeStart", { min: 0 })
-    .on("change", (ev) => {
-      ssrParams.eyeFadeStart = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
-
-  ssrFolder
-    .addBinding(ssrParams, "eyeFadeEnd", { min: 0 })
-    .on("change", (ev) => {
-      ssrParams.eyeFadeEnd = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
-
-  ssrFolder
-    .addBinding(ssrParams, "jitter", { min: 0, max: 1 })
-    .on("change", (ev) => {
-      ssrParams.jitter = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
-
-  ssrFolder
-    .addBinding(ssrParams, "roughness", { min: 0 })
-    .on("change", (ev) => {
-      ssrParams.roughness = ev.value;
-      ssrLayer.update({ ssr: ssrParams });
-    });
+  addFieldsToFolder(
+    pane.addFolder({ title: "Water Settings" }),
+    waterParams,
+    fields,
+  );
 };
