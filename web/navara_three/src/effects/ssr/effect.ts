@@ -3,7 +3,10 @@ import type { Camera, Texture } from "three";
 
 import { Effect, type EffectOptions } from "../effect";
 
-import { SSREffect as SSREffectImpl } from "./SSREffect";
+import {
+  SSREffect as SSREffectImpl,
+  ssrEffectOptionsDefaults,
+} from "./SSREffect";
 
 export type SSROptions = {
   /** Texture containing geometry information (normals, depth) for reflection calculations */
@@ -30,10 +33,20 @@ export type SSROptions = {
   eyeFadeEnd?: number;
   /** Amount of random jitter to reduce artifact */
   jitter?: number;
-  /** Surface roughness factor affecting reflection clarity (0=mirror, 1=diffuse) */
-  roughness?: number;
   /** Blend function for compositing reflections with the scene */
   blendFunction?: BlendFunction;
+  /** Gaussian blur kernel size. Should be an odd number in the range [3, 1020]. */
+  kernelSize?: number;
+  /** Enable cone tracing that improves visual quality, but it might take a cost. */
+  useConeTracing?: boolean;
+  /** A ratio thats starts fading reflections */
+  coneTracingFadeStart?: number;
+  /** A ratio that ends fading reflections */
+  coneTracingFadeEnd?: number;
+  /** The max distance at which a reflection is visible */
+  coneTracingMaxDistance?: number;
+  /** The number of iteration to accumulate the cone tracing */
+  coneTracingIteration?: number;
 } & EffectOptions;
 
 export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
@@ -50,8 +63,13 @@ export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
   eyeFadeStart: 0,
   eyeFadeEnd: 1,
   jitter: 1,
-  roughness: 0,
   blendFunction: BlendFunction.NORMAL,
+  kernelSize: 5,
+  useConeTracing: true,
+  coneTracingFadeStart: ssrEffectOptionsDefaults.coneTracingFadeStart,
+  coneTracingFadeEnd: ssrEffectOptionsDefaults.coneTracingFadeEnd,
+  coneTracingMaxDistance: ssrEffectOptionsDefaults.coneTracingMaxDistance,
+  coneTracingIteration: ssrEffectOptionsDefaults.coneTracingIteration,
 };
 
 export class SSR extends Effect<SSREffectImpl, SSROptions> {
@@ -70,8 +88,13 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
       eyeFadeStart: options.eyeFadeStart,
       eyeFadeEnd: options.eyeFadeEnd,
       jitter: options.jitter,
-      roughness: options.roughness,
       blendFunction: options.blendFunction,
+      kernelSize: options.kernelSize,
+      useConeTracing: options.useConeTracing,
+      coneTracingFadeStart: options.coneTracingFadeStart,
+      coneTracingFadeEnd: options.coneTracingFadeEnd,
+      coneTracingMaxDistance: options.coneTracingMaxDistance,
+      coneTracingIteration: options.coneTracingIteration,
     });
 
     super(camera, effect, options);
@@ -117,8 +140,20 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (this.options.jitter !== undefined) {
       this.jitter = this.options.jitter;
     }
-    if (this.options.roughness !== undefined) {
-      this.roughness = this.options.roughness;
+    if (this.options.useConeTracing !== undefined) {
+      this.useConeTracing = this.options.useConeTracing;
+    }
+    if (this.options.coneTracingFadeStart !== undefined) {
+      this.coneTracingFadeStart = this.options.coneTracingFadeStart;
+    }
+    if (this.options.coneTracingFadeEnd !== undefined) {
+      this.coneTracingFadeEnd = this.options.coneTracingFadeEnd;
+    }
+    if (this.options.coneTracingMaxDistance !== undefined) {
+      this.coneTracingMaxDistance = this.options.coneTracingMaxDistance;
+    }
+    if (this.options.coneTracingIteration !== undefined) {
+      this.coneTracingIteration = this.options.coneTracingIteration;
     }
   }
 
@@ -250,13 +285,64 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     this.emit("_needsUpdate");
   }
 
-  get roughness(): number {
-    return this.options.roughness ?? DEFAULT_SSR_OPTIONS.roughness;
+  get useConeTracing(): boolean {
+    return this.options.useConeTracing ?? DEFAULT_SSR_OPTIONS.useConeTracing;
   }
-  set roughness(v: number) {
+  set useConeTracing(v: boolean) {
     if (!this.rawEffect) return;
-    this.options.roughness = v;
-    this.rawEffect.roughness = v;
+    this.options.useConeTracing = v;
+    this.rawEffect.useConeTracing = v;
+    this.emit("_needsUpdate");
+  }
+
+  get coneTracingFadeStart(): number {
+    return (
+      this.options.coneTracingFadeStart ??
+      DEFAULT_SSR_OPTIONS.coneTracingFadeStart
+    );
+  }
+  set coneTracingFadeStart(v: number) {
+    if (!this.rawEffect) return;
+    this.options.coneTracingFadeStart = v;
+    this.rawEffect.coneTracingFadeStart = v;
+    this.emit("_needsUpdate");
+  }
+
+  get coneTracingFadeEnd(): number {
+    return (
+      this.options.coneTracingFadeEnd ?? DEFAULT_SSR_OPTIONS.coneTracingFadeEnd
+    );
+  }
+  set coneTracingFadeEnd(v: number) {
+    if (!this.rawEffect) return;
+    this.options.coneTracingFadeEnd = v;
+    this.rawEffect.coneTracingFadeEnd = v;
+    this.emit("_needsUpdate");
+  }
+
+  get coneTracingMaxDistance(): number {
+    return (
+      this.options.coneTracingMaxDistance ??
+      DEFAULT_SSR_OPTIONS.coneTracingMaxDistance
+    );
+  }
+  set coneTracingMaxDistance(v: number) {
+    if (!this.rawEffect) return;
+    this.options.coneTracingMaxDistance = v;
+    this.rawEffect.coneTracingMaxDistance = v;
+    this.emit("_needsUpdate");
+  }
+
+  get coneTracingIteration(): number {
+    return (
+      this.options.coneTracingIteration ??
+      DEFAULT_SSR_OPTIONS.coneTracingIteration
+    );
+  }
+  set coneTracingIteration(v: number) {
+    if (!this.rawEffect) return;
+    this.options.coneTracingIteration = v;
+    this.rawEffect.coneTracingIteration = v;
     this.emit("_needsUpdate");
   }
 }

@@ -20,6 +20,10 @@ import {
 } from "three";
 
 import {
+  ConeTracingPass,
+  coneTracingPassOptionsDefaults,
+} from "./ConeTracingPass";
+import {
   SSRMaterial,
   ssrMaterialParametersDefaults,
   type SSRMaterialParameters,
@@ -32,10 +36,18 @@ export type SSREffectOptions = {
   height?: number;
   resolutionX?: number;
   resolutionY?: number;
+  kernelSize?: number;
+  blur?: boolean;
+  useConeTracing?: boolean;
+  coneTracingFadeStart?: number;
+  coneTracingFadeEnd?: number;
+  coneTracingMaxDistance?: number;
+  coneTracingIteration?: number;
 } & Omit<SSRMaterialParameters, "inputBuffer" | "depthBuffer">;
 
 export const ssrEffectOptionsDefaults = {
   blendFunction: BlendFunction.NORMAL,
+  ...coneTracingPassOptionsDefaults,
 } satisfies SSREffectOptions;
 
 export class SSREffect extends Effect {
@@ -43,6 +55,9 @@ export class SSREffect extends Effect {
   readonly renderTarget: WebGLRenderTarget;
   readonly ssrMaterial: SSRMaterial;
   readonly ssrPass: ShaderPass;
+  readonly coneRenderTarget: WebGLRenderTarget;
+  readonly coneTracingPass: ConeTracingPass;
+  private _useConeTracing: boolean;
 
   constructor(
     private camera: Camera,
@@ -56,6 +71,12 @@ export class SSREffect extends Effect {
       height,
       resolutionX = width,
       resolutionY = height,
+      kernelSize = 7,
+      coneTracingFadeStart,
+      coneTracingFadeEnd,
+      coneTracingMaxDistance,
+      coneTracingIteration,
+      useConeTracing,
       ...others
     } = {
       ...ssrMaterialParametersDefaults,
@@ -75,13 +96,40 @@ export class SSREffect extends Effect {
     });
     this.renderTarget.texture.name = "SSR.Reflection";
 
-    this.ssrMaterial = new SSRMaterial(others);
+    this.ssrMaterial = new SSRMaterial({
+      ...others,
+      generateRayTracingBuffer: useConeTracing,
+    });
     this.ssrPass = new ShaderPass(this.ssrMaterial);
     this.ssrMaterial.geometryBuffer = geometryBuffer;
 
+    this.coneRenderTarget = new WebGLRenderTarget(1, 1, {
+      depthBuffer: false,
+      stencilBuffer: false,
+      type: HalfFloatType,
+    });
+    this.coneRenderTarget.texture.name = "ConeSSR.Reflection";
+    this.coneTracingPass = new ConeTracingPass({
+      width,
+      height,
+      fadeStart: coneTracingFadeStart,
+      fadeEnd: coneTracingFadeEnd,
+      maxDistance: coneTracingMaxDistance,
+      kernelSize: kernelSize,
+      rayTracingBuffer: this.renderTarget.texture,
+      normalBuffer: geometryBuffer,
+      specularBuffer: null,
+      indirectSpecularBuffer: null,
+      iteration: coneTracingIteration,
+    });
+
+    this._useConeTracing = !!useConeTracing;
+
     const ssrBuffer = this.uniforms.get("ssrBuffer");
     if (ssrBuffer) {
-      ssrBuffer.value = this.renderTarget.texture;
+      ssrBuffer.value = useConeTracing
+        ? this.coneRenderTarget.texture
+        : this.renderTarget.texture;
     }
 
     if (camera != null) {
@@ -116,14 +164,23 @@ export class SSREffect extends Effect {
     frameBufferType: TextureDataType,
   ): void {
     this.ssrPass.initialize(renderer, alpha, frameBufferType);
+    this.coneTracingPass.initialize(renderer, alpha, frameBufferType);
   }
 
   override update(
     renderer: WebGLRenderer,
     inputBuffer: WebGLRenderTarget,
-    _deltaTime?: number,
+    deltaTime?: number,
   ): void {
+    // First pass: ray tracing
     this.ssrPass.render(renderer, inputBuffer, this.renderTarget);
+
+    if (this.useConeTracing) {
+      // Second pass: cone tracing
+      this.coneTracingPass.update(renderer, inputBuffer, deltaTime);
+
+      this.coneTracingPass.render(renderer, inputBuffer, this.coneRenderTarget);
+    }
   }
 
   override setSize(width: number, height: number): void {
@@ -132,6 +189,10 @@ export class SSREffect extends Effect {
     this.renderTarget.setSize(resolution.width, resolution.height);
     this.ssrMaterial.setSize(resolution.width, resolution.height);
     this.ssrMaterial.copyCameraSettings(this.camera);
+
+    this.coneRenderTarget.setSize(width, height);
+    this.coneTracingPass.setSize(width, height);
+    this.coneTracingPass.coneTracingMaterial.copyCameraSettings(this.camera);
   }
 
   override setDepthTexture(
@@ -140,6 +201,7 @@ export class SSREffect extends Effect {
   ): void {
     this.ssrMaterial.depthBuffer = depthTexture;
     this.ssrMaterial.depthPacking = depthPacking ?? 0;
+    this.coneTracingPass.setDepthTexture(depthTexture, depthPacking);
   }
 
   get resolutionScale(): number {
@@ -238,11 +300,46 @@ export class SSREffect extends Effect {
     this.ssrMaterial.uniforms.jitter.value = value;
   }
 
-  get roughness(): number {
-    return this.ssrMaterial.uniforms.roughness.value;
+  get useConeTracing() {
+    return this._useConeTracing;
+  }
+  set useConeTracing(v: boolean) {
+    this._useConeTracing = v;
+    const ssrBuffer = this.uniforms.get("ssrBuffer");
+    this.ssrMaterial.generateRayTracingBuffer = v;
+    this.ssrMaterial.needsUpdate = true;
+    if (ssrBuffer) {
+      ssrBuffer.value = v
+        ? this.coneRenderTarget.texture
+        : this.renderTarget.texture;
+    }
   }
 
-  set roughness(value: number) {
-    this.ssrMaterial.uniforms.roughness.value = value;
+  get coneTracingFadeStart(): number {
+    return this.coneTracingPass.coneTracingMaterial.fadeStart;
+  }
+  set coneTracingFadeStart(value: number) {
+    this.coneTracingPass.coneTracingMaterial.fadeStart = value;
+  }
+
+  get coneTracingFadeEnd(): number {
+    return this.coneTracingPass.coneTracingMaterial.fadeEnd;
+  }
+  set coneTracingFadeEnd(value: number) {
+    this.coneTracingPass.coneTracingMaterial.fadeEnd = value;
+  }
+
+  get coneTracingMaxDistance(): number {
+    return this.coneTracingPass.coneTracingMaterial.maxDistance;
+  }
+  set coneTracingMaxDistance(value: number) {
+    this.coneTracingPass.coneTracingMaterial.maxDistance = value;
+  }
+
+  get coneTracingIteration(): number {
+    return this.coneTracingPass.coneTracingMaterial.iteration;
+  }
+  set coneTracingIteration(value: number) {
+    this.coneTracingPass.coneTracingMaterial.iteration = value;
   }
 }

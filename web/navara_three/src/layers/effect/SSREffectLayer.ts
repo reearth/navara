@@ -24,7 +24,7 @@ export class SSREffectLayer extends EffectLayerDeclaration<
   SSR
 > {
   static key = "ssr";
-  static insertAfter = ["ssao"];
+  static insertAfter = ["aerialPerspective"];
 
   private config: SSRConfig;
 
@@ -89,8 +89,20 @@ export class SSREffectLayer extends EffectLayerDeclaration<
     if (config.jitter !== undefined) {
       this._instance.jitter = config.jitter;
     }
-    if (config.roughness !== undefined) {
-      this._instance.roughness = config.roughness;
+    if (config.useConeTracing !== undefined) {
+      this._instance.useConeTracing = config.useConeTracing;
+    }
+    if (config.coneTracingFadeStart !== undefined) {
+      this._instance.coneTracingFadeStart = config.coneTracingFadeStart;
+    }
+    if (config.coneTracingFadeEnd !== undefined) {
+      this._instance.coneTracingFadeEnd = config.coneTracingFadeEnd;
+    }
+    if (config.coneTracingMaxDistance !== undefined) {
+      this._instance.coneTracingMaxDistance = config.coneTracingMaxDistance;
+    }
+    if (config.coneTracingIteration !== undefined) {
+      this._instance.coneTracingIteration = config.coneTracingIteration;
     }
   }
 }

@@ -42,7 +42,7 @@ export type SSRMaterialParameters = {
   eyeFadeEnd?: number;
 
   jitter?: number;
-  roughness?: number;
+  generateRayTracingBuffer?: boolean;
 } & ShaderMaterialParameters;
 
 export const ssrMaterialParametersDefaults = {
@@ -56,7 +56,7 @@ export const ssrMaterialParametersDefaults = {
   eyeFadeStart: 0,
   eyeFadeEnd: 1,
   jitter: 0,
-  roughness: 0,
+  generateRayTracingBuffer: true,
 } satisfies SSRMaterialParameters;
 
 export class SSRMaterial extends ShaderMaterial {
@@ -75,7 +75,7 @@ export class SSRMaterial extends ShaderMaterial {
       eyeFadeStart,
       eyeFadeEnd,
       jitter,
-      roughness,
+      generateRayTracingBuffer,
       ...others
     } = {
       ...ssrMaterialParametersDefaults,
@@ -111,12 +111,14 @@ export class SSRMaterial extends ShaderMaterial {
         eyeFadeStart: new Uniform(eyeFadeStart),
         eyeFadeEnd: new Uniform(eyeFadeEnd),
         jitter: new Uniform(jitter),
-        roughness: new Uniform(roughness),
       },
       defines: {
         DEPTH_PACKING: "0",
         MAX_ITERATIONS: "1000",
         MAX_BINARY_SEARCH_ITERATIONS: "64",
+        ...(generateRayTracingBuffer
+          ? { GENERATE_RAY_TRACING_BUFFER: "1" }
+          : {}),
       },
       blending: NoBlending,
       toneMapped: false,
@@ -187,6 +189,18 @@ export class SSRMaterial extends ShaderMaterial {
     if (value !== this.depthPacking) {
       this.defines.DEPTH_PACKING = `${value}`;
       this.needsUpdate = true;
+    }
+  }
+
+  get generateRayTracingBuffer(): boolean {
+    return !!this.defines.GENERATE_RAY_TRACING_BUFFER;
+  }
+
+  set generateRayTracingBuffer(value: boolean) {
+    if (value) {
+      this.defines.GENERATE_RAY_TRACING_BUFFER = "1";
+    } else {
+      delete this.defines.GENERATE_RAY_TRACING_BUFFER;
     }
   }
 }

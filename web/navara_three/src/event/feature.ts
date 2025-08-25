@@ -30,12 +30,12 @@ import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
 import { renderPoint, processPointChanged } from "./features/point";
 import { renderPolygon, processPolygonChanged } from "./features/polygon";
-import { renderPolyline, processPolylineChanged } from "./features/polyline";
-import { renderText, processTextChanged } from "./features/text";
 import {
   renderPolygonOutline,
   processPolygonOutlineChanged,
 } from "./features/polygonOutline";
+import { renderPolyline, processPolylineChanged } from "./features/polyline";
+import { renderText, processTextChanged } from "./features/text";
 
 import { setTransform, type BufferLoader, type FeatureHandler } from ".";
 

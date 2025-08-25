@@ -54,7 +54,6 @@ uniform float screenEdgeFadeStart;
 uniform float eyeFadeStart;
 uniform float eyeFadeEnd;
 uniform float jitter;
-uniform float roughness;
 
 in vec2 vUv;
 
@@ -324,6 +323,7 @@ vec3 sampleGGX(const vec3 n, const vec2 u, float roughness) {
 void main() {
   vec4 geometry = texture2D(geometryBuffer, vUv);
   float metalness = geometry.z;
+  float roughness = geometry.z;
   if (metalness < 0.01) {
     return;
   }
@@ -346,14 +346,17 @@ void main() {
 
   vec3 rayOrigin = viewPosition;
   vec3 rayDirection = reflect(normalize(rayOrigin), viewNormal);
-  float scaledRoughness = geometry.w * roughness;
-  if (scaledRoughness > 0.0001) {
-    rayDirection = sampleGGX(
-      rayDirection,
-      whiteNoise(vec3(vUv, 0.0)),
-      scaledRoughness
-    );
-  }
+
+  #ifndef GENERATE_RAY_TRACING_BUFFER
+    float scaledRoughness = geometry.w * roughness;
+    if (scaledRoughness > 0.0001) {
+      rayDirection = sampleGGX(
+        rayDirection,
+        whiteNoise(vec3(vUv, 0.0)),
+        scaledRoughness
+      );
+    }
+  #endif
 
   vec2 uv2 = vUv * resolution;
   float c = (uv2.x + uv2.y) * 0.25;
@@ -382,6 +385,25 @@ void main() {
     rayDirection
   );
 
-  vec3 color = texture2D(inputBuffer, hitPixel).rgb;
-  gl_FragColor = vec4(color, alpha);
+  // Ref: https://willpgfx.com/2015/07/screen-space-glossy-reflections/
+  #ifdef GENERATE_RAY_TRACING_BUFFER
+    // Calculate rdotv (reflection dot view) for validity check
+    float rdotv = intersect ? dot(rayDirection, normalize(rayOrigin)) : 0.0;
+
+    // Store ray tracing results in a format compatible with cone tracing
+    // x,y = hit UV coordinates
+    // z = hit depth at the hit point
+    // w = rdotv * alpha (combined validity indicator)
+    if (intersect) {
+      float hitDepth = readDepth(hitPixel);
+      gl_FragColor = vec4(hitPixel.x, hitPixel.y, hitDepth, rdotv * alpha);
+    } else {
+      // No intersection: output invalid marker
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    }
+  #else
+    vec3 color = texture2D(inputBuffer, hitPixel).rgb;
+    gl_FragColor = vec4(color, alpha);
+  #endif
+  
 }
