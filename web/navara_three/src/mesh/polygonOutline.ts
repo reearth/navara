@@ -1,7 +1,10 @@
+import type { EventHandler } from "@navara/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
+import type { ViewEvents } from "@navara/three";
+import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import { Color, InstancedBufferAttribute } from "three";
 import {
   Line2,
@@ -12,10 +15,8 @@ import {
 
 import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
+
 import type { FeatureMesh } from "./featureMesh";
-import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
-import type { EventHandler } from "@navara/core";
-import type { ViewEvents } from "@navara/three";
 
 class NvLineGeometry extends LineGeometry {
   setPositions(
