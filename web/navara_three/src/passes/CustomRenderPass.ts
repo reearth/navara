@@ -32,6 +32,7 @@ export class CustomRenderPass extends RenderPass {
   private copyPass: RenderTargetCopyPass;
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
+  disableShadow: boolean;
 
   // Used to render only the shadow map
   private shadowScene = new Scene();
@@ -49,7 +50,8 @@ export class CustomRenderPass extends RenderPass {
     drapedFeatureMaterials: Map<string, Material>,
     inputBuffer: WebGLRenderTarget,
     options?: {
-      debugNormal: boolean;
+      debugNormal?: boolean;
+      disableShadow?: boolean;
     },
   ) {
     super();
@@ -74,6 +76,8 @@ export class CustomRenderPass extends RenderPass {
       depthPacking: RGBADepthPacking,
     });
 
+    this.disableShadow = !!options?.disableShadow;
+
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
       this.gbufferRenderTarget.textures[1],
@@ -89,6 +93,10 @@ export class CustomRenderPass extends RenderPass {
 
   // Render the scene with world scene that includes user setting object like a light.
   protected _renderWithLight(renderer: WebGLRenderer, scene: Scene) {
+    if (this.disableShadow) {
+      renderer.render(scene, this._camera);
+      return;
+    }
     scene.add(this._scenes.light);
     renderer.render(scene, this._camera);
     scene.remove(this._scenes.light);
@@ -108,7 +116,7 @@ export class CustomRenderPass extends RenderPass {
     }
 
     // Render shadow map
-    if (renderer.shadowMap.enabled) {
+    if (renderer.shadowMap.enabled && !this.disableShadow) {
       renderer.setRenderTarget(this.dummyShadowRenderTarget);
       this.shadowScene.add(this._scenes.globe);
       this.shadowScene.add(this._scenes.mrt);
@@ -119,6 +127,7 @@ export class CustomRenderPass extends RenderPass {
     }
 
     renderer.setRenderTarget(renderTarget);
+    renderer.clear();
 
     this._renderWithLight(renderer, this._scenes.globe);
 
