@@ -94,17 +94,22 @@ function injectGBuffer(
   const outputBuffer1 =
     type === "physical"
       ? /* glsl */ `
-          vec4(
+          outputBuffer1 = vec4(
             packNormalToVec2(normal),
             metalnessFactor,
             roughnessFactor
           )
         `
       : /* glsl */ `
-          vec4(
+          #ifdef USE_ROUGHNESS
+            float roughnessFactor = roughness;
+          #else
+            float roughnessFactor = 0.0;
+          #endif
+          outputBuffer1 = vec4(
             packNormalToVec2(normal),
             reflectivity,
-            0.0
+            roughnessFactor
           );
         `;
   shader.fragmentShader = /* glsl */ `
@@ -116,13 +121,17 @@ function injectGBuffer(
       uniform float reflectivity;
     #endif // !defined(USE_ENVMAP)
 
+    #ifdef USE_ROUGHNESS
+      uniform float roughness;
+    #endif // USE_ROUGHNESS
+
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
-            outputBuffer1 = ${outputBuffer1};
+            ${outputBuffer1};
           #endif
         }
       `,

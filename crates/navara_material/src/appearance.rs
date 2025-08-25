@@ -260,6 +260,8 @@ pub struct PolygonMaterial {
     pub height: f32,
     pub extruded_height: Option<f32>,
     pub wireframe: bool,
+    pub reflectivity: f32,
+    pub roughness: f32,
     pub internal: Option<PolygonInternalMaterial>,
     pub id_property: String,
 
@@ -281,6 +283,8 @@ impl Default for PolygonMaterial {
             height: 1.,
             extruded_height: None,
             wireframe: false,
+            reflectivity: 0.0,
+            roughness: 0.0,
             internal: None,
             id_property: "".to_string(),
             surface_show: true,

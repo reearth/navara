@@ -135,7 +135,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.colorWrite = !shouldClipByStencil;
     material.depthWrite = !clampToGround;
     material.depthTest = !clampToGround;
-    material.reflectivity = 0;
     material.vertexColors = false;
 
     material.userData.color = mcolor;
@@ -159,11 +158,22 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.uIsTexturized = {
       value: isTexturized,
     };
+    material.userData.reflectivity = {
+      value: meshMaterial.reflectivity ?? 0,
+    };
+    material.userData.roughness = {
+      value: meshMaterial.roughness ?? 0,
+    };
+
+    material.defines ??= {};
+    material.defines.USE_ROUGHNESS = 1;
 
     material.onBeforeCompile = (shader) => {
       shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
       shader.uniforms.nvr_uPickable = material.userData.uPickable;
       shader.uniforms.useGroundNormals = material.userData.useGroundNormals;
+      shader.uniforms.reflectivity = material.userData.reflectivity;
+      shader.uniforms.roughness = material.userData.roughness;
       if (material.userData.uMinMaxHeight.value) {
         shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       }
@@ -357,6 +367,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.receiveShadow = !!material.receive_shadow;
     }
 
+    if (prev.reflectivity !== material.reflectivity) {
+      const next = material.reflectivity ?? 0;
+      this.material.userData.reflectivity.value = next;
+      prev.reflectivity = next;
+    }
+
     const [min, max] = material.__internal__?.min_max_heights ?? [];
     if (prev.min !== min || prev.max !== max) {
       this.material.userData.uMinMaxHeight.value = [min, max];
@@ -372,6 +388,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
       const next = !!material.use_ground_normals;
       this.material.userData.useGroundNormals.value = !isTexturized && next;
       prev.useGroundNormals = next;
+    }
+
+    if (prev.roughness !== material.roughness) {
+      const next = material.roughness ?? 0;
+      this.material.userData.roughness.value = next;
+      prev.roughness = next;
     }
 
     if (

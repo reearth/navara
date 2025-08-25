@@ -64,6 +64,7 @@ import {
   MRTPassEffectLayer,
   SMAAEffectLayer,
   SSAOEffectLayer,
+  SSREffectLayer,
   ToneMappingEffectLayer,
   TransparentPassEffectLayer,
 } from "./layers/effect";
@@ -875,6 +876,7 @@ export default class ThreeView<
     this.registerEffect("clouds", CloudsEffectLayer);
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
+    this.registerEffect("ssr", SSREffectLayer);
 
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
