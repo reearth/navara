@@ -89,9 +89,6 @@ export class SSREffectLayer extends EffectLayerDeclaration<
     if (config.jitter !== undefined) {
       this._instance.jitter = config.jitter;
     }
-    if (config.roughness !== undefined) {
-      this._instance.roughness = config.roughness;
-    }
     if (config.useConeTracing !== undefined) {
       this._instance.useConeTracing = config.useConeTracing;
     }

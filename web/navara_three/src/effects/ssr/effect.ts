@@ -33,15 +33,19 @@ export type SSROptions = {
   eyeFadeEnd?: number;
   /** Amount of random jitter to reduce artifact */
   jitter?: number;
-  /** Surface roughness factor affecting reflection clarity (0=mirror, 1=diffuse) */
-  roughness?: number;
   /** Blend function for compositing reflections with the scene */
   blendFunction?: BlendFunction;
+  /** Gaussian blur kernel size. Should be an odd number in the range [3, 1020]. */
   kernelSize?: number;
+  /** Enable cone tracing that improves visual quality, but it might take a cost. */
   useConeTracing?: boolean;
+  /** A ratio thats starts fading reflections */
   coneTracingFadeStart?: number;
+  /** A ratio that ends fading reflections */
   coneTracingFadeEnd?: number;
+  /** The max distance at which a reflection is visible */
   coneTracingMaxDistance?: number;
+  /** The number of iteration to accumulate the cone tracing */
   coneTracingIteration?: number;
 } & EffectOptions;
 
@@ -59,7 +63,6 @@ export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
   eyeFadeStart: 0,
   eyeFadeEnd: 1,
   jitter: 1,
-  roughness: 0,
   blendFunction: BlendFunction.NORMAL,
   kernelSize: 5,
   useConeTracing: true,
@@ -85,7 +88,6 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
       eyeFadeStart: options.eyeFadeStart,
       eyeFadeEnd: options.eyeFadeEnd,
       jitter: options.jitter,
-      roughness: options.roughness,
       blendFunction: options.blendFunction,
       kernelSize: options.kernelSize,
       useConeTracing: options.useConeTracing,
@@ -137,9 +139,6 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     }
     if (this.options.jitter !== undefined) {
       this.jitter = this.options.jitter;
-    }
-    if (this.options.roughness !== undefined) {
-      this.roughness = this.options.roughness;
     }
     if (this.options.useConeTracing !== undefined) {
       this.useConeTracing = this.options.useConeTracing;
@@ -283,16 +282,6 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.jitter = v;
     this.rawEffect.jitter = v;
-    this.emit("_needsUpdate");
-  }
-
-  get roughness(): number {
-    return this.options.roughness ?? DEFAULT_SSR_OPTIONS.roughness;
-  }
-  set roughness(v: number) {
-    if (!this.rawEffect) return;
-    this.options.roughness = v;
-    this.rawEffect.roughness = v;
     this.emit("_needsUpdate");
   }
 

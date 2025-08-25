@@ -42,7 +42,6 @@ export type SSRMaterialParameters = {
   eyeFadeEnd?: number;
 
   jitter?: number;
-  roughness?: number;
   generateRayTracingBuffer?: boolean;
 } & ShaderMaterialParameters;
 
@@ -57,7 +56,6 @@ export const ssrMaterialParametersDefaults = {
   eyeFadeStart: 0,
   eyeFadeEnd: 1,
   jitter: 0,
-  roughness: 0,
   generateRayTracingBuffer: true,
 } satisfies SSRMaterialParameters;
 
@@ -77,7 +75,6 @@ export class SSRMaterial extends ShaderMaterial {
       eyeFadeStart,
       eyeFadeEnd,
       jitter,
-      roughness,
       generateRayTracingBuffer,
       ...others
     } = {
@@ -114,7 +111,6 @@ export class SSRMaterial extends ShaderMaterial {
         eyeFadeStart: new Uniform(eyeFadeStart),
         eyeFadeEnd: new Uniform(eyeFadeEnd),
         jitter: new Uniform(jitter),
-        roughness: new Uniform(roughness),
       },
       defines: {
         DEPTH_PACKING: "0",

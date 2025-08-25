@@ -135,7 +135,6 @@ const addSSRControls = (
     eyeFadeStart: ssrLayer.ref.raw?.eyeFadeStart ?? 0.4,
     eyeFadeEnd: ssrLayer.ref.raw?.eyeFadeEnd ?? 0.8,
     jitter: ssrLayer.ref.raw?.jitter ?? 0,
-    roughness: ssrLayer.ref.raw?.roughness ?? 0.1,
     useConeTracing: ssrLayer.ref.raw?.useConeTracing ?? false,
     coneTracingFadeStart: ssrLayer.ref.raw?.coneTracingFadeStart ?? 0,
     coneTracingFadeEnd: ssrLayer.ref.raw?.coneTracingFadeEnd ?? 0,
@@ -235,14 +234,6 @@ const addSSRControls = (
       params: { min: 0, max: 1 },
       onChange: (v) => {
         ssrParams.jitter = v.value;
-        ssrLayer.update({ ssr: ssrParams });
-      },
-    },
-    {
-      name: "roughness",
-      params: { min: 0 },
-      onChange: (v) => {
-        ssrParams.roughness = v.value;
         ssrLayer.update({ ssr: ssrParams });
       },
     },

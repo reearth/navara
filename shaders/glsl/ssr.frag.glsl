@@ -54,7 +54,6 @@ uniform float screenEdgeFadeStart;
 uniform float eyeFadeStart;
 uniform float eyeFadeEnd;
 uniform float jitter;
-uniform float roughness;
 
 in vec2 vUv;
 
@@ -324,6 +323,7 @@ vec3 sampleGGX(const vec3 n, const vec2 u, float roughness) {
 void main() {
   vec4 geometry = texture2D(geometryBuffer, vUv);
   float metalness = geometry.z;
+  float roughness = geometry.z;
   if (metalness < 0.01) {
     return;
   }

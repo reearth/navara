@@ -300,14 +300,6 @@ export class SSREffect extends Effect {
     this.ssrMaterial.uniforms.jitter.value = value;
   }
 
-  get roughness(): number {
-    return this.ssrMaterial.uniforms.roughness.value;
-  }
-
-  set roughness(value: number) {
-    this.ssrMaterial.uniforms.roughness.value = value;
-  }
-
   get useConeTracing() {
     return this._useConeTracing;
   }
