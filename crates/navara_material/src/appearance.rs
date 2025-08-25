@@ -288,7 +288,7 @@ impl Default for PolygonMaterial {
             internal: None,
             id_property: "".to_string(),
             surface_show: true,
-            outline_show: true,
+            outline_show: false,
             outline_color: 0xffffff,
             outline_width: 1.,
         }
