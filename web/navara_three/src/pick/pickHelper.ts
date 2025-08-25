@@ -54,7 +54,9 @@ export class PickHelper extends CustomRenderPass {
     inputBuffer: WebGLRenderTarget,
     options?: PickHelperOptions,
   ) {
-    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer);
+    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer, {
+      disableShadow: true,
+    });
 
     this.element = element;
     this.pickingTexture = new WebGLRenderTarget(1, 1, {
