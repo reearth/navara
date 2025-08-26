@@ -38,18 +38,18 @@ export type RainConfig = {
 };
 
 export const DefaultRainConfig: RainConfig = {
-  particleCount: 10000,
+  particleCount: 5000,
   speed: 0.001,
   color: 0xffffff,
   areaWidth: 500,
   areaHeight: 1000,
-  width: 0.3,
-  height: 50,
+  width: 3.0,
+  height: 60,
   radius: 10,
   opacity: 0.5,
   alphaMax: 0.5,
   alphaMin: 0.05,
-  followCamera: false,
+  followCamera: true,
   maxHeight: 3000,
 };
 
@@ -69,6 +69,7 @@ class RainMaterial extends ShaderMaterial {
     cameraRight: Uniform<Vector3>;
     cameraUp: Uniform<Vector3>;
     followCamera: Uniform<boolean>;
+    radius: Uniform<number>;
   };
 
   constructor() {
@@ -100,6 +101,7 @@ class RainMaterial extends ShaderMaterial {
       meshOffset: new Uniform(new Vector3(0.0, 0.0, 0.0)),
       bounds: new Uniform(new Vector3(0, 0, 0)),
       followCamera: new Uniform(false),
+      radius: new Uniform(0),
     };
   }
 }
@@ -108,6 +110,7 @@ const createGeometry = (config: RainConfig): BufferGeometry => {
   const { particleCount, radius } = config;
   const index: number[] = [];
   const vertices: number[] = [];
+  const uvs: number[] = [];
   const offsets: number[] = [];
   const indices: number[] = [];
 
@@ -123,6 +126,7 @@ const createGeometry = (config: RainConfig): BufferGeometry => {
       index.push(i);
       vertices.push(px, py, pz);
     }
+    uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
     offsets.push(-1, -1, 1, -1, 1, 1, -1, 1);
     const vertexIndex = i * 4;
     indices.push(
@@ -139,6 +143,7 @@ const createGeometry = (config: RainConfig): BufferGeometry => {
   geometry.setIndex(indices);
   geometry.setAttribute("index", new Uint16BufferAttribute(index, 1));
   geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute("uv", new Uint16BufferAttribute(uvs, 2));
   geometry.setAttribute("offset", new Float32BufferAttribute(offsets, 2));
 
   return geometry;
@@ -182,6 +187,7 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     this._material.uniforms.alphaMax.value = this._config.alphaMax;
     this._material.uniforms.alphaMin.value = this._config.alphaMin;
     this._material.uniforms.followCamera.value = this._config.followCamera;
+    this._material.uniforms.radius.value = this._config.radius;
 
     this.updateBounds();
   }

@@ -163,25 +163,19 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
     type: "mesh",
     visible: false,
     position: position,
-    rain: {
-      opacity: 1,
-    },
+    rain: {},
   });
   const snow = view.addLayer<SnowMeshLayer>({
     type: "mesh",
     visible: false,
     position: position,
-    snow: {
-      opacity: 1,
-    },
+    snow: {},
   });
 
   type WeatherType = "sunny" | "rainy" | "snowy";
 
   const PARAMS = {
     weather: "sunny" as WeatherType,
-    followCamera: false,
-    renderAsAtmosphere: false,
   };
 
   let selectedLayer:
@@ -220,30 +214,6 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
         if (!selectedLayer) return;
 
         selectedLayer.visible = true;
-      },
-    },
-    {
-      name: "followCamera",
-      onChange: (v) => {
-        rain.update({
-          rain: {
-            followCamera: v.value,
-          },
-        });
-        snow.update({
-          snow: {
-            followCamera: v.value,
-          },
-        });
-
-        if (!v.value) {
-          rain.update({
-            position: position,
-          });
-          snow.update({
-            position: position,
-          });
-        }
       },
     },
   ];
