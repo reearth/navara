@@ -28,9 +28,9 @@ export const run = async (view: ThreeView) => {
   const defaultAtmospheres = view.addDefaultAtmosphereLayers();
   defaultAtmospheres.sun.update({
     sun: {
-      intensity: 1,
+      intensity: 2,
       castShadow: true,
-      shadowIntensity: 4,
+      shadowIntensity: 1,
     },
   });
 
@@ -78,7 +78,7 @@ export const run = async (view: ThreeView) => {
     type: "light",
     lightProbe: {
       sh: sh,
-      intensity: 1,
+      intensity: 0.3,
     },
   });
 

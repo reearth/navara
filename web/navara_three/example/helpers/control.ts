@@ -1,4 +1,5 @@
 import type ThreeView from "@navara/three";
+import { Vector3 } from "three";
 import type { InputBindingApi, Pane } from "tweakpane";
 
 export const addDateControl = (view: ThreeView, pane: Pane) => {
@@ -126,6 +127,20 @@ export const addCameraControl = (view: ThreeView, pane: Pane) => {
         roll: 0,
       });
     });
+
+  let rotationAnimationId: number;
+  pane.addBinding({ autoRotation: false }, "autoRotation").on("change", (v) => {
+    if (!v.value) {
+      cancelAnimationFrame(rotationAnimationId);
+      return;
+    }
+
+    const animateFunc = () => {
+      view.rotateAroundAxis(new Vector3(0, 0, 0), 0.002);
+      rotationAnimationId = requestAnimationFrame(animateFunc);
+    };
+    animateFunc();
+  });
 };
 
 export const addHidePaneKeyShortcut = (pane: Pane) => {
