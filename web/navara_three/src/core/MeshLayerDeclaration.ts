@@ -1,8 +1,7 @@
-import type { BaseEventMap } from "@navara/core";
+import type { BaseEventMap, XYZ } from "@navara/core";
 import { Object3D } from "three";
 
 import type { Scenes } from "../scene";
-import type { LayerVector3 } from "../type";
 
 import {
   LayerDeclaration,
@@ -14,9 +13,9 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
   type: "mesh";
-  position?: LayerVector3;
-  scale?: LayerVector3;
-  rotation?: LayerVector3;
+  position?: XYZ;
+  scale?: XYZ;
+  rotation?: XYZ;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
@@ -46,9 +45,9 @@ export abstract class MeshLayerDeclaration<
   Instance extends
     MeshBaseInstance<InstanceObj> = MeshBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance, CustomEvent> {
-  public position?: LayerVector3;
-  public scale?: LayerVector3;
-  public rotation?: LayerVector3;
+  public position?: XYZ;
+  public scale?: XYZ;
+  public rotation?: XYZ;
   private prevPassKey?: PassKey;
 
   constructor(view: ViewContext, config: Config = {} as Config) {

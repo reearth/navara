@@ -112,6 +112,7 @@ import { isWorker } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
+export type { Nullable, XYZ, LngLat, LngLatHeight } from "@navara/core";
 export * from "./type";
 export * from "./constants";
 export * from "./light";

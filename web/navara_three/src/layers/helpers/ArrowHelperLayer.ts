@@ -1,3 +1,4 @@
+import type { XYZ } from "@navara/core";
 import { ArrowHelper, Vector3 } from "three";
 
 import {
@@ -5,12 +6,11 @@ import {
   type MeshLayerConfig,
   type ViewContext,
 } from "../../core";
-import type { LayerVector3 } from "../../type";
 
 type LayerDescription = {
   arrowHelper?: {
-    direction: LayerVector3;
-    origin?: LayerVector3;
+    direction: XYZ;
+    origin?: XYZ;
     length?: number;
     color?: number;
     headLength?: number;
