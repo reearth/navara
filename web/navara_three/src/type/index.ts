@@ -43,8 +43,6 @@ import type {
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
-export * from "./unit";
-
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
 export type LayerDescription =

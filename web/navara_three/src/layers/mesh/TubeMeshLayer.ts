@@ -1,3 +1,4 @@
+import type { XYZ } from "@navara/core";
 import {
   CatmullRomCurve3,
   Mesh,
@@ -12,11 +13,10 @@ import {
   type ViewContext,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
-import type { LayerVector3 } from "../../type";
 
 type LayerDescription = {
   tube?: {
-    points?: LayerVector3[];
+    points?: XYZ[];
     tubularSegments?: number;
     radius?: number;
     radialSegments?: number;

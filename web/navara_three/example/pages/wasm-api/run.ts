@@ -1,4 +1,3 @@
-import type { Nullable } from "@navara/core";
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerHandle,
@@ -7,7 +6,8 @@ import ThreeView, {
   type TubeMeshLayer,
   type CylinderMeshLayer,
   type GLTFModelLayer,
-  type LayerVector3,
+  type Nullable,
+  type XYZ,
 } from "@navara/three";
 import {
   geodeticToVector3,
@@ -73,7 +73,7 @@ let gPolylineLayer: Nullable<LayerHandle<TubeMeshLayer>> = undefined;
 let gMouseBall: Nullable<Mesh> = undefined;
 let gInterBall: Nullable<Mesh> = undefined;
 let gLastCameraDistance = 0;
-let gPolylinePoints: LayerVector3[] = [];
+let gPolylinePoints: XYZ[] = [];
 let gView: Nullable<ThreeView> = undefined;
 let gFolderDist: Nullable<FolderApi> = null;
 let gFolderSample: Nullable<FolderApi> = null;
@@ -686,7 +686,7 @@ const onDistPosChange = () => {
 
   // Update polyline mesh
   if (gPolylineLayer) {
-    const curvePoints: LayerVector3[] = [];
+    const curvePoints: XYZ[] = [];
     for (const point of points) {
       if (point) {
         const pos = geodeticToVector3(new LLE(point.lat, point.lng, 1000));
@@ -713,7 +713,7 @@ const onDistPosChange = () => {
   }
 };
 
-const updatePolylineMesh = (view: ThreeView, curvePoints: LayerVector3[]) => {
+const updatePolylineMesh = (view: ThreeView, curvePoints: XYZ[]) => {
   if (!gPolylineLayer) return;
 
   // Calculate appropriate tube radius based on camera distance to keep visual thickness constant
@@ -780,7 +780,7 @@ const addCameraListener = (view: ThreeView) => {
 
 const createPolylineMesh = (view: ThreeView) => {
   // Create initial points for the curve
-  const points: LayerVector3[] = Array.from({ length: 2 }, () => ({
+  const points: XYZ[] = Array.from({ length: 2 }, () => ({
     x: 0,
     y: 0,
     z: 0,

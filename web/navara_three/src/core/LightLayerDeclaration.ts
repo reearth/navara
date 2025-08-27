@@ -1,6 +1,5 @@
+import type { XYZ } from "@navara/core";
 import { Light } from "three";
-
-import type { LayerVector3 } from "../type";
 
 import {
   LayerDeclaration,
@@ -12,7 +11,7 @@ import type { ViewContext } from "./ViewContext";
 
 export type LightLayerConfig = {
   type: "light";
-  position?: LayerVector3;
+  position?: XYZ;
 } & LayerDeclarationConfig;
 
 export type LightLayerUpdate = Pick<LightLayerConfig, "position"> &
@@ -34,7 +33,7 @@ export abstract class LightLayerDeclaration<
   Instance extends
     LightBaseInstance<InstanceObj> = LightBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
-  public position?: LayerVector3;
+  public position?: XYZ;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);

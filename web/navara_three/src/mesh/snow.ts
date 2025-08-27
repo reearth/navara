@@ -1,3 +1,4 @@
+import type { XYZ } from "@navara/core";
 import { eastNorthUpToFixedFrame, vector3ToGeodetic } from "@navara/three_api";
 import SimpleLightShaderChunk from "@shaders/glsl/chunks/simple_lights.glsl";
 import {
@@ -17,7 +18,6 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { LayerVector3 } from "../type";
 import { createReplacer } from "../utils";
 
 const createSnowflakeTexture = (): CanvasTexture => {
@@ -182,8 +182,8 @@ export type SnowConfig = {
   speed: number;
   size: number;
   color: number;
-  movementStrength: LayerVector3;
-  movementSpeed: LayerVector3;
+  movementStrength: XYZ;
+  movementSpeed: XYZ;
   /** The mesh follows a camera. It takes an effect that looks like the mesh is rendered infinitely. */
   followCamera: boolean;
   /** Opacity is reduced in proportion to the maximum height and the camera height. */
@@ -380,21 +380,21 @@ export class SnowMesh extends Points<BufferGeometry, SnowPointsMaterial> {
     return this._config.color;
   }
 
-  set movementStrength(value: LayerVector3) {
+  set movementStrength(value: XYZ) {
     this._config.movementStrength = value;
     this._material.uniforms.movementStrength.value.copy(value);
   }
 
-  get movementStrength(): LayerVector3 {
+  get movementStrength(): XYZ {
     return this._config.movementStrength;
   }
 
-  set movementSpeed(value: LayerVector3) {
+  set movementSpeed(value: XYZ) {
     this._config.movementSpeed = value;
     this._material.uniforms.movementSpeed.value.copy(value);
   }
 
-  get movementSpeed(): LayerVector3 {
+  get movementSpeed(): XYZ {
     return this._config.movementSpeed;
   }
 

@@ -1,16 +1,12 @@
-export type CameraPosition = {
-  lat: number;
-  lng: number;
-  height: number;
+import type { XYZ, LngLatHeight } from "./unit";
+
+export type CameraPosition = LngLatHeight & {
   pitch?: number;
   heading?: number;
   roll?: number;
 };
 
-export type CameraPositionECEF = {
-  x: number;
-  y: number;
-  z: number;
+export type CameraPositionECEF = XYZ & {
   pitch: number;
   heading: number;
   roll: number;
