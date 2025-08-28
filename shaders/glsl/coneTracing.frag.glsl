@@ -22,6 +22,7 @@ uniform float cameraNear;
 uniform float cameraFar;
 uniform mat4  inverseProjectionMatrix; // inverse of projection matrix
 uniform mat4  projectionMatrix; // inverse of projection matrix
+uniform vec3  ior; // TODO: Use specular map.
 
 in vec2 vUv;
 
@@ -82,14 +83,6 @@ float isoscelesTriangleNextAdjacent( float adjacentLength, float incircleRadius 
     return adjacentLength - (incircleRadius * 2.0);
 }
 
-vec3 viewPositionFromDepth( vec2 uv, float depth ) {
-    // Reconstruct view-space position using inverse projection
-    float z = depth * 2.0 - 1.0;
-    vec4 ndc = vec4(uv * 2.0 - 1.0, z, 1.0);
-    vec4 v = inverseProjectionMatrix * ndc;
-    return v.xyz / v.w; // view space
-}
-
 // Ref: https://willpgfx.com/2015/07/screen-space-glossy-reflections/
 void main() {
     vec2 pixel = vUv;
@@ -105,6 +98,7 @@ void main() {
     vec3 fallbackColor = texture2D(inputBuffer, pixel).rgb;
 
     float depth = readDepth(vUv);
+    depth = reverseLogDepth(depth, cameraNear, cameraFar);
     float viewZ = getViewZ(depth);
     vec3 viewPosition = screenToView(
         vUv,
@@ -118,8 +112,7 @@ void main() {
 
     vec3 normalVS = unpackVec2ToNormal(packedNormal.xy);
 
-    vec3 F0 = mix(Fdielectric, fallbackColor, packedNormal.z);
-    vec4 specularAll = vec4(F0, packedNormal.w);
+    vec4 specularAll = vec4(ior, packedNormal.w);
 
     float linearDepth = linearizeDepth(depth, cameraNear, cameraFar);
     vec3 toViewPosition = normalize(viewPosition);
@@ -175,13 +168,21 @@ void main() {
     fadeOnBorder *= 1.0 - clamp((boundary.y - uFadeStart) * fadeDiffRcp, 0.0, 1.0);
     fadeOnBorder = smoothstep(0.0, 1.0, fadeOnBorder);
 
-    vec3 rayHitViewPosition = viewPositionFromDepth(raySS.xy, raySS.z);
+    float rayDepth = reverseLogDepth(raySS.z, cameraNear, cameraFar);
+
+    vec3 rayHitViewPosition = screenToView(
+        raySS.xy,
+        rayDepth,
+        getViewZ(rayDepth),
+        projectionMatrix,
+        inverseProjectionMatrix
+    );
     float fadeOnDistance = 1.0 - clamp(distance(rayHitViewPosition, viewPosition) / uMaxDistance, 0.0, 1.0);
 
     float fadeOnPerpendicular = clamp(mix(0.0, 1.0, clamp(raySS.w * 4.0, 0.0, 1.0)), 0.0, 1.0);
     float fadeOnRoughness    = clamp(mix(0.0, 1.0, clamp(gloss * 4.0, 0.0, 1.0)), 0.0, 1.0);
     float totalFade = fadeOnBorder * fadeOnDistance * fadeOnPerpendicular * fadeOnRoughness * (1.0 - clamp(remainingAlpha, 0.0, 1.0));
 
-    vec3 result = mix(fallbackColor, totalColor.rgb, totalFade);
+    vec3 result = mix(fallbackColor, totalColor.rgb * specularF, totalFade);
     gl_FragColor = vec4(result, 1.0);
 }

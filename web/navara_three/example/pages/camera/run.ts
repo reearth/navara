@@ -3,8 +3,9 @@ import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { LLE } from "@navara/three_api";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
-import { addDateControl, addCameraControl } from "../../helpers/control";
+
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { addDateControl, addCameraControl } from "../../helpers/control";
 
 const gCameraParams = {
   longitude: 139.75711454748298,

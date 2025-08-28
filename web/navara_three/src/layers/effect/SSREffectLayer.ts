@@ -24,7 +24,7 @@ export class SSREffectLayer extends EffectLayerDeclaration<
   SSR
 > {
   static key = "ssr";
-  static insertAfter = ["aerialPerspective"];
+  static insertAfter = ["toneMapping"];
 
   private config: SSRConfig;
 
@@ -103,6 +103,9 @@ export class SSREffectLayer extends EffectLayerDeclaration<
     }
     if (config.coneTracingIteration !== undefined) {
       this._instance.coneTracingIteration = config.coneTracingIteration;
+    }
+    if (config.coneTracingIor !== undefined) {
+      this._instance.coneTracingIor = config.coneTracingIor;
     }
   }
 }

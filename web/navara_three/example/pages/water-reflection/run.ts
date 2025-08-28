@@ -104,6 +104,8 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
 
   // Create controls panel
   const pane = new Pane({ title: "SSR Water Reflection Example" });
+  pane.element.style.maxHeight = "98vh";
+  pane.element.style.overflow = "scroll";
 
   // Camera controls
   addCameraControl(view, pane);
@@ -140,6 +142,7 @@ const addSSRControls = (
     coneTracingFadeEnd: ssrLayer.ref.raw?.coneTracingFadeEnd ?? 0,
     coneTracingMaxDistance: ssrLayer.ref.raw?.coneTracingMaxDistance ?? 0,
     coneTracingIteration: ssrLayer.ref.raw?.coneTracingIteration ?? 0,
+    coneTracingIor: ssrLayer.ref.raw?.coneTracingIor ?? 0,
   };
 
   const fields: FolderFields<typeof ssrParams> = [
@@ -273,6 +276,19 @@ const addSSRControls = (
       params: { min: 0, step: 1 },
       onChange: (v) => {
         ssrParams.coneTracingIteration = v.value;
+        ssrLayer.update({ ssr: ssrParams });
+      },
+    },
+    {
+      name: "coneTracingIor",
+      params: {
+        color: {
+          alpha: false,
+          type: "int",
+        },
+      },
+      onChange: (v) => {
+        ssrParams.coneTracingIor = v.value;
         ssrLayer.update({ ssr: ssrParams });
       },
     },

@@ -9,7 +9,6 @@ import {
   ShaderPass,
 } from "postprocessing";
 import {
-  HalfFloatType,
   Uniform,
   WebGLRenderTarget,
   type Camera,
@@ -43,6 +42,7 @@ export type SSREffectOptions = {
   coneTracingFadeEnd?: number;
   coneTracingMaxDistance?: number;
   coneTracingIteration?: number;
+  coneTracingIor?: number;
 } & Omit<SSRMaterialParameters, "inputBuffer" | "depthBuffer">;
 
 export const ssrEffectOptionsDefaults = {
@@ -76,6 +76,7 @@ export class SSREffect extends Effect {
       coneTracingFadeEnd,
       coneTracingMaxDistance,
       coneTracingIteration,
+      coneTracingIor,
       useConeTracing,
       ...others
     } = {
@@ -92,7 +93,6 @@ export class SSREffect extends Effect {
     this.renderTarget = new WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
-      type: HalfFloatType,
     });
     this.renderTarget.texture.name = "SSR.Reflection";
 
@@ -106,7 +106,6 @@ export class SSREffect extends Effect {
     this.coneRenderTarget = new WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
-      type: HalfFloatType,
     });
     this.coneRenderTarget.texture.name = "ConeSSR.Reflection";
     this.coneTracingPass = new ConeTracingPass({
@@ -121,6 +120,7 @@ export class SSREffect extends Effect {
       specularBuffer: null,
       indirectSpecularBuffer: null,
       iteration: coneTracingIteration,
+      ior: coneTracingIor,
     });
 
     this._useConeTracing = !!useConeTracing;
@@ -156,6 +156,7 @@ export class SSREffect extends Effect {
   override set mainCamera(value: Camera) {
     this.camera = value;
     this.ssrMaterial.copyCameraSettings(value);
+    this.coneTracingPass.coneTracingMaterial.copyCameraSettings(this.camera);
   }
 
   override initialize(
@@ -341,5 +342,12 @@ export class SSREffect extends Effect {
   }
   set coneTracingIteration(value: number) {
     this.coneTracingPass.coneTracingMaterial.iteration = value;
+  }
+
+  get coneTracingIor(): number {
+    return this.coneTracingPass.coneTracingMaterial.ior;
+  }
+  set coneTracingIor(value: number) {
+    this.coneTracingPass.coneTracingMaterial.ior = value;
   }
 }
