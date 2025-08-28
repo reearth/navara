@@ -8,7 +8,6 @@ import {
 import type { ViewContext } from "../../core/ViewContext";
 import { SSR, type SSROptions } from "../../effects/ssr";
 
-import type { AerialPerspectiveEffectLayer } from "./AerialPerspectiveEffectLayer";
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
 type LayerDescription = {
@@ -25,21 +24,13 @@ export class SSREffectLayer extends EffectLayerDeclaration<
   SSR
 > {
   static key = "ssr";
+  static insertAfter = ["toneMapping"];
 
   private config: SSRConfig;
 
   constructor(view: ViewContext, config: SSRConfig) {
     super(view, config);
     this.config = config;
-  }
-
-  // Select the insertion point dynamically according to the state of aerial perspective.
-  getInsertAfter() {
-    const aerialPerspectivePass = this.findLayer<AerialPerspectiveEffectLayer>("aerialPerspective")?.raw;
-    if(!aerialPerspectivePass || !aerialPerspectivePass.irradiance) {
-      return ["aerialPerspective"];
-    }
-    return ["toneMapping"];
   }
 
   createPass() {
@@ -112,6 +103,9 @@ export class SSREffectLayer extends EffectLayerDeclaration<
     }
     if (config.coneTracingIteration !== undefined) {
       this._instance.coneTracingIteration = config.coneTracingIteration;
+    }
+    if (config.coneTracingIor !== undefined) {
+      this._instance.coneTracingIor = config.coneTracingIor;
     }
   }
 }

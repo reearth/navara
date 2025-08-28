@@ -21,6 +21,7 @@ export type ConeTracingPassOptions = {
   coneTracingFadeEnd?: number;
   coneTracingMaxDistance?: number;
   coneTracingIteration?: number;
+  coneTracingIor?: number;
   rayTracingBuffer?: Texture | null;
   normalBuffer?: Texture | null;
 } & ConeTracingMaterialParameters;
@@ -30,6 +31,7 @@ export const coneTracingPassOptionsDefaults = {
   coneTracingFadeEnd: coneTracingMaterialParametersDefaults.fadeEnd,
   coneTracingMaxDistance: coneTracingMaterialParametersDefaults.maxDistance,
   coneTracingIteration: coneTracingMaterialParametersDefaults.iteration,
+  coneTracingIor: coneTracingMaterialParametersDefaults.ior,
   rayTracingBuffer: null,
   normalBuffer: null,
 } satisfies ConeTracingPassOptions;
@@ -114,7 +116,6 @@ export class ConeTracingPass extends ShaderPass {
   }
 
   override setSize(width: number, height: number): void {
-    super.setSize(width, height);
     this.coneTracingMaterial.setSize(width, height);
 
     this.blurredRenderTarget.setSize(width, height);

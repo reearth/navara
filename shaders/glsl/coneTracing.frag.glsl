@@ -22,6 +22,7 @@ uniform float cameraNear;
 uniform float cameraFar;
 uniform mat4  inverseProjectionMatrix; // inverse of projection matrix
 uniform mat4  projectionMatrix; // inverse of projection matrix
+uniform vec3  ior; // TODO: Use specular map.
 
 in vec2 vUv;
 
@@ -111,8 +112,7 @@ void main() {
 
     vec3 normalVS = unpackVec2ToNormal(packedNormal.xy);
 
-    vec3 F0 = mix(Fdielectric, fallbackColor, packedNormal.z);
-    vec4 specularAll = vec4(F0, packedNormal.w);
+    vec4 specularAll = vec4(ior, packedNormal.w);
 
     float linearDepth = linearizeDepth(depth, cameraNear, cameraFar);
     vec3 toViewPosition = normalize(viewPosition);
@@ -183,6 +183,6 @@ void main() {
     float fadeOnRoughness    = clamp(mix(0.0, 1.0, clamp(gloss * 4.0, 0.0, 1.0)), 0.0, 1.0);
     float totalFade = fadeOnBorder * fadeOnDistance * fadeOnPerpendicular * fadeOnRoughness * (1.0 - clamp(remainingAlpha, 0.0, 1.0));
 
-    vec3 result = mix(fallbackColor, totalColor.rgb, totalFade);
+    vec3 result = mix(fallbackColor, totalColor.rgb * specularF, totalFade);
     gl_FragColor = vec4(result, 1.0);
 }

@@ -47,6 +47,7 @@ export type SSROptions = {
   coneTracingMaxDistance?: number;
   /** The number of iteration to accumulate the cone tracing */
   coneTracingIteration?: number;
+  coneTracingIor?: number;
 } & EffectOptions;
 
 export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
@@ -70,6 +71,7 @@ export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
   coneTracingFadeEnd: ssrEffectOptionsDefaults.coneTracingFadeEnd,
   coneTracingMaxDistance: ssrEffectOptionsDefaults.coneTracingMaxDistance,
   coneTracingIteration: ssrEffectOptionsDefaults.coneTracingIteration,
+  coneTracingIor: ssrEffectOptionsDefaults.coneTracingIor,
 };
 
 export class SSR extends Effect<SSREffectImpl, SSROptions> {
@@ -95,6 +97,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
       coneTracingFadeEnd: options.coneTracingFadeEnd,
       coneTracingMaxDistance: options.coneTracingMaxDistance,
       coneTracingIteration: options.coneTracingIteration,
+      coneTracingIor: options.coneTracingIor,
     });
 
     super(camera, effect, options);
@@ -343,6 +346,19 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingIteration = v;
     this.rawEffect.coneTracingIteration = v;
+    this.emit("_needsUpdate");
+  }
+
+  get coneTracingIor(): number {
+    return (
+      this.options.coneTracingIor ??
+      DEFAULT_SSR_OPTIONS.coneTracingIor
+    );
+  }
+  set coneTracingIor(v: number) {
+    if (!this.rawEffect) return;
+    this.options.coneTracingIor = v;
+    this.rawEffect.coneTracingIor = v;
     this.emit("_needsUpdate");
   }
 }

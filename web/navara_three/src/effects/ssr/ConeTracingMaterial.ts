@@ -14,6 +14,7 @@ import {
   type Camera,
   type ShaderMaterialParameters,
   type Texture,
+  Color,
 } from "three";
 
 export type ConeTracingMaterialParameters = {
@@ -28,14 +29,16 @@ export type ConeTracingMaterialParameters = {
   fadeEnd?: number;
   maxDistance?: number;
   iteration?: number;
+  ior?: number;
 } & ShaderMaterialParameters;
 
 export const coneTracingMaterialParametersDefaults = {
   numMips: 7,
   fadeStart: 0.9,
   fadeEnd: 1.0,
-  maxDistance: 10.0,
+  maxDistance: 5000.0,
   iteration: 14,
+  ior: 0xeeeeee,
 } satisfies ConeTracingMaterialParameters;
 
 export class ConeTracingMaterial extends ShaderMaterial {
@@ -51,6 +54,7 @@ export class ConeTracingMaterial extends ShaderMaterial {
       fadeEnd,
       maxDistance,
       iteration,
+      ior,
       ...others
     } = {
       ...coneTracingMaterialParametersDefaults,
@@ -84,6 +88,7 @@ export class ConeTracingMaterial extends ShaderMaterial {
         cameraFar: new Uniform(1),
         projectionMatrix: new Uniform(new Matrix4()),
         inverseProjectionMatrix: new Uniform(new Matrix4()),
+        ior: new Uniform(new Color(ior)),
       },
       defines: {
         DEPTH_PACKING: "0",
@@ -209,5 +214,13 @@ export class ConeTracingMaterial extends ShaderMaterial {
   set iteration(value: number) {
     this.defines.ITERATION = value;
     this.needsUpdate = true;
+  }
+
+  get ior(): number {
+    return this.uniforms.ior.value;
+  }
+
+  set ior(value: number) {
+    this.uniforms.ior.value = new Color(value);
   }
 }
