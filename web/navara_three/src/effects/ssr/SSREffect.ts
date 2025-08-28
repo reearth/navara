@@ -9,7 +9,6 @@ import {
   ShaderPass,
 } from "postprocessing";
 import {
-  HalfFloatType,
   Uniform,
   WebGLRenderTarget,
   type Camera,
@@ -92,7 +91,6 @@ export class SSREffect extends Effect {
     this.renderTarget = new WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
-      type: HalfFloatType,
     });
     this.renderTarget.texture.name = "SSR.Reflection";
 
@@ -106,7 +104,6 @@ export class SSREffect extends Effect {
     this.coneRenderTarget = new WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
-      type: HalfFloatType,
     });
     this.coneRenderTarget.texture.name = "ConeSSR.Reflection";
     this.coneTracingPass = new ConeTracingPass({

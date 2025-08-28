@@ -72,33 +72,17 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
 
   // Add water polygons using GeoJSON with reflection
   const polygonLayer = view.addLayer({
-    type: "geojson",
+    type: "cesium3dtiles",
     data: {
-      type: "Feature",
-      geometry: {
-        coordinates: [
-          [
-            [139.64114960199845, 35.77501909535009],
-            [139.64114960199845, 35.6170718697025],
-            [139.90177394130632, 35.6170718697025],
-            [139.90177394130632, 35.77501909535009],
-            [139.64114960199845, 35.77501909535009],
-          ],
-        ],
-        type: "Polygon",
-      },
+      url: "https://assets.cms.plateau.reearth.io/assets/bc/d3b4bd-77dd-428f-9ab9-9d77546a702b/13_tokyo-to_pref_2023_citygml_1_op_fld_pref_sumidagaw-shingashigawa-ryuiki_3dtiles_l2_no_texture/tileset.json",
     },
-    polygon: {
-      color: 0x355161,
-      height: 55,
-      extruded_height: 1,
-      clamp_to_ground: false,
-      use_ground_normals: true,
-      wireframe: false,
-      reflectivity: 0.5,
-      roughness: 0.2,
+    model: {
+      show: true,
+      color: 0xa9c5d6,
+      metalness: 0.05,
+      roughness: 0.3,
       receive_shadow: true,
-      outline_show: false,
+      height: -20,
     },
   });
 

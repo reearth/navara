@@ -61,9 +61,13 @@ fn generate_global_batch_id_and_selections(
     batch_length: usize,
     id_property: &String,
 ) -> Option<Vec<u32>> {
-    let prop_val = batch_table_json.get(id_property)?;
-
     let mut global_batch_id_and_selections: Vec<u32> = vec![];
+
+    let Some(prop_val) = batch_table_json.get(id_property) else {
+        global_batch_id_and_selections.fill(0);
+        return Some(global_batch_id_and_selections);
+    };
+
     if let serde_json::Value::Array(arr) = prop_val {
         for i in 0..batch_length {
             let val = arr.get(i).cloned();

@@ -3,12 +3,14 @@ import ThreeView, {
   LayerHandle,
   RainMeshLayer,
   SnowMeshLayer,
+  SSREffectLayer,
+  CloudsEffectLayer,
+  type LayerDescription,
 } from "@navara/three";
 import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import { Vector2, Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
@@ -25,6 +27,19 @@ export const run = async (view: ThreeView) => {
     clouds: {},
   });
 
+  defaultEffects.aerialPerspective.update({
+    aerialPerspective: {
+      irradiance: true,
+    },
+  });
+
+  view.addLayer<SSREffectLayer>({
+    type: "effect",
+    visible: true,
+    ssr: {
+    },
+  });
+
   view.setCamera({
     lng: 139.7371145474829,
     lat: 35.67564356091717,
@@ -38,12 +53,6 @@ export const run = async (view: ThreeView) => {
   date.setHours(8);
 
   view.atmosphere.date = date;
-
-  defaultEffects.aerialPerspective.update({
-    aerialPerspective: {
-      irradiance: true,
-    },
-  });
 
   cloudsLayer.update({
     clouds: {
@@ -124,7 +133,43 @@ export const run = async (view: ThreeView) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
+  add3DTilesControl(view, pane);
   addWeatherControl(view, pane);
+};
+
+const add3DTilesControl = (view: ThreeView, pane: Pane) => {
+  const PARAMS = {
+    visible: true,
+  };
+
+  const description: LayerDescription = {
+    type: "cesium3dtiles",
+    data: {
+      url: "https://assets.cms.plateau.reearth.io/assets/bc/d3b4bd-77dd-428f-9ab9-9d77546a702b/13_tokyo-to_pref_2023_citygml_1_op_fld_pref_sumidagaw-shingashigawa-ryuiki_3dtiles_l2_no_texture/tileset.json",
+    },
+    model: {
+      show: true,
+      color: 0xa9c5d6,
+      metalness: 0.05,
+      roughness: 0.3,
+      receive_shadow: true,
+      height: -20,
+    },
+  };
+
+  // Add Sumida River basin 3D tiles
+  const layer = view.addLayer(description);
+
+  const folder = pane.addFolder({
+    title: "Sumida River Basin",
+  });
+
+  folder.addBinding(PARAMS, "visible").on("change", (v) => {
+    if(description.model) {
+      description.model.show = v.value;
+    }
+    layer.update(description);
+  });
 };
 
 const addCameraControl = (view: ThreeView, pane: Pane) => {

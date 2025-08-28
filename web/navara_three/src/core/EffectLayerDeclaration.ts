@@ -70,8 +70,20 @@ export abstract class EffectLayerDeclaration<
     }
   }
 
+  getConstructor() {
+    return (this.constructor as typeof EffectLayerDeclaration);
+  }
+
   getKey(): string {
-    return (this.constructor as typeof EffectLayerDeclaration).key;
+    return this.getConstructor().key;
+  }
+
+  getInsertAfter() {
+    return this.getConstructor().insertAfter;
+  }
+
+  getInsertBefore() {
+    return this.getConstructor().insertBefore;
   }
 
   onCreate() {
@@ -91,9 +103,8 @@ export abstract class EffectLayerDeclaration<
     if (!this.raw) return;
 
     const key = this.getKey();
-    const EffectClass = this.constructor as typeof EffectLayerDeclaration;
-    const insertAfter = EffectClass.insertAfter || [];
-    const insertBefore = EffectClass.insertBefore || [];
+    const insertAfter = this.getInsertAfter() || [];
+    const insertBefore = this.getInsertBefore() || [];
 
     const raw = this.raw;
     const c =

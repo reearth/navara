@@ -34,7 +34,7 @@ export const coneTracingMaterialParametersDefaults = {
   numMips: 7,
   fadeStart: 0.9,
   fadeEnd: 1.0,
-  maxDistance: 100.0,
+  maxDistance: 10.0,
   iteration: 14,
 } satisfies ConeTracingMaterialParameters;
 

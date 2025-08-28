@@ -387,21 +387,24 @@ void main() {
 
   // Ref: https://willpgfx.com/2015/07/screen-space-glossy-reflections/
   #ifdef GENERATE_RAY_TRACING_BUFFER
+    if(!intersect) {
+      gl_FragColor = vec4(0.0);
+      return;
+    }
+
     // Calculate rdotv (reflection dot view) for validity check
-    float rdotv = intersect ? dot(rayDirection, normalize(rayOrigin)) : 0.0;
+    float rdotv = dot(rayDirection, normalize(rayOrigin));
 
     // Store ray tracing results in a format compatible with cone tracing
     // x,y = hit UV coordinates
     // z = hit depth at the hit point
     // w = rdotv * alpha (combined validity indicator)
-    if (intersect) {
-      float hitDepth = readDepth(hitPixel);
-      gl_FragColor = vec4(hitPixel.x, hitPixel.y, hitDepth, rdotv * alpha);
-    } else {
-      // No intersection: output invalid marker
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-    }
+    float hitDepth = readDepth(hitPixel);
+    gl_FragColor = vec4(hitPixel.x, hitPixel.y, hitDepth, rdotv * alpha);
   #else
+    if (!intersect) {
+      return;
+    }
     vec3 color = texture2D(inputBuffer, hitPixel).rgb;
     gl_FragColor = vec4(color, alpha);
   #endif
