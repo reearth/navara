@@ -36,8 +36,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer<SSREffectLayer>({
     type: "effect",
     visible: true,
-    ssr: {
-    },
+    ssr: {},
   });
 
   view.setCamera({
@@ -165,7 +164,7 @@ const add3DTilesControl = (view: ThreeView, pane: Pane) => {
   });
 
   folder.addBinding(PARAMS, "visible").on("change", (v) => {
-    if(description.model) {
+    if (description.model) {
       description.model.show = v.value;
     }
     layer.update(description);

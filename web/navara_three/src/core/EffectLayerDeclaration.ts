@@ -71,7 +71,7 @@ export abstract class EffectLayerDeclaration<
   }
 
   getConstructor() {
-    return (this.constructor as typeof EffectLayerDeclaration);
+    return this.constructor as typeof EffectLayerDeclaration;
   }
 
   getKey(): string {

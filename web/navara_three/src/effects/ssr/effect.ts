@@ -350,10 +350,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
   }
 
   get coneTracingIor(): number {
-    return (
-      this.options.coneTracingIor ??
-      DEFAULT_SSR_OPTIONS.coneTracingIor
-    );
+    return this.options.coneTracingIor ?? DEFAULT_SSR_OPTIONS.coneTracingIor;
   }
   set coneTracingIor(v: number) {
     if (!this.rawEffect) return;

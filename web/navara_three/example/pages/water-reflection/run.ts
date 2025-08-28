@@ -281,10 +281,12 @@ const addSSRControls = (
     },
     {
       name: "coneTracingIor",
-      params: { color: {
-        alpha: false,
-        type: "int",
-      } },
+      params: {
+        color: {
+          alpha: false,
+          type: "int",
+        },
+      },
       onChange: (v) => {
         ssrParams.coneTracingIor = v.value;
         ssrLayer.update({ ssr: ssrParams });
