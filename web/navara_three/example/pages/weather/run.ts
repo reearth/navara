@@ -156,11 +156,10 @@ const add3DTilesControl = (view: ThreeView, pane: Pane) => {
     },
   };
 
-  // Add Sumida River basin 3D tiles
   const layer = view.addLayer(description);
 
   const folder = pane.addFolder({
-    title: "Sumida River Basin",
+    title: "Sumida River Flood Model",
   });
 
   folder.addBinding(PARAMS, "visible").on("change", (v) => {
