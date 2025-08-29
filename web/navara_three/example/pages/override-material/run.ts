@@ -36,7 +36,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "effect",
-    smaa: {}
+    smaa: {},
   });
 
   view.setCamera({
