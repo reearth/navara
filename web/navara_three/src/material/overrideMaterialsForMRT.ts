@@ -106,11 +106,7 @@ function injectGBuffer(
           #else
             float roughnessFactor = 0.0;
           #endif
-          outputBuffer1 = vec4(
-            packNormalToVec2(normal),
-            reflectivity,
-            roughnessFactor
-          );
+          outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);
         `;
   shader.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH

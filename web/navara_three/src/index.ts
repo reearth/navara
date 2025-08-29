@@ -1064,10 +1064,6 @@ export default class ThreeView<
         type: "effect",
         lensFlare: {},
       } as LayerDescription),
-      ssao: this.addLayer<SSAOEffectLayer>({
-        type: "effect",
-        ssao: {},
-      } as LayerDescription),
       toneMapping: this.addLayer<ToneMappingEffectLayer>({
         type: "effect",
         toneMapping: {},

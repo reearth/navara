@@ -20,6 +20,7 @@ import { Pane } from "tweakpane";
 import type {
   AerialPerspectiveEffectLayer,
   CloudsEffectLayer,
+  SSAOEffectLayer,
 } from "../../../src/layers/effect";
 import type { LightProbeLayer } from "../../../src/layers/light/LightProbeLayer";
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -1143,7 +1144,12 @@ const addEffectsControl = (
     visible: PARAMS.lensFlare,
     lensFlare: { intensity: PARAMS.lensFlareIntensity },
   });
-  defaultEffects.ssao.update({ visible: PARAMS.ssao });
+
+  const ssao = view.addLayer<SSAOEffectLayer>({
+    type: "effect",
+    visible: PARAMS.ssao,
+    ssao: {},
+  });
 
   const folder = pane.addFolder({
     title: "Effects",
@@ -1175,10 +1181,10 @@ const addEffectsControl = (
       defaultEffects.lensFlare.update({ lensFlare: { intensity: v.value } });
     });
   folder.addBinding(PARAMS, "ssao").on("change", (v) => {
-    defaultEffects.ssao.update({ visible: v.value });
+    ssao.update({ visible: v.value });
   });
   folder.addBinding(PARAMS, "ssaoHalfRes").on("change", (v) => {
-    defaultEffects.ssao.update({ ssao: { halfRes: v.value } });
+    ssao.update({ ssao: { halfRes: v.value } });
   });
   folder
     .addBinding(PARAMS, "ssaoQuality", {
@@ -1188,20 +1194,20 @@ const addEffectsControl = (
       })),
     })
     .on("change", (v) => {
-      defaultEffects.ssao.update({
+      ssao.update({
         ssao: { quality: v.value as SSAOQualityMode },
       });
     });
   folder.addBinding(PARAMS, "ssaoSamples").on("change", (v) => {
-    defaultEffects.ssao.update({ ssao: { samples: v.value } });
+    ssao.update({ ssao: { samples: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoRadius").on("change", (v) => {
-    defaultEffects.ssao.update({ ssao: { radius: v.value } });
+    ssao.update({ ssao: { radius: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoIntensity").on("change", (v) => {
-    defaultEffects.ssao.update({ ssao: { intensity: v.value } });
+    ssao.update({ ssao: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoColor").on("change", (v) => {
-    defaultEffects.ssao.update({ ssao: { color: new Color(v.value) } });
+    ssao.update({ ssao: { color: new Color(v.value) } });
   });
 };
