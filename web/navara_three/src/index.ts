@@ -1,5 +1,5 @@
 import { EventManager, EventHandler } from "@navara/core";
-import type { CameraPosition, Nullable } from "@navara/core";
+import type { CameraPosition, Nullable, XYZ } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -167,6 +167,8 @@ export type Options = {
   shadow?: boolean;
 };
 
+export type MapMouseEvent = MouseEvent & XYZ;
+
 export type ViewEvents = {
   resize: (w: number, h: number) => void;
   pick: (info: Nullable<PickedFeature>) => void;
@@ -197,7 +199,11 @@ export type ViewEvents = {
    * You should pass a material that needs the shadow when it's initialized.
    */
   _csmMounted: (material: Material) => void;
+
+  // Mouse events
+  mousedown: (view: ThreeView, event: MapMouseEvent) => void;
 };
+
 
 export default class ThreeView<
   CustomLayerDescriptions extends
