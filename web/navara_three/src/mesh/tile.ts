@@ -16,6 +16,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  Material,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
@@ -40,6 +41,7 @@ import type {
 import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
 import type { TextureOptions } from "../textures";
 import type { MeshCache, TileMapByHandle } from "../type";
+import { createReplacer } from "../utils";
 
 import { BatchedFeatureMesh } from "./batchedFeature";
 
@@ -391,12 +393,14 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       shader.uniforms.uPickable = m.userData.uPickable;
       shader.uniforms.uColors = m.userData.colors;
       shader.uniforms.uOpacities = m.userData.opacities;
+      shader.uniforms.uReflectivities = m.userData.reflectivities;
+      shader.uniforms.uRoughnesses = m.userData.roughnesses;
       shader.uniforms.uTextures = m.userData.textures;
       // shader.uniforms.uTextures0 = { value: m.userData.textures.value[0] };
       // shader.uniforms.uTextures1 = { value: m.userData.textures.value[1] };
 
       // Add UV transform uniforms to the shader
-      shader.vertexShader = shader.vertexShader
+      shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "#include <common>",
           `
@@ -417,15 +421,17 @@ vOrigUv = vUv;
 // Apply transform for raster textures
 vUv = vUv * uScale + uOffset;
 `,
-        );
+        ).source;
 
-      shader.fragmentShader = shader.fragmentShader
+      shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
           "#include <common>",
           `
   uniform int uShows[${maxTextures}];
   uniform vec3 uColors[${maxTextures}];
   uniform float uOpacities[${maxTextures}];
+  uniform float uReflectivities[${maxTextures}];
+  uniform float uRoughnesses[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
   uniform float uPickable;
   
@@ -438,6 +444,9 @@ vUv = vUv * uScale + uOffset;
         .replace(
           "#include <map_fragment>",
           `
+  float tileReflectivity;
+  float tileRoughness;
+
   ${generateMixOverlaidTexturesMacro(
     maxTextures,
     (texColorVar, idx) => `
@@ -446,6 +455,14 @@ vUv = vUv * uScale + uOffset;
     // For raster textures, use transformed UV
     vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
     ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+
+    float currentReflectivity = uReflectivities[${idx}];
+    float currentRoughness = uRoughnesses[${idx}];
+
+    if(${texColorVar}.a > 0.0) {
+      tileReflectivity = currentReflectivity;
+      tileRoughness = currentRoughness;
+    }
     
     // Disable picking for the raster tile.
     // Allow picking for texturizedScene because it's vector data.
@@ -466,7 +483,11 @@ if (uPickable > 0.) {
 
   #include <envmap_fragment>
 `,
-        );
+        )
+        .replace(
+          "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+          `outputBuffer1 = vec4(packNormalToVec2(normal), tileReflectivity, tileRoughness);`,
+        ).source;
     };
 
     viewEvents.emit("_csmMounted", m);
@@ -588,6 +609,14 @@ if (uPickable > 0.) {
     const lastIdx = this.texturizedSceneIndexFrom + sceneIdx;
     if (textures[lastIdx]) {
       m.userData.shows.value[lastIdx] = visible ? 1 : 0;
+
+      const mesh = this.texturizedScenes.children[sceneIdx].children[0];
+      if (mesh instanceof Mesh && mesh.material instanceof Material) {
+        m.userData.reflectivities.value[lastIdx] =
+          mesh.material.userData.reflectivity.value;
+        m.userData.roughnesses.value[lastIdx] =
+          mesh.material.userData.roughness.value;
+      }
     }
   }
 
@@ -607,6 +636,16 @@ if (uPickable > 0.) {
     if (!m.userData.opacities) {
       m.userData.opacities = {
         value: [...new Array(maxTextures)].fill(1),
+      };
+    }
+    if (!m.userData.reflectivities) {
+      m.userData.reflectivities = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.roughnesses) {
+      m.userData.roughnesses = {
+        value: [...new Array(maxTextures)].fill(0),
       };
     }
 

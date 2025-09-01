@@ -132,41 +132,67 @@ export const run = async (view: ThreeView) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  add3DTilesControl(view, pane);
+  addWaterControl(view, pane);
   addWeatherControl(view, pane);
 };
 
-const add3DTilesControl = (view: ThreeView, pane: Pane) => {
+const addWaterControl = (view: ThreeView, pane: Pane) => {
   const PARAMS = {
-    visible: true,
+    "visible flood model": true,
+    "visible river model": true,
   };
 
-  const description: LayerDescription = {
+  const floodLayerDescription: LayerDescription = {
     type: "cesium3dtiles",
     data: {
       url: "https://assets.cms.plateau.reearth.io/assets/bc/d3b4bd-77dd-428f-9ab9-9d77546a702b/13_tokyo-to_pref_2023_citygml_1_op_fld_pref_sumidagaw-shingashigawa-ryuiki_3dtiles_l2_no_texture/tileset.json",
     },
     model: {
       show: true,
-      color: 0xa9c5d6,
-      metalness: 0.05,
+      color: 0xffdcad,
+      metalness: 0.02,
       roughness: 0.3,
       receive_shadow: true,
       height: -20,
     },
   };
 
-  const layer = view.addLayer(description);
+  const riverLayerDescription: LayerDescription = {
+    type: "mvt",
+    data: {
+      url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+    },
+    polygon: {
+      color: 0xcef7ff,
+      reflectivity: 0.9,
+      clamp_to_ground: true,
+      wireframe: false,
+    },
+    vector_tile: {
+      max_zoom: 16,
+      layers: ["waterarea"],
+    },
+  };
+
+  const floodModelLayer = view.addLayer(floodLayerDescription);
+  const riverModelLayer = view.addLayer(riverLayerDescription);
 
   const folder = pane.addFolder({
-    title: "Sumida River Flood Model",
+    title: "Water",
   });
 
-  folder.addBinding(PARAMS, "visible").on("change", (v) => {
-    if (description.model) {
-      description.model.show = v.value;
+  folder.addBinding(PARAMS, "visible flood model").on("change", (v) => {
+    if (floodLayerDescription.model) {
+      floodLayerDescription.model.show = v.value;
     }
-    layer.update(description);
+    floodModelLayer.update(floodLayerDescription);
+  });
+
+  folder.addBinding(PARAMS, "visible river model").on("change", (v) => {
+    if (riverLayerDescription.polygon) {
+      riverLayerDescription.polygon.show = v.value;
+    }
+    riverModelLayer.update(riverLayerDescription);
   });
 };
 

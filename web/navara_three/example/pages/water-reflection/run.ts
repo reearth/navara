@@ -1,4 +1,7 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  type LayerDescription,
+} from "@navara/three";
 import { Pane } from "tweakpane";
 
 import type { SSREffectLayer } from "../../../src/layers/effect";
@@ -26,7 +29,6 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   // Add SSR effect layer
   const ssrLayer = view.addLayer<SSREffectLayer>({
     type: "effect",
-    visible: true,
     ssr: {},
   });
 
@@ -70,38 +72,6 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
     },
   });
 
-  // Add water polygons using GeoJSON with reflection
-  const polygonLayer = view.addLayer({
-    type: "geojson",
-    data: {
-      type: "Feature",
-      geometry: {
-        coordinates: [
-          [
-            [139.64114960199845, 35.77501909535009],
-            [139.64114960199845, 35.6170718697025],
-            [139.90177394130632, 35.6170718697025],
-            [139.90177394130632, 35.77501909535009],
-            [139.64114960199845, 35.77501909535009],
-          ],
-        ],
-        type: "Polygon",
-      },
-    },
-    polygon: {
-      color: 0x355161,
-      height: 55,
-      extruded_height: 1,
-      clamp_to_ground: false,
-      use_ground_normals: true,
-      wireframe: false,
-      reflectivity: 0.5,
-      roughness: 0.2,
-      receive_shadow: true,
-      outline_show: false,
-    },
-  });
-
   // Create controls panel
   const pane = new Pane({ title: "SSR Water Reflection Example" });
   pane.element.style.maxHeight = "98vh";
@@ -117,7 +87,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   addSSRControls(ssrLayer, pane);
 
   // Water polygon controls
-  addWaterControls(polygonLayer, pane);
+  addWaterControls(view, pane);
 };
 
 const addSSRControls = (
@@ -301,45 +271,30 @@ const addSSRControls = (
   );
 };
 
-const addWaterControls = (
-  polygonLayer: ReturnType<typeof ThreeView.prototype.addLayer>,
-  pane: Pane,
-) => {
+const addWaterControls = (view: ThreeView, pane: Pane) => {
   // Store the layer description object
-  const layerDescription = {
-    type: "geojson" as const,
+  const layerDescription: LayerDescription = {
+    type: "mvt",
     data: {
-      type: "Feature" as const,
-      geometry: {
-        coordinates: [
-          [
-            [139.64114960199845, 35.77501909535009],
-            [139.64114960199845, 35.6170718697025],
-            [139.90177394130632, 35.6170718697025],
-            [139.90177394130632, 35.77501909535009],
-            [139.64114960199845, 35.77501909535009],
-          ],
-        ],
-        type: "Polygon" as const,
-      },
+      url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
     },
     polygon: {
-      color: 0x355161,
-      height: 55,
-      extruded_height: 1,
-      clamp_to_ground: false,
-      use_ground_normals: true,
-      wireframe: false,
+      color: 0xcef7ff,
       reflectivity: 0.5,
-      roughness: 0.2,
-      receive_shadow: true,
-      outline_show: false,
+      clamp_to_ground: true,
+      wireframe: false,
+    },
+    vector_tile: {
+      max_zoom: 16,
+      layers: ["waterarea"],
     },
   };
 
+  const waterLayer = view.addLayer(layerDescription);
+
   const waterParams = {
-    reflectivity: layerDescription.polygon.reflectivity,
-    roughness: layerDescription.polygon.roughness,
+    reflectivity: layerDescription.polygon?.reflectivity ?? 0,
+    roughness: layerDescription.polygon?.roughness ?? 0,
   };
 
   const fields: FolderFields<typeof waterParams> = [
@@ -347,18 +302,20 @@ const addWaterControls = (
       name: "reflectivity",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
+        if (!layerDescription.polygon) return;
         waterParams.reflectivity = v.value;
         layerDescription.polygon.reflectivity = v.value;
-        polygonLayer.update(layerDescription);
+        waterLayer.update(layerDescription);
       },
     },
     {
       name: "roughness",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
+        if (!layerDescription.polygon) return;
         waterParams.roughness = v.value;
         layerDescription.polygon.roughness = v.value;
-        polygonLayer.update(layerDescription);
+        waterLayer.update(layerDescription);
       },
     },
   ];

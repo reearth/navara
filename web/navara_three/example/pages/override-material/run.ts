@@ -34,6 +34,11 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  view.addLayer({
+    type: "effect",
+    smaa: {},
+  });
+
   view.setCamera({
     lng: 139.75711454748298,
     lat: 35.67564356091717,
