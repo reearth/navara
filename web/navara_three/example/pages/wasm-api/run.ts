@@ -8,7 +8,7 @@ import ThreeView, {
   type GLTFModelLayer,
   type Nullable,
   type XYZ,
-  type MapMouseEvent
+  type MapMouseEvent,
 } from "@navara/three";
 import {
   geodeticToVector3,
@@ -106,10 +106,9 @@ export const run = async (view: ThreeView) => {
   });
 
   view.on("mousedown", (_view: ThreeView, event: MapMouseEvent) => {
-      console.log("3D Position:", event.x, event.y, event.z);
-      console.log("Screen Position:", event.clientX, event.clientY);
-    }
-  );
+    console.log("3D Position:", event.x, event.y, event.z);
+    console.log("Screen Position:", event.clientX, event.clientY);
+  });
 
   view.addLayer({
     type: "tiles",
@@ -241,10 +240,15 @@ const testScreenToWorld = (view: ThreeView) => {
     const rect = view.renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    
+
     const xyz = convertScreenPos(view, x, y);
-    if(xyz){
-      const result = {...event, x: xyz.x, y: xyz.y, z: xyz.z} as MapMouseEvent;
+    if (xyz) {
+      const result = {
+        ...event,
+        x: xyz.x,
+        y: xyz.y,
+        z: xyz.z,
+      } as MapMouseEvent;
       view.emit("mousedown", view, result);
     }
   });

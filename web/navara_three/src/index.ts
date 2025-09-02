@@ -204,7 +204,6 @@ export type ViewEvents = {
   mousedown: (view: ThreeView, event: MapMouseEvent) => void;
 };
 
-
 export default class ThreeView<
   CustomLayerDescriptions extends
     | Record<string, unknown>
