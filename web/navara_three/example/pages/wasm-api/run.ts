@@ -15,7 +15,6 @@ import {
   vector3ToGeodetic,
   degreeToRadian,
   radianToDegree,
-  convertScreenToWorld,
   convertWorldToScreen,
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
@@ -105,7 +104,7 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  view.on("mousedown", (_view: ThreeView, event: MapMouseEvent) => {
+  view.on("mousedown", (event: MapMouseEvent) => {
     console.log("3D Position:", event.x, event.y, event.z);
     console.log("Screen Position:", event.clientX, event.clientY);
   });
@@ -218,7 +217,7 @@ const addRunningObject = (view: ThreeView) => {
 };
 
 const testScreenToWorld = (view: ThreeView) => {
-  const onMouseMove = (event: MouseEvent) => {
+  const onMouseMove = (event: MapMouseEvent) => {
     if (!gPaneParams.convertScreenToWorld) {
       return;
     }
@@ -235,39 +234,7 @@ const testScreenToWorld = (view: ThreeView) => {
     }
   };
 
-  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
-  view.renderer.domElement.addEventListener("mousedown", (event) => {
-    const rect = view.renderer.domElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    const xyz = convertScreenPos(view, x, y);
-    if (xyz) {
-      const result = {
-        ...event,
-        x: xyz.x,
-        y: xyz.y,
-        z: xyz.z,
-      } as MapMouseEvent;
-      view.emit("mousedown", view, result);
-    }
-  });
-};
-
-const convertScreenPos = (view: ThreeView, x: number, y: number) => {
-  if (!view.camera) {
-    console.error("View camera is not initialized.");
-    return;
-  }
-
-  const screenSize = view.screenSize;
-  const pixelRatio = view.pixelRatio;
-
-  const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
-
-  const pos = convertScreenToWorld(win, view.camera.raw, new Vector2(x, y));
-
-  return pos;
+  view.on("mousemove", onMouseMove);
 };
 
 const placeOneBall = (
@@ -573,10 +540,10 @@ const testRayPlane = (view: ThreeView) => {
   let cylinder: Mesh | undefined = undefined;
   let bMouseMoved = false;
 
-  const onMouseDown = (_e: MouseEvent) => {
+  const onMouseDown = (_e: MapMouseEvent) => {
     bMouseMoved = false;
   };
-  const onMouseMove = (event: MouseEvent) => {
+  const onMouseMove = (event: MapMouseEvent) => {
     bMouseMoved = true;
 
     const rect = view.renderer.domElement.getBoundingClientRect();
@@ -627,7 +594,7 @@ const testRayPlane = (view: ThreeView) => {
     const rect = view.renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    const pos = convertScreenPos(view, x, y);
+    const pos = view.pickTerrainPosition(x, y);
 
     if (!center && pos) {
       center = pos;
@@ -650,9 +617,9 @@ const testRayPlane = (view: ThreeView) => {
     cylinder = undefined;
   };
 
-  view.renderer.domElement.addEventListener("mousedown", onMouseDown);
-  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
-  view.renderer.domElement.addEventListener("mouseup", onMouseUp);
+  view.on("mousedown", onMouseDown);
+  view.on("mousemove", onMouseMove);
+  view.on("mouseup", onMouseUp);
 };
 
 const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
@@ -823,11 +790,13 @@ const createPolylineMesh = (view: ThreeView) => {
 };
 
 const testSampleTerrainHeight = (view: ThreeView) => {
-  const onMouseMove = (event: MouseEvent) => {
+  const onMouseMove = (event: MapMouseEvent) => {
+    // スクリーン座標を取得してpickTerrainPositionを使用
     const rect = view.renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    const pos = convertScreenPos(view, x, y);
+    const pos = view.pickTerrainPosition(x, y);
+
     if (pos) {
       const lle = vector3ToGeodetic(pos);
 
@@ -840,7 +809,7 @@ const testSampleTerrainHeight = (view: ThreeView) => {
     }
   };
 
-  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
+  view.on("mousemove", onMouseMove);
 };
 
 const onRegisterChange = () => {

@@ -108,7 +108,7 @@ import {
   type DrapedMaterialCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
-import { isWorker } from "./utils";
+import { isWorker, convertScreenPos } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
@@ -201,7 +201,12 @@ export type ViewEvents = {
   _csmMounted: (material: Material) => void;
 
   // Mouse events
-  mousedown: (view: ThreeView, event: MapMouseEvent) => void;
+  mousedown: (event: MapMouseEvent) => void;
+  mouseenter: (event: MouseEvent) => void;
+  mouseleave: (event: MouseEvent) => void;
+  mousemove: (event: MapMouseEvent) => void;
+  mouseup: (event: MouseEvent) => void;
+  click: (event: MouseEvent) => void;
 };
 
 export default class ThreeView<
@@ -644,6 +649,56 @@ export default class ThreeView<
     this.resize(size.width, size.height, this.renderer.getPixelRatio());
 
     this.camera.core = this._core;
+
+    this.renderer.domElement.addEventListener("mousedown", (event) => {
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const xyz = convertScreenPos(this, x, y);
+      if (xyz) {
+        const result = {
+          ...event,
+          x: xyz.x,
+          y: xyz.y,
+          z: xyz.z,
+        } as MapMouseEvent;
+        this.emit("mousedown", result);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("mouseenter", (event) => {
+      this.emit("mouseenter", event);
+    });
+
+    this.renderer.domElement.addEventListener("mouseleave", (event) => {
+      this.emit("mouseleave", event);
+    });
+
+    this.renderer.domElement.addEventListener("mousemove", (event) => {
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const xyz = convertScreenPos(this, x, y);
+      if (xyz) {
+        const result = {
+          ...event,
+          clientX: event.clientX, // 明示的に設定
+          clientY: event.clientY, // 明示的に設定
+          x: xyz.x,
+          y: xyz.y,
+          z: xyz.z,
+        } as MapMouseEvent;
+        this.emit("mousemove", result);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("mouseup", (event) => {
+      this.emit("mouseup", event);
+    });
+
+    this.renderer.domElement.addEventListener("click", (event) => {
+      this.emit("click", event);
+    });
   }
 
   dispose() {
