@@ -658,6 +658,8 @@ export default class ThreeView<
       if (xyz) {
         const result = {
           ...event,
+          clientX: event.clientX,
+          clientY: event.clientY,
           x: xyz.x,
           y: xyz.y,
           z: xyz.z,
@@ -682,8 +684,8 @@ export default class ThreeView<
       if (xyz) {
         const result = {
           ...event,
-          clientX: event.clientX, // 明示的に設定
-          clientY: event.clientY, // 明示的に設定
+          clientX: event.clientX,
+          clientY: event.clientY,
           x: xyz.x,
           y: xyz.y,
           z: xyz.z,
