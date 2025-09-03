@@ -170,7 +170,10 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             id_property: val.id_property.unwrap_or(default.id_property),
             outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
-            outline_offset: val.outline_offset.unwrap_or(default.outline_offset.into()).into(),
+            outline_offset: val
+                .outline_offset
+                .unwrap_or(default.outline_offset.into())
+                .into(),
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
         }

@@ -110,7 +110,9 @@ export class TextMesh extends Group implements FeatureMesh {
 
     // Set outline properties from material
     txt.outlineWidth = this.userData.outline_width.value;
-    txt.outlineColor = this.userData.outline_color.value ? this.userData.outline_color.value.getHex() : 0x000000;
+    txt.outlineColor = this.userData.outline_color.value
+      ? this.userData.outline_color.value.getHex()
+      : 0x000000;
     txt.outlineBlur = this.userData.outline_blur.value;
     txt.outlineOffsetX = this.userData.outline_offset.x;
     txt.outlineOffsetY = this.userData.outline_offset.y;
@@ -447,7 +449,9 @@ export class TextMesh extends Group implements FeatureMesh {
       : undefined;
     if (nextOutlineColor !== prev.outlineColor) {
       this.userData.outline_color.value = nextOutlineColor;
-      txt.outlineColor = nextOutlineColor ? nextOutlineColor.getHex() : 0x000000;
+      txt.outlineColor = nextOutlineColor
+        ? nextOutlineColor.getHex()
+        : 0x000000;
       prev.outlineColor = nextOutlineColor;
     }
 
@@ -460,7 +464,10 @@ export class TextMesh extends Group implements FeatureMesh {
 
     const nextOutlineOffsetX = material.outline_offset?.x ?? 0.0;
     const nextOutlineOffsetY = material.outline_offset?.y ?? 0.0;
-    if (nextOutlineOffsetX !== prev.outlineOffsetX || nextOutlineOffsetY !== prev.outlineOffsetY) {
+    if (
+      nextOutlineOffsetX !== prev.outlineOffsetX ||
+      nextOutlineOffsetY !== prev.outlineOffsetY
+    ) {
       this.userData.outline_offset.x = nextOutlineOffsetX;
       this.userData.outline_offset.y = nextOutlineOffsetY;
       txt.outlineOffsetX = nextOutlineOffsetX;
