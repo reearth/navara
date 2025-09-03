@@ -441,7 +441,7 @@ export class TextMesh extends Group implements FeatureMesh {
       this.userData.outline_width.value = nextOutlineWidth;
       txt.outlineWidth = nextOutlineWidth;
       prev.outlineWidth = nextOutlineWidth;
-      
+
       // Force text re-sync to recalculate sampling size when outline width changes
       txt.sync(() => {
         this.updateBackground();
