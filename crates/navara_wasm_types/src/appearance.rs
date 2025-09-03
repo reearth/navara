@@ -200,7 +200,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             id_property: Some(value.id_property.clone()),
             outline_blur: Some(value.outline_blur),
             outline_color: Some(value.outline_color),
-            outline_offset: Some(value.outline_offset.into()).into(),
+            outline_offset: Some(value.outline_offset.into()),
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
         }
