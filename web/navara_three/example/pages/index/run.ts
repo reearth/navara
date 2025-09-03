@@ -164,6 +164,50 @@ const geoLayersDef: MaterialLayerDescription[] = [
           type: "Feature",
           properties: {},
           geometry: {
+            coordinates: [80,10.0],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    text: {
+      color: 0xffffff,
+      height: 1,
+      scale_by_distance: true,
+      clamp_to_ground: true,
+      depth_test: true,
+      text: "hello world!!!",
+      // font: "/font/LoveDays-2v7Oe.ttf",
+      background_color: 0x0a70c2,
+      border_color: 0xf8e43c,
+      border_width: 0.08, // 0 ~ 0.5, the ratio of the border to the height
+      corner_radius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      size: 50,
+      center: {
+        x: 0.5,
+        y: 0,
+      },
+      padding: {
+        x: 10,
+        y: 0,
+      },
+      outline_blur: 0.0,
+      outline_color: 0x000000,
+      outline_offset: { x: 0, y: 0 },
+      outline_opacity: 1.0,
+      outline_width: 0.0,
+    },
+  },
+
+  {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
             coordinates: [86.925, 27.9881],
             type: "Point",
           },

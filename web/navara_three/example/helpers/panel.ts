@@ -81,6 +81,9 @@ export const addCtrlPanel = (
     outline_color: "#ffffff",
     outline_show: true,
     outline_width: 1,
+    outline_blur: 0.0,
+    outline_offset: { x: 0, y: 0 },
+    outline_opacity: 1.0,
     surface_show: true,
   };
 
@@ -304,6 +307,19 @@ export const addCtrlPanel = (
         material.outline_width = paneParams.outline_width;
       }
 
+      if ("outline_blur" in material) {
+        material.outline_blur = paneParams.outline_blur;
+      }
+
+      if ("outline_offset" in material) {
+        material.outline_offset.x = paneParams.outline_offset.x;
+        material.outline_offset.y = paneParams.outline_offset.y;
+      }
+
+      if ("outline_opacity" in material) {
+        material.outline_opacity = paneParams.outline_opacity;
+      }
+
       if ("surface_show" in material) {
         material.surface_show = paneParams.surface_show;
       }
@@ -499,6 +515,28 @@ function createParamCtrl(
     if ("outline_width" in material) {
       paneParams.outline_width = material.outline_width;
       f.addBinding(paneParams, "outline_width", { min: 0, max: 20 }).on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("outline_blur" in material) {
+      paneParams.outline_blur = material.outline_blur;
+      f.addBinding(paneParams, "outline_blur", { min: 0, max: 10 }).on(
+        "change",
+        changeFunc,
+      );
+    }
+
+    if ("outline_offset" in material) {
+      paneParams.outline_offset.x = material.outline_offset.x;
+      paneParams.outline_offset.y = material.outline_offset.y;
+      f.addBinding(paneParams, "outline_offset").on("change", changeFunc);
+    }
+
+    if ("outline_opacity" in material) {
+      paneParams.outline_opacity = material.outline_opacity;
+      f.addBinding(paneParams, "outline_opacity", { min: 0, max: 1 }).on(
         "change",
         changeFunc,
       );

@@ -75,6 +75,25 @@ export class TextMesh extends Group implements FeatureMesh {
       x: meshMaterial?.padding?.x ?? 0.5,
       y: meshMaterial?.padding?.y ?? 0,
     };
+    this.userData.outline_blur = {
+      value: meshMaterial.outline_blur ?? 0.0,
+    };
+    this.userData.outline_color = {
+      value: meshMaterial.outline_color
+        ? new Color(meshMaterial.outline_color)
+        : undefined,
+    };
+    this.userData.outline_offset = {
+      x: meshMaterial?.outline_offset?.x ?? 0.0,
+      y: meshMaterial?.outline_offset?.y ?? 0.0,
+    };
+    this.userData.outline_opacity = {
+      value: meshMaterial.outline_opacity ?? 1.0,
+    };
+    this.userData.outline_width = {
+      value: meshMaterial.outline_width ?? 0.0,
+    };
+
     this.userData.fov = uniforms?.fov;
     this.userData.screenHeightPx = uniforms?.screenHeightPx;
     this.userData.isPicked = selected;
@@ -88,6 +107,14 @@ export class TextMesh extends Group implements FeatureMesh {
   private initText() {
     const txt = this.text;
     txt.fontSize = 1;
+
+    // Set outline properties from material
+    txt.outlineWidth = this.userData.outline_width.value;
+    txt.outlineColor = this.userData.outline_color.value ? this.userData.outline_color.value.getHex() : 0x000000;
+    txt.outlineBlur = this.userData.outline_blur.value;
+    txt.outlineOffsetX = this.userData.outline_offset.x;
+    txt.outlineOffsetY = this.userData.outline_offset.y;
+    txt.outlineOpacity = this.userData.outline_opacity.value;
 
     (txt.material as Material).onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
@@ -405,6 +432,48 @@ export class TextMesh extends Group implements FeatureMesh {
     if (nextDepthTest !== prev.depthTest) {
       txt.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    // Update outline properties
+    const nextOutlineWidth = material.outline_width ?? 0.0;
+    if (nextOutlineWidth !== prev.outlineWidth) {
+      this.userData.outline_width.value = nextOutlineWidth;
+      txt.outlineWidth = nextOutlineWidth;
+      prev.outlineWidth = nextOutlineWidth;
+    }
+
+    const nextOutlineColor = material.outline_color
+      ? new Color(material.outline_color)
+      : undefined;
+    if (nextOutlineColor !== prev.outlineColor) {
+      this.userData.outline_color.value = nextOutlineColor;
+      txt.outlineColor = nextOutlineColor ? nextOutlineColor.getHex() : 0x000000;
+      prev.outlineColor = nextOutlineColor;
+    }
+
+    const nextOutlineBlur = material.outline_blur ?? 0.0;
+    if (nextOutlineBlur !== prev.outlineBlur) {
+      this.userData.outline_blur.value = nextOutlineBlur;
+      txt.outlineBlur = nextOutlineBlur;
+      prev.outlineBlur = nextOutlineBlur;
+    }
+
+    const nextOutlineOffsetX = material.outline_offset?.x ?? 0.0;
+    const nextOutlineOffsetY = material.outline_offset?.y ?? 0.0;
+    if (nextOutlineOffsetX !== prev.outlineOffsetX || nextOutlineOffsetY !== prev.outlineOffsetY) {
+      this.userData.outline_offset.x = nextOutlineOffsetX;
+      this.userData.outline_offset.y = nextOutlineOffsetY;
+      txt.outlineOffsetX = nextOutlineOffsetX;
+      txt.outlineOffsetY = nextOutlineOffsetY;
+      prev.outlineOffsetX = nextOutlineOffsetX;
+      prev.outlineOffsetY = nextOutlineOffsetY;
+    }
+
+    const nextOutlineOpacity = material.outline_opacity ?? 1.0;
+    if (nextOutlineOpacity !== prev.outlineOpacity) {
+      this.userData.outline_opacity.value = nextOutlineOpacity;
+      txt.outlineOpacity = nextOutlineOpacity;
+      prev.outlineOpacity = nextOutlineOpacity;
     }
 
     if (bNeedUpdateBg) {
