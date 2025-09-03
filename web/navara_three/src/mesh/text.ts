@@ -108,8 +108,7 @@ export class TextMesh extends Group implements FeatureMesh {
     const txt = this.text;
     txt.fontSize = 1;
 
-    // Set outline properties from material
-    txt.outlineWidth = this.userData.outline_width.value;
+    // Set outline properties from material (outlineWidth will be set later in _updateTextByMaterial)
     txt.outlineColor = this.userData.outline_color.value
       ? this.userData.outline_color.value.getHex()
       : 0x000000;
@@ -442,6 +441,14 @@ export class TextMesh extends Group implements FeatureMesh {
       this.userData.outline_width.value = nextOutlineWidth;
       txt.outlineWidth = nextOutlineWidth;
       prev.outlineWidth = nextOutlineWidth;
+      
+      // Force text re-sync to recalculate sampling size when outline width changes
+      txt.sync(() => {
+        this.updateBackground();
+        if (needRender) {
+          needRender();
+        }
+      });
     }
 
     const nextOutlineColor = material.outline_color

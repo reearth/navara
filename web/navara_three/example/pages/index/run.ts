@@ -195,7 +195,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       outline_color: 0x000000,
       outline_offset: { x: 0, y: 0 },
       outline_opacity: 1.0,
-      outline_width: 0.0,
+      outline_width: 0.10,
     },
   },
 
