@@ -105,7 +105,7 @@ export const run = async (view: ThreeView) => {
   });
 
   view.on("mousedown", (event: MapMouseEvent) => {
-    console.log("3D Position:", event.x, event.y, event.z);
+    console.log("3D Position:", event.map);
     console.log("Screen Position:", event.clientX, event.clientY);
   });
 
@@ -222,11 +222,7 @@ const testScreenToWorld = (view: ThreeView) => {
       return;
     }
 
-    const rect = view.renderer.domElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    const pos = view.pickTerrainPosition(x, y);
+    const pos = event.map;
 
     if (gMouseBall && pos) {
       gMouseBall.position.set(pos.x, pos.y, pos.z);
@@ -586,15 +582,13 @@ const testRayPlane = (view: ThreeView) => {
       }
     }
   };
-  const onMouseUp = (event: MouseEvent) => {
+  const onMouseUp = (event: MapMouseEvent) => {
     if (bMouseMoved || !gPaneParams.extrudeCylinder) {
       return;
     }
 
-    const rect = view.renderer.domElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const pos = view.pickTerrainPosition(x, y);
+    const mapPos = event.map;
+    const pos = mapPos ? new Vector3(mapPos.x, mapPos.y, mapPos.z) : null;
 
     if (!center && pos) {
       center = pos;
@@ -791,13 +785,10 @@ const createPolylineMesh = (view: ThreeView) => {
 
 const testSampleTerrainHeight = (view: ThreeView) => {
   const onMouseMove = (event: MapMouseEvent) => {
-    // スクリーン座標を取得してpickTerrainPositionを使用
-    const rect = view.renderer.domElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const pos = view.pickTerrainPosition(x, y);
+    const mapPos = event.map;
 
-    if (pos) {
+    if (mapPos) {
+      const pos = new Vector3(mapPos.x, mapPos.y, mapPos.z);
       const lle = vector3ToGeodetic(pos);
 
       const height = view.sampleTerrainHeight(lle);
