@@ -91,9 +91,9 @@ export class TextMesh extends Group implements FeatureMesh {
     txt.fontSize = 1;
 
     // Note: outlineWidth is set to 0 initially to avoid sampling priority issues
-    txt.outlineColor = meshMaterial.outline_color 
-  ? new Color(meshMaterial.outline_color).getHex() 
-  : 0x000000;
+    txt.outlineColor = meshMaterial.outline_color
+      ? new Color(meshMaterial.outline_color).getHex()
+      : 0x000000;
     txt.outlineBlur = meshMaterial.outline_blur ?? 0.0;
     txt.outlineOffsetX = meshMaterial?.outline_offset?.x ?? 0.0;
     txt.outlineOffsetY = meshMaterial?.outline_offset?.y ?? 0.0;
