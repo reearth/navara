@@ -83,6 +83,7 @@ import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
 import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
+import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
@@ -937,6 +938,7 @@ export default class ThreeView<
     this.registerMesh("gltfModel", GLTFModelLayer);
     this.registerMesh("axesHelper", AxesHelperLayer);
     this.registerMesh("arrowHelper", ArrowHelperLayer);
+    this.registerMesh("arcLine", ArclineMeshLayer);
   }
 
   private registerBuiltInLights(): void {
@@ -985,6 +987,15 @@ export default class ThreeView<
     // Set up update listener
     if (meshLayer.update) {
       this.on("preRender", meshLayer.update.bind(meshLayer));
+    }
+
+    if (meshLayer.onResize) {
+      this.on("resize", meshLayer.onResize.bind(meshLayer));
+
+      const canvasSize = this._getCanvasSize();
+      if (canvasSize) {
+        meshLayer.onResize(canvasSize.width, canvasSize.height);
+      }
     }
 
     // Trigger re-render

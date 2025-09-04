@@ -166,3 +166,68 @@ pub fn world_to_screen(
         y: screen_y,
     })
 }
+
+// #[wasm_bindgen(js_name = generateArclinePoints)]
+// pub fn generate_arcline_points(start: LLE, end: LLE, num_points: u32) -> Vec<Vec3Wasm> {
+//     if num_points == 0 {
+//         return Vec::new();
+//     }
+
+//     if num_points == 1 {
+//         return vec![geodetic_to_ecef(start)];
+//     }
+
+//     // Convert start and end to ECEF coordinates
+//     let start_ecef = geodetic_to_ecef(start);
+//     let end_ecef = geodetic_to_ecef(end);
+
+//     let start_vec = Vec3::new(start_ecef.x, start_ecef.y, start_ecef.z);
+//     let end_vec = Vec3::new(end_ecef.x, end_ecef.y, end_ecef.z);
+
+//     // Calculate the midpoint and create a parabolic arc
+//     let midpoint = (start_vec + end_vec) * 0.5;
+//     let distance = start_vec.distance(end_vec);
+
+//     // Calculate arc height as a percentage of distance (similar to deck.gl)
+//     let arc_height = distance * 0.1; // 10% of distance as default height
+
+//     // Handle antipodal points where midpoint is near Earth center
+//     let peak_point = if midpoint.length() < 1000.0 {
+//         // Very close to Earth center
+//         // For antipodal points, use the cross product to find a perpendicular direction
+//         let up = Vec3::new(0.0, 0.0, 1.0); // Z-axis as default up
+//         let cross = start_vec.cross(up);
+//         let perpendicular = if cross.length() > 1000.0 {
+//             cross.normalize()
+//         } else {
+//             // If start is at poles, use Y-axis
+//             start_vec.cross(Vec3::new(0.0, 1.0, 0.0)).normalize()
+//         };
+//         perpendicular * arc_height
+//     } else {
+//         // Normal case: midpoint away from Earth center
+//         let peak_direction = midpoint.normalize();
+//         midpoint + peak_direction * arc_height
+//     };
+
+//     let mut points = Vec::with_capacity(num_points as usize);
+
+//     for i in 0..num_points {
+//         let t = i as f32 / (num_points - 1) as f32;
+
+//         // Quadratic Bezier interpolation for parabolic arc
+//         // B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+//         let one_minus_t = 1.0 - t;
+//         let point = start_vec * (one_minus_t * one_minus_t)
+//             + peak_point * (2.0 * one_minus_t * t)
+//             + end_vec * (t * t);
+
+//         points.push(Vec3Wasm {
+//             x: point.x,
+//             y: point.y,
+//             z: point.z,
+//         });
+//     }
+
+//     points
+// }

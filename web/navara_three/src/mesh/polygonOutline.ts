@@ -6,46 +6,15 @@ import {
 import type { ViewEvents } from "@navara/three";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import { Color, InstancedBufferAttribute } from "three";
-import {
-  Line2,
-  LineGeometry,
-  LineMaterial,
-  LineSegmentsGeometry,
-} from "three-stdlib";
+import { Line2, LineGeometry, LineMaterial } from "three-stdlib";
 
 import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
+import { createReplacer } from "../utils/replacer";
 
 import type { FeatureMesh } from "./featureMesh";
 
-class NvLineGeometry extends LineGeometry {
-  setPositions(
-    array: Float32Array,
-    skipIdx: Uint32Array = new Uint32Array(),
-  ): this {
-    const positions: number[] = [];
-    const skipSet = new Set(skipIdx);
-
-    for (let i = 0; i < array.length - 3; i += 3) {
-      const currentIndex = i / 3;
-      if (skipSet.has(currentIndex)) {
-        continue;
-      }
-
-      // segment start
-      positions.push(array[i], array[i + 1], array[i + 2]);
-      // segment end
-      positions.push(array[i + 3], array[i + 4], array[i + 5]);
-    }
-
-    const points = new Float32Array(positions);
-
-    // This function is used to override LineGeometry's setPositions,
-    // so we don't call super.setPositions.
-    LineSegmentsGeometry.prototype.setPositions.call(this, points);
-    return this;
-  }
-}
+import { NvLineGeometry } from "./nvLine2";
 
 export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   private resizeEventUnsubscribe?: () => void;
@@ -163,14 +132,13 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     };
 
     material.onBeforeCompile = (shader) => {
-      // Add uniforms
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       shader.uniforms.uAddExtrudedHeight = material.userData.uAddExtrudedHeight;
 
-      // Add attribute declaration and uniforms
-      shader.vertexShader = shader.vertexShader.replace(
-        "attribute vec3 instanceEnd;",
-        `
+      shader.vertexShader = createReplacer(shader.vertexShader)
+        .replace(
+          "attribute vec3 instanceEnd;",
+          `
         attribute vec3 instanceEnd;
         attribute vec4 scaleNormalAndCapStart;
         attribute vec4 scaleNormalAndCapEnd;
@@ -178,10 +146,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         uniform float uAddExtrudedHeight;
         ${BranchFreeTernary}
         `,
-      );
-
-      // Apply height adjustment to instanceStart and instanceEnd
-      shader.vertexShader = shader.vertexShader
+        )
         .replace(
           "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
           `
@@ -201,7 +166,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(scaleNormalAndCapEnd.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
         vec4 end = modelViewMatrix * vec4( adjustedInstanceEnd, 1.0 );
         `,
-        );
+        ).source;
     };
 
     // Apply MRT compatibility

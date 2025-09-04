@@ -48,3 +48,8 @@ export {
   type TubeMeshLayerConfig,
   type TubeMeshLayerUpdate,
 } from "./TubeMeshLayer";
+export {
+  ArclineMeshLayer,
+  type ArclineMeshLayerConfig,
+  type ArclineMeshLayerUpdate,
+} from "./ArclineMeshLayer";
