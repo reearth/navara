@@ -163,6 +163,12 @@ pub struct TextMaterial {
     pub corner_radius: FloatType, // 0 ~ 0.5, the ratio of the corner radius to the height
     pub padding: Vec2,
     pub id_property: String,
+    // outline
+    pub outline_blur: f32,    // outlineBlur Defalut:0
+    pub outline_color: u32,   // outlineColor Defalut:black
+    pub outline_offset: Vec2, // outlineOffset Default: (0,0)
+    pub outline_opacity: f32, // outlineOpacity Default:1
+    pub outline_width: f32,   // outlineWidth Default:0
 }
 
 impl Default for TextMaterial {
@@ -184,6 +190,11 @@ impl Default for TextMaterial {
             corner_radius: 0.1,
             padding: Vec2::new(5.0, 2.0),
             id_property: "".to_string(),
+            outline_blur: 0.0,
+            outline_color: 0x000000,
+            outline_offset: Vec2::new(0.0, 0.0),
+            outline_opacity: 1.0,
+            outline_width: 0.0,
         }
     }
 }

@@ -75,6 +75,7 @@ export class TextMesh extends Group implements FeatureMesh {
       x: meshMaterial?.padding?.x ?? 0.5,
       y: meshMaterial?.padding?.y ?? 0,
     };
+
     this.userData.fov = uniforms?.fov;
     this.userData.screenHeightPx = uniforms?.screenHeightPx;
     this.userData.isPicked = selected;
@@ -82,12 +83,22 @@ export class TextMesh extends Group implements FeatureMesh {
     this.userData.highlightColor = uniforms?.highlightColor?.value;
     this.visible = meshMaterial.show ?? true;
 
-    this.initText();
+    this.initText(meshMaterial);
   }
 
-  private initText() {
+  private initText(meshMaterial: NavaraTextMaterial) {
     const txt = this.text;
     txt.fontSize = 1;
+
+    // Note: outlineWidth is set to 0 initially to avoid sampling priority issues
+    txt.outlineColor = meshMaterial.outline_color
+      ? new Color(meshMaterial.outline_color).getHex()
+      : 0x000000;
+    txt.outlineBlur = meshMaterial.outline_blur ?? 0.0;
+    txt.outlineOffsetX = meshMaterial?.outline_offset?.x ?? 0.0;
+    txt.outlineOffsetY = meshMaterial?.outline_offset?.y ?? 0.0;
+    txt.outlineOpacity = meshMaterial.outline_opacity ?? 1.0;
+    txt.outlineWidth = 0.0; // Always start with 0 to prevent sampling size optimization issues
 
     (txt.material as Material).onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
@@ -405,6 +416,55 @@ export class TextMesh extends Group implements FeatureMesh {
     if (nextDepthTest !== prev.depthTest) {
       txt.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    // Update outline properties
+    const nextOutlineWidth = material.outline_width ?? 0.0;
+    if (nextOutlineWidth !== prev.outlineWidth) {
+      txt.outlineWidth = nextOutlineWidth;
+      prev.outlineWidth = nextOutlineWidth;
+
+      // Force text re-sync to recalculate sampling size when outline width changes
+      txt.sync(() => {
+        this.updateBackground();
+        if (needRender) {
+          needRender();
+        }
+      });
+    }
+
+    const nextOutlineColor = material.outline_color
+      ? new Color(material.outline_color)
+      : undefined;
+    if (nextOutlineColor !== prev.outlineColor) {
+      txt.outlineColor = nextOutlineColor
+        ? nextOutlineColor.getHex()
+        : 0x000000;
+      prev.outlineColor = nextOutlineColor;
+    }
+
+    const nextOutlineBlur = material.outline_blur ?? 0.0;
+    if (nextOutlineBlur !== prev.outlineBlur) {
+      txt.outlineBlur = nextOutlineBlur;
+      prev.outlineBlur = nextOutlineBlur;
+    }
+
+    const nextOutlineOffsetX = material.outline_offset?.x ?? 0.0;
+    const nextOutlineOffsetY = material.outline_offset?.y ?? 0.0;
+    if (
+      nextOutlineOffsetX !== prev.outlineOffsetX ||
+      nextOutlineOffsetY !== prev.outlineOffsetY
+    ) {
+      txt.outlineOffsetX = nextOutlineOffsetX;
+      txt.outlineOffsetY = nextOutlineOffsetY;
+      prev.outlineOffsetX = nextOutlineOffsetX;
+      prev.outlineOffsetY = nextOutlineOffsetY;
+    }
+
+    const nextOutlineOpacity = material.outline_opacity ?? 1.0;
+    if (nextOutlineOpacity !== prev.outlineOpacity) {
+      txt.outlineOpacity = nextOutlineOpacity;
+      prev.outlineOpacity = nextOutlineOpacity;
     }
 
     if (bNeedUpdateBg) {
