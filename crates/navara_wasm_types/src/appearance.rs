@@ -140,6 +140,12 @@ pub struct TextMaterial {
     pub padding: Option<Vec2>,
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
+    // outline
+    pub outline_blur: Option<f32>,    // outlineBlur Defalut:0
+    pub outline_color: Option<u32>,   // outlineColor Defalut:black
+    pub outline_offset: Option<Vec2>, // outlineOffset Default: (0,0)
+    pub outline_opacity: Option<f32>, // outlineOpacity Default:1
+    pub outline_width: Option<f32>,   // outlineWidth Default:0
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -162,6 +168,14 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
             padding: val.padding.unwrap_or(default.padding.into()).into(),
             id_property: val.id_property.unwrap_or(default.id_property),
+            outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
+            outline_color: val.outline_color.unwrap_or(default.outline_color),
+            outline_offset: val
+                .outline_offset
+                .unwrap_or(default.outline_offset.into())
+                .into(),
+            outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
+            outline_width: val.outline_width.unwrap_or(default.outline_width),
         }
     }
 }
@@ -184,6 +198,11 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             corner_radius: Some(value.corner_radius),
             padding: Some(value.padding.into()),
             id_property: Some(value.id_property.clone()),
+            outline_blur: Some(value.outline_blur),
+            outline_color: Some(value.outline_color),
+            outline_offset: Some(value.outline_offset.into()),
+            outline_opacity: Some(value.outline_opacity),
+            outline_width: Some(value.outline_width),
         }
     }
 }
