@@ -557,6 +557,28 @@ export default class ThreeView<
     this.shadowMapViewers = new ShadowMapViewers(this._scenes.light);
   }
 
+  /**
+   * Convert a mouse event to a MapMouseEvent by adding map coordinates
+   */
+  private convertMouseEventToMapEvent(event: MouseEvent): MapMouseEvent | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const xyz = convertScreenPos(this, x, y);
+
+    if (xyz) {
+      return Object.assign(event, {
+        map: {
+          x: xyz.x,
+          y: xyz.y,
+          z: xyz.z,
+        },
+      }) as MapMouseEvent;
+    }
+
+    return null;
+  }
+
   async initializeRenderPass() {
     // Initialize atmosphere
     await this.atmosphere.init();
@@ -653,106 +675,44 @@ export default class ThreeView<
     this.camera.core = this._core;
 
     this.renderer.domElement.addEventListener("mousedown", (event) => {
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xyz = convertScreenPos(this, x, y);
-      if (xyz) {
-        const result = Object.assign(event, {
-          map: {
-            x: xyz.x,
-            y: xyz.y,
-            z: xyz.z,
-          },
-        }) as MapMouseEvent;
-
-        this.emit("mousedown", result);
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mousedown", mapEvent);
       }
     });
 
     this.renderer.domElement.addEventListener("mouseenter", (event) => {
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xyz = convertScreenPos(this, x, y);
-      if (xyz) {
-        const result = Object.assign(event, {
-          map: {
-            x: xyz.x,
-            y: xyz.y,
-            z: xyz.z,
-          },
-        }) as MapMouseEvent;
-
-        this.emit("mouseenter", result);
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mouseenter", mapEvent);
       }
     });
 
     this.renderer.domElement.addEventListener("mouseleave", (event) => {
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xyz = convertScreenPos(this, x, y);
-      if (xyz) {
-        const result = Object.assign(event, {
-          map: {
-            x: xyz.x,
-            y: xyz.y,
-            z: xyz.z,
-          },
-        }) as MapMouseEvent;
-        this.emit("mouseleave", result);
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mouseleave", mapEvent);
       }
     });
 
     this.renderer.domElement.addEventListener("mousemove", (event) => {
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xyz = convertScreenPos(this, x, y);
-      if (xyz) {
-        const result = Object.assign(event, {
-          map: {
-            x: xyz.x,
-            y: xyz.y,
-            z: xyz.z,
-          },
-        }) as MapMouseEvent;
-        this.emit("mousemove", result);
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mousemove", mapEvent);
       }
     });
 
     this.renderer.domElement.addEventListener("mouseup", (event) => {
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xyz = convertScreenPos(this, x, y);
-      if (xyz) {
-        const result = Object.assign(event, {
-          map: {
-            x: xyz.x,
-            y: xyz.y,
-            z: xyz.z,
-          },
-        }) as MapMouseEvent;
-        this.emit("mouseup", result);
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mouseup", mapEvent);
       }
     });
 
     this.renderer.domElement.addEventListener("click", (event) => {
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xyz = convertScreenPos(this, x, y);
-      if (xyz) {
-        const result = Object.assign(event, {
-          map: {
-            x: xyz.x,
-            y: xyz.y,
-            z: xyz.z,
-          },
-        }) as MapMouseEvent;
-        this.emit("click", result);
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("click", mapEvent);
       }
     });
   }

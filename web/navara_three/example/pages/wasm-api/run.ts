@@ -217,12 +217,16 @@ const addRunningObject = (view: ThreeView) => {
 };
 
 const testScreenToWorld = (view: ThreeView) => {
-  const onMouseMove = (event: MapMouseEvent) => {
+  const onMouseMove = (event: MouseEvent) => {
     if (!gPaneParams.convertScreenToWorld) {
       return;
     }
 
-    const pos = event.map;
+    const rect = view.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const pos = view.pickTerrainPosition(x, y);
 
     if (gMouseBall && pos) {
       gMouseBall.position.set(pos.x, pos.y, pos.z);
@@ -230,7 +234,7 @@ const testScreenToWorld = (view: ThreeView) => {
     }
   };
 
-  view.on("mousemove", onMouseMove);
+  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
 };
 
 const placeOneBall = (
