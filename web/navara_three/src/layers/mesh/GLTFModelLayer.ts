@@ -13,6 +13,8 @@ type LayerDescription = {
     url: string;
     castShadow?: boolean;
     receiveShadow?: boolean;
+
+    // この辺にアニメーションを指定するなど
   };
 };
 
@@ -46,7 +48,9 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     const group = new Group();
 
     if (modelConfig?.url) {
-      this.loadModel(modelConfig.url, group);
+      this.loadModel(modelConfig.url, group).then(() => {
+        this.initAnimation(); // If animations are to be handled
+      });
     }
 
     return group;
@@ -63,6 +67,10 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
       // Add the loaded model
       targetGroup.add(gltf.scene);
+      console.log(
+        "Model added to scene, children count:",
+        targetGroup.children.length,
+      );
 
       this.setupModel(targetGroup);
       this.emit("_needsUpdate");
@@ -144,5 +152,19 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       });
       this._instance = undefined;
     }
+  }
+
+  private initAnimation() {
+    // アニメーションを初期化する場合の処理
+  }
+
+  addAnimationClipAction(name: string) {
+    console.log("addAnimationClipAction called with name:", name);
+    // アニメーションを追加する場合の処理（プレースホルダー）
+  }
+
+  addAnimationCrossFade(from: string, to: string, duration: number) {
+    console.log("addAnimationCrossFade called:", { from, to, duration });
+    // アニメーションのクロスフェードを追加する場合の処理（プレースホルダー）
   }
 }
