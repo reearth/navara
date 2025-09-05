@@ -13,7 +13,7 @@ export async function renderPolygon(
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
 ) {
-  return new PolygonMesh(mesh, buf, uniforms, tileHandle, viewEvents);
+  return new PolygonMesh().init(mesh, buf, uniforms, tileHandle, viewEvents);
 }
 
 export function processPolygonChanged(

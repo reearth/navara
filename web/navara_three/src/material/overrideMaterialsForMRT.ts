@@ -94,11 +94,7 @@ function injectGBuffer(
   const outputBuffer1 =
     type === "physical"
       ? /* glsl */ `
-          outputBuffer1 = vec4(
-            packNormalToVec2(normal),
-            metalnessFactor,
-            roughnessFactor
-          )
+          outputBuffer1 = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)
         `
       : /* glsl */ `
           #ifdef USE_ROUGHNESS

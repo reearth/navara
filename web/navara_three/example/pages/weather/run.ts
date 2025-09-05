@@ -152,8 +152,12 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
       color: 0xffdcad,
       metalness: 0.02,
       roughness: 0.3,
+      reflectivity: 0.8,
       receive_shadow: true,
       height: -20,
+      water: true,
+      water_scale_normal: 2.0,
+      water_speed: 0.003,
     },
   };
 
@@ -167,6 +171,7 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
       reflectivity: 0.9,
       clamp_to_ground: true,
       wireframe: false,
+      water: true,
     },
     vector_tile: {
       max_zoom: 16,

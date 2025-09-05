@@ -4,6 +4,7 @@ import {
   type EventHandler,
 } from "@navara/core";
 import { orthoCameraTransform } from "@navara/engine";
+import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import type {
   MeshAdded,
   Mesh as EventMesh,
@@ -21,6 +22,7 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
+  RepeatWrapping,
   RGBAFormat,
   SRGBColorSpace,
   Texture,
@@ -30,7 +32,12 @@ import {
   type MinificationTextureFilter,
 } from "three";
 
-import type { ViewEvents } from "..";
+import {
+  PolygonMesh,
+  TEXTURE_LOADER,
+  WATER_NORMAL_URL,
+  type ViewEvents,
+} from "..";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
 import type {
@@ -41,6 +48,7 @@ import type {
 import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
 import type { TextureOptions } from "../textures";
 import type { MeshCache, TileMapByHandle } from "../type";
+import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
 import { BatchedFeatureMesh } from "./batchedFeature";
@@ -51,6 +59,8 @@ export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 const GLOBE_COLOR = 0xffffff;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
+
+const NUM_WATER_TEXTURES = 1;
 
 export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
   handle: TileHandle;
@@ -92,7 +102,8 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     this.camera.copy(texturizedSceneByTileCoordinates.camera);
 
     this.maxTextures = textureOptions.maxTextures;
-    this.numTexturizedVector = textureOptions.maxTextures / 2;
+    this.numTexturizedVector =
+      Math.floor(textureOptions.maxTextures / 2) - NUM_WATER_TEXTURES;
     this.texturizedSceneIndexFrom = this.maxTextures - this.numTexturizedVector;
 
     for (let i = 0; i < this.numTexturizedVector; i++) {
@@ -142,7 +153,13 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
   }
 
   private _onBeforeRender = () => {
-    if (!this.visible) return;
+    if (
+      !this.visible ||
+      !this.texturizedSceneByTileCoordinates.getNeedsUpdate(this.handle)
+    )
+      return;
+
+    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
 
     // This needs to be executed in every render to check parent tile state.
     // If the parent tile is available, but the child tile is still preparing, use the parent tile.
@@ -260,6 +277,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
     viewEvents: EventHandler<ViewEvents>,
+    uniforms: CommonUniforms,
   ) {
     await this.createMesh(
       scenes,
@@ -274,6 +292,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       tileMapByHandle,
       mesh.ready_parent_tile_handle,
       viewEvents,
+      uniforms,
     );
   }
 
@@ -290,6 +309,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     tileMapByHandle: TileMapByHandle,
     readyParentTileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
+    uniforms: CommonUniforms,
   ) {
     let position = buf.f32(mesh.vertices);
     let indices = buf.u32(mesh.indices);
@@ -318,7 +338,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
 
     this.geometry = geometry;
 
-    this.material = this.initMaterial(mat, viewEvents);
+    this.material = this.initMaterial(mat, viewEvents, uniforms);
 
     if (!this.material.userData.uvTransform) {
       this.material.userData.uvTransform = {
@@ -354,6 +374,7 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
   private initMaterial(
     mat: RasterTileInternalMaterial,
     viewEvents: EventHandler<ViewEvents>,
+    uniforms: CommonUniforms,
   ): TileMaterial {
     if (mat.wireframe) {
       return new MeshBasicMaterial({
@@ -363,7 +384,8 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       });
     }
 
-    const m = mat.should_compute_normal_from_vertex
+    const hasNormal = !!mat.should_compute_normal_from_vertex;
+    const m = hasNormal
       ? new MeshLambertMaterial({
           color: GLOBE_COLOR,
           stencilWrite: false,
@@ -376,6 +398,12 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
     m.userData.uPickable = {
       value: 0,
     };
+
+    m.userData.waterTexture = {
+      value: null,
+    };
+
+    m.userData.uTime = uniforms.time;
 
     m.defines ??= {};
     m.defines.USE_UV = 1;
@@ -395,9 +423,15 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
       shader.uniforms.uOpacities = m.userData.opacities;
       shader.uniforms.uReflectivities = m.userData.reflectivities;
       shader.uniforms.uRoughnesses = m.userData.roughnesses;
+      shader.uniforms.uWaters = m.userData.waters;
+      shader.uniforms.uWaterScaleNormals = m.userData.waterScaleNormals;
+      shader.uniforms.uWaterSpeeds = m.userData.waterSpeeds;
+      shader.uniforms.uShininesses = m.userData.shininesses;
+      shader.uniforms.uSpecularStrengths = m.userData.specularStrengths;
+      shader.uniforms.uApplyWaterNormals = m.userData.applyWaterNormals;
       shader.uniforms.uTextures = m.userData.textures;
-      // shader.uniforms.uTextures0 = { value: m.userData.textures.value[0] };
-      // shader.uniforms.uTextures1 = { value: m.userData.textures.value[1] };
+      shader.uniforms.uWaterNormalMap = m.userData.waterTexture;
+      shader.uniforms.uTime = m.userData.uTime;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -409,6 +443,7 @@ uniform vec2 uScale;
 
 // Store original UV for MVT textures
 varying vec2 vOrigUv;
+varying vec3 vPosition;
 
 #include <common>
 `,
@@ -421,6 +456,13 @@ vOrigUv = vUv;
 // Apply transform for raster textures
 vUv = vUv * uScale + uOffset;
 `,
+        )
+        .replace(
+          "#include <envmap_vertex>",
+          `
+  #include <envmap_vertex>
+  vPosition = transformed;
+  `,
         ).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
@@ -432,20 +474,44 @@ vUv = vUv * uScale + uOffset;
   uniform float uOpacities[${maxTextures}];
   uniform float uReflectivities[${maxTextures}];
   uniform float uRoughnesses[${maxTextures}];
+  uniform bool uWaters[${maxTextures}];
+  uniform float uWaterScaleNormals[${maxTextures}];
+  uniform float uWaterSpeeds[${maxTextures}];
+  uniform float uShininesses[${maxTextures}];
+  uniform float uSpecularStrengths[${maxTextures}];
+  uniform float uApplyWaterNormals[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
+  uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
+  uniform float uTime;
   
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;
   
   #include <common>
+
   `,
+        )
+        .replaceWithCondition(
+          "#include <lights_pars_begin>",
+          `
+        #include <lights_pars_begin>
+
+        ${WaterParsFragment}
+        `,
+          hasNormal,
         )
         .replace(
           "#include <map_fragment>",
           `
   float tileReflectivity;
   float tileRoughness;
+  bool useWater;
+  float waterScaleNormal = 0.0;
+  float waterSpeed = 0.0;
+  float waterShininess = 30.0;
+  float waterSpecularStrength = 1.0;
+  float applyWaterNormals = 0.0;
 
   ${generateMixOverlaidTexturesMacro(
     maxTextures,
@@ -458,12 +524,24 @@ vUv = vUv * uScale + uOffset;
 
     float currentReflectivity = uReflectivities[${idx}];
     float currentRoughness = uRoughnesses[${idx}];
+    bool currentWater = uWaters[${idx}];
+    float currentWaterScaleNormal = uWaterScaleNormals[${idx}];
+    float currentWaterSpeed = uWaterSpeeds[${idx}];
+    float currentShininess = uShininesses[${idx}];
+    float currentSpecularStrength = uSpecularStrengths[${idx}];
+    float currentApplyWaterNormals = uApplyWaterNormals[${idx}];
 
     if(${texColorVar}.a > 0.0) {
       tileReflectivity = currentReflectivity;
       tileRoughness = currentRoughness;
+      useWater = currentWater;
+      waterScaleNormal = currentWaterScaleNormal;
+      waterSpeed = currentWaterSpeed;
+      waterShininess = currentShininess;
+      waterSpecularStrength = currentSpecularStrength;
+      applyWaterNormals = currentApplyWaterNormals;
     }
-    
+
     // Disable picking for the raster tile.
     // Allow picking for texturizedScene because it's vector data.
     if(uPickable > 0.) {
@@ -473,6 +551,38 @@ vUv = vUv * uScale + uOffset;
   )}
   diffuseColor = sampledDiffuseColor;
   `,
+        )
+        .replaceWithCondition(
+          "#include <normal_fragment_maps>",
+          `
+  vec3 origNormal = vec3(normal);
+  vec3 specular;
+  if(useWater) {
+    specular = computeWaterSpecular(
+      uWaterNormalMap,
+      (vPosition.xy + vPosition.zy + vPosition.xz) / 3.0 * waterScaleNormal,
+      uTime * waterSpeed,
+      vViewPosition,
+      normalMatrix,
+      origNormal,
+      waterShininess,
+      waterSpecularStrength,
+      normal
+    );
+  } else {
+   #include <normal_fragment_maps>
+  }
+  `,
+          hasNormal,
+        )
+        .replaceWithCondition(
+          "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
+          `
+          vec3 reflectionPower = vec3(tileReflectivity);
+          vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
+          outgoingLight += specular;
+        `,
+          hasNormal,
         )
         .replace(
           "#include <envmap_fragment>",
@@ -484,9 +594,11 @@ if (uPickable > 0.) {
   #include <envmap_fragment>
 `,
         )
-        .replace(
+        .replaceWithCondition(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
-          `outputBuffer1 = vec4(packNormalToVec2(normal), tileReflectivity, tileRoughness);`,
+          `vec3 finalNormal = mix(origNormal, normal, applyWaterNormals);
+          outputBuffer1 = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
+          hasNormal,
         ).source;
     };
 
@@ -575,6 +687,10 @@ if (uPickable > 0.) {
               texturizedScene.userData.layerId,
             );
           }
+          this.texturizedSceneByTileCoordinates.setNeedsUpdate(
+            this.handle,
+            true,
+          );
         };
 
         texturizedScene.userData.childrenObserver = observer;
@@ -616,7 +732,36 @@ if (uPickable > 0.) {
           mesh.material.userData.reflectivity.value;
         m.userData.roughnesses.value[lastIdx] =
           mesh.material.userData.roughness.value;
+        if (mesh instanceof PolygonMesh) {
+          m.userData.waters.value[lastIdx] = mesh.water;
+          m.userData.waterScaleNormals.value[lastIdx] =
+            mesh.material.userData.waterScaleNormal?.value ?? 0;
+          m.userData.waterSpeeds.value[lastIdx] =
+            mesh.material.userData.waterSpeed?.value ?? 0;
+          m.userData.shininesses.value[lastIdx] =
+            mesh.material.userData.shininess?.value ?? 0;
+          m.userData.specularStrengths.value[lastIdx] =
+            mesh.material.userData.specularStrength?.value ?? 0;
+          m.userData.applyWaterNormals.value[lastIdx] =
+            mesh.material.userData.applyWaterNormal?.value ?? 0;
+          if (mesh.water) {
+            this.loadWaterTexture();
+          }
+        }
       }
+    }
+  }
+
+  // Just one water texture is available, since the maximum number of textures is restricted by GPU.
+  private loadWaterTexture() {
+    if (!this.material.userData.waterTexture.value) {
+      // TODO: Get URL from material setting.
+      this.material.userData.waterTexture.value = TEXTURE_LOADER.load(
+        WATER_NORMAL_URL,
+        (texture) => {
+          texture.wrapS = texture.wrapT = RepeatWrapping;
+        },
+      );
     }
   }
 
@@ -645,6 +790,36 @@ if (uPickable > 0.) {
     }
     if (!m.userData.roughnesses) {
       m.userData.roughnesses = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.waters) {
+      m.userData.waters = {
+        value: [...new Array(maxTextures)].fill(false),
+      };
+    }
+    if (!m.userData.waterScaleNormals) {
+      m.userData.waterScaleNormals = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.waterSpeeds) {
+      m.userData.waterSpeeds = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.shininesses) {
+      m.userData.shininesses = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.specularStrengths) {
+      m.userData.specularStrengths = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.applyWaterNormals) {
+      m.userData.applyWaterNormals = {
         value: [...new Array(maxTextures)].fill(0),
       };
     }

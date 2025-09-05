@@ -26,12 +26,6 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
     },
   });
 
-  // Add SSR effect layer
-  const ssrLayer = view.addLayer<SSREffectLayer>({
-    type: "effect",
-    ssr: {},
-  });
-
   view.addLayer({
     type: "tiles",
     data: { url: TILE_URLS.gsiSeamlessphoto },
@@ -84,16 +78,19 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   addDateControl(view, pane);
 
   // SSR controls
-  addSSRControls(ssrLayer, pane);
+  addSSRControls(view, pane);
 
   // Water polygon controls
   addWaterControls(view, pane);
 };
 
-const addSSRControls = (
-  ssrLayer: ReturnType<typeof ThreeView.prototype.addLayer<SSREffectLayer>>,
-  pane: Pane,
-) => {
+const addSSRControls = (view: ThreeView, pane: Pane) => {
+  // Add SSR effect layer
+  let ssrLayer = view.addLayer<SSREffectLayer>({
+    type: "effect",
+    ssr: {},
+  });
+
   const ssrParams = {
     visible: ssrLayer.visible,
     resolutionScale: ssrLayer.ref.raw?.resolutionScale ?? 0.5,
@@ -119,7 +116,14 @@ const addSSRControls = (
     {
       name: "visible",
       onChange: (v) => {
-        ssrLayer.visible = v.value;
+        if (v.value) {
+          ssrLayer = view.addLayer<SSREffectLayer>({
+            type: "effect",
+            ssr: ssrParams,
+          });
+        } else {
+          ssrLayer.delete();
+        }
       },
     },
     {
@@ -273,49 +277,223 @@ const addSSRControls = (
 
 const addWaterControls = (view: ThreeView, pane: Pane) => {
   // Store the layer description object
-  const layerDescription: LayerDescription = {
+  const mvtLayerDescription: LayerDescription = {
     type: "mvt",
     data: {
       url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
     },
     polygon: {
-      color: 0xcef7ff,
+      color: 0x001e0f,
       reflectivity: 0.5,
       clamp_to_ground: true,
       wireframe: false,
+      water: true,
+      shininess: 100,
+      specular_strength: 2,
+      apply_water_normal: false,
     },
     vector_tile: {
       max_zoom: 16,
       layers: ["waterarea"],
     },
   };
+  const geoJsonLayerDescription: LayerDescription = {
+    type: "geojson" as const,
+    data: {
+      type: "Feature" as const,
+      geometry: {
+        coordinates: [
+          [
+            [139.64114960199845, 35.77501909535009],
+            [139.64114960199845, 35.6170718697025],
+            [139.90177394130632, 35.6170718697025],
+            [139.90177394130632, 35.77501909535009],
+            [139.64114960199845, 35.77501909535009],
+          ],
+        ],
+        type: "Polygon" as const,
+      },
+    },
+    polygon: {
+      color: 0x001e0f,
+      height: 55,
+      extruded_height: 1,
+      clamp_to_ground: false,
+      use_ground_normals: true,
+      wireframe: false,
+      reflectivity: 0.5,
+      roughness: 0.2,
+      receive_shadow: true,
+      outline_show: false,
+      water: true,
+      shininess: 100,
+      specular_strength: 2,
+      apply_water_normal: false,
+    },
+  };
 
-  const waterLayer = view.addLayer(layerDescription);
+  let waterLayer = view.addLayer(geoJsonLayerDescription);
 
   const waterParams = {
-    reflectivity: layerDescription.polygon?.reflectivity ?? 0,
-    roughness: layerDescription.polygon?.roughness ?? 0,
+    dataType: "geojson",
+    reflectivity: mvtLayerDescription.polygon?.reflectivity ?? 0,
+    roughness: mvtLayerDescription.polygon?.roughness ?? 0,
+    water: mvtLayerDescription.polygon?.water ?? true,
+    waterScaleNormal: mvtLayerDescription.polygon?.water_scale_normal ?? 0.1,
+    waterSpeed: mvtLayerDescription.polygon?.water_speed ?? 0.0003,
+    shininess: mvtLayerDescription.polygon?.shininess ?? 100,
+    specularStrength: mvtLayerDescription.polygon?.specular_strength ?? 2,
+    applyWaterNormal: mvtLayerDescription.polygon?.apply_water_normal ?? false,
   };
 
   const fields: FolderFields<typeof waterParams> = [
     {
+      name: "dataType",
+      params: {
+        options: [
+          { text: "geojson", value: "geojson" },
+          { text: "mvt", value: "mvt" },
+        ],
+      },
+      onChange: (v) => {
+        waterParams.dataType = v.value;
+        waterLayer.delete();
+        switch (v.value) {
+          case "mvt": {
+            waterLayer = view.addLayer(mvtLayerDescription);
+            break;
+          }
+          case "geojson": {
+            waterLayer = view.addLayer(geoJsonLayerDescription);
+            break;
+          }
+        }
+      },
+    },
+    {
       name: "reflectivity",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
-        if (!layerDescription.polygon) return;
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
         waterParams.reflectivity = v.value;
-        layerDescription.polygon.reflectivity = v.value;
-        waterLayer.update(layerDescription);
+        mvtLayerDescription.polygon.reflectivity = v.value;
+        geoJsonLayerDescription.polygon.reflectivity = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
       },
     },
     {
       name: "roughness",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
-        if (!layerDescription.polygon) return;
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
         waterParams.roughness = v.value;
-        layerDescription.polygon.roughness = v.value;
-        waterLayer.update(layerDescription);
+        mvtLayerDescription.polygon.roughness = v.value;
+        geoJsonLayerDescription.polygon.roughness = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "water",
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.water = v.value;
+        mvtLayerDescription.polygon.water = v.value;
+        geoJsonLayerDescription.polygon.water = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "waterScaleNormal",
+      params: { min: 0.01, max: 1.0, step: 0.01 },
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.waterScaleNormal = v.value;
+        mvtLayerDescription.polygon.water_scale_normal = v.value;
+        geoJsonLayerDescription.polygon.water_scale_normal = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "waterSpeed",
+      params: { min: 0.0, max: 0.01, step: 0.0001 },
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.waterSpeed = v.value;
+        mvtLayerDescription.polygon.water_speed = v.value;
+        geoJsonLayerDescription.polygon.water_speed = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "shininess",
+      params: { min: 0, max: 200, step: 1 },
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.shininess = v.value;
+        mvtLayerDescription.polygon.shininess = v.value;
+        geoJsonLayerDescription.polygon.shininess = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "specularStrength",
+      params: { min: 0, max: 10, step: 0.1 },
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.specularStrength = v.value;
+        mvtLayerDescription.polygon.specular_strength = v.value;
+        geoJsonLayerDescription.polygon.specular_strength = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "applyWaterNormal",
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.applyWaterNormal = v.value;
+        mvtLayerDescription.polygon.apply_water_normal = v.value;
+        geoJsonLayerDescription.polygon.apply_water_normal = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
       },
     },
   ];

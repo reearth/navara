@@ -118,4 +118,8 @@ export class BatchedFeatureMesh<
   _togglePickable(pickable: number) {
     this.material.userData.uPickable.value = pickable;
   }
+
+  clone() {
+    return new BatchedFeatureMesh(this.geometry, this.material) as this;
+  }
 }
