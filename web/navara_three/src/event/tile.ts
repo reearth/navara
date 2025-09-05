@@ -8,6 +8,7 @@ import { TileMesh } from "../mesh";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
 import type { MeshCache, TileMapByHandle } from "../type";
+import type { CommonUniforms } from "../uniforms";
 
 import type { BufferLoader, TileHandler } from ".";
 
@@ -22,6 +23,7 @@ export async function processMeshAdded(
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   tileMapByHandle: TileMapByHandle,
   viewEvents: EventHandler<ViewEvents>,
+  uniforms: CommonUniforms,
 ) {
   const m = new TileMesh(
     mesh,
@@ -39,6 +41,7 @@ export async function processMeshAdded(
     textureOptions,
     tileMapByHandle,
     viewEvents,
+    uniforms,
   );
 }
 

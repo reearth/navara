@@ -18,6 +18,13 @@ export const RAIN_ASSETS_URL = new URL(
   import.meta.url,
 ).toString();
 
+export const WATER_ASSETS_URL = new URL(
+  `${import.meta.env.BASE_URL}assets/water`,
+  import.meta.url,
+).toString();
+
 export const STARS_ASSETS_URL = `${ATMOSPHERE_ASSETS_URL}/stars.bin`;
 
 export const STBN_URL = `${NOISE_ASSETS_URL}/stbn.bin`;
+
+export const WATER_NORMAL_URL = `${WATER_ASSETS_URL}/waternormals.jpg`;

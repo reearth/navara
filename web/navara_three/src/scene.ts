@@ -68,7 +68,7 @@ export class TexturizedSceneByTileCoordinates {
       if (child.userData.fromParent) continue;
 
       const m = child as BatchedFeatureMesh;
-      const nm = new Mesh(m.geometry, m.material);
+      const nm = m.clone();
       // Mark this mesh as inherited from the parent.
       nm.userData.fromParent = true;
       this.add(handle, layerId, nm, true);
@@ -128,5 +128,17 @@ export class TexturizedSceneByTileCoordinates {
     if (!scene) return;
     scene.userData.removed = true;
     scene.remove(...scene.children);
+  }
+
+  getNeedsUpdate(handle: TileHandle) {
+    const scene = this.map.get(handle);
+    if (!scene) return false;
+    return !!scene.userData.needsUpdate;
+  }
+
+  setNeedsUpdate(handle: TileHandle, v: boolean) {
+    const scene = this.map.get(handle);
+    if (!scene) return;
+    scene.userData.needsUpdate = v;
   }
 }

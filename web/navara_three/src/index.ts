@@ -495,6 +495,7 @@ export default class ThreeView<
       // TODO: Need to sync `fov` with WASM side
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
+      time: { value: 0 },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
@@ -784,6 +785,8 @@ export default class ThreeView<
   }
 
   private _render(updatedAt: number) {
+    this._uniforms.time.value = updatedAt;
+
     this.atmosphere._update();
 
     this.emit("preRender", updatedAt);

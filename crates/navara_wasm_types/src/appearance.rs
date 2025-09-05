@@ -344,6 +344,15 @@ pub struct PolygonMaterial {
     pub outline_color: Option<u32>,
     /// Currently, this property is supported only in GeoJSON.
     pub outline_width: Option<f32>,
+
+    pub water: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub water_normal_url: Option<String>,
+    pub water_scale_normal: Option<f32>,
+    pub water_speed: Option<f32>,
+    pub shininess: Option<f32>,
+    pub specular_strength: Option<f32>,
+    pub apply_water_normal: Option<bool>,
 }
 
 #[wasm_bindgen]
@@ -387,6 +396,15 @@ impl PolygonMaterial {
             outline_show,
             outline_color,
             outline_width,
+
+            // These are unnecessary for polygon geometry construction.
+            water: None,
+            water_normal_url: None,
+            water_scale_normal: None,
+            water_speed: None,
+            shininess: None,
+            specular_strength: None,
+            apply_water_normal: None,
         }
     }
 }
@@ -412,6 +430,13 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             outline_show: val.outline_show.unwrap_or(default.outline_show),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
+            water: val.water.unwrap_or(default.water),
+            water_normal_url: val.water_normal_url,
+            water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
+            water_speed: val.water_speed.unwrap_or(default.water_speed),
+            shininess: val.shininess.unwrap_or(default.shininess),
+            specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
+            apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
         }
     }
 }
@@ -435,6 +460,13 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
+            water: Some(value.water),
+            water_normal_url: value.water_normal_url.clone(),
+            water_scale_normal: Some(value.water_scale_normal),
+            water_speed: Some(value.water_speed),
+            shininess: Some(value.shininess),
+            specular_strength: Some(value.specular_strength),
+            apply_water_normal: Some(value.apply_water_normal),
         }
     }
 }
@@ -458,6 +490,13 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
+            water: Some(value.water),
+            water_normal_url: value.water_normal_url.clone(),
+            water_scale_normal: Some(value.water_scale_normal),
+            water_speed: Some(value.water_speed),
+            shininess: Some(value.shininess),
+            specular_strength: Some(value.specular_strength),
+            apply_water_normal: Some(value.apply_water_normal),
         }
     }
 }
@@ -509,6 +548,15 @@ pub struct ModelMaterial {
     pub color: Option<u32>,
     pub metalness: Option<f32>,
     pub roughness: Option<f32>,
+    pub reflectivity: Option<f32>,
+    pub water: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub water_normal_url: Option<String>,
+    pub water_scale_normal: Option<f32>,
+    pub water_speed: Option<f32>,
+    pub shininess: Option<f32>,
+    pub specular_strength: Option<f32>,
+    pub apply_water_normal: Option<bool>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -530,6 +578,14 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             color: val.color.unwrap_or(default.color),
             metalness: val.metalness.unwrap_or(default.metalness),
             roughness: val.roughness.unwrap_or(default.roughness),
+            reflectivity: val.reflectivity.unwrap_or(default.reflectivity),
+            water: val.water.unwrap_or(default.water),
+            water_normal_url: val.water_normal_url,
+            water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
+            water_speed: val.water_speed.unwrap_or(default.water_speed),
+            shininess: val.shininess.unwrap_or(default.shininess),
+            specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
+            apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
         }
     }
 }
@@ -549,6 +605,14 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             color: Some(value.color),
             metalness: Some(value.metalness),
             roughness: Some(value.roughness),
+            reflectivity: Some(value.reflectivity),
+            water: Some(value.water),
+            water_normal_url: value.water_normal_url.clone(),
+            water_scale_normal: Some(value.water_scale_normal),
+            water_speed: Some(value.water_speed),
+            shininess: Some(value.shininess),
+            specular_strength: Some(value.specular_strength),
+            apply_water_normal: Some(value.apply_water_normal),
         }
     }
 }
