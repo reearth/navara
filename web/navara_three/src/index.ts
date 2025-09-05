@@ -1,5 +1,5 @@
 import { EventManager, EventHandler } from "@navara/core";
-import type { CameraPosition, Nullable } from "@navara/core";
+import type { CameraPosition, Nullable, XYZ } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -108,7 +108,7 @@ import {
   type DrapedMaterialCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
-import { isWorker } from "./utils";
+import { isWorker, convertScreenPos } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
@@ -167,6 +167,10 @@ export type Options = {
   shadow?: boolean;
 };
 
+export interface MapMouseEvent extends MouseEvent {
+  map: XYZ;
+}
+
 export type ViewEvents = {
   resize: (w: number, h: number) => void;
   pick: (info: Nullable<PickedFeature>) => void;
@@ -197,6 +201,14 @@ export type ViewEvents = {
    * You should pass a material that needs the shadow when it's initialized.
    */
   _csmMounted: (material: Material) => void;
+
+  // Mouse events
+  mousedown: (event: MapMouseEvent) => void;
+  mouseenter: (event: MapMouseEvent) => void;
+  mouseleave: (event: MapMouseEvent) => void;
+  mousemove: (event: MapMouseEvent) => void;
+  mouseup: (event: MapMouseEvent) => void;
+  click: (event: MapMouseEvent) => void;
 };
 
 export default class ThreeView<
@@ -546,6 +558,28 @@ export default class ThreeView<
     this.shadowMapViewers = new ShadowMapViewers(this._scenes.light);
   }
 
+  /**
+   * Convert a mouse event to a MapMouseEvent by adding map coordinates
+   */
+  private convertMouseEventToMapEvent(event: MouseEvent): MapMouseEvent | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const xyz = convertScreenPos(this, x, y);
+
+    if (xyz) {
+      return Object.assign(event, {
+        map: {
+          x: xyz.x,
+          y: xyz.y,
+          z: xyz.z,
+        },
+      }) as MapMouseEvent;
+    }
+
+    return null;
+  }
+
   async initializeRenderPass() {
     // Initialize atmosphere
     await this.atmosphere.init();
@@ -640,6 +674,48 @@ export default class ThreeView<
     this.resize(size.width, size.height, this.renderer.getPixelRatio());
 
     this.camera.core = this._core;
+
+    this.renderer.domElement.addEventListener("mousedown", (event) => {
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mousedown", mapEvent);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("mouseenter", (event) => {
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mouseenter", mapEvent);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("mouseleave", (event) => {
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mouseleave", mapEvent);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("mousemove", (event) => {
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mousemove", mapEvent);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("mouseup", (event) => {
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("mouseup", mapEvent);
+      }
+    });
+
+    this.renderer.domElement.addEventListener("click", (event) => {
+      const mapEvent = this.convertMouseEventToMapEvent(event);
+      if (mapEvent) {
+        this.emit("click", mapEvent);
+      }
+    });
   }
 
   dispose() {

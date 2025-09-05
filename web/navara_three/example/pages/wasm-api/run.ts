@@ -8,13 +8,13 @@ import ThreeView, {
   type GLTFModelLayer,
   type Nullable,
   type XYZ,
+  type MapMouseEvent,
 } from "@navara/three";
 import {
   geodeticToVector3,
   vector3ToGeodetic,
   degreeToRadian,
   radianToDegree,
-  convertScreenToWorld,
   convertWorldToScreen,
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
@@ -102,6 +102,11 @@ export const run = async (view: ThreeView) => {
       min_zoom: 5,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
+  });
+
+  view.on("mousedown", (event: MapMouseEvent) => {
+    console.log("3D Position:", event.map);
+    console.log("Screen Position:", event.clientX, event.clientY);
   });
 
   view.addLayer({
@@ -230,22 +235,6 @@ const testScreenToWorld = (view: ThreeView) => {
   };
 
   view.renderer.domElement.addEventListener("mousemove", onMouseMove);
-};
-
-const convertScreenPos = (view: ThreeView, x: number, y: number) => {
-  if (!view.camera) {
-    console.error("View camera is not initialized.");
-    return;
-  }
-
-  const screenSize = view.screenSize;
-  const pixelRatio = view.pixelRatio;
-
-  const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
-
-  const pos = convertScreenToWorld(win, view.camera.raw, new Vector2(x, y));
-
-  return pos;
 };
 
 const placeOneBall = (
@@ -551,10 +540,10 @@ const testRayPlane = (view: ThreeView) => {
   let cylinder: Mesh | undefined = undefined;
   let bMouseMoved = false;
 
-  const onMouseDown = (_e: MouseEvent) => {
+  const onMouseDown = (_e: MapMouseEvent) => {
     bMouseMoved = false;
   };
-  const onMouseMove = (event: MouseEvent) => {
+  const onMouseMove = (event: MapMouseEvent) => {
     bMouseMoved = true;
 
     const rect = view.renderer.domElement.getBoundingClientRect();
@@ -597,15 +586,13 @@ const testRayPlane = (view: ThreeView) => {
       }
     }
   };
-  const onMouseUp = (event: MouseEvent) => {
+  const onMouseUp = (event: MapMouseEvent) => {
     if (bMouseMoved || !gPaneParams.extrudeCylinder) {
       return;
     }
 
-    const rect = view.renderer.domElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const pos = convertScreenPos(view, x, y);
+    const mapPos = event.map;
+    const pos = mapPos ? new Vector3(mapPos.x, mapPos.y, mapPos.z) : null;
 
     if (!center && pos) {
       center = pos;
@@ -628,9 +615,9 @@ const testRayPlane = (view: ThreeView) => {
     cylinder = undefined;
   };
 
-  view.renderer.domElement.addEventListener("mousedown", onMouseDown);
-  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
-  view.renderer.domElement.addEventListener("mouseup", onMouseUp);
+  view.on("mousedown", onMouseDown);
+  view.on("mousemove", onMouseMove);
+  view.on("mouseup", onMouseUp);
 };
 
 const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
@@ -801,12 +788,11 @@ const createPolylineMesh = (view: ThreeView) => {
 };
 
 const testSampleTerrainHeight = (view: ThreeView) => {
-  const onMouseMove = (event: MouseEvent) => {
-    const rect = view.renderer.domElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const pos = convertScreenPos(view, x, y);
-    if (pos) {
+  const onMouseMove = (event: MapMouseEvent) => {
+    const mapPos = event.map;
+
+    if (mapPos) {
+      const pos = new Vector3(mapPos.x, mapPos.y, mapPos.z);
       const lle = vector3ToGeodetic(pos);
 
       const height = view.sampleTerrainHeight(lle);
@@ -818,7 +804,7 @@ const testSampleTerrainHeight = (view: ThreeView) => {
     }
   };
 
-  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
+  view.on("mousemove", onMouseMove);
 };
 
 const onRegisterChange = () => {
