@@ -938,7 +938,7 @@ export default class ThreeView<
     this.registerMesh("gltfModel", GLTFModelLayer);
     this.registerMesh("axesHelper", AxesHelperLayer);
     this.registerMesh("arrowHelper", ArrowHelperLayer);
-    this.registerMesh("arcLine", ArclineMeshLayer);
+    this.registerMesh("arcLines", ArclineMeshLayer);
   }
 
   private registerBuiltInLights(): void {

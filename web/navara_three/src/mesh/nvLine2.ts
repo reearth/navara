@@ -74,7 +74,6 @@ export class NvLine2 extends Line2 {
     const fullConfig = { ...DefaultLineConfig, ...config };
     super(new NvLineGeometry(), new LineMaterial());
 
-    console.log(fullConfig);
     this._config = fullConfig;
   }
 

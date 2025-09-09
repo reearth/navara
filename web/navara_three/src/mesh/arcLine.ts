@@ -9,6 +9,7 @@ import {
 } from "@navara/three_api";
 
 import {
+  Object3D,
   Mesh,
   InstancedBufferGeometry,
   ShaderMaterial,
@@ -22,17 +23,16 @@ import {
 } from "three";
 
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
-import { FEATURE_RENDER_ORDER } from "../renderOrder";
 
 export type ArcLineConfig = {
-  thickness: number;
-  opacity: number;
-  segments: number;
-  srcColor: number;
-  tgtColor: number;
-  height: number;
-  arcHeightScale: number;
-  geometry: LngLat[];
+  thickness: number; // Thickness of the arc line
+  opacity: number; // Opacity of the arc line
+  segments: number; // Number of segments per arc line
+  srcColor: number; // Source color of the arc line
+  tgtColor: number; // Target color of the arc line
+  height: number; // height from globe surface
+  arcHeightScale: number; // Scale factor for arc height relative to distance between endpoints
+  geometry: LngLat[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
 };
 
 export const DefaultArcLineConfig: ArcLineConfig = {
@@ -46,65 +46,125 @@ export const DefaultArcLineConfig: ArcLineConfig = {
   geometry: [],
 };
 
-export class ArcLine extends Mesh<InstancedBufferGeometry, ShaderMaterial> {
-  private readonly _config: ArcLineConfig;
+export class ArcLine extends Object3D {
+  private readonly _config: ArcLineConfig[];
+  private _subMeshes: Mesh<InstancedBufferGeometry, ShaderMaterial>[] = [];
 
-  constructor(config: Partial<ArcLineConfig> = {}) {
-    const fullConfig = { ...DefaultArcLineConfig, ...config };
+  constructor(config: Partial<ArcLineConfig>[] = []) {
+    super();
 
-    super(new InstancedBufferGeometry(), new ShaderMaterial());
+    this._config = config.map((cfg) => {
+      return { ...DefaultArcLineConfig, ...cfg };
+    });
 
-    this._config = fullConfig;
-    this.renderOrder = FEATURE_RENDER_ORDER;
+    if (this._config.length < 1) {
+      return;
+    }
 
-    this.initGeometry();
-    this.initMaterial();
-    this.updateInstanceData();
+    this.initSubMeshes();
     this.updateBoundingSphere();
   }
 
-  private initGeometry(): void {
-    const geo = this.geometry;
-    const config = this._config;
-    const steps = config.segments + 1;
-    const vertCount = steps * 2;
-    const indCount = config.segments * 6;
+  private initSubMeshes(): void {
+    // Clear existing sub-meshes
+    this._subMeshes.forEach((mesh) => {
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+      this.remove(mesh);
+    });
+    this._subMeshes = [];
+
+    // Create a sub-mesh for each config
+    this._config.forEach((cfg) => {
+      const subMesh = this.createSubMesh(cfg);
+      this._subMeshes.push(subMesh);
+      this.add(subMesh);
+    });
+  }
+
+  private createSubMesh(
+    config: ArcLineConfig,
+  ): Mesh<InstancedBufferGeometry, ShaderMaterial> {
+    const geo = new InstancedBufferGeometry();
+
+    // Create geometry for this specific config only
+    this.fillSingleConfigAttributes(config, geo);
+
+    // Create instance data for this config only
     const numInstances = Math.floor(config.geometry.length / 2);
-
-    // Clear existing attributes and index if they exist
-    const attributeNames = Object.keys(geo.attributes);
-    for (const name of attributeNames) {
-      geo.deleteAttribute(name);
+    if (numInstances === 0) {
+      return new Mesh(geo, new ShaderMaterial());
     }
-    geo.setIndex(null);
 
-    // Base geometry - template for single arc line
+    const instanceSourceTarget = new Float32Array(numInstances * 4);
+    const instanceParams = new Float32Array(numInstances * 4);
+    const instanceSegments = new Float32Array(numInstances);
+    const instanceSrcColor = new Float32Array(numInstances * 3);
+    const instanceTgtColor = new Float32Array(numInstances * 3);
+
+    geo.setAttribute(
+      "aInstanceSourceTarget",
+      new InstancedBufferAttribute(instanceSourceTarget, 4),
+    );
+    geo.setAttribute(
+      "aInstanceParams",
+      new InstancedBufferAttribute(instanceParams, 4),
+    );
+    geo.setAttribute(
+      "aInstanceSegments",
+      new InstancedBufferAttribute(instanceSegments, 1),
+    );
+    geo.setAttribute(
+      "aInstanceSrcColor",
+      new InstancedBufferAttribute(instanceSrcColor, 3),
+    );
+    geo.setAttribute(
+      "aInstanceTgtColor",
+      new InstancedBufferAttribute(instanceTgtColor, 3),
+    );
+
+    // Fill instance data for this config
+    this.fillSingleConfigInstanceData(config, geo);
+
+    // Create material
+    const material = this.createMaterial();
+    const mesh = new Mesh(geo, material);
+
+    return mesh;
+  }
+
+  private fillSingleConfigAttributes(
+    config: ArcLineConfig,
+    geo: InstancedBufferGeometry,
+  ): void {
+    const configSegments = Math.max(2, config.segments);
+    const steps = configSegments + 1;
+    const vertCount = steps * 2;
+    const idxCount = configSegments * 6;
+
     const positions = new Float32Array(vertCount * 3);
-    const aT = new Float32Array(vertCount);
-    const aSide = new Float32Array(vertCount);
-    const indices = new Uint32Array(indCount);
+    const aVertexData = new Float32Array(vertCount * 2); // x=aT, y=aSide
+    const indices = new Uint32Array(idxCount);
 
-    // Fill base geometry data
-    let p3 = 0,
-      p1 = 0;
+    let ip = 0;
+    let vertexIndex = 0;
+
+    // Fill vertex attributes for this single config
     for (let i = 0; i < steps; i++) {
-      const tt = i / config.segments;
-      for (let sideIdx = 0; sideIdx < 2; sideIdx++) {
-        const side = sideIdx === 0 ? -1 : 1;
+      const t = i / configSegments;
 
-        // Position will be recalculated in shader, set to 0 here
-        positions[p3] = positions[p3 + 1] = positions[p3 + 2] = 0;
-        aT[p1] = tt;
-        aSide[p1] = side;
+      // Pack vertex data: x=aT, y=aSide
+      aVertexData[vertexIndex * 2] = t; // aT for bottom vertex
+      aVertexData[vertexIndex * 2 + 1] = -1; // aSide for bottom vertex
 
-        p3 += 3;
-        p1++;
-      }
+      aVertexData[(vertexIndex + 1) * 2] = t; // aT for top vertex
+      aVertexData[(vertexIndex + 1) * 2 + 1] = 1; // aSide for top vertex
+
+      vertexIndex += 2;
     }
 
-    // Fill indices
-    let ip = 0;
-    for (let i = 0; i < config.segments; i++) {
+    // Fill indices for this config
+    for (let i = 0; i < configSegments; i++) {
       const i0 = i * 2;
       const i1 = i0 + 1;
       const i2 = (i + 1) * 2;
@@ -120,94 +180,29 @@ export class ArcLine extends Mesh<InstancedBufferGeometry, ShaderMaterial> {
 
     geo.setIndex(new BufferAttribute(indices, 1));
     geo.setAttribute("position", new BufferAttribute(positions, 3));
-    geo.setAttribute("aT", new BufferAttribute(aT, 1));
-    geo.setAttribute("aSide", new BufferAttribute(aSide, 1));
-
-    // Instance attribute arrays (lon/lat coordinates)
-    const instanceSources = new Float32Array(numInstances * 2);
-    const instanceTargets = new Float32Array(numInstances * 2);
-    const instanceHeights = new Float32Array(numInstances);
-
-    geo.setAttribute(
-      "aInstanceSource",
-      new InstancedBufferAttribute(instanceSources, 2),
-    );
-    geo.setAttribute(
-      "aInstanceTarget",
-      new InstancedBufferAttribute(instanceTargets, 2),
-    );
-    geo.setAttribute(
-      "aInstanceHeight",
-      new InstancedBufferAttribute(instanceHeights, 1),
-    );
+    geo.setAttribute("aVertexData", new BufferAttribute(aVertexData, 2));
   }
 
-  private initMaterial(): void {
-    const WGS84_A = getWGS84SemiMajorAxis();
-    const WGS84_B = getWGS84SemiMinorAxis();
-    const WGS84_E2 = getWGS84EccentricitySquared();
+  private fillSingleConfigInstanceData(
+    config: ArcLineConfig,
+    geo: InstancedBufferGeometry,
+  ): void {
+    const numInstances = Math.floor(config.geometry.length / 2);
+    geo.instanceCount = numInstances;
 
-    const config = this._config;
+    if (numInstances === 0) return;
 
-    this.material.vertexShader = ArclineVertShader;
-    this.material.fragmentShader = `
-      uniform float uOpacity;
-      varying vec3 vColor;
+    const instanceSourceTarget = geo.getAttribute("aInstanceSourceTarget");
+    const instanceParams = geo.getAttribute("aInstanceParams");
+    const instanceSegments = geo.getAttribute("aInstanceSegments");
+    const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
+    const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
 
-      #include <logdepthbuf_pars_fragment>
-
-      void main() {
-        gl_FragColor = vec4(vColor, uOpacity);
-        
-        #include <logdepthbuf_fragment>
-      }
-    `;
-
-    this.material.uniforms = {
-      uThickness: { value: config.thickness },
-      uViewport: { value: new Vector2(1920, 1080) },
-      uSegments: { value: config.segments },
-      uOpacity: { value: config.opacity },
-      uHeight: { value: config.height },
-      uR: { value: WGS84_A },
-      uA: { value: WGS84_A },
-      uB: { value: WGS84_B },
-      uE2: { value: WGS84_E2 },
-    };
-
-    this.material.uniforms.uSrcColor = { value: new Color(config.srcColor) };
-    this.material.uniforms.uTgtColor = { value: new Color(config.tgtColor) };
-
-    this.material.depthTest = true;
-    this.material.depthWrite = true;
-    this.material.transparent = config.opacity < 1.0;
-    this.material.side = DoubleSide;
-  }
-
-  private updateInstanceData(): void {
-    if (!this._config.geometry.length) {
-      this.geometry.instanceCount = 0;
-      return;
-    }
-
-    const numInstances = Math.floor(this._config.geometry.length / 2);
-
-    const instanceSources = this.geometry.getAttribute(
-      "aInstanceSource",
-    ) as InstancedBufferAttribute;
-    const instanceTargets = this.geometry.getAttribute(
-      "aInstanceTarget",
-    ) as InstancedBufferAttribute;
-    const instanceHeights = this.geometry.getAttribute(
-      "aInstanceHeight",
-    ) as InstancedBufferAttribute;
-
-    // Set the instance count for rendering
-    this.geometry.instanceCount = numInstances;
+    const segments = Math.max(2, Math.floor(config.segments));
 
     for (let i = 0; i < numInstances; i++) {
-      const geom1 = this._config.geometry[i * 2];
-      const geom2 = this._config.geometry[i * 2 + 1];
+      const geom1 = config.geometry[i * 2];
+      const geom2 = config.geometry[i * 2 + 1];
 
       const lle1 = new LLE(
         degreeToRadian(geom1.lng),
@@ -224,128 +219,272 @@ export class ArcLine extends Mesh<InstancedBufferGeometry, ShaderMaterial> {
       const pos2 = geodeticToVector3(lle2);
       const dist = pos1.distanceTo(pos2);
 
-      instanceSources.setXY(i, geom1.lng, geom1.lat);
-      instanceTargets.setXY(i, geom2.lng, geom2.lat);
-      instanceHeights.setX(i, dist * this._config.arcHeightScale);
+      // Pack source/target: srcLon, srcLat, tgtLon, tgtLat
+      instanceSourceTarget.setXYZW(
+        i,
+        geom1.lng,
+        geom1.lat,
+        geom2.lng,
+        geom2.lat,
+      );
+
+      // Pack params: height, arcHeight, thickness, opacity
+      instanceParams.setXYZW(
+        i,
+        config.height,
+        dist * config.arcHeightScale,
+        config.thickness,
+        config.opacity,
+      );
+
+      // Set segments
+      instanceSegments.setX(i, segments);
+
+      const srcColor = new Color(config.srcColor);
+      const tgtColor = new Color(config.tgtColor);
+      instanceSrcColor.setXYZ(i, srcColor.r, srcColor.g, srcColor.b);
+      instanceTgtColor.setXYZ(i, tgtColor.r, tgtColor.g, tgtColor.b);
     }
 
-    instanceSources.needsUpdate = true;
-    instanceTargets.needsUpdate = true;
-    instanceHeights.needsUpdate = true;
+    instanceSourceTarget.needsUpdate = true;
+    instanceParams.needsUpdate = true;
+    instanceSegments.needsUpdate = true;
+    instanceSrcColor.needsUpdate = true;
+    instanceTgtColor.needsUpdate = true;
+  }
+
+  private createMaterial(): ShaderMaterial {
+    const WGS84_A = getWGS84SemiMajorAxis();
+    const WGS84_B = getWGS84SemiMinorAxis();
+    const WGS84_E2 = getWGS84EccentricitySquared();
+
+    const material = new ShaderMaterial();
+    material.vertexShader = ArclineVertShader;
+    material.fragmentShader = `
+      in float vOpacity;
+      in vec3 vColor;
+
+      #include <logdepthbuf_pars_fragment>
+
+      void main() {
+        gl_FragColor = vec4(vColor, vOpacity);
+        
+        #include <logdepthbuf_fragment>
+      }
+    `;
+
+    material.uniforms = {
+      uViewport: { value: new Vector2(1920, 1080) },
+      uR: { value: WGS84_A },
+      uA: { value: WGS84_A },
+      uB: { value: WGS84_B },
+      uE2: { value: WGS84_E2 },
+    };
+
+    material.depthTest = true;
+    material.depthWrite = true;
+    material.transparent = true;
+    material.side = DoubleSide;
+
+    return material;
   }
 
   private updateBoundingSphere(): void {
-    if (!this._config.geometry.length) return;
-
     const box = new Box3();
 
-    // Process each arc (pairs of points)
-    for (let i = 0; i < this._config.geometry.length; i += 2) {
-      if (i + 1 >= this._config.geometry.length) break;
+    this._config.forEach((cfg) => {
+      for (let i = 0; i < cfg.geometry.length; i += 2) {
+        if (i + 1 >= cfg.geometry.length) break;
 
-      const point1 = this._config.geometry[i];
-      const point2 = this._config.geometry[i + 1];
+        const point1 = cfg.geometry[i];
+        const point2 = cfg.geometry[i + 1];
 
-      const pos1 = geodeticToVector3(
-        new LLE(
-          degreeToRadian(point1.lng),
-          degreeToRadian(point1.lat),
-          this._config.height,
-        ),
-      );
-      const pos2 = geodeticToVector3(
-        new LLE(
-          degreeToRadian(point2.lng),
-          degreeToRadian(point2.lat),
-          this._config.height,
-        ),
-      );
+        const pos1 = geodeticToVector3(
+          new LLE(
+            degreeToRadian(point1.lng),
+            degreeToRadian(point1.lat),
+            cfg.height,
+          ),
+        );
+        const pos2 = geodeticToVector3(
+          new LLE(
+            degreeToRadian(point2.lng),
+            degreeToRadian(point2.lat),
+            cfg.height,
+          ),
+        );
 
-      box.expandByPoint(pos1);
-      box.expandByPoint(pos2);
+        box.expandByPoint(pos1);
+        box.expandByPoint(pos2);
 
-      // Add arc peak point (t = 0.5, where sin(PI * t) = 1, maximum height)
-      const midLng = (point1.lng + point2.lng) / 2;
-      const midLat = (point1.lat + point2.lat) / 2;
+        // Add arc peak point (t = 0.5, where sin(PI * t) = 1, maximum height)
+        const midLng = (point1.lng + point2.lng) / 2;
+        const midLat = (point1.lat + point2.lat) / 2;
 
-      const dist = pos1.distanceTo(pos2);
+        const dist = pos1.distanceTo(pos2);
 
-      // The top of the arc is calculated in the shader, and the calculation method
-      // here is not accurate—it's only used to estimate the bounding box.
-      const peakHeight =
-        this._config.height + dist * this._config.arcHeightScale;
-      const peakLLE = new LLE(
-        degreeToRadian(midLng),
-        degreeToRadian(midLat),
-        peakHeight,
-      );
-      box.expandByPoint(geodeticToVector3(peakLLE));
-    }
+        // The top of the arc is calculated in the shader, and the calculation method
+        // here is not accurate—it's only used to estimate the bounding box.
+        const peakHeight = cfg.height + dist * cfg.arcHeightScale;
+        const peakLLE = new LLE(
+          degreeToRadian(midLng),
+          degreeToRadian(midLat),
+          peakHeight,
+        );
+        box.expandByPoint(geodeticToVector3(peakLLE));
+      }
+    });
 
-    this.geometry.boundingBox = box;
-    this.geometry.boundingSphere = new Sphere();
-    this.geometry.boundingBox.getBoundingSphere(this.geometry.boundingSphere);
+    // Update bounding info for each sub-mesh
+    this._subMeshes.forEach((mesh) => {
+      mesh.geometry.boundingBox = box.clone();
+      mesh.geometry.boundingSphere = new Sphere();
+      mesh.geometry.boundingBox.getBoundingSphere(mesh.geometry.boundingSphere);
 
-    // Disable auto computation
-    this.geometry.computeBoundingBox = () => {};
-    this.geometry.computeBoundingSphere = () => {};
+      // Disable auto computation
+      mesh.geometry.computeBoundingBox = () => {};
+      mesh.geometry.computeBoundingSphere = () => {};
+    });
   }
 
-  updateConfig(newConfig: Partial<ArcLineConfig>) {
-    const segmentsChanged =
-      newConfig.segments !== undefined &&
-      newConfig.segments !== this._config.segments;
-    const heightChanged =
-      newConfig.height !== undefined &&
-      newConfig.height !== this._config.height;
-    const arcHeightScaleChanged =
-      newConfig.arcHeightScale !== undefined &&
-      newConfig.arcHeightScale !== this._config.arcHeightScale;
+  updateConfig(newConfig: Partial<ArcLineConfig>[]) {
+    const changedConfigs = new Set<number>();
+    const configsNeedingRebuild = new Set<number>();
 
-    if (newConfig.thickness !== undefined)
-      this._config.thickness = newConfig.thickness;
-    if (newConfig.opacity !== undefined)
-      this._config.opacity = newConfig.opacity;
-    if (newConfig.segments !== undefined)
-      this._config.segments = newConfig.segments;
-    if (newConfig.srcColor !== undefined)
-      this._config.srcColor = newConfig.srcColor;
-    if (newConfig.tgtColor !== undefined)
-      this._config.tgtColor = newConfig.tgtColor;
-    if (newConfig.height !== undefined) this._config.height = newConfig.height;
-    if (newConfig.geometry !== undefined)
-      this._config.geometry = newConfig.geometry;
-    if (newConfig.arcHeightScale !== undefined)
-      this._config.arcHeightScale = newConfig.arcHeightScale;
+    newConfig.forEach((cfg, i) => {
+      if (!this._config[i]) {
+        // New config - needs complete rebuild
+        this._config[i] = { ...DefaultArcLineConfig, ...cfg };
+        configsNeedingRebuild.add(i);
+        changedConfigs.add(i);
+      } else {
+        let hasChanges = false;
+        let needsRebuild = false;
 
-    this.material.uniforms.uThickness.value = this._config.thickness;
-    this.material.uniforms.uOpacity.value = this._config.opacity;
-    this.material.uniforms.uSegments.value = this._config.segments;
-    this.material.uniforms.uHeight.value = this._config.height;
-    this.material.uniforms.uSrcColor.value.set(this._config.srcColor);
-    this.material.uniforms.uTgtColor.value.set(this._config.tgtColor);
+        // Check if segments changed (requires geometry rebuild)
+        if (
+          cfg.segments !== undefined &&
+          cfg.segments !== this._config[i].segments
+        ) {
+          this._config[i].segments = cfg.segments;
+          needsRebuild = true;
+          hasChanges = true;
+        }
 
-    this.material.transparent = this._config.opacity < 1.0;
+        // Check if geometry changed
+        if (cfg.geometry !== undefined) {
+          if (cfg.geometry.length !== this._config[i].geometry.length) {
+            this._config[i].geometry = cfg.geometry;
+            needsRebuild = true;
+            hasChanges = true;
+          } else {
+            for (let j = 0; j < cfg.geometry.length; j++) {
+              if (
+                cfg.geometry[j].lng !== this._config[i].geometry[j].lng ||
+                cfg.geometry[j].lat !== this._config[i].geometry[j].lat
+              ) {
+                this._config[i].geometry[j].lng = cfg.geometry[j].lng;
+                this._config[i].geometry[j].lat = cfg.geometry[j].lat;
+                hasChanges = true;
+              }
+            }
+          }
+        }
 
-    if (segmentsChanged) {
-      this.initGeometry();
-    }
+        // Update other properties (these don't need geometry rebuild)
+        if (
+          cfg.thickness !== undefined &&
+          cfg.thickness !== this._config[i].thickness
+        ) {
+          this._config[i].thickness = cfg.thickness;
+          hasChanges = true;
+        }
+        if (
+          cfg.opacity !== undefined &&
+          cfg.opacity !== this._config[i].opacity
+        ) {
+          this._config[i].opacity = cfg.opacity;
+          hasChanges = true;
+        }
+        if (
+          cfg.srcColor !== undefined &&
+          cfg.srcColor !== this._config[i].srcColor
+        ) {
+          this._config[i].srcColor = cfg.srcColor;
+          hasChanges = true;
+        }
+        if (
+          cfg.tgtColor !== undefined &&
+          cfg.tgtColor !== this._config[i].tgtColor
+        ) {
+          this._config[i].tgtColor = cfg.tgtColor;
+          hasChanges = true;
+        }
+        if (cfg.height !== undefined && cfg.height !== this._config[i].height) {
+          this._config[i].height = cfg.height;
+          hasChanges = true;
+        }
+        if (
+          cfg.arcHeightScale !== undefined &&
+          cfg.arcHeightScale !== this._config[i].arcHeightScale
+        ) {
+          this._config[i].arcHeightScale = cfg.arcHeightScale;
+          hasChanges = true;
+        }
 
-    if (heightChanged || arcHeightScaleChanged) {
+        if (hasChanges) {
+          changedConfigs.add(i);
+          if (needsRebuild) {
+            configsNeedingRebuild.add(i);
+          }
+        }
+      }
+    });
+
+    // Handle configs that need complete rebuild
+    configsNeedingRebuild.forEach((configIndex) => {
+      if (this._subMeshes[configIndex]) {
+        // Dispose old mesh
+        this._subMeshes[configIndex].geometry.dispose();
+        this._subMeshes[configIndex].material.dispose();
+        this.remove(this._subMeshes[configIndex]);
+      }
+
+      // Create new mesh
+      const newMesh = this.createSubMesh(this._config[configIndex]);
+      this._subMeshes[configIndex] = newMesh;
+      this.add(newMesh);
+    });
+
+    // Handle configs that only need instance data update
+    changedConfigs.forEach((configIndex) => {
+      if (
+        !configsNeedingRebuild.has(configIndex) &&
+        this._subMeshes[configIndex]
+      ) {
+        this.fillSingleConfigInstanceData(
+          this._config[configIndex],
+          this._subMeshes[configIndex].geometry,
+        );
+      }
+    });
+
+    // Only update bounding sphere if there were actual changes
+    if (changedConfigs.size > 0) {
       this.updateBoundingSphere();
-    }
-
-    if (segmentsChanged || heightChanged || arcHeightScaleChanged) {
-      this.updateInstanceData();
     }
   }
 
   onResize(width: number, height: number): void {
-    this.material.uniforms?.uViewport.value.set(width, height);
+    this._subMeshes.forEach((mesh) => {
+      mesh.material.uniforms?.uViewport.value.set(width, height);
+    });
   }
 
   dispose(): void {
-    this.geometry.dispose();
-    this.material.dispose();
+    this._subMeshes.forEach((mesh) => {
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    });
   }
 }

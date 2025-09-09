@@ -7,7 +7,7 @@ import {
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "../../mesh";
 
 type LayerDescription = {
-  arcLine?: Partial<ArcLineConfig>;
+  arcLines?: Partial<ArcLineConfig>[];
 };
 
 export type ArclineMeshLayerConfig = MeshLayerConfig & LayerDescription;
@@ -27,24 +27,30 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
   }
 
   createMesh() {
-    const lineConfig: Partial<ArcLineConfig> = {
-      thickness:
-        this.config.arcLine?.thickness ?? DefaultArcLineConfig.thickness,
-      opacity: this.config.arcLine?.opacity ?? DefaultArcLineConfig.opacity,
-      segments: this.config.arcLine?.segments ?? DefaultArcLineConfig.segments,
-      srcColor: this.config.arcLine?.srcColor ?? DefaultArcLineConfig.srcColor,
-      tgtColor: this.config.arcLine?.tgtColor ?? DefaultArcLineConfig.tgtColor,
-      height: this.config.arcLine?.height ?? DefaultArcLineConfig.height,
-      geometry: this.config.arcLine?.geometry ?? DefaultArcLineConfig.geometry,
-    };
+    const lineConfig: Partial<ArcLineConfig>[] = [];
+    if (this.config.arcLines) {
+      for (const cfg of this.config.arcLines) {
+        lineConfig.push({
+          thickness: cfg.thickness ?? DefaultArcLineConfig.thickness,
+          opacity: cfg.opacity ?? DefaultArcLineConfig.opacity,
+          segments: cfg.segments ?? DefaultArcLineConfig.segments,
+          srcColor: cfg.srcColor ?? DefaultArcLineConfig.srcColor,
+          tgtColor: cfg.tgtColor ?? DefaultArcLineConfig.tgtColor,
+          height: cfg.height ?? DefaultArcLineConfig.height,
+          arcHeightScale:
+            cfg.arcHeightScale ?? DefaultArcLineConfig.arcHeightScale,
+          geometry: cfg.geometry ?? DefaultArcLineConfig.geometry,
+        });
+      }
+    }
 
     return new ArcLine(lineConfig);
   }
 
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
-    if (this.config.arcLine && updates.arcLine && this._instance) {
-      Object.assign(this.config.arcLine, updates.arcLine);
-      this._instance.updateConfig(updates.arcLine);
+    if (this.config.arcLines && updates.arcLines && this._instance) {
+      Object.assign(this.config.arcLines, updates.arcLines);
+      this._instance.updateConfig(updates.arcLines);
       this.emit("_needsUpdate");
     }
 
@@ -57,9 +63,7 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this._instance.geometry.dispose();
-      this._instance.material.dispose();
-
+      this._instance.dispose();
       this._instance = undefined;
     }
   }

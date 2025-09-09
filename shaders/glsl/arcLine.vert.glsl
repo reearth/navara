@@ -1,5 +1,5 @@
 /*******************************************************
-* Description:
+ * Description:
  *   Vertex shader for rendering geodesic arcs on the WGS84
  *   ellipsoid. Supports line thickness in screen space,
  *   smooth color interpolation (uniform or per-instance),
@@ -10,30 +10,31 @@
  *     - Geodesic interpolation between source & target
  *     - Screen-space line quad expansion
  *     - Per-instance and uniform color modes
- *******************************************************/
+*******************************************************/
+
+// The implementation is based on the principles of deck.gl's ArcLayer
+// https://github.com/visgl/deck.gl/blob/master/modules/layers/src/arc-layer/arc-layer-vertex.glsl.ts
 
 precision highp float;
 
-uniform float uThickness;
 uniform vec2  uViewport;
-uniform float uSegments;
-uniform float uHeight;
 uniform highp float uR;
 uniform float uA;
 uniform float uB;
 uniform float uE2;
-uniform vec3 uSrcColor;
-uniform vec3 uTgtColor;
 
-attribute float aT;      // Interpolation parameter along the arc
-attribute float aSide;   // Line side (-1 or 1)
+// Packed vertex attributes  
+attribute vec2 aVertexData; // x=aT, y=aSide 
 
-// Instance attributes - per arc instance (lon/lat positions)
-attribute vec2 aInstanceSource; // lon, lat
-attribute vec2 aInstanceTarget; // lon, lat
-attribute float aInstanceHeight;
+// Instance attributes - per arc instance
+attribute vec4 aInstanceSourceTarget; // x=srcLon, y=srcLat, z=tgtLon, w=tgtLat
+attribute vec4 aInstanceParams; // x=height, y=arcHeight, z=thickness, w=opacity
+attribute float aInstanceSegments; // Number of segments
+attribute vec3 aInstanceSrcColor;
+attribute vec3 aInstanceTgtColor;
 
-varying vec3 vColor;
+out vec3 vColor;
+out float vOpacity;
 
 #include <common>
 #include <logdepthbuf_pars_vertex>
@@ -76,6 +77,7 @@ vec3 ellipsoidGeodesic(vec3 s, vec3 t, float tt, float a, float e2) {
   // Spherical interpolation
   vec3 spherePoint;
   if (abs(omega) < 1e-6) {
+    // Handle nearly identical points
     spherePoint = sN;
   } else if (abs(PI - omega) < 1e-5) {
     // Handle nearly opposite points
@@ -97,8 +99,22 @@ vec3 ellipsoidGeodesic(vec3 s, vec3 t, float tt, float a, float e2) {
 }
 
 void main() {
+  // Unpack vertex data
+  float aT = aVertexData.x;
+  float aSide = aVertexData.y;
+  
+  // Unpack instance params
+  float aInstanceHeight = aInstanceParams.x;
+  float aInstanceArcHeight = aInstanceParams.y;
+  float aInstanceThickness = aInstanceParams.z;
+  float aInstanceOpacity = aInstanceParams.w;
+  
+  // Unpack source/target coordinates
+  vec2 aInstanceSource = aInstanceSourceTarget.xy;
+  vec2 aInstanceTarget = aInstanceSourceTarget.zw;
+  
   float t = aT;
-  float dt = 1.0 / uSegments;
+  float dt = 1.0 / aInstanceSegments;
   float t2 = min(1.0, t + dt);
 
   vec3 source3D = lonLatToEllipsoid(aInstanceSource.x, aInstanceSource.y, uA, uE2);
@@ -106,13 +122,13 @@ void main() {
 
   // First vertex along the arc
   vec3 base0 = ellipsoidGeodesic(source3D, target3D, t,  uA, uE2);
-  float lift0 = aInstanceHeight * sin(PI * t);
-  vec3 p0 = normalize(base0) * (length(base0) + lift0 + uHeight);
+  float lift0 = aInstanceArcHeight * sin(PI * t);
+  vec3 p0 = normalize(base0) * (length(base0) + lift0 + aInstanceHeight);
 
   // Second vertex along the arc
   vec3 base1 = ellipsoidGeodesic(source3D, target3D, t2, uA, uE2);
-  float lift1 = aInstanceHeight * sin(PI * t2);
-  vec3 p1 = normalize(base1) * (length(base1) + lift1 + uHeight);
+  float lift1 = aInstanceArcHeight * sin(PI * t2);
+  vec3 p1 = normalize(base1) * (length(base1) + lift1 + aInstanceHeight);
 
   // Project to clip space
   vec4 clip0 = projectionMatrix * modelViewMatrix * vec4(p0, 1.0);
@@ -123,7 +139,7 @@ void main() {
   // Construct line quad in NDC
   vec2 dir = normalize(ndc1 - ndc0 + vec2(1e-6));
   vec2 normal = vec2(-dir.y, dir.x);
-  vec2 pixel2NDC = vec2(uThickness / uViewport.x, uThickness / uViewport.y) * 2.0;
+  vec2 pixel2NDC = vec2(aInstanceThickness / uViewport.x, aInstanceThickness / uViewport.y) * 2.0;
   vec2 offsetNDC = normal * aSide * pixel2NDC;
 
   vec4 outPos = clip0;
@@ -133,5 +149,6 @@ void main() {
   #include <logdepthbuf_vertex>
 
   // Color interpolation
-  vColor = mix(uSrcColor, uTgtColor, t);
+  vColor = mix(aInstanceSrcColor, aInstanceTgtColor, t);
+  vOpacity = aInstanceOpacity;
 }
