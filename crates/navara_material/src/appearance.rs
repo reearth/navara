@@ -280,6 +280,14 @@ pub struct PolygonMaterial {
     pub outline_show: bool,
     pub outline_color: u32,
     pub outline_width: f32,
+
+    pub water: bool,
+    pub water_normal_url: Option<String>,
+    pub water_scale_normal: f32,
+    pub water_speed: f32,
+    pub shininess: f32,
+    pub specular_strength: f32,
+    pub apply_water_normal: bool,
 }
 
 impl Default for PolygonMaterial {
@@ -302,6 +310,14 @@ impl Default for PolygonMaterial {
             outline_show: false,
             outline_color: 0xffffff,
             outline_width: 1.,
+
+            water: false,
+            water_normal_url: None,
+            water_scale_normal: 0.1,
+            water_speed: 0.0003,
+            shininess: 100.0,
+            specular_strength: 2.0,
+            apply_water_normal: false,
         }
     }
 }
@@ -334,6 +350,14 @@ pub struct ModelMaterial {
     pub color: u32,
     pub metalness: f32,
     pub roughness: f32,
+    pub reflectivity: f32,
+    pub water: bool,
+    pub water_normal_url: Option<String>,
+    pub water_scale_normal: f32,
+    pub water_speed: f32,
+    pub shininess: f32,
+    pub specular_strength: f32,
+    pub apply_water_normal: bool,
 }
 
 impl Default for ModelMaterial {
@@ -352,6 +376,14 @@ impl Default for ModelMaterial {
             color: 0xffffff,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0.0,
+            water: false,
+            water_normal_url: None,
+            water_scale_normal: 0.01,
+            water_speed: 0.0003,
+            shininess: 100.0,
+            specular_strength: 2.0,
+            apply_water_normal: false,
         }
     }
 }

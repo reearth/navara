@@ -192,6 +192,7 @@ export function processEvent(
             texturizedSceneByTileCoordinates,
             tileMapByHandle,
             viewEvents,
+            uniforms,
           );
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
