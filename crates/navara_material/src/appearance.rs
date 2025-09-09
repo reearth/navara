@@ -358,6 +358,13 @@ pub struct ModelMaterial {
     pub shininess: f32,
     pub specular_strength: f32,
     pub apply_water_normal: bool,
+    // animation
+    pub animation_clips: Option<Vec<String>>,
+    pub active_clip: Option<String>,
+    pub speed: Option<f32>,
+    pub loop_enabled: Option<bool>,
+    pub crossfade_duration: Option<f32>,
+    pub auto_play: Option<bool>,
 }
 
 impl Default for ModelMaterial {
@@ -384,6 +391,13 @@ impl Default for ModelMaterial {
             shininess: 100.0,
             specular_strength: 2.0,
             apply_water_normal: false,
+            // animation
+            animation_clips: None,
+            active_clip: None,
+            speed: None,
+            loop_enabled: None,
+            crossfade_duration: None,
+            auto_play: None,
         }
     }
 }

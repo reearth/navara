@@ -576,6 +576,15 @@ pub struct ModelMaterial {
     pub shininess: Option<f32>,
     pub specular_strength: Option<f32>,
     pub apply_water_normal: Option<bool>,
+    // animation
+    #[wasm_bindgen(getter_with_clone)]
+    pub animation_clips: Option<Vec<String>>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub active_clip: Option<String>,
+    pub speed: Option<f32>,
+    pub loop_enabled: Option<bool>,
+    pub crossfade_duration: Option<f32>,
+    pub auto_play: Option<bool>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -605,6 +614,13 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             shininess: val.shininess.unwrap_or(default.shininess),
             specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
             apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
+            // animation
+            animation_clips: val.animation_clips,
+            active_clip: val.active_clip,
+            speed: val.speed,
+            loop_enabled: val.loop_enabled,
+            crossfade_duration: val.crossfade_duration,
+            auto_play: val.auto_play,
         }
     }
 }
@@ -632,6 +648,13 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             shininess: Some(value.shininess),
             specular_strength: Some(value.specular_strength),
             apply_water_normal: Some(value.apply_water_normal),
+            // animation
+            animation_clips: value.animation_clips.clone(),
+            active_clip: value.active_clip.clone(),
+            speed: value.speed,
+            loop_enabled: value.loop_enabled,
+            crossfade_duration: value.crossfade_duration,
+            auto_play: value.auto_play,
         }
     }
 }

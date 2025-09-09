@@ -18,6 +18,8 @@ const tileUrls = {
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.animation = true;
+
   view.addDefaultAtmosphereLayers();
 
   view.addLayer({
@@ -48,7 +50,7 @@ export const run = async (view: ThreeView) => {
       width: 2,
     },
   });
-  
+
   view.addLayer({
     type: "geojson",
     data: {
@@ -91,6 +93,14 @@ const addTestModelForNormal = (view: ThreeView) => {
     type: "mesh",
     gltfModel: {
       url: "/glTF/Soldier/Soldier.glb",
+      // Animation configuration
+      animation: true,
+      animationName: "idle",
+      animationActive: true,
+      animationSpeed: 1.0,
+      animationLoop: true,
+      animationAutoPlay: false,
+      animationCrossfadeDuration: 0.3,
     },
     scale: { x: 300000, y: 300000, z: 300000 },
     position: { x: pos.x, y: pos.y, z: pos.z },
@@ -108,5 +118,25 @@ const addTestModelForNormal = (view: ThreeView) => {
       headLength: 400000,
       headWidth: 70000,
     },
+  });
+
+  // Wait for animation initialization to complete before testing new APIs
+  modelLayer.ref.on("animationReady", () => {
+    console.log("🎬 Animation ready");
+
+    // Test new getter APIs
+    const availableAnimations = modelLayer.ref.getAnimationAvailable();
+    console.log("📋 Available animations:", availableAnimations);
+
+    // Get current playback state
+    const currentState = modelLayer.ref.getAnimationCurrentState();
+    console.log("📈 Current state:", currentState);
+
+    // Blending demo using new control APIs
+    console.log("🎭 Starting animation blend: Walk (70%) + Run (30%)");
+    modelLayer.ref.blendAnimations([
+      { name: "Walk", weight: 0.7 },
+      { name: "Run", weight: 0.3 },
+    ]);
   });
 };
