@@ -23,6 +23,7 @@ import {
 } from "three";
 
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
+import { overrideShaderMaterialForMRT } from "../material";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
@@ -267,6 +268,14 @@ export class ArcLine extends Object3D {
       #include <logdepthbuf_pars_fragment>
 
       void main() {
+        // Calculate screen-space normal for line geometry
+        vec3 fdx = dFdx(gl_FragCoord.xyz);
+        vec3 fdy = dFdy(gl_FragCoord.xyz);
+        vec3 normal = normalize(cross(fdx, fdy));
+        
+        // Ensure normal faces camera
+        if (normal.z < 0.0) normal = -normal;
+        
         gl_FragColor = vec4(vColor, vOpacity);
         
         #include <logdepthbuf_fragment>
@@ -285,6 +294,9 @@ export class ArcLine extends Object3D {
     material.depthWrite = true;
     material.transparent = true;
     material.side = DoubleSide;
+
+    // Apply MRT support for G-Buffer output
+    overrideShaderMaterialForMRT(material, "normal");
 
     return material;
   }

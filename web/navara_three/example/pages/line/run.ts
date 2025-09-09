@@ -1,5 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
+  CloudsEffectLayer,
   type ArclineMeshLayer,
 } from "@navara/three";
 
@@ -136,6 +137,20 @@ export const run = async (view: ThreeView) => {
       size: 5,
     },
     scale: new Vector3().setScalar(1e9),
+  });
+
+  const defaultEffects = view.addDefaultEffectLayers();
+  view.addDefaultAtmosphereLayers();
+
+  view.addLayer<CloudsEffectLayer>({
+    type: "effect",
+    clouds: {},
+  });
+
+  defaultEffects.aerialPerspective.update({
+    aerialPerspective: {
+      irradiance: true,
+    },
   });
 
   const pane = new Pane({
