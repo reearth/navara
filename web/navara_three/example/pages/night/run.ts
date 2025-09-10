@@ -39,6 +39,13 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  view.addLayer({
+    type: "effect",
+    ssao: {
+      intensity: 2
+    }
+  });
+
   // Set time to night (10 PM)
   const nightDate = new Date();
   nightDate.setHours(22);
@@ -121,7 +128,7 @@ const addNightLightProbeControl = (
     type: "light",
     lightProbe: {
       sh: new THREE.SphericalHarmonics3().set(SH_COEFFICIENTS.night),
-      intensity: 0.03,
+      intensity: 0.05,
     },
   });
 
@@ -131,7 +138,7 @@ const addNightLightProbeControl = (
   });
 
   const lightProbeParams = {
-    intensity: 0.03,
+    intensity: 0.05,
   };
 
   view.atmosphere.on("sunChanged", () => {

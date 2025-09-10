@@ -20,7 +20,7 @@ export class ToneMappingEffectLayer extends EffectLayerDeclaration<
   ToneMapping
 > {
   static key = "toneMapping";
-  static insertBefore = ["smaa", "fxaa"];
+  static insertBefore = ["smaa", "fxaa", "final"];
 
   private config: ToneMappingConfig;
 
