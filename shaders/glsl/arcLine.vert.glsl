@@ -58,29 +58,34 @@ void main() {
   
   float t = aT;
   float dt = 1.0 / aInstanceSegments;
-  float t2 = min(1.0, t + dt);
+
+  float t_dir2 = t + dt;
+  float t_pos2 = min(1.0, t + dt);
 
   vec3 source3D = lonLatToEllipsoid(aInstanceSource.x, aInstanceSource.y, uA, uE2);
   vec3 target3D = lonLatToEllipsoid(aInstanceTarget.x, aInstanceTarget.y, uA, uE2);
 
-  // First vertex along the arc
   vec3 base0 = ellipsoidGeodesic(source3D, target3D, t,  uA, uE2);
+  vec3 base1_pos = ellipsoidGeodesic(source3D, target3D, t_pos2,  uA, uE2);
+  vec3 base1_dir = ellipsoidGeodesic(source3D, target3D, t_dir2,  uA, uE2);
+
   float lift0 = aInstanceArcHeight * sin(PI * t);
-  vec3 p0 = normalize(base0) * (length(base0) + lift0 + aInstanceHeight);
+  float lift1_pos = aInstanceArcHeight * sin(PI * t_pos2);
+  float lift1_dir = aInstanceArcHeight * sin(PI * clamp(t_dir2, 0.0, 1.0));
 
-  // Second vertex along the arc
-  vec3 base1 = ellipsoidGeodesic(source3D, target3D, t2, uA, uE2);
-  float lift1 = aInstanceArcHeight * sin(PI * t2);
-  vec3 p1 = normalize(base1) * (length(base1) + lift1 + aInstanceHeight);
+  vec3 p0      = normalize(base0)     * (length(base0)     + lift0     + aInstanceHeight);
+  vec3 p1_pos  = normalize(base1_pos) * (length(base1_pos) + lift1_pos + aInstanceHeight);
+  vec3 p1_dir  = normalize(base1_dir) * (length(base1_dir) + lift1_dir + aInstanceHeight);
 
-  // Project to clip space
-  vec4 clip0 = projectionMatrix * modelViewMatrix * vec4(p0, 1.0);
-  vec4 clip1 = projectionMatrix * modelViewMatrix * vec4(p1, 1.0);
+  vec4 clip0     = projectionMatrix * modelViewMatrix * vec4(p0,     1.0);
+  vec4 clip1_pos = projectionMatrix * modelViewMatrix * vec4(p1_pos, 1.0);
+  vec4 clip1_dir = projectionMatrix * modelViewMatrix * vec4(p1_dir, 1.0);
+
   vec2 ndc0 = clip0.xy / clip0.w;
-  vec2 ndc1 = clip1.xy / clip1.w;
+  vec2 ndc1dir = clip1_dir.xy / clip1_dir.w;
 
   // Construct line quad in NDC
-  vec2 dir = normalize(ndc1 - ndc0 + vec2(1e-6));
+  vec2 dir = normalize(ndc1dir - ndc0 + vec2(1e-6));
   vec2 normal = vec2(-dir.y, dir.x);
   vec2 pixel2NDC = vec2(aInstanceThickness / uViewport.x, aInstanceThickness / uViewport.y) * 2.0;
   vec2 offsetNDC = normal * aSide * pixel2NDC;
