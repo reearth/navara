@@ -26,6 +26,10 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
     this.config = config;
   }
 
+  protected getPassKey() {
+    return "mrt" as const;
+  }
+
   createMesh() {
     const lineConfig: Partial<ArcLineConfig>[] = [];
     if (this.config.arcLines) {

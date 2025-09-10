@@ -587,7 +587,9 @@ export default class ThreeView<
 
     this.mrtPassLayer = this.addLayer<MRTPassEffectLayer>({
       type: "effect",
-      mrt: {},
+      mrt: {
+        // debugNormal: true,
+      },
     } as LayerDescription);
     this.transparentPassLayer = this.addLayer<TransparentPassEffectLayer>({
       type: "effect",
