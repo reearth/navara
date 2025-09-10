@@ -17,6 +17,7 @@ export type AtmosphereEvents = {
   _needsUpdate: () => void;
   _textureLoaded: () => void;
   _disposed: () => void;
+  sunChanged: (sunDirection: Vector3) => void;
 };
 
 export type AtmosphereOptions = {
@@ -123,9 +124,17 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       getSunDirectionECEF(this.date, this.sunDirection);
       getMoonDirectionECEF(this.date, this.moonDirection);
       getECIToECEFRotationMatrix(this.date, this.rotationMatrix);
+
+      this.emit("sunChanged", this.sunDirection.clone());
     }
 
     this.needsUpdate = false;
+  }
+
+  isAtNight(position: Vector3): boolean {
+    const normalizedPosition = position.clone().normalize();
+    const dotProduct = normalizedPosition.dot(this.sunDirection);
+    return dotProduct < 0;
   }
 
   get date() {

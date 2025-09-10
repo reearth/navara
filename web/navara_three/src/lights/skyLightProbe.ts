@@ -9,17 +9,21 @@ export type SkyLightProbeEvents = {
   _needsUpdate: () => void;
 };
 
-// Add any specific options if needed in the future
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type SkyLightProbeOptions = {};
+export type SkyLightProbeOptions = {
+  intensity?: number;
+};
 
 export class SkyLightProbe extends EventHandler<SkyLightProbeEvents> {
   raw: SkyLightProbeImpl;
 
-  constructor(_options: SkyLightProbeOptions = {}) {
+  constructor(options: SkyLightProbeOptions = {}) {
     super();
 
     this.raw = new SkyLightProbeImpl();
+
+    if (options.intensity !== undefined) {
+      this.raw.intensity = options.intensity;
+    }
   }
 
   setTextures(textures: PrecomputedTextures) {
@@ -39,6 +43,14 @@ export class SkyLightProbe extends EventHandler<SkyLightProbeEvents> {
   }
   set visible(v: boolean) {
     this.raw.visible = v;
+    this.emit("_needsUpdate");
+  }
+
+  get intensity() {
+    return this.raw.intensity;
+  }
+  set intensity(v: number) {
+    this.raw.intensity = v;
     this.emit("_needsUpdate");
   }
 
