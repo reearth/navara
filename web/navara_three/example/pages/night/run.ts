@@ -42,8 +42,8 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "effect",
     ssao: {
-      intensity: 2
-    }
+      intensity: 2,
+    },
   });
 
   // Set time to night (10 PM)
@@ -120,10 +120,7 @@ export const run = async (view: ThreeView) => {
   addSkyLightProbeControl(view, defaultAtmosphere.skyLightProbe, pane);
 };
 
-const addNightLightProbeControl = (
-  view: ThreeView,
-  pane: Pane,
-) => {
+const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
   const lightProbeLayer = view.addLayer<LightProbeLayer>({
     type: "light",
     lightProbe: {
@@ -163,7 +160,11 @@ const addNightLightProbeControl = (
   return lightProbeFolder;
 };
 
-const addStarsControl = (view: ThreeView, starsLayer: LayerHandle<StarsLayer>, pane: Pane) => {
+const addStarsControl = (
+  view: ThreeView,
+  starsLayer: LayerHandle<StarsLayer>,
+  pane: Pane,
+) => {
   const starsFolder = pane.addFolder({
     title: "Stars",
     expanded: true,
@@ -180,7 +181,7 @@ const addStarsControl = (view: ThreeView, starsLayer: LayerHandle<StarsLayer>, p
       stars: {
         intensity: isNight ? starsParams.intensity : 1,
         pointSize: isNight ? starsParams.pointSize : 1,
-      }
+      },
     });
   });
 

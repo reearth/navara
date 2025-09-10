@@ -167,9 +167,9 @@ export type Options = {
   shadow?: boolean;
 };
 
-export interface MapMouseEvent extends MouseEvent {
+export type MapMouseEvent = {
   map: XYZ;
-}
+} & MouseEvent;
 
 export type ViewEvents = {
   resize: (w: number, h: number) => void;
