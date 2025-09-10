@@ -114,7 +114,7 @@ export const run = async (view: ThreeView) => {
   addNightLightProbeControl(view, pane);
 
   // Stars controls
-  addStarsControl(defaultAtmosphere.stars, pane);
+  addStarsControl(view, defaultAtmosphere.stars, pane);
 
   // Sky Light Probe controls
   addSkyLightProbeControl(view, defaultAtmosphere.skyLightProbe, pane);
@@ -163,7 +163,7 @@ const addNightLightProbeControl = (
   return lightProbeFolder;
 };
 
-const addStarsControl = (starsLayer: LayerHandle<StarsLayer>, pane: Pane) => {
+const addStarsControl = (view: ThreeView, starsLayer: LayerHandle<StarsLayer>, pane: Pane) => {
   const starsFolder = pane.addFolder({
     title: "Stars",
     expanded: true,
@@ -173,6 +173,16 @@ const addStarsControl = (starsLayer: LayerHandle<StarsLayer>, pane: Pane) => {
     intensity: 50,
     pointSize: 2,
   };
+
+  view.atmosphere.on("sunChanged", () => {
+    const isNight = view.atmosphere.isAtNight(view.camera.raw.position);
+    starsLayer.update({
+      stars: {
+        intensity: isNight ? starsParams.intensity : 1,
+        pointSize: isNight ? starsParams.pointSize : 1,
+      }
+    });
+  });
 
   starsFolder
     .addBinding(starsParams, "intensity", {
