@@ -62,6 +62,7 @@ import {
   FXAAEffectLayer,
   LensFlareEffectLayer,
   MRTPassEffectLayer,
+  OutlineEffectLayer,
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
@@ -960,6 +961,7 @@ export default class ThreeView<
     this.registerEffect("transparent", TransparentPassEffectLayer);
 
     this.registerEffect("toneMapping", ToneMappingEffectLayer);
+    this.registerEffect("outline", OutlineEffectLayer);
     this.registerEffect("smaa", SMAAEffectLayer);
     this.registerEffect("fxaa", FXAAEffectLayer);
     this.registerEffect("final", FinalCopyEffectLayer);

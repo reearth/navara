@@ -35,6 +35,7 @@ import type {
   FXAAConfig,
   LensFlareConfig,
   MRTPassConfig,
+  OutlineConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
@@ -88,7 +89,8 @@ export type EffectLayerDeclarationDescription =
   | SSAOConfig
   | SSRConfig
   | ToneMappingConfig
-  | TransparentPassConfig;
+  | TransparentPassConfig
+  | OutlineConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";

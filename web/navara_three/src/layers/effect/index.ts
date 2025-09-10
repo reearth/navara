@@ -4,6 +4,7 @@ export * from "./FXAAEffectLayer";
 export * from "./FinalCopyEffectLayer";
 export * from "./LensFlareEffectLayer";
 export * from "./MRTPassEffectLayer";
+export * from "./OutlineEffectLayer";
 export * from "./SMAAEffectLayer";
 export * from "./SSAOEffectLayer";
 export * from "./SSREffectLayer";
