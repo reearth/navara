@@ -21,6 +21,7 @@ export class LensFlareEffectLayer extends EffectLayerDeclaration<
 > {
   static key = "lensFlare";
   static insertAfter = ["clouds"];
+  static insertBefore = ["transparent"];
 
   private config: LensFlareConfig;
 

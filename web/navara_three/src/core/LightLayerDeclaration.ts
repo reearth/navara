@@ -77,6 +77,10 @@ export abstract class LightLayerDeclaration<
 
   onUpdateConfig(updates: UpdateConfig): void {
     super.onUpdateConfig(updates);
+
+    if (updates.position) {
+      this.raw?.position.copy(updates.position);
+    }
   }
 
   onDestroy(): void {
