@@ -237,6 +237,7 @@ export async function processRenderableFeatureChanged(
     } else {
       texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
     }
+    texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
   } else if (
     obj instanceof PolygonMesh &&
     obj.userData.draped != null &&

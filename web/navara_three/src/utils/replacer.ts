@@ -67,6 +67,15 @@ export class Replacer {
     );
     return new Replacer(newSource);
   }
+
+  replaceWithCondition(
+    search: string | RegExp,
+    replace: string,
+    condition: boolean,
+    errorMessage?: string,
+  ) {
+    return condition ? this.replace(search, replace, errorMessage) : this;
+  }
 }
 
 /**
