@@ -41,7 +41,7 @@ const gPaneParams = {
   convertScreenToWorld: false,
   extrudeCylinder: false,
   moveDistance: 0,
-  transform: "eastNorthUp",
+  transform: "northUpEast",
 
   lngStart: 127.6809,
   latStart: 26.2124,
@@ -270,9 +270,9 @@ const addTestModelForNormal = (view: ThreeView) => {
   const modelLayer = view.addLayer<GLTFModelLayer>({
     type: "mesh",
     gltfModel: {
-      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      url: "/glTF/steel_drum/scene.gltf",
     },
-    scale: { x: 300000, y: 300000, z: 300000 },
+    scale: { x: 200000, y: 200000, z: 200000 },
     position: { x: pos.x, y: pos.y, z: pos.z },
   });
 
@@ -319,7 +319,7 @@ const addTestModelForTerrainHeight = (view: ThreeView) => {
   const modelLayer = view.addLayer<GLTFModelLayer>({
     type: "mesh",
     gltfModel: {
-      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      url: "/glTF/steel_drum/scene.gltf",
     },
     scale: new Vector3().setScalar(200),
     position: pos,
@@ -487,7 +487,7 @@ const onTransformChange = () => {
   gModelNormalHandle.update({
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
-    scale: { x: 300000, y: 300000, z: 300000 },
+    scale: { x: 200000, y: 200000, z: 200000 },
   });
 
   let transformMatrix;
