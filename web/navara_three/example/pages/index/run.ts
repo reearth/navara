@@ -290,7 +290,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates: [30, 30],
+            coordinates: [127.7, 26.2],
             type: "Point",
           },
         },
@@ -298,10 +298,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     model: {
       show: true,
-      size: 300000,
-      height: -30000,
+      size: 200000,
+      height: 0,
       clamp_to_ground: true,
-      url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
+      url: "/glTF/steel_drum/scene.gltf",
       should_rotate_in_default: true,
       id_property: "gml_id",
       color: 0xffffff,
