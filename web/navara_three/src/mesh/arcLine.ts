@@ -27,7 +27,7 @@ import { overrideShaderMaterialForMRT } from "../material";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
-  opacity: number; // Opacity of the arc line
+  // opacity: number; // Opacity of the arc line
   segments: number; // Number of segments per arc line
   srcColor: number; // Source color of the arc line
   tgtColor: number; // Target color of the arc line
@@ -38,7 +38,7 @@ export type ArcLineConfig = {
 
 export const DefaultArcLineConfig: ArcLineConfig = {
   thickness: 1,
-  opacity: 1,
+  // opacity: 1,
   segments: 64,
   srcColor: 0xffffff,
   tgtColor: 0xffffff,
@@ -235,7 +235,7 @@ export class ArcLine extends Object3D {
         config.height,
         dist * config.arcHeightScale,
         config.thickness,
-        config.opacity,
+        1.0,
       );
 
       // Set segments
@@ -409,13 +409,6 @@ export class ArcLine extends Object3D {
           cfg.thickness !== this._config[i].thickness
         ) {
           this._config[i].thickness = cfg.thickness;
-          hasChanges = true;
-        }
-        if (
-          cfg.opacity !== undefined &&
-          cfg.opacity !== this._config[i].opacity
-        ) {
-          this._config[i].opacity = cfg.opacity;
           hasChanges = true;
         }
         if (

@@ -15,7 +15,6 @@ const gArcLinesDef = [
   {
     // Asia
     thickness: 2,
-    opacity: 1,
     segments: 64,
     height: 0,
     arcHeightScale: 0.3,
@@ -186,7 +185,6 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
   const params = {
     selectedGroup: 0,
     thickness: gArcLinesDef[0].thickness || 1,
-    opacity: gArcLinesDef[0].opacity || 1,
     segments: gArcLinesDef[0].segments || 64,
     srcColor: intToHexColor(gArcLinesDef[0].srcColor || 0xffffff),
     tgtColor: intToHexColor(gArcLinesDef[0].tgtColor || 0xffffff),
@@ -198,7 +196,6 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     const selectedArcLine = gArcLinesDef[index];
     if (selectedArcLine) {
       params.thickness = selectedArcLine.thickness || 1;
-      params.opacity = selectedArcLine.opacity || 1;
       params.segments = selectedArcLine.segments || 64;
       params.srcColor = intToHexColor(selectedArcLine.srcColor || 0xffffff);
       params.tgtColor = intToHexColor(selectedArcLine.tgtColor || 0xffffff);
@@ -211,7 +208,6 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     const selectedIndex = params.selectedGroup;
     if (gArcLinesDef[selectedIndex]) {
       gArcLinesDef[selectedIndex].thickness = params.thickness;
-      gArcLinesDef[selectedIndex].opacity = params.opacity;
       gArcLinesDef[selectedIndex].segments = params.segments;
       gArcLinesDef[selectedIndex].srcColor = parseInt(
         params.srcColor.replace("#", ""),
@@ -250,10 +246,6 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     .on("change", () => {
       onChange();
     });
-
-  folder.addBinding(params, "opacity", { min: 0, max: 1 }).on("change", () => {
-    onChange();
-  });
 
   folder
     .addBinding(params, "segments", { min: 2, max: 128, step: 1 })
