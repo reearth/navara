@@ -292,7 +292,7 @@ export class ArcLine extends Object3D {
 
     material.depthTest = true;
     material.depthWrite = true;
-    material.transparent = true;
+    // material.transparent = true;
     material.side = DoubleSide;
 
     // Apply MRT support for G-Buffer output
