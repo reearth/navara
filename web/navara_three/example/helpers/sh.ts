@@ -39,8 +39,42 @@ const satelliteSphericalHarmonicCoefficients: Vector3[] = [
   new Vector3(0.114833705127239, 0.114355310797691, 0.067587599158287),
 ];
 
+// Ref: https://polyhaven.com/a/kloppenheim_02_puresky
+const nightSphericalHarmonicCoefficients: Vector3[] = [
+  new Vector3(0.7768183151569876, 0.8962905080209752, 1.0950065852682103),
+  new Vector3(0.2031440113110435, 0.22629959100584449, 0.26255072713344335),
+  new Vector3(
+    1.7718680098598248e-14,
+    -2.0011890513194474e-15,
+    -8.09433424581587e-15,
+  ),
+  new Vector3(-0.10638442866329469, -0.11715880433197051, -0.13316407475959086),
+  new Vector3(
+    -2.4331983259384247e-15,
+    -3.692584909337766e-15,
+    -1.0229005354126508e-14,
+  ),
+  new Vector3(-0.18562508788681314, -0.2061490872033833, -0.23838373609683416),
+  new Vector3(
+    -4.3271554764135334e-14,
+    6.37928112728071e-14,
+    8.239468189407829e-14,
+  ),
+  new Vector3(
+    -3.8537247023373964e-14,
+    -4.508143918732445e-14,
+    -6.19814435134191e-15,
+  ),
+  new Vector3(
+    -0.01862734335323212,
+    -0.018733715778089455,
+    -0.018706279307167235,
+  ),
+];
+
 export const SH_COEFFICIENTS = {
   debug: debugSphericalHarmonicCoefficients,
   white: whiteSphericalHarmonicCoefficients,
   satellite: satelliteSphericalHarmonicCoefficients,
+  night: nightSphericalHarmonicCoefficients,
 };

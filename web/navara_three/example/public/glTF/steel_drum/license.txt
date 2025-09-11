@@ -1,0 +1,8 @@
+Model Information:
+* title:	Steel Drum - 3D Asset
+* source:	https://sketchfab.com/3d-models/steel-drum-3d-asset-1fc1f18b8d074f65af7d1f00b7f8eec5
+* author:	themaayur (https://sketchfab.com/themaayur)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

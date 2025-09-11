@@ -24,7 +24,7 @@ export class SSREffectLayer extends EffectLayerDeclaration<
   SSR
 > {
   static key = "ssr";
-  static insertAfter = ["toneMapping"];
+  static insertBefore = ["final"];
 
   private config: SSRConfig;
 

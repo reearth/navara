@@ -2,9 +2,15 @@ import type ThreeView from "@navara/three";
 import { Vector3 } from "three";
 import type { InputBindingApi, Pane } from "tweakpane";
 
-export const addDateControl = (view: ThreeView, pane: Pane) => {
-  const date = new Date();
-  date.setHours(8);
+export const addDateControl = (
+  view: ThreeView,
+  pane: Pane,
+  initialDate?: Date,
+) => {
+  const date = initialDate ?? new Date();
+  if (!initialDate) {
+    date.setHours(8);
+  }
 
   view.atmosphere.date = date;
 

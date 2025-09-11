@@ -1,9 +1,10 @@
-import { Vector2 } from "three";
+import type { Nullable, XYZ } from "@navara/core";
 import {
   convertScreenToWorld,
   Window as NavaraWindow,
 } from "@navara/three_api";
-import type { Nullable, XYZ } from "@navara/core";
+import { Vector2 } from "three";
+
 import type ThreeView from "../index";
 
 export const convertScreenPos = (
