@@ -162,4 +162,6 @@ export abstract class MeshLayerDeclaration<
   }
 
   update?(time: number): void;
+
+  onResize?(width: number, height: number): void;
 }
