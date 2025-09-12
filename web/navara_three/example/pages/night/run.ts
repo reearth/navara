@@ -94,19 +94,19 @@ export const run = async (view: ThreeView) => {
   // Camera controls
   addCameraControl(view, pane, () => {
     pane
-    .addButton({
-      title: "Takanawa view",
-    })
-    .on("click", () => {
-      view.setCamera({
-        lng: 139.7597808838,
-        lat: 35.6186485291,
-        height: 1106.74,
-        heading: 315.9337768555,
-        pitch: -23.1623802185,
-        roll: 0.00,
+      .addButton({
+        title: "Takanawa view",
+      })
+      .on("click", () => {
+        view.setCamera({
+          lng: 139.7597808838,
+          lat: 35.6186485291,
+          height: 1106.74,
+          heading: 315.9337768555,
+          pitch: -23.1623802185,
+          roll: 0.0,
+        });
       });
-    });
   });
 
   // Add 3D Tiles scene switcher and fog light control
@@ -295,7 +295,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
       ],
       lightDataFile: "/street_light.geojson",
     },
-    "Takanawa": {
+    Takanawa: {
       tiles: [
         {
           url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
@@ -372,20 +372,23 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
       const sceneName = v.value as keyof typeof SCENES;
       loadScene(sceneName);
       // Emit scene change event with light data file
-      sceneChangeHandler.emit("sceneChanged", { 
-        scene: sceneName, 
-        lightDataFile: SCENES[sceneName].lightDataFile 
+      sceneChangeHandler.emit("sceneChanged", {
+        scene: sceneName,
+        lightDataFile: SCENES[sceneName].lightDataFile,
       });
     });
 
   return sceneChangeHandler;
 };
 
-type StreetLightFeature = FeatureCollection<Point, {
-  height?: number;
-  color?: number;
-  intensity?: number;
-}>;
+type StreetLightFeature = FeatureCollection<
+  Point,
+  {
+    height?: number;
+    color?: number;
+    intensity?: number;
+  }
+>;
 
 const addFogLightControl = async (
   view: ThreeView,
@@ -443,10 +446,7 @@ const addFogLightControl = async (
         });
       }
     } catch (error) {
-      console.warn(
-        `Failed to load light data from ${lightDataFile}:`,
-        error,
-      );
+      console.warn(`Failed to load light data from ${lightDataFile}:`, error);
     }
   };
 
@@ -455,9 +455,12 @@ const addFogLightControl = async (
 
   // Listen for scene changes if handler provided
   if (sceneChangeHandler) {
-    sceneChangeHandler.on("sceneChanged", async (data: { scene: string; lightDataFile: string }) => {
-      await loadLightData(data.lightDataFile);
-    });
+    sceneChangeHandler.on(
+      "sceneChanged",
+      async (data: { scene: string; lightDataFile: string }) => {
+        await loadLightData(data.lightDataFile);
+      },
+    );
   }
 
   const fogLightFolder = pane.addFolder({
