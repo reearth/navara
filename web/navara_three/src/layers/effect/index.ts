@@ -1,5 +1,6 @@
 export * from "./AerialPerspectiveEffectLayer";
 export * from "./CloudsEffectLayer";
+export * from "./FogLightEffectLayer";
 export * from "./FXAAEffectLayer";
 export * from "./FinalCopyEffectLayer";
 export * from "./LensFlareEffectLayer";

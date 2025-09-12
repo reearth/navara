@@ -59,6 +59,7 @@ import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
 import {
   CloudsEffectLayer,
+  FogLightEffectLayer,
   FXAAEffectLayer,
   LensFlareEffectLayer,
   MRTPassEffectLayer,
@@ -958,6 +959,7 @@ export default class ThreeView<
 
     this.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
     this.registerEffect("clouds", CloudsEffectLayer);
+    this.registerEffect("fogLight", FogLightEffectLayer);
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);

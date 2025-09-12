@@ -1,0 +1,330 @@
+import FogLightFragment from "@shaders/glsl/fogLight.frag.glsl?raw";
+import { resolveIncludes } from "@takram/three-geospatial";
+import {
+  Effect as PostProcessingEffect,
+  EffectAttribute,
+} from "postprocessing";
+import {
+  Camera,
+  PerspectiveCamera,
+  OrthographicCamera,
+  Color,
+  Matrix4,
+  Uniform,
+  Vector2,
+  Vector3,
+  WebGLRenderTarget,
+  WebGLRenderer,
+  DataTexture,
+  FloatType,
+  RGBAFormat,
+  NearestFilter,
+  ClampToEdgeWrapping,
+  Texture,
+} from "three";
+
+import { depth, packing, transform } from "../shaders";
+
+import { Effect, type EffectEvents, type EffectOptions } from "./effect";
+
+export type FogLightDefinition = {
+  position: { x: number; y: number; z: number };
+  color: number | Color;
+  intensity: number;
+};
+
+export type FogLightOptions = {
+  lights?: FogLightDefinition[];
+  fogDensity?: number;
+  maxLights?: number;
+  normalBuffer?: Texture;
+  useSurfaceLighting?: boolean;
+} & EffectOptions;
+
+export type FogLightEvents = EffectEvents;
+
+const DEFAULT_FOG_LIGHT_OPTIONS: FogLightOptions = {
+  lights: [],
+  fogDensity: 0.1,
+  maxLights: 4096,
+  useSurfaceLighting: true,
+  enabled: true,
+};
+
+class FogLightEffect extends PostProcessingEffect {
+  private camera: PerspectiveCamera | OrthographicCamera;
+  private invProjectionMatrix: Matrix4;
+  private invViewMatrix: Matrix4;
+  private viewMatrix: Matrix4;
+  private lightTex0: DataTexture;
+  private lightTex1: DataTexture;
+  private buf0: Float32Array;
+  private buf1: Float32Array;
+
+  constructor(
+    camera: PerspectiveCamera | OrthographicCamera,
+    options: FogLightOptions = {},
+  ) {
+    // Get max lights from options
+    const maxLights =
+      options.maxLights ?? DEFAULT_FOG_LIGHT_OPTIONS.maxLights ?? 0;
+
+    // Calculate texture dimensions
+    const W = Math.ceil(Math.sqrt(maxLights));
+    const H = Math.ceil(maxLights / W);
+
+    // Create buffers for DataTextures
+    const buf0 = new Float32Array(W * H * 4); // color,intensity
+    const buf1 = new Float32Array(W * H * 4); // position,unused
+
+    // Create DataTextures
+    const lightTex0 = new DataTexture(buf0, W, H, RGBAFormat, FloatType);
+    lightTex0.needsUpdate = true;
+    lightTex0.magFilter = lightTex0.minFilter = NearestFilter;
+    lightTex0.wrapS = lightTex0.wrapT = ClampToEdgeWrapping;
+
+    const lightTex1 = new DataTexture(buf1, W, H, RGBAFormat, FloatType);
+    lightTex1.needsUpdate = true;
+    lightTex1.magFilter = lightTex1.minFilter = NearestFilter;
+    lightTex1.wrapS = lightTex1.wrapT = ClampToEdgeWrapping;
+
+    const uniforms = new Map<string, Uniform>([
+      ["uLightTex0", new Uniform(lightTex0)],
+      ["uLightTex1", new Uniform(lightTex1)],
+      ["uLightCount", new Uniform(0)],
+      ["uLightTexSize", new Uniform(new Vector2(W, H))],
+      ["cameraPos", new Uniform(camera.position)],
+      [
+        "fogDensity",
+        new Uniform(options.fogDensity ?? DEFAULT_FOG_LIGHT_OPTIONS.fogDensity),
+      ],
+      ["normalBuffer", new Uniform(options.normalBuffer ?? null)],
+      [
+        "useSurfaceLighting",
+        new Uniform(
+          options.useSurfaceLighting ??
+            DEFAULT_FOG_LIGHT_OPTIONS.useSurfaceLighting,
+        ),
+      ],
+      ["resolution", new Uniform(new Vector2())],
+      ["cameraNear", new Uniform(camera.near)],
+      ["cameraFar", new Uniform(camera.far)],
+      ["projectionMatrix", new Uniform(new Matrix4())],
+      ["invProjectionMatrix", new Uniform(new Matrix4())],
+      ["invViewMatrix", new Uniform(new Matrix4())],
+      ["viewMatrix", new Uniform(new Matrix4())],
+    ]);
+
+    super(
+      "FogLightEffect",
+      resolveIncludes(FogLightFragment, {
+        core: {
+          packing,
+          depth,
+          transform,
+        },
+      }),
+      {
+        uniforms,
+        attributes: EffectAttribute.DEPTH,
+      },
+    );
+
+    this.camera = camera;
+    this.invProjectionMatrix = new Matrix4();
+    this.invViewMatrix = new Matrix4();
+    this.viewMatrix = new Matrix4();
+    this.lightTex0 = lightTex0;
+    this.lightTex1 = lightTex1;
+    this.buf0 = buf0;
+    this.buf1 = buf1;
+  }
+
+  update(
+    renderer: WebGLRenderer,
+    inputBuffer: WebGLRenderTarget,
+    deltaTime: number,
+  ): void {
+    // Update camera matrices
+    this.invProjectionMatrix.copy(this.camera.projectionMatrix).invert();
+    this.invViewMatrix.copy(this.camera.matrixWorld);
+    this.viewMatrix.copy(this.camera.matrixWorld).invert();
+
+    const cameraPosUniform = this.uniforms.get("cameraPos");
+    const cameraNearUniform = this.uniforms.get("cameraNear");
+    const cameraFarUniform = this.uniforms.get("cameraFar");
+    const projectionMatrixUniform = this.uniforms.get("projectionMatrix");
+    const invProjectionMatrixUniform = this.uniforms.get("invProjectionMatrix");
+    const invViewMatrixUniform = this.uniforms.get("invViewMatrix");
+    const viewMatrixUniform = this.uniforms.get("viewMatrix");
+    if (cameraPosUniform) cameraPosUniform.value.copy(this.camera.position);
+    if (cameraNearUniform) cameraNearUniform.value = this.camera.near;
+    if (cameraFarUniform) cameraFarUniform.value = this.camera.far;
+    if (invProjectionMatrixUniform)
+      invProjectionMatrixUniform.value.copy(this.invProjectionMatrix);
+    if (projectionMatrixUniform)
+      projectionMatrixUniform.value.copy(this.camera.projectionMatrix);
+    if (invViewMatrixUniform)
+      invViewMatrixUniform.value.copy(this.invViewMatrix);
+    if (viewMatrixUniform) viewMatrixUniform.value.copy(this.viewMatrix);
+
+    if (this.camera instanceof PerspectiveCamera) {
+      if (this.defines.get("PERSPECTIVE_CAMERA") !== "1") {
+        this.defines.set("PERSPECTIVE_CAMERA", "1");
+      }
+    } else {
+      if (this.defines.get("PERSPECTIVE_CAMERA") != null) {
+        this.defines.delete("PERSPECTIVE_CAMERA");
+      }
+    }
+
+    super.update(renderer, inputBuffer, deltaTime);
+  }
+
+  writeLight(
+    i: number,
+    color: Color,
+    intensity: number,
+    position: Vector3,
+  ): void {
+    const k = 4 * i;
+    this.buf0[k + 0] = color.r;
+    this.buf0[k + 1] = color.g;
+    this.buf0[k + 2] = color.b;
+    this.buf0[k + 3] = intensity;
+
+    this.buf1[k + 0] = position.x;
+    this.buf1[k + 1] = position.y;
+    this.buf1[k + 2] = position.z;
+    this.buf1[k + 3] = 0.0; // unused
+  }
+
+  updateLightTextures(): void {
+    this.lightTex0.needsUpdate = true;
+    this.lightTex1.needsUpdate = true;
+  }
+}
+
+export class FogLight extends Effect<
+  FogLightEffect,
+  FogLightOptions,
+  FogLightEvents
+> {
+  constructor(camera: Camera, options?: FogLightOptions) {
+    const mergedOptions = { ...DEFAULT_FOG_LIGHT_OPTIONS, ...options };
+    const perspectiveOrOrthoCamera = camera as
+      | PerspectiveCamera
+      | OrthographicCamera;
+    super(
+      camera,
+      new FogLightEffect(perspectiveOrOrthoCamera, mergedOptions),
+      mergedOptions,
+    );
+  }
+
+  protected onMounted(): void {
+    this.updateLights();
+    this.updateFogDensity();
+    this.updateUseSurfaceLighting();
+  }
+
+  private updateLights(): void {
+    if (!this.rawEffect) return;
+
+    const lights = this.options.lights ?? [];
+    const maxLights =
+      this.options.maxLights ?? DEFAULT_FOG_LIGHT_OPTIONS.maxLights ?? 0;
+    const numLights = Math.min(lights.length, maxLights);
+
+    // Warn if there are more lights than maxLights
+    if (lights.length > maxLights) {
+      console.warn(
+        `FogLight: ${lights.length} lights specified, but only ${maxLights} will be rendered. ` +
+          `Consider increasing the 'maxLights' option if you need more lights.`,
+      );
+    }
+
+    const uniforms = this.rawEffect.uniforms;
+    const numLightsUniform = uniforms.get("uLightCount");
+
+    // Write light data to buffers
+    for (let i = 0; i < numLights; i++) {
+      const light = lights[i];
+      const position = new Vector3(
+        light.position.x,
+        light.position.y,
+        light.position.z,
+      );
+      const color =
+        light.color instanceof Color ? light.color : new Color(light.color);
+
+      this.rawEffect.writeLight(i, color, light.intensity, position);
+    }
+
+    // Clear remaining slots
+    for (let i = numLights; i < maxLights; i++) {
+      this.rawEffect.writeLight(i, new Color(0, 0, 0), 0, new Vector3(0, 0, 0));
+    }
+
+    // Update textures
+    this.rawEffect.updateLightTextures();
+
+    if (numLightsUniform) numLightsUniform.value = numLights;
+  }
+
+  private updateFogDensity(): void {
+    if (!this.rawEffect) return;
+    const fogDensityUniform = this.rawEffect.uniforms.get("fogDensity");
+    if (fogDensityUniform) {
+      fogDensityUniform.value =
+        this.options.fogDensity ?? DEFAULT_FOG_LIGHT_OPTIONS.fogDensity;
+    }
+  }
+
+  get lights(): FogLightDefinition[] {
+    return this.options.lights ?? [];
+  }
+
+  set lights(lights: FogLightDefinition[]) {
+    this.options.lights = lights;
+    this.updateLights();
+    this.emit("_needsUpdate");
+  }
+
+  get fogDensity(): number {
+    return (
+      this.options.fogDensity ?? DEFAULT_FOG_LIGHT_OPTIONS.fogDensity ?? 0.1
+    );
+  }
+
+  set fogDensity(value: number) {
+    this.options.fogDensity = value;
+    this.updateFogDensity();
+    this.emit("_needsUpdate");
+  }
+
+  get useSurfaceLighting(): boolean {
+    return (
+      this.options.useSurfaceLighting ??
+      DEFAULT_FOG_LIGHT_OPTIONS.useSurfaceLighting ??
+      false
+    );
+  }
+
+  set useSurfaceLighting(value: boolean) {
+    this.options.useSurfaceLighting = value;
+    this.updateUseSurfaceLighting();
+    this.emit("_needsUpdate");
+  }
+
+  private updateUseSurfaceLighting(): void {
+    if (!this.rawEffect) return;
+    const useSurfaceLightingUniform =
+      this.rawEffect.uniforms.get("useSurfaceLighting");
+    if (useSurfaceLightingUniform) {
+      useSurfaceLightingUniform.value =
+        this.options.useSurfaceLighting ??
+        DEFAULT_FOG_LIGHT_OPTIONS.useSurfaceLighting;
+    }
+  }
+}

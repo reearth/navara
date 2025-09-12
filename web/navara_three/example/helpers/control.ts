@@ -89,7 +89,7 @@ export const addDateControl = (
   });
 };
 
-export const addCameraControl = (view: ThreeView, pane: Pane) => {
+export const addCameraControl = (view: ThreeView, pane: Pane, addButton?: () => void) => {
   pane
     .addButton({
       title: "Globe view",
@@ -133,6 +133,8 @@ export const addCameraControl = (view: ThreeView, pane: Pane) => {
         roll: 0,
       });
     });
+
+    addButton?.();
 
   let rotationAnimationId: number;
   pane.addBinding({ autoRotation: false }, "autoRotation").on("change", (v) => {

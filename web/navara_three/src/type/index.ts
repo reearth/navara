@@ -33,6 +33,7 @@ import type {
   AerialPerspectiveConfig,
   CloudsConfig,
   FinalCopyPassConfig,
+  FogLightConfig,
   FXAAConfig,
   LensFlareConfig,
   MRTPassConfig,
@@ -83,6 +84,7 @@ export type EffectLayerDeclarationDescription =
   | AerialPerspectiveConfig
   | CloudsConfig
   | FinalCopyPassConfig
+  | FogLightConfig
   | FXAAConfig
   | LensFlareConfig
   | MRTPassConfig
