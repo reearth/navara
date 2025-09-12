@@ -34,10 +34,15 @@ export type FogLightDefinition = {
 };
 
 export type FogLightOptions = {
+  /** Array of fog light definitions with position, color, and intensity */
   lights?: FogLightDefinition[];
+  /** Density of the volumetric fog (default: 5) */
   fogDensity?: number;
+  /** Maximum number of lights supported (default: 100) */
   maxLights?: number;
+  /** Optional normal buffer texture for surface lighting calculations */
   normalBuffer?: Texture;
+  /** Whether to apply surface lighting effects (default: true) */
   useSurfaceLighting?: boolean;
 } & EffectOptions;
 
@@ -45,8 +50,8 @@ export type FogLightEvents = EffectEvents;
 
 const DEFAULT_FOG_LIGHT_OPTIONS: FogLightOptions = {
   lights: [],
-  fogDensity: 0.1,
-  maxLights: 4096,
+  fogDensity: 5,
+  maxLights: 100,
   useSurfaceLighting: true,
   enabled: true,
 };
