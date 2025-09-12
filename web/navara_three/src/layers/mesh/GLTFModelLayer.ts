@@ -23,14 +23,14 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
 
-    // Declarative animation settings
-    animation?: boolean; // Enable/disable animation functionality
-    animationName?: string; // Initial animation name to play
-    animationActive?: boolean; // Play/pause state
-    animationSpeed?: number; // Playback speed (default: 1.0)
-    animationLoop?: boolean; // Loop setting (default: true)
-    animationAutoPlay?: boolean; // Auto-play setting (default: false)
-    animationCrossfadeDuration?: number; // Default crossfade duration (default: 0.3)
+    // Declarative animation settings - fully aligned with Rust naming
+    animation_enabled?: boolean; // animation_enabled
+    animation_clips?: string[]; // animation_clips (available clips list)
+    animation_active_clip?: string; // animation_active_clip
+    animation_speed?: number; // animation_speed (default: 1.0)
+    animation_loop?: boolean; // animation_loop (default: true)
+    animation_crossfade_duration?: number; // animation_crossfade_duration (default: 0.3)
+    animation_auto_play?: boolean; // animation_auto_play (default: false)
   };
 };
 
@@ -197,32 +197,32 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       // Dynamic animation settings update
       if (this.mixer && this.actions.size > 0) {
         // Speed change
-        if (modelConfig.animationSpeed !== undefined) {
-          this.setAnimationSpeed(modelConfig.animationSpeed);
+        if (modelConfig.animation_speed !== undefined) {
+          this.setAnimationSpeed(modelConfig.animation_speed);
         }
 
         // Loop setting change
-        if (modelConfig.animationLoop !== undefined) {
-          this.setAnimationLoop(modelConfig.animationLoop);
+        if (modelConfig.animation_loop !== undefined) {
+          this.setAnimationLoop(modelConfig.animation_loop);
         }
 
         // Animation switching
-        if (modelConfig.animationName !== undefined) {
-          const duration = modelConfig.animationCrossfadeDuration ?? 0.3;
+        if (modelConfig.animation_active_clip !== undefined) {
+          const duration = modelConfig.animation_crossfade_duration ?? 0.3;
           if (this.currentAction) {
             this.crossFadeAnimation(
               this.getCurrentAnimationName() ?? "",
-              modelConfig.animationName,
+              modelConfig.animation_active_clip,
               duration,
             );
           } else {
-            this.playAnimation(modelConfig.animationName);
+            this.playAnimation(modelConfig.animation_active_clip);
           }
         }
 
-        // Active state change
-        if (modelConfig.animationActive !== undefined) {
-          if (modelConfig.animationActive) {
+        // Animation enabled state change
+        if (modelConfig.animation_enabled !== undefined) {
+          if (modelConfig.animation_enabled) {
             this.resumeAnimation();
           } else {
             this.pauseAnimation();
@@ -316,8 +316,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     this.mixer = new AnimationMixer(this.gltf.scene);
 
     // Apply configuration values
-    const speed = animConfig?.animationSpeed ?? this.animationSpeed;
-    const loop = animConfig?.animationLoop ?? this.isLooping;
+    const speed = animConfig?.animation_speed ?? this.animationSpeed;
+    const loop = animConfig?.animation_loop ?? this.isLooping;
 
     // Register animation clips
     this.gltf.animations.forEach((clip) => {
@@ -340,13 +340,13 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     );
 
     // Handle auto-play settings
-    if (animConfig?.animationAutoPlay && animConfig?.animationName) {
-      const clipName = animConfig.animationName;
+    if (animConfig?.animation_auto_play && animConfig?.animation_active_clip) {
+      const clipName = animConfig.animation_active_clip;
       if (this.clips.has(clipName)) {
         this.playAnimation(clipName);
 
-        // Set active state
-        if (animConfig.animationActive === false) {
+        // Set enabled state
+        if (animConfig.animation_enabled === false) {
           this.pauseAnimation();
         }
       } else {
