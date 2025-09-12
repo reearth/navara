@@ -9,6 +9,7 @@ import ThreeView, {
   type LayerDescription,
 } from "@navara/three";
 import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
+import type { FeatureCollection, Point } from "geojson";
 import * as THREE from "three";
 import { Pane } from "tweakpane";
 
@@ -380,6 +381,12 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
   return sceneChangeHandler;
 };
 
+type StreetLightFeature = FeatureCollection<Point, {
+  height?: number;
+  color?: number;
+  intensity?: number;
+}>;
+
 const addFogLightControl = async (
   view: ThreeView,
   pane: Pane,
@@ -397,19 +404,10 @@ const addFogLightControl = async (
   const loadLightData = async (lightDataFile: string) => {
     try {
       const response = await fetch(lightDataFile);
-      const geojson = await response.json();
+      const geojson: StreetLightFeature = await response.json();
 
-    // Convert GeoJSON coordinates to Vector3
-    type StreetLightFeature = {
-      geometry: { coordinates: [number, number] };
-      properties?: {
-        height?: number;
-        color?: number;
-        intensity?: number;
-      };
-    };
-
-      streetLights = geojson.features.map((feature: StreetLightFeature) => {
+      // Convert GeoJSON coordinates to Vector3
+      streetLights = geojson.features.map((feature) => {
         const [lon, lat] = feature.geometry.coordinates;
         const altitude = feature.properties?.height || 10; // Default 10m height for street lights
 
@@ -432,6 +430,8 @@ const addFogLightControl = async (
           },
         });
       } else {
+        // Create fog light layer, initially visible only at night
+        const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
         fogLightLayer = view.addLayer<FogLightEffectLayer>({
           type: "effect",
           fogLight: {
@@ -439,6 +439,7 @@ const addFogLightControl = async (
             fogDensity: 5,
             useSurfaceLighting: true,
           },
+          visible: isAtNight,
         });
       }
     } catch (error) {
@@ -468,8 +469,21 @@ const addFogLightControl = async (
     fogDensity: 5,
     useSurfaceLighting: true,
     lightsIntensity: 2.0,
-    visible: true,
+    enableAtNight: true,
   };
+
+  // Function to update visibility based on time of day
+  const updateVisibility = () => {
+    if (fogLightLayer && fogLightParams.enableAtNight) {
+      const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
+      fogLightLayer.update({
+        visible: isAtNight,
+      });
+    }
+  };
+
+  // Listen for sun changes to update visibility
+  view.atmosphere.on("sunChanged", updateVisibility);
 
   // Fog density control
   fogLightFolder
@@ -520,18 +534,27 @@ const addFogLightControl = async (
       }
     });
 
-  // Visibility control
+  // Enable at Night control
   fogLightFolder
-    .addBinding(fogLightParams, "visible", {
-      label: "Visible",
+    .addBinding(fogLightParams, "enableAtNight", {
+      label: "Enable at Night",
     })
     .on("change", (ev) => {
       if (fogLightLayer) {
-        fogLightLayer.update({
-          visible: ev.value,
-        });
+        if (ev.value) {
+          // When enabled, check current time and update visibility
+          updateVisibility();
+        } else {
+          // When disabled, always show the fog lights
+          fogLightLayer.update({
+            visible: true,
+          });
+        }
       }
     });
+
+  // Initial visibility update
+  updateVisibility();
 
   return fogLightFolder;
 };
