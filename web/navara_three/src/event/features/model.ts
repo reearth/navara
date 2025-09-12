@@ -24,12 +24,16 @@ export async function renderModel(
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
       bin.set([]);
+      // Attach animations to the scene for downstream access
+      (model.scene.userData ||= {}).gltfAnimations = model.animations;
       return model.scene;
     } else {
       if (!m.material.url) {
         return;
       }
       const model = await loader.loadAsync(m.material.url);
+      // Attach animations to the scene for downstream access
+      (model.scene.userData ||= {}).gltfAnimations = model.animations;
       return model.scene;
     }
   })();
