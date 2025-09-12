@@ -6,7 +6,6 @@ import {
   LineSegmentsGeometry,
 } from "three-stdlib";
 
-
 export type LineConfig = {
   color: number;
   lineWidth: number;
