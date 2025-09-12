@@ -73,6 +73,7 @@ export const run = async (view: ThreeView) => {
   });
 
   addTestModelForNormal(view);
+  addGeoJsonAnimatedModel(view);
 };
 
 const addTestModelForNormal = (view: ThreeView) => {
@@ -93,14 +94,13 @@ const addTestModelForNormal = (view: ThreeView) => {
     type: "mesh",
     gltfModel: {
       url: "/glTF/Soldier/Soldier.glb",
-      // Animation configuration
-      animation: true,
-      animationName: "idle",
-      animationActive: true,
-      animationSpeed: 1.0,
-      animationLoop: true,
-      animationAutoPlay: false,
-      animationCrossfadeDuration: 0.3,
+      // Animation configuration - fully aligned with Rust naming
+      animation_enabled: true,
+      animation_active_clip: "idle",
+      animation_speed: 1.0,
+      animation_loop: true,
+      animation_auto_play: false,
+      animation_crossfade_duration: 0.3,
     },
     scale: { x: 300000, y: 300000, z: 300000 },
     position: { x: pos.x, y: pos.y, z: pos.z },
@@ -138,5 +138,24 @@ const addTestModelForNormal = (view: ThreeView) => {
       { name: "Walk", weight: 0.7 },
       { name: "Run", weight: 0.3 },
     ]);
+  });
+};
+
+const addGeoJsonAnimatedModel = (view: ThreeView) => {
+  // 東京駅付近の座標に配置
+  const pos = { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [139.7671, 35.6812] } };
+
+  view.addLayer({
+    type: "geojson",
+    data: pos,
+    model: {
+      show: true,
+      size: 300000,
+      clamp_to_ground: true,
+      // Minimal animation config for GeoJSON model
+      url: "/glTF/Soldier/Soldier.glb",
+      animation_active_clip: "Walk",
+      animation_speed: 2.0,
+    },
   });
 };
