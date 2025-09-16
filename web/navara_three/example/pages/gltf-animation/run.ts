@@ -196,6 +196,119 @@ const addTextModelControl = (
     runWeight: { refresh: () => void };
   };
 
+  // Type-safe button interface (no any types)
+  type CrossfadeButton = {
+    disabled: boolean;
+  };
+
+  // Store button references for dynamic enable/disable
+  let crossfadeButtons: {
+    walkToIdle: CrossfadeButton;
+    idleToWalk: CrossfadeButton;
+    walkToRun: CrossfadeButton;
+    runToWalk: CrossfadeButton;
+  };
+
+  // Animation state type
+  type AnimationState = "Idle" | "Walk" | "Run";
+
+  // Get current crossfade duration
+  function getCrossfadeDuration(): number {
+    return PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
+  }
+
+  // Function to get current primary animation state
+  function getCurrentPrimaryAnimation(): AnimationState | null {
+    const weights = {
+      idle: PARAMS.idleWeight,
+      walk: PARAMS.walkWeight,
+      run: PARAMS.runWeight,
+    };
+
+    // Find the animation with the highest weight
+    let maxWeight = 0;
+    let primaryAnimation: AnimationState | null = null;
+
+    if (weights.idle > maxWeight) {
+      maxWeight = weights.idle;
+      primaryAnimation = "Idle";
+    }
+    if (weights.walk > maxWeight) {
+      maxWeight = weights.walk;
+      primaryAnimation = "Walk";
+    }
+    if (weights.run > maxWeight) {
+      maxWeight = weights.run;
+      primaryAnimation = "Run";
+    }
+
+    // Only return primary animation if it has significant weight (> 0.5)
+    return maxWeight > 0.5 ? primaryAnimation : null;
+  }
+
+  // Disable all crossfade buttons
+  function disableAllCrossfadeButtons(): void {
+    if (!crossfadeButtons) return;
+
+    crossfadeButtons.walkToIdle.disabled = true;
+    crossfadeButtons.idleToWalk.disabled = true;
+    crossfadeButtons.walkToRun.disabled = true;
+    crossfadeButtons.runToWalk.disabled = true;
+  }
+
+  // Enable buttons based on animation state
+  function enableButtonsForAnimation(animation: AnimationState): void {
+    if (!crossfadeButtons) return;
+
+    // First disable all
+    disableAllCrossfadeButtons();
+
+    // Enable buttons based on current animation
+    switch (animation) {
+      case "Walk":
+        crossfadeButtons.walkToIdle.disabled = false;
+        crossfadeButtons.walkToRun.disabled = false;
+        break;
+      case "Idle":
+        crossfadeButtons.idleToWalk.disabled = false;
+        break;
+      case "Run":
+        crossfadeButtons.runToWalk.disabled = false;
+        break;
+    }
+  }
+
+  // Update button states based on current weights
+  function updateButtonStatesBasedOnWeights(): void {
+    const currentAnimation = getCurrentPrimaryAnimation();
+    if (currentAnimation) {
+      enableButtonsForAnimation(currentAnimation);
+    } else {
+      // If no clear primary animation, disable all buttons
+      disableAllCrossfadeButtons();
+    }
+  }
+
+  // Start crossfade with duration-based button control
+  function startCrossfadeWithButtonControl(
+    from: AnimationState,
+    to: AnimationState,
+  ): void {
+    const duration = getCrossfadeDuration();
+
+    // Start animation
+    modelLayer.ref.crossFadeAnimation(from, to, duration);
+    startCrossfadeSync(from, to, duration);
+
+    // Disable all buttons during crossfade
+    disableAllCrossfadeButtons();
+
+    // Enable appropriate buttons after crossfade completes
+    setTimeout(() => {
+      enableButtonsForAnimation(to);
+    }, duration * 1000);
+  }
+
   function startCrossfadeSync(
     from: "Idle" | "Walk" | "Run",
     to: "Idle" | "Walk" | "Run",
@@ -237,12 +350,38 @@ const addTextModelControl = (
     const w = { idle: 0, walk: 0, run: 0 };
     const vFrom = Math.max(0, 1 - t);
     const vTo = Math.max(0, t);
+
+    // 関与するアニメーションのみ重みを設定
     if (from === "Idle") w.idle = vFrom;
     if (from === "Walk") w.walk = vFrom;
     if (from === "Run") w.run = vFrom;
     if (to === "Idle") w.idle = vTo;
     if (to === "Walk") w.walk = vTo;
     if (to === "Run") w.run = vTo;
+
+    // 関係のないアニメーションの重みを明示的に0にする
+    if (
+      (from === "Walk" && to === "Idle") ||
+      (from === "Idle" && to === "Walk")
+    ) {
+      w.run = 0; // walk ↔ idle の時はrunを0に
+    }
+
+    if (
+      (from === "Walk" && to === "Run") ||
+      (from === "Run" && to === "Walk")
+    ) {
+      w.idle = 0; // walk ↔ run の時はidleを0に
+    }
+
+    // idle ↔ run の場合はwalkを0に（将来的な拡張のため）
+    if (
+      (from === "Idle" && to === "Run") ||
+      (from === "Run" && to === "Idle")
+    ) {
+      w.walk = 0;
+    }
+
     return w;
   }
 
@@ -287,49 +426,46 @@ const addTextModelControl = (
     expanded: true,
   });
 
-  crossfadingFolder
+  // Create buttons and store references for dynamic enable/disable
+  const walkToIdleButton = crossfadingFolder
     .addButton({
       title: "from walk to idle",
     })
     .on("click", () => {
-      // Default crossfade duration is 1.0s when useDefaultDuration=true
-      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
-      modelLayer.ref.crossFadeAnimation("Walk", "Idle", duration);
-      startCrossfadeSync("Walk", "Idle", duration);
+      startCrossfadeWithButtonControl("Walk", "Idle");
     });
 
-  crossfadingFolder
+  const idleToWalkButton = crossfadingFolder
     .addButton({
       title: "from idle to walk",
     })
     .on("click", () => {
-      // Default crossfade duration is 1.0s when useDefaultDuration=true
-      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
-      modelLayer.ref.crossFadeAnimation("Idle", "Walk", duration);
-      startCrossfadeSync("Idle", "Walk", duration);
+      startCrossfadeWithButtonControl("Idle", "Walk");
     });
 
-  crossfadingFolder
+  const walkToRunButton = crossfadingFolder
     .addButton({
       title: "from walk to run",
     })
     .on("click", () => {
-      // Default crossfade duration is 1.0s when useDefaultDuration=true
-      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
-      modelLayer.ref.crossFadeAnimation("Walk", "Run", duration);
-      startCrossfadeSync("Walk", "Run", duration);
+      startCrossfadeWithButtonControl("Walk", "Run");
     });
 
-  crossfadingFolder
+  const runToWalkButton = crossfadingFolder
     .addButton({
       title: "from run to walk",
     })
     .on("click", () => {
-      // Default crossfade duration is 1.0s when useDefaultDuration=true
-      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
-      modelLayer.ref.crossFadeAnimation("Run", "Walk", duration);
-      startCrossfadeSync("Run", "Walk", duration);
+      startCrossfadeWithButtonControl("Run", "Walk");
     });
+
+  // Store button references
+  crossfadeButtons = {
+    walkToIdle: walkToIdleButton,
+    idleToWalk: idleToWalkButton,
+    walkToRun: walkToRunButton,
+    runToWalk: runToWalkButton,
+  };
 
   crossfadingFolder.addBinding(PARAMS, "useDefaultDuration");
 
@@ -368,6 +504,8 @@ const addTextModelControl = (
         if (isProgrammaticUpdate) return;
         PARAMS.idleWeight = v.value;
         updateBlendWeights();
+        // Update button states when weights change
+        setTimeout(() => updateButtonStatesBasedOnWeights(), 50);
       },
     },
     {
@@ -377,6 +515,8 @@ const addTextModelControl = (
         if (isProgrammaticUpdate) return;
         PARAMS.walkWeight = v.value;
         updateBlendWeights();
+        // Update button states when weights change
+        setTimeout(() => updateButtonStatesBasedOnWeights(), 50);
       },
     },
     {
@@ -386,6 +526,8 @@ const addTextModelControl = (
         if (isProgrammaticUpdate) return;
         PARAMS.runWeight = v.value;
         updateBlendWeights();
+        // Update button states when weights change
+        setTimeout(() => updateButtonStatesBasedOnWeights(), 50);
       },
     },
   ];
@@ -487,7 +629,7 @@ const addTextModelControl = (
 };
 
 const addGeoJsonAnimatedModel = (_view: ThreeView) => {
-  // 東京駅付近の座標に配置
+  // Position near Tokyo Station coordinates
   const pos = {
     type: "Feature",
     properties: {},
