@@ -36,7 +36,8 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
-    material.customProgramCacheKey = () => JSON.stringify(material.userData.defines);
+    material.customProgramCacheKey = () =>
+      JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);
