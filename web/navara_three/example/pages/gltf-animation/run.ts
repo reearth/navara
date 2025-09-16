@@ -450,7 +450,9 @@ const addTextModelControl = (
     weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
   ) {
     // Update UI values and refresh without triggering change handlers
-    const weightMap = new Map<string, number>(weights.map((w) => [w.name, w.weight]));
+    const weightMap = new Map<string, number>(
+      weights.map((w) => [w.name, w.weight]),
+    );
     isProgrammaticUpdate = true;
     PARAMS.idleWeight = weightMap.get("Idle") ?? 0;
     PARAMS.walkWeight = weightMap.get("Walk") ?? 0;
