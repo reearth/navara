@@ -22,7 +22,7 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
   RenderPass
 > {
   static key = "transparent";
-  static insertAfter = ["ssao", "clouds", "atmosphere"];
+  static insertAfter = ["ssao", "clouds", "atmosphere", "mrt"];
 
   light = new Group();
   lightsSyncMap = new Map();

@@ -439,7 +439,7 @@ const addFogLightControl = async (
           type: "effect",
           fogLight: {
             lights: streetLights,
-            fogDensity: 5,
+            fogDensity: 0.5,
             useSurfaceLighting: true,
           },
           visible: isAtNight,
@@ -469,9 +469,9 @@ const addFogLightControl = async (
   });
 
   const fogLightParams = {
-    fogDensity: 5,
+    fogDensity: 0.5,
     useSurfaceLighting: true,
-    lightsIntensity: 2.0,
+    lightsIntensity: 1.0,
     enableAtNight: true,
   };
 

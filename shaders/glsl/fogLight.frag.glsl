@@ -28,14 +28,6 @@ vec4 readPos(int idx) {
   return texelFetch(uLightTex1, tc, 0);
 }
 
-float readDepth(const vec2 uv) {
-  #if DEPTH_PACKING == 3201
-  return unpackRGBAToDepth(texture2D(depthBuffer, uv));
-  #else
-  return texture2D(depthBuffer, uv).r;
-  #endif // DEPTH_PACKING == 3201
-}
-
 // ref: https://ijdykeman.github.io/graphics/simple_fog_shader
 vec3 calculateFogScattering(vec3 worldPos, vec3 lightPos, vec3 lightColor, vec3 normal, float intensity, vec3 albedo) {
     vec3 viewDir = worldPos - cameraPos;
@@ -74,14 +66,6 @@ vec3 calculateFogScattering(vec3 worldPos, vec3 lightPos, vec3 lightColor, vec3 
     fogLight *= attenuation;
 
     return fogLight;
-}
-
-float getViewZ(const float depth) {
-  #ifdef PERSPECTIVE_CAMERA
-  return perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
-  #else
-  return orthographicDepthToViewZ(depth, cameraNear, cameraFar);
-  #endif
 }
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
@@ -134,8 +118,6 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     }
     
     vec3 finalColor = inputColor.rgb + fogColor;
-    
-    finalColor = finalColor / (1.0 + finalColor);
     
     outputColor = vec4(finalColor, inputColor.a);
 }

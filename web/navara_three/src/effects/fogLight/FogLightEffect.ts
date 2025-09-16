@@ -3,6 +3,7 @@ import { resolveIncludes } from "@takram/three-geospatial";
 import {
   Effect as PostProcessingEffect,
   EffectAttribute,
+  BlendFunction,
 } from "postprocessing";
 import {
   PerspectiveCamera,
@@ -128,6 +129,7 @@ export class FogLightEffect extends PostProcessingEffect {
       {
         uniforms,
         attributes: EffectAttribute.DEPTH,
+        blendFunction: BlendFunction.NORMAL,
       },
     );
 
