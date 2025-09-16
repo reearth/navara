@@ -405,12 +405,15 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
 
     m.userData.uTime = uniforms.time;
 
-    m.defines ??= {};
-    m.defines.USE_UV = 1;
+    m.userData.defines ??= {};
+    m.userData.defines.USE_UV = 1;
 
     const maxTextures = this.maxTextures;
 
+    m.customProgramCacheKey = () => JSON.stringify(m.userData.defines);
     m.onBeforeCompile = (shader) => {
+      shader.defines ??= {};
+      Object.assign(shader.defines, m.userData.defines);
       // Add UV transform uniforms
       const uvT = m.userData.uvTransform;
       shader.uniforms.uOffset = { value: uvT.offset };
@@ -638,6 +641,8 @@ if (uPickable > 0.) {
       this.setupTextures(loadedTexes, textureOptions, maxTextures);
 
       this._setupSceneObserver();
+
+      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
     }
 
     if (this.castShadow !== changedMaterial.cast_shadow) {
@@ -841,9 +846,9 @@ if (uPickable > 0.) {
       m.userData.opacities.value[i] = opacities[i];
     }
 
-    if (!m.defines) {
-      m.defines = {
-        USE_UV: true,
+    if (!m.userData.defines) {
+      m.userData.defines = {
+        USE_UV: 1,
       };
     }
   }

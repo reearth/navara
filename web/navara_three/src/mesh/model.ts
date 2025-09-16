@@ -219,13 +219,17 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
       // Set water define if water is enabled
       if (this.water) {
-        mesh.material.defines = mesh.material.defines || {};
-        mesh.material.defines.WATER = 1;
+        mesh.material.userData.defines = mesh.material.userData.defines || {};
+        mesh.material.userData.defines.WATER = 1;
       }
 
+      mesh.material.customProgramCacheKey = () =>
+        JSON.stringify(mesh.material.userData.defines);
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
+        shader.defines ??= {};
+        Object.assign(shader.defines, mesh.material.userData.defines);
         shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
         shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
         shader.uniforms.reflectivity = mesh.material.userData.reflectivity;
@@ -391,10 +395,15 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
     const origin = mesh.material;
 
+    mesh.customDepthMaterial.customProgramCacheKey = () =>
+      mesh.customDepthMaterial
+        ? JSON.stringify(mesh.customDepthMaterial.userData.defines)
+        : "";
     mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
       origin.onBeforeCompile(shader, renderer);
 
-      shader.defines = { ...origin.defines };
+      shader.defines ??= {};
+      Object.assign(shader.defines, origin.userData?.defines || {});
       shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
       shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
     };
@@ -441,9 +450,9 @@ export class ModelMesh extends Object3D implements FeatureMesh {
       this.water = next;
       distMaterial.userData.prev.water = next;
       // Update water define
-      distMaterial.defines = distMaterial.defines || {};
+      distMaterial.userData.defines = distMaterial.userData.defines || {};
       if (next) {
-        distMaterial.defines.WATER = 1;
+        distMaterial.userData.defines.WATER = 1;
         // Load water texture once at ModelMesh level if not already loaded
         if (!this.waterNormalMapTexture) {
           this.waterNormalMapTexture = TEXTURE_LOADER.load(
@@ -456,7 +465,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
         // Share the same texture instance across all meshes
         distMaterial.userData.waterNormalMap.value = this.waterNormalMapTexture;
       } else {
-        delete distMaterial.defines.WATER;
+        delete distMaterial.userData.defines.WATER;
       }
       distMaterial.needsUpdate = true;
     }

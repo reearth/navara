@@ -89,6 +89,8 @@ export class BatchedFeatureMesh<
       value,
       this._getDefaultBatchAttributeValues(),
     );
+
+    this.dispatchEvent({ type: "batchAttributeUpdated" } as any); // Events aren't inferred well.
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {

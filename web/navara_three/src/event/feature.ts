@@ -144,6 +144,9 @@ export async function processRenderableFeatureAdded(
     obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
     });
+    obj.addEventListener("batchAttributeUpdated", () => {
+      texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
+    });
   } else if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
     drapedFeatureMaterials.set(id, obj.material);
     obj.addEventListener("removedFromWorld", () => {

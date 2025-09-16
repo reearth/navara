@@ -55,7 +55,6 @@ export class ConeTracingMaterial extends ShaderMaterial {
       maxDistance,
       iteration,
       ior,
-      ...others
     } = {
       ...coneTracingMaterialParametersDefaults,
       ...params,
@@ -98,7 +97,6 @@ export class ConeTracingMaterial extends ShaderMaterial {
       toneMapped: false,
       depthWrite: false,
       depthTest: false,
-      ...others,
     });
   }
 

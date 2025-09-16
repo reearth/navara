@@ -36,7 +36,10 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    material.customProgramCacheKey = () => JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (shader) => {
+      shader.defines ??= {};
+      Object.assign(shader.defines, material.userData.defines);
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
 
@@ -126,8 +129,8 @@ export class PointMesh extends Sprite implements FeatureMesh {
     const nextTransparent = !!material.transparent;
     if (prev.transparent !== nextTransparent) {
       this.material.transparent = nextTransparent;
-      this.material.defines ??= {};
-      this.material.defines.USE_AA = nextTransparent;
+      this.material.userData.defines ??= {};
+      this.material.userData.defines.USE_AA = nextTransparent;
       prev.transparent = nextTransparent;
       this.material.needsUpdate = true;
     }
