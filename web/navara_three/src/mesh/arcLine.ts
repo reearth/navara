@@ -7,7 +7,7 @@ import {
   degreeToRadian,
   LLE,
 } from "@navara/three_api";
-import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
+
 import {
   Object3D,
   Mesh,
@@ -22,6 +22,7 @@ import {
   Box3,
 } from "three";
 
+import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import { overrideShaderMaterialForMRT } from "../material";
 
 export type ArcLineConfig = {

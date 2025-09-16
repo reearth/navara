@@ -1,10 +1,11 @@
-import type { LngLat } from "@navara/core";
 import {
   Line2,
   LineGeometry,
   LineMaterial,
   LineSegmentsGeometry,
 } from "three-stdlib";
+
+import type { LngLat } from "@navara/core";
 
 export type LineConfig = {
   color: number;
