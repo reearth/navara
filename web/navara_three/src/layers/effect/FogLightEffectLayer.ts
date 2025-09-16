@@ -24,7 +24,6 @@ export class FogLightEffectLayer extends EffectLayerDeclaration<
   FogLight
 > {
   static key = "fogLight";
-  // static insertAfter = ["toneMapping"];
   static insertBefore = ["toneMapping", "final"];
 
   private config: FogLightConfig;
