@@ -6,7 +6,7 @@ import {
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
-import { FogLight, type FogLightOptions } from "../../effects/fogLight";
+import { FogLight, type FogLightOptions } from "../../effects/fogLight/effect";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
