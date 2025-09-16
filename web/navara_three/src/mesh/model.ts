@@ -30,7 +30,12 @@ import {
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
 } from "three";
-import { AnimationAction, AnimationClip, AnimationMixer, LoopRepeat } from "three";
+import {
+  AnimationAction,
+  AnimationClip,
+  AnimationMixer,
+  LoopRepeat,
+} from "three";
 
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { BufferLoader } from "../event";
@@ -61,9 +66,9 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
-  private actions: Map<string, AnimationAction> = new Map();
+  private actions = new Map<string, AnimationAction>();
   private currentAction: AnimationAction | null = null;
-  private animationSpeed: number = 1.0;
+  private animationSpeed = 1.0;
   private lastUpdateTime?: number;
 
   constructor(
@@ -121,13 +126,15 @@ export class ModelMesh extends Object3D implements FeatureMesh {
     this.userData.prev.visible = this.visible;
 
     // Initialize minimal animation features if GLTF animations exist on the scene
-    const gltfAnimations: AnimationClip[] | undefined = (this.children[0] as Group)?.userData?.gltfAnimations;
+    const gltfAnimations: AnimationClip[] | undefined = (
+      this.children[0] as Group
+    )?.userData?.gltfAnimations;
     if (gltfAnimations && gltfAnimations.length > 0) {
       const target = this.children[0] as Group;
       this.mixer = new AnimationMixer(target);
 
       // Read initial speed from material if provided
-      const initSpeed = (meshMaterial as any).animation_speed as number | undefined;
+      const initSpeed = meshMaterial.animation_speed as number | undefined;
       this.animationSpeed = initSpeed ?? 1.0;
 
       gltfAnimations.forEach((clip) => {
@@ -137,7 +144,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
         this.actions.set(clip.name, action);
       });
 
-      const clipName = (meshMaterial as any).animation_active_clip as string | undefined;
+      const clipName = meshMaterial.animation_active_clip as string | undefined;
       if (clipName && this.actions.has(clipName)) {
         const action = this.actions.get(clipName)!;
         action.reset().play();
@@ -458,7 +465,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
     // Minimal animation updates: speed and active clip
     if (this.mixer) {
-      const nextSpeed = (material as any).animation_speed as number | undefined;
+      const nextSpeed = material.animation_speed as number | undefined;
       if (nextSpeed !== undefined && nextSpeed !== this.animationSpeed) {
         this.animationSpeed = nextSpeed;
         if (this.currentAction) {
@@ -466,7 +473,7 @@ export class ModelMesh extends Object3D implements FeatureMesh {
         }
       }
 
-      const nextClip = (material as any).animation_active_clip as string | undefined;
+      const nextClip = material.animation_active_clip as string | undefined;
       if (nextClip && this.actions.has(nextClip)) {
         const nextAction = this.actions.get(nextClip)!;
         if (this.currentAction !== nextAction) {

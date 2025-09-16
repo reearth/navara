@@ -1,12 +1,18 @@
-import ThreeView, { type GLTFModelLayer } from "@navara/three";
-import { Vector3, Quaternion, Euler } from "three";
-
+import ThreeView, {
+  type GLTFModelLayer,
+  type LayerHandle,
+} from "@navara/three";
 import {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   LLE,
 } from "@navara/three_api";
+import { Vector3, Quaternion, Euler } from "three";
+import { Pane } from "tweakpane";
+
+import { addHidePaneKeyShortcut } from "../../helpers/control";
+import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -72,11 +78,35 @@ export const run = async (view: ThreeView) => {
     polygon: {},
   });
 
-  addTestModelForNormal(view);
+  // Create control panel
+  const pane = new Pane({
+    title: "Controls",
+    expanded: true,
+  });
+
+  addHidePaneKeyShortcut(pane);
+
+  const modelLayer = addTestModelForNormal(view);
   addGeoJsonAnimatedModel(view);
+  const controls = addTextModelControl(view, pane, modelLayer);
+
+  // Wait for animation initialization, then set initial blend and sync UI
+  modelLayer.ref.on("animationReady", () => {
+    // Initial blend at this timing becomes the UI initial values
+    const initialWeights = [
+      { name: "Idle", weight: 0.2 },
+      { name: "Walk", weight: 0.5 },
+      { name: "Run", weight: 0.3 },
+    ] as const;
+    // Remember these as the default weights for Reset button
+    controls.setDefaultWeights(initialWeights);
+    controls.applyWeights(initialWeights);
+  });
 };
 
-const addTestModelForNormal = (view: ThreeView) => {
+const addTestModelForNormal = (
+  view: ThreeView,
+): LayerHandle<GLTFModelLayer> => {
   const pos = geodeticToVector3(
     new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
   );
@@ -96,7 +126,7 @@ const addTestModelForNormal = (view: ThreeView) => {
       url: "/glTF/Soldier/Soldier.glb",
       // Animation configuration - fully aligned with Rust naming
       animation_enabled: true,
-      animation_active_clip: "idle",
+      animation_active_clip: "Idle",
       animation_speed: 1.0,
       animation_loop: true,
       animation_auto_play: false,
@@ -120,32 +150,349 @@ const addTestModelForNormal = (view: ThreeView) => {
     },
   });
 
-  // Wait for animation initialization to complete before testing new APIs
-  modelLayer.ref.on("animationReady", () => {
-    console.log("🎬 Animation ready");
-
-    // Test new getter APIs
-    const availableAnimations = modelLayer.ref.getAnimationAvailable();
-    console.log("📋 Available animations:", availableAnimations);
-
-    // Get current playback state
-    const currentState = modelLayer.ref.getAnimationCurrentState();
-    console.log("📈 Current state:", currentState);
-
-    // Blending demo using new control APIs
-    console.log("🎭 Starting animation blend: Walk (70%) + Run (30%)");
-    modelLayer.ref.blendAnimations([
-      { name: "Walk", weight: 0.7 },
-      { name: "Run", weight: 0.3 },
-    ]);
-  });
+  return modelLayer;
 };
 
-const addGeoJsonAnimatedModel = (view: ThreeView) => {
-  // 東京駅付近の座標に配置
-  const pos = { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [139.7671, 35.6812] } };
+const addTextModelControl = (
+  _view: ThreeView,
+  pane: Pane,
+  modelLayer: LayerHandle<GLTFModelLayer>,
+): {
+  applyWeights: (
+    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
+  ) => void;
+  setDefaultWeights: (
+    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
+  ) => void;
+} => {
+  // Control parameters
+  const PARAMS = {
+    showModel: true,
+    showSkeleton: false,
+    useDefaultDuration: true,
+    customDuration: 3.5,
+    idleWeight: 0,
+    walkWeight: 0,
+    runWeight: 0,
+    timeScale: 1,
+  };
 
-  view.addLayer({
+  // Helpers to sync Crossfading with Blend Weights UI
+  let isProgrammaticUpdate = false;
+  let crossfadeRaf: number | null = null;
+  let defaultWeights: readonly {
+    name: "Idle" | "Walk" | "Run";
+    weight: number;
+  }[] = [
+    { name: "Idle", weight: 0 },
+    { name: "Walk", weight: 0 },
+    { name: "Run", weight: 0 },
+  ];
+
+  // Store field APIs for programmatic updates
+  let blendWeightApis: {
+    idleWeight: { refresh: () => void };
+    walkWeight: { refresh: () => void };
+    runWeight: { refresh: () => void };
+  };
+
+  function startCrossfadeSync(
+    from: "Idle" | "Walk" | "Run",
+    to: "Idle" | "Walk" | "Run",
+    duration: number,
+  ) {
+    if (crossfadeRaf !== null) cancelAnimationFrame(crossfadeRaf);
+    const start = performance.now();
+    const loop = () => {
+      const now = performance.now();
+      const t = Math.min((now - start) / (duration * 1000), 1);
+      const weights = getCrossfadeWeights(from, to, t);
+
+      isProgrammaticUpdate = true;
+      PARAMS.idleWeight = weights.idle;
+      PARAMS.walkWeight = weights.walk;
+      PARAMS.runWeight = weights.run;
+      BLEND_PARAMS.idleWeight = weights.idle;
+      BLEND_PARAMS.walkWeight = weights.walk;
+      BLEND_PARAMS.runWeight = weights.run;
+      blendWeightApis.idleWeight.refresh();
+      blendWeightApis.walkWeight.refresh();
+      blendWeightApis.runWeight.refresh();
+      isProgrammaticUpdate = false;
+
+      if (t < 1) {
+        crossfadeRaf = requestAnimationFrame(loop);
+      } else {
+        crossfadeRaf = null;
+      }
+    };
+    loop();
+  }
+
+  function getCrossfadeWeights(
+    from: "Idle" | "Walk" | "Run",
+    to: "Idle" | "Walk" | "Run",
+    t: number,
+  ) {
+    const w = { idle: 0, walk: 0, run: 0 };
+    const vFrom = Math.max(0, 1 - t);
+    const vTo = Math.max(0, t);
+    if (from === "Idle") w.idle = vFrom;
+    if (from === "Walk") w.walk = vFrom;
+    if (from === "Run") w.run = vFrom;
+    if (to === "Idle") w.idle = vTo;
+    if (to === "Walk") w.walk = vTo;
+    if (to === "Run") w.run = vTo;
+    return w;
+  }
+
+  // Visibility folder
+  const visibilityFolder = pane.addFolder({
+    title: "Visibility",
+    expanded: true,
+  });
+
+  visibilityFolder.addBinding(PARAMS, "showModel").on("change", (_v) => {
+    modelLayer.visible = _v.value;
+  });
+
+  // Activation/Deactivation folder
+  const activationFolder = pane.addFolder({
+    title: "Activation/Deactivation",
+    expanded: true,
+  });
+
+  activationFolder
+    .addButton({
+      title: "deactivate all",
+    })
+    .on("click", () => {
+      modelLayer.ref.stopAllAnimations();
+    });
+
+  activationFolder
+    .addButton({
+      title: "activate all",
+    })
+    .on("click", () => {
+      // Apply current Blend Weights values
+      updateBlendWeights();
+    });
+
+  // Pausing/Stepping controls removed per request
+
+  // Crossfading folder
+  const crossfadingFolder = pane.addFolder({
+    title: "Crossfading",
+    expanded: true,
+  });
+
+  crossfadingFolder
+    .addButton({
+      title: "from walk to idle",
+    })
+    .on("click", () => {
+      // Default crossfade duration is 1.0s when useDefaultDuration=true
+      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
+      modelLayer.ref.crossFadeAnimation("Walk", "Idle", duration);
+      startCrossfadeSync("Walk", "Idle", duration);
+    });
+
+  crossfadingFolder
+    .addButton({
+      title: "from idle to walk",
+    })
+    .on("click", () => {
+      // Default crossfade duration is 1.0s when useDefaultDuration=true
+      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
+      modelLayer.ref.crossFadeAnimation("Idle", "Walk", duration);
+      startCrossfadeSync("Idle", "Walk", duration);
+    });
+
+  crossfadingFolder
+    .addButton({
+      title: "from walk to run",
+    })
+    .on("click", () => {
+      // Default crossfade duration is 1.0s when useDefaultDuration=true
+      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
+      modelLayer.ref.crossFadeAnimation("Walk", "Run", duration);
+      startCrossfadeSync("Walk", "Run", duration);
+    });
+
+  crossfadingFolder
+    .addButton({
+      title: "from run to walk",
+    })
+    .on("click", () => {
+      // Default crossfade duration is 1.0s when useDefaultDuration=true
+      const duration = PARAMS.useDefaultDuration ? 1.0 : PARAMS.customDuration;
+      modelLayer.ref.crossFadeAnimation("Run", "Walk", duration);
+      startCrossfadeSync("Run", "Walk", duration);
+    });
+
+  crossfadingFolder.addBinding(PARAMS, "useDefaultDuration");
+
+  // Default duration is fixed to 1.0s, no slider needed
+
+  crossfadingFolder.addBinding(PARAMS, "customDuration", {
+    min: 0.1,
+    max: 10.0,
+    step: 0.1,
+  });
+
+  // Blend Weights folder - Type-safe implementation
+  const blendWeightsFolder = pane.addFolder({
+    title: "Blend Weights",
+    expanded: true,
+  });
+
+  const BLEND_PARAMS = {
+    idleWeight: PARAMS.idleWeight,
+    walkWeight: PARAMS.walkWeight,
+    runWeight: PARAMS.runWeight,
+  };
+
+  const blendFields: FolderFields<typeof BLEND_PARAMS> = [
+    {
+      name: "idleWeight",
+      params: { min: 0, max: 1, step: 0.01 },
+      onMount: (apis) => {
+        blendWeightApis = {
+          idleWeight: apis.idleWeight,
+          walkWeight: apis.walkWeight,
+          runWeight: apis.runWeight,
+        };
+      },
+      onChange: (v, _apis) => {
+        if (isProgrammaticUpdate) return;
+        PARAMS.idleWeight = v.value;
+        updateBlendWeights();
+      },
+    },
+    {
+      name: "walkWeight",
+      params: { min: 0, max: 1, step: 0.01 },
+      onChange: (v, _apis) => {
+        if (isProgrammaticUpdate) return;
+        PARAMS.walkWeight = v.value;
+        updateBlendWeights();
+      },
+    },
+    {
+      name: "runWeight",
+      params: { min: 0, max: 1, step: 0.01 },
+      onChange: (v, _apis) => {
+        if (isProgrammaticUpdate) return;
+        PARAMS.runWeight = v.value;
+        updateBlendWeights();
+      },
+    },
+  ];
+
+  addFieldsToFolder(blendWeightsFolder, BLEND_PARAMS, blendFields);
+
+  // Reset weights to initial defaults (placed at bottom)
+  blendWeightsFolder.addButton({ title: "reset weights" }).on("click", () => {
+    applyWeights(defaultWeights);
+  });
+
+  // General Speed folder
+  const generalSpeedFolder = pane.addFolder({
+    title: "General Speed",
+    expanded: true,
+  });
+
+  generalSpeedFolder
+    .addBinding(PARAMS, "timeScale", {
+      min: 0.1,
+      max: 3.0,
+      step: 0.1,
+    })
+    .on("change", (v) => {
+      modelLayer.ref.setAnimationSpeed(v.value);
+    });
+
+  // Helper function to update blend weights
+  function updateBlendWeights() {
+    const animations: { name: string; weight: number }[] = [];
+    if (PARAMS.idleWeight > 0)
+      animations.push({ name: "Idle", weight: PARAMS.idleWeight });
+    if (PARAMS.walkWeight > 0)
+      animations.push({ name: "Walk", weight: PARAMS.walkWeight });
+    if (PARAMS.runWeight > 0)
+      animations.push({ name: "Run", weight: PARAMS.runWeight });
+
+    const state = modelLayer.ref.getAnimationCurrentState();
+
+    if (!state.isBlendMode) {
+      // Enter blend mode with current non-zero weights
+      if (animations.length > 0) {
+        modelLayer.ref.blendAnimations(animations);
+      } else {
+        // No animations requested, stop all
+        modelLayer.ref.stopAllAnimations();
+      }
+      return;
+    }
+
+    // Already in blend mode: adjust weights incrementally
+    const weightMap = new Map(
+      animations.map((a) => [a.name, a.weight] as const),
+    );
+    (["Idle", "Walk", "Run"] as const).forEach((name) => {
+      const w = weightMap.get(name) ?? 0;
+      modelLayer.ref.setAnimationWeight(name, w);
+    });
+  }
+
+  function applyWeights(
+    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
+  ) {
+    // Update UI values and refresh without triggering change handlers
+    const weightMap = new Map(weights.map((w) => [w.name, w.weight] as const));
+    isProgrammaticUpdate = true;
+    PARAMS.idleWeight = weightMap.get("Idle") ?? 0;
+    PARAMS.walkWeight = weightMap.get("Walk") ?? 0;
+    PARAMS.runWeight = weightMap.get("Run") ?? 0;
+    BLEND_PARAMS.idleWeight = PARAMS.idleWeight;
+    BLEND_PARAMS.walkWeight = PARAMS.walkWeight;
+    BLEND_PARAMS.runWeight = PARAMS.runWeight;
+    blendWeightApis.idleWeight?.refresh?.();
+    blendWeightApis.walkWeight?.refresh?.();
+    blendWeightApis.runWeight?.refresh?.();
+    isProgrammaticUpdate = false;
+
+    const state = modelLayer.ref.getAnimationCurrentState();
+    const asArray = weights as { name: string; weight: number }[];
+    if (!state.isBlendMode) {
+      modelLayer.ref.blendAnimations(asArray);
+    } else {
+      ["Idle", "Walk", "Run"].forEach((name) => {
+        const w = weightMap.get(name) ?? 0;
+        modelLayer.ref.setAnimationWeight(name, w);
+      });
+    }
+  }
+
+  function setDefaultWeights(
+    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
+  ) {
+    defaultWeights = weights;
+  }
+
+  return { applyWeights, setDefaultWeights };
+};
+
+const addGeoJsonAnimatedModel = (_view: ThreeView) => {
+  // 東京駅付近の座標に配置
+  const pos = {
+    type: "Feature",
+    properties: {},
+    geometry: { type: "Point", coordinates: [139.7671, 35.6812] },
+  };
+
+  _view.addLayer({
     type: "geojson",
     data: pos,
     model: {
