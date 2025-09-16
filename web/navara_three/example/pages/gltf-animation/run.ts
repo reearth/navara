@@ -196,19 +196,6 @@ const addTextModelControl = (
     runWeight: { refresh: () => void };
   };
 
-  // Type-safe button interface (no any types)
-  type CrossfadeButton = {
-    disabled: boolean;
-  };
-
-  // Store button references for dynamic enable/disable
-  let crossfadeButtons: {
-    walkToIdle: CrossfadeButton;
-    idleToWalk: CrossfadeButton;
-    walkToRun: CrossfadeButton;
-    runToWalk: CrossfadeButton;
-  };
-
   // Animation state type
   type AnimationState = "Idle" | "Walk" | "Run";
 
@@ -244,69 +231,6 @@ const addTextModelControl = (
 
     // Only return primary animation if it has significant weight (> 0.5)
     return maxWeight > 0.5 ? primaryAnimation : null;
-  }
-
-  // Disable all crossfade buttons
-  function disableAllCrossfadeButtons(): void {
-    if (!crossfadeButtons) return;
-
-    crossfadeButtons.walkToIdle.disabled = true;
-    crossfadeButtons.idleToWalk.disabled = true;
-    crossfadeButtons.walkToRun.disabled = true;
-    crossfadeButtons.runToWalk.disabled = true;
-  }
-
-  // Enable buttons based on animation state
-  function enableButtonsForAnimation(animation: AnimationState): void {
-    if (!crossfadeButtons) return;
-
-    // First disable all
-    disableAllCrossfadeButtons();
-
-    // Enable buttons based on current animation
-    switch (animation) {
-      case "Walk":
-        crossfadeButtons.walkToIdle.disabled = false;
-        crossfadeButtons.walkToRun.disabled = false;
-        break;
-      case "Idle":
-        crossfadeButtons.idleToWalk.disabled = false;
-        break;
-      case "Run":
-        crossfadeButtons.runToWalk.disabled = false;
-        break;
-    }
-  }
-
-  // Update button states based on current weights
-  function updateButtonStatesBasedOnWeights(): void {
-    const currentAnimation = getCurrentPrimaryAnimation();
-    if (currentAnimation) {
-      enableButtonsForAnimation(currentAnimation);
-    } else {
-      // If no clear primary animation, disable all buttons
-      disableAllCrossfadeButtons();
-    }
-  }
-
-  // Start crossfade with duration-based button control
-  function startCrossfadeWithButtonControl(
-    from: AnimationState,
-    to: AnimationState,
-  ): void {
-    const duration = getCrossfadeDuration();
-
-    // Start animation
-    modelLayer.ref.crossFadeAnimation(from, to, duration);
-    startCrossfadeSync(from, to, duration);
-
-    // Disable all buttons during crossfade
-    disableAllCrossfadeButtons();
-
-    // Enable appropriate buttons after crossfade completes
-    setTimeout(() => {
-      enableButtonsForAnimation(to);
-    }, duration * 1000);
   }
 
   function startCrossfadeSync(
@@ -426,6 +350,26 @@ const addTextModelControl = (
     expanded: true,
   });
 
+  // Start crossfade with duration-based button control
+  function startCrossfadeWithButtonControl(
+    from: AnimationState,
+    to: AnimationState,
+  ): void {
+    const duration = getCrossfadeDuration();
+
+    // Start animation
+    modelLayer.ref.crossFadeAnimation(from, to, duration);
+    startCrossfadeSync(from, to, duration);
+
+    // Disable all buttons during crossfade
+    disableAllCrossfadeButtons();
+
+    // Enable appropriate buttons after crossfade completes
+    setTimeout(() => {
+      enableButtonsForAnimation(to);
+    }, duration * 1000);
+  }
+
   // Create buttons and store references for dynamic enable/disable
   const walkToIdleButton = crossfadingFolder
     .addButton({
@@ -459,13 +403,52 @@ const addTextModelControl = (
       startCrossfadeWithButtonControl("Run", "Walk");
     });
 
-  // Store button references
-  crossfadeButtons = {
+  // Store button references for dynamic enable/disable
+  const crossfadeButtons = {
     walkToIdle: walkToIdleButton,
     idleToWalk: idleToWalkButton,
     walkToRun: walkToRunButton,
     runToWalk: runToWalkButton,
   };
+
+  // Disable all crossfade buttons
+  function disableAllCrossfadeButtons(): void {
+    crossfadeButtons.walkToIdle.disabled = true;
+    crossfadeButtons.idleToWalk.disabled = true;
+    crossfadeButtons.walkToRun.disabled = true;
+    crossfadeButtons.runToWalk.disabled = true;
+  }
+
+  // Enable buttons based on animation state
+  function enableButtonsForAnimation(animation: AnimationState): void {
+    // First disable all
+    disableAllCrossfadeButtons();
+
+    // Enable buttons based on current animation
+    switch (animation) {
+      case "Walk":
+        crossfadeButtons.walkToIdle.disabled = false;
+        crossfadeButtons.walkToRun.disabled = false;
+        break;
+      case "Idle":
+        crossfadeButtons.idleToWalk.disabled = false;
+        break;
+      case "Run":
+        crossfadeButtons.runToWalk.disabled = false;
+        break;
+    }
+  }
+
+  // Update button states based on current weights
+  function updateButtonStatesBasedOnWeights(): void {
+    const currentAnimation = getCurrentPrimaryAnimation();
+    if (currentAnimation) {
+      enableButtonsForAnimation(currentAnimation);
+    } else {
+      // If no clear primary animation, disable all buttons
+      disableAllCrossfadeButtons();
+    }
+  }
 
   crossfadingFolder.addBinding(PARAMS, "useDefaultDuration");
 
