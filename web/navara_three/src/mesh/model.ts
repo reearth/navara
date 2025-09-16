@@ -138,7 +138,11 @@ export class ModelMesh extends Object3D implements FeatureMesh {
       this.animationSpeed = initSpeed ?? 1.0;
 
       gltfAnimations.forEach((clip) => {
-        const action = this.mixer!.clipAction(clip);
+        if (!this.mixer) {
+          console.warn("Animation mixer not initialized");
+          return;
+        }
+        const action = this.mixer.clipAction(clip);
         action.timeScale = this.animationSpeed;
         action.setLoop(LoopRepeat, Infinity);
         this.actions.set(clip.name, action);
@@ -146,7 +150,11 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
       const clipName = meshMaterial.animation_active_clip as string | undefined;
       if (clipName && this.actions.has(clipName)) {
-        const action = this.actions.get(clipName)!;
+        const action = this.actions.get(clipName);
+        if (!action) {
+          console.warn(`Animation action "${clipName}" not found`);
+          return;
+        }
         action.reset().play();
         this.currentAction = action;
       }
@@ -475,7 +483,11 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
       const nextClip = material.animation_active_clip as string | undefined;
       if (nextClip && this.actions.has(nextClip)) {
-        const nextAction = this.actions.get(nextClip)!;
+        const nextAction = this.actions.get(nextClip);
+        if (!nextAction) {
+          console.warn(`Animation action "${nextClip}" not found`);
+          return;
+        }
         if (this.currentAction !== nextAction) {
           if (this.currentAction) this.currentAction.stop();
           nextAction.timeScale = this.animationSpeed;

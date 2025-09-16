@@ -9,7 +9,7 @@ import type { CommonUniforms } from "../../uniforms";
 import { initializeGltfLoader } from "../loaders";
 
 // Type-safe interface for scene userData
-interface SceneUserData {
+type SceneUserData = {
   gltfAnimations?: AnimationClip[];
   [key: string]: unknown;
 }
