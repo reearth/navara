@@ -60,12 +60,11 @@ fn generate_global_batch_id_and_selections(
     batch_table_json: &serde_json::Value,
     batch_length: usize,
     id_property: &String,
-) -> Option<Vec<u32>> {
-    let mut global_batch_id_and_selections: Vec<u32> = vec![];
-
+    global_batch_id_and_selections: &mut Vec<u32>,
+) {
     let Some(prop_val) = batch_table_json.get(id_property) else {
         global_batch_id_and_selections.fill(0);
-        return Some(global_batch_id_and_selections);
+        return;
     };
 
     if let serde_json::Value::Array(arr) = prop_val {
@@ -87,12 +86,6 @@ fn generate_global_batch_id_and_selections(
                 global_batch_id_and_selections.push(0);
             }
         }
-    }
-
-    if !global_batch_id_and_selections.is_empty() {
-        Some(global_batch_id_and_selections)
-    } else {
-        None
     }
 }
 
@@ -137,19 +130,19 @@ pub fn construct_model_by_b3dm_layer(
                 None => continue,
             };
 
-        let Ok(batch_table_json) = batch_table.json() else {
-            continue;
-        };
-
-        let Some(global_batch_ids) = generate_global_batch_id_and_selections(
-            &mut batch_table_res,
-            &mut id_prop_table_res,
-            &id_prop_sel_res,
-            &batch_table_json,
-            batch_length,
-            &appearance.id_property,
-        ) else {
-            continue;
+        let mut global_batch_ids = Vec::with_capacity(batch_length);
+        if let Ok(batch_table_json) = batch_table.json() {
+            generate_global_batch_id_and_selections(
+                &mut batch_table_res,
+                &mut id_prop_table_res,
+                &id_prop_sel_res,
+                &batch_table_json,
+                batch_length,
+                &appearance.id_property,
+                &mut global_batch_ids,
+            );
+        } else {
+            global_batch_ids.fill(0);
         };
 
         let feature_batch_id = if batch_length > 0 {
@@ -326,19 +319,19 @@ pub fn construct_model_by_cesium3dtiles_layer(
                 None => continue,
             };
 
-        let Ok(batch_table_json) = batch_table.json() else {
-            continue;
-        };
-
-        let Some(global_batch_ids) = generate_global_batch_id_and_selections(
-            &mut batch_table_res,
-            &mut id_prop_table_res,
-            &id_prop_sel_res,
-            &batch_table_json,
-            batch_length,
-            &appearance.id_property,
-        ) else {
-            continue;
+        let mut global_batch_ids = Vec::with_capacity(batch_length);
+        if let Ok(batch_table_json) = batch_table.json() {
+            generate_global_batch_id_and_selections(
+                &mut batch_table_res,
+                &mut id_prop_table_res,
+                &id_prop_sel_res,
+                &batch_table_json,
+                batch_length,
+                &appearance.id_property,
+                &mut global_batch_ids,
+            );
+        } else {
+            global_batch_ids.fill(0);
         };
 
         let feature_batch_id = if batch_length > 0 {

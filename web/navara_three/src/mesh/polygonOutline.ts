@@ -13,7 +13,6 @@ import { overrideLineMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";
 
 import type { FeatureMesh } from "./featureMesh";
-
 import { NvLineGeometry } from "./nvLine2";
 
 export class PolygonOutlineMesh extends Line2 implements FeatureMesh {

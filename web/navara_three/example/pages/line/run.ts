@@ -3,9 +3,7 @@ import ThreeView, {
   CloudsEffectLayer,
   type ArclineMeshLayer,
 } from "@navara/three";
-
 import { Vector3 } from "three";
-
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
