@@ -12,7 +12,7 @@ import { initializeGltfLoader } from "../loaders";
 type SceneUserData = {
   gltfAnimations?: AnimationClip[];
   [key: string]: unknown;
-}
+};
 
 export async function renderModel(
   m: NavaraModelMesh,

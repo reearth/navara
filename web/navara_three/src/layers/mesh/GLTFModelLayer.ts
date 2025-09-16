@@ -758,11 +758,11 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     // Weight adjustment in blend mode
     if (this.isBlendMode && this.activeBlendAnimations.has(name)) {
-        const blendAnim = this.activeBlendAnimations.get(name);
-        if (!blendAnim) {
-          console.warn(`Blend animation "${name}" not found`);
-          return;
-        }
+      const blendAnim = this.activeBlendAnimations.get(name);
+      if (!blendAnim) {
+        console.warn(`Blend animation "${name}" not found`);
+        return;
+      }
       blendAnim.action.enabled = weight > 0;
       blendAnim.action.setEffectiveWeight(weight);
       blendAnim.weight = weight;
