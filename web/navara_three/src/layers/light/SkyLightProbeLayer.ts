@@ -56,8 +56,11 @@ export class SkyLightProbeLayer extends LightLayerDeclaration<
 
     if (this.config.skyLightProbe && updates.skyLightProbe && this._instance) {
       Object.assign(this.config.skyLightProbe, updates.skyLightProbe);
-      // SkyLightProbe doesn't have many runtime configurable properties
-      // Most configuration happens during construction
+
+      // Update intensity if provided
+      if (updates.skyLightProbe.intensity !== undefined) {
+        this._instance.intensity = updates.skyLightProbe.intensity;
+      }
     }
   }
 

@@ -22,7 +22,8 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
   SSAO
 > {
   static key = "ssao";
-  static insertBefore = ["lensFlare"];
+  static insertAfter = ["clouds"];
+  static insertBefore = ["transparent"];
 
   private config: SSAOConfig;
 

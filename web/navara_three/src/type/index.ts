@@ -27,6 +27,7 @@ import type {
   AmbientLightLayerConfig,
   LightProbeLayerConfig,
   TubeMeshLayerConfig,
+  ArclineMeshLayerConfig,
 } from "../layers";
 import type {
   AerialPerspectiveConfig,
@@ -69,7 +70,8 @@ export type MeshLayerDeclarationDescription =
   | PlaneMeshLayerConfig
   | GLTFModelLayerConfig
   | AxesHelperLayerConfig
-  | ArrowHelperLayerConfig;
+  | ArrowHelperLayerConfig
+  | ArclineMeshLayerConfig;
 
 export type LightLayerDeclarationDescription =
   | SunLightLayerConfig

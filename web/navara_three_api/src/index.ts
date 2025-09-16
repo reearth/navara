@@ -16,6 +16,11 @@ import initApi, {
   Window,
   Transform,
   CameraFrustum,
+  getWGS84SemiMajorAxis as nvGetWGS84SemiMajorAxis,
+  getWGS84SemiMinorAxis as nvGetWGS84SemiMinorAxis,
+  getWGS84EccentricitySquared as nvGetWGS84EccentricitySquared,
+  getWGS84Flattening as nvGetWGS84Flattening,
+  getWGS84Eccentricity as nvGetWGS84Eccentricity,
 } from "@navara/engine-api";
 import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
@@ -165,4 +170,24 @@ export function convertWorldToScreen(
     return undefined;
   }
   return new Vector2(screenPos.x, screenPos.y);
+}
+
+export function getWGS84SemiMajorAxis(): number {
+  return nvGetWGS84SemiMajorAxis();
+}
+
+export function getWGS84SemiMinorAxis(): number {
+  return nvGetWGS84SemiMinorAxis();
+}
+
+export function getWGS84EccentricitySquared(): number {
+  return nvGetWGS84EccentricitySquared();
+}
+
+export function getWGS84Flattening(): number {
+  return nvGetWGS84Flattening();
+}
+
+export function getWGS84Eccentricity(): number {
+  return nvGetWGS84Eccentricity();
 }
