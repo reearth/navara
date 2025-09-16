@@ -8,7 +8,12 @@ import {
 
 import { Effect, type EffectEvents, type EffectOptions } from "../effect";
 
-import { DEFAULT_FOG_LIGHT_EFFECT_OPTIONS, FogLightEffect, type FogLightDefinition, type FogLightEffectOptions } from "./FogLightEffect";
+import {
+  DEFAULT_FOG_LIGHT_EFFECT_OPTIONS,
+  FogLightEffect,
+  type FogLightDefinition,
+  type FogLightEffectOptions,
+} from "./FogLightEffect";
 
 export type FogLightEvents = EffectEvents;
 
@@ -17,7 +22,7 @@ export type FogLightOptions = FogLightEffectOptions & EffectOptions;
 export const DEFAULT_FOG_LIGHT_OPTIONS: FogLightOptions = {
   ...DEFAULT_FOG_LIGHT_EFFECT_OPTIONS,
   enabled: true,
-}
+};
 
 export class FogLight extends Effect<
   FogLightEffect,

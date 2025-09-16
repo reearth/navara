@@ -95,7 +95,9 @@ export class FogLightEffect extends PostProcessingEffect {
       ["cameraPos", new Uniform(camera.position)],
       [
         "fogDensity",
-        new Uniform(options.fogDensity ?? DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.fogDensity),
+        new Uniform(
+          options.fogDensity ?? DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.fogDensity,
+        ),
       ],
       ["normalBuffer", new Uniform(options.normalBuffer ?? null)],
       [
