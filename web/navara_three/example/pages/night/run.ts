@@ -280,7 +280,7 @@ const addSkyLightProbeControl = (
 };
 
 const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
-  // Define the two scenes with their light data files
+  // Define the scenes with their light data files
   const SCENES = {
     "Chiyoda & Chuo": {
       tiles: [
@@ -303,6 +303,10 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
       ],
       lightDataFile: "/takanawa_point_light.geojson",
+    },
+    "Tokyo Points": {
+      tiles: [],
+      lightDataFile: "/tokyo_points_100.geojson",
     },
   };
 
@@ -354,7 +358,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
 
   // Add control to pane
   const folder = pane.addFolder({
-    title: "3D Tiles Scene",
+    title: "Scene type",
     expanded: true,
   });
 
