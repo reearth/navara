@@ -1,11 +1,18 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 import type { ViewEvents } from "@navara/three";
+import type { AnimationClip } from "three";
 
 import type { BufferLoader } from "../";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
 import { initializeGltfLoader } from "../loaders";
+
+// Type-safe interface for scene userData
+interface SceneUserData {
+  gltfAnimations?: AnimationClip[];
+  [key: string]: unknown;
+}
 
 export async function renderModel(
   m: NavaraModelMesh,
@@ -25,7 +32,8 @@ export async function renderModel(
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
       bin.set([]);
       // Attach animations to the scene for downstream access
-      (model.scene.userData ||= {}).gltfAnimations = model.animations;
+      const userData = model.scene.userData as SceneUserData;
+      userData.gltfAnimations = model.animations;
       return model.scene;
     } else {
       if (!m.material.url) {
@@ -33,7 +41,8 @@ export async function renderModel(
       }
       const model = await loader.loadAsync(m.material.url);
       // Attach animations to the scene for downstream access
-      (model.scene.userData ||= {}).gltfAnimations = model.animations;
+      const userData = model.scene.userData as SceneUserData;
+      userData.gltfAnimations = model.animations;
       return model.scene;
     }
   })();

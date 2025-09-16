@@ -437,12 +437,12 @@ const addTextModelControl = (
     }
 
     // Already in blend mode: adjust weights incrementally
-    const weightMap = new Map(
-      animations.map((a) => [a.name, a.weight] as const),
+    const weightMap = new Map<string, number>(
+      animations.map((a) => [a.name, a.weight]),
     );
     (["Idle", "Walk", "Run"] as const).forEach((name) => {
       const w = weightMap.get(name) ?? 0;
-      modelLayer.ref.setAnimationWeight(name, w);
+      modelLayer.ref.setAnimationWeight(name as string, w);
     });
   }
 
@@ -450,7 +450,7 @@ const addTextModelControl = (
     weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
   ) {
     // Update UI values and refresh without triggering change handlers
-    const weightMap = new Map(weights.map((w) => [w.name, w.weight] as const));
+    const weightMap = new Map<string, number>(weights.map((w) => [w.name, w.weight]));
     isProgrammaticUpdate = true;
     PARAMS.idleWeight = weightMap.get("Idle") ?? 0;
     PARAMS.walkWeight = weightMap.get("Walk") ?? 0;
@@ -470,7 +470,7 @@ const addTextModelControl = (
     } else {
       ["Idle", "Walk", "Run"].forEach((name) => {
         const w = weightMap.get(name) ?? 0;
-        modelLayer.ref.setAnimationWeight(name, w);
+        modelLayer.ref.setAnimationWeight(name as string, w);
       });
     }
   }
