@@ -14,12 +14,14 @@ export function toBufferGeometryLike(
 ): [BufferGeometryLike, ArrayBuffer[]] {
   return [
     pick(geometry, ["attributes", "index", "boundingBox", "boundingSphere"]),
-    [
-      ...Object.values(geometry.attributes).map(
-        (attribute) => attribute.array.buffer,
-      ),
-      geometry.index?.array.buffer,
-    ].filter(isNotNullish),
+    (
+      [
+        ...Object.values(geometry.attributes).map(
+          (attribute) => attribute.array.buffer,
+        ),
+        geometry.index?.array.buffer,
+      ] as ArrayBuffer[]
+    ).filter(isNotNullish),
   ];
 }
 

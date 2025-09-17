@@ -22,11 +22,11 @@ export class MaterialStates {
       return material;
     }
 
-    material.defines ??= {};
-    material.defines.CSM = 1;
-    material.defines.CSM_CASCADE_COUNT = csm.cascadeCount;
+    material.userData.defines ??= {};
+    material.userData.defines.CSM = 1;
+    material.userData.defines.CSM_CASCADE_COUNT = csm.cascadeCount;
     if (csm.fade) {
-      material.defines.CSM_FADE = 1;
+      material.userData.defines.CSM_FADE = 1;
     }
 
     const stateRef: MaterialState = {};
@@ -52,7 +52,12 @@ export class MaterialStates {
     if (Object.prototype.hasOwnProperty.call(material, "hasOwnProperty")) {
       stateRef.originalHandler = originalHandler;
     }
+    material.customProgramCacheKey = () =>
+      JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (...args) => {
+      const [shader] = args;
+      shader.defines ??= {};
+      Object.assign(shader.defines, material.userData.defines);
       originalHandler.apply(material, args);
       handleBeforeCompile(...args);
     };
@@ -75,7 +80,7 @@ export class MaterialStates {
     const far = Math.min(csm.mainCamera.far, csm.far);
 
     for (const [material, state] of this.map.entries()) {
-      const defines = material.defines;
+      const defines = material.userData.defines;
       if (defines != null) {
         let needsUpdate = false;
         if ((defines.CSM_FADE != null) !== fade) {
@@ -127,10 +132,10 @@ export class MaterialStates {
       // we've assigned above.
       delete material.onBeforeCompile;
     }
-    if (material.defines != null) {
-      delete material.defines.CSM;
-      delete material.defines.CSM_CASCADE_COUNT;
-      delete material.defines.CSM_FADE;
+    if (material.userData.defines != null) {
+      delete material.userData.defines.CSM;
+      delete material.userData.defines.CSM_CASCADE_COUNT;
+      delete material.userData.defines.CSM_FADE;
     }
     material.needsUpdate = true;
 

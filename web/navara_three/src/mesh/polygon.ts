@@ -204,11 +204,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
         : null,
     };
 
-    material.defines ??= {};
-    material.defines.USE_ROUGHNESS = 1;
+    material.userData.defines ??= {};
+    material.userData.defines.USE_ROUGHNESS = 1;
     this.water = !!meshMaterial.water;
 
+    material.customProgramCacheKey = () =>
+      JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (shader) => {
+      shader.defines ??= {};
+      Object.assign(shader.defines, material.userData.defines);
       shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
       shader.uniforms.nvr_uPickable = material.userData.uPickable;
       shader.uniforms.useGroundNormals = material.userData.useGroundNormals;
@@ -379,7 +383,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
   vec3 outgoingLight;
-  if((uClampToGround && !useGroundNormals) || uIsTexturized) {
+  if(uClampToGround && !useGroundNormals) {
     // Without lighting
     outgoingLight = diffuseColor.xyz;
   } else {
@@ -412,6 +416,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
         ).source;
     };
 
+    material.customProgramCacheKey = () =>
+      JSON.stringify(material.userData.defines);
+
     viewEvents.emit("_csmMounted", material);
 
     this.material = material;
@@ -432,10 +439,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     const origin = this.material;
 
+    this.customDepthMaterial.customProgramCacheKey = () =>
+      this.customDepthMaterial
+        ? JSON.stringify(this.customDepthMaterial.userData.defines)
+        : "";
     this.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
       origin.onBeforeCompile(shader, renderer);
 
-      shader.defines = { ...origin.defines };
+      shader.defines ??= {};
+      Object.assign(shader.defines, origin.userData.defines || {});
       shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
       shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
     };
@@ -565,15 +577,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   get water() {
-    return !!this.material.defines?.WATER;
+    return !!this.material.userData.defines?.WATER;
   }
   set water(v: boolean) {
-    this.material.defines ??= {};
+    this.material.userData.defines ??= {};
     if (v) {
-      this.material.defines.WATER = 1;
-      this.material.defines.USE_UV = 1;
+      this.material.userData.defines.WATER = 1;
+      this.material.userData.defines.USE_UV = 1;
     } else {
-      delete this.material.defines.WATER;
+      delete this.material.userData.defines.WATER;
     }
   }
 }

@@ -76,7 +76,6 @@ export class SSRMaterial extends ShaderMaterial {
       eyeFadeEnd,
       jitter,
       generateRayTracingBuffer,
-      ...others
     } = {
       ...ssrMaterialParametersDefaults,
       ...params,
@@ -124,7 +123,6 @@ export class SSRMaterial extends ShaderMaterial {
       toneMapped: false,
       depthWrite: false,
       depthTest: false,
-      ...others,
     });
   }
 
