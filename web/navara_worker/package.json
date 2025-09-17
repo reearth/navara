@@ -24,7 +24,7 @@
   "license": "MIT OR Apache-2.0",
   "dependencies": {
     "@navara/core": "workspace:*",
-    "workerpool": "^9.3.2"
+    "workerpool": "^9.3.4"
   },
   "devDependencies": {}
 }

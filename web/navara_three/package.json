@@ -24,19 +24,19 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.178.0"
+    "three": "^0.180.0"
   },
   "dependencies": {
     "@navara/core": "workspace:*",
     "@navara/three_api": "workspace:*",
     "@navara/three_csm": "workspace:*",
     "@navara/worker": "workspace:*",
-    "@takram/three-atmosphere": "^0.13.2",
-    "@takram/three-clouds": "^0.4.2",
-    "@takram/three-geospatial": "^0.3.0",
-    "@takram/three-geospatial-effects": "^0.4.0",
-    "n8ao": "^1.10.0",
-    "postprocessing": "^6.37.4",
+    "@takram/three-atmosphere": "^0.14.0",
+    "@takram/three-clouds": "^0.5.0",
+    "@takram/three-geospatial": "^0.4.0",
+    "@takram/three-geospatial-effects": "^0.4.1",
+    "n8ao": "^1.10.1",
+    "postprocessing": "^6.37.8",
     "stats.js": "^0.17.0",
     "three-stdlib": "^2.36.0",
     "troika-three-text": "^0.52.4"
@@ -44,12 +44,12 @@
   "devDependencies": {
     "@tweakpane/core": "^2.0.5",
     "@types/stats.js": "^0.17.4",
-    "@types/three": "^0.178.0",
+    "@types/three": "^0.180.0",
     "ajv": "^8.17.1",
-    "three": "^0.178.0",
+    "three": "^0.180.0",
     "tweakpane": "^4.0.5",
-    "vite-plugin-glsl": "^1.5.0",
-    "vite-plugin-static-copy": "^3.0.2",
+    "vite-plugin-glsl": "^1.5.1",
+    "vite-plugin-static-copy": "^3.1.2",
     "vite-plugin-virtual-mpa": "^1.12.1"
   }
 }
