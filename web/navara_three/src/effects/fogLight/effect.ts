@@ -36,7 +36,9 @@ export class FogLight extends Effect<
       | OrthographicCamera;
     super(
       camera,
-      new FogLightEffect(perspectiveOrOrthoCamera, mergedOptions),
+      new FogLightEffect(perspectiveOrOrthoCamera, {
+        ...mergedOptions,
+      }),
       mergedOptions,
     );
   }
@@ -63,9 +65,6 @@ export class FogLight extends Effect<
       );
     }
 
-    const uniforms = this.rawEffect.uniforms;
-    const numLightsUniform = uniforms.get("uLightCount");
-
     // Write light data to buffers
     for (let i = 0; i < numLights; i++) {
       const light = lights[i];
@@ -88,7 +87,7 @@ export class FogLight extends Effect<
     // Update textures
     this.rawEffect.updateLightTextures();
 
-    if (numLightsUniform) numLightsUniform.value = numLights;
+    this.rawEffect.defines.set("NUM_FOG_LIGHT", numLights.toString());
   }
 
   private updateFogDensity(): void {
