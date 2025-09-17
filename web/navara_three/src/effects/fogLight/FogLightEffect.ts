@@ -2,8 +2,8 @@ import FogLightFragment from "@shaders/glsl/fogLight.frag.glsl?raw";
 import { resolveIncludes } from "@takram/three-geospatial";
 import {
   Effect as PostProcessingEffect,
-  EffectAttribute,
   BlendFunction,
+  DepthCopyPass,
 } from "postprocessing";
 import {
   PerspectiveCamera,
@@ -21,6 +21,8 @@ import {
   NearestFilter,
   ClampToEdgeWrapping,
   Texture,
+  RGBADepthPacking,
+  type DepthPackingStrategies,
 } from "three";
 
 import { depth, packing, transform } from "../../shaders";
@@ -60,6 +62,7 @@ export class FogLightEffect extends PostProcessingEffect {
   private lightTex1: DataTexture;
   private buf0: Float32Array;
   private buf1: Float32Array;
+  private depthCopyPass: DepthCopyPass;
 
   constructor(
     camera: PerspectiveCamera | OrthographicCamera,
@@ -101,6 +104,7 @@ export class FogLightEffect extends PostProcessingEffect {
         ),
       ],
       ["normalBuffer", new Uniform(options.normalBuffer ?? null)],
+      ["copiedDepthBuffer", new Uniform(null)],
       [
         "useSurfaceLighting",
         new Uniform(
@@ -128,7 +132,6 @@ export class FogLightEffect extends PostProcessingEffect {
       }),
       {
         uniforms,
-        attributes: EffectAttribute.DEPTH,
         blendFunction: BlendFunction.NORMAL,
       },
     );
@@ -141,6 +144,22 @@ export class FogLightEffect extends PostProcessingEffect {
     this.lightTex1 = lightTex1;
     this.buf0 = buf0;
     this.buf1 = buf1;
+
+    // This is necessary to avoid
+    this.depthCopyPass = new DepthCopyPass();
+    // Assign the copied depth texture to the uniform
+    const depthBufferUniform = this.uniforms.get("copiedDepthBuffer");
+    if (depthBufferUniform) {
+      depthBufferUniform.value = this.depthCopyPass.texture;
+      this.defines.set("DEPTH_PACKING", RGBADepthPacking.toString());
+    }
+  }
+
+  setDepthTexture(
+    depthTexture: Texture,
+    depthPacking?: DepthPackingStrategies,
+  ): void {
+    this.depthCopyPass.setDepthTexture(depthTexture, depthPacking);
   }
 
   update(
@@ -148,6 +167,9 @@ export class FogLightEffect extends PostProcessingEffect {
     inputBuffer: WebGLRenderTarget,
     deltaTime: number,
   ): void {
+    // Copy the depth buffer
+    this.depthCopyPass.render(renderer, null, null);
+
     // Update camera matrices
     this.invProjectionMatrix.copy(this.camera.projectionMatrix).invert();
     this.invViewMatrix.copy(this.camera.matrixWorld);
@@ -205,5 +227,16 @@ export class FogLightEffect extends PostProcessingEffect {
   updateLightTextures(): void {
     this.lightTex0.needsUpdate = true;
     this.lightTex1.needsUpdate = true;
+  }
+
+  updateDepthBuffer(depthBuffer: Texture | null): void {
+    const depthBufferUniform = this.uniforms.get("depthBuffer");
+    if (depthBufferUniform) {
+      depthBufferUniform.value = depthBuffer;
+    }
+  }
+
+  setSize(width: number, height: number): void {
+    this.depthCopyPass.setSize(width, height);
   }
 }

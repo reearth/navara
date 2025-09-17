@@ -46,9 +46,16 @@ export abstract class EffectLayerDeclaration<
   static key: string;
   static insertAfter?: string[];
   static insertBefore?: string[];
+  static allowDuplication?: boolean;
+
+  private instanceId: string;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
+    // Generate unique instance ID for layers that allow duplication
+    this.instanceId = this.getConstructor().allowDuplication
+      ? `${this.getKey()}_${Math.random().toString(36).slice(2, 9)}`
+      : this.getKey();
   }
 
   abstract createPass(): Instance;
@@ -102,7 +109,8 @@ export abstract class EffectLayerDeclaration<
   private insertPass(): void {
     if (!this.raw) return;
 
-    const key = this.getKey();
+    // Use instanceId for pass registration to allow duplicates
+    const key = this.instanceId;
     const insertAfter = this.getInsertAfter() || [];
     const insertBefore = this.getInsertBefore() || [];
 
@@ -140,9 +148,9 @@ export abstract class EffectLayerDeclaration<
   }
 
   onDestroy(): void {
-    // Remove from orchestrator
+    // Remove from orchestrator using the instance ID
     if (this.view.renderPassOrchestrator) {
-      this.view.renderPassOrchestrator.removePass(this.getKey());
+      this.view.renderPassOrchestrator.removePass(this.instanceId);
     }
 
     this._instance = undefined;
