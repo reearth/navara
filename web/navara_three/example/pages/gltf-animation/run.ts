@@ -9,10 +9,40 @@ import {
   LLE,
 } from "@navara/three_api";
 import { Vector3, Quaternion, Euler } from "three";
-import { Pane } from "tweakpane";
+import { Pane, type FolderApi } from "tweakpane";
 
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
+
+// Type definitions
+type AnimationState = "Idle" | "Walk" | "Run";
+
+type AnimationWeights = {
+  readonly name: AnimationState;
+  readonly weight: number;
+};
+
+type AnimationControlParams = {
+  showModel: boolean;
+  showSkeleton: boolean;
+  useDefaultDuration: boolean;
+  customDuration: number;
+  idleWeight: number;
+  walkWeight: number;
+  runWeight: number;
+  timeScale: number;
+};
+
+type BlendWeightApis = {
+  idleWeight: { refresh: () => void };
+  walkWeight: { refresh: () => void };
+  runWeight: { refresh: () => void };
+};
+
+type AnimationControlReturn = {
+  applyWeights: (weights: readonly AnimationWeights[]) => void;
+  setDefaultWeights: (weights: readonly AnimationWeights[]) => void;
+};
 
 const tileUrls = {
   openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -80,15 +110,27 @@ export const run = async (view: ThreeView) => {
 
   // Create control panel
   const pane = new Pane({
-    title: "Controls",
+    title: "Animation Controls",
     expanded: true,
   });
 
   addHidePaneKeyShortcut(pane);
 
+  // Create folders for each model
+  const gltfFolder = pane.addFolder({
+    title: "GLTF Model (Sapporo)",
+    expanded: true,
+  });
+
+  const geojsonFolder = pane.addFolder({
+    title: "GeoJSON Model (Tokyo)",
+    expanded: true,
+  });
+
   const modelLayer = addTestModelForNormal(view);
-  addGeoJsonAnimatedModel(view);
-  const controls = addTextModelControl(view, pane, modelLayer);
+  const geoJsonModelLayer = addGeoJsonAnimatedModel(view);
+  const controls = addTextModelControl(view, gltfFolder, modelLayer);
+  addGeoJsonModelControl(view, geojsonFolder, geoJsonModelLayer);
 
   // Wait for animation initialization, then set initial blend and sync UI
   modelLayer.ref.on("animationReady", () => {
@@ -155,18 +197,11 @@ const addTestModelForNormal = (
 
 const addTextModelControl = (
   _view: ThreeView,
-  pane: Pane,
+  pane: Pane | FolderApi,
   modelLayer: LayerHandle<GLTFModelLayer>,
-): {
-  applyWeights: (
-    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
-  ) => void;
-  setDefaultWeights: (
-    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
-  ) => void;
-} => {
+): AnimationControlReturn => {
   // Control parameters
-  const PARAMS = {
+  const PARAMS: AnimationControlParams = {
     showModel: true,
     showSkeleton: false,
     useDefaultDuration: true,
@@ -180,24 +215,14 @@ const addTextModelControl = (
   // Helpers to sync Crossfading with Blend Weights UI
   let isProgrammaticUpdate = false;
   let crossfadeRaf: number | null = null;
-  let defaultWeights: readonly {
-    name: "Idle" | "Walk" | "Run";
-    weight: number;
-  }[] = [
+  let defaultWeights: readonly AnimationWeights[] = [
     { name: "Idle", weight: 0 },
     { name: "Walk", weight: 0 },
     { name: "Run", weight: 0 },
   ];
 
   // Store field APIs for programmatic updates
-  let blendWeightApis: {
-    idleWeight: { refresh: () => void };
-    walkWeight: { refresh: () => void };
-    runWeight: { refresh: () => void };
-  };
-
-  // Animation state type
-  type AnimationState = "Idle" | "Walk" | "Run";
+  let blendWeightApis: BlendWeightApis;
 
   // Get current crossfade duration
   function getCrossfadeDuration(): number {
@@ -234,10 +259,10 @@ const addTextModelControl = (
   }
 
   function startCrossfadeSync(
-    from: "Idle" | "Walk" | "Run",
-    to: "Idle" | "Walk" | "Run",
+    from: AnimationState,
+    to: AnimationState,
     duration: number,
-  ) {
+  ): void {
     if (crossfadeRaf !== null) cancelAnimationFrame(crossfadeRaf);
     const start = performance.now();
     const loop = () => {
@@ -267,15 +292,15 @@ const addTextModelControl = (
   }
 
   function getCrossfadeWeights(
-    from: "Idle" | "Walk" | "Run",
-    to: "Idle" | "Walk" | "Run",
+    from: AnimationState,
+    to: AnimationState,
     t: number,
-  ) {
+  ): { idle: number; walk: number; run: number } {
     const w = { idle: 0, walk: 0, run: 0 };
     const vFrom = Math.max(0, 1 - t);
     const vTo = Math.max(0, t);
 
-    // 関与するアニメーションのみ重みを設定
+    // Set weights only for animations involved in the transition
     if (from === "Idle") w.idle = vFrom;
     if (from === "Walk") w.walk = vFrom;
     if (from === "Run") w.run = vFrom;
@@ -283,22 +308,22 @@ const addTextModelControl = (
     if (to === "Walk") w.walk = vTo;
     if (to === "Run") w.run = vTo;
 
-    // 関係のないアニメーションの重みを明示的に0にする
+    // Explicitly set weights to 0 for unrelated animations
     if (
       (from === "Walk" && to === "Idle") ||
       (from === "Idle" && to === "Walk")
     ) {
-      w.run = 0; // walk ↔ idle の時はrunを0に
+      w.run = 0; // Set run to 0 during walk ↔ idle transitions
     }
 
     if (
       (from === "Walk" && to === "Run") ||
       (from === "Run" && to === "Walk")
     ) {
-      w.idle = 0; // walk ↔ run の時はidleを0に
+      w.idle = 0; // Set idle to 0 during walk ↔ run transitions
     }
 
-    // idle ↔ run の場合はwalkを0に（将来的な拡張のため）
+    // Set walk to 0 for idle ↔ run transitions (for future extensions)
     if (
       (from === "Idle" && to === "Run") ||
       (from === "Run" && to === "Idle")
@@ -341,8 +366,6 @@ const addTextModelControl = (
       // Apply current Blend Weights values
       updateBlendWeights();
     });
-
-  // Pausing/Stepping controls removed per request
 
   // Crossfading folder
   const crossfadingFolder = pane.addFolder({
@@ -451,8 +474,6 @@ const addTextModelControl = (
   }
 
   crossfadingFolder.addBinding(PARAMS, "useDefaultDuration");
-
-  // Default duration is fixed to 1.0s, no slider needed
 
   crossfadingFolder.addBinding(PARAMS, "customDuration", {
     min: 0.1,
@@ -571,9 +592,7 @@ const addTextModelControl = (
     });
   }
 
-  function applyWeights(
-    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
-  ) {
+  function applyWeights(weights: readonly AnimationWeights[]): void {
     // Update UI values and refresh without triggering change handlers
     const weightMap = new Map<string, number>(
       weights.map((w) => [w.name, w.weight]),
@@ -602,16 +621,14 @@ const addTextModelControl = (
     }
   }
 
-  function setDefaultWeights(
-    weights: readonly { name: "Idle" | "Walk" | "Run"; weight: number }[],
-  ) {
+  function setDefaultWeights(weights: readonly AnimationWeights[]): void {
     defaultWeights = weights;
   }
 
   return { applyWeights, setDefaultWeights };
 };
 
-const addGeoJsonAnimatedModel = (_view: ThreeView) => {
+const addGeoJsonAnimatedModel = (_view: ThreeView): LayerHandle => {
   // Position near Tokyo Station coordinates
   const pos = {
     type: "Feature",
@@ -619,7 +636,7 @@ const addGeoJsonAnimatedModel = (_view: ThreeView) => {
     geometry: { type: "Point", coordinates: [139.7671, 35.6812] },
   };
 
-  _view.addLayer({
+  return _view.addLayer({
     type: "geojson",
     data: pos,
     model: {
@@ -629,7 +646,160 @@ const addGeoJsonAnimatedModel = (_view: ThreeView) => {
       // Minimal animation config for GeoJSON model
       url: "/glTF/Soldier/Soldier.glb",
       animation_active_clip: "Walk",
-      animation_speed: 2.0,
+      animation_speed: 1.0,
     },
   });
+};
+
+const addGeoJsonModelControl = (
+  view: ThreeView,
+  folder: FolderApi,
+  initialLayer: LayerHandle,
+): void => {
+  // Control parameters for GeoJSON model
+  const PARAMS = {
+    animationSpeed: 1.0,
+    currentAnimation: "Walk" as AnimationState,
+    modelSize: 300000,
+  };
+
+  // Keep track of current layer
+  let currentGeoJsonLayer = initialLayer;
+
+  const pos = {
+    type: "Feature",
+    properties: {},
+    geometry: { type: "Point", coordinates: [139.7671, 35.6812] },
+  };
+
+  // Function to recreate the layer with minimal T-pose visibility
+  const updateLayer = () => {
+    // Create new layer first to minimize gap
+    const newLayer = view.addLayer({
+      type: "geojson",
+      data: pos,
+      model: {
+        show: true,
+        size: PARAMS.modelSize,
+        clamp_to_ground: true,
+        url: "/glTF/Soldier/Soldier.glb",
+        animation_active_clip: PARAMS.currentAnimation,
+        animation_speed: PARAMS.animationSpeed,
+      },
+    }) as LayerHandle;
+
+    // Delete the old layer after new one is created
+    currentGeoJsonLayer.delete();
+    
+    // Update reference to new layer
+    currentGeoJsonLayer = newLayer;
+  };
+
+  // Animation switching buttons
+  const switchingFolder = folder.addFolder({
+    title: "Animation Switching",
+    expanded: true,
+  });
+
+  switchingFolder
+    .addButton({
+      title: "Idle",
+    })
+    .on("click", () => {
+      PARAMS.currentAnimation = "Idle";
+      updateLayer();
+    });
+
+  switchingFolder
+    .addButton({
+      title: "Walk",
+    })
+    .on("click", () => {
+      PARAMS.currentAnimation = "Walk";
+      updateLayer();
+    });
+
+  switchingFolder
+    .addButton({
+      title: "Run",
+    })
+    .on("click", () => {
+      PARAMS.currentAnimation = "Run";
+      updateLayer();
+    });
+
+  // Size presets
+  const sizePresetsFolder = folder.addFolder({
+    title: "Size Presets",
+    expanded: true,
+  });
+
+  sizePresetsFolder
+    .addButton({
+      title: "Small Model",
+    })
+    .on("click", () => {
+      PARAMS.modelSize = 150000;
+      updateLayer();
+    });
+
+  sizePresetsFolder
+    .addButton({
+      title: "Medium Model",
+    })
+    .on("click", () => {
+      PARAMS.modelSize = 300000;
+      updateLayer();
+    });
+
+  sizePresetsFolder
+    .addButton({
+      title: "Large Model",
+    })
+    .on("click", () => {
+      PARAMS.modelSize = 450000;
+      updateLayer();
+    });
+
+  // Speed presets
+  const speedPresetsFolder = folder.addFolder({
+    title: "Speed Presets",
+    expanded: true,
+  });
+
+  speedPresetsFolder
+    .addButton({
+      title: "Slow (0.5x)",
+    })
+    .on("click", () => {
+      PARAMS.animationSpeed = 0.5;
+      updateLayer();
+    });
+
+  speedPresetsFolder
+    .addButton({
+      title: "Normal (1.0x)",
+    })
+    .on("click", () => {
+      PARAMS.animationSpeed = 1.0;
+      updateLayer();
+    });
+
+  speedPresetsFolder
+    .addButton({
+      title: "Fast (2.0x)",
+    })
+    .on("click", () => {
+      PARAMS.animationSpeed = 2.0;
+      updateLayer();
+    });
+
+  speedPresetsFolder
+    .addButton({
+      title: "Very Fast (3.0x)",
+    })
+    .on("click", () => {
+      PARAMS.animationSpeed = 3.0;
+      updateLayer();
+    });
 };
