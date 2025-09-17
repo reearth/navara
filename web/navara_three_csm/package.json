@@ -23,11 +23,11 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.180.0"
+    "three": "^0.178.0"
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/three": "^0.180.0",
-    "three": "^0.180.0"
+    "@types/three": "^0.178.0",
+    "three": "^0.178.0"
   }
 }
