@@ -45,7 +45,7 @@ navara_wasm_transferable = { path = "../navara_wasm_transferable" }
 navara_quadtree = { path = "../navara_quadtree" }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.50"
+wasm-bindgen-test = "0.3.52"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
