@@ -690,7 +690,7 @@ const addGeoJsonModelControl = (
 
     // Delete the old layer after new one is created
     currentGeoJsonLayer.delete();
-    
+
     // Update reference to new layer
     currentGeoJsonLayer = newLayer;
   };
