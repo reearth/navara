@@ -1,6 +1,6 @@
 // GeoJSON Model related functions
 
-import ThreeView, { type LayerHandle } from "@navara/three";
+import ThreeView, { type Layer } from "@navara/three";
 import { type FolderApi } from "tweakpane";
 
 import { TOKYO_STATION_COORDINATES, MODEL_CONFIG } from "../constants";
@@ -9,7 +9,7 @@ import type { AnimationState } from "../types";
 /**
  * Add GeoJSON animated model
  */
-export const addGeoJsonAnimatedModel = (_view: ThreeView): LayerHandle => {
+export const addGeoJsonAnimatedModel = (_view: ThreeView): Layer => {
   // Position near Tokyo Station coordinates
   const pos = {
     type: "Feature",
@@ -44,7 +44,7 @@ export const addGeoJsonAnimatedModel = (_view: ThreeView): LayerHandle => {
 export const addGeoJsonModelControl = (
   view: ThreeView,
   folder: FolderApi,
-  initialLayer: LayerHandle,
+  initialLayer: Layer,
 ): void => {
   // Control parameters for GeoJSON model
   const PARAMS = {
@@ -68,27 +68,39 @@ export const addGeoJsonModelControl = (
     },
   };
 
-  // Function to recreate the layer with minimal T-pose visibility
+  // Try in-place update first; fallback to recreate only if needed
   const updateLayer = () => {
-    // Create new layer first to minimize gap
-    const newLayer = view.addLayer({
-      type: "geojson",
-      data: pos,
-      model: {
-        show: true,
-        size: PARAMS.modelSize,
-        clamp_to_ground: true,
-        url: MODEL_CONFIG.url,
-        animation_active_clip: PARAMS.currentAnimation,
-        animation_speed: PARAMS.animationSpeed,
-      },
-    }) as LayerHandle;
-
-    // Delete the old layer after new one is created
-    currentGeoJsonLayer.delete();
-
-    // Update reference to new layer
-    currentGeoJsonLayer = newLayer;
+    try {
+      currentGeoJsonLayer.update({
+        model: {
+          show: true,
+          size: PARAMS.modelSize,
+          clamp_to_ground: true,
+          url: MODEL_CONFIG.url,
+          animation_active_clip: PARAMS.currentAnimation,
+          animation_speed: PARAMS.animationSpeed,
+        },
+      });
+    } catch (error) {
+      console.warn(
+        "Direct layer update failed, falling back to recreation:",
+        error,
+      );
+      const newLayer = view.addLayer({
+        type: "geojson",
+        data: pos,
+        model: {
+          show: true,
+          size: PARAMS.modelSize,
+          clamp_to_ground: true,
+          url: MODEL_CONFIG.url,
+          animation_active_clip: PARAMS.currentAnimation,
+          animation_speed: PARAMS.animationSpeed,
+        },
+      }) as Layer;
+      currentGeoJsonLayer.delete();
+      currentGeoJsonLayer = newLayer;
+    }
   };
 
   // Animation switching buttons
