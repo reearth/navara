@@ -1,5 +1,3 @@
-import { Scene } from "three";
-
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -33,16 +31,7 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
   }
 
   createPass() {
-    // TODO: Pass depth buffer, not a scene.
-    // This matches the existing implementation in ThreeView
-    const combinedScene = new Scene();
-    combinedScene.add(this.view.scenes.globe);
-    combinedScene.add(this.view.scenes.mrt);
-    combinedScene.add(this.view.scenes.opaque);
-    combinedScene.add(this.view.scenes.light);
-
     const pass = new SSAO(
-      combinedScene,
       this.view.camera,
       this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientWidth,
       this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientHeight,
