@@ -90,7 +90,11 @@ export class BatchedFeatureMesh<
       this._getDefaultBatchAttributeValues(),
     );
 
-    this.dispatchEvent({ type: "batchAttributeUpdated" } as any); // Events aren't inferred well.
+    this.needsUpdate();
+  }
+
+  needsUpdate() {
+    this.dispatchEvent({ type: "needsUpdate" } as any); // Events aren't inferred well.
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
@@ -119,6 +123,7 @@ export class BatchedFeatureMesh<
 
   _togglePickable(pickable: number) {
     this.material.userData.uPickable.value = pickable;
+    this.needsUpdate();
   }
 
   clone() {
