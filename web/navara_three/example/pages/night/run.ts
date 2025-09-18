@@ -7,6 +7,7 @@ import ThreeView, {
   type StarsLayer,
   type FogLightEffectLayer,
   type LayerDescription,
+  type FogLightDefinition,
 } from "@navara/three";
 import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import type { FeatureCollection, Point } from "geojson";
@@ -124,7 +125,10 @@ export const run = async (view: ThreeView) => {
   // Sky Light Probe controls
   addSkyLightProbeControl(view, defaultAtmosphere.skyLightProbe, pane);
 
-  // Fog Light controls
+  // Add independent Tokyo Points control with its own fog light
+  addTokyoPointsFogLightControl(view, pane);
+
+  // Fog Light controls for 3D Tiles scenes
   addFogLightControl(view, pane, sceneChangeHandler);
 };
 
@@ -280,7 +284,6 @@ const addSkyLightProbeControl = (
 };
 
 const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
-  // Define the scenes with their light data files
   const SCENES = {
     "Chiyoda & Chuo": {
       tiles: [
@@ -303,10 +306,6 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
       ],
       lightDataFile: "/takanawa_point_light.geojson",
-    },
-    "Tokyo Points": {
-      tiles: [],
-      lightDataFile: "/tokyo_points_100.geojson",
     },
   };
 
@@ -358,7 +357,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
 
   // Add control to pane
   const folder = pane.addFolder({
-    title: "Scene type",
+    title: "3D Tiles Scene",
     expanded: true,
   });
 
@@ -394,6 +393,120 @@ type StreetLightFeature = FeatureCollection<
   }
 >;
 
+// Common function to load GeoJSON light data and convert to 3D positions
+const loadGeoJSONLights = async (
+  url: string,
+): Promise<FogLightDefinition[]> => {
+  try {
+    const response = await fetch(url);
+    const geojson: StreetLightFeature = await response.json();
+
+    return geojson.features.map((feature) => {
+      const [lon, lat] = feature.geometry.coordinates;
+      const altitude = feature.properties?.height || 10;
+
+      const lle = new LLE(degreeToRadian(lat), degreeToRadian(lon), altitude);
+      const position = geodeticToVector3(lle);
+
+      return {
+        position: { x: position.x, y: position.y, z: position.z },
+        color: feature.properties?.color || 0xffaa55,
+        intensity: feature.properties?.intensity || 1.0,
+      };
+    });
+  } catch (error) {
+    console.warn(`Failed to load GeoJSON data from ${url}:`, error);
+    return [];
+  }
+};
+
+const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
+  // Load Tokyo Points light data using common function
+  const tokyoPointsLights = await loadGeoJSONLights(
+    "/tokyo_points_100.geojson",
+  );
+
+  // Create separate fog light layer for Tokyo Points
+  const tokyoPointsFogLayer = view.addLayer<FogLightEffectLayer>({
+    type: "effect",
+    fogLight: {
+      lights: tokyoPointsLights,
+      fogDensity: 2.0, // Different default density for Tokyo Points
+      useSurfaceLighting: true,
+    },
+    visible: false, // Initially hidden
+  });
+
+  // Create UI folder for Tokyo Points
+  const folder = pane.addFolder({
+    title: "Tokyo Points Fog Light",
+    expanded: true,
+  });
+
+  const params = {
+    visible: false,
+    fogDensity: 2.0,
+    lightsIntensity: 1.0,
+    useSurfaceLighting: true,
+  };
+
+  // Visibility control
+  folder
+    .addBinding(params, "visible", {
+      label: "Enable",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({
+        visible: ev.value,
+      });
+    });
+
+  // Fog density control
+  folder
+    .addBinding(params, "fogDensity", {
+      min: 0,
+      max: 20,
+      step: 0.1,
+      label: "Fog Density",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({
+        fogLight: { fogDensity: ev.value },
+      });
+    });
+
+  // Lights intensity control
+  folder
+    .addBinding(params, "lightsIntensity", {
+      min: 0,
+      max: 10,
+      step: 0.1,
+      label: "Lights Intensity",
+    })
+    .on("change", (ev) => {
+      const updatedLights = tokyoPointsLights.map((light) => ({
+        ...light,
+        intensity: ev.value,
+      }));
+      tokyoPointsFogLayer.update({
+        fogLight: { lights: updatedLights },
+      });
+    });
+
+  // Surface lighting toggle
+  folder
+    .addBinding(params, "useSurfaceLighting", {
+      label: "Surface Lighting",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({
+        fogLight: { useSurfaceLighting: ev.value },
+      });
+    });
+
+  return folder;
+};
+
 const addFogLightControl = async (
   view: ThreeView,
   pane: Pane,
@@ -401,56 +514,31 @@ const addFogLightControl = async (
 ) => {
   // Fetch street light data and add fog light effect
   let fogLightLayer: LayerHandle<FogLightEffectLayer> | undefined;
-  let streetLights: {
-    position: { x: number; y: number; z: number };
-    color: number;
-    intensity: number;
-  }[] = [];
+  let streetLights: FogLightDefinition[] = [];
 
-  // Function to load light data from a file
+  // Function to load light data from a file using common function
   const loadLightData = async (lightDataFile: string) => {
-    try {
-      const response = await fetch(lightDataFile);
-      const geojson: StreetLightFeature = await response.json();
+    streetLights = await loadGeoJSONLights(lightDataFile);
 
-      // Convert GeoJSON coordinates to Vector3
-      streetLights = geojson.features.map((feature) => {
-        const [lon, lat] = feature.geometry.coordinates;
-        const altitude = feature.properties?.height || 10; // Default 10m height for street lights
-
-        // Convert geodetic coordinates to 3D vector
-        const lle = new LLE(degreeToRadian(lat), degreeToRadian(lon), altitude);
-        const position = geodeticToVector3(lle);
-
-        return {
-          position: { x: position.x, y: position.y, z: position.z },
-          color: feature.properties?.color || 0xffaa55, // Warm street light color
-          intensity: feature.properties?.intensity || 1.0,
-        };
+    // Update or create fog light layer
+    if (fogLightLayer) {
+      fogLightLayer.update({
+        fogLight: {
+          lights: streetLights,
+        },
       });
-
-      // Update or create fog light layer
-      if (fogLightLayer) {
-        fogLightLayer.update({
-          fogLight: {
-            lights: streetLights,
-          },
-        });
-      } else {
-        // Create fog light layer, initially visible only at night
-        const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-        fogLightLayer = view.addLayer<FogLightEffectLayer>({
-          type: "effect",
-          fogLight: {
-            lights: streetLights,
-            fogDensity: 0.5,
-            useSurfaceLighting: true,
-          },
-          visible: isAtNight,
-        });
-      }
-    } catch (error) {
-      console.warn(`Failed to load light data from ${lightDataFile}:`, error);
+    } else {
+      // Create fog light layer, initially visible only at night
+      const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
+      fogLightLayer = view.addLayer<FogLightEffectLayer>({
+        type: "effect",
+        fogLight: {
+          lights: streetLights,
+          fogDensity: 0.5,
+          useSurfaceLighting: true,
+        },
+        visible: isAtNight,
+      });
     }
   };
 
@@ -468,7 +556,7 @@ const addFogLightControl = async (
   }
 
   const fogLightFolder = pane.addFolder({
-    title: "Fog Light",
+    title: "Scene Fog Light",
     expanded: true,
   });
 

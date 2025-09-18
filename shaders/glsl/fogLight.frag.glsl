@@ -5,6 +5,7 @@
 uniform sampler2D uLightTex0; // color,intensity
 uniform sampler2D uLightTex1; // position in world space, unused
 uniform sampler2D normalBuffer;
+uniform sampler2D copiedDepthBuffer;
 uniform bool useSurfaceLighting;
 uniform int uLightCount;
 uniform ivec2 uLightTexSize;
@@ -68,6 +69,22 @@ vec3 calculateFogScattering(vec3 worldPos, vec3 lightPos, vec3 lightColor, vec3 
     return fogLight;
 }
 
+float readDepth(const vec2 uv) {
+  #if DEPTH_PACKING == 3201
+  return unpackRGBAToDepth(texture2D(copiedDepthBuffer, uv));
+  #else
+  return texture2D(copiedDepthBuffer, uv).r;
+  #endif // DEPTH_PACKING == 3201
+}
+
+float getViewZ(const float depth) {
+  #ifdef PERSPECTIVE_CAMERA
+  return perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
+  #else
+  return orthographicDepthToViewZ(depth, cameraNear, cameraFar);
+  #endif
+}
+
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
     float depth = readDepth(uv);
     depth = reverseLogDepth(depth, cameraNear, cameraFar);
@@ -94,7 +111,8 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec3 fogColor = vec3(0.0);
     
     // Loop through all lights using DataTexture
-    for (int i = 0; i < uLightCount; ++i) {
+    #pragma unroll_loop_start
+    for (int i = 0; i < NUM_FOG_LIGHT; ++i) {
         vec4 ci = readCI(i); // color,intensity
         vec4 posData = readPos(i); // position in world space
         
@@ -116,6 +134,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
             fogColor += lightContribution;
         }
     }
+    #pragma unroll_loop_end
     
     vec3 finalColor = inputColor.rgb + fogColor;
     
