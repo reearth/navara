@@ -576,6 +576,16 @@ pub struct ModelMaterial {
     pub shininess: Option<f32>,
     pub specular_strength: Option<f32>,
     pub apply_water_normal: Option<bool>,
+    // animation
+    pub animation_enabled: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub animation_clips: Option<Vec<String>>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub animation_active_clip: Option<String>,
+    pub animation_speed: Option<f32>,
+    pub animation_loop: Option<bool>,
+    pub animation_crossfade_duration: Option<f32>,
+    pub animation_auto_play: Option<bool>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -605,6 +615,14 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             shininess: val.shininess.unwrap_or(default.shininess),
             specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
             apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
+            // animation
+            animation_enabled: val.animation_enabled.or(default.animation_enabled),
+            animation_clips: val.animation_clips,
+            animation_active_clip: val.animation_active_clip,
+            animation_speed: val.animation_speed,
+            animation_loop: val.animation_loop,
+            animation_crossfade_duration: val.animation_crossfade_duration,
+            animation_auto_play: val.animation_auto_play,
         }
     }
 }
@@ -632,6 +650,14 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             shininess: Some(value.shininess),
             specular_strength: Some(value.specular_strength),
             apply_water_normal: Some(value.apply_water_normal),
+            // animation
+            animation_enabled: value.animation_enabled,
+            animation_clips: value.animation_clips.clone(),
+            animation_active_clip: value.animation_active_clip.clone(),
+            animation_speed: value.animation_speed,
+            animation_loop: value.animation_loop,
+            animation_crossfade_duration: value.animation_crossfade_duration,
+            animation_auto_play: value.animation_auto_play,
         }
     }
 }
