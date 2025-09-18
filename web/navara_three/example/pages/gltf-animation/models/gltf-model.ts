@@ -14,7 +14,7 @@ import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 
 import { addFieldsToFolder, type FolderFields } from "../../../helpers/panel";
-import { SAPPORO_COORDINATES, MODEL_CONFIG } from "../constants";
+import { SAPPORO_GEOJSON, MODEL_CONFIG } from "../constants";
 import type {
   AnimationState,
   AnimationWeights,
@@ -26,6 +26,19 @@ import {
   getCrossfadeWeights,
   getCurrentPrimaryAnimation,
 } from "../utils/animation-utils";
+
+// Helper function to extract coordinates from GeoJSON
+function getCoordinatesFromGeoJSON(geojson: typeof SAPPORO_GEOJSON) {
+  const [longitude, latitude] = geojson.geometry.coordinates;
+  return {
+    latitude,
+    longitude,
+    altitude: 0, // Default altitude for GLTF model
+  };
+}
+
+// Extract coordinates from GeoJSON for calculations
+const SAPPORO_COORDINATES = getCoordinatesFromGeoJSON(SAPPORO_GEOJSON);
 
 /**
  * Add GLTF model for normal surface alignment

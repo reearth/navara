@@ -3,9 +3,9 @@
 import ThreeView from "@navara/three";
 import { Pane } from "tweakpane";
 
+import { TILE_URLS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
-import { tileUrls } from "./constants";
 import {
   addGeoJsonAnimatedModel,
   addGeoJsonModelControl,
@@ -29,14 +29,11 @@ export const run = async (view: ThreeView) => {
   // Add base tile layer
   view.addLayer({
     type: "tiles",
-    data: { url: tileUrls.openstreetmap },
+    data: { url: TILE_URLS.openstreetmap },
     raster_tile: {
       max_zoom: 23,
     },
   });
-
-  // Add sample geometry layers
-  addSampleGeometry(view);
 
   // Create control panel
   const pane = new Pane({
@@ -76,52 +73,3 @@ export const run = async (view: ThreeView) => {
     controls.applyWeights(initialWeights);
   });
 };
-
-/**
- * Add sample geometry layers for demonstration
- */
-function addSampleGeometry(view: ThreeView): void {
-  // Add sample line
-  view.addLayer({
-    type: "geojson",
-    data: {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        coordinates: [
-          [138.64270223212833, 35.42793245331515],
-          [138.8398612065625, 35.42635304536398],
-          [138.64071756664583, 35.33027587314082],
-          [138.8449071750585, 35.32671062382879],
-        ],
-        type: "LineString",
-      },
-    },
-    polyline: {
-      color: 0xff0000,
-      width: 2,
-    },
-  });
-
-  // Add sample polygon
-  view.addLayer({
-    type: "geojson",
-    data: {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        coordinates: [
-          [
-            [138.66861922558115, 35.46838056308519],
-            [138.6559918549957, 35.29164005065681],
-            [138.81174182884172, 35.279838616806046],
-            [138.8071009152797, 35.436389815907134],
-            [138.66861922558115, 35.46838056308519],
-          ],
-        ],
-        type: "Polygon",
-      },
-    },
-    polygon: {},
-  });
-}

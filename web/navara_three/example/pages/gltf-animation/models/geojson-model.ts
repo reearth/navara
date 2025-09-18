@@ -3,29 +3,16 @@
 import ThreeView, { type Layer } from "@navara/three";
 import { type FolderApi } from "tweakpane";
 
-import { TOKYO_STATION_COORDINATES, MODEL_CONFIG } from "../constants";
+import { TOKYO_STATION_GEOJSON, MODEL_CONFIG } from "../constants";
 import type { AnimationState } from "../types";
 
 /**
  * Add GeoJSON animated model
  */
 export const addGeoJsonAnimatedModel = (_view: ThreeView): Layer => {
-  // Position near Tokyo Station coordinates
-  const pos = {
-    type: "Feature",
-    properties: {},
-    geometry: {
-      type: "Point",
-      coordinates: [
-        TOKYO_STATION_COORDINATES.longitude,
-        TOKYO_STATION_COORDINATES.latitude,
-      ],
-    },
-  };
-
   return _view.addLayer({
     type: "geojson",
-    data: pos,
+    data: TOKYO_STATION_GEOJSON,
     model: {
       show: true,
       size: MODEL_CONFIG.size,
@@ -56,18 +43,6 @@ export const addGeoJsonModelControl = (
   // Keep track of current layer
   let currentGeoJsonLayer = initialLayer;
 
-  const pos = {
-    type: "Feature",
-    properties: {},
-    geometry: {
-      type: "Point",
-      coordinates: [
-        TOKYO_STATION_COORDINATES.longitude,
-        TOKYO_STATION_COORDINATES.latitude,
-      ],
-    },
-  };
-
   // Try in-place update first; fallback to recreate only if needed
   const updateLayer = () => {
     try {
@@ -88,7 +63,7 @@ export const addGeoJsonModelControl = (
       );
       const newLayer = view.addLayer({
         type: "geojson",
-        data: pos,
+        data: TOKYO_STATION_GEOJSON,
         model: {
           show: true,
           size: PARAMS.modelSize,

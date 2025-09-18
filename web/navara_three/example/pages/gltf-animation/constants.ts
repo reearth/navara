@@ -1,25 +1,31 @@
-// Constants for GLTF Animation example
+/**
+ * Constants for GLTF Animation example
+ * 
+ * Contains geographical coordinates and 3D model configuration
+ * used in the GLTF animation demonstration.
+ */
 
-export const tileUrls = {
-  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-  gsiSeamlessphoto:
-    "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+// Sapporo coordinates as GeoJSON Feature (used for GLTF model)
+export const SAPPORO_GEOJSON = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    type: "Point",
+    coordinates: [141.3545, 43.0618], // [longitude, latitude]
+  },
 };
 
-// Model coordinates
-export const SAPPORO_COORDINATES = {
-  latitude: 43.0618,
-  longitude: 141.3545,
-  altitude: 0,
+// Tokyo Station coordinates as GeoJSON Feature (used for GeoJSON model)
+export const TOKYO_STATION_GEOJSON = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    type: "Point",
+    coordinates: [139.7671, 35.6812], // [longitude, latitude]
+  },
 };
 
-export const TOKYO_STATION_COORDINATES = {
-  latitude: 35.6812,
-  longitude: 139.7671,
-};
-
-// Model configuration
+// 3D model configuration
 export const MODEL_CONFIG = {
   url: "/glTF/Soldier/Soldier.glb",
   scale: { x: 300000, y: 300000, z: 300000 },
