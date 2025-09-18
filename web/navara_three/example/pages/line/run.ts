@@ -3,9 +3,7 @@ import ThreeView, {
   CloudsEffectLayer,
   type ArclineMeshLayer,
 } from "@navara/three";
-
 import { Vector3 } from "three";
-
 import { Pane } from "tweakpane";
 
 import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
@@ -108,8 +106,6 @@ const gArcLinesDef = [
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
-
   view.addLayer({
     type: "terrain",
     data: {
@@ -138,20 +134,20 @@ export const run = async (view: ThreeView) => {
     scale: new Vector3().setScalar(1e9),
   });
 
-  const defaultEffects = view.addDefaultEffectLayers();
+  // For debug
+  // const defaultEffects = view.addDefaultEffectLayers();
+  // defaultEffects.aerialPerspective.update({
+  //   aerialPerspective: {
+  //     irradiance: true,
+  //   },
+  // });
+
   view.addDefaultAtmosphereLayers();
 
   view.addLayer<CloudsEffectLayer>({
     type: "effect",
     clouds: {},
   });
-
-  defaultEffects.aerialPerspective.update({
-    aerialPerspective: {
-      irradiance: true,
-    },
-  });
-
   const pane = new Pane({
     title: "Parameters",
     expanded: true,

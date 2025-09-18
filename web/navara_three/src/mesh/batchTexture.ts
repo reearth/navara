@@ -42,12 +42,12 @@ export function initBatchedMaterial(
   material: Material,
   config: BatchTextureConfig,
 ): void {
-  material.defines ??= {};
+  material.userData.defines ??= {};
 
   let idx = 0;
   for (const row of config.rows) {
     const defineKey = `BATCHED_TEXTURE_ROW_${row}`;
-    material.defines[defineKey] = idx.toFixed(1);
+    material.userData.defines[defineKey] = idx.toFixed(1);
     idx++;
   }
 
@@ -74,8 +74,8 @@ export function initBatchDataTexture(
   material.userData.batchDataTexture = { value: texture };
   material.userData.batchTextureConfig = config;
 
-  material.defines ??= {};
-  material.defines.USE_BATCH_TEXTURE = true;
+  material.userData.defines ??= {};
+  material.userData.defines.USE_BATCH_TEXTURE = true;
   material.needsUpdate = true;
 }
 
@@ -118,9 +118,9 @@ export function updateBatchAttribute(
   switch (attribute) {
     case "color": {
       if (!(value instanceof Array)) return;
-      if (material.defines) {
+      if (material.userData.defines) {
         material.vertexColors = true;
-        material.defines.USE_BATCH_COLOR_SHOW = true;
+        material.userData.defines.USE_BATCH_COLOR_SHOW = true;
         material.needsUpdate = true;
       }
 
@@ -139,9 +139,9 @@ export function updateBatchAttribute(
     }
     case "show": {
       if (typeof value !== "boolean") return;
-      if (material.defines) {
+      if (material.userData.defines) {
         material.vertexColors = true;
-        material.defines.USE_BATCH_COLOR_SHOW = true;
+        material.userData.defines.USE_BATCH_COLOR_SHOW = true;
         material.needsUpdate = true;
       }
 
@@ -163,8 +163,8 @@ export function updateBatchAttribute(
     }
     case "height": {
       if (typeof value !== "number") return;
-      if (material.defines) {
-        material.defines.USE_BATCH_HEIGHT = true;
+      if (material.userData.defines) {
+        material.userData.defines.USE_BATCH_HEIGHT = true;
         material.needsUpdate = true;
       }
 
@@ -184,8 +184,8 @@ export function updateBatchAttribute(
     }
     case "extrudedHeight": {
       if (typeof value !== "number") return;
-      if (material.defines) {
-        material.defines.USE_BATCH_EXTRUDED_HEIGHT = true;
+      if (material.userData.defines) {
+        material.userData.defines.USE_BATCH_EXTRUDED_HEIGHT = true;
         material.needsUpdate = true;
       }
 

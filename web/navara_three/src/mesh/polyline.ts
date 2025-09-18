@@ -181,7 +181,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.userData.color = meshMaterial.color;
     this.material.userData.uPickable = uPickable;
 
+    this.material.customProgramCacheKey = () =>
+      JSON.stringify(this.material.userData.defines);
     this.material.onBeforeCompile = (shader) => {
+      shader.defines ??= {};
+      Object.assign(shader.defines, this.material.userData.defines);
       if (this.material.userData.batchDataTexture) {
         shader.uniforms.batchDataTexture =
           this.material.userData.batchDataTexture;

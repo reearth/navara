@@ -1128,7 +1128,7 @@ const addEffectsControl = (
     dithering: true,
     ssao: false,
     ssaoHalfRes: true,
-    ssaoQuality: "Medium",
+    ssaoQuality: "Low",
     ssaoSamples: 16,
     ssaoRadius: 5,
     ssaoIntensity: 1,

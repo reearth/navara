@@ -59,6 +59,7 @@ import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
 import {
   CloudsEffectLayer,
+  FogLightEffectLayer,
   FXAAEffectLayer,
   LensFlareEffectLayer,
   MRTPassEffectLayer,
@@ -73,6 +74,7 @@ import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
 import { ArrowHelperLayer } from "./layers/helpers/ArrowHelperLayer";
 import { AxesHelperLayer } from "./layers/helpers/AxesHelperLayer";
 import { LightProbeLayer } from "./layers/light/LightProbeLayer";
+import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
 import { BoxMeshLayer } from "./layers/mesh/BoxMeshLayer";
 import { CylinderMeshLayer } from "./layers/mesh/CylinderMeshLayer";
 import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
@@ -83,7 +85,6 @@ import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
 import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
-import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
@@ -958,6 +959,7 @@ export default class ThreeView<
 
     this.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
     this.registerEffect("clouds", CloudsEffectLayer);
+    this.registerEffect("fogLight", FogLightEffectLayer);
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);

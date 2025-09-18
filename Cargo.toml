@@ -17,22 +17,22 @@ bevy_log = "0.16.1"
 bevy_math = "0.16.1"
 bevy_transform = "0.16.1"
 approx = "0.5.1"
-url = "2.5.4"
+url = "2.5.7"
 binrw = { version = "0.15.0", default-features = false }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.225", features = ["derive"] }
+serde_json = { version = "1.0.145", default-features = false, features = ["alloc"] }
 nanoid = "0.4"
-cfg-if = "1.0.0"
+cfg-if = "1.0.3"
 radians = "0.3.1"
 itertools = "0.14.0"
-geo-types = "0.7.16"
+geo-types = "0.7.17"
 instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
 fxhash = "0.2.1"
 
 # --- WASM ---
-wasm-bindgen = { version = "=0.2.100" }
+wasm-bindgen = { version = "=0.2.102" }
 
-js-sys = "0.3.77"
+js-sys = "0.3.79"
 serde-wasm-bindgen = "0.6.5"
 gloo-utils = { version = "0.2.0", features = ["serde"] }
-web-sys = { version = "0.3.77", features = ["console"] }
+web-sys = { version = "0.3.79", features = ["console"] }
