@@ -1,6 +1,6 @@
 import type { Nullable } from "@navara/core";
 import { N8AOPostPass, type QualityMode } from "n8ao";
-import { Color, type Camera, type Scene } from "three";
+import { Color, Scene, type Camera } from "three";
 
 import { Pass, type EffectOptions } from "./effect";
 
@@ -24,26 +24,29 @@ export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
   intensity: 1,
   color: new Color(0),
   halfRes: false,
-  quality: "Medium",
+  quality: "Low",
 };
 
 export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
-  scene: Scene;
   camera: Camera;
   width: number;
   height: number;
 
   constructor(
-    scene: Scene,
     camera: Camera,
     width: number,
     height: number,
     options?: SSAOOptions,
   ) {
-    const pass = new N8AOPostPass(scene, camera, width, height);
+    const pass = new N8AOPostPass(
+      // This is used only for a transparent scene, but we aren't using it, so we just assign an empty scene.
+      new Scene(),
+      camera,
+      width,
+      height,
+    );
     super(pass, null, { ...DEFAULT_SSAO_OPTIONS, ...options });
 
-    this.scene = scene;
     this.camera = camera;
     this.width = width;
     this.height = height;
