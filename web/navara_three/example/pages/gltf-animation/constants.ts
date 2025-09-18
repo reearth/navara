@@ -1,6 +1,6 @@
 /**
  * Constants for GLTF Animation example
- * 
+ *
  * Contains geographical coordinates and 3D model configuration
  * used in the GLTF animation demonstration.
  */
