@@ -437,6 +437,7 @@ pub struct VectorTileMaterial {
     pub max_sse: f32,
     pub max_zoom: usize,
     pub layers: Option<Vec<String>>,
+    pub overscaled_max_zoom: usize,
 }
 
 impl Default for VectorTileMaterial {
@@ -448,6 +449,7 @@ impl Default for VectorTileMaterial {
             max_sse: 2.,
             max_zoom: 20,
             layers: None,
+            overscaled_max_zoom: 24, // Allow overscaling up to zoom level 24 by default
         }
     }
 }

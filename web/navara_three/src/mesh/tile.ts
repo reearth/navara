@@ -122,11 +122,9 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
   }
 
   private updateTexturizedSceneByTileState() {
+    const prevStates = [...(this.tileStates ?? [])];
     this.tileStates = [];
-    const tileStates = this.tileHandler.getVectorTileStates(this.handle);
-    if (!tileStates || !tileStates.length) {
-      return;
-    }
+    const tileStates = this.tileHandler.getVectorTileStates(this.handle) ?? [];
     for (const state of tileStates) {
       const parentHandle = state.ready_parent_tile_handle;
       const layerId = state.layer_id;
@@ -149,21 +147,25 @@ export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
         layerId,
         scene,
       );
+      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
+    }
+
+    if (prevStates.length !== this.tileStates.length) {
+      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
     }
   }
 
   private _onBeforeRender = () => {
-    if (
-      !this.visible ||
-      !this.texturizedSceneByTileCoordinates.getNeedsUpdate(this.handle)
-    )
-      return;
-
-    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
+    if (!this.visible) return;
 
     // This needs to be executed in every render to check parent tile state.
     // If the parent tile is available, but the child tile is still preparing, use the parent tile.
     this.updateTexturizedSceneByTileState();
+
+    if (!this.texturizedSceneByTileCoordinates.getNeedsUpdate(this.handle))
+      return;
+
+    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
 
     let i = -1;
     for (const texturizedScene of this.texturizedScenes.children) {
