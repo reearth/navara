@@ -513,7 +513,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       id_property: "gml_id",
     },
     vector_tile: {
-      max_zoom: 16,
+      max_zoom: 15,
       layers: ["HeightControlDistrict"],
     },
   },

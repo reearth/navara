@@ -8,6 +8,7 @@ use navara_data_requester::DataRequesterStatus;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
+use navara_material::Appearance;
 use navara_math::{FloatType, Transform};
 
 use navara_layer::{MvtLayer, TerrainLayer};
@@ -34,6 +35,8 @@ use super::render::RenderedTile;
 // 5. On the other hand, if SSE works but the tile isn't loaded, the tile should be requested, not rendered.
 // 6. If above steps aren't matched, traverse children.
 // 7. If children couldn't be rendered completely, use this tile instead.
+// 8. If all children is rendered, use children.
+// 9. If the tile is overscaled, it's leaf is marked just in quadtree, but it isn't actually rendered. It reuses a parent tile.
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_tile(
     command: &mut Commands,
@@ -66,7 +69,13 @@ pub fn traverse_tile(
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
     if tile.coords.z > vector_tile_appearance.max_zoom {
-        return TraversalResult::NotFound;
+        let has_clamp_to_ground = layer
+            .appearances
+            .iter()
+            .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
+        if !has_clamp_to_ground {
+            return TraversalResult::NotFound;
+        }
     }
 
     // Reference the terrain information from the raster tile process.
@@ -92,6 +101,14 @@ pub fn traverse_tile(
         .unwrap_or(true);
     if is_culled_by_occlusion {
         return TraversalResult::Culled;
+    }
+
+    let is_overscaled = ready_parent_tile_handle.is_some()
+        && tile.coords.z > vector_tile_appearance.max_zoom
+        && tile.coords.z <= vector_tile_appearance.overscaled_max_zoom;
+
+    if tile.coords.z > vector_tile_appearance.max_zoom && !is_overscaled {
+        return TraversalResult::NotFound;
     }
 
     let data_requester = tile
@@ -127,6 +144,10 @@ pub fn traverse_tile(
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     if meets_sse || meets_sse_ancestors {
+        if is_overscaled {
+            return TraversalResult::Overscaled;
+        }
+
         if is_renderable
             // Keep rendering children while preparing the tile if it's available, because rendering tile takes some time.
             && !were_children_rendered
@@ -169,16 +190,17 @@ pub fn traverse_tile(
     }
 
     if let Some(children) = VectorTile::traversable_children(qt, handle) {
-        let are_feature_activated = matches!(
-            are_all_renderable_features_active(
-                tc,
-                &handle,
-                rendered_tiles,
-                features,
-                renderable_features,
-            ),
-            Some(true)
-        );
+        let are_feature_activated = !is_overscaled
+            && matches!(
+                are_all_renderable_features_active(
+                    tc,
+                    &handle,
+                    rendered_tiles,
+                    features,
+                    renderable_features,
+                ),
+                Some(true)
+            );
 
         let ready_parent_tile_handle = if are_feature_activated {
             Some(handle)
@@ -200,6 +222,10 @@ pub fn traverse_tile(
         let mut rendered_children_indices = vec![];
         let mut hidden_children_indices = vec![];
         let mut prepared_children_indices = vec![];
+
+        // Overscaled tile is actually not rendered, since parent tile is reused in the rendering engine side.
+        let mut overscaled_children_indices = vec![];
+
         for (i, child) in children.iter().enumerate() {
             let traversal_result = traverse_tile(
                 command,
@@ -236,6 +262,10 @@ pub fn traverse_tile(
                 TraversalResult::NotFound | TraversalResult::Culled | TraversalResult::Failed
             ) {
                 hidden_children_indices.push(i);
+            }
+
+            if matches!(traversal_result, TraversalResult::Overscaled) {
+                overscaled_children_indices.push(i);
             }
 
             // If there is one child at least, trigger the rendering children process.
@@ -296,7 +326,9 @@ pub fn traverse_tile(
             }
         }
 
-        if any_children_rendered {
+        // This condition should be avoided when overscaled children are selected.
+        // We assume vector tiles is continuous data, so a tile that is over `max_zoom` is assumed an overscaled tile.
+        if any_children_rendered && overscaled_children_indices.is_empty() {
             if are_all_children_activated && !meets_sse && !meets_sse_ancestors {
                 let tile = qt.qt.get_mut(handle).unwrap();
                 tile.were_children_rendered = true;
@@ -380,6 +412,10 @@ pub fn traverse_tile(
                 }
             }
         }
+    }
+
+    if is_overscaled {
+        return TraversalResult::Overscaled;
     }
 
     if is_tile_failed {
@@ -583,4 +619,5 @@ pub(super) enum TraversalResult {
     Culled,
     NotFound,
     Failed,
+    Overscaled,
 }
