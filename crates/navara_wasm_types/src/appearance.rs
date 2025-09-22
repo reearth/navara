@@ -759,7 +759,9 @@ impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             max_sse: val.max_sse.unwrap_or(default.max_sse),
             layers: val.layers.clone(),
-            overscaled_max_zoom: val.overscaled_max_zoom.unwrap_or(default.overscaled_max_zoom),
+            overscaled_max_zoom: val
+                .overscaled_max_zoom
+                .unwrap_or(default.overscaled_max_zoom),
         }
     }
 }
