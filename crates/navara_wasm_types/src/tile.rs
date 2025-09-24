@@ -42,14 +42,10 @@ impl From<TileXYZ> for navara_core::TileXYZ {
 #[derive(Debug, Clone, PartialEq, Default, Copy, Serialize)]
 pub struct OverscaledTileHandle {
     pub handle: TileHandle,
-    pub overscaled: usize,
 }
 
 impl From<&navara_tile_component::OverscaledTileHandle> for OverscaledTileHandle {
     fn from(d: &navara_tile_component::OverscaledTileHandle) -> Self {
-        OverscaledTileHandle {
-            handle: d.handle,
-            overscaled: d.overscaled,
-        }
+        OverscaledTileHandle { handle: d.handle }
     }
 }

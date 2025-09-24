@@ -13,17 +13,11 @@ pub struct TileMeshMarker {
 #[derive(Debug, Clone, Component)]
 pub struct OverscaledTileHandle {
     pub handle: TileHandle,
-    /// TODO: Support overscaled zoom in vector tile format like MVT.
-    /// How much it is overscaled
-    pub overscaled: usize,
 }
 
 impl OverscaledTileHandle {
     pub fn new(handle: TileHandle) -> Self {
-        Self {
-            handle,
-            overscaled: 0,
-        }
+        Self { handle }
     }
 }
 
