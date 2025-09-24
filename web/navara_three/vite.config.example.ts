@@ -1,6 +1,7 @@
 import { readdirSync } from "fs";
 import path, { resolve } from "path";
 
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
@@ -12,13 +13,13 @@ import { commonConfig } from "../vite.config.common";
 const pages = readdirSync(resolve(__dirname, "example/pages"));
 
 export default defineConfig((env) => {
-  console.log(resolve(__dirname, "./assets"));
   const common = commonConfig("NavaraExample", env);
   return {
     envPrefix: "NAVARA",
     plugins: [
       glsl(),
       tsconfig(),
+      react(),
       viteStaticCopy({
         targets: [
           {
@@ -47,6 +48,9 @@ export default defineConfig((env) => {
         ],
       }),
     ],
+    define: {
+      PAGES: pages,
+    },
     resolve: {
       alias: {
         ...common.resolve?.alias,

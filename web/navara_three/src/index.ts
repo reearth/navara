@@ -382,12 +382,12 @@ export default class ThreeView<
 
     if (!options.canvas) {
       const div = document.createElement("div");
-      div.id = "root";
+      div.id = "navara-root";
       div.style.width = "100vw";
       div.style.height = "100vh";
 
       options.canvas = document.createElement("canvas");
-      options.canvas.id = "canvas";
+      options.canvas.id = "navara-canvas";
       options.canvas.style.width = "100%";
       options.canvas.style.height = "100%";
 
