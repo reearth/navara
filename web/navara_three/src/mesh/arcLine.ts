@@ -205,13 +205,13 @@ export class ArcLine extends Object3D {
       const geom2 = config.geometry[i * 2 + 1];
 
       const lle1 = new LLE(
-        degreeToRadian(geom1.lng),
         degreeToRadian(geom1.lat),
+        degreeToRadian(geom1.lng),
         0,
       );
       const lle2 = new LLE(
-        degreeToRadian(geom2.lng),
         degreeToRadian(geom2.lat),
+        degreeToRadian(geom2.lng),
         0,
       );
 
@@ -312,15 +312,15 @@ export class ArcLine extends Object3D {
 
         const pos1 = geodeticToVector3(
           new LLE(
-            degreeToRadian(point1.lng),
             degreeToRadian(point1.lat),
+            degreeToRadian(point1.lng),
             cfg.height,
           ),
         );
         const pos2 = geodeticToVector3(
           new LLE(
-            degreeToRadian(point2.lng),
             degreeToRadian(point2.lat),
+            degreeToRadian(point2.lng),
             cfg.height,
           ),
         );
@@ -338,8 +338,8 @@ export class ArcLine extends Object3D {
         // here is not accurate—it's only used to estimate the bounding box.
         const peakHeight = cfg.height + dist * cfg.arcHeightScale;
         const peakLLE = new LLE(
-          degreeToRadian(midLng),
           degreeToRadian(midLat),
+          degreeToRadian(midLng),
           peakHeight,
         );
         box.expandByPoint(geodeticToVector3(peakLLE));

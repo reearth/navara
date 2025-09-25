@@ -1,0 +1,220 @@
+import {
+  BufferGeometry,
+  BufferAttribute,
+  Vector3,
+  Vector2,
+  Camera,
+  ShaderMaterial,
+  Points,
+  Color,
+  PerspectiveCamera,
+  WebGLRenderer,
+  Scene,
+} from "three";
+
+import { overrideSpherePointsMaterialForMRT } from "../material";
+
+export interface SpherePointOptions {
+  visible?: boolean;
+  size?: number;
+  color?: number;
+}
+
+/**
+ * Renders points as spheres using impostor technique.
+ */
+export class SpherePoints extends Points {
+  public pointOpts: Required<SpherePointOptions>;
+
+  constructor(opts: SpherePointOptions = {}) {
+    // Create initial empty geometry and material
+    const geometry = new BufferGeometry();
+    const material = new ShaderMaterial();
+
+    super(geometry, material);
+
+    this.pointOpts = {
+      visible: opts.visible ?? true,
+      size: opts.size ?? 1,
+      color: opts.color ?? 0xffffff,
+    };
+  }
+
+  setPoints(points: Vector3[]) {
+    this._refreshPoints(points);
+  }
+
+  setOptions(patch: Partial<SpherePointOptions>) {
+    Object.assign(this.pointOpts, patch || {});
+    this._refreshPointsUniforms();
+    this.visible = this.pointOpts.visible;
+  }
+
+  onBeforeRender(renderer: WebGLRenderer, _scene: Scene, camera: Camera) {
+    const mat = this.material as ShaderMaterial;
+    if (!mat) return;
+
+    const pixelRatio = renderer.getPixelRatio();
+    const width = renderer.getContext().drawingBufferWidth;
+    const height = renderer.getContext().drawingBufferHeight;
+
+    if (mat.uniforms?.uProjScaleY)
+      mat.uniforms.uProjScaleY.value = camera.projectionMatrix.elements[5];
+    if (mat.uniforms?.uNear)
+      mat.uniforms.uNear.value = (camera as PerspectiveCamera).near;
+    if (mat.uniforms?.uFar)
+      mat.uniforms.uFar.value = (camera as PerspectiveCamera).far;
+
+    if (mat.uniforms?.uViewport) {
+      mat.uniforms.uViewport.value.set(width, height);
+    }
+
+    if (mat.uniforms?.dpr) {
+      mat.uniforms.dpr.value = pixelRatio;
+    }
+  }
+
+  dispose() {
+    this.geometry?.dispose();
+    (this.material as ShaderMaterial)?.dispose();
+  }
+
+  private _ensurePointsGeometry(pointCount: number) {
+    if (this.geometry) {
+      this.geometry.dispose();
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute(
+      "position",
+      new BufferAttribute(new Float32Array(pointCount * 3), 3),
+    );
+    this.geometry = geo;
+  }
+
+  private _updatePositionsAttr(points: Vector3[]) {
+    if (!this.geometry) return;
+    const pos = this.geometry.getAttribute("position") as BufferAttribute;
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      pos.setXYZ(i, p.x, p.y, p.z);
+    }
+    pos.needsUpdate = true;
+  }
+
+  private _makePointsMat(): ShaderMaterial {
+    const mat = new ShaderMaterial({
+      uniforms: {
+        dpr: { value: 1 },
+        uViewport: { value: new Vector2(0, 0) }, // set in onBeforeRender
+        uColor: { value: new Color(this.pointOpts.color) },
+        uProjScaleY: { value: 1.0 }, // set in onBeforeRender
+        uNear: { value: 0.1 }, // set in onBeforeRender
+        uFar: { value: 1000.0 }, // set in onBeforeRender
+        uSize: { value: this.pointOpts.size }, // pixel diameter
+      },
+      vertexShader: `
+        precision highp float;
+        uniform float dpr;
+        uniform float uSize;
+
+        varying vec3  vCenterView;
+        varying float vRadiusPx;
+
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vCenterView = mv.xyz;
+
+          gl_PointSize = uSize * dpr;        // pixel diameter
+          vRadiusPx    = 0.5 * uSize * dpr;  // pixel radius for FS
+
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+
+        uniform vec2  uViewport;
+        uniform vec3  uColor;
+        uniform float uProjScaleY;
+        uniform float uNear, uFar;
+
+        varying vec3  vCenterView;
+        varying float vRadiusPx;
+
+        float viewZToDepth(float viewZ, float near, float far){
+          float A = (far + near) / (near - far);
+          float B = (2.0 * far * near) / (near - far);
+          float ndcZ = (A * viewZ + B) / (-viewZ);
+          return 0.5 * ndcZ + 0.5;
+        }
+
+        void main() {
+          // round cutout
+          vec2 corner = gl_PointCoord * 2.0 - 1.0;
+          float rr = dot(corner, corner);
+          if (rr > 1.0) discard;
+
+          // pixel radius -> view-space radius of sphere
+          float Rv = (vRadiusPx * 2.0 / (uProjScaleY * uViewport.y)) * (-vCenterView.z);
+
+          // hemisphere z (unit sphere)
+          float zLocal = sqrt(max(0.0, 1.0 - rr));
+
+          // view-space z at hit point (only z is needed for depth)
+          float Pz = vCenterView.z + zLocal * Rv;
+
+          // write depth
+          #ifdef USE_LOGDEPTHBUF
+            if (vIsPerspective == 0.0) {
+              gl_FragDepth = gl_FragCoord.z;
+            } else {
+              float fragDepth = max(1.0 + -Pz, 1e-6);
+              gl_FragDepth = log2(fragDepth) * logDepthBufFC * 0.5;
+            }
+          #else
+            gl_FragDepth = viewZToDepth(Pz, uNear, uFar);
+          #endif
+
+          // color
+          gl_FragColor = vec4(uColor, 1.0);
+        }
+      `,
+      transparent: false,
+      depthTest: true,
+      depthWrite: true,
+    });
+
+    // Add MRT support for sphere points material
+    overrideSpherePointsMaterialForMRT(mat);
+
+    return mat;
+  }
+
+  private _refreshPoints(points: Vector3[]) {
+    if (!points.length) return;
+
+    // ensure geometry matches count
+    this._ensurePointsGeometry(points.length);
+
+    // update attributes
+    this._updatePositionsAttr(points);
+
+    // dispose old material
+    if (this.material) {
+      (this.material as ShaderMaterial).dispose();
+    }
+
+    // create new material and assign
+    const mat = this._makePointsMat();
+    this.material = mat;
+    this.visible = this.pointOpts.visible;
+  }
+
+  private _refreshPointsUniforms() {
+    const mat = this.material as ShaderMaterial;
+    if (!mat) return;
+    if (mat.uniforms?.uColor)
+      mat.uniforms.uColor.value.set(this.pointOpts.color);
+    if (mat.uniforms?.uSize) mat.uniforms.uSize.value = this.pointOpts.size;
+  }
+}
