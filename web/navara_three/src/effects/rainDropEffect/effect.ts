@@ -23,10 +23,19 @@ export class RainDropEffect extends Effect<
   RainDropEvents
 > {
   constructor(camera: Camera, options?: RainDropOptions) {
-    const mergedOptions = { ...DEFAULT_RAIN_DROP_OPTIONS, ...options };
+    const mergedOptions: RainDropOptions = {
+      ...DEFAULT_RAIN_DROP_OPTIONS,
+      ...options,
+    };
     super(camera, new RainDropPostEffect(mergedOptions), mergedOptions);
-    this.rawEffect.dropGridSize = mergedOptions.dropGridSize;
-    this.rawEffect.timeOffset = mergedOptions.timeOffset;
+
+    const dropGridSize =
+      mergedOptions.dropGridSize ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize;
+    const timeOffset =
+      mergedOptions.timeOffset ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset;
+
+    this.rawEffect.dropGridSize = dropGridSize;
+    this.rawEffect.timeOffset = timeOffset;
   }
 
   protected onMounted(): void {}
