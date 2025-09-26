@@ -67,6 +67,7 @@ import {
   SSAOEffectLayer,
   SSREffectLayer,
   ToneMappingEffectLayer,
+  RainDropEffectLayer,
   TransparentPassEffectLayer,
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
@@ -958,6 +959,7 @@ export default class ThreeView<
     this.registerEffect("mrt", MRTPassEffectLayer);
 
     this.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
+    this.registerEffect("rainDrop", RainDropEffectLayer);
     this.registerEffect("clouds", CloudsEffectLayer);
     this.registerEffect("fogLight", FogLightEffectLayer);
     this.registerEffect("lensFlare", LensFlareEffectLayer);

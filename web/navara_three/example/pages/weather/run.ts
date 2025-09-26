@@ -108,6 +108,17 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  // Add Sample Post Effect with two circles
+  view.addLayer({
+    type: "effect",
+    rainDrop: {
+      opacity: 1.0,
+      dropGridSize: 12,
+      timeOffset: 12,
+    },
+    visible: true,
+  });
+
   view.addLayer({
     type: "cesium3dtiles",
     data: {
