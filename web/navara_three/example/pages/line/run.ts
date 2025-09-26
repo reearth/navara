@@ -109,7 +109,7 @@ const gSmoothLinesDef = [
     // satellite orbit
     tension: 0.5,
     closed: false,
-    segments: 64,
+    segments: 1,
     lineWidth: 3,
     dashed: false,
     dashSize: 500000,
@@ -173,7 +173,7 @@ const gSmoothLinesDef = [
     // Azimuth: ~43° (pointing northeast, consistent with ~53° orbital inclination)
     tension: 0.3,
     closed: false,
-    segments: 32,
+    segments: 1,
     lineWidth: 2,
     dashed: true,
     dashSize: 20000,
@@ -480,7 +480,7 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
   });
 
   folder
-    .addBinding(params, "segments", { min: 2, max: 1024, step: 1 })
+    .addBinding(params, "segments", { min: 1, max: 64, step: 1 })
     .on("change", () => {
       onChange();
     });

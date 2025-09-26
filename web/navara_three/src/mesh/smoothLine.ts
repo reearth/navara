@@ -11,24 +11,24 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 export type SmoothLineConfig = {
-  tension: number;
-  closed: boolean;
-  segments: number;
-  lineWidth: number;
-  dashed: boolean;
-  dashSize: number;
-  gapSize: number;
-  color: number;
-  showPoints: boolean;
-  pointSize: number;
-  pointColor: number;
-  points: LngLatHeight[];
+  tension: number; // Curve stiffness: 0 = straight lines, higher = smoother curves (often 0–1)
+  closed: boolean; // Whether the polyline is closed (connect the last point back to the first).
+  segments: number; // Number of interpolation segments between each pair of input points.
+  lineWidth: number; // Line thickness (in pixels)
+  dashed: boolean; // Render the line with a dashed pattern
+  dashSize: number; // Length of each dash unit when dashed is true
+  gapSize: number; // Length of the gap between dashes when dashed is true
+  color: number; // Line color as a hex integer (e.g., 0xff0000)
+  showPoints: boolean; // Whether to display the sample points along the line
+  pointSize: number; // Size of the point markers
+  pointColor: number; // Point color as a hex integer (e.g., 0x00ff00)
+  points: LngLatHeight[]; // Source positions as [lng, lat, height]
 };
 
 export const DefaultSmoothLineConfig: SmoothLineConfig = {
   tension: 0.5,
   closed: false,
-  segments: 64,
+  segments: 1,
   lineWidth: 1,
   dashed: false,
   dashSize: 1000,
@@ -77,19 +77,6 @@ export class SmoothLine extends Object3D {
   }
 
   private initSubMeshes(): void {
-    this._lineMeshes.forEach((mesh) => {
-      mesh.geometry.dispose();
-      mesh.material.dispose();
-      this.remove(mesh);
-    });
-    this._lineMeshes = [];
-
-    this._pointsMeshes.forEach((spherePoint) => {
-      spherePoint.dispose();
-      this.remove(spherePoint);
-    });
-    this._pointsMeshes = [];
-
     this._config.forEach((cfg, i) => {
       if (cfg.points.length > 1) {
         const lineMesh = this.createLineMesh(cfg, i);
@@ -119,10 +106,10 @@ export class SmoothLine extends Object3D {
 
     // Sample points from the curve
     const segments = Math.max(
-      config.points.length - 1,
+      DefaultSmoothLineConfig.segments,
       Math.floor(config.segments),
     );
-    const points = curve.getPoints(segments);
+    const points = curve.getPoints((config.points.length - 1) * segments);
 
     // If closed, add first point at the end
     if (config.closed && points.length > 0) {
