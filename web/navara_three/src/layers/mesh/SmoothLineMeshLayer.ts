@@ -11,7 +11,7 @@ import {
 } from "../../mesh";
 
 type LayerDescription = {
-  smoothLines?: Partial<SmoothLineConfig>[];
+  smoothLines?: Partial<SmoothLineConfig> | Partial<SmoothLineConfig>[];
 };
 
 export type SmoothLineMeshLayerConfig = MeshLayerConfig & LayerDescription;
@@ -37,7 +37,11 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
   createMesh() {
     const lineConfig: Partial<SmoothLineConfig>[] = [];
     if (this.config.smoothLines) {
-      for (const cfg of this.config.smoothLines) {
+      const configs = Array.isArray(this.config.smoothLines)
+        ? this.config.smoothLines
+        : [this.config.smoothLines];
+
+      for (const cfg of configs) {
         lineConfig.push({
           tension: cfg.tension ?? DefaultSmoothLineConfig.tension,
           closed: cfg.closed ?? DefaultSmoothLineConfig.closed,
@@ -45,6 +49,7 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
           lineWidth: cfg.lineWidth ?? DefaultSmoothLineConfig.lineWidth,
           dashed: cfg.dashed ?? DefaultSmoothLineConfig.dashed,
           dashSize: cfg.dashSize ?? DefaultSmoothLineConfig.dashSize,
+          dashOffset: cfg.dashOffset ?? DefaultSmoothLineConfig.dashOffset,
           gapSize: cfg.gapSize ?? DefaultSmoothLineConfig.gapSize,
           color: cfg.color ?? DefaultSmoothLineConfig.color,
           showPoints: cfg.showPoints ?? DefaultSmoothLineConfig.showPoints,
@@ -61,7 +66,10 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
   onUpdateConfig(updates: SmoothLineMeshLayerUpdate): void {
     if (this.config.smoothLines && updates.smoothLines && this._instance) {
       Object.assign(this.config.smoothLines, updates.smoothLines);
-      this._instance.updateConfig(updates.smoothLines);
+      const updateConfigs = Array.isArray(updates.smoothLines)
+        ? updates.smoothLines
+        : [updates.smoothLines];
+      this._instance.updateConfig(updateConfigs);
       this.emit("_needsUpdate");
     }
 

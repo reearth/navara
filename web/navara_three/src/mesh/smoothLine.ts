@@ -17,6 +17,7 @@ export type SmoothLineConfig = {
   lineWidth: number; // Line thickness (in pixels)
   dashed: boolean; // Render the line with a dashed pattern
   dashSize: number; // Length of each dash unit when dashed is true
+  dashOffset: number; // Offset of the dash pattern along the line
   gapSize: number; // Length of the gap between dashes when dashed is true
   color: number; // Line color as a hex integer (e.g., 0xff0000)
   showPoints: boolean; // Whether to display the sample points along the line
@@ -31,6 +32,7 @@ export const DefaultSmoothLineConfig: SmoothLineConfig = {
   segments: 1,
   lineWidth: 1,
   dashed: false,
+  dashOffset: 0,
   dashSize: 1000,
   gapSize: 500,
   color: 0xffffff,
@@ -41,8 +43,6 @@ export const DefaultSmoothLineConfig: SmoothLineConfig = {
 };
 
 export class SmoothLine extends Object3D {
-  private readonly _curveType: "centripetal" | "chordal" | "catmullrom" =
-    "catmullrom";
   private readonly _config: SmoothLineConfig[];
   private _lineMeshes: Line2[] = [];
   private _pointsMeshes: SpherePoints[] = [];
@@ -100,7 +100,7 @@ export class SmoothLine extends Object3D {
     const curve = new CatmullRomCurve3(
       this._pointsData[index],
       config.closed,
-      this._curveType,
+      "catmullrom",
       config.tension,
     );
 
@@ -148,6 +148,7 @@ export class SmoothLine extends Object3D {
     if (config.dashed) {
       material.dashSize = config.dashSize;
       material.gapSize = config.gapSize;
+      material.dashOffset = config.dashOffset;
     }
 
     material.resolution.set(1920, 1080);
@@ -293,12 +294,20 @@ export class SmoothLine extends Object3D {
       this._config[i].gapSize = cfg.gapSize;
     }
 
+    if (
+      cfg.dashOffset !== undefined &&
+      cfg.dashOffset !== this._config[i].dashOffset
+    ) {
+      this._config[i].dashOffset = cfg.dashOffset;
+    }
+
     if (this._lineMeshes[i]) {
       const material = this._lineMeshes[i].material as LineMaterial;
       material.dashed = this._config[i].dashed;
       if (this._config[i].dashed) {
         material.dashSize = this._config[i].dashSize;
         material.gapSize = this._config[i].gapSize;
+        material.dashOffset = this._config[i].dashOffset;
         this._lineMeshes[i].computeLineDistances();
       }
     }

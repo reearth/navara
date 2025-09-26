@@ -113,6 +113,7 @@ const gSmoothLinesDef = [
     lineWidth: 3,
     dashed: false,
     dashSize: 500000,
+    dashOffset: 0,
     gapSize: 500000,
     color: 0xff0000,
     showPoints: true,
@@ -177,6 +178,7 @@ const gSmoothLinesDef = [
     lineWidth: 2,
     dashed: true,
     dashSize: 20000,
+    dashOffset: 0,
     gapSize: 20000,
     color: 0x00ff00,
     showPoints: true,
@@ -389,6 +391,8 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
     smoothLines: gSmoothLinesDef,
   });
 
+  let animationId: number | null = null;
+
   // Create smooth line group names
   const smoothLineNames = ["Satellite Orbit", "Falcon 9 Launch"];
 
@@ -400,11 +404,14 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
     lineWidth: gSmoothLinesDef[0].lineWidth || 1,
     dashed: gSmoothLinesDef[0].dashed || false,
     dashSize: gSmoothLinesDef[0].dashSize || 1,
+    dashOffset: gSmoothLinesDef[0].dashOffset || 0,
     gapSize: gSmoothLinesDef[0].gapSize || 1,
     color: intToHexColor(gSmoothLinesDef[0].color || 0xffffff),
     showPoints: gSmoothLinesDef[0].showPoints ?? true,
     pointSize: gSmoothLinesDef[0].pointSize || 2,
     pointColor: intToHexColor(gSmoothLinesDef[0].pointColor || 0xffffff),
+    dashAnimation: false,
+    dashAnimationSpeed: 10000,
   };
 
   const updateParams = (index: number) => {
@@ -416,6 +423,7 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
       params.lineWidth = selectedSmoothLine.lineWidth || 1;
       params.dashed = selectedSmoothLine.dashed || false;
       params.dashSize = selectedSmoothLine.dashSize || 1;
+      params.dashOffset = selectedSmoothLine.dashOffset || 0;
       params.gapSize = selectedSmoothLine.gapSize || 1;
       params.color = intToHexColor(selectedSmoothLine.color || 0xffffff);
       params.showPoints = selectedSmoothLine.showPoints ?? true;
@@ -435,6 +443,7 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
       gSmoothLinesDef[selectedIndex].lineWidth = params.lineWidth;
       gSmoothLinesDef[selectedIndex].dashed = params.dashed;
       gSmoothLinesDef[selectedIndex].dashSize = params.dashSize;
+      gSmoothLinesDef[selectedIndex].dashOffset = params.dashOffset;
       gSmoothLinesDef[selectedIndex].gapSize = params.gapSize;
       gSmoothLinesDef[selectedIndex].color = parseInt(
         params.color.replace("#", ""),
@@ -453,6 +462,32 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
   const folder = pane.addFolder({
     title: "SmoothLine",
   });
+
+  const startDashAnimation = () => {
+    if (animationId !== null) return; // Already animating
+
+    const animate = () => {
+      const selectedIndex = params.selectedGroup;
+      if (gSmoothLinesDef[selectedIndex] && params.dashed) {
+        gSmoothLinesDef[selectedIndex].dashOffset += params.dashAnimationSpeed;
+        params.dashOffset = gSmoothLinesDef[selectedIndex].dashOffset;
+        smoothLineLayer.update({ smoothLines: gSmoothLinesDef });
+
+        if (dashFolder) {
+          dashFolder.refresh();
+        }
+      }
+      animationId = requestAnimationFrame(animate);
+    };
+    animate();
+  };
+
+  const stopDashAnimation = () => {
+    if (animationId !== null) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  };
 
   // Add dropdown for selecting smooth line group
   folder
@@ -496,22 +531,6 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
     onChange();
   });
 
-  folder.addBinding(params, "dashed").on("change", () => {
-    onChange();
-  });
-
-  folder
-    .addBinding(params, "dashSize", { min: 1, max: 1000000, step: 1 })
-    .on("change", () => {
-      onChange();
-    });
-
-  folder
-    .addBinding(params, "gapSize", { min: 1, max: 1000000, step: 1 })
-    .on("change", () => {
-      onChange();
-    });
-
   // Point parameters
   folder.addBinding(params, "showPoints").on("change", () => {
     onChange();
@@ -525,5 +544,44 @@ const addSmoothLines = (view: ThreeView, pane: Pane) => {
 
   folder.addBinding(params, "pointColor").on("change", () => {
     onChange();
+  });
+
+  // Dash controls subfolder
+  const dashFolder = folder.addFolder({
+    title: "Dash Settings",
+  });
+
+  dashFolder.addBinding(params, "dashed").on("change", () => {
+    onChange();
+  });
+
+  dashFolder
+    .addBinding(params, "dashSize", { min: 1, max: 1000000, step: 1 })
+    .on("change", () => {
+      onChange();
+    });
+
+  dashFolder.addBinding(params, "dashOffset").on("change", () => {
+    onChange();
+  });
+
+  dashFolder
+    .addBinding(params, "gapSize", { min: 1, max: 1000000, step: 1 })
+    .on("change", () => {
+      onChange();
+    });
+
+  dashFolder.addBinding(params, "dashAnimation").on("change", () => {
+    if (params.dashAnimation) {
+      startDashAnimation();
+    } else {
+      stopDashAnimation();
+    }
+  });
+
+  dashFolder.addBinding(params, "dashAnimationSpeed", {
+    min: 1,
+    max: 100000,
+    step: 1,
   });
 };

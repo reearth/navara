@@ -12,7 +12,8 @@ import {
   Scene,
 } from "three";
 
-import { overrideSpherePointsMaterialForMRT } from "../material";
+import { packing } from "@takram/three-geospatial/shaders";
+import { createReplacer } from "../utils";
 
 export interface SpherePointOptions {
   visible?: boolean;
@@ -185,7 +186,7 @@ export class SpherePoints extends Points {
     });
 
     // Add MRT support for sphere points material
-    overrideSpherePointsMaterialForMRT(mat);
+    injectGBufferToSpherePointsMaterial(mat);
 
     return mat;
   }
@@ -217,4 +218,72 @@ export class SpherePoints extends Points {
       mat.uniforms.uColor.value.set(this.pointOpts.color);
     if (mat.uniforms?.uSize) mat.uniforms.uSize.value = this.pointOpts.size;
   }
+}
+
+function injectGBufferToSpherePointsMaterial(shader: ShaderMaterial) {
+  // Vertex shader
+  const common = "#include <common>";
+
+  const logdepthParsVert = "#include <logdepthbuf_pars_vertex>";
+  const logdepthVert = "#include <logdepthbuf_vertex>";
+
+  shader.vertexShader = /* glsl */ `
+    ${shader.vertexShader.includes(common) ? "" : common}
+    ${shader.vertexShader.includes(logdepthParsVert) ? "" : logdepthParsVert}
+
+    ${
+      createReplacer(shader.vertexShader).replace(
+        /}\s*$/, // Assume the last curly brace is of main()
+        /* glsl */ `
+          ${shader.vertexShader.includes(logdepthVert) ? "" : logdepthVert}
+        }
+      `,
+      ).source
+    }
+  `;
+
+  // Fragment shader
+  const logdepthParsFrag = "#include <logdepthbuf_pars_fragment>";
+
+  shader.fragmentShader = /* glsl */ `
+    #ifndef USE_SHADOWMAP_DEPTH
+      layout(location = 1) out vec4 outputBuffer1;
+    #endif
+
+    ${packing}
+
+    ${shader.fragmentShader.includes(logdepthParsFrag) ? "" : logdepthParsFrag}
+
+    ${
+      createReplacer(shader.fragmentShader)
+        .replace(
+          "void main() {",
+          /* glsl */ `
+          void main() {
+            // Calculate screen-space normal for Line2 MRT compatibility
+            vec3 fdx = dFdx(gl_FragCoord.xyz);
+            vec3 fdy = dFdy(gl_FragCoord.xyz);
+            vec3 normal = normalize(cross(fdx, fdy));
+            
+            // Ensure normal faces camera (positive Z in screen space)
+            if (normal.z < 0.0) normal = -normal;
+        `,
+        )
+        .replace(
+          /}\s*$/, // Assume the last curly brace is of main()
+          /* glsl */ `
+          #ifndef USE_SHADOWMAP_DEPTH
+            outputBuffer1 = vec4(
+              packNormalToVec2(normal),
+              0.0,
+              0.0
+            );
+          #endif
+        }
+      `,
+        ).source
+    }
+  `;
+
+  return shader;
 }

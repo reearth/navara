@@ -7,7 +7,7 @@ import {
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "../../mesh";
 
 type LayerDescription = {
-  arcLines?: Partial<ArcLineConfig>[];
+  arcLines?: Partial<ArcLineConfig> | Partial<ArcLineConfig>[];
 };
 
 export type ArclineMeshLayerConfig = MeshLayerConfig & LayerDescription;
@@ -33,7 +33,11 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
   createMesh() {
     const lineConfig: Partial<ArcLineConfig>[] = [];
     if (this.config.arcLines) {
-      for (const cfg of this.config.arcLines) {
+      const configs = Array.isArray(this.config.arcLines)
+        ? this.config.arcLines
+        : [this.config.arcLines];
+
+      for (const cfg of configs) {
         lineConfig.push({
           thickness: cfg.thickness ?? DefaultArcLineConfig.thickness,
           segments: cfg.segments ?? DefaultArcLineConfig.segments,
@@ -53,7 +57,10 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
     if (this.config.arcLines && updates.arcLines && this._instance) {
       Object.assign(this.config.arcLines, updates.arcLines);
-      this._instance.updateConfig(updates.arcLines);
+      const updateConfigs = Array.isArray(updates.arcLines)
+        ? updates.arcLines
+        : [updates.arcLines];
+      this._instance.updateConfig(updateConfigs);
       this.emit("_needsUpdate");
     }
 
