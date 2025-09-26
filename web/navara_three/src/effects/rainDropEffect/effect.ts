@@ -30,7 +30,8 @@ export class RainDropEffect extends Effect<
     super(camera, new RainDropPostEffect(mergedOptions), mergedOptions);
 
     const dropGridSize =
-      mergedOptions.dropGridSize ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize;
+      mergedOptions.dropGridSize ??
+      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize;
     const timeOffset =
       mergedOptions.timeOffset ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset;
 
