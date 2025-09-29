@@ -51,19 +51,31 @@ export class FogLightEffectLayer extends EffectLayerDeclaration<
 
     super.onUpdateConfig(updates);
 
-    if (updates.fogLight) {
-      const config = updates.fogLight;
+    // Merge config snapshot
+    Object.assign(this.config, updates);
 
-      if (config.lights !== undefined) {
-        this._instance.lights = config.lights;
+    const cfg = updates.fogLight;
+    if (cfg) {
+      if (cfg.lights !== undefined) {
+        this._instance.lights = cfg.lights;
       }
-
-      if (config.fogDensity !== undefined) {
-        this._instance.fogDensity = config.fogDensity;
+      if (cfg.fogDensity !== undefined) {
+        this._instance.fogDensity = cfg.fogDensity;
       }
-
-      if (config.useSurfaceLighting !== undefined) {
-        this._instance.useSurfaceLighting = config.useSurfaceLighting;
+      if (cfg.useSurfaceLighting !== undefined) {
+        this._instance.useSurfaceLighting = cfg.useSurfaceLighting;
+      }
+      if (cfg.downsample !== undefined) {
+        this._instance.downsample = cfg.downsample;
+      }
+      if (cfg.maxLightsPerTile !== undefined) {
+        this._instance.maxLightsPerTile = cfg.maxLightsPerTile;
+      }
+      if (cfg.extentScale !== undefined) {
+        this._instance.extentScale = cfg.extentScale;
+      }
+      if (cfg.debugShowGrid !== undefined) {
+        this._instance.debugShowGrid = cfg.debugShowGrid;
       }
     }
 
