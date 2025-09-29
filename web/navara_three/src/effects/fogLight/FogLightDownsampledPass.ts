@@ -46,7 +46,11 @@ export class FogLightDownsampledPass extends Pass {
   private compositeMat: ShaderMaterial;
   readonly resolution: Resolution;
 
-  constructor(camera: Camera, effect: FogLightEffect, opts: FogLightDownsampledOptions) {
+  constructor(
+    camera: Camera,
+    effect: FogLightEffect,
+    opts: FogLightDownsampledOptions,
+  ) {
     super("FogLightDownsampledPass");
 
     this.effect = effect;
@@ -84,7 +88,12 @@ export class FogLightDownsampledPass extends Pass {
 
     // Manage scaled resolution for the inner pass + lowRT.
     const scale = Math.max(1, opts.downsample ?? 1);
-    this.resolution = new Resolution(this, Resolution.AUTO_SIZE, Resolution.AUTO_SIZE, 1 / scale);
+    this.resolution = new Resolution(
+      this,
+      Resolution.AUTO_SIZE,
+      Resolution.AUTO_SIZE,
+      1 / scale,
+    );
     this.resolution.addEventListener("change", () => {
       // The composer will call setSize; we just mirror here when base size changes.
       this.setSize(this.resolution.baseWidth, this.resolution.baseHeight);
@@ -92,7 +101,10 @@ export class FogLightDownsampledPass extends Pass {
   }
 
   // Forward depth texture to the inner pass/effect.
-  setDepthTexture(depthTexture: Texture, depthPacking?: DepthPackingStrategies): void {
+  setDepthTexture(
+    depthTexture: Texture,
+    depthPacking?: DepthPackingStrategies,
+  ): void {
     this.inner.setDepthTexture(depthTexture, depthPacking);
   }
 
@@ -104,7 +116,13 @@ export class FogLightDownsampledPass extends Pass {
     stencilTest?: boolean,
   ): void {
     // 1) Render fog (fog-only) into low-res target using the inner EffectPass.
-    this.inner.render(renderer, inputBuffer, this.lowRT, deltaTime, stencilTest);
+    this.inner.render(
+      renderer,
+      inputBuffer,
+      this.lowRT,
+      deltaTime,
+      stencilTest,
+    );
 
     // 2) Composite low-res fog over full-res input.
     this.compositeMat.uniforms.inputBuffer.value = inputBuffer.texture;
@@ -121,7 +139,11 @@ export class FogLightDownsampledPass extends Pass {
     this.effect.setSize(w, h);
   }
 
-  initialize(renderer: WebGLRenderer, alpha: boolean, frameBufferType: TextureDataType): void {
+  initialize(
+    renderer: WebGLRenderer,
+    alpha: boolean,
+    frameBufferType: TextureDataType,
+  ): void {
     // Initialize inner pass for framebuffer precision/encoding.
     this.inner.initialize(renderer, alpha, frameBufferType);
     // Make lowRT precision match the composer.

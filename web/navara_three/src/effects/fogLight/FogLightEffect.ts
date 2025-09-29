@@ -400,7 +400,10 @@ export class FogLightEffect extends PostProcessingEffect {
 
     // Use fixed-stride packing: each tile reserves strideTexels = ceil(maxLightsPerTile/4) RGBA texels
     const strideTexels = Math.max(1, Math.ceil(this.maxLightsPerTile / 4));
-    const indexTexelCapacity = Math.max(1, this.gridW * this.gridH * strideTexels);
+    const indexTexelCapacity = Math.max(
+      1,
+      this.gridW * this.gridH * strideTexels,
+    );
     if (!this.indexBuf || this.indexBuf.length !== indexTexelCapacity * 4) {
       // Use near-square 2D texture to avoid exceeding max texture size
       this.indexTexW = Math.ceil(Math.sqrt(indexTexelCapacity));
@@ -491,18 +494,25 @@ export class FogLightEffect extends PostProcessingEffect {
         const absViewZCenter = Math.abs(viewZ);
         const absViewZMin = Math.max(
           1e-3,
-          Math.min(Math.max(this.camera.near * 0.5, 1e-3), absViewZCenter - rWorld),
+          Math.min(
+            Math.max(this.camera.near * 0.5, 1e-3),
+            absViewZCenter - rWorld,
+          ),
         );
         const absViewZ = absViewZMin;
         const ndcRadiusX = (rWorld * fx) / absViewZ;
         const ndcRadiusY = (rWorld * fy) / absViewZ;
-        return (
-          Math.max(Math.abs(ndcRadiusX) * halfW, Math.abs(ndcRadiusY) * halfH)
+        return Math.max(
+          Math.abs(ndcRadiusX) * halfW,
+          Math.abs(ndcRadiusY) * halfH,
         );
       } else {
         const ndcRadiusX = rWorld * fx;
         const ndcRadiusY = rWorld * fy;
-        return Math.max(Math.abs(ndcRadiusX) * halfW, Math.abs(ndcRadiusY) * halfH);
+        return Math.max(
+          Math.abs(ndcRadiusX) * halfW,
+          Math.abs(ndcRadiusY) * halfH,
+        );
       }
     };
 
@@ -528,10 +538,11 @@ export class FogLightEffect extends PostProcessingEffect {
       const ratio = (radius * 4) / distance;
 
       // const rWorld = Math.max(0, radius * this.extentScale);
-      const rWorld = this.estimatePointLightRange(
-        intensity,
-        this.uniforms.get("fogDensity")?.value ?? 1,
-      ) * ratio;
+      const rWorld =
+        this.estimatePointLightRange(
+          intensity,
+          this.uniforms.get("fogDensity")?.value ?? 1,
+        ) * ratio;
 
       // Additional far-distance culling: if the nearest point of the light's
       // influence sphere is beyond maxFar from the camera, skip it.

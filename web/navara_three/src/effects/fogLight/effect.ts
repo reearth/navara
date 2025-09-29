@@ -6,7 +6,11 @@ import {
   Vector3,
 } from "three";
 
-import { Pass as PassWrapper, type EffectEvents, type EffectOptions } from "../effect";
+import {
+  Pass as PassWrapper,
+  type EffectEvents,
+  type EffectOptions,
+} from "../effect";
 
 import { FogLightDownsampledPass } from "./FogLightDownsampledPass";
 import {
