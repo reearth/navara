@@ -6,14 +6,47 @@ import {
 import type { ViewEvents } from "@navara/three";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import { Color, InstancedBufferAttribute } from "three";
-import { Line2, LineGeometry, LineMaterial } from "three-stdlib";
+import {
+  Line2,
+  LineGeometry,
+  LineMaterial,
+  LineSegmentsGeometry,
+} from "three-stdlib";
 
 import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";
 
 import type { FeatureMesh } from "./featureMesh";
-import { NvLineGeometry } from "./nvLine2";
+
+class NvLineGeometry extends LineGeometry {
+  setPositions(
+    array: Float32Array,
+    skipIdx: Uint32Array = new Uint32Array(),
+  ): this {
+    const positions: number[] = [];
+    const skipSet = new Set(skipIdx);
+
+    for (let i = 0; i < array.length - 3; i += 3) {
+      const currentIndex = i / 3;
+      if (skipSet.has(currentIndex)) {
+        continue;
+      }
+
+      // segment start
+      positions.push(array[i], array[i + 1], array[i + 2]);
+      // segment end
+      positions.push(array[i + 3], array[i + 4], array[i + 5]);
+    }
+
+    const points = new Float32Array(positions);
+
+    // This function is used to override LineGeometry's setPositions,
+    // so we don't call super.setPositions.
+    LineSegmentsGeometry.prototype.setPositions.call(this, points);
+    return this;
+  }
+}
 
 export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   private resizeEventUnsubscribe?: () => void;

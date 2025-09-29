@@ -74,7 +74,6 @@ import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
 import { ArrowHelperLayer } from "./layers/helpers/ArrowHelperLayer";
 import { AxesHelperLayer } from "./layers/helpers/AxesHelperLayer";
 import { LightProbeLayer } from "./layers/light/LightProbeLayer";
-import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
 import { BoxMeshLayer } from "./layers/mesh/BoxMeshLayer";
 import { CylinderMeshLayer } from "./layers/mesh/CylinderMeshLayer";
 import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
@@ -85,6 +84,8 @@ import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
 import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
+import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
+import { SmoothLineMeshLayer } from "./layers/mesh/SmoothLineMeshLayer";
 import { LayersManager } from "./layersManager";
 import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
@@ -382,12 +383,12 @@ export default class ThreeView<
 
     if (!options.canvas) {
       const div = document.createElement("div");
-      div.id = "root";
+      div.id = "navara-root";
       div.style.width = "100vw";
       div.style.height = "100vh";
 
       options.canvas = document.createElement("canvas");
-      options.canvas.id = "canvas";
+      options.canvas.id = "navara-canvas";
       options.canvas.style.width = "100%";
       options.canvas.style.height = "100%";
 
@@ -945,6 +946,7 @@ export default class ThreeView<
     this.registerMesh("axesHelper", AxesHelperLayer);
     this.registerMesh("arrowHelper", ArrowHelperLayer);
     this.registerMesh("arcLines", ArclineMeshLayer);
+    this.registerMesh("smoothLines", SmoothLineMeshLayer);
   }
 
   private registerBuiltInLights(): void {

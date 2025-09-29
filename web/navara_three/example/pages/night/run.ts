@@ -85,6 +85,15 @@ export const run = async (view: ThreeView) => {
   pane.element.style.maxHeight = "98vh";
   pane.element.style.overflow = "scroll";
 
+  view.setCamera({
+    lng: 139.7511145474829,
+    lat: 35.67364356091717,
+    height: 902.0,
+    heading: 64.41840149763287,
+    pitch: -36.00000121921312,
+    roll: 0,
+  });
+
   // Camera controls
   addCameraControl(view, pane, () => {
     pane

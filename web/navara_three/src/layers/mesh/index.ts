@@ -53,3 +53,8 @@ export {
   type ArclineMeshLayerConfig,
   type ArclineMeshLayerUpdate,
 } from "./ArclineMeshLayer";
+export {
+  SmoothLineMeshLayer,
+  type SmoothLineMeshLayerConfig,
+  type SmoothLineMeshLayerUpdate,
+} from "./SmoothLineMeshLayer";
