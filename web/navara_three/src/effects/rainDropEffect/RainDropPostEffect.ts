@@ -20,14 +20,18 @@ export class RainDropPostEffect extends PostProcessingEffect {
   private readonly timeOffsetUniform: Uniform;
 
   constructor(options: RainDropEffectOptions = {}) {
+    const dropGridSizeUniform = new Uniform(
+      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize,
+    );
+    const timeOffsetUniform = new Uniform(
+      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset,
+    );
+
     const uniforms = new Map<string, Uniform>([
       ["time", new Uniform(0)],
       ["resolution", new Uniform(new Vector2())],
-      [
-        "dropGridSize",
-        new Uniform(DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize),
-      ],
-      ["timeOffset", new Uniform(DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset)],
+      ["dropGridSize", dropGridSizeUniform],
+      ["timeOffset", timeOffsetUniform],
     ]);
 
     super("RainDropPostEffect", Fragment, {
@@ -35,8 +39,8 @@ export class RainDropPostEffect extends PostProcessingEffect {
       blendFunction: BlendFunction.NORMAL,
     });
 
-    this.dropGridSizeUniform = uniforms.get("dropGridSize")!;
-    this.timeOffsetUniform = uniforms.get("timeOffset")!;
+    this.dropGridSizeUniform = dropGridSizeUniform;
+    this.timeOffsetUniform = timeOffsetUniform;
 
     this.dropGridSize =
       options.dropGridSize ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize;
