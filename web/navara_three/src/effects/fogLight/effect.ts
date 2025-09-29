@@ -192,6 +192,15 @@ export class FogLight extends PassWrapper<
     this.emit("_needsUpdate");
   }
 
+  get maxFar(): number {
+    return this.rawEffect.maxFar;
+  }
+
+  set maxFar(value: number) {
+    this.rawEffect.maxFar = value;
+    this.emit("_needsUpdate");
+  }
+
   get debugShowGrid(): boolean {
     return this.rawEffect.debugShowGrid;
   }

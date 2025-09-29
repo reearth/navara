@@ -57,6 +57,12 @@ export type FogLightEffectOptions = {
   extentScale?: number;
   /** Debug: show grid extent overlay in the shader */
   debugShowGrid?: boolean;
+  /**
+   * Maximum distance from the camera at which fog lights are considered.
+   * Lights whose entire influence sphere is farther than this value are culled on CPU.
+   * Defaults to the camera's current `far` value.
+   */
+  maxFar?: number;
 };
 
 export const DEFAULT_FOG_LIGHT_EFFECT_OPTIONS: FogLightEffectOptions = {
@@ -68,6 +74,7 @@ export const DEFAULT_FOG_LIGHT_EFFECT_OPTIONS: FogLightEffectOptions = {
   maxLightsPerTile: 64,
   extentScale: 0.8,
   debugShowGrid: false,
+  maxFar: 1e6,
 };
 
 export class FogLightEffect extends PostProcessingEffect {
@@ -100,6 +107,8 @@ export class FogLightEffect extends PostProcessingEffect {
   private _maxLightsPerTile: number;
   // Extent tuning
   private _extentScale: number;
+  // Culling distance (defaults to camera.far)
+  private _maxFar: number;
 
   constructor(
     camera: PerspectiveCamera | OrthographicCamera,
@@ -206,6 +215,9 @@ export class FogLightEffect extends PostProcessingEffect {
       options.extentScale ??
       DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.extentScale ??
       3.0;
+
+    // Far-distance culling threshold
+    this._maxFar = options.maxFar ?? camera.far;
 
     if (options.debugShowGrid) {
       this.defines.set("DEBUG_SHOW_GRID", "1");
@@ -345,6 +357,13 @@ export class FogLightEffect extends PostProcessingEffect {
   }
   get extentScale(): number {
     return this._extentScale;
+  }
+
+  set maxFar(v: number) {
+    this._maxFar = Math.max(0, v);
+  }
+  get maxFar(): number {
+    return this._maxFar;
   }
 
   private allocateGridTextures(): void {
@@ -500,14 +519,23 @@ export class FogLightEffect extends PostProcessingEffect {
       const wy = this.buf1[base + 1];
       const wz = this.buf1[base + 2];
 
-      const distance = this.camera.position.distanceTo({ x: wx, y: wy, z: wz });
+      // Compute camera-to-light distance using scratch vector to satisfy TS types
+      view.set(wx, wy, wz);
+      const distance = this.camera.position.distanceTo(view);
 
       // World-space influence radius: read from buffer (w component)
       const radius = this.buf1[base + 3] || 0;
       const ratio = (radius * 4) / distance;
 
       // const rWorld = Math.max(0, radius * this.extentScale);
-      const rWorld = this.estimatePointLightRange(intensity, this.uniforms.get("fogDensity")?.value ?? 1) * ratio;
+      const rWorld = this.estimatePointLightRange(
+        intensity,
+        this.uniforms.get("fogDensity")?.value ?? 1,
+      ) * ratio;
+
+      // Additional far-distance culling: if the nearest point of the light's
+      // influence sphere is beyond maxFar from the camera, skip it.
+      if (distance - rWorld > this._maxFar) continue;
 
       // Camera-space position (also used later for screen-radius)
       view.set(wx, wy, wz).applyMatrix4(viewM);

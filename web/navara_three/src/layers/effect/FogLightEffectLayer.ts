@@ -74,6 +74,9 @@ export class FogLightEffectLayer extends EffectLayerDeclaration<
       if (cfg.extentScale !== undefined) {
         this._instance.extentScale = cfg.extentScale;
       }
+      if (cfg.maxFar !== undefined) {
+        this._instance.maxFar = cfg.maxFar;
+      }
       if (cfg.debugShowGrid !== undefined) {
         this._instance.debugShowGrid = cfg.debugShowGrid;
       }

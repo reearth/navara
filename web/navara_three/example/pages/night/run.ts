@@ -428,6 +428,7 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
       lights: tokyoPointsLights,
       fogDensity: 2.0, // Different default density for Tokyo Points
       useSurfaceLighting: true,
+      maxFar: view.camera.raw.far,
     },
     visible: false, // Initially hidden
   });
@@ -451,6 +452,7 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
     extentScale: 0.8,
     debugShowGrid: false,
     maxLights: 200,
+    maxFar: view.camera.raw.far,
   };
 
   // Visibility control
@@ -563,6 +565,18 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
       tokyoPointsFogLayer.update({ fogLight: { extentScale: ev.value } });
     });
 
+  // Max far culling distance
+  folder
+    .addBinding(params, "maxFar", {
+      min: 100,
+      max: 1e7,
+      step: 10000,
+      label: "Cull Distance (maxFar)",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({ fogLight: { maxFar: ev.value } });
+    });
+
   // Debug: show grid
   folder
     .addBinding(params, "debugShowGrid", { label: "Debug Grid" })
@@ -602,6 +616,7 @@ const addFogLightControl = async (
           lights: streetLights,
           fogDensity: 0.5,
           useSurfaceLighting: true,
+          maxFar: view.camera.raw.far,
         },
         visible: isAtNight,
       });
@@ -639,6 +654,7 @@ const addFogLightControl = async (
     extentScale: 0.8,
     debugShowGrid: false,
     maxLights: 200,
+    maxFar: view.camera.raw.far,
   };
 
   // Function to update visibility based on time of day
@@ -722,6 +738,20 @@ const addFogLightControl = async (
     .on("change", (ev) => {
       if (fogLightLayer) {
         fogLightLayer.update({ fogLight: { extentScale: ev.value } });
+      }
+    });
+
+  // Max far culling distance
+  fogLightFolder
+    .addBinding(fogLightParams, "maxFar", {
+      min: 100,
+      max: 1e7,
+      step: 10000,
+      label: "Cull Distance (maxFar)",
+    })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        fogLightLayer.update({ fogLight: { maxFar: ev.value } });
       }
     });
 
