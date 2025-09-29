@@ -1,17 +1,5 @@
-#ifdef GL_ES
-precision highp float;
-#endif
-
-#if defined(GL_ES) && (__VERSION__ < 300)
-  #ifdef GL_OES_standard_derivatives
-    #extension GL_OES_standard_derivatives : enable
-    #define HAS_DERIVATIVES 1
-  #else
-    #define HAS_DERIVATIVES 0
-  #endif
-#else
-  #define HAS_DERIVATIVES 1
-#endif
+// ref: Reference URL https://www.shadertoy.com/view/ltffzl
+// ref: Reference URL https://www.youtube.com/watch?v=EBrAdahFtuo
 
 #define S(a, b, t) smoothstep(a, b, t)
 
@@ -155,12 +143,8 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
   float height = drop * 0.75 + trail * 0.25;
   vec2 heightGrad = vec2(0.0);
-#if HAS_DERIVATIVES
+
   heightGrad = vec2(dFdx(height), dFdy(height));
-#else
-  vec2 pixelStep = vec2(1.0 / resolution.x, 1.0 / resolution.y);
-  heightGrad = DropsNormal(uvRain, rainTime, staticMix, layer1, layer2, vec2(pixelStep.x * 0.5, 0.0));
-#endif
 
   const float DISTORTION_STRENGTH = 0.045;
   vec2 distortion = vec2(-heightGrad.x, heightGrad.y) * (DISTORTION_STRENGTH * rainMask);

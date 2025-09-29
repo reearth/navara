@@ -1,6 +1,7 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
+  RainDropEffectLayer,
   RainMeshLayer,
   SnowMeshLayer,
   SSREffectLayer,
@@ -109,14 +110,14 @@ export const run = async (view: ThreeView) => {
   });
 
   // Add Sample Post Effect with two circles
-  view.addLayer({
+  const rainDropEffect = view.addLayer<RainDropEffectLayer>({
     type: "effect",
     rainDrop: {
       opacity: 1.0,
       dropGridSize: 12,
       timeOffset: 12,
     },
-    visible: true,
+    visible: false,
   });
 
   view.addLayer({
@@ -144,7 +145,7 @@ export const run = async (view: ThreeView) => {
   addDateControl(view, pane);
   addCameraControl(view, pane);
   addWaterControl(view, pane);
-  addWeatherControl(view, pane);
+  addWeatherControl(view, pane, rainDropEffect);
 };
 
 const addWaterControl = (view: ThreeView, pane: Pane) => {
@@ -235,7 +236,11 @@ const addCameraControl = (view: ThreeView, pane: Pane) => {
   });
 };
 
-const addWeatherControl = (view: ThreeView, pane: Pane) => {
+const addWeatherControl = (
+  view: ThreeView,
+  pane: Pane,
+  rainDropEffect: LayerHandle<RainDropEffectLayer>,
+) => {
   const position = geodeticToVector3(
     new LLE(
       degreeToRadian(35.67564356091717),
@@ -295,10 +300,15 @@ const addWeatherControl = (view: ThreeView, pane: Pane) => {
 
         rain.visible = false;
         snow.visible = false;
+        rainDropEffect.visible = false;
 
         if (!selectedLayer) return;
 
         selectedLayer.visible = true;
+
+        if (selectedLayer === rain) {
+          rainDropEffect.visible = true;
+        }
       },
     },
   ];

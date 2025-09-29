@@ -1,14 +1,8 @@
 import ThreeView, { RainDropEffectLayer } from "@navara/three";
 import { Pane } from "tweakpane";
 
+import { TILE_URLS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
-
-const tileUrls = {
-  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-  gsiSeamlessphoto:
-    "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-};
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -22,7 +16,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: tileUrls.openstreetmap },
+    data: { url: TILE_URLS.openstreetmap },
     raster_tile: {
       max_zoom: 23,
     },
@@ -47,6 +41,14 @@ export const run = async (view: ThreeView) => {
       },
     },
     polygon: {},
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: { url: TILE_URLS.gsiSeamlessphoto },
+    raster_tile: {
+      max_zoom: 23,
+    },
   });
 
   const rainDropLayer = view.addLayer<RainDropEffectLayer>({
