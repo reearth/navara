@@ -1,3 +1,4 @@
+import { packing } from "@takram/three-geospatial/shaders";
 import {
   BufferGeometry,
   BufferAttribute,
@@ -12,14 +13,13 @@ import {
   Scene,
 } from "three";
 
-import { packing } from "@takram/three-geospatial/shaders";
 import { createReplacer } from "../utils";
 
-export interface SpherePointOptions {
+export type SpherePointOptions = {
   visible?: boolean;
   size?: number;
   color?: number;
-}
+};
 
 /**
  * Renders points as spheres using impostor technique.
