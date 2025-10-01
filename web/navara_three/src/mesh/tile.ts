@@ -52,6 +52,7 @@ import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
 import { BatchedFeatureMesh } from "./batchedFeature";
+import type { PickableMesh } from "./pickableMesh";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
@@ -62,7 +63,10 @@ const PREV_RENDERER_CLEAR_COLOR = new Color();
 
 const NUM_WATER_TEXTURES = 1;
 
-export class TileMesh extends Mesh<BufferGeometry, TileMaterial> {
+export class TileMesh
+  extends Mesh<BufferGeometry, TileMaterial>
+  implements PickableMesh
+{
   handle: TileHandle;
   tileHandler: TileHandler;
   maxTextures: number;
@@ -965,18 +969,18 @@ if (uPickable > 0.) {
     }
   }
 
-  _togglePickable(pickable: number) {
+  _setPickable(pickable: boolean): void {
     if (pickable) {
       this.material.color.setHex(0);
     } else {
       this.material.color.setHex(this.userData.tileOrigColor);
     }
-    this.material.userData.uPickable.value = pickable;
+    this.material.userData.uPickable.value = pickable ? 1 : 0;
 
     for (const texturizedScene of this.texturizedScenes.children) {
       texturizedScene.traverse((obj) => {
         if (obj instanceof BatchedFeatureMesh) {
-          obj._togglePickable(pickable);
+          obj._setPickable(pickable);
         }
       });
     }

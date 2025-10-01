@@ -1,13 +1,17 @@
 import { Color, Mesh, Object3D } from "three";
 
 import { isFeatureMesh } from "./featureMesh";
+import type { PickableMesh } from "./pickableMesh";
 
 export type InstancedMeshOptions = {
   renderOrder?: number;
 };
 
 // This is used for point related mesh like point, billboard and text.
-export class InstancedMesh<M extends Object3D> extends Mesh {
+export class InstancedMesh<M extends Object3D>
+  extends Mesh
+  implements PickableMesh
+{
   constructor(options?: InstancedMeshOptions) {
     super();
     this.renderOrder = options?.renderOrder ?? this.renderOrder;
@@ -44,7 +48,8 @@ export class InstancedMesh<M extends Object3D> extends Mesh {
     mesh._setFeatureShow(visible);
   }
 
-  setPickable(v: number) {
+  _setPickable(pickable: boolean) {
+    const v = pickable ? 1.0 : 0.0;
     for (const mesh of this.meshes()) {
       mesh.userData.uPickable.value = v;
 

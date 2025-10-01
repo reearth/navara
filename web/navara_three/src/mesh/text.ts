@@ -21,8 +21,9 @@ import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
 import type { FeatureMesh } from "./featureMesh";
+import type { PickableMesh } from "./pickableMesh";
 
-export class TextMesh extends Group implements FeatureMesh {
+export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
   background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
 
@@ -362,7 +363,7 @@ export class TextMesh extends Group implements FeatureMesh {
       bNeedUpdateBg = true;
     }
 
-    const nextColor = material.color ?? "#ffffff";
+    const nextColor = material.color ?? 0xffffff;
     if (nextColor !== prev.color) {
       prev.color = nextColor;
       if (this.userData.isPicked) {
@@ -556,11 +557,11 @@ export class TextMesh extends Group implements FeatureMesh {
   }
 
   _setFeatureColor(color: Color): void {
-    this.text.material.color.set(color);
+    this.text.color = color.getHex();
   }
 
   _getFeatureColor() {
-    return this.text.material.color;
+    return new Color(this.text.color as number);
   }
 
   _setFeatureShow(visible: boolean): void {
@@ -576,5 +577,16 @@ export class TextMesh extends Group implements FeatureMesh {
 
   _setFeatureExtrudedHeight(_height: number): void {
     throw new Unimplemented();
+  }
+
+  _setPickable(pickable: boolean) {
+    this.userData.uPickable.value = pickable ? 1.0 : 0.0;
+
+    this.children.forEach((item) => {
+      // The frustum used for picking is only 1 pixel in size,
+      // and both the text and its background dynamically change positions,
+      // they risk being incorrectly culled. Therefore, frustumCulled must be set to false
+      item.frustumCulled = !pickable;
+    });
   }
 }

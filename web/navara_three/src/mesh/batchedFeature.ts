@@ -21,6 +21,7 @@ import {
   type DefaultBatchAttributeValues,
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
+import { PickableMesh } from "./pickableMesh";
 
 export type BatchedFeatureAttributes<
   Attr extends NormalBufferAttributes = NormalBufferAttributes,
@@ -40,7 +41,7 @@ export class BatchedFeatureMesh<
     E extends CustomObject3DEventMap = CustomObject3DEventMap,
   >
   extends Mesh<Buf, M, E>
-  implements FeatureMesh
+  implements FeatureMesh, PickableMesh
 {
   static _isBatchedAttributeName(v: string): v is BatchedAttributeName {
     return BATCHED_ATTRIBUTE_NAMES.includes(v as BatchedAttributeName);
@@ -121,8 +122,8 @@ export class BatchedFeatureMesh<
     throw new Unimplemented();
   }
 
-  _togglePickable(pickable: number) {
-    this.material.userData.uPickable.value = pickable;
+  _setPickable(pickable: boolean) {
+    this.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
     this.needsUpdate();
   }
 

@@ -50,6 +50,7 @@ import {
   type BatchTextureConfig,
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
+import type { PickableMesh } from "./pickableMesh";
 
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
@@ -60,7 +61,7 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
   batchLength: 0,
 };
 
-export class ModelMesh extends Object3D implements FeatureMesh {
+export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
 
@@ -628,5 +629,13 @@ export class ModelMesh extends Object3D implements FeatureMesh {
 
   _setFrustumCulled(culled: boolean): void {
     this.frustumCulled = culled;
+  }
+
+  _setPickable(pickable: boolean): void {
+    this.traverseMesh((mesh) => {
+      if ("userData" in mesh.material && mesh.material.userData.uPickable) {
+        mesh.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
+      }
+    });
   }
 }
