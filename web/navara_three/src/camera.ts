@@ -1,4 +1,8 @@
-import { type CRSTypes, type CameraPositionByCRS, EventHandler } from "@navara/core";
+import {
+  type CRSTypes,
+  type CameraPositionByCRS,
+  EventHandler,
+} from "@navara/core";
 import { Core, CameraStatus, CameraStatusType } from "@navara/engine";
 import { PerspectiveCamera } from "three";
 

@@ -65,20 +65,17 @@ export default defineConfig((env) => {
               "@navara/core": path.resolve(__dirname, "../navara_core/src"),
               "@navara/three_api": path.resolve(
                 __dirname,
-                "../navara_three_api/src"
+                "../navara_three_api/src",
               ),
               "@navara/three_csm": path.resolve(
                 __dirname,
-                "../navara_three_csm/src"
+                "../navara_three_csm/src",
               ),
               "@navara/three_react": path.resolve(
                 __dirname,
-                "../navara_three_react/src"
+                "../navara_three_react/src",
               ),
-              "@navara/worker": path.resolve(
-                __dirname,
-                "../navara_worker/src"
-              ),
+              "@navara/worker": path.resolve(__dirname, "../navara_worker/src"),
             }
           : {
               // For production example builds, consume the built library output.
