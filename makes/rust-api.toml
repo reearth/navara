@@ -1,20 +1,20 @@
 [tasks.build-rust-api]
 script = ['''
-#!/usr/bin/env bash -eux
+REM #!/usr/bin/env bash -eux
 cd crates/navara_wasm_api
 wasm-pack build --out-dir ../../web/wasm/navara_engine_api --target web --release
 ''']
 
 [tasks.build-dev-rust-api]
 script = ['''
-#!/usr/bin/env bash -eux
+REM #!/usr/bin/env bash -eux
 cd crates/navara_wasm_api
 wasm-pack build --out-dir ../../web/wasm/navara_engine_api --target web
 ''']
 
 [tasks.watch-rust-api]
 script = ['''
-#!/usr/bin/env bash -eux
+REM #!/usr/bin/env bash -eux
 cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_api" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_api /Mir" --poll
 ''']

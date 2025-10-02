@@ -2,7 +2,7 @@ import { readdirSync } from "fs";
 import path, { resolve } from "path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
@@ -23,7 +23,7 @@ export default defineConfig((env) => {
       viteStaticCopy({
         targets: [
           {
-            src: resolve(__dirname, "./assets"),
+            src: normalizePath(resolve(__dirname, "./assets")),
             dest: "./",
           },
         ],
@@ -34,7 +34,7 @@ export default defineConfig((env) => {
           return {
             name: page,
             filename: `${page}.html`,
-            entry: resolve(__dirname, `example/pages/${page}/main.ts`),
+            entry: normalizePath(`/example/pages/${page}/main.ts`),
             data: {
               title: "Navara",
             },
@@ -54,11 +54,11 @@ export default defineConfig((env) => {
     resolve: {
       alias: {
         ...common.resolve?.alias,
-        "@shaders": path.resolve(__dirname, "../../shaders"),
+        "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),
       },
     },
-    publicDir: path.resolve(__dirname, "example/public"),
-    envDir: path.resolve(__dirname, "example"),
+    publicDir: normalizePath(path.resolve(__dirname, "./example/public")),
+    envDir: normalizePath(path.resolve(__dirname, "./example")),
     worker: {
       plugins: () => [tsconfig()],
     },

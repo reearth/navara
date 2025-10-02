@@ -1,6 +1,6 @@
 import path from "path";
 
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
@@ -17,7 +17,7 @@ export default defineConfig((env) => {
       viteStaticCopy({
         targets: [
           {
-            src: path.resolve(__dirname, "./assets"),
+            src: normalizePath(path.resolve(__dirname, "./assets")),
             dest: "./",
           },
         ],
