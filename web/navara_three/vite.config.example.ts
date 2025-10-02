@@ -58,7 +58,32 @@ export default defineConfig((env) => {
       alias: {
         ...common.resolve?.alias,
         "@shaders": path.resolve(__dirname, "../../shaders"),
-        "@navara/three": path.resolve(__dirname, "./dist"),
+        // For dev server, import packages directly from source to avoid bundling.
+        ...(env.command === "serve"
+          ? {
+              "@navara/three": path.resolve(__dirname, "./src"),
+              "@navara/core": path.resolve(__dirname, "../navara_core/src"),
+              "@navara/three_api": path.resolve(
+                __dirname,
+                "../navara_three_api/src"
+              ),
+              "@navara/three_csm": path.resolve(
+                __dirname,
+                "../navara_three_csm/src"
+              ),
+              "@navara/three_react": path.resolve(
+                __dirname,
+                "../navara_three_react/src"
+              ),
+              "@navara/worker": path.resolve(
+                __dirname,
+                "../navara_worker/src"
+              ),
+            }
+          : {
+              // For production example builds, consume the built library output.
+              "@navara/three": path.resolve(__dirname, "./dist"),
+            }),
       },
     },
     publicDir: path.resolve(__dirname, "example/public"),
