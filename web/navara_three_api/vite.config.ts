@@ -6,5 +6,9 @@ export default defineConfig((env) => {
   const common = commonConfig("NavaraThreeApi", env);
   return {
     ...common,
+    rollupOptions: {
+      ...common?.build?.rollupOptions,
+      external: ["three"],
+    },
   };
 });

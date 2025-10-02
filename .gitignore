@@ -29,6 +29,7 @@ lerna-debug.log*
 web/wasm
 node_modules
 dist
+dist-example
 dist-ssr
 *.local
 !web/**/example/pages/debug

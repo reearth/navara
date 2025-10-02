@@ -9,8 +9,6 @@ import ThreeView, {
   type Nullable,
   type XYZ,
   type MapMouseEvent,
-} from "@navara/three";
-import {
   geodeticToVector3,
   vector3ToGeodetic,
   degreeToRadian,
@@ -28,7 +26,7 @@ import {
   Window as NavaraWindow,
   LLE,
   EllipsoidGeodesic,
-} from "@navara/three_api";
+} from "@navara/three";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 

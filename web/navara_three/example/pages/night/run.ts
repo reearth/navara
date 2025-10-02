@@ -8,8 +8,10 @@ import ThreeView, {
   type FogLightEffectLayer,
   type LayerDescription,
   type FogLightDefinition,
+  degreeToRadian,
+  geodeticToVector3,
+  LLE,
 } from "@navara/three";
-import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import type { FeatureCollection, Point } from "geojson";
 import * as THREE from "three";
 import { Pane } from "tweakpane";

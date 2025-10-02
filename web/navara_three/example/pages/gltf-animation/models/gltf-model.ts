@@ -3,13 +3,11 @@
 import ThreeView, {
   type GLTFModelLayer,
   type LayerHandle,
-} from "@navara/three";
-import {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   LLE,
-} from "@navara/three_api";
+} from "@navara/three";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 
