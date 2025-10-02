@@ -14,43 +14,6 @@ export const run = async (view: ThreeView) => {
 
   view.addDefaultAtmosphereLayers();
 
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_URLS.openstreetmap },
-    raster_tile: {
-      max_zoom: 23,
-    },
-  });
-
-  view.addLayer({
-    type: "geojson",
-    data: {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        coordinates: [
-          [
-            [138.66861922558115, 35.46838056308519],
-            [138.6559918549957, 35.29164005065681],
-            [138.81174182884172, 35.279838616806046],
-            [138.8071009152797, 35.436389815907134],
-            [138.66861922558115, 35.46838056308519],
-          ],
-        ],
-        type: "Polygon",
-      },
-    },
-    polygon: {},
-  });
-
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
-    raster_tile: {
-      max_zoom: 23,
-    },
-  });
-
   const rainDropLayer = view.addLayer<RainDropEffectLayer>({
     type: "effect",
     rainDrop: {
