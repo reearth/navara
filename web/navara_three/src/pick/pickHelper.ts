@@ -12,10 +12,10 @@ import {
 
 import { BufferView } from "../bufferView";
 import { ModelMesh, InstancedMesh } from "../mesh";
+import { isPickableMesh } from "../mesh/pickableMesh";
 import { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
-import { isPickableMesh } from "../mesh/pickableMesh";
 
 export type PickHelperOptions = {
   debug: boolean;
