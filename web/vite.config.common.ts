@@ -30,7 +30,7 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
     watchPackages(["navara_wasm", "navara_wasm_worker", "navara_wasm_api"]),
     tsconfig(),
-    dts({ rollupTypes: true }),
+    dts(),
   ],
   resolve: {
     mainFields: ["module"],
