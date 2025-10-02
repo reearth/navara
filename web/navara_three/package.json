@@ -15,6 +15,8 @@
     "dev": "vite -c vite.config.example.ts --host",
     "dev:example": "vite -c vite.config.example.ts --host",
     "build": "tsc && vite build",
+    "build:dev": "vite build --mode development",
+    "build:dev:watch": "pnpm build:dev --watch",
     "build:example": "tsc && vite build -c vite.config.example.ts",
     "preview": "vite preview",
     "test": "vitest --passWithNoTests --watch=false",
@@ -44,6 +46,7 @@
     "troika-three-text": "^0.52.4"
   },
   "devDependencies": {
+    "@navara/three_react": "workspace:*",
     "@playwright/test": "^1.55.0",
     "@tweakpane/core": "^2.0.5",
     "@types/stats.js": "^0.17.4",
