@@ -24,6 +24,14 @@ export const run = async (view: ThreeView) => {
     visible: true,
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TILE_URLS.gsiSeamlessphoto },
+    raster_tile: {
+      max_zoom: 23,
+    },
+  });
+
   const pane = new Pane({
     title: "Rain Drop Effect",
     expanded: true,
