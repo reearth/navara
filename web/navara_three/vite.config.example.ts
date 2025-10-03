@@ -62,20 +62,21 @@ export default defineConfig((env) => {
         ...(env.command === "serve"
           ? {
               "@navara/three": normalizePath(path.resolve(__dirname, "./src")),
-              "@navara/core": normalizePath(path.resolve(__dirname, "../navara_core/src")),
-              "@navara/three_api": normalizePath(path.resolve(
-                __dirname,
-                "../navara_three_api/src",
-              )),
-              "@navara/three_csm": normalizePath(path.resolve(
-                __dirname,
-                "../navara_three_csm/src",
-              )),
-              "@navara/three_react": normalizePath(path.resolve(
-                __dirname,
-                "../navara_three_react/src",
-              )),
-              "@navara/worker": normalizePath(path.resolve(__dirname, "../navara_worker/src")),
+              "@navara/core": normalizePath(
+                path.resolve(__dirname, "../navara_core/src"),
+              ),
+              "@navara/three_api": normalizePath(
+                path.resolve(__dirname, "../navara_three_api/src"),
+              ),
+              "@navara/three_csm": normalizePath(
+                path.resolve(__dirname, "../navara_three_csm/src"),
+              ),
+              "@navara/three_react": normalizePath(
+                path.resolve(__dirname, "../navara_three_react/src"),
+              ),
+              "@navara/worker": normalizePath(
+                path.resolve(__dirname, "../navara_worker/src"),
+              ),
             }
           : {
               // For production example builds, consume the built library output.
