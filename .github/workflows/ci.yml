@@ -56,6 +56,9 @@ jobs:
         run: cargo make prepare
       - name: Run Build
         # WASM is built in `Prepare` action.
+        run: pnpm build
+      - name: Run Build Example
+        # WASM is built in `Prepare` action.
         run: pnpm build:example
       - name: Run Test
         run: cargo make test

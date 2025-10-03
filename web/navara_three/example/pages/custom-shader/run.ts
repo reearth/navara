@@ -4,13 +4,11 @@ import ThreeView, {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
-} from "@navara/three";
-import {
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
   LLE,
-} from "@navara/three_api";
+} from "@navara/three";
 import {
   Color,
   ShaderLib,

@@ -1,6 +1,5 @@
 import type { CameraPosition } from "@navara/core";
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { LLE } from "@navara/three_api";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, LLE } from "@navara/three";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 

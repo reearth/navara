@@ -3,7 +3,6 @@ import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
-import type { ViewEvents } from "@navara/three";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import { Color, InstancedBufferAttribute } from "three";
 import {
@@ -13,6 +12,7 @@ import {
   LineSegmentsGeometry,
 } from "three-stdlib";
 
+import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";

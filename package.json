@@ -12,7 +12,7 @@
     "star": "pnpm navara_three start",
     "dev": "pnpm build:common:dev & pnpm navara_three dev",
     "preview": "pnpm navara_three preview",
-    "build": "pnpm -r run build",
+    "build": "pnpm --filter-prod './web/**' run build",
     "build:common:dev": "NODE_ENV=development pnpm -r --parallel run build:dev:watch",
     "build:example": "pnpm -r run build:example",
     "test": "pnpm -r run test",

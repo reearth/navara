@@ -1,3 +1,4 @@
+import { globalIgnores } from "eslint/config";
 import reearthConfig from "eslint-config-reearth";
 
 /** @type { import("eslint").Linter.Config[] } */
@@ -14,6 +15,6 @@ export default [
         },
       ],
     },
-    ignores: ["dist"],
   },
+  globalIgnores(["dist/**/*", "dist-example/**/*"]),
 ];

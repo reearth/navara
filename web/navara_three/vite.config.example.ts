@@ -51,10 +51,14 @@ export default defineConfig((env) => {
     define: {
       PAGES: pages,
     },
+    build: {
+      outDir: "dist-example",
+    },
     resolve: {
       alias: {
         ...common.resolve?.alias,
         "@shaders": path.resolve(__dirname, "../../shaders"),
+        "@navara/three": path.resolve(__dirname, "./dist"),
       },
     },
     publicDir: path.resolve(__dirname, "example/public"),
