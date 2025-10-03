@@ -6,47 +6,40 @@ cargo fmt --all
 
 [tasks.format-check-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cargo fmt --all --check
 ''']
 
 [tasks.lint-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 ''']
 
 
 [tasks.test-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cargo test --workspace --all-targets --all-features
 ''']
 
 [tasks.build-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cd crates/navara_wasm
 wasm-pack build --out-dir ../../web/wasm/navara_engine --target web --release
 ''']
 
 [tasks.build-dev-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cd crates/navara_wasm
 wasm-pack build --out-dir ../../web/wasm/navara_engine --target web
 ''']
 
 [tasks.watch-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cd crates/navara_wasm
 cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir" --poll
 ''']
 
 [tasks.doc-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cargo clean --doc
 cargo doc --no-deps --all-features
 ''']

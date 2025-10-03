@@ -1,61 +1,52 @@
 [tasks.install-deps-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm i
 ''']
 
 [tasks.dev-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm dev
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.build-web-example]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm build:example
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.build-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm build
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.lint-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm lint
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.lint-check-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm lint:check
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.format-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm format
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.format-check-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm format:check
 ''']
 dependencies = ["install-deps-web"]
 
 [tasks.test-web]
 script = ['''
-REM #!/usr/bin/env bash -eux
 pnpm test
 ''']
 dependencies = ["install-deps-web"]
