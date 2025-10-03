@@ -8,7 +8,10 @@ export default defineConfig((env) => {
     ...common,
     rollupOptions: {
       ...common?.build?.rollupOptions,
-      external: ["three"],
+      external: [
+        ...(common.build?.rollupOptions?.external as string[]),
+        "three",
+      ],
     },
   };
 });

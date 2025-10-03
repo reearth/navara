@@ -4,7 +4,6 @@ import {
   type EventHandler,
 } from "@navara/core";
 import { orthoCameraTransform } from "@navara/engine";
-import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import type {
   MeshAdded,
   Mesh as EventMesh,
@@ -12,7 +11,8 @@ import type {
   Transform,
   TextureFragment,
   MeshChanged,
-} from "navara_wasm";
+} from "@navara/engine";
+import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
