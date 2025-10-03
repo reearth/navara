@@ -118,6 +118,18 @@ export const run = async (view: ThreeView) => {
       opacity: 1.0,
       dropGridSize: 12,
       dropDensity: 1,
+      dropLayers: 4,
+      dropSizeFactor: 0.015,
+      noiseScale: 200,
+      refractionStrength: 0.3,
+      minDropStrength: 0.01,
+      dropFadeStart: 0.3,
+      dropFadeEnd: 0.8,
+      dropThresholdFactor: 0.08,
+      gridDensityLow: 1.15,
+      gridDensityHigh: 0.85,
+      jitterStrengthLow: 0.45,
+      jitterStrengthHigh: 0.08,
     },
     visible: false,
   });
@@ -495,10 +507,57 @@ const addWeatherControl = (
   });
   addFieldsToFolder(rainFolder, RAIN_PARAMS, rainFolderFields);
 
+  const rainDropDefaults = {
+    opacity: 1,
+    dropGridSize: 12,
+    dropDensity: 1,
+    dropLayers: 4,
+    dropSizeFactor: 0.015,
+    noiseScale: 200,
+    refractionStrength: 0.3,
+    minDropStrength: 0.01,
+    dropFadeStart: 0.3,
+    dropFadeEnd: 0.8,
+    dropThresholdFactor: 0.08,
+    gridDensityLow: 1.15,
+    gridDensityHigh: 0.85,
+    jitterStrengthLow: 0.45,
+    jitterStrengthHigh: 0.08,
+  } as const;
+
   const RAIN_DROP_PARAMS = {
-    opacity: rainDropEffect.ref?.raw?.opacity ?? 1,
-    dropGridSize: rainDropEffect.ref?.raw?.dropGridSize ?? 12,
-    dropDensity: rainDropEffect.ref?.raw?.dropDensity ?? 1,
+    ...rainDropDefaults,
+    opacity: rainDropEffect.ref?.raw?.opacity ?? rainDropDefaults.opacity,
+    dropGridSize:
+      rainDropEffect.ref?.raw?.dropGridSize ?? rainDropDefaults.dropGridSize,
+    dropDensity: rainDropEffect.ref?.raw?.dropDensity ?? rainDropDefaults.dropDensity,
+    dropLayers: rainDropEffect.ref?.raw?.dropLayers ?? rainDropDefaults.dropLayers,
+    dropSizeFactor:
+      rainDropEffect.ref?.raw?.dropSizeFactor ?? rainDropDefaults.dropSizeFactor,
+    noiseScale: rainDropEffect.ref?.raw?.noiseScale ?? rainDropDefaults.noiseScale,
+    refractionStrength:
+      rainDropEffect.ref?.raw?.refractionStrength ??
+      rainDropDefaults.refractionStrength,
+    minDropStrength:
+      rainDropEffect.ref?.raw?.minDropStrength ??
+      rainDropDefaults.minDropStrength,
+    dropFadeStart:
+      rainDropEffect.ref?.raw?.dropFadeStart ?? rainDropDefaults.dropFadeStart,
+    dropFadeEnd:
+      rainDropEffect.ref?.raw?.dropFadeEnd ?? rainDropDefaults.dropFadeEnd,
+    dropThresholdFactor:
+      rainDropEffect.ref?.raw?.dropThresholdFactor ??
+      rainDropDefaults.dropThresholdFactor,
+    gridDensityLow:
+      rainDropEffect.ref?.raw?.gridDensityLow ?? rainDropDefaults.gridDensityLow,
+    gridDensityHigh:
+      rainDropEffect.ref?.raw?.gridDensityHigh ?? rainDropDefaults.gridDensityHigh,
+    jitterStrengthLow:
+      rainDropEffect.ref?.raw?.jitterStrengthLow ??
+      rainDropDefaults.jitterStrengthLow,
+    jitterStrengthHigh:
+      rainDropEffect.ref?.raw?.jitterStrengthHigh ??
+      rainDropDefaults.jitterStrengthHigh,
   };
 
   const rainDropFolder = rainFolder.addFolder({
@@ -551,7 +610,203 @@ const addWeatherControl = (
         });
       },
     },
+    {
+      name: "dropLayers",
+      params: {
+        min: 1,
+        max: 6,
+        step: 1,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropLayers: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "dropSizeFactor",
+      params: {
+        min: 0.01,
+        max: 0.03,
+        step: 0.001,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropSizeFactor: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "noiseScale",
+      params: {
+        min: 50,
+        max: 400,
+        step: 1,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            noiseScale: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "refractionStrength",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            refractionStrength: v.value,
+          },
+        });
+      },
+    },
   ]);
+
+  const rainDropAdvancedFolder = rainDropFolder.addFolder({
+    title: "Advanced",
+    expanded: false,
+  });
+
+  addFieldsToFolder(rainDropAdvancedFolder, RAIN_DROP_PARAMS, [
+    {
+      name: "minDropStrength",
+      params: {
+        min: 0,
+        max: 0.05,
+        step: 0.001,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            minDropStrength: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "dropFadeStart",
+      params: {
+        min: 0,
+        max: 0.9,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropFadeStart: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "dropFadeEnd",
+      params: {
+        min: 0.1,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropFadeEnd: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "dropThresholdFactor",
+      params: {
+        min: 0.02,
+        max: 0.15,
+        step: 0.005,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropThresholdFactor: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "gridDensityLow",
+      params: {
+        min: 0.8,
+        max: 1.4,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            gridDensityLow: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "gridDensityHigh",
+      params: {
+        min: 0.6,
+        max: 1.1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            gridDensityHigh: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "jitterStrengthLow",
+      params: {
+        min: 0.2,
+        max: 0.6,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            jitterStrengthLow: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "jitterStrengthHigh",
+      params: {
+        min: 0.02,
+        max: 0.2,
+        step: 0.005,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            jitterStrengthHigh: v.value,
+          },
+        });
+      },
+    },
+  ]);
+
+  rainDropFolder
+    .addButton({ title: "Reset" })
+    .on("click", () => {
+      Object.assign(RAIN_DROP_PARAMS, rainDropDefaults);
+      pane.refresh();
+      rainDropEffect.update({ rainDrop: { ...rainDropDefaults } });
+    });
 
   // Snow
 

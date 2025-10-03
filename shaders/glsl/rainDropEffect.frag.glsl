@@ -7,23 +7,25 @@ uniform float time;
 uniform vec2 resolution;
 uniform float dropGridSize;
 uniform float dropDensity;
+uniform float dropLayers;
+uniform float dropSizeFactor;
+uniform float noiseScale;
+uniform float refractionStrength;
+uniform float minDropStrength;
+uniform float dropFadeStart;
+uniform float dropFadeEnd;
+uniform float dropThresholdFactor;
+uniform float gridDensityLow;
+uniform float gridDensityHigh;
+uniform float jitterStrengthLow;
+uniform float jitterStrengthHigh;
 
 // ============================================================================
 // Constants
 // ============================================================================
 const float TWO_PI = 6.28318530718;
-const float DROP_LAYERS = 4.0;            // Number of drop layers
-const float DROP_SIZE_FACTOR = 0.015;     // Drop size coefficient
-const float NOISE_SCALE = 200.0;          // Noise scale
-const float REFRACTION_STRENGTH = 0.3;    // Refraction strength
-const float MIN_DROP_STRENGTH = 0.01;     // Minimum drop strength
-const float DROP_FADE_START = 0.3;        // Fade start position
-const float DROP_FADE_END = 0.8;          // Fade end position
-const float DROP_THRESHOLD_FACTOR = 0.08; // Drop display threshold factor
-const float GRID_DENSITY_LOW = 1.15;      // Grid shrink when density is low
-const float GRID_DENSITY_HIGH = 0.85;     // Grid stretch when density is high
-const float JITTER_STRENGTH_LOW = 0.45;   // Max jitter for sparse drops
-const float JITTER_STRENGTH_HIGH = 0.08;  // Min jitter for dense drops
+const float MAX_DROP_LAYERS = 6.0;        // Upper bound for dynamic layer count
+const float MIN_FADE_GAP = 0.01;          // Prevents fade range collapse
 
 // ============================================================================
 // Helper Functions
@@ -69,7 +71,7 @@ float calculateDropShape(vec2 sinWave, float timeSec, vec4 dropProperties) {
 // Calculate drop display strength
 float calculateDropStrength(float dropShape, float layerIndex, float randomValue) {
   // Drop display probability (varies by layer)
-  float baseThreshold = (5.0 - layerIndex) * DROP_THRESHOLD_FACTOR;
+  float baseThreshold = (5.0 - layerIndex) * dropThresholdFactor;
 
   // Density curve: <1.0 tightens threshold, >1.0 loosens it
   float densityNorm = clamp(dropDensity, 0.0, 2.0);
@@ -79,13 +81,17 @@ float calculateDropStrength(float dropShape, float layerIndex, float randomValue
   densityScale = mix(densityScale, 1.5, highRange);
 
   // Keep large drops slightly easier to spawn when thinning
-  float layerBias = mix(0.6, 1.0, layerIndex / DROP_LAYERS);
+  float effectiveLayers = max(dropLayers, 1.0);
+  float layerBias = mix(0.6, 1.0, layerIndex / effectiveLayers);
   float threshold = clamp(baseThreshold * densityScale * layerBias, 0.0, 0.95);
 
   float probability = smoothstep(threshold + 0.05, threshold - 0.05, randomValue);
   
   // Calculate strength (with fade in/out)
-  float strength = smoothstep(DROP_FADE_START, DROP_FADE_END, dropShape);
+  float fadeStart = clamp(dropFadeStart, 0.0, 1.0 - MIN_FADE_GAP);
+  float minFadeEnd = fadeStart + MIN_FADE_GAP;
+  float fadeEnd = clamp(dropFadeEnd, minFadeEnd, 1.0);
+  float strength = smoothstep(fadeStart, fadeEnd, dropShape);
   
   return strength * probability;
 }
@@ -105,7 +111,7 @@ vec3 calculateDropNormal(vec2 sinWave, float dropShape) {
 // Apply refraction effect
 vec4 applyRefraction(vec2 uv, vec3 dropNormal, float dropStrength) {
   // Distort UV coordinates (in normal direction)
-  vec2 refractedUV = uv - dropNormal.xy * REFRACTION_STRENGTH * dropStrength;
+  vec2 refractedUV = uv - dropNormal.xy * refractionStrength * dropStrength;
   
   // Sample background at distorted UV coordinates
   return texture2D(inputBuffer, refractedUV);
@@ -120,18 +126,23 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   
   // Position displacement by noise (randomize drop positions)
   vec2 normalizedUV = (uv * 0.1) / (resolution / resolution.x);
-  vec2 displacement = noise(normalizedUV * NOISE_SCALE);
+  vec2 displacement = noise(normalizedUV * noiseScale);
   
   // Final color (initial value is input color)
   vec4 finalColor = inputColor;
   
   // Generate drops in multiple layers (from large to small)
-  for (float layerIndex = DROP_LAYERS; layerIndex > 0.0; layerIndex -= 1.0) {
+  float layerCount = clamp(floor(dropLayers + 0.5), 1.0, MAX_DROP_LAYERS);
+
+  for (float layerIndex = MAX_DROP_LAYERS; layerIndex > 0.0; layerIndex -= 1.0) {
+    if (layerIndex > layerCount) {
+      continue;
+    }
     // Calculate drop grid size
     float densityNorm = clamp(dropDensity, 0.0, 2.0);
-    float gridDensityAdjust = mix(GRID_DENSITY_LOW, 1.0, clamp(densityNorm, 0.0, 1.0));
-    gridDensityAdjust = mix(gridDensityAdjust, GRID_DENSITY_HIGH, clamp(densityNorm - 1.0, 0.0, 1.0));
-    vec2 gridSize = resolution * layerIndex * DROP_SIZE_FACTOR * (dropGridSize / 12.0) * gridDensityAdjust;
+    float gridDensityAdjust = mix(gridDensityLow, 1.0, clamp(densityNorm, 0.0, 1.0));
+    gridDensityAdjust = mix(gridDensityAdjust, gridDensityHigh, clamp(densityNorm - 1.0, 0.0, 1.0));
+    vec2 gridSize = resolution * layerIndex * dropSizeFactor * (dropGridSize / 12.0) * gridDensityAdjust;
     
     // Calculate sine wave phase (including position displacement by noise)
     vec2 phase = TWO_PI * uv * gridSize + (displacement - 0.5) * 2.0;
@@ -139,12 +150,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     
     // Current drop coordinates (rounded to grid)
     vec2 baseDropCoord = round(uv * gridSize - 0.25) / gridSize;
-    float jitterStrength = mix(JITTER_STRENGTH_LOW, JITTER_STRENGTH_HIGH, clamp(densityNorm, 0.0, 1.0));
-    vec2 jitter = (noise(baseDropCoord * (NOISE_SCALE * 0.37)) - 0.5) * jitterStrength / gridSize;
+    float jitterStrength = mix(jitterStrengthLow, jitterStrengthHigh, clamp(densityNorm, 0.0, 1.0));
+    vec2 jitter = (noise(baseDropCoord * (noiseScale * 0.37)) - 0.5) * jitterStrength / gridSize;
     vec2 dropCoord = baseDropCoord + jitter;
     
     // Drop properties (get four random values)
-    vec4 dropProperties = vec4(noise(dropCoord * NOISE_SCALE), noise(dropCoord));
+    vec4 dropProperties = vec4(noise(dropCoord * noiseScale), noise(dropCoord));
     
     // Calculate drop shape
     float dropShape = calculateDropShape(sinWave, timeSec, dropProperties);
@@ -153,7 +164,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     float dropStrength = calculateDropStrength(dropShape, layerIndex, dropProperties.r);
     
     // Apply refraction effect if strength is sufficient
-    if (dropStrength > MIN_DROP_STRENGTH) {
+    if (dropStrength > minDropStrength) {
       // Calculate normal vector
       vec3 dropNormal = calculateDropNormal(phase, dropShape);
       

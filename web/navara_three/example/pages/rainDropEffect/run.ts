@@ -14,13 +14,27 @@ export const run = async (view: ThreeView) => {
 
   view.addDefaultAtmosphereLayers();
 
+  const rainDropDefaults = {
+    opacity: 0.85,
+    dropGridSize: 14,
+    dropDensity: 0.8,
+    dropLayers: 3,
+    dropSizeFactor: 0.017,
+    noiseScale: 200,
+    refractionStrength: 0.3,
+    minDropStrength: 0.01,
+    dropFadeStart: 0.3,
+    dropFadeEnd: 0.8,
+    dropThresholdFactor: 0.08,
+    gridDensityLow: 1.15,
+    gridDensityHigh: 0.85,
+    jitterStrengthLow: 0.45,
+    jitterStrengthHigh: 0.08,
+  };
+
   const rainDropLayer = view.addLayer<RainDropEffectLayer>({
     type: "effect",
-    rainDrop: {
-      opacity: 1.0,
-      dropGridSize: 12,
-      dropDensity: 1,
-    },
+    rainDrop: { ...rainDropDefaults },
     visible: true,
   });
 
@@ -39,11 +53,7 @@ export const run = async (view: ThreeView) => {
 
   addHidePaneKeyShortcut(pane);
 
-  const params = {
-    opacity: 1.0,
-    dropGridSize: 12,
-    dropDensity: 1,
-  };
+  const params = { ...rainDropDefaults };
 
   pane
     .addBinding(params, "opacity", { min: 0, max: 1, step: 0.01 })
@@ -61,5 +71,97 @@ export const run = async (view: ThreeView) => {
     .addBinding(params, "dropDensity", { min: 0, max: 2, step: 0.01 })
     .on("change", (ev) => {
       rainDropLayer.update({ rainDrop: { dropDensity: ev.value } });
+    });
+
+  pane
+    .addBinding(params, "dropLayers", { min: 1, max: 6, step: 1 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { dropLayers: ev.value } });
+    });
+
+  pane
+    .addBinding(params, "dropSizeFactor", { min: 0.01, max: 0.03, step: 0.001 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { dropSizeFactor: ev.value } });
+    });
+
+  pane
+    .addBinding(params, "noiseScale", { min: 50, max: 400, step: 1 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { noiseScale: ev.value } });
+    });
+
+  pane
+    .addBinding(params, "refractionStrength", { min: 0, max: 1, step: 0.01 })
+    .on("change", (ev) => {
+      rainDropLayer.update({
+        rainDrop: { refractionStrength: ev.value },
+      });
+    });
+
+  const advancedFolder = pane.addFolder({ title: "Advanced", expanded: false });
+
+  advancedFolder
+    .addBinding(params, "dropFadeStart", { min: 0, max: 0.9, step: 0.01 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { dropFadeStart: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "dropFadeEnd", { min: 0.1, max: 1, step: 0.01 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { dropFadeEnd: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "dropThresholdFactor", {
+      min: 0.02,
+      max: 0.15,
+      step: 0.005,
+    })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { dropThresholdFactor: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "minDropStrength", { min: 0, max: 0.05, step: 0.001 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { minDropStrength: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "gridDensityLow", { min: 0.8, max: 1.4, step: 0.01 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { gridDensityLow: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "gridDensityHigh", { min: 0.6, max: 1.1, step: 0.01 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { gridDensityHigh: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "jitterStrengthLow", { min: 0.2, max: 0.6, step: 0.01 })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { jitterStrengthLow: ev.value } });
+    });
+
+  advancedFolder
+    .addBinding(params, "jitterStrengthHigh", {
+      min: 0.02,
+      max: 0.2,
+      step: 0.005,
+    })
+    .on("change", (ev) => {
+      rainDropLayer.update({ rainDrop: { jitterStrengthHigh: ev.value } });
+    });
+
+  pane
+    .addButton({ title: "Reset" })
+    .on("click", () => {
+      Object.assign(params, rainDropDefaults);
+      pane.refresh();
+      rainDropLayer.update({ rainDrop: { ...rainDropDefaults } });
     });
 };

@@ -57,6 +57,42 @@ export class RainDropEffectLayer extends EffectLayerDeclaration<
       if (cfg.dropDensity !== undefined) {
         this._instance.dropDensity = cfg.dropDensity;
       }
+      if (cfg.dropLayers !== undefined) {
+        this._instance.dropLayers = cfg.dropLayers;
+      }
+      if (cfg.dropSizeFactor !== undefined) {
+        this._instance.dropSizeFactor = cfg.dropSizeFactor;
+      }
+      if (cfg.noiseScale !== undefined) {
+        this._instance.noiseScale = cfg.noiseScale;
+      }
+      if (cfg.refractionStrength !== undefined) {
+        this._instance.refractionStrength = cfg.refractionStrength;
+      }
+      if (cfg.minDropStrength !== undefined) {
+        this._instance.minDropStrength = cfg.minDropStrength;
+      }
+      if (cfg.dropFadeStart !== undefined) {
+        this._instance.dropFadeStart = cfg.dropFadeStart;
+      }
+      if (cfg.dropFadeEnd !== undefined) {
+        this._instance.dropFadeEnd = cfg.dropFadeEnd;
+      }
+      if (cfg.dropThresholdFactor !== undefined) {
+        this._instance.dropThresholdFactor = cfg.dropThresholdFactor;
+      }
+      if (cfg.gridDensityLow !== undefined) {
+        this._instance.gridDensityLow = cfg.gridDensityLow;
+      }
+      if (cfg.gridDensityHigh !== undefined) {
+        this._instance.gridDensityHigh = cfg.gridDensityHigh;
+      }
+      if (cfg.jitterStrengthLow !== undefined) {
+        this._instance.jitterStrengthLow = cfg.jitterStrengthLow;
+      }
+      if (cfg.jitterStrengthHigh !== undefined) {
+        this._instance.jitterStrengthHigh = cfg.jitterStrengthHigh;
+      }
     }
 
     if (updates.visible !== undefined) {
