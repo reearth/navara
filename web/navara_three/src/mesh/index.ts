@@ -17,5 +17,7 @@ export * from "./stars";
 export * from "./snow";
 export * from "./rain";
 export * from "./skyMesh";
-export * from "./nvLine2";
 export * from "./arcLine";
+export * from "./smoothLine";
+export * from "./spherePoints";
+export * from "./pickableMesh";

@@ -37,10 +37,7 @@ export default defineConfig((env) => {
       ...common.build,
       rollupOptions: {
         ...common.build.rollupOptions,
-        external: [
-          ...(common.build.rollupOptions.external as string[]),
-          "three",
-        ],
+        external: ["three"],
       },
       watch: undefined,
     },

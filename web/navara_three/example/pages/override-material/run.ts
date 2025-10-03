@@ -726,42 +726,42 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
 // Ref: https://maps.gsi.go.jp/help/pdf/vector/dataspec.pdf
 const ALLOWED_FT_CODE = [
   // 人口100万人以上
-  "51301",
+  51301,
   // 人口50万～100万人未満
-  "51302",
+  51302,
   // 人口50万人未満
-  "51303",
+  51303,
 
   // 都道府県所在地
-  "1401",
+  1401,
   // 市役所・東京都の区役所
-  "1402",
+  1402,
   // 町村役場・政令指定都市の区役所
-  "1403",
+  1403,
 
   // 都道府県庁
-  "100",
+  100,
   // 市役所・東京都の区役所
-  "3205",
+  3205,
   // 町村役場・政令指定都市の区役所
-  "3206",
+  3206,
   // 広葉樹林
-  "6321",
+  6321,
   // 針葉樹林
-  "6322",
+  6322,
   // 温泉
-  "6331",
+  6331,
 ];
 // Ref: https://maps.gsi.go.jp/help/pdf/vector/dataspec.pdf
 const ALLOWED_ANNO_CTG = [
   // 市区町村
-  "110",
+  110,
   // 山名
-  "311",
+  311,
   // 都道府県庁
-  "621",
+  621,
   // 神社
-  "661",
+  661,
 ];
 
 const addSymbolLayer = (pane: Pane, view: ThreeView) => {
@@ -806,8 +806,8 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
       const uniqueLabels = new Set();
       evaluator.evaluate((_batchId, property) => {
         const text = (property?.get("knj") ?? property?.get("name")) as string;
-        const ftCode = property?.get("ftCode") as string;
-        const annoCtg = property?.get("annoCtg") as string;
+        const ftCode = property?.get("ftCode") as number;
+        const annoCtg = property?.get("annoCtg") as number;
 
         if (
           !ALLOWED_FT_CODE.includes(ftCode) ||

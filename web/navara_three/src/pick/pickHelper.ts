@@ -11,13 +11,8 @@ import {
 } from "three";
 
 import { BufferView } from "../bufferView";
-import {
-  TextMesh,
-  ModelMesh,
-  InstancedMesh,
-  TileMesh,
-  BatchedFeatureMesh,
-} from "../mesh";
+import { ModelMesh, InstancedMesh } from "../mesh";
+import { isPickableMesh } from "../mesh/pickableMesh";
 import { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
@@ -125,39 +120,10 @@ export class PickHelper extends CustomRenderPass {
     }
   }
 
-  private togglePickable(pickable: number) {
+  private togglePickable(pickable: boolean) {
     for (const [_key, obj] of this._meshes) {
-      // point, billboard, text
-      if (obj instanceof InstancedMesh) {
-        obj.setPickable(pickable);
-      }
-      // polygon, polyline
-      else if (obj instanceof BatchedFeatureMesh) {
-        obj._togglePickable(pickable);
-      }
-
-      // model
-      else if (obj instanceof ModelMesh) {
-        this.traverseModel(obj, (mesh: Mesh) => {
-          if ("userData" in mesh.material && mesh.material.userData.uPickable) {
-            mesh.material.userData.uPickable.value = pickable;
-          }
-        });
-      }
-      // text
-      else if (obj instanceof TextMesh) {
-        obj.userData.uPickable.value = pickable;
-
-        obj.children.forEach((item) => {
-          // The frustum used for picking is only 1 pixel in size,
-          // and both the text and its background dynamically change positions,
-          // they risk being incorrectly culled. Therefore, frustumCulled must be set to false
-          item.frustumCulled = pickable < 0.5;
-        });
-      }
-      // tile
-      else if (obj instanceof TileMesh) {
-        obj._togglePickable(pickable);
+      if (isPickableMesh(obj)) {
+        obj._setPickable(pickable);
       }
     }
 
@@ -266,11 +232,11 @@ export class PickHelper extends CustomRenderPass {
 
     this._renderer.setClearColor(0x000000);
 
-    this.togglePickable(1);
+    this.togglePickable(true);
 
     this.render(this._renderer, target, null);
 
-    this.togglePickable(0);
+    this.togglePickable(false);
 
     this._renderer.setClearColor(orgClearColor);
   }

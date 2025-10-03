@@ -3,18 +3,16 @@
 import ThreeView, {
   type GLTFModelLayer,
   type LayerHandle,
-} from "@navara/three";
-import {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   LLE,
-} from "@navara/three_api";
+} from "@navara/three";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 
 import { addFieldsToFolder, type FolderFields } from "../../../helpers/panel";
-import { SAPPORO_GEOJSON, MODEL_CONFIG } from "../constants";
+import { SAPPORO_GEOJSON, OSAKA_GEOJSON, MODEL_CONFIG } from "../constants";
 import type {
   AnimationState,
   AnimationWeights,
@@ -467,4 +465,82 @@ export const addTextModelControl = (
   }
 
   return { applyWeights, setDefaultWeights };
+};
+
+/**
+ * Add GLTF model that runs around the earth
+ * Fixed latitude, changing longitude over time
+ */
+export const addRunningModelAroundEarth = (
+  view: ThreeView,
+): LayerHandle<GLTFModelLayer> => {
+  const OSAKA_COORDINATES = getCoordinatesFromGeoJSON(OSAKA_GEOJSON);
+
+  const pos = geodeticToVector3(
+    new LLE(
+      degreeToRadian(OSAKA_COORDINATES.latitude),
+      degreeToRadian(OSAKA_COORDINATES.longitude),
+      OSAKA_COORDINATES.altitude,
+    ),
+  );
+  const normal = geodeticSurfaceNormal(
+    new LLE(
+      degreeToRadian(OSAKA_COORDINATES.latitude),
+      degreeToRadian(OSAKA_COORDINATES.longitude),
+      OSAKA_COORDINATES.altitude,
+    ),
+  );
+
+  // Calculate rotation to align model with surface normal
+  const up = new Vector3(0, 1, 0);
+  const quaternion = new Quaternion().setFromUnitVectors(up, normal);
+  const euler = new Euler().setFromQuaternion(quaternion);
+
+  // Add GLTF model with Run animation fixed
+  const modelLayer = view.addLayer<GLTFModelLayer>({
+    type: "mesh",
+    gltfModel: {
+      url: MODEL_CONFIG.url,
+      animation_enabled: true,
+      animation_active_clip: "Run",
+      animation_speed: 1.0,
+      animation_loop: true,
+      animation_auto_play: true,
+    },
+    scale: MODEL_CONFIG.scale,
+    position: { x: pos.x, y: pos.y, z: pos.z },
+    rotation: { x: euler.x, y: euler.y, z: euler.z },
+  });
+
+  return modelLayer;
+};
+
+/**
+ * Add running model control panel
+ */
+export const addRunningModelControl = (pane: Pane | FolderApi) => {
+  // Running model parameters
+  const runningModelParams = {
+    movementSpeed: 0.01, // degrees per frame
+    direction: "West" as "East" | "West",
+  };
+
+  // Add direction control
+  pane.addBinding(runningModelParams, "direction", {
+    label: "Direction",
+    options: {
+      East: "East",
+      West: "West",
+    },
+  });
+
+  // Add speed control
+  pane.addBinding(runningModelParams, "movementSpeed", {
+    label: "Movement Speed",
+    min: 0.001,
+    max: 0.1,
+    step: 0.001,
+  });
+
+  return runningModelParams;
 };

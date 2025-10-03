@@ -8,8 +8,10 @@ import ThreeView, {
   type FogLightEffectLayer,
   type LayerDescription,
   type FogLightDefinition,
+  degreeToRadian,
+  geodeticToVector3,
+  LLE,
 } from "@navara/three";
-import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import type { FeatureCollection, Point } from "geojson";
 import * as THREE from "three";
 import { Pane } from "tweakpane";
@@ -42,13 +44,6 @@ export const run = async (view: ThreeView) => {
     stars: {
       intensity: 50,
       pointSize: 2,
-    },
-  });
-
-  view.addLayer({
-    type: "effect",
-    ssao: {
-      intensity: 2,
     },
   });
 
@@ -399,6 +394,7 @@ type StreetLightFeature = FeatureCollection<
     height?: number;
     color?: number;
     intensity?: number;
+    radius?: number;
   }
 >;
 
@@ -421,6 +417,7 @@ const loadGeoJSONLights = async (
         position: { x: position.x, y: position.y, z: position.z },
         color: feature.properties?.color || 0xffaa55,
         intensity: feature.properties?.intensity || 1.0,
+        radius: feature.properties?.radius ?? 500,
       };
     });
   } catch (error) {
@@ -442,6 +439,7 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
       lights: tokyoPointsLights,
       fogDensity: 2.0, // Different default density for Tokyo Points
       useSurfaceLighting: true,
+      maxFar: view.camera.raw.far,
     },
     visible: false, // Initially hidden
   });
@@ -456,7 +454,16 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
     visible: false,
     fogDensity: 2.0,
     lightsIntensity: 1.0,
+    lightsRadius: 500,
     useSurfaceLighting: true,
+    // Newly exposed tuning params
+    downsample: 2,
+    tileSize: 32,
+    maxLightsPerTile: 64,
+    extentScale: 0.8,
+    debugShowGrid: false,
+    maxLights: 200,
+    maxFar: view.camera.raw.far,
   };
 
   // Visibility control
@@ -502,6 +509,24 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
       });
     });
 
+  // Lights radius control
+  folder
+    .addBinding(params, "lightsRadius", {
+      min: 0,
+      max: 5000,
+      step: 10,
+      label: "Lights Radius",
+    })
+    .on("change", (ev) => {
+      const updatedLights = tokyoPointsLights.map((light) => ({
+        ...light,
+        radius: ev.value,
+      }));
+      tokyoPointsFogLayer.update({
+        fogLight: { lights: updatedLights },
+      });
+    });
+
   // Surface lighting toggle
   folder
     .addBinding(params, "useSurfaceLighting", {
@@ -511,6 +536,63 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
       tokyoPointsFogLayer.update({
         fogLight: { useSurfaceLighting: ev.value },
       });
+    });
+
+  // Downsample factor (1: full, 2: half, 4: quarter)
+  folder
+    .addBinding(params, "downsample", {
+      min: 1,
+      max: 4,
+      step: 1,
+      label: "Downsample",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({ fogLight: { downsample: ev.value } });
+    });
+
+  // Max lights per tile
+  folder
+    .addBinding(params, "maxLightsPerTile", {
+      min: 16,
+      max: 256,
+      step: 16,
+      label: "Max Lights/Tile",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({
+        fogLight: { maxLightsPerTile: ev.value },
+      });
+    });
+
+  // Extent scale
+  folder
+    .addBinding(params, "extentScale", {
+      min: 0.1,
+      max: 5,
+      step: 0.05,
+      label: "Extent Scale",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({ fogLight: { extentScale: ev.value } });
+    });
+
+  // Max far culling distance
+  folder
+    .addBinding(params, "maxFar", {
+      min: 100,
+      max: 1e7,
+      step: 10000,
+      label: "Cull Distance (maxFar)",
+    })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({ fogLight: { maxFar: ev.value } });
+    });
+
+  // Debug: show grid
+  folder
+    .addBinding(params, "debugShowGrid", { label: "Debug Grid" })
+    .on("change", (ev) => {
+      tokyoPointsFogLayer.update({ fogLight: { debugShowGrid: ev.value } });
     });
 
   return folder;
@@ -545,6 +627,7 @@ const addFogLightControl = async (
           lights: streetLights,
           fogDensity: 0.5,
           useSurfaceLighting: true,
+          maxFar: view.camera.raw.far,
         },
         visible: isAtNight,
       });
@@ -573,7 +656,16 @@ const addFogLightControl = async (
     fogDensity: 0.5,
     useSurfaceLighting: true,
     lightsIntensity: 1.0,
+    lightsRadius: 500,
     enableAtNight: true,
+    // Newly exposed tuning params
+    downsample: 2,
+    tileSize: 32,
+    maxLightsPerTile: 64,
+    extentScale: 0.8,
+    debugShowGrid: false,
+    maxLights: 200,
+    maxFar: view.camera.raw.far,
   };
 
   // Function to update visibility based on time of day
@@ -618,6 +710,71 @@ const addFogLightControl = async (
       }
     });
 
+  // Downsample factor (1: full, 2: half, 4: quarter)
+  fogLightFolder
+    .addBinding(fogLightParams, "downsample", {
+      min: 1,
+      max: 4,
+      step: 1,
+      label: "Downsample",
+    })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        fogLightLayer.update({ fogLight: { downsample: ev.value } });
+      }
+    });
+
+  // Max lights per tile
+  fogLightFolder
+    .addBinding(fogLightParams, "maxLightsPerTile", {
+      min: 16,
+      max: 256,
+      step: 16,
+      label: "Max Lights/Tile",
+    })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        fogLightLayer.update({ fogLight: { maxLightsPerTile: ev.value } });
+      }
+    });
+
+  // Extent scale
+  fogLightFolder
+    .addBinding(fogLightParams, "extentScale", {
+      min: 0.1,
+      max: 5,
+      step: 0.05,
+      label: "Extent Scale",
+    })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        fogLightLayer.update({ fogLight: { extentScale: ev.value } });
+      }
+    });
+
+  // Max far culling distance
+  fogLightFolder
+    .addBinding(fogLightParams, "maxFar", {
+      min: 100,
+      max: 1e7,
+      step: 10000,
+      label: "Cull Distance (maxFar)",
+    })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        fogLightLayer.update({ fogLight: { maxFar: ev.value } });
+      }
+    });
+
+  // Debug: show grid
+  fogLightFolder
+    .addBinding(fogLightParams, "debugShowGrid", { label: "Debug Grid" })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        fogLightLayer.update({ fogLight: { debugShowGrid: ev.value } });
+      }
+    });
+
   // Lights intensity control (updates all lights)
   fogLightFolder
     .addBinding(fogLightParams, "lightsIntensity", {
@@ -631,6 +788,26 @@ const addFogLightControl = async (
         const updatedLights = streetLights.map((light) => ({
           ...light,
           intensity: ev.value,
+        }));
+        fogLightLayer.update({
+          fogLight: { lights: updatedLights },
+        });
+      }
+    });
+
+  // Lights radius control (updates all lights)
+  fogLightFolder
+    .addBinding(fogLightParams, "lightsRadius", {
+      min: 0,
+      max: 5000,
+      step: 10,
+      label: "Lights Radius",
+    })
+    .on("change", (ev) => {
+      if (fogLightLayer) {
+        const updatedLights = streetLights.map((light) => ({
+          ...light,
+          radius: ev.value,
         }));
         fogLightLayer.update({
           fogLight: { lights: updatedLights },

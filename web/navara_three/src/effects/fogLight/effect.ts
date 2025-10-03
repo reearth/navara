@@ -6,8 +6,13 @@ import {
   Vector3,
 } from "three";
 
-import { Effect, type EffectEvents, type EffectOptions } from "../effect";
+import {
+  Pass as PassWrapper,
+  type EffectEvents,
+  type EffectOptions,
+} from "../effect";
 
+import { FogLightDownsampledPass } from "./FogLightDownsampledPass";
 import {
   DEFAULT_FOG_LIGHT_EFFECT_OPTIONS,
   FogLightEffect,
@@ -17,14 +22,20 @@ import {
 
 export type FogLightEvents = EffectEvents;
 
-export type FogLightOptions = FogLightEffectOptions & EffectOptions;
+export type FogLightOptions = FogLightEffectOptions &
+  EffectOptions & {
+    // Downsample factor: 1 = full-res, 2 = half, 4 = quarter. Default 1.
+    downsample?: number;
+  };
 
 export const DEFAULT_FOG_LIGHT_OPTIONS: FogLightOptions = {
   ...DEFAULT_FOG_LIGHT_EFFECT_OPTIONS,
   enabled: true,
+  downsample: 2,
 };
 
-export class FogLight extends Effect<
+export class FogLight extends PassWrapper<
+  FogLightDownsampledPass,
   FogLightEffect,
   FogLightOptions,
   FogLightEvents
@@ -34,13 +45,20 @@ export class FogLight extends Effect<
     const perspectiveOrOrthoCamera = camera as
       | PerspectiveCamera
       | OrthographicCamera;
-    super(
-      camera,
-      new FogLightEffect(perspectiveOrOrthoCamera, {
-        ...mergedOptions,
-      }),
-      mergedOptions,
+
+    const { downsample, ...effectOptions } = mergedOptions;
+    const effect = new FogLightEffect(
+      perspectiveOrOrthoCamera,
+      effectOptions as FogLightEffectOptions,
     );
+
+    const ds = downsample || 1;
+    const downPass = new FogLightDownsampledPass(
+      perspectiveOrOrthoCamera,
+      effect,
+      { downsample: ds },
+    );
+    super(downPass, effect, mergedOptions);
   }
 
   protected onMounted(): void {
@@ -76,7 +94,13 @@ export class FogLight extends Effect<
       const color =
         light.color instanceof Color ? light.color : new Color(light.color);
 
-      this.rawEffect.writeLight(i, color, light.intensity, position);
+      this.rawEffect.writeLight(
+        i,
+        color,
+        light.intensity,
+        position,
+        light.radius ?? 500,
+      );
     }
 
     // Clear remaining slots
@@ -144,5 +168,48 @@ export class FogLight extends Effect<
         this.options.useSurfaceLighting ??
         DEFAULT_FOG_LIGHT_OPTIONS.useSurfaceLighting;
     }
+  }
+
+  get downsample(): number {
+    return this.raw.downsample;
+  }
+
+  set downsample(value: number) {
+    this.raw.downsample = value;
+  }
+
+  get maxLightsPerTile(): number {
+    return this.rawEffect.maxLightsPerTile;
+  }
+
+  set maxLightsPerTile(value: number) {
+    this.rawEffect.maxLightsPerTile = value;
+    this.emit("_needsUpdate");
+  }
+
+  get extentScale(): number {
+    return this.rawEffect.extentScale;
+  }
+
+  set extentScale(value: number) {
+    this.rawEffect.extentScale = value;
+    this.emit("_needsUpdate");
+  }
+
+  get maxFar(): number {
+    return this.rawEffect.maxFar;
+  }
+
+  set maxFar(value: number) {
+    this.rawEffect.maxFar = value;
+    this.emit("_needsUpdate");
+  }
+
+  get debugShowGrid(): boolean {
+    return this.rawEffect.debugShowGrid;
+  }
+  set debugShowGrid(v: boolean) {
+    this.rawEffect.debugShowGrid = v;
+    this.emit("_needsUpdate");
   }
 }

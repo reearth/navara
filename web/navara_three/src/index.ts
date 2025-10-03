@@ -82,6 +82,7 @@ import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
 import { PlaneMeshLayer } from "./layers/mesh/PlaneMeshLayer";
 import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
 import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
+import { SmoothLineMeshLayer } from "./layers/mesh/SmoothLineMeshLayer";
 import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
 import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
@@ -129,6 +130,7 @@ export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
+export * from "@navara/three_api";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -258,6 +260,7 @@ export default class ThreeView<
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private _tileMapByHandle: TileMapByHandle = new Map();
+  private _initialized = false;
 
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -639,7 +642,9 @@ export default class ThreeView<
   };
 
   async init() {
-    if (this._core) return;
+    if (this._core || this._initialized) return;
+
+    this._initialized = true;
 
     initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
 
@@ -946,6 +951,7 @@ export default class ThreeView<
     this.registerMesh("axesHelper", AxesHelperLayer);
     this.registerMesh("arrowHelper", ArrowHelperLayer);
     this.registerMesh("arcLines", ArclineMeshLayer);
+    this.registerMesh("smoothLines", SmoothLineMeshLayer);
   }
 
   private registerBuiltInLights(): void {

@@ -7,8 +7,10 @@ import ThreeView, {
   SSREffectLayer,
   CloudsEffectLayer,
   type LayerDescription,
+  degreeToRadian,
+  geodeticToVector3,
+  LLE,
 } from "@navara/three";
-import { degreeToRadian, geodeticToVector3, LLE } from "@navara/three_api";
 import { Vector2, Vector3 } from "three";
 import { Pane } from "tweakpane";
 
