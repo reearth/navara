@@ -1,9 +1,9 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
-import type { ViewEvents } from "@navara/three";
 import type { AnimationClip } from "three";
 
 import type { BufferLoader } from "../";
+import type { ViewEvents } from "../..";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
 import { initializeGltfLoader } from "../loaders";

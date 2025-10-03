@@ -5,7 +5,7 @@ import type {
   PolygonMaterial,
   PolylineMaterial,
   TextMaterial,
-} from "navara_wasm";
+} from "@navara/engine";
 import { BufferGeometry, Color, Mesh, Object3D } from "three";
 import type { NormalBufferAttributes } from "three";
 import invariant from "tiny-invariant";

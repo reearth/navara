@@ -53,11 +53,13 @@ cargo make dev
 
 An error is displayed in the Web browser, but this is because the compilation of WASM has not been completed. Wait a little and when the compilation of WASM is completed, reload the page and it will be displayed correctly.
 
-### Setup your Claude
+### Screenshots
 
-If you add Claude MCP, then Claude can handle multiple tasks concurrency.
+Please take a screenshot when you add/update an example in `navara_three/example`.
 
-`claude mcp add claude-mcp path/to/claude -- mcp serve`
+```sh
+pnpm navara_three screenshots {PAGE_NAME}
+```
 
 ## License
 

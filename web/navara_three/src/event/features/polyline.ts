@@ -1,8 +1,8 @@
 import type { EventHandler } from "@navara/core";
 import { PolylineMesh as NavaraPolylineMesh } from "@navara/engine";
-import type { ViewEvents } from "@navara/three";
 
 import type { BufferLoader } from "../";
+import type { ViewEvents } from "../..";
 import { PolylineMesh } from "../../mesh";
 import type { CommonUniforms } from "../../uniforms";
 

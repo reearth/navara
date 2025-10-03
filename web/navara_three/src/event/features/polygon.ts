@@ -1,8 +1,8 @@
 import type { EventHandler, TileHandle } from "@navara/core";
 import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
-import type { ViewEvents } from "@navara/three";
 
 import type { BufferLoader } from "../";
+import type { ViewEvents } from "../..";
 import { PolygonMesh } from "../../mesh";
 import type { CommonUniforms } from "../../uniforms";
 

@@ -10,10 +10,10 @@
   "scripts": {
     "navara_three": "pnpm -C web/navara_three",
     "star": "pnpm navara_three start",
-    "dev": "run-p \"build:common:dev\" \"navara_three dev\"",
+    "dev": "pnpm navara_three dev",
     "preview": "pnpm navara_three preview",
-    "build": "pnpm -r run build",
-    "build:common:dev": "SET NODE_ENV=development & pnpm -r --parallel run build:dev:watch",
+    "build": "pnpm --filter-prod './web/**' run build",
+    "build:common:dev": "NODE_ENV=development pnpm -r --parallel run build:dev:watch",
     "build:example": "pnpm -r run build:example",
     "test": "pnpm -r run test",
     "format": "pnpm -r run format",

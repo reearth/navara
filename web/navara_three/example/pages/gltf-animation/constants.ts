@@ -25,6 +25,16 @@ export const TOKYO_STATION_GEOJSON = {
   },
 };
 
+// Osaka coordinates (used for running model around earth)
+export const OSAKA_GEOJSON = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    type: "Point",
+    coordinates: [135.5023, 34.6937], // [longitude, latitude]
+  },
+};
+
 // 3D model configuration
 export const MODEL_CONFIG = {
   url: "/glTF/Soldier/Soldier.glb",

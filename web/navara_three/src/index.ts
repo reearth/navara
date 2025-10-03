@@ -129,6 +129,7 @@ export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
+export * from "@navara/three_api";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -258,6 +259,7 @@ export default class ThreeView<
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private _tileMapByHandle: TileMapByHandle = new Map();
+  private _initialized = false;
 
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -639,7 +641,9 @@ export default class ThreeView<
   };
 
   async init() {
-    if (this._core) return;
+    if (this._core || this._initialized) return;
+
+    this._initialized = true;
 
     initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
 
