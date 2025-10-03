@@ -530,11 +530,15 @@ const addWeatherControl = (
     opacity: rainDropEffect.ref?.raw?.opacity ?? rainDropDefaults.opacity,
     dropGridSize:
       rainDropEffect.ref?.raw?.dropGridSize ?? rainDropDefaults.dropGridSize,
-    dropDensity: rainDropEffect.ref?.raw?.dropDensity ?? rainDropDefaults.dropDensity,
-    dropLayers: rainDropEffect.ref?.raw?.dropLayers ?? rainDropDefaults.dropLayers,
+    dropDensity:
+      rainDropEffect.ref?.raw?.dropDensity ?? rainDropDefaults.dropDensity,
+    dropLayers:
+      rainDropEffect.ref?.raw?.dropLayers ?? rainDropDefaults.dropLayers,
     dropSizeFactor:
-      rainDropEffect.ref?.raw?.dropSizeFactor ?? rainDropDefaults.dropSizeFactor,
-    noiseScale: rainDropEffect.ref?.raw?.noiseScale ?? rainDropDefaults.noiseScale,
+      rainDropEffect.ref?.raw?.dropSizeFactor ??
+      rainDropDefaults.dropSizeFactor,
+    noiseScale:
+      rainDropEffect.ref?.raw?.noiseScale ?? rainDropDefaults.noiseScale,
     refractionStrength:
       rainDropEffect.ref?.raw?.refractionStrength ??
       rainDropDefaults.refractionStrength,
@@ -549,9 +553,11 @@ const addWeatherControl = (
       rainDropEffect.ref?.raw?.dropThresholdFactor ??
       rainDropDefaults.dropThresholdFactor,
     gridDensityLow:
-      rainDropEffect.ref?.raw?.gridDensityLow ?? rainDropDefaults.gridDensityLow,
+      rainDropEffect.ref?.raw?.gridDensityLow ??
+      rainDropDefaults.gridDensityLow,
     gridDensityHigh:
-      rainDropEffect.ref?.raw?.gridDensityHigh ?? rainDropDefaults.gridDensityHigh,
+      rainDropEffect.ref?.raw?.gridDensityHigh ??
+      rainDropDefaults.gridDensityHigh,
     jitterStrengthLow:
       rainDropEffect.ref?.raw?.jitterStrengthLow ??
       rainDropDefaults.jitterStrengthLow,
@@ -800,13 +806,11 @@ const addWeatherControl = (
     },
   ]);
 
-  rainDropFolder
-    .addButton({ title: "Reset" })
-    .on("click", () => {
-      Object.assign(RAIN_DROP_PARAMS, rainDropDefaults);
-      pane.refresh();
-      rainDropEffect.update({ rainDrop: { ...rainDropDefaults } });
-    });
+  rainDropFolder.addButton({ title: "Reset" }).on("click", () => {
+    Object.assign(RAIN_DROP_PARAMS, rainDropDefaults);
+    pane.refresh();
+    rainDropEffect.update({ rainDrop: { ...rainDropDefaults } });
+  });
 
   // Snow
 

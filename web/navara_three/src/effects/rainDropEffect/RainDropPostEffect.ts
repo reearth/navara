@@ -2,37 +2,37 @@ import Fragment from "@shaders/glsl/rainDropEffect.frag.glsl?raw";
 import { Effect as PostProcessingEffect, BlendFunction } from "postprocessing";
 import { Uniform, Vector2 } from "three";
 
-// Optional knobs exposed to whoever constructs the effect.
+/** Optional knobs exposed to whoever constructs the effect. */
 export type RainDropEffectOptions = {
-  // Opacity applied after the shader runs, useful for blending the effect.
+  /** Opacity applied after the shader runs, useful for blending the effect. */
   opacity?: number;
-  // Size of the UV grid used to place droplets; larger values yield smaller cells.
+  /** Size of the UV grid used to place droplets; larger values yield smaller cells. */
   dropGridSize?: number;
-  // Multiplier applied in the shader to control how many droplets are spawned.
+  /** Multiplier applied in the shader to control how many droplets are spawned. */
   dropDensity?: number;
-  // Active number of simulated layers; higher values add small droplets at extra cost.
+  /** Active number of simulated layers; higher values add small droplets at extra cost. */
   dropLayers?: number;
-  // Controls how tightly droplets are packed by scaling the grid size.
+  /** Controls how tightly droplets are packed by scaling the grid size. */
   dropSizeFactor?: number;
-  // Scales the noise that drives jitter and refraction wobble.
+  /** Scales the noise that drives jitter and refraction wobble. */
   noiseScale?: number;
-  // Intensity of UV distortion caused by refraction.
+  /** Intensity of UV distortion caused by refraction. */
   refractionStrength?: number;
-  // Minimum strength required before rendering a droplet.
+  /** Minimum strength required before rendering a droplet. */
   minDropStrength?: number;
-  // Fade window (start) for smooth drop visibility.
+  /** Fade window (start) for smooth drop visibility. */
   dropFadeStart?: number;
-  // Fade window (end) paired with dropFadeStart.
+  /** Fade window (end) paired with dropFadeStart. */
   dropFadeEnd?: number;
-  // Base threshold factor controlling spawn probability.
+  /** Base threshold factor controlling spawn probability. */
   dropThresholdFactor?: number;
-  // Adjustment applied when density is low; pairs with gridDensityHigh.
+  /** Adjustment applied when density is low; pairs with gridDensityHigh. */
   gridDensityLow?: number;
-  // Adjustment applied when density is high; pairs with gridDensityLow.
+  /** Adjustment applied when density is high; pairs with gridDensityLow. */
   gridDensityHigh?: number;
-  // Maximum jitter for sparse drops; pairs with jitterStrengthHigh.
+  /** Maximum jitter for sparse drops; pairs with jitterStrengthHigh. */
   jitterStrengthLow?: number;
-  // Minimum jitter for dense drops; pairs with jitterStrengthLow.
+  /** Minimum jitter for dense drops; pairs with jitterStrengthLow. */
   jitterStrengthHigh?: number;
 };
 
@@ -55,8 +55,10 @@ export const DEFAULT_RAIN_DROP_EFFECT_OPTIONS: Required<RainDropEffectOptions> =
     jitterStrengthHigh: 0.08,
   };
 
-// Wraps the GLSL rain drop shader so it can be slotted into the post-processing
-// pipeline with adjustable density, grid size, and opacity.
+/**
+ * Wraps the GLSL rain drop shader so it can be slotted into the post-processing
+ * pipeline with adjustable density, grid size, and opacity.
+ */
 export class RainDropPostEffect extends PostProcessingEffect {
   private readonly dropGridSizeUniform: Uniform;
   private readonly dropDensityUniform: Uniform;
@@ -175,8 +177,7 @@ export class RainDropPostEffect extends PostProcessingEffect {
       options.minDropStrength ??
       DEFAULT_RAIN_DROP_EFFECT_OPTIONS.minDropStrength;
     this.dropFadeStart =
-      options.dropFadeStart ??
-      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropFadeStart;
+      options.dropFadeStart ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropFadeStart;
     this.dropFadeEnd =
       options.dropFadeEnd ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropFadeEnd;
     this.dropThresholdFactor =
@@ -185,7 +186,8 @@ export class RainDropPostEffect extends PostProcessingEffect {
     this.gridDensityLow =
       options.gridDensityLow ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.gridDensityLow;
     this.gridDensityHigh =
-      options.gridDensityHigh ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.gridDensityHigh;
+      options.gridDensityHigh ??
+      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.gridDensityHigh;
     this.jitterStrengthLow =
       options.jitterStrengthLow ??
       DEFAULT_RAIN_DROP_EFFECT_OPTIONS.jitterStrengthLow;

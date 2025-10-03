@@ -157,11 +157,9 @@ export const run = async (view: ThreeView) => {
       rainDropLayer.update({ rainDrop: { jitterStrengthHigh: ev.value } });
     });
 
-  pane
-    .addButton({ title: "Reset" })
-    .on("click", () => {
-      Object.assign(params, rainDropDefaults);
-      pane.refresh();
-      rainDropLayer.update({ rainDrop: { ...rainDropDefaults } });
-    });
+  pane.addButton({ title: "Reset" }).on("click", () => {
+    Object.assign(params, rainDropDefaults);
+    pane.refresh();
+    rainDropLayer.update({ rainDrop: { ...rainDropDefaults } });
+  });
 };

@@ -203,8 +203,7 @@ export class RainDropEffect extends Effect<
 
   get dropFadeEnd(): number {
     return (
-      this.options.dropFadeEnd ??
-      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropFadeEnd
+      this.options.dropFadeEnd ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropFadeEnd
     );
   }
 
