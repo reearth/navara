@@ -1,5 +1,5 @@
 import { EventHandler, type BaseEventMap } from "@navara/core";
-import { generateId } from "navara_wasm";
+import { generateId } from "@navara/engine";
 
 import type { ViewContext } from "./ViewContext";
 

@@ -1,5 +1,5 @@
 import { EventHandler, type FeatureId } from "@navara/core";
-import type { Core } from "navara_wasm";
+import type { Core } from "@navara/engine";
 
 import { FeatureEvaluator } from "./evaluations/FeatureEvaluator";
 import type { LayerDescription } from "./type";
