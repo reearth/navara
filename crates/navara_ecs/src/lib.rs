@@ -10,7 +10,7 @@ use bevy_ecs::{
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
     get_heading, get_pitch, get_roll, CamDirType, CameraDirection, CameraEvent, CameraMarker,
-    CameraOrientation, CameraStatus, FrustumEvent,
+    CameraOrientation, CameraStatus, FrustumEvent, CameraFrustum,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_32};
@@ -798,6 +798,17 @@ impl App {
                 get_pitch(transform),
                 get_roll(transform),
             ));
+        }
+
+        None
+    }
+
+    pub fn get_camera_fov_y(&mut self) -> Option<FloatType> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<&CameraFrustum, With<CameraMarker>>();
+
+        if let Some(frustum) = query.iter(world).next() {
+            return Some(frustum.fov_y);
         }
 
         None

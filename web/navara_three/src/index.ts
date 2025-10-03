@@ -778,9 +778,9 @@ export default class ThreeView<
     const pixelRatio = this.renderer.getPixelRatio();
 
     // Ref: https://github.com/CesiumGS/cesium/blob/2cf09cb06e4f7ea767da39befabcfc3444b02c49/packages/engine/Source/Core/PerspectiveFrustum.js#L208-L218
-    // TODO: Need to get this value from WASM side, and near, far as well.
+    // TODO: Need to get near and far values from WASM side.
     // const fovY = 0.7245411;
-    const fovY = 1;
+    const fovY = this.camera.fovy ?? 1;
     const top = this.camera.raw.near * Math.tan(0.5 * fovY);
     const bottom = -top;
     const right = this.camera.raw.aspect * top;
