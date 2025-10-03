@@ -9,3 +9,4 @@ export * from "./render";
 export * from "./copy";
 export * from "./ssr";
 export * from "./fogLight";
+export * from "./rainDropEffect";

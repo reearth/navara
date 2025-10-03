@@ -38,6 +38,7 @@ import type {
   FXAAConfig,
   LensFlareConfig,
   MRTPassConfig,
+  RainDropConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
@@ -90,6 +91,7 @@ export type EffectLayerDeclarationDescription =
   | FXAAConfig
   | LensFlareConfig
   | MRTPassConfig
+  | RainDropConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig
