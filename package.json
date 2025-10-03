@@ -10,7 +10,7 @@
   "scripts": {
     "navara_three": "pnpm -C web/navara_three",
     "star": "pnpm navara_three start",
-    "dev": "pnpm build:common:dev & pnpm navara_three dev",
+    "dev": "pnpm navara_three dev",
     "preview": "pnpm navara_three preview",
     "build": "pnpm --filter-prod './web/**' run build",
     "build:common:dev": "NODE_ENV=development pnpm -r --parallel run build:dev:watch",
