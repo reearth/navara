@@ -1,6 +1,7 @@
 import path from "path";
 
 import { defineConfig } from "vite";
+import dts from "vite-plugin-dts";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
@@ -13,6 +14,9 @@ export default defineConfig((env) => {
     base: "./",
     plugins: [
       ...common.plugins,
+      dts({
+        rollupTypes: true
+      }),
       glsl(),
       viteStaticCopy({
         targets: [
@@ -43,6 +47,7 @@ export default defineConfig((env) => {
         ],
       },
       watch: undefined,
+      sourcemap: true,
     },
   };
 });
