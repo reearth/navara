@@ -1,6 +1,5 @@
 [tasks.format-rust]
 script = ['''
-REM #!/usr/bin/env bash -eux
 cargo fmt --all
 ''']
 
@@ -33,6 +32,12 @@ wasm-pack build --out-dir ../../web/wasm/navara_engine --target web
 ''']
 
 [tasks.watch-rust]
+script = ['''
+cd crates/navara_wasm
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
+''']
+
+[tasks.watch-rust.windows]
 script = ['''
 cd crates/navara_wasm
 cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir" --poll
