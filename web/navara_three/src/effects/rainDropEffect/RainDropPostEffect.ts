@@ -5,33 +5,33 @@ import { Uniform, Vector2 } from "three";
 export type RainDropEffectOptions = {
   opacity?: number;
   dropGridSize?: number;
-  timeOffset?: number;
+  dropDensity?: number;
 };
 
 export const DEFAULT_RAIN_DROP_EFFECT_OPTIONS: Required<RainDropEffectOptions> =
   {
     opacity: 1,
     dropGridSize: 12,
-    timeOffset: 12,
+    dropDensity: 1,
   };
 
 export class RainDropPostEffect extends PostProcessingEffect {
   private readonly dropGridSizeUniform: Uniform;
-  private readonly timeOffsetUniform: Uniform;
+  private readonly dropDensityUniform: Uniform;
 
   constructor(options: RainDropEffectOptions = {}) {
     const dropGridSizeUniform = new Uniform(
       DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize,
     );
-    const timeOffsetUniform = new Uniform(
-      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset,
+    const dropDensityUniform = new Uniform(
+      DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropDensity,
     );
 
     const uniforms = new Map<string, Uniform>([
       ["time", new Uniform(0)],
       ["resolution", new Uniform(new Vector2())],
       ["dropGridSize", dropGridSizeUniform],
-      ["timeOffset", timeOffsetUniform],
+      ["dropDensity", dropDensityUniform],
     ]);
 
     super("RainDropPostEffect", Fragment, {
@@ -40,12 +40,12 @@ export class RainDropPostEffect extends PostProcessingEffect {
     });
 
     this.dropGridSizeUniform = dropGridSizeUniform;
-    this.timeOffsetUniform = timeOffsetUniform;
+    this.dropDensityUniform = dropDensityUniform;
 
     this.dropGridSize =
       options.dropGridSize ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize;
-    this.timeOffset =
-      options.timeOffset ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset;
+    this.dropDensity =
+      options.dropDensity ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropDensity;
 
     this.blendMode.opacity.value =
       options.opacity ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.opacity;
@@ -73,11 +73,11 @@ export class RainDropPostEffect extends PostProcessingEffect {
     return this.dropGridSizeUniform.value as number;
   }
 
-  set timeOffset(value: number) {
-    this.timeOffsetUniform.value = value;
+  set dropDensity(value: number) {
+    this.dropDensityUniform.value = value;
   }
 
-  get timeOffset(): number {
-    return this.timeOffsetUniform.value as number;
+  get dropDensity(): number {
+    return this.dropDensityUniform.value as number;
   }
 }

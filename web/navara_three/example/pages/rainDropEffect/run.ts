@@ -19,7 +19,7 @@ export const run = async (view: ThreeView) => {
     rainDrop: {
       opacity: 1.0,
       dropGridSize: 12,
-      timeOffset: 12,
+      dropDensity: 1,
     },
     visible: true,
   });
@@ -42,7 +42,7 @@ export const run = async (view: ThreeView) => {
   const params = {
     opacity: 1.0,
     dropGridSize: 12,
-    timeOffset: 12,
+    dropDensity: 1,
   };
 
   pane
@@ -58,8 +58,8 @@ export const run = async (view: ThreeView) => {
     });
 
   pane
-    .addBinding(params, "timeOffset", { min: 0, max: 24, step: 0.5 })
+    .addBinding(params, "dropDensity", { min: 0, max: 2, step: 0.01 })
     .on("change", (ev) => {
-      rainDropLayer.update({ rainDrop: { timeOffset: ev.value } });
+      rainDropLayer.update({ rainDrop: { dropDensity: ev.value } });
     });
 };

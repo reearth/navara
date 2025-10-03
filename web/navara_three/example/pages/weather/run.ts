@@ -117,7 +117,7 @@ export const run = async (view: ThreeView) => {
     rainDrop: {
       opacity: 1.0,
       dropGridSize: 12,
-      timeOffset: 12,
+      dropDensity: 1,
     },
     visible: false,
   });
@@ -494,6 +494,64 @@ const addWeatherControl = (
     title: "Rain",
   });
   addFieldsToFolder(rainFolder, RAIN_PARAMS, rainFolderFields);
+
+  const RAIN_DROP_PARAMS = {
+    opacity: rainDropEffect.ref?.raw?.opacity ?? 1,
+    dropGridSize: rainDropEffect.ref?.raw?.dropGridSize ?? 12,
+    dropDensity: rainDropEffect.ref?.raw?.dropDensity ?? 1,
+  };
+
+  const rainDropFolder = rainFolder.addFolder({
+    title: "Rain Drop Effect",
+  });
+
+  addFieldsToFolder(rainDropFolder, RAIN_DROP_PARAMS, [
+    {
+      name: "opacity",
+      params: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            opacity: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "dropGridSize",
+      params: {
+        min: 4,
+        max: 24,
+        step: 0.1,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropGridSize: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "dropDensity",
+      params: {
+        min: 0,
+        max: 2,
+        step: 0.01,
+      },
+      onChange: (v) => {
+        rainDropEffect.update({
+          rainDrop: {
+            dropDensity: v.value,
+          },
+        });
+      },
+    },
+  ]);
 
   // Snow
 

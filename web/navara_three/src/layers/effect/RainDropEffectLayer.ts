@@ -54,8 +54,8 @@ export class RainDropEffectLayer extends EffectLayerDeclaration<
       if (cfg.dropGridSize !== undefined) {
         this._instance.dropGridSize = cfg.dropGridSize;
       }
-      if (cfg.timeOffset !== undefined) {
-        this._instance.timeOffset = cfg.timeOffset;
+      if (cfg.dropDensity !== undefined) {
+        this._instance.dropDensity = cfg.dropDensity;
       }
     }
 

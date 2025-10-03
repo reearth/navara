@@ -6,7 +6,7 @@
 uniform float time;
 uniform vec2 resolution;
 uniform float dropGridSize;
-uniform float timeOffset;
+uniform float dropDensity;
 
 // ============================================================================
 // Constants
@@ -20,6 +20,10 @@ const float MIN_DROP_STRENGTH = 0.01;     // Minimum drop strength
 const float DROP_FADE_START = 0.3;        // Fade start position
 const float DROP_FADE_END = 0.8;          // Fade end position
 const float DROP_THRESHOLD_FACTOR = 0.08; // Drop display threshold factor
+const float GRID_DENSITY_LOW = 1.15;      // Grid shrink when density is low
+const float GRID_DENSITY_HIGH = 0.85;     // Grid stretch when density is high
+const float JITTER_STRENGTH_LOW = 0.45;   // Max jitter for sparse drops
+const float JITTER_STRENGTH_HIGH = 0.08;  // Min jitter for dense drops
 
 // ============================================================================
 // Helper Functions
@@ -65,7 +69,19 @@ float calculateDropShape(vec2 sinWave, float timeSec, vec4 dropProperties) {
 // Calculate drop display strength
 float calculateDropStrength(float dropShape, float layerIndex, float randomValue) {
   // Drop display probability (varies by layer)
-  float threshold = (5.0 - layerIndex) * DROP_THRESHOLD_FACTOR;
+  float baseThreshold = (5.0 - layerIndex) * DROP_THRESHOLD_FACTOR;
+
+  // Density curve: <1.0 tightens threshold, >1.0 loosens it
+  float densityNorm = clamp(dropDensity, 0.0, 2.0);
+  float lowRange = clamp(1.0 - densityNorm, 0.0, 1.0);
+  float highRange = clamp(densityNorm - 1.0, 0.0, 1.0);
+  float densityScale = mix(1.0, 0.35, lowRange);
+  densityScale = mix(densityScale, 1.5, highRange);
+
+  // Keep large drops slightly easier to spawn when thinning
+  float layerBias = mix(0.6, 1.0, layerIndex / DROP_LAYERS);
+  float threshold = clamp(baseThreshold * densityScale * layerBias, 0.0, 0.95);
+
   float probability = smoothstep(threshold + 0.05, threshold - 0.05, randomValue);
   
   // Calculate strength (with fade in/out)
@@ -99,8 +115,8 @@ vec4 applyRefraction(vec2 uv, vec3 dropNormal, float dropStrength) {
 // Main Shader
 // ============================================================================
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  // Calculate time (convert milliseconds to seconds and add offset)
-  float timeSec = time * 0.001 + timeOffset;
+  // Calculate time (convert milliseconds to seconds)
+  float timeSec = time * 0.001;
   
   // Position displacement by noise (randomize drop positions)
   vec2 normalizedUV = (uv * 0.1) / (resolution / resolution.x);
@@ -112,14 +128,20 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   // Generate drops in multiple layers (from large to small)
   for (float layerIndex = DROP_LAYERS; layerIndex > 0.0; layerIndex -= 1.0) {
     // Calculate drop grid size
-    vec2 gridSize = resolution * layerIndex * DROP_SIZE_FACTOR * (dropGridSize / 12.0);
+    float densityNorm = clamp(dropDensity, 0.0, 2.0);
+    float gridDensityAdjust = mix(GRID_DENSITY_LOW, 1.0, clamp(densityNorm, 0.0, 1.0));
+    gridDensityAdjust = mix(gridDensityAdjust, GRID_DENSITY_HIGH, clamp(densityNorm - 1.0, 0.0, 1.0));
+    vec2 gridSize = resolution * layerIndex * DROP_SIZE_FACTOR * (dropGridSize / 12.0) * gridDensityAdjust;
     
     // Calculate sine wave phase (including position displacement by noise)
     vec2 phase = TWO_PI * uv * gridSize + (displacement - 0.5) * 2.0;
     vec2 sinWave = sin(phase);
     
     // Current drop coordinates (rounded to grid)
-    vec2 dropCoord = round(uv * gridSize - 0.25) / gridSize;
+    vec2 baseDropCoord = round(uv * gridSize - 0.25) / gridSize;
+    float jitterStrength = mix(JITTER_STRENGTH_LOW, JITTER_STRENGTH_HIGH, clamp(densityNorm, 0.0, 1.0));
+    vec2 jitter = (noise(baseDropCoord * (NOISE_SCALE * 0.37)) - 0.5) * jitterStrength / gridSize;
+    vec2 dropCoord = baseDropCoord + jitter;
     
     // Drop properties (get four random values)
     vec4 dropProperties = vec4(noise(dropCoord * NOISE_SCALE), noise(dropCoord));

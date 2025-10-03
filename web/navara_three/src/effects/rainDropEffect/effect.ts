@@ -32,11 +32,11 @@ export class RainDropEffect extends Effect<
     const dropGridSize =
       mergedOptions.dropGridSize ??
       DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropGridSize;
-    const timeOffset =
-      mergedOptions.timeOffset ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset;
+    const dropDensity =
+      mergedOptions.dropDensity ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropDensity;
 
     this.rawEffect.dropGridSize = dropGridSize;
-    this.rawEffect.timeOffset = timeOffset;
+    this.rawEffect.dropDensity = dropDensity;
   }
 
   protected onMounted(): void {}
@@ -68,15 +68,15 @@ export class RainDropEffect extends Effect<
     this.emit("_needsUpdate");
   }
 
-  get timeOffset(): number {
+  get dropDensity(): number {
     return (
-      this.options.timeOffset ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.timeOffset
+      this.options.dropDensity ?? DEFAULT_RAIN_DROP_EFFECT_OPTIONS.dropDensity
     );
   }
 
-  set timeOffset(value: number) {
-    this.options.timeOffset = value;
-    this.rawEffect.timeOffset = value;
+  set dropDensity(value: number) {
+    this.options.dropDensity = value;
+    this.rawEffect.dropDensity = value;
     this.emit("_needsUpdate");
   }
 }
