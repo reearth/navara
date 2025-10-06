@@ -655,7 +655,7 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
   }
 
   _setFeatureHeight(height: number, m?: ModelMaterial): void {
-    if(m) {
+    if (m) {
       m.userData.uAddHeight.value = height;
     }
   }

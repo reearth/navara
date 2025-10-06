@@ -152,8 +152,6 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
             const extrudedHeight =
               (property?.get("extrudedHeight") as number) ?? 0;
 
-              console.log(color);
-
             return {
               height,
               extrudedHeight,
