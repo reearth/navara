@@ -15,6 +15,9 @@ export class FeatureMesh {
   _setFeatureExtrudedHeight(_height: number) {
     throw new Unimplemented();
   }
+  _setFeatureHeight(_height: number) {
+    throw new Unimplemented();
+  }
   _setFrustumCulled(_culled: boolean) {
     throw new Unimplemented();
   }

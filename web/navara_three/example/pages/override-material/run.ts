@@ -30,6 +30,7 @@ export const run = async (view: ThreeView) => {
     sun: {
       intensity: 2,
       castShadow: true,
+      shadowFar: 5000,
       shadowIntensity: 1,
     },
   });
@@ -89,6 +90,7 @@ export const run = async (view: ThreeView) => {
 
   addDateControl(view, pane);
   addGeoJSONLayer(pane, view);
+  addInteriorGeoJSONLayer(pane, view);
   addHeliportLayer(pane, view);
   addRoadLayer(pane, view);
   addFireproofAreaLayer(pane, view);
@@ -104,6 +106,65 @@ export const run = async (view: ThreeView) => {
     //     ...cesium3DTilesLayer.model,
     //   },
     // });
+  });
+};
+
+const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
+  const folder = pane.addFolder({
+    title: "Interior GeoJSON",
+  });
+
+  let layer: Layer | undefined;
+  addToggleButton(folder, (isAdded) => {
+    if (isAdded) {
+      layer?.delete();
+      layer = undefined;
+      return;
+    }
+
+    // Load GeoJSON from public directory and add as a polygon layer
+    void (async () => {
+      try {
+        const res = await fetch("/interior.geojson");
+        const data = await res.json();
+
+        layer = view.addLayer({
+          type: "geojson",
+          data,
+          polygon: {
+            color: 0xffffff,
+            height: 5,
+            extruded_height: 0,
+            clamp_to_ground: false,
+            cast_shadow: true,
+            receive_shadow: true,
+          },
+        });
+
+        layer.on("featureUpdated", (evaluator) => {
+          // Prevent repeated heavy updates per feature
+          if (UPDATED_FEATURE.has(evaluator.id)) return;
+          UPDATED_FEATURE.add(evaluator.id);
+
+          evaluator.evaluate((_batchId, property) => {
+            const height = (property?.get("height") as number) ?? 0;
+            const color = (property?.get("color") as string) ?? "#ffffff";
+            const extrudedHeight =
+              (property?.get("extrudedHeight") as number) ?? 0;
+
+              console.log(color);
+
+            return {
+              height,
+              extrudedHeight,
+              color: new Color(color),
+            };
+          });
+        });
+      } catch (e) {
+        console.warn("Failed to load /interior.geojson", e);
+      }
+    })();
   });
 };
 

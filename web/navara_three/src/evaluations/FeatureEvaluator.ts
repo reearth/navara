@@ -282,6 +282,11 @@ export class FeatureEvaluator {
             featureMesh._setFeatureExtrudedHeight(height);
             continue;
           }
+          case "height": {
+            const height = target.array[0] as number;
+            featureMesh._setFeatureHeight(height, m.material as ModelMaterial);
+            continue;
+          }
           // TODO: Support others
           default:
             continue;

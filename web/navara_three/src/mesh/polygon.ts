@@ -8,6 +8,8 @@ import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_vertex.glsl";
 import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.glsl";
+import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
+import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ShadowMapDepthFragment from "@shaders/glsl/chunks/shadowmap_depth_fragment.glsl";
 import ShadowMapDepthParsFragment from "@shaders/glsl/chunks/shadowmap_depth_pars_fragment.glsl";
@@ -159,6 +161,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.uAddExtrudedHeight = {
       value: 0.0,
     };
+    material.userData.uAddHeight = {
+      value: 0.0,
+    };
     material.userData.uClampToGround = {
       value: shouldClipByStencil,
     };
@@ -229,6 +234,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       }
       shader.uniforms.uAddExtrudedHeight = material.userData.uAddExtrudedHeight;
+      shader.uniforms.uAddHeight = material.userData.uAddHeight;
       if (material.userData.uClampToGround.value != null) {
         shader.uniforms.uClampToGround = material.userData.uClampToGround;
       }
@@ -254,6 +260,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   
   ${ShowParsVertex}
   ${ExtrudedHeightParsVertex}
+  ${HeightParsVertex}
   ${BatchTextureParsVertex}
   
   ${BranchFreeTernary}
@@ -269,9 +276,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
   #include <begin_vertex>
 
   ${ExtrudedHeightVertex}
+  ${HeightVertex}
   ${BatchTextureVertex}
 
-  transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + addExtrudedHeight);
+  transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(
+    scaleNormalAndCap.w == 0.0,
+    uMinMaxHeight.x + addHeight,
+    uMinMaxHeight.y + addExtrudedHeight
+  );
 
   nvr_vBatchIdAndSel = batchIdAndSel;
   `,
@@ -574,6 +586,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   _setFeatureExtrudedHeight(height: number): void {
     this.material.userData.uAddExtrudedHeight.value = height;
+  }
+
+  _setFeatureHeight(height: number): void {
+    this.material.userData.uAddHeight.value = height;
   }
 
   get water() {
