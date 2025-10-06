@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ConfigEnv } from "vite";
+import { ConfigEnv, normalizePath } from "vite";
 import { PluginOption, type UserConfig } from "vite";
 
 import dts from "vite-plugin-dts";
@@ -13,11 +13,11 @@ function watchPackages(packageNames: string[]): PluginOption {
     name: "vite-plugin-watch-packages",
     buildStart() {
       packageNames.forEach((packageName) => {
-        const absPackagePath = path.resolve(
+        const absPackagePath = normalizePath(path.resolve(
           __dirname,
           "../node_modules",
           packageName
-        );
+        ));
         const realPackagePath = fs.realpathSync(absPackagePath);
 
         this.addWatchFile(realPackagePath);
