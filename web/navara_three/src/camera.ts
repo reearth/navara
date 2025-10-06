@@ -94,6 +94,10 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     return undefined;
   }
 
+  get fovy(): number | undefined {
+    return this._core?.getCameraFOVY();
+  }
+
   set fov(val: number) {
     if (val < 1 || val > 180) {
       return;

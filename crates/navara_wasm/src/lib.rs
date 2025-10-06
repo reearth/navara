@@ -505,6 +505,11 @@ impl Core {
         None
     }
 
+    #[wasm_bindgen(js_name = getCameraFOVY)]
+    pub fn get_camera_fov_y(&mut self) -> Option<FloatType> {
+        self.app.get_camera_fov_y()
+    }
+
     #[wasm_bindgen(js_name = rotateAroundAxis)]
     pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
         self.app.rotate_around_axis(axis, angle);
