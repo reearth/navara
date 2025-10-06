@@ -60,6 +60,8 @@ export const ViewProvider: FC<PropsWithChildren<ViewProviderProps>> = ({
 
     const v = new ThreeView({ canvas: innerCanvas, ...opts });
     setView(v);
+    viewRef.current = v;
+
     (async () => {
       try {
         await v.init();
