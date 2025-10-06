@@ -43,6 +43,7 @@ export default defineConfig((env) => {
         ],
       },
       watch: undefined,
+      sourcemap: true,
     },
   };
 });
