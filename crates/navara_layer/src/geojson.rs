@@ -28,6 +28,5 @@ pub struct UpdateGeoJsonLayerMarker {
 #[derive(Debug, Component)]
 pub struct DeleteGeoJsonLayerMarker(pub String);
 
-
 #[derive(Debug, Component)]
 pub struct GeoJsonLayerDataRequesterMarker(pub Entity);
