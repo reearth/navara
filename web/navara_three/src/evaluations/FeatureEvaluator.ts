@@ -78,6 +78,8 @@ export class FeatureEvaluator {
     this.handler = handler;
     this.featureId = featureId;
     this.obj = obj;
+
+    this.cachedBatchedProperties = new Map();
   }
 
   get id() {
@@ -146,23 +148,25 @@ export class FeatureEvaluator {
       }
     };
 
-    if (this.cachedBatchedProperties) {
-      for (const [batchId, property] of this.cachedBatchedProperties) {
+    // if (this.cachedBatchedProperties) {
+    //   for (const [batchId, property] of this.cachedBatchedProperties) {
+    //     prepare(batchId, property);
+    //   }
+    // } else {
+    this.cachedBatchedProperties?.clear();
+    this.batchIds.clear();
+
+    this.handler.readPropertiesFromFeature(
+      this.featureId,
+      (batchId: number, property: Map<string, unknown> | undefined) => {
+        if (property) {
+          this.cachedBatchedProperties?.set(batchId, property);
+        }
+        this.batchIds.add(batchId);
         prepare(batchId, property);
-      }
-    } else {
-      this.cachedBatchedProperties = new Map();
-      this.handler.readPropertiesFromFeature(
-        this.featureId,
-        (batchId: number, property: Map<string, unknown> | undefined) => {
-          if (property) {
-            this.cachedBatchedProperties?.set(batchId, property);
-          }
-          this.batchIds.add(batchId);
-          prepare(batchId, property);
-        },
-      );
-    }
+      },
+    );
+    // }
 
     // Convert just an array into TypedArray
     for (const [k, v] of result) {

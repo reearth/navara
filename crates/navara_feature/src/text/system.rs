@@ -10,7 +10,7 @@ use navara_core::WGS84_32;
 use navara_feature_component::{
     batch::{
         BatchId, BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIdAndSelections, IdPropertyTable,
+        GlobalBatchIds,
     },
     id::FeatureId,
     render::{RenderInformation, RenderableFeature, TransferablePointGeometry},
@@ -37,7 +37,7 @@ pub fn transfer_batched_mesh(
             &TextMaterial,
             &BatchedFeature,
             &FeatureBatchId,
-            &GlobalBatchIdAndSelections,
+            &GlobalBatchIds,
             &mut FeatureId,
         ),
         (With<TextMarker>, Added<BatchedFeature>, Without<Deleted>),
@@ -185,10 +185,10 @@ pub fn transfer_mesh(
                         &mut buf,
                         position.to_array().to_vec(),
                         vec![0],
-                        batch_id.0.to_array().to_vec(),
+                        vec![batch_id.0],
                     ),
                     active: lod_marker.is_none(),
-                    feature_batch_id: batch_id.0.x as u32,
+                    feature_batch_id: batch_id.0 as u32,
                     batch_length: 1,
                 },
             ))
@@ -372,28 +372,22 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &GlobalBatchIdAndSelections),
+        (Entity, &FeatureId, &GlobalBatchIds),
         (With<BatchedFeature>, With<TextMarker>, With<Deleted>),
     >,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, global_batch_id_and_selections) in &removed_features {
+    for (feature_id, rendered_feature_id, global_batch_ids) in &removed_features {
         let Some(rendered_feature_id) = rendered_feature_id.0 else {
             unreachable!();
         };
         if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res, &mut id_prop_table_res);
+            feature.destroy(&mut buf, &mut batch_table_res);
         }
-        feature_batch_id_map.remove(
-            &rendered_feature_id,
-            &mut buf,
-            &mut batch_table_res,
-            &mut id_prop_table_res,
-        );
-        buf.remove(&global_batch_id_and_selections.handle);
+        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+        buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
     }
 }

@@ -17,10 +17,7 @@ use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_32};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
-    batch::{
-        BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, GlobalBatchIdAndSelections,
-        IdPropertySelections, IdPropertyTable,
-    },
+    batch::{BatchProperty, BatchTable, BatchedFeature, FeatureBatchIdMap, GlobalBatchIds},
     render::RenderableFeature,
 };
 use navara_frame::FrameManager;
@@ -397,34 +394,30 @@ impl App {
     fn get_batched_features_with_material<C: Component + Clone>(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIdAndSelections, C)> {
+    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, C)> {
         let entity = Entity::from_bits(batched_feature_id);
         let world = self.app.world();
-        let (batched_feature, batch_id_and_selected_status, material) = world
+        let (batched_feature, batch_ids, material) = world
             .get_entity(entity)
             .ok()?
-            .get_components::<(&BatchedFeature, &GlobalBatchIdAndSelections, &C)>()?;
+            .get_components::<(&BatchedFeature, &GlobalBatchIds, &C)>()?;
 
         let features = world.get_entity(&batched_feature.features[..]).ok()?;
 
-        Some((
-            features,
-            batch_id_and_selected_status.clone(),
-            material.clone(),
-        ))
+        Some((features, batch_ids.clone(), material.clone()))
     }
 
     pub fn get_batched_features_for_polyline(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIdAndSelections, PolylineMaterial)> {
+    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, PolylineMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
     pub fn get_batched_features_for_polygon(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIdAndSelections, PolygonMaterial)> {
+    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, PolygonMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
@@ -632,57 +625,10 @@ impl App {
             self.get_buffer_u32(batch_ids.handle).and_then(|vec_ids| {
                 vec_ids
                     .iter()
-                    .step_by(2)
                     .position(|id| id == global_batch_id)
-                    .map(|i| (*entity, i, vec_ids.len() / 2))
+                    .map(|i| (*entity, i, vec_ids.len()))
             })
         })
-    }
-
-    // Get all batch ids that have the same id_property_value as the batch_id.
-    pub fn get_picked_batch_ids(&mut self, batch_id: &u32) -> Vec<u32> {
-        let world = self.app.world_mut();
-
-        let (id_prop_val, picked_batch_ids) = {
-            let Some(batch_table_res) = world.get_resource::<BatchTable>() else {
-                return vec![*batch_id];
-            };
-
-            let Some(id_prop_table) = world.get_resource::<IdPropertyTable>() else {
-                return vec![*batch_id];
-            };
-
-            let Some(batch_table_value) = batch_table_res.get(batch_id) else {
-                return vec![*batch_id];
-            };
-
-            let Some(id_prop_val) = &batch_table_value.id_property_value else {
-                return vec![*batch_id];
-            };
-
-            let Some(picked_batch_ids) = id_prop_table.get(id_prop_val) else {
-                return vec![*batch_id];
-            };
-
-            (id_prop_val.clone(), picked_batch_ids.clone())
-        };
-
-        if let Some(mut id_prop_sel) = world.get_resource_mut::<IdPropertySelections>() {
-            id_prop_sel.clear();
-            id_prop_sel.add(id_prop_val);
-        };
-
-        picked_batch_ids
-    }
-
-    pub fn clear_picking_status(&mut self) {
-        if let Some(mut id_prop_sel) = self
-            .app
-            .world_mut()
-            .get_resource_mut::<IdPropertySelections>()
-        {
-            id_prop_sel.clear();
-        };
     }
 
     pub fn change_camera(

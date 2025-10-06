@@ -47,10 +47,10 @@ export function renderFeature(
   viewEvents: EventHandler<ViewEvents>,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf, uniforms);
+    return renderPoint(f.point, buf);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf, uniforms);
+    return renderBillboard(f.billboard, buf);
   }
   if (f.model) {
     return renderModel(f.model, buf, uniforms, viewEvents);

@@ -318,7 +318,7 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolygonBatchedFeature> {
-        let (features, batch_id_and_selected_status, material) = self
+        let (features, batch_id, material) = self
             .app
             .get_batched_features_for_polygon(batched_feature_id)?;
 
@@ -340,11 +340,7 @@ impl Core {
             transferable.add(&mut hierarchy, batch_index);
         }
 
-        transferable.add_batch_id_and_selected_status(
-            &mut buf_store
-                .get_u32(&batch_id_and_selected_status.handle)?
-                .to_vec(),
-        );
+        transferable.add_batch_id(&mut buf_store.get_u32(&batch_id.handle)?.to_vec());
 
         Some(ReturnedTransferablePolygonBatchedFeature {
             transferable,
@@ -357,7 +353,7 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolylineBatchedFeature> {
-        let (features, batch_id_and_selected_status, material) = self
+        let (features, batch_id, material) = self
             .app
             .get_batched_features_for_polyline(batched_feature_id)?;
 
@@ -379,11 +375,7 @@ impl Core {
             transferable.add(&mut points, batch_index);
         }
 
-        transferable.add_batch_id_and_selected_status(
-            &mut buf_store
-                .get_u32(&batch_id_and_selected_status.handle)?
-                .to_vec(),
-        );
+        transferable.add_batch_id(&mut buf_store.get_u32(&batch_id.handle)?.to_vec());
 
         Some(ReturnedTransferablePolylineBatchedFeature {
             transferable,
@@ -397,16 +389,6 @@ impl Core {
             .get_batch_prop(&batch_id)
             .and_then(|v| serde_wasm_bindgen::to_value(&v).ok())
             .unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen(js_name = getPickedBatchIds)]
-    pub fn get_picked_batch_ids(&mut self, batch_id: u32) -> Vec<u32> {
-        self.app.get_picked_batch_ids(&batch_id)
-    }
-
-    #[wasm_bindgen(js_name = clearPickingStatus)]
-    pub fn clear_picking_status(&mut self) {
-        self.app.clear_picking_status();
     }
 
     #[wasm_bindgen(js_name = readPropertiesFromFeature)]

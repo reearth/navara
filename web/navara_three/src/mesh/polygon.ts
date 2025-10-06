@@ -41,7 +41,7 @@ type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
   normal: BufferAttribute;
   scaleNormalAndCap: BufferAttribute;
-  batchIdAndSel: BufferAttribute;
+  attrBatchId: BufferAttribute;
 }>;
 
 export class PolygonMesh extends BatchedFeatureMesh<
@@ -80,10 +80,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       ? buf.removeF32(g.scale_normal_and_cap.data)
       : undefined;
     const indices = buf.removeU32(g.indices);
-    const batchIdAndSel = g.batch_id_and_sel
-      ? buf.removeF32(g.batch_id_and_sel.data)
-      : undefined;
-    const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
+    const batchIds = g.batch_ids ? buf.removeF32(g.batch_ids.data) : undefined;
+    const batchIdSize = g.batch_ids ? g.batch_ids.size : 0;
     const batchIndex = g.batch_index
       ? buf.removeU32(g.batch_index.data)
       : undefined;
@@ -108,10 +106,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       );
     }
 
-    if (batchIdAndSel) {
+    if (batchIds) {
       geometry.setAttribute(
-        "batchIdAndSel",
-        new BufferAttribute(batchIdAndSel, batchIdSize),
+        "attrBatchId",
+        new BufferAttribute(batchIds, batchIdSize),
       );
     }
 
@@ -121,7 +119,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     geometry.setIndex(new BufferAttribute(indices, 1));
 
-    this.userData.batchIdAndSel = batchIdAndSel;
+    this.userData.batchIds = batchIds;
     this.userData.batchIdSize = batchIdSize;
   }
 
@@ -237,7 +235,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
         shader.uniforms.batchDataTexture = material.userData.batchDataTexture;
       }
 
-      shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
       shader.uniforms.uIsTexturized = material.userData.uIsTexturized;
 
       // Use Replacer for method chaining (with side-effect free implementation)
@@ -246,11 +243,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
           "#include <common>",
           `
   #include <common>
-  in vec2 batchIdAndSel;
+  in float attrBatchId;
   in vec4 scaleNormalAndCap;
   
   uniform vec2 uMinMaxHeight;
-  out vec2 nvr_vBatchIdAndSel;
+  out float nvr_vBatchId;
   
   ${ShowParsVertex}
   ${ExtrudedHeightParsVertex}
@@ -273,7 +270,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(scaleNormalAndCap.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + addExtrudedHeight);
 
-  nvr_vBatchIdAndSel = batchIdAndSel;
+  // Use the original GlobalBatchId for picking, not the batch_index
+  nvr_vBatchId = attrBatchId;
   `,
         )
         .replace(
@@ -299,7 +297,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform bool uClampToGround;
   uniform bool useGroundNormals;
   uniform sampler2D uGlobeNormal;
-  uniform vec3 nvr_uHighlightColor;
   uniform float nvr_uPickable;
   uniform bool uIsTexturized;
   uniform sampler2D uWaterNormalMap;
@@ -311,7 +308,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform float uTime;
   uniform mat4 modelMatrix;
 
-  in vec2 nvr_vBatchIdAndSel;
+  in float nvr_vBatchId;
   
   ${ShowParsFragment}
   
@@ -370,16 +367,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   `,
         )
         .replace(
-          "#include <color_fragment>",
-          `
-  #include <color_fragment>
-
-  if(nvr_vBatchIdAndSel.y > 0.0) {
-    diffuseColor.xyz = nvr_uHighlightColor.xyz;
-  }
-  `,
-        )
-        .replace(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
   vec3 outgoingLight;
@@ -402,7 +389,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
           `
   #include <dithering_fragment>
   if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
-    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchIdAndSel.x);
+    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
     gl_FragColor = vec4(pickColor.xyz, 1.0);
   }
   `,

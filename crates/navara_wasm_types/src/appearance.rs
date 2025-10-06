@@ -16,8 +16,6 @@ pub struct PointMaterial {
     pub clamp_to_ground: Option<bool>,
     pub depth_test: Option<bool>,
     pub transparent: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub id_property: Option<String>,
 }
 
 impl From<PointMaterial> for navara_material::PointMaterial {
@@ -33,7 +31,6 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             transparent: val.transparent.unwrap_or(default.transparent),
-            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -49,7 +46,6 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             transparent: Some(value.transparent),
-            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -76,8 +72,6 @@ pub struct BillboardMaterial {
     pub depth_test: Option<bool>,
     pub transparent: Option<bool>,
     pub alpha_test: Option<f32>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub id_property: Option<String>,
 }
 
 impl From<BillboardMaterial> for navara_material::BillboardMaterial {
@@ -95,7 +89,6 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             transparent: val.transparent.unwrap_or(default.transparent),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
-            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -113,7 +106,6 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             depth_test: Some(value.depth_test),
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
-            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -138,8 +130,6 @@ pub struct TextMaterial {
     pub border_width: Option<f32>,
     pub corner_radius: Option<f32>,
     pub padding: Option<Vec2>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub id_property: Option<String>,
     // outline
     pub outline_blur: Option<f32>,    // outlineBlur Defalut:0
     pub outline_color: Option<u32>,   // outlineColor Defalut:black
@@ -167,7 +157,6 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             border_width: val.border_width.unwrap_or(default.border_width),
             corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
             padding: val.padding.unwrap_or(default.padding.into()).into(),
-            id_property: val.id_property.unwrap_or(default.id_property),
             outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
             outline_offset: val
@@ -197,7 +186,6 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             border_width: Some(value.border_width),
             corner_radius: Some(value.corner_radius),
             padding: Some(value.padding.into()),
-            id_property: Some(value.id_property.clone()),
             outline_blur: Some(value.outline_blur),
             outline_color: Some(value.outline_color),
             outline_offset: Some(value.outline_offset.into()),
@@ -220,8 +208,6 @@ pub struct PolylineMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub id_property: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -238,7 +224,6 @@ impl PolylineMaterial {
         height: Option<f32>,
         width: Option<f32>,
         __internal__: Option<PolylineInternalMaterial>,
-        id_property: Option<String>,
     ) -> Self {
         Self {
             show,
@@ -250,7 +235,6 @@ impl PolylineMaterial {
             height,
             width,
             __internal__,
-            id_property,
         }
     }
 }
@@ -268,7 +252,6 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
-            id_property: val.id_property.unwrap_or(default.id_property),
         }
     }
 }
@@ -284,7 +267,6 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
-            id_property: Some(value.id_property.clone()),
         }
     }
 }
@@ -301,7 +283,6 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.map(|v| v.into()),
-            id_property: Some(value.id_property),
         }
     }
 }
@@ -352,8 +333,6 @@ pub struct PolygonMaterial {
     pub roughness: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolygonInternalMaterial>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub id_property: Option<String>,
 
     /// Currently, this property is supported only in GeoJSON.
     pub surface_show: Option<bool>,
@@ -391,7 +370,6 @@ impl PolygonMaterial {
         reflectivity: Option<f32>,
         roughness: Option<f32>,
         __internal__: Option<PolygonInternalMaterial>,
-        id_property: Option<String>,
         surface_show: Option<bool>,
         outline_show: Option<bool>,
         outline_color: Option<u32>,
@@ -410,7 +388,6 @@ impl PolygonMaterial {
             reflectivity,
             roughness,
             __internal__,
-            id_property,
             surface_show,
             outline_show,
             outline_color,
@@ -444,7 +421,6 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             reflectivity: val.reflectivity.unwrap_or(default.reflectivity),
             roughness: val.roughness.unwrap_or(default.reflectivity),
             internal: val.__internal__.map(|v| v.into()),
-            id_property: val.id_property.unwrap_or(default.id_property),
             surface_show: val.surface_show.unwrap_or(default.surface_show),
             outline_show: val.outline_show.unwrap_or(default.outline_show),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
@@ -474,7 +450,6 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             reflectivity: Some(value.reflectivity),
             roughness: Some(value.roughness),
             __internal__: value.internal.as_ref().map(|v| v.into()),
-            id_property: Some(value.id_property.clone()),
             surface_show: Some(value.surface_show),
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
@@ -504,7 +479,6 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             reflectivity: Some(value.reflectivity),
             roughness: Some(value.roughness),
             __internal__: value.internal.map(|v| v.into()),
-            id_property: Some(value.id_property),
             surface_show: Some(value.surface_show),
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
@@ -562,8 +536,6 @@ pub struct ModelMaterial {
     pub max_sse: Option<f32>,
     pub clamp_to_ground: Option<bool>,
     pub should_rotate_in_default: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub id_property: Option<String>,
     pub color: Option<u32>,
     pub metalness: Option<f32>,
     pub roughness: Option<f32>,
@@ -603,7 +575,6 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             should_rotate_in_default: val
                 .should_rotate_in_default
                 .unwrap_or(default.should_rotate_in_default),
-            id_property: val.id_property.unwrap_or(default.id_property),
             color: val.color.unwrap_or(default.color),
             metalness: val.metalness.unwrap_or(default.metalness),
             roughness: val.roughness.unwrap_or(default.roughness),
@@ -638,7 +609,6 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             max_sse: Some(value.max_sse),
             clamp_to_ground: Some(value.clamp_to_ground),
             should_rotate_in_default: Some(value.should_rotate_in_default),
-            id_property: Some(value.id_property.clone()),
             color: Some(value.color),
             metalness: Some(value.metalness),
             roughness: Some(value.roughness),

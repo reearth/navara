@@ -11,7 +11,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequester
 use navara_feature_component::{
     batch::{
         BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
+        GlobalBatchIds,
     },
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
@@ -53,39 +53,16 @@ pub fn request_model_by_b3dm_layer(
     }
 }
 
-fn generate_global_batch_id_and_selections(
+fn generate_global_batch_ids(
     batch_table_res: &mut BatchTable,
-    id_prop_table_res: &mut IdPropertyTable,
-    id_prop_sel_res: &IdPropertySelections,
-    batch_table_json: &serde_json::Value,
     batch_length: usize,
-    id_property: &String,
-    global_batch_id_and_selections: &mut Vec<u32>,
+    global_batch_ids: &mut Vec<u32>,
 ) {
-    let Some(prop_val) = batch_table_json.get(id_property) else {
-        global_batch_id_and_selections.fill(0);
-        return;
-    };
-
-    if let serde_json::Value::Array(arr) = prop_val {
-        for i in 0..batch_length {
-            let val = arr.get(i).cloned();
-            let g_id = batch_table_res
-                .add(Some(BatchTableValue {
-                    id_property_value: val.clone(),
-                    properties: None,
-                }))
-                .unwrap_or(0);
-            global_batch_id_and_selections.push(g_id);
-
-            if let Some(val) = val {
-                id_prop_table_res.add(val.clone(), g_id);
-
-                global_batch_id_and_selections.push(id_prop_sel_res.get_selection(&val));
-            } else {
-                global_batch_id_and_selections.push(0);
-            }
-        }
+    for _i in 0..batch_length {
+        let g_id = batch_table_res
+            .add(Some(BatchTableValue { properties: None }))
+            .unwrap_or(0);
+        global_batch_ids.push(g_id);
     }
 }
 
@@ -97,8 +74,6 @@ pub fn construct_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
-    id_prop_sel_res: Res<IdPropertySelections>,
     requesters: Query<
         (Entity, &B3dmLayerDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -131,16 +106,8 @@ pub fn construct_model_by_b3dm_layer(
             };
 
         let mut global_batch_ids = Vec::with_capacity(batch_length);
-        if let Ok(batch_table_json) = batch_table.json() {
-            generate_global_batch_id_and_selections(
-                &mut batch_table_res,
-                &mut id_prop_table_res,
-                &id_prop_sel_res,
-                &batch_table_json,
-                batch_length,
-                &appearance.id_property,
-                &mut global_batch_ids,
-            );
+        if let Ok(_batch_table_json) = batch_table.json() {
+            generate_global_batch_ids(&mut batch_table_res, batch_length, &mut global_batch_ids);
         } else {
             global_batch_ids.fill(0);
         };
@@ -149,7 +116,6 @@ pub fn construct_model_by_b3dm_layer(
             {
                 batch_table_res
                     .add(Some(BatchTableValue {
-                        id_property_value: None,
                         properties: Some(BatchProperty::Cesium3dTileset(batch_table)),
                     }))
                     .unwrap_or(0)
@@ -158,13 +124,13 @@ pub fn construct_model_by_b3dm_layer(
             0
         };
 
-        let batch_length = global_batch_ids.len() / 2;
+        let batch_length = global_batch_ids.len();
         let ids_handle = buf.new_u32(global_batch_ids);
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(feature_batch_id),
-            GlobalBatchIdAndSelections {
+            GlobalBatchIds {
                 handle: ids_handle,
                 batch_length: batch_length as u32,
             },
@@ -211,13 +177,12 @@ pub fn delete_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
     b3dm_layers: Query<Entity, With<B3dmLayer>>,
     features: Query<
-        (&ModelBin, &FeatureBatchId, &GlobalBatchIdAndSelections),
+        (&ModelBin, &FeatureBatchId, &GlobalBatchIds),
         (
             With<LayerId>,
             With<ModelGeometry>,
@@ -235,7 +200,7 @@ pub fn delete_model_by_b3dm_layer(
 
         for e in entities {
             // if a model has batch table, its global batch ids will be removed here.
-            feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res, &mut id_prop_table_res);
+            feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res);
             commands.entity(*e).despawn();
 
             if let Ok((_maker, mut feature)) = rendered_features.get_mut(*e) {
@@ -246,14 +211,10 @@ pub fn delete_model_by_b3dm_layer(
                 } = &mut *feature
                 {
                     // if a model hasn't batch table, its global batch ids will be removed here.
-                    geometry.remove_from_buf(
-                        &mut buf,
-                        &mut batch_table_res,
-                        &mut id_prop_table_res,
-                    );
+                    geometry.remove_from_buf(&mut buf, &mut batch_table_res);
 
                     if let Ok((modebin, feature_batch_id, ..)) = features.get(*feature_id) {
-                        batch_table_res.remove(&feature_batch_id.0, &mut id_prop_table_res);
+                        batch_table_res.remove(&feature_batch_id.0);
                         buf.remove(&modebin.0);
                     }
                     commands.entity(*feature_id).despawn();
@@ -274,8 +235,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
-    id_prop_sel_res: Res<IdPropertySelections>,
     requesters: Query<
         (
             &Cesium3dTileContentDataRequesterMarker,
@@ -320,16 +279,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
             };
 
         let mut global_batch_ids = Vec::with_capacity(batch_length);
-        if let Ok(batch_table_json) = batch_table.json() {
-            generate_global_batch_id_and_selections(
-                &mut batch_table_res,
-                &mut id_prop_table_res,
-                &id_prop_sel_res,
-                &batch_table_json,
-                batch_length,
-                &appearance.id_property,
-                &mut global_batch_ids,
-            );
+        if let Ok(_batch_table_json) = batch_table.json() {
+            generate_global_batch_ids(&mut batch_table_res, batch_length, &mut global_batch_ids);
         } else {
             global_batch_ids.fill(0);
         };
@@ -338,7 +289,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
             {
                 batch_table_res
                     .add(Some(BatchTableValue {
-                        id_property_value: None,
                         properties: Some(BatchProperty::Cesium3dTileset(batch_table)),
                     }))
                     .unwrap_or(0)
@@ -347,14 +297,14 @@ pub fn construct_model_by_cesium3dtiles_layer(
             0
         };
 
-        let batch_length = global_batch_ids.len() / 2;
+        let batch_length = global_batch_ids.len();
         let ids_handle = buf.new_u32(global_batch_ids);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureId::default(),
             FeatureBatchId(feature_batch_id),
-            GlobalBatchIdAndSelections {
+            GlobalBatchIds {
                 handle: ids_handle,
                 batch_length: batch_length as u32,
             },

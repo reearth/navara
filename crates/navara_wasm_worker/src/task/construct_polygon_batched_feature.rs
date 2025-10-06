@@ -34,7 +34,7 @@ pub fn construct_polygon(
         position: FloatAttribute::new(vec![], 3),
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
-        batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
+        batch_ids: Some(FloatAttribute::new(vec![], 1)),
         batch_index: Some(UintAttribute::new(vec![], 1)),
     };
     let mut indices = vec![];
@@ -98,14 +98,13 @@ pub fn construct_polygon(
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
         for _i in 0..position_length {
-            batch_ids.push(batch_id.0.x as FloatType);
-            batch_ids.push(batch_id.0.y as FloatType);
+            batch_ids.push(batch_id.0 as FloatType);
 
             batch_indices.push(batch_idx.0);
         }
 
         combined_attributes
-            .batch_id_and_sel
+            .batch_ids
             .as_mut()
             .unwrap()
             .data
@@ -145,7 +144,7 @@ pub fn construct_flat_polygon(
         position: FloatAttribute::new(vec![], 3),
         normal: None,
         scale_normal_and_cap: None,
-        batch_id_and_sel: Some(FloatAttribute::new(vec![], 2)),
+        batch_ids: Some(FloatAttribute::new(vec![], 1)),
         batch_index: Some(UintAttribute::new(vec![], 1)),
     };
     let mut indices = vec![];
@@ -181,14 +180,13 @@ pub fn construct_flat_polygon(
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
         for _i in 0..position_length {
-            batch_ids.push(batch_id.0.x as FloatType);
-            batch_ids.push(batch_id.0.y as FloatType);
+            batch_ids.push(batch_id.0 as FloatType);
 
             batch_indices.push(batch_idx.0);
         }
 
         combined_attributes
-            .batch_id_and_sel
+            .batch_ids
             .as_mut()
             .unwrap()
             .data

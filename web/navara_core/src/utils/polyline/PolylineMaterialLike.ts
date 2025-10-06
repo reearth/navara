@@ -12,7 +12,6 @@ export class PolylineMaterialLike {
   height?: number;
   width?: number;
   show?: boolean;
-  id_property?: string;
   __internal__?: PolylineInternalMaterial;
 
   constructor(material: PolylineMaterial) {
@@ -24,7 +23,6 @@ export class PolylineMaterialLike {
     this.width = material.width;
     this.height = material.height;
     this.show = material.show;
-    this.id_property = material.id_property;
   }
 
   free(): void {}

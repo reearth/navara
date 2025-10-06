@@ -6,7 +6,6 @@ import { Color, Sprite, SpriteMaterial } from "three";
 import invariant from "tiny-invariant";
 
 import { TEXTURE_LOADER } from "../event/loaders";
-import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
 import { FeatureMesh } from "./featureMesh";
@@ -18,19 +17,15 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
 
   async _init(
     material: NavaraBillboardMaterial,
-    uniforms: CommonUniforms,
     batchId: number,
-    selected: boolean,
     active: boolean,
   ) {
-    await this.initMaterial(material, uniforms, batchId, selected, active);
+    await this.initMaterial(material, batchId, active);
   }
 
   private async initMaterial(
     meshMaterial: NavaraBillboardMaterial,
-    uniforms: CommonUniforms,
     batchId: number,
-    selected: boolean,
     active: boolean,
   ) {
     invariant(meshMaterial.url);
@@ -67,13 +62,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     };
 
     this.userData.batchId = batchId;
-    this.userData.isPicked = false;
     this.userData.color = meshMaterial.color;
-
-    if (selected && uniforms?.highlightColor?.value) {
-      material.color.set(uniforms.highlightColor.value);
-      this.userData.isPicked = true;
-    }
 
     await this._update(meshMaterial, active);
   }
@@ -85,9 +74,6 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     const prev = this.material.userData.prev;
 
     if (prev.color !== material.color) {
-      if (!this.userData.isPicked) {
-        this.material.color.set(material.color ?? 0);
-      }
       prev.color = material.color;
     }
 

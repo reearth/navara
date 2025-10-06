@@ -1,6 +1,6 @@
 use navara_feature_component::batch::{BatchId, BatchIndex};
 use navara_geometry::Hierarchy;
-use navara_math::{FloatType, Vec2};
+use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
 use crate::{
@@ -149,7 +149,7 @@ impl TransferablePolygonBatchedFeature {
         let mut holes_total_sizes = Vec::with_capacity(length);
         let mut holes_boundaries = Vec::with_capacity(length);
         let mut holes_sizes = Vec::with_capacity(length);
-        let mut batch_ids = Vec::with_capacity(length * 2);
+        let mut batch_ids = Vec::with_capacity(length);
         let mut batch_indices = Vec::with_capacity(length);
         let mut expected_winding_orders = Vec::with_capacity(length);
 
@@ -158,7 +158,6 @@ impl TransferablePolygonBatchedFeature {
             outer_ring.append(&mut hierarchy.outer_ring);
 
             batch_ids.push(batch_id as u32);
-            batch_ids.push(0);
 
             batch_indices.push(i as u32);
 
@@ -203,7 +202,7 @@ impl TransferablePolygonBatchedFeature {
         let holes_total_sizes = Vec::with_capacity(length);
         let holes_boundaries = Vec::with_capacity(length);
         let holes_sizes = Vec::with_capacity(length);
-        let batch_ids = Vec::with_capacity(length * 2);
+        let batch_ids = Vec::with_capacity(length);
         let batch_indices = Vec::with_capacity(length);
         let expected_winding_orders = Vec::with_capacity(length);
 
@@ -249,11 +248,8 @@ impl TransferablePolygonBatchedFeature {
         self.holes_total_sizes.push(holes_total_size as u32);
     }
 
-    pub fn add_batch_id_and_selected_status(
-        &mut self,
-        batch_id_and_selected_status: &mut Vec<u32>,
-    ) {
-        self.batch_ids.append(batch_id_and_selected_status);
+    pub fn add_batch_id(&mut self, batch_id: &mut Vec<u32>) {
+        self.batch_ids.append(batch_id);
     }
 
     pub fn to_transferable_hierarchy_by_index(
@@ -284,10 +280,7 @@ impl TransferablePolygonBatchedFeature {
 
         let batch_idx = self.batch_indices[idx] as usize;
 
-        let batch_id = BatchId(Vec2::new(
-            self.batch_ids[batch_idx * 2] as FloatType,
-            self.batch_ids[batch_idx * 2 + 1] as FloatType,
-        ));
+        let batch_id = BatchId(self.batch_ids[batch_idx] as FloatType);
 
         (
             transferable_hierarchy,
@@ -314,7 +307,6 @@ impl Iterator for TransferablePolygonBatchedFeature {
 mod test {
     use super::TransferablePolygonBatchedFeature;
     use navara_geometry::Hierarchy;
-    use navara_math::Vec2;
 
     #[test]
     fn it_should_get_a_hierarchy_of_batched_feature() {
@@ -421,14 +413,7 @@ mod test {
         }
 
         assert_eq!(features, hierarchies);
-        assert_eq!(
-            batch_ids,
-            vec![
-                Vec2::new(0.0, 0.0),
-                Vec2::new(1.0, 0.0),
-                Vec2::new(2.0, 0.0)
-            ]
-        );
+        assert_eq!(batch_ids, vec![0.0, 1.0, 2.0]);
         assert_eq!(batch_idxs, vec![0, 1, 2,]);
     }
 }

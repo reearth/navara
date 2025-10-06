@@ -8,10 +8,7 @@ use navara_component::Deleted;
 use navara_core::CRS;
 
 use navara_feature_component::{
-    batch::{
-        BatchId, BatchTable, FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections,
-        IdPropertyTable,
-    },
+    batch::{BatchId, BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, GlobalBatchIds},
     billboard::BillboardGeometry,
     model::ModelGeometry,
     point::PointGeometry,
@@ -29,7 +26,7 @@ use navara_layer::{
 };
 use navara_material::Appearance;
 
-use navara_math::{FloatType, Vec2, Vec3};
+use navara_math::{FloatType, Vec3};
 use navara_parser::geojson::{GeoJson, Geometry, Value};
 
 fn coords(f: &[f64]) -> Vec3 {
@@ -67,8 +64,6 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
 
 fn generate_batch_id(
     batch_table_res: &mut BatchTable,
-    id_prop_table_res: &mut IdPropertyTable,
-    id_prop: String,
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) -> u32 {
     let props = properties
@@ -76,7 +71,9 @@ fn generate_batch_id(
         .and_then(|prop| serde_json::to_value(prop).ok())
         .unwrap_or(serde_json::Value::Null);
     batch_table_res
-        .init_values_with_id_props(Some(id_prop), props, id_prop_table_res)
+        .add(Some(BatchTableValue {
+            properties: Some(BatchProperty::Values(vec![props])),
+        }))
         .unwrap_or(0)
 }
 
@@ -85,8 +82,6 @@ fn spawn_feature(
     commands: &mut Commands,
     buf: &mut BufferStore,
     batch_table_res: &mut BatchTable,
-    id_prop_table_res: &mut IdPropertyTable,
-    id_prop_sel_res: &IdPropertySelections,
     appearances: &[Appearance],
     geometry: &Geometry,
     layer_id: &str,
@@ -96,19 +91,11 @@ fn spawn_feature(
         match appearance {
             Appearance::Point(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let batch_id = generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    );
+                    let batch_id = generate_batch_id(batch_table_res, properties);
 
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(Vec2::new(
-                            batch_id as FloatType,
-                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-                        )),
+                        BatchId(batch_id as f32),
                         PointGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -118,20 +105,11 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let batch_id = generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        );
+                        let batch_id = generate_batch_id(batch_table_res, properties);
 
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(Vec2::new(
-                                batch_id as FloatType,
-                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
-                                    as FloatType,
-                            )),
+                            BatchId(batch_id as f32),
                             PointGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -144,19 +122,11 @@ fn spawn_feature(
             },
             Appearance::Billboard(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let batch_id = generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    );
+                    let batch_id = generate_batch_id(batch_table_res, properties);
 
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(Vec2::new(
-                            batch_id as FloatType,
-                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-                        )),
+                        BatchId(batch_id as f32),
                         BillboardGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -166,20 +136,11 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let batch_id = generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        );
+                        let batch_id = generate_batch_id(batch_table_res, properties);
 
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(Vec2::new(
-                                batch_id as FloatType,
-                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
-                                    as FloatType,
-                            )),
+                            BatchId(batch_id as f32),
                             BillboardGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -192,19 +153,11 @@ fn spawn_feature(
             },
             Appearance::Text(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let batch_id = generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    );
+                    let batch_id = generate_batch_id(batch_table_res, properties);
 
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(Vec2::new(
-                            batch_id as FloatType,
-                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-                        )),
+                        BatchId(batch_id as f32),
                         TextGeometry {
                             coords: coords(f),
                             crs: CRS::Geographic,
@@ -214,20 +167,11 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let batch_id = generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        );
+                        let batch_id = generate_batch_id(batch_table_res, properties);
 
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(Vec2::new(
-                                batch_id as FloatType,
-                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
-                                    as FloatType,
-                            )),
+                            BatchId(batch_id as f32),
                             TextGeometry {
                                 coords: coords(f),
                                 crs: CRS::Geographic,
@@ -240,39 +184,22 @@ fn spawn_feature(
             },
             Appearance::Polyline(v) => match &geometry.value {
                 Value::LineString(f) => {
-                    let batch_id = generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    );
+                    let batch_id = generate_batch_id(batch_table_res, properties);
 
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(Vec2::new(
-                            batch_id as FloatType,
-                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-                        )),
+                        BatchId(batch_id as f32),
                         PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                         v.clone(),
                     ));
                 }
                 Value::MultiLineString(fs) => {
                     for f in fs {
-                        let batch_id = generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        );
+                        let batch_id = generate_batch_id(batch_table_res, properties);
 
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(Vec2::new(
-                                batch_id as FloatType,
-                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
-                                    as FloatType,
-                            )),
+                            BatchId(batch_id as f32),
                             PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
                             v.clone(),
                         ));
@@ -282,19 +209,11 @@ fn spawn_feature(
             },
             Appearance::Polygon(v) => match &geometry.value {
                 Value::Polygon(f) => {
-                    let batch_id = generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    );
+                    let batch_id = generate_batch_id(batch_table_res, properties);
 
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
-                        BatchId(Vec2::new(
-                            batch_id as FloatType,
-                            batch_table_res.get_selection(&batch_id, id_prop_sel_res) as FloatType,
-                        )),
+                        BatchId(batch_id as f32),
                         PolygonGeometry {
                             hierarchy: Hierarchy {
                                 outer_ring: f
@@ -311,19 +230,10 @@ fn spawn_feature(
                 }
                 Value::MultiPolygon(fs) => {
                     for f in fs {
-                        let batch_id = generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        );
+                        let batch_id = generate_batch_id(batch_table_res, properties);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
-                            BatchId(Vec2::new(
-                                batch_id as FloatType,
-                                batch_table_res.get_selection(&batch_id, id_prop_sel_res)
-                                    as FloatType,
-                            )),
+                            BatchId(batch_id as f32),
                             PolygonGeometry {
                                 hierarchy: Hierarchy {
                                     outer_ring: multi_flat_coords(&f[0]),
@@ -341,24 +251,16 @@ fn spawn_feature(
             },
             Appearance::Model(v) => match &geometry.value {
                 Value::Point(f) => {
-                    let batch_id = generate_batch_id(
-                        batch_table_res,
-                        id_prop_table_res,
-                        v.id_property.clone(),
-                        properties,
-                    );
+                    let batch_id = generate_batch_id(batch_table_res, properties);
 
-                    let global_batch_ids = vec![
-                        batch_id,
-                        batch_table_res.get_selection(&batch_id, id_prop_sel_res),
-                    ];
+                    let global_batch_ids = vec![batch_id];
 
-                    let batch_length = global_batch_ids.len() / 2;
+                    let batch_length = global_batch_ids.len();
                     let ids_handle = buf.new_u32(global_batch_ids);
                     commands.spawn((
                         LayerId(layer_id.to_owned()),
                         FeatureBatchId(batch_id),
-                        GlobalBatchIdAndSelections {
+                        GlobalBatchIds {
                             handle: ids_handle,
                             batch_length: batch_length as u32,
                         },
@@ -371,24 +273,16 @@ fn spawn_feature(
                 }
                 Value::MultiPoint(fs) => {
                     for f in fs {
-                        let batch_id = generate_batch_id(
-                            batch_table_res,
-                            id_prop_table_res,
-                            v.id_property.clone(),
-                            properties,
-                        );
+                        let batch_id = generate_batch_id(batch_table_res, properties);
 
-                        let global_batch_ids = vec![
-                            batch_id,
-                            batch_table_res.get_selection(&batch_id, id_prop_sel_res),
-                        ];
+                        let global_batch_ids = vec![batch_id];
 
-                        let batch_length = global_batch_ids.len() / 2;
+                        let batch_length = global_batch_ids.len();
                         let ids_handle = buf.new_u32(global_batch_ids);
                         commands.spawn((
                             LayerId(layer_id.to_owned()),
                             FeatureBatchId(batch_id),
-                            GlobalBatchIdAndSelections {
+                            GlobalBatchIds {
                                 handle: ids_handle,
                                 batch_length: batch_length as u32,
                             },
@@ -415,8 +309,6 @@ fn spawn_feature(
 pub fn construct_feature(
     mut commands: Commands,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
-    id_prop_sel_res: Res<IdPropertySelections>,
     mut buf: ResMut<BufferStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
@@ -432,8 +324,6 @@ pub fn construct_feature(
                                 &mut commands,
                                 &mut buf,
                                 &mut batch_table_res,
-                                &mut id_prop_table_res,
-                                &id_prop_sel_res,
                                 appearances,
                                 g,
                                 layer.layer_id.as_str(),
@@ -448,8 +338,6 @@ pub fn construct_feature(
                             &mut commands,
                             &mut buf,
                             &mut batch_table_res,
-                            &mut id_prop_table_res,
-                            &id_prop_sel_res,
                             appearances,
                             g,
                             layer.layer_id.as_str(),
@@ -462,8 +350,6 @@ pub fn construct_feature(
                         &mut commands,
                         &mut buf,
                         &mut batch_table_res,
-                        &mut id_prop_table_res,
-                        &id_prop_sel_res,
                         appearances,
                         g,
                         layer.layer_id.as_str(),
@@ -572,7 +458,6 @@ pub fn delete_geo_json_layer(
     mut buf: ResMut<BufferStore>,
     entities_with_layerid: Query<(Entity, &LayerId), Without<RenderableFeature>>,
     mut batch_table: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     batch_id: Query<&BatchId>,
 ) {
     for (e, d) in &deleted {
@@ -581,7 +466,7 @@ pub fn delete_geo_json_layer(
             // delete RenderableFeature and related Buffers
             for entity in vec {
                 if let Ok(mut feature) = features.get_mut(*entity) {
-                    feature.destroy(&mut buf, &mut batch_table, &mut id_prop_table_res);
+                    feature.destroy(&mut buf, &mut batch_table);
                 }
 
                 commands.entity(*entity).insert(Deleted);
@@ -592,10 +477,7 @@ pub fn delete_geo_json_layer(
         for (entity, l_id) in entities_with_layerid.iter() {
             if l_id.0 == d.0 {
                 if batch_id.get(entity).is_ok() {
-                    batch_table.remove(
-                        &(batch_id.get(entity).unwrap().0.x as u32),
-                        &mut id_prop_table_res,
-                    );
+                    batch_table.remove(&(batch_id.get(entity).unwrap().0 as u32));
                 }
 
                 commands.entity(entity).despawn();

@@ -33,7 +33,7 @@ type Attributes = BatchedFeatureAttributes<{
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
   end_normal_and_texture_coordinate_normalization_x: BufferAttribute;
   forward_offset: BufferAttribute;
-  batchIdAndSel: BufferAttribute;
+  batchId: BufferAttribute;
 }>;
 
 export class PolylineMesh extends BatchedFeatureMesh<
@@ -64,10 +64,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
       g.right_normal_and_texture_coordinate_normalization_y.data,
     );
     const indices = buf.removeU32(g.indices);
-    const batchIdAndSel = g.batch_id_and_sel
-      ? buf.removeF32(g.batch_id_and_sel.data)
-      : undefined;
-    const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
+    const batchIds = g.batch_ids ? buf.removeF32(g.batch_ids.data) : undefined;
+    const batchIdSize = g.batch_ids ? g.batch_ids.size : 0;
     const batchIndex = g.batch_index
       ? buf.removeU32(g.batch_index.data)
       : undefined;
@@ -113,10 +111,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
       ),
     );
 
-    if (batchIdAndSel) {
+    if (batchIds) {
       geometry.setAttribute(
-        "batchIdAndSel",
-        new BufferAttribute(batchIdAndSel, batchIdSize),
+        "batchId",
+        new BufferAttribute(batchIds, batchIdSize),
       );
     }
 
@@ -127,7 +125,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
 
-    this.userData.batchIdAndSel = batchIdAndSel;
+    this.userData.batchIds = batchIds;
     this.userData.batchIdSize = batchIdSize;
   }
 
@@ -162,7 +160,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       nvr_uPickable: uPickable,
-      nvr_uHighlightColor: uniforms.highlightColor,
     };
 
     // Use the original shader files with modifications for batch texture

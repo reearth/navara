@@ -1,5 +1,6 @@
-import type { LayerDescription } from "@navara/three";
+import type { LayerDescription, Layer } from "@navara/three";
 import type ThreeView from "@navara/three";
+import { Color } from "three";
 import {
   FolderApi,
   Pane,
@@ -21,12 +22,41 @@ export const addCtrlPanel = (
   view: ThreeView,
   paneInput?: Pane,
 ) => {
-  const layerMap = new Map<string, MaterialLayerDescription>();
-  layers.forEach((layer) => {
-    const layerId = view.addLayer(layer).id;
-    if (layerId) {
-      layerMap.set(layerId, layer);
+  const arrLayers: Layer[] = [];
+  const selectedFeatures = new Set<string>();
+  view.on("pick", (props) => {
+    const gmlId = props?.properties.get("gml_id");
+    if (gmlId) {
+      selectedFeatures.add(gmlId as string);
+      arrLayers.forEach((layer) => {
+        layer.forceUpdate();
+      });
     }
+  });
+
+  const layerMap = new Map<string, MaterialLayerDescription>();
+  layers.forEach((layerDef) => {
+    const layer = view.addLayer(layerDef);
+    arrLayers.push(layer);
+
+    if (layer.id) {
+      layerMap.set(layer.id, layerDef);
+    }
+
+    layer.on("featureUpdated", (evaluator) => {
+      evaluator.evaluate((_batchId, property) => {
+        const gmlId = property?.get("gml_id");
+        if (gmlId && selectedFeatures.has(gmlId as string)) {
+          return {
+            color: new Color(0xff0000),
+          };
+        }
+
+        return {
+          color: new Color(0xffffff),
+        };
+      });
+    });
   });
 
   const layerIds = Array.from(layerMap.keys());

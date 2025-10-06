@@ -53,7 +53,6 @@ pub struct PointMaterial {
     pub depth_test: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
-    pub id_property: String,
 }
 
 impl Default for PointMaterial {
@@ -68,7 +67,6 @@ impl Default for PointMaterial {
             scale_by_distance: true,
             depth_test: true,
             transparent: true,
-            id_property: "".to_string(),
         }
     }
 }
@@ -105,7 +103,6 @@ pub struct BillboardMaterial {
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     pub alpha_test: f32,
-    pub id_property: String,
 }
 
 impl Default for BillboardMaterial {
@@ -122,7 +119,6 @@ impl Default for BillboardMaterial {
             depth_test: true,
             transparent: false,
             alpha_test: 0.1,
-            id_property: "".to_string(),
         }
     }
 }
@@ -162,7 +158,6 @@ pub struct TextMaterial {
     pub border_width: FloatType, // 0 ~ 0.5, the ratio of the border to the height
     pub corner_radius: FloatType, // 0 ~ 0.5, the ratio of the corner radius to the height
     pub padding: Vec2,
-    pub id_property: String,
     // outline
     pub outline_blur: f32,    // outlineBlur Defalut:0
     pub outline_color: u32,   // outlineColor Defalut:black
@@ -189,7 +184,6 @@ impl Default for TextMaterial {
             border_width: 0.05,
             corner_radius: 0.1,
             padding: Vec2::new(5.0, 2.0),
-            id_property: "".to_string(),
             outline_blur: 0.0,
             outline_color: 0x000000,
             outline_offset: Vec2::new(0.0, 0.0),
@@ -227,7 +221,6 @@ pub struct PolylineMaterial {
     pub use_ground_normals: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
-    pub id_property: String,
 }
 
 impl Default for PolylineMaterial {
@@ -242,7 +235,6 @@ impl Default for PolylineMaterial {
             use_ground_normals: false,
             height: 1.,
             internal: None,
-            id_property: "".to_string(),
         }
     }
 }
@@ -274,7 +266,6 @@ pub struct PolygonMaterial {
     pub reflectivity: f32,
     pub roughness: f32,
     pub internal: Option<PolygonInternalMaterial>,
-    pub id_property: String,
 
     pub surface_show: bool,
     pub outline_show: bool,
@@ -305,7 +296,6 @@ impl Default for PolygonMaterial {
             reflectivity: 0.0,
             roughness: 0.0,
             internal: None,
-            id_property: "".to_string(),
             surface_show: true,
             outline_show: false,
             outline_color: 0xffffff,
@@ -346,7 +336,6 @@ pub struct ModelMaterial {
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
-    pub id_property: String,
     pub color: u32,
     pub metalness: f32,
     pub roughness: f32,
@@ -380,7 +369,6 @@ impl Default for ModelMaterial {
             url: "".to_string(),
             should_rotate_in_default: true,
             max_sse: 2.,
-            id_property: "".to_string(),
             color: 0xffffff,
             metalness: 0.0,
             roughness: 1.0,

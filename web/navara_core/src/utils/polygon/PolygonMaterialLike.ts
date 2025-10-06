@@ -10,7 +10,6 @@ export class PolygonMaterialLike {
   height?: number;
   show?: boolean;
   wireframe?: boolean;
-  id_property?: string;
   __internal__?: PolygonInternalMaterial | undefined;
 
   constructor(material: PolygonMaterial) {
@@ -22,7 +21,6 @@ export class PolygonMaterialLike {
     this.extruded_height = material.extruded_height;
     this.height = material.height;
     this.show = material.show;
-    this.id_property = material.id_property;
     this.wireframe = material.wireframe;
   }
 

@@ -80,13 +80,12 @@ pub fn construct_polyline_batched_feature(
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
         for _i in 0..position_length {
-            batch_ids.push(batch_id.0.x as FloatType);
-            batch_ids.push(batch_id.0.y as FloatType);
+            batch_ids.push(batch_id.0 as FloatType);
 
             batch_indices.push(batch_index.0);
         }
         combined_attributes
-            .batch_id_and_sel
+            .batch_ids
             .as_mut()
             .unwrap()
             .data

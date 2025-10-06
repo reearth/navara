@@ -11,7 +11,7 @@ use navara_math::{FloatType, Transform, Vec3};
 
 use crate::model::ModelBin;
 
-use crate::batch::{BatchTable, IdPropertyTable};
+use crate::batch::BatchTable;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderInformation {
@@ -162,44 +162,39 @@ impl RenderableFeature {
         }
     }
 
-    pub fn destroy(
-        &mut self,
-        buf: &mut BufferStore,
-        batch_table_res: &mut BatchTable,
-        id_prop_table_res: &mut IdPropertyTable,
-    ) {
+    pub fn destroy(&mut self, buf: &mut BufferStore, batch_table_res: &mut BatchTable) {
         match self {
             RenderableFeature::Point {
                 geometry,
                 feature_batch_id,
                 ..
             } => {
-                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
-                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+                geometry.remove_from_buf(buf, batch_table_res);
+                batch_table_res.remove(feature_batch_id);
             }
             RenderableFeature::Billboard {
                 geometry,
                 feature_batch_id,
                 ..
             } => {
-                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
-                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+                geometry.remove_from_buf(buf, batch_table_res);
+                batch_table_res.remove(feature_batch_id);
             }
             RenderableFeature::Text {
                 geometry,
                 feature_batch_id,
                 ..
             } => {
-                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
-                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+                geometry.remove_from_buf(buf, batch_table_res);
+                batch_table_res.remove(feature_batch_id);
             }
             RenderableFeature::Polyline {
                 geometry,
                 feature_batch_id,
                 ..
             } => {
-                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
-                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+                geometry.remove_from_buf(buf, batch_table_res);
+                batch_table_res.remove(feature_batch_id);
             }
             RenderableFeature::Polygon {
                 geometry,
@@ -207,8 +202,8 @@ impl RenderableFeature {
                 feature_batch_id,
                 ..
             } => {
-                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
-                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+                geometry.remove_from_buf(buf, batch_table_res);
+                batch_table_res.remove(feature_batch_id);
 
                 if let Some(outline_geometry) = outline_geometry {
                     outline_geometry.remove_from_buf(buf);
@@ -219,8 +214,8 @@ impl RenderableFeature {
                 feature_batch_id,
                 ..
             } => {
-                geometry.remove_from_buf(buf, batch_table_res, id_prop_table_res);
-                batch_table_res.remove(feature_batch_id, id_prop_table_res);
+                geometry.remove_from_buf(buf, batch_table_res);
+                batch_table_res.remove(feature_batch_id);
             }
             _ => (),
         }
@@ -235,7 +230,7 @@ pub struct TransferablePolylineGeometry {
     pub start_normals: TransferableFloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
-    pub batch_id_and_sel: Option<TransferableFloatAttribute>,
+    pub batch_ids: Option<TransferableFloatAttribute>,
     pub batch_index: Option<TransferableUintAttribute>,
     pub indices: Handle,
 }
@@ -292,12 +287,13 @@ impl TransferablePolylineGeometry {
                     .right_normal_and_texture_coordinate_normalization_y
                     .size,
             },
-            batch_id_and_sel: geo.attributes.batch_id_and_sel.map(|batch_id| {
-                TransferableFloatAttribute {
-                    data: buf.new_f32(batch_id.data),
-                    size: batch_id.size,
-                }
-            }),
+            batch_ids: geo
+                .attributes
+                .batch_ids
+                .map(|batch_ids| TransferableFloatAttribute {
+                    data: buf.new_f32(batch_ids.data),
+                    size: batch_ids.size,
+                }),
             batch_index: geo
                 .attributes
                 .batch_index
@@ -309,12 +305,7 @@ impl TransferablePolylineGeometry {
         }
     }
 
-    pub fn remove_from_buf(
-        &mut self,
-        buf: &mut BufferStore,
-        batch_table: &mut BatchTable,
-        id_prop_table: &mut IdPropertyTable,
-    ) {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
         buf.remove(&self.position.data);
         buf.remove(&self.start.data);
         buf.remove(&self.forward_offset.data);
@@ -325,13 +316,13 @@ impl TransferablePolylineGeometry {
                 .right_normal_and_texture_coordinate_normalization_y
                 .data,
         );
-        if let Some(batch_id) = &self.batch_id_and_sel {
-            let Some(vec_ids) = buf.remove_f32(&batch_id.data) else {
+        if let Some(batch_ids) = &self.batch_ids {
+            let Some(vec_ids) = buf.remove_f32(&batch_ids.data) else {
                 return;
             };
 
-            for i in (0..vec_ids.len()).step_by(batch_id.size as usize) {
-                batch_table.remove(&(vec_ids[i] as u32), id_prop_table);
+            for i in (0..vec_ids.len()).step_by(batch_ids.size as usize) {
+                batch_table.remove(&(vec_ids[i] as u32));
             }
         }
         if let Some(batch_index) = &self.batch_index {
@@ -346,7 +337,7 @@ pub struct TransferablePolygonGeometry {
     pub position: TransferableFloatAttribute,
     pub normal: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
-    pub batch_id_and_sel: Option<TransferableFloatAttribute>,
+    pub batch_ids: Option<TransferableFloatAttribute>,
     pub batch_index: Option<TransferableUintAttribute>,
     pub indices: Handle,
 }
@@ -362,9 +353,9 @@ impl TransferablePolygonGeometry {
             .attributes
             .scale_normal_and_cap
             .map(|n| (buf.new_f32(n.data), n.size));
-        let batch_id = geo
+        let batch_ids = geo
             .attributes
-            .batch_id_and_sel
+            .batch_ids
             .map(|n| (buf.new_f32(n.data), n.size));
         let batch_index = geo
             .attributes
@@ -384,8 +375,8 @@ impl TransferablePolygonGeometry {
                     size,
                 }
             }),
-            batch_id_and_sel: batch_id.map(|(batch_id, size)| TransferableFloatAttribute {
-                data: batch_id,
+            batch_ids: batch_ids.map(|(batch_ids, size)| TransferableFloatAttribute {
+                data: batch_ids,
                 size,
             }),
             batch_index: batch_index.map(|(batch_index, size)| TransferableUintAttribute {
@@ -398,12 +389,7 @@ impl TransferablePolygonGeometry {
 }
 
 impl TransferablePolygonGeometry {
-    pub fn remove_from_buf(
-        &mut self,
-        buf: &mut BufferStore,
-        batch_table: &mut BatchTable,
-        id_prop_table: &mut IdPropertyTable,
-    ) {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
         buf.remove(&self.position.data);
         buf.remove(&self.indices);
 
@@ -413,13 +399,13 @@ impl TransferablePolygonGeometry {
         if let Some(normal) = &self.scale_normal_and_cap {
             buf.remove(&normal.data);
         }
-        if let Some(batch_id) = &self.batch_id_and_sel {
-            let Some(vec_ids) = buf.remove_f32(&batch_id.data) else {
+        if let Some(batch_ids) = &self.batch_ids {
+            let Some(vec_ids) = buf.remove_f32(&batch_ids.data) else {
                 return;
             };
 
-            for i in (0..vec_ids.len()).step_by(batch_id.size as usize) {
-                batch_table.remove(&(vec_ids[i] as u32), id_prop_table);
+            for i in (0..vec_ids.len()).step_by(batch_ids.size as usize) {
+                batch_table.remove(&(vec_ids[i] as u32));
             }
         }
         if let Some(batch_index) = &self.batch_index {
@@ -483,7 +469,7 @@ impl TransferablePolygonOutlineGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePointGeometry {
     pub position: TransferableFloatAttribute,
-    pub batch_id_and_sel: TransferableFloatAttribute,
+    pub batch_ids: TransferableFloatAttribute,
     pub batch_index: TransferableUintAttribute,
 }
 
@@ -492,16 +478,16 @@ impl TransferablePointGeometry {
         buf: &mut BufferStore,
         positions: Vec<f32>,
         batch_indices: Vec<u32>,
-        batch_ids_and_sels: Vec<f32>,
+        batch_ids: Vec<f32>,
     ) -> Self {
         Self {
             position: TransferableFloatAttribute {
                 data: buf.new_f32(positions),
                 size: 3, // x, y, z for each point
             },
-            batch_id_and_sel: TransferableFloatAttribute {
-                data: buf.new_f32(batch_ids_and_sels),
-                size: 2, // batch_id and selected status
+            batch_ids: TransferableFloatAttribute {
+                data: buf.new_f32(batch_ids),
+                size: 1, // batch_id
             },
             batch_index: TransferableUintAttribute {
                 data: buf.new_u32(batch_indices),
@@ -510,20 +496,15 @@ impl TransferablePointGeometry {
         }
     }
 
-    pub fn remove_from_buf(
-        &mut self,
-        buf: &mut BufferStore,
-        batch_table: &mut BatchTable,
-        id_prop_table: &mut IdPropertyTable,
-    ) {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
         buf.remove(&self.position.data);
 
-        let Some(vec_ids) = buf.remove_f32(&self.batch_id_and_sel.data) else {
+        let Some(vec_ids) = buf.remove_f32(&self.batch_ids.data) else {
             return;
         };
 
-        for i in (0..vec_ids.len()).step_by(self.batch_id_and_sel.size as usize) {
-            batch_table.remove(&(vec_ids[i] as u32), id_prop_table);
+        for i in (0..vec_ids.len()).step_by(self.batch_ids.size as usize) {
+            batch_table.remove(&(vec_ids[i] as u32));
         }
 
         buf.remove(&self.batch_index.data);
@@ -538,17 +519,12 @@ pub struct TransferableSingleGeometry {
 
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferableModelGeometry {
-    pub batch_id_and_selected_status: Option<TransferableFloatAttribute>,
+    pub batch_ids: Option<TransferableFloatAttribute>,
 }
 
 impl TransferableModelGeometry {
-    pub fn remove_from_buf(
-        &mut self,
-        buf: &mut BufferStore,
-        batch_table: &mut BatchTable,
-        id_prop_table: &mut IdPropertyTable,
-    ) {
-        let Some(ids) = &self.batch_id_and_selected_status else {
+    pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
+        let Some(ids) = &self.batch_ids else {
             return;
         };
 
@@ -557,7 +533,7 @@ impl TransferableModelGeometry {
         };
 
         for i in (0..vec_ids.len()).step_by(ids.size as usize) {
-            batch_table.remove(&vec_ids[i], id_prop_table);
+            batch_table.remove(&vec_ids[i]);
         }
 
         buf.remove(&ids.data);
