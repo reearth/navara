@@ -1,2 +1,7 @@
 packages:
-  - 'web/**'
+  - web/**
+  - debug_tile_server
+
+onlyBuiltDependencies:
+  - canvas
+  - esbuild
