@@ -2,8 +2,8 @@ use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 
 use navara_layer::{
-    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, LayerData, MvtLayer, TerrainDataType,
-    TerrainLayer, TilesLayer,
+    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, GeoJsonLayerData, LayerData, MvtLayer,
+    TerrainDataType, TerrainLayer, TilesLayer,
 };
 
 use navara_material::Appearance;
@@ -317,9 +317,20 @@ impl LayerDescription {
                         data: JsValue::NULL,
                     });
 
-                let mut geo_data: Option<GeoJson> = None;
+                let mut geo_data: Option<GeoJsonLayerData> = None;
                 if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    geo_data = GeoJson::from_json_object(js_data.data.into_serde().ok()?).ok();
+                    // Try to parse the data as URL first.
+                    let data_url: Option<LayerDescriptionUrl> =
+                        serde_wasm_bindgen::from_value(js_data.clone().data).ok();
+
+                    if let Some(layer_description_url) = data_url {
+                        geo_data = Some(GeoJsonLayerData::URL(layer_description_url.url));
+                    } else {
+                        // Try to parse the data as GeoJson if the URL is not provided.
+                        let data_json: Option<GeoJson> =
+                            GeoJson::from_json_object(js_data.data.into_serde().ok()?).ok();
+                        geo_data = Some(GeoJsonLayerData::GeoJson(data_json.unwrap()));
+                    }
                 }
 
                 let mut layer: GeoJsonLayerDescription =
