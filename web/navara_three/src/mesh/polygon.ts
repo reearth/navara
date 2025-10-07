@@ -28,7 +28,12 @@ import {
   RGBADepthPacking,
 } from "three";
 
-import { PolygonOutlineMesh, TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
+import {
+  PolygonOutlineMesh,
+  TEXTURE_LOADER,
+  WATER_NORMAL_URL,
+  type ViewEvents,
+} from "..";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";

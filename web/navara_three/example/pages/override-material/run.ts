@@ -143,7 +143,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
             receive_shadow: true,
             outline_show: false,
             outline_width: 2,
-            outline_color: 0xff00ff
+            outline_color: 0xff00ff,
           },
         };
 
@@ -175,11 +175,11 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
 
   const PARAMS = {
     outline: false,
-  }
+  };
 
   folder.addBinding(PARAMS, "outline").on("change", ({ value }) => {
-    if(layerDescription) {
-      if(layerDescription.polygon) {
+    if (layerDescription) {
+      if (layerDescription.polygon) {
         layerDescription.polygon.outline_show = value;
       }
       layer?.update(layerDescription);
