@@ -26,6 +26,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "geojson",
     data: {
+      // ref: https://dataworks.calderdale.gov.uk/dataset/defibrillators-e6xdw
       url: "https://dataworks.calderdale.gov.uk/download/e6xdw/b1z/Council%20owned%20defibrillators%202025.geojson",
     },
     point: {

@@ -659,8 +659,9 @@ pub fn parse_geojson(
         let geojson = buf.remove_u8(&req.handle).unwrap();
         let geojson = GeoJson::from_reader(geojson.as_slice()).unwrap();
 
-        let mut l = layers.get_mut(marker.0).unwrap();
-        l.data = Some(GeoJsonLayerData::GeoJson(geojson));
+        if let Ok(mut l) = layers.get_mut(marker.0) {
+            l.data = Some(GeoJsonLayerData::GeoJson(geojson));
+        }
     }
 }
 

@@ -18,8 +18,8 @@ impl Plugin for GeoJsonPlugin {
         app.add_systems(
             Update,
             (
-                system::parse_geojson,
                 system::request_geojson,
+                system::parse_geojson,
                 system::construct_feature,
                 system::update_geo_json_layer,
                 system::delete_geo_json_layer,
