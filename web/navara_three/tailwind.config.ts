@@ -1,10 +1,9 @@
 import type { Config } from "tailwindcss";
+import TailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: [
-    "./example/**/*.{ts,tsx,js,jsx,html}",
-  ],
+  content: ["./example/**/*.{ts,tsx,js,jsx,html}"],
   theme: {
     container: {
       center: true,
@@ -70,6 +69,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [TailwindcssAnimate],
 } satisfies Config;
-

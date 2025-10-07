@@ -20,7 +20,10 @@ export const App = () => {
   const { isDark: dark, toggle } = useDarkMode();
 
   const pages = useMemo(
-    () => (PAGES || []).filter((p) => p !== "index").sort((a, b) => a.localeCompare(b)),
+    () =>
+      (PAGES || [])
+        .filter((p) => p !== "index")
+        .sort((a, b) => a.localeCompare(b)),
     [],
   );
 
@@ -36,8 +39,17 @@ export const App = () => {
         <Card className="mb-4">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Navara Three — Examples</CardTitle>
-            <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={toggle}>
-              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Toggle theme"
+              onClick={toggle}
+            >
+              {dark ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
             </Button>
           </CardHeader>
           <CardContent>

@@ -12,7 +12,12 @@ export const PageList = ({ pages }: PageListProps) => {
         const src = `/screenshots/${p}.png`;
         const title = p.replace(/-/g, " ");
         return (
-          <a key={p} href={href} aria-label={`Open ${title}`} className="no-underline">
+          <a
+            key={p}
+            href={href}
+            aria-label={`Open ${title}`}
+            className="no-underline"
+          >
             <Card className="overflow-hidden transition-colors hover:bg-accent">
               <CardContent className="p-0">
                 <img
@@ -25,7 +30,9 @@ export const PageList = ({ pages }: PageListProps) => {
                 />
               </CardContent>
               <CardHeader className="border-t p-3">
-                <CardTitle className="text-sm font-medium capitalize">{title}</CardTitle>
+                <CardTitle className="text-sm font-medium capitalize">
+                  {title}
+                </CardTitle>
               </CardHeader>
             </Card>
           </a>

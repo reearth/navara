@@ -70,10 +70,10 @@
 * {
   @apply border-border;
 }
-html, body {
+html,
+body {
   height: 100%;
 }
 body {
   @apply bg-background text-foreground;
 }
-

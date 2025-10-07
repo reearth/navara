@@ -86,6 +86,7 @@ The repository contains a shadcn CLI configuration at `web/navara_three/componen
 3. Re-run the dev server if needed: `pnpm --filter @navara/three dev` or `pnpm --filter @navara/three build:example`.
 
 Notes:
+
 - The CLI reads paths/aliases from `components.json` and `tsconfig.json` (already set up for this example).
 - New components may require extra Radix packages; install prompts will be handled by the CLI.
 
