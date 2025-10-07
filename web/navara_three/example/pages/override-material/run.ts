@@ -3,6 +3,7 @@ import ThreeView, {
   type Layer,
   JAPAN_GSI_ELEVATION_DECODER,
   LightProbeLayer,
+  type GeoJsonLayer,
 } from "@navara/three";
 import { Color, SphericalHarmonics3 } from "three";
 import { FolderApi, Pane } from "tweakpane";
@@ -114,6 +115,8 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
     title: "Interior GeoJSON",
   });
 
+  let layerDescription: GeoJsonLayer | undefined;
+
   let layer: Layer | undefined;
   addToggleButton(folder, (isAdded) => {
     if (isAdded) {
@@ -128,7 +131,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         const res = await fetch("/interior.geojson");
         const data = await res.json();
 
-        layer = view.addLayer({
+        layerDescription = {
           type: "geojson",
           data,
           polygon: {
@@ -138,8 +141,13 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
             clamp_to_ground: false,
             cast_shadow: true,
             receive_shadow: true,
+            outline_show: false,
+            outline_width: 2,
+            outline_color: 0xff00ff
           },
-        });
+        };
+
+        layer = view.addLayer(layerDescription);
 
         layer.on("featureUpdated", (evaluator) => {
           // Prevent repeated heavy updates per feature
@@ -163,6 +171,19 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         console.warn("Failed to load /interior.geojson", e);
       }
     })();
+  });
+
+  const PARAMS = {
+    outline: false,
+  }
+
+  folder.addBinding(PARAMS, "outline").on("change", ({ value }) => {
+    if(layerDescription) {
+      if(layerDescription.polygon) {
+        layerDescription.polygon.outline_show = value;
+      }
+      layer?.update(layerDescription);
+    }
   });
 };
 
@@ -832,7 +853,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
     text: {
       color: 0xffffff,
       scale_by_distance: true,
-      clamp_to_ground: true,
+      clamp_to_ground: false,
       size: 20,
       center: {
         x: 0.5,

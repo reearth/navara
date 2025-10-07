@@ -243,6 +243,15 @@ export class FeatureEvaluator {
             }
             continue;
           }
+          case "height": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const height =
+                (target.array[i * target.itemSize] as number);
+              m.setFeatureHeightByBatchIndex(i, height);
+            }
+            continue;
+          }
           default:
             continue;
         }

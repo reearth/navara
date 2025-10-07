@@ -28,7 +28,7 @@ import {
   RGBADepthPacking,
 } from "three";
 
-import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
+import { PolygonOutlineMesh, TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
@@ -50,6 +50,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
   BufferGeometry<Attributes>,
   MeshLambertMaterial
 > {
+  outline?: PolygonOutlineMesh;
+
   constructor(
     buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
     mat: MeshLambertMaterial = new MeshLambertMaterial(),
@@ -578,18 +580,22 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   _setFeatureColor(color: Color): void {
     this.material.color.set(color);
+    // TODO: Support outline color
   }
 
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
+    this.outline?._setFeatureShow(visible);
   }
 
   _setFeatureExtrudedHeight(height: number): void {
     this.material.userData.uAddExtrudedHeight.value = height;
+    this.outline?._setFeatureExtrudedHeight(height);
   }
 
   _setFeatureHeight(height: number): void {
     this.material.userData.uAddHeight.value = height;
+    this.outline?._setFeatureHeight(height);
   }
 
   get water() {
