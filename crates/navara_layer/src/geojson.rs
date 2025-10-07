@@ -1,13 +1,20 @@
 use bevy_ecs::component::Component;
+use bevy_ecs::entity::Entity;
 use navara_core::CRS;
 use navara_parser::geojson::GeoJson;
 
 use navara_material::Appearance;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum GeoJsonLayerData {
+    GeoJson(GeoJson),
+    URL(String),
+}
+
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct GeoJsonLayer {
     pub layer_id: String,
-    pub data: Option<GeoJson>,
+    pub data: Option<GeoJsonLayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }
@@ -20,3 +27,6 @@ pub struct UpdateGeoJsonLayerMarker {
 
 #[derive(Debug, Component)]
 pub struct DeleteGeoJsonLayerMarker(pub String);
+
+#[derive(Debug, Component)]
+pub struct GeoJsonLayerDataRequesterMarker(pub Entity);
