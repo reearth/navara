@@ -69,6 +69,7 @@ pub fn traverse_tile(
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
     if tile.coords.z > vector_tile_appearance.max_zoom {
+        // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
         let has_clamp_to_ground = layer
             .appearances
             .iter()

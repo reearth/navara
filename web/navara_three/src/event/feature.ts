@@ -159,11 +159,11 @@ export async function processRenderableFeatureAdded(
     outline.renderOrder = FEATURE_RENDER_ORDER;
     scenes.mrt.add(outline);
 
-    obj.userData.outlineObj = outline;
+    obj.outline = outline;
 
     obj.addEventListener("removedFromWorld", () => {
-      obj.userData.outlineObj.clear();
-      obj.userData.outlineObj.removeFromParent();
+      obj.outline?.clear();
+      obj.outline?.removeFromParent();
     });
   }
 
@@ -226,8 +226,8 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof PolygonMesh && polygon) {
     processPolygonChanged(obj, polygon, active, tileHandle);
 
-    if (obj.userData.outlineObj) {
-      processPolygonOutlineChanged(obj.userData.outlineObj, polygon, active);
+    if (obj.outline) {
+      processPolygonOutlineChanged(obj.outline, polygon, active);
     }
   }
 

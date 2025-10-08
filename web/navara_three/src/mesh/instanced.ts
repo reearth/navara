@@ -48,6 +48,15 @@ export class InstancedMesh<M extends Object3D>
     mesh._setFeatureShow(visible);
   }
 
+  setFeatureHeightByBatchIndex(batchIndex: number, height: number) {
+    const mesh = this.getMeshByBatchIndex(batchIndex);
+
+    if (!isFeatureMesh(mesh))
+      throw new Error(`Mesh doesn't support FeatureMesh`);
+
+    mesh._setFeatureHeight(height);
+  }
+
   _setPickable(pickable: boolean) {
     const v = pickable ? 1.0 : 0.0;
     for (const mesh of this.meshes()) {

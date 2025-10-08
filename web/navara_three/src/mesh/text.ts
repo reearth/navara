@@ -2,6 +2,7 @@ import { Unimplemented } from "@navara/core";
 import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
+import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
 import SdRoundedBox from "@shaders/glsl/chunks/sdRoundedBox.glsl";
@@ -82,6 +83,9 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     this.userData.isPicked = selected;
     this.userData.batchId = batchId;
     this.userData.highlightColor = uniforms?.highlightColor?.value;
+    this.userData.addHeight = {
+      value: 0.0,
+    };
     this.visible = meshMaterial.show ?? true;
 
     this.initText(meshMaterial);
@@ -109,6 +113,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
+      shader.uniforms.uAddHeight = this.userData.addHeight;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -120,6 +125,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             uniform float nvr_uFontSizeWorld;
             uniform float nvr_uFov;
             uniform float nvr_uScreenHeightPx;
+            ${HeightParsVertex}
             ${BillboardMatrix}
             ${PixelToWorld}
             `,
@@ -133,10 +139,16 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldPosition.xyz, cameraPosition);
               scaleFactor = worldSize / nvr_uFontSizeWorld;
             }
-      
+    
             mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
-            vec4 newMvPosition = billboardMatrix * vec4(transformed, 1.0);
-      
+            // Anchor with additional height offset along globe normal
+            vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+            vec3 globeNormal = normalize(worldAnchor.xyz);
+            worldAnchor.xyz += globeNormal * uAddHeight;
+            vec4 anchorMv = viewMatrix * worldAnchor;
+            vec4 delta = billboardMatrix * vec4(transformed, 0.0);
+            vec4 newMvPosition = anchorMv + delta;
+    
             gl_Position = projectionMatrix * newMvPosition;
             `,
         ).source;
@@ -185,6 +197,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
+      shader.uniforms.uAddHeight = this.userData.addHeight;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -196,6 +209,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         uniform float nvr_uFov;
         uniform float nvr_uScreenHeightPx;
         out vec2 vUv;
+        ${HeightParsVertex}
         ${BillboardMatrix}
         ${PixelToWorld}
         void main() {
@@ -215,8 +229,14 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         }
   
         mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
-        vec4 newMvPosition = billboardMatrix * vec4(transformed, 1.0);
-  
+        // Anchor with additional height offset along globe normal
+        vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        vec3 globeNormal = normalize(worldAnchor.xyz);
+        worldAnchor.xyz += globeNormal * uAddHeight;
+        vec4 anchorMv = viewMatrix * worldAnchor;
+        vec4 delta = billboardMatrix * vec4(transformed, 0.0);
+        vec4 newMvPosition = anchorMv + delta;
+
         gl_Position = projectionMatrix * newMvPosition;
         `,
         ).source;
@@ -577,6 +597,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
   _setFeatureExtrudedHeight(_height: number): void {
     throw new Unimplemented();
+  }
+
+  _setFeatureHeight(height: number): void {
+    this.userData.addHeight.value = height;
   }
 
   _setPickable(pickable: boolean) {

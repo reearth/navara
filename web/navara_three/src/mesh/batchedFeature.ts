@@ -118,6 +118,10 @@ export class BatchedFeatureMesh<
     this._updateBatchAttribute(0, "extrudedHeight", height);
   }
 
+  _setFeatureHeight(height: number): void {
+    this._updateBatchAttribute(0, "height", height);
+  }
+
   _setFrustumCulled(_culled: boolean): void {
     throw new Unimplemented();
   }

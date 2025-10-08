@@ -14,6 +14,6 @@
 
   #ifdef USE_BATCH_HEIGHT
     float height = getBatchHeight(batchId);
-    // TODO: Set height
+    addHeight = height;
   #endif
 #endif

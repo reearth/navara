@@ -1,6 +1,7 @@
 import { Unimplemented } from "@navara/core";
 import { PointMaterial as NavaraPointMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
+import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import { Color, Sprite, SpriteMaterial } from "three";
@@ -36,6 +37,11 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    // Height uniform (same as polygon.ts)
+    material.userData.uAddHeight = {
+      value: 0.0,
+    };
+
     material.customProgramCacheKey = () =>
       JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (shader) => {
@@ -43,13 +49,26 @@ export class PointMesh extends Sprite implements FeatureMesh {
       Object.assign(shader.defines, material.userData.defines);
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
+      // Pass height uniform to shader
+      shader.uniforms.uAddHeight = material.userData.uAddHeight;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "uniform vec2 center;",
           `
           uniform vec2 center;
+          ${HeightParsVertex}
           out vec2 sprite_uv;
+          `,
+        )
+        .replace(
+          "vec4 mvPosition = modelViewMatrix[ 3 ];",
+          `
+          // Offset anchor world position along globe normal by addHeight
+          vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          vec3 globeNormal = normalize(worldPosition.xyz);
+          worldPosition.xyz += globeNormal * uAddHeight;
+          vec4 mvPosition = viewMatrix * worldPosition;
           `,
         )
         .replace(
@@ -176,5 +195,9 @@ export class PointMesh extends Sprite implements FeatureMesh {
 
   _setFeatureExtrudedHeight(_height: number): void {
     throw new Unimplemented();
+  }
+
+  _setFeatureHeight(height: number): void {
+    this.material.userData.uAddHeight.value = height;
   }
 }

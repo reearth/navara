@@ -5,6 +5,8 @@ import {
 } from "@navara/engine";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
+import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
+import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ShadowMapDepthFragment from "@shaders/glsl/chunks/shadowmap_depth_fragment.glsl";
 import ShadowMapDepthParsFragment from "@shaders/glsl/chunks/shadowmap_depth_pars_fragment.glsl";
@@ -254,6 +256,9 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
       mesh.material.userData.reflectivity = {
         value: meshMaterial.reflectivity ?? 0,
       };
+      mesh.material.userData.uAddHeight = {
+        value: 0.0,
+      };
       mesh.material.userData.waterScaleNormal = {
         value: meshMaterial.water_scale_normal ?? 0.01,
       };
@@ -304,6 +309,7 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
         shader.uniforms.uApplyWaterNormal =
           mesh.material.userData.applyWaterNormal;
         shader.uniforms.uTime = uniforms.time;
+        shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
 
         if (mesh.material.userData.batchDataTexture) {
           shader.uniforms.batchDataTexture =
@@ -320,6 +326,7 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
                   out vec3 vPosition;
                   
                   ${ShowParsVertex}
+                  ${HeightParsVertex}
                   ${BatchTextureParsVertex}
 
                   ${ShadowMapDepthParsVertex}
@@ -327,6 +334,14 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
                   void main() {
                     nvr_vBatchIdAndSel = batchIdAndSel;
               `,
+          )
+          .replace(
+            "#include <begin_vertex>",
+            `
+    #include <begin_vertex>
+    ${HeightVertex}
+    transformed.xyz += normal * addHeight;
+            `,
           )
           .replace(
             "#include <color_vertex>",
@@ -637,5 +652,11 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
         mesh.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
       }
     });
+  }
+
+  _setFeatureHeight(height: number, m?: ModelMaterial): void {
+    if (m) {
+      m.userData.uAddHeight.value = height;
+    }
   }
 }
