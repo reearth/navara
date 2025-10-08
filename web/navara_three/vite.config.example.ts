@@ -7,6 +7,8 @@ import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
 import tsconfig from "vite-tsconfig-paths";
+import wasm from "vite-plugin-wasm";
+import topLevelAwait from "vite-plugin-top-level-await";
 
 import { commonConfig } from "../vite.config.common";
 
@@ -20,6 +22,8 @@ export default defineConfig((env) => {
       glsl(),
       tsconfig(),
       react(),
+      wasm(),
+      topLevelAwait(),
       viteStaticCopy({
         targets: [
           {

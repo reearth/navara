@@ -6,18 +6,12 @@ wasm-pack build --out-dir ../../web/wasm/navara_engine_api --target web --releas
 
 [tasks.build-dev-rust-api]
 script = ['''
-cd crates/navara_wasm_api
-wasm-pack build --out-dir ../../web/wasm/navara_engine_api --target web
+cargo build --target wasm32-unknown-unknown --package navara_wasm_api 
+wasm-bindgen --keep-debug --out-dir ./web/wasm/navara_engine_api ./target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm
 ''']
 
 [tasks.watch-rust-api]
 script = ['''
-cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_api" --poll
-''']
-
-[tasks.watch-rust-api.windows]
-script = ['''
-cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_api /Mir" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "cargo build --target wasm32-unknown-unknown --package navara_wasm_api && wasm-bindgen --keep-debug --out-dir ./web/wasm/navara_engine_api ./target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm" --poll
+" --poll
 ''']
