@@ -4,6 +4,8 @@ import {
   PolygonMaterial,
 } from "@navara/engine";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
+import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
 import { Color, InstancedBufferAttribute } from "three";
 import {
   Line2,
@@ -162,10 +164,14 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     material.userData.uAddExtrudedHeight = {
       value: 0.0,
     };
+    material.userData.uAddHeight = {
+      value: 0.0,
+    };
 
     material.onBeforeCompile = (shader) => {
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       shader.uniforms.uAddExtrudedHeight = material.userData.uAddExtrudedHeight;
+      shader.uniforms.uAddHeight = material.userData.uAddHeight;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -176,16 +182,22 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         attribute vec4 scaleNormalAndCapEnd;
         uniform vec2 uMinMaxHeight;
         uniform float uAddExtrudedHeight;
+        ${HeightParsVertex}
         ${BranchFreeTernary}
         `,
         )
         .replace(
           "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
           `
+        ${HeightVertex}
         // Apply height adjustment to start point
         vec3 adjustedInstanceStart = instanceStart;
 
-        adjustedInstanceStart.xyz += scaleNormalAndCapStart.xyz * nvr_branchFreeTernary(scaleNormalAndCapStart.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
+        adjustedInstanceStart.xyz += scaleNormalAndCapStart.xyz * nvr_branchFreeTernary(
+          scaleNormalAndCapStart.w == 0.0,
+          uMinMaxHeight.x + addHeight,
+          uMinMaxHeight.y + uAddExtrudedHeight
+        );
         vec4 start = modelViewMatrix * vec4( adjustedInstanceStart, 1.0 );
         `,
         )
@@ -195,7 +207,11 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         // Apply height adjustment to end point  
         vec3 adjustedInstanceEnd = instanceEnd;
 
-        adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(scaleNormalAndCapEnd.w == 0.0, uMinMaxHeight.x, uMinMaxHeight.y + uAddExtrudedHeight);
+        adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(
+          scaleNormalAndCapEnd.w == 0.0,
+          uMinMaxHeight.x + addHeight,
+          uMinMaxHeight.y + uAddExtrudedHeight
+        );
         vec4 end = modelViewMatrix * vec4( adjustedInstanceEnd, 1.0 );
         `,
         ).source;
@@ -264,6 +280,10 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
 
   _setFeatureExtrudedHeight(height: number): void {
     this.material.userData.uAddExtrudedHeight.value = height;
+  }
+
+  _setFeatureHeight(height: number): void {
+    this.material.userData.uAddHeight.value = height;
   }
 
   // Utility method to update resolution (should be called when renderer size changes)

@@ -247,6 +247,14 @@ export class FeatureEvaluator {
             }
             continue;
           }
+          case "height": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const height = target.array[i * target.itemSize] as number;
+              m.setFeatureHeightByBatchIndex(i, height);
+            }
+            continue;
+          }
           default:
             continue;
         }
@@ -284,6 +292,11 @@ export class FeatureEvaluator {
           case "extrudedHeight": {
             const height = target.array[0] as number;
             featureMesh._setFeatureExtrudedHeight(height);
+            continue;
+          }
+          case "height": {
+            const height = target.array[0] as number;
+            featureMesh._setFeatureHeight(height, m.material as ModelMaterial);
             continue;
           }
           // TODO: Support others

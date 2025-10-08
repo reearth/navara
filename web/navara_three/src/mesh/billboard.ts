@@ -1,6 +1,7 @@
 import { Unimplemented } from "@navara/core";
 import { BillboardMaterial as NavaraBillboardMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
+import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import { Color, Sprite, SpriteMaterial } from "three";
 import invariant from "tiny-invariant";
@@ -35,10 +36,36 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     this.userData.uPickable = {
       value: 0.0,
     };
+    // Height uniform (same as polygon.ts)
+    material.userData.uAddHeight = {
+      value: 0.0,
+    };
 
     material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
+      // Pass height uniform to shader
+      shader.uniforms.uAddHeight = material.userData.uAddHeight;
+
+      // Declare uniform in vertex shader and apply to position
+      shader.vertexShader = createReplacer(shader.vertexShader)
+        .replace(
+          "uniform vec2 center;",
+          `
+        uniform vec2 center;
+        ${HeightParsVertex}
+        `,
+        )
+        .replace(
+          "vec4 mvPosition = modelViewMatrix[ 3 ];",
+          `
+          // Offset anchor world position along globe normal by addHeight
+          vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          vec3 globeNormal = normalize(worldPosition.xyz);
+          worldPosition.xyz += globeNormal * uAddHeight;
+          vec4 mvPosition = viewMatrix * worldPosition;
+          `,
+        ).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
@@ -147,5 +174,11 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
 
   _setFeatureExtrudedHeight(_height: number): void {
     throw new Unimplemented();
+  }
+
+  _setFeatureHeight(height: number): void {
+    if (this.material?.userData?.uAddHeight) {
+      this.material.userData.uAddHeight.value = height;
+    }
   }
 }

@@ -55,6 +55,7 @@ pub enum DataRequesterExtension {
     Json,
     B3dm,
     Mvt,
+    GeoJson,
 }
 
 impl DataRequesterExtension {
@@ -65,6 +66,7 @@ impl DataRequesterExtension {
             "json" => Self::Json,
             "b3dm" => Self::B3dm,
             "mvt" => Self::Mvt,
+            "geojson" => Self::GeoJson,
             _ => unimplemented!("{}", v),
         }
     }
@@ -76,11 +78,13 @@ impl DataRequesterExtension {
             Self::Json => "json".to_string(),
             Self::B3dm => "b3dm".to_string(),
             Self::Mvt => "mvt".to_string(),
+            Self::GeoJson => "geojson".to_string(),
         }
     }
 
     pub fn from_url(url: &Url) -> Self {
         match url.path() {
+            v if v.ends_with("geojson") => Self::GeoJson,
             v if v.ends_with("json") => Self::Json,
             v if v.ends_with("b3dm") => Self::B3dm,
             v if v.ends_with("png") => Self::Png,
