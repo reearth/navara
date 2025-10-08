@@ -1,17 +1,23 @@
 [tasks.build-rust-worker]
 script = ['''
 cd crates/navara_wasm_worker
-wasm-pack build --out-dir ../../web/wasm/navara_engine_worker --target web --release
+wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_worker --target web --release
 ''']
 
 [tasks.build-dev-rust-worker]
 script = ['''
-cargo build --target wasm32-unknown-unknown --package navara_wasm_worker 
-wasm-bindgen --keep-debug --out-dir ./web/wasm/navara_engine_worker ./target/wasm32-unknown-unknown/debug/navara_wasm_worker.wasm
+cd crates/navara_wasm_worker
+wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_worker --target web
 ''']
 
 [tasks.watch-rust-worker]
 script = ['''
-cargo watch -i .gitignore -i "pkg/*" -s "cargo build --target wasm32-unknown-unknown --package navara_wasm_worker && wasm-bindgen --keep-debug --out-dir ./web/wasm/navara_engine_worker ./target/wasm32-unknown-unknown/debug/navara_wasm_worker.wasm" --poll
-" --poll
+cd crates/navara_wasm_worker
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_worker" --poll
+''']
+
+[tasks.watch-rust-worker.windows]
+script = ['''
+cd crates/navara_wasm_worker
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_worker /Mir" --poll
 ''']

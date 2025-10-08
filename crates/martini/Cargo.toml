@@ -12,3 +12,10 @@ navara_math = { path = "../navara_math" }
 
 [dev-dependencies]
 image = "0.25.8"
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+

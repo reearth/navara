@@ -12,3 +12,9 @@ bevy_app.workspace = true
 bevy_ecs.workspace = true
 navara_math = { path = "../navara_math" }
 navara_core = { path = "../navara_core" }
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+

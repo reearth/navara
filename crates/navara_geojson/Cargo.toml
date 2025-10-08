@@ -24,3 +24,10 @@ navara_component = { path = "../navara_component" }
 
 [dev-dependencies]
 navara_feature = { path = "../navara_feature" }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+

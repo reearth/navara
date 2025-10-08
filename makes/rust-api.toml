@@ -1,17 +1,23 @@
 [tasks.build-rust-api]
 script = ['''
 cd crates/navara_wasm_api
-wasm-pack build --out-dir ../../web/wasm/navara_engine_api --target web --release
+wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_api --target web --release
 ''']
 
 [tasks.build-dev-rust-api]
 script = ['''
-cargo build --target wasm32-unknown-unknown --package navara_wasm_api 
-wasm-bindgen --keep-debug --out-dir ./web/wasm/navara_engine_api ./target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm
+cd crates/navara_wasm_api
+wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_api --target web
 ''']
 
 [tasks.watch-rust-api]
 script = ['''
-cargo watch -i .gitignore -i "pkg/*" -s "cargo build --target wasm32-unknown-unknown --package navara_wasm_api && wasm-bindgen --keep-debug --out-dir ./web/wasm/navara_engine_api ./target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm" --poll
-" --poll
+cd crates/navara_wasm_api
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_api" --poll
+''']
+
+[tasks.watch-rust-api.windows]
+script = ['''
+cd crates/navara_wasm_api
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_api /Mir" --poll
 ''']

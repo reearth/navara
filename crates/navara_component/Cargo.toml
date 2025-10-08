@@ -7,3 +7,10 @@ edition = "2021"
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+

@@ -24,3 +24,10 @@ navara_mock = { path = "../navara_mock" }
 navara_fog = { path = "../navara_fog" }
 martini = { path = "../martini" }
 fxhash.workspace = true
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+

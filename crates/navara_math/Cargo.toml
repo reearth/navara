@@ -14,3 +14,10 @@ approx.workspace = true
 default = ["use_f32"]
 use_f32 = []
 use_f64 = []
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+

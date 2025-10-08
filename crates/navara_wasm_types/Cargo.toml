@@ -23,3 +23,9 @@ navara_wasm_utils = { path = "../navara_wasm_utils" }
 navara_camera = { path = "../navara_camera" }
 navara_tile_component = { path = "../navara_tile_component" }
 navara_window = { path = "../navara_window" }
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+dwarf-debug-info = true
+
