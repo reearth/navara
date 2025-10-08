@@ -52,8 +52,6 @@ export class MaterialStates {
     if (Object.prototype.hasOwnProperty.call(material, "hasOwnProperty")) {
       stateRef.originalHandler = originalHandler;
     }
-    material.customProgramCacheKey = () =>
-      JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (...args) => {
       const [shader] = args;
       shader.defines ??= {};
