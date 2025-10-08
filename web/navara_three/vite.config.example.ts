@@ -2,7 +2,7 @@ import { readdirSync } from "fs";
 import path, { resolve } from "path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
@@ -23,7 +23,7 @@ export default defineConfig((env) => {
       viteStaticCopy({
         targets: [
           {
-            src: resolve(__dirname, "./assets"),
+            src: normalizePath(resolve(__dirname, "./assets")),
             dest: "./",
           },
         ],
@@ -34,7 +34,7 @@ export default defineConfig((env) => {
           return {
             name: page,
             filename: `${page}.html`,
-            entry: resolve(__dirname, `example/pages/${page}/main.ts`),
+            entry: normalizePath(`/example/pages/${page}/main.ts`),
             data: {
               title: "Navara",
             },
@@ -57,34 +57,35 @@ export default defineConfig((env) => {
     resolve: {
       alias: {
         ...common.resolve?.alias,
-        "@shaders": path.resolve(__dirname, "../../shaders"),
+        "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),
         // For dev server, import packages directly from source to avoid bundling.
         ...(env.command === "serve"
           ? {
-              "@navara/three": path.resolve(__dirname, "./src"),
-              "@navara/core": path.resolve(__dirname, "../navara_core/src"),
-              "@navara/three_api": path.resolve(
-                __dirname,
-                "../navara_three_api/src",
+              "@navara/three": normalizePath(path.resolve(__dirname, "./src")),
+              "@navara/core": normalizePath(
+                path.resolve(__dirname, "../navara_core/src"),
               ),
-              "@navara/three_csm": path.resolve(
-                __dirname,
-                "../navara_three_csm/src",
+              "@navara/three_api": normalizePath(
+                path.resolve(__dirname, "../navara_three_api/src"),
               ),
-              "@navara/three_react": path.resolve(
-                __dirname,
-                "../navara_three_react/src",
+              "@navara/three_csm": normalizePath(
+                path.resolve(__dirname, "../navara_three_csm/src"),
               ),
-              "@navara/worker": path.resolve(__dirname, "../navara_worker/src"),
+              "@navara/three_react": normalizePath(
+                path.resolve(__dirname, "../navara_three_react/src"),
+              ),
+              "@navara/worker": normalizePath(
+                path.resolve(__dirname, "../navara_worker/src"),
+              ),
             }
           : {
               // For production example builds, consume the built library output.
-              "@navara/three": path.resolve(__dirname, "./dist"),
+              "@navara/three": normalizePath(path.resolve(__dirname, "./dist")),
             }),
       },
     },
-    publicDir: path.resolve(__dirname, "example/public"),
-    envDir: path.resolve(__dirname, "example"),
+    publicDir: normalizePath(path.resolve(__dirname, "./example/public")),
+    envDir: normalizePath(path.resolve(__dirname, "./example")),
     worker: {
       plugins: () => [tsconfig()],
     },
