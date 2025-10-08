@@ -275,6 +275,7 @@ pub struct PolygonMaterial {
     pub roughness: f32,
     pub internal: Option<PolygonInternalMaterial>,
     pub id_property: String,
+    pub per_position_height: bool,
 
     pub surface_show: bool,
     pub outline_show: bool,
@@ -306,6 +307,7 @@ impl Default for PolygonMaterial {
             roughness: 0.0,
             internal: None,
             id_property: "".to_string(),
+            per_position_height: false,
             surface_show: true,
             outline_show: false,
             outline_color: 0xffffff,
