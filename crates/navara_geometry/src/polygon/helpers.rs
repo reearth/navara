@@ -85,11 +85,31 @@ pub fn create_geometry_from_positions(
     ellipsoid: Ellipsoid<FloatType>,
     polygon_resource: &mut PolygonResource,
     polygon: &Polygon,
+    per_position_height: bool,
     granularity: FloatType,
 ) -> (Vec<FloatType>, Vec<u32>) {
     let mut indices = polygon_resource.earcut(polygon);
     if indices.len() < 3 {
         indices = vec![0, 1, 2];
+    }
+
+    if per_position_height {
+        let length = polygon.positions.len();
+        let mut flattened_positions = vec![0.0; length * 3];
+        let mut index = 0;
+        for p in &polygon.positions {
+            flattened_positions[index] = p.x;
+            flattened_positions[index + 1] = p.y;
+            flattened_positions[index + 2] = p.z;
+            index += 3;
+        }
+
+        let mut casted_indices = Vec::with_capacity(indices.len());
+        for idx in indices {
+            casted_indices.push(idx as u32);
+        }
+
+        return (flattened_positions, casted_indices);
     }
 
     // TODO: Support RHUMB arc type.
@@ -101,6 +121,7 @@ pub fn create_geometry_from_positions(
 pub fn scale_to_geodetic_height_extruded(
     positions: &mut [f32],
     ellipsoid: Ellipsoid<FloatType>,
+    per_position_height: bool,
 ) -> Vec<f32> {
     let length = positions.len() / 2;
 
@@ -114,9 +135,14 @@ pub fn scale_to_geodetic_height_extruded(
 
         let n1 =
             Into::<Vec3>::into(ellipsoid.geodetic_surface_normal_from_vec3(p.into())).normalize();
-        let p2 = match ellipsoid.scale_to_geodetic_surface(p) {
-            Some(p2) => p2,
-            None => unreachable!(),
+
+        let p2 = if per_position_height {
+            p
+        } else {
+            match ellipsoid.scale_to_geodetic_surface(p) {
+                Some(p2) => p2,
+                None => unreachable!(),
+            }
         };
 
         positions[i3 + length] = p2.x as f32;
