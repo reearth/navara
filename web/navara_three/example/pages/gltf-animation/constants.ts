@@ -5,6 +5,8 @@
  * used in the GLTF animation demonstration.
  */
 
+import { LOCAL_DATASETS } from "../../helpers/constants";
+
 // Sapporo coordinates as GeoJSON Feature (used for GLTF model)
 export const SAPPORO_GEOJSON = {
   type: "Feature",
@@ -37,7 +39,7 @@ export const OSAKA_GEOJSON = {
 
 // 3D model configuration
 export const MODEL_CONFIG = {
-  url: "/glTF/Soldier/Soldier.glb",
+  url: LOCAL_DATASETS.soldierGLTF.url,
   scale: { x: 300000, y: 300000, z: 300000 },
   size: 300000,
 };

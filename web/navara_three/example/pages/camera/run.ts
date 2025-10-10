@@ -3,7 +3,8 @@ import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, LLE } from "@navara/three";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../helpers/control";
 
 const gCameraParams = {
@@ -45,7 +46,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -57,7 +58,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: {
-      url: TILE_URLS.openstreetmap,
+      url: TILE_DATASETS.openstreetmap.url,
     },
     raster_tile: {},
   });
@@ -90,6 +91,8 @@ export const run = async (view: ThreeView) => {
   addFlyToOption(pane, view);
   addLookAtOption(pane, view);
   addRotateOption(pane, view);
+
+  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
 const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
