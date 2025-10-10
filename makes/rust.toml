@@ -40,7 +40,7 @@ cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --fe
 [tasks.watch-rust.windows]
 script = ['''
 cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir > nul" --poll
 ''']
 
 [tasks.doc-rust]
