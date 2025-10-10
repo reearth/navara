@@ -28,6 +28,7 @@ function createContainer(): HTMLDivElement {
   container.style.color = "#ffffff";
   container.style.padding = "4px";
   container.style.borderRadius = "8px";
+  container.style.border = "2px solid #999999";
   container.style.fontSize = "12px";
   container.style.lineHeight = "1.6";
   container.style.maxWidth = "200px";
