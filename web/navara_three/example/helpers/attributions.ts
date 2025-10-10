@@ -33,7 +33,7 @@ function createContainer(): HTMLDivElement {
   container.style.lineHeight = "1.6";
   container.style.maxWidth = "200px";
   container.style.minWidth = "200px";
-  container.style.maxHeight = "30px";
+  container.style.maxHeight = "34px";
   container.style.overflow = "auto";
   container.style.zIndex = "1000";
   container.style.fontFamily = "system-ui, -apple-system, sans-serif";
@@ -70,7 +70,7 @@ function createToggleButton(container: HTMLDivElement): HTMLButtonElement {
   button.style.color = "#ffffff";
   button.style.cursor = "pointer";
   button.style.fontSize = "14px";
-  button.style.padding = "8px";
+  button.style.padding = "4px";
   button.style.lineHeight = "1";
 
   button.addEventListener("click", () => {
@@ -78,7 +78,7 @@ function createToggleButton(container: HTMLDivElement): HTMLButtonElement {
 
     if (isCollapsed) {
       icon.style.transform = "rotate(90deg)";
-      container.style.maxHeight = "30px";
+      container.style.maxHeight = "34px";
       container.style.maxWidth = "200px";
     } else {
       icon.style.transform = "rotate(0deg)";
@@ -170,6 +170,8 @@ export function showAttributions(datasets: Dataset[]): void {
   const seen = new Set<string>();
 
   for (const dataset of datasets) {
+    if (!dataset.attribution) continue;
+
     const key = `${dataset.attribution}|${dataset.attributionUrl || ""}`;
     if (!seen.has(key)) {
       seen.add(key);

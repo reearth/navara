@@ -3,14 +3,14 @@
  */
 export type Dataset = {
   url: string;
-  attribution: string;
+  attribution?: string;
   attributionUrl?: string;
 };
 
 /**
  * Raster tile datasets
  */
-export const TILE_DATASETS: Record<string, Dataset> = {
+export const TILE_DATASETS = {
   openstreetmap: {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "© OpenStreetMap contributors",
@@ -26,12 +26,12 @@ export const TILE_DATASETS: Record<string, Dataset> = {
     attribution: "国土地理院タイル 全国最新写真（シームレス）",
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
   },
-};
+} satisfies Record<string, Dataset>;
 
 /**
  * Terrain/DEM datasets
  */
-export const TERRAIN_DATASETS: Record<string, Dataset> = {
+export const TERRAIN_DATASETS = {
   gsi: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
     attribution: "国土地理院タイル デジタル標高地形図",
@@ -45,24 +45,24 @@ export const TERRAIN_DATASETS: Record<string, Dataset> = {
     attributionUrl:
       "https://docs.mapbox.com/data/tilesets/reference/mapbox-terrain-rgb-v1/",
   },
-};
+} satisfies Record<string, Dataset>;
 
 /**
  * Vector tile datasets
  */
-export const VECTOR_DATASETS: Record<string, Dataset> = {
+export const VECTOR_DATASETS = {
   gsiExperimentalVector: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
     attribution: "国土地理院ベクトルタイル提供実験",
     attributionUrl:
       "https://github.com/gsi-cyberjapan/gsimaps-vector-experiment",
   },
-};
+} satisfies Record<string, Dataset>;
 
 /**
  * 3D Tiles datasets (PLATEAU)
  */
-export const TILES_3D_DATASETS: Record<string, Dataset> = {
+export const TILES_3D_DATASETS = {
   plateauChiyoda: {
     url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
     attribution:
@@ -97,12 +97,12 @@ export const TILES_3D_DATASETS: Record<string, Dataset> = {
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-13109-shinagawa-ku-2023",
   },
-};
+} satisfies Record<string, Dataset>;
 
 /**
  * MVT (Mapbox Vector Tiles) datasets (PLATEAU)
  */
-export const MVT_DATASETS: Record<string, Dataset> = {
+export const MVT_DATASETS = {
   plateauWakayamaGen: {
     url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/{z}/{x}/{y}.mvt",
     attribution:
@@ -129,24 +129,24 @@ export const MVT_DATASETS: Record<string, Dataset> = {
       "3D都市モデル（Project PLATEAU）東京都23区 - 国土交通省 PLATEAU",
     attributionUrl: "https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku",
   },
-};
+} satisfies Record<string, Dataset>;
 
 /**
  * GeoJSON datasets
  */
-export const GEOJSON_DATASETS: Record<string, Dataset> = {
+export const GEOJSON_DATASETS = {
   calderdaleDefibrillators: {
     url: "https://dataworks.calderdale.gov.uk/download/e6xdw/b1z/Council%20owned%20defibrillators%202025.geojson",
     attribution: "© Calderdale Council - Open Government Licence v3.0",
     attributionUrl:
       "https://dataworks.calderdale.gov.uk/dataset/defibrillators-e6xdw",
   },
-};
+} satisfies Record<string, Dataset>;
 
 /**
  * Local asset datasets
  */
-export const LOCAL_DATASETS: Record<string, Dataset> = {
+export const LOCAL_DATASETS = {
   blueMarbleClouds: {
     url: "/data/blue-marble-clouds/{z}/{x}/{y}.webp",
     attribution: "NASA Blue Marble Clouds(Converted as raster tiles)",
@@ -162,4 +162,16 @@ export const LOCAL_DATASETS: Record<string, Dataset> = {
     attribution:
       "https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb",
   },
-};
+  streetLightGeoJSON: {
+    url: "/street_light.geojson",
+  },
+  takanawaPointLightGeoJSON: {
+    url: "/takanawa_point_light.geojson",
+  },
+  tokyoPoints100GeoJSON: {
+    url: "/tokyo_points_100.geojson",
+  },
+  interiorGeoJSON: {
+    url: "/interior.geojson",
+  },
+} satisfies Record<string, Dataset>;
