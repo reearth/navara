@@ -1,6 +1,7 @@
 import ThreeView from "@navara/three";
 
-import { TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import { TILE_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel } from "../../helpers/panel";
 
 export const run = async (view: ThreeView) => {
@@ -12,7 +13,7 @@ export const run = async (view: ThreeView) => {
     [
       {
         type: "tiles",
-        data: { url: TILE_URLS.openstreetmap },
+        data: { url: TILE_DATASETS.openstreetmap.url },
         raster_tile: {
           color: 0xffffff,
           max_zoom: 23,
@@ -21,7 +22,7 @@ export const run = async (view: ThreeView) => {
       },
       {
         type: "tiles",
-        data: { url: TILE_URLS.gsiStd },
+        data: { url: TILE_DATASETS.gsiStd.url },
         raster_tile: {
           color: 0xffffff,
           max_zoom: 18,
@@ -30,7 +31,7 @@ export const run = async (view: ThreeView) => {
       },
       {
         type: "tiles",
-        data: { url: TILE_URLS.gsiSeamlessphoto },
+        data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
         raster_tile: {
           color: 0xffffff,
           max_zoom: 18,
@@ -40,4 +41,10 @@ export const run = async (view: ThreeView) => {
     ],
     view,
   );
+
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    TILE_DATASETS.gsiStd,
+    TILE_DATASETS.gsiSeamlessphoto,
+  ]);
 };

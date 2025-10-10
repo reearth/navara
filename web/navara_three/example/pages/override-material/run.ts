@@ -8,7 +8,14 @@ import ThreeView, {
 import { Color, SphericalHarmonics3 } from "three";
 import { FolderApi, Pane } from "tweakpane";
 
-import { TERRAIN_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILES_3D_DATASETS,
+  MVT_DATASETS,
+  LOCAL_DATASETS,
+  VECTOR_DATASETS,
+} from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -67,7 +74,7 @@ export const run = async (view: ThreeView) => {
     view.addLayer({
       type: "terrain",
       data: {
-        url: TERRAIN_URLS.gsi,
+        url: TERRAIN_DATASETS.gsi.url,
       },
       raster_terrain: {
         max_zoom: 15,
@@ -108,6 +115,16 @@ export const run = async (view: ThreeView) => {
     //   },
     // });
   });
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILES_3D_DATASETS.plateauChiyoda,
+    MVT_DATASETS.plateauWakayamaGen,
+    MVT_DATASETS.plateauGifuTran,
+    MVT_DATASETS.plateauTokyoFirePrevention,
+    MVT_DATASETS.plateauTokyoHeightControl,
+    VECTOR_DATASETS.gsiExperimentalVector,
+  ]);
 };
 
 const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
@@ -128,7 +145,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
     // Load GeoJSON from public directory and add as a polygon layer
     void (async () => {
       try {
-        const res = await fetch("/interior.geojson");
+        const res = await fetch(LOCAL_DATASETS.interiorGeoJSON.url);
         const data = await res.json();
 
         layerDescription = {
@@ -168,7 +185,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
           });
         });
       } catch (e) {
-        console.warn("Failed to load /interior.geojson", e);
+        console.warn(`Failed to load ${LOCAL_DATASETS.interiorGeoJSON.url}`, e);
       }
     })();
   });
@@ -227,13 +244,6 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         depth_test: true,
         url: "/example.png",
       },
-      // model: {
-      //   color: 0xffffff,
-      //   size: 3000,
-      //   height: 1,
-      //   clamp_to_ground: true,
-      //   url: "/glTF/CesiumMilkTruck/CesiumMilkTruck.gltf",
-      // },
     },
     {
       type: "geojson",
@@ -384,7 +394,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauWakayamaGen.url,
     },
     point: {
       size: 0.01,
@@ -439,7 +449,7 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/67/b5b3c6-71d8-405c-88c8-4ead72890b2b/21201_gifu-shi_city_2023_citygml_1_op_tran_mvt_lod0/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauGifuTran.url,
     },
     polyline: {
       width: 3,
@@ -502,7 +512,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/d9/5ce2d6-0aa8-4a17-a86a-028c2dc2b817/13_tokyo_pref_2023_citygml_1_op_urf_FirePreventionDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauTokyoFirePrevention.url,
     },
     polygon: {
       color: 0xffffff,
@@ -583,7 +593,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/a2/81a1a7-03b8-4cf2-bb26-19103b32e255/13_tokyo_pref_2023_citygml_1_op_urf_HeightControlDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauTokyoHeightControl.url,
     },
     polygon: {
       height: 0,
@@ -696,7 +706,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
     },
     model: {
       show: true,
@@ -848,7 +858,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     text: {
       color: 0xffffff,

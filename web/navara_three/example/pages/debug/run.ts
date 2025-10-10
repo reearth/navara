@@ -5,7 +5,15 @@ import ThreeView, {
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  MVT_DATASETS,
+  GEOJSON_DATASETS,
+  LOCAL_DATASETS,
+} from "../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../helpers/control";
 import {
   addCtrlPanel,
@@ -15,7 +23,7 @@ import {
 const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "tiles",
-    data: { url: TILE_URLS.openstreetmap },
+    data: { url: TILE_DATASETS.openstreetmap.url },
     raster_tile: {
       color: 0xffffff,
       max_zoom: 23,
@@ -26,8 +34,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "geojson",
     data: {
-      // ref: https://dataworks.calderdale.gov.uk/dataset/defibrillators-e6xdw
-      url: "https://dataworks.calderdale.gov.uk/download/e6xdw/b1z/Council%20owned%20defibrillators%202025.geojson",
+      url: GEOJSON_DATASETS.calderdaleDefibrillators.url,
     },
     point: {
       color: 0xff00ff,
@@ -317,7 +324,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       size: 200000,
       height: 0,
       clamp_to_ground: true,
-      url: "/glTF/steel_drum/scene.gltf",
+      url: LOCAL_DATASETS.steelDrumGLTF.url,
       should_rotate_in_default: true,
       id_property: "gml_id",
       color: 0xffffff,
@@ -427,7 +434,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "b3dm",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
+      url: TILES_3D_DATASETS.plateauChiyodaB3DM,
     },
     model: {
       show: true,
@@ -440,7 +447,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
     },
     model: {
       show: true,
@@ -455,7 +462,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChuo.url,
     },
     model: {
       show: true,
@@ -470,8 +477,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "mvt",
     data: {
-      // url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/12/3587/1632.mvt",
-      url: "https://assets.cms.plateau.reearth.io/assets/d4/ee889d-98b4-4425-a5b6-c60bf36e2e5a/30201_wakayama-shi_city_2023_citygml_1_op_gen_20_mvt_lod0/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauWakayamaGen.url,
     },
     point: {
       color: 0xff0000,
@@ -491,11 +497,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "mvt",
     data: {
-      // url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/10/904/402.mvt",
-      // Heavy
-      // url: "https://assets.cms.plateau.reearth.io/assets/e3/a2373b-6dd5-4c8f-a771-d360dc59d952/20214_chino-shi_city_2023_citygml_1_op_tran_mvt_lod0/{z}/{x}/{y}.mvt",
-      // Light
-      url: "https://assets.cms.plateau.reearth.io/assets/67/b5b3c6-71d8-405c-88c8-4ead72890b2b/21201_gifu-shi_city_2023_citygml_1_op_tran_mvt_lod0/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauGifuTran.url,
     },
     polyline: {
       show: true,
@@ -513,10 +515,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "mvt",
     data: {
-      // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/16/58214/25806.mvt",
-      // url: "https://assets.cms.plateau.reearth.io/assets/d3/b6e654-9c94-43ae-9109-3c35ece89cbd/13102_chuo-ku_pref_2023_citygml_1_op_luse_mvt/{z}/{x}/{y}.mvt",
-      // url: "https://assets.cms.plateau.reearth.io/assets/c7/a9681c-bf92-4496-a367-f4d2dcf35aec/13101_chiyoda-ku_pref_2023_citygml_1_op_tran_mvt_lod1/{z}/{x}/{y}.mvt",
-      url: "https://assets.cms.plateau.reearth.io/assets/a2/81a1a7-03b8-4cf2-bb26-19103b32e255/13_tokyo_pref_2023_citygml_1_op_urf_HeightControlDistrict_mvt_lod1/{z}/{x}/{y}.mvt",
+      url: MVT_DATASETS.plateauTokyoHeightControl.url,
     },
     polygon: {
       color: 0x00aaff,
@@ -570,8 +569,11 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      // @ts-expect-error : Make switch button later
-      url: terrainType === "mapbox" ? TERRAIN_URLS.mapbox : TERRAIN_URLS.gsi,
+      url:
+        // @ts-expect-error : Make switch button later
+        terrainType === "mapbox"
+          ? TERRAIN_DATASETS.mapbox.url
+          : TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -600,4 +602,16 @@ export const run = async (view: ThreeView) => {
   const materialCtrl = pane.addFolder({ title: "material" });
 
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.openstreetmap,
+    GEOJSON_DATASETS.calderdaleDefibrillators,
+    LOCAL_DATASETS.steelDrumGLTF,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    MVT_DATASETS.plateauWakayamaGen,
+    MVT_DATASETS.plateauGifuTran,
+    MVT_DATASETS.plateauTokyoHeightControl,
+  ]);
 };

@@ -14,7 +14,13 @@ import ThreeView, {
 import { Vector2, Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  VECTOR_DATASETS,
+} from "../../helpers/constants";
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
@@ -75,7 +81,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -84,7 +90,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -97,7 +103,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
     },
     model: {
       show: true,
@@ -137,7 +143,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChuo.url,
     },
     model: {
       show: true,
@@ -160,6 +166,15 @@ export const run = async (view: ThreeView) => {
   addCameraControl(view, pane);
   addWaterControl(view, pane);
   addWeatherControl(view, pane, rainDropEffect);
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    TILES_3D_DATASETS.plateauTokyoFlood,
+    VECTOR_DATASETS.gsiExperimentalVector,
+  ]);
 };
 
 const addWaterControl = (view: ThreeView, pane: Pane) => {
@@ -171,7 +186,7 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
   const floodLayerDescription: LayerDescription = {
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/bc/d3b4bd-77dd-428f-9ab9-9d77546a702b/13_tokyo-to_pref_2023_citygml_1_op_fld_pref_sumidagaw-shingashigawa-ryuiki_3dtiles_l2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauTokyoFlood.url,
     },
     model: {
       show: true,
@@ -190,7 +205,7 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
   const riverLayerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     polygon: {
       color: 0xcef7ff,
