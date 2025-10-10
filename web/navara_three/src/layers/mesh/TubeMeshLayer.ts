@@ -167,6 +167,7 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
 
   protected disposeMesh(): void {
     if (this._instance) {
+      this.view.emit("_csmUnmounted", this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

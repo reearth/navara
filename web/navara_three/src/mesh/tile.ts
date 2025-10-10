@@ -40,6 +40,7 @@ import {
 } from "..";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
+import type { CustomObject3DEventMap } from "../object3DEvent";
 import type {
   SceneGroup,
   Scenes,
@@ -64,7 +65,7 @@ const PREV_RENDERER_CLEAR_COLOR = new Color();
 const NUM_WATER_TEXTURES = 1;
 
 export class TileMesh
-  extends Mesh<BufferGeometry, TileMaterial>
+  extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
   implements PickableMesh
 {
   handle: TileHandle;
@@ -300,6 +301,10 @@ export class TileMesh
       viewEvents,
       uniforms,
     );
+
+    this.addEventListener("removedFromWorld", () => {
+      this.dispose(viewEvents);
+    });
   }
 
   private async createMesh(
@@ -416,7 +421,6 @@ export class TileMesh
 
     const maxTextures = this.maxTextures;
 
-    m.customProgramCacheKey = () => JSON.stringify(m.userData.defines);
     m.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, m.userData.defines);
@@ -984,5 +988,9 @@ if (uPickable > 0.) {
         }
       });
     }
+  }
+
+  dispose(viewEvents: EventHandler<ViewEvents>) {
+    viewEvents.emit("_csmUnmounted", this.material);
   }
 }

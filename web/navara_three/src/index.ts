@@ -206,6 +206,7 @@ export type ViewEvents = {
    * You should pass a material that needs the shadow when it's initialized.
    */
   _csmMounted: (material: Material) => void;
+  _csmUnmounted: (material: Material) => void;
 
   // Mouse events
   mousedown: (event: MapMouseEvent) => void;
@@ -608,6 +609,9 @@ export default class ThreeView<
     // Set up CSM material mounting listener
     this.on("_csmMounted", (material: Material) => {
       this.setupCSMForMaterial(material);
+    });
+    this.on("_csmUnmounted", (material: Material) => {
+      this.removeCSMForMaterial(material);
     });
   }
 
@@ -1130,6 +1134,18 @@ export default class ThreeView<
     }
 
     sunLightLayer.setupMaterialForShadows(material);
+  }
+
+  /**
+   * Remove CSM for a single material
+   */
+  private removeCSMForMaterial(material: Material): void {
+    const sunLightLayer = this.findSunLightLayer();
+    if (!sunLightLayer) {
+      return;
+    }
+
+    sunLightLayer.removeMaterialFromShadows(material);
   }
 
   // TODO: Handle this in plugin system.
