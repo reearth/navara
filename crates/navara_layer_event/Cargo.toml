@@ -19,7 +19,3 @@ navara_math = { path = "../navara_math" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true
-
-[package.metadata.wasm-pack.profile.release.wasm-bindgen]
-dwarf-debug-info = true
-

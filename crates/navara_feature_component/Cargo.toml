@@ -26,7 +26,3 @@ getrandom = { version = "0.3.3", features = ["wasm_js"] }
 
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true
-
-[package.metadata.wasm-pack.profile.release.wasm-bindgen]
-dwarf-debug-info = true
-

@@ -17,9 +17,6 @@ navara_data_requester = { path = "../navara_data_requester" }
 navara_worker = { path = "../navara_worker" }
 navara_layer = { path = "../navara_layer" }
 navara_camera = { path = "../navara_camera" }
+
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true
-
-[package.metadata.wasm-pack.profile.release.wasm-bindgen]
-dwarf-debug-info = true
-
