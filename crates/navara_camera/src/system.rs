@@ -345,7 +345,7 @@ fn handle_orbit_spin(
 
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
     let clamped_ratio = ratio.max(0.0004);
-    info!("ratio before: {}, ratio after: {}", ratio, clamped_ratio);
+    // info!("ratio before: {}, ratio after: {}", ratio, clamped_ratio);
 
     let Some(spin) = rotate(mm, controller, clamped_ratio * 1.5, clamped_ratio) else {
         return;
@@ -643,6 +643,9 @@ fn apply_spin(
     let mut next = inertia.spin * (1.0 - ease_out_circ(t));
 
     next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
+    next.x = next.x.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
+
+    info!("delta x: {}, delta y: {}", inertia.spin.x.to_degrees(), inertia.spin.y.to_degrees());
 
     orbit.horizon_quat *= Quat::from_axis_angle(orbit.horizontal_rotation_axis, next.x);
 
