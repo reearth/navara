@@ -12,6 +12,7 @@ use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
 };
+use bevy_log::info;
 use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
     CRS, WGS84_32,
@@ -343,8 +344,10 @@ fn handle_orbit_spin(
     let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
 
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
+    let clamped_ratio = ratio.max(0.0004);
+    info!("ratio before: {}, ratio after: {}", ratio, clamped_ratio);
 
-    let Some(spin) = rotate(mm, controller, ratio * 1.5, ratio) else {
+    let Some(spin) = rotate(mm, controller, clamped_ratio * 1.5, clamped_ratio) else {
         return;
     };
 
@@ -636,7 +639,7 @@ fn apply_spin(
     if t > 1.0 {
         return;
     }
-
+    
     let mut next = inertia.spin * (1.0 - ease_out_circ(t));
 
     next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
