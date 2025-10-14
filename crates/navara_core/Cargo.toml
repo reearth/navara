@@ -10,3 +10,6 @@ bevy_log.workspace = true
 navara_math = { path = "../navara_math" }
 approx.workspace = true
 regex = "1.11.2"
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

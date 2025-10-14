@@ -23,3 +23,6 @@ navara_component = { path = "../navara_component" }
 navara_parser = { path = "../navara_parser" }
 rand = { version = "0.9.2" }
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

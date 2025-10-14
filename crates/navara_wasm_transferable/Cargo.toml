@@ -19,3 +19,6 @@ serde.workspace = true
 serde-wasm-bindgen.workspace = true
 gloo-utils = { workspace = true, features = ["serde"] }
 web-sys = { workspace = true, features = ["console"] }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 bevy_ecs.workspace = true
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

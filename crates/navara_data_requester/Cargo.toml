@@ -11,3 +11,7 @@ navara_buffer_store = { path = "../navara_buffer_store" }
 navara_event_store = { path = "../navara_event_store" }
 navara_component = { path = "../navara_component" }
 url.workspace = true
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
+

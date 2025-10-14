@@ -9,3 +9,6 @@ geo-types.workspace = true
 
 [dev-dependencies]
 prost = "0.13.5"
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

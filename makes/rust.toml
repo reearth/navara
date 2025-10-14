@@ -22,25 +22,25 @@ cargo test --workspace --all-targets --all-features
 [tasks.build-rust]
 script = ['''
 cd crates/navara_wasm
-wasm-pack build --out-dir ../../web/wasm/navara_engine --target web --release
+wasm-pack build --release --target web --out-dir ../../web/wasm/navara_engine
 ''']
 
 [tasks.build-dev-rust]
 script = ['''
 cd crates/navara_wasm
-wasm-pack build --out-dir ../../web/wasm/navara_engine --target web
+wasm-pack build --dev --target web --out-dir ../../web/wasm/navara_engine
 ''']
 
 [tasks.watch-rust]
 script = ['''
 cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
 ''']
 
 [tasks.watch-rust.windows]
 script = ['''
 cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --profiling --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir" --poll
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir > nul" --poll
 ''']
 
 [tasks.doc-rust]
