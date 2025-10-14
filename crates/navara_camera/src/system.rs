@@ -341,13 +341,13 @@ fn handle_orbit_spin(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 
-    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
+    let mut distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
+    // max to 1000m for ratio calculation to avoid slow spin near the surface.
+    distance_from_ellipsoid_surface = distance_from_ellipsoid_surface.abs().max(1000.);
 
-    let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
-    let clamped_ratio = ratio.max(0.0004);
-    // info!("ratio before: {}, ratio after: {}", ratio, clamped_ratio);
+    let ratio = distance_from_ellipsoid_surface / controller.minimum_zoom_distance;
 
-    let Some(spin) = rotate(mm, controller, clamped_ratio * 1.5, clamped_ratio) else {
+    let Some(spin) = rotate(mm, controller, ratio * 1.5, ratio) else {
         return;
     };
 
@@ -643,9 +643,7 @@ fn apply_spin(
     let mut next = inertia.spin * (1.0 - ease_out_circ(t));
 
     next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
-    next.x = next.x.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
 
-    info!("delta x: {}, delta y: {}", inertia.spin.x.to_degrees(), inertia.spin.y.to_degrees());
 
     orbit.horizon_quat *= Quat::from_axis_angle(orbit.horizontal_rotation_axis, next.x);
 
