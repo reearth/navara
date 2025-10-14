@@ -12,7 +12,6 @@ use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
 };
-use bevy_log::info;
 use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
     CRS, WGS84_32,
@@ -639,11 +638,10 @@ fn apply_spin(
     if t > 1.0 {
         return;
     }
-    
+
     let mut next = inertia.spin * (1.0 - ease_out_circ(t));
 
     next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
-
 
     orbit.horizon_quat *= Quat::from_axis_angle(orbit.horizontal_rotation_axis, next.x);
 
