@@ -1,13 +1,13 @@
 [tasks.build-rust-api]
 script = ['''
 cd crates/navara_wasm_api
-wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_api --target web --release
+wasm-pack build --release --target web --out-dir ../../web/wasm/navara_engine_api
 ''']
 
 [tasks.build-dev-rust-api]
 script = ['''
 cd crates/navara_wasm_api
-wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_api --target web
+wasm-pack build --dev --target web --out-dir ../../web/wasm/navara_engine_api
 ''']
 
 [tasks.watch-rust-api]

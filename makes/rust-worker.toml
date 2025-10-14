@@ -1,13 +1,13 @@
 [tasks.build-rust-worker]
 script = ['''
 cd crates/navara_wasm_worker
-wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_worker --target web --release
+wasm-pack build --release --target web --out-dir ../../web/wasm/navara_engine_worker
 ''']
 
 [tasks.build-dev-rust-worker]
 script = ['''
 cd crates/navara_wasm_worker
-wasm-pack build --dev --out-dir ../../web/wasm/navara_engine_worker --target web
+wasm-pack build --dev --target web --out-dir ../../web/wasm/navara_engine_worker
 ''']
 
 [tasks.watch-rust-worker]
