@@ -340,7 +340,8 @@ fn handle_orbit_spin(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 
-    let mut distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
+    let mut distance_from_ellipsoid_surface =
+        calc_distance_from_ellipsoid_surface(transform, WGS84_32);
     // max to 1000m for ratio calculation to avoid slow spin near the surface.
     distance_from_ellipsoid_surface = distance_from_ellipsoid_surface.abs().max(1000.);
 
