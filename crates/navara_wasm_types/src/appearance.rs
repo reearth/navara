@@ -141,11 +141,14 @@ pub struct TextMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
     // outline
-    pub outline_blur: Option<f32>,    // outlineBlur Defalut:0
-    pub outline_color: Option<u32>,   // outlineColor Defalut:black
-    pub outline_offset: Option<Vec2>, // outlineOffset Default: (0,0)
+    /// Outline blur radius in CSS pixels. Defaults to `0.0`.
+    pub outline_blur: Option<f32>,
+    pub outline_color: Option<u32>, // outlineColor Defalut:black
+    /// Pixel offset `[x, y]` in CSS pixels. Defaults to `(0.0, 0.0)`.
+    pub outline_offset: Option<Vec2>,
     pub outline_opacity: Option<f32>, // outlineOpacity Default:1
-    pub outline_width: Option<f32>,   // outlineWidth Default:0
+    /// Outline thickness measured in CSS pixels. Defaults to `0.0`.
+    pub outline_width: Option<f32>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
