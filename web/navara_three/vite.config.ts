@@ -13,7 +13,7 @@ export default defineConfig((env) => {
   return {
     ...common,
     base: "./",
-    
+
     // Note: Plugin doesn't include common config.
     plugins: [
       tsconfig({ configNames: ["tsconfig.build.json"] }),
