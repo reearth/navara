@@ -80,7 +80,7 @@ export default defineConfig((env) => {
             }
           : {
               // For production example builds, consume the built library output.
-              "@navara/three": normalizePath(path.resolve(__dirname, "./dist")),
+              "@navara/three": normalizePath(path.resolve(__dirname, "./src")),
             }),
       },
     },

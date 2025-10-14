@@ -3,6 +3,10 @@
   "compilerOptions": {
     "paths": {
       "@navara/three": ["./src"],
+      "@navara/three_api": ["../navara_api/src"],
+      "@navara/core": ["../navara_core/src"],
+      "@navara/csm": ["../navara_csm/src"],
+      "@navara/three_react": ["../navara_react/src"],
       "@navara/engine": ["../../node_modules/navara_wasm"],
       "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
       "@navara/engine-api": ["../../node_modules/navara_wasm_api"],

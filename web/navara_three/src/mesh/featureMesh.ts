@@ -1,9 +1,9 @@
 import { Unimplemented } from "@navara/core";
-import type { Color } from "three";
+import type { Color, Material } from "three";
 
 // Interface for feature's mesh.
 export class FeatureMesh {
-  _setFeatureColor(_color: Color) {
+  _setFeatureColor(_color: Color, _material?: Material) {
     throw new Unimplemented();
   }
   _getFeatureColor(): Color {

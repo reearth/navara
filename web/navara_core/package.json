@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "tsc && vite build --watch=false",
+    "build:example": "pnpm build",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
     "test": "vitest --passWithNoTests --watch=false",
@@ -21,6 +22,10 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore ."
   },
   "license": "MIT OR Apache-2.0",
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "d3": "^7.9.0"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3"
+  }
 }
