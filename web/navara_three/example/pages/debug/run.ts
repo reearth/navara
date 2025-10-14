@@ -214,11 +214,11 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 10,
         y: 0,
       },
-      outline_blur: 0.0,
+      outline_blur: 0, // px
       outline_color: 0x000000,
-      outline_offset: { x: 0, y: 0 },
+      outline_offset: { x: 4, y: 0 }, // px
       outline_opacity: 1.0,
-      outline_width: 0.1,
+      outline_width: 4, // px
     },
   },
 
