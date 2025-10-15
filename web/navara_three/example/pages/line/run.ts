@@ -7,7 +7,8 @@ import ThreeView, {
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
 const gArcLinesDef = [
@@ -225,7 +226,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -237,7 +238,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: {
-      url: TILE_URLS.openstreetmap,
+      url: TILE_DATASETS.openstreetmap.url,
     },
     raster_tile: {},
   });
@@ -274,6 +275,8 @@ export const run = async (view: ThreeView) => {
 
   addArcLines(view, pane);
   addSmoothLines(view, pane);
+
+  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
 function intToHexColor(num: number) {

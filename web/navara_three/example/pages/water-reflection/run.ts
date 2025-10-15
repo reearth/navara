@@ -5,7 +5,13 @@ import ThreeView, {
 import { Pane } from "tweakpane";
 
 import type { SSREffectLayer } from "../../../src/layers/effect";
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  VECTOR_DATASETS,
+} from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
@@ -28,7 +34,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -37,7 +43,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -52,7 +58,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   view.addLayer({
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
     },
     model: {
       show: true,
@@ -91,6 +97,13 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
 
   // Water polygon controls
   addWaterControls(view, pane);
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    VECTOR_DATASETS.gsiExperimentalVector,
+  ]);
 };
 
 const addSSRControls = (view: ThreeView, pane: Pane) => {
@@ -289,7 +302,7 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
   const mvtLayerDescription: LayerDescription = {
     type: "mvt",
     data: {
-      url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     polygon: {
       color: 0x001e0f,

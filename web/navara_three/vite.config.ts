@@ -1,8 +1,10 @@
 import path from "path";
 
 import { defineConfig, normalizePath } from "vite";
+import dts from "vite-plugin-dts";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import tsconfig from "vite-tsconfig-paths";
 
 import { commonConfig } from "../vite.config.common";
 
@@ -11,8 +13,11 @@ export default defineConfig((env) => {
   return {
     ...common,
     base: "./",
+
+    // Note: Plugin doesn't include common config.
     plugins: [
-      ...common.plugins,
+      tsconfig({ configNames: ["tsconfig.build.json"] }),
+      dts({ tsconfigPath: "./tsconfig.build.json" }),
       glsl(),
       viteStaticCopy({
         targets: [

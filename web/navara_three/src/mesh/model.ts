@@ -41,6 +41,7 @@ import {
 
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { BufferLoader } from "../event";
+import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -63,7 +64,10 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
   batchLength: 0,
 };
 
-export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
+export class ModelMesh
+  extends Object3D<CustomObject3DEventMap>
+  implements FeatureMesh, PickableMesh
+{
   water = false;
   private waterNormalMapTexture: Texture | null = null;
 
@@ -84,6 +88,9 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
     super();
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
+    this.addEventListener("removedFromWorld", () => {
+      this.dispose(viewEvents);
+    });
   }
 
   private init(
@@ -289,8 +296,6 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
         mesh.material.userData.defines.WATER = 1;
       }
 
-      mesh.material.customProgramCacheKey = () =>
-        JSON.stringify(mesh.material.userData.defines);
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
@@ -471,10 +476,6 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
 
     const origin = mesh.material;
 
-    mesh.customDepthMaterial.customProgramCacheKey = () =>
-      mesh.customDepthMaterial
-        ? JSON.stringify(mesh.customDepthMaterial.userData.defines)
-        : "";
     mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
       origin.onBeforeCompile(shader, renderer);
 
@@ -658,5 +659,11 @@ export class ModelMesh extends Object3D implements FeatureMesh, PickableMesh {
     if (m) {
       m.userData.uAddHeight.value = height;
     }
+  }
+
+  dispose(viewEvents: EventHandler<ViewEvents>) {
+    this.traverseMesh((m) => {
+      viewEvents.emit("_csmMounted", m.material);
+    });
   }
 }
