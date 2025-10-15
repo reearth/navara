@@ -10,3 +10,4 @@ export * from "./types";
 export * from "./namedIndexMap";
 export * from "./observed";
 export * from "./abstracts";
+export * from "./color";

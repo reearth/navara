@@ -117,6 +117,7 @@ import { isWorker, convertScreenPos } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
+export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
 export type { Nullable, XYZ, LngLat, LngLatHeight } from "@navara/core";
 export * from "./type";
 export * from "./constants";
@@ -131,6 +132,7 @@ export * from "./core";
 export * from "./layers";
 export * from "./lights";
 export * from "@navara/three_api";
+export * from "./Color";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
