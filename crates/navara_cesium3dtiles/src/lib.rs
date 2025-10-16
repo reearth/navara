@@ -3,6 +3,7 @@
 use bevy_app::{App, Plugin, Update};
 
 mod b3dm;
+mod pnts;
 mod cesium3dtiles;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
@@ -25,12 +26,24 @@ impl Plugin for Cesium3dTilesPlugin {
         .add_systems(
             Update,
             (
+                pnts::system::request_model_by_pnts_layer,
+                pnts::system::construct_model_by_pnts_layer,
+                // pnts::system::delete_model_by_pnts_layer,
+                // pnts::system::update_model_by_pnts_layer,
+            )
+                .chain(),
+        )
+        .add_systems(
+            Update,
+            (
                 cesium3dtiles::system::request_metadata,
                 cesium3dtiles::system::construct_cesium_3d_tiles_tree,
                 cesium3dtiles::system::traverse_cesium_3d_tiles_tree,
                 cesium3dtiles::data_requester::systems::filter_requestable_data_requester,
                 b3dm::system::construct_model_by_cesium3dtiles_layer,
                 b3dm::system::remove_invisible_rendered_tiles,
+                pnts::system::construct_model_by_cesium3dtiles_layer,
+                // pnts::system::remove_invisible_rendered_tiles,
                 cesium3dtiles::system::delete_cesium3dtiles_layer,
                 cesium3dtiles::system::update_cesium3dtiles_layer,
             )

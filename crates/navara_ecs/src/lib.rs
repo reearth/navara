@@ -280,6 +280,7 @@ impl App {
                     LayerDescription::Terrain(_) => "terrain",
                     LayerDescription::GeoJson(_) => "geojson",
                     LayerDescription::B3dm(_) => "b3dm",
+                    LayerDescription::Pnts(_) => "pnts",
                     LayerDescription::Mvt(_) => "mvt",
                     LayerDescription::Cesium3dTiles(_) => "cesium3dtiles",
                 };
@@ -294,6 +295,7 @@ impl App {
         let appearance = match desc {
             LayerDescription::GeoJson(layer) => layer.appearances[0].clone(),
             LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
+            LayerDescription::Pnts(layer) => layer.appearances[0].clone(),
             LayerDescription::Cesium3dTiles(layer) => layer.appearances[0].clone(),
             LayerDescription::Mvt(layer) => layer.appearances[0].clone(),
             LayerDescription::Tiles(layer) => layer.appearance.unwrap().clone(),

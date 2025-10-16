@@ -97,6 +97,14 @@ export const TILES_3D_DATASETS = {
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-13109-shinagawa-ku-2023",
   },
+  plateauKakegawaCastle: {
+    // url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json",
+    url: "https://github.com/CesiumGS/3d-tiles-samples/blob/main/1.0/TilesetWithRequestVolume/tileset.json?raw=true",
+    attribution:
+      "ADEL attribution",
+    attributionUrl:
+      "Adel - https://www.adel.wiki/",
+  },
 } satisfies Record<string, Dataset>;
 
 /**

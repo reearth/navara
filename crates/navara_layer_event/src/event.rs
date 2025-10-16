@@ -1,9 +1,9 @@
 use bevy_ecs::prelude::*;
 
 use navara_layer::{
-    DeleteB3dmLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
+    DeleteB3dmLayerMarker, DeletePntsLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
     DeleteMvtLayerMarker, DeleteRasterTileLayerMarker, LayerDescStore, LayerDescription, LayerId,
-    UpdateB3dmLayerMarker, UpdateCesium3dTilesLayerMarker, UpdateGeoJsonLayerMarker,
+    UpdateB3dmLayerMarker, UpdatePntsLayerMarker, UpdateCesium3dTilesLayerMarker, UpdateGeoJsonLayerMarker,
     UpdateMvtLayerMarker, UpdateRasterTileLayerMarker,
 };
 use navara_material::Appearance;
@@ -36,6 +36,9 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             LayerDescription::B3dm(t) => {
                 commands.spawn(t.clone());
             }
+            LayerDescription::Pnts(t) => {
+                commands.spawn(t.clone());
+            }
             LayerDescription::Mvt(t) => {
                 commands.spawn(t.clone());
             }
@@ -66,6 +69,14 @@ pub fn process_update_events(
             LayerDescription::B3dm(_) => {
                 if let Appearance::Model(mat) = &ev.appearance {
                     commands.spawn(UpdateB3dmLayerMarker {
+                        material: mat.clone(),
+                        layer_id: ev.layer_id.0.clone(),
+                    });
+                }
+            }
+            LayerDescription::Pnts(_) => {
+                if let Appearance::Model(mat) = &ev.appearance {
+                    commands.spawn(UpdatePntsLayerMarker {
                         material: mat.clone(),
                         layer_id: ev.layer_id.0.clone(),
                     });
@@ -113,6 +124,9 @@ pub fn process_delete_events(
             }
             LayerDescription::B3dm(_) => {
                 commands.spawn(DeleteB3dmLayerMarker(layer_id.0.clone()));
+            }
+            LayerDescription::Pnts(_) => {
+                commands.spawn(DeletePntsLayerMarker(layer_id.0.clone()));
             }
             LayerDescription::Cesium3dTiles(_) => {
                 commands.spawn(DeleteCesium3dTilesLayerMarker(layer_id.0.clone()));
