@@ -1,8 +1,8 @@
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
+use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker, RenderedCesium3dTileContent};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
-    query::{Added, Changed, With, Without},
+    query::{Added, Changed, Or, With, Without},
     system::{Commands, Query, Res, ResMut},
     world::Ref,
 };
@@ -144,6 +144,7 @@ pub fn traverse_cesium_3d_tiles_tree(
     }
 }
 
+// TODO(adel): update pnts tiles as well
 #[allow(clippy::type_complexity)]
 pub fn update_cesium3dtiles_layer(
     mut commands: Commands,
@@ -153,7 +154,7 @@ pub fn update_cesium3dtiles_layer(
     mut rendered_features: Query<&mut RenderableFeature>,
     rendered_tiles: Query<
         &RenderedCesium3dTileContent,
-        With<RenderedCesium3dTileContentB3dmMarker>,
+        Or<(With<RenderedCesium3dTileContentPntsMarker>, With<RenderedCesium3dTileContentB3dmMarker>)>,
     >,
     mut features: Query<
         &mut ModelMaterial,

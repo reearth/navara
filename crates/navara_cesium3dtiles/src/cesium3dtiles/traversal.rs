@@ -2,17 +2,18 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
 use navara_component::Priority;
-use navara_data_requester::DataRequesterStatus;
+use navara_data_requester::{DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_math::Vec3;
-use navara_parser::cesium3dtiles::tileset::Refine;
+use navara_parser::{cesium3dtiles::tileset::Refine, pnts};
 use navara_window::Window;
 use url::Url;
 
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
+use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent, pnts::RenderedCesium3dTileContentPntsMarker};
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
@@ -323,23 +324,49 @@ fn update_or_spawn_rendered_tile(
         return;
     }
 
-    if visible {
-        tile.rendered_tile_id = Some(
-            commands
-                .spawn((
-                    RenderedCesium3dTileContentB3dmMarker,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
-                    RenderedCesium3dTileContent {
-                        layer_id,
-                        feature_id: None,
-                        data_requester_id: tile.data_requester_id.unwrap(),
-                        is_visible: true,
-                    },
-                ))
-                .id(),
-        );
+    // TODO: reveret invisible
+    if true {
+        if tile.uri.ends_with("pnts") {
+            info!("spawning pnts rendered tile for layer {}", layer_id);
+            tile.rendered_tile_id = Some(
+                commands
+                    .spawn((
+                        RenderedCesium3dTileContentPntsMarker,
+                        TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                        RenderedCesium3dTileContent {
+                            layer_id,
+                            feature_id: None,
+                            data_requester_id: tile.data_requester_id.unwrap(),
+                            is_visible: true,
+                        },
+                    ))
+                    .id(),
+            );
+        } else if tile.uri.ends_with("b3dm") {
+            tile.rendered_tile_id = Some(
+                commands
+                    .spawn((
+                        RenderedCesium3dTileContentB3dmMarker,
+                        TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                        RenderedCesium3dTileContent {
+                            layer_id,
+                            feature_id: None,
+                            data_requester_id: tile.data_requester_id.unwrap(),
+                            is_visible: true,
+                        },
+                    ))
+                    .id(),
+            );
+        }
+        else {
+            // TODO: support other formats like i3dm, cmpt, etc.
+            unimplemented!("The tile format of {} isn't supported yet", tile.uri);
+        }
     }
 }

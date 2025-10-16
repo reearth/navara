@@ -82,6 +82,7 @@ impl DataRequesterExtension {
             Self::Pnts => "pnts".to_string(),
             Self::Mvt => "mvt".to_string(),
             Self::GeoJson => "geojson".to_string(),
+            _ => unimplemented!("{:?}", self),
         }
     }
 

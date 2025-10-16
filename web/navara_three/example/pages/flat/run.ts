@@ -8,6 +8,12 @@ export const run = async (view: ThreeView) => {
 
   view.addDefaultAtmosphereLayers();
 
+  view.flyTo({
+    lat: 34.775417,
+    lng: 138.014733,
+    height: 300,
+  });
+
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
@@ -76,8 +82,8 @@ export const run = async (view: ThreeView) => {
   // });
 
     view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: "https://raw.githubusercontent.com/adel-elmala/dummy-assets/refs/heads/main/pnts/tileset.json", },
+    type: "pnts",
+    data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/4/8.pnts", },
     model: {
       show: true,
       id_property: "gml_id",

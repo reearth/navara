@@ -4,6 +4,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
 };
 
+use bevy_log::info;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{Deleted, Priority};
 use navara_core::CRS;
@@ -13,12 +14,10 @@ use navara_feature_component::{
     //     BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
     //     GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
     // },
-    // id::FeatureId,
-    model::{ModelBin, ModelGeometry, ModelMarker},
-    render::RenderableFeature,
+    batch::{FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable}, id::FeatureId, model::{ModelBin, ModelGeometry, ModelMarker}, render::RenderableFeature
 };
 use navara_layer::{
-    PntsLayer, Cesium3dTilesLayer, DeletePntsLayerMarker, LayerId, LayerStore,
+    Cesium3dTilesLayer, DeletePntsLayerMarker, LayerId, LayerStore, PntsLayer,
     UpdatePntsLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
@@ -50,6 +49,7 @@ pub fn request_model_by_pnts_layer(
                 DataRequesterExtension::Pnts,
             ),
         ));
+        info!("pnts data requester spawned for layer {}", layer.layer_id);
     }
 }
 
@@ -94,6 +94,11 @@ pub fn construct_model_by_pnts_layer(
         // TODO: insert position_len into the entity
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
+            FeatureBatchId(0), // Dummy value,
+            GlobalBatchIdAndSelections { // Dummy value
+                handle: Handle::default(),
+                batch_length: 0,
+            },
             ModelGeometry {
                 coords: positions_center,
                 crs: CRS::Geocentric,
@@ -107,24 +112,29 @@ pub fn construct_model_by_pnts_layer(
     }
 }
 
-fn get_geometry_info_from_pnts( buf: &mut BufferStore, handle: &Handle) -> Option<(usize, Vec3, Handle)> {
+fn get_geometry_info_from_pnts(
+    buf: &mut BufferStore,
+    handle: &Handle,
+) -> Option<(usize, Vec3, Handle)> {
     let pnts_bin = buf.get_u8(handle)?;
     let mut pnts = Pnts::from_data(pnts_bin).unwrap();
 
     // TODO: make util functions at navara_pnts instead of these...
-    let feature_table_json: serde_json::Value = parse_json_to_struct(&pnts.feature_table.json).unwrap();
+    let feature_table_json: serde_json::Value =
+        parse_json_to_struct(&pnts.feature_table.json).unwrap();
 
     const N_POSITION_COMPONENTS: usize = 3;
     const N_POSITION_COMPONENTS_BYTE_SIZE: usize = 4;
 
     // TODO: handle errors more gracefully
     let positions_len = feature_table_json["POINTS_LENGTH"].as_u64()? as usize;
-    let positions_offset = feature_table_json["POSITION"]["byteoffset"].as_u64()? as usize;
-    let positions_byte_size = positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
+    let positions_offset = feature_table_json["POSITION"]["byteOffset"].as_u64()? as usize;
+    let positions_byte_size =
+        positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
 
     // extract the position data from featuretable's binary blob
     let mut position_bin_data = pnts.feature_table.binary.split_off(positions_offset);
-    position_bin_data = position_bin_data.split_off(positions_byte_size);
+    position_bin_data.truncate(positions_byte_size);
 
     let position_bin_handle = buf.new_u8(position_bin_data);
 
@@ -138,8 +148,12 @@ fn get_geometry_info_from_pnts( buf: &mut BufferStore, handle: &Handle) -> Optio
 
     Some((
         positions_len,
-        Vec3::new(positions_center[0], positions_center[1], positions_center[2]),
-        position_bin_handle
+        Vec3::new(
+            positions_center[0],
+            positions_center[1],
+            positions_center[2],
+        ),
+        position_bin_handle,
     ))
 }
 
@@ -166,7 +180,6 @@ pub fn update_model_by_pnts_layer(
     }
 }
 
-
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn delete_model_by_pnts_layer(
     mut commands: Commands,
@@ -192,7 +205,9 @@ pub fn delete_model_by_pnts_layer(
         };
 
         for e in entities {
-
+            if let Ok(f) = features.get(*e) {
+                buf.remove(&f.0);
+            };
             commands.entity(*e).despawn();
         }
 
@@ -203,8 +218,6 @@ pub fn delete_model_by_pnts_layer(
         commands.entity(e).despawn();
     }
 }
-
-
 
 #[allow(clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(
@@ -229,8 +242,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
 ) {
     for mut tile in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
-            Ok(v) => v,
-            Err(_) => continue,
+            Ok(v) => {info!("pnts data requester found"); v},
+            Err(_) => {info!("pnts data requester not found"); continue},
         };
         // TODO: Handle fail
         if !matches!(req.status, DataRequesterStatus::Success) {
@@ -255,6 +268,11 @@ pub fn construct_model_by_cesium3dtiles_layer(
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
+            FeatureBatchId(0), // Dummy value,
+            GlobalBatchIdAndSelections { // Dummy value
+                handle: Handle::default(),
+                batch_length: 0,
+            },
             ModelGeometry {
                 coords: postions_center,
                 crs: CRS::Geocentric,
@@ -266,6 +284,10 @@ pub fn construct_model_by_cesium3dtiles_layer(
         tile.feature_id = Some(entity.id());
 
         buf.remove(&req.handle);
+        info!(
+            "pnts model constructed for layer {}, feature count: {}",
+            layer.layer_id, postions_len
+        );
     }
 }
 
@@ -285,36 +307,36 @@ pub fn remove_invisible_rendered_tiles(
         (Entity, &RenderedCesium3dTileContent, &TileOrderByDistance),
         With<RenderedCesium3dTileContentPntsMarker>,
     >,
-    // features: Query<
-    //     &FeatureId,
-    //     (
-    //         With<LayerId>,
-    //         With<ModelGeometry>,
-    //         With<ModelMaterial>,
-    //         With<Transform>,
-    //     ),
-    // >,
+    features: Query<
+        &FeatureId,
+        (
+            With<LayerId>,
+            With<ModelGeometry>,
+            With<ModelMaterial>,
+            With<Transform>,
+        ),
+    >,
 ) {
     for (entity, tile, _) in &rendered_tiles {
         if tile.is_visible {
             continue;
         }
 
-        // if let Some(feature_id) = tile.feature_id {
-        //     // Remove feature
-        //     if let Ok(rendered_feature_id) = features.get(feature_id) {
-        //         if let Some(rendered_feature_id) = rendered_feature_id.0 {
-        //             commands.entity(feature_id).insert(Deleted);
-        //             commands.entity(rendered_feature_id).insert(Deleted);
-        //         } else {
-        //             continue;
-        //         }
-        //     } else {
-        //         continue;
-        //     }
-        // } else {
-        //     continue;
-        // }
+        if let Some(feature_id) = tile.feature_id {
+            // Remove feature
+            if let Ok(rendered_feature_id) = features.get(feature_id) {
+                if let Some(rendered_feature_id) = rendered_feature_id.0 {
+                    commands.entity(feature_id).insert(Deleted);
+                    commands.entity(rendered_feature_id).insert(Deleted);
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        } else {
+            continue;
+        }
 
         // Remove data requester
         if let Ok(requester) = requesters.get(tile.data_requester_id) {
