@@ -14,6 +14,10 @@ PROJ_NAME = "navara"
 
 [tasks.prepare]
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
+run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api","install-deps-web"] }
+
+[tasks.prepare-ci]
+# Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
 run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api","install-deps-web"] }
 
 [tasks.build-dev]
