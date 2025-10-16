@@ -197,17 +197,31 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
           this.setAnimationSpeed(modelConfig.animation_speed);
         }
 
+        // Loop setting change
+        if (modelConfig.animation_loop !== undefined) {
+          this.setAnimationLoop(modelConfig.animation_loop);
+        }
+
         // Animation switching
         if (modelConfig.animation_active_clip !== undefined) {
+          const duration = modelConfig.animation_crossfade_duration ?? 0.3;
           if (this.currentAction) {
-            // Use fixed crossfade duration of 0.3 seconds
             this.crossFadeAnimation(
               this.getCurrentAnimationName() ?? "",
               modelConfig.animation_active_clip,
-              0.3,
+              duration,
             );
           } else {
             this.playAnimation(modelConfig.animation_active_clip);
+          }
+        }
+
+        // Animation enabled state change
+        if (modelConfig.animation_enabled !== undefined) {
+          if (modelConfig.animation_enabled) {
+            this.resumeAnimation();
+          } else {
+            this.pauseAnimation();
           }
         }
       }
@@ -301,6 +315,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     // Apply configuration values
     const speed = animConfig?.animation_speed ?? this.animationSpeed;
+    const loop = animConfig?.animation_loop ?? this.isLooping;
 
     // Register animation clips
     this.gltf.animations.forEach((clip) => {
@@ -309,8 +324,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         const action = this.mixer.clipAction(clip);
         this.actions.set(clip.name, action);
 
-        // Apply configuration values (always loop by default)
-        action.setLoop(LoopRepeat, Infinity);
+        // Apply configuration values (align with three.js example semantics)
+        action.setLoop(loop ? LoopRepeat : LoopOnce, Infinity);
         action.setEffectiveTimeScale(speed);
         action.setEffectiveWeight(0);
         action.enabled = true;
@@ -319,12 +334,18 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     // Reflect configuration values to internal state
     this.animationSpeed = speed;
+    this.isLooping = loop;
 
-    // Auto-play animation if active clip is specified
-    if (animConfig?.animation_active_clip) {
+    // Handle auto-play settings
+    if (animConfig?.animation_auto_play && animConfig?.animation_active_clip) {
       const clipName = animConfig.animation_active_clip;
       if (this.clips.has(clipName)) {
         this.playAnimation(clipName);
+
+        // Set enabled state
+        if (animConfig.animation_enabled === false) {
+          this.pauseAnimation();
+        }
       } else {
         console.warn(`Specified animation "${clipName}" not found in model`);
       }
