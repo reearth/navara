@@ -69,13 +69,9 @@ export const addTestModelForNormal = (
     type: "mesh",
     gltfModel: {
       url: MODEL_CONFIG.url,
-      // Animation configuration - fully aligned with Rust naming
-      animation_enabled: true,
+      // Animation configuration
       animation_active_clip: "Idle",
       animation_speed: 1.0,
-      animation_loop: true,
-      animation_auto_play: false,
-      animation_crossfade_duration: 0.3,
     },
     scale: MODEL_CONFIG.scale,
     position: { x: pos.x, y: pos.y, z: pos.z },
@@ -501,11 +497,8 @@ export const addRunningModelAroundEarth = (
     type: "mesh",
     gltfModel: {
       url: MODEL_CONFIG.url,
-      animation_enabled: true,
       animation_active_clip: "Run",
       animation_speed: 1.0,
-      animation_loop: true,
-      animation_auto_play: true,
     },
     scale: MODEL_CONFIG.scale,
     position: { x: pos.x, y: pos.y, z: pos.z },
