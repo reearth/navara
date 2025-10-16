@@ -1,11 +1,7 @@
 import ThreeView from "@navara/three";
 
-const tileUrls = {
-  openstreetmap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  gsiStd: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-  gsiSeamlessphoto:
-    "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-};
+import { showAttributions } from "../../helpers/attributions";
+import { TILE_DATASETS } from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -14,7 +10,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: tileUrls.openstreetmap },
+    data: { url: TILE_DATASETS.openstreetmap.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -61,4 +57,6 @@ export const run = async (view: ThreeView) => {
     },
     polygon: {},
   });
+
+  showAttributions([TILE_DATASETS.openstreetmap]);
 };

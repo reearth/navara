@@ -7,7 +7,12 @@ import {
 import { Layer, useViewContext } from "@navara/three_react";
 import { useMemo, useState, type FC } from "react";
 
-import { TILE_URLS, TERRAIN_URLS } from "../../helpers/constants";
+import {
+  TILE_DATASETS,
+  TERRAIN_DATASETS,
+  TILES_3D_DATASETS,
+  LOCAL_DATASETS,
+} from "../../helpers/constants";
 
 import { useCloudOverlayOpacity, useDefaultLayers } from "./hooks";
 
@@ -20,7 +25,7 @@ export const Layers: FC = () => {
   const baseTiles = useMemo<LayerDescription>(
     () => ({
       type: "tiles",
-      data: { url: TILE_URLS.gsiSeamlessphoto },
+      data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
       raster_tile: { min_zoom: 2, max_zoom: 18 },
     }),
     [],
@@ -29,7 +34,7 @@ export const Layers: FC = () => {
   const terrain = useMemo<LayerDescription>(
     () => ({
       type: "terrain",
-      data: { url: TERRAIN_URLS.gsi },
+      data: { url: TERRAIN_DATASETS.gsi.url },
       raster_terrain: {
         min_zoom: 6,
         max_zoom: 15,
@@ -45,7 +50,7 @@ export const Layers: FC = () => {
     () => ({
       type: "cesium3dtiles",
       data: {
-        url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+        url: TILES_3D_DATASETS.plateauChiyoda.url,
       },
       model: {
         show: true,
@@ -65,7 +70,7 @@ export const Layers: FC = () => {
     () => ({
       type: "cesium3dtiles",
       data: {
-        url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+        url: TILES_3D_DATASETS.plateauChuo.url,
       },
       model: {
         show: true,
@@ -84,7 +89,7 @@ export const Layers: FC = () => {
   const cloudsOverlayDesc = useMemo<TilesLayer>(
     () => ({
       type: "tiles",
-      data: { url: "/data/blue-marble-clouds/{z}/{x}/{y}.webp" },
+      data: { url: LOCAL_DATASETS.blueMarbleClouds.url },
       raster_tile: { min_zoom: 2, max_zoom: 6, opacity: 1 },
     }),
     [],

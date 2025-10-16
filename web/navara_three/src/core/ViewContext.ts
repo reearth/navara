@@ -1,6 +1,7 @@
 import type { EventHandler } from "@navara/core";
 import type { Material, PerspectiveCamera } from "three";
 
+import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
@@ -14,7 +15,7 @@ type Private = {
 
 // Restrict public API for a layer declaration.
 export class ViewContext {
-  private eventHandler?: EventHandler<any>;
+  private eventHandler?: EventHandler<ViewEvents>;
 
   constructor(
     public scenes: Scenes,
@@ -23,7 +24,7 @@ export class ViewContext {
     public layersManager: LayersManager,
     public renderPassOrchestrator: RenderPassOrchestrator,
     public _privates: Private,
-    eventHandler?: EventHandler<any>,
+    eventHandler?: EventHandler<ViewEvents>,
   ) {
     this.eventHandler = eventHandler;
   }
@@ -32,7 +33,7 @@ export class ViewContext {
     this.camera = camera;
   }
 
-  emit(event: "_csmMounted", material: Material): void {
+  emit(event: "_csmMounted" | "_csmUnmounted", material: Material): void {
     this.eventHandler?.emit(event, material);
   }
 }

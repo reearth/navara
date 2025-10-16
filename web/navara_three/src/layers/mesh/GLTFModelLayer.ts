@@ -247,6 +247,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     if (this._instance) {
       this._instance.traverse((child) => {
         if (child instanceof Mesh) {
+          this.view.emit("_csmUnmounted", child.material);
+
           child.geometry.dispose();
           if (child.material) {
             if (Array.isArray(child.material)) {

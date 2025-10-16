@@ -12,6 +12,7 @@ export function toPolygonMaterialLike(like: PolygonMaterialLike) {
     like.height,
     like.extruded_height,
     like.wireframe,
+    like.per_position_height,
     like.__internal__,
   );
 }

@@ -117,6 +117,7 @@ import { isWorker, convertScreenPos } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
+export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
 export type { Nullable, XYZ, LngLat, LngLatHeight } from "@navara/core";
 export * from "./type";
 export * from "./constants";
@@ -131,6 +132,7 @@ export * from "./core";
 export * from "./layers";
 export * from "./lights";
 export * from "@navara/three_api";
+export * from "./Color";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -206,6 +208,7 @@ export type ViewEvents = {
    * You should pass a material that needs the shadow when it's initialized.
    */
   _csmMounted: (material: Material) => void;
+  _csmUnmounted: (material: Material) => void;
 
   // Mouse events
   mousedown: (event: MapMouseEvent) => void;
@@ -608,6 +611,9 @@ export default class ThreeView<
     // Set up CSM material mounting listener
     this.on("_csmMounted", (material: Material) => {
       this.setupCSMForMaterial(material);
+    });
+    this.on("_csmUnmounted", (material: Material) => {
+      this.removeCSMForMaterial(material);
     });
   }
 
@@ -1130,6 +1136,18 @@ export default class ThreeView<
     }
 
     sunLightLayer.setupMaterialForShadows(material);
+  }
+
+  /**
+   * Remove CSM for a single material
+   */
+  private removeCSMForMaterial(material: Material): void {
+    const sunLightLayer = this.findSunLightLayer();
+    if (!sunLightLayer) {
+      return;
+    }
+
+    sunLightLayer.removeMaterialFromShadows(material);
   }
 
   // TODO: Handle this in plugin system.

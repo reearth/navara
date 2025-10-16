@@ -141,11 +141,14 @@ pub struct TextMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
     // outline
-    pub outline_blur: Option<f32>,    // outlineBlur Defalut:0
-    pub outline_color: Option<u32>,   // outlineColor Defalut:black
-    pub outline_offset: Option<Vec2>, // outlineOffset Default: (0,0)
+    /// Outline blur radius in CSS pixels. Defaults to `0.0`.
+    pub outline_blur: Option<f32>,
+    pub outline_color: Option<u32>, // outlineColor Defalut:black
+    /// Pixel offset `[x, y]` in CSS pixels. Defaults to `(0.0, 0.0)`.
+    pub outline_offset: Option<Vec2>,
     pub outline_opacity: Option<f32>, // outlineOpacity Default:1
-    pub outline_width: Option<f32>,   // outlineWidth Default:0
+    /// Outline thickness measured in CSS pixels. Defaults to `0.0`.
+    pub outline_width: Option<f32>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -354,6 +357,8 @@ pub struct PolygonMaterial {
     pub __internal__: Option<PolygonInternalMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub id_property: Option<String>,
+    /// Whether or not the height is obtained from the data. If false, the height is constant.
+    pub per_position_height: Option<bool>,
 
     /// Currently, this property is supported only in GeoJSON.
     pub surface_show: Option<bool>,
@@ -388,14 +393,8 @@ impl PolygonMaterial {
         height: Option<f32>,
         extruded_height: Option<f32>,
         wireframe: Option<bool>,
-        reflectivity: Option<f32>,
-        roughness: Option<f32>,
+        per_position_height: Option<bool>,
         __internal__: Option<PolygonInternalMaterial>,
-        id_property: Option<String>,
-        surface_show: Option<bool>,
-        outline_show: Option<bool>,
-        outline_color: Option<u32>,
-        outline_width: Option<f32>,
     ) -> Self {
         Self {
             show,
@@ -407,14 +406,15 @@ impl PolygonMaterial {
             height,
             extruded_height,
             wireframe,
-            reflectivity,
-            roughness,
+            reflectivity: None,
+            roughness: None,
             __internal__,
-            id_property,
-            surface_show,
-            outline_show,
-            outline_color,
-            outline_width,
+            per_position_height,
+            id_property: None,
+            surface_show: None,
+            outline_show: None,
+            outline_color: None,
+            outline_width: None,
 
             // These are unnecessary for polygon geometry construction.
             water: None,
@@ -445,6 +445,9 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             roughness: val.roughness.unwrap_or(default.reflectivity),
             internal: val.__internal__.map(|v| v.into()),
             id_property: val.id_property.unwrap_or(default.id_property),
+            per_position_height: val
+                .per_position_height
+                .unwrap_or(default.per_position_height),
             surface_show: val.surface_show.unwrap_or(default.surface_show),
             outline_show: val.outline_show.unwrap_or(default.outline_show),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
@@ -475,6 +478,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             roughness: Some(value.roughness),
             __internal__: value.internal.as_ref().map(|v| v.into()),
             id_property: Some(value.id_property.clone()),
+            per_position_height: Some(value.per_position_height),
             surface_show: Some(value.surface_show),
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
@@ -505,6 +509,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             roughness: Some(value.roughness),
             __internal__: value.internal.map(|v| v.into()),
             id_property: Some(value.id_property),
+            per_position_height: Some(value.per_position_height),
             surface_show: Some(value.surface_show),
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
