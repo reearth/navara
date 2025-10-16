@@ -1,4 +1,4 @@
-use navara_core::{Ellipsoid, CRS, WGS84_32};
+use navara_core::{Ellipsoid, Meters, CRS, WGS84_32};
 use navara_math::{EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
 
 use crate::{helpers::vec::unpack_flatten_vec3, FloatAttribute};
@@ -25,6 +25,7 @@ pub struct PolygonGeometryOptions {
     pub clamp_to_ground: bool,
     pub extruded_height: f32,
     pub height: f32,
+    pub per_position_height: bool,
 }
 
 impl Default for PolygonGeometryOptions {
@@ -40,6 +41,7 @@ impl Default for PolygonGeometryOptions {
             clamp_to_ground: false,
             extruded_height: 0.,
             height: 1.,
+            per_position_height: false,
         }
     }
 }
@@ -132,10 +134,11 @@ fn create_side_outline(
     positions: &mut Vec<f32>,
     skip_indices: &mut Vec<u32>,
     scale_normal_cap: &mut Vec<f32>,
+    per_position_height: bool,
 ) {
     for p in ring {
         let mut side_seg = vec![p.x, p.y, p.z, p.x, p.y, p.z];
-        let s_n_c = scale_to_geodetic_height_extruded(&mut side_seg, WGS84_32);
+        let s_n_c = scale_to_geodetic_height_extruded(&mut side_seg, WGS84_32, per_position_height);
         scale_normal_cap.extend(s_n_c);
 
         positions.extend(side_seg);
@@ -146,6 +149,7 @@ fn create_side_outline(
 fn outlines_from_hierarchy(
     hierarchies: &[HierarchyVec3],
     granularity: f32,
+    per_position_height: bool,
 ) -> PolygonOutlineGeometry {
     let mut positions = vec![];
     let mut skip_indices = vec![];
@@ -154,7 +158,7 @@ fn outlines_from_hierarchy(
     for hierarchy in hierarchies {
         let outer_ring = &(hierarchy.outer_ring);
         let mut poss = compute_outline_positions(WGS84_32, outer_ring, granularity);
-        let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32);
+        let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32, per_position_height);
         scale_normal_cap.extend(s_n_c);
 
         // top end index
@@ -168,13 +172,15 @@ fn outlines_from_hierarchy(
             &mut positions,
             &mut skip_indices,
             &mut scale_normal_cap,
+            per_position_height,
         );
 
         if let Some(holes_src) = &(hierarchy.holes) {
             for hole_src in holes_src {
                 let mut poss =
                     compute_outline_positions(WGS84_32, &hole_src.outer_ring, granularity);
-                let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32);
+                let s_n_c =
+                    scale_to_geodetic_height_extruded(&mut poss, WGS84_32, per_position_height);
                 scale_normal_cap.extend(s_n_c);
 
                 // top end index
@@ -188,6 +194,7 @@ fn outlines_from_hierarchy(
                     &mut positions,
                     &mut skip_indices,
                     &mut scale_normal_cap,
+                    per_position_height,
                 );
             }
         }
@@ -205,6 +212,7 @@ pub fn create_polygon_geometry(
     options: PolygonGeometryOptions,
     polygon_resource: &mut PolygonResource,
 ) -> Option<PolygonGeometryResult> {
+    let per_position_height = options.per_position_height;
     let granularity = options.granularity;
     let polygon_hierarchy = &options.hierarchy;
     let clamp_to_ground = options.clamp_to_ground;
@@ -221,7 +229,7 @@ pub fn create_polygon_geometry(
         return None;
     }
 
-    let outline_geometry = outlines_from_hierarchy(&hierarchies, granularity);
+    let outline_geometry = outlines_from_hierarchy(&hierarchies, granularity, per_position_height);
 
     let mut geometries = vec![];
 
@@ -233,11 +241,16 @@ pub fn create_polygon_geometry(
             &polygons[i],
             granularity,
             &hierarchies[i],
+            per_position_height,
         );
 
         if !clamp_to_ground {
-            let top_bottom_normals =
-                compute_extruded_normals(WGS84_32, &split_geometry.top_bottom_geometry, false);
+            let top_bottom_normals = compute_extruded_normals(
+                WGS84_32,
+                &split_geometry.top_bottom_geometry,
+                false,
+                per_position_height,
+            );
             split_geometry.top_bottom_geometry.attributes.normal =
                 Some(FloatAttribute::new(top_bottom_normals, 3));
         }
@@ -245,7 +258,8 @@ pub fn create_polygon_geometry(
 
         for mut wall_geometry in split_geometry.wall_geometries {
             if !clamp_to_ground {
-                let wall_normals = compute_extruded_normals(WGS84_32, &wall_geometry, true);
+                let wall_normals =
+                    compute_extruded_normals(WGS84_32, &wall_geometry, true, per_position_height);
                 wall_geometry.attributes.normal = Some(FloatAttribute::new(wall_normals, 3));
             }
             geometries.push(wall_geometry);
@@ -318,9 +332,15 @@ pub fn create_geometry_from_positions_extruded(
     polygon: &Polygon,
     granularity: FloatType,
     hierarchy: &HierarchyVec3,
+    per_position_height: bool,
 ) -> ExtrudedPolygonGeometry {
-    let (mut top_positions, mut top_indices) =
-        create_geometry_from_positions(ellipsoid, polygon_resource, polygon, granularity);
+    let (mut top_positions, mut top_indices) = create_geometry_from_positions(
+        ellipsoid,
+        polygon_resource,
+        polygon,
+        per_position_height,
+        granularity,
+    );
 
     let mut top_bottom_positions = Vec::with_capacity(top_positions.len() * 2);
     top_bottom_positions.append(&mut top_positions);
@@ -341,8 +361,11 @@ pub fn create_geometry_from_positions_extruded(
         top_bottom_indices.push(i0);
     }
 
-    let scale_normal_and_cap =
-        scale_to_geodetic_height_extruded(&mut top_bottom_positions, ellipsoid);
+    let scale_normal_and_cap = scale_to_geodetic_height_extruded(
+        &mut top_bottom_positions,
+        ellipsoid,
+        per_position_height,
+    );
 
     let outer_ring = &hierarchy.outer_ring;
 
@@ -353,7 +376,7 @@ pub fn create_geometry_from_positions_extruded(
         compute_wall_geometry(ellipsoid, outer_ring, granularity);
 
     let wall_scale_normal_and_cap =
-        scale_to_geodetic_height_extruded(&mut wall_positions, ellipsoid);
+        scale_to_geodetic_height_extruded(&mut wall_positions, ellipsoid, per_position_height);
 
     wall_geometries.push(PolygonGeometry {
         attributes: PolygonGeometryAttributes {
@@ -371,8 +394,11 @@ pub fn create_geometry_from_positions_extruded(
             let (mut hole_wall_pos, hole_wall_i) =
                 compute_wall_geometry(ellipsoid, &hole_src.outer_ring, granularity);
 
-            let hole_scale_normal_and_cap =
-                scale_to_geodetic_height_extruded(&mut hole_wall_pos, ellipsoid);
+            let hole_scale_normal_and_cap = scale_to_geodetic_height_extruded(
+                &mut hole_wall_pos,
+                ellipsoid,
+                per_position_height,
+            );
 
             wall_geometries.push(PolygonGeometry {
                 attributes: PolygonGeometryAttributes {
@@ -407,6 +433,7 @@ fn compute_extruded_normals(
     ellipsoid: Ellipsoid<FloatType>,
     geometry: &PolygonGeometry,
     wall: bool,
+    per_position_height: bool,
 ) -> Vec<f32> {
     let positions = &geometry.attributes.position.data;
     let positions_length = positions.len();
@@ -424,6 +451,18 @@ fn compute_extruded_normals(
                 let mut p1 = unpack_flatten_vec3(positions, i + 3);
                 if is_in_corner {
                     let mut bottom_p = unpack_flatten_vec3(positions, i + bottom_offset);
+
+                    if per_position_height {
+                        // Adjust position for correct normal.
+                        let p0_geo = ellipsoid.xyz_to_lle(p0.into());
+                        let mut p1_geo = ellipsoid.xyz_to_lle(p1.into());
+                        let mut bottom_p_geo = ellipsoid.xyz_to_lle(bottom_p.into());
+                        p1_geo.height = p0_geo.height;
+                        bottom_p_geo.height = Meters::new(p1_geo.height.val() - 100.0);
+                        p1 = p1_geo.to_xyz(ellipsoid).into();
+                        bottom_p = bottom_p_geo.to_xyz(ellipsoid).into();
+                    }
+
                     p1 -= p0;
                     bottom_p -= p0;
                     normal = bottom_p.cross(p1).normalize();

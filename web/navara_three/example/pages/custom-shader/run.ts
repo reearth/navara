@@ -23,7 +23,8 @@ import {
 import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 
 import type { CloudsEffectLayer } from "../../../src/layers/effect";
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
 // Custom MarchingCubesLayer definition
 type MarchingCubesLayerDescription = {
@@ -168,7 +169,7 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -177,7 +178,7 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -226,6 +227,8 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
       updateCubes(cubes, t * 0.001, 10);
     }
   });
+
+  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
 };
 
 // Ref: https://github.com/mrdoob/three.js/blob/master/examples/webgl_marchingcubes.html

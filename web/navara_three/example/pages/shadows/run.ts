@@ -8,7 +8,12 @@ import ThreeView, {
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+} from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
@@ -29,7 +34,7 @@ export async function run() {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -43,7 +48,7 @@ export async function run() {
   // Add tile layer
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     raster_tile: {
       color: 0xffffff,
       max_zoom: 18,
@@ -57,6 +62,13 @@ export async function run() {
   addDateControl(view, pane);
   addViewShadowControl(view, defaultLayers.sun, pane);
   addBuildingModelControl(view, pane);
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+  ]);
 }
 
 const addViewShadowControl = (
@@ -254,7 +266,7 @@ const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
     {
       type: "cesium3dtiles",
       data: {
-        url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+        url: TILES_3D_DATASETS.plateauChiyoda.url,
       },
       model: {
         show: true,
@@ -268,7 +280,7 @@ const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
     {
       type: "cesium3dtiles",
       data: {
-        url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+        url: TILES_3D_DATASETS.plateauChuo.url,
       },
       model: {
         show: true,

@@ -1,15 +1,12 @@
-import ThreeView, {
-  JAPAN_GSI_ELEVATION_DECODER,
-  MAPBOX_ELEVATION_DECODER,
-} from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { Vector3 } from "three";
 
-const terrainUrls = {
-  gsi: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  mapbox: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
-    import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
-  }`,
-};
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  VECTOR_DATASETS,
+} from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -27,7 +24,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: {
-      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      url: TILE_DATASETS.openstreetmap.url,
     },
     raster_tile: {
       max_zoom: 23,
@@ -35,31 +32,24 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  const terrainType: "mapbox" | "gsi" = "gsi";
-
   view.addLayer({
     type: "terrain",
     data: {
-      // @ts-expect-error : Make switch button later
-      url: terrainType === "mapbox" ? terrainUrls.mapbox : terrainUrls.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       segments: 64,
       max_zoom: 15,
       min_zoom: 5,
       wireframe: false,
-      elevation_decoder:
-        // @ts-expect-error : Make switch button later
-        terrainType === "mapbox"
-          ? MAPBOX_ELEVATION_DECODER()
-          : JAPAN_GSI_ELEVATION_DECODER(),
+      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
   view.addLayer({
     type: "mvt",
     data: {
-      url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     point: {
       size: 1000,
@@ -90,4 +80,10 @@ export const run = async (view: ThreeView) => {
       max_zoom: 16,
     },
   });
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.openstreetmap,
+    VECTOR_DATASETS.gsiExperimentalVector,
+  ]);
 };

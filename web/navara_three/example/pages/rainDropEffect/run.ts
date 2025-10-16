@@ -1,7 +1,8 @@
 import ThreeView, { RainDropEffectLayer } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import { TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
 export const run = async (view: ThreeView) => {
@@ -40,7 +41,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -162,4 +163,6 @@ export const run = async (view: ThreeView) => {
     pane.refresh();
     rainDropLayer.update({ rainDrop: { ...rainDropDefaults } });
   });
+
+  showAttributions([TILE_DATASETS.gsiSeamlessphoto]);
 };

@@ -30,7 +30,13 @@ import ThreeView, {
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  LOCAL_DATASETS,
+} from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
 import { FloatingDialog } from "./dialog";
@@ -93,7 +99,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -110,7 +116,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: {
-      url: TILE_URLS.openstreetmap,
+      url: TILE_DATASETS.openstreetmap.url,
     },
     raster_tile: {},
   });
@@ -118,7 +124,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
     },
     model: {
       show: true,
@@ -179,6 +185,13 @@ export const run = async (view: ThreeView) => {
   gInterBall = placeOneBall(view, new Vector3(0, 0, 0), 0xff0000);
   onDistPosChange();
   onRegisterChange();
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.openstreetmap,
+    TILES_3D_DATASETS.plateauChiyoda,
+    LOCAL_DATASETS.steelDrumGLTF,
+  ]);
 };
 
 const addRunningObject = (view: ThreeView) => {
@@ -267,7 +280,7 @@ const addTestModelForNormal = (view: ThreeView) => {
   const modelLayer = view.addLayer<GLTFModelLayer>({
     type: "mesh",
     gltfModel: {
-      url: "/glTF/steel_drum/scene.gltf",
+      url: LOCAL_DATASETS.steelDrumGLTF.url,
     },
     scale: { x: 200000, y: 200000, z: 200000 },
     position: { x: pos.x, y: pos.y, z: pos.z },
@@ -316,7 +329,7 @@ const addTestModelForTerrainHeight = (view: ThreeView) => {
   const modelLayer = view.addLayer<GLTFModelLayer>({
     type: "mesh",
     gltfModel: {
-      url: "/glTF/steel_drum/scene.gltf",
+      url: LOCAL_DATASETS.steelDrumGLTF.url,
     },
     scale: new Vector3().setScalar(200),
     position: pos,

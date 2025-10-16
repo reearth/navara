@@ -23,7 +23,13 @@ import type {
   SSAOEffectLayer,
 } from "../../../src/layers/effect";
 import type { LightProbeLayer } from "../../../src/layers/light/LightProbeLayer";
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  LOCAL_DATASETS,
+} from "../../helpers/constants";
 import {
   addCameraControl,
   addDateControl,
@@ -75,7 +81,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -89,7 +95,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
     },
     model: {
       show: true,
@@ -105,7 +111,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "cesium3dtiles",
     data: {
-      url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+      url: TILES_3D_DATASETS.plateauChuo.url,
     },
     model: {
       show: true,
@@ -144,11 +150,19 @@ export const run = async (view: ThreeView) => {
   addAAControl(pane, defaultEffects);
   addIBLControl(view, pane);
   addEffectsControl(view, pane, defaultEffects);
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    LOCAL_DATASETS.blueMarbleClouds,
+  ]);
 };
 
 const addTileControl = (view: ThreeView, pane: Pane) => {
   const PARAMS = {
-    type: TILE_URLS.gsiSeamlessphoto,
+    type: TILE_DATASETS.gsiSeamlessphoto.url,
   };
 
   const description: LayerDescription = {
@@ -172,7 +186,9 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
 
   folder
     .addBinding(PARAMS, "type", {
-      options: TILE_URLS,
+      options: Object.fromEntries(
+        Object.entries(TILE_DATASETS).map(([key, value]) => [key, value.url]),
+      ),
     })
     .on("change", (v) => {
       layer.delete();
@@ -200,7 +216,7 @@ const addCloudsTilesControl = (
   const description: LayerDescription = {
     type: "tiles",
     data: {
-      url: "/data/blue-marble-clouds/{z}/{x}/{y}.webp",
+      url: LOCAL_DATASETS.blueMarbleClouds.url,
     },
     raster_tile: {
       max_zoom: 6,

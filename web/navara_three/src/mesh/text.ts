@@ -56,6 +56,16 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     this.userData.borderWidth = {
       value: meshMaterial.border_width ?? 0.0,
     };
+    this.userData.outlineWidthPx = {
+      value: meshMaterial.outline_width ?? 0.0,
+    };
+    this.userData.outlineBlurPx = {
+      value: meshMaterial.outline_blur ?? 0.0,
+    };
+    this.userData.outlineOffsetPx = {
+      x: meshMaterial?.outline_offset?.x ?? 0.0,
+      y: meshMaterial?.outline_offset?.y ?? 0.0,
+    };
     this.userData.cornerRadius = {
       value: meshMaterial.corner_radius ?? 0.0,
     };
@@ -96,9 +106,9 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     txt.outlineColor = meshMaterial.outline_color
       ? new Color(meshMaterial.outline_color).getHex()
       : 0x000000;
-    txt.outlineBlur = meshMaterial.outline_blur ?? 0.0;
-    txt.outlineOffsetX = meshMaterial?.outline_offset?.x ?? 0.0;
-    txt.outlineOffsetY = meshMaterial?.outline_offset?.y ?? 0.0;
+    txt.outlineBlur = 0.0;
+    txt.outlineOffsetX = 0.0;
+    txt.outlineOffsetY = 0.0;
     txt.outlineOpacity = meshMaterial.outline_opacity ?? 1.0;
     txt.outlineWidth = 0.0; // Always start with 0 to prevent sampling size optimization issues
 
@@ -333,6 +343,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
     let bNeedUpdateBg = false;
     let bPaddingChanged = false;
+    let outlineNeedsSync = false;
 
     const nextText = material.text;
     if (nextText !== prev.text) {
@@ -396,6 +407,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     if (nextFontSize !== prev.fontSize) {
       this.userData.fontSizePx.value = nextFontSize;
       prev.fontSize = nextFontSize;
+      outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
     const nextBackgroundColor = material.background_color
@@ -433,18 +445,11 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     }
 
     // Update outline properties
-    const nextOutlineWidth = material.outline_width ?? 0.0;
-    if (nextOutlineWidth !== prev.outlineWidth) {
-      txt.outlineWidth = nextOutlineWidth;
-      prev.outlineWidth = nextOutlineWidth;
-
-      // Force text re-sync to recalculate sampling size when outline width changes
-      txt.sync(() => {
-        this.updateBackground();
-        if (needRender) {
-          needRender();
-        }
-      });
+    const nextOutlineWidth = Math.max(material.outline_width ?? 0.0, 0.0);
+    if (nextOutlineWidth !== prev.outlineWidthPx) {
+      this.userData.outlineWidthPx.value = nextOutlineWidth;
+      prev.outlineWidthPx = nextOutlineWidth;
+      outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
     const nextOutlineColor = material.outline_color
@@ -457,10 +462,11 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       prev.outlineColor = nextOutlineColor;
     }
 
-    const nextOutlineBlur = material.outline_blur ?? 0.0;
-    if (nextOutlineBlur !== prev.outlineBlur) {
-      txt.outlineBlur = nextOutlineBlur;
-      prev.outlineBlur = nextOutlineBlur;
+    const nextOutlineBlur = Math.max(material.outline_blur ?? 0.0, 0.0);
+    if (nextOutlineBlur !== prev.outlineBlurPx) {
+      this.userData.outlineBlurPx.value = nextOutlineBlur;
+      prev.outlineBlurPx = nextOutlineBlur;
+      outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
     const nextOutlineOffsetX = material.outline_offset?.x ?? 0.0;
@@ -469,10 +475,11 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       nextOutlineOffsetX !== prev.outlineOffsetX ||
       nextOutlineOffsetY !== prev.outlineOffsetY
     ) {
-      txt.outlineOffsetX = nextOutlineOffsetX;
-      txt.outlineOffsetY = nextOutlineOffsetY;
+      this.userData.outlineOffsetPx.x = nextOutlineOffsetX;
+      this.userData.outlineOffsetPx.y = nextOutlineOffsetY;
       prev.outlineOffsetX = nextOutlineOffsetX;
       prev.outlineOffsetY = nextOutlineOffsetY;
+      outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
     const nextOutlineOpacity = material.outline_opacity ?? 1.0;
@@ -481,7 +488,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       prev.outlineOpacity = nextOutlineOpacity;
     }
 
-    if (bNeedUpdateBg) {
+    if (bNeedUpdateBg || outlineNeedsSync) {
       txt.sync(() => {
         this.updateBackground();
 
@@ -605,5 +612,46 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       // they risk being incorrectly culled. Therefore, frustumCulled must be set to false
       item.frustumCulled = !pickable;
     });
+  }
+
+  // Normalize px-based outline parameters into the font-relative units expected by Troika.
+  private recalculateOutlineParams(): boolean {
+    if (!this.text) return false;
+
+    const fontSizePx = this.userData.fontSizePx?.value ?? 0.0;
+    const outlineWidthPx = this.userData.outlineWidthPx?.value ?? 0.0;
+    const outlineBlurPx = this.userData.outlineBlurPx?.value ?? 0.0;
+    const outlineOffsetPx = this.userData.outlineOffsetPx ?? { x: 0.0, y: 0.0 };
+
+    const invFontSize = fontSizePx > 0.0 ? 1.0 / fontSizePx : 0.0;
+
+    const normalizedWidth = Math.max(outlineWidthPx * invFontSize, 0.0);
+    const normalizedBlur = Math.max(outlineBlurPx * invFontSize, 0.0);
+    const normalizedOffsetX = outlineOffsetPx.x * invFontSize;
+    const normalizedOffsetY = outlineOffsetPx.y * invFontSize;
+
+    let changed = false;
+
+    if (this.text.outlineWidth !== normalizedWidth) {
+      this.text.outlineWidth = normalizedWidth;
+      changed = true;
+    }
+
+    if (this.text.outlineBlur !== normalizedBlur) {
+      this.text.outlineBlur = normalizedBlur;
+      changed = true;
+    }
+
+    if (this.text.outlineOffsetX !== normalizedOffsetX) {
+      this.text.outlineOffsetX = normalizedOffsetX;
+      changed = true;
+    }
+
+    if (this.text.outlineOffsetY !== normalizedOffsetY) {
+      this.text.outlineOffsetY = normalizedOffsetY;
+      changed = true;
+    }
+
+    return changed;
   }
 }

@@ -74,6 +74,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
     this.initDepthMaterial();
+
+    this.addEventListener("removedFromWorld", () => {
+      this.dispose(viewEvents);
+    });
+
     return this;
   }
 
@@ -217,8 +222,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.defines.USE_ROUGHNESS = 1;
     this.water = !!meshMaterial.water;
 
-    material.customProgramCacheKey = () =>
-      JSON.stringify(material.userData.defines);
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);
@@ -421,9 +424,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
         ).source;
     };
 
-    material.customProgramCacheKey = () =>
-      JSON.stringify(material.userData.defines);
-
     viewEvents.emit("_csmMounted", material);
 
     this.material = material;
@@ -444,10 +444,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     const origin = this.material;
 
-    this.customDepthMaterial.customProgramCacheKey = () =>
-      this.customDepthMaterial
-        ? JSON.stringify(this.customDepthMaterial.userData.defines)
-        : "";
     this.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
       origin.onBeforeCompile(shader, renderer);
 
@@ -610,5 +606,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     } else {
       delete this.material.userData.defines.WATER;
     }
+  }
+
+  dispose(viewEvents: EventHandler<ViewEvents>) {
+    viewEvents.emit("_csmUnmounted", this.material);
   }
 }

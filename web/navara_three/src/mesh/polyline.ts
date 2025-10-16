@@ -49,6 +49,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, viewEvents);
+
+    this.addEventListener("removedFromWorld", () => {
+      this.dispose(viewEvents);
+    });
   }
 
   private initGeometry(mesh: NavaraPolylineMesh, buf: BufferLoader) {
@@ -176,8 +180,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.vertexColors = false;
     this.material.userData.uPickable = uPickable;
 
-    this.material.customProgramCacheKey = () =>
-      JSON.stringify(this.material.userData.defines);
     this.material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, this.material.userData.defines);
@@ -270,5 +272,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
+  }
+
+  dispose(viewEvents: EventHandler<ViewEvents>) {
+    viewEvents.emit("_csmUnmounted", this.material);
   }
 }

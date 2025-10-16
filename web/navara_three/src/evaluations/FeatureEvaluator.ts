@@ -1,4 +1,4 @@
-import type { FeatureId } from "@navara/core";
+import { type FeatureId } from "@navara/core";
 import type {
   ModelMaterial as NavaraModelMaterial,
   PointMaterial,
@@ -6,10 +6,11 @@ import type {
   PolylineMaterial,
   TextMaterial,
 } from "@navara/engine";
-import { BufferGeometry, Color, Mesh, Object3D } from "three";
+import { BufferGeometry, Mesh, Object3D } from "three";
 import type { NormalBufferAttributes } from "three";
 import invariant from "tiny-invariant";
 
+import { Color } from "../Color";
 import type { FeatureHandler } from "../event";
 import {
   InstancedMesh,
@@ -233,11 +234,11 @@ export class FeatureEvaluator {
 
               m.setFeatureColorByBatchIndex(
                 i,
-                new Color(
+                new Color().setRGB(
                   target.array[colorIdx] as number,
                   target.array[colorIdx + 1] as number,
                   target.array[colorIdx + 2] as number,
-                ),
+                ).raw,
               );
             }
             continue;
@@ -279,11 +280,11 @@ export class FeatureEvaluator {
         switch (target.attribute) {
           case "color": {
             featureMesh._setFeatureColor(
-              new Color(
+              new Color().setRGB(
                 target.array[0] as number,
                 target.array[1] as number,
                 target.array[2] as number,
-              ),
+              ).raw,
               m.material as ModelMaterial,
             );
             continue;

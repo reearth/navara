@@ -10,7 +10,8 @@ import {
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 
-import { TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
 import { OSAKA_GEOJSON } from "./constants";
@@ -39,7 +40,7 @@ export const run = async (view: ThreeView) => {
   // Add base tile layer
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.openstreetmap },
+    data: { url: TILE_DATASETS.openstreetmap.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -173,4 +174,6 @@ export const run = async (view: ThreeView) => {
 
   // Start animation loop
   animate();
+
+  showAttributions([TILE_DATASETS.openstreetmap]);
 };

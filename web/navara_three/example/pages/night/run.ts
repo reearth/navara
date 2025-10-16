@@ -16,7 +16,13 @@ import type { FeatureCollection, Point } from "geojson";
 import * as THREE from "three";
 import { Pane } from "tweakpane";
 
-import { TERRAIN_URLS, TILE_URLS } from "../../helpers/constants";
+import { showAttributions } from "../../helpers/attributions";
+import {
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  LOCAL_DATASETS,
+} from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -61,7 +67,7 @@ export const run = async (view: ThreeView) => {
   // Add raster tiles
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_URLS.gsiSeamlessphoto },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     raster_tile: {
       max_zoom: 23,
     },
@@ -71,7 +77,7 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_URLS.gsi,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
       max_zoom: 15,
@@ -134,6 +140,14 @@ export const run = async (view: ThreeView) => {
 
   // Fog Light controls for 3D Tiles scenes
   addFogLightControl(view, pane, sceneChangeHandler);
+
+  showAttributions([
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    TILES_3D_DATASETS.plateauTakanawa,
+  ]);
 };
 
 const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
@@ -292,24 +306,24 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
     "Chiyoda & Chuo": {
       tiles: [
         {
-          url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+          url: TILES_3D_DATASETS.plateauChiyoda.url,
           name: "Chiyoda",
         },
         {
-          url: "https://assets.cms.plateau.reearth.io/assets/4c/f2436a-e2be-40e2-83da-f1781f36e30b/13102_chuo-ku_pref_2023_citygml_1_op_bldg_3dtiles_13102_chuo-ku_lod2_no_texture/tileset.json",
+          url: TILES_3D_DATASETS.plateauChuo.url,
           name: "Chuo",
         },
       ],
-      lightDataFile: "/street_light.geojson",
+      lightDataFile: LOCAL_DATASETS.streetLightGeoJSON.url,
     },
     Takanawa: {
       tiles: [
         {
-          url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
+          url: TILES_3D_DATASETS.plateauTakanawa.url,
           name: "Takanawa",
         },
       ],
-      lightDataFile: "/takanawa_point_light.geojson",
+      lightDataFile: LOCAL_DATASETS.takanawaPointLightGeoJSON.url,
     },
   };
 
@@ -428,7 +442,7 @@ const loadGeoJSONLights = async (
 const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
   // Load Tokyo Points light data using common function
   const tokyoPointsLights = await loadGeoJSONLights(
-    "/tokyo_points_100.geojson",
+    LOCAL_DATASETS.tokyoPoints100GeoJSON.url,
   );
 
   // Create separate fog light layer for Tokyo Points
@@ -634,7 +648,7 @@ const addFogLightControl = async (
   };
 
   // Load initial light data
-  await loadLightData("/street_light.geojson");
+  await loadLightData(LOCAL_DATASETS.streetLightGeoJSON.url);
 
   // Listen for scene changes if handler provided
   if (sceneChangeHandler) {
