@@ -591,6 +591,7 @@ pub struct ModelMaterial {
     pub animation_loop: Option<bool>,
     pub animation_crossfade_duration: Option<f32>,
     pub animation_auto_play: Option<bool>,
+    pub point_cloud: Option<bool>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -628,6 +629,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             animation_loop: val.animation_loop,
             animation_crossfade_duration: val.animation_crossfade_duration,
             animation_auto_play: val.animation_auto_play,
+            point_cloud: val.point_cloud.unwrap_or(default.point_cloud),
         }
     }
 }
@@ -663,6 +665,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             animation_loop: value.animation_loop,
             animation_crossfade_duration: value.animation_crossfade_duration,
             animation_auto_play: value.animation_auto_play,
+            point_cloud: Some(value.point_cloud),
         }
     }
 }

@@ -368,6 +368,7 @@ pub struct ModelMaterial {
     pub animation_loop: Option<bool>,
     pub animation_crossfade_duration: Option<f32>,
     pub animation_auto_play: Option<bool>,
+    pub point_cloud: bool,
 }
 
 impl Default for ModelMaterial {
@@ -402,6 +403,7 @@ impl Default for ModelMaterial {
             animation_loop: None,
             animation_crossfade_duration: None,
             animation_auto_play: None,
+            point_cloud: false,
         }
     }
 }

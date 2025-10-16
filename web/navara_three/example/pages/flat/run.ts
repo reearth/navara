@@ -1,16 +1,24 @@
 import ThreeView from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
+import { TILE_DATASETS } from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
   await view.init();
 
   view.addDefaultAtmosphereLayers();
 
-  view.flyTo({
-    lat: 34.775417,
-    lng: 138.014733,
+  // kag castle
+  // view.flyTo({
+  //   lat: 34.775417,
+  //   lng: 138.014733,
+  //   height: 300,
+  // });
+
+
+    view.flyTo({
+    lat: 39.85328,
+    lng: 284.38791,
     height: 300,
   });
 
@@ -83,7 +91,8 @@ export const run = async (view: ThreeView) => {
 
     view.addLayer({
     type: "pnts",
-    data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/4/8.pnts", },
+    data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudConstantColor/pointCloudConstantColor.pnts", },
+    // data: { uri: "/public/pnts/PointCloudConstantColor/pointCloudConstantColor.pnts", },
     model: {
       show: true,
       id_property: "gml_id",
@@ -94,6 +103,7 @@ export const run = async (view: ThreeView) => {
       receive_shadow: true,
       height: 50,
       size: 100000,
+      point_cloud: true,
     },
   });
 

@@ -1,6 +1,7 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 import type { AnimationClip } from "three";
+import { BufferGeometry, Points, Float32BufferAttribute, Group } from "three";
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
@@ -27,6 +28,22 @@ export async function renderModel(
       const bin = buf.removeU8(m.bin);
       if (!bin) {
         return;
+      }
+
+      if (m.material.point_cloud) {
+        // console.warn(
+        //   "Point cloud rendering for models is not yet implemented.",
+        // );
+
+        const geometry = new BufferGeometry();
+        geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(bin.buffer), 3));
+
+        const points: Points = new Points(geometry);
+
+       const group = new Group();
+        group.add(points);
+
+        return group;
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
