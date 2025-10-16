@@ -583,8 +583,6 @@ pub struct ModelMaterial {
     pub apply_water_normal: Option<bool>,
     // animation
     #[wasm_bindgen(getter_with_clone)]
-    pub animation_clips: Option<Vec<String>>,
-    #[wasm_bindgen(getter_with_clone)]
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
 }
@@ -617,7 +615,6 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
             apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
             // animation
-            animation_clips: val.animation_clips,
             animation_active_clip: val.animation_active_clip,
             animation_speed: val.animation_speed,
         }
@@ -648,7 +645,6 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             specular_strength: Some(value.specular_strength),
             apply_water_normal: Some(value.apply_water_normal),
             // animation
-            animation_clips: value.animation_clips.clone(),
             animation_active_clip: value.animation_active_clip.clone(),
             animation_speed: value.animation_speed,
         }

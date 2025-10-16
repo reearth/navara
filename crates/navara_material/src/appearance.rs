@@ -361,7 +361,6 @@ pub struct ModelMaterial {
     pub specular_strength: f32,
     pub apply_water_normal: bool,
     // animation
-    pub animation_clips: Option<Vec<String>>,
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
 }
@@ -391,7 +390,6 @@ impl Default for ModelMaterial {
             specular_strength: 2.0,
             apply_water_normal: false,
             // animation
-            animation_clips: None,
             animation_active_clip: None,
             animation_speed: None,
         }
