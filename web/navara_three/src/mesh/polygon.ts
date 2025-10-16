@@ -156,8 +156,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.depthWrite = !clampToGround;
     material.depthTest = !clampToGround;
     material.vertexColors = false;
-
-    material.userData.color = mcolor;
+    material.visible = !!meshMaterial.show;
 
     const uMinMaxHeights = meshMaterial.__internal__?.min_max_heights;
     material.userData.uMinMaxHeight = {
@@ -465,9 +464,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
     const prev = this.material.userData.prev;
 
+    // Only update material.color if batchTexture color is not being used
     if (prev.color !== material.color) {
       const next = material.color ?? 0;
-      this.material.color.set(next);
+      // If batchTexture color is not enabled, update material.color directly
+      if (!this.material.userData._batchColorTouched) {
+        this.material.color.set(next);
+      }
       prev.color = next;
     }
 
@@ -571,7 +574,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureColor(color: Color): void {
-    this.material.color.set(color);
+    // If batchTexture is being used, update via batchTexture
+    if (this.material.userData._batchColorTouched) {
+      super._setFeatureColor(color);
+    } else {
+      // Otherwise, update material.color directly
+      this.material.color.set(color);
+    }
     // TODO: Support outline color
   }
 

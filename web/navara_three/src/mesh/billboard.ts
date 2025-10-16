@@ -101,6 +101,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     const prev = this.material.userData.prev;
 
     if (prev.color !== material.color) {
+      this.material.color.set(material.color ?? 0);
       prev.color = material.color;
     }
 

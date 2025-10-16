@@ -398,17 +398,20 @@ impl Core {
         callback: &js_sys::Function,
     ) {
         let this = JsValue::NULL;
-        self.app
-            .read_properties_by_global_batch_ids(renderable_feature_bits, &|batch_id, v| {
+        self.app.read_properties_by_global_batch_ids(
+            renderable_feature_bits,
+            &|batch_idx, batch_id, v| {
+                let batch_idx = JsValue::from(batch_idx as u32);
                 let batch_id = JsValue::from(batch_id);
                 let _ = match v
                     .as_ref()
                     .and_then(|v| serde_wasm_bindgen::to_value(v).ok())
                 {
-                    Some(v) => callback.call2(&this, &batch_id, &v).unwrap(),
-                    None => callback.call1(&this, &batch_id).unwrap(),
+                    Some(v) => callback.call3(&this, &batch_idx, &batch_id, &v).unwrap(),
+                    None => callback.call2(&this, &batch_idx, &batch_id).unwrap(),
                 };
-            });
+            },
+        );
     }
 
     #[wasm_bindgen(js_name = changeCamera)]

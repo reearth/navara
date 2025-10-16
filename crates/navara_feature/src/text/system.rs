@@ -60,7 +60,7 @@ pub fn transfer_batched_mesh(
         let feature_len = batched_feature.features.len();
         let mut all_coords = Vec::with_capacity(feature_len * 3);
         let mut batch_indices = Vec::with_capacity(feature_len);
-        let mut batch_ids_and_sels = Vec::with_capacity(feature_len * 2);
+        let mut batch_ids = Vec::with_capacity(feature_len);
         let mut crs = None;
 
         // Get the global batch IDs from the buffer store
@@ -89,10 +89,8 @@ pub fn transfer_batched_mesh(
             // Add batch index
             batch_indices.push(batch_index.0);
 
-            // Add batch ID and selection status
-            let global_index = (batch_index.0 * 2) as usize;
-            batch_ids_and_sels.push(global_ids[global_index] as f32); // batch ID
-            batch_ids_and_sels.push(global_ids[global_index + 1] as f32); // selection status
+            let global_index = (batch_index.0) as usize;
+            batch_ids.push(global_ids[global_index] as f32);
         }
 
         let crs = crs.unwrap();
@@ -122,7 +120,7 @@ pub fn transfer_batched_mesh(
                         &mut buf,
                         all_coords,
                         batch_indices,
-                        batch_ids_and_sels,
+                        batch_ids,
                     ),
                     active: false,
                     feature_batch_id: feature_batch_id.0,

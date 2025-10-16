@@ -177,7 +177,7 @@ export type MapMouseEvent = {
 
 export type ViewEvents = {
   resize: (w: number, h: number) => void;
-  pick: (info: Nullable<PickedFeature>) => void;
+  pick: (batchId: number, info: Nullable<PickedFeature>) => void;
   layer: <K extends keyof LayerEvent>(
     k: K,
     layerId: string,
@@ -1344,15 +1344,15 @@ export default class ThreeView<
         const pickedFeature: PickedFeature = {
           properties: prop,
         };
-        this.emit("pick", pickedFeature);
+        this.emit("pick", pickArr[0], pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
           properties: new Map<string, unknown>(),
         };
-        this.emit("pick", emptyFeature);
+        this.emit("pick", pickArr[0], emptyFeature);
       }
     } else {
-      this.emit("pick", null);
+      this.emit("pick", pickArr[0], null);
     }
   }
 

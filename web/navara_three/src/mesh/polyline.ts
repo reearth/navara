@@ -33,7 +33,7 @@ type Attributes = BatchedFeatureAttributes<{
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
   end_normal_and_texture_coordinate_normalization_x: BufferAttribute;
   forward_offset: BufferAttribute;
-  batchId: BufferAttribute;
+  attrBatchId: BufferAttribute;
 }>;
 
 export class PolylineMesh extends BatchedFeatureMesh<
@@ -113,7 +113,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     if (batchIds) {
       geometry.setAttribute(
-        "batchId",
+        "attrBatchId",
         new BufferAttribute(batchIds, batchIdSize),
       );
     }
@@ -174,8 +174,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.visible = !!meshMaterial.show;
     this.material.lights = true;
     this.material.vertexColors = false;
-
-    this.material.userData.color = meshMaterial.color;
     this.material.userData.uPickable = uPickable;
 
     this.material.customProgramCacheKey = () =>
@@ -201,9 +199,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
     const prev = this.material.userData.prev;
 
+    // Only update material.color if batchTexture color is not being used
     if (prev.color !== material.color) {
-      this.material.uniforms.color.value.set(material.color);
-      prev.color = material.color;
+      const next = material.color ?? 0;
+      // If batchTexture color is not enabled, update material.color directly
+      if (!this.material.userData._batchColorTouched) {
+        this.material.uniforms.color.value.set(material.color);
+      }
+      prev.color = next;
     }
 
     if (prev.use_ground_normals !== material.use_ground_normals) {
@@ -256,7 +259,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureColor(color: Color): void {
-    this.material.uniforms.color.value.set(color);
+    // If batchTexture is being used, update via batchTexture
+    if (this.material.userData._batchColorTouched) {
+      super._setFeatureColor(color);
+    } else {
+      // Otherwise, update material.uniforms.color directly
+      this.material.uniforms.color.value.set(color);
+    }
   }
 
   _setFeatureShow(visible: boolean): void {

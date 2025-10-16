@@ -4,7 +4,7 @@
 #include chunks/planeDistance;
 #include chunks/metersPerPixel;
 
-in float batchId;
+in float attrBatchId;
 
 #include chunks/show_pars_vertex;
 
@@ -44,7 +44,7 @@ void main() {
     vec3 offset = normalMatrix * forward_offset;
     vec3 ecEnd = ecStart + offset;
 
-    nvr_vBatchId = batchId;
+    nvr_vBatchId = attrBatchId;
 
     vec3 forwardDirectionEC = normalize(offset);
 

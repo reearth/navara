@@ -854,7 +854,7 @@ const onRegisterChange = () => {
 };
 
 const testShowModelInfo = (view: ThreeView) => {
-  view.on("pick", (event) => {
+  view.on("pick", (_batchId, event) => {
     if (!event) {
       gPickedPos = null;
       gPickedFeature = null;

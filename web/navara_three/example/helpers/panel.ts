@@ -17,21 +17,97 @@ export type MaterialLayerDescription = Exclude<
   | { type: "effect" }
 >;
 
+const selectedFeatures = new Set<string>();
+const selectedBatchIds = new Set<number>();
+
+const addFeatureUpdateHandler = (
+  layerDesc: MaterialLayerDescription,
+  layer: Layer,
+) => {
+  // Function to dynamically get the current default color from layerDesc
+  const getDefaultColor = (): number => {
+    let defaultColor = 0xffffff;
+
+    if (layerDesc.type == "geojson") {
+      if (layerDesc.point && layerDesc.point.color !== undefined) {
+        defaultColor = layerDesc.point.color;
+      } else if (
+        layerDesc.billboard &&
+        layerDesc.billboard.color !== undefined
+      ) {
+        defaultColor = layerDesc.billboard.color;
+      } else if (layerDesc.text && layerDesc.text.color !== undefined) {
+        defaultColor = layerDesc.text.color;
+      } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
+        defaultColor = layerDesc.polyline.color;
+      } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
+        defaultColor = layerDesc.polygon.color;
+      } else if (layerDesc.model && layerDesc.model.color !== undefined) {
+        defaultColor = layerDesc.model.color;
+      }
+    } else if (layerDesc.type == "b3dm") {
+      if (layerDesc.model && layerDesc.model.color !== undefined) {
+        defaultColor = layerDesc.model.color;
+      }
+    } else if (layerDesc.type == "cesium3dtiles") {
+      if (layerDesc.model && layerDesc.model.color !== undefined) {
+        defaultColor = layerDesc.model.color;
+      }
+    } else if (layerDesc.type == "mvt") {
+      if (layerDesc.point && layerDesc.point.color !== undefined) {
+        defaultColor = layerDesc.point.color;
+      } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
+        defaultColor = layerDesc.polyline.color;
+      } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
+        defaultColor = layerDesc.polygon.color;
+      }
+    }
+
+    return defaultColor;
+  };
+
+  layer.on("featureUpdated", (evaluator) => {
+    evaluator.evaluate((batchId, property) => {
+      const gmlId = property?.get("gml_id");
+      if (gmlId && selectedFeatures.has(gmlId as string)) {
+        return {
+          color: new Color(0x00ffff),
+        };
+      } else if (batchId !== undefined && selectedBatchIds.has(batchId)) {
+        return {
+          color: new Color(0x00ffff),
+        };
+      }
+
+      // Dynamically get the current default color
+      return {
+        color: new Color(getDefaultColor()),
+      };
+    });
+  });
+};
+
 export const addCtrlPanel = (
   layers: MaterialLayerDescription[],
   view: ThreeView,
   paneInput?: Pane,
 ) => {
   const arrLayers: Layer[] = [];
-  const selectedFeatures = new Set<string>();
-  view.on("pick", (props) => {
+
+  view.on("pick", (batchId, props) => {
     const gmlId = props?.properties.get("gml_id");
     if (gmlId) {
       selectedFeatures.add(gmlId as string);
-      arrLayers.forEach((layer) => {
-        layer.forceUpdate();
-      });
+    } else if (batchId !== undefined) {
+      selectedBatchIds.add(batchId);
+    } else {
+      selectedFeatures.clear();
+      selectedBatchIds.clear();
     }
+
+    arrLayers.forEach((layer) => {
+      layer.forceUpdate();
+    });
   });
 
   const layerMap = new Map<string, MaterialLayerDescription>();
@@ -43,20 +119,9 @@ export const addCtrlPanel = (
       layerMap.set(layer.id, layerDef);
     }
 
-    layer.on("featureUpdated", (evaluator) => {
-      evaluator.evaluate((_batchId, property) => {
-        const gmlId = property?.get("gml_id");
-        if (gmlId && selectedFeatures.has(gmlId as string)) {
-          return {
-            color: new Color(0xff0000),
-          };
-        }
-
-        return {
-          color: new Color(0xffffff),
-        };
-      });
-    });
+    if (layerDef.type !== "tiles") {
+      addFeatureUpdateHandler(layerDef, layer);
+    }
   });
 
   const layerIds = Array.from(layerMap.keys());

@@ -192,6 +192,9 @@ export async function processRenderableFeatureChanged(
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   renderFlag: RenderFlag,
   buf: BufferLoader,
+  viewEvents: EventHandler<ViewEvents>,
+  layersManager: LayersManager,
+  updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
@@ -272,4 +275,12 @@ export async function processRenderableFeatureChanged(
   }
 
   obj.updateMatrix();
+
+  handleFeatureUpdatedEventByLayerId(
+    viewEvents,
+    layersManager,
+    layerId,
+    ev.bits,
+    updatedAt,
+  );
 }
