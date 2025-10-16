@@ -53,6 +53,7 @@ export default defineConfig((env) => {
     },
     build: {
       outDir: "dist-example",
+      assetsDir: "./",
     },
     resolve: {
       alias: {
