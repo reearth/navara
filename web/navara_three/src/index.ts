@@ -1410,6 +1410,10 @@ export default class ThreeView<
       this.camera.raw,
     );
   }
+
+  getLayerIdByGlobalBatchId(globalBatchId: number): Nullable<string> {
+    return this._core?.getLayerIdByGlobalBatchId(globalBatchId);
+  }
 }
 
 function newId() {

@@ -723,6 +723,51 @@ impl App {
         })
     }
 
+    pub fn get_layer_id_by_global_batch_id(&mut self, global_batch_id: &u32) -> Option<String> {
+        // For batched features like MVT(polygon, polyline) and Cesium 3D Tiles
+        if let Some((entity, _, _)) = self.search_feature_entity_by_global_batch_id(global_batch_id)
+        {
+            let world = self.app.world();
+            let entity_ref = world.get_entity(entity).ok()?;
+            let layer_id = entity_ref.get::<LayerId>()?;
+            return Some(layer_id.0.clone());
+        }
+
+        // For other features like GeoJSON and MVT point
+        // Search through all RenderableFeature entities to find one with matching feature_batch_id
+        let world = self.app.world_mut();
+        let mut query = world.query::<(&RenderableFeature, &LayerId)>();
+        for (renderable_feature, layer_id) in query.iter(world) {
+            let feature_batch_id = match renderable_feature {
+                RenderableFeature::Point {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Billboard {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Text {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Polyline {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Polygon {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Model {
+                    feature_batch_id, ..
+                } => feature_batch_id,
+                RenderableFeature::Unknown => continue,
+            };
+
+            if feature_batch_id == global_batch_id {
+                return Some(layer_id.0.clone());
+            }
+        }
+
+        None
+    }
+
     pub fn change_camera(
         &mut self,
         position: Option<Vec<FloatType>>,

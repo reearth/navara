@@ -1,6 +1,8 @@
-import type { LayerDescription, Layer } from "@navara/three";
-import type ThreeView from "@navara/three";
-import { Color } from "three";
+import ThreeView, {
+  type LayerDescription,
+  type Layer,
+  Color,
+} from "@navara/three";
 import {
   FolderApi,
   Pane,
@@ -71,17 +73,17 @@ const addFeatureUpdateHandler = (
       const gmlId = property?.get("gml_id");
       if (gmlId && selectedFeatures.has(gmlId as string)) {
         return {
-          color: new Color(0x00ffff),
+          color: new Color().setHex(0x00ffff),
         };
       } else if (batchId !== undefined && selectedBatchIds.has(batchId)) {
         return {
-          color: new Color(0x00ffff),
+          color: new Color().setHex(0x00ffff),
         };
       }
 
       // Dynamically get the current default color
       return {
-        color: new Color(getDefaultColor()),
+        color: new Color().setHex(getDefaultColor()),
       };
     });
   });
@@ -97,17 +99,38 @@ export const addCtrlPanel = (
   view.on("pick", (batchId, props) => {
     const gmlId = props?.properties.get("gml_id");
     if (gmlId) {
+      // if gml_id exists, use it for selection
       selectedFeatures.add(gmlId as string);
+
+      const layerId = view.getLayerIdByGlobalBatchId(batchId);
+      if (layerId) {
+        arrLayers.forEach((layer) => {
+          if (layer.id === layerId) {
+            layer.forceUpdate();
+          }
+        });
+      }
     } else if (batchId !== undefined) {
+      // else if batchId exists, use it for selection
       selectedBatchIds.add(batchId);
+
+      const layerId = view.getLayerIdByGlobalBatchId(batchId);
+      if (layerId) {
+        arrLayers.forEach((layer) => {
+          if (layer.id === layerId) {
+            layer.forceUpdate();
+          }
+        });
+      }
     } else {
+      // else clear all selections
       selectedFeatures.clear();
       selectedBatchIds.clear();
-    }
 
-    arrLayers.forEach((layer) => {
-      layer.forceUpdate();
-    });
+      arrLayers.forEach((layer) => {
+        layer.forceUpdate();
+      });
+    }
   });
 
   const layerMap = new Map<string, MaterialLayerDescription>();

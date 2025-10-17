@@ -298,7 +298,7 @@ impl Default for PolygonMaterial {
             roughness: 0.0,
             internal: None,
             per_position_height: false,
-            
+
             surface_show: true,
             outline_show: false,
             outline_color: 0xffffff,

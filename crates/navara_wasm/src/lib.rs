@@ -391,6 +391,11 @@ impl Core {
             .unwrap_or(JsValue::NULL)
     }
 
+    #[wasm_bindgen(js_name = getLayerIdByGlobalBatchId)]
+    pub fn get_layer_id_by_global_batch_id(&mut self, batch_id: u32) -> Option<String> {
+        self.app.get_layer_id_by_global_batch_id(&batch_id)
+    }
+
     #[wasm_bindgen(js_name = readPropertiesFromFeature)]
     pub fn read_properties_from_feature(
         &mut self,
