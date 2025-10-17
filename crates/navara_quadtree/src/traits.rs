@@ -73,7 +73,13 @@ where
 
     /// Get a parent of specified coordinates.
     fn parent(&self, (x, y, z): Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
-        self.leaf((x >> 1, y >> 1, z - U::one()))
+        self.leaf((
+            x >> 1,
+            y >> 1,
+            z.checked_sub(&U::one())
+                .or_else(|| Some(U::zero()))
+                .unwrap(),
+        ))
     }
 
     /// Get children of specified coordinates.
