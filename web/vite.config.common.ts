@@ -46,6 +46,9 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
       "@navara/engine-api": "navara_wasm_api",
     },
   },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(env.mode),
+  },
   build: {
     lib: {
       entry: "./src/index.ts",

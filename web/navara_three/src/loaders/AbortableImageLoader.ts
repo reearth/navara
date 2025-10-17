@@ -1,4 +1,4 @@
-import { Cache, Loader } from "three";
+import { Loader } from "three";
 
 function createElementNS(name: string) {
   return document.createElementNS("http://www.w3.org/1999/xhtml", name);
@@ -32,20 +32,6 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const scope = this;
 
-    const cached = Cache.get(url);
-
-    if (cached !== undefined) {
-      scope.manager.itemStart(url);
-
-      setTimeout(function () {
-        if (onLoad) onLoad(cached);
-
-        scope.manager.itemEnd(url);
-      }, 0);
-
-      return cached;
-    }
-
     const timeoutId = window.setTimeout(() => {
       abort?.abort();
       onImageError(new Error("TimeoutError"));
@@ -54,8 +40,6 @@ export class AbortableImageLoader extends Loader<HTMLImageElement> {
     const image = createElementNS("img") as HTMLImageElement;
     function onImageLoad(this: any) {
       removeEventListeners();
-
-      Cache.add(url, this);
 
       if (onLoad) onLoad(this);
 

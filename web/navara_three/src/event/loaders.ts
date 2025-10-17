@@ -1,9 +1,11 @@
-import { ImageLoader, TextureLoader } from "three";
+import { Cache, ImageLoader, TextureLoader } from "three";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import { AbortableImageLoader } from "../loaders";
 import { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
+
+Cache.enabled = true;
 
 export const TEXTURE_LOADER = new TextureLoader();
 export const ABORTABLE_TEXTURE_LOADER = new AbortableTextureLoader();
