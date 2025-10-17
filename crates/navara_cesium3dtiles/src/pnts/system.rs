@@ -14,7 +14,10 @@ use navara_feature_component::{
     //     BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
     //     GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
     // },
-    batch::{FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable}, id::FeatureId, model::{ModelBin, ModelGeometry, ModelMarker}, render::RenderableFeature
+    batch::{FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable},
+    id::FeatureId,
+    model::{ModelBin, ModelGeometry, ModelMarker},
+    render::RenderableFeature,
 };
 use navara_layer::{
     Cesium3dTilesLayer, DeletePntsLayerMarker, LayerId, LayerStore, PntsLayer,
@@ -23,7 +26,7 @@ use navara_layer::{
 use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
 
-use navara_parser::pnts::*;
+use navara_parser::{geojson::Position, pnts::*};
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
@@ -85,17 +88,20 @@ pub fn construct_model_by_pnts_layer(
         };
         appearance.should_rotate_in_default = false;
 
-        let (positions_len, positions_center, positions_handle) =
+        let (draco_compressed, positions_center, positions_handle) =
             match get_geometry_info_from_pnts(&mut buf, &req.handle) {
                 Some(r) => r,
                 None => continue,
             };
 
-        // TODO: insert position_len into the entity
+        appearance.draco_point_compressed = draco_compressed;
+        appearance.point_cloud = true;
+
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
-            GlobalBatchIdAndSelections { // Dummy value
+            GlobalBatchIdAndSelections {
+                // Dummy value
                 handle: Handle::default(),
                 batch_length: 0,
             },
@@ -115,7 +121,7 @@ pub fn construct_model_by_pnts_layer(
 fn get_geometry_info_from_pnts(
     buf: &mut BufferStore,
     handle: &Handle,
-) -> Option<(usize, Vec3, Handle)> {
+) -> Option<(bool, Vec3, Handle)> {
     let pnts_bin = buf.get_u8(handle)?;
     let mut pnts = Pnts::from_data(pnts_bin).unwrap();
 
@@ -132,9 +138,36 @@ fn get_geometry_info_from_pnts(
     let positions_byte_size =
         positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
 
-    // extract the position data from featuretable's binary blob
-    let mut position_bin_data = pnts.feature_table.binary.split_off(positions_offset);
-    position_bin_data.truncate(positions_byte_size);
+    // Find out if the pnts uses Draco compression
+    let draco_compression_meta = feature_table_json["extensions"]
+        .as_object()
+        .and_then(|ext| {
+            if let Some(draco_meta) = ext["3DTILES_draco_point_compression"].as_object() {
+                let properties = draco_meta["properties"].as_object().unwrap();
+                    let byte_offset = draco_meta["byteOffset"].as_u64().unwrap();
+                    let byte_length = draco_meta["byteLength"].as_u64().unwrap();
+                    Some((properties, byte_offset, byte_length))
+            }
+            else {
+                None
+            }
+        });
+
+    let mut position_bin_data: Vec<u8>;
+    let mut draco_compressed = false;
+    if let Some((_, byte_offset, byte_length)) = draco_compression_meta {
+        // Draco compression
+        // extract the draco compressed data from featuretable's binary blob
+        position_bin_data = pnts.feature_table.binary.split_off(byte_offset as usize);
+        position_bin_data.truncate(byte_length as usize);
+        draco_compressed = true;
+
+    } else {
+        // No Draco compression
+        // extract the position data from featuretable's binary blob
+        position_bin_data = pnts.feature_table.binary.split_off(positions_offset);
+        position_bin_data.truncate(positions_byte_size);
+    }
 
     let position_bin_handle = buf.new_u8(position_bin_data);
 
@@ -147,7 +180,7 @@ fn get_geometry_info_from_pnts(
     };
 
     Some((
-        positions_len,
+        draco_compressed,
         Vec3::new(
             positions_center[0],
             positions_center[1],
@@ -240,10 +273,17 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
+    info!("construct_model_by_cesium3dtiles_layer called");
     for mut tile in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
-            Ok(v) => {info!("pnts data requester found"); v},
-            Err(_) => {info!("pnts data requester not found"); continue},
+            Ok(v) => {
+                info!("pnts data requester found");
+                v
+            }
+            Err(_) => {
+                info!("pnts data requester not found");
+                continue;
+            }
         };
         // TODO: Handle fail
         if !matches!(req.status, DataRequesterStatus::Success) {
@@ -260,16 +300,20 @@ pub fn construct_model_by_cesium3dtiles_layer(
         appearance.should_rotate_in_default = false;
         appearance.clamp_to_ground = false;
 
-        let (postions_len, postions_center, postions_handle) =
+        let (draco_compressed, postions_center, postions_handle) =
             match get_geometry_info_from_pnts(&mut buf, &req.handle) {
                 Some(r) => r,
                 None => continue,
             };
 
+        appearance.draco_point_compressed = draco_compressed;
+        appearance.point_cloud = true;
+
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
-            GlobalBatchIdAndSelections { // Dummy value
+            GlobalBatchIdAndSelections {
+                // Dummy value
                 handle: Handle::default(),
                 batch_length: 0,
             },
@@ -285,8 +329,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
 
         buf.remove(&req.handle);
         info!(
-            "pnts model constructed for layer {}, feature count: {}",
-            layer.layer_id, postions_len
+            "pnts model constructed for layer {}",
+            layer.layer_id
         );
     }
 }

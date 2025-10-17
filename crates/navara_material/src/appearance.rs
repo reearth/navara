@@ -369,6 +369,7 @@ pub struct ModelMaterial {
     pub animation_crossfade_duration: Option<f32>,
     pub animation_auto_play: Option<bool>,
     pub point_cloud: bool,
+    pub draco_point_compressed: bool
 }
 
 impl Default for ModelMaterial {
@@ -404,6 +405,7 @@ impl Default for ModelMaterial {
             animation_crossfade_duration: None,
             animation_auto_play: None,
             point_cloud: false,
+            draco_point_compressed: false,
         }
     }
 }

@@ -39,14 +39,14 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             }
             LayerDescription::Pnts(t) => {
                 commands.spawn(t.clone());
-                info!("pnts layer added: {:?}", t);
+                // info!("pnts layer added: {:?}", t);
             }
             LayerDescription::Mvt(t) => {
                 commands.spawn(t.clone());
             }
             LayerDescription::Cesium3dTiles(t) => {
                 commands.spawn(t.clone());
-                info!("cesium3dtiles layer added: {:?}", t);
+                // info!("cesium3dtiles layer added: {:?}", t);
             }
         }
     }

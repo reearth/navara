@@ -592,6 +592,7 @@ pub struct ModelMaterial {
     pub animation_crossfade_duration: Option<f32>,
     pub animation_auto_play: Option<bool>,
     pub point_cloud: Option<bool>,
+    pub draco_point_compressed: Option<bool>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -630,6 +631,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             animation_crossfade_duration: val.animation_crossfade_duration,
             animation_auto_play: val.animation_auto_play,
             point_cloud: val.point_cloud.unwrap_or(default.point_cloud),
+            draco_point_compressed: val.draco_point_compressed.unwrap_or(false),
         }
     }
 }
@@ -666,6 +668,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             animation_crossfade_duration: value.animation_crossfade_duration,
             animation_auto_play: value.animation_auto_play,
             point_cloud: Some(value.point_cloud),
+            draco_point_compressed: Some(value.draco_point_compressed),
         }
     }
 }

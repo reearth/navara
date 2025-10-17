@@ -90,8 +90,12 @@ export const run = async (view: ThreeView) => {
   // });
 
     view.addLayer({
-    type: "pnts",
-    data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudConstantColor/pointCloudConstantColor.pnts", },
+    type: "cesium3dtiles",
+    // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudConstantColor/pointCloudConstantColor.pnts", },
+    // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/pointCloudDraco.pnts", },
+    data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/tileset.json", },
+    // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/4/8.pnts", },
+    // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json", },
     // data: { uri: "/public/pnts/PointCloudConstantColor/pointCloudConstantColor.pnts", },
     model: {
       show: true,
@@ -101,7 +105,7 @@ export const run = async (view: ThreeView) => {
       roughness: 1,
       cast_shadow: true,
       receive_shadow: true,
-      height: 50,
+      height: 500,
       size: 100000,
       point_cloud: true,
     },

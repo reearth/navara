@@ -1,7 +1,8 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 import type { AnimationClip } from "three";
-import { BufferGeometry, Points, Float32BufferAttribute, Group } from "three";
+import { BufferGeometry, Points, Group, Float32BufferAttribute} from "three";
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
@@ -31,18 +32,22 @@ export async function renderModel(
       }
 
       if (m.material.point_cloud) {
-        // console.warn(
-        //   "Point cloud rendering for models is not yet implemented.",
-        // );
+        let geometry: BufferGeometry | undefined;
 
-        const geometry = new BufferGeometry();
-        geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(bin.buffer), 3));
+        if (m.material.draco_point_compressed) {
+          const loader = new DRACOLoader();
+          geometry = await decompressDraco(bin.buffer as ArrayBuffer, loader);
+          loader.dispose();
+        } else {
+          geometry = new BufferGeometry();
+          geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(bin.buffer), 3));
+        }
 
-        const points: Points = new Points(geometry);
-
-       const group = new Group();
-        group.add(points);
-
+        const group = new Group();
+        if (geometry) {
+          const points: Points = new Points(geometry);
+           group.add(points);
+        }
         return group;
       }
 
@@ -79,4 +84,15 @@ export function processModelChanged(
   active: boolean,
 ) {
   obj._update(m.material, active);
+}
+
+
+async function decompressDraco(buffer: ArrayBuffer, dracoLoader: DRACOLoader): Promise<BufferGeometry | undefined> {
+  return new Promise((resolve) => {
+    dracoLoader.setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/');
+    console.log(buffer);
+    dracoLoader.parse(buffer, (geometry) => {
+      resolve(geometry);
+    });
+  });
 }

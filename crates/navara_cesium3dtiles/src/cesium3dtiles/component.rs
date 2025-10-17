@@ -4,7 +4,7 @@ use navara_data_requester::DataRequesterExtension;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
-use navara_math::FloatType;
+use navara_math::{FloatType, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
 use url::{ParseError, Url};
 
@@ -76,8 +76,8 @@ impl Cesium3dTileContent {
             None => unimplemented!("TODO: Support multiple contents"),
         };
         let bv = &tile.bounding_volume;
-        let bounding_volume = match (bv.region, bv.sphere) {
-            (Some([west, south, east, north, min_height, max_height]), _) => {
+        let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
+            (Some([west, south, east, north, min_height, max_height]), _, _) => {
                 Some(Aabb::from_extent_f32(
                     Extent::from_points(&[
                         LngLat::new(south as FloatType, west as FloatType),
@@ -88,7 +88,14 @@ impl Cesium3dTileContent {
                 ))
             }
             // TODO: Support making bounding volume from the sphere
-            (_, Some(_)) => None,
+            (_, Some(_), _) => None,
+            (_, _, Some([cx, cy, cz,
+                         xdir0, xdir1, xdir2,
+                         ydir0, ydir1, ydir2,
+                         zdir0, zdir1, zdir2,])) => {
+                Some(Aabb { center: Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType),
+                     extents: Vec3::new(xdir0 as FloatType, ydir0 as FloatType, zdir0 as FloatType) })
+            }
             _ => None,
         };
         let default_refine = Refine::Replace;
