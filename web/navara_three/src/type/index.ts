@@ -1,4 +1,4 @@
-import type { TileHandle } from "@navara/core";
+import type { Nullable, TileHandle } from "@navara/core";
 import type {
   B3dmLayerDescription,
   Cesium3dTilesLayerDescription,
@@ -144,6 +144,8 @@ export type WorkerPoolPromises = Map<string, WorkerPoolPromise<unknown>>;
 
 export type PickedFeature = {
   properties: Map<string, unknown>;
+  batchId: Nullable<number>;
+  layerId: Nullable<string>;
 };
 
 export type RenderFlag = {

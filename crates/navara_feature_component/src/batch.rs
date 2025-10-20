@@ -98,11 +98,15 @@ pub enum BatchProperty {
 
 pub struct BatchTableValue {
     pub properties: Option<BatchProperty>,
+    pub layer_id: Option<String>,
 }
 
 impl BatchTableValue {
     pub fn empty() -> Self {
-        Self { properties: None }
+        Self {
+            properties: None,
+            layer_id: None,
+        }
     }
 }
 
@@ -141,9 +145,10 @@ impl BatchTable {
         }
     }
 
-    pub fn init_values(&mut self) -> Option<u32> {
+    pub fn init_values(&mut self, layer_id: Option<String>) -> Option<u32> {
         self.add(Some(BatchTableValue {
             properties: Some(BatchProperty::Values(vec![])),
+            layer_id,
         }))
     }
 

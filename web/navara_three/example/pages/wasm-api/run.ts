@@ -867,17 +867,17 @@ const onRegisterChange = () => {
 };
 
 const testShowModelInfo = (view: ThreeView) => {
-  view.on("pick", (_batchId, event) => {
-    if (!event) {
+  view.on("pick", (info) => {
+    if (!info) {
       gPickedPos = null;
       gPickedFeature = null;
       updatePopup();
       return;
     }
 
-    const x = event.properties.get("_x");
-    const y = event.properties.get("_y");
-    const z = event.properties.get("_zmax");
+    const x = info.properties.get("_x");
+    const y = info.properties.get("_y");
+    const z = info.properties.get("_zmax");
 
     if (
       typeof x !== "number" ||
@@ -894,7 +894,7 @@ const testShowModelInfo = (view: ThreeView) => {
       new LLE(degreeToRadian(y), degreeToRadian(x), z),
     );
 
-    gPickedFeature = event;
+    gPickedFeature = info;
 
     updatePopup();
   });

@@ -103,7 +103,10 @@ export class FeatureEvaluator {
     return properties;
   }
 
-  // This works with batched feature like MVT and Cesium 3D Tiles.
+  /**
+   * Evaluate feature styles by feature's property.
+   * Note that layer color is overridden by the evaluated color.
+   */
   evaluate(
     f: (
       batchId: number,

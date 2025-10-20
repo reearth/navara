@@ -97,6 +97,7 @@ pub fn construct_single_mvt(
             get_tile_pos_from_url(&layer.data.as_ref().unwrap().url).unwrap(),
             &layer.appearances,
             limit_layers,
+            &layer.layer_id,
         ) {
             for v in geometries {
                 let batched = BatchedFeature {

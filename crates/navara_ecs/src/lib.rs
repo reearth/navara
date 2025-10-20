@@ -487,33 +487,49 @@ impl App {
     pub fn get_batch_prop(
         &mut self,
         batch_id: &u32,
-    ) -> Option<serde_json::Map<String, serde_json::Value>> {
+    ) -> (
+        Option<serde_json::Map<String, serde_json::Value>>,
+        Option<String>,
+    ) {
         // For batched features like MVT(polygon, polyline) and Cesium 3D Tiles.
         if let Some((entity, in_batch_id, in_batch_len)) =
             self.search_feature_entity_by_global_batch_id(batch_id)
         {
             let properties = self.get_internal_batch_table(entity, &in_batch_len, &in_batch_id);
             if properties.is_some() {
-                return properties;
+                // Get layer_id from batch table
+                let layer_id = self
+                    .app
+                    .world()
+                    .get_resource::<BatchTable>()
+                    .and_then(|bt| bt.get(batch_id))
+                    .and_then(|bv| bv.layer_id.clone());
+                return (properties, layer_id);
             }
         };
 
         // For other features like GeoJSON and MVT point
-        let batch_value = self
-            .app
-            .world()
-            .get_resource::<BatchTable>()
-            .unwrap()
-            .get(batch_id)?;
+        let batch_table = match self.app.world().get_resource::<BatchTable>() {
+            Some(bt) => bt,
+            None => return (None, None),
+        };
+
+        let batch_value = match batch_table.get(batch_id) {
+            Some(bv) => bv,
+            None => return (None, None),
+        };
+
+        let layer_id = batch_value.layer_id.clone();
+
         let Some(BatchProperty::Values(values)) = &batch_value.properties else {
-            return None;
+            return (None, layer_id);
         };
         // This should include only one batch.
         let serde_json::Value::Object(map) = values[0].clone() else {
-            return None;
+            return (None, layer_id);
         };
 
-        Some(map)
+        (Some(map), layer_id)
     }
 
     pub fn read_properties_by_global_batch_ids<
@@ -618,43 +634,8 @@ impl App {
             }
             RenderableFeature::Polygon {
                 feature_batch_id, ..
-            } => {
-                let batch_value = batch_table.get(feature_batch_id)?;
-                let batch_prop = batch_value.properties.as_ref()?;
-                let BatchProperty::Values(values) = batch_prop else {
-                    return None;
-                };
-
-                let global_batch_ids_opt = world
-                    .get_entity(renderable_feature_entity)
-                    .ok()
-                    .and_then(|e| e.get::<GlobalBatchIds>());
-
-                if let Some(global_batch_ids) = global_batch_ids_opt {
-                    let buffer_store = world.get_resource::<BufferStore>()?;
-                    let global_batch_id_array = buffer_store.get_u32(&global_batch_ids.handle)?;
-
-                    for (batch_idx, value) in values.iter().enumerate() {
-                        let global_batch_id = global_batch_id_array
-                            .get(batch_idx)
-                            .copied()
-                            .unwrap_or(batch_idx as u32);
-
-                        let serde_json::Value::Object(map) = value.clone() else {
-                            continue;
-                        };
-                        callback(batch_idx, global_batch_id, Some(map));
-                    }
-                } else {
-                    for (batch_idx, value) in values.iter().enumerate() {
-                        let serde_json::Value::Object(map) = value.clone() else {
-                            continue;
-                        };
-                        callback(batch_idx, *feature_batch_id, Some(map));
-                    }
-                }
             }
-            RenderableFeature::Polyline {
+            | RenderableFeature::Polyline {
                 feature_batch_id, ..
             }
             | RenderableFeature::Point {
@@ -721,51 +702,6 @@ impl App {
                     .map(|i| (*entity, i, vec_ids.len()))
             })
         })
-    }
-
-    pub fn get_layer_id_by_global_batch_id(&mut self, global_batch_id: &u32) -> Option<String> {
-        // For batched features like MVT(polygon, polyline) and Cesium 3D Tiles
-        if let Some((entity, _, _)) = self.search_feature_entity_by_global_batch_id(global_batch_id)
-        {
-            let world = self.app.world();
-            let entity_ref = world.get_entity(entity).ok()?;
-            let layer_id = entity_ref.get::<LayerId>()?;
-            return Some(layer_id.0.clone());
-        }
-
-        // For other features like GeoJSON and MVT point
-        // Search through all RenderableFeature entities to find one with matching feature_batch_id
-        let world = self.app.world_mut();
-        let mut query = world.query::<(&RenderableFeature, &LayerId)>();
-        for (renderable_feature, layer_id) in query.iter(world) {
-            let feature_batch_id = match renderable_feature {
-                RenderableFeature::Point {
-                    feature_batch_id, ..
-                }
-                | RenderableFeature::Billboard {
-                    feature_batch_id, ..
-                }
-                | RenderableFeature::Text {
-                    feature_batch_id, ..
-                }
-                | RenderableFeature::Polyline {
-                    feature_batch_id, ..
-                }
-                | RenderableFeature::Polygon {
-                    feature_batch_id, ..
-                }
-                | RenderableFeature::Model {
-                    feature_batch_id, ..
-                } => feature_batch_id,
-                RenderableFeature::Unknown => continue,
-            };
-
-            if feature_batch_id == global_batch_id {
-                return Some(layer_id.0.clone());
-            }
-        }
-
-        None
     }
 
     pub fn change_camera(

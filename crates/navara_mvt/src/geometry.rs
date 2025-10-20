@@ -43,6 +43,7 @@ pub fn construct_geometry(
     xyz: TileXYZ,
     appearances: &[Appearance],
     limit_layers: &Option<Vec<String>>,
+    layer_id: &str,
 ) -> Option<Vec<ConstructedGeometry>> {
     let mut result = vec![];
 
@@ -68,7 +69,9 @@ pub fn construct_geometry(
 
         let mut feature_ids = vec![];
 
-        let feature_batch_id = batch_table.init_values().unwrap_or(0);
+        let feature_batch_id = batch_table
+            .init_values(Some(layer_id.to_owned()))
+            .unwrap_or(0);
         let mut global_batch_ids: Vec<u32> = vec![];
 
         for feature in features {
@@ -81,7 +84,9 @@ pub fn construct_geometry(
 
             let batch_idx = BatchIndex(global_batch_ids.len() as u32);
 
-            let batch_id = batch_table.init_values().unwrap_or(0);
+            let batch_id = batch_table
+                .init_values(Some(layer_id.to_owned()))
+                .unwrap_or(0);
 
             batch_table.add_values(feature_batch_id, props);
 

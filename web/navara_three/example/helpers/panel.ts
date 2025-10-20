@@ -3,6 +3,7 @@ import ThreeView, {
   type Layer,
   Color,
 } from "@navara/three";
+import { isNumber } from "lodash-es";
 import {
   FolderApi,
   Pane,
@@ -94,40 +95,40 @@ export const addCtrlPanel = (
   view: ThreeView,
   paneInput?: Pane,
 ) => {
-  const arrLayers: Layer[] = [];
+  const layerInstMap = new Map<string, Layer>();
 
-  view.on("pick", (batchId, props) => {
-    const gmlId = props?.properties.get("gml_id");
+  view.on("pick", (info) => {
+    const gmlId = info?.properties.get("gml_id");
     if (gmlId) {
       // if gml_id exists, use it for selection
       selectedFeatures.add(gmlId as string);
 
-      const layerId = view.getLayerIdByGlobalBatchId(batchId);
-      if (layerId) {
-        arrLayers.forEach((layer) => {
-          if (layer.id === layerId) {
+      if (isNumber(info?.batchId)) {
+        const layerId = info?.layerId;
+        if (layerId) {
+          const layer = layerInstMap.get(layerId);
+          if (layer) {
             layer.forceUpdate();
           }
-        });
+        }
       }
-    } else if (batchId !== undefined) {
+    } else if (isNumber(info?.batchId)) {
       // else if batchId exists, use it for selection
-      selectedBatchIds.add(batchId);
+      selectedBatchIds.add(info?.batchId);
 
-      const layerId = view.getLayerIdByGlobalBatchId(batchId);
+      const layerId = info?.layerId;
       if (layerId) {
-        arrLayers.forEach((layer) => {
-          if (layer.id === layerId) {
-            layer.forceUpdate();
-          }
-        });
+        const layer = layerInstMap.get(layerId);
+        if (layer) {
+          layer.forceUpdate();
+        }
       }
     } else {
       // else clear all selections
       selectedFeatures.clear();
       selectedBatchIds.clear();
 
-      arrLayers.forEach((layer) => {
+      layerInstMap.forEach((layer) => {
         layer.forceUpdate();
       });
     }
@@ -136,9 +137,9 @@ export const addCtrlPanel = (
   const layerMap = new Map<string, MaterialLayerDescription>();
   layers.forEach((layerDef) => {
     const layer = view.addLayer(layerDef);
-    arrLayers.push(layer);
 
     if (layer.id) {
+      layerInstMap.set(layer.id, layer);
       layerMap.set(layer.id, layerDef);
     }
 

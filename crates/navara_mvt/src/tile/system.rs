@@ -262,6 +262,7 @@ pub fn transfer_mesh(
                 tile.coords,
                 &layer.appearances,
                 limit_layers,
+                &layer.layer_id,
             ) {
                 if rendered_tile.feature_ids.is_some() {
                     panic!("It should be cleaned before new feature is added");

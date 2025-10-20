@@ -179,7 +179,7 @@ export type MapMouseEvent = {
 
 export type ViewEvents = {
   resize: (w: number, h: number) => void;
-  pick: (batchId: number, info: Nullable<PickedFeature>) => void;
+  pick: (info: Nullable<PickedFeature>) => void;
   layer: <K extends keyof LayerEvent>(
     k: K,
     layerId: string,
@@ -1360,17 +1360,21 @@ export default class ThreeView<
       const prop = this._core?.getBatchProp(pickArr[0]);
       if (prop) {
         const pickedFeature: PickedFeature = {
-          properties: prop,
+          properties: prop.properties,
+          batchId: pickArr[0],
+          layerId: prop.layerId,
         };
-        this.emit("pick", pickArr[0], pickedFeature);
+        this.emit("pick", pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
           properties: new Map<string, unknown>(),
+          batchId: null,
+          layerId: null,
         };
-        this.emit("pick", pickArr[0], emptyFeature);
+        this.emit("pick", emptyFeature);
       }
     } else {
-      this.emit("pick", pickArr[0], null);
+      this.emit("pick", null);
     }
   }
 
@@ -1409,10 +1413,6 @@ export default class ThreeView<
       this.globeDepthTexture,
       this.camera.raw,
     );
-  }
-
-  getLayerIdByGlobalBatchId(globalBatchId: number): Nullable<string> {
-    return this._core?.getLayerIdByGlobalBatchId(globalBatchId);
   }
 }
 

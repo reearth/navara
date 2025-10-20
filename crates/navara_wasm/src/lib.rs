@@ -384,16 +384,17 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = getBatchProp)]
-    pub fn get_batch_prop(&mut self, batch_id: u32) -> JsValue {
-        self.app
-            .get_batch_prop(&batch_id)
-            .and_then(|v| serde_wasm_bindgen::to_value(&v).ok())
-            .unwrap_or(JsValue::NULL)
-    }
+    pub fn get_batch_prop(&mut self, batch_id: u32) -> BatchPropResult {
+        let (properties, layer_id) = self.app.get_batch_prop(&batch_id);
 
-    #[wasm_bindgen(js_name = getLayerIdByGlobalBatchId)]
-    pub fn get_layer_id_by_global_batch_id(&mut self, batch_id: u32) -> Option<String> {
-        self.app.get_layer_id_by_global_batch_id(&batch_id)
+        let properties_js = properties
+            .and_then(|v| serde_wasm_bindgen::to_value(&v).ok())
+            .unwrap_or(JsValue::NULL);
+
+        BatchPropResult {
+            properties: properties_js,
+            layer_id,
+        }
     }
 
     #[wasm_bindgen(js_name = readPropertiesFromFeature)]
