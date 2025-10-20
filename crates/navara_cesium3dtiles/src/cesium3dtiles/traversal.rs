@@ -17,7 +17,7 @@ use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileCon
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
-    Cesium3dTileContentMetadata, TileOrderByDistance,
+    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform
 };
 
 pub enum TraversalResult {
@@ -341,6 +341,9 @@ fn update_or_spawn_rendered_tile(
                             feature_id: None,
                             data_requester_id: tile.data_requester_id.unwrap(),
                             is_visible: true,
+                        },
+                        TileTransform {
+                            transform: tile.transform.unwrap_or_default(),
                         },
                     ))
                     .id(),

@@ -29,7 +29,7 @@ use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
 use navara_parser::{geojson::Position, pnts::*};
 
 use crate::{
-    Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
+    Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance, TileTransform,
 };
 
 use super::{
@@ -265,7 +265,10 @@ pub fn construct_model_by_cesium3dtiles_layer(
         Without<Deleted>,
     >,
     mut rendered_tiles: Query<
-        &mut RenderedCesium3dTileContent,
+        (
+            &mut RenderedCesium3dTileContent,
+            &TileTransform
+        ),
         (
             With<RenderedCesium3dTileContentPntsMarker>,
             Added<RenderedCesium3dTileContent>,
@@ -274,7 +277,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
     info!("construct_model_by_cesium3dtiles_layer called");
-    for mut tile in &mut rendered_tiles {
+    for (mut tile, transform) in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => {
                 info!("pnts data requester found");
@@ -309,6 +312,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
         appearance.draco_point_compressed = draco_compressed;
         appearance.point_cloud = true;
 
+        info!("transform: {:?}", transform.transform);
+
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
@@ -323,7 +328,10 @@ pub fn construct_model_by_cesium3dtiles_layer(
             },
             appearance,
             ModelBin(postions_handle),
-            Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)),
+            // Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)) *
+            // Transform::from_scale(Vec3::splat(0.25))
+            transform.transform.clone(),
+
         ));
         tile.feature_id = Some(entity.id());
 

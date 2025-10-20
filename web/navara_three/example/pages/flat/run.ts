@@ -9,18 +9,18 @@ export const run = async (view: ThreeView) => {
   view.addDefaultAtmosphereLayers();
 
   // kag castle
-  // view.flyTo({
-  //   lat: 34.775417,
-  //   lng: 138.014733,
-  //   height: 300,
-  // });
-
-
-    view.flyTo({
-    lat: 39.85328,
-    lng: 284.38791,
+  view.flyTo({
+    lat: 34.775417,
+    lng: 138.014733,
     height: 300,
   });
+
+
+  //   view.flyTo({
+  //   lat: 39.85328,
+  //   lng: 284.38791,
+  //   height: 300,
+  // });
 
   view.addLayer({
     type: "tiles",
@@ -93,20 +93,20 @@ export const run = async (view: ThreeView) => {
     type: "cesium3dtiles",
     // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudConstantColor/pointCloudConstantColor.pnts", },
     // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/pointCloudDraco.pnts", },
-    data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/tileset.json", },
+    // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/tileset.json", },
     // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/4/8.pnts", },
-    // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json", },
+    data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json", },
     // data: { uri: "/public/pnts/PointCloudConstantColor/pointCloudConstantColor.pnts", },
     model: {
       show: true,
       id_property: "gml_id",
-      color: 0xffffff,
+      color: 0xff0000,
       metalness: 0,
       roughness: 1,
       cast_shadow: true,
       receive_shadow: true,
-      height: 500,
-      size: 100000,
+      // height: 50,
+      // size: 100000,
       point_cloud: true,
     },
   });

@@ -4,7 +4,7 @@ use navara_data_requester::DataRequesterExtension;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
-use navara_math::{FloatType, Vec3};
+use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
 use url::{ParseError, Url};
 
@@ -65,7 +65,7 @@ pub struct Cesium3dTileContent {
     // If the content's URI isn't a model file, it's false.
     pub is_renderable_content: bool,
     pub bounding_volume: Option<Aabb>,
-
+    pub transform: Option<Transform>,
     pub state: Cesium3dTileContentState,
 }
 
@@ -75,6 +75,8 @@ impl Cesium3dTileContent {
             Some(c) => c,
             None => unimplemented!("TODO: Support multiple contents"),
         };
+
+        let tile_transform = Transform::from_matrix(Mat4::from_cols_array(&tile.transform.clone().map(|v| v as FloatType)));
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
@@ -93,8 +95,19 @@ impl Cesium3dTileContent {
                          xdir0, xdir1, xdir2,
                          ydir0, ydir1, ydir2,
                          zdir0, zdir1, zdir2,])) => {
-                Some(Aabb { center: Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType),
-                     extents: Vec3::new(xdir0 as FloatType, ydir0 as FloatType, zdir0 as FloatType) })
+                // Transform the bounding volume
+                let center = Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType);
+                let x_axis = Vec3::new(xdir0 as FloatType, xdir1 as FloatType, xdir2 as FloatType);
+                let y_axis = Vec3::new(ydir0 as FloatType, ydir1 as FloatType, ydir2 as FloatType);
+                let z_axis = Vec3::new(zdir0 as FloatType, zdir1 as FloatType, zdir2 as FloatType);
+
+                let center_transformed = tile_transform.transform_point(center);
+                let x_axis_transformed = tile_transform * x_axis;
+                let y_axis_transformed = tile_transform * y_axis;
+                let z_axis_transformed = tile_transform * z_axis;
+
+                Some(Aabb { center: center_transformed,
+                     extents: Vec3::new(x_axis_transformed.length(), y_axis_transformed.length(), z_axis_transformed.length()) })
             }
             _ => None,
         };
@@ -114,6 +127,7 @@ impl Cesium3dTileContent {
                 Refine::Replace => Refine::Replace,
                 Refine::Add => Refine::Add,
             },
+            transform: Some(tile_transform),
             state: Cesium3dTileContentState::default(),
         }
     }
@@ -182,4 +196,9 @@ pub struct RenderedCesium3dTileContent {
     pub feature_id: Option<Entity>,
     pub data_requester_id: Entity,
     pub is_visible: bool,
+}
+
+#[derive(Component)]
+pub struct TileTransform {
+    pub transform: Transform,
 }
