@@ -1,7 +1,7 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 import type { AnimationClip } from "three";
-import { BufferGeometry, Points, Group, Float32BufferAttribute} from "three";
+import { BufferGeometry, Points, Group, Float32BufferAttribute, PointsMaterial} from "three";
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 import type { BufferLoader } from "../";
@@ -23,6 +23,7 @@ export async function renderModel(
   viewEvents: EventHandler<ViewEvents>,
 ) {
   const loader = initializeGltfLoader();
+  const dracoLoader = new DRACOLoader();
 
   const rawScene = await (async () => {
     if (m.bin) {
@@ -33,11 +34,11 @@ export async function renderModel(
 
       if (m.material.point_cloud) {
         let geometry: BufferGeometry | undefined;
+        const material = new PointsMaterial( { vertexColors: true } );
 
         if (m.material.draco_point_compressed) {
-          const loader = new DRACOLoader();
-          geometry = await decompressDraco(bin.buffer as ArrayBuffer, loader);
-          loader.dispose();
+          geometry = await decompressDraco(bin.buffer as ArrayBuffer, dracoLoader);
+          geometry?.hasAttribute('color') && console.log('color attribute found in draco compressed geometry');
         } else {
           geometry = new BufferGeometry();
           geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(bin.buffer), 3));
@@ -45,7 +46,7 @@ export async function renderModel(
 
         const group = new Group();
         if (geometry) {
-          const points: Points = new Points(geometry);
+          const points: Points = new Points(geometry, material);
            group.add(points);
         }
         return group;
