@@ -356,7 +356,6 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
         model: {
           show: true,
-          id_property: "gml_id",
           color: 0xffffff,
           metalness: 0.2,
           roughness: 0.8,

@@ -2,9 +2,7 @@
 
 use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
-use navara_feature_component::batch::{
-    BatchTable, FeatureBatchIdMap, IdPropertySelections, IdPropertyTable,
-};
+use navara_feature_component::batch::{BatchTable, FeatureBatchIdMap};
 use navara_geometry::PolygonResource;
 
 mod billboard;
@@ -22,8 +20,6 @@ impl Plugin for FeaturePlugin {
         app.init_resource::<PolygonResource>()
             .init_resource::<BatchTable>()
             .init_resource::<FeatureBatchIdMap>()
-            .init_resource::<IdPropertyTable>()
-            .init_resource::<IdPropertySelections>()
             // Despawn RenderableFeature after removed event is sent.
             // Otherwise removed event can't reach to client.
             .add_systems(PreUpdate, event::despawn)

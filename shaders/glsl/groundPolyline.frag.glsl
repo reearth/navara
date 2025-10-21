@@ -18,7 +18,7 @@ in vec3 v_endPlaneNormalEc;
 in vec4 v_rightPlaneEC; // Technically can compute distance for this here
 in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
-in vec2 nvr_vBatchIdAndSel;
+in float nvr_vBatchId;
 in vec3 vNormal;
 
 #include chunks/show_pars_fragment;
@@ -33,7 +33,6 @@ uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
-uniform vec3 nvr_uHighlightColor;
 
 layout(location = 1) out vec4 normalBuffer;
 
@@ -100,16 +99,12 @@ void main() {
     }
 
     if(nvr_uPickable > 0.0) {
-        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchIdAndSel.x);
+        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
         gl_FragColor = vec4(pickColor.xyz, 1.0);
         return;
     }
 
     vec4 diffuseColor = vec4( color, 1. );
-
-    if(nvr_vBatchIdAndSel.y > 0.0) {
-        diffuseColor = vec4(nvr_uHighlightColor.xyz, 1.0);
-    }
 
     ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
 	vec3 totalEmissiveRadiance = vec3(1.);

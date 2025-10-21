@@ -1,6 +1,6 @@
 import { Unimplemented } from "@navara/core";
 
-// Interface for feature's mesh.
+// Interface for pickable mesh.
 export class PickableMesh {
   _setPickable(_pickable: boolean) {
     throw new Unimplemented();

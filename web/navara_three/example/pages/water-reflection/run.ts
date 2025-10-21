@@ -62,7 +62,6 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
     },
     model: {
       show: true,
-      id_property: "gml_id",
       color: 0xffffff,
       metalness: 0,
       roughness: 0.5,

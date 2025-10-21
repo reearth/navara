@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 mod appearance;
 mod attribute;
+mod batch;
 mod camera;
 mod coords;
 mod crs;
@@ -20,6 +21,7 @@ mod window;
 
 pub use appearance::*;
 pub use attribute::*;
+pub use batch::*;
 pub use camera::*;
 pub use coords::*;
 pub use crs::*;

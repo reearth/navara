@@ -11,7 +11,6 @@ import {
 } from "three";
 
 import { BufferView } from "../bufferView";
-import { ModelMesh, InstancedMesh } from "../mesh";
 import { isPickableMesh } from "../mesh/pickableMesh";
 import { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
@@ -26,8 +25,7 @@ export class PickHelper extends CustomRenderPass {
   private pickingTexture: WebGLRenderTarget;
   private pixelBuffer: Uint8Array;
   private _renderer: WebGLRenderer;
-  private highlightColor: Color;
-  private onPickCallback: (pickArr: number[]) => number[];
+  private onPickCallback: (pickArr: number[]) => void;
 
   private debugBufferView?: BufferView;
   private debugRenderTarget?: WebGLRenderTarget;
@@ -44,8 +42,7 @@ export class PickHelper extends CustomRenderPass {
     scenes: Scenes,
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
-    highlightColor: Color,
-    onPickCallback: (pickArr: number[]) => number[],
+    onPickCallback: (pickArr: number[]) => void,
     inputBuffer: WebGLRenderTarget,
     options?: PickHelperOptions,
   ) {
@@ -62,7 +59,6 @@ export class PickHelper extends CustomRenderPass {
     this.pixelBuffer = new Uint8Array(4);
     this._renderer = renderer;
     this.camera = camera;
-    this.highlightColor = highlightColor;
     this.onPickCallback = onPickCallback;
 
     this.mouseMoved = false;
@@ -132,100 +128,6 @@ export class PickHelper extends CustomRenderPass {
     this._scenes.opaque.visible = !pickable;
   }
 
-  private pickSprite(pickSet: Set<number>, obj: InstancedMesh<Object3D>) {
-    obj.pick(pickSet, this.highlightColor);
-  }
-
-  private pickModel(pickSet: Set<number>, obj: ModelMesh) {
-    const batchIdAndSel = obj.userData.batchIdAndSel;
-    const dataSize = obj.userData.dataSize;
-    if (!batchIdAndSel || batchIdAndSel.length < 1 || !dataSize) {
-      return;
-    }
-
-    this.traverseModel(obj, (mesh: Mesh) => {
-      const attrBatchIdAndSel = mesh.geometry.attributes?.batchIdAndSel?.array;
-      if (attrBatchIdAndSel) {
-        for (let i = 1; i < attrBatchIdAndSel.length; i += 2) {
-          attrBatchIdAndSel[i] = 0;
-        }
-        mesh.geometry.attributes.batchIdAndSel.needsUpdate = true;
-      }
-    });
-
-    const toDelete = new Set<number>();
-
-    this.traverseModel(obj, (mesh: Mesh) => {
-      const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
-      const attrBatchIdAndSel = mesh.geometry.attributes?.batchIdAndSel?.array;
-      if (attrBatchIdAndSel) {
-        if (internalBatchIds) {
-          for (let j = 0; j < internalBatchIds.length; j++) {
-            const batchId = batchIdAndSel[internalBatchIds[j] * dataSize];
-            if (pickSet.has(batchId)) {
-              attrBatchIdAndSel[j * 2 + 1] = 1;
-              toDelete.add(batchId);
-            }
-          }
-        } else {
-          if (pickSet.has(batchIdAndSel[0])) {
-            for (let i = 1; i < attrBatchIdAndSel.length; i += 2) {
-              attrBatchIdAndSel[i] = 1;
-            }
-            toDelete.add(batchIdAndSel[0]);
-          }
-        }
-        mesh.geometry.attributes.batchIdAndSel.needsUpdate = true;
-      }
-    });
-
-    toDelete.forEach((batchId) => pickSet.delete(batchId));
-  }
-
-  private pickMesh(pickSet: Set<number>, obj: Mesh) {
-    const batchIdAndSel = obj.userData.batchIdAndSel;
-    const attrBatchIdAndSel = obj.geometry.attributes?.batchIdAndSel?.array;
-    if (!attrBatchIdAndSel) {
-      return;
-    }
-
-    for (let i = 1; i < attrBatchIdAndSel.length; i += 2) {
-      attrBatchIdAndSel[i] = 0;
-    }
-
-    const toDelete = new Set<number>();
-
-    for (let j = 0; j < batchIdAndSel.length; j += 2) {
-      if (pickSet.has(batchIdAndSel[j])) {
-        attrBatchIdAndSel[j + 1] = 1;
-        toDelete.add(batchIdAndSel[j]);
-      }
-    }
-
-    toDelete.forEach((batchId) => pickSet.delete(batchId));
-    obj.geometry.attributes.batchIdAndSel.needsUpdate = true;
-  }
-
-  private toggleHighlight(pickArr: number[]) {
-    const pickSet = new Set(pickArr);
-    for (const [_key, obj] of this._meshes) {
-      // point, billboard
-      if (obj instanceof InstancedMesh) {
-        this.pickSprite(pickSet, obj);
-      }
-
-      // model
-      else if (obj instanceof ModelMesh) {
-        this.pickModel(pickSet, obj);
-      }
-
-      // polygon, polyline
-      else if (obj instanceof Mesh && obj.userData.batchIdAndSel) {
-        this.pickMesh(pickSet, obj);
-      }
-    }
-  }
-
   public processRender(target: WebGLRenderTarget) {
     const orgClearColor = new Color();
     this._renderer.getClearColor(orgClearColor);
@@ -287,10 +189,7 @@ export class PickHelper extends CustomRenderPass {
       this.pixelBuffer[2];
 
     const pickArr = batchId > 0 ? [batchId] : [];
-    const pickedBatchIds = this.onPickCallback(pickArr);
-    if (pickedBatchIds) {
-      this.toggleHighlight(pickedBatchIds);
-    }
+    this.onPickCallback(pickArr);
   }
 
   public dispose() {

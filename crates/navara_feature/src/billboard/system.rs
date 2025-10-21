@@ -9,7 +9,7 @@ use navara_core::WGS84_32;
 use navara_feature_component::{
     batch::{
         BatchId, BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIdAndSelections, IdPropertyTable,
+        GlobalBatchIds,
     },
     id::FeatureId,
     render::{RenderInformation, RenderableFeature, TransferablePointGeometry},
@@ -36,7 +36,7 @@ pub fn transfer_batched_mesh(
             &BillboardMaterial,
             &BatchedFeature,
             &FeatureBatchId,
-            &GlobalBatchIdAndSelections,
+            &GlobalBatchIds,
             &mut FeatureId,
         ),
         (
@@ -63,7 +63,7 @@ pub fn transfer_batched_mesh(
         let feature_len = batched_feature.features.len();
         let mut all_coords = Vec::with_capacity(feature_len * 3);
         let mut batch_indices = Vec::with_capacity(feature_len);
-        let mut batch_ids_and_sels = Vec::with_capacity(feature_len * 2);
+        let mut batch_ids = Vec::with_capacity(feature_len);
         let mut crs = None;
 
         // Get the global batch IDs from the buffer store
@@ -92,10 +92,8 @@ pub fn transfer_batched_mesh(
             // Add batch index
             batch_indices.push(batch_index.0);
 
-            // Add batch ID and selection status
-            let global_index = (batch_index.0 * 2) as usize;
-            batch_ids_and_sels.push(global_ids[global_index] as f32); // batch ID
-            batch_ids_and_sels.push(global_ids[global_index + 1] as f32); // selection status
+            let global_index = (batch_index.0) as usize;
+            batch_ids.push(global_ids[global_index] as f32);
         }
 
         let crs = crs.unwrap();
@@ -125,7 +123,7 @@ pub fn transfer_batched_mesh(
                         &mut buf,
                         all_coords,
                         batch_indices,
-                        batch_ids_and_sels,
+                        batch_ids,
                     ),
                     active: false,
                     feature_batch_id: feature_batch_id.0,
@@ -189,10 +187,10 @@ pub fn transfer_mesh(
                         &mut buf,
                         position.to_array().to_vec(),
                         vec![0],
-                        batch_id.0.to_array().to_vec(),
+                        vec![batch_id.0],
                     ),
                     active: lod_marker.is_none(),
-                    feature_batch_id: batch_id.0.x as u32,
+                    feature_batch_id: batch_id.0 as u32,
                     batch_length: 1,
                 },
             ))
@@ -372,28 +370,22 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &GlobalBatchIdAndSelections),
+        (Entity, &FeatureId, &GlobalBatchIds),
         (With<BatchedFeature>, With<BillboardMarker>, With<Deleted>),
     >,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, global_batch_id_and_selections) in &removed_features {
+    for (feature_id, rendered_feature_id, global_batch_ids) in &removed_features {
         let Some(rendered_feature_id) = rendered_feature_id.0 else {
             unreachable!();
         };
         if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res, &mut id_prop_table_res);
+            feature.destroy(&mut buf, &mut batch_table_res);
         }
-        feature_batch_id_map.remove(
-            &rendered_feature_id,
-            &mut buf,
-            &mut batch_table_res,
-            &mut id_prop_table_res,
-        );
-        buf.remove(&global_batch_id_and_selections.handle);
+        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+        buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
     }
 }

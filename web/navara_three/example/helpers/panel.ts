@@ -1,5 +1,9 @@
-import type { LayerDescription } from "@navara/three";
-import type ThreeView from "@navara/three";
+import ThreeView, {
+  type LayerDescription,
+  type Layer,
+  Color,
+} from "@navara/three";
+import { isNumber } from "lodash-es";
 import {
   FolderApi,
   Pane,
@@ -16,16 +20,131 @@ export type MaterialLayerDescription = Exclude<
   | { type: "effect" }
 >;
 
+const selectedFeatures = new Set<string>();
+const selectedBatchIds = new Set<number>();
+
+const addFeatureUpdateHandler = (
+  layerDesc: MaterialLayerDescription,
+  layer: Layer,
+) => {
+  // Function to dynamically get the current default color from layerDesc
+  const getDefaultColor = (): number => {
+    let defaultColor = 0xffffff;
+
+    if (layerDesc.type == "geojson") {
+      if (layerDesc.point && layerDesc.point.color !== undefined) {
+        defaultColor = layerDesc.point.color;
+      } else if (
+        layerDesc.billboard &&
+        layerDesc.billboard.color !== undefined
+      ) {
+        defaultColor = layerDesc.billboard.color;
+      } else if (layerDesc.text && layerDesc.text.color !== undefined) {
+        defaultColor = layerDesc.text.color;
+      } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
+        defaultColor = layerDesc.polyline.color;
+      } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
+        defaultColor = layerDesc.polygon.color;
+      } else if (layerDesc.model && layerDesc.model.color !== undefined) {
+        defaultColor = layerDesc.model.color;
+      }
+    } else if (layerDesc.type == "b3dm") {
+      if (layerDesc.model && layerDesc.model.color !== undefined) {
+        defaultColor = layerDesc.model.color;
+      }
+    } else if (layerDesc.type == "cesium3dtiles") {
+      if (layerDesc.model && layerDesc.model.color !== undefined) {
+        defaultColor = layerDesc.model.color;
+      }
+    } else if (layerDesc.type == "mvt") {
+      if (layerDesc.point && layerDesc.point.color !== undefined) {
+        defaultColor = layerDesc.point.color;
+      } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
+        defaultColor = layerDesc.polyline.color;
+      } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
+        defaultColor = layerDesc.polygon.color;
+      }
+    }
+
+    return defaultColor;
+  };
+
+  layer.on("featureUpdated", (evaluator) => {
+    evaluator.evaluate((batchId, property) => {
+      const gmlId = property?.get("gml_id");
+      if (gmlId && selectedFeatures.has(gmlId as string)) {
+        return {
+          color: new Color().setHex(0x00ffff),
+        };
+      } else if (batchId !== undefined && selectedBatchIds.has(batchId)) {
+        return {
+          color: new Color().setHex(0x00ffff),
+        };
+      }
+
+      // Dynamically get the current default color
+      return {
+        color: new Color().setHex(getDefaultColor()),
+      };
+    });
+  });
+};
+
 export const addCtrlPanel = (
   layers: MaterialLayerDescription[],
   view: ThreeView,
   paneInput?: Pane,
 ) => {
+  const layerInstMap = new Map<string, Layer>();
+
+  view.on("pick", (info) => {
+    const gmlId = info?.properties.get("gml_id");
+    if (gmlId) {
+      // if gml_id exists, use it for selection
+      selectedFeatures.add(gmlId as string);
+
+      if (isNumber(info?.batchId)) {
+        const layerId = info?.layerId;
+        if (layerId) {
+          const layer = layerInstMap.get(layerId);
+          if (layer) {
+            layer.forceUpdate();
+          }
+        }
+      }
+    } else if (isNumber(info?.batchId)) {
+      // else if batchId exists, use it for selection
+      selectedBatchIds.add(info?.batchId);
+
+      const layerId = info?.layerId;
+      if (layerId) {
+        const layer = layerInstMap.get(layerId);
+        if (layer) {
+          layer.forceUpdate();
+        }
+      }
+    } else {
+      // else clear all selections
+      selectedFeatures.clear();
+      selectedBatchIds.clear();
+
+      layerInstMap.forEach((layer) => {
+        layer.forceUpdate();
+      });
+    }
+  });
+
   const layerMap = new Map<string, MaterialLayerDescription>();
-  layers.forEach((layer) => {
-    const layerId = view.addLayer(layer).id;
-    if (layerId) {
-      layerMap.set(layerId, layer);
+  layers.forEach((layerDef) => {
+    const layer = view.addLayer(layerDef);
+
+    if (layer.id) {
+      layerInstMap.set(layer.id, layer);
+      layerMap.set(layer.id, layerDef);
+    }
+
+    if (layerDef.type !== "tiles") {
+      addFeatureUpdateHandler(layerDef, layer);
     }
   });
 

@@ -33,7 +33,7 @@ type Attributes = BatchedFeatureAttributes<{
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
   end_normal_and_texture_coordinate_normalization_x: BufferAttribute;
   forward_offset: BufferAttribute;
-  batchIdAndSel: BufferAttribute;
+  attrBatchId: BufferAttribute;
 }>;
 
 export class PolylineMesh extends BatchedFeatureMesh<
@@ -68,10 +68,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
       g.right_normal_and_texture_coordinate_normalization_y.data,
     );
     const indices = buf.removeU32(g.indices);
-    const batchIdAndSel = g.batch_id_and_sel
-      ? buf.removeF32(g.batch_id_and_sel.data)
-      : undefined;
-    const batchIdSize = g.batch_id_and_sel ? g.batch_id_and_sel.size : 0;
+    const batchIds = g.batch_ids ? buf.removeF32(g.batch_ids.data) : undefined;
+    const batchIdSize = g.batch_ids ? g.batch_ids.size : 0;
     const batchIndex = g.batch_index
       ? buf.removeU32(g.batch_index.data)
       : undefined;
@@ -117,10 +115,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
       ),
     );
 
-    if (batchIdAndSel) {
+    if (batchIds) {
       geometry.setAttribute(
-        "batchIdAndSel",
-        new BufferAttribute(batchIdAndSel, batchIdSize),
+        "attrBatchId",
+        new BufferAttribute(batchIds, batchIdSize),
       );
     }
 
@@ -131,7 +129,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
 
-    this.userData.batchIdAndSel = batchIdAndSel;
+    this.userData.batchIds = batchIds;
     this.userData.batchIdSize = batchIdSize;
   }
 
@@ -166,7 +164,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       nvr_uPickable: uPickable,
-      nvr_uHighlightColor: uniforms.highlightColor,
     };
 
     // Use the original shader files with modifications for batch texture
@@ -181,8 +178,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.visible = !!meshMaterial.show;
     this.material.lights = true;
     this.material.vertexColors = false;
-
-    this.material.userData.color = meshMaterial.color;
     this.material.userData.uPickable = uPickable;
 
     this.material.onBeforeCompile = (shader) => {
@@ -206,9 +201,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
     const prev = this.material.userData.prev;
 
+    // Only update material.color if batchTexture color is not being used
     if (prev.color !== material.color) {
-      this.material.uniforms.color.value.set(material.color);
-      prev.color = material.color;
+      const next = material.color ?? 0;
+      // If batchTexture color is not enabled, update material.color directly
+      if (!this.material.userData._batchColorTouched) {
+        this.material.uniforms.color.value.set(material.color);
+      }
+      prev.color = next;
     }
 
     if (prev.use_ground_normals !== material.use_ground_normals) {
@@ -261,7 +261,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureColor(color: Color): void {
-    this.material.uniforms.color.value.set(color);
+    // If batchTexture is being used, update via batchTexture
+    if (this.material.userData._batchColorTouched) {
+      super._setFeatureColor(color);
+    } else {
+      // Otherwise, update material.uniforms.color directly
+      this.material.uniforms.color.value.set(color);
+    }
   }
 
   _setFeatureShow(visible: boolean): void {

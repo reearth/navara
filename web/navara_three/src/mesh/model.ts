@@ -99,13 +99,13 @@ export class ModelMesh
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
   ) {
-    const batchIdAndSelectedStatus = m.geometry.batch_id_and_selected_status;
-    const dataSize = batchIdAndSelectedStatus?.size ?? 0;
-    const batchIdAndSel = batchIdAndSelectedStatus
-      ? buf.u32(batchIdAndSelectedStatus.data)
+    const batchIdsData = m.geometry.batch_ids;
+    const dataSize = batchIdsData?.size ?? 0;
+    const batchIds = batchIdsData
+      ? buf.u32(batchIdsData.data)
       : new Uint32Array(dataSize);
 
-    this.userData.batchIdAndSel = batchIdAndSel;
+    this.userData.batchIds = batchIds;
     this.userData.dataSize = dataSize;
 
     const meshMaterial = m.material;
@@ -121,10 +121,10 @@ export class ModelMesh
     }
 
     // For Cesium 3D Tiles
-    if (batchIdAndSel) {
+    if (batchIds) {
       this.overrideCesium3DTilesMaterial(
         meshMaterial,
-        batchIdAndSel,
+        batchIds,
         dataSize,
         uniforms,
         viewEvents,
@@ -220,7 +220,7 @@ export class ModelMesh
 
   private overrideCesium3DTilesMaterial(
     meshMaterial: NavaraModelMaterial,
-    batchIdAndSel: Uint32Array<ArrayBufferLike>,
+    batchIds: Uint32Array<ArrayBufferLike>,
     dataSize: number,
     uniforms: CommonUniforms,
     viewEvents: EventHandler<ViewEvents>,
@@ -228,27 +228,24 @@ export class ModelMesh
     this.traverseMesh((mesh) => {
       const vertCnt = mesh.geometry.attributes?.position?.count;
 
-      const attrBatchIdAndSel = new Float32Array(vertCnt * 2);
+      const attrBatchIds = new Float32Array(vertCnt);
       const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
 
       if (internalBatchIds) {
         let i = 0;
         for (const internalBatchId of internalBatchIds) {
-          attrBatchIdAndSel[i * 2] = batchIdAndSel[internalBatchId * 2] ?? 0;
-          attrBatchIdAndSel[i * 2 + 1] =
-            batchIdAndSel[internalBatchId * 2 + 1] ?? 0;
+          attrBatchIds[i] = batchIds[internalBatchId] ?? 0;
           i++;
         }
       } else {
         for (let i = 0; i < vertCnt; i++) {
-          attrBatchIdAndSel[i * 2] = batchIdAndSel[0];
-          attrBatchIdAndSel[i * 2 + 1] = batchIdAndSel[1];
+          attrBatchIds[i] = batchIds[0];
         }
       }
 
       mesh.geometry.setAttribute(
-        "batchIdAndSel",
-        new BufferAttribute(attrBatchIdAndSel, dataSize),
+        "batchId",
+        new BufferAttribute(attrBatchIds, dataSize),
       );
 
       const mcolor = meshMaterial.color;
@@ -301,7 +298,6 @@ export class ModelMesh
       ) => {
         shader.defines ??= {};
         Object.assign(shader.defines, mesh.material.userData.defines);
-        shader.uniforms.nvr_uHighlightColor = uniforms.highlightColor;
         shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
         shader.uniforms.reflectivity = mesh.material.userData.reflectivity;
         shader.uniforms.uWaterNormalMap = mesh.material.userData.waterNormalMap;
@@ -326,8 +322,8 @@ export class ModelMesh
           .replace(
             "void main() {",
             `
-                  in vec2 batchIdAndSel;
-                  out vec2 nvr_vBatchIdAndSel;
+                  in float batchId;
+                  out float nvr_vBatchId;
                   out vec3 vPosition;
                   
                   ${ShowParsVertex}
@@ -337,7 +333,7 @@ export class ModelMesh
                   ${ShadowMapDepthParsVertex}
     
                   void main() {
-                    nvr_vBatchIdAndSel = batchIdAndSel;
+                    nvr_vBatchId = batchId;
               `,
           )
           .replace(
@@ -370,7 +366,6 @@ export class ModelMesh
           .replace(
             "void main() {",
             `
-                  uniform vec3 nvr_uHighlightColor;
                   uniform float nvr_uPickable;
                   uniform sampler2D uWaterNormalMap;
                   uniform float uWaterScaleNormal;
@@ -380,7 +375,7 @@ export class ModelMesh
                   uniform float uApplyWaterNormal;
                   uniform float uTime;
                   // uniform float reflectivity;
-                  in vec2 nvr_vBatchIdAndSel;
+                  in float nvr_vBatchId;
                   
                   ${ShowParsFragment}
                   
@@ -429,21 +424,12 @@ export class ModelMesh
           `,
           )
           .replace(
-            "#include <color_fragment>",
-            `
-                  #include <color_fragment>
-                  if(nvr_vBatchIdAndSel.y > 0.0) {
-                    diffuseColor = vec4(nvr_uHighlightColor.xyz, 1.0);
-                  }
-                  `,
-          )
-          .replace(
             "#include <dithering_fragment>",
             `
                   #include <dithering_fragment>
     
                   if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
-                    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchIdAndSel.x);
+                    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
                     gl_FragColor = vec4(pickColor.xyz, 1.0);
                   }
                   `,

@@ -107,7 +107,11 @@ export type FeatureHandler = {
   ) => void;
   readPropertiesFromFeature(
     bits: bigint,
-    callback: (batchId: number, properties?: Map<string, unknown>) => void,
+    callback: (
+      batchIdx: number,
+      batchId: number,
+      properties?: Map<string, unknown>,
+    ) => void,
   ): void;
 };
 
@@ -322,6 +326,9 @@ export function processEvent(
             texturizedSceneByTileCoordinates,
             renderFlag,
             buf,
+            viewEvents,
+            layersManager,
+            updatedAt,
           );
           break;
       }

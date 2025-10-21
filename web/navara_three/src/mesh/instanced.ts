@@ -70,26 +70,4 @@ export class InstancedMesh<M extends Object3D>
       }
     }
   }
-
-  pick(pickedBatchIds: Set<number>, highlightColor: Color) {
-    for (const mesh of this.meshes()) {
-      const batchId = mesh.userData.batchId;
-      const isPicked = pickedBatchIds.has(batchId);
-      if (isPicked) {
-        pickedBatchIds.delete(batchId);
-      }
-
-      if (!isFeatureMesh(mesh)) continue;
-
-      if (mesh.userData.isPicked !== isPicked) {
-        mesh.userData.isPicked = isPicked;
-        if (isPicked) {
-          mesh.userData.orgColor = mesh._getFeatureColor().clone();
-          mesh._setFeatureColor(highlightColor);
-        } else {
-          mesh._setFeatureColor(mesh.userData.orgColor);
-        }
-      }
-    }
-  }
 }
