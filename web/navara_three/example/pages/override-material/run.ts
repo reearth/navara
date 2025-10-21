@@ -402,7 +402,6 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       size: 0.01,
       scale_by_distance: true,
       clamp_to_ground: true,
-      id_property: "gml_id",
       color: 0xff0000,
     },
   };
@@ -457,7 +456,6 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       width: 3,
       height: 1,
       clamp_to_ground: true,
-      id_property: "gml_id",
       use_ground_normals: true,
     },
     vector_tile: {
@@ -523,7 +521,6 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       clamp_to_ground: true,
       use_ground_normals: true,
       wireframe: false,
-      id_property: "gml_id",
     },
     vector_tile: {
       max_zoom: 16,
@@ -602,7 +599,6 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
       extruded_height: 0,
       clamp_to_ground: false,
       wireframe: false,
-      id_property: "gml_id",
       // cast_shadow: true,
       // receive_shadow: true,
     },
@@ -712,7 +708,6 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
     },
     model: {
       show: true,
-      id_property: "gml_id",
       color: 0xffffff,
       metalness: 0,
       roughness: 1,

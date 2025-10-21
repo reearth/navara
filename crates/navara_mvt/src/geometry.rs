@@ -3,10 +3,7 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use navara_buffer_store::BufferStore;
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::{
-        BatchIndex, BatchTable, FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections,
-        IdPropertyTable,
-    },
+    batch::{BatchIndex, BatchTable, FeatureBatchId, GlobalBatchIds},
     billboard::BillboardGeometry,
     point::PointGeometry,
     polygon::PolygonGeometry,
@@ -32,7 +29,7 @@ pub(crate) struct ConstructedGeometry {
     pub feature_ids: Vec<Entity>,
     pub geometry_type: ConstructedGeometryType,
     pub feature_batch_id: FeatureBatchId,
-    pub global_batch_id_and_selections: GlobalBatchIdAndSelections,
+    pub global_batch_ids: GlobalBatchIds,
 }
 
 // TODO: Store the coordinates into BufferStore.
@@ -41,13 +38,12 @@ pub(crate) struct ConstructedGeometry {
 pub fn construct_geometry(
     commands: &mut Commands,
     batch_table: &mut BatchTable,
-    id_prop_table_res: &mut IdPropertyTable,
     buf: &mut BufferStore,
     mvt_bin: Vec<u8>,
-    id_prop_sel_res: &IdPropertySelections,
     xyz: TileXYZ,
     appearances: &[Appearance],
     limit_layers: &Option<Vec<String>>,
+    layer_id: &str,
 ) -> Option<Vec<ConstructedGeometry>> {
     let mut result = vec![];
 
@@ -73,8 +69,10 @@ pub fn construct_geometry(
 
         let mut feature_ids = vec![];
 
-        let feature_batch_id = batch_table.init_values().unwrap_or(0);
-        let mut global_batch_id_and_selections: Vec<u32> = vec![];
+        let feature_batch_id = batch_table
+            .init_values(Some(layer_id.to_owned()))
+            .unwrap_or(0);
+        let mut global_batch_ids: Vec<u32> = vec![];
 
         for feature in features {
             let geom = feature.get_geometry();
@@ -83,19 +81,16 @@ pub fn construct_geometry(
                 .as_ref()
                 .and_then(|props| serde_json::to_value(props).ok())
                 .unwrap_or(serde_json::Value::Null);
-            let id_prop = get_id_property(geom, appearances);
 
-            let batch_idx = BatchIndex((global_batch_id_and_selections.len() / 2) as u32);
+            let batch_idx = BatchIndex(global_batch_ids.len() as u32);
 
             let batch_id = batch_table
-                .add_id_prop(id_prop, &props, id_prop_table_res)
+                .init_values(Some(layer_id.to_owned()))
                 .unwrap_or(0);
 
             batch_table.add_values(feature_batch_id, props);
 
-            global_batch_id_and_selections.push(batch_id);
-            global_batch_id_and_selections
-                .push(batch_table.get_selection(&batch_id, id_prop_sel_res));
+            global_batch_ids.push(batch_id);
 
             handle_geometry(
                 commands,
@@ -114,74 +109,20 @@ pub fn construct_geometry(
             continue;
         }
 
-        let batch_length = global_batch_id_and_selections.len() / 2;
+        let batch_length = global_batch_ids.len();
 
         result.push(ConstructedGeometry {
             feature_ids,
             geometry_type: geometry_type.unwrap(),
             feature_batch_id: FeatureBatchId(feature_batch_id),
-            global_batch_id_and_selections: GlobalBatchIdAndSelections {
-                handle: buf.new_u32(global_batch_id_and_selections),
+            global_batch_ids: GlobalBatchIds {
+                handle: buf.new_u32(global_batch_ids),
                 batch_length: batch_length as u32,
             },
         });
     }
 
     Some(result)
-}
-
-fn get_id_property(geom: &Geometry<f32>, appearances: &[Appearance]) -> Option<String> {
-    match geom {
-        Geometry::MultiPolygon(_) | Geometry::Polygon(_) => {
-            match appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polygon(_)))
-            {
-                Some(Appearance::Polygon(a)) => {
-                    return Some(a.id_property.clone());
-                }
-                _ => {
-                    return None;
-                }
-            };
-        }
-        Geometry::MultiPoint(_) | Geometry::Point(_) => {
-            match appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Point(_)))
-            {
-                Some(Appearance::Point(a)) => {
-                    return Some(a.id_property.clone());
-                }
-                _ => {
-                    return None;
-                }
-            };
-        }
-        Geometry::MultiLineString(_) | Geometry::LineString(_) => {
-            match appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polyline(_)))
-            {
-                Some(Appearance::Polyline(a)) => {
-                    return Some(a.id_property.clone());
-                }
-                _ => {
-                    return None;
-                }
-            };
-        }
-        Geometry::GeometryCollection(geoms) => {
-            for geom in &geoms.0 {
-                if let Some(id) = get_id_property(geom, appearances) {
-                    return Some(id);
-                }
-            }
-        }
-        _ => {}
-    };
-
-    None
 }
 
 #[allow(clippy::too_many_arguments)]

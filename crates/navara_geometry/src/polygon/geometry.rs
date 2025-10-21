@@ -116,7 +116,7 @@ pub fn create_flat_polygon_geometry(
         position: FloatAttribute::new(combined_positions, 3),
         normal: None,
         scale_normal_and_cap: None,
-        batch_id_and_sel: None,
+        batch_ids: None,
         batch_index: None,
     };
 
@@ -270,7 +270,7 @@ pub fn create_polygon_geometry(
         position: FloatAttribute::new(vec![], 3),
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
-        batch_id_and_sel: None,
+        batch_ids: None,
         batch_index: None,
     };
     let mut indices = vec![];
@@ -383,7 +383,7 @@ pub fn create_geometry_from_positions_extruded(
             position: FloatAttribute::new(wall_positions, 3),
             normal: None,
             scale_normal_and_cap: Some(FloatAttribute::new(wall_scale_normal_and_cap, 4)),
-            batch_id_and_sel: None,
+            batch_ids: None,
             batch_index: None,
         },
         indices: wall_indices,
@@ -405,7 +405,7 @@ pub fn create_geometry_from_positions_extruded(
                     position: FloatAttribute::new(hole_wall_pos, 3),
                     normal: None,
                     scale_normal_and_cap: Some(FloatAttribute::new(hole_scale_normal_and_cap, 4)),
-                    batch_id_and_sel: None,
+                    batch_ids: None,
                     batch_index: None,
                 },
                 indices: hole_wall_i,
@@ -419,7 +419,7 @@ pub fn create_geometry_from_positions_extruded(
                 position: FloatAttribute::new(top_bottom_positions, 3),
                 normal: None,
                 scale_normal_and_cap: Some(FloatAttribute::new(scale_normal_and_cap, 4)),
-                batch_id_and_sel: None,
+                batch_ids: None,
                 batch_index: None,
             },
             indices: top_bottom_indices,

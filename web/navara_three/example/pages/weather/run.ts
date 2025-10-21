@@ -107,7 +107,6 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      id_property: "gml_id",
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
@@ -147,7 +146,6 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      id_property: "gml_id",
       color: 0xffffff,
       metalness: 0,
       roughness: 1,

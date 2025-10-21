@@ -1,7 +1,6 @@
 import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
 import { setTransform, type BufferLoader } from "../event";
-import type { CommonUniforms } from "../uniforms";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { PointMesh } from "./point";
@@ -10,29 +9,24 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
   constructor(
     m: NavaraPointMesh,
     buf: BufferLoader,
-    uniforms: CommonUniforms,
     options?: InstancedMeshOptions,
   ) {
     super(options);
 
-    this.initMeshes(m, buf, uniforms);
+    this.initMeshes(m, buf);
   }
 
-  private initMeshes(
-    m: NavaraPointMesh,
-    buf: BufferLoader,
-    uniforms: CommonUniforms,
-  ) {
+  private initMeshes(m: NavaraPointMesh, buf: BufferLoader) {
     const g = m.geometry;
     const positionData = g.position;
     const position = buf.removeF32(positionData.data);
     const positionSize = positionData.size;
-    const batchIdAndSelData = g.batch_id_and_sel;
-    const batchIdAndSel = buf.removeF32(batchIdAndSelData.data);
-    const batchIdSize = batchIdAndSelData.size;
+    const batchIdsData = g.batch_ids;
+    const batchIds = buf.removeF32(batchIdsData.data);
+    const batchIdSize = batchIdsData.size;
     const batchIndexData = g.batch_index;
     const batchIndex = buf.removeU32(batchIndexData.data);
-    if (!position || !batchIdAndSel || !batchIndex) return;
+    if (!position || !batchIds || !batchIndex) return;
 
     const material = m.material;
     const active = m.active;
@@ -47,10 +41,9 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
       const z = position[posIdx + 2];
 
       const batchIdIdx = i * batchIdSize;
-      const batchId = batchIdAndSel[batchIdIdx];
-      const selected = !!batchIdAndSel[batchIdIdx + 1];
+      const batchId = batchIds[batchIdIdx];
 
-      const mesh = new PointMesh(material, uniforms, batchId, selected, active);
+      const mesh = new PointMesh(material, batchId, active);
       mesh.renderOrder = this.renderOrder;
 
       setTransform(mesh, transform);

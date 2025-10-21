@@ -16,7 +16,6 @@ import {
   Vector3,
   Texture,
   Vector2,
-  Color,
   LinearFilter,
   Group,
   Material,
@@ -510,9 +509,6 @@ export default class ThreeView<
       tGlobeDepth: { value: null },
       tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
-      highlightColor: {
-        value: options.picking?.highlightColor ?? new Color(0x00ffff),
-      },
       // TODO: Need to sync `fov` with WASM side
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
@@ -671,7 +667,6 @@ export default class ThreeView<
         this._scenes,
         this._meshes,
         this._drapedFeatureMaterials,
-        this._options.picking?.highlightColor ?? new Color(0x00ffff),
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
         // {
@@ -1358,34 +1353,29 @@ export default class ThreeView<
     this.resize(width, height, pixelRatio);
   };
 
-  onPick(pickArr: number[]): number[] {
+  onPick(pickArr: number[]) {
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
       const prop = this._core?.getBatchProp(pickArr[0]);
       if (prop) {
         const pickedFeature: PickedFeature = {
-          properties: prop,
+          properties: prop.properties,
+          batchId: pickArr[0],
+          layerId: prop.layerId,
         };
         this.emit("pick", pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
           properties: new Map<string, unknown>(),
+          batchId: null,
+          layerId: null,
         };
         this.emit("pick", emptyFeature);
       }
-
-      // for highlight
-      const pickedBatchIds = this._core?.getPickedBatchIds(pickArr[0]);
-      if (pickedBatchIds) {
-        return Array.from(pickedBatchIds);
-      }
     } else {
-      this._core?.clearPickingStatus();
       this.emit("pick", null);
     }
-
-    return [];
   }
 
   get animation() {

@@ -68,7 +68,7 @@ export class FeatureEvaluator {
   private handler: FeatureHandler;
   private featureId: FeatureId;
   private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
-  private batchIds = new Set<number>();
+  private batchIds: number[] = [];
 
   // TODO: Need to support TSL
   obj: Object3D;
@@ -91,7 +91,11 @@ export class FeatureEvaluator {
 
     this.handler.readPropertiesFromFeature(
       this.featureId,
-      (_batchId: number, props: Map<string, unknown> | undefined) => {
+      (
+        _batchIdx: number,
+        _batchId: number,
+        props: Map<string, unknown> | undefined,
+      ) => {
         properties = props;
       },
     );
@@ -99,7 +103,10 @@ export class FeatureEvaluator {
     return properties;
   }
 
-  // This works with batched feature like MVT and Cesium 3D Tiles.
+  /**
+   * Evaluate feature styles by feature's property.
+   * Note that layer color is overridden by the evaluated color.
+   */
   evaluate(
     f: (
       batchId: number,
@@ -148,18 +155,22 @@ export class FeatureEvaluator {
     };
 
     if (this.cachedBatchedProperties) {
-      for (const [batchId, property] of this.cachedBatchedProperties) {
-        prepare(batchId, property);
+      for (const [batchIdx, property] of this.cachedBatchedProperties) {
+        prepare(this.batchIds[batchIdx], property);
       }
     } else {
       this.cachedBatchedProperties = new Map();
       this.handler.readPropertiesFromFeature(
         this.featureId,
-        (batchId: number, property: Map<string, unknown> | undefined) => {
+        (
+          batchIdx: number,
+          batchId: number,
+          property: Map<string, unknown> | undefined,
+        ) => {
           if (property) {
-            this.cachedBatchedProperties?.set(batchId, property);
+            this.cachedBatchedProperties?.set(batchIdx, property);
           }
-          this.batchIds.add(batchId);
+          this.batchIds[batchIdx] = batchId;
           prepare(batchId, property);
         },
       );
@@ -313,7 +324,7 @@ export class FeatureEvaluator {
             : undefined;
       invariant(mesh);
 
-      const batchLength = this.batchIds.size;
+      const batchLength = this.batchIds.length;
       if (mesh instanceof ModelMesh) {
         mesh._initBatchDataTexture(
           m as Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
@@ -324,54 +335,54 @@ export class FeatureEvaluator {
       }
 
       const updateBatchAttribute = (
-        batchId: number,
+        batchIdx: number,
         attribute: ModelBatchedAttributeName | BatchedAttributeName,
         value: number | number[] | boolean,
       ) => {
         if (mesh instanceof ModelMesh) {
           mesh._updateBatchAttribute(
             m as Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-            batchId,
+            batchIdx,
             attribute as ModelBatchedAttributeName,
             value,
           );
         } else {
           mesh._updateBatchAttribute(
-            batchId,
+            batchIdx,
             attribute as ModelBatchedAttributeName,
             value,
           );
         }
       };
 
-      for (const [batchId, _property] of this.cachedBatchedProperties) {
+      for (const [batchIdx, _property] of this.cachedBatchedProperties) {
         switch (target.attribute) {
           case "color": {
-            const colorIdx = batchId * target.itemSize;
+            const colorIdx = batchIdx * target.itemSize;
             const colorValues = [
               target.array[colorIdx] as number,
               target.array[colorIdx + 1] as number,
               target.array[colorIdx + 2] as number,
             ];
-            updateBatchAttribute(batchId, "color", colorValues);
+            updateBatchAttribute(batchIdx, "color", colorValues);
             break;
           }
           case "show": {
-            const showIdx = batchId * target.itemSize;
+            const showIdx = batchIdx * target.itemSize;
             const visible = (target.array[showIdx] as number) >= 0.5;
-            updateBatchAttribute(batchId, "show", visible);
+            updateBatchAttribute(batchIdx, "show", visible);
             break;
           }
           case "height": {
-            const heightIdx = batchId * target.itemSize;
+            const heightIdx = batchIdx * target.itemSize;
             const height = target.array[heightIdx] as number;
-            updateBatchAttribute(batchId, "height", height);
+            updateBatchAttribute(batchIdx, "height", height);
             break;
           }
           case "extrudedHeight": {
-            const heightIdx = batchId * target.itemSize;
+            const heightIdx = batchIdx * target.itemSize;
             const height = target.array[heightIdx] as number;
-            updateBatchAttribute(batchId, "extrudedHeight", height);
+            updateBatchAttribute(batchIdx, "extrudedHeight", height);
             break;
           }
         }

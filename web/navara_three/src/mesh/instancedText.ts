@@ -27,12 +27,12 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     const positionData = g.position;
     const position = buf.removeF32(positionData.data);
     const positionSize = positionData.size;
-    const batchIdAndSelData = g.batch_id_and_sel;
-    const batchIdAndSel = buf.removeF32(batchIdAndSelData.data);
-    const batchIdSize = batchIdAndSelData.size;
+    const batchIdsData = g.batch_ids;
+    const batchIds = buf.removeF32(batchIdsData.data);
+    const batchIdSize = batchIdsData.size;
     const batchIndexData = g.batch_index;
     const batchIndex = buf.removeU32(batchIndexData.data);
-    if (!position || !batchIdAndSel || !batchIndex) return;
+    if (!position || !batchIds || !batchIndex) return;
 
     const material = m.material;
     const active = m.active;
@@ -47,10 +47,9 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
       const z = position[posIdx + 2];
 
       const batchIdIdx = i * batchIdSize;
-      const batchId = batchIdAndSel[batchIdIdx];
-      const selected = !!batchIdAndSel[batchIdIdx + 1];
+      const batchId = batchIds[batchIdIdx];
 
-      const mesh = new TextMesh(material, uniforms, batchId, selected);
+      const mesh = new TextMesh(material, uniforms, batchId);
       mesh.renderOrder = this.renderOrder;
       mesh._updateTextByMaterial(material, active);
 
