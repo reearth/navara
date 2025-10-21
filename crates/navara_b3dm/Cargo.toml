@@ -16,3 +16,6 @@ navara_glb = { path = "../navara_glb" }
 
 [dev-dependencies]
 approx.workspace = true
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

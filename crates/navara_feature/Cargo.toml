@@ -20,3 +20,6 @@ navara_feature_component = { path = "../navara_feature_component" }
 navara_layer = { path = "../navara_layer" }
 navara_worker = { path = "../navara_worker" }
 navara_component = { path = "../navara_component" }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

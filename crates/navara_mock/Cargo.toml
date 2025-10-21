@@ -7,3 +7,6 @@ edition = "2021"
 navara_math = { path = "../navara_math" }
 navara_core = { path = "../navara_core" }
 navara_camera = { path = "../navara_camera" }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

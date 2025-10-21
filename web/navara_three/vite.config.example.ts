@@ -5,7 +5,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, normalizePath } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import topLevelAwait from "vite-plugin-top-level-await";
 import { createMpaPlugin, Page } from "vite-plugin-virtual-mpa";
+import wasm from "vite-plugin-wasm";
 import tsconfig from "vite-tsconfig-paths";
 
 import { commonConfig } from "../vite.config.common";
@@ -47,6 +49,7 @@ export default defineConfig((env) => {
           },
         ],
       }),
+      ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),
     ],
     define: {
       PAGES: pages,

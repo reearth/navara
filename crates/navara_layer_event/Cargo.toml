@@ -17,3 +17,5 @@ navara_material = { path = "../navara_material" }
 navara_core = { path = "../navara_core" }
 navara_math = { path = "../navara_math" }
 navara_buffer_store = { path = "../navara_buffer_store" }
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

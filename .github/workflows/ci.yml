@@ -53,7 +53,7 @@ jobs:
           tool: protoc@${{ env.PROTOC_VERSION }}
 
       - name: Prepare
-        run: cargo make prepare
+        run: cargo make prepare-ci
       - name: Run Build Example
         # WASM is built in `Prepare` action.
         run: pnpm build:example

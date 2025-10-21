@@ -8,3 +8,6 @@ bevy_app.workspace = true
 bevy_ecs.workspace = true
 navara_event_store = { path = "../navara_event_store" }
 navara_component = { path = "../navara_component" }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

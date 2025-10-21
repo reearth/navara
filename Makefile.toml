@@ -16,11 +16,19 @@ PROJ_NAME = "navara"
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
 run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api","install-deps-web"] }
 
+[tasks.prepare-ci]
+# Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
+run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api","install-deps-web"] }
+
 [tasks.build-dev]
 run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api"] }
 
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
+
+[tasks.web]
+# Build WASM in release mode, but web is built in dev mode to improve development experience on Web.
+run_task = { name = ["watch-prod", "dev-web"], parallel = true }
 
 [tasks.test]
 run_task = { name = ["test-rust", "test-web"], parallel = true }
@@ -45,6 +53,9 @@ run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build
 
 [tasks.watch]
 run_task = { name = ["watch-rust", "watch-rust-worker", "watch-rust-api"], parallel = true }
+
+[tasks.watch-prod]
+run_task = { name = ["watch-release-rust", "watch-release-rust-worker", "watch-release-rust-api"], parallel = true }
 
 [tasks.doc]
 run_task = { name = ["doc-rust"] }

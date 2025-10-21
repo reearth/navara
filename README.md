@@ -51,7 +51,13 @@ cargo make prepare
 cargo make dev
 ```
 
-An error is displayed in the Web browser, but this is because the compilation of WASM has not been completed. Wait a little and when the compilation of WASM is completed, reload the page and it will be displayed correctly.
+> An error is displayed in the Web browser, but this is because the compilation of WASM has not been completed. Wait a little and when the compilation of WASM is completed, reload the page and it will be displayed correctly.
+
+
+Alternatively, use `web` if you are working on the web side (using release rust builds + debug web builds)
+```console
+cargo make web
+```
 
 ### Screenshots
 

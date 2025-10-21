@@ -13,3 +13,6 @@ cesiumtiles = { git = "https://github.com/reearth/cesiumtiles-rs.git" }
 navara_b3dm = { path = "../navara_b3dm" }
 navara_glb = { path = "../navara_glb" }
 navara_mvt_parser = { path = "../navara_mvt_parser" }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true
