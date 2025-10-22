@@ -14,7 +14,7 @@ use navara_feature_component::{
     //     BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
     //     GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
     // },
-    batch::{FeatureBatchId, GlobalBatchIdAndSelections},
+    batch::{FeatureBatchId, GlobalBatchIds},
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
@@ -123,7 +123,7 @@ pub fn construct_model_by_pnts_layer(
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
-            GlobalBatchIdAndSelections {
+            GlobalBatchIds {
                 // Dummy value
                 handle: Handle::default(),
                 batch_length: 0,
@@ -339,7 +339,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
-            GlobalBatchIdAndSelections {
+            GlobalBatchIds {
                 // Dummy value
                 handle: Handle::default(),
                 batch_length: 0,

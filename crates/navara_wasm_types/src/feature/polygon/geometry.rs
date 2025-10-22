@@ -111,7 +111,7 @@ pub struct PolygonGeometryAttributes {
     position: FloatAttribute,
     normal: Option<FloatAttribute>,
     scale_normal_and_cap: Option<FloatAttribute>,
-    batch_id_and_sel: Option<FloatAttribute>,
+    batch_ids: Option<FloatAttribute>,
     batch_index: Option<UintAttribute>,
 }
 
@@ -148,16 +148,16 @@ impl PolygonGeometryAttributes {
         Some(scale_normal_and_cap.size)
     }
     pub fn transfer_batch_id(&mut self) -> Option<js_sys::Float32Array> {
-        let Some(batch_id) = &mut self.batch_id_and_sel else {
+        let Some(batch_ids) = &mut self.batch_ids else {
             return None;
         };
-        Some(batch_id.transfer_data())
+        Some(batch_ids.transfer_data())
     }
     pub fn transfer_batch_id_size(&mut self) -> Option<u8> {
-        let Some(batch_id) = &mut self.batch_id_and_sel else {
+        let Some(batch_ids) = &mut self.batch_ids else {
             return None;
         };
-        Some(batch_id.size)
+        Some(batch_ids.size)
     }
     pub fn transfer_batch_index(&mut self) -> Option<js_sys::Uint32Array> {
         let Some(batch_index) = &mut self.batch_index else {
@@ -179,7 +179,7 @@ impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttribu
             position: val.position.into(),
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
-            batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
+            batch_ids: val.batch_ids.map(|v| v.into()),
             batch_index: val.batch_index.map(|v| v.into()),
         }
     }
@@ -190,7 +190,7 @@ impl From<navara_geometry::PolygonGeometryAttributes> for PolygonGeometryAttribu
             position: val.position.into(),
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
-            batch_id_and_sel: val.batch_id_and_sel.map(|v| v.into()),
+            batch_ids: val.batch_ids.map(|v| v.into()),
             batch_index: val.batch_index.map(|v| v.into()),
         }
     }

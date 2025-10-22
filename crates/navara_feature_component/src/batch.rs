@@ -2,11 +2,10 @@ use bevy_ecs::{component::Component, entity::Entity, prelude::Resource, system::
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
-use navara_math::Vec2;
 use rand::Rng;
 
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Component, Debug, Default)]
 pub struct BatchedFeature {
@@ -33,7 +32,7 @@ impl BatchedFeature {
 }
 
 #[derive(Component, Debug)]
-pub struct BatchId(pub Vec2);
+pub struct BatchId(pub f32);
 
 /// This is used to retrieve batch's properties by index.
 #[derive(Component, Debug, Clone)]
@@ -45,15 +44,15 @@ pub struct FeatureBatchId(pub u32);
 
 // The global batch ID and the selection state corresponding to the internal batch ID in b3dm.
 #[derive(Component, Default, Clone, Debug)]
-pub struct GlobalBatchIdAndSelections {
+pub struct GlobalBatchIds {
     pub handle: Handle,
     pub batch_length: u32,
 }
 
 // Search b3dm feature by global batch id
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct FeatureBatchIdMap {
-    pub map: HashMap<Entity, GlobalBatchIdAndSelections>,
+    pub map: HashMap<Entity, GlobalBatchIds>,
 }
 
 impl FeatureBatchIdMap {
@@ -63,10 +62,10 @@ impl FeatureBatchIdMap {
         }
     }
 
-    pub fn add(&mut self, key: Entity, ids: GlobalBatchIdAndSelections) {
+    pub fn add(&mut self, key: Entity, ids: GlobalBatchIds) {
         self.map.insert(key, ids);
     }
-    pub fn get(&self, key: &Entity) -> Option<&GlobalBatchIdAndSelections> {
+    pub fn get(&self, key: &Entity) -> Option<&GlobalBatchIds> {
         self.map.get(key)
     }
     pub fn remove(
@@ -74,13 +73,12 @@ impl FeatureBatchIdMap {
         key: &Entity,
         buf: &mut BufferStore,
         batch_table: &mut BatchTable,
-        id_prop_table: &mut IdPropertyTable,
     ) -> bool {
         if let Some(ids) = self.get(key) {
             if let Some(global_ids) = buf.get_u32(&ids.handle) {
                 // remove global batch ids from batch table
                 for id in global_ids {
-                    batch_table.remove(id, id_prop_table);
+                    batch_table.remove(id);
                 }
             }
 
@@ -99,15 +97,15 @@ pub enum BatchProperty {
 }
 
 pub struct BatchTableValue {
-    pub id_property_value: Option<serde_json::Value>,
     pub properties: Option<BatchProperty>,
+    pub layer_id: Option<String>,
 }
 
 impl BatchTableValue {
     pub fn empty() -> Self {
         Self {
-            id_property_value: None,
             properties: None,
+            layer_id: None,
         }
     }
 }
@@ -147,55 +145,11 @@ impl BatchTable {
         }
     }
 
-    pub fn add_id_prop(
-        &mut self,
-        id_prop: Option<String>,
-        value: &serde_json::Value,
-        id_prop_table: &mut IdPropertyTable,
-    ) -> Option<u32> {
-        let id_property_value = id_prop.and_then(|id_prop| value.get(id_prop)).cloned();
-        let batch_id = self.add(Some(BatchTableValue {
-            id_property_value: id_property_value.clone(),
-            properties: None,
-        }));
-
-        // FIXME(keiya01): Remove this
-        if let Some(b_id) = batch_id {
-            if let Some(id_property_value) = id_property_value {
-                id_prop_table.add(id_property_value, b_id);
-            }
-        }
-
-        batch_id
-    }
-
-    pub fn init_values(&mut self) -> Option<u32> {
+    pub fn init_values(&mut self, layer_id: Option<String>) -> Option<u32> {
         self.add(Some(BatchTableValue {
-            id_property_value: None,
             properties: Some(BatchProperty::Values(vec![])),
+            layer_id,
         }))
-    }
-
-    pub fn init_values_with_id_props(
-        &mut self,
-        id_prop: Option<String>,
-        value: serde_json::Value,
-        id_prop_table: &mut IdPropertyTable,
-    ) -> Option<u32> {
-        let id_property_value = id_prop.and_then(|id_prop| value.get(id_prop)).cloned();
-        let batch_id = self.add(Some(BatchTableValue {
-            id_property_value: id_property_value.clone(),
-            properties: Some(BatchProperty::Values(vec![value])),
-        }));
-
-        // FIXME(keiya01): Remove this
-        if let Some(b_id) = batch_id {
-            if let Some(id_property_value) = id_property_value {
-                id_prop_table.add(id_property_value, b_id);
-            }
-        }
-
-        batch_id
     }
 
     pub fn add_values(&mut self, key: u32, props: serde_json::Value) {
@@ -214,95 +168,7 @@ impl BatchTable {
         self.map.get(key).and_then(|value| value.as_ref())
     }
 
-    pub fn get_selection(&self, key: &u32, id_prop_sel_res: &IdPropertySelections) -> u32 {
-        if let Some(value) = self.get(key) {
-            if let Some(id_prop_val) = &value.id_property_value {
-                return id_prop_sel_res.get_selection(id_prop_val);
-            }
-        }
-        0
-    }
-
-    pub fn remove(&mut self, key: &u32, id_prop_table: &mut IdPropertyTable) {
-        if let Some(value) = self.get(key) {
-            if let Some(id_prop_value) = &value.id_property_value {
-                id_prop_table.remove(id_prop_value, *key);
-            }
-        }
-
+    pub fn remove(&mut self, key: &u32) {
         self.map.remove(key);
-    }
-}
-
-#[derive(Resource)]
-pub struct IdPropertyTable {
-    // store the mapping of id property value to global batch ids
-    map: HashMap<serde_json::Value, Vec<u32>>,
-}
-
-impl Default for IdPropertyTable {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl IdPropertyTable {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-        }
-    }
-
-    pub fn add(&mut self, key: serde_json::Value, value: u32) {
-        self.map.entry(key).or_default().push(value);
-    }
-
-    pub fn get(&self, key: &serde_json::Value) -> Option<&Vec<u32>> {
-        self.map.get(key)
-    }
-
-    pub fn remove(&mut self, key: &serde_json::Value, value: u32) {
-        if let Some(ids) = self.map.get_mut(key) {
-            ids.retain(|&x| x != value);
-            if ids.is_empty() {
-                self.map.remove(key);
-            }
-        }
-    }
-}
-
-// store the selected id property values
-#[derive(Resource)]
-pub struct IdPropertySelections {
-    set: HashSet<serde_json::Value>,
-}
-
-impl Default for IdPropertySelections {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl IdPropertySelections {
-    pub fn new() -> Self {
-        Self {
-            set: HashSet::new(),
-        }
-    }
-
-    pub fn add(&mut self, key: serde_json::Value) {
-        self.set.insert(key);
-    }
-
-    pub fn get_selection(&self, key: &serde_json::Value) -> u32 {
-        if self.set.contains(key) {
-            1
-        } else {
-            0
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.set.clear();
     }
 }

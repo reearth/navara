@@ -3,10 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_32};
 use navara_feature_component::{
-    batch::{
-        BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIdAndSelections,
-        IdPropertySelections, IdPropertyTable,
-    },
+    batch::{BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
     billboard::BillboardMarker,
     id::FeatureId,
     point::PointMarker,
@@ -213,9 +210,7 @@ fn attach_rendered(commands: &mut Commands, e: Entity) {
 pub fn transfer_mesh(
     mut commands: Commands,
     mut batch_table: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut buf: ResMut<BufferStore>,
-    id_prop_sel_res: Res<IdPropertySelections>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     layers: Query<(&MvtLayer, &LayerResources)>,
@@ -262,13 +257,12 @@ pub fn transfer_mesh(
             if let Some(result) = construct_geometry(
                 &mut commands,
                 &mut batch_table,
-                &mut id_prop_table_res,
                 &mut buf,
                 mvt_bin,
-                &id_prop_sel_res,
                 tile.coords,
                 &layer.appearances,
                 limit_layers,
+                &layer.layer_id,
             ) {
                 if rendered_tile.feature_ids.is_some() {
                     panic!("It should be cleaned before new feature is added");
@@ -300,7 +294,7 @@ pub fn transfer_mesh(
                                 marker: M,
                                 appearance: A,
                                 feature_batch_id: FeatureBatchId,
-                                global_batch_id_and_selections: GlobalBatchIdAndSelections,
+                                global_batch_ids: GlobalBatchIds,
                             ) -> EntityCommands<'a> {
                                 commands.spawn((
                                     marker,
@@ -310,7 +304,7 @@ pub fn transfer_mesh(
                                     LayerId(layer_id),
                                     appearance,
                                     feature_batch_id,
-                                    global_batch_id_and_selections,
+                                    global_batch_ids,
                                 ))
                             }
                             match appearance {
@@ -321,7 +315,7 @@ pub fn transfer_mesh(
                                     PointMarker,
                                     appearance.clone(),
                                     v.feature_batch_id,
-                                    v.global_batch_id_and_selections,
+                                    v.global_batch_ids,
                                 ),
                                 Appearance::Billboard(appearance) => spawn(
                                     &mut commands,
@@ -330,7 +324,7 @@ pub fn transfer_mesh(
                                     BillboardMarker,
                                     appearance.clone(),
                                     v.feature_batch_id,
-                                    v.global_batch_id_and_selections,
+                                    v.global_batch_ids,
                                 ),
                                 Appearance::Text(appearance) => spawn(
                                     &mut commands,
@@ -339,7 +333,7 @@ pub fn transfer_mesh(
                                     TextMarker,
                                     appearance.clone(),
                                     v.feature_batch_id,
-                                    v.global_batch_id_and_selections,
+                                    v.global_batch_ids,
                                 ),
                                 _ => continue,
                             }
@@ -360,7 +354,7 @@ pub fn transfer_mesh(
                                 LayerId(layer.layer_id.clone()),
                                 appearance.clone(),
                                 v.feature_batch_id,
-                                v.global_batch_id_and_selections,
+                                v.global_batch_ids,
                             ))
                         }
                         ConstructedGeometryType::Polygon => {
@@ -379,7 +373,7 @@ pub fn transfer_mesh(
                                 LayerId(layer.layer_id.clone()),
                                 appearance.clone(),
                                 v.feature_batch_id,
-                                v.global_batch_id_and_selections,
+                                v.global_batch_ids,
                             ))
                         }
                     };

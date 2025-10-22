@@ -10,9 +10,8 @@
 
 uniform vec3 color;
 uniform float nvr_uPickable;
-uniform vec3 nvr_uHighlightColor;
 
-in vec2 nvr_vBatchIdAndSel;
+in float nvr_vBatchId;
 in vec3 vNormal;
 
 #include chunks/show_pars_fragment;
@@ -45,12 +44,8 @@ void main() {
     #include <colorspace_fragment>
 
     if(nvr_uPickable > 0.0) {
-        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchIdAndSel.x);
+        vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
         gl_FragColor = vec4(pickColor.xyz, 1.0);
-    }
-
-    if(nvr_vBatchIdAndSel.y > 0.0) {
-        gl_FragColor = vec4(nvr_uHighlightColor.xyz, 1.0);
     }
 
     normalBuffer = vec4(

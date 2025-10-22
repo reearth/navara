@@ -32,7 +32,6 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     meshMaterial: NavaraTextMaterial,
     uniforms: CommonUniforms,
     batchId: number,
-    selected: boolean,
   ) {
     super();
 
@@ -90,9 +89,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
     this.userData.fov = uniforms?.fov;
     this.userData.screenHeightPx = uniforms?.screenHeightPx;
-    this.userData.isPicked = selected;
     this.userData.batchId = batchId;
-    this.userData.highlightColor = uniforms?.highlightColor?.value;
     this.userData.addHeight = {
       value: 0.0,
     };
@@ -397,11 +394,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     const nextColor = material.color ?? 0xffffff;
     if (nextColor !== prev.color) {
       prev.color = nextColor;
-      if (this.userData.isPicked) {
-        txt.color = this.userData.highlightColor;
-      } else {
-        txt.color = nextColor;
-      }
+      txt.color = nextColor;
     }
 
     const nextScaleByDistance = material.scale_by_distance ? 1 : 0;

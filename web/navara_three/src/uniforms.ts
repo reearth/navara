@@ -1,4 +1,4 @@
-import type { Matrix4, Texture, Color } from "three";
+import type { Matrix4, Texture } from "three";
 
 type Ref<K extends string, T> = Record<K, T | undefined | null>;
 type RefThree<T> = Ref<"value", T>;
@@ -11,7 +11,6 @@ export type CommonUniforms = {
   tGlobeDepth: RefThree<Texture>;
   tGlobeNormal: RefThree<Texture>;
   inverseProjectionMatrix: RefThree<Matrix4>;
-  highlightColor: RefThree<Color>;
   fov: RefThree<number>;
   screenHeightPx: RefThree<number>;
   time: RefThree<number>;

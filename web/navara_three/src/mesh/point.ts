@@ -6,29 +6,20 @@ import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import { Color, Sprite, SpriteMaterial } from "three";
 
-import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
 import { FeatureMesh } from "./featureMesh";
 
 export class PointMesh extends Sprite implements FeatureMesh {
-  constructor(
-    material: NavaraPointMaterial,
-    uniforms: CommonUniforms,
-    batchId: number,
-    selected: boolean,
-    active: boolean,
-  ) {
+  constructor(material: NavaraPointMaterial, batchId: number, active: boolean) {
     super(new SpriteMaterial());
 
-    this.initMaterial(material, uniforms, batchId, selected, active);
+    this.initMaterial(material, batchId, active);
   }
 
   private initMaterial(
     meshMaterial: NavaraPointMaterial,
-    uniforms: CommonUniforms,
     batchId: number,
-    selected: boolean,
     active: boolean,
   ) {
     const material = this.material;
@@ -115,12 +106,6 @@ export class PointMesh extends Sprite implements FeatureMesh {
     }
 
     this.userData.batchId = batchId;
-    this.userData.isPicked = false;
-
-    if (selected && uniforms?.highlightColor?.value) {
-      material.color.set(uniforms.highlightColor.value);
-      this.userData.isPicked = true;
-    }
 
     this._update(meshMaterial, active);
   }
@@ -132,9 +117,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
     const prev = this.material.userData.prev;
 
     if (prev.color !== material.color) {
-      if (!this.userData.isPicked) {
-        this.material.color.set(material.color ?? 0);
-      }
+      this.material.color.set(material.color ?? 0);
       prev.color = material.color;
     }
 

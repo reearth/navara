@@ -34,6 +34,11 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
     wasm(),
     topLevelAwait(),
     dts(),
+    ...(
+      env.mode !== "production" ? [
+    wasm(),
+    topLevelAwait(),
+    ]: [])
   ],
   resolve: {
     mainFields: ["module"],
@@ -42,6 +47,9 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
       "@navara/engine-worker": "navara_wasm_worker",
       "@navara/engine-api": "navara_wasm_api",
     },
+  },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(env.mode),
   },
   build: {
     lib: {

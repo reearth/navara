@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
-  "types": "dist/src/index.d.ts",
+  "types": "dist/index.d.ts",
   "files": [
     "src",
     "dist"
@@ -14,7 +14,7 @@
     "start": "vite",
     "dev": "vite -c vite.config.example.ts --host",
     "dev:example": "vite -c vite.config.example.ts --host",
-    "build": "tsc --project tsconfig.build.json && vite build",
+    "build": "tsc --project tsconfig.build.json && vite build -c vite.config.ts",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
     "build:example": "tsc && vite build -c vite.config.example.ts",

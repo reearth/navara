@@ -4,11 +4,13 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LightProbeLayer,
   type GeoJsonLayer,
+  Color,
 } from "@navara/three";
-import { Color, SphericalHarmonics3 } from "three";
+import { SphericalHarmonics3 } from "three";
 import { FolderApi, Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
+import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
 import {
   TERRAIN_DATASETS,
   TILES_3D_DATASETS,
@@ -180,7 +182,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
             return {
               height,
               extrudedHeight,
-              color: new Color(color),
+              color: new Color().setStyle(color),
             };
           });
         });
@@ -382,7 +384,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
           const [r, g, b] = calcColor(num);
 
           return {
-            color: new Color(r, g, b),
+            color: new Color().setRGB(r, g, b),
           };
         });
       });
@@ -400,7 +402,6 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       size: 0.01,
       scale_by_distance: true,
       clamp_to_ground: true,
-      id_property: "gml_id",
       color: 0xff0000,
     },
   };
@@ -438,7 +439,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
         })();
 
         return {
-          color: new Color(color),
+          color: new Color().setHex(color),
         };
       });
     });
@@ -455,7 +456,6 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       width: 3,
       height: 1,
       clamp_to_ground: true,
-      id_property: "gml_id",
       use_ground_normals: true,
     },
     vector_tile: {
@@ -501,7 +501,7 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
         })();
 
         return {
-          color: new Color(color),
+          color: new Color().setHex(color),
         };
       });
     });
@@ -521,7 +521,6 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       clamp_to_ground: true,
       use_ground_normals: true,
       wireframe: false,
-      id_property: "gml_id",
     },
     vector_tile: {
       max_zoom: 16,
@@ -559,7 +558,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
         })();
 
         return {
-          color: new Color(color),
+          color: new Color().setStyle(color),
         };
       });
     });
@@ -600,7 +599,6 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
       extruded_height: 0,
       clamp_to_ground: false,
       wireframe: false,
-      id_property: "gml_id",
       // cast_shadow: true,
       // receive_shadow: true,
     },
@@ -648,7 +646,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
         })();
 
         return {
-          color: new Color(color),
+          color: new Color().setStyle(color),
           extrudedHeight: extrudedHeight * scale,
         };
       });
@@ -710,7 +708,6 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
     },
     model: {
       show: true,
-      id_property: "gml_id",
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
@@ -737,21 +734,35 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
       evaluator.evaluate((_batchId, property) => {
         const measuredHeight = property?.get("bldg:measuredHeight") as number;
 
-        const [color, show] = (() => {
-          if (measuredHeight < 30) {
-            return [CHANGED_PARAMS_COLOR["< 30"], CHANGED_PARAMS_SHOW["< 30"]];
+        // Determine visibility buckets regardless of color mode
+        const show = (() => {
+          if (measuredHeight < 30) return CHANGED_PARAMS_SHOW["< 30"];
+          if (measuredHeight < 60) return CHANGED_PARAMS_SHOW["< 60"];
+          if (measuredHeight < 90) return CHANGED_PARAMS_SHOW["< 90"];
+          return CHANGED_PARAMS_SHOW[">= 90"];
+        })();
+
+        // Color: either threshold-based or gradation by height
+        const color = (() => {
+          if (PARAMS_COLOR_MODE.color_by_gradation) {
+            const mh = typeof measuredHeight === "number" ? measuredHeight : 0;
+            const min = 3;
+            const max = 235;
+            const t = Math.max(0, Math.min(1, (mh - min) / (max - min)));
+            const [r, g, b] = PLATEAU_COLOR_MAP.linear(t);
+            return new Color().setRGB(r, g, b);
           }
-          if (measuredHeight < 60) {
-            return [CHANGED_PARAMS_COLOR["< 60"], CHANGED_PARAMS_SHOW["< 60"]];
-          }
-          if (measuredHeight < 90) {
-            return [CHANGED_PARAMS_COLOR["< 90"], CHANGED_PARAMS_SHOW["< 90"]];
-          }
-          return [CHANGED_PARAMS_COLOR[">= 90"], CHANGED_PARAMS_SHOW[">= 90"]];
+          if (measuredHeight < 30)
+            return new Color().setStyle(CHANGED_PARAMS_COLOR["< 30"]);
+          if (measuredHeight < 60)
+            return new Color().setStyle(CHANGED_PARAMS_COLOR["< 60"]);
+          if (measuredHeight < 90)
+            return new Color().setStyle(CHANGED_PARAMS_COLOR["< 90"]);
+          return new Color().setStyle(CHANGED_PARAMS_COLOR[">= 90"]);
         })();
 
         return {
-          color: new Color(color),
+          color,
           show,
         };
       });
@@ -780,7 +791,18 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
   };
   const CHANGED_PARAMS_COLOR = { ...PARAMS_COLOR };
 
+  // Color options (thresholds and gradation toggle)
   const colorFolder = folder.addFolder({ title: "Color", expanded: false });
+
+  const PARAMS_COLOR_MODE = {
+    color_by_gradation: false,
+  };
+
+  colorFolder
+    .addBinding(PARAMS_COLOR_MODE, "color_by_gradation", {
+      label: "Color by gradation",
+    })
+    .on("change", () => onChange());
   for (const key of Object.keys(PARAMS_COLOR)) {
     const k = key as keyof typeof PARAMS_COLOR;
     const field = colorFolder

@@ -2,35 +2,26 @@ import { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
 import { setTransform, type BufferLoader } from "../event";
 import { applyTextureAspect } from "../texture";
-import type { CommonUniforms } from "../uniforms";
 
 import { BillboardMesh } from "./billboard";
 import { InstancedMesh } from "./instanced";
 
 export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
-  async _init(
-    m: NavaraBillboardMesh,
-    buf: BufferLoader,
-    uniforms: CommonUniforms,
-  ) {
-    await this.initMeshes(m, buf, uniforms);
+  async _init(m: NavaraBillboardMesh, buf: BufferLoader) {
+    await this.initMeshes(m, buf);
   }
 
-  private async initMeshes(
-    m: NavaraBillboardMesh,
-    buf: BufferLoader,
-    uniforms: CommonUniforms,
-  ) {
+  private async initMeshes(m: NavaraBillboardMesh, buf: BufferLoader) {
     const g = m.geometry;
     const positionData = g.position;
     const position = buf.removeF32(positionData.data);
     const positionSize = positionData.size;
-    const batchIdAndSelData = g.batch_id_and_sel;
-    const batchIdAndSel = buf.removeF32(batchIdAndSelData.data);
-    const batchIdSize = batchIdAndSelData.size;
+    const batchIdsData = g.batch_ids;
+    const batchIds = buf.removeF32(batchIdsData.data);
+    const batchIdSize = batchIdsData.size;
     const batchIndexData = g.batch_index;
     const batchIndex = buf.removeU32(batchIndexData.data);
-    if (!position || !batchIdAndSel || !batchIndex) return;
+    if (!position || !batchIds || !batchIndex) return;
 
     const material = m.material;
     const active = m.active;
@@ -47,14 +38,13 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       const z = position[posIdx + 2];
 
       const batchIdIdx = i * batchIdSize;
-      const batchId = batchIdAndSel[batchIdIdx];
-      const selected = !!batchIdAndSel[batchIdIdx + 1];
+      const batchId = batchIds[batchIdIdx];
 
       const mesh = new BillboardMesh();
       mesh.renderOrder = this.renderOrder;
 
       promises.push(
-        mesh._init(material, uniforms, batchId, selected, active).then(() => {
+        mesh._init(material, batchId, active).then(() => {
           setTransform(mesh, transform);
           mesh.position.set(x, y, z);
 

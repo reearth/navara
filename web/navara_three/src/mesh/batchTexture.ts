@@ -122,6 +122,18 @@ export function updateBatchAttribute(
         material.vertexColors = true;
         material.userData.defines.USE_BATCH_COLOR_SHOW = true;
         material.needsUpdate = true;
+
+        // When enabling batchTexture color, set material.color to white
+        // so that it acts as a multiplier identity (white * any color = that color)
+        if ("color" in material) {
+          (material.color as Color).setHex(0xffffff);
+        }
+        if ("uniforms" in material && material.uniforms) {
+          const uniforms = material.uniforms as Record<string, any>;
+          if (uniforms.color?.value) {
+            uniforms.color.value.set(0xffffff);
+          }
+        }
       }
 
       material.userData._batchColorTouched = true;

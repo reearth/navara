@@ -9,8 +9,7 @@ use navara_component::Deleted;
 use navara_core::CRS;
 use navara_feature_component::{
     batch::{
-        BatchId, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIdAndSelections, IdPropertyTable,
+        BatchId, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds,
     },
     id::FeatureId,
     polyline::construct_polyline_feature,
@@ -43,7 +42,7 @@ pub fn transfer_batched_mesh(
             &PolylineMaterial,
             &mut BatchedFeature,
             &FeatureBatchId,
-            &GlobalBatchIdAndSelections,
+            &GlobalBatchIds,
             Option<&mut FeatureId>,
         ),
         With<PolylineMarker>,
@@ -164,11 +163,9 @@ pub fn transfer_mesh(
 
             let pos_cnt = geometry.attributes.position.data.len()
                 / geometry.attributes.position.size as usize;
-            let mut batch_id_vec = vec![batch_id.0.x as FloatType; pos_cnt * 2];
-            for i in (1..pos_cnt * 2).step_by(2) {
-                batch_id_vec[i] = batch_id.0.y as FloatType;
-            }
-            geometry.attributes.batch_id_and_sel = Some(FloatAttribute::new(batch_id_vec, 2));
+            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+
+            geometry.attributes.batch_ids = Some(FloatAttribute::new(batch_id_vec, 1));
 
             let clamp_to_ground = material.clamp_to_ground;
             let entity = commands
@@ -189,7 +186,7 @@ pub fn transfer_mesh(
                         },
                         extent,
                         active: true,
-                        feature_batch_id: batch_id.0.x as u32,
+                        feature_batch_id: batch_id.0 as u32,
                         batch_length: 1,
                     },
                 ))
@@ -264,28 +261,22 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &GlobalBatchIdAndSelections),
+        (Entity, &FeatureId, &GlobalBatchIds),
         (With<BatchedFeature>, With<PolylineMarker>, With<Deleted>),
     >,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, global_batch_id_and_selections) in &removed_features {
+    for (feature_id, rendered_feature_id, global_batch_ids) in &removed_features {
         let Some(rendered_feature_id) = rendered_feature_id.0 else {
             continue;
         };
         if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res, &mut id_prop_table_res);
+            feature.destroy(&mut buf, &mut batch_table_res);
         }
-        feature_batch_id_map.remove(
-            &rendered_feature_id,
-            &mut buf,
-            &mut batch_table_res,
-            &mut id_prop_table_res,
-        );
-        buf.remove(&global_batch_id_and_selections.handle);
+        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+        buf.remove(&global_batch_ids.handle);
 
         commands.entity(feature_id).despawn();
     }

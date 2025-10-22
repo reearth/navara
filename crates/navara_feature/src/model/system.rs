@@ -11,9 +11,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::WGS84_32;
 use navara_feature_component::{
-    batch::{
-        BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIdAndSelections, IdPropertyTable,
-    },
+    batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{ModelRenderInformation, RenderableFeature, TransferableModelGeometry},
     DeletedFeatureMarker,
@@ -39,7 +37,7 @@ pub fn transfer_mesh(
             Entity,
             &LayerId,
             &FeatureBatchId,
-            &GlobalBatchIdAndSelections,
+            &GlobalBatchIds,
             Option<&mut FeatureId>,
             &ModelGeometry,
             &ModelMaterial,
@@ -123,9 +121,9 @@ pub fn transfer_mesh(
                 },
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
-                    batch_id_and_selected_status: Some(TransferableFloatAttribute {
+                    batch_ids: Some(TransferableFloatAttribute {
                         data: global_batch_ids.handle,
-                        size: 2,
+                        size: 1,
                     }),
                 },
                 feature_batch_id: feature_batch_id.0,
@@ -229,41 +227,30 @@ pub fn remove_batched_feature(
             &FeatureId,
             &ModelBin,
             Option<&FeatureBatchId>,
-            Option<&GlobalBatchIdAndSelections>,
+            Option<&GlobalBatchIds>,
         ),
         With<Deleted>,
     >,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
-    mut id_prop_table_res: ResMut<IdPropertyTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (
-        feature_id,
-        rendered_feature_id,
-        model_bin,
-        feature_batch_id,
-        global_batch_id_and_selections,
-    ) in &removed_features
+    for (feature_id, rendered_feature_id, model_bin, feature_batch_id, global_batch_ids) in
+        &removed_features
     {
         let Some(rendered_feature_id) = rendered_feature_id.0 else {
             continue;
         };
         // if a model has batch table, its global batch ids will be removed here.
-        feature_batch_id_map.remove(
-            &rendered_feature_id,
-            &mut buf,
-            &mut batch_table_res,
-            &mut id_prop_table_res,
-        );
-        if let Some(global_batch_id_and_selections) = global_batch_id_and_selections {
-            buf.remove(&global_batch_id_and_selections.handle);
+        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+        if let Some(global_batch_ids) = global_batch_ids {
+            buf.remove(&global_batch_ids.handle);
         }
         if let Some(feature_batch_id) = feature_batch_id {
-            batch_table_res.remove(&feature_batch_id.0, &mut id_prop_table_res);
+            batch_table_res.remove(&feature_batch_id.0);
         }
         if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res, &mut id_prop_table_res);
+            feature.destroy(&mut buf, &mut batch_table_res);
         }
 
         buf.remove(&model_bin.0);
