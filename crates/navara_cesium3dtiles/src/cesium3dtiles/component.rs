@@ -1,5 +1,4 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
-use bevy_log::info;
 use navara_core::{Aabb, Extent, LngLat};
 use navara_data_requester::DataRequesterExtension;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
@@ -83,7 +82,6 @@ impl Cesium3dTileContent {
         if tile_transform == Transform::IDENTITY {
             tile_transform = parent.and_then(|p| p.transform.clone()).unwrap_or(Transform::IDENTITY);
         }
-        // info!("Tile {}'s transform: {:?}", content.uri, tile_transform);
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
@@ -108,7 +106,6 @@ impl Cesium3dTileContent {
                 let x_axis = Vec3::new(xdir0 as FloatType, xdir1 as FloatType, xdir2 as FloatType);
                 let y_axis = Vec3::new(ydir0 as FloatType, ydir1 as FloatType, ydir2 as FloatType);
                 let z_axis = Vec3::new(zdir0 as FloatType, zdir1 as FloatType, zdir2 as FloatType);
-                // info!("Tile {}'s bounding volume: {} {} {} {} {} {} {} {} {} {} {} {}", content.uri, cx, cy, cz, xdir0, xdir1, xdir2, ydir0, ydir1, ydir2, zdir0, zdir1, zdir2);
                 
                 let center_transformed = tile_transform.transform_point(center);
 

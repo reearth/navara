@@ -1,12 +1,9 @@
-use std::f32::MIN_POSITIVE;
-
 use bevy_ecs::{
     entity::Entity,
     query::{Added, With},
     system::{Commands, Query, ResMut},
 };
 
-use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::WGS84_32;

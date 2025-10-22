@@ -31,8 +31,6 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
     watchPackages(["navara_wasm", "navara_wasm_worker", "navara_wasm_api"]),
     tsconfig(),
-    wasm(),
-    topLevelAwait(),
     dts(),
     ...(
       env.mode !== "production" ? [

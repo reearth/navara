@@ -144,7 +144,6 @@ pub fn traverse_cesium_3d_tiles_tree(
     }
 }
 
-// TODO(adel): update pnts tiles as well
 #[allow(clippy::type_complexity)]
 pub fn update_cesium3dtiles_layer(
     mut commands: Commands,

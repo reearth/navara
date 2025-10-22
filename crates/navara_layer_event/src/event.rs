@@ -1,6 +1,5 @@
 use bevy_ecs::prelude::*;
 
-use bevy_log::info;
 use navara_layer::{
     DeleteB3dmLayerMarker, DeletePntsLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
     DeleteMvtLayerMarker, DeleteRasterTileLayerMarker, LayerDescStore, LayerDescription, LayerId,
@@ -39,14 +38,12 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
             }
             LayerDescription::Pnts(t) => {
                 commands.spawn(t.clone());
-                // info!("pnts layer added: {:?}", t);
             }
             LayerDescription::Mvt(t) => {
                 commands.spawn(t.clone());
             }
             LayerDescription::Cesium3dTiles(t) => {
                 commands.spawn(t.clone());
-                // info!("cesium3dtiles layer added: {:?}", t);
             }
         }
     }
@@ -77,7 +74,6 @@ pub fn process_update_events(
                     });
                 }
             }
-            // TODO(adel): handle update of Point Cloud layer properly.
             LayerDescription::Pnts(_) => {
                 if let Appearance::Model(mat) = &ev.appearance {
                     commands.spawn(UpdatePntsLayerMarker {
@@ -129,7 +125,6 @@ pub fn process_delete_events(
             LayerDescription::B3dm(_) => {
                 commands.spawn(DeleteB3dmLayerMarker(layer_id.0.clone()));
             }
-            // TODO(adel): handle deletion of Point Cloud layer properly.
             LayerDescription::Pnts(_) => {
                 commands.spawn(DeletePntsLayerMarker(layer_id.0.clone()));
             }

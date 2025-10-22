@@ -2,14 +2,13 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
-use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
 use navara_component::Priority;
-use navara_data_requester::{DataRequesterExtension, DataRequesterStatus};
+use navara_data_requester::{DataRequesterStatus};
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_math::Vec3;
-use navara_parser::{cesium3dtiles::tileset::Refine, pnts};
+use navara_parser::{cesium3dtiles::tileset::Refine};
 use navara_window::Window;
 use url::Url;
 
@@ -324,7 +323,6 @@ fn update_or_spawn_rendered_tile(
         return;
     }
 
-    // TODO: reveret invisible
     if visible {
         if tile.uri.ends_with("pnts") {
             tile.rendered_tile_id = Some(
