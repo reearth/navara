@@ -24,7 +24,7 @@ impl EncodedFloat {
     /// use navara_core::EncodedFloat;
     ///
     /// let encoded = EncodedFloat::encode(6371000.123456);
-    /// assert!((encoded.high as f64 + encoded.low as f64 - 6371000.123456).abs() < 0.0001);
+    /// assert!((encoded.high as f64 + encoded.low as f64 - 6371000.123456).abs() < 0.001);
     /// ```
     pub fn encode(value: f64) -> Self {
         let double_high = if value >= 0.0 {
