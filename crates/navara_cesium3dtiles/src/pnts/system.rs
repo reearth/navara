@@ -14,7 +14,7 @@ use navara_feature_component::{
     //     BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
     //     GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
     // },
-    batch::{FeatureBatchId, GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable},
+    batch::{FeatureBatchId, GlobalBatchIdAndSelections},
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
@@ -24,9 +24,9 @@ use navara_layer::{
     UpdatePntsLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
+use navara_math::{Mat4, Transform, Vec3, Vec4};
 
-use navara_parser::{geojson::Position, pnts::*};
+use navara_parser::pnts::*;
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance, TileTransform,
@@ -52,7 +52,6 @@ pub fn request_model_by_pnts_layer(
                 DataRequesterExtension::Pnts,
             ),
         ));
-        info!("pnts data requester spawned for layer {}", layer.layer_id);
     }
 }
 
@@ -87,6 +86,7 @@ pub fn construct_model_by_pnts_layer(
             _ => unimplemented!(),
         };
         appearance.should_rotate_in_default = false;
+        appearance.clamp_to_ground = false;
 
         let (draco_compressed, positions_center, positions_handle) =
             match get_geometry_info_from_pnts(&mut buf, &req.handle) {
@@ -97,6 +97,29 @@ pub fn construct_model_by_pnts_layer(
         appearance.draco_point_compressed = draco_compressed;
         appearance.point_cloud = true;
 
+            let x_axis = Vec4::new(
+            -0.6689445620740821,
+            -0.7433122983453956,
+            0.0,
+            0.0);
+        let y_axis = Vec4::new(
+            0.4239546898635435,
+            -0.3815383991107325,
+            0.821395684762664,
+            0.0);
+        let z_axis = Vec4::new(
+            -0.6105535142919258,
+            0.5494681766331011,
+            0.5703587722243553,
+            0.0);
+        let w_axis = Vec4::new(
+            -3898480.7755511394,
+            3508441.231176139,
+            3617451.1883247257,
+            1.0
+        );
+
+        let dummy_transform = Transform::from_matrix(Mat4::from_cols(x_axis, y_axis, z_axis, w_axis));
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
@@ -111,7 +134,9 @@ pub fn construct_model_by_pnts_layer(
             },
             appearance,
             ModelBin(positions_handle),
-            Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)),
+            // Transform::IDENTITY,
+            dummy_transform,
+
         ));
 
         buf.remove(&req.handle);
@@ -276,15 +301,12 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
-    info!("construct_model_by_cesium3dtiles_layer called");
     for (mut tile, transform) in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => {
-                info!("pnts data requester found");
                 v
             }
             Err(_) => {
-                info!("pnts data requester not found");
                 continue;
             }
         };
@@ -312,7 +334,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         appearance.draco_point_compressed = draco_compressed;
         appearance.point_cloud = true;
 
-        info!("transform: {:?}", transform.transform);
+        // info!("transform: {:?}", transform.transform);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
@@ -328,18 +350,12 @@ pub fn construct_model_by_cesium3dtiles_layer(
             },
             appearance,
             ModelBin(postions_handle),
-            // Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)) *
-            // Transform::from_scale(Vec3::splat(0.25))
             transform.transform.clone(),
 
         ));
         tile.feature_id = Some(entity.id());
 
         buf.remove(&req.handle);
-        info!(
-            "pnts model constructed for layer {}",
-            layer.layer_id
-        );
     }
 }
 

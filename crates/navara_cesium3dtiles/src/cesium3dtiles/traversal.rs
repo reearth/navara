@@ -325,9 +325,8 @@ fn update_or_spawn_rendered_tile(
     }
 
     // TODO: reveret invisible
-    if true {
+    if visible {
         if tile.uri.ends_with("pnts") {
-            info!("spawning pnts rendered tile for layer {}", layer_id);
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
@@ -343,7 +342,7 @@ fn update_or_spawn_rendered_tile(
                             is_visible: true,
                         },
                         TileTransform {
-                            transform: tile.transform.unwrap_or_default(),
+                            transform: tile.transform.clone().unwrap_or_default(),
                         },
                     ))
                     .id(),

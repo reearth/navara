@@ -1,4 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
+use bevy_log::info;
 use navara_core::{Aabb, Extent, LngLat};
 use navara_data_requester::DataRequesterExtension;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
@@ -76,7 +77,13 @@ impl Cesium3dTileContent {
             None => unimplemented!("TODO: Support multiple contents"),
         };
 
-        let tile_transform = Transform::from_matrix(Mat4::from_cols_array(&tile.transform.clone().map(|v| v as FloatType)));
+        let mut tile_transform = Transform::from_matrix(Mat4::from_cols_array(
+            &tile.transform.clone().map(|v| v as FloatType),
+        ));
+        if tile_transform == Transform::IDENTITY {
+            tile_transform = parent.and_then(|p| p.transform.clone()).unwrap_or(Transform::IDENTITY);
+        }
+        // info!("Tile {}'s transform: {:?}", content.uri, tile_transform);
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
@@ -91,23 +98,28 @@ impl Cesium3dTileContent {
             }
             // TODO: Support making bounding volume from the sphere
             (_, Some(_), _) => None,
-            (_, _, Some([cx, cy, cz,
-                         xdir0, xdir1, xdir2,
-                         ydir0, ydir1, ydir2,
-                         zdir0, zdir1, zdir2,])) => {
+            (
+                _,
+                _,
+                Some([cx, cy, cz, xdir0, xdir1, xdir2, ydir0, ydir1, ydir2, zdir0, zdir1, zdir2]),
+            ) => {
                 // Transform the bounding volume
                 let center = Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType);
                 let x_axis = Vec3::new(xdir0 as FloatType, xdir1 as FloatType, xdir2 as FloatType);
                 let y_axis = Vec3::new(ydir0 as FloatType, ydir1 as FloatType, ydir2 as FloatType);
                 let z_axis = Vec3::new(zdir0 as FloatType, zdir1 as FloatType, zdir2 as FloatType);
-
+                // info!("Tile {}'s bounding volume: {} {} {} {} {} {} {} {} {} {} {} {}", content.uri, cx, cy, cz, xdir0, xdir1, xdir2, ydir0, ydir1, ydir2, zdir0, zdir1, zdir2);
+                
                 let center_transformed = tile_transform.transform_point(center);
-                let x_axis_transformed = tile_transform * x_axis;
-                let y_axis_transformed = tile_transform * y_axis;
-                let z_axis_transformed = tile_transform * z_axis;
 
-                Some(Aabb { center: center_transformed,
-                     extents: Vec3::new(x_axis_transformed.length(), y_axis_transformed.length(), z_axis_transformed.length()) })
+                Some(Aabb {
+                    center: center_transformed,
+                    extents: Vec3::new(
+                        x_axis.length(),
+                        y_axis.length(),
+                        z_axis.length(),
+                    ),
+                })
             }
             _ => None,
         };
