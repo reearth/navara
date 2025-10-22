@@ -37,10 +37,9 @@ export class TestSelectiveEffectLayer extends SelectiveEffectLayerBase<
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
     // Extract testSelective config
-    const testSelectiveConfig = "testSelective" in config 
-      ? (config as any).testSelective 
-      : {};
-    
+    const testSelectiveConfig =
+      "testSelective" in config ? (config as any).testSelective : {};
+
     // Ensure config has selective: true
     const selectiveConfig: SelectiveEffectConfig = {
       ...config,
@@ -48,7 +47,7 @@ export class TestSelectiveEffectLayer extends SelectiveEffectLayerBase<
       resolutionScale: testSelectiveConfig.resolutionScale ?? 1.0,
       debugMask: testSelectiveConfig.debugMask ?? false,
     };
-    
+
     super(view, selectiveConfig);
   }
 
