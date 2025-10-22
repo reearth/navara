@@ -1,5 +1,5 @@
-use navara_core::{Ellipsoid, Meters, CRS, WGS84_32};
-use navara_math::{EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
+use navara_core::{Ellipsoid, EncodedVec3, Meters, CRS, WGS84_32};
+use navara_math::{EqualEpsilon, FloatType, RawDVec3, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
 
 use crate::{helpers::vec::unpack_flatten_vec3, FloatAttribute};
 
@@ -9,7 +9,7 @@ use super::{
         polygons_from_hierarchy, project_to_2d, scale_to_geodetic_height_extruded,
     },
     types::Polygon,
-    HierarchyVec3, PolygonGeometryAttributes, PolygonResource, WindingOrder,
+    HierarchyDVec3, PolygonGeometryAttributes, PolygonResource, WindingOrder,
 };
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -19,19 +19,20 @@ pub struct PolygonGeometry {
 }
 
 pub struct PolygonGeometryOptions {
-    pub hierarchy: HierarchyVec3,
+    pub hierarchy: HierarchyDVec3,
     pub granularity: f32,
     pub crs: CRS,
     pub clamp_to_ground: bool,
     pub extruded_height: f32,
     pub height: f32,
     pub per_position_height: bool,
+    pub use_rte: bool,
 }
 
 impl Default for PolygonGeometryOptions {
     fn default() -> Self {
         Self {
-            hierarchy: HierarchyVec3 {
+            hierarchy: HierarchyDVec3 {
                 outer_ring: vec![],
                 holes: None,
                 expected_winding_order: WindingOrder::Unknown,
@@ -42,6 +43,7 @@ impl Default for PolygonGeometryOptions {
             extruded_height: 0.,
             height: 1.,
             per_position_height: false,
+            use_rte: true, // Default to true for individual features
         }
     }
 }
@@ -72,8 +74,11 @@ pub fn create_flat_polygon_geometry(
     }
 
     // Simple projection for Cartesian coordinates - just extract x and y
-    let project_to_cartesian_2d = |positions: &[Vec3]| -> Vec<Vec2> {
-        positions.iter().map(|p| Vec2::new(p.x, p.y)).collect()
+    let project_to_cartesian_2d = |positions: &[RawDVec3]| -> Vec<Vec2> {
+        positions
+            .iter()
+            .map(|p| Vec2::new(p.x as f32, p.y as f32))
+            .collect()
     };
 
     let (polygons, _) = polygons_from_hierarchy(polygon_hierarchy, project_to_cartesian_2d);
@@ -82,7 +87,10 @@ pub fn create_flat_polygon_geometry(
         return None;
     }
 
-    let mut combined_positions = vec![];
+    let use_rte = options.use_rte;
+    let mut combined_position = vec![];
+    let mut combined_position_high = vec![];
+    let mut combined_position_low = vec![];
     let mut combined_indices = vec![];
 
     // Process each polygon
@@ -94,11 +102,30 @@ pub fn create_flat_polygon_geometry(
         }
 
         // Add positions to the combined buffer
-        let positions_len = combined_positions.len() / 3;
+        let positions_len = if use_rte {
+            combined_position_high.len() / 3
+        } else {
+            combined_position.len() / 3
+        };
+
         for position in &polygon.positions {
-            combined_positions.push(position.x);
-            combined_positions.push(position.y);
-            combined_positions.push(position.z);
+            let vec3_pos = Vec3::new(position.x as f32, position.y as f32, position.z as f32);
+
+            if use_rte {
+                // Encode to RTE high/low
+                let encoded = EncodedVec3::encode(vec3_pos);
+                combined_position_high.push(encoded.high.x);
+                combined_position_high.push(encoded.high.y);
+                combined_position_high.push(encoded.high.z);
+                combined_position_low.push(encoded.low.x);
+                combined_position_low.push(encoded.low.y);
+                combined_position_low.push(encoded.low.z);
+            } else {
+                // Use regular position
+                combined_position.push(vec3_pos.x);
+                combined_position.push(vec3_pos.y);
+                combined_position.push(vec3_pos.z);
+            }
         }
 
         // Adjust and add indices to the combined buffer
@@ -111,13 +138,27 @@ pub fn create_flat_polygon_geometry(
         return None;
     }
 
-    // Create the final geometry with only position attribute
-    let combined_attributes = PolygonGeometryAttributes {
-        position: FloatAttribute::new(combined_positions, 3),
-        normal: None,
-        scale_normal_and_cap: None,
-        batch_ids: None,
-        batch_index: None,
+    // Create the final geometry with conditional RTE encoding
+    let combined_attributes = if use_rte {
+        PolygonGeometryAttributes {
+            position: None,
+            position_3d_high: Some(FloatAttribute::new(combined_position_high, 3)),
+            position_3d_low: Some(FloatAttribute::new(combined_position_low, 3)),
+            normal: None,
+            scale_normal_and_cap: None,
+            batch_ids: None,
+            batch_index: None,
+        }
+    } else {
+        PolygonGeometryAttributes {
+            position: Some(FloatAttribute::new(combined_position, 3)),
+            position_3d_high: None,
+            position_3d_low: None,
+            normal: None,
+            scale_normal_and_cap: None,
+            batch_ids: None,
+            batch_index: None,
+        }
     };
 
     Some(PolygonGeometryResult {
@@ -130,14 +171,16 @@ pub fn create_flat_polygon_geometry(
 }
 
 fn create_side_outline(
-    ring: &[Vec3],
+    ring: &[RawDVec3],
     positions: &mut Vec<f32>,
     skip_indices: &mut Vec<u32>,
     scale_normal_cap: &mut Vec<f32>,
     per_position_height: bool,
 ) {
     for p in ring {
-        let mut side_seg = vec![p.x, p.y, p.z, p.x, p.y, p.z];
+        let mut side_seg = vec![
+            p.x as f32, p.y as f32, p.z as f32, p.x as f32, p.y as f32, p.z as f32,
+        ];
         let s_n_c = scale_to_geodetic_height_extruded(&mut side_seg, WGS84_32, per_position_height);
         scale_normal_cap.extend(s_n_c);
 
@@ -147,7 +190,7 @@ fn create_side_outline(
 }
 
 fn outlines_from_hierarchy(
-    hierarchies: &[HierarchyVec3],
+    hierarchies: &[HierarchyDVec3],
     granularity: f32,
     per_position_height: bool,
 ) -> PolygonOutlineGeometry {
@@ -233,6 +276,7 @@ pub fn create_polygon_geometry(
 
     let mut geometries = vec![];
 
+    let use_rte = options.use_rte;
     let polygons_length = polygons.len();
     for i in 0..polygons_length {
         let mut split_geometry = create_geometry_from_positions_extruded(
@@ -242,24 +286,30 @@ pub fn create_polygon_geometry(
             granularity,
             &hierarchies[i],
             per_position_height,
+            use_rte,
         );
 
         if !clamp_to_ground {
             let top_bottom_normals = compute_extruded_normals(
                 WGS84_32,
-                &split_geometry.top_bottom_geometry,
+                &split_geometry.top_bottom_geometry.attributes,
                 false,
                 per_position_height,
             );
             split_geometry.top_bottom_geometry.attributes.normal =
                 Some(FloatAttribute::new(top_bottom_normals, 3));
         }
+
         geometries.push(split_geometry.top_bottom_geometry);
 
         for mut wall_geometry in split_geometry.wall_geometries {
             if !clamp_to_ground {
-                let wall_normals =
-                    compute_extruded_normals(WGS84_32, &wall_geometry, true, per_position_height);
+                let wall_normals = compute_extruded_normals(
+                    WGS84_32,
+                    &wall_geometry.attributes,
+                    true,
+                    per_position_height,
+                );
                 wall_geometry.attributes.normal = Some(FloatAttribute::new(wall_normals, 3));
             }
             geometries.push(wall_geometry);
@@ -267,7 +317,9 @@ pub fn create_polygon_geometry(
     }
 
     let mut combined_attributes = PolygonGeometryAttributes {
-        position: FloatAttribute::new(vec![], 3),
+        position: (!use_rte).then(|| FloatAttribute::new(vec![], 3)),
+        position_3d_high: use_rte.then(|| FloatAttribute::new(vec![], 3)),
+        position_3d_low: use_rte.then(|| FloatAttribute::new(vec![], 3)),
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_ids: None,
@@ -278,11 +330,40 @@ pub fn create_polygon_geometry(
     let mut index_offset = 0;
     // Combine all attributes into one geometry
     for mut geometry in geometries {
-        let position_length = geometry.attributes.position.data.len() / 3;
-        combined_attributes
-            .position
-            .data
-            .append(&mut geometry.attributes.position.data);
+        let position_length = if use_rte {
+            geometry
+                .attributes
+                .position_3d_high
+                .as_ref()
+                .unwrap()
+                .data
+                .len()
+                / 3
+        } else {
+            geometry.attributes.position.as_ref().unwrap().data.len() / 3
+        };
+
+        if use_rte {
+            combined_attributes
+                .position_3d_high
+                .as_mut()
+                .unwrap()
+                .data
+                .append(&mut geometry.attributes.position_3d_high.as_mut().unwrap().data);
+            combined_attributes
+                .position_3d_low
+                .as_mut()
+                .unwrap()
+                .data
+                .append(&mut geometry.attributes.position_3d_low.as_mut().unwrap().data);
+        } else {
+            combined_attributes
+                .position
+                .as_mut()
+                .unwrap()
+                .data
+                .append(&mut geometry.attributes.position.as_mut().unwrap().data);
+        }
         if let Some(normal) = geometry.attributes.normal.as_mut() {
             combined_attributes
                 .normal
@@ -331,8 +412,9 @@ pub fn create_geometry_from_positions_extruded(
     polygon_resource: &mut PolygonResource,
     polygon: &Polygon,
     granularity: FloatType,
-    hierarchy: &HierarchyVec3,
+    hierarchy: &HierarchyDVec3,
     per_position_height: bool,
+    use_rte: bool,
 ) -> ExtrudedPolygonGeometry {
     let (mut top_positions, mut top_indices) = create_geometry_from_positions(
         ellipsoid,
@@ -367,6 +449,10 @@ pub fn create_geometry_from_positions_extruded(
         per_position_height,
     );
 
+    // Conditionally encode positions based on use_rte
+    let (top_bottom_pos, top_bottom_pos_high, top_bottom_pos_low) =
+        encode_positions_conditionally(top_bottom_positions, use_rte);
+
     let outer_ring = &hierarchy.outer_ring;
 
     let mut wall_geometries =
@@ -378,9 +464,15 @@ pub fn create_geometry_from_positions_extruded(
     let wall_scale_normal_and_cap =
         scale_to_geodetic_height_extruded(&mut wall_positions, ellipsoid, per_position_height);
 
+    // Conditionally encode wall positions based on use_rte
+    let (wall_pos, wall_pos_high, wall_pos_low) =
+        encode_positions_conditionally(wall_positions, use_rte);
+
     wall_geometries.push(PolygonGeometry {
         attributes: PolygonGeometryAttributes {
-            position: FloatAttribute::new(wall_positions, 3),
+            position: wall_pos.map(|p| FloatAttribute::new(p, 3)),
+            position_3d_high: wall_pos_high.map(|p| FloatAttribute::new(p, 3)),
+            position_3d_low: wall_pos_low.map(|p| FloatAttribute::new(p, 3)),
             normal: None,
             scale_normal_and_cap: Some(FloatAttribute::new(wall_scale_normal_and_cap, 4)),
             batch_ids: None,
@@ -400,9 +492,15 @@ pub fn create_geometry_from_positions_extruded(
                 per_position_height,
             );
 
+            // Conditionally encode hole wall positions based on use_rte
+            let (hole_pos, hole_pos_high, hole_pos_low) =
+                encode_positions_conditionally(hole_wall_pos, use_rte);
+
             wall_geometries.push(PolygonGeometry {
                 attributes: PolygonGeometryAttributes {
-                    position: FloatAttribute::new(hole_wall_pos, 3),
+                    position: hole_pos.map(|p| FloatAttribute::new(p, 3)),
+                    position_3d_high: hole_pos_high.map(|p| FloatAttribute::new(p, 3)),
+                    position_3d_low: hole_pos_low.map(|p| FloatAttribute::new(p, 3)),
                     normal: None,
                     scale_normal_and_cap: Some(FloatAttribute::new(hole_scale_normal_and_cap, 4)),
                     batch_ids: None,
@@ -416,7 +514,9 @@ pub fn create_geometry_from_positions_extruded(
     ExtrudedPolygonGeometry {
         top_bottom_geometry: PolygonGeometry {
             attributes: PolygonGeometryAttributes {
-                position: FloatAttribute::new(top_bottom_positions, 3),
+                position: top_bottom_pos.map(|p| FloatAttribute::new(p, 3)),
+                position_3d_high: top_bottom_pos_high.map(|p| FloatAttribute::new(p, 3)),
+                position_3d_low: top_bottom_pos_low.map(|p| FloatAttribute::new(p, 3)),
                 normal: None,
                 scale_normal_and_cap: Some(FloatAttribute::new(scale_normal_and_cap, 4)),
                 batch_ids: None,
@@ -428,29 +528,75 @@ pub fn create_geometry_from_positions_extruded(
     }
 }
 
+/// Helper function to encode positions conditionally
+#[allow(clippy::type_complexity)]
+fn encode_positions_conditionally(
+    positions: Vec<f32>,
+    use_rte: bool,
+) -> (Option<Vec<f32>>, Option<Vec<f32>>, Option<Vec<f32>>) {
+    if use_rte {
+        // Encode to RTE high/low
+        let mut pos_high = Vec::with_capacity(positions.len());
+        let mut pos_low = Vec::with_capacity(positions.len());
+
+        for chunk in positions.chunks(3) {
+            let encoded = EncodedVec3::encode(Vec3::new(chunk[0], chunk[1], chunk[2]));
+            pos_high.push(encoded.high.x);
+            pos_high.push(encoded.high.y);
+            pos_high.push(encoded.high.z);
+            pos_low.push(encoded.low.x);
+            pos_low.push(encoded.low.y);
+            pos_low.push(encoded.low.z);
+        }
+        (None, Some(pos_high), Some(pos_low))
+    } else {
+        // Use regular positions
+        (Some(positions), None, None)
+    }
+}
+
 // Ref: https://github.com/CesiumGS/cesium/blob/baaabaa49058067c855ad050be73a9cdfe9b6ac7/packages/engine/Source/Core/PolygonGeometry.js#L62
 fn compute_extruded_normals(
     ellipsoid: Ellipsoid<FloatType>,
-    geometry: &PolygonGeometry,
+    attributes: &PolygonGeometryAttributes,
     wall: bool,
     per_position_height: bool,
 ) -> Vec<f32> {
-    let positions = &geometry.attributes.position.data;
-    let positions_length = positions.len();
-    let mut normals = vec![0.; positions_length];
+    // Helper closure to get position at index i, decoding from RTE if needed
+    let get_position = |idx: usize| -> Vec3 {
+        if let Some(pos_high) = &attributes.position_3d_high {
+            let pos_low = attributes.position_3d_low.as_ref().unwrap();
+            let i = idx * 3;
+            Vec3::new(
+                pos_high.data[i] + pos_low.data[i],
+                pos_high.data[i + 1] + pos_low.data[i + 1],
+                pos_high.data[i + 2] + pos_low.data[i + 2],
+            )
+        } else {
+            let positions = attributes.position.as_ref().unwrap();
+            unpack_flatten_vec3(&positions.data, idx * 3)
+        }
+    };
+
+    let positions_count = if let Some(pos_high) = &attributes.position_3d_high {
+        pos_high.data.len() / 3
+    } else {
+        attributes.position.as_ref().unwrap().data.len() / 3
+    };
+
+    let mut normals = vec![0.; positions_count * 3];
 
     let mut is_in_corner = true;
 
-    let bottom_offset = positions_length / 2;
+    let bottom_offset = positions_count / 2;
     let mut normal = Vec3::ZERO;
-    for i in 0..(bottom_offset / 3) {
-        let i: usize = i * 3;
-        let p0 = unpack_flatten_vec3(positions, i);
+    for i in 0..bottom_offset {
+        let p0 = get_position(i);
         if wall {
-            if i + 3 < bottom_offset {
-                let mut p1 = unpack_flatten_vec3(positions, i + 3);
+            if i + 1 < bottom_offset {
+                let mut p1 = get_position(i + 1);
                 if is_in_corner {
-                    let mut bottom_p = unpack_flatten_vec3(positions, i + bottom_offset);
+                    let mut bottom_p = get_position(i + bottom_offset);
 
                     if per_position_height {
                         // Adjust position for correct normal.
@@ -477,18 +623,18 @@ fn compute_extruded_normals(
                 .normalize();
         }
 
-        let i0 = i;
+        let i0 = i * 3;
         let i1 = i0 + 1;
         let i2 = i0 + 2;
 
         if wall {
-            normals[i0 + bottom_offset] = normal.x;
-            normals[i1 + bottom_offset] = normal.y;
-            normals[i2 + bottom_offset] = normal.z;
+            normals[i0 + bottom_offset * 3] = normal.x;
+            normals[i1 + bottom_offset * 3] = normal.y;
+            normals[i2 + bottom_offset * 3] = normal.z;
         } else {
-            normals[i0 + bottom_offset] = -normal.x;
-            normals[i1 + bottom_offset] = -normal.y;
-            normals[i2 + bottom_offset] = -normal.z;
+            normals[i0 + bottom_offset * 3] = -normal.x;
+            normals[i1 + bottom_offset * 3] = -normal.y;
+            normals[i2 + bottom_offset * 3] = -normal.z;
         }
 
         normals[i0] = normal.x;

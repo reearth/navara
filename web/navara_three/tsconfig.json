@@ -3,7 +3,7 @@
   "compilerOptions": {
     "paths": {
       "@navara/three": ["./src"],
-      "@navara/three_api": ["../navara_api/src"],
+      "@navara/three_api": ["../navara_three_api/src"],
       "@navara/core": ["../navara_core/src"],
       "@navara/csm": ["../navara_csm/src"],
       "@navara/three_react": ["../navara_react/src"],

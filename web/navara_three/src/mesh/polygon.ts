@@ -3,6 +3,7 @@ import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
+import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
@@ -11,6 +12,9 @@ import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.gl
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
+import ProjectVertexRte from "@shaders/glsl/chunks/project_vertex_rte.glsl";
+import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
+import RteVertex from "@shaders/glsl/chunks/rte_vertex.glsl";
 import ShadowMapDepthFragment from "@shaders/glsl/chunks/shadowmap_depth_fragment.glsl";
 import ShadowMapDepthParsFragment from "@shaders/glsl/chunks/shadowmap_depth_pars_fragment.glsl";
 import ShadowMapDepthParsVertex from "@shaders/glsl/chunks/shadowmap_depth_pars_vertex.glsl";
@@ -23,9 +27,11 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  Matrix4,
   MeshLambertMaterial,
   RepeatWrapping,
   RGBADepthPacking,
+  Vector3,
 } from "three";
 
 import {
@@ -45,7 +51,9 @@ import {
 import type { DefaultBatchAttributeValues } from "./batchTexture";
 
 type Attributes = BatchedFeatureAttributes<{
-  position: BufferAttribute;
+  position?: BufferAttribute; // Present when use_rte = false
+  position_3d_high?: BufferAttribute; // Present when use_rte = true
+  position_3d_low?: BufferAttribute; // Present when use_rte = true
   normal: BufferAttribute;
   scaleNormalAndCap: BufferAttribute;
   attrBatchId: BufferAttribute;
@@ -71,6 +79,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     tileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
   ) {
+    // TODO: Need to calculate bounding sphere by position_high and position_low.
+    this.frustumCulled = false;
+
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
     this.initDepthMaterial();
@@ -88,7 +99,21 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
     const g = mesh.geometry;
-    const position = buf.removeF32(g.position.data);
+
+    // Check if RTE attributes are present
+    const useRTE =
+      g.position_3d_high !== undefined && g.position_3d_high.size > 0;
+
+    const position =
+      !useRTE && g.position ? buf.removeF32(g.position.data) : undefined;
+    const position_3d_high =
+      useRTE && g.position_3d_high
+        ? buf.removeF32(g.position_3d_high.data)
+        : undefined;
+    const position_3d_low =
+      useRTE && g.position_3d_low
+        ? buf.removeF32(g.position_3d_low.data)
+        : undefined;
     const normal = g.normal ? buf.removeF32(g.normal.data) : undefined;
     const scale_normal_and_cap = g.scale_normal_and_cap
       ? buf.removeF32(g.scale_normal_and_cap.data)
@@ -100,13 +125,43 @@ export class PolygonMesh extends BatchedFeatureMesh<
       ? buf.removeU32(g.batch_index.data)
       : undefined;
     const batchIndexSize = g.batch_index ? g.batch_index.size : 0;
-    if (!position || !indices) return;
+
+    if (!indices) return;
+    if (!useRTE && !position) return;
+    if (useRTE && (!position_3d_high || !position_3d_low)) return;
 
     const geometry = this.geometry;
-    geometry.setAttribute(
-      "position",
-      new BufferAttribute(position, g.position.size),
-    );
+
+    if (useRTE) {
+      // RTE mode: set position_3d_high and position_3d_low
+      if (
+        position_3d_high &&
+        position_3d_low &&
+        g.position_3d_high &&
+        g.position_3d_low
+      ) {
+        geometry.setAttribute(
+          "position_3d_high",
+          new BufferAttribute(position_3d_high, g.position_3d_high.size),
+        );
+        geometry.setAttribute(
+          "position_3d_low",
+          new BufferAttribute(position_3d_low, g.position_3d_low.size),
+        );
+      }
+    } else {
+      // Regular mode: set position
+      if (position && g.position) {
+        geometry.setAttribute(
+          "position",
+          new BufferAttribute(position, g.position.size),
+        );
+      }
+    }
+
+    // Store useRTE flag for later use
+    this.userData.useRTE = useRTE;
+
     if (g.normal && normal) {
       geometry.setAttribute(
         "normal",
@@ -154,6 +209,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     const isTexturized = !!tileHandle;
     const shouldClipByStencil = !isTexturized && clampToGround;
     const material = this.material;
+
     material.color.set(mcolor ?? 0);
     material.wireframe = !!meshMaterial.wireframe;
     material.stencilWrite = false;
@@ -218,6 +274,39 @@ export class PolygonMesh extends BatchedFeatureMesh<
         : null,
     };
 
+    // Only set up RTE uniforms if using RTE
+    const useRTE = this.userData.useRTE;
+    if (useRTE) {
+      material.userData.modelViewMatrixRTE = {
+        value: new Matrix4(),
+      };
+      material.userData.cameraPositionHigh = {
+        value: new Vector3(),
+      };
+      material.userData.cameraPositionLow = {
+        value: new Vector3(),
+      };
+
+      this.onBeforeRender = () => {
+        if (
+          !uniforms.inverseWorldMatrix.value ||
+          !uniforms.cameraPosition.value
+        )
+          return;
+        calcModelMatrixRTE(
+          this.matrixWorld,
+          uniforms.inverseWorldMatrix.value,
+          material.userData.modelViewMatrixRTE.value,
+        );
+        const result = calcCameraPosition(
+          uniforms.cameraPosition.value,
+          this.matrixWorld,
+        );
+        material.userData.cameraPositionHigh.value = result.high;
+        material.userData.cameraPositionLow.value = result.low;
+      };
+    }
+
     material.userData.defines ??= {};
     material.userData.defines.USE_ROUGHNESS = 1;
     this.water = !!meshMaterial.water;
@@ -237,6 +326,17 @@ export class PolygonMesh extends BatchedFeatureMesh<
       shader.uniforms.uSpecularStrength = material.userData.specularStrength;
       shader.uniforms.uApplyWaterNormal = material.userData.applyWaterNormal;
       shader.uniforms.uTime = uniforms.time;
+
+      // Only add RTE uniforms if using RTE
+      if (useRTE) {
+        shader.uniforms.u_cameraPositionHigh =
+          material.userData.cameraPositionHigh;
+        shader.uniforms.u_cameraPositionLow =
+          material.userData.cameraPositionLow;
+        shader.uniforms.modelViewMatrixRTE =
+          material.userData.modelViewMatrixRTE;
+      }
+
       if (material.userData.uMinMaxHeight.value) {
         shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       }
@@ -252,7 +352,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
       shader.uniforms.uIsTexturized = material.userData.uIsTexturized;
 
-      // Use Replacer for method chaining (with side-effect free implementation)
+      // Build vertex shader with conditional RTE support
+      // RTE mode: use RTE shaders
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "#include <common>",
@@ -260,15 +361,16 @@ export class PolygonMesh extends BatchedFeatureMesh<
   #include <common>
   in float attrBatchId;
   in vec4 scaleNormalAndCap;
-  
+
   uniform vec2 uMinMaxHeight;
   out float nvr_vBatchId;
-  
+
+  ${useRTE ? RteParsVertex : ""}
   ${ShowParsVertex}
   ${ExtrudedHeightParsVertex}
   ${HeightParsVertex}
   ${BatchTextureParsVertex}
-  
+
   ${BranchFreeTernary}
 
   ${ShadowMapDepthParsVertex}
@@ -279,7 +381,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         .replace(
           "#include <begin_vertex>",
           `
-  #include <begin_vertex>
+  ${useRTE ? RteVertex : "#include <begin_vertex>"}
 
   ${ExtrudedHeightVertex}
   ${HeightVertex}
@@ -302,12 +404,32 @@ export class PolygonMesh extends BatchedFeatureMesh<
   ${ShadowMapDepthVertex}
   `,
         )
-        .replace(
+        .replaceWithCondition(
+          "#include <project_vertex>",
+          `
+  ${ProjectVertexRte}
+  `,
+          useRTE,
+        )
+        .replaceWithCondition(
           "#include <envmap_vertex>",
           `
   #include <envmap_vertex>
-  vPosition = transformed;
+
+  vec4 absTransformed = vec4(decode_position_rte(), 1.0);
+  vPosition = absTransformed.xyz;
+  vViewPosition = -(modelViewMatrix * absTransformed).xyz;
   `,
+          useRTE,
+        )
+        .replaceWithCondition(
+          "#include <envmap_vertex>",
+          `
+  #include <envmap_vertex>
+
+  vPosition = transformed.xyz;
+  `,
+          !useRTE,
         ).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
@@ -327,7 +449,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform float uSpecularStrength;
   uniform float uApplyWaterNormal;
   uniform float uTime;
-  uniform mat4 modelMatrix;
 
   in float nvr_vBatchId;
   

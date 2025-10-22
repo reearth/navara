@@ -185,6 +185,7 @@ pub fn transfer_mesh(
             &geometry.crs,
             material,
             &mut polygon_resource,
+            true, // use_rte = true for individual features
         );
         if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
@@ -200,10 +201,22 @@ pub fn transfer_mesh(
                 ),
             });
 
-            let pos_cnt = polygon_result.geometry.attributes.position.data.len()
-                / polygon_result.geometry.attributes.position.size as usize;
+            let pos_cnt = polygon_result
+                .geometry
+                .attributes
+                .position_3d_high
+                .as_ref()
+                .unwrap()
+                .data
+                .len()
+                / polygon_result
+                    .geometry
+                    .attributes
+                    .position_3d_high
+                    .as_ref()
+                    .unwrap()
+                    .size as usize;
             let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
-
             polygon_result.geometry.attributes.batch_ids =
                 Some(FloatAttribute::new(batch_id_vec, 1));
 

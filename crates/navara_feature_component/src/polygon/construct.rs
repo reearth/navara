@@ -2,21 +2,22 @@ use core::f32;
 
 use navara_core::{Extent, Radians, CRS, WGS84_32};
 use navara_geometry::{
-    create_flat_polygon_geometry, create_polygon_geometry, Hierarchy, HierarchyVec3,
+    create_flat_polygon_geometry, create_polygon_geometry, Hierarchy, HierarchyDVec3,
     PolygonGeometryOptions, PolygonGeometryResult, PolygonResource, WindingOrder,
 };
 use navara_material::PolygonMaterial;
-use navara_math::Vec3;
+use navara_math::{RawDVec3, Vec3};
 
 pub fn construct_polygon_feature(
     geometry_hierarchy: Hierarchy,
     crs: &CRS,
     material: &PolygonMaterial,
     polygon_resource: &mut PolygonResource,
+    use_rte: bool,
 ) -> (Option<Extent<f32, Radians>>, Option<PolygonGeometryResult>) {
     let mut lnglats = vec![];
 
-    let mut hierarchy = HierarchyVec3 {
+    let mut hierarchy = HierarchyDVec3 {
         expected_winding_order: geometry_hierarchy.expected_winding_order,
         ..Default::default()
     };
@@ -24,9 +25,12 @@ pub fn construct_polygon_feature(
     for i in 0..(ring.len() / 3) {
         let i = i * 3;
         let v = Vec3::new(ring[i], ring[i + 1], ring[i + 2]);
-        hierarchy
-            .outer_ring
-            .push(crs.to_vec3(WGS84_32, v, material.height));
+        let converted = crs.to_vec3(WGS84_32, v, material.height);
+        hierarchy.outer_ring.push(RawDVec3::new(
+            converted.x as f64,
+            converted.y as f64,
+            converted.z as f64,
+        ));
         lnglats.push(crs.to_lng_lat(WGS84_32, v));
     }
 
@@ -39,13 +43,18 @@ pub fn construct_polygon_feature(
                     let mut outer_ring = vec![];
                     for i in 0..(ring.len() / 3) {
                         let i = i * 3;
-                        outer_ring.push(crs.to_vec3(
+                        let converted = crs.to_vec3(
                             WGS84_32,
                             Vec3::new(ring[i], ring[i + 1], ring[i + 2]),
                             material.height,
+                        );
+                        outer_ring.push(RawDVec3::new(
+                            converted.x as f64,
+                            converted.y as f64,
+                            converted.z as f64,
                         ));
                     }
-                    HierarchyVec3 {
+                    HierarchyDVec3 {
                         outer_ring,
                         holes: None,
                         expected_winding_order: geometry_hierarchy.expected_winding_order,
@@ -72,6 +81,7 @@ pub fn construct_polygon_feature(
             height: material.height,
             extruded_height: material.extruded_height.unwrap_or_default(),
             per_position_height: material.per_position_height,
+            use_rte,
             ..Default::default()
         },
         polygon_resource,
@@ -84,16 +94,20 @@ pub fn construct_flat_polygon_feature(
     geometry_hierarchy: Hierarchy,
     material: &PolygonMaterial,
     polygon_resource: &mut PolygonResource,
+    use_rte: bool,
 ) -> Option<PolygonGeometryResult> {
-    let mut hierarchy = HierarchyVec3 {
+    let mut hierarchy = HierarchyDVec3 {
         expected_winding_order: geometry_hierarchy.expected_winding_order,
         ..Default::default()
     };
     let ring = geometry_hierarchy.outer_ring;
     for i in 0..(ring.len() / 3) {
         let i = i * 3;
-        let v = Vec3::new(ring[i], ring[i + 1], ring[i + 2]);
-        hierarchy.outer_ring.push(v);
+        hierarchy.outer_ring.push(RawDVec3::new(
+            ring[i] as f64,
+            ring[i + 1] as f64,
+            ring[i + 2] as f64,
+        ));
     }
 
     if let Some(holes_before) = &geometry_hierarchy.holes {
@@ -105,9 +119,13 @@ pub fn construct_flat_polygon_feature(
                     let mut outer_ring = vec![];
                     for i in 0..(ring.len() / 3) {
                         let i = i * 3;
-                        outer_ring.push(Vec3::new(ring[i], ring[i + 1], ring[i + 2]));
+                        outer_ring.push(RawDVec3::new(
+                            ring[i] as f64,
+                            ring[i + 1] as f64,
+                            ring[i + 2] as f64,
+                        ));
                     }
-                    HierarchyVec3 {
+                    HierarchyDVec3 {
                         outer_ring,
                         holes: None,
                         expected_winding_order: geometry_hierarchy.expected_winding_order,
@@ -131,6 +149,7 @@ pub fn construct_flat_polygon_feature(
             clamp_to_ground: material.clamp_to_ground,
             height: material.height,
             extruded_height: material.extruded_height.unwrap_or_default(),
+            use_rte,
             ..Default::default()
         },
         polygon_resource,

@@ -31,7 +31,9 @@ pub fn construct_polygon(
     let crs: navara_core::CRS = (&features.crs).into();
 
     let mut combined_attributes = PolygonGeometryAttributes {
-        position: FloatAttribute::new(vec![], 3),
+        position: Some(FloatAttribute::new(vec![], 3)),
+        position_3d_high: None,
+        position_3d_low: None,
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_ids: Some(FloatAttribute::new(vec![], 1)),
@@ -52,6 +54,7 @@ pub fn construct_polygon(
                 &crs,
                 &material,
                 &mut polygon_resource,
+                false, // use_rte = false for batched MVT features
             );
 
         let (extent, mut polygon_result) = match (extent_opt, polygon_result_opt) {
@@ -64,16 +67,31 @@ pub fn construct_polygon(
             None => extent,
         });
 
-        let position_length = polygon_result.geometry.attributes.position.data.len()
-            / polygon_result.geometry.attributes.position.size as usize;
+        let position_length = polygon_result
+            .geometry
+            .attributes
+            .position
+            .as_ref()
+            .unwrap()
+            .data
+            .len()
+            / polygon_result
+                .geometry
+                .attributes
+                .position
+                .as_ref()
+                .unwrap()
+                .size as usize;
         if position_length == 0 {
             continue;
         }
 
         combined_attributes
             .position
+            .as_mut()
+            .unwrap()
             .data
-            .append(&mut polygon_result.geometry.attributes.position.data);
+            .append(&mut polygon_result.geometry.attributes.position.unwrap().data);
         if let Some(normal) = polygon_result.geometry.attributes.normal.as_mut() {
             combined_attributes
                 .normal
@@ -141,7 +159,9 @@ pub fn construct_flat_polygon(
     let material: navara_material::PolygonMaterial = material.into();
 
     let mut combined_attributes = PolygonGeometryAttributes {
-        position: FloatAttribute::new(vec![], 3),
+        position: Some(FloatAttribute::new(vec![], 3)),
+        position_3d_high: None,
+        position_3d_low: None,
         normal: None,
         scale_normal_and_cap: None,
         batch_ids: Some(FloatAttribute::new(vec![], 1)),
@@ -159,6 +179,7 @@ pub fn construct_flat_polygon(
             geometry_hierarchy,
             &material,
             &mut polygon_resource,
+            false, // use_rte = false for batched MVT features
         );
 
         let mut polygon_result = match polygon_result_opt {
@@ -166,16 +187,31 @@ pub fn construct_flat_polygon(
             None => continue,
         };
 
-        let position_length = polygon_result.geometry.attributes.position.data.len()
-            / polygon_result.geometry.attributes.position.size as usize;
+        let position_length = polygon_result
+            .geometry
+            .attributes
+            .position
+            .as_ref()
+            .unwrap()
+            .data
+            .len()
+            / polygon_result
+                .geometry
+                .attributes
+                .position
+                .as_ref()
+                .unwrap()
+                .size as usize;
         if position_length == 0 {
             continue;
         }
 
         combined_attributes
             .position
+            .as_mut()
+            .unwrap()
             .data
-            .append(&mut polygon_result.geometry.attributes.position.data);
+            .append(&mut polygon_result.geometry.attributes.position.unwrap().data);
 
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];

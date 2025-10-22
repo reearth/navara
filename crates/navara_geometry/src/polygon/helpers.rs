@@ -1,32 +1,32 @@
 use std::collections::{HashMap, VecDeque};
 
 use navara_core::{Ellipsoid, EllipsoidTangentPlane};
-use navara_math::{chord_length, EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10};
+use navara_math::{chord_length, EqualEpsilon, FloatType, RawDVec3, Vec2, Vec3, EPSILON10};
 
 use crate::helpers::vec::{unique_with_delta_e, unpack_flatten_vec3};
 
-use super::{types::Polygon, HierarchyVec3, PolygonResource, WindingOrder};
+use super::{types::Polygon, HierarchyDVec3, PolygonResource, WindingOrder};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometry.js#L1163
 pub fn project_to_2d(
     ellipsoid: Ellipsoid<FloatType>,
-    outer_positions: &[Vec3],
-) -> impl Fn(&[Vec3]) -> Vec<Vec2> {
+    outer_positions: &[RawDVec3],
+) -> impl Fn(&[RawDVec3]) -> Vec<Vec2> {
     // TODO: Add a logic for a large extent polygon: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometry.js#L1165-L1189
-    let tangent_plane = EllipsoidTangentPlane::from_points(outer_positions, ellipsoid);
-    move |p| tangent_plane.project_points_onto_plane(p)
+    let tangent_plane = EllipsoidTangentPlane::from_dvec3_points(outer_positions, ellipsoid);
+    move |p| tangent_plane.project_dvec3_points_onto_plane(p)
 }
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometryLibrary.js#L753
 pub fn polygons_from_hierarchy<F>(
-    polygon_hierarchy: &HierarchyVec3,
+    polygon_hierarchy: &HierarchyDVec3,
     project_points_to_2d: F,
-) -> (Vec<Polygon>, Vec<HierarchyVec3>)
+) -> (Vec<Polygon>, Vec<HierarchyDVec3>)
 where
-    F: Fn(&[Vec3]) -> Vec<Vec2>,
+    F: Fn(&[RawDVec3]) -> Vec<Vec2>,
 {
     let mut polygons: Vec<Polygon> = vec![];
-    let mut hierarchies: Vec<HierarchyVec3> = vec![];
+    let mut hierarchies: Vec<HierarchyDVec3> = vec![];
 
     let mut queue = VecDeque::new();
     queue.push_back(polygon_hierarchy);
@@ -52,7 +52,7 @@ where
                     hole_indices.push(index);
                     positions.extend(hole_dst.iter());
 
-                    holes_dst.push(HierarchyVec3 {
+                    holes_dst.push(HierarchyDVec3 {
                         outer_ring: hole_dst,
                         holes: None,
                         expected_winding_order: WindingOrder::Clockwise,
@@ -71,7 +71,7 @@ where
             positions_2d,
             hole_indices,
         });
-        hierarchies.push(HierarchyVec3 {
+        hierarchies.push(HierarchyDVec3 {
             outer_ring,
             holes: (!holes_dst.is_empty()).then_some(holes_dst),
             expected_winding_order: WindingOrder::CounterClockwise,
@@ -98,9 +98,9 @@ pub fn create_geometry_from_positions(
         let mut flattened_positions = vec![0.0; length * 3];
         let mut index = 0;
         for p in &polygon.positions {
-            flattened_positions[index] = p.x;
-            flattened_positions[index + 1] = p.y;
-            flattened_positions[index + 2] = p.z;
+            flattened_positions[index] = p.x as FloatType;
+            flattened_positions[index + 1] = p.y as FloatType;
+            flattened_positions[index + 2] = p.z as FloatType;
             index += 3;
         }
 
@@ -172,7 +172,7 @@ pub fn scale_to_geodetic_height_extruded(
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonPipeline.js#L102
 pub fn compute_subdivision(
     ellipsoid: Ellipsoid<FloatType>,
-    positions: &[Vec3],
+    positions: &[RawDVec3],
     indices: Vec<usize>,
     granularity: FloatType,
 ) -> (Vec<FloatType>, Vec<u32>) {
@@ -185,7 +185,7 @@ pub fn compute_subdivision(
     let mut subdivided_indices = vec![];
     let mut subdivided_positions = positions
         .iter()
-        .flat_map(|p| [p.x, p.y, p.z])
+        .flat_map(|p| [p.x as FloatType, p.y as FloatType, p.z as FloatType])
         .collect::<Vec<_>>();
 
     let mut triangles = indices;
@@ -277,7 +277,7 @@ pub fn compute_subdivision(
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometryLibrary.js#L1029
 pub fn compute_wall_geometry(
     ellipsoid: Ellipsoid<FloatType>,
-    positions: &[Vec3],
+    positions: &[RawDVec3],
     granularity: FloatType,
 ) -> (Vec<f32>, Vec<u32>) {
     let length = positions.len();
@@ -303,9 +303,9 @@ pub fn compute_wall_geometry(
             edge_positions.push(z);
         }
 
-        edge_positions.push(p2.x);
-        edge_positions.push(p2.y);
-        edge_positions.push(p2.z);
+        edge_positions.push(p2.x as f32);
+        edge_positions.push(p2.y as f32);
+        edge_positions.push(p2.z as f32);
     }
 
     edge_positions.extend_from_within(..);
@@ -317,7 +317,7 @@ pub fn compute_wall_geometry(
 
 pub fn compute_outline_positions(
     ellipsoid: Ellipsoid<FloatType>,
-    positions: &[Vec3],
+    positions: &[RawDVec3],
     granularity: FloatType,
 ) -> Vec<f32> {
     let length = positions.len();
@@ -382,32 +382,32 @@ pub fn calculate_wall_indices(top_bottom_positions: &[FloatType]) -> Vec<u32> {
     indices
 }
 
-fn subdivide_line_count(p0: Vec3, p1: Vec3, min_distance: FloatType) -> u32 {
-    let distance = p0.distance(p1);
+fn subdivide_line_count(p0: RawDVec3, p1: RawDVec3, min_distance: FloatType) -> u32 {
+    let distance = p0.distance(p1) as FloatType;
     let n = distance / min_distance;
     let count_divide = n.log2().ceil().max(0.);
     2.0f32.powf(count_divide) as u32
 }
 
-fn get_point_at_distance(p0: Vec3, p1: Vec3, distance: f32, length: f32) -> Vec3 {
+fn get_point_at_distance(p0: RawDVec3, p1: RawDVec3, distance: f32, length: f32) -> RawDVec3 {
     let mut next_p = p1 - p0;
-    next_p *= distance / length;
+    next_p *= (distance / length) as f64;
     next_p = p0 + next_p;
     next_p
 }
 
 /// Subdivide line by the given minimum distance.
-fn subdivide_line(p0: Vec3, p1: Vec3, min_distance: FloatType) -> Vec<f32> {
+fn subdivide_line(p0: RawDVec3, p1: RawDVec3, min_distance: FloatType) -> Vec<f32> {
     let num_vertices = subdivide_line_count(p0, p1, min_distance);
-    let length = p0.distance(p1);
+    let length = p0.distance(p1) as f32;
     let distance_between_vertices = length / num_vertices as f32;
 
     let mut positions = vec![];
     for i in 0..num_vertices {
         let p = get_point_at_distance(p0, p1, i as f32 * distance_between_vertices, length);
-        positions.push(p.x);
-        positions.push(p.y);
-        positions.push(p.z);
+        positions.push(p.x as f32);
+        positions.push(p.y as f32);
+        positions.push(p.z as f32);
     }
 
     positions
@@ -416,7 +416,7 @@ fn subdivide_line(p0: Vec3, p1: Vec3, min_distance: FloatType) -> Vec<f32> {
 #[cfg(test)]
 mod test {
     use navara_core::WGS84_32;
-    use navara_math::{Vec3, RADIANS_PER_DEGREE};
+    use navara_math::{RawDVec3, RADIANS_PER_DEGREE};
 
     use crate::polygon::helpers::calculate_wall_indices;
 
@@ -425,9 +425,9 @@ mod test {
     #[test]
     fn it_should_be_non_subdivision_polygon() {
         let positions = &[
-            Vec3::new(0.0, 0.0, 90.0),
-            Vec3::new(0.0, 90.0, 0.0),
-            Vec3::new(90.0, 0.0, 0.0),
+            RawDVec3::new(0.0, 0.0, 90.0),
+            RawDVec3::new(0.0, 90.0, 0.0),
+            RawDVec3::new(90.0, 0.0, 0.0),
         ];
         let indices = vec![0, 1, 2];
         let subdivision = compute_subdivision(WGS84_32, positions, indices, 60.);
@@ -450,11 +450,11 @@ mod test {
     #[test]
     fn it_should_be_subdivided_polygon() {
         let positions = &[
-            Vec3::new(6377802.759444977, -58_441.305, 29_025.648),
-            Vec3::new(6377802.759444977, -58_441.305, -29_025.648),
-            Vec3::new(6378137., 0., 0.),
-            Vec3::new(6377802.759444977, 58_441.305, -29_025.648),
-            Vec3::new(6377802.759444977, 58_441.305, 29_025.648),
+            RawDVec3::new(6377802.759444977, -58_441.305, 29_025.648),
+            RawDVec3::new(6377802.759444977, -58_441.305, -29_025.648),
+            RawDVec3::new(6378137., 0., 0.),
+            RawDVec3::new(6377802.759444977, 58_441.305, -29_025.648),
+            RawDVec3::new(6377802.759444977, 58_441.305, 29_025.648),
         ];
         let indices = vec![0, 1, 2, 2, 3, 4, 4, 0, 2];
         let subdivision = compute_subdivision(WGS84_32, positions, indices, RADIANS_PER_DEGREE);
