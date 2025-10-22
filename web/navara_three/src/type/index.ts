@@ -39,9 +39,11 @@ import type {
   LensFlareConfig,
   MRTPassConfig,
   RainDropConfig,
+  SelectiveBloomConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
+  TestSelectiveConfig,
   ToneMappingConfig,
   TransparentPassConfig,
 } from "../layers/effect";
@@ -92,9 +94,11 @@ export type EffectLayerDeclarationDescription =
   | LensFlareConfig
   | MRTPassConfig
   | RainDropConfig
+  | SelectiveBloomConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig
+  | TestSelectiveConfig
   | ToneMappingConfig
   | TransparentPassConfig;
 

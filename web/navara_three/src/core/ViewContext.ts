@@ -8,6 +8,12 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
+import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
+
+export type ViewDebugOptions = {
+  selectiveEffectMask?: boolean;
+};
+
 type Private = {
   meshes: MeshCache;
   drapedMaterials: DrapedMaterialCache;
@@ -16,6 +22,8 @@ type Private = {
 // Restrict public API for a layer declaration.
 export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
+  public selectiveRegistry?: SelectiveEffectRegistry;
+  public debugOptions: ViewDebugOptions;
 
   constructor(
     public scenes: Scenes,
@@ -25,8 +33,12 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public _privates: Private,
     eventHandler?: EventHandler<ViewEvents>,
+    selectiveRegistry?: SelectiveEffectRegistry,
+    debugOptions?: ViewDebugOptions,
   ) {
     this.eventHandler = eventHandler;
+    this.selectiveRegistry = selectiveRegistry;
+    this.debugOptions = debugOptions ?? {};
   }
 
   setCamera(camera: PerspectiveCamera) {

@@ -29,6 +29,7 @@ import { MAP_CONCURRENCY } from "./concurrency";
 import {
   LayerDeclaration,
   ViewContext,
+  SelectiveEffectRegistry,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
@@ -65,6 +66,7 @@ import {
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
+  TestSelectiveEffectLayer,
   ToneMappingEffectLayer,
   RainDropEffectLayer,
   TransparentPassEffectLayer,
@@ -157,6 +159,9 @@ export type Options = {
   clouds?: CloudsOptions;
   backgroundColor?: number;
   picking?: Picking;
+  selectiveEffects?: {
+    debugMask?: boolean;
+  };
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
   animation?: boolean;
   // The number of samples for MSAA.
@@ -382,6 +387,7 @@ export default class ThreeView<
 
   // Registry support
   private registries: Registries;
+  public selectiveRegistry: SelectiveEffectRegistry;
 
   constructor(options: Options = {}) {
     super();
@@ -455,6 +461,7 @@ export default class ThreeView<
       draped: new Scene(),
       opaque: new Scene(),
       transparent: new Scene(),
+      postprocessing: new Map(),
     };
 
     if (options.camera) {
@@ -532,6 +539,9 @@ export default class ThreeView<
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
+    // Initialize SelectiveEffectRegistry
+    this.selectiveRegistry = new SelectiveEffectRegistry(width, height);
+
     // Set up Registry
     const viewContext = new ViewContext(
       this._scenes,
@@ -544,6 +554,10 @@ export default class ThreeView<
         drapedMaterials: this._drapedFeatureMaterials,
       },
       this,
+      this.selectiveRegistry,
+      {
+        selectiveEffectMask: this._options.selectiveEffects?.debugMask,
+      },
     );
     this.registries = new Registries(viewContext);
 
@@ -745,6 +759,9 @@ export default class ThreeView<
       this._terrainPicker.dispose();
     }
 
+    // Dispose SelectiveEffectRegistry
+    this.selectiveRegistry.dispose();
+
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -769,6 +786,9 @@ export default class ThreeView<
     if (pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
+
+    // Update SelectiveEffectRegistry
+    this.selectiveRegistry.setSize(w, h);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
@@ -877,6 +897,9 @@ export default class ThreeView<
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
+    this.selectiveRegistry.renderDebugViews(
+      this.renderPassOrchestrator.effectComposer.getRenderer(),
+    );
     this._pickHelper?.renderDebugCanvas();
 
     this.shadowMapViewers.render(this.renderer);
@@ -970,6 +993,9 @@ export default class ThreeView<
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);
+
+    // Test selective effect (for development)
+    this.registerEffect("testSelective", TestSelectiveEffectLayer);
 
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);

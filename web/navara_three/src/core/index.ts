@@ -34,3 +34,8 @@ export {
 } from "./EffectLayerRegistry";
 export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
+export {
+  SelectiveEffectRegistry,
+  type SelectiveEffectOptions,
+  type SelectiveEffectResources,
+} from "./SelectiveEffectRegistry";

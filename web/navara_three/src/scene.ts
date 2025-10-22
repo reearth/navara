@@ -17,6 +17,8 @@ export type Scenes = {
   // Render this scene after the atmosphere effect. This scene should not be handled in MRT.
   // It is useful to render a transparent mesh.
   transparent: Scene;
+  // Container for selective postprocessing scenes (effectId -> Scene).
+  postprocessing: Map<string, Scene>;
 };
 
 export class SceneGroup extends Group {}

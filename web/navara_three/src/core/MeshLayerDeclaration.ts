@@ -16,11 +16,12 @@ export type MeshLayerConfig = {
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
+  effects?: string[];
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation"
+  "position" | "scale" | "rotation" | "effects"
 > &
   LayerDeclarationConfigUpdate;
 
@@ -49,12 +50,14 @@ export abstract class MeshLayerDeclaration<
   public scale?: XYZ;
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
+  private effects?: string[];
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
     this.position = config.position;
     this.scale = config.scale;
     this.rotation = config.rotation;
+    this.effects = config.effects;
   }
 
   protected getPassKey(): PassKey {
@@ -97,6 +100,13 @@ export abstract class MeshLayerDeclaration<
     this._instance.visible = this.visible;
 
     this.onPassKeyChange();
+
+    // Link to selective effects
+    if (this.effects && this.view.selectiveRegistry && this.raw) {
+      for (const effectId of this.effects) {
+        this.view.selectiveRegistry.link(effectId, this.raw);
+      }
+    }
   }
 
   removeFromScene(passKey: PassKey) {
