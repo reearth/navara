@@ -8,3 +8,4 @@
 // 'transformed' variable, which replaces the standard position.
 
 vec3 transformed = transform_position_rte();
+vec3 absTransformed = decode_position_rte();

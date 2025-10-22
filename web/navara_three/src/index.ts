@@ -509,12 +509,10 @@ export default class ThreeView<
       tGlobeDepth: { value: null },
       tGlobeNormal: { value: null },
       inverseProjectionMatrix: { value: null },
-      inverseWorldMatrix: { value: null },
       // TODO: Need to sync `fov` with WASM side
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
       time: { value: 0 },
-      cameraPosition: { value: new Vector3(0, 0, 0) },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
@@ -804,9 +802,6 @@ export default class ThreeView<
       this.renderPass.globeNormalCopyPass.texture;
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.raw.projectionMatrixInverse;
-    this._uniforms.inverseWorldMatrix.value =
-      this.camera.raw.matrixWorldInverse;
-    this._uniforms.cameraPosition.value?.copy(this.camera.raw.position);
 
     // TODO: Need to sync `fov` with WASM side
     this._uniforms.fov.value = (this.camera.raw.fov * Math.PI) / 180;

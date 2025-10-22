@@ -14,3 +14,6 @@
 // because 'transformed' is already camera-relative from RTE computation
 vec4 mvPosition = modelViewMatrixRTE * vec4(transformed, 1.0);
 gl_Position = projectionMatrix * mvPosition;
+
+vec4 absMvPosition = modelViewMatrix * vec4(absTransformed, 1.0);
+vec4 absProjectedPosition = projectionMatrix * absMvPosition;

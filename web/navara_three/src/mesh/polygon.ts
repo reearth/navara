@@ -26,7 +26,9 @@ import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw
 import {
   BufferAttribute,
   BufferGeometry,
+  Camera,
   Color,
+  Material,
   Matrix4,
   MeshLambertMaterial,
   RepeatWrapping,
@@ -287,23 +289,35 @@ export class PolygonMesh extends BatchedFeatureMesh<
         value: new Vector3(),
       };
 
-      this.onBeforeRender = () => {
-        if (
-          !uniforms.inverseWorldMatrix.value ||
-          !uniforms.cameraPosition.value
-        )
-          return;
+      const handleBeforeRender = (camera: Camera, material: Material) => {
         calcModelMatrixRTE(
           this.matrixWorld,
-          uniforms.inverseWorldMatrix.value,
+          camera.matrixWorldInverse,
           material.userData.modelViewMatrixRTE.value,
         );
-        const result = calcCameraPosition(
-          uniforms.cameraPosition.value,
-          this.matrixWorld,
-        );
+        const result = calcCameraPosition(camera.position, this.matrixWorld);
         material.userData.cameraPositionHigh.value = result.high;
         material.userData.cameraPositionLow.value = result.low;
+      };
+
+      this.onBeforeRender = (
+        _renderer,
+        _scene,
+        camera,
+        _geometry,
+        material,
+      ) => {
+        handleBeforeRender(camera, material);
+      };
+      this.onBeforeShadow = (
+        _renderer,
+        _scene,
+        _camera,
+        shadowCamera,
+        _geometry,
+        material,
+      ) => {
+        handleBeforeRender(shadowCamera, material);
       };
     }
 
@@ -406,9 +420,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         )
         .replaceWithCondition(
           "#include <project_vertex>",
-          `
-  ${ProjectVertexRte}
-  `,
+          ProjectVertexRte,
           useRTE,
         )
         .replaceWithCondition(
@@ -416,9 +428,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
           `
   #include <envmap_vertex>
 
-  vec4 absTransformed = vec4(decode_position_rte(), 1.0);
   vPosition = absTransformed.xyz;
-  vViewPosition = -(modelViewMatrix * absTransformed).xyz;
+  vViewPosition = -absMvPosition.xyz;
   `,
           useRTE,
         )
