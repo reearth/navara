@@ -34,6 +34,7 @@ export {
 } from "@navara/engine-api";
 
 export * from "./intersection";
+export * from "./rte";
 
 export async function initNavaraApi() {
   await initApi();

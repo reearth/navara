@@ -1,11 +1,16 @@
-import type { ConstructedPolygonGeometry } from "@navara/engine";
+import type { ConstructedPolygonGeometry, Vec3 } from "@navara/engine";
 
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
+import { Vec3Like } from "../Vec3Like";
 
 export class ConstructedPolygonGeometryLike {
   extent: ExtentRadianF32Like | undefined;
-  position: Float32Array;
-  position_size: number;
+  position_3d_high: Float32Array | undefined;
+  position_3d_high_size: number | undefined;
+  position_3d_low: Float32Array | undefined;
+  position_3d_low_size: number | undefined;
+  position: Float32Array | undefined;
+  position_size: number | undefined;
   normal: Float32Array | undefined;
   normal_size: number | undefined;
   scale_normal_and_cap: Float32Array | undefined;
@@ -15,12 +20,18 @@ export class ConstructedPolygonGeometryLike {
   batch_index: Uint32Array | undefined;
   batch_index_size: number | undefined;
   indices: Uint32Array;
+  /** RTC (Relative-To-Center) translation vector in world-space ECEF coordinates */
+  rtc_translation: Vec3 | undefined;
 
   constructor(t: ConstructedPolygonGeometry) {
     const extent = t.extent;
     this.extent = extent ? new ExtentRadianF32Like(extent) : undefined;
     // Need to make a slice to avoid memory leak due to it's transferred.
-    this.position = t.position().slice();
+    this.position_3d_high = t.position_3d_high()?.slice();
+    this.position_3d_high_size = t.position_3d_high_size();
+    this.position_3d_low = t.position_3d_low()?.slice();
+    this.position_3d_low_size = t.position_3d_low_size();
+    this.position = t.position()?.slice();
     this.position_size = t.position_size();
     this.normal = t.normal()?.slice();
     this.normal_size = t.normal_size();
@@ -31,5 +42,8 @@ export class ConstructedPolygonGeometryLike {
     this.batch_index = t.batch_index()?.slice();
     this.batch_index_size = t.batch_index_size();
     this.indices = t.indices().slice();
+    this.rtc_translation = t.rtc_translation
+      ? new Vec3Like(t.rtc_translation)
+      : undefined;
   }
 }

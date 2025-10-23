@@ -839,8 +839,6 @@ export default class ThreeView<
       return false;
     }
 
-    this._updateUniforms();
-
     processEvent(
       this._eventManager,
       this._scenes,
@@ -870,6 +868,8 @@ export default class ThreeView<
 
     this.control?.update();
     this.camera.raw.updateMatrixWorld();
+
+    this._updateUniforms();
 
     this.emit("postUpdate", updatedAt);
 

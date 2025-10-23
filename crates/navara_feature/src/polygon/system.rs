@@ -16,7 +16,8 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileMeshMarker,
+    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileExtent,
+    TileMeshMarker,
 };
 
 use navara_feature_component::{
@@ -48,6 +49,7 @@ pub fn transfer_batched_mesh(
             &GlobalBatchIds,
             Option<&mut FeatureId>,
             Option<&OverscaledTileHandle>,
+            Option<&TileExtent>,
         ),
         With<PolygonMarker>,
     >,
@@ -66,6 +68,7 @@ pub fn transfer_batched_mesh(
         global_batch_ids,
         feature_id,
         tile_coordinates,
+        tile_extent_component,
     ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
@@ -87,6 +90,7 @@ pub fn transfer_batched_mesh(
                         batched_feature: batched_feature_entity,
                         // If it uses `clamp_to_ground` and it is tile, it should be flat.
                         flat: material.clamp_to_ground && tile_coordinates.is_some(),
+                        tile_extent: tile_extent_component.map(|t| t.extent),
                     },
                 ))
                 .id();
@@ -94,10 +98,16 @@ pub fn transfer_batched_mesh(
             continue;
         }
 
-        let (task_entity, ConstructPolygonBatchedFeatureResult { extent, geometry }) =
-            construct_polygon_feature_tasks
-                .get(batched_feature.construct_polygon_feature.unwrap())
-                .unwrap();
+        let (
+            task_entity,
+            ConstructPolygonBatchedFeatureResult {
+                extent,
+                geometry,
+                rtc_translation,
+            },
+        ) = construct_polygon_feature_tasks
+            .get(batched_feature.construct_polygon_feature.unwrap())
+            .unwrap();
 
         let mut material = material.clone();
         material.internal = Some(PolygonInternalMaterial {
@@ -114,6 +124,10 @@ pub fn transfer_batched_mesh(
             None => None,
         };
 
+        // Use RTC translation for coordinates if available
+        // This positions the mesh at the tile center in world space
+        let translation = rtc_translation.unwrap_or(Vec3::new(0., 0., 0.));
+
         let clamp_to_ground = material.clamp_to_ground;
         let mut entity_cmd = commands.spawn((
             PolygonMarker,
@@ -125,7 +139,7 @@ pub fn transfer_batched_mesh(
                 material,
                 geometry: geometry.clone(),
                 outline_geometry: None,
-                transform: Transform::default(),
+                transform: Transform::from_translation(translation),
                 feature_id: None,
                 render_info: PolygonRenderInformation {
                     should_recalculate_height: true,
@@ -185,6 +199,7 @@ pub fn transfer_mesh(
             &geometry.crs,
             material,
             &mut polygon_resource,
+            true, // use_rte = true for individual features
         );
         if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
@@ -200,10 +215,22 @@ pub fn transfer_mesh(
                 ),
             });
 
-            let pos_cnt = polygon_result.geometry.attributes.position.data.len()
-                / polygon_result.geometry.attributes.position.size as usize;
+            let pos_cnt = polygon_result
+                .geometry
+                .attributes
+                .position_3d_high
+                .as_ref()
+                .unwrap()
+                .data
+                .len()
+                / polygon_result
+                    .geometry
+                    .attributes
+                    .position_3d_high
+                    .as_ref()
+                    .unwrap()
+                    .size as usize;
             let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
-
             polygon_result.geometry.attributes.batch_ids =
                 Some(FloatAttribute::new(batch_id_vec, 1));
 

@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use navara_core::{xyz_to_vec3, Ellipsoid, Meters, LLE};
-use navara_math::Vec3;
+use navara_math::{RawDVec3, Vec3};
 use radians::Radians;
 
 #[derive(Eq, PartialEq, Hash)]
@@ -38,6 +38,18 @@ impl UniqueWithDelta for Vec3 {
     }
     fn z(&self) -> f32 {
         self.z
+    }
+}
+
+impl UniqueWithDelta for RawDVec3 {
+    fn x(&self) -> f32 {
+        self.x as f32
+    }
+    fn y(&self) -> f32 {
+        self.y as f32
+    }
+    fn z(&self) -> f32 {
+        self.z as f32
     }
 }
 

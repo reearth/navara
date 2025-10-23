@@ -7,6 +7,7 @@ import {
   UpsamplableTerrainGeometryLike,
   PolylineMaterialLike,
   TransferablePolylineBatchedFeatureLike,
+  ExtentRadianF32Like,
 } from "@navara/core";
 import {
   ConstructPolygonBatchedFeatureParameters,
@@ -26,6 +27,7 @@ import {
   TransferableUintAttribute,
   UpsampleTerrainMeshParameters,
   UpsampleTerrainMeshResult,
+  Vec3,
   type WorkerTaskDelegatedEvent,
 } from "@navara/engine";
 
@@ -160,11 +162,15 @@ async function processConstructTerrainMesh(
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
+  const rtcTranslation = result.rtc_translation;
   const constructTerrainMeshResult = new ConstructTerrainMeshResult(
     geometry,
     heights,
     result.min_height,
     result.max_height,
+    rtcTranslation
+      ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
+      : undefined,
   );
 
   const delegatedTaskResult =
@@ -242,11 +248,15 @@ async function processUpsampleTerrainMesh(
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
+  const rtcTranslation = result.rtc_translation;
   const upsampleTerrainMeshResult = new UpsampleTerrainMeshResult(
     geometry,
     heights,
     result.min_height,
     result.max_height,
+    rtcTranslation
+      ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
+      : undefined,
   );
 
   const delegatedTaskResult =
@@ -278,6 +288,9 @@ async function processConstructPolygonBatchedFeature(
     new TransferablePolygonBatchedFeatureLike(transferable),
     new PolygonMaterialLike(transferable.material),
     params.flat,
+    params.tile_extent
+      ? new ExtentRadianF32Like(params.tile_extent)
+      : undefined,
   );
   workerPoolPromises.set(id, promise);
   const result = await promise;
@@ -294,12 +307,24 @@ async function processConstructPolygonBatchedFeature(
     ? bufHandler.newU32(result.batch_index)
     : undefined;
   const normal = result.normal ? bufHandler.newF32(result.normal) : undefined;
-  const position = bufHandler.newF32(result.position);
+  const position = result.position
+    ? bufHandler.newF32(result.position)
+    : undefined;
+  const position3dHigh = result.position_3d_high
+    ? bufHandler.newF32(result.position_3d_high)
+    : undefined;
+  const position3dLow = result.position_3d_low
+    ? bufHandler.newF32(result.position_3d_low)
+    : undefined;
   const scaleNormalAndCap = result.scale_normal_and_cap
     ? bufHandler.newF32(result.scale_normal_and_cap)
     : undefined;
   const indices = bufHandler.newU32(result.indices);
-  if (!position || !indices) {
+  if (!indices) {
+    return;
+  }
+  // Either position or (position_3d_high and position_3d_low) must be present
+  if (!position && (!position3dHigh || !position3dLow)) {
     return;
   }
 
@@ -312,10 +337,21 @@ async function processConstructPolygonBatchedFeature(
   const transferableNormal = normal
     ? new TransferableFloatAttribute(normal, result.normal_size ?? 0)
     : undefined;
-  const transferablePosition = new TransferableFloatAttribute(
-    position,
-    result.position_size,
-  );
+  const transferablePosition = position
+    ? new TransferableFloatAttribute(position, result.position_size ?? 0)
+    : undefined;
+  const transferablePosition3dHigh = position3dHigh
+    ? new TransferableFloatAttribute(
+        position3dHigh,
+        result.position_3d_high_size ?? 0,
+      )
+    : undefined;
+  const transferablePosition3dLow = position3dLow
+    ? new TransferableFloatAttribute(
+        position3dLow,
+        result.position_3d_low_size ?? 0,
+      )
+    : undefined;
   const transferableScaleNormalAndCap = scaleNormalAndCap
     ? new TransferableFloatAttribute(
         scaleNormalAndCap,
@@ -324,6 +360,8 @@ async function processConstructPolygonBatchedFeature(
     : undefined;
   const geometry = new TransferablePolygonGeometry(
     transferablePosition,
+    transferablePosition3dHigh,
+    transferablePosition3dLow,
     transferableNormal,
     transferableScaleNormalAndCap,
     transferableBatchId,
@@ -332,6 +370,7 @@ async function processConstructPolygonBatchedFeature(
   );
 
   const extent = result.extent;
+  const rtc_translation = result.rtc_translation;
   const constructPolygonBatchedFeatureResult =
     new ConstructPolygonBatchedFeatureResult(
       geometry,
@@ -343,6 +382,10 @@ async function processConstructPolygonBatchedFeature(
             extent.north,
           )
         : undefined,
+
+      rtc_translation
+        ? new Vec3(rtc_translation.x, rtc_translation.y, rtc_translation.z)
+        : undefined, // RTC translation from worker
     );
 
   const delegatedTaskResult =

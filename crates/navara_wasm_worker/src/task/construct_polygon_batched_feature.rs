@@ -1,11 +1,11 @@
-use navara_core::{Extent, Radians};
+use navara_core::{Aabb, Extent, Radians};
 use navara_geometry::{
     FloatAttribute, Hierarchy, PolygonGeometryAttributes, PolygonResource, UintAttribute,
 };
-use navara_math::FloatType;
+use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
     polygon::{ConstructedPolygonGeometry, PolygonGeometry, TransferablePolygonBatchedFeature},
-    PolygonMaterial,
+    ExtentRadianF32, PolygonMaterial,
 };
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -14,24 +14,39 @@ pub fn construct_polygon_batched_feature(
     features: TransferablePolygonBatchedFeature,
     material: PolygonMaterial,
     flat: bool,
+    tile_extent: Option<ExtentRadianF32>,
 ) -> Option<ConstructedPolygonGeometry> {
     if flat {
         construct_flat_polygon(features, material)
     } else {
-        construct_polygon(features, material)
+        construct_polygon(features, material, tile_extent)
     }
 }
 
 pub fn construct_polygon(
     mut features: TransferablePolygonBatchedFeature,
     material: PolygonMaterial,
+    tile_extent: Option<ExtentRadianF32>,
 ) -> Option<ConstructedPolygonGeometry> {
     let mut polygon_resource = PolygonResource::new();
     let material: navara_material::PolygonMaterial = material.into();
     let crs: navara_core::CRS = (&features.crs).into();
 
+    // Determine whether to use RTE based on tile_extent availability
+    // When tile_extent is Some: use RTC (simpler, pre-calculated center)
+    // When tile_extent is None: use RTE (more flexible, no translation needed)
+    let use_rte = tile_extent.is_none();
+
+    // Pre-calculate RTC center if tile_extent is available
+    let rtc_center = tile_extent.as_ref().map(|extent| {
+        let extent_radians: Extent<FloatType, Radians> = (*extent).into();
+        calculate_tile_center(&extent_radians)
+    });
+
     let mut combined_attributes = PolygonGeometryAttributes {
-        position: FloatAttribute::new(vec![], 3),
+        position: (!use_rte).then(|| FloatAttribute::new(vec![], 3)),
+        position_3d_high: (use_rte).then(|| FloatAttribute::new(vec![], 3)),
+        position_3d_low: (use_rte).then(|| FloatAttribute::new(vec![], 3)),
         normal: None,
         scale_normal_and_cap: Some(FloatAttribute::new(vec![], 4)),
         batch_ids: Some(FloatAttribute::new(vec![], 1)),
@@ -52,6 +67,7 @@ pub fn construct_polygon(
                 &crs,
                 &material,
                 &mut polygon_resource,
+                use_rte, // Use RTE when tile_extent is None, RTC when Some
             );
 
         let (extent, mut polygon_result) = match (extent_opt, polygon_result_opt) {
@@ -64,16 +80,66 @@ pub fn construct_polygon(
             None => extent,
         });
 
-        let position_length = polygon_result.geometry.attributes.position.data.len()
-            / polygon_result.geometry.attributes.position.size as usize;
+        // Calculate position length based on mode (RTE or RTC)
+        let position_length = if use_rte {
+            let pos = polygon_result
+                .geometry
+                .attributes
+                .position_3d_high
+                .as_ref()
+                .unwrap();
+            pos.data.len() / pos.size as usize
+        } else {
+            let pos = polygon_result
+                .geometry
+                .attributes
+                .position
+                .as_ref()
+                .unwrap();
+            pos.data.len() / pos.size as usize
+        };
         if position_length == 0 {
             continue;
         }
 
-        combined_attributes
-            .position
-            .data
-            .append(&mut polygon_result.geometry.attributes.position.data);
+        // Append position attributes based on mode
+        if use_rte {
+            // RTE mode: append high/low positions
+            combined_attributes
+                .position_3d_high
+                .as_mut()
+                .unwrap()
+                .data
+                .append(
+                    &mut polygon_result
+                        .geometry
+                        .attributes
+                        .position_3d_high
+                        .unwrap()
+                        .data,
+                );
+            combined_attributes
+                .position_3d_low
+                .as_mut()
+                .unwrap()
+                .data
+                .append(
+                    &mut polygon_result
+                        .geometry
+                        .attributes
+                        .position_3d_low
+                        .unwrap()
+                        .data,
+                );
+        } else {
+            // RTC mode: append regular positions
+            combined_attributes
+                .position
+                .as_mut()
+                .unwrap()
+                .data
+                .append(&mut polygon_result.geometry.attributes.position.unwrap().data);
+        }
         if let Some(normal) = polygon_result.geometry.attributes.normal.as_mut() {
             combined_attributes
                 .normal
@@ -127,10 +193,49 @@ pub fn construct_polygon(
         index_offset += position_length as u32;
     }
 
+    let combined_extent = combined_extent?;
+
+    // Handle RTC translation based on mode
+    let rtc_translation = if use_rte {
+        // RTE mode: positions are already encoded as high/low, no translation needed
+        None
+    } else {
+        // RTC mode: calculate translation and translate positions
+        let center = rtc_center.unwrap();
+        translate_positions_to_center(&mut combined_attributes, &center);
+        Some(center.into())
+    };
+
     Some(ConstructedPolygonGeometry::new(
         PolygonGeometry::new(combined_attributes.into(), indices),
-        Some((&combined_extent?).into()),
+        Some((&combined_extent).into()),
+        rtc_translation,
     ))
+}
+
+/// Calculate the geometric center of a tile extent in ECEF coordinates
+/// This is used as the RTC (Relative-To-Center) translation origin
+fn calculate_tile_center(extent: &Extent<FloatType, Radians>) -> Vec3 {
+    let aabb = Aabb::from_extent_f32(*extent, 0., 1.);
+
+    aabb.center
+}
+
+/// Translate all vertex positions to be relative to the tile center
+/// This converts world-space positions to local RTC space
+fn translate_positions_to_center(attributes: &mut PolygonGeometryAttributes, center: &Vec3) {
+    if let Some(position_attr) = attributes.position.as_mut() {
+        let positions = &mut position_attr.data;
+        let component_count = position_attr.size as usize;
+
+        // Iterate through positions in chunks (x, y, z)
+        for i in 0..(positions.len() / component_count) {
+            let idx = i * component_count;
+            positions[idx] -= center.x; // X
+            positions[idx + 1] -= center.y; // Y
+            positions[idx + 2] -= center.z; // Z
+        }
+    }
 }
 
 pub fn construct_flat_polygon(
@@ -141,7 +246,9 @@ pub fn construct_flat_polygon(
     let material: navara_material::PolygonMaterial = material.into();
 
     let mut combined_attributes = PolygonGeometryAttributes {
-        position: FloatAttribute::new(vec![], 3),
+        position: Some(FloatAttribute::new(vec![], 3)),
+        position_3d_high: None,
+        position_3d_low: None,
         normal: None,
         scale_normal_and_cap: None,
         batch_ids: Some(FloatAttribute::new(vec![], 1)),
@@ -159,6 +266,7 @@ pub fn construct_flat_polygon(
             geometry_hierarchy,
             &material,
             &mut polygon_resource,
+            false, // use_rte = false for batched MVT features
         );
 
         let mut polygon_result = match polygon_result_opt {
@@ -166,16 +274,31 @@ pub fn construct_flat_polygon(
             None => continue,
         };
 
-        let position_length = polygon_result.geometry.attributes.position.data.len()
-            / polygon_result.geometry.attributes.position.size as usize;
+        let position_length = polygon_result
+            .geometry
+            .attributes
+            .position
+            .as_ref()
+            .unwrap()
+            .data
+            .len()
+            / polygon_result
+                .geometry
+                .attributes
+                .position
+                .as_ref()
+                .unwrap()
+                .size as usize;
         if position_length == 0 {
             continue;
         }
 
         combined_attributes
             .position
+            .as_mut()
+            .unwrap()
             .data
-            .append(&mut polygon_result.geometry.attributes.position.data);
+            .append(&mut polygon_result.geometry.attributes.position.unwrap().data);
 
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
@@ -209,8 +332,10 @@ pub fn construct_flat_polygon(
         index_offset += position_length as u32;
     }
 
+    // Flat polygons don't have extent or RTC translation
     Some(ConstructedPolygonGeometry::new(
         PolygonGeometry::new(combined_attributes.into(), indices),
         None,
+        None, // No RTC translation for flat polygons
     ))
 }

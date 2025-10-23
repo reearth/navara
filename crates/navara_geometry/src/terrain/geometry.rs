@@ -1,5 +1,5 @@
 use crate::{tile_triangles, ReturnedConstructedTerrainMesh};
-use navara_core::{ElevationDecoder, Ellipsoid, Extent, Radians};
+use navara_core::{Aabb, ElevationDecoder, Ellipsoid, Extent, Radians};
 use navara_math::FloatType;
 
 /// Decode pixels to a terrain height.
@@ -38,7 +38,7 @@ pub fn encode_height_to_dem(
     (r, g, b)
 }
 
-/// Construct a terrain geometry.
+/// Construct a terrain geometry with RTC translation.
 #[allow(clippy::too_many_arguments)]
 pub fn tile_triangles_with_terrain(
     ellipsoid: Ellipsoid<FloatType>,
@@ -49,6 +49,7 @@ pub fn tile_triangles_with_terrain(
     terrain_w: usize,
     terrain_h: usize,
     decoder: &ElevationDecoder,
+    parent_max_height: FloatType,
 ) -> ReturnedConstructedTerrainMesh {
     let mut max_height = 0.0f32;
     let mut min_height = 9999.0f32;
@@ -72,11 +73,18 @@ pub fn tile_triangles_with_terrain(
         height
     };
 
+    // Calculate tile center using AABB from extent and terrain heights
+    let aabb = Aabb::from_extent_f32(*extent, 0., parent_max_height);
+    let tile_center = aabb.center;
+
+    let geometry = tile_triangles(ellipsoid, extent, segments, &mut height, &tile_center);
+
     ReturnedConstructedTerrainMesh {
-        geometry: tile_triangles(ellipsoid, extent, segments, &mut height),
+        geometry,
         max_height,
         min_height,
         heights,
+        rtc_translation: Some(tile_center),
     }
 }
 

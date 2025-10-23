@@ -3,7 +3,9 @@
 
   #ifdef USE_BATCH_COLOR_SHOW
     vec4 batchColor = getBatchColorShow(batchId);
-    vColor.rgb = batchColor.rgb;
+    #ifdef USE_COLOR
+      vColor.rgb = batchColor.rgb;
+    #endif
     nvr_vShow = batchColor.a;
   #endif
 
