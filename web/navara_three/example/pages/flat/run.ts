@@ -58,5 +58,7 @@ export const run = async (view: ThreeView) => {
     polygon: {},
   });
 
+  // TODO: remove this comment
+
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
