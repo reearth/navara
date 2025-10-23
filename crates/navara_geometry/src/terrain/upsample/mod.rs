@@ -10,7 +10,7 @@ use navara_core::{lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
 
 use crate::Geometry;
 
-use navara_math::FloatType;
+use navara_math::{FloatType, Vec3};
 
 #[derive(Debug)]
 pub struct UpsamplableTerrainGeometry<'a> {
@@ -62,11 +62,13 @@ impl UpsampledTerrainGeometry {
         }
     }
 
+    /// Construct geometry with optional RTC translation.
     /// You can run this function only once.
     pub fn construct_geometry(
         &mut self,
         ellipsoid: Ellipsoid<FloatType>,
         extent: &Extent<FloatType, Radians>,
+        center: &Vec3,
     ) -> (Geometry, Vec<FloatType>) {
         let mut vertices = vec![];
         let mut uvs = vec![];
@@ -98,9 +100,10 @@ impl UpsampledTerrainGeometry {
                 height: Meters::new(heights[i]),
             };
             let xyz = lle.to_xyz(ellipsoid);
-            vertices.push(xyz.x.val());
-            vertices.push(xyz.y.val());
-            vertices.push(xyz.z.val());
+
+            vertices.push(xyz.x.val() - center.x);
+            vertices.push(xyz.y.val() - center.y);
+            vertices.push(xyz.z.val() - center.z);
 
             uvs.push(u);
             uvs.push(v);

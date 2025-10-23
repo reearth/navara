@@ -1,6 +1,6 @@
 use crate::Geometry;
-use navara_core::{Ellipsoid, Extent, Meters, Radians, TileXYZ, LLE};
-use navara_math::{FloatType, Vec2};
+use navara_core::{Aabb, Ellipsoid, Extent, Meters, Radians, TileXYZ, LLE};
+use navara_math::{FloatType, Vec2, Vec3};
 
 /// Represents a UV transformation for mapping a child tile to its parent's texture space.
 /// This is used when a child tile is not yet loaded and we want to display the parent's
@@ -122,28 +122,43 @@ pub fn ortho_camera_transform(child: TileXYZ, parent_z: usize) -> OrthoCamTransf
     }
 }
 
-/// Construct a flat tile geometry.
+/// Construct a flat tile geometry with RTC translation.
+/// Returns a tuple of (Geometry, RTC translation vector).
+/// Vertices in the geometry are in local space relative to the RTC center.
 pub fn tile_triangles_flat(
     ellipsoid: Ellipsoid<FloatType>,
     extent: &Extent<FloatType, Radians>,
     segments: usize,
     height: FloatType,
-) -> Geometry {
-    tile_triangles(ellipsoid, extent, segments, &mut |_, _| height)
+) -> (Geometry, Vec3) {
+    let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+    let tile_center = aabb.center;
+
+    // Generate geometry directly in local RTC space
+    let geometry = tile_triangles(
+        ellipsoid,
+        extent,
+        segments,
+        &mut |_, _| height,
+        &tile_center,
+    );
+
+    (geometry, tile_center)
 }
 
-/// Calculate a tile geometry.
+/// Calculate a tile geometry with optional RTC translation.
 pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
     ellipsoid: Ellipsoid<FloatType>,
     extent: &Extent<FloatType, Radians>,
     segments: usize,
     height: &mut F,
+    center: &Vec3,
 ) -> Geometry {
     let segments = if segments == 0 { 1 } else { segments };
 
-    let verties_count = (segments + 1) * (segments + 1);
-    let mut vertices = Vec::with_capacity(verties_count);
-    let mut uvs = Vec::with_capacity(verties_count);
+    let vertices_count = (segments + 1) * (segments + 1);
+    let mut vertices = Vec::with_capacity(vertices_count);
+    let mut uvs = Vec::with_capacity(vertices_count);
     let mut indices = Vec::with_capacity(segments * segments * 6);
 
     let dlng = (extent.east - extent.west) / segments as FloatType;
@@ -158,9 +173,9 @@ pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
             };
             let xyz = lle.to_xyz(ellipsoid);
 
-            vertices.push(xyz.x.val());
-            vertices.push(xyz.y.val());
-            vertices.push(xyz.z.val());
+            vertices.push(xyz.x.val() - center.x);
+            vertices.push(xyz.y.val() - center.y);
+            vertices.push(xyz.z.val() - center.z);
 
             uvs.push(i as FloatType / segments as FloatType);
             uvs.push(j as FloatType / segments as FloatType);
