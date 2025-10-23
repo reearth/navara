@@ -58,6 +58,5 @@ export const run = async (view: ThreeView) => {
     polygon: {},
   });
 
-
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
