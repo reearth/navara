@@ -388,6 +388,7 @@ export default class ThreeView<
   // Registry support
   private registries: Registries;
   public selectiveRegistry: SelectiveEffectRegistry;
+  private viewContext!: ViewContext;
 
   constructor(options: Options = {}) {
     super();
@@ -543,7 +544,7 @@ export default class ThreeView<
     this.selectiveRegistry = new SelectiveEffectRegistry(width, height);
 
     // Set up Registry
-    const viewContext = new ViewContext(
+    this.viewContext = new ViewContext(
       this._scenes,
       this.camera.raw,
       this.atmosphere,
@@ -559,7 +560,7 @@ export default class ThreeView<
         selectiveEffectMask: this._options.selectiveEffects?.debugMask,
       },
     );
-    this.registries = new Registries(viewContext);
+    this.registries = new Registries(this.viewContext);
 
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
@@ -862,6 +863,7 @@ export default class ThreeView<
       this._renderFlag,
       this,
       this.layersManager,
+      this.viewContext,
       updatedAt,
     );
     events?.free();
@@ -935,6 +937,11 @@ export default class ThreeView<
     const layerId = this._core?.addLayer(l);
     invariant(layerId);
     invariant(this._core);
+
+    // Register effects if specified in layer config
+    if ("effects" in l && Array.isArray(l.effects) && l.effects.length > 0) {
+      this.viewContext.registerLayerEffects(layerId, l.effects as string[]);
+    }
 
     const layer = new Layer(layerId, this._core);
     this.layersManager.add(layer);

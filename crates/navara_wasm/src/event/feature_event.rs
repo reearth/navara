@@ -17,6 +17,8 @@ pub struct RenderableFeatureAddedEvent {
     #[wasm_bindgen(getter_with_clone)]
     pub layer_id: String,
     pub overscaled_tile_handle: Option<OverscaledTileHandle>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub effects: Option<Vec<String>>,
 }
 
 impl<'a>
@@ -42,6 +44,7 @@ impl<'a>
             feature: RenderableFeature::from(ev.comp.0),
             layer_id: ev.comp.1 .0.clone(),
             overscaled_tile_handle: ev.comp.2.map(|v| v.into()),
+            effects: None, // Note: Effects are retrieved from layer config on TypeScript side
         }
     }
 }

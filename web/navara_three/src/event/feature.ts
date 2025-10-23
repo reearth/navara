@@ -8,6 +8,7 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
+import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
@@ -77,6 +78,7 @@ export async function processRenderableFeatureAdded(
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
   onConcurrency: (v: number) => void,
 ) {
@@ -139,6 +141,28 @@ export async function processRenderableFeatureAdded(
   }
 
   meshes.set(id, obj);
+
+  // Link to selective effects from layer config cache
+  // Must be done after obj is added to scene so world matrices are valid
+  const effects = viewContext.getLayerEffects(featureLayerId);
+
+  if (effects && effects.length > 0 && viewContext.selectiveRegistry) {
+    if (obj instanceof ModelMesh) {
+      // For ModelMesh, link all child meshes
+      // Update world matrix first since obj was just added to scene
+      obj.updateMatrixWorld(true);
+      obj.traverseMesh((mesh) => {
+        for (const effectId of effects) {
+          viewContext.selectiveRegistry?.link(effectId, mesh);
+        }
+      });
+    } else if (obj instanceof Mesh) {
+      // For other mesh types, link directly
+      for (const effectId of effects) {
+        viewContext.selectiveRegistry.link(effectId, obj);
+      }
+    }
+  }
 
   if (obj instanceof PolygonMesh && obj.userData.draped && tileHandle) {
     obj.addEventListener("removedFromWorld", () => {

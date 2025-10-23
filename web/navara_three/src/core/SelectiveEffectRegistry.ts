@@ -109,9 +109,6 @@ export class SelectiveEffectRegistry {
 
     // Only support Mesh for now
     if (!(sourceObject instanceof Mesh)) {
-      console.warn(
-        `Object type ${sourceObject.type} is not supported for selective effects`,
-      );
       return;
     }
 
@@ -120,13 +117,31 @@ export class SelectiveEffectRegistry {
       return;
     }
 
-    // Clone the object
+    // Clone the mesh
     const clone = sourceObject.clone();
     clone.userData.isSelectiveClone = true;
     clone.userData.sourceId = sourceObject.uuid;
 
+    // Use world position/rotation/scale for clones
+    // This ensures child meshes of ModelMesh appear at correct locations
+    clone.position.setFromMatrixPosition(sourceObject.matrixWorld);
+    clone.rotation.setFromRotationMatrix(sourceObject.matrixWorld);
+    clone.scale.setFromMatrixScale(sourceObject.matrixWorld);
+    clone.visible = sourceObject.visible;
+
+    // Copy render properties to preserve depth relationships
+    clone.renderOrder = sourceObject.renderOrder;
+    clone.castShadow = sourceObject.castShadow;
+    clone.receiveShadow = sourceObject.receiveShadow;
+
+    // Sync material
+    clone.material = sourceObject.material;
+
     resources.objects.set(sourceObject, clone);
     resources.scene.add(clone);
+
+    // Update world matrix after adding to scene
+    clone.updateMatrixWorld(true);
   }
 
   /**

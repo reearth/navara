@@ -31,6 +31,7 @@ import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import { FEATURE_CONCURRENCY } from "../concurrency";
+import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
@@ -145,6 +146,7 @@ export function processEvent(
   renderFlag: RenderFlag,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
 ) {
   eventManager.pushEvents(event);
@@ -304,8 +306,9 @@ export function processEvent(
             featureHandler,
             viewEvents,
             layersManager,
+            viewContext,
             updatedAt,
-            (v) => (RENDERABLE_FEATURE_CONCURRENCY += v),
+            (v: number) => (RENDERABLE_FEATURE_CONCURRENCY += v),
           );
           break;
         case "remove":
@@ -474,7 +477,9 @@ function processObjectRemoved(
     disposeObject3D(m);
   }
 
-  m.dispatchEvent({ type: "removedFromWorld" } as any);
+  // Custom event not in Object3DEventMap
+  // @ts-expect-error - removedFromWorld is a custom event
+  m.dispatchEvent({ type: "removedFromWorld" });
 
   // clear should after dispose, otherwise model's children will not be disposed
   m.clear();

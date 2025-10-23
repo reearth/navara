@@ -585,6 +585,7 @@ mod test {
             data: Some(navara_layer::GeoJsonLayerData::GeoJson(geojson)),
             crs: None,
             appearances,
+            effects: None,
         }
     }
 

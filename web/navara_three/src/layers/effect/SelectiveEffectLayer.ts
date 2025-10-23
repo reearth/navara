@@ -1,4 +1,10 @@
-import { Color, MeshBasicMaterial, Vector2, type WebGLRenderer } from "three";
+import {
+  Color,
+  MeshBasicMaterial,
+  Vector2,
+  DoubleSide,
+  type WebGLRenderer,
+} from "three";
 
 import { BufferView } from "../../bufferView";
 import {
@@ -48,6 +54,14 @@ const MASK_MATERIAL = new MeshBasicMaterial({
   color: new Color(1, 1, 1),
   depthTest: true,
   depthWrite: true,
+  side: DoubleSide, // Render both sides to handle model orientation
+});
+
+// Depth-only material for rendering depth from main scene
+const DEPTH_ONLY_MATERIAL = new MeshBasicMaterial({
+  colorWrite: false,
+  depthTest: true,
+  depthWrite: true,
 });
 
 /**
@@ -88,10 +102,12 @@ export abstract class SelectiveEffectLayerBase<
 
   /**
    * Render mask to maskRT
-   * Uses white material to create silhouettes
+   * First renders depth from main scene, then renders mask silhouettes
+   * This ensures that objects without effects still occlude masked objects
    */
   protected renderMask(renderer: WebGLRenderer): void {
     const { scene, maskRT } = this.resources;
+    const mainScene = this.view.scenes.mrt;
 
     // Save renderer state
     const originalClearColor = new Color();
@@ -100,16 +116,23 @@ export abstract class SelectiveEffectLayerBase<
     const prevRenderTarget = renderer.getRenderTarget();
 
     // Set up for mask rendering
-    renderer.setClearColor(0x000000, 1);
-    scene.overrideMaterial = MASK_MATERIAL;
-
-    // Render mask
     renderer.setRenderTarget(maskRT);
+    renderer.setClearColor(0x000000, 1);
     renderer.clear(true, true, true);
+
+    // 1. Render depth from main scene (all objects)
+    // This ensures objects without effects contribute to depth buffer
+    mainScene.overrideMaterial = DEPTH_ONLY_MATERIAL;
+    renderer.render(mainScene, this.view.camera);
+    mainScene.overrideMaterial = null;
+
+    // 2. Render mask silhouettes (only objects with effects)
+    // depthTest is enabled, so objects behind other objects won't be visible
+    scene.overrideMaterial = MASK_MATERIAL;
     renderer.render(scene, this.view.camera);
+    scene.overrideMaterial = null;
 
     // Restore renderer state
-    scene.overrideMaterial = null;
     renderer.setRenderTarget(prevRenderTarget);
     renderer.setClearColor(originalClearColor, originalClearAlpha);
   }

@@ -11,6 +11,7 @@ pub struct Cesium3dTilesLayer {
     pub data: Option<LayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
+    pub effects: Option<Vec<String>>,
 }
 
 #[derive(Debug, Component)]

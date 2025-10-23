@@ -24,6 +24,7 @@ export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
   public selectiveRegistry?: SelectiveEffectRegistry;
   public debugOptions: ViewDebugOptions;
+  private layerEffects = new Map<string, string[]>();
 
   constructor(
     public scenes: Scenes,
@@ -47,5 +48,17 @@ export class ViewContext {
 
   emit(event: "_csmMounted" | "_csmUnmounted", material: Material): void {
     this.eventHandler?.emit(event, material);
+  }
+
+  registerLayerEffects(layerId: string, effects: string[]): void {
+    this.layerEffects.set(layerId, effects);
+  }
+
+  getLayerEffects(layerId: string): string[] | undefined {
+    return this.layerEffects.get(layerId);
+  }
+
+  unregisterLayerEffects(layerId: string): void {
+    this.layerEffects.delete(layerId);
   }
 }

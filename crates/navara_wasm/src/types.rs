@@ -84,6 +84,10 @@ pub struct GeoJsonLayerDescription {
     pub polygon: Option<PolygonMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub model: Option<ModelMaterial>,
+
+    // Effects
+    #[wasm_bindgen(getter_with_clone)]
+    pub effects: Option<Vec<String>>,
 }
 
 impl GeoJsonLayerDescription {
@@ -160,6 +164,10 @@ pub struct Cesium3dTilesLayerDescription {
     // Appearances
     #[wasm_bindgen(getter_with_clone)]
     pub model: Option<ModelMaterial>,
+
+    // Effects
+    #[wasm_bindgen(getter_with_clone)]
+    pub effects: Option<Vec<String>>,
 }
 
 impl Cesium3dTilesLayerDescription {
@@ -341,6 +349,7 @@ impl LayerDescription {
                     data: geo_data,
                     appearances: layer.appearances(),
                     crs: layer.crs(),
+                    effects: layer.effects.clone(),
                 }))
             }
             "b3dm" => {
@@ -403,6 +412,7 @@ impl LayerDescription {
                         data: data.map(|d| LayerData { url: d.url }),
                         appearances: layer.appearances(),
                         crs: layer.crs(),
+                        effects: layer.effects.clone(),
                     },
                 ))
             }

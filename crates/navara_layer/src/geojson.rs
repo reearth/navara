@@ -17,6 +17,7 @@ pub struct GeoJsonLayer {
     pub data: Option<GeoJsonLayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
+    pub effects: Option<Vec<String>>,
 }
 
 #[derive(Debug, Component)]
