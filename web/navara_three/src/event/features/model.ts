@@ -6,9 +6,9 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
+import { FEATURE_CONCURRENCY } from "../../concurrency";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
-import { FEATURE_CONCURRENCY } from "../../concurrency";
 import { initializeGltfLoader } from "../loaders";
 
 // Type-safe interface for scene userData
@@ -25,6 +25,8 @@ export async function renderModel(
 ) {
   const loader = initializeGltfLoader();
   const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/');
+  dracoLoader.setWorkerLimit(FEATURE_CONCURRENCY);
 
   const rawScene = await (async () => {
     if (m.bin) {
@@ -35,9 +37,8 @@ export async function renderModel(
 
       if (m.material.point_cloud) {
         let geometry: BufferGeometry | undefined;
-        // const material = new PointsMaterial( { size: 0.4, vertexColors: false, color: 0x0000ff } );
-        
         const material = new PointsMaterial( { size: 0.3, vertexColors: true } );
+
         if (m.material.draco_point_compressed) {
           geometry = await decompressDraco(bin.buffer as ArrayBuffer, dracoLoader);
         } else {
@@ -91,20 +92,9 @@ export function processModelChanged(
 
 
 async function decompressDraco(buffer: ArrayBuffer, dracoLoader: DRACOLoader): Promise<BufferGeometry | undefined> {
-  // console.log('compressed buffer', buffer);
   return new Promise((resolve) => {
-    dracoLoader.setDecoderPath('https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/');
-    dracoLoader.setWorkerLimit(FEATURE_CONCURRENCY);
     dracoLoader.parse(buffer, (geometry) => {
       const colors = geometry.getAttribute('color');
-      // console.log('Decoded colors:', {
-      //     count: colors?.count,
-      //     itemSize: colors?.itemSize,
-      //     normalized: colors?.normalized,
-      //     arrayType: colors?.array.constructor.name,
-      //     // minMax: colors ? [Math.min(...colors.array), Math.max(...colors.array)] : null,
-      //     firstFewValues: colors ? Array.from(colors.array.slice(0, 9)) : null
-      //   });
       if (colors) {
         // Normalize color values to [0, 1]
         const divisor = colors.array instanceof Uint8Array ? 255 : 65535;

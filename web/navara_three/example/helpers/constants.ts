@@ -98,13 +98,19 @@ export const TILES_3D_DATASETS = {
       "https://www.geospatial.jp/ckan/dataset/plateau-13109-shinagawa-ku-2023",
   },
   plateauKakegawaCastle: {
-    // url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json",
-    url: "https://github.com/CesiumGS/3d-tiles-samples/blob/main/1.0/TilesetWithRequestVolume/tileset.json?raw=true",
+    url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json",
     attribution:
-      "ADEL attribution",
+      "kakegawa castle point cloud model - 国土交通省 PLATEAU",
     attributionUrl:
-      "Adel - https://www.adel.wiki/",
+      "https://www.geospatial.jp/ckan/dataset/kakegawacastle",
   },
+  YamanashiKyonaka: {
+    url: "https://yamanashi-tile.geospatial.jp/tile/2024/01_kyouchu/tileset.json",
+    attribution:
+      "Yamanashi Prefecture point cloud data - Kyonaka",
+    attributionUrl:
+      "https://www.geospatial.jp/ckan/dataset/yamanashi-pointcloud-2024",
+  }
 } satisfies Record<string, Dataset>;
 
 /**

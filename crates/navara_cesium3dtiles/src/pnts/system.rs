@@ -115,27 +115,17 @@ fn get_geometry_info_from_pnts(
     handle: &Handle,
 ) -> Option<(bool, Vec3, Handle)> {
     let pnts_bin = buf.get_u8(handle)?;
-    let mut pnts = Pnts::from_data(pnts_bin).unwrap();
+    let mut pnts = Pnts::from_data(pnts_bin).ok()?;
 
-    // TODO: make util functions at navara_pnts instead of these...
     let feature_table_json: serde_json::Value =
-        parse_json_to_struct(&pnts.feature_table.json).unwrap();
-
-    const N_POSITION_COMPONENTS: usize = 3;
-    const N_POSITION_COMPONENTS_BYTE_SIZE: usize = 4;
-
-    // TODO: handle errors more gracefully
-    let positions_len = feature_table_json["POINTS_LENGTH"].as_u64()? as usize;
-    let positions_offset = feature_table_json["POSITION"]["byteOffset"].as_u64()? as usize;
-    let positions_byte_size =
-        positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
+        parse_json_to_struct(&pnts.feature_table.json).ok()?;
 
     // Find out if the pnts uses Draco compression
     let draco_compression_meta = feature_table_json["extensions"]
         .as_object()
         .and_then(|ext| {
             if let Some(draco_meta) = ext["3DTILES_draco_point_compression"].as_object() {
-                let properties = draco_meta["properties"].as_object().unwrap();
+                    let properties = draco_meta["properties"].as_object().unwrap();
                     let byte_offset = draco_meta["byteOffset"].as_u64().unwrap();
                     let byte_length = draco_meta["byteLength"].as_u64().unwrap();
                     Some((properties, byte_offset, byte_length))
@@ -156,6 +146,14 @@ fn get_geometry_info_from_pnts(
 
     } else {
         // No Draco compression
+        const N_POSITION_COMPONENTS: usize = 3;
+        const N_POSITION_COMPONENTS_BYTE_SIZE: usize = 4;
+
+        let positions_len = feature_table_json["POINTS_LENGTH"].as_u64()? as usize;
+        let positions_offset = feature_table_json["POSITION"]["byteOffset"].as_u64()? as usize;
+        let positions_byte_size = positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
+
+        // TODO: support color, normal, etc.
         // extract the position data from featuretable's binary blob
         position_bin_data = pnts.feature_table.binary.split_off(positions_offset);
         position_bin_data.truncate(positions_byte_size);
@@ -299,8 +297,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
 
         appearance.draco_point_compressed = draco_compressed;
         appearance.point_cloud = true;
-
-        // info!("transform: {:?}", transform.transform);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),

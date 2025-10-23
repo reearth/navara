@@ -1,7 +1,7 @@
 import ThreeView from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS } from "../../helpers/constants";
+import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -105,7 +105,7 @@ export const run = async (view: ThreeView) => {
     // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/tileset.json", },
     // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/0/0.pnts", },
     // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json", },
-    data: { url: "https://yamanashi-tile.geospatial.jp/tile/2024/01_kyouchu/tileset.json", },
+    data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url, },
     // data: { uri: "/public/pnts/PointCloudConstantColor/pointCloudConstantColor.pnts", },
     model: {
       show: true,
