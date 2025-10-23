@@ -4,8 +4,12 @@ import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
 
 export class ConstructedPolygonGeometryLike {
   extent: ExtentRadianF32Like | undefined;
-  position: Float32Array;
-  position_size: number;
+  position_3d_high: Float32Array | undefined;
+  position_3d_high_size: number | undefined;
+  position_3d_low: Float32Array | undefined;
+  position_3d_low_size: number | undefined;
+  position: Float32Array | undefined;
+  position_size: number | undefined;
   normal: Float32Array | undefined;
   normal_size: number | undefined;
   scale_normal_and_cap: Float32Array | undefined;
@@ -20,7 +24,11 @@ export class ConstructedPolygonGeometryLike {
     const extent = t.extent;
     this.extent = extent ? new ExtentRadianF32Like(extent) : undefined;
     // Need to make a slice to avoid memory leak due to it's transferred.
-    this.position = t.position().slice();
+    this.position_3d_high = t.position_3d_high()?.slice();
+    this.position_3d_high_size = t.position_3d_high_size();
+    this.position_3d_low = t.position_3d_low()?.slice();
+    this.position_3d_low_size = t.position_3d_low_size();
+    this.position = t.position()?.slice();
     this.position_size = t.position_size();
     this.normal = t.normal()?.slice();
     this.normal_size = t.normal_size();

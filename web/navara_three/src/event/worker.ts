@@ -294,12 +294,24 @@ async function processConstructPolygonBatchedFeature(
     ? bufHandler.newU32(result.batch_index)
     : undefined;
   const normal = result.normal ? bufHandler.newF32(result.normal) : undefined;
-  const position = bufHandler.newF32(result.position);
+  const position = result.position
+    ? bufHandler.newF32(result.position)
+    : undefined;
+  const position3dHigh = result.position_3d_high
+    ? bufHandler.newF32(result.position_3d_high)
+    : undefined;
+  const position3dLow = result.position_3d_low
+    ? bufHandler.newF32(result.position_3d_low)
+    : undefined;
   const scaleNormalAndCap = result.scale_normal_and_cap
     ? bufHandler.newF32(result.scale_normal_and_cap)
     : undefined;
   const indices = bufHandler.newU32(result.indices);
-  if (!position || !indices) {
+  if (!indices) {
+    return;
+  }
+  // Either position or (position_3d_high and position_3d_low) must be present
+  if (!position && (!position3dHigh || !position3dLow)) {
     return;
   }
 
@@ -312,10 +324,21 @@ async function processConstructPolygonBatchedFeature(
   const transferableNormal = normal
     ? new TransferableFloatAttribute(normal, result.normal_size ?? 0)
     : undefined;
-  const transferablePosition = new TransferableFloatAttribute(
-    position,
-    result.position_size,
-  );
+  const transferablePosition = position
+    ? new TransferableFloatAttribute(position, result.position_size ?? 0)
+    : undefined;
+  const transferablePosition3dHigh = position3dHigh
+    ? new TransferableFloatAttribute(
+        position3dHigh,
+        result.position_3d_high_size ?? 0,
+      )
+    : undefined;
+  const transferablePosition3dLow = position3dLow
+    ? new TransferableFloatAttribute(
+        position3dLow,
+        result.position_3d_low_size ?? 0,
+      )
+    : undefined;
   const transferableScaleNormalAndCap = scaleNormalAndCap
     ? new TransferableFloatAttribute(
         scaleNormalAndCap,
@@ -324,6 +347,8 @@ async function processConstructPolygonBatchedFeature(
     : undefined;
   const geometry = new TransferablePolygonGeometry(
     transferablePosition,
+    transferablePosition3dHigh,
+    transferablePosition3dLow,
     transferableNormal,
     transferableScaleNormalAndCap,
     transferableBatchId,
