@@ -7,6 +7,7 @@ import {
   UpsamplableTerrainGeometryLike,
   PolylineMaterialLike,
   TransferablePolylineBatchedFeatureLike,
+  ExtentRadianF32Like,
 } from "@navara/core";
 import {
   ConstructPolygonBatchedFeatureParameters,
@@ -26,6 +27,7 @@ import {
   TransferableUintAttribute,
   UpsampleTerrainMeshParameters,
   UpsampleTerrainMeshResult,
+  Vec3,
   type WorkerTaskDelegatedEvent,
 } from "@navara/engine";
 
@@ -278,6 +280,9 @@ async function processConstructPolygonBatchedFeature(
     new TransferablePolygonBatchedFeatureLike(transferable),
     new PolygonMaterialLike(transferable.material),
     params.flat,
+    params.tile_extent
+      ? new ExtentRadianF32Like(params.tile_extent)
+      : undefined,
   );
   workerPoolPromises.set(id, promise);
   const result = await promise;
@@ -357,6 +362,7 @@ async function processConstructPolygonBatchedFeature(
   );
 
   const extent = result.extent;
+  const rtc_translation = result.rtc_translation;
   const constructPolygonBatchedFeatureResult =
     new ConstructPolygonBatchedFeatureResult(
       geometry,
@@ -368,6 +374,10 @@ async function processConstructPolygonBatchedFeature(
             extent.north,
           )
         : undefined,
+
+      rtc_translation
+        ? new Vec3(rtc_translation.x, rtc_translation.y, rtc_translation.z)
+        : undefined, // RTC translation from worker
     );
 
   const delegatedTaskResult =

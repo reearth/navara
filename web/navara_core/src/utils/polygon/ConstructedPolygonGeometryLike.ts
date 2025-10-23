@@ -1,6 +1,7 @@
-import type { ConstructedPolygonGeometry } from "@navara/engine";
+import type { ConstructedPolygonGeometry, Vec3 } from "@navara/engine";
 
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
+import { Vec3Like } from "../Vec3Like";
 
 export class ConstructedPolygonGeometryLike {
   extent: ExtentRadianF32Like | undefined;
@@ -19,6 +20,8 @@ export class ConstructedPolygonGeometryLike {
   batch_index: Uint32Array | undefined;
   batch_index_size: number | undefined;
   indices: Uint32Array;
+  /** RTC (Relative-To-Center) translation vector in world-space ECEF coordinates */
+  rtc_translation: Vec3 | undefined;
 
   constructor(t: ConstructedPolygonGeometry) {
     const extent = t.extent;
@@ -39,5 +42,8 @@ export class ConstructedPolygonGeometryLike {
     this.batch_index = t.batch_index()?.slice();
     this.batch_index_size = t.batch_index_size();
     this.indices = t.indices().slice();
+    this.rtc_translation = t.rtc_translation
+      ? new Vec3Like(t.rtc_translation)
+      : undefined;
   }
 }

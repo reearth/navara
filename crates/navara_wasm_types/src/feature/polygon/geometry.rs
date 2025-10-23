@@ -1,17 +1,30 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
+use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute, Vec3};
 
 #[wasm_bindgen]
 pub struct ConstructedPolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
     geometry: PolygonGeometry,
     pub extent: Option<ExtentRadianF32>,
+    /// RTC (Relative-To-Center) translation vector
+    /// Contains the tile center in world-space ECEF coordinates
+    /// Used to position the mesh while keeping vertex positions in local space
+    #[wasm_bindgen(getter_with_clone)]
+    pub rtc_translation: Option<Vec3>,
 }
 
 impl ConstructedPolygonGeometry {
-    pub fn new(geometry: PolygonGeometry, extent: Option<ExtentRadianF32>) -> Self {
-        Self { geometry, extent }
+    pub fn new(
+        geometry: PolygonGeometry,
+        extent: Option<ExtentRadianF32>,
+        rtc_translation: Option<Vec3>,
+    ) -> Self {
+        Self {
+            geometry,
+            extent,
+            rtc_translation,
+        }
     }
 }
 

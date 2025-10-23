@@ -599,8 +599,8 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
       extruded_height: 0,
       clamp_to_ground: false,
       wireframe: false,
-      // cast_shadow: true,
-      // receive_shadow: true,
+      cast_shadow: true,
+      receive_shadow: true,
     },
     vector_tile: {
       max_zoom: 16,
@@ -704,7 +704,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
   const layerDescription: LayerDescription = {
     type: "cesium3dtiles",
     data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
+      url: TILES_3D_DATASETS.plateauShinjuku.url,
     },
     model: {
       show: true,
@@ -713,7 +713,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
       roughness: 1,
       cast_shadow: true,
       receive_shadow: true,
-      height: -50,
+      height: -30,
     },
   };
 

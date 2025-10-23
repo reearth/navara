@@ -5,3 +5,5 @@ export * from "./TransferableRasterDEMDataLike";
 export * from "./ReturnedConstructedTerrainMeshLike";
 export * from "./polygon";
 export * from "./polyline";
+export * from "./ExtentRadianF32Like";
+export * from "./Vec3Like";

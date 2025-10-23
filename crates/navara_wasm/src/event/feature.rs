@@ -12,7 +12,7 @@ use crate::{
 use navara_wasm_types::{
     polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
     BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
-    TextMaterial, CRS,
+    TextMaterial, Vec3, CRS,
 };
 
 #[wasm_bindgen]
@@ -70,6 +70,10 @@ pub struct PolygonMesh {
     pub outline_geometry: Option<TransferablePolygonOutlineGeometry>,
     pub transform: Transform,
     pub active: bool,
+    /// RTC (Relative-To-Center) coordinates - tile center in world-space
+    /// Used for positioning the mesh when using RTC rendering
+    #[wasm_bindgen(getter_with_clone)]
+    pub coordinates: Vec3,
 }
 
 #[wasm_bindgen]
@@ -170,6 +174,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 outline_geometry,
                 transform,
                 active,
+                coordinates,
                 ..
             } => Self {
                 polygon: Some(PolygonMesh {
@@ -178,6 +183,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     outline_geometry: outline_geometry.as_ref().map(|og| og.into()),
                     transform: transform.into(),
                     active: *active,
+                    coordinates: (*coordinates).into(),
                 }),
                 ..Default::default()
             },
