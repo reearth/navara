@@ -162,11 +162,15 @@ async function processConstructTerrainMesh(
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
+  const rtcTranslation = result.rtc_translation;
   const constructTerrainMeshResult = new ConstructTerrainMeshResult(
     geometry,
     heights,
     result.min_height,
     result.max_height,
+    rtcTranslation
+      ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
+      : undefined,
   );
 
   const delegatedTaskResult =
@@ -244,11 +248,15 @@ async function processUpsampleTerrainMesh(
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
+  const rtcTranslation = result.rtc_translation;
   const upsampleTerrainMeshResult = new UpsampleTerrainMeshResult(
     geometry,
     heights,
     result.min_height,
     result.max_height,
+    rtcTranslation
+      ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
+      : undefined,
   );
 
   const delegatedTaskResult =

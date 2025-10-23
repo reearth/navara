@@ -1,6 +1,7 @@
 use navara_buffer_store::Handle;
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
+use navara_wasm_types::Vec3;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -41,6 +42,7 @@ pub struct UpsampleTerrainMeshResult {
     pub heights: Handle,
     pub min_height: FloatType,
     pub max_height: FloatType,
+    pub rtc_translation: Option<Vec3>,
 }
 
 #[wasm_bindgen]
@@ -51,12 +53,14 @@ impl UpsampleTerrainMeshResult {
         heights: Handle,
         min_height: FloatType,
         max_height: FloatType,
+        rtc_translation: Option<Vec3>,
     ) -> Self {
         Self {
             geometry,
             heights,
             min_height,
             max_height,
+            rtc_translation,
         }
     }
 }
@@ -70,6 +74,7 @@ impl From<UpsampleTerrainMeshResult>
             heights: val.heights,
             min_height: val.min_height,
             max_height: val.max_height,
+            rtc_translation: val.rtc_translation.map(|r| r.into()),
         }
     }
 }
@@ -84,6 +89,7 @@ impl<'a> From<&'a navara_worker::upsample_terrain_mesh::UpsampleTerrainMeshResul
             heights: val.heights,
             min_height: val.min_height,
             max_height: val.max_height,
+            rtc_translation: val.rtc_translation.map(|r| r.into()),
         }
     }
 }

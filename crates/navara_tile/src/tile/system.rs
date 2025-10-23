@@ -7,7 +7,7 @@ use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_geometry::{tile_triangles_flat, uv_transform};
 use navara_material::RasterTileInternalMaterial;
-use navara_math::{FloatType, Transform, Vec3};
+use navara_math::{FloatType, Transform};
 
 use navara_mesh::{CachedMeshHandle, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -250,7 +250,6 @@ pub fn transfer_mesh(
 
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
         let is_root = tile.is_root();
-        let scale = if is_root { 0.98 } else { 1. };
         let render_order = if is_root { -1 } else { 0 };
 
         let ready_parent_tile = tc
@@ -331,7 +330,7 @@ pub fn transfer_mesh(
                 .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z)
                 || (!should_upsample_terrain && is_terrain_failed))
         {
-            let triangles = tile_triangles_flat(
+            let (triangles, rtc_translation) = tile_triangles_flat(
                 WGS84_32,
                 &extent,
                 if is_root {
@@ -375,7 +374,7 @@ pub fn transfer_mesh(
                     },
                     material: appearance,
                     object: ObjectBundle {
-                        transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
+                        transform: Transform::from_translation(rtc_translation),
                         marker: Default::default(),
                     },
                 },
@@ -438,6 +437,7 @@ pub fn transfer_mesh(
 
             let min_height = terrain_mesh_upsampler.min_height;
             let max_height = terrain_mesh_upsampler.max_height;
+            let rtc_translation = terrain_mesh_upsampler.rtc_translation.unwrap_or_default();
 
             let vhandle = terrain_mesh_upsampler.geometry.vertices;
             let ihandle = terrain_mesh_upsampler.geometry.indices;
@@ -473,7 +473,7 @@ pub fn transfer_mesh(
                     },
                     material: appearance,
                     object: ObjectBundle {
-                        transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
+                        transform: Transform::from_translation(rtc_translation),
                         marker: Default::default(),
                     },
                 },
@@ -524,6 +524,7 @@ pub fn transfer_mesh(
 
         let min_height = terrain_mesh_constructor.min_height;
         let max_height = terrain_mesh_constructor.max_height;
+        let rtc_translation = terrain_mesh_constructor.rtc_translation.unwrap_or_default();
 
         let vhandle = terrain_mesh_constructor.geometry.vertices;
         let ihandle = terrain_mesh_constructor.geometry.indices;
@@ -558,7 +559,7 @@ pub fn transfer_mesh(
                 },
                 material: appearance,
                 object: ObjectBundle {
-                    transform: Transform::from_scale(Vec3::new(scale, scale, scale)),
+                    transform: Transform::from_translation(rtc_translation),
                     marker: Default::default(),
                 },
             },
