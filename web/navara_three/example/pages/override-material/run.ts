@@ -599,8 +599,8 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
       extruded_height: 0,
       clamp_to_ground: false,
       wireframe: false,
-      // cast_shadow: true,
-      // receive_shadow: true,
+      cast_shadow: true,
+      receive_shadow: true,
     },
     vector_tile: {
       max_zoom: 16,
