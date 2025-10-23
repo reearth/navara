@@ -21,7 +21,7 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
-    OverscaledTileHandle, TerrainInformationQuadtree, VectorTile, VectorTileQuadtree,
+    OverscaledTileHandle, TerrainInformationQuadtree, TileExtent, VectorTile, VectorTileQuadtree,
 };
 use navara_window::Window;
 
@@ -378,7 +378,10 @@ pub fn transfer_mesh(
                         }
                     };
 
-                    e.insert(OverscaledTileHandle::new(rendered_tile.tile_handle));
+                    e.insert((
+                        OverscaledTileHandle::new(rendered_tile.tile_handle),
+                        TileExtent::new(tile.extent),
+                    ));
 
                     rendered_tile.feature_ids.as_mut().unwrap().push(e.id());
                 }
