@@ -1,8 +1,14 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 import type { AnimationClip } from "three";
-import { BufferGeometry, Points, Group, Float32BufferAttribute, PointsMaterial} from "three";
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import {
+  BufferGeometry,
+  Points,
+  Group,
+  Float32BufferAttribute,
+  PointsMaterial,
+} from "three";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
@@ -25,7 +31,9 @@ export async function renderModel(
 ) {
   const loader = initializeGltfLoader();
   const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath('https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/');
+  dracoLoader.setDecoderPath(
+    "https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/",
+  );
   dracoLoader.setWorkerLimit(FEATURE_CONCURRENCY);
 
   const rawScene = await (async () => {
@@ -37,19 +45,25 @@ export async function renderModel(
 
       if (m.material.point_cloud) {
         let geometry: BufferGeometry | undefined;
-        const material = new PointsMaterial( { size: 0.3, vertexColors: true } );
+        const material = new PointsMaterial({ size: 0.3, vertexColors: true });
 
         if (m.material.draco_point_compressed) {
-          geometry = await decompressDraco(bin.buffer as ArrayBuffer, dracoLoader);
+          geometry = await decompressDraco(
+            bin.buffer as ArrayBuffer,
+            dracoLoader,
+          );
         } else {
           geometry = new BufferGeometry();
-          geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(bin.buffer), 3));
+          geometry.setAttribute(
+            "position",
+            new Float32BufferAttribute(new Float32Array(bin.buffer), 3),
+          );
         }
 
         const group = new Group();
         if (geometry) {
           const points: Points = new Points(geometry, material);
-           group.add(points);
+          group.add(points);
         }
         return group;
       }
@@ -90,11 +104,13 @@ export function processModelChanged(
   obj._update(m.material, active);
 }
 
-
-async function decompressDraco(buffer: ArrayBuffer, dracoLoader: DRACOLoader): Promise<BufferGeometry | undefined> {
+async function decompressDraco(
+  buffer: ArrayBuffer,
+  dracoLoader: DRACOLoader,
+): Promise<BufferGeometry | undefined> {
   return new Promise((resolve) => {
     dracoLoader.parse(buffer, (geometry) => {
-      const colors = geometry.getAttribute('color');
+      const colors = geometry.getAttribute("color");
       if (colors) {
         // Normalize color values to [0, 1]
         const divisor = colors.array instanceof Uint8Array ? 255 : 65535;
@@ -104,7 +120,10 @@ async function decompressDraco(buffer: ArrayBuffer, dracoLoader: DRACOLoader): P
           colorArray[i * 3 + 1] = colors.getY(i) / divisor;
           colorArray[i * 3 + 2] = colors.getZ(i) / divisor;
         }
-        geometry.setAttribute('color', new Float32BufferAttribute(colorArray, 3));
+        geometry.setAttribute(
+          "color",
+          new Float32BufferAttribute(colorArray, 3),
+        );
       }
       resolve(geometry);
     });

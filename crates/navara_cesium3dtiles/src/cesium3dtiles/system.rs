@@ -1,4 +1,7 @@
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker, RenderedCesium3dTileContent};
+use crate::{
+    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    RenderedCesium3dTileContent,
+};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
@@ -153,7 +156,10 @@ pub fn update_cesium3dtiles_layer(
     mut rendered_features: Query<&mut RenderableFeature>,
     rendered_tiles: Query<
         &RenderedCesium3dTileContent,
-        Or<(With<RenderedCesium3dTileContentPntsMarker>, With<RenderedCesium3dTileContentB3dmMarker>)>,
+        Or<(
+            With<RenderedCesium3dTileContentPntsMarker>,
+            With<RenderedCesium3dTileContentB3dmMarker>,
+        )>,
     >,
     mut features: Query<
         &mut ModelMaterial,

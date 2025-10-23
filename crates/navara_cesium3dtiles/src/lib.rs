@@ -3,8 +3,8 @@
 use bevy_app::{App, Plugin, Update};
 
 mod b3dm;
-mod pnts;
 mod cesium3dtiles;
+mod pnts;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use cesium3dtiles::*;

@@ -1,5 +1,6 @@
 use crate::{
-    b3dm::B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, MvtLayer, TerrainLayer, TilesLayer, pnts::PntsLayer
+    b3dm::B3dmLayer, pnts::PntsLayer, Cesium3dTilesLayer, GeoJsonLayer, MvtLayer, TerrainLayer,
+    TilesLayer,
 };
 
 #[derive(Debug, Clone, PartialEq)]

@@ -8,7 +8,7 @@ use navara_data_requester::DataRequester;
 
 use crate::{
     b3dm::B3dmDataRequesterMarker, cesium3dtiles::order::TileOrderByDistance,
-    Cesium3dTileContentDataRequesterMarker, pnts::PntsDataRequesterMarker,
+    pnts::PntsDataRequesterMarker, Cesium3dTileContentDataRequesterMarker,
 };
 
 const MAX_PENDINGS: u32 = 10;

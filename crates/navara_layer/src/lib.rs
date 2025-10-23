@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 
 mod b3dm;
-mod pnts;
 mod cesium3dtiles;
 mod data;
 mod descriptor;
@@ -10,10 +9,10 @@ mod layer_desc_store;
 mod layer_id;
 mod layer_store;
 mod mvt;
+mod pnts;
 mod terrain;
 mod tile;
 pub use b3dm::*;
-pub use pnts::*;
 pub use cesium3dtiles::*;
 pub use data::*;
 pub use descriptor::*;
@@ -22,5 +21,6 @@ pub use layer_desc_store::*;
 pub use layer_id::*;
 pub use layer_store::*;
 pub use mvt::*;
+pub use pnts::*;
 pub use terrain::*;
 pub use tile::*;

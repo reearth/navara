@@ -2,12 +2,12 @@ use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_component::Priority;
-use navara_data_requester::{ DataRequester, DataRequesterExtension};
+use navara_data_requester::{DataRequester, DataRequesterExtension};
 use url::Url;
 
 use crate::{
-    b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery, pnts, Cesium3dTileContent, TileOrderByDistance
-    , pnts::PntsDataRequesterMarker,
+    b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
+    pnts::PntsDataRequesterMarker, Cesium3dTileContent, TileOrderByDistance,
 };
 
 #[derive(Component)]
@@ -54,20 +54,19 @@ pub(crate) fn request_tile_content(
             .id();
         tile.data_requester_id = Some(id);
         return true;
-    }
-    else if extension == DataRequesterExtension::B3dm {
+    } else if extension == DataRequesterExtension::B3dm {
         let id = commands
-        .spawn((
-            Cesium3dTileContentDataRequesterMarker,
-            B3dmDataRequesterMarker,
-            priority,
-            TileOrderByDistance {
-                distance_from_camera: tile.state.distance_from_camera,
-                sse: tile.state.sse,
-            },
-            DataRequester::from_store(content_url, buf, extension),
-        ))
-        .id();
+            .spawn((
+                Cesium3dTileContentDataRequesterMarker,
+                B3dmDataRequesterMarker,
+                priority,
+                TileOrderByDistance {
+                    distance_from_camera: tile.state.distance_from_camera,
+                    sse: tile.state.sse,
+                },
+                DataRequester::from_store(content_url, buf, extension),
+            ))
+            .id();
         tile.data_requester_id = Some(id);
         return true;
     }

@@ -5,18 +5,21 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
 use navara_component::Priority;
-use navara_data_requester::{DataRequesterStatus};
+use navara_data_requester::DataRequesterStatus;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_math::Vec3;
-use navara_parser::{cesium3dtiles::tileset::Refine};
+use navara_parser::cesium3dtiles::tileset::Refine;
 use navara_window::Window;
 use url::Url;
 
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent, pnts::RenderedCesium3dTileContentPntsMarker};
+use crate::{
+    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    RenderedCesium3dTileContent,
+};
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
-    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform
+    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform,
 };
 
 pub enum TraversalResult {
@@ -340,7 +343,7 @@ fn update_or_spawn_rendered_tile(
                             is_visible: true,
                         },
                         TileTransform {
-                            transform: tile.transform.clone().unwrap_or_default(),
+                            transform: tile.transform.unwrap_or_default(),
                         },
                     ))
                     .id(),
@@ -363,8 +366,7 @@ fn update_or_spawn_rendered_tile(
                     ))
                     .id(),
             );
-        }
-        else {
+        } else {
             // TODO: support other formats like i3dm, cmpt, etc.
             unimplemented!("The tile format of {} isn't supported yet", tile.uri);
         }

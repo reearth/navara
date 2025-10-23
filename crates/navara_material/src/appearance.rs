@@ -354,7 +354,7 @@ pub struct ModelMaterial {
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
     pub point_cloud: bool,
-    pub draco_point_compressed: bool
+    pub draco_point_compressed: bool,
 }
 
 impl Default for ModelMaterial {

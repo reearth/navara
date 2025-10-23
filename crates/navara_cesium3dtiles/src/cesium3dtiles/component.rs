@@ -77,10 +77,12 @@ impl Cesium3dTileContent {
         };
 
         let mut tile_transform = Transform::from_matrix(Mat4::from_cols_array(
-            &tile.transform.clone().map(|v| v as FloatType),
+            &tile.transform.map(|v| v as FloatType),
         ));
         if tile_transform == Transform::IDENTITY {
-            tile_transform = parent.and_then(|p| p.transform.clone()).unwrap_or(Transform::IDENTITY);
+            tile_transform = parent
+                .and_then(|p| p.transform)
+                .unwrap_or(Transform::IDENTITY);
         }
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
@@ -106,16 +108,12 @@ impl Cesium3dTileContent {
                 let x_axis = Vec3::new(xdir0 as FloatType, xdir1 as FloatType, xdir2 as FloatType);
                 let y_axis = Vec3::new(ydir0 as FloatType, ydir1 as FloatType, ydir2 as FloatType);
                 let z_axis = Vec3::new(zdir0 as FloatType, zdir1 as FloatType, zdir2 as FloatType);
-                
+
                 let center_transformed = tile_transform.transform_point(center);
 
                 Some(Aabb {
                     center: center_transformed,
-                    extents: Vec3::new(
-                        x_axis.length(),
-                        y_axis.length(),
-                        z_axis.length(),
-                    ),
+                    extents: Vec3::new(x_axis.length(), y_axis.length(), z_axis.length()),
                 })
             }
             _ => None,

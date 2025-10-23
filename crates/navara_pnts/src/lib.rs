@@ -6,7 +6,6 @@ pub use navara_bin::*;
 use alloc::vec::Vec;
 use binrw::BinRead;
 
-
 #[derive(BinRead)]
 pub struct Pnts {
     pub header: PntsHeader,
@@ -29,7 +28,6 @@ pub struct PntsHeader {
     pub batch_table_binary_byte_length: u32,
 }
 
-
 #[derive(BinRead)]
 #[br(import(feature_table_json_byte_length: u32, feature_table_binary_byte_length: u32))]
 pub struct FeatureTable {
@@ -49,5 +47,5 @@ pub struct BatchTable {
 }
 
 pub fn json(blob: &[u8]) -> Result<serde_json::Value, serde_json::Error> {
-    parse_json_to_struct(&blob)
+    parse_json_to_struct(blob)
 }

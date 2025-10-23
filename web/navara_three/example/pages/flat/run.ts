@@ -4,7 +4,6 @@ import { Pane } from "tweakpane";
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 
-
 export const run = async (view: ThreeView) => {
   await view.init();
 
@@ -62,15 +61,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url, },
-    model: {
-      show: true,
-    },
-  });
-
-  view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url, },
+    data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
     model: {
       show: true,
     },
@@ -85,12 +76,8 @@ export const run = async (view: ThreeView) => {
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
 
-
-const addCameraControl = (
-  view: ThreeView,
-  pane: Pane,
-) => {
-   pane
+const addCameraControl = (view: ThreeView, pane: Pane) => {
+  pane
     .addButton({
       title: "Globe view",
     })
@@ -104,17 +91,7 @@ const addCameraControl = (
         roll: 0,
       });
     });
-  pane
-    .addButton({
-      title: " Kakegawa Castle view",
-    })
-    .on("click", () => {
-      view.setCamera({
-        lat: 34.775417,
-        lng: 138.014733,
-        height: 300,
-      });
-    });
+
   pane
     .addButton({
       title: "Yamanashi - Kyonaka view",

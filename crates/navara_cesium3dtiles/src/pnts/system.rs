@@ -11,7 +11,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequester
 use navara_feature_component::{
     batch::{FeatureBatchId, GlobalBatchIds},
     id::FeatureId,
-    model::{ModelBin, ModelGeometry, ModelMarker},
+    model::{ModelBin, ModelGeometry},
     render::RenderableFeature,
 };
 use navara_layer::{
@@ -19,12 +19,13 @@ use navara_layer::{
     UpdatePntsLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Mat4, Transform, Vec3, Vec4};
+use navara_math::{Transform, Vec3};
 
 use navara_parser::pnts::*;
 
 use crate::{
-    Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance, TileTransform,
+    Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
+    TileTransform,
 };
 
 use super::{
@@ -125,12 +126,11 @@ fn get_geometry_info_from_pnts(
         .as_object()
         .and_then(|ext| {
             if let Some(draco_meta) = ext["3DTILES_draco_point_compression"].as_object() {
-                    let properties = draco_meta["properties"].as_object().unwrap();
-                    let byte_offset = draco_meta["byteOffset"].as_u64().unwrap();
-                    let byte_length = draco_meta["byteLength"].as_u64().unwrap();
-                    Some((properties, byte_offset, byte_length))
-            }
-            else {
+                let properties = draco_meta["properties"].as_object().unwrap();
+                let byte_offset = draco_meta["byteOffset"].as_u64().unwrap();
+                let byte_length = draco_meta["byteLength"].as_u64().unwrap();
+                Some((properties, byte_offset, byte_length))
+            } else {
                 None
             }
         });
@@ -143,7 +143,6 @@ fn get_geometry_info_from_pnts(
         position_bin_data = pnts.feature_table.binary.split_off(byte_offset as usize);
         position_bin_data.truncate(byte_length as usize);
         draco_compressed = true;
-
     } else {
         // No Draco compression
         const N_POSITION_COMPONENTS: usize = 3;
@@ -151,7 +150,8 @@ fn get_geometry_info_from_pnts(
 
         let positions_len = feature_table_json["POINTS_LENGTH"].as_u64()? as usize;
         let positions_offset = feature_table_json["POSITION"]["byteOffset"].as_u64()? as usize;
-        let positions_byte_size = positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
+        let positions_byte_size =
+            positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
 
         // TODO: support color, normal, etc.
         // extract the position data from featuretable's binary blob
@@ -241,7 +241,7 @@ pub fn delete_model_by_pnts_layer(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
@@ -254,10 +254,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         Without<Deleted>,
     >,
     mut rendered_tiles: Query<
-        (
-            &mut RenderedCesium3dTileContent,
-            &TileTransform
-        ),
+        (&mut RenderedCesium3dTileContent, &TileTransform),
         (
             With<RenderedCesium3dTileContentPntsMarker>,
             Added<RenderedCesium3dTileContent>,
@@ -267,9 +264,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
 ) {
     for (mut tile, transform) in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
-            Ok(v) => {
-                v
-            }
+            Ok(v) => v,
             Err(_) => {
                 continue;
             }
@@ -312,8 +307,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             },
             appearance,
             ModelBin(postions_handle),
-            transform.transform.clone(),
-
+            transform.transform,
         ));
         tile.feature_id = Some(entity.id());
 
