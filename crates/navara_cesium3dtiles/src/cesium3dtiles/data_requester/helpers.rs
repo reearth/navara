@@ -38,7 +38,6 @@ pub(crate) fn request_tile_content(
             return false;
         }
     };
-    // TODO: remove this comment
     let id = commands
         .spawn((
             Cesium3dTileContentDataRequesterMarker,
