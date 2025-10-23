@@ -4,16 +4,11 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
 };
 
-use bevy_log::info;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{Deleted, Priority};
 use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
-    // batch::{
-    //     BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
-    //     GlobalBatchIdAndSelections, IdPropertySelections, IdPropertyTable,
-    // },
     batch::{FeatureBatchId, GlobalBatchIds},
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
@@ -59,9 +54,6 @@ pub fn request_model_by_pnts_layer(
 pub fn construct_model_by_pnts_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    // mut batch_table_res: ResMut<BatchTable>,
-    // mut id_prop_table_res: ResMut<IdPropertyTable>,
-    // id_prop_sel_res: Res<IdPropertySelections>,
     requesters: Query<
         (Entity, &PntsLayerDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -97,29 +89,6 @@ pub fn construct_model_by_pnts_layer(
         appearance.draco_point_compressed = draco_compressed;
         appearance.point_cloud = true;
 
-            let x_axis = Vec4::new(
-            -0.6689445620740821,
-            -0.7433122983453956,
-            0.0,
-            0.0);
-        let y_axis = Vec4::new(
-            0.4239546898635435,
-            -0.3815383991107325,
-            0.821395684762664,
-            0.0);
-        let z_axis = Vec4::new(
-            -0.6105535142919258,
-            0.5494681766331011,
-            0.5703587722243553,
-            0.0);
-        let w_axis = Vec4::new(
-            -3898480.7755511394,
-            3508441.231176139,
-            3617451.1883247257,
-            1.0
-        );
-
-        let dummy_transform = Transform::from_matrix(Mat4::from_cols(x_axis, y_axis, z_axis, w_axis));
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
             FeatureBatchId(0), // Dummy value,
@@ -134,9 +103,7 @@ pub fn construct_model_by_pnts_layer(
             },
             appearance,
             ModelBin(positions_handle),
-            // Transform::IDENTITY,
-            dummy_transform,
-
+            Transform::IDENTITY,
         ));
 
         buf.remove(&req.handle);
@@ -254,7 +221,6 @@ pub fn delete_model_by_pnts_layer(
             With<Transform>,
         ),
     >,
-    mut rendered_features: Query<(&ModelMarker, &mut RenderableFeature)>,
 ) {
     for (e, d) in &deleted {
         let entities = match layer_store.get(&d.0.clone()) {

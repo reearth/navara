@@ -9,12 +9,21 @@ export const run = async (view: ThreeView) => {
   view.addDefaultAtmosphereLayers();
 
   // kag castle
+  // view.flyTo({
+  //   lat: 34.775417,
+  //   lng: 138.014733,
+  //   height: 300,
+  // });
+
+    // 01_kyouchu
+    // 35.62553°N, 138.39706°E
+
+
   view.flyTo({
-    lat: 34.775417,
-    lng: 138.014733,
+    lat:  35.62553,
+    lng: 138.39706,
     height: 300,
   });
-
 
   //   view.flyTo({
   //   lat: 39.85328,
@@ -95,7 +104,8 @@ export const run = async (view: ThreeView) => {
     // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/pointCloudDraco.pnts", },
     // data: { url: "https://raw.githubusercontent.com/CesiumGS/cesium/refs/heads/main/Apps/SampleData/Cesium3DTiles/PointCloud/PointCloudDraco/tileset.json", },
     // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/0/0.pnts", },
-    data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json", },
+    // data: { url: "https://assets.cms.plateau.reearth.io/assets/6b/68c785-f43d-4451-ba7f-d4d130ef6ba5/uc_pv1_22213_kakegawa/pointcloud/22213_kakegawa_castle/tileset.json", },
+    data: { url: "https://yamanashi-tile.geospatial.jp/tile/2024/01_kyouchu/tileset.json", },
     // data: { uri: "/public/pnts/PointCloudConstantColor/pointCloudConstantColor.pnts", },
     model: {
       show: true,
