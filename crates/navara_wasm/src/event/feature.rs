@@ -11,8 +11,8 @@ use crate::{
 };
 use navara_wasm_types::{
     polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
-    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
-    TextMaterial, Vec3, CRS,
+    BillboardMaterial, BoundingSphere, ModelMaterial, PointMaterial, PolygonMaterial,
+    PolylineMaterial, TextMaterial, Vec3, CRS,
 };
 
 #[wasm_bindgen]
@@ -74,6 +74,8 @@ pub struct PolygonMesh {
     /// Used for positioning the mesh when using RTC rendering
     #[wasm_bindgen(getter_with_clone)]
     pub coordinates: Vec3,
+    #[wasm_bindgen(getter_with_clone)]
+    pub bounding_sphere: Option<BoundingSphere>,
 }
 
 #[wasm_bindgen]
@@ -175,6 +177,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 active,
                 coordinates,
+                bounding_sphere,
                 ..
             } => Self {
                 polygon: Some(PolygonMesh {
@@ -184,6 +187,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     active: *active,
                     coordinates: (*coordinates).into(),
+                    bounding_sphere: bounding_sphere.as_ref().map(|bs| (*bs).into()),
                 }),
                 ..Default::default()
             },
