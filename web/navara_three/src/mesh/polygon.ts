@@ -34,6 +34,7 @@ import {
   RepeatWrapping,
   RGBADepthPacking,
   Vector3,
+  Sphere,
 } from "three";
 
 import {
@@ -67,6 +68,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
 > {
   outline?: PolygonOutlineMesh;
 
+  private _baseBoundingSphere?: {
+    surfaceCenter: Vector3; // Center point on ellipsoid surface (without height)
+    aabbRadius: number; // Horizontal extent radius from AABB
+  };
+
   constructor(
     buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
     mat: MeshLambertMaterial = new MeshLambertMaterial(),
@@ -87,6 +93,17 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
     this.initDepthMaterial();
+
+    if (mesh.bounding_sphere) {
+      const bs = mesh.bounding_sphere;
+
+      this._baseBoundingSphere = {
+        surfaceCenter: new Vector3(bs.center_x, bs.center_y, bs.center_z),
+        aabbRadius: bs.radius,
+      };
+
+      this._recalculateBoundingSphere();
+    }
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
@@ -633,6 +650,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.material.userData.uMinMaxHeight.value = [min, max];
       prev.min = min;
       prev.max = max;
+
+      this._recalculateBoundingSphere();
     }
 
     if (this.material.userData.uIsTexturized.value !== isTexturized) {
@@ -655,6 +674,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.material.userData.uClampToGround.value !== material.clamp_to_ground
     ) {
       this.material.userData.uClampToGround.value = material.clamp_to_ground;
+
+      this._recalculateBoundingSphere();
     }
     this.userData.draped = material.clamp_to_ground;
 
@@ -695,6 +716,52 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
   }
 
+  private _recalculateBoundingSphere() {
+    const base = this._baseBoundingSphere;
+    if (!base) {
+      return;
+    }
+
+    if (this.material.userData.uClampToGround.value) {
+      this.geometry.boundingSphere = new Sphere(
+        base.surfaceCenter,
+        base.aabbRadius,
+      );
+      return;
+    }
+
+    const addHeight = this.material.userData.uAddHeight.value ?? 0;
+    const addExtrudedHeight =
+      this.material.userData.uAddExtrudedHeight.value ?? 0;
+
+    const baseMinMaxHeight = this.material.userData.uMinMaxHeight.value as
+      | [number, number]
+      | undefined;
+    if (!baseMinMaxHeight) return;
+
+    const minHeight = baseMinMaxHeight[0] + addHeight;
+    const maxHeight = baseMinMaxHeight[1] + addHeight + addExtrudedHeight;
+
+    const heightOffset = (maxHeight - minHeight) / 2.0;
+    const centerHeight = (maxHeight + minHeight) / 2.0;
+
+    // Get surface normal from surface center
+    const surfaceNormal = base.surfaceCenter.clone().normalize();
+
+    // Calculate new center by elevating along surface normal
+    const center = base.surfaceCenter
+      .clone()
+      .add(surfaceNormal.multiplyScalar(centerHeight));
+
+    // Calculate new radius using Pythagorean theorem
+    const radius = Math.sqrt(
+      base.aabbRadius * base.aabbRadius + heightOffset * heightOffset,
+    );
+
+    // Update geometry bounding sphere
+    this.geometry.boundingSphere = new Sphere(center, radius);
+  }
+
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
     return {
       color: this.material.color,
@@ -720,11 +787,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
   _setFeatureExtrudedHeight(height: number): void {
     this.material.userData.uAddExtrudedHeight.value = height;
     this.outline?._setFeatureExtrudedHeight(height);
+    this._recalculateBoundingSphere();
   }
 
   _setFeatureHeight(height: number): void {
     this.material.userData.uAddHeight.value = height;
     this.outline?._setFeatureHeight(height);
+    this._recalculateBoundingSphere();
   }
 
   get water() {

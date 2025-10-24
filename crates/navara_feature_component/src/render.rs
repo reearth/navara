@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity, system::ResMut};
 use navara_buffer_store::{BufferStore, Handle};
-use navara_core::{Extent, Radians, CRS};
+use navara_core::{BoundingSphere, Extent, Radians, CRS};
 use navara_geometry::{TransferableFloatAttribute, TransferableUintAttribute};
 use navara_layer::LayerId;
 use navara_material::{
@@ -105,6 +105,7 @@ pub enum RenderableFeature {
         feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
         extent: Option<Extent<f32, Radians>>,
+        bounding_sphere: Option<BoundingSphere>,
         feature_batch_id: u32,
         batch_length: u32,
     },
