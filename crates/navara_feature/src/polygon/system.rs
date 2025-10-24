@@ -6,7 +6,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::{Aabb, CRS, WGS84_32};
+use navara_core::{Aabb, BoundingSphere, CRS, WGS84_32};
 use navara_feature_component::{
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
@@ -16,7 +16,8 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileMeshMarker,
+    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileExtent,
+    TileMeshMarker,
 };
 
 use navara_feature_component::{
@@ -48,6 +49,7 @@ pub fn transfer_batched_mesh(
             &GlobalBatchIds,
             Option<&mut FeatureId>,
             Option<&OverscaledTileHandle>,
+            Option<&TileExtent>,
         ),
         With<PolygonMarker>,
     >,
@@ -66,6 +68,7 @@ pub fn transfer_batched_mesh(
         global_batch_ids,
         feature_id,
         tile_coordinates,
+        tile_extent_component,
     ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
@@ -87,6 +90,7 @@ pub fn transfer_batched_mesh(
                         batched_feature: batched_feature_entity,
                         // If it uses `clamp_to_ground` and it is tile, it should be flat.
                         flat: material.clamp_to_ground && tile_coordinates.is_some(),
+                        tile_extent: tile_extent_component.map(|t| t.extent),
                     },
                 ))
                 .id();
@@ -94,25 +98,37 @@ pub fn transfer_batched_mesh(
             continue;
         }
 
-        let (task_entity, ConstructPolygonBatchedFeatureResult { extent, geometry }) =
-            construct_polygon_feature_tasks
-                .get(batched_feature.construct_polygon_feature.unwrap())
-                .unwrap();
+        let (
+            task_entity,
+            ConstructPolygonBatchedFeatureResult {
+                extent,
+                geometry,
+                rtc_translation,
+            },
+        ) = construct_polygon_feature_tasks
+            .get(batched_feature.construct_polygon_feature.unwrap())
+            .unwrap();
 
         let mut material = material.clone();
         material.internal = Some(PolygonInternalMaterial {
             min_max_heights: vec![0., 0.],
         });
 
-        let distance_to_center_from_ellipsoid_surface = match extent {
+        let (distance_to_center_from_ellipsoid_surface, bounding_sphere) = match extent {
             Some(extent) => {
                 let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
-                WGS84_32
+                let distance = WGS84_32
                     .scale_to_geodetic_surface(aabb.center)
-                    .map(|surface_point| -aabb.center.distance(surface_point))
+                    .map(|surface_point| -aabb.center.distance(surface_point));
+                let sphere = get_bounding_sphere(&aabb);
+                (distance, Some(sphere))
             }
-            None => None,
+            None => (None, None),
         };
+
+        // Use RTC translation for coordinates if available
+        // This positions the mesh at the tile center in world space
+        let translation = rtc_translation.unwrap_or(Vec3::new(0., 0., 0.));
 
         let clamp_to_ground = material.clamp_to_ground;
         let mut entity_cmd = commands.spawn((
@@ -125,7 +141,7 @@ pub fn transfer_batched_mesh(
                 material,
                 geometry: geometry.clone(),
                 outline_geometry: None,
-                transform: Transform::default(),
+                transform: Transform::from_translation(translation),
                 feature_id: None,
                 render_info: PolygonRenderInformation {
                     should_recalculate_height: true,
@@ -134,6 +150,7 @@ pub fn transfer_batched_mesh(
                     should_be_texturized: clamp_to_ground && tile_coordinates.is_some(),
                 },
                 extent: *extent,
+                bounding_sphere,
                 active: false,
                 feature_batch_id: feature_batch_id.0,
                 batch_length: global_batch_ids.batch_length,
@@ -185,6 +202,7 @@ pub fn transfer_mesh(
             &geometry.crs,
             material,
             &mut polygon_resource,
+            true, // use_rte = true for individual features
         );
         if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
             let aabb = Aabb::from_extent_f32(extent, 0., 0.);
@@ -200,10 +218,24 @@ pub fn transfer_mesh(
                 ),
             });
 
-            let pos_cnt = polygon_result.geometry.attributes.position.data.len()
-                / polygon_result.geometry.attributes.position.size as usize;
-            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+            let bounding_sphere = get_bounding_sphere(&aabb);
 
+            let pos_cnt = polygon_result
+                .geometry
+                .attributes
+                .position_3d_high
+                .as_ref()
+                .unwrap()
+                .data
+                .len()
+                / polygon_result
+                    .geometry
+                    .attributes
+                    .position_3d_high
+                    .as_ref()
+                    .unwrap()
+                    .size as usize;
+            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
             polygon_result.geometry.attributes.batch_ids =
                 Some(FloatAttribute::new(batch_id_vec, 1));
 
@@ -237,6 +269,7 @@ pub fn transfer_mesh(
                             should_be_texturized: false,
                         },
                         extent: Some(extent),
+                        bounding_sphere: Some(bounding_sphere),
                         active: true,
                         feature_batch_id: batch_id.0 as u32,
                         batch_length: 1,
@@ -268,6 +301,8 @@ pub fn update_polygon(
         if let RenderableFeature::Polygon {
             material,
             render_info,
+            extent,
+            bounding_sphere,
             ..
         } = f
         {
@@ -277,6 +312,13 @@ pub fn update_polygon(
                 || material.extruded_height != updated.material.extruded_height;
             material.update(&updated.material);
             render_info.should_recalculate_height = should_recalculate_height;
+
+            if should_recalculate_height {
+                if let Some(extent) = extent {
+                    let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+                    *bounding_sphere = Some(get_bounding_sphere(&aabb));
+                }
+            }
         }
         commands.entity(e).remove::<UpdatePolygon>();
     }
@@ -319,6 +361,7 @@ pub fn update_height_by_terrain(
                 material,
                 extent,
                 render_info,
+                bounding_sphere,
                 ..
             } => {
                 render_info.should_recalculate_height = false;
@@ -346,6 +389,9 @@ pub fn update_height_by_terrain(
                     material.clamp_to_ground,
                     distance_to_center_from_ellipsoid_surface,
                 );
+
+                let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+                *bounding_sphere = Some(get_bounding_sphere(&aabb));
             }
             _ => unreachable!(),
         };
@@ -370,6 +416,17 @@ fn calc_min_max_height(
     };
 
     vec![height, extruded_height]
+}
+
+fn get_bounding_sphere(aabb: &Aabb) -> BoundingSphere {
+    // Use AABB center and extents directly without height adjustment
+    let bs_center = aabb.center;
+    let bs_radius = aabb.extents.length();
+
+    BoundingSphere {
+        center: bs_center,
+        radius: bs_radius,
+    }
 }
 
 #[allow(clippy::type_complexity)]

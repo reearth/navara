@@ -2,7 +2,7 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
+    Aabb, ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
 };
 use navara_geometry::{
     decode_height_from_dem, tile_triangles_with_terrain, Geometry, ReturnedConstructedTerrainMesh,
@@ -122,6 +122,13 @@ impl TerrainData for RasterDEMData {
             decode_height_from_dem(r, g, b, geoid_height, &self.decoder)
         };
 
+        let aabb = Aabb::from_extent_f32(
+            *extent,
+            0.,
+            tile.max_height, // Use parent max_height
+        );
+        let tile_center = aabb.center;
+
         // This is a trial and error value. We can update it if necessary, but...
         // 1. The raw geometric error is too large, so you need to adjust the value.
         // 2. If the error is still large when you are close to the tile, upsampling might not work well.
@@ -149,11 +156,16 @@ impl TerrainData for RasterDEMData {
                 max_height = max_height.max(h);
                 min_height = min_height.min(h);
 
-                (x.val(), y.val(), z.val())
+                (
+                    x.val() - tile_center.x,
+                    y.val() - tile_center.y,
+                    z.val() - tile_center.z,
+                )
             });
 
         // This is just a plane, so increase the number of vertices to make a smooth ellipsoidal surface.
         if indices.len() <= 6 {
+            // tile_triangles_with_terrain already includes RTC translation
             return tile_triangles_with_terrain(
                 ellipsoid,
                 extent,
@@ -163,6 +175,7 @@ impl TerrainData for RasterDEMData {
                 martini_size - 1,
                 martini_size - 1,
                 &self.decoder,
+                tile.max_height,
             );
         }
 
@@ -175,6 +188,7 @@ impl TerrainData for RasterDEMData {
             max_height,
             min_height,
             heights,
+            rtc_translation: Some(tile_center),
         }
     }
 

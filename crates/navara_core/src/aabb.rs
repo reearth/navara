@@ -9,6 +9,12 @@ pub struct Aabb {
     pub extents: Vec3,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct BoundingSphere {
+    pub center: Vec3,
+    pub radius: FloatType,
+}
+
 impl Aabb {
     pub fn from_vec3(ps: &[Vec3]) -> Self {
         let first_vec = *ps.first().unwrap();

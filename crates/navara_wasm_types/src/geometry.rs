@@ -3,7 +3,7 @@ use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{copy_f32_array, copy_u32_array};
+use crate::{copy_f32_array, copy_u32_array, Vec3};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
@@ -69,6 +69,7 @@ pub struct ReturnedConstructedTerrainMesh {
     pub max_height: FloatType,
     pub min_height: FloatType,
     heights: Vec<FloatType>,
+    pub rtc_translation: Option<Vec3>,
 }
 
 #[wasm_bindgen]
@@ -79,12 +80,14 @@ impl ReturnedConstructedTerrainMesh {
         max_height: FloatType,
         min_height: FloatType,
         heights: Vec<FloatType>,
+        rtc_translation: Option<Vec3>,
     ) -> Self {
         Self {
             geometry,
             max_height,
             min_height,
             heights,
+            rtc_translation,
         }
     }
 
@@ -116,6 +119,7 @@ impl From<navara_geometry::ReturnedConstructedTerrainMesh> for ReturnedConstruct
             max_height: d.max_height,
             min_height: d.min_height,
             heights: d.heights,
+            rtc_translation: d.rtc_translation.map(|v| v.into()),
         }
     }
 }
@@ -127,6 +131,7 @@ impl From<ReturnedConstructedTerrainMesh> for navara_geometry::ReturnedConstruct
             max_height: d.max_height,
             min_height: d.min_height,
             heights: d.heights,
+            rtc_translation: d.rtc_translation.map(|v| v.into()),
         }
     }
 }

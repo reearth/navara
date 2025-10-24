@@ -272,13 +272,23 @@ impl RasterTile {
             .as_ref()
             .and_then(|t| t.upsample(&region, upsamplable_geometry))?;
 
-        let (geometry, heights) = upsampled_mesh.construct_geometry(ellipsoid, &self.extent);
+        let aabb = Aabb::from_extent_f32(
+            self.extent,
+            upsampled_mesh.min_height,
+            upsampled_mesh.max_height,
+        );
+        let tile_center = aabb.center;
+
+        // Generate geometry directly in local RTC space
+        let (geometry, heights) =
+            upsampled_mesh.construct_geometry(ellipsoid, &self.extent, &tile_center);
 
         Some(ReturnedConstructedTerrainMesh {
             geometry,
             heights,
             max_height: upsampled_mesh.max_height,
             min_height: upsampled_mesh.min_height,
+            rtc_translation: Some(tile_center),
         })
     }
 

@@ -1,26 +1,51 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
+use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute, Vec3};
 
 #[wasm_bindgen]
 pub struct ConstructedPolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
     geometry: PolygonGeometry,
     pub extent: Option<ExtentRadianF32>,
+    /// RTC (Relative-To-Center) translation vector
+    /// Contains the tile center in world-space ECEF coordinates
+    /// Used to position the mesh while keeping vertex positions in local space
+    #[wasm_bindgen(getter_with_clone)]
+    pub rtc_translation: Option<Vec3>,
 }
 
 impl ConstructedPolygonGeometry {
-    pub fn new(geometry: PolygonGeometry, extent: Option<ExtentRadianF32>) -> Self {
-        Self { geometry, extent }
+    pub fn new(
+        geometry: PolygonGeometry,
+        extent: Option<ExtentRadianF32>,
+        rtc_translation: Option<Vec3>,
+    ) -> Self {
+        Self {
+            geometry,
+            extent,
+            rtc_translation,
+        }
     }
 }
 
 #[wasm_bindgen]
 impl ConstructedPolygonGeometry {
-    pub fn position(&mut self) -> js_sys::Float32Array {
+    pub fn position_3d_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.position_3d_high()
+    }
+    pub fn position_3d_high_size(&mut self) -> Option<u8> {
+        self.geometry.position_3d_high_size()
+    }
+    pub fn position_3d_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.position_3d_low()
+    }
+    pub fn position_3d_low_size(&mut self) -> Option<u8> {
+        self.geometry.position_3d_low_size()
+    }
+    pub fn position(&mut self) -> Option<js_sys::Float32Array> {
         self.geometry.position()
     }
-    pub fn position_size(&mut self) -> u8 {
+    pub fn position_size(&mut self) -> Option<u8> {
         self.geometry.position_size()
     }
     pub fn normal(&mut self) -> Option<js_sys::Float32Array> {
@@ -70,10 +95,22 @@ impl PolygonGeometry {
 
 #[wasm_bindgen]
 impl PolygonGeometry {
-    pub fn position(&mut self) -> js_sys::Float32Array {
+    pub fn position_3d_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_position_3d_high()
+    }
+    pub fn position_3d_high_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_position_3d_high_size()
+    }
+    pub fn position_3d_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_position_3d_low()
+    }
+    pub fn position_3d_low_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_position_3d_low_size()
+    }
+    pub fn position(&mut self) -> Option<js_sys::Float32Array> {
         self.attributes.transfer_position()
     }
-    pub fn position_size(&mut self) -> u8 {
+    pub fn position_size(&mut self) -> Option<u8> {
         self.attributes.transfer_position_size()
     }
     pub fn normal(&mut self) -> Option<js_sys::Float32Array> {
@@ -108,7 +145,9 @@ impl PolygonGeometry {
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonGeometryAttributes {
-    position: FloatAttribute,
+    position: Option<FloatAttribute>,
+    position_3d_high: Option<FloatAttribute>,
+    position_3d_low: Option<FloatAttribute>,
     normal: Option<FloatAttribute>,
     scale_normal_and_cap: Option<FloatAttribute>,
     batch_ids: Option<FloatAttribute>,
@@ -117,11 +156,23 @@ pub struct PolygonGeometryAttributes {
 
 #[wasm_bindgen]
 impl PolygonGeometryAttributes {
-    pub fn transfer_position(&mut self) -> js_sys::Float32Array {
-        self.position.transfer_data()
+    pub fn transfer_position_3d_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.position_3d_high.as_mut().map(|p| p.transfer_data())
     }
-    pub fn transfer_position_size(&mut self) -> u8 {
-        self.position.size
+    pub fn transfer_position_3d_high_size(&mut self) -> Option<u8> {
+        self.position_3d_high.as_ref().map(|p| p.size)
+    }
+    pub fn transfer_position_3d_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.position_3d_low.as_mut().map(|p| p.transfer_data())
+    }
+    pub fn transfer_position_3d_low_size(&mut self) -> Option<u8> {
+        self.position_3d_low.as_ref().map(|p| p.size)
+    }
+    pub fn transfer_position(&mut self) -> Option<js_sys::Float32Array> {
+        self.position.as_mut().map(|p| p.transfer_data())
+    }
+    pub fn transfer_position_size(&mut self) -> Option<u8> {
+        self.position.as_ref().map(|p| p.size)
     }
     pub fn transfer_normal(&mut self) -> Option<js_sys::Float32Array> {
         let Some(normal) = &mut self.normal else {
@@ -176,7 +227,9 @@ impl PolygonGeometryAttributes {
 impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttributes {
     fn from(val: PolygonGeometryAttributes) -> Self {
         navara_geometry::PolygonGeometryAttributes {
-            position: val.position.into(),
+            position: val.position.map(|v| v.into()),
+            position_3d_high: val.position_3d_high.map(|v| v.into()),
+            position_3d_low: val.position_3d_low.map(|v| v.into()),
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
             batch_ids: val.batch_ids.map(|v| v.into()),
@@ -187,7 +240,9 @@ impl From<PolygonGeometryAttributes> for navara_geometry::PolygonGeometryAttribu
 impl From<navara_geometry::PolygonGeometryAttributes> for PolygonGeometryAttributes {
     fn from(val: navara_geometry::PolygonGeometryAttributes) -> Self {
         PolygonGeometryAttributes {
-            position: val.position.into(),
+            position: val.position.map(|v| v.into()),
+            position_3d_high: val.position_3d_high.map(|v| v.into()),
+            position_3d_low: val.position_3d_low.map(|v| v.into()),
             normal: val.normal.map(|v| v.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|v| v.into()),
             batch_ids: val.batch_ids.map(|v| v.into()),

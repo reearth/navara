@@ -1,4 +1,6 @@
-import type { ReturnedConstructedTerrainMesh } from "@navara/engine";
+import type { ReturnedConstructedTerrainMesh, Vec3 } from "@navara/engine";
+
+import { Vec3Like } from "./Vec3Like";
 
 export class ReturnedConstructedTerrainMeshLike
   implements ReturnedConstructedTerrainMesh
@@ -9,6 +11,7 @@ export class ReturnedConstructedTerrainMeshLike
   heights: Float32Array;
   max_height: number;
   min_height: number;
+  rtc_translation: Vec3 | undefined;
 
   constructor(t: ReturnedConstructedTerrainMesh) {
     this.vertices = t.transferVertices().slice();
@@ -17,6 +20,9 @@ export class ReturnedConstructedTerrainMeshLike
     this.heights = t.transferHeights().slice();
     this.max_height = t.max_height;
     this.min_height = t.min_height;
+    this.rtc_translation = t.rtc_translation
+      ? new Vec3Like(t.rtc_translation)
+      : undefined;
   }
 
   transferVertices(): Float32Array {

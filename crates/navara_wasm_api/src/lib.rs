@@ -3,10 +3,12 @@ use wasm_bindgen::prelude::*;
 
 mod ellipsoid;
 mod intersection;
+mod rte;
 mod transform;
 
 pub use ellipsoid::*;
 pub use intersection::*;
+pub use rte::*;
 pub use transform::*;
 
 #[wasm_bindgen]
