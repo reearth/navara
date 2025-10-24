@@ -1,21 +1,26 @@
-import ThreeView, { Layer } from "@navara/three";
+import ThreeView from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
-// import { addCtrlPanel, type MaterialLayerDescription } from "../../helpers/panel";
-// import { add } from "lodash-es";
+import { addCtrlPanel, type MaterialLayerDescription } from "../../helpers/panel";
 
-// const geoLayersDef: MaterialLayerDescription[] = [
-//     {
-//         type: "cesium3dtiles",
-//         data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
-//         model: {
-//             show: true,
-//         },
-//     }
-// ];
-let gLayerVisible = true;
+const geoLayersDef: MaterialLayerDescription[] = [
+    {
+        type: "cesium3dtiles",
+        data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
+        model: {
+            show: true,
+        },
+    },
+    {
+        type: "cesium3dtiles",
+        data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url },
+        model: {
+            show: true,
+        },
+    }
+];
 
 export const run = async (view: ThreeView) => {
     await view.init();
@@ -39,23 +44,13 @@ export const run = async (view: ThreeView) => {
         },
     });
 
-    const pntsLayer = view.addLayer({
-        type: "cesium3dtiles",
-        // data: { url: "https://raw.githubusercontent.com/adel-elmala/dummy-assets/refs/heads/main/dataset_0/tileset.json" },
-        data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
-        model: {
-            show: true,
-        },
-    });
-
     const pane = new Pane({
         title: "Parameters",
         expanded: true,
     });
 
     addCameraControl(view, pane);
-    // addCtrlPanel(geoLayersDef, view, pane);
-    addLayerControl(view, pane, pntsLayer);
+    addCtrlPanel(geoLayersDef, view, pane);
     showAttributions([TILE_DATASETS.openstreetmap]);
 };
 
@@ -89,29 +84,19 @@ const addCameraControl = (view: ThreeView, pane: Pane) => {
                 roll: 0.0,
             });
         });
-};
-
-const addLayerControl = (view: ThreeView, pane: Pane, layer: Layer) => {
-    pane
-        .addButton({
-            title: "Delete Point Cloud Layer",
-        })
-        .on("click", () => {
-            view.deleteLayerById(layer.id);
-        });
 
     pane
         .addButton({
-            title: "update Point Cloud Layer",
+            title: "Kakegawa castle view",
         })
         .on("click", () => {
-            gLayerVisible = !gLayerVisible;
-            view.updateLayerById(layer.id, {
-                model: {
-                    show: gLayerVisible,
-                },
+            view.flyTo({
+                lat: 34.7734947205,
+                lng: 138.0163726807,
+                height: 424.66,
+                heading: 326.6210937500,
+                pitch: -56.2649879456,
+                roll: 360.00,
             });
         });
 };
-
-
