@@ -18,7 +18,7 @@ use navara_layer::{
     Cesium3dTilesLayer, DeletePntsLayerMarker, LayerId, LayerStore, PntsLayer,
     UpdatePntsLayerMarker,
 };
-use navara_material::{Appearance, ModelMaterial};
+use navara_material::{Appearance, ModelInternalMaterial, ModelMaterial};
 use navara_math::{Transform, Vec3};
 
 use navara_parser::pnts::*;
@@ -87,8 +87,10 @@ pub fn construct_model_by_pnts_layer(
                 None => continue,
             };
 
-        appearance.draco_point_compressed = draco_compressed;
-        appearance.point_cloud = true;
+        appearance.internal = Some(ModelInternalMaterial {
+            draco_compressed,
+            point_cloud: true,
+        });
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
@@ -291,8 +293,10 @@ pub fn construct_model_by_cesium3dtiles_layer(
                 None => continue,
             };
 
-        appearance.draco_point_compressed = draco_compressed;
-        appearance.point_cloud = true;
+        appearance.internal = Some(ModelInternalMaterial {
+            draco_compressed,
+            point_cloud: true,
+        });
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
@@ -356,13 +360,13 @@ pub fn remove_invisible_rendered_tiles(
                     commands.entity(rendered_feature_id).insert(Deleted);
                 } else {
                     continue;
-                } 
+                }
             } else {
                 continue;
-            } 
+            }
         } else {
             continue;
-        } 
+        }
 
         // Remove data requester
         if let Ok(requester) = requesters.get(tile.data_requester_id) {

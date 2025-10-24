@@ -353,8 +353,8 @@ pub struct ModelMaterial {
     // animation
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
-    pub point_cloud: bool,
-    pub draco_point_compressed: bool,
+    pub point_size: f32,
+    pub internal: Option<ModelInternalMaterial>,
 }
 
 impl Default for ModelMaterial {
@@ -383,8 +383,8 @@ impl Default for ModelMaterial {
             // animation
             animation_active_clip: None,
             animation_speed: None,
-            point_cloud: false,
-            draco_point_compressed: false,
+            point_size: 0.3,
+            internal: None,
         }
     }
 }
@@ -412,6 +412,12 @@ impl ModelMaterial {
             );
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModelInternalMaterial {
+    pub point_cloud: bool,
+    pub draco_compressed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

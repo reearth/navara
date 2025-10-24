@@ -5,12 +5,14 @@ import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel, type MaterialLayerDescription } from "../../helpers/panel";
 
-const geoLayersDef: MaterialLayerDescription[] = [
+
+const gGeoLayersDef: MaterialLayerDescription[] = [
     {
         type: "cesium3dtiles",
         data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
         model: {
             show: true,
+            point_size: 0.3,
         },
     },
     {
@@ -18,6 +20,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url },
         model: {
             show: true,
+            point_size: 0.3,
         },
     }
 ];
@@ -50,7 +53,7 @@ export const run = async (view: ThreeView) => {
     });
 
     addCameraControl(view, pane);
-    addCtrlPanel(geoLayersDef, view, pane);
+    addCtrlPanel(gGeoLayersDef, view, pane);
     showAttributions([TILE_DATASETS.openstreetmap]);
 };
 

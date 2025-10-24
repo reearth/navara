@@ -43,11 +43,11 @@ export async function renderModel(
         return;
       }
 
-      if (m.material.point_cloud) {
+      if (m.material.__internal__?.point_cloud) {
         let geometry: BufferGeometry | undefined;
-        const material = new PointsMaterial({ size: 0.3, vertexColors: true });
+        const material = new PointsMaterial({ size: m.material.point_size, vertexColors: true });
 
-        if (m.material.draco_point_compressed) {
+        if (m.material.__internal__?.draco_compressed) {
           geometry = await decompressDraco(
             bin.buffer as ArrayBuffer,
             dracoLoader,

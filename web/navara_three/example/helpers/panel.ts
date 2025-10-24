@@ -204,6 +204,7 @@ export const addCtrlPanel = (
     outline_offset: { x: 0, y: 0 },
     outline_opacity: 1.0,
     surface_show: true,
+    point_size: 0.3,
   };
 
   pane
@@ -443,6 +444,10 @@ export const addCtrlPanel = (
         material.surface_show = paneParams.surface_show;
       }
 
+      if ("point_size" in material) {
+        material.point_size = paneParams.point_size;
+      }
+
       view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
@@ -664,6 +669,14 @@ function createParamCtrl(
     if ("surface_show" in material) {
       paneParams.surface_show = material.surface_show;
       f.addBinding(paneParams, "surface_show").on("change", changeFunc);
+    }
+
+    if ("point_size" in material) {
+      paneParams.point_size = material.point_size;
+      f.addBinding(paneParams, "point_size", { min: 0, max: 10}).on(
+        "change",
+        changeFunc,
+      );
     }
     return f;
   }

@@ -180,7 +180,9 @@ pub fn update_cesium3dtiles_layer(
             }
             for a in &mut l.appearances {
                 if let Appearance::Model(mat) = a {
-                    *mat = u.material.clone();
+                    let mut new_mat = u.material.clone();
+                    new_mat.internal = mat.internal.clone();
+                    *mat = new_mat;
                     mat.should_rotate_in_default = false;
                     mat.clamp_to_ground = false;
                 }
@@ -193,7 +195,9 @@ pub fn update_cesium3dtiles_layer(
                     Err(_) => continue,
                 };
                 if let RenderableFeature::Model { material, .. } = f.as_mut() {
-                    *material = u.material.clone();
+                    let mut new_mat = u.material.clone();
+                    new_mat.internal = material.internal.clone();
+                    *material = new_mat;
                     material.should_rotate_in_default = false;
                     material.clamp_to_ground = false;
                 }
@@ -207,7 +211,9 @@ pub fn update_cesium3dtiles_layer(
                 .feature_id
                 .and_then(|id| features.get_mut(id).ok())
             {
-                *mat = u.material.clone();
+                let mut new_mat = u.material.clone();
+                new_mat.internal = mat.internal.clone();
+                *mat = new_mat;
                 mat.should_rotate_in_default = false;
                 mat.clamp_to_ground = false;
             }
