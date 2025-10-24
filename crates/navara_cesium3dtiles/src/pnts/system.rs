@@ -92,6 +92,7 @@ pub fn construct_model_by_pnts_layer(
 
         commands.spawn((
             LayerId(layer.layer_id.to_owned()),
+            FeatureId::default(),
             FeatureBatchId(0), // Dummy value,
             GlobalBatchIds {
                 // Dummy value
@@ -295,6 +296,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),
+            FeatureId::default(),
             FeatureBatchId(0), // Dummy value,
             GlobalBatchIds {
                 // Dummy value
@@ -354,13 +356,13 @@ pub fn remove_invisible_rendered_tiles(
                     commands.entity(rendered_feature_id).insert(Deleted);
                 } else {
                     continue;
-                }
+                } 
             } else {
                 continue;
-            }
+            } 
         } else {
             continue;
-        }
+        } 
 
         // Remove data requester
         if let Ok(requester) = requesters.get(tile.data_requester_id) {

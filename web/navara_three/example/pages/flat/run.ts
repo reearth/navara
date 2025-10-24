@@ -1,8 +1,7 @@
 import ThreeView from "@navara/three";
-import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
+import { TILE_DATASETS } from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -59,48 +58,5 @@ export const run = async (view: ThreeView) => {
     polygon: {},
   });
 
-  view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
-    model: {
-      show: true,
-    },
-  });
-
-  const pane = new Pane({
-    title: "Parameters",
-    expanded: true,
-  });
-
-  addCameraControl(view, pane);
   showAttributions([TILE_DATASETS.openstreetmap]);
-};
-
-const addCameraControl = (view: ThreeView, pane: Pane) => {
-  pane
-    .addButton({
-      title: "Globe view",
-    })
-    .on("click", () => {
-      view.setCamera({
-        lng: 90,
-        lat: 0.1,
-        height: 12600000,
-        heading: 0,
-        pitch: -90,
-        roll: 0,
-      });
-    });
-
-  pane
-    .addButton({
-      title: "Yamanashi - Kyonaka view",
-    })
-    .on("click", () => {
-      view.setCamera({
-        lat: 35.62553,
-        lng: 138.39706,
-        height: 27700,
-      });
-    });
 };

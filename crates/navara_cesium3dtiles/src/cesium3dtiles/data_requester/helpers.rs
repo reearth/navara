@@ -39,36 +39,39 @@ pub(crate) fn request_tile_content(
         }
     };
 
-    if extension == DataRequesterExtension::Pnts {
-        let id = commands
-            .spawn((
-                Cesium3dTileContentDataRequesterMarker,
-                PntsDataRequesterMarker,
-                priority,
-                TileOrderByDistance {
-                    distance_from_camera: tile.state.distance_from_camera,
-                    sse: tile.state.sse,
-                },
-                DataRequester::from_store(content_url, buf, extension),
-            ))
-            .id();
-        tile.data_requester_id = Some(id);
-        return true;
-    } else if extension == DataRequesterExtension::B3dm {
-        let id = commands
-            .spawn((
-                Cesium3dTileContentDataRequesterMarker,
-                B3dmDataRequesterMarker,
-                priority,
-                TileOrderByDistance {
-                    distance_from_camera: tile.state.distance_from_camera,
-                    sse: tile.state.sse,
-                },
-                DataRequester::from_store(content_url, buf, extension),
-            ))
-            .id();
-        tile.data_requester_id = Some(id);
-        return true;
+    match extension {
+        DataRequesterExtension::Pnts => {
+            let id = commands
+                .spawn((
+                    Cesium3dTileContentDataRequesterMarker,
+                    PntsDataRequesterMarker,
+                    priority,
+                    TileOrderByDistance {
+                        distance_from_camera: tile.state.distance_from_camera,
+                        sse: tile.state.sse,
+                    },
+                    DataRequester::from_store(content_url, buf, extension),
+                ))
+                .id();
+            tile.data_requester_id = Some(id);
+            true
+        }
+        DataRequesterExtension::B3dm => {
+            let id = commands
+                .spawn((
+                    Cesium3dTileContentDataRequesterMarker,
+                    B3dmDataRequesterMarker,
+                    priority,
+                    TileOrderByDistance {
+                        distance_from_camera: tile.state.distance_from_camera,
+                        sse: tile.state.sse,
+                    },
+                    DataRequester::from_store(content_url, buf, extension),
+                ))
+                .id();
+            tile.data_requester_id = Some(id);
+            true
+        }
+        _ => false,
     }
-    false
 }
