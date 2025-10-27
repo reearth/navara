@@ -271,7 +271,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   }
 
   _setFeatureShow(visible: boolean): void {
-    this.visible = this.visible && visible;
+    this.visible = visible;
   }
 
   _setFrustumCulled(culled: boolean): void {
