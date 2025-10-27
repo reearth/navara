@@ -339,6 +339,8 @@ pub struct PolygonMaterial {
 
     /// Whether or not the height is obtained from the data. If false, the height is constant.
     pub per_position_height: Option<bool>,
+    pub opacity: Option<f32>,
+    pub transparent: Option<bool>,
 
     /// Currently, this property is supported only in GeoJSON.
     pub surface_show: Option<bool>,
@@ -357,6 +359,8 @@ pub struct PolygonMaterial {
     pub shininess: Option<f32>,
     pub specular_strength: Option<f32>,
     pub apply_water_normal: Option<bool>,
+    pub specular: Option<bool>,
+    pub ior: Option<f32>,
 }
 
 #[wasm_bindgen]
@@ -391,6 +395,8 @@ impl PolygonMaterial {
             __internal__,
 
             per_position_height,
+            opacity: None,
+            transparent: None,
 
             surface_show: None,
             outline_show: None,
@@ -405,6 +411,8 @@ impl PolygonMaterial {
             shininess: None,
             specular_strength: None,
             apply_water_normal: None,
+            specular: None,
+            ior: None,
         }
     }
 }
@@ -429,6 +437,8 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             per_position_height: val
                 .per_position_height
                 .unwrap_or(default.per_position_height),
+            opacity: val.opacity.unwrap_or(default.opacity),
+            transparent: val.transparent.unwrap_or(default.transparent),
 
             surface_show: val.surface_show.unwrap_or(default.surface_show),
             outline_show: val.outline_show.unwrap_or(default.outline_show),
@@ -441,6 +451,8 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             shininess: val.shininess.unwrap_or(default.shininess),
             specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
             apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
+            specular: val.specular.unwrap_or(default.specular),
+            ior: val.ior.unwrap_or(default.ior),
         }
     }
 }
@@ -461,6 +473,8 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             __internal__: value.internal.as_ref().map(|v| v.into()),
 
             per_position_height: Some(value.per_position_height),
+            opacity: Some(value.opacity),
+            transparent: Some(value.transparent),
 
             surface_show: Some(value.surface_show),
             outline_show: Some(value.outline_show),
@@ -473,6 +487,8 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             shininess: Some(value.shininess),
             specular_strength: Some(value.specular_strength),
             apply_water_normal: Some(value.apply_water_normal),
+            specular: Some(value.specular),
+            ior: Some(value.ior),
         }
     }
 }
@@ -493,6 +509,8 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             __internal__: value.internal.map(|v| v.into()),
 
             per_position_height: Some(value.per_position_height),
+            opacity: Some(value.opacity),
+            transparent: Some(value.transparent),
 
             surface_show: Some(value.surface_show),
             outline_show: Some(value.outline_show),
@@ -505,6 +523,8 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             shininess: Some(value.shininess),
             specular_strength: Some(value.specular_strength),
             apply_water_normal: Some(value.apply_water_normal),
+            specular: Some(value.specular),
+            ior: Some(value.ior),
         }
     }
 }
@@ -563,6 +583,8 @@ pub struct ModelMaterial {
     pub shininess: Option<f32>,
     pub specular_strength: Option<f32>,
     pub apply_water_normal: Option<bool>,
+    pub specular: Option<bool>,
+    pub ior: Option<f32>,
     // animation
     #[wasm_bindgen(getter_with_clone)]
     pub animation_active_clip: Option<String>,
@@ -595,6 +617,8 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             shininess: val.shininess.unwrap_or(default.shininess),
             specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
             apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
+            specular: val.specular.unwrap_or(default.specular),
+            ior: val.ior.unwrap_or(default.ior),
             // animation
             animation_active_clip: val.animation_active_clip,
             animation_speed: val.animation_speed,
@@ -624,6 +648,8 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             shininess: Some(value.shininess),
             specular_strength: Some(value.specular_strength),
             apply_water_normal: Some(value.apply_water_normal),
+            specular: Some(value.specular),
+            ior: Some(value.ior),
             // animation
             animation_active_clip: value.animation_active_clip.clone(),
             animation_speed: value.animation_speed,

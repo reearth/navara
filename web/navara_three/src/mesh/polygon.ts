@@ -22,6 +22,7 @@ import ShadowMapDepthVertex from "@shaders/glsl/chunks/shadowmap_depth_vertex.gl
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
+import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
@@ -33,6 +34,7 @@ import {
   MeshLambertMaterial,
   RepeatWrapping,
   RGBADepthPacking,
+  ShaderChunk,
   Vector3,
 } from "three";
 
@@ -194,6 +196,26 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.userData.batchIdSize = batchIdSize;
   }
 
+  private enableWater() {
+    if (!this.water || this.material.userData.uIsTexturized.value) {
+      this.material.userData.waterNormalMap.value = null;
+      return;
+    }
+
+    if (!this.visible || this.material.userData.waterNormalMap.value) {
+      return;
+    }
+
+    const url = this.material.userData.waterNormalUrl ?? WATER_NORMAL_URL;
+    this.material.userData.waterNormalMap.value = TEXTURE_LOADER.load(
+      url,
+      (texture) => {
+        texture.wrapS = texture.wrapT = RepeatWrapping;
+      },
+    );
+    this.material.needsUpdate = true;
+  }
+
   private initMaterial(
     mesh: NavaraPolygonMesh,
     uniforms: CommonUniforms,
@@ -219,7 +241,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.depthWrite = !clampToGround;
     material.depthTest = !clampToGround;
     material.vertexColors = false;
-    material.visible = !!meshMaterial.show;
+    this.visible = !!meshMaterial.show;
+    material.transparent = !!meshMaterial.transparent;
+    material.opacity = meshMaterial.opacity ?? 1.0;
 
     const uMinMaxHeights = meshMaterial.__internal__?.min_max_heights;
     material.userData.uMinMaxHeight = {
@@ -264,16 +288,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.applyWaterNormal = {
       value: (meshMaterial.apply_water_normal ?? false) ? 1.0 : 0.0,
     };
-
     material.userData.waterNormalMap = {
-      value: meshMaterial.water
-        ? TEXTURE_LOADER.load(
-            meshMaterial.water_normal_url ?? WATER_NORMAL_URL,
-            (texture) => {
-              texture.wrapS = texture.wrapT = RepeatWrapping;
-            },
-          )
-        : null,
+      value: null,
+    };
+    material.userData.specular = {
+      value: meshMaterial.specular ?? false,
+    };
+    material.userData.ior = {
+      value: meshMaterial.ior ?? 1.33333,
     };
 
     // Only set up RTE uniforms if using RTE
@@ -325,6 +347,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.defines.USE_ROUGHNESS = 1;
     this.water = !!meshMaterial.water;
 
+    material.userData.waterNormalUrl = meshMaterial.water_normal_url;
+
+    this.enableWater();
+
+    material.customProgramCacheKey = () =>
+      material.onBeforeCompile.toString() +
+      JSON.stringify(material.userData.defines);
+
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);
@@ -339,6 +369,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       shader.uniforms.uShininess = material.userData.shininess;
       shader.uniforms.uSpecularStrength = material.userData.specularStrength;
       shader.uniforms.uApplyWaterNormal = material.userData.applyWaterNormal;
+      shader.uniforms.uSpecular = material.userData.specular;
+      shader.uniforms.uIor = material.userData.ior;
       shader.uniforms.uTime = uniforms.time;
 
       // Only add RTE uniforms if using RTE
@@ -438,7 +470,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
           `
   #include <envmap_vertex>
 
-  vPosition = transformed.xyz;
+  vPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
   `,
           !useRTE,
         ).source;
@@ -459,6 +491,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
   uniform float uShininess;
   uniform float uSpecularStrength;
   uniform float uApplyWaterNormal;
+  uniform bool uSpecular;
+  uniform float uIor;
   uniform float uTime;
 
   in float nvr_vBatchId;
@@ -471,11 +505,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
   `,
         )
         .replace(
-          "#include <lights_pars_begin>",
+          "#include <lights_lambert_pars_fragment>",
           `
-        #include <lights_pars_begin>
+        #include <lights_lambert_pars_fragment>
 
         ${WaterParsFragment}
+        ${SpecularParsFragment}
         `,
         )
         .replace(
@@ -516,8 +551,27 @@ export class PolygonMesh extends BatchedFeatureMesh<
       normal
     );
   }
+  #else
+  if(uSpecular && !uIsTexturized) {
+    specular = computeSpecular(
+      vViewPosition,
+      origNormal,
+      uShininess,
+      uSpecularStrength,
+      uIor
+    );
+  }
   #endif
+
   `,
+        )
+        .replaceWithCondition(
+          "#include <lights_fragment_end>",
+          createReplacer(ShaderChunk.lights_fragment_end).replace(
+            "RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );",
+            `lightProbeIrradianceReflection(irradiance, geometryNormal, geometryViewDir, material.diffuseColor, reflectedLight);`,
+          ).source,
+          this.water && !isTexturized,
         )
         .replace(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
@@ -529,12 +583,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
   } else {
     outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
   }
-  
-  #ifdef WATER
+
   if(!uIsTexturized) {
     outgoingLight += specular;
   }
-  #endif
+
   `,
         )
         .replace(
@@ -607,12 +660,25 @@ export class PolygonMesh extends BatchedFeatureMesh<
     if (prev.visible !== next) {
       this.visible = next;
       prev.visible = next;
+      this.enableWater();
     }
 
     if (prev.wireframe !== material.wireframe) {
       const next = !!material.wireframe;
       this.material.wireframe = next;
       prev.wireframe = next;
+    }
+
+    if (prev.transparent !== material.transparent) {
+      const next = !!material.transparent;
+      this.material.transparent = next;
+      prev.transparent = next;
+    }
+
+    if (prev.opacity !== material.opacity) {
+      const next = material.opacity ?? 1.0;
+      this.material.opacity = next;
+      prev.opacity = next;
     }
 
     if (this.castShadow !== material.cast_shadow) {
@@ -662,6 +728,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       const next = !!material.water;
       this.water = next;
       prev.water = next;
+      this.enableWater();
     }
 
     if (prev.waterScaleNormal !== material.water_scale_normal) {
@@ -693,6 +760,18 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.material.userData.applyWaterNormal.value = next;
       prev.applyWaterNormal = next;
     }
+
+    if (prev.specular !== material.specular) {
+      const next = material.specular ?? false;
+      this.material.userData.specular.value = next;
+      prev.specular = next;
+    }
+
+    if (prev.ior !== material.ior) {
+      const next = material.ior ?? 1.33333;
+      this.material.userData.ior.value = next;
+      prev.ior = next;
+    }
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
@@ -715,6 +794,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
     this.outline?._setFeatureShow(visible);
+    this.enableWater();
   }
 
   _setFeatureExtrudedHeight(height: number): void {
@@ -738,6 +818,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     } else {
       delete this.material.userData.defines.WATER;
     }
+    this.material.needsUpdate = true;
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {

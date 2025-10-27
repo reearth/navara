@@ -39,7 +39,7 @@ export type RainConfig = {
 
 export const DefaultRainConfig: RainConfig = {
   particleCount: 5000,
-  speed: 0.001,
+  speed: 0.0015,
   color: 0xffffff,
   areaWidth: 500,
   areaHeight: 1000,

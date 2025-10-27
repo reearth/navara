@@ -15,6 +15,7 @@ import ShadowMapDepthVertex from "@shaders/glsl/chunks/shadowmap_depth_vertex.gl
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
+import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
@@ -28,6 +29,7 @@ import {
   Object3D,
   RepeatWrapping,
   RGBADepthPacking,
+  ShaderChunk,
   Texture,
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
@@ -73,6 +75,32 @@ export class ModelMesh
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
+
+  /**
+   * Loads the water normal map texture if water is enabled.
+   * Returns the texture if it should be used, or null otherwise.
+   */
+  private enableWaterNormalMap(
+    water: boolean,
+    waterNormalUrl?: string,
+  ): Texture | null {
+    // Only load if water is enabled
+    if (!water) {
+      return null;
+    }
+
+    // Load texture if not already loaded
+    if (!this.waterNormalMapTexture) {
+      this.waterNormalMapTexture = TEXTURE_LOADER.load(
+        waterNormalUrl ?? WATER_NORMAL_URL,
+        (texture) => {
+          texture.wrapS = texture.wrapT = RepeatWrapping;
+        },
+      );
+    }
+
+    return this.waterNormalMapTexture;
+  }
   private actions = new Map<string, AnimationAction>();
   private currentAction: AnimationAction | null = null;
   private animationSpeed = 1.0;
@@ -110,15 +138,10 @@ export class ModelMesh
 
     const meshMaterial = m.material;
 
-    // Load water normal map once for the entire ModelMesh if water is enabled
-    if (meshMaterial.water) {
-      this.waterNormalMapTexture = TEXTURE_LOADER.load(
-        meshMaterial.water_normal_url ?? WATER_NORMAL_URL,
-        (texture) => {
-          texture.wrapS = texture.wrapT = RepeatWrapping;
-        },
-      );
-    }
+    this.waterNormalMapTexture = this.enableWaterNormalMap(
+      !!meshMaterial.water,
+      meshMaterial.water_normal_url,
+    );
 
     // For Cesium 3D Tiles
     if (batchIds) {
@@ -281,6 +304,12 @@ export class ModelMesh
       mesh.material.userData.waterNormalMap = {
         value: this.waterNormalMapTexture,
       };
+      mesh.material.userData.specular = {
+        value: meshMaterial.specular ?? false,
+      };
+      mesh.material.userData.ior = {
+        value: meshMaterial.ior ?? 1.33333,
+      };
 
       this.water = !!meshMaterial.water;
       this.setMaterial(meshMaterial, mesh);
@@ -292,6 +321,10 @@ export class ModelMesh
         mesh.material.userData.defines = mesh.material.userData.defines || {};
         mesh.material.userData.defines.WATER = 1;
       }
+
+      mesh.material.customProgramCacheKey = () =>
+        mesh.material.onBeforeCompile.toString() +
+        JSON.stringify(mesh.material.userData.defines);
 
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
@@ -309,6 +342,8 @@ export class ModelMesh
           mesh.material.userData.specularStrength;
         shader.uniforms.uApplyWaterNormal =
           mesh.material.userData.applyWaterNormal;
+        shader.uniforms.uSpecular = mesh.material.userData.specular;
+        shader.uniforms.uIor = mesh.material.userData.ior;
         shader.uniforms.uTime = uniforms.time;
         shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
 
@@ -373,6 +408,8 @@ export class ModelMesh
                   uniform float uShininess;
                   uniform float uSpecularStrength;
                   uniform float uApplyWaterNormal;
+                  uniform bool uSpecular;
+                  uniform float uIor;
                   uniform float uTime;
                   // uniform float reflectivity;
                   in float nvr_vBatchId;
@@ -389,11 +426,20 @@ export class ModelMesh
                   `,
           )
           .replace(
-            "#include <lights_pars_begin>",
+            "#include <lights_physical_pars_fragment>",
             `
-        #include <lights_pars_begin>
+        #include <lights_physical_pars_fragment>
         ${WaterParsFragment}
+        ${SpecularParsFragment}
         `,
+          )
+          .replaceWithCondition(
+            "#include <lights_fragment_end>",
+            createReplacer(ShaderChunk.lights_fragment_end).replace(
+              "RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );",
+              `lightProbeIrradianceReflection(irradiance, geometryNormal, geometryViewDir, material.diffuseColor, reflectedLight);`,
+            ).source,
+            this.water,
           )
           .replace(
             "#include <normal_fragment_maps>",
@@ -412,6 +458,15 @@ export class ModelMesh
             normal
           );
         #else
+          if(uSpecular) {
+            specular = computeSpecular(
+              vViewPosition,
+              origNormal,
+              uShininess,
+              uSpecularStrength,
+              uIor
+            );
+          }
           #include <normal_fragment_maps>
         #endif
         `,
@@ -542,19 +597,14 @@ export class ModelMesh
       distMaterial.userData.defines = distMaterial.userData.defines || {};
       if (next) {
         distMaterial.userData.defines.WATER = 1;
-        // Load water texture once at ModelMesh level if not already loaded
-        if (!this.waterNormalMapTexture) {
-          this.waterNormalMapTexture = TEXTURE_LOADER.load(
-            src.water_normal_url ?? WATER_NORMAL_URL,
-            (texture) => {
-              texture.wrapS = texture.wrapT = RepeatWrapping;
-            },
-          );
-        }
-        // Share the same texture instance across all meshes
-        distMaterial.userData.waterNormalMap.value = this.waterNormalMapTexture;
+
+        distMaterial.userData.waterNormalMap.value = this.enableWaterNormalMap(
+          next,
+          src.water_normal_url,
+        );
       } else {
         delete distMaterial.userData.defines.WATER;
+        distMaterial.userData.waterNormalMap.value = null;
       }
       distMaterial.needsUpdate = true;
     }
@@ -591,6 +641,11 @@ export class ModelMesh
       const next = src.apply_water_normal ?? 0;
       distMaterial.userData.applyWaterNormal.value = next;
       distMaterial.userData.prev.applyWaterNormal = next;
+    }
+    if (distMaterial.userData.prev.specular !== src.specular) {
+      const next = src.specular ?? false;
+      distMaterial.userData.specular.value = next;
+      distMaterial.userData.prev.specular = next;
     }
     if (dist.castShadow !== src.cast_shadow) {
       dist.castShadow = !!src.cast_shadow;
