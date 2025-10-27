@@ -66,7 +66,11 @@ pub fn transfer_mesh(
             continue;
         }
 
-        let position: Vec3 = if material.internal.as_ref().map_or(false, |internal| internal.point_cloud) {
+        let position: Vec3 = if material
+            .internal
+            .as_ref()
+            .is_some_and(|internal| internal.point_cloud)
+        {
             geometry.coords
         } else {
             geometry
@@ -94,7 +98,11 @@ pub fn transfer_mesh(
         };
         let transform = match adjustment_transform {
             Some(a) => {
-                if material.internal.as_ref().map_or(false, |internal| internal.point_cloud) {
+                if material
+                    .internal
+                    .as_ref()
+                    .is_some_and(|internal| internal.point_cloud)
+                {
                     a.mul_transform(transform)
                 } else {
                     transform.mul_transform(*a)

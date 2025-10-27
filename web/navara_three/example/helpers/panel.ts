@@ -673,7 +673,7 @@ function createParamCtrl(
 
     if ("point_size" in material) {
       paneParams.point_size = material.point_size;
-      f.addBinding(paneParams, "point_size", { min: 0, max: 10}).on(
+      f.addBinding(paneParams, "point_size", { min: 0, max: 10 }).on(
         "change",
         changeFunc,
       );

@@ -13,7 +13,11 @@ import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
-import { initializeGltfLoader, initializeDracoLoader, decompressDraco } from "../loaders";
+import {
+  initializeGltfLoader,
+  initializeDracoLoader,
+  decompressDraco,
+} from "../loaders";
 
 // Type-safe interface for scene userData
 type SceneUserData = {
@@ -39,7 +43,10 @@ export async function renderModel(
 
       if (m.material.__internal__?.point_cloud) {
         let geometry: BufferGeometry | undefined;
-        const material = new PointsMaterial({ size: m.material.point_size, vertexColors: true });
+        const material = new PointsMaterial({
+          size: m.material.point_size,
+          vertexColors: true,
+        });
 
         if (m.material.__internal__?.draco_compressed) {
           geometry = await decompressDraco(

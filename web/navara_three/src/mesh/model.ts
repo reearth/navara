@@ -67,7 +67,8 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
 
 export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
-  implements FeatureMesh, PickableMesh {
+  implements FeatureMesh, PickableMesh
+{
   water = false;
   private waterNormalMapTexture: Texture | null = null;
 
@@ -466,11 +467,9 @@ export class ModelMesh
         shader: WebGLProgramParametersWithUniforms,
       ) => {
         // Update vertex shader
-        shader.vertexShader = createReplacer(shader.vertexShader)
-
-          .replace(
-            "#include <color_vertex>",
-            `
+        shader.vertexShader = createReplacer(shader.vertexShader).replace(
+          "#include <color_vertex>",
+          `
             #if defined( USE_COLOR_ALPHA )
 
               vColor = vec4( 1.0 / ${colorDivisior}.0 );
@@ -500,9 +499,9 @@ export class ModelMesh
               vColor.xyz *= batchingColor.xyz;
 
             #endif
-          `
-          ).source;
-      }
+          `,
+        ).source;
+      };
     });
   }
 

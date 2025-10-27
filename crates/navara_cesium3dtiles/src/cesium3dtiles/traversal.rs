@@ -346,7 +346,7 @@ fn update_or_spawn_rendered_tile(
                             transform: tile.transform.unwrap_or_default(),
                         },
                     ))
-                    .id()
+                    .id(),
             );
         } else if tile.uri.ends_with("b3dm") {
             tile.rendered_tile_id = Some(
@@ -364,7 +364,7 @@ fn update_or_spawn_rendered_tile(
                             is_visible: true,
                         },
                     ))
-                    .id()
+                    .id(),
             );
         } else {
             // TODO: support other formats like i3dm, cmpt, etc.

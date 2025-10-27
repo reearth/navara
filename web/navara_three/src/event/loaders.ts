@@ -1,5 +1,5 @@
 import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
-import { DRACOLoader as DRACODecoder} from "three/addons/loaders/DRACOLoader.js";
+import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import { FEATURE_CONCURRENCY } from "../concurrency";
