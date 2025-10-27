@@ -11,70 +11,76 @@ env:
   PROTOC_VERSION: "3.20.3"
 
 jobs:
-  # TODO: Add some jobs to test multiplatform like bevy does: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L24
   web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-      - uses: actions/setup-node@v5
-        with:
-          cache: "pnpm"
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        env:
-          cache-name: cache-rust-dependencies
-        with:
-          # Ref: https://github.com/bevyengine/bevy/blob/2cffd14923c9e217dc98881af6c8926fe4dc65ea/.github/workflows/ci.yml#L31
-          path: |
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.toml') }}
+      
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.86.0
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
-      - name: Install deps for cargo
-        run: |
-          cargo install cargo-make
-          cargo install wasm-pack
-      - name: install protoc
+
+      # Cache Rust build artifacts and dependencies
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-deps"
+          cache-on-failure: true
+          # Cache cargo-make and wasm-pack binaries
+          cache-all-crates: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      
+      - uses: actions/setup-node@v5
+        with:
+          cache: "pnpm"
+
+      - name: Install protoc
         uses: taiki-e/install-action@v2
         with:
           tool: protoc@${{ env.PROTOC_VERSION }}
 
+      # Install cargo tools (these will be cached by rust-cache)
+      - name: Install cargo-make
+        run: cargo install cargo-make --locked
+      
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
       - name: Prepare
         run: cargo make prepare-ci
+      
       - name: Run Build Example
-        # WASM is built in `Prepare` action.
         run: pnpm build:example
+      
       - name: Run Test
         run: cargo make test
         env:
           RUST_BACKTRACE: 1
+      
       - name: Cargo format
         run: cargo make format-check
+      
       - name: Lint
         run: cargo make lint-check
+
   doc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions-rs/toolchain@v1
+      
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: true
 
-      - name: install protoc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-docs"
+
+      - name: Install protoc
         uses: taiki-e/install-action@v2
         with:
           tool: protoc@${{ env.PROTOC_VERSION }}

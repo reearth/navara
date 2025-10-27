@@ -1,5 +1,6 @@
 import {
   ConstructedPolygonGeometryLike,
+  ExtentRadianF32Like,
   PolygonMaterialLike,
   TransferablePolygonBatchedFeatureLike,
 } from "@navara/core";
@@ -11,10 +12,11 @@ export function constructPolygonBatchedFeature(
   transferableBatchedFeatureLike: TransferablePolygonBatchedFeatureLike,
   materialLike: PolygonMaterialLike,
   flat: boolean,
+  tileExtent: ExtentRadianF32Like | undefined,
 ): Promise<ConstructedPolygonGeometryLike | undefined> {
   return queueTask(
     "constructPolygonBatchedFeature",
-    [transferableBatchedFeatureLike, materialLike, flat],
+    [transferableBatchedFeatureLike, materialLike, flat, tileExtent],
     {
       transfer: [
         transferableBatchedFeatureLike.batch_ids.buffer,

@@ -245,17 +245,23 @@ export const addCtrlPanel = (
   function onDeleteBtnClick() {
     if (btnCtrl.title == "Delete Layer") {
       view.deleteLayerById(layerIds[paneParams.layer]);
+      layerInstMap.delete(layerIds[paneParams.layer]);
       layerDeleted[paneParams.layer] = 1;
       btnCtrl.title = "Add Layer";
     } else {
       const oldLayerId = layerIds[paneParams.layer];
       const layerDef = layerMap.get(oldLayerId);
       if (layerDef) {
-        const newLayerId = view.addLayer(layerDef).id;
-        if (newLayerId) {
-          layerMap.set(newLayerId, layerDef);
-          layerIds[paneParams.layer] = newLayerId;
+        const newLayer = view.addLayer(layerDef);
+        if (newLayer.id) {
+          layerInstMap.set(newLayer.id, newLayer);
+          layerMap.set(newLayer.id, layerDef);
+          layerIds[paneParams.layer] = newLayer.id;
           layerDeleted[paneParams.layer] = 0;
+
+          if (layerDef.type !== "tiles") {
+            addFeatureUpdateHandler(layerDef, newLayer);
+          }
         }
       }
 

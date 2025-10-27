@@ -70,6 +70,13 @@ export const TILES_3D_DATASETS = {
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023",
   },
+  plateauShinjuku: {
+    url: "https://assets.cms.plateau.reearth.io/assets/f0/840fc4-114c-41e4-9a65-67768efd3629/13104_shinjuku-ku_pref_2023_citygml_2_op_bldg_3dtiles_13104_shinjuku-ku_lod2_no_texture/tileset.json",
+    attribution:
+      "3D都市モデル（Project PLATEAU）新宿区（2023年度） - 国土交通省 PLATEAU",
+    attributionUrl:
+      "https://www.geospatial.jp/ckan/dataset/plateau-13104-shinjuku-ku-2023",
+  },
   plateauChiyodaB3DM: {
     url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
     attribution:

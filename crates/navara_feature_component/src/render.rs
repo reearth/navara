@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity, system::ResMut};
 use navara_buffer_store::{BufferStore, Handle};
-use navara_core::{Extent, Radians, CRS};
+use navara_core::{BoundingSphere, Extent, Radians, CRS};
 use navara_geometry::{TransferableFloatAttribute, TransferableUintAttribute};
 use navara_layer::LayerId;
 use navara_material::{
@@ -105,6 +105,7 @@ pub enum RenderableFeature {
         feature_id: Option<Entity>,
         render_info: PolygonRenderInformation,
         extent: Option<Extent<f32, Radians>>,
+        bounding_sphere: Option<BoundingSphere>,
         feature_batch_id: u32,
         batch_length: u32,
     },
@@ -334,7 +335,9 @@ impl TransferablePolylineGeometry {
 
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePolygonGeometry {
-    pub position: TransferableFloatAttribute,
+    pub position: Option<TransferableFloatAttribute>,
+    pub position_3d_high: Option<TransferableFloatAttribute>,
+    pub position_3d_low: Option<TransferableFloatAttribute>,
     pub normal: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub batch_ids: Option<TransferableFloatAttribute>,
@@ -347,7 +350,18 @@ impl TransferablePolygonGeometry {
         buf: &mut BufferStore,
         geo: navara_geometry::PolygonGeometry,
     ) -> TransferablePolygonGeometry {
-        let position = buf.new_f32(geo.attributes.position.data);
+        let position = geo
+            .attributes
+            .position
+            .map(|p| (buf.new_f32(p.data), p.size));
+        let position_3d_high = geo
+            .attributes
+            .position_3d_high
+            .map(|p| (buf.new_f32(p.data), p.size));
+        let position_3d_low = geo
+            .attributes
+            .position_3d_low
+            .map(|p| (buf.new_f32(p.data), p.size));
         let normal = geo.attributes.normal.map(|n| (buf.new_f32(n.data), n.size));
         let scale_normal_and_cap = geo
             .attributes
@@ -364,10 +378,14 @@ impl TransferablePolygonGeometry {
         let indices = buf.new_u32(geo.indices);
 
         TransferablePolygonGeometry {
-            position: TransferableFloatAttribute {
+            position: position.map(|(position, size)| TransferableFloatAttribute {
                 data: position,
-                size: geo.attributes.position.size,
-            },
+                size,
+            }),
+            position_3d_high: position_3d_high
+                .map(|(data, size)| TransferableFloatAttribute { data, size }),
+            position_3d_low: position_3d_low
+                .map(|(data, size)| TransferableFloatAttribute { data, size }),
             normal: normal.map(|(normal, size)| TransferableFloatAttribute { data: normal, size }),
             scale_normal_and_cap: scale_normal_and_cap.map(|(scale_normal_and_cap, size)| {
                 TransferableFloatAttribute {
@@ -390,7 +408,15 @@ impl TransferablePolygonGeometry {
 
 impl TransferablePolygonGeometry {
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
-        buf.remove(&self.position.data);
+        if let Some(position) = &self.position {
+            buf.remove(&position.data);
+        }
+        if let Some(position_3d_high) = &self.position_3d_high {
+            buf.remove(&position_3d_high.data);
+        }
+        if let Some(position_3d_low) = &self.position_3d_low {
+            buf.remove(&position_3d_low.data);
+        }
         buf.remove(&self.indices);
 
         if let Some(normal) = &self.normal {

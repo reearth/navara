@@ -144,7 +144,11 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolylineGeometry
 #[derive(Debug, Clone, Serialize)]
 pub struct TransferablePolygonGeometry {
     #[wasm_bindgen(getter_with_clone)]
-    pub position: TransferableFloatAttribute,
+    pub position: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub position_3d_high: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub position_3d_low: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub normal: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
@@ -160,8 +164,11 @@ pub struct TransferablePolygonGeometry {
 #[wasm_bindgen]
 impl TransferablePolygonGeometry {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        position: TransferableFloatAttribute,
+        position: Option<TransferableFloatAttribute>,
+        position_3d_high: Option<TransferableFloatAttribute>,
+        position_3d_low: Option<TransferableFloatAttribute>,
         normal: Option<TransferableFloatAttribute>,
         scale_normal_and_cap: Option<TransferableFloatAttribute>,
         batch_ids: Option<TransferableFloatAttribute>,
@@ -170,6 +177,8 @@ impl TransferablePolygonGeometry {
     ) -> Self {
         Self {
             position,
+            position_3d_high,
+            position_3d_low,
             normal,
             scale_normal_and_cap,
             batch_ids,
@@ -184,7 +193,9 @@ impl From<TransferablePolygonGeometry>
 {
     fn from(val: TransferablePolygonGeometry) -> Self {
         navara_feature_component::render::TransferablePolygonGeometry {
-            position: val.position.into(),
+            position: val.position.map(|p| p.into()),
+            position_3d_high: val.position_3d_high.map(|p| p.into()),
+            position_3d_low: val.position_3d_low.map(|p| p.into()),
             normal: val.normal.map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|n| n.into()),
             batch_ids: val.batch_ids.map(|n| n.into()),
@@ -200,7 +211,9 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonGeometry>
         val: &'a navara_feature_component::render::TransferablePolygonGeometry,
     ) -> TransferablePolygonGeometry {
         TransferablePolygonGeometry {
-            position: (&val.position).into(),
+            position: val.position.as_ref().map(|p| p.into()),
+            position_3d_high: val.position_3d_high.as_ref().map(|p| p.into()),
+            position_3d_low: val.position_3d_low.as_ref().map(|p| p.into()),
             normal: val.normal.as_ref().map(|n| n.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|n| n.into()),
             batch_ids: val.batch_ids.as_ref().map(|n| n.into()),

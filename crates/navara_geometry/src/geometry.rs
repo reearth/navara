@@ -1,5 +1,5 @@
 use navara_buffer_store::{BufferStore, Handle};
-use navara_math::FloatType;
+use navara_math::{FloatType, Vec3};
 use serde::Serialize;
 
 /// A struct to construct a geometry.
@@ -36,4 +36,5 @@ pub struct ReturnedConstructedTerrainMesh {
     pub max_height: FloatType,
     pub min_height: FloatType,
     pub heights: Vec<FloatType>,
+    pub rtc_translation: Option<Vec3>,
 }

@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::{Radians, LLE};
+use navara_core::{Extent, Radians, LLE};
 use navara_math::FloatType;
 
 use crate::TileHandle;
@@ -18,6 +18,17 @@ pub struct OverscaledTileHandle {
 impl OverscaledTileHandle {
     pub fn new(handle: TileHandle) -> Self {
         Self { handle }
+    }
+}
+
+#[derive(Debug, Clone, Component)]
+pub struct TileExtent {
+    pub extent: Extent<FloatType, Radians>,
+}
+
+impl TileExtent {
+    pub fn new(extent: Extent<FloatType, Radians>) -> Self {
+        Self { extent }
     }
 }
 

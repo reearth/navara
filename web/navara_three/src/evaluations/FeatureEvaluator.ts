@@ -237,7 +237,7 @@ export class FeatureEvaluator {
 
               m.setFeatureColorByBatchIndex(
                 i,
-                new Color().setRGB(
+                new Color().setRGBLinear(
                   target.array[colorIdx] as number,
                   target.array[colorIdx + 1] as number,
                   target.array[colorIdx + 2] as number,
@@ -283,7 +283,7 @@ export class FeatureEvaluator {
         switch (target.attribute) {
           case "color": {
             featureMesh._setFeatureColor(
-              new Color().setRGB(
+              new Color().setRGBLinear(
                 target.array[0] as number,
                 target.array[1] as number,
                 target.array[2] as number,
