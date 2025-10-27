@@ -8,14 +8,12 @@ import {
   Float32BufferAttribute,
   PointsMaterial,
 } from "three";
-import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
-import { FEATURE_CONCURRENCY } from "../../concurrency";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
-import { initializeGltfLoader } from "../loaders";
+import { initializeGltfLoader, initializeDracoLoader, decompressDraco } from "../loaders";
 
 // Type-safe interface for scene userData
 type SceneUserData = {
@@ -30,11 +28,7 @@ export async function renderModel(
   viewEvents: EventHandler<ViewEvents>,
 ) {
   const loader = initializeGltfLoader();
-  const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath(
-    "https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/",
-  );
-  dracoLoader.setWorkerLimit(FEATURE_CONCURRENCY);
+  const dracoLoader = initializeDracoLoader();
 
   const rawScene = await (async () => {
     if (m.bin) {
@@ -91,8 +85,6 @@ export async function renderModel(
   }
 
   const scene = new ModelMesh(rawScene, m, uniforms, buf, viewEvents);
-  dracoLoader.dispose();
-
   return scene;
 }
 
@@ -102,15 +94,4 @@ export function processModelChanged(
   active: boolean,
 ) {
   obj._update(m.material, active);
-}
-
-async function decompressDraco(
-  buffer: ArrayBuffer,
-  dracoLoader: DRACOLoader,
-): Promise<BufferGeometry | undefined> {
-  return new Promise((resolve) => {
-    dracoLoader.parse(buffer, (geometry) => {
-      resolve(geometry);
-    });
-  });
 }
