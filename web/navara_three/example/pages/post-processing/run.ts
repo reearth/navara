@@ -45,20 +45,23 @@ export const run = async (view: ThreeView) => {
   const date = new Date();
   date.setHours(8);
   view.atmosphere.date = date;
-
-  // Add TestSelectiveEffectLayer with debug mask
-  const testSelectiveEffect = view.addLayer({
+  
+  // Add SelectiveOutlineEffectLayer with debug mask
+  const selectiveOutline = view.addLayer({
     type: "effect",
-    testSelective: {
-      debugMask: true,
-      resolutionScale: 1.0,
+    selectiveOutline: {
+      color: 0x0000ff,        // Blue outline (for future use)
+      thickness: 2.0,         // Outline thickness (for future use)
+      edgeStrength: 1.0,      // Edge detection strength (for future use)
     },
+    debugMask: true,          // Show mask in top-left corner
+    resolutionScale: 1.0,
   });
 
   // Add default effect layers for proper rendering (Tone Mapping, SMAA, etc.)
   view.addDefaultEffectLayers();
 
-  //Add cube mesh with selective effect
+  // Add cube mesh with selective effect (depthTest enabled)
   view.addLayer({
     type: "mesh",
     box: {
@@ -78,10 +81,10 @@ export const run = async (view: ThreeView) => {
       y: cubePosition.y,
       z: cubePosition.z,
     },
-    effects: [testSelectiveEffect.id],
+    effects: [selectiveOutline.id],  // depthTest enabled (default)
   });
 
-  // Add sphere mesh with selective effect
+  // Add sphere mesh with selective effect (depthTest enabled)
   view.addLayer({
     type: "mesh",
     sphere: {
@@ -99,10 +102,11 @@ export const run = async (view: ThreeView) => {
       y: spherePosition.y,
       z: spherePosition.z,
     },
-    effects: [testSelectiveEffect.id],
+    effects: [selectiveOutline.id],  // depthTest enabled (default)
   });
 
-  // Add GeoJSON model near Tokyo Station with selective effect
+  // Add GeoJSON drum model near Tokyo Station with selective effect
+  // ignoreDepth: true to avoid depth noise from complex geometry
   view.addLayer({
     type: "geojson",
     data: {
@@ -129,7 +133,41 @@ export const run = async (view: ThreeView) => {
       metalness: 0.1,
       roughness: 0.1,
     },
-    effects: [testSelectiveEffect.id],
+    effects: [selectiveOutline.id],
+    //ignoreDepth: true,  // Ignore depth for complex models
+  });
+
+  // Add GeoJSON animated soldier model near Imperial Palace with selective effect
+  // ignoreDepth: true to avoid depth noise from complex geometry
+  view.addLayer({
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [139.7505, 35.677],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    model: {
+      show: true,
+      size: 100,
+      height: 0,
+      clamp_to_ground: true,
+      url: LOCAL_DATASETS.soldierGLTF.url,
+      animation_active_clip: "Walk",
+      animation_speed: 1.0,
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
+    },
+    //effects: [selectiveOutline.id],
+    //ignoreDepth: true,  // Ignore depth for complex models
   });
 
   // Add terrain layer for Tokyo area
@@ -155,7 +193,7 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  // Add 3D building models for Tokyo area
+  // Add 3D building models for Tokyo area with selective outline effect
   view.addLayer({
     type: "cesium3dtiles",
     data: {
@@ -169,6 +207,7 @@ export const run = async (view: ThreeView) => {
       cast_shadow: true,
       receive_shadow: true,
     },
+    //effects: [selectiveOutline.id],  // ← ここにeffects配列を追加
   });
 
   view.addLayer({
@@ -184,6 +223,8 @@ export const run = async (view: ThreeView) => {
       cast_shadow: true,
       receive_shadow: true,
     },
+    //effects: [selectiveOutline.id],  // ← ここにeffects配列を追加
+    
   });
 
   showAttributions([

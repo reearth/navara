@@ -49,11 +49,41 @@ export type SelectiveBloomUpdate = {
   debugMask?: boolean;
 } & EffectLayerUpdate;
 
-// Mask material for rendering white silhouettes
-const MASK_MATERIAL = new MeshBasicMaterial({
+// Selective Outline configuration
+export type SelectiveOutlineConfig = {
+  selective: true;
+  selectiveOutline: {
+    color?: number;
+    thickness?: number;
+    edgeStrength?: number;
+  };
+  resolutionScale?: number;
+  debugMask?: boolean;
+} & EffectLayerConfig;
+
+export type SelectiveOutlineUpdate = {
+  selectiveOutline?: {
+    color?: number;
+    thickness?: number;
+    edgeStrength?: number;
+  };
+  resolutionScale?: number;
+  debugMask?: boolean;
+} & EffectLayerUpdate;
+
+// Mask material for rendering white silhouettes (depth enabled)
+const MASK_MATERIAL_DEPTH_ENABLED = new MeshBasicMaterial({
   color: new Color(1, 1, 1),
   depthTest: true,
   depthWrite: true,
+  side: DoubleSide, // Render both sides to handle model orientation
+});
+
+// Mask material for rendering white silhouettes (depth disabled)
+const MASK_MATERIAL_DEPTH_DISABLED = new MeshBasicMaterial({
+  color: new Color(1, 1, 1),
+  depthTest: false,
+  depthWrite: false,
   side: DoubleSide, // Render both sides to handle model orientation
 });
 
@@ -102,11 +132,16 @@ export abstract class SelectiveEffectLayerBase<
 
   /**
    * Render mask to maskRT
-   * First renders depth from main scene, then renders mask silhouettes
-   * This ensures that objects without effects still occlude masked objects
+   * Uses separate scenes for depthTest enabled/disabled objects
+   * This completely eliminates the need for scene traversal
+   * 
+   * Performance optimizations:
+   * - Zero scene.traverse() calls
+   * - Uses overrideMaterial for fastest rendering
+   * - No material cloning or restoration needed
    */
   protected renderMask(renderer: WebGLRenderer): void {
-    const { scene, maskRT } = this.resources;
+    const { sceneDepthEnabled, sceneDepthDisabled, maskRT } = this.resources;
     const mainScene = this.view.scenes.mrt;
 
     // Save renderer state
@@ -126,15 +161,38 @@ export abstract class SelectiveEffectLayerBase<
     renderer.render(mainScene, this.view.camera);
     mainScene.overrideMaterial = null;
 
-    // 2. Render mask silhouettes (only objects with effects)
-    // depthTest is enabled, so objects behind other objects won't be visible
-    scene.overrideMaterial = MASK_MATERIAL;
-    renderer.render(scene, this.view.camera);
-    scene.overrideMaterial = null;
+    // 2. Render mask silhouettes with depthTest enabled
+    // overrideMaterial applies to all objects in scene - no traverse needed!
+    sceneDepthEnabled.overrideMaterial = MASK_MATERIAL_DEPTH_ENABLED;
+    renderer.render(sceneDepthEnabled, this.view.camera);
+    sceneDepthEnabled.overrideMaterial = null;
+
+    // 3. Render mask silhouettes with depthTest disabled
+    // overrideMaterial applies to all objects in scene - no traverse needed!
+    sceneDepthDisabled.overrideMaterial = MASK_MATERIAL_DEPTH_DISABLED;
+    renderer.render(sceneDepthDisabled, this.view.camera);
+    sceneDepthDisabled.overrideMaterial = null;
 
     // Restore renderer state
     renderer.setRenderTarget(prevRenderTarget);
     renderer.setClearColor(originalClearColor, originalClearAlpha);
+  }
+
+  /**
+   * Find layer ID for an object by its source ID
+   */
+  private findLayerIdForObject(sourceId: string): string | undefined {
+    // Check all registered layer effects
+    for (const layer of this.view.layersManager.getResourceLayers()) {
+      const effects = this.view.getLayerEffects(layer.id);
+      if (effects && effects.includes(this.id)) {
+        // This layer uses this effect, check if it has matching meshes
+        // We need to traverse the layer's meshes to find the one with matching UUID
+        // For now, return the layer ID if it uses this effect
+        return layer.id;
+      }
+    }
+    return undefined;
   }
 
   /**

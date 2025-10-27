@@ -16,9 +16,12 @@ export type SelectiveEffectOptions = {
 
 export type SelectiveEffectResources = {
   scene: Scene;
+  sceneDepthEnabled: Scene;    // Scene for objects with depthTest enabled
+  sceneDepthDisabled: Scene;   // Scene for objects with depthTest disabled
   maskRT: WebGLRenderTarget;
   highlightRT: WebGLRenderTarget;
   objects: WeakMap<Object3D, Object3D>; // source -> clone
+  objectLayerMap: Map<string, string>;  // sourceId -> layerId cache
   options: SelectiveEffectOptions;
   maskDebug?: BufferView;
 };
@@ -31,6 +34,7 @@ export class SelectiveEffectRegistry {
   private resources = new Map<string, SelectiveEffectResources>();
   private width: number;
   private height: number;
+  private layerDepthSettings = new Map<string, boolean>();
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -55,6 +59,12 @@ export class SelectiveEffectRegistry {
     const scene = new Scene();
     scene.name = `SelectiveEffect_${effectId}`;
 
+    const sceneDepthEnabled = new Scene();
+    sceneDepthEnabled.name = `SelectiveEffect_${effectId}_DepthEnabled`;
+
+    const sceneDepthDisabled = new Scene();
+    sceneDepthDisabled.name = `SelectiveEffect_${effectId}_DepthDisabled`;
+
     const maskRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
       depthBuffer: true,
@@ -70,6 +80,7 @@ export class SelectiveEffectRegistry {
     highlightRT.texture.name = `SelectiveHighlight_${effectId}`;
 
     const objects = new WeakMap<Object3D, Object3D>();
+    const objectLayerMap = new Map<string, string>();
 
     let maskDebug: BufferView | undefined;
     if (options.debugMask) {
@@ -78,9 +89,12 @@ export class SelectiveEffectRegistry {
 
     const resources: SelectiveEffectResources = {
       scene,
+      sceneDepthEnabled,
+      sceneDepthDisabled,
       maskRT,
       highlightRT,
       objects,
+      objectLayerMap,
       options,
       maskDebug,
     };
@@ -100,7 +114,7 @@ export class SelectiveEffectRegistry {
   /**
    * Link an object to a selective effect by creating a clone
    */
-  link(effectId: string, sourceObject: Object3D): void {
+  link(effectId: string, sourceObject: Object3D, layerId?: string): void {
     const resources = this.resources.get(effectId);
     if (!resources) {
       console.warn(`Selective effect ${effectId} not found`);
@@ -139,6 +153,19 @@ export class SelectiveEffectRegistry {
 
     resources.objects.set(sourceObject, clone);
     resources.scene.add(clone);
+
+    // Cache layerId for performance and add to appropriate depth-specific scene
+    if (layerId) {
+      resources.objectLayerMap.set(sourceObject.uuid, layerId);
+      
+      // Add to appropriate scene based on depth settings
+      const ignoreDepth = this.shouldIgnoreDepth(layerId);
+      if (ignoreDepth) {
+        resources.sceneDepthDisabled.add(clone);
+      } else {
+        resources.sceneDepthEnabled.add(clone);
+      }
+    }
 
     // Update world matrix after adding to scene
     clone.updateMatrixWorld(true);
@@ -233,6 +260,20 @@ export class SelectiveEffectRegistry {
     for (const effectId of Array.from(this.resources.keys())) {
       this.destroy(effectId);
     }
+  }
+
+  /**
+   * Register depth setting for a layer
+   */
+  registerLayerDepth(layerId: string, ignoreDepth: boolean): void {
+    this.layerDepthSettings.set(layerId, ignoreDepth);
+  }
+
+  /**
+   * Check if a layer should ignore depth
+   */
+  shouldIgnoreDepth(layerId: string): boolean {
+    return this.layerDepthSettings.get(layerId) ?? false;
   }
 
   /**

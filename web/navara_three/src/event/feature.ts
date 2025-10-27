@@ -153,13 +153,13 @@ export async function processRenderableFeatureAdded(
       obj.updateMatrixWorld(true);
       obj.traverseMesh((mesh) => {
         for (const effectId of effects) {
-          viewContext.selectiveRegistry?.link(effectId, mesh);
+          viewContext.selectiveRegistry?.link(effectId, mesh, featureLayerId);
         }
       });
     } else if (obj instanceof Mesh) {
       // For other mesh types, link directly
       for (const effectId of effects) {
-        viewContext.selectiveRegistry.link(effectId, obj);
+        viewContext.selectiveRegistry.link(effectId, obj, featureLayerId);
       }
     }
   }

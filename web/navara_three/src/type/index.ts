@@ -40,6 +40,7 @@ import type {
   MRTPassConfig,
   RainDropConfig,
   SelectiveBloomConfig,
+  SelectiveOutlineConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
@@ -95,6 +96,7 @@ export type EffectLayerDeclarationDescription =
   | MRTPassConfig
   | RainDropConfig
   | SelectiveBloomConfig
+  | SelectiveOutlineConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig
@@ -127,14 +129,20 @@ export type ExtractProperties<T> = {
 
 type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 
-export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
-export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
-export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
-export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
+// Common options for layer effects
+type LayerEffectOptions = {
+  effects?: string[];
+  ignoreDepth?: boolean;
+};
+
+export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }> & LayerEffectOptions;
+export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }> & LayerEffectOptions;
+export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }> & LayerEffectOptions;
+export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }> & LayerEffectOptions;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
->;
-export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
+> & LayerEffectOptions;
+export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }> & LayerEffectOptions;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 export type DrapedMaterialCache = Map<string, Material>;

@@ -107,7 +107,7 @@ export abstract class MeshLayerDeclaration<
       this.raw.updateMatrixWorld(true);
 
       for (const effectId of this.effects) {
-        this.view.selectiveRegistry.link(effectId, this.raw);
+        this.view.selectiveRegistry.link(effectId, this.raw, this.id);
       }
     }
   }

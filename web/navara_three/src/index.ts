@@ -66,6 +66,7 @@ import {
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
+  SelectiveOutlineEffectLayer,
   TestSelectiveEffectLayer,
   ToneMappingEffectLayer,
   RainDropEffectLayer,
@@ -940,7 +941,8 @@ export default class ThreeView<
 
     // Register effects if specified in layer config
     if ("effects" in l && Array.isArray(l.effects) && l.effects.length > 0) {
-      this.viewContext.registerLayerEffects(layerId, l.effects as string[]);
+      const ignoreDepth = "ignoreDepth" in l ? (l.ignoreDepth as boolean) : undefined;
+      this.viewContext.registerLayerEffects(layerId, l.effects as string[], ignoreDepth);
     }
 
     const layer = new Layer(layerId, this._core);
@@ -1001,8 +1003,9 @@ export default class ThreeView<
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);
 
-    // Test selective effect (for development)
+    // Selective effects
     this.registerEffect("testSelective", TestSelectiveEffectLayer);
+    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
 
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
