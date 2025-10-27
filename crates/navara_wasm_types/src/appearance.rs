@@ -332,14 +332,18 @@ pub struct PolygonMaterial {
     pub height: Option<f32>,
     pub extruded_height: Option<f32>,
     pub wireframe: Option<bool>,
+    /// Reflectivity for post-process or env map.
     pub reflectivity: Option<f32>,
+    /// Reflectivity for post-process.
     pub roughness: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolygonInternalMaterial>,
 
     /// Whether or not the height is obtained from the data. If false, the height is constant.
     pub per_position_height: Option<bool>,
+    /// Need to enable `transparent`.
     pub opacity: Option<f32>,
+    /// Enable `opacity`. It might cause unexpected behavior when you use an effect layer.
     pub transparent: Option<bool>,
 
     /// Currently, this property is supported only in GeoJSON.
@@ -351,14 +355,18 @@ pub struct PolygonMaterial {
     /// Currently, this property is supported only in GeoJSON.
     pub outline_width: Option<f32>,
 
+    /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub water_normal_url: Option<String>,
+    /// Scale water normal. Decreasing this value will make the water surface rough.
     pub water_scale_normal: Option<f32>,
+    /// Water wave speed.
     pub water_speed: Option<f32>,
     pub shininess: Option<f32>,
     pub specular_strength: Option<f32>,
     pub apply_water_normal: Option<bool>,
+    /// Enabling this value allows using `shininess` and `specular_strength`.
     pub specular: Option<bool>,
     pub ior: Option<f32>,
 }
@@ -573,16 +581,22 @@ pub struct ModelMaterial {
     pub should_rotate_in_default: Option<bool>,
     pub color: Option<u32>,
     pub metalness: Option<f32>,
+    /// Reflectivity for post-process.
     pub roughness: Option<f32>,
+    /// Reflectivity for post-process or env map.
     pub reflectivity: Option<f32>,
+    /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub water_normal_url: Option<String>,
+    /// Scale water normal. Decreasing this value will make the water surface rough.
     pub water_scale_normal: Option<f32>,
+    /// Water wave speed.
     pub water_speed: Option<f32>,
     pub shininess: Option<f32>,
     pub specular_strength: Option<f32>,
     pub apply_water_normal: Option<bool>,
+    /// Enabling this value allows using `shininess` and `specular_strength`.
     pub specular: Option<bool>,
     pub ior: Option<f32>,
     // animation
