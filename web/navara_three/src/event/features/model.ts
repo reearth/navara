@@ -110,21 +110,6 @@ async function decompressDraco(
 ): Promise<BufferGeometry | undefined> {
   return new Promise((resolve) => {
     dracoLoader.parse(buffer, (geometry) => {
-      const colors = geometry.getAttribute("color");
-      if (colors) {
-        // Normalize color values to [0, 1]
-        const divisor = colors.array instanceof Uint8Array ? 255 : 65535;
-        const colorArray = new Float32Array(colors.count * 3);
-        for (let i = 0; i < colors.count; i++) {
-          colorArray[i * 3] = colors.getX(i) / divisor;
-          colorArray[i * 3 + 1] = colors.getY(i) / divisor;
-          colorArray[i * 3 + 2] = colors.getZ(i) / divisor;
-        }
-        geometry.setAttribute(
-          "color",
-          new Float32BufferAttribute(colorArray, 3),
-        );
-      }
       resolve(geometry);
     });
   });

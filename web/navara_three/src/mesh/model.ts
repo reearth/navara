@@ -23,6 +23,7 @@ import {
   DataTexture,
   Group,
   Mesh,
+  Points,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
@@ -66,8 +67,7 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
 
 export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
-  implements FeatureMesh, PickableMesh
-{
+  implements FeatureMesh, PickableMesh {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
 
@@ -129,6 +129,11 @@ export class ModelMesh
         uniforms,
         viewEvents,
       );
+    }
+
+    if (meshMaterial.__internal__?.point_cloud) {
+      // Point cloud specific initialization can go here
+      this.overridePntsMaterial();
     }
 
     this.userData.prev = {};
@@ -446,6 +451,58 @@ export class ModelMesh
       this.initDepthMaterial(mesh);
 
       viewEvents.emit("_csmMounted", mesh.material);
+    });
+  }
+
+  private overridePntsMaterial() {
+    this.traverse((object: Object3D) => {
+      if (!(object instanceof Points)) {
+        return;
+      }
+
+      const colorDivisior = 65535.0;
+      const material = object.material;
+      material.onBeforeCompile = (
+        shader: WebGLProgramParametersWithUniforms,
+      ) => {
+        // Update vertex shader
+        shader.vertexShader = createReplacer(shader.vertexShader)
+
+          .replace(
+            "#include <color_vertex>",
+            `
+            #if defined( USE_COLOR_ALPHA )
+
+              vColor = vec4( 1.0 / ${colorDivisior}.0 );
+
+            #elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR ) || defined( USE_BATCHING_COLOR )
+
+              vColor = vec3( 1.0 / ${colorDivisior}.0 );
+
+            #endif
+
+            #ifdef USE_COLOR
+
+              vColor *= color;
+
+            #endif
+
+            #ifdef USE_INSTANCING_COLOR
+
+              vColor.xyz *= instanceColor.xyz;
+
+            #endif
+
+            #ifdef USE_BATCHING_COLOR
+
+              vec3 batchingColor = getBatchingColor( getIndirectIndex( gl_DrawID ) );
+
+              vColor.xyz *= batchingColor.xyz;
+
+            #endif
+          `
+          ).source;
+      }
     });
   }
 
