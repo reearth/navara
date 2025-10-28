@@ -579,7 +579,7 @@ export class ModelMesh
       this.userData.prev.visible = next;
     }
 
-    if (material.__internal__?.point_cloud === false) {
+    if (!material.__internal__?.point_cloud) {
       this.traverseMesh((m) => {
         this.setMaterial(material, m);
       });
@@ -637,7 +637,7 @@ export class ModelMesh
         distMaterial.userData.prev.point_size = next;
       }
     }
-    if (distMaterial instanceof MeshStandardMaterial) {
+    if ((distMaterial instanceof MeshStandardMaterial) || (distMaterial instanceof MeshPhysicalMaterial)) {
       if (distMaterial.userData.prev.metalness !== src.metalness) {
         const next = src.metalness ?? 0;
         distMaterial.metalness = next;
