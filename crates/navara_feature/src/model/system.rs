@@ -66,9 +66,17 @@ pub fn transfer_mesh(
             continue;
         }
 
-        let position = geometry
-            .crs
-            .to_vec3(WGS84_32, geometry.coords, material.height);
+        let position: Vec3 = if material
+            .internal
+            .as_ref()
+            .is_some_and(|internal| internal.point_cloud)
+        {
+            geometry.coords
+        } else {
+            geometry
+                .crs
+                .to_vec3(WGS84_32, geometry.coords, material.height)
+        };
 
         let transform = if material.should_rotate_in_default {
             let lnglat = geometry.crs.to_lng_lat(WGS84_32, geometry.coords);
@@ -89,7 +97,17 @@ pub fn transfer_mesh(
             ))
         };
         let transform = match adjustment_transform {
-            Some(a) => transform.mul_transform(*a),
+            Some(a) => {
+                if material
+                    .internal
+                    .as_ref()
+                    .is_some_and(|internal| internal.point_cloud)
+                {
+                    a.mul_transform(transform)
+                } else {
+                    transform.mul_transform(*a)
+                }
+            }
             None => transform,
         };
 

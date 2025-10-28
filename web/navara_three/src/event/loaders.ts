@@ -1,4 +1,5 @@
-import { Cache, ImageLoader, TextureLoader } from "three";
+import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
+import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import { FEATURE_CONCURRENCY } from "../concurrency";
@@ -26,3 +27,27 @@ export const initializeGltfLoader = (() => {
     return GLTF;
   };
 })();
+
+export const initializeDracoLoader = (() => {
+  let draco: DRACODecoder;
+  return () => {
+    if (draco) return draco;
+    draco = new DRACODecoder();
+    draco.setWorkerLimit(FEATURE_CONCURRENCY);
+    draco.setDecoderPath(
+      "https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/",
+    );
+    return draco;
+  };
+})();
+
+export async function decompressDraco(
+  buffer: ArrayBuffer,
+  dracoLoader: DRACODecoder,
+): Promise<BufferGeometry | undefined> {
+  return new Promise((resolve) => {
+    dracoLoader.parse(buffer, (geometry) => {
+      resolve(geometry);
+    });
+  });
+}

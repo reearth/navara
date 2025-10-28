@@ -1,6 +1,7 @@
 import type { Nullable, TileHandle } from "@navara/core";
 import type {
   B3dmLayerDescription,
+  PntsLayerDescription,
   Cesium3dTilesLayerDescription,
   GeoJsonLayerDescription,
   TerrainLayerDescription,
@@ -56,6 +57,7 @@ export type LayerDescription =
   | TerrainLayer
   | GeoJsonLayer
   | B3dmLayer
+  | PntsLayer
   | Cesium3dTilesLayer
   | MvtLayer
   | MeshLayerDeclarationDescription
@@ -129,6 +131,7 @@ export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
 export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
 export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
 export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
+export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }>;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
 >;
