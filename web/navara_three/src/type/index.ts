@@ -39,6 +39,7 @@ import type {
   LensFlareConfig,
   MRTPassConfig,
   RainDropConfig,
+  SkyEnvMapPassConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
@@ -91,6 +92,7 @@ export type EffectLayerDeclarationDescription =
   | FXAAConfig
   | LensFlareConfig
   | MRTPassConfig
+  | SkyEnvMapPassConfig
   | RainDropConfig
   | SMAAConfig
   | SSAOConfig

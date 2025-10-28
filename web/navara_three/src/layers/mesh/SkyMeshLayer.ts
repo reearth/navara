@@ -29,7 +29,10 @@ export class SkyMeshLayer extends MeshLayerDeclaration<
     this.config = config;
   }
 
-  getPassKey(): "opaque" | "transparent" {
+  getPassKey(): "opaque" | "skyEnvMap" {
+    if (this.config.sky?.envMap) {
+      return "skyEnvMap";
+    }
     return "opaque";
   }
 
@@ -61,6 +64,11 @@ export class SkyMeshLayer extends MeshLayerDeclaration<
 
     if (this.config.sky && updates.sky && this._skyMesh) {
       Object.assign(this.config.sky, updates.sky);
+
+      if (updates.sky.envMap !== undefined) {
+        this.config.sky.envMap = updates.sky.envMap;
+        this.onPassKeyChange();
+      }
 
       // Update individual properties
       if (updates.sky.sun !== undefined) {

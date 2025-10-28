@@ -30,6 +30,7 @@ export class RenderPassOrchestrator {
     draped: new Scene(),
     opaque: new Scene(),
     transparent: new Scene(),
+    skyEnvMap: new Scene(),
   };
   effectComposer: EffectComposer;
 

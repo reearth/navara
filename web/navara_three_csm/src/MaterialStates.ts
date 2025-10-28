@@ -48,11 +48,14 @@ export class MaterialStates {
       );
     };
 
-    const originalHandler = material.onBeforeCompile;
+    const originalHandler = material.onBeforeCompile.bind(material);
+    const originalCustomProgramCacheKey =
+      material.customProgramCacheKey.bind(material);
     if (Object.prototype.hasOwnProperty.call(material, "hasOwnProperty")) {
       stateRef.originalHandler = originalHandler;
     }
-    material.customProgramCacheKey = () => originalHandler.toString();
+    material.customProgramCacheKey = () =>
+      originalHandler.toString() + originalCustomProgramCacheKey();
     material.onBeforeCompile = (...args) => {
       const [shader] = args;
       shader.defines ??= {};

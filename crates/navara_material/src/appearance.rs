@@ -267,6 +267,8 @@ pub struct PolygonMaterial {
     pub roughness: f32,
     pub internal: Option<PolygonInternalMaterial>,
     pub per_position_height: bool,
+    pub opacity: f32,
+    pub transparent: bool,
 
     pub surface_show: bool,
     pub outline_show: bool,
@@ -280,6 +282,8 @@ pub struct PolygonMaterial {
     pub shininess: f32,
     pub specular_strength: f32,
     pub apply_water_normal: bool,
+    pub specular: bool,
+    pub ior: f32,
 }
 
 impl Default for PolygonMaterial {
@@ -298,6 +302,8 @@ impl Default for PolygonMaterial {
             roughness: 0.0,
             internal: None,
             per_position_height: false,
+            opacity: 1.0,
+            transparent: false,
 
             surface_show: true,
             outline_show: false,
@@ -311,6 +317,8 @@ impl Default for PolygonMaterial {
             shininess: 100.0,
             specular_strength: 2.0,
             apply_water_normal: false,
+            specular: false,
+            ior: 1.33333,
         }
     }
 }
@@ -350,6 +358,8 @@ pub struct ModelMaterial {
     pub shininess: f32,
     pub specular_strength: f32,
     pub apply_water_normal: bool,
+    pub specular: bool,
+    pub ior: f32,
     // animation
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
@@ -378,6 +388,8 @@ impl Default for ModelMaterial {
             shininess: 100.0,
             specular_strength: 2.0,
             apply_water_normal: false,
+            specular: false,
+            ior: 1.33333,
             // animation
             animation_active_clip: None,
             animation_speed: None,
