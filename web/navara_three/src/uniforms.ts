@@ -10,6 +10,7 @@ export type CommonUniforms = {
   frustumNearFar: RefThree<[x: number, y: number]>;
   tGlobeDepth: RefThree<Texture>;
   tGlobeNormal: RefThree<Texture>;
+  tSkyEnvMap: RefThree<Texture>;
   inverseProjectionMatrix: RefThree<Matrix4>;
   fov: RefThree<number>;
   screenHeightPx: RefThree<number>;

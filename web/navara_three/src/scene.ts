@@ -17,6 +17,8 @@ export type Scenes = {
   // Render this scene after the atmosphere effect. This scene should not be handled in MRT.
   // It is useful to render a transparent mesh.
   transparent: Scene;
+  // Render sky environment map to a cube map for reflections
+  skyEnvMap: Scene;
 };
 
 export class SceneGroup extends Group {}

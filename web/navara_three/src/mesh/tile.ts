@@ -12,6 +12,7 @@ import type {
   TextureFragment,
   MeshChanged,
 } from "@navara/engine";
+import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
@@ -27,9 +28,11 @@ import {
   SRGBColorSpace,
   Texture,
   Vector2,
+  AddOperation,
   WebGLRenderTarget,
   type MagnificationTextureFilter,
   type MinificationTextureFilter,
+  ShaderChunk,
 } from "three";
 
 import {
@@ -62,7 +65,7 @@ const GLOBE_COLOR = 0xffffff;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
-const NUM_WATER_TEXTURES = 1;
+const NUM_ADDITIONAL_TEXTURES = 2;
 
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
@@ -108,7 +111,7 @@ export class TileMesh
 
     this.maxTextures = textureOptions.maxTextures;
     this.numTexturizedVector =
-      Math.floor(textureOptions.maxTextures / 2) - NUM_WATER_TEXTURES;
+      Math.floor(textureOptions.maxTextures / 2) - NUM_ADDITIONAL_TEXTURES;
     this.texturizedSceneIndexFrom = this.maxTextures - this.numTexturizedVector;
 
     for (let i = 0; i < this.numTexturizedVector; i++) {
@@ -419,6 +422,9 @@ export class TileMesh
     m.userData.defines ??= {};
     m.userData.defines.USE_UV = 1;
 
+    m.envMap = uniforms.tSkyEnvMap.value ?? null;
+    m.combine = AddOperation;
+
     const maxTextures = this.maxTextures;
 
     m.onBeforeCompile = (shader) => {
@@ -442,8 +448,10 @@ export class TileMesh
       shader.uniforms.uShininesses = m.userData.shininesses;
       shader.uniforms.uSpecularStrengths = m.userData.specularStrengths;
       shader.uniforms.uApplyWaterNormals = m.userData.applyWaterNormals;
+      shader.uniforms.uSpeculars = m.userData.speculars;
       shader.uniforms.uTextures = m.userData.textures;
       shader.uniforms.uWaterNormalMap = m.userData.waterTexture;
+      shader.uniforms.uIor = { value: 1.33333 };
       shader.uniforms.uTime = m.userData.uTime;
 
       // Add UV transform uniforms to the shader
@@ -474,7 +482,7 @@ vUv = vUv * uScale + uOffset;
           "#include <envmap_vertex>",
           `
   #include <envmap_vertex>
-  vPosition = transformed;
+  vPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
   `,
         ).source;
 
@@ -493,24 +501,27 @@ vUv = vUv * uScale + uOffset;
   uniform float uShininesses[${maxTextures}];
   uniform float uSpecularStrengths[${maxTextures}];
   uniform float uApplyWaterNormals[${maxTextures}];
+  uniform bool uSpeculars[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
+  uniform float uIor;
   uniform float uTime;
-  
+
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;
-  
+
   #include <common>
 
   `,
         )
         .replaceWithCondition(
-          "#include <lights_pars_begin>",
+          "#include <lights_lambert_pars_fragment>",
           `
-        #include <lights_pars_begin>
+        #include <lights_lambert_pars_fragment>
 
         ${WaterParsFragment}
+        ${SpecularParsFragment}
         `,
           hasNormal,
         )
@@ -525,6 +536,7 @@ vUv = vUv * uScale + uOffset;
   float waterShininess = 30.0;
   float waterSpecularStrength = 1.0;
   float applyWaterNormals = 0.0;
+  bool useSpecular = false;
 
   ${generateMixOverlaidTexturesMacro(
     maxTextures,
@@ -543,6 +555,7 @@ vUv = vUv * uScale + uOffset;
     float currentShininess = uShininesses[${idx}];
     float currentSpecularStrength = uSpecularStrengths[${idx}];
     float currentApplyWaterNormals = uApplyWaterNormals[${idx}];
+    bool currentSpecular = uSpeculars[${idx}];
 
     if(${texColorVar}.a > 0.0) {
       tileReflectivity = currentReflectivity;
@@ -553,6 +566,7 @@ vUv = vUv * uScale + uOffset;
       waterShininess = currentShininess;
       waterSpecularStrength = currentSpecularStrength;
       applyWaterNormals = currentApplyWaterNormals;
+      useSpecular = currentSpecular;
     }
 
     // Disable picking for the raster tile.
@@ -582,6 +596,15 @@ vUv = vUv * uScale + uOffset;
       waterSpecularStrength,
       normal
     );
+  } else if(useSpecular) {
+    specular = computeSpecular(
+      vViewPosition,
+      origNormal,
+      waterShininess,
+      waterSpecularStrength,
+      uIor
+    );
+    #include <normal_fragment_maps>
   } else {
    #include <normal_fragment_maps>
   }
@@ -591,7 +614,6 @@ vUv = vUv * uScale + uOffset;
         .replaceWithCondition(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
-          vec3 reflectionPower = vec3(tileReflectivity);
           vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
           outgoingLight += specular;
         `,
@@ -606,6 +628,13 @@ if (uPickable > 0.) {
 
   #include <envmap_fragment>
 `,
+        )
+        .replace(
+          "#include <envmap_fragment>",
+          createReplacer(ShaderChunk.envmap_fragment).replace(
+            "outgoingLight += envColor.xyz * specularStrength * reflectivity;",
+            "outgoingLight += envColor.xyz * specularStrength * tileReflectivity;",
+          ).source,
         )
         .replaceWithCondition(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
@@ -759,6 +788,9 @@ if (uPickable > 0.) {
             mesh.material.userData.specularStrength?.value ?? 0;
           m.userData.applyWaterNormals.value[lastIdx] =
             mesh.material.userData.applyWaterNormal?.value ?? 0;
+          m.userData.speculars.value[lastIdx] =
+            mesh.material.userData.specular?.value ?? false;
+          // Load water normal map texture if water is enabled
           if (mesh.water) {
             this.loadWaterTexture();
           }
@@ -836,6 +868,11 @@ if (uPickable > 0.) {
     if (!m.userData.applyWaterNormals) {
       m.userData.applyWaterNormals = {
         value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.speculars) {
+      m.userData.speculars = {
+        value: [...new Array(maxTextures)].fill(false),
       };
     }
 
