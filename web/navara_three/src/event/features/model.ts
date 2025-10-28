@@ -46,6 +46,7 @@ export async function renderModel(
         const material = new PointsMaterial({
           size: m.material.point_size,
           vertexColors: true,
+          sizeAttenuation: false,
         });
 
         if (m.material.__internal__?.draco_compressed) {
