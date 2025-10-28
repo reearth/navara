@@ -18,6 +18,8 @@ export type SkyMeshOptions = {
   moon?: boolean;
   moonScale?: number;
   moonIntensity?: number;
+  sunAngularRadius?: number;
+  envMap?: boolean;
 };
 
 // https://github.com/takram-design-engineering/three-geospatial/blob/2536eb9ea9ff6690d304aa744a777c2f11b06178/packages/atmosphere/src/SkyMaterial.ts#L53
@@ -39,6 +41,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
       sun: options.sun ?? true,
       moon: options.moon ?? true,
       depthWrite: false,
+      sunAngularRadius: options.sunAngularRadius,
     });
 
     this.raw = new Mesh(new PlaneGeometry(2, 2), skyMaterial);

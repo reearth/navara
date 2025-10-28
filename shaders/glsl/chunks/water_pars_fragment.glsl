@@ -99,34 +99,11 @@ vec3 computeWaterSpecularSimple(
     return specularColor(normal, toEye, shininess, specStrength) * specularF;
 }
 
-void lightProbeIrradianceReflection(const in vec3 irradiance, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 diffuseColor, inout ReflectedLight reflectedLight) {
-    #if defined( USE_LIGHT_PROBES )
-      // Original diffuse contribution
-      vec3 diffuseTerm = irradiance * BRDF_Lambert( diffuseColor );
+vec3 getSkyEnv(const in vec3 geometryNormal, const in samplerCube envMap, const in vec3 worldPosition) {
+    vec3 worldNormal = inverseTransformDirection( geometryNormal, viewMatrix );
+    vec3 cameraToFrag  = normalize(worldPosition - cameraPosition);
 
-      // Compute Fresnel reflectance for water
-      vec3 eyeDirection = normalize(geometryViewDir);
-      float theta = max(dot(eyeDirection, geometryNormal), 0.0);
-      float rf0 = 0.3;  // Base reflectance for water
-      float reflectance = rf0 + (1.0 - rf0) * pow((1.0 - theta), 5.0);
+    vec3 reflectDir = reflect(cameraToFrag, worldNormal);
 
-      // Sample light probe for reflections
-      vec3 reflectDir = reflect(-geometryViewDir, geometryNormal);
-      vec3 reflectionIrradiance = getLightProbeIrradiance(lightProbe, reflectDir);
-
-      // Scatter term (subsurface-like effect)
-      vec3 waterColor = diffuseColor;
-      vec3 scatter = max(0.0, dot(geometryNormal, eyeDirection)) * waterColor;
-
-      // Mix diffuse and reflection based on Fresnel
-      vec3 finalIndirect = mix(
-          diffuseTerm * rf0 + scatter,
-          reflectionIrradiance * 0.1,
-          reflectance
-      );
-
-      reflectedLight.indirectDiffuse += finalIndirect;
-    #else
-      reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( diffuseColor );
-    #endif
+    return textureCube(envMap, reflectDir).rgb;
 }

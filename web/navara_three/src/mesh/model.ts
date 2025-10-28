@@ -29,7 +29,6 @@ import {
   Object3D,
   RepeatWrapping,
   RGBADepthPacking,
-  ShaderChunk,
   Texture,
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
@@ -331,6 +330,10 @@ export class ModelMesh
       ) => {
         shader.defines ??= {};
         Object.assign(shader.defines, mesh.material.userData.defines);
+        if (this.water && uniforms.tSkyEnvMap.value) {
+          shader.defines.USE_SKY_ENVMAP = "1";
+          shader.uniforms.tSkyEnvMap = uniforms.tSkyEnvMap;
+        }
         shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
         shader.uniforms.reflectivity = mesh.material.userData.reflectivity;
         shader.uniforms.uWaterNormalMap = mesh.material.userData.waterNormalMap;
@@ -403,6 +406,7 @@ export class ModelMesh
             `
                   uniform float nvr_uPickable;
                   uniform sampler2D uWaterNormalMap;
+                  uniform samplerCube tSkyEnvMap;
                   uniform float uWaterScaleNormal;
                   uniform float uWaterSpeed;
                   uniform float uShininess;
@@ -413,9 +417,9 @@ export class ModelMesh
                   uniform float uTime;
                   // uniform float reflectivity;
                   in float nvr_vBatchId;
-                  
+
                   ${ShowParsFragment}
-                  
+
                   ${Pick}
 
                   ${ShadowMapDepthParsFragment}
@@ -432,14 +436,6 @@ export class ModelMesh
         ${WaterParsFragment}
         ${SpecularParsFragment}
         `,
-          )
-          .replaceWithCondition(
-            "#include <lights_fragment_end>",
-            createReplacer(ShaderChunk.lights_fragment_end).replace(
-              "RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );",
-              `lightProbeIrradianceReflection(irradiance, geometryNormal, geometryViewDir, material.diffuseColor, reflectedLight);`,
-            ).source,
-            this.water,
           )
           .replace(
             "#include <normal_fragment_maps>",
@@ -475,6 +471,10 @@ export class ModelMesh
             "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
             `
             vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
+            #if defined(WATER) && defined(USE_SKY_ENVMAP)
+              vec3 envColor = getSkyEnv(geometryNormal, tSkyEnvMap, vPosition);
+              outgoingLight += envColor * reflectivity;
+            #endif
             outgoingLight += specular;
           `,
           )

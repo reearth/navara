@@ -25,13 +25,14 @@ import {
   OrthographicCamera,
   RepeatWrapping,
   RGBAFormat,
-  ShaderChunk,
   SRGBColorSpace,
   Texture,
   Vector2,
+  AddOperation,
   WebGLRenderTarget,
   type MagnificationTextureFilter,
   type MinificationTextureFilter,
+  ShaderChunk,
 } from "three";
 
 import {
@@ -64,7 +65,7 @@ const GLOBE_COLOR = 0xffffff;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
-const NUM_WATER_TEXTURES = 1;
+const NUM_ADDITIONAL_TEXTURES = 2;
 
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
@@ -110,7 +111,7 @@ export class TileMesh
 
     this.maxTextures = textureOptions.maxTextures;
     this.numTexturizedVector =
-      Math.floor(textureOptions.maxTextures / 2) - NUM_WATER_TEXTURES;
+      Math.floor(textureOptions.maxTextures / 2) - NUM_ADDITIONAL_TEXTURES;
     this.texturizedSceneIndexFrom = this.maxTextures - this.numTexturizedVector;
 
     for (let i = 0; i < this.numTexturizedVector; i++) {
@@ -421,6 +422,9 @@ export class TileMesh
     m.userData.defines ??= {};
     m.userData.defines.USE_UV = 1;
 
+    m.envMap = uniforms.tSkyEnvMap.value ?? null;
+    m.combine = AddOperation;
+
     const maxTextures = this.maxTextures;
 
     m.onBeforeCompile = (shader) => {
@@ -503,10 +507,10 @@ vUv = vUv * uScale + uOffset;
   uniform float uPickable;
   uniform float uIor;
   uniform float uTime;
-  
+
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;
-  
+
   #include <common>
 
   `,
@@ -519,20 +523,6 @@ vUv = vUv * uScale + uOffset;
         ${WaterParsFragment}
         ${SpecularParsFragment}
         `,
-          hasNormal,
-        )
-        .replaceWithCondition(
-          "#include <lights_fragment_end>",
-          createReplacer(ShaderChunk.lights_fragment_end).replace(
-            "RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );",
-            `
-            if(useWater) {
-              lightProbeIrradianceReflection(irradiance, geometryNormal, geometryViewDir, material.diffuseColor, reflectedLight);
-            } else {
-              RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
-            }
-            `,
-          ).source,
           hasNormal,
         )
         .replace(
@@ -624,7 +614,6 @@ vUv = vUv * uScale + uOffset;
         .replaceWithCondition(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
-          vec3 reflectionPower = vec3(tileReflectivity);
           vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
           outgoingLight += specular;
         `,
@@ -639,6 +628,13 @@ if (uPickable > 0.) {
 
   #include <envmap_fragment>
 `,
+        )
+        .replace(
+          "#include <envmap_fragment>",
+          createReplacer(ShaderChunk.envmap_fragment).replace(
+            "outgoingLight += envColor.xyz * specularStrength * reflectivity;",
+            "outgoingLight += envColor.xyz * specularStrength * tileReflectivity;",
+          ).source,
         )
         .replaceWithCondition(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",

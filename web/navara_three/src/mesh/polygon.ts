@@ -25,6 +25,7 @@ import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
+  AddOperation,
   BufferAttribute,
   BufferGeometry,
   Camera,
@@ -270,6 +271,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.reflectivity = {
       value: meshMaterial.reflectivity ?? 0,
     };
+    material.reflectivity = meshMaterial.reflectivity ?? 0;
     material.userData.roughness = {
       value: meshMaterial.roughness ?? 0,
     };
@@ -358,6 +360,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);
+      if (!isTexturized && this.water) {
+        material.envMap = uniforms.tSkyEnvMap.value ?? null;
+        material.combine = AddOperation;
+      } else {
+        material.envMap = null;
+      }
       shader.uniforms.uGlobeNormal = uniforms.tGlobeNormal;
       shader.uniforms.nvr_uPickable = material.userData.uPickable;
       shader.uniforms.useGroundNormals = material.userData.useGroundNormals;
@@ -466,6 +474,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
           useRTE,
         )
         .replaceWithCondition(
+          "#include <worldpos_vertex>",
+          createReplacer(ShaderChunk.worldpos_vertex).replace(
+            "vec4 worldPosition = vec4( transformed, 1.0 );",
+            "vec4 worldPosition = vec4( absTransformed, 1.0 );",
+          ).source,
+          useRTE,
+        )
+        .replaceWithCondition(
           "#include <envmap_vertex>",
           `
   #include <envmap_vertex>
@@ -565,14 +581,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   `,
         )
-        .replaceWithCondition(
-          "#include <lights_fragment_end>",
-          createReplacer(ShaderChunk.lights_fragment_end).replace(
-            "RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );",
-            `lightProbeIrradianceReflection(irradiance, geometryNormal, geometryViewDir, material.diffuseColor, reflectedLight);`,
-          ).source,
-          this.water && !isTexturized,
-        )
         .replace(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
@@ -582,12 +590,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
     outgoingLight = diffuseColor.xyz;
   } else {
     outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
+    if(!uIsTexturized) {
+      outgoingLight += specular;
+    }
   }
-
-  if(!uIsTexturized) {
-    outgoingLight += specular;
-  }
-
   `,
         )
         .replace(
@@ -691,6 +697,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     if (prev.reflectivity !== material.reflectivity) {
       const next = material.reflectivity ?? 0;
       this.material.userData.reflectivity.value = next;
+      this.material.reflectivity = next;
       prev.reflectivity = next;
     }
 
