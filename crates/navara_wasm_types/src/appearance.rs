@@ -567,6 +567,7 @@ pub struct ModelMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
+    // Point size for point clouds data.
     pub point_size: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,

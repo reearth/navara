@@ -580,6 +580,11 @@ export class ModelMesh
       distMaterial.color.set(next);
       distMaterial.userData.prev.color = next;
     }
+    if (distMaterial.userData.prev.point_size !== src.point_size) {
+      const next = src.point_size ?? 0;
+      distMaterial.userData.pointSize.value = next;
+      distMaterial.userData.prev.point_size = next;
+    }
     if (distMaterial.userData.prev.metalness !== src.metalness) {
       const next = src.metalness ?? 0;
       distMaterial.metalness = next;

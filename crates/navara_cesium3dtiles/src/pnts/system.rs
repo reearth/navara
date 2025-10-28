@@ -156,7 +156,7 @@ fn get_geometry_info_from_pnts(
         let positions_byte_size =
             positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
 
-        // TODO: support color, normal, etc.
+        // TODO: support color, normal, etc for non-draco compressed data.
         // extract the position data from featuretable's binary blob
         position_bin_data = pnts.feature_table.binary.split_off(positions_offset);
         position_bin_data.truncate(positions_byte_size);
