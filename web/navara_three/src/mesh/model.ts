@@ -1,7 +1,7 @@
 import { EventHandler, Unimplemented } from "@navara/core";
 import {
   ModelMaterial as NavaraModelMaterial,
-  ModelMesh as NavaraModelMesh
+  ModelMesh as NavaraModelMesh,
 } from "@navara/engine";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
@@ -34,7 +34,7 @@ import {
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
   ShaderChunk,
-  PointsMaterial
+  PointsMaterial,
 } from "three";
 import {
   AnimationAction,
@@ -70,7 +70,8 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
 
 export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
-  implements FeatureMesh, PickableMesh {
+  implements FeatureMesh, PickableMesh
+{
   water = false;
   private waterNormalMapTexture: Texture | null = null;
 
@@ -511,14 +512,17 @@ export class ModelMesh
     });
   }
 
-  private traversePoints(f: (points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>) => void) {
+  private traversePoints(
+    f: (
+      points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
+    ) => void,
+  ) {
     this.traverse((object: Object3D) => {
       if (object instanceof Points) {
         f(object);
       }
     });
   }
-
 
   private overridePntsMaterial() {
     this.traverse((object: Object3D) => {
@@ -537,10 +541,11 @@ export class ModelMesh
           createReplacer(ShaderChunk.color_vertex)
             .replace(
               "vColor = vec4( 1.0 );",
-              `vColor = vec4( 1.0 / ${colorDivisior}.0 );`
-            ).replace(
+              `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
+            )
+            .replace(
               "vColor = vec3( 1.0 );",
-              `vColor = vec3( 1.0 / ${colorDivisior}.0 );`
+              `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
             ).source,
         ).source;
       };
@@ -618,7 +623,9 @@ export class ModelMesh
 
   private setMaterial(
     src: NavaraModelMaterial,
-    dist: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial> | Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
+    dist:
+      | Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>
+      | Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
   ) {
     const distMaterial = dist.material;
 
@@ -637,7 +644,10 @@ export class ModelMesh
         distMaterial.userData.prev.point_size = next;
       }
     }
-    if ((distMaterial instanceof MeshStandardMaterial) || (distMaterial instanceof MeshPhysicalMaterial)) {
+    if (
+      distMaterial instanceof MeshStandardMaterial ||
+      distMaterial instanceof MeshPhysicalMaterial
+    ) {
       if (distMaterial.userData.prev.metalness !== src.metalness) {
         const next = src.metalness ?? 0;
         distMaterial.metalness = next;
@@ -657,10 +667,8 @@ export class ModelMesh
         if (next) {
           distMaterial.userData.defines.WATER = 1;
 
-          distMaterial.userData.waterNormalMap.value = this.enableWaterNormalMap(
-            next,
-            src.water_normal_url,
-          );
+          distMaterial.userData.waterNormalMap.value =
+            this.enableWaterNormalMap(next, src.water_normal_url);
         } else {
           delete distMaterial.userData.defines.WATER;
           distMaterial.userData.waterNormalMap.value = null;
@@ -689,7 +697,9 @@ export class ModelMesh
         distMaterial.userData.shininess.value = next;
         distMaterial.userData.prev.shininess = next;
       }
-      if (distMaterial.userData.prev.specularStrength !== src.specular_strength) {
+      if (
+        distMaterial.userData.prev.specularStrength !== src.specular_strength
+      ) {
         const next = src.specular_strength ?? 0;
         distMaterial.userData.specularStrength.value = next;
         distMaterial.userData.prev.specularStrength = next;
