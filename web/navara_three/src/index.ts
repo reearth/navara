@@ -69,6 +69,7 @@ import {
   ToneMappingEffectLayer,
   RainDropEffectLayer,
   TransparentPassEffectLayer,
+  DepthOfFieldEffectLayer,
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
@@ -981,7 +982,7 @@ export default class ThreeView<
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);
-
+    this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);
