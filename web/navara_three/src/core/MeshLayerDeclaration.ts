@@ -25,7 +25,10 @@ export type MeshLayerUpdate = Pick<
 > &
   LayerDeclarationConfigUpdate;
 
-type PassKey = keyof Pick<Scenes, "opaque" | "transparent" | "mrt">;
+type PassKey = keyof Pick<
+  Scenes,
+  "opaque" | "transparent" | "mrt" | "skyEnvMap"
+>;
 
 export type MeshBaseInstance<Instance extends object = object> =
   Instance extends Object3D
@@ -113,11 +116,9 @@ export abstract class MeshLayerDeclaration<
   }
 
   removeFromScene(passKey: PassKey) {
-    if (!this.raw) return;
-
     const scenes = this.view.scenes;
 
-    if (scenes[passKey]) {
+    if (scenes[passKey] && this.raw) {
       scenes[passKey].remove(this.raw);
     }
   }
@@ -171,6 +172,7 @@ export abstract class MeshLayerDeclaration<
     if (this.raw && this.raw.parent) {
       this.raw.parent.remove(this.raw);
     }
+
     super.onDestroy();
   }
 

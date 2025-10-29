@@ -305,13 +305,17 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
     },
     polygon: {
       color: 0x001e0f,
-      reflectivity: 0.5,
+      reflectivity: 0.2,
       clamp_to_ground: true,
       wireframe: false,
       water: true,
       shininess: 100,
       specular_strength: 2,
       apply_water_normal: false,
+      specular: true,
+      ior: 1.33333,
+      transparent: false,
+      opacity: 1.0,
     },
     vector_tile: {
       max_zoom: 16,
@@ -342,14 +346,18 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
       clamp_to_ground: false,
       use_ground_normals: true,
       wireframe: false,
-      reflectivity: 0.5,
+      reflectivity: 0.2,
       roughness: 0.2,
-      receive_shadow: true,
+      receive_shadow: false,
       outline_show: false,
       water: true,
       shininess: 100,
       specular_strength: 2,
       apply_water_normal: false,
+      specular: true,
+      ior: 1.33333,
+      transparent: false,
+      opacity: 1.0,
     },
   };
 
@@ -365,6 +373,10 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
     shininess: mvtLayerDescription.polygon?.shininess ?? 100,
     specularStrength: mvtLayerDescription.polygon?.specular_strength ?? 2,
     applyWaterNormal: mvtLayerDescription.polygon?.apply_water_normal ?? false,
+    specular: mvtLayerDescription.polygon?.specular ?? false,
+    ior: mvtLayerDescription.polygon?.ior ?? 1.33333,
+    transparent: mvtLayerDescription.polygon?.transparent ?? false,
+    opacity: mvtLayerDescription.polygon?.opacity ?? 1.0,
   };
 
   const fields: FolderFields<typeof waterParams> = [
@@ -510,6 +522,68 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
         waterParams.applyWaterNormal = v.value;
         mvtLayerDescription.polygon.apply_water_normal = v.value;
         geoJsonLayerDescription.polygon.apply_water_normal = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "specular",
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.specular = v.value;
+        mvtLayerDescription.polygon.specular = v.value;
+        geoJsonLayerDescription.polygon.specular = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "ior",
+      params: { min: 1.0, max: 2.5, step: 0.01 },
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.ior = v.value;
+        mvtLayerDescription.polygon.ior = v.value;
+        geoJsonLayerDescription.polygon.ior = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "transparent",
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.transparent = v.value;
+        mvtLayerDescription.polygon.transparent = v.value;
+        geoJsonLayerDescription.polygon.transparent = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt"
+            ? mvtLayerDescription
+            : geoJsonLayerDescription,
+        );
+      },
+    },
+    {
+      name: "opacity",
+      params: { min: 0, max: 1, step: 0.01 },
+      onChange: (v) => {
+        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
+          return;
+        waterParams.opacity = v.value;
+        mvtLayerDescription.polygon.opacity = v.value;
+        geoJsonLayerDescription.polygon.opacity = v.value;
         waterLayer.update(
           waterParams.dataType === "mvt"
             ? mvtLayerDescription

@@ -12,11 +12,14 @@ use navara_parser::cesium3dtiles::tileset::Refine;
 use navara_window::Window;
 use url::Url;
 
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
+use crate::{
+    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    RenderedCesium3dTileContent,
+};
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
-    Cesium3dTileContentMetadata, TileOrderByDistance,
+    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform,
 };
 
 pub enum TraversalResult {
@@ -324,22 +327,48 @@ fn update_or_spawn_rendered_tile(
     }
 
     if visible {
-        tile.rendered_tile_id = Some(
-            commands
-                .spawn((
-                    RenderedCesium3dTileContentB3dmMarker,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
-                    RenderedCesium3dTileContent {
-                        layer_id,
-                        feature_id: None,
-                        data_requester_id: tile.data_requester_id.unwrap(),
-                        is_visible: true,
-                    },
-                ))
-                .id(),
-        );
+        if tile.uri.ends_with("pnts") {
+            tile.rendered_tile_id = Some(
+                commands
+                    .spawn((
+                        RenderedCesium3dTileContentPntsMarker,
+                        TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                        RenderedCesium3dTileContent {
+                            layer_id,
+                            feature_id: None,
+                            data_requester_id: tile.data_requester_id.unwrap(),
+                            is_visible: true,
+                        },
+                        TileTransform {
+                            transform: tile.transform.unwrap_or_default(),
+                        },
+                    ))
+                    .id(),
+            );
+        } else if tile.uri.ends_with("b3dm") {
+            tile.rendered_tile_id = Some(
+                commands
+                    .spawn((
+                        RenderedCesium3dTileContentB3dmMarker,
+                        TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                        RenderedCesium3dTileContent {
+                            layer_id,
+                            feature_id: None,
+                            data_requester_id: tile.data_requester_id.unwrap(),
+                            is_visible: true,
+                        },
+                    ))
+                    .id(),
+            );
+        } else {
+            // TODO: support other formats like i3dm, cmpt, etc.
+            unimplemented!("The tile format of {} isn't supported yet", tile.uri);
+        }
     }
 }

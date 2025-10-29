@@ -48,7 +48,7 @@ vec3 specularColor( const vec3 surfaceNormal, const vec3 eyeDirection, float shi
 
     vec3 reflection = normalize( reflect( -sunLightDirection, surfaceNormal ) );
     float direction = max(dot( eyeDirection, reflection ), 0.0);
-    return pow( direction, shiny ) * sunLightColor * spec * ndotL;
+    return pow( direction, shiny ) * sunLightColor * spec;
 }
 
 // Compute water Fresnel factor
@@ -97,4 +97,13 @@ vec3 computeWaterSpecularSimple(
     float specularF = computeWaterFresnel(normal, toEye);
     
     return specularColor(normal, toEye, shininess, specStrength) * specularF;
+}
+
+vec3 getSkyEnv(const in vec3 geometryNormal, const in samplerCube envMap, const in vec3 worldPosition) {
+    vec3 worldNormal = inverseTransformDirection( geometryNormal, viewMatrix );
+    vec3 cameraToFrag  = normalize(worldPosition - cameraPosition);
+
+    vec3 reflectDir = reflect(cameraToFrag, worldNormal);
+
+    return textureCube(envMap, reflectDir).rgb;
 }

@@ -9,6 +9,7 @@ export * from "./RainDropEffectLayer";
 export * from "./SelectiveEffectLayer";
 export * from "./SelectiveOutlineEffectLayer";
 export * from "./TestSelectiveEffectLayer";
+export * from "./SkyEnvMapEffectLayer";
 export * from "./SMAAEffectLayer";
 export * from "./SSAOEffectLayer";
 export * from "./SSREffectLayer";

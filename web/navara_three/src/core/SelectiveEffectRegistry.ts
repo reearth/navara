@@ -16,12 +16,12 @@ export type SelectiveEffectOptions = {
 
 export type SelectiveEffectResources = {
   scene: Scene;
-  sceneDepthEnabled: Scene;    // Scene for objects with depthTest enabled
-  sceneDepthDisabled: Scene;   // Scene for objects with depthTest disabled
+  sceneDepthEnabled: Scene; // Scene for objects with depthTest enabled
+  sceneDepthDisabled: Scene; // Scene for objects with depthTest disabled
   maskRT: WebGLRenderTarget;
   highlightRT: WebGLRenderTarget;
   objects: WeakMap<Object3D, Object3D>; // source -> clone
-  objectLayerMap: Map<string, string>;  // sourceId -> layerId cache
+  objectLayerMap: Map<string, string>; // sourceId -> layerId cache
   options: SelectiveEffectOptions;
   maskDebug?: BufferView;
 };
@@ -157,7 +157,7 @@ export class SelectiveEffectRegistry {
     // Cache layerId for performance and add to appropriate depth-specific scene
     if (layerId) {
       resources.objectLayerMap.set(sourceObject.uuid, layerId);
-      
+
       // Add to appropriate scene based on depth settings
       const ignoreDepth = this.shouldIgnoreDepth(layerId);
       if (ignoreDepth) {

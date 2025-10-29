@@ -191,12 +191,13 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
       color: 0xffdcad,
       metalness: 0.02,
       roughness: 0.3,
-      reflectivity: 0.8,
+      reflectivity: 0.2,
       receive_shadow: true,
       height: -20,
       water: true,
       water_scale_normal: 2.0,
       water_speed: 0.003,
+      specular: true,
     },
   };
 
@@ -207,7 +208,7 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
     },
     polygon: {
       color: 0xcef7ff,
-      reflectivity: 0.9,
+      reflectivity: 0.2,
       clamp_to_ground: true,
       wireframe: false,
       water: true,

@@ -63,6 +63,7 @@ import {
   FXAAEffectLayer,
   LensFlareEffectLayer,
   MRTPassEffectLayer,
+  SkyEnvMapEffectLayer,
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
@@ -240,6 +241,7 @@ export default class ThreeView<
   atmosphere: Atmosphere;
 
   // Layers
+  skyEnvMapLayer?: LayerHandle<SkyEnvMapEffectLayer>;
   mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
   transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
   finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
@@ -464,6 +466,7 @@ export default class ThreeView<
       opaque: new Scene(),
       transparent: new Scene(),
       postprocessing: new Map(),
+      skyEnvMap: new Scene(),
     };
 
     if (options.camera) {
@@ -517,6 +520,7 @@ export default class ThreeView<
       frustumRatio: { value: null },
       tGlobeDepth: { value: null },
       tGlobeNormal: { value: null },
+      tSkyEnvMap: { value: null },
       inverseProjectionMatrix: { value: null },
       // TODO: Need to sync `fov` with WASM side
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
@@ -605,6 +609,10 @@ export default class ThreeView<
     // Initialize atmosphere
     await this.atmosphere.init();
 
+    this.skyEnvMapLayer = this.addLayer<SkyEnvMapEffectLayer>({
+      type: "effect",
+      skyEnvMap: {},
+    } as LayerDescription);
     this.mrtPassLayer = this.addLayer<MRTPassEffectLayer>({
       type: "effect",
       mrt: {
@@ -822,6 +830,8 @@ export default class ThreeView<
       this.renderPass.globeDepthCopyPass.texture;
     this._uniforms.tGlobeNormal.value =
       this.renderPass.globeNormalCopyPass.texture;
+    this._uniforms.tSkyEnvMap.value =
+      this.skyEnvMapLayer?.ref.raw?.getEnvMapTexture() ?? null;
     this._uniforms.inverseProjectionMatrix.value =
       this.camera.raw.projectionMatrixInverse;
 
@@ -941,8 +951,13 @@ export default class ThreeView<
 
     // Register effects if specified in layer config
     if ("effects" in l && Array.isArray(l.effects) && l.effects.length > 0) {
-      const ignoreDepth = "ignoreDepth" in l ? (l.ignoreDepth as boolean) : undefined;
-      this.viewContext.registerLayerEffects(layerId, l.effects as string[], ignoreDepth);
+      const ignoreDepth =
+        "ignoreDepth" in l ? (l.ignoreDepth as boolean) : undefined;
+      this.viewContext.registerLayerEffects(
+        layerId,
+        l.effects as string[],
+        ignoreDepth,
+      );
     }
 
     const layer = new Layer(layerId, this._core);
@@ -993,6 +1008,7 @@ export default class ThreeView<
   }
 
   private registerBuiltInEffects(): void {
+    this.registerEffect("skyEnvMap", SkyEnvMapEffectLayer);
     this.registerEffect("mrt", MRTPassEffectLayer);
 
     this.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
@@ -1187,6 +1203,13 @@ export default class ThreeView<
       sky: this.addLayer<SkyMeshLayer>({
         type: "mesh",
         sky: {},
+      } as LayerDescription),
+      skyEnv: this.addLayer<SkyMeshLayer>({
+        type: "mesh",
+        sky: {
+          envMap: true,
+          sunAngularRadius: 0.1,
+        },
       } as LayerDescription),
       stars: this.addLayer<StarsLayer>({
         type: "mesh",

@@ -134,7 +134,7 @@ export abstract class SelectiveEffectLayerBase<
    * Render mask to maskRT
    * Uses separate scenes for depthTest enabled/disabled objects
    * This completely eliminates the need for scene traversal
-   * 
+   *
    * Performance optimizations:
    * - Zero scene.traverse() calls
    * - Uses overrideMaterial for fastest rendering
@@ -182,6 +182,10 @@ export abstract class SelectiveEffectLayerBase<
    * Find layer ID for an object by its source ID
    */
   private findLayerIdForObject(sourceId: string): string | undefined {
+    const cached = this.resources.objectLayerMap.get(sourceId);
+    if (cached) {
+      return cached;
+    }
     // Check all registered layer effects
     for (const layer of this.view.layersManager.getResourceLayers()) {
       const effects = this.view.getLayerEffects(layer.id);

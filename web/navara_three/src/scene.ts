@@ -19,6 +19,8 @@ export type Scenes = {
   transparent: Scene;
   // Container for selective postprocessing scenes (effectId -> Scene).
   postprocessing: Map<string, Scene>;
+  // Render sky environment map to a cube map for reflections
+  skyEnvMap: Scene;
 };
 
 export class SceneGroup extends Group {}

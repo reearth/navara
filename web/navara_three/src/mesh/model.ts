@@ -15,6 +15,7 @@ import ShadowMapDepthVertex from "@shaders/glsl/chunks/shadowmap_depth_vertex.gl
 import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
 import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
+import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
@@ -23,6 +24,7 @@ import {
   DataTexture,
   Group,
   Mesh,
+  Points,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
@@ -31,6 +33,8 @@ import {
   Texture,
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
+  ShaderChunk,
+  PointsMaterial,
 } from "three";
 import {
   AnimationAction,
@@ -73,6 +77,32 @@ export class ModelMesh
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
+
+  /**
+   * Loads the water normal map texture if water is enabled.
+   * Returns the texture if it should be used, or null otherwise.
+   */
+  private enableWaterNormalMap(
+    water: boolean,
+    waterNormalUrl?: string,
+  ): Texture | null {
+    // Only load if water is enabled
+    if (!water) {
+      return null;
+    }
+
+    // Load texture if not already loaded
+    if (!this.waterNormalMapTexture) {
+      this.waterNormalMapTexture = TEXTURE_LOADER.load(
+        waterNormalUrl ?? WATER_NORMAL_URL,
+        (texture) => {
+          texture.wrapS = texture.wrapT = RepeatWrapping;
+        },
+      );
+    }
+
+    return this.waterNormalMapTexture;
+  }
   private actions = new Map<string, AnimationAction>();
   private currentAction: AnimationAction | null = null;
   private animationSpeed = 1.0;
@@ -110,15 +140,10 @@ export class ModelMesh
 
     const meshMaterial = m.material;
 
-    // Load water normal map once for the entire ModelMesh if water is enabled
-    if (meshMaterial.water) {
-      this.waterNormalMapTexture = TEXTURE_LOADER.load(
-        meshMaterial.water_normal_url ?? WATER_NORMAL_URL,
-        (texture) => {
-          texture.wrapS = texture.wrapT = RepeatWrapping;
-        },
-      );
-    }
+    this.waterNormalMapTexture = this.enableWaterNormalMap(
+      !!meshMaterial.water,
+      meshMaterial.water_normal_url,
+    );
 
     // For Cesium 3D Tiles
     if (batchIds) {
@@ -129,6 +154,11 @@ export class ModelMesh
         uniforms,
         viewEvents,
       );
+    }
+
+    if (meshMaterial.__internal__?.point_cloud) {
+      // Point cloud specific initialization can go here
+      this.overridePntsMaterial();
     }
 
     this.userData.prev = {};
@@ -281,6 +311,12 @@ export class ModelMesh
       mesh.material.userData.waterNormalMap = {
         value: this.waterNormalMapTexture,
       };
+      mesh.material.userData.specular = {
+        value: meshMaterial.specular ?? false,
+      };
+      mesh.material.userData.ior = {
+        value: meshMaterial.ior ?? 1.33333,
+      };
 
       this.water = !!meshMaterial.water;
       this.setMaterial(meshMaterial, mesh);
@@ -293,11 +329,19 @@ export class ModelMesh
         mesh.material.userData.defines.WATER = 1;
       }
 
+      mesh.material.customProgramCacheKey = () =>
+        mesh.material.onBeforeCompile.toString() +
+        JSON.stringify(mesh.material.userData.defines);
+
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
         shader.defines ??= {};
         Object.assign(shader.defines, mesh.material.userData.defines);
+        if (this.water && uniforms.tSkyEnvMap.value) {
+          shader.defines.USE_SKY_ENVMAP = "1";
+          shader.uniforms.tSkyEnvMap = uniforms.tSkyEnvMap;
+        }
         shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
         shader.uniforms.reflectivity = mesh.material.userData.reflectivity;
         shader.uniforms.uWaterNormalMap = mesh.material.userData.waterNormalMap;
@@ -309,6 +353,8 @@ export class ModelMesh
           mesh.material.userData.specularStrength;
         shader.uniforms.uApplyWaterNormal =
           mesh.material.userData.applyWaterNormal;
+        shader.uniforms.uSpecular = mesh.material.userData.specular;
+        shader.uniforms.uIor = mesh.material.userData.ior;
         shader.uniforms.uTime = uniforms.time;
         shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
 
@@ -368,17 +414,20 @@ export class ModelMesh
             `
                   uniform float nvr_uPickable;
                   uniform sampler2D uWaterNormalMap;
+                  uniform samplerCube tSkyEnvMap;
                   uniform float uWaterScaleNormal;
                   uniform float uWaterSpeed;
                   uniform float uShininess;
                   uniform float uSpecularStrength;
                   uniform float uApplyWaterNormal;
+                  uniform bool uSpecular;
+                  uniform float uIor;
                   uniform float uTime;
                   // uniform float reflectivity;
                   in float nvr_vBatchId;
-                  
+
                   ${ShowParsFragment}
-                  
+
                   ${Pick}
 
                   ${ShadowMapDepthParsFragment}
@@ -389,10 +438,11 @@ export class ModelMesh
                   `,
           )
           .replace(
-            "#include <lights_pars_begin>",
+            "#include <lights_physical_pars_fragment>",
             `
-        #include <lights_pars_begin>
+        #include <lights_physical_pars_fragment>
         ${WaterParsFragment}
+        ${SpecularParsFragment}
         `,
           )
           .replace(
@@ -412,6 +462,15 @@ export class ModelMesh
             normal
           );
         #else
+          if(uSpecular) {
+            specular = computeSpecular(
+              vViewPosition,
+              origNormal,
+              uShininess,
+              uSpecularStrength,
+              uIor
+            );
+          }
           #include <normal_fragment_maps>
         #endif
         `,
@@ -420,6 +479,10 @@ export class ModelMesh
             "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
             `
             vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
+            #if defined(WATER) && defined(USE_SKY_ENVMAP)
+              vec3 envColor = getSkyEnv(geometryNormal, tSkyEnvMap, vPosition);
+              outgoingLight += envColor * reflectivity;
+            #endif
             outgoingLight += specular;
           `,
           )
@@ -446,6 +509,48 @@ export class ModelMesh
       this.initDepthMaterial(mesh);
 
       viewEvents.emit("_csmMounted", mesh.material);
+    });
+  }
+
+  private traversePoints(
+    f: (
+      points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
+    ) => void,
+  ) {
+    this.traverse((object: Object3D) => {
+      if (object instanceof Points) {
+        f(object);
+      }
+    });
+  }
+
+  private overridePntsMaterial() {
+    this.traverse((object: Object3D) => {
+      if (!(object instanceof Points)) {
+        return;
+      }
+
+      const material = object.material;
+      material.onBeforeCompile = (
+        shader: WebGLProgramParametersWithUniforms,
+      ) => {
+        // Update vertex shader
+        const colorDivisior = 65535.0;
+        shader.vertexShader = createReplacer(shader.vertexShader).replace(
+          "#include <color_vertex>",
+          createReplacer(ShaderChunk.color_vertex)
+            .replace(
+              "vColor = vec4( 1.0 );",
+              `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
+            )
+            .replace(
+              "vColor = vec3( 1.0 );",
+              `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
+            ).source,
+        ).source;
+      };
+
+      this.setMaterial(material, object);
     });
   }
 
@@ -479,9 +584,15 @@ export class ModelMesh
       this.userData.prev.visible = next;
     }
 
-    this.traverseMesh((m) => {
-      this.setMaterial(material, m);
-    });
+    if (!material.__internal__?.point_cloud) {
+      this.traverseMesh((m) => {
+        this.setMaterial(material, m);
+      });
+    } else {
+      this.traversePoints((pnts) => {
+        this.setMaterial(material, pnts);
+      });
+    }
 
     // Minimal animation updates: speed and active clip
     if (this.mixer) {
@@ -512,7 +623,9 @@ export class ModelMesh
 
   private setMaterial(
     src: NavaraModelMaterial,
-    dist: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    dist:
+      | Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>
+      | Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
   ) {
     const distMaterial = dist.material;
 
@@ -524,79 +637,91 @@ export class ModelMesh
       distMaterial.color.set(next);
       distMaterial.userData.prev.color = next;
     }
-    if (distMaterial.userData.prev.metalness !== src.metalness) {
-      const next = src.metalness ?? 0;
-      distMaterial.metalness = next;
-      distMaterial.userData.prev.metalness = next;
-    }
-    if (distMaterial.userData.prev.roughness !== src.roughness) {
-      const next = src.roughness ?? 0;
-      distMaterial.roughness = next;
-      distMaterial.userData.prev.roughness = next;
-    }
-    if (distMaterial.userData.prev.water !== src.water) {
-      const next = !!src.water;
-      this.water = next;
-      distMaterial.userData.prev.water = next;
-      // Update water define
-      distMaterial.userData.defines = distMaterial.userData.defines || {};
-      if (next) {
-        distMaterial.userData.defines.WATER = 1;
-        // Load water texture once at ModelMesh level if not already loaded
-        if (!this.waterNormalMapTexture) {
-          this.waterNormalMapTexture = TEXTURE_LOADER.load(
-            src.water_normal_url ?? WATER_NORMAL_URL,
-            (texture) => {
-              texture.wrapS = texture.wrapT = RepeatWrapping;
-            },
-          );
-        }
-        // Share the same texture instance across all meshes
-        distMaterial.userData.waterNormalMap.value = this.waterNormalMapTexture;
-      } else {
-        delete distMaterial.userData.defines.WATER;
+    if (distMaterial instanceof PointsMaterial) {
+      if (distMaterial.userData.prev.point_size !== src.point_size) {
+        const next = src.point_size ?? 0;
+        distMaterial.size = next;
+        distMaterial.userData.prev.point_size = next;
       }
-      distMaterial.needsUpdate = true;
-    }
-    if (distMaterial.userData.prev.reflectivity !== src.reflectivity) {
-      const next = src.reflectivity ?? 0;
-      distMaterial.userData.reflectivity.value = next;
-      distMaterial.userData.prev.reflectivity = next;
     }
     if (
-      distMaterial.userData.prev.waterScaleNormal !== src.water_scale_normal
+      distMaterial instanceof MeshStandardMaterial ||
+      distMaterial instanceof MeshPhysicalMaterial
     ) {
-      const next = src.water_scale_normal ?? 0.01;
-      distMaterial.userData.waterScaleNormal.value = next;
-      distMaterial.userData.prev.waterScaleNormal = next;
-    }
-    if (distMaterial.userData.prev.waterSpeed !== src.water_speed) {
-      const next = src.water_speed ?? 0.0003;
-      distMaterial.userData.waterSpeed.value = next;
-      distMaterial.userData.prev.waterSpeed = next;
-    }
-    if (distMaterial.userData.prev.shininess !== src.shininess) {
-      const next = src.shininess ?? 0;
-      distMaterial.userData.shininess.value = next;
-      distMaterial.userData.prev.shininess = next;
-    }
-    if (distMaterial.userData.prev.specularStrength !== src.specular_strength) {
-      const next = src.specular_strength ?? 0;
-      distMaterial.userData.specularStrength.value = next;
-      distMaterial.userData.prev.specularStrength = next;
-    }
-    if (
-      distMaterial.userData.prev.applyWaterNormal !== src.apply_water_normal
-    ) {
-      const next = src.apply_water_normal ?? 0;
-      distMaterial.userData.applyWaterNormal.value = next;
-      distMaterial.userData.prev.applyWaterNormal = next;
-    }
-    if (dist.castShadow !== src.cast_shadow) {
-      dist.castShadow = !!src.cast_shadow;
-    }
-    if (dist.receiveShadow !== src.receive_shadow) {
-      dist.receiveShadow = !!src.receive_shadow;
+      if (distMaterial.userData.prev.metalness !== src.metalness) {
+        const next = src.metalness ?? 0;
+        distMaterial.metalness = next;
+        distMaterial.userData.prev.metalness = next;
+      }
+      if (distMaterial.userData.prev.roughness !== src.roughness) {
+        const next = src.roughness ?? 0;
+        distMaterial.roughness = next;
+        distMaterial.userData.prev.roughness = next;
+      }
+      if (distMaterial.userData.prev.water !== src.water) {
+        const next = !!src.water;
+        this.water = next;
+        distMaterial.userData.prev.water = next;
+        // Update water define
+        distMaterial.userData.defines = distMaterial.userData.defines || {};
+        if (next) {
+          distMaterial.userData.defines.WATER = 1;
+
+          distMaterial.userData.waterNormalMap.value =
+            this.enableWaterNormalMap(next, src.water_normal_url);
+        } else {
+          delete distMaterial.userData.defines.WATER;
+          distMaterial.userData.waterNormalMap.value = null;
+        }
+        distMaterial.needsUpdate = true;
+      }
+      if (distMaterial.userData.prev.reflectivity !== src.reflectivity) {
+        const next = src.reflectivity ?? 0;
+        distMaterial.userData.reflectivity.value = next;
+        distMaterial.userData.prev.reflectivity = next;
+      }
+      if (
+        distMaterial.userData.prev.waterScaleNormal !== src.water_scale_normal
+      ) {
+        const next = src.water_scale_normal ?? 0.01;
+        distMaterial.userData.waterScaleNormal.value = next;
+        distMaterial.userData.prev.waterScaleNormal = next;
+      }
+      if (distMaterial.userData.prev.waterSpeed !== src.water_speed) {
+        const next = src.water_speed ?? 0.0003;
+        distMaterial.userData.waterSpeed.value = next;
+        distMaterial.userData.prev.waterSpeed = next;
+      }
+      if (distMaterial.userData.prev.shininess !== src.shininess) {
+        const next = src.shininess ?? 0;
+        distMaterial.userData.shininess.value = next;
+        distMaterial.userData.prev.shininess = next;
+      }
+      if (
+        distMaterial.userData.prev.specularStrength !== src.specular_strength
+      ) {
+        const next = src.specular_strength ?? 0;
+        distMaterial.userData.specularStrength.value = next;
+        distMaterial.userData.prev.specularStrength = next;
+      }
+      if (
+        distMaterial.userData.prev.applyWaterNormal !== src.apply_water_normal
+      ) {
+        const next = src.apply_water_normal ?? 0;
+        distMaterial.userData.applyWaterNormal.value = next;
+        distMaterial.userData.prev.applyWaterNormal = next;
+      }
+      if (distMaterial.userData.prev.specular !== src.specular) {
+        const next = src.specular ?? false;
+        distMaterial.userData.specular.value = next;
+        distMaterial.userData.prev.specular = next;
+      }
+      if (dist.castShadow !== src.cast_shadow) {
+        dist.castShadow = !!src.cast_shadow;
+      }
+      if (dist.receiveShadow !== src.receive_shadow) {
+        dist.receiveShadow = !!src.receive_shadow;
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 import type { Nullable, TileHandle } from "@navara/core";
 import type {
   B3dmLayerDescription,
+  PntsLayerDescription,
   Cesium3dTilesLayerDescription,
   GeoJsonLayerDescription,
   TerrainLayerDescription,
@@ -41,6 +42,7 @@ import type {
   RainDropConfig,
   SelectiveBloomConfig,
   SelectiveOutlineConfig,
+  SkyEnvMapPassConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
@@ -58,6 +60,7 @@ export type LayerDescription =
   | TerrainLayer
   | GeoJsonLayer
   | B3dmLayer
+  | PntsLayer
   | Cesium3dTilesLayer
   | MvtLayer
   | MeshLayerDeclarationDescription
@@ -94,6 +97,7 @@ export type EffectLayerDeclarationDescription =
   | FXAAConfig
   | LensFlareConfig
   | MRTPassConfig
+  | SkyEnvMapPassConfig
   | RainDropConfig
   | SelectiveBloomConfig
   | SelectiveOutlineConfig
@@ -135,14 +139,17 @@ type LayerEffectOptions = {
   ignoreDepth?: boolean;
 };
 
-export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }> & LayerEffectOptions;
-export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }> & LayerEffectOptions;
-export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }> & LayerEffectOptions;
-export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }> & LayerEffectOptions;
+export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
+export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
+export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
+export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
+export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }>;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
-> & LayerEffectOptions;
-export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }> & LayerEffectOptions;
+> &
+  LayerEffectOptions;
+export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }> &
+  LayerEffectOptions;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 export type DrapedMaterialCache = Map<string, Material>;

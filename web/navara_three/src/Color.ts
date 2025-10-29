@@ -1,5 +1,5 @@
 import { Color as CoreColor } from "@navara/core";
-import { SRGBColorSpace, Color as ThreeColor } from "three";
+import { NoColorSpace, SRGBColorSpace, Color as ThreeColor } from "three";
 
 /**
  * Class representing a color.
@@ -19,6 +19,11 @@ export class Color implements CoreColor {
    */
   setRGB(r: number, g: number, b: number) {
     this.#color.setRGB(r, g, b, SRGBColorSpace);
+    return this;
+  }
+
+  setRGBLinear(r: number, g: number, b: number) {
+    this.#color.setRGB(r, g, b, NoColorSpace);
     return this;
   }
 

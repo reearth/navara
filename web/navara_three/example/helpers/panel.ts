@@ -204,6 +204,7 @@ export const addCtrlPanel = (
     outline_offset: { x: 0, y: 0 },
     outline_opacity: 1.0,
     surface_show: true,
+    point_size: 0.3,
   };
 
   pane
@@ -244,17 +245,23 @@ export const addCtrlPanel = (
   function onDeleteBtnClick() {
     if (btnCtrl.title == "Delete Layer") {
       view.deleteLayerById(layerIds[paneParams.layer]);
+      layerInstMap.delete(layerIds[paneParams.layer]);
       layerDeleted[paneParams.layer] = 1;
       btnCtrl.title = "Add Layer";
     } else {
       const oldLayerId = layerIds[paneParams.layer];
       const layerDef = layerMap.get(oldLayerId);
       if (layerDef) {
-        const newLayerId = view.addLayer(layerDef).id;
-        if (newLayerId) {
-          layerMap.set(newLayerId, layerDef);
-          layerIds[paneParams.layer] = newLayerId;
+        const newLayer = view.addLayer(layerDef);
+        if (newLayer.id) {
+          layerInstMap.set(newLayer.id, newLayer);
+          layerMap.set(newLayer.id, layerDef);
+          layerIds[paneParams.layer] = newLayer.id;
           layerDeleted[paneParams.layer] = 0;
+
+          if (layerDef.type !== "tiles") {
+            addFeatureUpdateHandler(layerDef, newLayer);
+          }
         }
       }
 
@@ -441,6 +448,10 @@ export const addCtrlPanel = (
 
       if ("surface_show" in material) {
         material.surface_show = paneParams.surface_show;
+      }
+
+      if ("point_size" in material) {
+        material.point_size = paneParams.point_size;
       }
 
       view.updateLayerById(layerId, {
@@ -664,6 +675,14 @@ function createParamCtrl(
     if ("surface_show" in material) {
       paneParams.surface_show = material.surface_show;
       f.addBinding(paneParams, "surface_show").on("change", changeFunc);
+    }
+
+    if ("point_size" in material) {
+      paneParams.point_size = material.point_size;
+      f.addBinding(paneParams, "point_size", { min: 0, max: 10 }).on(
+        "change",
+        changeFunc,
+      );
     }
     return f;
   }

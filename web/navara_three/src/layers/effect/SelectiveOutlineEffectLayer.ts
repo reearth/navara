@@ -1,6 +1,4 @@
-import {
-  Pass as PostProcessingPass,
-} from "postprocessing";
+import { Pass as PostProcessingPass } from "postprocessing";
 import {
   Color,
   Mesh,

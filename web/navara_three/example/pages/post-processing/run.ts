@@ -45,16 +45,16 @@ export const run = async (view: ThreeView) => {
   const date = new Date();
   date.setHours(8);
   view.atmosphere.date = date;
-  
+
   // Add SelectiveOutlineEffectLayer with debug mask
   const selectiveOutline = view.addLayer({
     type: "effect",
     selectiveOutline: {
-      color: 0x0000ff,        // Blue outline (for future use)
-      thickness: 2.0,         // Outline thickness (for future use)
-      edgeStrength: 1.0,      // Edge detection strength (for future use)
+      color: 0x0000ff, // Blue outline (for future use)
+      thickness: 2.0, // Outline thickness (for future use)
+      edgeStrength: 1.0, // Edge detection strength (for future use)
     },
-    debugMask: true,          // Show mask in top-left corner
+    debugMask: true, // Show mask in top-left corner
     resolutionScale: 1.0,
   });
 
@@ -81,7 +81,7 @@ export const run = async (view: ThreeView) => {
       y: cubePosition.y,
       z: cubePosition.z,
     },
-    effects: [selectiveOutline.id],  // depthTest enabled (default)
+    effects: [selectiveOutline.id], // depthTest enabled (default)
   });
 
   // Add sphere mesh with selective effect (depthTest enabled)
@@ -102,7 +102,7 @@ export const run = async (view: ThreeView) => {
       y: spherePosition.y,
       z: spherePosition.z,
     },
-    effects: [selectiveOutline.id],  // depthTest enabled (default)
+    effects: [selectiveOutline.id], // depthTest enabled (default)
   });
 
   // Add GeoJSON drum model near Tokyo Station with selective effect
@@ -224,7 +224,6 @@ export const run = async (view: ThreeView) => {
       receive_shadow: true,
     },
     //effects: [selectiveOutline.id],  // ← ここにeffects配列を追加
-    
   });
 
   showAttributions([

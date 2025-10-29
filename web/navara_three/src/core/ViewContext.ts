@@ -50,9 +50,13 @@ export class ViewContext {
     this.eventHandler?.emit(event, material);
   }
 
-  registerLayerEffects(layerId: string, effects: string[], ignoreDepth?: boolean): void {
+  registerLayerEffects(
+    layerId: string,
+    effects: string[],
+    ignoreDepth?: boolean,
+  ): void {
     this.layerEffects.set(layerId, effects);
-    
+
     // Register depth setting if provided
     if (ignoreDepth !== undefined && this.selectiveRegistry) {
       this.selectiveRegistry.registerLayerDepth(layerId, ignoreDepth);
