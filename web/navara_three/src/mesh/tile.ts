@@ -594,6 +594,7 @@ vUv = vUv * uScale + uOffset;
       origNormal,
       waterShininess,
       waterSpecularStrength,
+      diffuseColor.rgb,
       normal
     );
   } else if(useSpecular) {
@@ -638,7 +639,7 @@ if (uPickable > 0.) {
         )
         .replaceWithCondition(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
-          `vec3 finalNormal = mix(origNormal, normal, applyWaterNormals);
+          `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
           outputBuffer1 = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
           hasNormal,
         ).source;

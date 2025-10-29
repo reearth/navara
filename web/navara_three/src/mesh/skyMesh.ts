@@ -16,9 +16,21 @@ export type SkyMeshOptions = {
   visible?: boolean;
   sun?: boolean;
   moon?: boolean;
+  /**
+   * @default 1
+   */
   moonScale?: number;
+  /**
+   * @default 1
+   */
   moonIntensity?: number;
+  /**
+   * @default 0.004675
+   */
   sunAngularRadius?: number;
+  /**
+   * Render as env map
+   */
   envMap?: boolean;
 };
 
@@ -122,6 +134,15 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   set moonIntensity(v: number) {
     this.options.moonIntensity = v;
     this.raw.material.lunarRadianceScale = v;
+    this.emit("_needsUpdate");
+  }
+
+  get sunAngularRadius() {
+    return this.options.sunAngularRadius ?? 1;
+  }
+  set sunAngularRadius(v: number) {
+    this.options.sunAngularRadius = v;
+    this.raw.material.sunAngularRadius = v;
     this.emit("_needsUpdate");
   }
 

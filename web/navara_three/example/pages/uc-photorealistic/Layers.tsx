@@ -1,31 +1,56 @@
 import {
   type LayerDescription,
-  type TilesLayer,
   JAPAN_GSI_ELEVATION_DECODER,
-  Layer as NavaraLayer,
 } from "@navara/three";
 import { Layer, useViewContext } from "@navara/three_react";
-import { useMemo, useState, type FC } from "react";
+import { useEffect, useMemo, type FC } from "react";
+import { SphericalHarmonics3, Vector2 } from "three";
+
+import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 import {
-  TILE_DATASETS,
-  TERRAIN_DATASETS,
-  TILES_3D_DATASETS,
-  LOCAL_DATASETS,
-} from "../../helpers/constants";
+  BuildingTilesLayer,
+  type BuildingColorAttribute,
+} from "./BuildingLayer";
+import { BUILDING_DATASETS, UC_PHOTOREALISTIC_DATASETS } from "./datasets";
+import { useDefaultLayers } from "./hooks";
+import { useNightContext } from "./NightContext";
+import { QUALITY, type QualityFlags } from "./quality";
 
-import { useCloudOverlayOpacity, useDefaultLayers } from "./hooks";
+export type SceneLayerToggles = {
+  buildingsVisible?: boolean;
+  buildingColorAttribute?: BuildingColorAttribute;
+  cloudsEffectVisible?: boolean;
+  rainVisible?: boolean;
+  quality?: QualityFlags;
+  cloudShadow?: boolean;
+  waterSurface?: boolean;
+  waterAreaVisible?: boolean;
+  individualBuildingVisibility?: boolean[];
+};
 
-export const Layers: FC = () => {
+export const Layers: FC<SceneLayerToggles> = ({
+  buildingsVisible = true,
+  buildingColorAttribute = "bldg:measuredHeight",
+  cloudsEffectVisible = true,
+  rainVisible = false,
+  quality = "high",
+  cloudShadow = false,
+  waterSurface = false,
+  waterAreaVisible = false,
+  individualBuildingVisibility = BUILDING_DATASETS.map(() => true),
+}) => {
   const { view } = useViewContext();
 
   const defaultLayers = useDefaultLayers(view);
+
+  const { isNight } = useNightContext();
 
   // Descriptions
   const baseTiles = useMemo<LayerDescription>(
     () => ({
       type: "tiles",
-      data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
+      data: { url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url },
       raster_tile: { min_zoom: 2, max_zoom: 18 },
     }),
     [],
@@ -34,7 +59,7 @@ export const Layers: FC = () => {
   const terrain = useMemo<LayerDescription>(
     () => ({
       type: "terrain",
-      data: { url: TERRAIN_DATASETS.gsi.url },
+      data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
       raster_terrain: {
         min_zoom: 6,
         max_zoom: 15,
@@ -46,75 +71,165 @@ export const Layers: FC = () => {
     [],
   );
 
-  const chiyoda3d = useMemo<LayerDescription>(
-    () => ({
-      type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChiyoda.url,
-      },
-      model: {
-        show: true,
-        color: 0xffffff,
-        metalness: 0,
-        roughness: 1,
-        cast_shadow: true,
-        receive_shadow: true,
-        height: -50,
-      },
-    }),
-    [],
-  );
-
-  const chuo3d = useMemo<LayerDescription>(
-    () => ({
-      type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChuo.url,
-      },
-      model: {
-        show: true,
-        color: 0xffffff,
-        metalness: 0,
-        roughness: 1,
-        cast_shadow: true,
-        receive_shadow: true,
-        height: -50,
-      },
-    }),
-    [],
-  );
-
-  const cloudsOverlayDesc = useMemo<TilesLayer>(
-    () => ({
-      type: "tiles",
-      data: { url: LOCAL_DATASETS.blueMarbleClouds.url },
-      raster_tile: { min_zoom: 2, max_zoom: 6, opacity: 1 },
-    }),
-    [],
-  );
-
-  const [cloudsHandle, setCloudsHandle] = useState<NavaraLayer | null>(null);
-  useCloudOverlayOpacity(view, cloudsHandle, cloudsOverlayDesc);
-
   const cloudsEffect = useMemo<LayerDescription>(
     () => ({
       type: "effect",
-      clouds: {},
+      clouds: {
+        coverage: cloudsEffectVisible ? 0.5 : 0,
+        localWeatherVelocity: new Vector2(0.005, 0.001),
+        absorptionCoefficient: 5,
+        haze: true,
+        hazeDensityScale: 0.001,
+        hazeExponent: 0.002,
+        hazeAbsorptionCoefficient: 1.5,
+        ...QUALITY[quality]?.clouds,
+      },
     }),
-    [],
+    [cloudsEffectVisible, quality],
+  );
+
+  const rainDesc = useMemo<LayerDescription>(
+    () => ({
+      type: "mesh",
+      visible: rainVisible,
+      rain: {
+        particleCount: 5000,
+        followCamera: true,
+      },
+    }),
+    [rainVisible],
+  );
+
+  const rainDropEffect = useMemo<LayerDescription>(
+    () => ({
+      type: "effect",
+      rainDrop: {
+        opacity: 0.5,
+        dropDensity: 0.2,
+        refractionStrength: 0.2,
+        dropSizeFactor: 0.03,
+        dropGridSize: 25,
+        ...QUALITY[quality]?.rainDrop,
+      },
+      visible: rainVisible,
+    }),
+    [rainVisible, quality],
+  );
+
+  const ssrEffect = useMemo<LayerDescription>(
+    () => ({
+      type: "effect",
+      ssr: {
+        iterations: QUALITY[quality]?.ssr?.iterations,
+        useConeTracing: QUALITY[quality]?.ssr?.useConeTracing,
+      },
+      visible: !!QUALITY[quality].ssr,
+    }),
+    [quality],
+  );
+
+  const mvtLayerDescription = useMemo<LayerDescription>(
+    () => ({
+      type: "mvt",
+      data: {
+        url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
+      },
+      polygon: {
+        color: 0x72501a,
+        reflectivity: 0.3,
+        clamp_to_ground: true,
+        wireframe: false,
+        water: waterSurface,
+        shininess: 100,
+        specular_strength: 2,
+        water_scale_normal: 0.5,
+        apply_water_normal: false,
+        receive_shadow: true,
+        specular: true,
+      },
+      vector_tile: {
+        max_zoom: 16,
+        layers: ["waterarea"],
+      },
+    }),
+    [waterSurface],
+  );
+
+  // Night scene tuning inspired by example/pages/night
+  useEffect(() => {
+    // Boost stars and enable at night; keep subtle in day
+    defaultLayers?.atmosphere?.stars.update({
+      stars: isNight
+        ? { intensity: 50, pointSize: 1.5 }
+        : { intensity: 1, pointSize: 1 },
+    });
+  }, [defaultLayers, isNight]);
+
+  useEffect(() => {
+    if (!defaultLayers) return;
+    defaultLayers.atmosphere?.sun.update({
+      sun: {
+        castShadow: true,
+        ...QUALITY[quality]?.sun,
+      },
+    });
+  }, [defaultLayers, quality]);
+
+  useEffect(() => {
+    if (!defaultLayers) return;
+    defaultLayers.atmosphere.skyEnv.update({
+      sky: {
+        sunAngularRadius: cloudsEffectVisible ? 0.0001 : 0.1,
+      },
+    });
+  }, [defaultLayers, cloudsEffectVisible]);
+
+  // Clouds shadow: enable/disable aerial perspective irradiance
+  useEffect(() => {
+    if (!defaultLayers) return;
+    defaultLayers.effects?.aerialPerspective?.update?.({
+      aerialPerspective: { irradiance: !!cloudShadow },
+    });
+  }, [defaultLayers, cloudShadow]);
+
+  const nightLightProbe = useMemo<LayerDescription>(
+    () => ({
+      type: "light",
+      lightProbe: {
+        sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
+        intensity: 0.03,
+      },
+      visible: isNight,
+    }),
+    [isNight],
   );
 
   return (
     <>
       <Layer config={baseTiles} />
       <Layer config={terrain} />
-      <Layer config={chiyoda3d} />
-      <Layer config={chuo3d} />
-      <Layer<NavaraLayer>
-        config={cloudsOverlayDesc}
-        onReady={setCloudsHandle}
-      />
-      {defaultLayers && <Layer config={cloudsEffect} />}
+      {buildingsVisible &&
+        BUILDING_DATASETS.map((dataset, index) =>
+          individualBuildingVisibility[index] ? (
+            <BuildingTilesLayer
+              key={dataset.url}
+              url={dataset.url}
+              colorBy={buildingColorAttribute}
+              heightDomain={dataset.heightDomain}
+              heightOffset={dataset.heightOffset}
+            />
+          ) : null,
+        )}
+      {defaultLayers && (
+        <>
+          <Layer config={cloudsEffect} />
+          <Layer config={ssrEffect} />
+        </>
+      )}
+      <Layer config={rainDesc} />
+      {rainVisible && defaultLayers && <Layer config={rainDropEffect} />}
+      <Layer config={nightLightProbe} />
+      {waterAreaVisible && <Layer config={mvtLayerDescription} />}
     </>
   );
 };

@@ -83,6 +83,9 @@ export class SkyMeshLayer extends MeshLayerDeclaration<
       if (updates.sky.moonIntensity !== undefined) {
         this._skyMesh.moonIntensity = updates.sky.moonIntensity;
       }
+      if (updates.sky.sunAngularRadius !== undefined) {
+        this._skyMesh.sunAngularRadius = updates.sky.sunAngularRadius;
+      }
     }
   }
 

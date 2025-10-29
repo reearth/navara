@@ -1,17 +1,24 @@
 import { ViewProvider } from "@navara/three_react";
-import { StrictMode } from "react";
+// import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import invariant from "tiny-invariant";
 
-import { Layers } from "./Layers";
+import { NightProvider } from "./NightContext";
+import { PhotorealisticScene } from "./PhotorealisticScene";
+
+import { useDarkMode } from "@/components/hooks/useDarkMode";
 
 export const App = () => {
+  useDarkMode({ storageKey: "navara:uc-photoreal" });
   return (
-    <StrictMode>
-      <ViewProvider shadow debug>
-        <Layers />
-      </ViewProvider>
-    </StrictMode>
+    // TODO: Use strict mode
+    // <StrictMode>
+    <ViewProvider shadow animation>
+      <NightProvider>
+        <PhotorealisticScene />
+      </NightProvider>
+    </ViewProvider>
+    // </StrictMode>
   );
 };
 

@@ -20,6 +20,12 @@ impl Appearance {
             (Appearance::Point(dist), Appearance::Point(src)) => {
                 *dist = src.clone();
             }
+            (Appearance::Billboard(dist), Appearance::Billboard(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::Text(dist), Appearance::Text(src)) => {
+                *dist = src.clone();
+            }
             (Appearance::Polyline(dist), Appearance::Polyline(src)) => {
                 *dist = src.clone();
             }

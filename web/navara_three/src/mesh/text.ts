@@ -93,7 +93,6 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     this.userData.addHeight = {
       value: 0.0,
     };
-    this.visible = meshMaterial.show ?? true;
 
     this.initText(meshMaterial);
   }
@@ -372,6 +371,12 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       prev.visible = nextVisible;
     }
 
+    const nextDepthTest = material.depth_test ?? true;
+    if (nextDepthTest !== prev.depthTest) {
+      txt.material.depthTest = nextDepthTest;
+      prev.depthTest = nextDepthTest;
+    }
+
     if (!nextVisible) return;
 
     const nextPaddingX = material.padding?.x ?? 0;
@@ -436,12 +441,6 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     if (nextCornerRadius !== prev.cornerRadius) {
       this.userData.cornerRadius.value = nextCornerRadius;
       prev.cornerRadius = nextCornerRadius;
-    }
-
-    const nextDepthTest = material.depth_test ?? true;
-    if (nextDepthTest !== prev.depthTest) {
-      txt.material.depthTest = nextDepthTest;
-      prev.depthTest = nextDepthTest;
     }
 
     // Update outline properties
