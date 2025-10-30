@@ -16,6 +16,7 @@ The index page shows a card grid using screenshots from `example/public/screensh
 2. From root, run one of:
    - All pages: `pnpm navara_three screenshots`
    - Specific page(s): `pnpm navara_three screenshots <page> [another-page]`
+3. You can specify waiting time to `PAGE_CONFIGS` in `web/navara_three/scripts/generate-screenshots.ts`.
 
 Notes:
 
