@@ -1,8 +1,11 @@
-use crate::{b3dm::RenderedCesium3dTileContentB3dmMarker, RenderedCesium3dTileContent};
+use crate::{
+    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    RenderedCesium3dTileContent,
+};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
-    query::{Added, Changed, With, Without},
+    query::{Added, Changed, Or, With, Without},
     system::{Commands, Query, Res, ResMut},
     world::Ref,
 };
@@ -153,7 +156,10 @@ pub fn update_cesium3dtiles_layer(
     mut rendered_features: Query<&mut RenderableFeature>,
     rendered_tiles: Query<
         &RenderedCesium3dTileContent,
-        With<RenderedCesium3dTileContentB3dmMarker>,
+        Or<(
+            With<RenderedCesium3dTileContentPntsMarker>,
+            With<RenderedCesium3dTileContentB3dmMarker>,
+        )>,
     >,
     mut features: Query<
         &mut ModelMaterial,
@@ -174,7 +180,9 @@ pub fn update_cesium3dtiles_layer(
             }
             for a in &mut l.appearances {
                 if let Appearance::Model(mat) = a {
-                    *mat = u.material.clone();
+                    let mut new_mat = u.material.clone();
+                    new_mat.internal = mat.internal.clone();
+                    *mat = new_mat;
                     mat.should_rotate_in_default = false;
                     mat.clamp_to_ground = false;
                 }
@@ -187,7 +195,9 @@ pub fn update_cesium3dtiles_layer(
                     Err(_) => continue,
                 };
                 if let RenderableFeature::Model { material, .. } = f.as_mut() {
-                    *material = u.material.clone();
+                    let mut new_mat = u.material.clone();
+                    new_mat.internal = material.internal.clone();
+                    *material = new_mat;
                     material.should_rotate_in_default = false;
                     material.clamp_to_ground = false;
                 }
@@ -201,7 +211,9 @@ pub fn update_cesium3dtiles_layer(
                 .feature_id
                 .and_then(|id| features.get_mut(id).ok())
             {
-                *mat = u.material.clone();
+                let mut new_mat = u.material.clone();
+                new_mat.internal = mat.internal.clone();
+                *mat = new_mat;
                 mat.should_rotate_in_default = false;
                 mat.clamp_to_ground = false;
             }

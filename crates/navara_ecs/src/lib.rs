@@ -277,6 +277,7 @@ impl App {
                     LayerDescription::Terrain(_) => "terrain",
                     LayerDescription::GeoJson(_) => "geojson",
                     LayerDescription::B3dm(_) => "b3dm",
+                    LayerDescription::Pnts(_) => "pnts",
                     LayerDescription::Mvt(_) => "mvt",
                     LayerDescription::Cesium3dTiles(_) => "cesium3dtiles",
                 };
@@ -290,6 +291,7 @@ impl App {
         let appearances = match &mut desc {
             LayerDescription::GeoJson(layer) => &layer.appearances,
             LayerDescription::B3dm(layer) => &layer.appearances,
+            LayerDescription::Pnts(layer) => layer.appearances,
             LayerDescription::Cesium3dTiles(layer) => &layer.appearances,
             LayerDescription::Mvt(layer) => &layer.appearances,
             LayerDescription::Tiles(layer) => &vec![layer.appearance.take().unwrap()],

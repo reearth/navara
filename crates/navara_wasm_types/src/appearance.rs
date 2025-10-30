@@ -603,6 +603,10 @@ pub struct ModelMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
+    // Point size for point clouds data.
+    pub point_size: Option<f32>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub __internal__: Option<ModelInternalMaterial>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -636,9 +640,12 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             // animation
             animation_active_clip: val.animation_active_clip,
             animation_speed: val.animation_speed,
+            point_size: val.point_size.unwrap_or(default.point_size),
+            internal: val.__internal__.clone().map(|v| v.into()),
         }
     }
 }
+
 impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
     fn from(value: &'a navara_material::ModelMaterial) -> ModelMaterial {
         ModelMaterial {
@@ -667,6 +674,35 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             // animation
             animation_active_clip: value.animation_active_clip.clone(),
             animation_speed: value.animation_speed,
+            point_size: Some(value.point_size),
+            __internal__: value.internal.clone().as_ref().map(|v| v.into()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelInternalMaterial {
+    #[wasm_bindgen(getter_with_clone)]
+    pub point_cloud: bool,
+    #[wasm_bindgen(getter_with_clone)]
+    pub draco_compressed: bool,
+}
+
+impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMaterial {
+    fn from(value: &'a navara_material::ModelInternalMaterial) -> ModelInternalMaterial {
+        ModelInternalMaterial {
+            point_cloud: value.point_cloud,
+            draco_compressed: value.draco_compressed,
+        }
+    }
+}
+
+impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
+    fn from(value: ModelInternalMaterial) -> navara_material::ModelInternalMaterial {
+        navara_material::ModelInternalMaterial {
+            point_cloud: value.point_cloud,
+            draco_compressed: value.draco_compressed,
         }
     }
 }

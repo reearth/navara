@@ -2,7 +2,7 @@ use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 
 use navara_layer::{
-    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, GeoJsonLayerData, LayerData, MvtLayer,
+    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, GeoJsonLayerData, LayerData, MvtLayer, PntsLayer,
     TerrainDataType, TerrainLayer, TilesLayer,
 };
 
@@ -133,6 +133,36 @@ pub struct B3dmLayerDescription {
 }
 
 impl B3dmLayerDescription {
+    pub fn appearances(&mut self) -> Vec<Appearance> {
+        let mut result = vec![];
+        if let Some(v) = self.model.take() {
+            result.push(Appearance::Model(v.into()));
+        }
+        result
+    }
+
+    pub fn crs(&self) -> Option<navara_core::CRS> {
+        Some(CRS::from_str(self.crs.as_ref()?.as_str()))
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct PntsLayerDescription {
+    #[wasm_bindgen(getter_with_clone)]
+    pub r#type: Option<String>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub crs: Option<String>,
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(skip_deserializing)]
+    pub data: JsValue,
+
+    // Appearances
+    #[wasm_bindgen(getter_with_clone)]
+    pub model: Option<ModelMaterial>,
+}
+
+impl PntsLayerDescription {
     pub fn appearances(&mut self) -> Vec<Appearance> {
         let mut result = vec![];
         if let Some(v) = self.model.take() {
@@ -357,6 +387,26 @@ impl LayerDescription {
                 let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
                 Some(navara_layer::LayerDescription::B3dm(B3dmLayer {
+                    layer_id: layer_id.to_string(),
+                    data: data.map(|d| LayerData { url: d.url }),
+                    appearances: layer.appearances(),
+                    crs: layer.crs(),
+                }))
+            }
+            "pnts" => {
+                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
+                    .unwrap_or_else(|_e| LayerDescriptionData {
+                        data: JsValue::NULL,
+                    });
+
+                let mut data: Option<LayerDescriptionUrl> = None;
+                if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                }
+
+                let mut layer: PntsLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+
+                Some(navara_layer::LayerDescription::Pnts(PntsLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(),
