@@ -123,6 +123,7 @@ pub struct TextMaterial {
     pub depth_test: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
+    /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
     #[wasm_bindgen(getter_with_clone)]
     pub font: Option<String>,
     pub background_color: Option<u32>,

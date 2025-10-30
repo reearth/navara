@@ -76,7 +76,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     return {
       type: "mvt",
       data: {
-        url: "/data/11100_saitama-shi_city_2024_shelter_mvt/{z}/{x}/{y}.pbf",
+        url: "/mvt/11100_saitama-shi_city_2024_shelter_mvt/{z}/{x}/{y}.pbf",
       },
       // Render labels using instanced text anchored at point positions.
       text: {

@@ -88,7 +88,7 @@ export const UC_PHOTOREALISTIC_DATASETS = {
   // Shelter points (source GeoJSON on PLATEAU CMS)
   shelterGeojson: {
     url: "https://assets.cms.plateau.reearth.io/assets/be/fef5a2-d6a0-4c03-b7b1-0c86ffcecde0/11100_saitama-shi_city_2024_shelter.geojson",
-    attribution: "PLATEAU 避難施設データ（埼玉市 2024）",
+    attribution: "PLATEAU 避難施設データ（埼玉市 2024）をMVTに変換して利用",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   } satisfies Dataset,
