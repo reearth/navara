@@ -291,7 +291,7 @@ impl App {
         let appearances = match &mut desc {
             LayerDescription::GeoJson(layer) => &layer.appearances,
             LayerDescription::B3dm(layer) => &layer.appearances,
-            LayerDescription::Pnts(layer) => layer.appearances,
+            LayerDescription::Pnts(layer) => &layer.appearances,
             LayerDescription::Cesium3dTiles(layer) => &layer.appearances,
             LayerDescription::Mvt(layer) => &layer.appearances,
             LayerDescription::Tiles(layer) => &vec![layer.appearance.take().unwrap()],
