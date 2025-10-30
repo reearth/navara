@@ -581,6 +581,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       origNormal,
       uShininess,
       uSpecularStrength,
+      diffuseColor.rgb,
       normal
     );
   }
@@ -626,7 +627,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         .replace(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
           `
-    vec3 finalNormal = mix(origNormal, normal, uApplyWaterNormal);
+    vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), uApplyWaterNormal);
     outputBuffer1 = vec4(packNormalToVec2(finalNormal), reflectivity, roughnessFactor);
   `,
         ).source;
@@ -867,7 +868,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
-    this.outline?._setFeatureShow(visible);
+    this.outline?._setFeatureShow(this.outline.visible && visible);
     this.enableWater();
   }
 

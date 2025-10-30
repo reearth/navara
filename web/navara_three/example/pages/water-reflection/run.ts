@@ -305,7 +305,7 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
     },
     polygon: {
       color: 0x001e0f,
-      reflectivity: 0.2,
+      reflectivity: 0.02,
       clamp_to_ground: true,
       wireframe: false,
       water: true,
@@ -346,7 +346,7 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
       clamp_to_ground: false,
       use_ground_normals: true,
       wireframe: false,
-      reflectivity: 0.2,
+      reflectivity: 0.02,
       roughness: 0.2,
       receive_shadow: false,
       outline_show: false,

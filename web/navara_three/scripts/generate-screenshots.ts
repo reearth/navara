@@ -61,6 +61,9 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   "water-reflection": {
     waitTime: 10000,
   },
+  "uc-photorealistic": {
+    waitTime: 50000,
+  },
 };
 
 class ScreenshotGenerator {

@@ -287,23 +287,24 @@ impl App {
         layer_type
     }
 
-    pub fn update_layer(&mut self, layer_id: &str, desc: LayerDescription) {
-        // TODO: Support multiple appearance
-        let appearance = match desc {
-            LayerDescription::GeoJson(layer) => layer.appearances[0].clone(),
-            LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
-            LayerDescription::Pnts(layer) => layer.appearances[0].clone(),
-            LayerDescription::Cesium3dTiles(layer) => layer.appearances[0].clone(),
-            LayerDescription::Mvt(layer) => layer.appearances[0].clone(),
-            LayerDescription::Tiles(layer) => layer.appearance.unwrap().clone(),
+    pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
+        let appearances = match &mut desc {
+            LayerDescription::GeoJson(layer) => &layer.appearances,
+            LayerDescription::B3dm(layer) => &layer.appearances,
+            LayerDescription::Pnts(layer) => &layer.appearances,
+            LayerDescription::Cesium3dTiles(layer) => &layer.appearances,
+            LayerDescription::Mvt(layer) => &layer.appearances,
+            LayerDescription::Tiles(layer) => &vec![layer.appearance.take().unwrap()],
             _ => return,
         };
-        self.app
-            .world_mut()
-            .send_event(navara_layer_event::UpdateLayerEvent {
-                layer_id: LayerId(layer_id.to_owned()),
-                appearance,
-            });
+        for appearance in appearances {
+            self.app
+                .world_mut()
+                .send_event(navara_layer_event::UpdateLayerEvent {
+                    layer_id: LayerId(layer_id.to_owned()),
+                    appearance: appearance.clone(),
+                });
+        }
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {
