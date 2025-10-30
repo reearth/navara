@@ -24,49 +24,49 @@ export const UC_PHOTOREALISTIC_DATASETS = {
   buildings3DTilesSaitamaSakura: {
     url: "https://assets.cms.plateau.reearth.io/assets/2a/695ff5-0bb1-4e7f-8a4e-7c301e58b753/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11106_sakura-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）桜区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Sakura Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
   buildings3DTilesSaitamaWest: {
     url: "https://assets.cms.plateau.reearth.io/assets/14/896375-2974-4623-b02a-fa7a71a78a70/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11101_nishi-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）西区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Nishi Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
   buildings3DTilesSaitamaNorth: {
     url: "https://assets.cms.plateau.reearth.io/assets/e4/174d24-0479-4b7b-8302-053f3d2e4411/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11102_kita-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）北区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Kita Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
   buildings3DTilesSaitamaSouth: {
     url: "https://assets.cms.plateau.reearth.io/assets/1f/51ec0d-44bf-424f-9b44-05cdfdfa5de3/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11108_minami-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）南区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Minami Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
   buildings3DTilesSaitamaCenter: {
     url: "https://assets.cms.plateau.reearth.io/assets/a0/935444-8044-4cda-9b82-cee922e1d80a/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11105_chuo-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）中央区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Chuo Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
   buildings3DTilesSaitamaOmiya: {
     url: "https://assets.cms.plateau.reearth.io/assets/4d/3051ba-5c06-476d-afba-7fcb44e422c6/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11103_omiya-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）大宮区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Omiya Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
   buildings3DTilesSaitamaUrawa: {
     url: "https://assets.cms.plateau.reearth.io/assets/a4/a34b26-be50-4cc3-acf3-1996d0227f0c/11100_saitama-shi_city_2024_citygml_1_op_bldg_3dtiles_11107_urawa-ku_lod1/tileset.json",
     attribution:
-      "3D都市モデル（Project PLATEAU）さいたま市（2023年度）浦和区 - 国土交通省 PLATEAU",
+      "3D City Model (Project PLATEAU) Saitama City (FY2023) Urawa Ward - MLIT PLATEAU",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   },
@@ -81,14 +81,15 @@ export const UC_PHOTOREALISTIC_DATASETS = {
   floodCzml: {
     url: "https://assets.cms.plateau.reearth.io/assets/c3/2822c1-a99f-46d0-9d73-766b685e2126/11100_saitama-shi_city_2024_flood-simulation_saitama-BP002.czml",
     attribution:
-      "PLATEAU 破堤点別時系列浸水シミュレーションの三次元可視化（荒川水系荒川）",
+      "PLATEAU 3D Visualization of Time-Series Flood Simulation by Levee Break Point (Arakawa River System)",
     attributionUrl: "https://www.mlit.go.jp/plateau/use-case/uc22-026/",
   } satisfies Dataset,
 
   // Shelter points (source GeoJSON on PLATEAU CMS)
   shelterGeojson: {
     url: "https://assets.cms.plateau.reearth.io/assets/be/fef5a2-d6a0-4c03-b7b1-0c86ffcecde0/11100_saitama-shi_city_2024_shelter.geojson",
-    attribution: "PLATEAU 避難施設データ（埼玉市 2024）をMVTに変換して利用",
+    attribution:
+      "PLATEAU Shelter Facility Data (Saitama City 2024) Converted to MVT",
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-11100-saitama-shi-2023",
   } satisfies Dataset,
