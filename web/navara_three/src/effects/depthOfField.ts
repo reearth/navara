@@ -14,10 +14,9 @@ export type DepthOfFieldOptions = {
 export const DEFAULT_DEPTH_OF_FIELD_OPTIONS: Required<DepthOfFieldOptions> = {
   enabled: false,
   blendFunction: BlendFunction.NORMAL,
-  focusDistance: 1,
-  // focusRange: 1,
-  focalLength: 1,
-  bokehScale: 1,
+  focusDistance: 0,
+  focalLength: 0,
+  bokehScale: 3,
 };
 
 export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions> {
@@ -30,7 +29,6 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
     if (!this.rawEffect) return;
     this.rawEffect.blendMode.blendFunction = this.options.blendFunction ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.blendFunction;
     this.rawEffect.cocMaterial.uniforms.focusDistance.value = this.options.focusDistance ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusDistance;
-    // this.rawEffect.cocMaterial.uniforms.focusRange.value = this.options.focusRange ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusRange;
     this.rawEffect.cocMaterial.uniforms.focalLength.value = this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength;
     this.rawEffect.bokehScale = this.options.bokehScale ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.bokehScale;
   }
@@ -56,21 +54,8 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
     this.options.focusDistance = v;
     if (!this.rawEffect) return;
     this.rawEffect.cocMaterial.uniforms.focusDistance.value = v;
-    console.log('focusDistance set to', v);
     this.emit("_needsUpdate");
   }
-
-  // get focusRange() {
-  //   return this.options.focusRange ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusRange;
-  // }
-
-  // set focusRange(v: number) {
-  //   if (this.options.focusRange === v) return;
-  //   this.options.focusRange = v;
-  //   if (!this.rawEffect) return;
-  //   this.rawEffect.cocMaterial.uniforms.focusRange.value = v;
-  //   this.emit("_needsUpdate");
-  // }
 
   get focalLength() {
     return this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength;
@@ -81,7 +66,6 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
     this.options.focalLength = v;
     if (!this.rawEffect) return;
     this.rawEffect.cocMaterial.uniforms.focalLength.value = v;
-    console.log('focalLength set to', v);
     this.emit("_needsUpdate");
   }
 
@@ -94,7 +78,6 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
     this.options.bokehScale = v;
     if (!this.rawEffect) return;
     this.rawEffect.bokehScale = v;
-    console.log('bokehScale set to', v);
     this.emit("_needsUpdate");
   }
 }

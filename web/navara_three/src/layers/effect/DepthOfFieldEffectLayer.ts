@@ -55,10 +55,6 @@ export class DepthOfFieldEffectLayer extends EffectLayerDeclaration<
       this._instance.focusDistance = config.focusDistance;
     }
 
-    // if (config.focusRange !== undefined) {
-    //   this._instance.focusRange = config.focusRange;
-    // }
-
     if (config.focalLength !== undefined) {
       this._instance.focalLength = config.focalLength;
     }

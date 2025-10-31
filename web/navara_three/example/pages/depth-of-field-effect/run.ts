@@ -84,23 +84,18 @@ export const run = async (view: ThreeView) => {
 
     const params = { ...depthOfFieldDefaults };
 
-    pane.addBinding(params, "bokehScale", { min: 1.0, max: 5.0, step: 0.001 })
+    pane.addBinding(params, "bokehScale", { min: 1.0, max: 50.0, step: 0.01 })
         .on("change", (ev) => {
             depthOfFieldLayer.update({ depthOfField: { bokehScale: ev.value } });
         });
 
     const coc = pane.addFolder({ title: "Circle of confusion", expanded: true });
-    coc.addBinding(params, "focusDistance", { min: 0.0, max: 1.0, step: 0.001 })
+    coc.addBinding(params, "focusDistance", { step: 0.000001 })
         .on("change", (ev) => {
             depthOfFieldLayer.update({ depthOfField: { focusDistance: ev.value } });
         });
 
-    // coc.addBinding(params, "focusRange", { min: 0.0, max: 1.0, step: 0.001 })
-    //     .on("change", (ev) => {
-    //         depthOfFieldLayer.update({ depthOfField: { focusRange: ev.value } });
-    //     });
-
-    coc.addBinding(params, "focalLength", { min: 0.0, max: 1.0, step: 0.0001 })
+    coc.addBinding(params, "focalLength", { step: 0.000001 })
         .on("change", (ev) => {
             depthOfFieldLayer.update({ depthOfField: { focalLength: ev.value } });
         });
