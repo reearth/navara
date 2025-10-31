@@ -4,16 +4,13 @@ import type { Camera } from "three";
 import { Effect, type EffectOptions } from "./effect";
 
 export type DepthOfFieldOptions = {
-  blendFunction?: BlendFunction;
   focusDistance?: number;
-  // focusRange?: number;
   focalLength?: number;
   bokehScale?: number;
 } & EffectOptions;
 
 export const DEFAULT_DEPTH_OF_FIELD_OPTIONS: Required<DepthOfFieldOptions> = {
   enabled: false,
-  blendFunction: BlendFunction.NORMAL,
   focusDistance: 0,
   focalLength: 0,
   bokehScale: 3,
@@ -27,22 +24,10 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
 
   protected onMounted(): void {
     if (!this.rawEffect) return;
-    this.rawEffect.blendMode.blendFunction = this.options.blendFunction ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.blendFunction;
+    this.rawEffect.blendMode.blendFunction = BlendFunction.NORMAL;
     this.rawEffect.cocMaterial.uniforms.focusDistance.value = this.options.focusDistance ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusDistance;
     this.rawEffect.cocMaterial.uniforms.focalLength.value = this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength;
     this.rawEffect.bokehScale = this.options.bokehScale ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.bokehScale;
-  }
-
-  get blendFunction() {
-    return this.options.blendFunction ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.blendFunction;
-  }
-
-  set blendFunction(v: BlendFunction) {
-    if (this.options.blendFunction === v) return;
-    this.options.blendFunction = v;
-    if (!this.rawEffect) return;
-    this.rawEffect.blendMode.blendFunction = v;
-    this.emit("_needsUpdate");
   }
 
   get focusDistance() {
