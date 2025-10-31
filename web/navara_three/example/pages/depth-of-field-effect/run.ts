@@ -5,11 +5,7 @@ import ThreeView, {
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import {
-  LOCAL_DATASETS,
-  TILE_DATASETS,
-  TILES_3D_DATASETS,
-} from "../../helpers/constants";
+import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import {
   addHidePaneKeyShortcut,
   addDateControl,
@@ -64,34 +60,6 @@ export const run = async (view: ThreeView) => {
       roughness: 0.1,
       cast_shadow: true,
       receive_shadow: true,
-    },
-  });
-
-  view.addLayer({
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [127.7, 26.2],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 200000,
-      height: 0,
-      clamp_to_ground: true,
-      url: LOCAL_DATASETS.steelDrumGLTF.url,
-      should_rotate_in_default: true,
-      color: 0xffffff,
-      metalness: 0.1,
-      roughness: 0.1,
     },
   });
 
