@@ -104,7 +104,6 @@ export type EffectLayerDeclarationDescription =
   | TransparentPassConfig
   | DepthOfFieldConfig;
 
-
 // export type MVTLayer = {
 //   type: "mvt";
 //   zoom: number;

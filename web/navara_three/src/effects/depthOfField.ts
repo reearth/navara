@@ -11,13 +11,15 @@ export type DepthOfFieldOptions = {
 
 export const DEFAULT_DEPTH_OF_FIELD_OPTIONS: Required<DepthOfFieldOptions> = {
   enabled: false,
-  focusDistance: 0,
-  focalLength: 0,
-  bokehScale: 3,
+  focusDistance: 0.000006,
+  focalLength: 0.000013,
+  bokehScale: 7,
 };
 
-export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions> {
-
+export class DepthOfField extends Effect<
+  DepthOfFieldEffect,
+  DepthOfFieldOptions
+> {
   constructor(camera: Camera, options?: DepthOfFieldOptions) {
     super(camera, new DepthOfFieldEffect(), options);
   }
@@ -25,13 +27,19 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
   protected onMounted(): void {
     if (!this.rawEffect) return;
     this.rawEffect.blendMode.blendFunction = BlendFunction.NORMAL;
-    this.rawEffect.cocMaterial.uniforms.focusDistance.value = this.options.focusDistance ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusDistance;
-    this.rawEffect.cocMaterial.uniforms.focalLength.value = this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength;
-    this.rawEffect.bokehScale = this.options.bokehScale ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.bokehScale;
+    this.rawEffect.cocMaterial.uniforms.focusDistance.value =
+      this.options.focusDistance ??
+      DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusDistance;
+    this.rawEffect.cocMaterial.uniforms.focalLength.value =
+      this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength;
+    this.rawEffect.bokehScale =
+      this.options.bokehScale ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.bokehScale;
   }
 
   get focusDistance() {
-    return this.options.focusDistance ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusDistance;
+    return (
+      this.options.focusDistance ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focusDistance
+    );
   }
 
   set focusDistance(v: number) {
@@ -43,7 +51,9 @@ export class DepthOfField extends Effect<DepthOfFieldEffect, DepthOfFieldOptions
   }
 
   get focalLength() {
-    return this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength;
+    return (
+      this.options.focalLength ?? DEFAULT_DEPTH_OF_FIELD_OPTIONS.focalLength
+    );
   }
 
   set focalLength(v: number) {
