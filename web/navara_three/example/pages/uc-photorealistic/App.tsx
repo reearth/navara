@@ -13,7 +13,7 @@ export const App = () => {
   return (
     // TODO: Use strict mode
     // <StrictMode>
-    <ViewProvider shadow animation>
+    <ViewProvider shadow animation hideUnderground={false}>
       <NightProvider>
         <PhotorealisticScene />
       </NightProvider>

@@ -1,8 +1,12 @@
 use bevy_ecs::world::World;
 use navara_camera::CameraFrustum;
 use navara_data_requester::DataRequester;
-use navara_event_store::{ComponentEvent, EntityEvent, EventStore, ReconstructableComponentEvent};
+use navara_event_store::{
+    ComponentEvent, ComponentEventWithResource, EntityEvent, EventStore,
+    ReconstructableComponentEvent,
+};
 use navara_feature_component::render::RenderableFeature;
+use navara_globe::Globe;
 use navara_layer::LayerId;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
@@ -19,15 +23,22 @@ pub struct Events<'a> {
     pub mesh_removed: Vec<EntityEvent>,
     #[allow(clippy::type_complexity)]
     pub mesh_added: Vec<
-        ComponentEvent<(
-            &'a TileMeshMarker,
-            &'a Mesh,
-            &'a RasterTileInternalMaterial,
-            &'a Transform,
-        )>,
+        ComponentEventWithResource<
+            (
+                &'a TileMeshMarker,
+                &'a Mesh,
+                &'a RasterTileInternalMaterial,
+                &'a Transform,
+            ),
+            &'a Globe,
+        >,
     >,
-    pub mesh_updated:
-        Vec<ComponentEvent<(&'a TileMeshMarker, &'a Mesh, &'a RasterTileInternalMaterial)>>,
+    pub mesh_updated: Vec<
+        ComponentEventWithResource<
+            (&'a TileMeshMarker, &'a Mesh, &'a RasterTileInternalMaterial),
+            &'a Globe,
+        >,
+    >,
     pub data_requested: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub data_requester_removed: Vec<ReconstructableComponentEvent<&'a DataRequester>>,
     pub texture_fragment_reqested: Vec<ReconstructableComponentEvent<&'a TextureFragment>>,
@@ -82,14 +93,14 @@ impl<'a> Events<'a> {
         }
 
         for e in store.mesh_added.iter() {
-            if let Some(e) = ComponentEvent::from_world_4(*e, world) {
+            if let Some(e) = ComponentEventWithResource::from_world_4(*e, world) {
                 events.mesh_added.push(e);
                 is_changed = true;
             }
         }
 
         for e in store.mesh_updated.iter() {
-            if let Some(e) = ComponentEvent::from_world_3(*e, world) {
+            if let Some(e) = ComponentEventWithResource::from_world_3(*e, world) {
                 events.mesh_updated.push(e);
                 is_changed = true;
             }

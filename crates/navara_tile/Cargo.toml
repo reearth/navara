@@ -9,6 +9,7 @@ bevy_ecs.workspace = true
 bevy_log.workspace = true
 navara_core = { path = "../navara_core" }
 navara_geometry = { path = "../navara_geometry" }
+navara_globe = { path = "../navara_globe" }
 navara_layer = { path = "../navara_layer" }
 navara_math = { path = "../navara_math" }
 navara_texture_fragment = { path = "../navara_texture_fragment" }

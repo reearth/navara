@@ -94,6 +94,29 @@ export type TileHandler = {
   getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
 };
 
+/**
+ * Handler for accessing individual Globe properties from WASM.
+ * This provides a reference-based interface instead of copying the entire Globe object.
+ */
+export type GlobeHandler = {
+  getTransparent: () => boolean | undefined;
+  getMaxSse: () => number | undefined;
+  getSegments: () => number | undefined;
+  getColor: () => number | undefined;
+  getHideUnderground: () => boolean | undefined;
+  getShouldComputeNormalFromVertex: () => boolean | undefined;
+  getOpacity: () => number | undefined;
+  getWireframe: () => boolean | undefined;
+  setTransparent: (value: boolean) => void;
+  setMaxSse: (value: number) => void;
+  setSegments: (value: number) => void;
+  setColor: (value: number) => void;
+  setHideUnderground: (value: boolean) => void;
+  setShouldComputeNormalFromVertex: (value: boolean) => void;
+  setOpacity: (value: number) => void;
+  setWireframe: (value: boolean) => void;
+};
+
 export type FeatureHandler = {
   getTransferablePolygonBatchedFeature: (
     bits: bigint,

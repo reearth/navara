@@ -1,3 +1,4 @@
+import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
   AlwaysStencilFunc,
@@ -33,6 +34,8 @@ export class CustomRenderPass extends RenderPass {
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
   disableShadow: boolean;
+  private globe: Globe;
+  private combinedScene = new Scene();
 
   // Used to render only the shadow map
   private shadowScene = new Scene();
@@ -42,6 +45,7 @@ export class CustomRenderPass extends RenderPass {
   });
 
   private debugNormalCopyPass?: NormalCopyPass;
+  private allowTransparent: boolean;
 
   constructor(
     scenes: Scenes,
@@ -49,9 +53,11 @@ export class CustomRenderPass extends RenderPass {
     meshes: MeshCache,
     drapedFeatureMaterials: Map<string, Material>,
     inputBuffer: WebGLRenderTarget,
+    globe: Globe,
     options?: {
       debugNormal?: boolean;
       disableShadow?: boolean;
+      allowTransparent?: boolean;
     },
   ) {
     super();
@@ -64,6 +70,7 @@ export class CustomRenderPass extends RenderPass {
     this._camera = camera;
     this._meshes = meshes;
     this._drapedFeatureMaterials = drapedFeatureMaterials;
+    this.globe = globe;
 
     this.gbufferRenderTarget = inputBuffer.clone();
     this.gbufferRenderTarget.textures.push(
@@ -77,6 +84,7 @@ export class CustomRenderPass extends RenderPass {
     });
 
     this.disableShadow = !!options?.disableShadow;
+    this.allowTransparent = options?.allowTransparent ?? true;
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -139,11 +147,36 @@ export class CustomRenderPass extends RenderPass {
     // Set actual renderTarget again because it's changed in copy passes
     renderer.setRenderTarget(renderTarget);
 
+    const shouldBlend =
+      this.allowTransparent &&
+      this.globe.transparent &&
+      this.globe.hideUnderground;
+
+    if (shouldBlend) {
+      // Clear just color for blending.
+      // Also avoid to reset depth before draping by stencil buffer.
+      renderer.clearColor();
+    }
+
     if (shouldDrapeByStencilTest) {
       this._renderDrapedMesh(renderer);
     }
 
-    this._renderWithLight(renderer, this._scenes.mrt);
+    if (shouldBlend) {
+      // Clear depth as well after stencil buffer draping.
+      renderer.clearDepth();
+    }
+
+    // If globe can be transparent, need to render all scene in same scene to blend them.
+    // Currently, blending is supported only with MRT scene.
+    if (shouldBlend) {
+      this.combinedScene.clear();
+      this.combinedScene.add(this._scenes.globe);
+      this.combinedScene.add(this._scenes.mrt);
+      this._renderWithLight(renderer, this.combinedScene);
+    } else {
+      this._renderWithLight(renderer, this._scenes.mrt);
+    }
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 
