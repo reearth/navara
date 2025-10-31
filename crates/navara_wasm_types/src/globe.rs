@@ -8,11 +8,11 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Globe {
-    /// Screen-space error threshold for level of detail (LOD) calculations.
+    /// Screen-space error threshold for level of detail (LOD) calculations. Initialization only.
     #[wasm_bindgen(js_name = maxSse)]
     pub max_sse: f32,
 
-    /// Number of segments for mesh tessellation.
+    /// Number of segments for mesh tessellation. Initialization only.
     pub segments: f32,
 
     /// Base color for the globe surface (RGB as u32).
@@ -22,7 +22,7 @@ pub struct Globe {
     #[wasm_bindgen(js_name = hideUnderground)]
     pub hide_underground: bool,
 
-    /// Whether to compute normals from vertex positions.
+    /// Whether to compute normals from vertex positions. Initialization only.
     #[wasm_bindgen(js_name = shouldComputeNormalFromVertex)]
     pub should_compute_normal_from_vertex: bool,
 
