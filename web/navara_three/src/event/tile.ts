@@ -56,5 +56,5 @@ export function processMeshChanged(
   const m = meshes.get(id);
   if (!m || !(m instanceof TileMesh)) return;
 
-  m._update(mesh, loadedTexes, textureOptions, tileMapByHandle);
+  m._update(mesh, loadedTexes, textureOptions, tileMapByHandle, mesh.globe);
 }

@@ -74,6 +74,13 @@ export const TILES_3D_DATASETS = {
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023",
   },
+  ChiyodaSubway: {
+    url: "https://assets.cms.plateau.reearth.io/assets/62/e6884a-2c59-409c-9f1b-29c887bc7f58/13101_chiyoda-ku_pref_2023_citygml_2_op_ubld_3dtiles_lod4/tileset.json",
+    attribution:
+      "3D City Model (Project PLATEAU) Chiyoda Ward (FY2023) - MLIT PLATEAU",
+    attributionUrl:
+      "https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023",
+  },
   plateauShinjuku: {
     url: "https://assets.cms.plateau.reearth.io/assets/f0/840fc4-114c-41e4-9a65-67768efd3629/13104_shinjuku-ku_pref_2023_citygml_2_op_bldg_3dtiles_13104_shinjuku-ku_lod2_no_texture/tileset.json",
     attribution:

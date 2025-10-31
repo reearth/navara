@@ -13,6 +13,7 @@ navara_component = { path = "../navara_component" }
 navara_buffer_store = { path = "../navara_buffer_store" }
 navara_material = { path = "../navara_material" }
 navara_geometry = { path = "../navara_geometry" }
+navara_globe = { path = "../navara_globe" }
 
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

@@ -8,6 +8,7 @@ use navara_data_requester::DataRequesterStatus;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
+use navara_globe::Globe;
 use navara_material::Appearance;
 use navara_math::{FloatType, Transform};
 
@@ -61,22 +62,22 @@ pub fn traverse_tile(
     terrain_layer: &Option<&TerrainLayer>,
     terrain_qt: &TerrainInformationQuadtree,
     ready_parent_tile_handle: Option<TileHandle>,
+    globe: &Globe,
 ) -> TraversalResult {
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.ready_parent_tile_handle = ready_parent_tile_handle;
     tile.is_rendered = false;
 
+    // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
+    let is_texturized = layer
+        .appearances
+        .iter()
+        .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
+
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
-    if tile.coords.z > vector_tile_appearance.max_zoom {
-        // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
-        let has_clamp_to_ground = layer
-            .appearances
-            .iter()
-            .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
-        if !has_clamp_to_ground {
-            return TraversalResult::NotFound;
-        }
+    if tile.coords.z > vector_tile_appearance.max_zoom && !is_texturized {
+        return TraversalResult::NotFound;
     }
 
     // Reference the terrain information from the raster tile process.
@@ -139,7 +140,12 @@ pub fn traverse_tile(
 
     let were_children_rendered = tile.were_children_rendered;
 
-    let max_sse = vector_tile_appearance.max_sse;
+    // If it is texturized, max SSE need to be same with Globe.
+    let max_sse = if is_texturized {
+        globe.max_sse
+    } else {
+        vector_tile_appearance.max_sse
+    };
     let meets_sse = sse <= max_sse;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
@@ -250,6 +256,7 @@ pub fn traverse_tile(
                 terrain_layer,
                 terrain_qt,
                 ready_parent_tile_handle,
+                globe,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {

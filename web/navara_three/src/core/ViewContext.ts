@@ -1,4 +1,4 @@
-import type { EventHandler } from "@navara/core";
+import type { EventHandler, Globe } from "@navara/core";
 import type { Material, PerspectiveCamera } from "three";
 
 import type { ViewEvents } from "..";
@@ -16,6 +16,7 @@ type Private = {
 // Restrict public API for a layer declaration.
 export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
+  public globe?: Globe;
 
   constructor(
     public scenes: Scenes,
@@ -27,6 +28,10 @@ export class ViewContext {
     eventHandler?: EventHandler<ViewEvents>,
   ) {
     this.eventHandler = eventHandler;
+  }
+
+  setGlobe(globe: Globe) {
+    this.globe = globe;
   }
 
   setCamera(camera: PerspectiveCamera) {

@@ -9,6 +9,7 @@ use navara_feature::FeaturePlugin;
 use navara_fog::FogPlugin;
 use navara_frame::FramePlugin;
 use navara_geojson::GeoJsonPlugin;
+use navara_globe::GlobePlugin;
 use navara_input::InputPlugin;
 use navara_layer_event::LayerPlugin;
 use navara_mesh::MeshPlugin;
@@ -29,6 +30,7 @@ impl bevy_app::Plugin for Plugin {
 
         // custom plugins
         app.add_plugins(FramePlugin);
+        app.add_plugins(GlobePlugin);
         app.add_plugins(BufferStorePlugin);
         app.add_plugins(InputPlugin);
         app.add_plugins(EventPlugin);

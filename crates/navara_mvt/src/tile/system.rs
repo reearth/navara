@@ -14,6 +14,7 @@ use navara_feature_component::{
 };
 use navara_fog::Fog;
 use navara_frame::FrameManager;
+use navara_globe::Globe;
 use navara_material::Appearance;
 use navara_math::Transform;
 
@@ -45,14 +46,17 @@ use navara_layer::{LayerId, LayerStore, MvtLayer, TerrainLayer};
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
-    mut qts: Query<&mut VectorTileQuadtree>,
     terrain_qt: Res<TerrainInformationQuadtree>,
+    mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
     tiles: Query<(&MvtLayer, Ref<LayerResources>)>,
-    camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
+    mut camera_set: ParamSet<(
+        Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
+        Query<&Fog>,
+    )>,
     mut mvt_data_requester: ParamSet<(MvtDataRequesterQuery, ChangedMvtDataRequesterQuery)>,
     occluder: Query<&EllipsoidalOccluder>,
     rendered_tiles: Query<&RenderedTile>,
@@ -66,8 +70,8 @@ pub fn update_tiles(
         //       We should use another marker to detect if it is MVT's RenderableFeature.
         Query<(), (With<RenderableFeature>, Changed<Rendered>)>,
     )>,
-    fogs: Query<&Fog>,
     terrain_layer: Query<&TerrainLayer>,
+    globe: Res<Globe>,
 ) {
     let is_data_requester_changed = !mvt_data_requester.p1().is_empty();
     let are_features_changed = !features.p1().is_empty();
@@ -75,7 +79,8 @@ pub fn update_tiles(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let fog = fogs.single().unwrap();
+    let fog = camera_set.p1().single().unwrap().clone();
+    let camera = camera_set.p0();
 
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer.iter().next();
@@ -149,11 +154,12 @@ pub fn update_tiles(
                 &rendered_tiles,
                 &features,
                 &mut renderable_features,
-                fog,
+                &fog,
                 false,
                 &terrain_layer,
                 &terrain_qt,
                 is_rendered.then_some(zero_tile_handle),
+                &globe,
             ) {
                 TraversalResult::TileRendered => {
                     spawn_tile_entity(

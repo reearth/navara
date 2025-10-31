@@ -195,7 +195,7 @@ export function FloodLayer({
         outline_show: false,
         water: waterNormalEnabled,
         per_position_height: true,
-        height: -18.3,
+        height: -22.0,
         reflectivity: transparent ? 0.0 : 0.3,
         water_scale_normal: 0.3,
         extruded_height: 1,

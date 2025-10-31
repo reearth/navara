@@ -712,15 +712,11 @@ impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTileMaterial {
     pub show: Option<bool>,
-    pub segments: Option<usize>,
     pub color: Option<u32>,
     pub opacity: Option<f32>,
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
-    pub max_sse: Option<f32>,
-    pub wireframe: Option<bool>,
     pub tms: Option<bool>,
-    pub should_compute_normal_from_vertex: Option<bool>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
@@ -728,14 +724,10 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
         let default = navara_material::RasterTileMaterial::default();
         navara_material::RasterTileMaterial {
             show: val.show.unwrap_or(default.show),
-            segments: val.segments.unwrap_or(default.segments),
             color: val.color.unwrap_or(default.color),
             opacity: val.opacity.unwrap_or(default.opacity),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            max_sse: val.max_sse.unwrap_or(default.max_sse),
-            should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
-            wireframe: val.wireframe.unwrap_or(default.wireframe),
             tms: val.tms.unwrap_or(default.tms),
         }
     }
@@ -744,14 +736,10 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
     fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
         RasterTileMaterial {
             show: Some(value.show),
-            segments: Some(value.segments),
             color: Some(value.color),
             opacity: Some(value.opacity),
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
-            max_sse: Some(value.max_sse),
-            should_compute_normal_from_vertex: value.should_compute_normal_from_vertex,
-            wireframe: Some(value.wireframe),
             tms: Some(value.tms),
         }
     }
@@ -769,8 +757,6 @@ pub struct RasterTileInternalMaterial {
     texture_fragments: Option<Vec<Option<TextureFragment>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
-    pub should_compute_normal_from_vertex: Option<bool>,
-    pub wireframe: bool,
 }
 
 #[wasm_bindgen]
@@ -802,8 +788,6 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             }),
             cast_shadow: m.cast_shadow,
             receive_shadow: m.receive_shadow,
-            should_compute_normal_from_vertex: m.should_compute_normal_from_vertex,
-            wireframe: m.wireframe,
         }
     }
 }
@@ -815,6 +799,7 @@ pub struct VectorTileMaterial {
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
     pub max_zoom: Option<usize>,
+    /// `Globe.max_sse` would be used to a material that uses `clamp_to_ground`.
     pub max_sse: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub layers: Option<Vec<String>>,
@@ -860,7 +845,6 @@ pub struct RasterTerrainMaterial {
     pub segments: Option<usize>,
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
-    pub wireframe: Option<bool>,
     pub elevation_decoder: Option<ElevationDecoder>,
     pub tile_size: Option<u32>,
 }
@@ -875,7 +859,6 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
             segments: val.segments.unwrap_or(default.segments),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            wireframe: val.wireframe.unwrap_or(default.wireframe),
             tile_size: val.tile_size.unwrap_or(default.tile_size),
             elevation_decoder: val
                 .elevation_decoder
@@ -894,7 +877,6 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
             segments: Some(value.segments),
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
-            wireframe: Some(value.wireframe),
             elevation_decoder: Some(ElevationDecoder {
                 r_scaler: value.elevation_decoder.r_scaler,
                 g_scaler: value.elevation_decoder.g_scaler,

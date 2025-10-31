@@ -530,6 +530,97 @@ impl Core {
     ) {
         self.app.set_frustum(fov, near, far);
     }
+
+    // === Globe definition ===
+
+    #[wasm_bindgen(js_name = getGlobe)]
+    pub fn get_globe(&self) -> Option<Globe> {
+        self.app.get_globe().map(|g| g.into())
+    }
+
+    #[wasm_bindgen(js_name = getGlobeTransparent)]
+    pub fn get_globe_transparent(&self) -> Option<bool> {
+        self.app.get_globe().map(|g| g.transparent)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeMaxSse)]
+    pub fn get_globe_max_sse(&self) -> Option<f32> {
+        self.app.get_globe().map(|g| g.max_sse)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeSegments)]
+    pub fn get_globe_segments(&self) -> Option<f32> {
+        self.app.get_globe().map(|g| g.segments as f32)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeColor)]
+    pub fn get_globe_color(&self) -> Option<u32> {
+        self.app.get_globe().map(|g| g.color)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeHideUnderground)]
+    pub fn get_globe_hide_underground(&self) -> Option<bool> {
+        self.app.get_globe().map(|g| g.hide_underground)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeShouldComputeNormalFromVertex)]
+    pub fn get_globe_should_compute_normal_from_vertex(&self) -> Option<bool> {
+        self.app
+            .get_globe()
+            .map(|g| g.should_compute_normal_from_vertex)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeOpacity)]
+    pub fn get_globe_opacity(&self) -> Option<f32> {
+        self.app.get_globe().map(|g| g.opacity)
+    }
+
+    #[wasm_bindgen(js_name = getGlobeWireframe)]
+    pub fn get_globe_wireframe(&self) -> Option<bool> {
+        self.app.get_globe().map(|g| g.wireframe)
+    }
+
+    #[wasm_bindgen(js_name = setGlobeTransparent)]
+    pub fn set_globe_transparent(&mut self, value: bool) {
+        self.app.set_globe_transparent(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeMaxSse)]
+    pub fn set_globe_max_sse(&mut self, value: f32) {
+        self.app.set_globe_max_sse(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeSegments)]
+    pub fn set_globe_segments(&mut self, value: f32) {
+        self.app.set_globe_segments(value as usize);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeColor)]
+    pub fn set_globe_color(&mut self, value: u32) {
+        self.app.set_globe_color(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeHideUnderground)]
+    pub fn set_globe_hide_underground(&mut self, value: bool) {
+        self.app.set_globe_hide_underground(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeShouldComputeNormalFromVertex)]
+    pub fn set_globe_should_compute_normal_from_vertex(&mut self, value: bool) {
+        self.app.set_globe_should_compute_normal_from_vertex(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeOpacity)]
+    pub fn set_globe_opacity(&mut self, value: f32) {
+        self.app.set_globe_opacity(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeWireframe)]
+    pub fn set_globe_wireframe(&mut self, value: bool) {
+        self.app.set_globe_wireframe(value);
+    }
+
+    // === Globe definition ===
 }
 
 #[wasm_bindgen(js_name = generateId)]

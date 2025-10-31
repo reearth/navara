@@ -27,7 +27,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
     raster_tile: {
       color: 0xffffff,
       max_zoom: 23,
-      wireframe: false,
       opacity: 1,
     },
   },

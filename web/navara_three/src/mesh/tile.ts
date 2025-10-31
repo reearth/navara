@@ -11,6 +11,7 @@ import type {
   Transform,
   TextureFragment,
   MeshChanged,
+  Globe,
 } from "@navara/engine";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
@@ -59,9 +60,6 @@ import { BatchedFeatureMesh } from "./batchedFeature";
 import type { PickableMesh } from "./pickableMesh";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
-
-// TODO: Replace with one resource
-const GLOBE_COLOR = 0xffffff;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
@@ -303,6 +301,7 @@ export class TileMesh
       mesh.ready_parent_tile_handle,
       viewEvents,
       uniforms,
+      mesh.globe,
     );
 
     this.addEventListener("removedFromWorld", () => {
@@ -324,6 +323,7 @@ export class TileMesh
     readyParentTileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
     uniforms: CommonUniforms,
+    globe: Globe,
   ) {
     let position = buf.f32(mesh.vertices);
     let indices = buf.u32(mesh.indices);
@@ -346,13 +346,13 @@ export class TileMesh
     indices.set([]);
     indices = null;
 
-    if (mat.should_compute_normal_from_vertex) {
+    if (globe.shouldComputeNormalFromVertex) {
       geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
     }
 
     this.geometry = geometry;
 
-    this.material = this.initMaterial(mat, viewEvents, uniforms);
+    this.material = this.initMaterial(mat, viewEvents, uniforms, globe);
 
     if (!this.material.userData.uvTransform) {
       this.material.userData.uvTransform = {
@@ -379,34 +379,29 @@ export class TileMesh
 
     this.visible = false;
     this.renderOrder = mesh.render_order;
-    this.userData.tileOrigColor = GLOBE_COLOR;
+    this.userData.tileOrigColor = globe.color;
     if (transform) setTransform(this, transform);
     scenes.globe.add(this);
     meshes.set(id, this);
   }
 
   private initMaterial(
-    mat: RasterTileInternalMaterial,
+    _mat: RasterTileInternalMaterial,
     viewEvents: EventHandler<ViewEvents>,
     uniforms: CommonUniforms,
+    globe: Globe,
   ): TileMaterial {
-    if (mat.wireframe) {
-      return new MeshBasicMaterial({
-        color: GLOBE_COLOR,
-        wireframe: true,
-        stencilWrite: false,
-      });
-    }
-
-    const hasNormal = !!mat.should_compute_normal_from_vertex;
+    const hasNormal = !!globe.shouldComputeNormalFromVertex;
     const m = hasNormal
       ? new MeshLambertMaterial({
-          color: GLOBE_COLOR,
           stencilWrite: false,
+          color: globe.color,
+          depthWrite: globe.hideUnderground,
         })
       : new MeshBasicMaterial({
-          color: GLOBE_COLOR,
           stencilWrite: false,
+          color: globe.color,
+          depthWrite: globe.hideUnderground,
         });
 
     m.userData.uPickable = {
@@ -576,7 +571,7 @@ vUv = vUv * uScale + uOffset;
     }
   `,
   )}
-  diffuseColor = sampledDiffuseColor;
+  diffuseColor *= sampledDiffuseColor;
   `,
         )
         .replaceWithCondition(
@@ -655,6 +650,7 @@ if (uPickable > 0.) {
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
+    globe: Globe,
   ) {
     const changedMaterial = mesh.material;
     const tileMesh = mesh.mesh;
@@ -690,6 +686,23 @@ if (uPickable > 0.) {
     }
     if (this.receiveShadow !== changedMaterial.receive_shadow) {
       this.receiveShadow = !!changedMaterial.receive_shadow;
+    }
+    if (this.material.color.getHex() !== globe.color) {
+      this.material.color.setHex(globe.color);
+      this.userData.tileOrigColor = globe.color;
+    }
+    if (this.material.transparent !== globe.transparent) {
+      this.material.transparent = globe.transparent;
+      this.material.needsUpdate = true;
+    }
+    if (this.material.opacity !== globe.opacity) {
+      this.material.opacity = globe.opacity;
+    }
+    if (this.material.depthWrite !== globe.hideUnderground) {
+      this.material.depthWrite = globe.hideUnderground;
+    }
+    if (this.material.wireframe !== globe.wireframe) {
+      this.material.wireframe = globe.wireframe;
     }
   }
 
@@ -1014,8 +1027,14 @@ if (uPickable > 0.) {
   _setPickable(pickable: boolean): void {
     if (pickable) {
       this.material.color.setHex(0);
+
+      // If `transparent` is true, `depthWrite` will be `false` to make underground model pickable.
+      this.userData.orgDepthWrite = this.material.depthWrite;
+      this.material.depthWrite =
+        this.material.depthWrite && !this.material.transparent;
     } else {
       this.material.color.setHex(this.userData.tileOrigColor);
+      this.material.depthWrite = this.userData.orgDepthWrite;
     }
     this.material.userData.uPickable.value = pickable ? 1 : 0;
 

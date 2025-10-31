@@ -52,9 +52,13 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
+    globe: Res<navara_globe::Globe>,
     mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Changed<TilesLayer>>)>,
     mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
-    camera: Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
+    mut camera_set: ParamSet<(
+        Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
+        Query<&Fog>,
+    )>,
     texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     terrain_data_requester: TileTerrainDataRequesterQuery,
@@ -73,7 +77,6 @@ pub fn update_tiles(
             ),
         >,
     )>,
-    fogs: Query<&Fog>,
 ) {
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
@@ -89,7 +92,8 @@ pub fn update_tiles(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let fog = fogs.single().unwrap();
+    let fog = camera_set.p1().single().unwrap().clone();
+    let camera = camera_set.p0();
     let (camera, frustum) = camera.single().unwrap();
 
     // Since TilesLayer is added asynchronously, we need to check if it's changed at last frame by ourself.
@@ -151,7 +155,8 @@ pub fn update_tiles(
         &WGS84_32,
         &occluder,
         &mut meshes,
-        fog,
+        &fog,
+        globe.max_sse,
         false,
         is_texture_ready.then_some(zero_tile_handle),
     ) {
@@ -219,15 +224,11 @@ pub fn transfer_mesh(
     terrain_layer: Query<&TerrainLayer>,
     terrain_mesh_constructors: Query<&ConstructTerrainMeshResult, Without<Deleted>>,
     terrain_mesh_upsamplers: Query<&UpsampleTerrainMeshResult, Without<Deleted>>,
+    globe: Res<navara_globe::Globe>,
 ) {
     if !tc.is_updated_in_this_frame {
         return;
     }
-
-    let tile_layer = match tile_layers.iter().next() {
-        Some((tile, _)) => tile,
-        None => return,
-    };
 
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
@@ -268,8 +269,6 @@ pub fn transfer_mesh(
         let extent = tile.extent;
 
         let should_render_terrain = terrain_layer.is_some();
-        let should_compute_normal_from_vertex =
-            terrain_layer.is_some_and(|t| t.should_compute_normal_from_vertex);
 
         let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
 
@@ -300,13 +299,8 @@ pub fn transfer_mesh(
             opacities,
             colors,
             texture_fragments: texture_fragment_entity_ids.clone(),
-            // TODO: It should be a part of a terrain material.
             cast_shadow: Some(cast_shadow),
             receive_shadow: Some(receive_shadow),
-            // TODO: Replace with one resource
-            should_compute_normal_from_vertex: Some(should_compute_normal_from_vertex),
-            // TODO: Replace with one resource
-            wireframe: tile_layer.appearance().unwrap().wireframe,
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -333,12 +327,7 @@ pub fn transfer_mesh(
             let (triangles, rtc_translation) = tile_triangles_flat(
                 WGS84_32,
                 &extent,
-                if is_root {
-                    65
-                } else {
-                    // TODO: Replace with one resource
-                    tile_layer.appearance().unwrap().segments
-                },
+                if is_root { 65 } else { globe.segments },
                 0.,
             );
 

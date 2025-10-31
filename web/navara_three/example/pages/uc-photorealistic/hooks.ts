@@ -20,5 +20,12 @@ export function useDefaultLayers(view: ThreeView | null) {
     setDefaultLayers({ effects, atmosphere });
   }, [view]);
 
+  useEffect(() => {
+    defaultLayers?.atmosphere?.sky.update({
+      sky: {},
+      visible: false,
+    });
+  }, [defaultLayers]);
+
   return defaultLayers;
 }
