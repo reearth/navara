@@ -108,11 +108,8 @@ const addGlobeControl = (view: ThreeView, pane: Pane) => {
   const globe = view.globe;
 
   const PARAMS = {
-    maxSse: globe.maxSse,
-    segments: globe.segments,
     color: globe.color,
     hideUnderground: globe.hideUnderground,
-    shouldComputeNormalFromVertex: globe.shouldComputeNormalFromVertex,
     transparent: true,
     opacity: 0.5,
     wireframe: globe.wireframe,
@@ -138,14 +135,6 @@ const addGlobeControl = (view: ThreeView, pane: Pane) => {
       onChange: (v) => {
         if (globe) {
           globe.hideUnderground = v.value;
-        }
-      },
-    },
-    {
-      name: "shouldComputeNormalFromVertex",
-      onChange: (v) => {
-        if (globe) {
-          globe.shouldComputeNormalFromVertex = v.value;
         }
       },
     },
