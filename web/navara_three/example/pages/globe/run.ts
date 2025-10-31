@@ -78,7 +78,7 @@ export async function run() {
   });
 
   view.setCamera({
-    lng: 139.7613830566,
+    lng: 139.7621830566,
     lat: 35.6776542664,
     height: 455.79,
     heading: 64.301940918,
