@@ -1,4 +1,4 @@
-import type { EventHandler } from "@navara/core";
+import type { EventHandler, Globe } from "@navara/core";
 import {
   Mesh,
   MeshPhysicalMaterial,
@@ -31,6 +31,7 @@ export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
   public selectiveRegistry?: SelectiveEffectRegistry;
   public debugOptions: ViewDebugOptions;
+  public globe?: Globe;
   private layerEffects = new Map<string, string[]>();
   private layerEmissiveIntensity = new Map<string, number>();
 
@@ -48,6 +49,10 @@ export class ViewContext {
     this.eventHandler = eventHandler;
     this.selectiveRegistry = selectiveRegistry;
     this.debugOptions = debugOptions ?? {};
+  }
+
+  setGlobe(globe: Globe) {
+    this.globe = globe;
   }
 
   setCamera(camera: PerspectiveCamera) {

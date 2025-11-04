@@ -1,3 +1,5 @@
+import invariant from "tiny-invariant";
+
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -36,12 +38,15 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     const scenes = this.view.scenes;
     const camera = this.view.camera;
 
+    invariant(this.view.globe);
+
     const pass = new CustomRenderPass(
       scenes,
       camera,
       this.view._privates.meshes,
       this.view._privates.drapedMaterials,
       this.view.renderPassOrchestrator.effectComposer.inputBuffer,
+      this.view.globe,
       { debugNormal: !!this.config.mrt?.debugNormal },
     );
 

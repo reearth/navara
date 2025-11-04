@@ -54,6 +54,7 @@ pub fn traverse_tile(
     occluder: &EllipsoidalOccluder,
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     fog: &Fog,
+    max_sse: f32,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
     // This is used to show parent's texture if child's texture isn't ready.
@@ -114,8 +115,6 @@ pub fn traverse_tile(
 
     let were_children_rendered = tile.were_children_rendered;
 
-    // TODO: Replace with one resource
-    let max_sse = tiles.iter().next().unwrap().0.appearance().unwrap().max_sse;
     let is_over_min_z = tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z));
     let meets_sse = sse <= max_sse && is_over_min_z;
 
@@ -211,6 +210,7 @@ pub fn traverse_tile(
                 occluder,
                 meshes,
                 fog,
+                max_sse,
                 meets_sse,
                 ready_parent_tile_handle,
             );

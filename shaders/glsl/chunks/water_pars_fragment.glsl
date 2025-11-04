@@ -69,15 +69,19 @@ vec3 computeWaterSpecular(
     const in vec3 origNormal,
     const in float shininess,
     const in float specStrength,
+    const in vec3 diffuseColor,
     out vec3 normal
 ) {
     vec4 noise = getNoise(waterNormalMap, uv, speed);
-    normal = normalize((normalMatrix * noise.xyz) * origNormal);
+    vec3 noiseNormal = normalMatrix * noise.xyz;
+    normal = normalize(noiseNormal * origNormal * 1.5 + origNormal);
     
     vec3 toEye = normalize(viewPosition);
     float specularF = computeWaterFresnel(normal, toEye);
-    
-    return specularColor(normal, toEye, shininess, specStrength) * specularF;
+
+    vec3 scatter = max( 0.0, dot( normal, toEye ) ) * diffuseColor;
+
+    return specularColor(normal, toEye, shininess, specStrength) * specularF + scatter;
 }
 
 // Simplified version for model.ts use case
@@ -88,6 +92,7 @@ vec3 computeWaterSpecularSimple(
     const in vec3 viewPosition,
     const in float shininess,
     const in float specStrength,
+    const in vec3 diffuseColor,
     out vec3 normal
 ) {
     vec4 noise = getNoise(waterNormalMap, uv, speed);
@@ -95,6 +100,8 @@ vec3 computeWaterSpecularSimple(
 
     vec3 toEye = normalize(viewPosition);
     float specularF = computeWaterFresnel(normal, toEye);
+
+    vec3 scatter = max( 0.0, dot( normal, toEye ) ) * diffuseColor;
     
     return specularColor(normal, toEye, shininess, specStrength) * specularF;
 }

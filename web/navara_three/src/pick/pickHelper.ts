@@ -1,3 +1,4 @@
+import type { Globe } from "@navara/core";
 import {
   WebGLRenderer,
   WebGLRenderTarget,
@@ -44,10 +45,12 @@ export class PickHelper extends CustomRenderPass {
     drapedFeatureMaterials: Map<string, Material>,
     onPickCallback: (pickArr: number[]) => void,
     inputBuffer: WebGLRenderTarget,
+    globe: Globe,
     options?: PickHelperOptions,
   ) {
-    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer, {
+    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer, globe, {
       disableShadow: true,
+      allowTransparent: false,
     });
 
     this.element = element;

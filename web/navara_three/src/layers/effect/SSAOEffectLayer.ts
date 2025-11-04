@@ -41,6 +41,13 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
       },
     );
 
+    // TODO: Support SSAO when `hideUnderground` is true.
+    // To support it, N8AOPostPass needs to allow taking `RGBADepthPacking` in `setDepthTexture`.
+    // Ref: https://github.com/N8python/n8ao/blob/master/src/N8AOPostPass.js#L533
+    // const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    // invariant(mrtPass?.raw);
+    // pass.raw.setDepthTexture(mrtPass.raw.allDepthCopyPass.texture, RGBADepthPacking);
+
     return pass;
   }
 

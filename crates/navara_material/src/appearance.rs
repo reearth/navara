@@ -20,6 +20,12 @@ impl Appearance {
             (Appearance::Point(dist), Appearance::Point(src)) => {
                 *dist = src.clone();
             }
+            (Appearance::Billboard(dist), Appearance::Billboard(src)) => {
+                *dist = src.clone();
+            }
+            (Appearance::Text(dist), Appearance::Text(src)) => {
+                *dist = src.clone();
+            }
             (Appearance::Polyline(dist), Appearance::Polyline(src)) => {
                 *dist = src.clone();
             }
@@ -460,15 +466,11 @@ impl Default for VectorTileMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct RasterTileMaterial {
     pub show: bool,
-    pub segments: usize,
     pub color: u32,
     pub opacity: f32,
-    pub max_sse: f32,
     pub max_zoom: usize,
     pub min_zoom: usize,
-    pub wireframe: bool,
     pub tms: bool,
-    pub should_compute_normal_from_vertex: Option<bool>,
 }
 
 impl Default for RasterTileMaterial {
@@ -477,15 +479,9 @@ impl Default for RasterTileMaterial {
             show: true,
             color: 0xffffff,
             opacity: 1.,
-
-            // TODO: Replace with one resource
-            segments: 10,
-            max_sse: 2.,
             max_zoom: 20,
             min_zoom: 0,
-            wireframe: false,
             tms: false,
-            should_compute_normal_from_vertex: None,
         }
     }
 }
@@ -499,8 +495,6 @@ pub struct RasterTileInternalMaterial {
     pub texture_fragments: Option<Vec<Option<Entity>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
-    pub should_compute_normal_from_vertex: Option<bool>,
-    pub wireframe: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -511,7 +505,6 @@ pub struct RasterTerrainMaterial {
     pub segments: usize,
     pub max_zoom: usize,
     pub min_zoom: usize,
-    pub wireframe: bool,
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: u32,
 }
@@ -525,7 +518,6 @@ impl Default for RasterTerrainMaterial {
             segments: 64,
             max_zoom: 20,
             min_zoom: 0,
-            wireframe: false,
             elevation_decoder: ElevationDecoder::default(),
             tile_size: 256,
         }

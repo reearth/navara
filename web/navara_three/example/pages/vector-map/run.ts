@@ -28,7 +28,6 @@ export const run = async (view: ThreeView) => {
     },
     raster_tile: {
       max_zoom: 23,
-      wireframe: false,
     },
   });
 
@@ -41,7 +40,6 @@ export const run = async (view: ThreeView) => {
       segments: 64,
       max_zoom: 15,
       min_zoom: 5,
-      wireframe: false,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });

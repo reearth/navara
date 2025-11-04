@@ -2,7 +2,7 @@ import { EventHandler, type FeatureId } from "@navara/core";
 import type { Core } from "@navara/engine";
 
 import type { ViewContext } from "./core";
-import { FeatureEvaluator } from "./evaluations/FeatureEvaluator";
+import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
 export type LayerEvent = {

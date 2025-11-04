@@ -11,7 +11,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{CameraFrustum, RasterTileInternalMaterial, Transform, Vec2, LLE};
+use navara_wasm_types::{CameraFrustum, Globe, RasterTileInternalMaterial, Transform, Vec2, LLE};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -53,6 +53,8 @@ pub struct MeshAdded {
     #[wasm_bindgen(getter_with_clone)]
     pub material: RasterTileInternalMaterial,
     pub transform: Transform,
+    #[wasm_bindgen(getter_with_clone)]
+    pub globe: Globe,
 }
 
 #[wasm_bindgen]
@@ -64,6 +66,8 @@ pub struct MeshChanged {
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
     pub material: RasterTileInternalMaterial,
+    #[wasm_bindgen(getter_with_clone)]
+    pub globe: Globe,
 }
 
 #[wasm_bindgen]
@@ -255,56 +259,70 @@ impl<'a> From<navara_event_store::ComponentEvent<&'a navara_math::Transform>>
 
 impl
     From<
-        navara_event_store::ComponentEvent<(
-            &navara_tile_component::TileMeshMarker,
-            &navara_mesh::Mesh,
-            &navara_material::RasterTileInternalMaterial,
-            &navara_math::Transform,
-        )>,
+        navara_event_store::ComponentEventWithResource<
+            (
+                &navara_tile_component::TileMeshMarker,
+                &navara_mesh::Mesh,
+                &navara_material::RasterTileInternalMaterial,
+                &navara_math::Transform,
+            ),
+            &navara_globe::Globe,
+        >,
     > for MeshAdded
 {
     fn from(
-        ev: navara_event_store::ComponentEvent<(
-            &navara_tile_component::TileMeshMarker,
-            &navara_mesh::Mesh,
-            &navara_material::RasterTileInternalMaterial,
-            &navara_math::Transform,
-        )>,
+        ev: navara_event_store::ComponentEventWithResource<
+            (
+                &navara_tile_component::TileMeshMarker,
+                &navara_mesh::Mesh,
+                &navara_material::RasterTileInternalMaterial,
+                &navara_math::Transform,
+            ),
+            &navara_globe::Globe,
+        >,
     ) -> Self {
         Self {
-            ind: ev.ind,
-            gen: ev.gen,
-            tile_handle: ev.comp.0.handle,
-            ready_parent_tile_handle: ev.comp.0.ready_parent_tile_handle,
-            mesh: ev.comp.1.into(),
-            material: ev.comp.2.into(),
-            transform: ev.comp.3.into(),
+            ind: ev.comp.ind,
+            gen: ev.comp.gen,
+            tile_handle: ev.comp.comp.0.handle,
+            ready_parent_tile_handle: ev.comp.comp.0.ready_parent_tile_handle,
+            mesh: ev.comp.comp.1.into(),
+            material: ev.comp.comp.2.into(),
+            transform: ev.comp.comp.3.into(),
+            globe: ev.resource.into(),
         }
     }
 }
 
 impl
     From<
-        navara_event_store::ComponentEvent<(
-            &navara_tile_component::TileMeshMarker,
-            &navara_mesh::Mesh,
-            &navara_material::RasterTileInternalMaterial,
-        )>,
+        navara_event_store::ComponentEventWithResource<
+            (
+                &navara_tile_component::TileMeshMarker,
+                &navara_mesh::Mesh,
+                &navara_material::RasterTileInternalMaterial,
+            ),
+            &navara_globe::Globe,
+        >,
     > for MeshChanged
 {
     fn from(
-        ev: navara_event_store::ComponentEvent<(
-            &navara_tile_component::TileMeshMarker,
-            &navara_mesh::Mesh,
-            &navara_material::RasterTileInternalMaterial,
-        )>,
+        ev: navara_event_store::ComponentEventWithResource<
+            (
+                &navara_tile_component::TileMeshMarker,
+                &navara_mesh::Mesh,
+                &navara_material::RasterTileInternalMaterial,
+            ),
+            &navara_globe::Globe,
+        >,
     ) -> Self {
         Self {
-            ind: ev.ind,
-            gen: ev.gen,
-            ready_parent_tile_handle: ev.comp.0.ready_parent_tile_handle,
-            mesh: ev.comp.1.into(),
-            material: ev.comp.2.into(),
+            ind: ev.comp.ind,
+            gen: ev.comp.gen,
+            ready_parent_tile_handle: ev.comp.comp.0.ready_parent_tile_handle,
+            mesh: ev.comp.comp.1.into(),
+            material: ev.comp.comp.2.into(),
+            globe: ev.resource.into(),
         }
     }
 }

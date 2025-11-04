@@ -16,6 +16,7 @@ The index page shows a card grid using screenshots from `example/public/screensh
 2. From root, run one of:
    - All pages: `pnpm navara_three screenshots`
    - Specific page(s): `pnpm navara_three screenshots <page> [another-page]`
+3. You can specify waiting time to `PAGE_CONFIGS` in `web/navara_three/scripts/generate-screenshots.ts`.
 
 Notes:
 
@@ -42,7 +43,7 @@ Two ways to manage components:
 
 - Included: `button.tsx`, `card.tsx` (with `CardHeader`, `CardContent`, `CardFooter`, `CardTitle`, `CardDescription`), `input.tsx`, `label.tsx`, `separator.tsx`.
 - Aliases: Import via `@/components/ui/*` and utilities via `@/lib/utils` (see `tsconfig.json`).
-- Tailwind: Tokens and dark mode are defined in `example/styles/globals.css`; Tailwind is configured in `tailwind.config.ts` with `content: ["./example/**/*"]` and CSS variables enabled.
+- Tailwind: Tokens and dark mode are defined per page in `example/pages/<name>/globals.css` and imported from each page's `main.ts`. Tailwind is configured in `tailwind.config.ts` with `content: ["./example/**/*"]` and CSS variables enabled.
 
 ### Using the components
 
@@ -96,7 +97,7 @@ If you prefer MCP, add the shadcn MCP server config manually following [shadcn d
 
 ### Theming and tokens
 
-- Color tokens and radii live in `example/styles/globals.css` as CSS variables and power Tailwind theme values defined in `tailwind.config.ts`.
+- Color tokens and radii live in each page's `globals.css` (e.g. `example/pages/index/globals.css`) as CSS variables and power Tailwind theme values defined in `tailwind.config.ts`.
 - Dark mode is toggled by the `dark` class on `<html>`; see `pages/index/App.tsx` for a usage example.
 
 ### What these components are (and aren’t)

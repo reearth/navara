@@ -49,6 +49,7 @@ import type {
   TestSelectiveConfig,
   ToneMappingConfig,
   TransparentPassConfig,
+  DepthOfFieldConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
@@ -106,7 +107,8 @@ export type EffectLayerDeclarationDescription =
   | SSRConfig
   | TestSelectiveConfig
   | ToneMappingConfig
-  | TransparentPassConfig;
+  | TransparentPassConfig
+  | DepthOfFieldConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";
