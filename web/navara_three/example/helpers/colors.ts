@@ -16,6 +16,7 @@ export const PLATEAU_COLOR_MAP = new ColorMap("sequential", "Plateau", [
   [248 / 255, 252 / 255, 78 / 255], // #f8fc4e
 ]);
 
+// Ref: https://github.com/eukarya-inc/PLATEAU-VIEW/blob/26c98fa36e6cfe5776c04d1d2cbf77cc69eb264d/extension/src/prototypes/color-maps/colorMaps/turbo.ts
 export const TURBO_COLOR_MAP = new ColorMap("sequential", "Turbo", [
   [48 / 255, 18 / 255, 59 / 255], // #30123b
   [50 / 255, 21 / 255, 67 / 255], // #321543
