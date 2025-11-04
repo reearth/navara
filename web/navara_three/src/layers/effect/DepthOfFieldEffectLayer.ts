@@ -20,7 +20,7 @@ export class DepthOfFieldEffectLayer extends EffectLayerDeclaration<
   DepthOfField
 > {
   static key = "depthOfField";
-  static insertBefore = ["final"];
+  static insertBefore = ["smaa", "fxaa", "final"];
 
   private config: DepthOfFieldConfig;
 
