@@ -1,12 +1,14 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
+use bevy_log::info;
 use navara_core::{Aabb, Extent, LngLat};
 use navara_data_requester::DataRequesterExtension;
-use navara_feature_component::{id::FeatureId, render::RenderableFeature};
+use navara_feature_component::{id::FeatureId, render::{self, RenderableFeature}};
 use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
 use url::{ParseError, Url};
+use std::collections::HashMap;
 
 pub type Cesium3dTileContentMetadata = navara_parser::cesium3dtiles::tileset::Tile;
 
@@ -57,7 +59,7 @@ impl Cesium3dTilesTree {
 #[derive(Debug)]
 pub struct Cesium3dTileContent {
     // This URI might be just path, so keep using string.
-    pub uri: String,
+    pub uri: Option<String>,
     pub data_requester_id: Option<Entity>,
     pub rendered_tile_id: Option<Entity>,
     pub children: Option<Vec<Cesium3dTileContent>>,
@@ -71,9 +73,12 @@ pub struct Cesium3dTileContent {
 
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
-        let content = match &tile.content {
-            Some(c) => c,
-            None => unimplemented!("TODO: Support multiple contents"),
+        let (uri, is_renderable_content) = match &tile.content {
+            Some(content) => {
+                // info!("Creating Cesium3dTileContent for tile: {:?}", content.uri);
+                (Some(content.uri.clone()), !content.uri.contains(".json"))
+            }
+            None => (None, false),
         };
 
         let mut tile_transform = Transform::from_matrix(Mat4::from_cols_array(
@@ -120,11 +125,11 @@ impl Cesium3dTileContent {
         };
         let default_refine = Refine::Replace;
         Self {
-            uri: content.uri.clone(),
+            uri,
             data_requester_id: None,
             rendered_tile_id: None,
             children: None,
-            is_renderable_content: !content.uri.ends_with(".json"),
+            is_renderable_content,
             bounding_volume,
             refine: match tile
                 .refine
@@ -143,7 +148,17 @@ impl Cesium3dTileContent {
         &self,
         base_url: &Url,
     ) -> Result<(String, DataRequesterExtension), ParseError> {
-        let url = base_url.join(&self.uri)?;
+        let mut url = base_url.join(&self.uri.as_ref().unwrap())?;
+        let base_query = base_url.query_pairs().into_owned();
+        let new_query: HashMap<String, String> = url.query_pairs().into_owned().collect();
+        for (key, value) in base_query {
+            if (new_query.contains_key(&key)) {
+                continue;
+            }
+            url
+                .query_pairs_mut()
+                .append_pair(key.as_ref(), value.as_ref());
+        }
         let extension = DataRequesterExtension::from_url(&url);
         Ok((url.to_string(), extension))
     }

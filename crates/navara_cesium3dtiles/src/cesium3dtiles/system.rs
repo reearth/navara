@@ -1,5 +1,5 @@
 use crate::{
-    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker, glb::RenderedCesium3dTileContentGlbMarker,
     RenderedCesium3dTileContent,
 };
 use bevy_ecs::{
@@ -159,6 +159,7 @@ pub fn update_cesium3dtiles_layer(
         Or<(
             With<RenderedCesium3dTileContentPntsMarker>,
             With<RenderedCesium3dTileContentB3dmMarker>,
+            With<RenderedCesium3dTileContentGlbMarker>,
         )>,
     >,
     mut features: Query<

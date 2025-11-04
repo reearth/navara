@@ -8,13 +8,13 @@ export const run = async (view: ThreeView) => {
 
   view.addDefaultAtmosphereLayers();
 
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    raster_tile: {
-      max_zoom: 23,
-    },
-  });
+  // view.addLayer({
+  //   type: "tiles",
+  //   data: { url: TILE_DATASETS.openstreetmap.url },
+  //   raster_tile: {
+  //     max_zoom: 23,
+  //   },
+  // });
 
   view.addLayer({
     type: "geojson",
@@ -56,6 +56,14 @@ export const run = async (view: ThreeView) => {
       },
     },
     polygon: {},
+  });
+
+  view.addLayer({
+    type: "cesium3dtiles",
+    data: {
+      url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=AIzaSyD2Jo_QHIP_4aCi3tnl72JNxCM5RRMrOZ8",
+    },
+    model: {},
   });
 
   showAttributions([TILE_DATASETS.openstreetmap]);

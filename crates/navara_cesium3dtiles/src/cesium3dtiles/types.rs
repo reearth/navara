@@ -5,7 +5,7 @@ use bevy_ecs::{
 use navara_component::Deleted;
 use navara_data_requester::DataRequester;
 
-use crate::{b3dm::B3dmDataRequesterMarker, pnts::PntsDataRequesterMarker};
+use crate::{b3dm::B3dmDataRequesterMarker, pnts::PntsDataRequesterMarker, glb::GlbDataRequesterMarker};
 
 use super::Cesium3dTileContentDataRequesterMarker;
 
@@ -20,6 +20,7 @@ pub type Cesium3dTileContentRequesterQuery<'a, 'world, 'state> = Query<
         Or<(
             With<B3dmDataRequesterMarker>,
             With<PntsDataRequesterMarker>,
+            With<GlbDataRequesterMarker>,
             // With<GlbDataRequesterMarker>
         )>,
         Without<Deleted>,
@@ -37,6 +38,7 @@ pub type ChangedCesium3dTileContentRequesterQuery<'a, 'world, 'state> = Query<
         Or<(
             With<B3dmDataRequesterMarker>,
             With<PntsDataRequesterMarker>,
+            With<GlbDataRequesterMarker>,
             // With<GlbDataRequesterMarker>
         )>,
         Or<(Added<DataRequester>, Changed<DataRequester>)>,

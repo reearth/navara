@@ -9,6 +9,7 @@ use navara_data_requester::DataRequester;
 use crate::{
     b3dm::B3dmDataRequesterMarker, cesium3dtiles::order::TileOrderByDistance,
     pnts::PntsDataRequesterMarker, Cesium3dTileContentDataRequesterMarker,
+    glb::GlbDataRequesterMarker,
 };
 
 const MAX_PENDINGS: u32 = 10;
@@ -24,6 +25,7 @@ pub fn filter_requestable_data_requester(
             Or<(
                 With<B3dmDataRequesterMarker>,
                 With<PntsDataRequesterMarker>,
+                With<GlbDataRequesterMarker>,
                 // With<GlbDataRequesterMarker>
             )>,
             Added<DataRequester>,
@@ -39,6 +41,7 @@ pub fn filter_requestable_data_requester(
             Or<(
                 With<B3dmDataRequesterMarker>,
                 With<PntsDataRequesterMarker>,
+                With<GlbDataRequesterMarker>,
                 // With<GlbDataRequesterMarker>
             )>,
             Without<Deleted>,

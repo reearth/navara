@@ -1,7 +1,12 @@
+use std::collections::HashMap;
+
 use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+
+use bevy_log::info;
+
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
 use navara_component::Priority;
@@ -13,14 +18,17 @@ use navara_window::Window;
 use url::Url;
 
 use crate::{
-    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker, glb::RenderedCesium3dTileContentGlbMarker,
     RenderedCesium3dTileContent,
 };
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
-    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform,
+    Cesium3dTileContentMetadata, Cesium3dTilesMetadataDataRequesterMarker, TileOrderByDistance,
+    TileTransform,
 };
+
+use navara_data_requester::{DataRequester, DataRequesterExtension};
 
 pub enum TraversalResult {
     Selected,
@@ -47,9 +55,13 @@ pub fn select_tiles(
     window: &Window,
 ) {
     if let TraversalResult::Selected = mark_leaves(
+        commands,
+        layer_id,
+        buf,
         max_sse,
         tile_meta,
         tile,
+        base_url,
         camera_position,
         frustum,
         requesters,
@@ -75,9 +87,13 @@ pub fn select_tiles(
 
 #[allow(clippy::too_many_arguments)]
 fn mark_leaves(
+    commands: &mut Commands,
+    layer_id: Entity,
+    buf: &mut ResMut<BufferStore>,
     max_sse: f32,
     tile_meta: &Cesium3dTileContentMetadata,
     tile: &mut Cesium3dTileContent,
+    base_url: &Url,
     camera_position: Vec3,
     frustum: &CameraFrustum,
     requesters: &Cesium3dTileContentRequesterQuery,
@@ -151,9 +167,13 @@ fn mark_leaves(
             let child_tile = tile_children.get_mut(i).unwrap();
 
             match mark_leaves(
+                commands,
+                layer_id,
+                buf,
                 max_sse,
                 child_tile_meta,
                 child_tile,
+                base_url,
                 camera_position,
                 frustum,
                 requesters,
@@ -206,8 +226,57 @@ fn mark_leaves(
         }
     }
 
+    // No children available and tile content is another json file.
+    // if let Some(content) = &tile_meta.content {
+    //     if is_visible && content.uri.contains(".json") && tile_meta.children.is_none() {
+    //         // spawn a data requester to load the child tileset json.
+    //         let url = construct_child_tile_url(base_url, content.uri.as_str())
+    //             .as_str()
+    //             .to_string();
+    //         info!("Requesting child tileset json: {}", url);
+    //         commands.spawn((
+    //             Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+    //             Priority::Medium,
+    //             DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+    //         ));
+    //     }
+    // }
+
     // Use this tile if children aren't found.
     TraversalResult::Selected
+}
+
+fn construct_child_tile_url(base_url: &Url, child_url: &str) -> Url {
+    let mut new_url: Url = base_url.clone().join(child_url).unwrap();
+    let base_query = base_url.query_pairs().into_owned();
+    let new_query: HashMap<String, String> = new_url.query_pairs().into_owned().collect();
+    for (key, value) in base_query {
+        if (new_query.contains_key(&key)) {
+            continue;
+        }
+        new_url
+            .query_pairs_mut()
+            .append_pair(key.as_ref(), value.as_ref());
+    }
+    return new_url;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_uri_inherit_query_params() {
+        let base_url = Url::parse(
+            "https://tile.googleapis.com/v1/3dtiles/root.json?key=abc&session=old-session",
+        )
+        .unwrap();
+        let target_url =
+            "/v1/3dtiles/datasets/CgIYAQ/files/file.json?session=CJKIvdfhscLXThCIy6LIBgb";
+
+        let result = construct_child_tile_url(&base_url, target_url);
+        println!("Result URL: {}", result.as_str());
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -233,28 +302,45 @@ fn mark_rendered_tiles(
     }
 
     let leaf = state.touched && state.leaf;
-    if (leaf || !tile.state.are_all_children_loaded) && tile.is_renderable_content {
-        if state.is_data_loaded {
-            let is_visible = state.is_visible;
-            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
-            if is_visible {
-                *rendered_tiles_count += 1;
+    if (leaf || !tile.state.are_all_children_loaded) {
+        if tile.is_renderable_content {
+            if state.is_data_loaded {
+                let is_visible = state.is_visible;
+                update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
+                if is_visible {
+                    *rendered_tiles_count += 1;
+                }
+            } else if state.is_visible {
+                request_tile_content(
+                    commands,
+                    buf,
+                    base_url,
+                    tile,
+                    requesters,
+                    if tile.state.are_all_children_loaded {
+                        Priority::Low
+                    } else {
+                        Priority::Medium
+                    },
+                );
+            } else {
+                toggle_rendered_tile_visible(rendered_tiles, tile, false);
             }
-        } else if state.is_visible {
-            request_tile_content(
-                commands,
-                buf,
-                base_url,
-                tile,
-                requesters,
-                if tile.state.are_all_children_loaded {
-                    Priority::Low
-                } else {
-                    Priority::Medium
-                },
-            );
-        } else {
-            toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        } else if tile.uri.is_some() && tile.uri.as_ref().unwrap().contains(".json") && tile.children.is_none() && tile.data_requester_id.is_none() && state.is_visible {
+            let url = construct_child_tile_url(base_url, tile.uri.as_ref().unwrap().as_str())
+                .as_str()
+                .to_string();
+            // info!("Requesting child tileset json: {}", url);
+            // info!("Distance from camera: {}, sse {}", tile.state.distance_from_camera, tile.state.sse);
+            // let e = commands
+            //     .spawn((
+            //         Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+            //         Priority::Medium,
+            //         DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+            //     ))
+            //     .id();
+
+            // tile.data_requester_id = Some(e);
         }
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
@@ -327,7 +413,7 @@ fn update_or_spawn_rendered_tile(
     }
 
     if visible {
-        if tile.uri.ends_with("pnts") {
+        if tile.uri.as_ref().unwrap().ends_with("pnts") {
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
@@ -348,7 +434,7 @@ fn update_or_spawn_rendered_tile(
                     ))
                     .id(),
             );
-        } else if tile.uri.ends_with("b3dm") {
+        } else if tile.uri.as_ref().unwrap().ends_with("b3dm") {
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
@@ -366,9 +452,28 @@ fn update_or_spawn_rendered_tile(
                     ))
                     .id(),
             );
+        } else if tile.uri.as_ref().unwrap().contains("glb") {
+            info!("Spawning RenderedCesium3dTileContentGlbMarker for tile: {:?}", tile.uri);
+            tile.rendered_tile_id = Some(
+                commands
+                    .spawn((
+                        RenderedCesium3dTileContentGlbMarker,
+                        TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                        RenderedCesium3dTileContent {
+                            layer_id,
+                            feature_id: None,
+                            data_requester_id: tile.data_requester_id.unwrap(),
+                            is_visible: true,
+                        },
+                    ))
+                    .id(),
+            );
         } else {
             // TODO: support other formats like i3dm, cmpt, etc.
-            unimplemented!("The tile format of {} isn't supported yet", tile.uri);
+            unimplemented!("The tile format of {:?} isn't supported yet", tile.uri);
         }
     }
 }
