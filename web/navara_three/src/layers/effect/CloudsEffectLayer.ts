@@ -1,3 +1,6 @@
+import { RGBADepthPacking } from "three";
+import invariant from "tiny-invariant";
+
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -5,6 +8,8 @@ import {
 } from "../../core/EffectLayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
 import { Clouds, type CloudsOptions } from "../../effects";
+
+import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
 type LayerDescription = {
   clouds?: Omit<CloudsOptions, "enabled">;
@@ -34,6 +39,13 @@ export class CloudsEffectLayer extends EffectLayerDeclaration<
       ...this.config.clouds,
       enabled: this.config.visible ?? true,
     });
+
+    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    invariant(mrtPass?.raw);
+    pass.raw.setCustomDepthTexture(
+      mrtPass.raw.allDepthCopyPass.texture,
+      RGBADepthPacking,
+    );
 
     return pass;
   }

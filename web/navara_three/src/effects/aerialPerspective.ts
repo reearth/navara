@@ -8,7 +8,9 @@ import { type PerspectiveCamera, Texture } from "three";
 import invariant from "tiny-invariant";
 
 import type { Atmosphere } from "../atmosphere";
-import { Effect, type EffectOptions } from "../effects";
+import { Pass, type EffectOptions } from "../effects";
+
+import { CustomEffectPass } from "./CustomEffectPass";
 
 export type AerialPerspectiveOptions = {
   inscatter?: boolean;
@@ -18,6 +20,9 @@ export type AerialPerspectiveOptions = {
   // - It doesn't support transparency.
   // - Enable this flag when rendering clouds with shadows.
   irradiance?: boolean;
+  sky?: boolean;
+  sun?: boolean;
+  moon?: boolean;
 } & EffectOptions;
 
 export const DEFAULT_AERIAL_PERSPECTIVE_OPTIONS: Required<AerialPerspectiveOptions> =
@@ -26,9 +31,13 @@ export const DEFAULT_AERIAL_PERSPECTIVE_OPTIONS: Required<AerialPerspectiveOptio
     inscatter: true,
     transmittance: true,
     irradiance: false,
+    sky: false,
+    sun: true,
+    moon: true,
   };
 
-export class AerialPerspective extends Effect<
+export class AerialPerspective extends Pass<
+  CustomEffectPass,
   AerialPerspectiveEffect,
   AerialPerspectiveOptions
 > {
@@ -47,8 +56,9 @@ export class AerialPerspective extends Effect<
       normalBuffer: normalBuffer,
       octEncodedNormal: true,
     });
+    const pass = new CustomEffectPass(camera, effect);
     const options = { ...DEFAULT_AERIAL_PERSPECTIVE_OPTIONS, ..._options };
-    super(camera, effect, options);
+    super(pass, effect, options);
 
     this.atmosphere = atmosphere;
 
@@ -67,6 +77,9 @@ export class AerialPerspective extends Effect<
     this.inscatter = !!this.options.inscatter;
     this.transmittance = !!this.options.transmittance;
     this.irradiance = !!this.options.irradiance;
+    this.sky = !!this.options.sky;
+    this.sun = !!this.options.sun;
+    this.moon = !!this.options.moon;
 
     if (this.atmosphere.textures) {
       this.onTextureLoaded();
@@ -153,6 +166,36 @@ export class AerialPerspective extends Effect<
     this.options.irradiance = v;
     this.rawEffect.sunLight = v;
     this.rawEffect.skyLight = v;
+    this.onUpdate();
+  }
+
+  get sky() {
+    return this.options.sky ?? DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.sky;
+  }
+  set sky(v: boolean) {
+    if (!this.rawEffect) return;
+    this.options.sky = v;
+    this.rawEffect.sky = v;
+    this.onUpdate();
+  }
+
+  get sun() {
+    return this.options.sun ?? DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.sun;
+  }
+  set sun(v: boolean) {
+    if (!this.rawEffect) return;
+    this.options.sun = v;
+    this.rawEffect.sun = v;
+    this.onUpdate();
+  }
+
+  get moon() {
+    return this.options.moon ?? DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.moon;
+  }
+  set moon(v: boolean) {
+    if (!this.rawEffect) return;
+    this.options.moon = v;
+    this.rawEffect.moon = v;
     this.onUpdate();
   }
 }

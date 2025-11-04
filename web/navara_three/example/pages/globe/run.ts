@@ -15,12 +15,22 @@ export async function run() {
 
   await view.init();
 
-  // Add atmosphere layers
-  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
-  view.addDefaultEffectLayers();
+  view.toneMappingExposure = 10;
 
-  defaultAtmospheres.sky.update({
-    visible: false,
+  // Add atmosphere layers
+  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+  const defaultEffects = view.addDefaultEffectLayers();
+
+  defaultAtmosphere.sky.delete();
+  defaultEffects.aerialPerspective.update({
+    aerialPerspective: {
+      sky: true,
+    },
+  });
+
+  view.addLayer({
+    type: "effect",
+    clouds: {},
   });
 
   // Add terrain layer

@@ -50,6 +50,12 @@ export const run = async (view: ThreeView) => {
   const defaultEffects = view.addDefaultEffectLayers();
   const defaultLayers = view.addDefaultAtmosphereLayers();
 
+  defaultEffects.aerialPerspective.update({
+    aerialPerspective: {
+      sky: false,
+    },
+  });
+
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({
     type: "effect",

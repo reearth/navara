@@ -396,12 +396,10 @@ export class TileMesh
       ? new MeshLambertMaterial({
           stencilWrite: false,
           color: globe.color,
-          depthWrite: globe.hideUnderground,
         })
       : new MeshBasicMaterial({
           stencilWrite: false,
           color: globe.color,
-          depthWrite: globe.hideUnderground,
         });
 
     m.userData.uPickable = {
@@ -697,9 +695,6 @@ if (uPickable > 0.) {
     }
     if (this.material.opacity !== globe.opacity) {
       this.material.opacity = globe.opacity;
-    }
-    if (this.material.depthWrite !== globe.hideUnderground) {
-      this.material.depthWrite = globe.hideUnderground;
     }
     if (this.material.wireframe !== globe.wireframe) {
       this.material.wireframe = globe.wireframe;
@@ -1027,14 +1022,8 @@ if (uPickable > 0.) {
   _setPickable(pickable: boolean): void {
     if (pickable) {
       this.material.color.setHex(0);
-
-      // If `transparent` is true, `depthWrite` will be `false` to make underground model pickable.
-      this.userData.orgDepthWrite = this.material.depthWrite;
-      this.material.depthWrite =
-        this.material.depthWrite && !this.material.transparent;
     } else {
       this.material.color.setHex(this.userData.tileOrigColor);
-      this.material.depthWrite = this.userData.orgDepthWrite;
     }
     this.material.userData.uPickable.value = pickable ? 1 : 0;
 
