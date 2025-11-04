@@ -4,8 +4,11 @@ import type { Camera } from "three";
 import { Effect, type EffectOptions } from "./effect";
 
 export type DepthOfFieldOptions = {
+  /** Normalized focus distance that defines where the focus plane is, Range is [0.0, 1.0]. */
   focusDistance?: number;
+  /** Virtual lens focal length that controls how quickly sharpness falls off around the focus plane, Range is [0.0, 1.0]. */
   focalLength?: number;
+  /** Multiplier applied to the blur kernel that scales the apparent size of bokeh highlights. */
   bokehScale?: number;
 } & EffectOptions;
 
