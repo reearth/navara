@@ -1,8 +1,11 @@
-import type { Layer as NavaraLayer, LayerDescription } from "@navara/three";
+import type {
+  Layer as NavaraLayer,
+  LayerDescription,
+  FeatureEvaluatorCallback,
+} from "@navara/three";
+import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-import { Color } from "../../../src/Color";
 
 import { czmlToGeoJSON, type GeoJSONFC } from "./czml";
 
@@ -133,8 +136,7 @@ export function FloodLayer({
 
   const onReady = (layer: NavaraLayer) => {
     layerRef.current = layer;
-    // Attach per-feature evaluator: set color + show based on availability
-    layer.on("featureUpdated", (evaluator) => {
+    const onUpdate: FeatureEvaluatorCallback = (evaluator) => {
       evaluator.evaluate((_batchId, property) => {
         const kind = (property?.get("kind") as string) || "";
         const color =
@@ -181,7 +183,10 @@ export function FloodLayer({
           show: true,
         };
       });
-    });
+    };
+    // Attach per-feature evaluator: set color + show based on availability
+    layer.on("featureUpdated", onUpdate);
+    return () => layer.off("featureUpdated", onUpdate);
   };
 
   const layerDesc = useMemo<LayerDescription | null>(() => {
