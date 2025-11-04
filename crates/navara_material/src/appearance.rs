@@ -2,6 +2,16 @@ use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{calc_transform, ElevationDecoder, CRS};
 use navara_math::{FloatType, Transform, Vec2, Vec3};
 
+/// Configuration for elevation heatmap rendering.
+/// Shared across all elevation heatmap layers in a tile.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElevationHeatmapConfig {
+    pub max_height: f32,
+    pub min_height: f32,
+    pub elevation_decoder: ElevationDecoder,
+    pub color_map_lut: Vec<f32>, // Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...]
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
     Point(PointMaterial),
@@ -495,6 +505,10 @@ pub struct RasterTileInternalMaterial {
     pub texture_fragments: Option<Vec<Option<Entity>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+
+    // Elevation Heatmap fields
+    pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
+    pub elevation_heatmap_config: Option<ElevationHeatmapConfig>, // Shared config for all heatmap layers
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

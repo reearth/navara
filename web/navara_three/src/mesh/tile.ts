@@ -18,7 +18,10 @@ import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw
 import {
   BufferAttribute,
   BufferGeometry,
+  ClampToEdgeWrapping,
   Color,
+  LinearFilter,
+  NearestFilter,
   Material,
   Mesh,
   MeshBasicMaterial,
@@ -27,8 +30,10 @@ import {
   RepeatWrapping,
   RGBAFormat,
   SRGBColorSpace,
+  LinearSRGBColorSpace,
   Texture,
   Vector2,
+  Vector3,
   AddOperation,
   WebGLRenderTarget,
   type MagnificationTextureFilter,
@@ -63,7 +68,7 @@ export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
-const NUM_ADDITIONAL_TEXTURES = 2;
+const NUM_ADDITIONAL_TEXTURES = 3; // For water normal map, color map, etc.
 
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
@@ -372,7 +377,7 @@ export class TileMesh
       tileMapByHandle,
       readyParentTileHandle,
     );
-    this.setupTextures(loadedTexes, textureOptions, maxTextures);
+    this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
 
     this.castShadow = !!mat.cast_shadow;
     this.receiveShadow = !!mat.receive_shadow;
@@ -410,10 +415,15 @@ export class TileMesh
       value: null,
     };
 
+    m.userData.colorMapTexture = {
+      value: null,
+    };
+
     m.userData.uTime = uniforms.time;
 
     m.userData.defines ??= {};
     m.userData.defines.USE_UV = 1;
+    m.userData.defines.USE_COLOR_MAP = 0;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -444,8 +454,20 @@ export class TileMesh
       shader.uniforms.uSpeculars = m.userData.speculars;
       shader.uniforms.uTextures = m.userData.textures;
       shader.uniforms.uWaterNormalMap = m.userData.waterTexture;
+      shader.uniforms.uColorMapTexture = m.userData.colorMapTexture;
       shader.uniforms.uIor = { value: 1.33333 };
       shader.uniforms.uTime = m.userData.uTime;
+
+      // Elevation Heatmap uniforms
+      shader.uniforms.uIsElevationHeatmaps = m.userData.isElevationHeatmaps;
+      shader.uniforms.uElevationMinHeight = m.userData.elevationMinHeight;
+      shader.uniforms.uElevationMaxHeight = m.userData.elevationMaxHeight;
+      shader.uniforms.uElevationRGBScaler = m.userData.elevationRGBScaler;
+      shader.uniforms.uElevationBoundary = m.userData.elevationBoundary;
+      shader.uniforms.uElevationMaxOffset = m.userData.elevationMaxOffset;
+      shader.uniforms.uElevationMinOffset = m.userData.elevationMinOffset;
+      shader.uniforms.uElevationEpsilon = m.userData.elevationEpsilon;
+      shader.uniforms.uElevationOffset = m.userData.elevationOffset;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -501,10 +523,56 @@ vUv = vUv * uScale + uOffset;
   uniform float uIor;
   uniform float uTime;
 
+  #ifdef USE_COLOR_MAP
+    uniform sampler2D uColorMapTexture;
+    uniform bool uIsElevationHeatmaps[${maxTextures}];
+    uniform float uElevationMinHeight;
+    uniform float uElevationMaxHeight;
+    uniform vec3 uElevationRGBScaler;
+    uniform float uElevationBoundary;
+    uniform float uElevationMaxOffset;
+    uniform float uElevationMinOffset;
+    uniform float uElevationEpsilon;
+    uniform float uElevationOffset;
+  #endif
+  
+
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;
 
   #include <common>
+
+  #ifdef USE_COLOR_MAP
+    float decodeElevationNormal(vec4 color) {
+      vec3 rgb = color.rgb * 255.0;
+      float x = dot(rgb, uElevationRGBScaler);
+
+      float h;
+      // Use epsilon-based comparison for floating point equality check
+      float epsilon_cmp = 1.0; // Tolerance for boundary comparison
+      if (abs(x - uElevationBoundary) > epsilon_cmp) {
+        if (x > uElevationBoundary) {
+          h = x + uElevationMaxOffset;
+        } else {
+          h = x + uElevationMinOffset;
+        }
+      } else {
+        h = 0.0;
+      }
+
+      h = h * uElevationEpsilon + uElevationOffset;
+      if(h < 0.0) {
+        h = 0.0;
+      }
+      h = clamp(
+          (h - uElevationMinHeight) / (uElevationMaxHeight - uElevationMinHeight),
+          0.0,
+          1.0
+      );
+
+      return h;
+    }
+  #endif
 
   `,
         )
@@ -538,7 +606,22 @@ vUv = vUv * uScale + uOffset;
     // For MVT textures (index >= this.texturizedSceneIndexFrom), use original UV
     // For raster textures, use transformed UV
     vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
-    ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+
+    #ifdef USE_COLOR_MAP
+      // Check if this is an elevation heatmap texture
+      if (uIsElevationHeatmaps[${idx}]) {
+        // For elevation heatmap: decode DEM data and apply color mapping
+        vec4 elevationColor = texture2D(uTextures[${idx}], texUv);
+        float normalized_h = decodeElevationNormal(elevationColor);
+        ${texColorVar} = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      }
+      else {
+        ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+      }
+    #else
+      // For regular textures: use color as-is
+      ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+    #endif
 
     float currentReflectivity = uReflectivities[${idx}];
     float currentRoughness = uRoughnesses[${idx}];
@@ -672,7 +755,12 @@ if (uPickable > 0.) {
         readyParentTileHandle,
       );
       this.setUniforms(changedMaterial, maxTextures);
-      this.setupTextures(loadedTexes, textureOptions, maxTextures);
+      this.setupTextures(
+        loadedTexes,
+        textureOptions,
+        maxTextures,
+        changedMaterial,
+      );
 
       this._setupSceneObserver();
 
@@ -885,11 +973,59 @@ if (uPickable > 0.) {
       };
     }
 
-    // Reset
+    // Elevation Heatmap uniforms
+    if (!m.userData.isElevationHeatmaps) {
+      m.userData.isElevationHeatmaps = {
+        value: [...new Array(maxTextures)].fill(false),
+      };
+    }
+    if (!m.userData.elevationMinHeight) {
+      m.userData.elevationMinHeight = {
+        value: 0,
+      };
+    }
+    if (!m.userData.elevationMaxHeight) {
+      m.userData.elevationMaxHeight = {
+        value: 0,
+      };
+    }
+    if (!m.userData.elevationRGBScaler) {
+      m.userData.elevationRGBScaler = {
+        value: new Vector3(0, 0, 0),
+      };
+    }
+    if (!m.userData.elevationBoundary) {
+      m.userData.elevationBoundary = {
+        value: 0,
+      };
+    }
+    if (!m.userData.elevationMaxOffset) {
+      m.userData.elevationMaxOffset = {
+        value: 0,
+      };
+    }
+    if (!m.userData.elevationMinOffset) {
+      m.userData.elevationMinOffset = {
+        value: 0,
+      };
+    }
+    if (!m.userData.elevationEpsilon) {
+      m.userData.elevationEpsilon = {
+        value: 0,
+      };
+    }
+    if (!m.userData.elevationOffset) {
+      m.userData.elevationOffset = {
+        value: 0,
+      };
+    }
+
+    // Reset all texture properties
     for (let i = 0; i < m.userData.shows.value.length; i++) {
       m.userData.shows.value[i] = 0;
       m.userData.colors.value[i] = new Color();
       m.userData.opacities.value[i] = 1;
+      m.userData.isElevationHeatmaps.value[i] = false; // Reset elevation heatmap flags
     }
 
     // All properties have same length.
@@ -902,11 +1038,41 @@ if (uPickable > 0.) {
       m.userData.opacities.value[i] = opacities[i];
     }
 
+    // Update elevation heatmap parameters from Rust material
+    if (mat.is_elevation_heatmaps && mat.is_elevation_heatmaps.length > 0) {
+      for (
+        let i = 0;
+        i < Math.min(mat.is_elevation_heatmaps.length, maxTextures);
+        i++
+      ) {
+        m.userData.isElevationHeatmaps.value[i] =
+          mat.is_elevation_heatmaps[i] !== 0;
+      }
+    }
+
+    m.userData.elevationMinHeight.value = mat.elevation_min_height;
+    m.userData.elevationMaxHeight.value = mat.elevation_max_height;
+    m.userData.elevationBoundary.value = mat.elevation_boundary;
+    m.userData.elevationMaxOffset.value = mat.elevation_max_offset;
+    m.userData.elevationMinOffset.value = mat.elevation_min_offset;
+    m.userData.elevationEpsilon.value = mat.elevation_epsilon;
+    m.userData.elevationOffset.value = mat.elevation_offset;
+
+    m.userData.elevationRGBScaler.value = new Vector3(
+      mat.elevation_r_scaler,
+      mat.elevation_g_scaler,
+      mat.elevation_b_scaler,
+    );
+
     if (!m.userData.defines) {
       m.userData.defines = {
         USE_UV: 1,
+        USE_COLOR_MAP: 0,
       };
     }
+
+    m.userData.defines.USE_COLOR_MAP =
+      m.userData.isElevationHeatmaps.value.some((v: boolean) => v === true);
   }
 
   private setupTextureFragments(
@@ -941,6 +1107,7 @@ if (uPickable > 0.) {
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     maxTextures: number,
+    mat: RasterTileInternalMaterial,
   ) {
     const m = this.material;
 
@@ -983,12 +1150,29 @@ if (uPickable > 0.) {
         continue;
       }
 
-      if (t.colorSpace !== SRGBColorSpace) {
-        t.colorSpace = SRGBColorSpace;
-        t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
-        t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
+      // Use LinearSRGBColorSpace for elevation heatmap textures to preserve RGB values for DEM data
+      // For regular textures, use SRGBColorSpace for proper color display
+      const isElevationHeatmap =
+        mat.is_elevation_heatmaps && mat.is_elevation_heatmaps[i];
+      const targetColorSpace = isElevationHeatmap
+        ? LinearSRGBColorSpace
+        : SRGBColorSpace;
+
+      if (t.colorSpace !== targetColorSpace) {
+        t.colorSpace = targetColorSpace;
+        // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
+        // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
+        // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
+        t.minFilter = isElevationHeatmap
+          ? NearestFilter
+          : (textureOptions.minFilter as MinificationTextureFilter);
+        t.magFilter = isElevationHeatmap
+          ? NearestFilter
+          : (textureOptions.magFilter as MagnificationTextureFilter);
         t.anisotropy = textureOptions.maxAnisotropy;
-        t.generateMipmaps = textureOptions.useMipmaps;
+        t.generateMipmaps = isElevationHeatmap
+          ? false
+          : textureOptions.useMipmaps;
         t.needsUpdate = true;
       }
 
@@ -1016,6 +1200,47 @@ if (uPickable > 0.) {
         (this.texturizedScenes.children[i]?.children.length ?? 0 > 0) ? 1 : 0;
       m.userData.colors.value[lastIndex] = new Color(0xffffff);
       m.userData.opacities.value[lastIndex] = 1.0;
+    }
+
+    // Setup color map texture from Rust-provided LUT
+    // Use the first non-null color map (since all elevation heatmaps share one color map)
+    const lut = mat.color_map_lut;
+    if (lut && lut.length > 0) {
+      if (lut && lut.length > 0) {
+        // LUT is Float32Array of RGB values: [r0, g0, b0, r1, g1, b1, ...]
+        const width = lut.length / 3;
+        const rgbData = new Uint8Array(lut.length);
+
+        for (let j = 0; j < lut.length; j++) {
+          rgbData[j] = Math.round(lut[j] * 255);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = 1;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const imageData = ctx.createImageData(width, 1);
+          for (let j = 0; j < width; j++) {
+            imageData.data[j * 4 + 0] = rgbData[j * 3 + 0]; // R
+            imageData.data[j * 4 + 1] = rgbData[j * 3 + 1]; // G
+            imageData.data[j * 4 + 2] = rgbData[j * 3 + 2]; // B
+            imageData.data[j * 4 + 3] = 255; // A
+          }
+          ctx.putImageData(imageData, 0, 0);
+
+          const texture = new Texture(canvas);
+          texture.wrapS = ClampToEdgeWrapping;
+          texture.wrapT = ClampToEdgeWrapping;
+          texture.minFilter = LinearFilter;
+          texture.magFilter = LinearFilter;
+          texture.generateMipmaps = false;
+          texture.flipY = false;
+          texture.needsUpdate = true;
+
+          m.userData.colorMapTexture.value = texture;
+        }
+      }
     }
   }
 
