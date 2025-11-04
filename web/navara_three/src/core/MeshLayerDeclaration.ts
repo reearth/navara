@@ -17,6 +17,7 @@ export type MeshLayerConfig = {
   scale?: XYZ;
   rotation?: XYZ;
   effects?: string[];
+  ignoreDepth?: boolean;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
@@ -54,6 +55,7 @@ export abstract class MeshLayerDeclaration<
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
   private effects?: string[];
+  private ignoreDepth?: boolean;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
@@ -61,6 +63,7 @@ export abstract class MeshLayerDeclaration<
     this.scale = config.scale;
     this.rotation = config.rotation;
     this.effects = config.effects;
+    this.ignoreDepth = config.ignoreDepth;
   }
 
   protected getPassKey(): PassKey {
@@ -103,6 +106,11 @@ export abstract class MeshLayerDeclaration<
     this._instance.visible = this.visible;
 
     this.onPassKeyChange();
+
+    // Register layer effects with ignoreDepth setting
+    if (this.effects && this.effects.length > 0) {
+      this.view.registerLayerEffects(this.id, this.effects, this.ignoreDepth);
+    }
 
     // Link to selective effects
     if (this.effects && this.view.selectiveRegistry && this.raw) {
@@ -153,6 +161,41 @@ export abstract class MeshLayerDeclaration<
         updates.rotation.y,
         updates.rotation.z,
       );
+    }
+
+    // Handle effects update
+    if (updates.effects !== undefined) {
+      const prevEffects = this.effects || [];
+      const newEffects = updates.effects || [];
+
+      // Unlink effects that are no longer needed
+      if (this.view.selectiveRegistry && this.raw) {
+        for (const effectId of prevEffects) {
+          if (!newEffects.includes(effectId)) {
+            this.view.selectiveRegistry.unlink(effectId, this.raw);
+          }
+        }
+      }
+
+      // Update effects (normalize empty array to undefined)
+      this.effects = newEffects.length > 0 ? updates.effects : undefined;
+
+      // Update ViewContext registry
+      if (newEffects.length > 0) {
+        this.view.registerLayerEffects(this.id, newEffects, this.ignoreDepth);
+      } else {
+        this.view.unregisterLayerEffects(this.id);
+      }
+
+      // Link new effects (only new ones)
+      if (this.view.selectiveRegistry && this.raw) {
+        for (const effectId of newEffects) {
+          if (!prevEffects.includes(effectId)) {
+            this.raw.updateMatrixWorld(true);
+            this.view.selectiveRegistry.link(effectId, this.raw, this.id);
+          }
+        }
+      }
     }
 
     this.onPassKeyChange();

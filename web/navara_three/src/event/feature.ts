@@ -5,7 +5,14 @@ import {
   type RenderableFeature,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
-import { Mesh, Sprite, Object3D, Material } from "three";
+import {
+  Mesh,
+  Sprite,
+  Object3D,
+  Material,
+  MeshStandardMaterial,
+  MeshPhysicalMaterial,
+} from "three";
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
@@ -152,12 +159,38 @@ export async function processRenderableFeatureAdded(
       // Update world matrix first since obj was just added to scene
       obj.updateMatrixWorld(true);
       obj.traverseMesh((mesh) => {
+        // Set emissive for bloom effects (only for objects with effects)
+        const material = Array.isArray(mesh.material)
+          ? mesh.material[0]
+          : mesh.material;
+        if (
+          material instanceof MeshStandardMaterial ||
+          material instanceof MeshPhysicalMaterial
+        ) {
+          const emissiveIntensity =
+            viewContext.getLayerEmissiveIntensity(featureLayerId);
+          material.emissive.set(material.color);
+          material.emissiveIntensity = emissiveIntensity;
+        }
         for (const effectId of effects) {
           viewContext.selectiveRegistry?.link(effectId, mesh, featureLayerId);
         }
       });
     } else if (obj instanceof Mesh) {
       // For other mesh types, link directly
+      // Set emissive for bloom effects (only for objects with effects)
+      const material = Array.isArray(obj.material)
+        ? obj.material[0]
+        : obj.material;
+      if (
+        material instanceof MeshStandardMaterial ||
+        material instanceof MeshPhysicalMaterial
+      ) {
+        const emissiveIntensity =
+          viewContext.getLayerEmissiveIntensity(featureLayerId);
+        material.emissive.set(material.color);
+        material.emissiveIntensity = emissiveIntensity;
+      }
       for (const effectId of effects) {
         viewContext.selectiveRegistry.link(effectId, obj, featureLayerId);
       }
@@ -196,6 +229,7 @@ export async function processRenderableFeatureAdded(
     obj,
     viewEvents,
     layersManager,
+    viewContext,
     featureLayerId,
     ev.bits,
   );

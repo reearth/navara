@@ -15,13 +15,15 @@ export type SelectiveEffectOptions = {
 };
 
 export type SelectiveEffectResources = {
-  scene: Scene;
+  scene: Scene; // Legacy scene for compatibility
   sceneDepthEnabled: Scene; // Scene for objects with depthTest enabled
   sceneDepthDisabled: Scene; // Scene for objects with depthTest disabled
   maskRT: WebGLRenderTarget;
-  highlightRT: WebGLRenderTarget;
+  highlightRT: WebGLRenderTarget; // Legacy render target for compatibility
   objects: WeakMap<Object3D, Object3D>; // source -> clone
   objectLayerMap: Map<string, string>; // sourceId -> layerId cache
+  sourceMap: Map<string, Object3D>; // sourceId -> source object cache
+  cloneMap: Map<string, Object3D>; // sourceId -> clone cache
   options: SelectiveEffectOptions;
   maskDebug?: BufferView;
 };
@@ -35,6 +37,7 @@ export class SelectiveEffectRegistry {
   private width: number;
   private height: number;
   private layerDepthSettings = new Map<string, boolean>();
+  private layerKeepClones = new Map<string, boolean>();
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -56,6 +59,7 @@ export class SelectiveEffectRegistry {
     const width = Math.floor(this.width * resolutionScale);
     const height = Math.floor(this.height * resolutionScale);
 
+    // Legacy scene for compatibility (not actively used)
     const scene = new Scene();
     scene.name = `SelectiveEffect_${effectId}`;
 
@@ -72,6 +76,7 @@ export class SelectiveEffectRegistry {
     });
     maskRT.texture.name = `SelectiveMask_${effectId}`;
 
+    // Legacy render target for compatibility (not actively used)
     const highlightRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
       depthBuffer: true,
@@ -81,6 +86,8 @@ export class SelectiveEffectRegistry {
 
     const objects = new WeakMap<Object3D, Object3D>();
     const objectLayerMap = new Map<string, string>();
+    const sourceMap = new Map<string, Object3D>();
+    const cloneMap = new Map<string, Object3D>();
 
     let maskDebug: BufferView | undefined;
     if (options.debugMask) {
@@ -95,6 +102,8 @@ export class SelectiveEffectRegistry {
       highlightRT,
       objects,
       objectLayerMap,
+      sourceMap,
+      cloneMap,
       options,
       maskDebug,
     };
@@ -114,6 +123,49 @@ export class SelectiveEffectRegistry {
   /**
    * Link an object to a selective effect by creating a clone
    */
+  private forEachMesh(source: Object3D, fn: (mesh: Mesh) => void): void {
+    if (source instanceof Mesh) {
+      fn(source);
+      return;
+    }
+
+    source.traverse((child) => {
+      if (child instanceof Mesh) {
+        fn(child);
+      }
+    });
+  }
+
+  private syncCloneTransform(source: Mesh, clone: Mesh): void {
+    clone.visible = source.visible;
+    clone.renderOrder = source.renderOrder;
+    clone.castShadow = source.castShadow;
+    clone.receiveShadow = source.receiveShadow;
+    clone.material = source.material;
+    clone.position.setFromMatrixPosition(source.matrixWorld);
+    clone.rotation.setFromRotationMatrix(source.matrixWorld);
+    clone.scale.setFromMatrixScale(source.matrixWorld);
+    clone.updateMatrixWorld(true);
+  }
+
+  private attachCloneToScene(
+    resources: SelectiveEffectResources,
+    clone: Object3D,
+    layerId?: string,
+  ): void {
+    if (!layerId) return;
+
+    const ignoreDepth = this.shouldIgnoreDepth(layerId);
+    resources.sceneDepthEnabled.remove(clone);
+    resources.sceneDepthDisabled.remove(clone);
+
+    if (ignoreDepth) {
+      resources.sceneDepthDisabled.add(clone);
+    } else {
+      resources.sceneDepthEnabled.add(clone);
+    }
+  }
+
   link(effectId: string, sourceObject: Object3D, layerId?: string): void {
     const resources = this.resources.get(effectId);
     if (!resources) {
@@ -121,54 +173,56 @@ export class SelectiveEffectRegistry {
       return;
     }
 
-    // Only support Mesh for now
-    if (!(sourceObject instanceof Mesh)) {
-      return;
-    }
+    // Ensure world matrices are up to date before traversing children
+    sourceObject.updateMatrixWorld(true);
 
-    // Check if already linked
-    if (resources.objects.has(sourceObject)) {
-      return;
-    }
+    const linkMesh = (mesh: Mesh) => {
+      const existing = resources.objects.get(mesh);
+      const mappedLayerId = resources.objectLayerMap.get(mesh.uuid) ?? layerId;
 
-    // Clone the mesh
-    const clone = sourceObject.clone();
-    clone.userData.isSelectiveClone = true;
-    clone.userData.sourceId = sourceObject.uuid;
-
-    // Use world position/rotation/scale for clones
-    // This ensures child meshes of ModelMesh appear at correct locations
-    clone.position.setFromMatrixPosition(sourceObject.matrixWorld);
-    clone.rotation.setFromRotationMatrix(sourceObject.matrixWorld);
-    clone.scale.setFromMatrixScale(sourceObject.matrixWorld);
-    clone.visible = sourceObject.visible;
-
-    // Copy render properties to preserve depth relationships
-    clone.renderOrder = sourceObject.renderOrder;
-    clone.castShadow = sourceObject.castShadow;
-    clone.receiveShadow = sourceObject.receiveShadow;
-
-    // Sync material
-    clone.material = sourceObject.material;
-
-    resources.objects.set(sourceObject, clone);
-    resources.scene.add(clone);
-
-    // Cache layerId for performance and add to appropriate depth-specific scene
-    if (layerId) {
-      resources.objectLayerMap.set(sourceObject.uuid, layerId);
-
-      // Add to appropriate scene based on depth settings
-      const ignoreDepth = this.shouldIgnoreDepth(layerId);
-      if (ignoreDepth) {
-        resources.sceneDepthDisabled.add(clone);
-      } else {
-        resources.sceneDepthEnabled.add(clone);
+      if (existing) {
+        // Refresh existing clone state
+        this.syncCloneTransform(mesh, existing as Mesh);
+        if (mappedLayerId) {
+          resources.objectLayerMap.set(mesh.uuid, mappedLayerId);
+        }
+        resources.sourceMap.set(mesh.uuid, mesh);
+        resources.cloneMap.set(mesh.uuid, existing);
+        this.attachCloneToScene(resources, existing, mappedLayerId);
+        return;
       }
-    }
 
-    // Update world matrix after adding to scene
-    clone.updateMatrixWorld(true);
+      const clone = mesh.clone();
+      clone.userData.isSelectiveClone = true;
+      clone.userData.sourceId = mesh.uuid;
+
+      // Copy world space transform so detached clone renders correctly
+      clone.position.setFromMatrixPosition(mesh.matrixWorld);
+      clone.rotation.setFromRotationMatrix(mesh.matrixWorld);
+      clone.scale.setFromMatrixScale(mesh.matrixWorld);
+      clone.visible = mesh.visible;
+
+      clone.renderOrder = mesh.renderOrder;
+      clone.castShadow = mesh.castShadow;
+      clone.receiveShadow = mesh.receiveShadow;
+
+      // Share material reference to keep uniforms/settings in sync
+      clone.material = mesh.material;
+
+      resources.objects.set(mesh, clone);
+      resources.sourceMap.set(mesh.uuid, mesh);
+      resources.cloneMap.set(mesh.uuid, clone);
+
+      const cacheLayerId = mappedLayerId ?? layerId;
+      if (cacheLayerId) {
+        resources.objectLayerMap.set(mesh.uuid, cacheLayerId);
+        this.attachCloneToScene(resources, clone, cacheLayerId);
+      }
+
+      clone.updateMatrixWorld(true);
+    };
+
+    this.forEachMesh(sourceObject, linkMesh);
   }
 
   /**
@@ -180,30 +234,54 @@ export class SelectiveEffectRegistry {
       return;
     }
 
-    const clone = resources.objects.get(sourceObject);
-    if (clone) {
-      resources.scene.remove(clone);
-      resources.objects.delete(sourceObject);
-    }
+    const unlinkMesh = (mesh: Mesh) => {
+      const clone = resources.objects.get(mesh);
+      if (!clone) {
+        return;
+      }
+
+      resources.sceneDepthEnabled.remove(clone);
+      resources.sceneDepthDisabled.remove(clone);
+
+      const mappedLayerId = resources.objectLayerMap.get(mesh.uuid);
+      const keepClones = mappedLayerId && this.shouldKeepClones(mappedLayerId);
+
+      if (keepClones) {
+        clone.visible = false;
+      } else {
+        resources.objects.delete(mesh);
+        resources.objectLayerMap.delete(mesh.uuid);
+        resources.sourceMap.delete(mesh.uuid);
+        resources.cloneMap.delete(mesh.uuid);
+      }
+    };
+
+    this.forEachMesh(sourceObject, unlinkMesh);
   }
 
   /**
    * Sync transform/visibility from source to clone
    */
   syncObject(sourceObject: Object3D): void {
-    for (const resources of this.resources.values()) {
-      const clone = resources.objects.get(sourceObject);
-      if (clone) {
-        // Sync transform
-        clone.position.copy(sourceObject.position);
-        clone.rotation.copy(sourceObject.rotation);
-        clone.scale.copy(sourceObject.scale);
-        clone.visible = sourceObject.visible;
+    sourceObject.updateMatrixWorld(true);
 
-        // Sync material if both are Mesh
-        if (sourceObject instanceof Mesh && clone instanceof Mesh) {
-          clone.material = sourceObject.material;
+    const meshes: Mesh[] = [];
+    this.forEachMesh(sourceObject, (mesh) => {
+      meshes.push(mesh);
+    });
+
+    for (const resources of this.resources.values()) {
+      const syncMesh = (mesh: Mesh) => {
+        const clone = resources.objects.get(mesh);
+        if (!clone) {
+          return;
         }
+
+        this.syncCloneTransform(mesh, clone as Mesh);
+      };
+
+      for (const mesh of meshes) {
+        syncMesh(mesh);
       }
     }
   }
@@ -240,8 +318,10 @@ export class SelectiveEffectRegistry {
       return;
     }
 
-    // Clear scene
+    // Clear scenes
     resources.scene.clear();
+    resources.sceneDepthEnabled.clear();
+    resources.sceneDepthDisabled.clear();
 
     // Dispose render targets
     resources.maskRT.dispose();
@@ -269,11 +349,52 @@ export class SelectiveEffectRegistry {
     this.layerDepthSettings.set(layerId, ignoreDepth);
   }
 
+  registerLayerKeepClones(
+    layerId: string,
+    keepClones: boolean | undefined,
+  ): void {
+    if (keepClones) {
+      this.layerKeepClones.set(layerId, true);
+    } else {
+      this.layerKeepClones.delete(layerId);
+      this.cleanupLayerClones(layerId);
+    }
+  }
+
   /**
    * Check if a layer should ignore depth
    */
   shouldIgnoreDepth(layerId: string): boolean {
     return this.layerDepthSettings.get(layerId) ?? false;
+  }
+
+  shouldKeepClones(layerId: string): boolean {
+    return this.layerKeepClones.get(layerId) ?? false;
+  }
+
+  private cleanupLayerClones(layerId: string): void {
+    for (const resources of this.resources.values()) {
+      for (const [sourceId, mappedLayerId] of Array.from(
+        resources.objectLayerMap.entries(),
+      )) {
+        if (mappedLayerId !== layerId) continue;
+
+        const clone = resources.cloneMap.get(sourceId);
+        if (clone) {
+          resources.sceneDepthEnabled.remove(clone);
+          resources.sceneDepthDisabled.remove(clone);
+          resources.cloneMap.delete(sourceId);
+        }
+
+        const source = resources.sourceMap.get(sourceId);
+        if (source) {
+          resources.objects.delete(source);
+          resources.sourceMap.delete(sourceId);
+        }
+
+        resources.objectLayerMap.delete(sourceId);
+      }
+    }
   }
 
   /**

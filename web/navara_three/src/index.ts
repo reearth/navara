@@ -67,6 +67,7 @@ import {
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
+  SelectiveBloomEffectLayer,
   SelectiveOutlineEffectLayer,
   TestSelectiveEffectLayer,
   ToneMappingEffectLayer,
@@ -953,14 +954,21 @@ export default class ThreeView<
     if ("effects" in l && Array.isArray(l.effects) && l.effects.length > 0) {
       const ignoreDepth =
         "ignoreDepth" in l ? (l.ignoreDepth as boolean) : undefined;
+      const emissiveIntensity =
+        "emissive_intensity" in l
+          ? (l.emissive_intensity as number)
+          : undefined;
+      const keepClones = l.type === "cesium3dtiles";
       this.viewContext.registerLayerEffects(
         layerId,
         l.effects as string[],
         ignoreDepth,
+        emissiveIntensity,
+        { keepClones },
       );
     }
 
-    const layer = new Layer(layerId, this._core);
+    const layer = new Layer(layerId, this._core, this.viewContext, l.type);
     this.layersManager.add(layer);
 
     return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
@@ -968,6 +976,23 @@ export default class ThreeView<
 
   updateLayerById(layerId: string, l: LayerDescription) {
     invariant(this._core);
+
+    // Update effects if specified in the update
+    if ("effects" in l) {
+      const effects = l.effects as string[] | undefined;
+      const emissiveIntensity =
+        "emissive_intensity" in l
+          ? (l.emissive_intensity as number)
+          : undefined;
+      const keepClones = l.type === "cesium3dtiles";
+      this.viewContext.updateLayerEffects(
+        layerId,
+        effects,
+        emissiveIntensity,
+        keepClones ? { keepClones: true } : undefined,
+      );
+    }
+
     this.layersManager.get(layerId)?.update(l);
   }
 
@@ -1021,6 +1046,7 @@ export default class ThreeView<
 
     // Selective effects
     this.registerEffect("testSelective", TestSelectiveEffectLayer);
+    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
     this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
 
     // TODO: Curve out opaque pass from MRT pass.

@@ -60,9 +60,10 @@ export class SphereMeshLayer extends MeshLayerDeclaration<
     );
 
     // Create material from properties
+    // If emissive is not specified, use color as emissive (for bloom effects)
     const material = new MeshLambertMaterial({
       color: cfg.color ?? 0xffffff,
-      emissive: cfg.emissive ?? 0,
+      emissive: cfg.emissive ?? cfg.color ?? 0,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,

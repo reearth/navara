@@ -7,6 +7,7 @@ export * from "./LensFlareEffectLayer";
 export * from "./MRTPassEffectLayer";
 export * from "./RainDropEffectLayer";
 export * from "./SelectiveEffectLayer";
+export * from "./SelectiveBloomEffectLayer";
 export * from "./SelectiveOutlineEffectLayer";
 export * from "./TestSelectiveEffectLayer";
 export * from "./SkyEnvMapEffectLayer";

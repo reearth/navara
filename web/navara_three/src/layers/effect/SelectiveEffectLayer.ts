@@ -30,20 +30,22 @@ export type SelectiveEffectUpdate = {
 // Selective Bloom configuration
 export type SelectiveBloomConfig = {
   selective: true;
-  bloom: {
+  selectiveBloom: {
     strength?: number;
     radius?: number;
     threshold?: number;
+    debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
   };
   resolutionScale?: number;
   debugMask?: boolean;
 } & EffectLayerConfig;
 
 export type SelectiveBloomUpdate = {
-  bloom?: {
+  selectiveBloom?: {
     strength?: number;
     radius?: number;
     threshold?: number;
+    debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
   };
   resolutionScale?: number;
   debugMask?: boolean;
@@ -176,27 +178,6 @@ export abstract class SelectiveEffectLayerBase<
     // Restore renderer state
     renderer.setRenderTarget(prevRenderTarget);
     renderer.setClearColor(originalClearColor, originalClearAlpha);
-  }
-
-  /**
-   * Find layer ID for an object by its source ID
-   */
-  private findLayerIdForObject(sourceId: string): string | undefined {
-    const cached = this.resources.objectLayerMap.get(sourceId);
-    if (cached) {
-      return cached;
-    }
-    // Check all registered layer effects
-    for (const layer of this.view.layersManager.getResourceLayers()) {
-      const effects = this.view.getLayerEffects(layer.id);
-      if (effects && effects.includes(this.id)) {
-        // This layer uses this effect, check if it has matching meshes
-        // We need to traverse the layer's meshes to find the one with matching UUID
-        // For now, return the layer ID if it uses this effect
-        return layer.id;
-      }
-    }
-    return undefined;
   }
 
   /**

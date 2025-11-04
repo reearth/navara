@@ -137,13 +137,23 @@ type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 type LayerEffectOptions = {
   effects?: string[];
   ignoreDepth?: boolean;
+  emissive_intensity?: number;
 };
 
-export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
-export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
-export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
-export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
-export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }>;
+export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }> &
+  LayerEffectOptions;
+export type TerrainLayer = Layer<
+  TerrainLayerDescription & { type: "terrain" }
+> &
+  LayerEffectOptions;
+export type GeoJsonLayer = Layer<
+  GeoJsonLayerDescription & { type: "geojson" }
+> &
+  LayerEffectOptions;
+export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }> &
+  LayerEffectOptions;
+export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }> &
+  LayerEffectOptions;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
 > &
