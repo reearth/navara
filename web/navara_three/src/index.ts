@@ -132,6 +132,7 @@ export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
+export * from "./passes";
 export * from "@navara/three_api";
 export * from "./Color";
 

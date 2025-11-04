@@ -21,9 +21,11 @@ export function useDefaultLayers(view: ThreeView | null) {
   }, [view]);
 
   useEffect(() => {
-    defaultLayers?.atmosphere?.sky.update({
-      sky: {},
-      visible: false,
+    defaultLayers?.atmosphere.sky.delete();
+    defaultLayers?.effects.aerialPerspective.update({
+      aerialPerspective: {
+        sky: true,
+      },
     });
   }, [defaultLayers]);
 
