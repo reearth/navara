@@ -12,3 +12,4 @@ export * from "./SSAOEffectLayer";
 export * from "./SSREffectLayer";
 export * from "./ToneMappingEffectLayer";
 export * from "./TransparentPassEffectLayer";
+export * from "./DepthOfFieldEffectLayer";
