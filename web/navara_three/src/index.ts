@@ -442,7 +442,6 @@ export default class ThreeView<
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
   private shadowMapViewers: ShadowMapViewers;
-  private viewContext: ViewContext;
 
   // Registry support
   private registries: Registries;
