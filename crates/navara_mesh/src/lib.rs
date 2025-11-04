@@ -3,10 +3,11 @@
 use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     bundle::Bundle,
+    change_detection::DetectChanges,
     component::Component,
     entity::Entity,
     query::{Added, Changed, Or, With, Without},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query, Res, ResMut},
 };
 
 mod cache;
@@ -15,6 +16,7 @@ use navara_buffer_store::Handle;
 use navara_component::Deleted;
 use navara_event_store::EventStore;
 use navara_geometry::TileUvTransform;
+use navara_globe::Globe;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 
@@ -56,6 +58,8 @@ impl bevy_app::Plugin for MeshPlugin {
 #[allow(clippy::type_complexity)]
 fn commit_events(
     mut events: ResMut<EventStore>,
+    globe_res: Res<Globe>,
+    all_meshes: Query<Entity, (With<Mesh>, Without<Deleted>)>,
     removed: Query<Entity, (With<Mesh>, With<Deleted>)>,
     t_changed: Query<Entity, (With<Mesh>, Changed<Transform>, Without<Deleted>)>,
     mesh_added: Query<Entity, (Added<Mesh>, Without<Deleted>)>,
@@ -78,6 +82,11 @@ fn commit_events(
 
     for e in mesh_changed.iter() {
         events.mesh_updated.push(e);
+    }
+    if globe_res.is_changed() {
+        for e in all_meshes.iter() {
+            events.mesh_updated.push(e);
+        }
     }
 
     // for (e, _, _) in mat_changed.iter() {

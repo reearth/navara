@@ -110,7 +110,7 @@ export class FeatureEvaluator {
   evaluate(
     f: (
       batchId: number,
-      v: Map<string, unknown> | undefined,
+      property: Map<string, unknown> | undefined,
     ) => Partial<EvaluatedValue>,
   ) {
     const result = new Map<

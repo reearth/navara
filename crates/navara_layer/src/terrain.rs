@@ -6,7 +6,6 @@ use navara_material::RasterTerrainMaterial;
 pub struct TerrainLayer {
     pub layer_id: String,
     pub data: Option<LayerData>,
-    pub should_compute_normal_from_vertex: bool,
     pub terrain_type: TerrainDataType,
     pub appearance: Option<RasterTerrainMaterial>,
 }

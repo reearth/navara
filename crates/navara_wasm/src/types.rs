@@ -49,9 +49,6 @@ pub struct TerrainLayerDescription {
 
     #[wasm_bindgen(getter_with_clone)]
     pub raster_terrain: Option<RasterTerrainMaterial>,
-
-    /// Compute normals from vertices if the model doesn't have a normal.
-    pub should_compute_normal_from_vertex: Option<bool>,
 }
 
 impl TerrainLayerDescription {
@@ -335,9 +332,6 @@ impl LayerDescription {
                         url: String::from(url),
                     }),
                     appearance: layer.appearance(),
-                    should_compute_normal_from_vertex: layer
-                        .should_compute_normal_from_vertex
-                        .unwrap_or(true),
                     terrain_type: TerrainDataType::from_url(url),
                 }))
             }

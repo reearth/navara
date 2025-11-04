@@ -459,6 +459,7 @@ export class ModelMesh
             vViewPosition,
             uShininess,
             uSpecularStrength,
+            diffuseColor.rgb,
             normal
           );
         #else
@@ -500,7 +501,7 @@ export class ModelMesh
           .replace(
             "outputBuffer1 = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)",
             `
-            vec3 finalNormal = mix(origNormal, normal, uApplyWaterNormal);
+            vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), uApplyWaterNormal);
             outputBuffer1 = vec4(packNormalToVec2(finalNormal), metalnessFactor, roughnessFactor)
             `,
           ).source;

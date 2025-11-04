@@ -21,6 +21,7 @@ use navara_feature_component::{
     render::RenderableFeature,
 };
 use navara_frame::FrameManager;
+use navara_globe::Globe;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId, MvtLayer};
 use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
@@ -287,23 +288,24 @@ impl App {
         layer_type
     }
 
-    pub fn update_layer(&mut self, layer_id: &str, desc: LayerDescription) {
-        // TODO: Support multiple appearance
-        let appearance = match desc {
-            LayerDescription::GeoJson(layer) => layer.appearances[0].clone(),
-            LayerDescription::B3dm(layer) => layer.appearances[0].clone(),
-            LayerDescription::Pnts(layer) => layer.appearances[0].clone(),
-            LayerDescription::Cesium3dTiles(layer) => layer.appearances[0].clone(),
-            LayerDescription::Mvt(layer) => layer.appearances[0].clone(),
-            LayerDescription::Tiles(layer) => layer.appearance.unwrap().clone(),
+    pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
+        let appearances = match &mut desc {
+            LayerDescription::GeoJson(layer) => &layer.appearances,
+            LayerDescription::B3dm(layer) => &layer.appearances,
+            LayerDescription::Pnts(layer) => &layer.appearances,
+            LayerDescription::Cesium3dTiles(layer) => &layer.appearances,
+            LayerDescription::Mvt(layer) => &layer.appearances,
+            LayerDescription::Tiles(layer) => &vec![layer.appearance.take().unwrap()],
             _ => return,
         };
-        self.app
-            .world_mut()
-            .send_event(navara_layer_event::UpdateLayerEvent {
-                layer_id: LayerId(layer_id.to_owned()),
-                appearance,
-            });
+        for appearance in appearances {
+            self.app
+                .world_mut()
+                .send_event(navara_layer_event::UpdateLayerEvent {
+                    layer_id: LayerId(layer_id.to_owned()),
+                    appearance: appearance.clone(),
+                });
+        }
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {
@@ -894,6 +896,66 @@ impl App {
             .world_mut()
             .send_event(FrustumEvent { fov, near, far });
     }
+
+    pub fn get_globe(&self) -> Option<&Globe> {
+        self.app.world().get_resource::<Globe>()
+    }
+
+    pub fn get_globe_mut(&mut self) -> Option<Mut<Globe>> {
+        self.app.world_mut().get_resource_mut::<Globe>()
+    }
+
+    // === Globe definition ===
+
+    pub fn set_globe_transparent(&mut self, value: bool) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.transparent = value;
+        }
+    }
+
+    pub fn set_globe_max_sse(&mut self, value: f32) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.max_sse = value;
+        }
+    }
+
+    pub fn set_globe_segments(&mut self, value: usize) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.segments = value;
+        }
+    }
+
+    pub fn set_globe_color(&mut self, value: u32) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.color = value;
+        }
+    }
+
+    pub fn set_globe_hide_underground(&mut self, value: bool) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.hide_underground = value;
+        }
+    }
+
+    pub fn set_globe_should_compute_normal_from_vertex(&mut self, value: bool) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.should_compute_normal_from_vertex = value;
+        }
+    }
+
+    pub fn set_globe_opacity(&mut self, value: f32) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.opacity = value;
+        }
+    }
+
+    pub fn set_globe_wireframe(&mut self, value: bool) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.wireframe = value;
+        }
+    }
+
+    // === Globe definition ===
 }
 
 fn get_prop_from_batch_table(

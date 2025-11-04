@@ -31,7 +31,8 @@ import type { Atmosphere } from "../atmosphere";
 import { CloudLayer, type CloudLayerOptions } from "../clouds";
 import { CLOUD_ASSETS_URL, STBN_URL } from "../constants";
 
-import { Effect, type EffectOptions } from "./effect";
+import { CustomEffectPass } from "./CustomEffectPass";
+import { Pass, type EffectOptions } from "./effect";
 
 export type CloudsOptions = {
   assetsUrl?: string;
@@ -133,12 +134,18 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   cloudLayers: null,
 };
 
-export class Clouds extends Effect<CloudsEffect, Required<CloudsOptions>> {
+export class Clouds extends Pass<
+  CustomEffectPass,
+  CloudsEffect,
+  Required<CloudsOptions>
+> {
   atmosphere: Atmosphere;
   private _cloudLayers: CloudLayer[] = [];
 
   constructor(camera: Camera, atmosphere: Atmosphere, options?: CloudsOptions) {
-    super(camera, new CloudsEffect(camera), {
+    const effect = new CloudsEffect(camera);
+    const pass = new CustomEffectPass(camera, effect);
+    super(pass, effect, {
       ...DEFAULT_CLOUDS_OPTIONS,
       ...(options ?? {}),
     });

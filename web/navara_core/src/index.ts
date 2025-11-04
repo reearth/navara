@@ -11,3 +11,4 @@ export * from "./namedIndexMap";
 export * from "./observed";
 export * from "./abstracts";
 export * from "./color";
+export * from "./globe";

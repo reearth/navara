@@ -56,8 +56,8 @@ export function useDarkMode(options?: {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent | { matches: boolean }) => {
-      setSystemDark("matches" in e ? e.matches : false);
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemDark(e.matches);
     };
     // Initialize state in case something changed before mount.
     setSystemDark(mql.matches);

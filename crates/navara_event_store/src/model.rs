@@ -1,4 +1,4 @@
-use bevy_ecs::{component::Component, entity::Entity, world::World};
+use bevy_ecs::{component::Component, entity::Entity, prelude::Resource, world::World};
 
 #[derive(Debug)]
 pub struct EntityEvent {
@@ -152,5 +152,55 @@ impl<'a, T: Component, U: Component, V: Component>
         };
 
         Some(Self::new(e, (a, b, c)))
+    }
+}
+
+#[derive(Debug)]
+pub struct ComponentEventWithResource<T = (), R = ()> {
+    pub comp: ComponentEvent<T>,
+    pub resource: R,
+}
+
+impl<T, R> ComponentEventWithResource<T, R> {
+    pub fn new(comp: ComponentEvent<T>, resource: R) -> Self {
+        Self { comp, resource }
+    }
+}
+
+impl<'a, T: Component, R: Resource> ComponentEventWithResource<&'a T, &'a R> {
+    pub fn from_world(e: Entity, world: &'a World) -> Option<Self> {
+        let comp = ComponentEvent::from_world(e, world)?;
+        let resource = world.get_resource::<R>()?;
+        Some(Self::new(comp, resource))
+    }
+}
+
+impl<'a, T: Component, U: Component, R: Resource>
+    ComponentEventWithResource<(&'a T, &'a U), &'a R>
+{
+    pub fn from_world_2(e: Entity, world: &'a World) -> Option<Self> {
+        let comp = ComponentEvent::from_world_2(e, world)?;
+        let resource = world.get_resource::<R>()?;
+        Some(Self::new(comp, resource))
+    }
+}
+
+impl<'a, T: Component, U: Component, V: Component, R: Resource>
+    ComponentEventWithResource<(&'a T, &'a U, &'a V), &'a R>
+{
+    pub fn from_world_3(e: Entity, world: &'a World) -> Option<Self> {
+        let comp = ComponentEvent::from_world_3(e, world)?;
+        let resource = world.get_resource::<R>()?;
+        Some(Self::new(comp, resource))
+    }
+}
+
+impl<'a, A: Component, B: Component, C: Component, D: Component, R: Resource>
+    ComponentEventWithResource<(&'a A, &'a B, &'a C, &'a D), &'a R>
+{
+    pub fn from_world_4(e: Entity, world: &'a World) -> Option<Self> {
+        let comp = ComponentEvent::from_world_4(e, world)?;
+        let resource = world.get_resource::<R>()?;
+        Some(Self::new(comp, resource))
     }
 }

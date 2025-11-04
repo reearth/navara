@@ -1,5 +1,5 @@
-import { EventManager, EventHandler } from "@navara/core";
-import type { CameraPosition, Nullable, XYZ } from "@navara/core";
+import { EventManager, EventHandler, Globe } from "@navara/core";
+import type { CameraPosition, GlobeOptions, Nullable, XYZ } from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -48,6 +48,7 @@ import {
   processEvent,
   type BufferLoader,
   type FeatureHandler,
+  type GlobeHandler,
   type MeshHandler,
   type TextureFragmentHandler,
   type TileHandler,
@@ -132,6 +133,7 @@ export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
+export * from "./passes";
 export * from "@navara/three_api";
 export * from "./Color";
 
@@ -173,7 +175,7 @@ export type Options = {
   logarithmicDepthBuffer?: boolean;
   // It must be passed when instantiated.
   shadow?: boolean;
-};
+} & GlobeOptions;
 
 export type MapMouseEvent = {
   map: XYZ;
@@ -233,6 +235,7 @@ export default class ThreeView<
   renderer: WebGLRenderer;
   control?: { update: () => void; get target(): Vector3 | undefined };
 
+  globe!: Globe;
   atmosphere: Atmosphere;
 
   // Layers
@@ -350,6 +353,56 @@ export default class ThreeView<
       return this._core?.getVectorTileStates(handle);
     },
   };
+  private _globeHandler: GlobeHandler = {
+    getTransparent: () => {
+      return this._core?.getGlobeTransparent();
+    },
+    getMaxSse: () => {
+      return this._core?.getGlobeMaxSse();
+    },
+    getSegments: () => {
+      return this._core?.getGlobeSegments();
+    },
+    getColor: () => {
+      return this._core?.getGlobeColor();
+    },
+    getHideUnderground: () => {
+      return this._core?.getGlobeHideUnderground();
+    },
+    getShouldComputeNormalFromVertex: () => {
+      return this._core?.getGlobeShouldComputeNormalFromVertex();
+    },
+    getOpacity: () => {
+      return this._core?.getGlobeOpacity();
+    },
+    getWireframe: () => {
+      return this._core?.getGlobeWireframe();
+    },
+    setTransparent: (value: boolean) => {
+      this._core?.setGlobeTransparent(value);
+    },
+    setMaxSse: (value: number) => {
+      this._core?.setGlobeMaxSse(value);
+    },
+    setSegments: (value: number) => {
+      this._core?.setGlobeSegments(value);
+    },
+    setColor: (value: number) => {
+      this._core?.setGlobeColor(value);
+    },
+    setHideUnderground: (value: boolean) => {
+      this._core?.setGlobeHideUnderground(value);
+    },
+    setShouldComputeNormalFromVertex: (value: boolean) => {
+      this._core?.setGlobeShouldComputeNormalFromVertex(value);
+    },
+    setOpacity: (value: number) => {
+      this._core?.setGlobeOpacity(value);
+    },
+    setWireframe: (value: boolean) => {
+      this._core?.setGlobeWireframe(value);
+    },
+  };
   private _workerTaskHandler: WorkerTaskHandler = {
     triggerWorkerTaskCompleted: (bits, result) => {
       this._core?.triggerWorkerTaskCompleted(bits, result);
@@ -382,6 +435,7 @@ export default class ThreeView<
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
   private shadowMapViewers: ShadowMapViewers;
+  private viewContext: ViewContext;
 
   // Registry support
   private registries: Registries;
@@ -538,7 +592,7 @@ export default class ThreeView<
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
     // Set up Registry
-    const viewContext = new ViewContext(
+    this.viewContext = new ViewContext(
       this._scenes,
       this.camera.raw,
       this.atmosphere,
@@ -550,7 +604,7 @@ export default class ThreeView<
       },
       this,
     );
-    this.registries = new Registries(viewContext);
+    this.registries = new Registries(this.viewContext);
 
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
@@ -664,6 +718,10 @@ export default class ThreeView<
 
     this._core = new Core(newId());
     this._core.start();
+
+    this.globe = new Globe(this._globeHandler, this._options);
+    this.viewContext.setGlobe(this.globe);
+
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(
         this._core,
@@ -678,6 +736,7 @@ export default class ThreeView<
         this._drapedFeatureMaterials,
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
+        this.globe,
         // {
         //   debug: true,
         // },

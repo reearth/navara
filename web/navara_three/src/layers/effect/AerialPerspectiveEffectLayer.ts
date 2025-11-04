@@ -1,3 +1,4 @@
+import { RGBADepthPacking } from "three";
 import invariant from "tiny-invariant";
 
 import {
@@ -50,6 +51,11 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
       },
     );
 
+    pass.raw.setCustomDepthTexture(
+      mrtPass.raw.allDepthCopyPass.texture,
+      RGBADepthPacking,
+    );
+
     return pass;
   }
 
@@ -70,6 +76,15 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
     }
     if (config.irradiance !== undefined) {
       this._instance.irradiance = config.irradiance;
+    }
+    if (config.sky !== undefined) {
+      this._instance.sky = config.sky;
+    }
+    if (config.sun !== undefined) {
+      this._instance.sun = config.sun;
+    }
+    if (config.moon !== undefined) {
+      this._instance.moon = config.moon;
     }
   }
 
