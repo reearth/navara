@@ -12,7 +12,8 @@ type LH<L> = L extends LayerDeclaration ? LayerHandle<L> : NavaraLayer;
 
 type Props<L> = {
   config: LayerDescription;
-  onReady?: (handle: LH<L>) => void;
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  onReady?: (handle: LH<L>) => ((() => void) | void);
 };
 
 export function Layer<L = NavaraLayer>({
@@ -31,10 +32,11 @@ export function Layer<L = NavaraLayer>({
   useEffect(() => {
     const handle = view.addLayer(configRef.current) as LH<L>;
     handleRef.current = handle;
-    onReadyRef.current?.(handle);
+    const unmount = onReadyRef.current?.(handle);
     return () => {
       // TODO: Support unmount in strict mode. Currently tile layer doesn't work well(order is confused).
       // Unmount: remove layer
+      unmount?.();
       handle.delete();
       handleRef.current = null;
     };

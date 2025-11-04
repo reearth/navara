@@ -1,4 +1,4 @@
-import { encode_camera } from "navara_wasm_api";
+import { encode_camera } from "@navara/engine-api";
 import { Matrix4, Vector3 } from "three";
 
 export const calcModelMatrixRTE = (

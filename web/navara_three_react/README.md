@@ -34,14 +34,11 @@ import {
   type TilesLayer,
   Layer as NavaraLayer,
 } from "@navara/three";
-import { useViewContext, useDefaultLayers, Layer } from "@navara/three_react";
+import { useViewContext, Layer } from "@navara/three_react";
 import { useMemo, useState } from "react";
 
 export function Layers() {
   const { view } = useViewContext();
-
-  // mount atmosphere/effects once
-  useDefaultLayers(view);
 
   const baseTiles = useMemo<LayerDescription>(
     () => ({
@@ -89,9 +86,6 @@ export function Layers() {
 - `Layer`
   - Props: `{ config: LayerDescription; onReady?: (handle) => void }`.
   - Declaratively adds a layer on mount and updates it when `config` changes. The `onReady` callback receives a layer handle.
-
-- `useDefaultLayers(view)`
-  - Mounts default effect and atmosphere layers once when a `view` becomes available.
 
 ## Canvas control (optional)
 

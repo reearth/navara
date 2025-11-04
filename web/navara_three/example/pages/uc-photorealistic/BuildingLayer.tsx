@@ -2,11 +2,12 @@ import type {
   Layer as NavaraLayer,
   LayerDescription,
   ColorTuple,
+  FeatureEvaluatorCallback,
 } from "@navara/three";
+import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
 
-import { Color } from "../../../src/Color";
 import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
 
 export type BuildingColorAttribute =
@@ -101,14 +102,11 @@ export function BuildingTilesLayer({
 
   const onReady = (layer: NavaraLayer) => {
     layerRef.current = layer;
-    layer.on("featureUpdated", (evaluator) => {
+    const onFeatureUpdated: FeatureEvaluatorCallback = (evaluator) => {
+      const fallback = new Color().setHex(0xffffff);
+      const { colorBy, heightDomain } = paramsRef.current;
+      
       evaluator.evaluate((_batchId, property) => {
-        // Default color when property not present
-        const fallback = new Color().setHex(0xffffff);
-
-        const { colorBy, heightDomain } = paramsRef.current;
-
-        // No coloring: push base white so any previous per-feature color resets
         if (colorBy === "none") {
           return { color: fallback };
         }
@@ -155,7 +153,9 @@ export function BuildingTilesLayer({
 
         return { color: fallback };
       });
-    });
+    };
+    layer.on("featureUpdated", onFeatureUpdated);
+    return () => layer.off("featureUpdated", onFeatureUpdated);
   };
 
   // Re-evaluate when coloring parameters change
