@@ -105,7 +105,7 @@ export function BuildingTilesLayer({
     const onFeatureUpdated: FeatureEvaluatorCallback = (evaluator) => {
       const fallback = new Color().setHex(0xffffff);
       const { colorBy, heightDomain } = paramsRef.current;
-      
+
       evaluator.evaluate((_batchId, property) => {
         if (colorBy === "none") {
           return { color: fallback };

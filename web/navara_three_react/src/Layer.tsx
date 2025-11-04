@@ -13,7 +13,7 @@ type LH<L> = L extends LayerDeclaration ? LayerHandle<L> : NavaraLayer;
 type Props<L> = {
   config: LayerDescription;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  onReady?: (handle: LH<L>) => ((() => void) | void);
+  onReady?: (handle: LH<L>) => (() => void) | void;
 };
 
 export function Layer<L = NavaraLayer>({

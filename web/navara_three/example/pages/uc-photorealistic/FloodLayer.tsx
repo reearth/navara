@@ -1,4 +1,8 @@
-import type { Layer as NavaraLayer, LayerDescription, FeatureEvaluatorCallback } from "@navara/three";
+import type {
+  Layer as NavaraLayer,
+  LayerDescription,
+  FeatureEvaluatorCallback,
+} from "@navara/three";
 import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
