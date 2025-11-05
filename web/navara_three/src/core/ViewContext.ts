@@ -10,11 +10,14 @@ import {
 
 import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
+import { Layer } from "../layer";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
+import { LayerHandle } from "./LayerHandle";
+import { MeshLayerDeclaration } from "./MeshLayerDeclaration";
 import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 export type ViewDebugOptions = {
@@ -124,14 +127,23 @@ export class ViewContext {
       options,
     );
 
-    // Try to access featureEvaluators (for GeoJSON/Cesium3DTiles layers)
-    const featureEvaluators = (layer as any).featureEvaluators;
-    if (!featureEvaluators || !this.selectiveRegistry) return;
+    if (!this.selectiveRegistry) return;
 
-    // Update effects for each feature's mesh
-    for (const evaluator of featureEvaluators.values()) {
-      const obj = evaluator.obj;
-      if (!obj) continue;
+    if (layer instanceof Layer) {
+      // Update effects for each feature's mesh
+      for (const evaluator of layer._getFeatureEvaluators()) {
+        const obj = evaluator.obj;
+        if (!obj) continue;
+
+        this.updateSelectiveLinks(obj, layerId, prevEffects, newEffects);
+        this.applyEmissive(obj, layerId, newEffects, emissiveIntensity);
+      }
+      return;
+    }
+
+    if (layer instanceof LayerHandle) {
+      const obj = this.getLayerHandleObject(layer);
+      if (!obj) return;
 
       this.updateSelectiveLinks(obj, layerId, prevEffects, newEffects);
       this.applyEmissive(obj, layerId, newEffects, emissiveIntensity);
@@ -236,5 +248,14 @@ export class ViewContext {
         fn(child);
       }
     });
+  }
+
+  private getLayerHandleObject(layerHandle: LayerHandle): Object3D | undefined {
+    const declaration = layerHandle.ref;
+    if (declaration instanceof MeshLayerDeclaration) {
+      return declaration.raw ?? undefined;
+    }
+
+    return undefined;
   }
 }
