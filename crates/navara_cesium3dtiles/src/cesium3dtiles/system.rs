@@ -1,6 +1,5 @@
 use crate::{
-    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker, glb::RenderedCesium3dTileContentGlbMarker,
-    RenderedCesium3dTileContent,
+    RenderedCesium3dTileContent, b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles_bfs, glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -127,7 +126,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 continue;
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
-            select_tiles(
+            select_tiles_bfs(
                 &mut commands,
                 &mut buf,
                 tree.layer_id,

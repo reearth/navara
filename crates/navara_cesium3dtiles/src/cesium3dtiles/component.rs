@@ -63,6 +63,7 @@ pub struct Cesium3dTileContent {
     pub data_requester_id: Option<Entity>,
     pub rendered_tile_id: Option<Entity>,
     pub children: Option<Vec<Cesium3dTileContent>>,
+    // pub parent: Option<*mut Cesium3dTileContent>,
     pub refine: Refine,
     // If the content's URI isn't a model file, it's false.
     pub is_renderable_content: bool,
@@ -129,6 +130,7 @@ impl Cesium3dTileContent {
             data_requester_id: None,
             rendered_tile_id: None,
             children: None,
+            // parent: parent.map(|p| p as *const _ as *mut _),
             is_renderable_content,
             bounding_volume,
             refine: match tile
