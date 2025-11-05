@@ -1,19 +1,44 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
+  ToneMappingMode,
   type LayerDescription,
 } from "@navara/three";
+import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { PLATEAU_COLOR_MAP, TURBO_COLOR_MAP } from "../../helpers/colors";
 import { TERRAIN_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
+import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export const run = async (view: ThreeView) => {
   await view.init();
 
   // Add atmosphere layers
-  view.addDefaultAtmosphereLayers();
+  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+
+  defaultAtmosphere.sun.update({
+    sun: {},
+    visible: false,
+  });
+
+  view.toneMappingExposure = 5;
+
+  view.addLayer({
+    type: "effect",
+    toneMapping: {
+      mode: ToneMappingMode.REINHARD2,
+    },
+  });
+
+  view.addLayer({
+    type: "light",
+    lightProbe: {
+      sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.white),
+      intensity: 1,
+    },
+  });
 
   // Set camera to focus on Mt. Fuji area
   view.setCamera({
@@ -88,7 +113,7 @@ export const run = async (view: ThreeView) => {
     }
     layerDef.elevation_heatmap.max_height = params.max_height;
     layerDef.elevation_heatmap.min_height = params.min_height;
-    
+
     if (params.color_map === "plateau") {
       layerDef.elevation_heatmap.color_map_lut = PLATEAU_COLOR_MAP.flatten();
     } else if (params.color_map === "turbo") {
