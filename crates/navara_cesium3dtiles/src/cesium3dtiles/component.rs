@@ -196,6 +196,7 @@ pub struct Cesium3dTileContentState {
     pub meet_sse: bool,
     pub is_data_loaded: bool,
     pub are_all_children_loaded: bool,
+    pub any_children_has_json: bool,
     pub distance_from_camera: f32,
     pub sse: f32,
 }
@@ -209,6 +210,7 @@ impl Cesium3dTileContentState {
         self.are_all_children_loaded = false;
         self.distance_from_camera = 0.;
         self.sse = 0.;
+        self.any_children_has_json = false;
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num::NonZero};
+use std::{collections::{HashMap, VecDeque}, num::NonZero};
 
 use bevy_ecs::{
     entity::Entity,
@@ -18,8 +18,8 @@ use navara_window::Window;
 use url::Url;
 
 use crate::{
-    b3dm::RenderedCesium3dTileContentB3dmMarker, pnts::RenderedCesium3dTileContentPntsMarker, glb::RenderedCesium3dTileContentGlbMarker,
-    RenderedCesium3dTileContent,
+    b3dm::RenderedCesium3dTileContentB3dmMarker, glb::RenderedCesium3dTileContentGlbMarker,
+    pnts::RenderedCesium3dTileContentPntsMarker, RenderedCesium3dTileContent,
 };
 
 use super::{
@@ -35,6 +35,7 @@ pub enum TraversalResult {
     ChildrenSelected,
     ChildrenSelectedPartially,
     Culled,
+    JsonChildFound,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -195,6 +196,9 @@ fn mark_leaves(
                     any_children_rendered = true;
                     all_children_rendered = false;
                 }
+                TraversalResult::JsonChildFound => {
+                    tile.state.any_children_has_json = true;
+                }
             };
 
             all_children_loaded = all_children_loaded
@@ -223,32 +227,42 @@ fn mark_leaves(
             if matches!(tile.refine, Refine::Add) {
                 return TraversalResult::ChildrenSelectedPartially;
             }
+
+            if matches!(tile.refine, Refine::Replace) {
+                return TraversalResult::Culled;
+            }
         }
     }
 
     // No children available and tile content is another json file.
     if let Some(content) = &tile_meta.content {
-        if is_visible && content.uri.contains(".json") && tile_meta.children.is_none() && tile.data_requester_id.is_none() {
-            
+        if tile_meta.children.is_none()
+            && tile.data_requester_id.is_none()
+            && content.uri.contains(".json")
+        {
             // spawn a data requester to load the child tileset json.
             let url = construct_child_tile_url(base_url, content.uri.as_str())
                 .as_str()
                 .to_string();
-            // info!("Requesting child tileset json: {}", url);
-            let e = commands.spawn((
-                Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-                Priority::Medium,
-                DataRequester::from_store(url, buf, DataRequesterExtension::Json),
-            )).id();
+
+            let e = commands
+                .spawn((
+                    Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                    Priority::Medium,
+                    DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+                ))
+                .id();
             tile.data_requester_id = Some(e);
+            tile.state.is_data_loaded = true;
+            return TraversalResult::JsonChildFound;
         }
 
-        return TraversalResult::Selected;
     }
 
     // Use this tile if children aren't found.
     TraversalResult::Selected
 }
+
 
 fn construct_child_tile_url(base_url: &Url, child_url: &str) -> Url {
     let mut new_url: Url = base_url.clone().join(child_url).unwrap();
@@ -306,6 +320,7 @@ fn mark_rendered_tiles(
     }
 
     let leaf = state.touched && state.leaf;
+
     if (leaf || !tile.state.are_all_children_loaded) {
         if tile.is_renderable_content {
             if state.is_data_loaded {
@@ -314,6 +329,7 @@ fn mark_rendered_tiles(
                 if is_visible {
                     *rendered_tiles_count += 1;
                 }
+
             } else if state.is_visible {
                 request_tile_content(
                     commands,
@@ -330,12 +346,6 @@ fn mark_rendered_tiles(
             } else {
                 toggle_rendered_tile_visible(rendered_tiles, tile, false);
             }
-        } else {
-            // mark_rendered_tiles_invisible(root_tile, rendered_tiles);
-            info!(
-                "Tile content is not renderable yet for tile: {:?}",
-                tile.uri
-            );
         }
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);

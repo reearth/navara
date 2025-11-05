@@ -1,7 +1,4 @@
 use bevy_ecs::{component::Component, entity::Entity};
 
 #[derive(Component)]
-pub struct GlbLayerDataRequesterMarker(pub Entity);
-    
-#[derive(Component)]
 pub struct GlbDataRequesterMarker;

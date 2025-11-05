@@ -5,8 +5,11 @@ import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import {
   addCtrlPanel,
+  
   type MaterialLayerDescription,
 } from "../../helpers/panel";
+
+import { addDateControl } from "../../helpers/control";
 
 const gGeoLayersDef: MaterialLayerDescription[] = [
   {
@@ -56,6 +59,7 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addCtrlPanel(gGeoLayersDef, view, pane);
+  addDateControl(view, pane);
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
 

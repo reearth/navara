@@ -14,7 +14,7 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     data: {
       url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=AIzaSyD2Jo_QHIP_4aCi3tnl72JNxCM5RRMrOZ8",
     },
-    model: {},
+    model: {max_sse: 80},
   }
 ];
 
