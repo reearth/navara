@@ -66,7 +66,7 @@ export function FloodLayer({
 
     waterNormalTimerRef.current = setTimeout(() => {
       setWaterNormalEnabled(waterSurface);
-    }, 100);
+    }, 1500);
 
     // Cleanup on unmount
     return () => {
