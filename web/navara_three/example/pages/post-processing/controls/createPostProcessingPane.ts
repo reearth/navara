@@ -141,7 +141,7 @@ const setupCubeFolder = (
   outlineId: string,
 ) => {
   const params = {
-    emissiveIntensity: 1.0,
+    emissiveIntensity: 1.1,
     visible: true,
     bloomEnabled: false,
     outlineEnabled: false,
@@ -188,6 +188,12 @@ const setupCubeFolder = (
       if (params.bloomEnabled) effects.push(bloomId);
       cubeLayer.ref.onUpdateConfig({ effects });
     });
+
+  cubeLayer.ref.onUpdateConfig({
+    box: {
+      emissiveIntensity: params.emissiveIntensity,
+    },
+  });
 };
 
 const setupSphereFolder = (
@@ -198,7 +204,7 @@ const setupSphereFolder = (
   const params = {
     emissiveIntensity: 1.0,
     visible: true,
-    bloomEnabled: false,
+    bloomEnabled: true,
   };
 
   const folder = pane.addFolder({ title: "Sphere (Blue)" });
@@ -230,6 +236,10 @@ const setupSphereFolder = (
         effects: ev.value ? [bloomId] : [],
       });
     });
+
+  sphereLayer.ref.onUpdateConfig({
+    effects: params.bloomEnabled ? [bloomId] : [],
+  });
 };
 
 const setupGeoJsonVisibilityBinding =
@@ -425,8 +435,8 @@ const setupChiyodaFolder = (
     color: { r: 255, g: 255, b: 255 },
     visible: true,
     emissiveIntensity: 0.3,
-    bloomEnabled: false,
-    outlineEnabled: false,
+    bloomEnabled: true,
+    outlineEnabled: true,
   };
 
   const folder = pane.addFolder({ title: "Chiyoda Buildings" });
@@ -494,6 +504,8 @@ const setupChiyodaFolder = (
     .on("change", () => {
       chiyodaLayer.setEffects(composeEffects(params, bloomId, outlineId));
     });
+
+  chiyodaLayer.setEffects(composeEffects(params, bloomId, outlineId));
 };
 
 const setupChuoFolder = (
