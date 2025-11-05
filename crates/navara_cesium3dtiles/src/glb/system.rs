@@ -1,25 +1,22 @@
 use bevy_ecs::{
     entity::Entity,
-    query::{Added, Changed, With, Without},
-    system::{Commands, Query, Res, ResMut},
+    query::{Added, With, Without},
+    system::{Commands, Query, ResMut},
 };
-use bevy_log::{error, info};
-use navara_buffer_store::{BufferStore, Handle};
-use navara_component::{Deleted, Priority};
+use bevy_log::{info};
+use navara_buffer_store::{BufferStore, Handle} ;
+use navara_component::Deleted;
 use navara_core::CRS;
-use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
+use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
     batch::{
-        BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, FeatureBatchIdMap,
-        GlobalBatchIds,
+        BatchTable, FeatureBatchId, GlobalBatchIds,
     },
     id::FeatureId,
-    model::{ModelBin, ModelGeometry, ModelMarker},
-    render::RenderableFeature,
+    model::{ModelBin, ModelGeometry},
 };
 use navara_layer::{
-    B3dmLayer, Cesium3dTilesLayer, DeleteB3dmLayerMarker, LayerId, LayerStore,
-    UpdateB3dmLayerMarker,
+    B3dmLayer, Cesium3dTilesLayer, LayerId, LayerStore,
 };
 use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
@@ -29,7 +26,7 @@ use crate::{
 };
 
 use super::{
-    requester::{GlbDataRequesterMarker, GlbLayerDataRequesterMarker},
+    requester::{GlbDataRequesterMarker},
     RenderedCesium3dTileContentGlbMarker,
 };
 
@@ -37,8 +34,7 @@ use super::{
 #[allow(clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    mut batch_table_res: ResMut<BatchTable>,
+    // mut buf: ResMut<BufferStore>,
     requesters: Query<
         (
             &Cesium3dTileContentDataRequesterMarker,
@@ -56,8 +52,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
-    info!("requesters: {:?}", requesters);
-    info!("rendered tiles: {:?}", rendered_tiles);
+    // info!("requesters: {:?}", requesters);
+    // info!("rendered tiles: {:?}", rendered_tiles);
     for mut tile in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => v,
@@ -83,7 +79,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             FeatureId::default(),
             FeatureBatchId(0),
             GlobalBatchIds {
-                handle: 0,
+                handle: Handle::default(),
                 batch_length: 0,
             },
             ModelGeometry {

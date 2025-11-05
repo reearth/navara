@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZero};
 
 use bevy_ecs::{
     entity::Entity,
@@ -227,20 +227,24 @@ fn mark_leaves(
     }
 
     // No children available and tile content is another json file.
-    // if let Some(content) = &tile_meta.content {
-    //     if is_visible && content.uri.contains(".json") && tile_meta.children.is_none() {
-    //         // spawn a data requester to load the child tileset json.
-    //         let url = construct_child_tile_url(base_url, content.uri.as_str())
-    //             .as_str()
-    //             .to_string();
-    //         info!("Requesting child tileset json: {}", url);
-    //         commands.spawn((
-    //             Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-    //             Priority::Medium,
-    //             DataRequester::from_store(url, buf, DataRequesterExtension::Json),
-    //         ));
-    //     }
-    // }
+    if let Some(content) = &tile_meta.content {
+        if is_visible && content.uri.contains(".json") && tile_meta.children.is_none() && tile.data_requester_id.is_none() {
+            
+            // spawn a data requester to load the child tileset json.
+            let url = construct_child_tile_url(base_url, content.uri.as_str())
+                .as_str()
+                .to_string();
+            // info!("Requesting child tileset json: {}", url);
+            let e = commands.spawn((
+                Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                Priority::Medium,
+                DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+            )).id();
+            tile.data_requester_id = Some(e);
+        }
+
+        return TraversalResult::Selected;
+    }
 
     // Use this tile if children aren't found.
     TraversalResult::Selected
@@ -326,21 +330,12 @@ fn mark_rendered_tiles(
             } else {
                 toggle_rendered_tile_visible(rendered_tiles, tile, false);
             }
-        } else if tile.uri.is_some() && tile.uri.as_ref().unwrap().contains(".json") && tile.children.is_none() && tile.data_requester_id.is_none() && state.is_visible {
-            let url = construct_child_tile_url(base_url, tile.uri.as_ref().unwrap().as_str())
-                .as_str()
-                .to_string();
-            // info!("Requesting child tileset json: {}", url);
-            // info!("Distance from camera: {}, sse {}", tile.state.distance_from_camera, tile.state.sse);
-            // let e = commands
-            //     .spawn((
-            //         Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-            //         Priority::Medium,
-            //         DataRequester::from_store(url, buf, DataRequesterExtension::Json),
-            //     ))
-            //     .id();
-
-            // tile.data_requester_id = Some(e);
+        } else {
+            // mark_rendered_tiles_invisible(root_tile, rendered_tiles);
+            info!(
+                "Tile content is not renderable yet for tile: {:?}",
+                tile.uri
+            );
         }
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
@@ -453,7 +448,7 @@ fn update_or_spawn_rendered_tile(
                     .id(),
             );
         } else if tile.uri.as_ref().unwrap().contains("glb") {
-            info!("Spawning RenderedCesium3dTileContentGlbMarker for tile: {:?}", tile.uri);
+            // info!("Spawning RenderedCesium3dTileContentGlbMarker for tile: {:?}", tile.uri);
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
