@@ -103,7 +103,7 @@ pub fn select_tiles_bfs(
             continue;
         }
 
-        if matches!(result, TraversalResult::NotSelected) && matches!(tile.refine, Refine::Add) {
+        if matches!(result, TraversalResult::NotSelected) && matches!(tile.refine, Refine::Add) && tile.is_renderable_content {
             current_tile.state.leaf = true;
         }
 
@@ -206,7 +206,7 @@ fn process_tile_bfs(
     tile.state.touched = true;
 
     let meets_sse = sse < max_sse;
-    if meets_sse {
+    if meets_sse && tile.is_renderable_content {
         return TraversalResult::Selected;
     }
 
@@ -335,8 +335,7 @@ fn process_rendered_tile(
 
     if leaf && tile.is_renderable_content {
         if state.is_data_loaded {
-            let is_visible = state.is_visible;
-            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
+            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, state.is_visible);
             tile_is_rendered = TileRenderingStatus::Rendered;
         } else if state.is_visible {
             request_tile_content(
@@ -345,16 +344,10 @@ fn process_rendered_tile(
                 base_url,
                 tile,
                 requesters,
-                if tile.state.are_all_children_loaded {
-                    Priority::Low
-                } else {
-                    Priority::Medium
-                },
+                Priority::Medium
             );
             tile_is_rendered = TileRenderingStatus::Requested;
-        } else {
-            toggle_rendered_tile_visible(rendered_tiles, tile, false);
-        }
+        } 
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
     }
