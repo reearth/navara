@@ -3,13 +3,11 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
+import { addDateControl } from "../../helpers/control";
 import {
   addCtrlPanel,
-  
   type MaterialLayerDescription,
 } from "../../helpers/panel";
-
-import { addDateControl } from "../../helpers/control";
 
 const gGeoLayersDef: MaterialLayerDescription[] = [
   {

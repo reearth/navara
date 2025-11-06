@@ -1,4 +1,4 @@
-use bevy_ecs::{component::Component, entity::Entity};
+use bevy_ecs::component::Component;
 
 #[derive(Component)]
 pub struct GlbDataRequesterMarker;

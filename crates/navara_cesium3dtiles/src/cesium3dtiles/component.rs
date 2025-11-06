@@ -1,14 +1,13 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
-use bevy_log::info;
 use navara_core::{Aabb, Extent, LngLat};
 use navara_data_requester::DataRequesterExtension;
-use navara_feature_component::{id::FeatureId, render::{self, RenderableFeature}};
+use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
-use url::{ParseError, Url};
 use std::collections::HashMap;
+use url::{ParseError, Url};
 
 pub type Cesium3dTileContentMetadata = navara_parser::cesium3dtiles::tileset::Tile;
 
@@ -150,15 +149,14 @@ impl Cesium3dTileContent {
         &self,
         base_url: &Url,
     ) -> Result<(String, DataRequesterExtension), ParseError> {
-        let mut url = base_url.join(&self.uri.as_ref().unwrap())?;
+        let mut url = base_url.join(self.uri.as_ref().unwrap())?;
         let base_query = base_url.query_pairs().into_owned();
         let new_query: HashMap<String, String> = url.query_pairs().into_owned().collect();
         for (key, value) in base_query {
-            if (new_query.contains_key(&key)) {
+            if new_query.contains_key(&key) {
                 continue;
             }
-            url
-                .query_pairs_mut()
+            url.query_pairs_mut()
                 .append_pair(key.as_ref(), value.as_ref());
         }
         let extension = DataRequesterExtension::from_url(&url);

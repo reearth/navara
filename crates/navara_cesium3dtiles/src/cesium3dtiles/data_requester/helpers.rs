@@ -1,16 +1,14 @@
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
-use bevy_log::{error, info};
+use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_component::Priority;
 use navara_data_requester::{DataRequester, DataRequesterExtension};
-use navara_parser::glb::Glb;
 use url::Url;
 
 use crate::{
     b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
-    pnts::PntsDataRequesterMarker, Cesium3dTileContent, TileOrderByDistance,
-    glb::GlbDataRequesterMarker
-
+    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker, Cesium3dTileContent,
+    TileOrderByDistance,
 };
 
 #[derive(Component)]

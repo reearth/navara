@@ -3,21 +3,16 @@ use bevy_ecs::{
     query::{Added, With, Without},
     system::{Commands, Query, ResMut},
 };
-use bevy_log::{info};
-use navara_buffer_store::{BufferStore, Handle} ;
+use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
-    batch::{
-        BatchTable, FeatureBatchId, GlobalBatchIds,
-    },
+    batch::{FeatureBatchId, GlobalBatchIds},
     id::FeatureId,
     model::{ModelBin, ModelGeometry},
 };
-use navara_layer::{
-    B3dmLayer, Cesium3dTilesLayer, LayerId, LayerStore,
-};
+use navara_layer::{Cesium3dTilesLayer, LayerId};
 use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
 
@@ -25,11 +20,7 @@ use crate::{
     Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
 };
 
-use super::{
-    requester::{GlbDataRequesterMarker},
-    RenderedCesium3dTileContentGlbMarker,
-};
-
+use super::{requester::GlbDataRequesterMarker, RenderedCesium3dTileContentGlbMarker};
 
 #[allow(clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(

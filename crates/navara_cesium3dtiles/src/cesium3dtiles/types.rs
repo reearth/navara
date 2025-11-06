@@ -5,7 +5,9 @@ use bevy_ecs::{
 use navara_component::Deleted;
 use navara_data_requester::DataRequester;
 
-use crate::{b3dm::B3dmDataRequesterMarker, pnts::PntsDataRequesterMarker, glb::GlbDataRequesterMarker};
+use crate::{
+    b3dm::B3dmDataRequesterMarker, glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker,
+};
 
 use super::Cesium3dTileContentDataRequesterMarker;
 

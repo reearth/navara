@@ -1,5 +1,7 @@
 use crate::{
-    RenderedCesium3dTileContent, b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles_bfs, glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker
+    b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles_bfs,
+    glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    RenderedCesium3dTileContent,
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -29,7 +31,7 @@ use navara_parser::cesium3dtiles;
 use navara_window::Window;
 
 use super::{
-    traversal::{mark_rendered_tiles_invisible, select_tiles},
+    traversal::mark_rendered_tiles_invisible,
     types::{Cesium3dTileContentRequesterQuery, ChangedCesium3dTileContentRequesterQuery},
     Cesium3dTilesMetadata, Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
 };
