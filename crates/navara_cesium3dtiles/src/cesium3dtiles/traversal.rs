@@ -103,7 +103,10 @@ pub fn select_tiles_bfs(
             continue;
         }
 
-        if matches!(result, TraversalResult::NotSelected) && matches!(tile.refine, Refine::Add) && tile.is_renderable_content {
+        if matches!(result, TraversalResult::NotSelected)
+            && matches!(tile.refine, Refine::Add)
+            && tile.is_renderable_content
+        {
             current_tile.state.leaf = true;
         }
 
@@ -250,7 +253,7 @@ fn mark_rendered_tiles_bfs(
     // Helper struct to hold tile references and metadata for BFS traversal
     struct TileQueueItem {
         tile: *mut Cesium3dTileContent,
-        // parent: *mut Cesium3dTileContent,
+        parent: *mut Cesium3dTileContent,
     }
 
     // Initialize BFS queue with root tile
@@ -258,7 +261,7 @@ fn mark_rendered_tiles_bfs(
 
     queue.push_back(TileQueueItem {
         tile: tile as *mut Cesium3dTileContent,
-        // parent: std::ptr::null_mut(),
+        parent: std::ptr::null_mut(),
     });
 
     // Process tiles level by level
@@ -285,13 +288,13 @@ fn mark_rendered_tiles_bfs(
         }
 
         // TODO: reconsider this logic for backfilling parent tiles when children are not loaded yet
-        // if matches!(tile_status, TileRenderingStatus::Requested) && !item.parent.is_null() {
-        //     let parent_tile = unsafe { &mut *item.parent };
-        //     if parent_tile.is_renderable_content && parent_tile.state.is_data_loaded {
-        //         update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, parent_tile, true);
-        //     }
-        //     continue;
-        // }
+        if matches!(tile_status, TileRenderingStatus::Requested) && !item.parent.is_null() {
+            let parent_tile = unsafe { &mut *item.parent };
+            if parent_tile.is_renderable_content && parent_tile.state.is_data_loaded {
+                toggle_rendered_tile_visible(rendered_tiles, parent_tile, true);
+            }
+            continue;
+        }
 
         let children = match current_tile.children.as_mut() {
             Some(c) => c,
@@ -302,7 +305,7 @@ fn mark_rendered_tiles_bfs(
         for child_tile in children.iter_mut() {
             queue.push_back(TileQueueItem {
                 tile: child_tile as *mut Cesium3dTileContent,
-                // parent: item.tile,
+                parent: item.tile,
             });
         }
     }
@@ -335,19 +338,18 @@ fn process_rendered_tile(
 
     if leaf && tile.is_renderable_content {
         if state.is_data_loaded {
-            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, state.is_visible);
+            update_or_spawn_rendered_tile(
+                commands,
+                layer_id,
+                rendered_tiles,
+                tile,
+                state.is_visible,
+            );
             tile_is_rendered = TileRenderingStatus::Rendered;
         } else if state.is_visible {
-            request_tile_content(
-                commands,
-                buf,
-                base_url,
-                tile,
-                requesters,
-                Priority::Medium
-            );
+            request_tile_content(commands, buf, base_url, tile, requesters, Priority::Medium);
             tile_is_rendered = TileRenderingStatus::Requested;
-        } 
+        }
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
     }
