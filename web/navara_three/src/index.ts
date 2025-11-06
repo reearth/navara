@@ -16,7 +16,6 @@ import initCore, {
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
 import {
-  PerspectiveCamera,
   Scene,
   WebGLRenderer,
   Vector3,
@@ -43,15 +42,6 @@ import {
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
 import {
-  type AntialiasOptions,
-  type EffectOptions,
-  type LensFlareOptions,
-  type SSAOOptions,
-  type ToneMappingOptions,
-  type CloudsOptions,
-  type AerialPerspectiveOptions,
-} from "./effects";
-import {
   processEvent,
   type BufferLoader,
   type FeatureHandler,
@@ -77,6 +67,7 @@ import {
   ToneMappingEffectLayer,
   RainDropEffectLayer,
   TransparentPassEffectLayer,
+  DepthOfFieldEffectLayer,
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
@@ -96,7 +87,6 @@ import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
 import { LayersManager } from "./layersManager";
-import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
@@ -154,17 +144,10 @@ overrideMaterialsForMRT();
 export type Options = {
   container?: HTMLElement;
   canvas?: HTMLCanvasElement | OffscreenCanvas;
-  initialWidth?: number;
-  initialHeight?: number;
-  initialPixelRatio?: number;
+  pixelRatio?: number;
   disableAutoResize?: boolean;
   debug?: boolean;
-  camera?: PerspectiveCamera;
-  antialias?: AntialiasOptions;
-  light?: Light;
   atmosphere?: AtmosphereOptions;
-  aerialPerspective?: AerialPerspectiveOptions;
-  clouds?: CloudsOptions;
   backgroundColor?: number;
   picking?: Picking;
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
@@ -174,10 +157,6 @@ export type Options = {
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
   // Default=true
   halfFloat?: boolean;
-  toneMapping?: ToneMappingOptions;
-  lensFlare?: LensFlareOptions;
-  dithering?: EffectOptions;
-  ssao?: SSAOOptions;
   logarithmicDepthBuffer?: boolean;
   // It must be passed when instantiated.
   shadow?: boolean;
@@ -495,7 +474,7 @@ export default class ThreeView<
 
     const renderer = new WebGLRenderer({
       // If it's true, some noise will happen. So use other AA algorithm instead.
-      antialias: false,
+      antialias: (options.multisampling ?? 0) > 0,
       logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? true,
       canvas: options.canvas,
       stencil: true,
@@ -512,13 +491,12 @@ export default class ThreeView<
     // Update shadow map manually in CustomRenderPass.
     renderer.shadowMap.autoUpdate = false;
 
-    const { width = options.initialWidth, height = options.initialHeight } =
-      this._getCanvasSize() ?? {};
+    const { width, height } = this._getCanvasSize() ?? {};
     invariant(width && height);
 
-    if (typeof options?.initialPixelRatio === "number" || !isWorker()) {
+    if (typeof options?.pixelRatio === "number" || !isWorker()) {
       const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
-      renderer.setPixelRatio(options.initialPixelRatio ?? defaultPixelRatio);
+      renderer.setPixelRatio(options.pixelRatio ?? defaultPixelRatio);
     }
 
     renderer.setSize(width, height, !isWorker());
@@ -539,17 +517,7 @@ export default class ThreeView<
       skyEnvMap: new Scene(),
     };
 
-    if (options.camera) {
-      this.camera = new ThreeViewCamera(options.camera);
-    } else {
-      const { width = options.initialWidth, height = options.initialHeight } =
-        this._getCanvasSize() ?? {};
-      if (typeof width !== "number" || typeof height !== "number") {
-        throw new Error("Must provide initialWidth and initialHeight");
-      }
-
-      this.camera = new ThreeViewCamera();
-    }
+    this.camera = new ThreeViewCamera();
 
     // Setup render pass orchestrator
     this.renderPassOrchestrator = new RenderPassOrchestrator(this.renderer, {
@@ -859,7 +827,7 @@ export default class ThreeView<
     this.camera.raw.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this.renderPassOrchestrator.setSize(w, h);
-    if (pixelRatio) {
+    if (this._options.pixelRatio == null && pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
 
@@ -1066,7 +1034,7 @@ export default class ThreeView<
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);
-
+    this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);
@@ -1451,7 +1419,7 @@ export default class ThreeView<
     if (!width || !height) return;
 
     const pixelRatio = isWorker()
-      ? (this._options.initialPixelRatio ?? 1)
+      ? (this._options.pixelRatio ?? 1)
       : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };
