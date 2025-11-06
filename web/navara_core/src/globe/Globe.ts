@@ -39,14 +39,10 @@ export type GlobeOptions = Partial<
  */
 export class Globe implements Omit<GlobeWasm, "free" | "elevationColormap"> {
   private handler: GlobeHandler;
-  private _elevationColormap: ColorMap;
+  private _elevationColormap?: ColorMap;
 
   constructor(handler: GlobeHandler, options?: GlobeOptions) {
     this.handler = handler;
-    this._elevationColormap = new ColorMap("sequential", "", [
-      [0, 0, 0],
-      [1, 1, 1],
-    ]);
     this.setOptions(options);
   }
 
@@ -144,7 +140,7 @@ export class Globe implements Omit<GlobeWasm, "free" | "elevationColormap"> {
     this.handler.setWireframe(value);
   }
 
-  get elevationColormap(): ColorMap {
+  get elevationColormap(): ColorMap | undefined {
     return this._elevationColormap;
   }
 
