@@ -14,13 +14,12 @@ import type {
   Globe,
 } from "@navara/engine";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
+import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
-  ClampToEdgeWrapping,
   Color,
-  LinearFilter,
   NearestFilter,
   Material,
   Mesh,
@@ -415,15 +414,11 @@ export class TileMesh
       value: null,
     };
 
-    m.userData.colorMapTexture = {
-      value: null,
-    };
-
     m.userData.uTime = uniforms.time;
 
     m.userData.defines ??= {};
     m.userData.defines.USE_UV = 1;
-    m.userData.defines.USE_COLOR_MAP = 0;
+    m.userData.defines.USE_ELEVATION_HEATMAP = 0;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -454,7 +449,7 @@ export class TileMesh
       shader.uniforms.uSpeculars = m.userData.speculars;
       shader.uniforms.uTextures = m.userData.textures;
       shader.uniforms.uWaterNormalMap = m.userData.waterTexture;
-      shader.uniforms.uColorMapTexture = m.userData.colorMapTexture;
+      shader.uniforms.uColorMapTexture = uniforms.colorMapTexture;
       shader.uniforms.uIor = { value: 1.33333 };
       shader.uniforms.uTime = m.userData.uTime;
 
@@ -468,6 +463,9 @@ export class TileMesh
       shader.uniforms.uElevationMinOffset = m.userData.elevationMinOffset;
       shader.uniforms.uElevationEpsilon = m.userData.elevationEpsilon;
       shader.uniforms.uElevationOffset = m.userData.elevationOffset;
+      shader.uniforms.uLogarithmic = m.userData.logarithmic;
+      shader.uniforms.uLogBase = m.userData.logBase;
+      shader.uniforms.uLogBoundary = m.userData.logBoundary;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -518,61 +516,19 @@ vUv = vUv * uScale + uOffset;
   uniform float uApplyWaterNormals[${maxTextures}];
   uniform bool uSpeculars[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
+  uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
   uniform float uTime;
-
-  #ifdef USE_COLOR_MAP
-    uniform sampler2D uColorMapTexture;
-    uniform bool uIsElevationHeatmaps[${maxTextures}];
-    uniform float uElevationMinHeight;
-    uniform float uElevationMaxHeight;
-    uniform vec3 uElevationRGBScaler;
-    uniform float uElevationBoundary;
-    uniform float uElevationMaxOffset;
-    uniform float uElevationMinOffset;
-    uniform float uElevationEpsilon;
-    uniform float uElevationOffset;
-  #endif
-  
 
   // Add varying for original UV coordinates
   varying vec2 vOrigUv;
 
   #include <common>
 
-  #ifdef USE_COLOR_MAP
-    float decodeElevationNormal(vec4 color) {
-      vec3 rgb = color.rgb * 255.0;
-      float x = dot(rgb, uElevationRGBScaler);
-
-      float h;
-      // Use epsilon-based comparison for floating point equality check
-      float epsilon_cmp = 1.0; // Tolerance for boundary comparison
-      if (abs(x - uElevationBoundary) > epsilon_cmp) {
-        if (x > uElevationBoundary) {
-          h = x + uElevationMaxOffset;
-        } else {
-          h = x + uElevationMinOffset;
-        }
-      } else {
-        h = 0.0;
-      }
-
-      h = h * uElevationEpsilon + uElevationOffset;
-      if(h < 0.0) {
-        h = 0.0;
-      }
-      h = clamp(
-          (h - uElevationMinHeight) / (uElevationMaxHeight - uElevationMinHeight),
-          0.0,
-          1.0
-      );
-
-      return h;
-    }
-  #endif
+  // uColorMapTexture is used for elevation heatmap color mapping
+  ${ElevationParsFragment}
 
   `,
         )
@@ -607,7 +563,7 @@ vUv = vUv * uScale + uOffset;
     // For raster textures, use transformed UV
     vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
 
-    #ifdef USE_COLOR_MAP
+    #ifdef USE_ELEVATION_HEATMAP
       // Check if this is an elevation heatmap texture
       if (uIsElevationHeatmaps[${idx}]) {
         // For elevation heatmap: decode DEM data and apply color mapping
@@ -1019,6 +975,21 @@ if (uPickable > 0.) {
         value: 0,
       };
     }
+    if (!m.userData.logarithmic) {
+      m.userData.logarithmic = {
+        value: false,
+      };
+    }
+    if (!m.userData.logBase) {
+      m.userData.logBase = {
+        value: 10,
+      };
+    }
+    if (!m.userData.logBoundary) {
+      m.userData.logBoundary = {
+        value: 10,
+      };
+    }
 
     // Reset all texture properties
     for (let i = 0; i < m.userData.shows.value.length; i++) {
@@ -1064,14 +1035,18 @@ if (uPickable > 0.) {
       mat.elevation_b_scaler,
     );
 
+    m.userData.logarithmic.value = mat.logarithmic;
+    m.userData.logBase.value = mat.log_base;
+    m.userData.logBoundary.value = mat.log_boundary;
+
     if (!m.userData.defines) {
       m.userData.defines = {
         USE_UV: 1,
-        USE_COLOR_MAP: 0,
+        USE_ELEVATION_HEATMAP: 0,
       };
     }
 
-    m.userData.defines.USE_COLOR_MAP =
+    m.userData.defines.USE_ELEVATION_HEATMAP =
       m.userData.isElevationHeatmaps.value.some((v: boolean) => v === true);
   }
 
@@ -1200,47 +1175,6 @@ if (uPickable > 0.) {
         (this.texturizedScenes.children[i]?.children.length ?? 0 > 0) ? 1 : 0;
       m.userData.colors.value[lastIndex] = new Color(0xffffff);
       m.userData.opacities.value[lastIndex] = 1.0;
-    }
-
-    // Setup color map texture from Rust-provided LUT
-    // Use the first non-null color map (since all elevation heatmaps share one color map)
-    const lut = mat.color_map_lut;
-    if (lut && lut.length > 0) {
-      if (lut && lut.length > 0) {
-        // LUT is Float32Array of RGB values: [r0, g0, b0, r1, g1, b1, ...]
-        const width = lut.length / 3;
-        const rgbData = new Uint8Array(lut.length);
-
-        for (let j = 0; j < lut.length; j++) {
-          rgbData[j] = Math.round(lut[j] * 255);
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = 1;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          const imageData = ctx.createImageData(width, 1);
-          for (let j = 0; j < width; j++) {
-            imageData.data[j * 4 + 0] = rgbData[j * 3 + 0]; // R
-            imageData.data[j * 4 + 1] = rgbData[j * 3 + 1]; // G
-            imageData.data[j * 4 + 2] = rgbData[j * 3 + 2]; // B
-            imageData.data[j * 4 + 3] = 255; // A
-          }
-          ctx.putImageData(imageData, 0, 0);
-
-          const texture = new Texture(canvas);
-          texture.wrapS = ClampToEdgeWrapping;
-          texture.wrapT = ClampToEdgeWrapping;
-          texture.minFilter = LinearFilter;
-          texture.magFilter = LinearFilter;
-          texture.generateMipmaps = false;
-          texture.flipY = false;
-          texture.needsUpdate = true;
-
-          m.userData.colorMapTexture.value = texture;
-        }
-      }
     }
   }
 

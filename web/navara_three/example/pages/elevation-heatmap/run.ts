@@ -65,6 +65,9 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  // Set the elevation colormap on the globe
+  view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
+
   const layerDef: LayerDescription = {
     type: "tiles",
     data: {
@@ -78,7 +81,9 @@ export const run = async (view: ThreeView) => {
       max_height: 3000,
       min_height: 0,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      color_map_lut: PLATEAU_COLOR_MAP.flatten(),
+      logarithmic: true,
+      log_base: 6.907755,
+      log_boundary: 1000,
     },
   };
 
@@ -87,11 +92,11 @@ export const run = async (view: ThreeView) => {
   const layerInst = view.addLayer(layerDef);
 
   view.setCamera({
-    lng: 138.75,
-    lat: 35.13,
-    height: 10000,
+    lng: 138.5,
+    lat: 34,
+    height: 100000,
     heading: 0,
-    pitch: -20,
+    pitch: -30,
     roll: 0,
   });
 
@@ -102,10 +107,15 @@ export const run = async (view: ThreeView) => {
   showAttributions([TERRAIN_DATASETS.gsi]);
 
   const params = {
+    color_map: "plateau",
     max_height: 3000,
     min_height: 0,
-    color_map: "plateau",
+    logarithmic: true,
+    log_base: 6.907755,
+    log_boundary: 1000,
   };
+
+  view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
 
   const changeFunc = () => {
     if (!layerDef.elevation_heatmap) {
@@ -113,11 +123,14 @@ export const run = async (view: ThreeView) => {
     }
     layerDef.elevation_heatmap.max_height = params.max_height;
     layerDef.elevation_heatmap.min_height = params.min_height;
+    layerDef.elevation_heatmap.logarithmic = params.logarithmic;
+    layerDef.elevation_heatmap.log_base = params.log_base;
+    layerDef.elevation_heatmap.log_boundary = params.log_boundary;
 
     if (params.color_map === "plateau") {
-      layerDef.elevation_heatmap.color_map_lut = PLATEAU_COLOR_MAP.flatten();
+      view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
     } else if (params.color_map === "turbo") {
-      layerDef.elevation_heatmap.color_map_lut = TURBO_COLOR_MAP.flatten();
+      view.globe.elevationColormap = TURBO_COLOR_MAP.flatten();
     }
     view.updateLayerById(layerInst.id, layerDef);
   };
@@ -126,11 +139,14 @@ export const run = async (view: ThreeView) => {
     title: "Elevation Heatmap",
   });
 
-  folder.addBinding(params, "max_height").on("change", changeFunc);
-  folder.addBinding(params, "min_height").on("change", changeFunc);
   folder
     .addBinding(params, "color_map", {
       options: { plateau: "plateau", turbo: "turbo" },
     })
     .on("change", changeFunc);
+  folder.addBinding(params, "max_height").on("change", changeFunc);
+  folder.addBinding(params, "min_height").on("change", changeFunc);
+  folder.addBinding(params, "logarithmic").on("change", changeFunc);
+  folder.addBinding(params, "log_base").on("change", changeFunc);
+  folder.addBinding(params, "log_boundary").on("change", changeFunc);
 };

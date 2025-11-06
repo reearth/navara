@@ -313,7 +313,9 @@ impl LayerDescription {
                             max_height: heatmap.max_height.unwrap_or(1000.0),
                             min_height: heatmap.min_height.unwrap_or(0.0),
                             elevation_decoder: heatmap.elevation_decoder?.into(),
-                            color_map_lut: heatmap.color_map_lut.clone(),
+                            logarithmic: heatmap.logarithmic,
+                            log_base: heatmap.log_base,
+                            log_boundary: heatmap.log_boundary,
                         })
                     });
 

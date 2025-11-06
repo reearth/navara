@@ -35,6 +35,11 @@ pub struct Globe {
 
     /// Whether to render materials in wireframe mode.
     pub wireframe: bool,
+
+    /// Color map lookup table for elevation heatmap rendering.
+    /// Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...].
+    #[wasm_bindgen(js_name = elevationColormap, getter_with_clone)]
+    pub elevation_colormap: Vec<f32>,
 }
 
 #[wasm_bindgen]
@@ -50,6 +55,7 @@ impl Globe {
         transparent: bool,
         opacity: f32,
         wireframe: bool,
+        elevation_colormap: Vec<f32>,
     ) -> Self {
         Self {
             max_sse,
@@ -60,6 +66,7 @@ impl Globe {
             transparent,
             opacity,
             wireframe,
+            elevation_colormap,
         }
     }
 }
@@ -75,6 +82,7 @@ impl From<&navara_globe::Globe> for Globe {
             transparent: val.transparent,
             opacity: val.opacity,
             wireframe: val.wireframe,
+            elevation_colormap: val.elevation_colormap.clone(),
         }
     }
 }
@@ -96,6 +104,7 @@ impl From<&Globe> for navara_globe::Globe {
             transparent: val.transparent,
             opacity: val.opacity,
             wireframe: val.wireframe,
+            elevation_colormap: val.elevation_colormap.clone(),
         }
     }
 }

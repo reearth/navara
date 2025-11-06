@@ -580,6 +580,11 @@ impl Core {
         self.app.get_globe().map(|g| g.wireframe)
     }
 
+    #[wasm_bindgen(js_name = getGlobeElevationColormap)]
+    pub fn get_globe_elevation_colormap(&self) -> Option<Vec<f32>> {
+        self.app.get_globe().map(|g| g.elevation_colormap.clone())
+    }
+
     #[wasm_bindgen(js_name = setGlobeTransparent)]
     pub fn set_globe_transparent(&mut self, value: bool) {
         self.app.set_globe_transparent(value);
@@ -618,6 +623,11 @@ impl Core {
     #[wasm_bindgen(js_name = setGlobeWireframe)]
     pub fn set_globe_wireframe(&mut self, value: bool) {
         self.app.set_globe_wireframe(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeElevationColormap)]
+    pub fn set_globe_elevation_colormap(&mut self, value: Vec<f32>) {
+        self.app.set_globe_elevation_colormap(value);
     }
 
     // === Globe definition ===

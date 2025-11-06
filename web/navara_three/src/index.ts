@@ -17,6 +17,7 @@ import {
   Texture,
   Vector2,
   LinearFilter,
+  ClampToEdgeWrapping,
   Group,
   Material,
   PCFSoftShadowMap,
@@ -377,6 +378,9 @@ export default class ThreeView<
     getWireframe: () => {
       return this._core?.getGlobeWireframe();
     },
+    getElevationColormap: () => {
+      return this._core?.getGlobeElevationColormap();
+    },
     setTransparent: (value: boolean) => {
       this._core?.setGlobeTransparent(value);
     },
@@ -400,6 +404,45 @@ export default class ThreeView<
     },
     setWireframe: (value: boolean) => {
       this._core?.setGlobeWireframe(value);
+    },
+    setElevationColormap: (value: Float32Array) => {
+      this._core?.setGlobeElevationColormap(value);
+
+      // Generate colormap texture and update CommonUniforms
+      if (value && value.length > 0) {
+        const width = value.length / 3;
+        const rgbData = new Uint8Array(value.length);
+
+        for (let j = 0; j < value.length; j++) {
+          rgbData[j] = Math.round(value[j] * 255);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = 1;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const imageData = ctx.createImageData(width, 1);
+          for (let j = 0; j < width; j++) {
+            imageData.data[j * 4 + 0] = rgbData[j * 3 + 0]; // R
+            imageData.data[j * 4 + 1] = rgbData[j * 3 + 1]; // G
+            imageData.data[j * 4 + 2] = rgbData[j * 3 + 2]; // B
+            imageData.data[j * 4 + 3] = 255; // A
+          }
+          ctx.putImageData(imageData, 0, 0);
+
+          const texture = new Texture(canvas);
+          texture.wrapS = ClampToEdgeWrapping;
+          texture.wrapT = ClampToEdgeWrapping;
+          texture.minFilter = LinearFilter;
+          texture.magFilter = LinearFilter;
+          texture.generateMipmaps = false;
+          texture.flipY = false;
+          texture.needsUpdate = true;
+
+          this._uniforms.colorMapTexture.value = texture;
+        }
+      }
     },
   };
   private _workerTaskHandler: WorkerTaskHandler = {
@@ -571,6 +614,7 @@ export default class ThreeView<
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
       time: { value: 0 },
+      colorMapTexture: { value: null },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.

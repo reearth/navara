@@ -45,6 +45,11 @@ pub struct Globe {
     /// Whether to render materials in wireframe mode.
     /// Used by RasterTileMaterial and RasterTerrainMaterial.
     pub wireframe: bool,
+
+    /// Color map lookup table for elevation heatmap rendering.
+    /// Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...].
+    /// Used by elevation heatmap layers.
+    pub elevation_colormap: Vec<f32>,
 }
 
 impl Default for Globe {
@@ -58,6 +63,7 @@ impl Default for Globe {
             transparent: false,
             opacity: 1.0,
             wireframe: false,
+            elevation_colormap: Vec::new(),
         }
     }
 }

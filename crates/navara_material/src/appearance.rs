@@ -4,12 +4,16 @@ use navara_math::{FloatType, Transform, Vec2, Vec3};
 
 /// Configuration for elevation heatmap rendering.
 /// Shared across all elevation heatmap layers in a tile.
+/// Note: color_map_lut is now stored in Globe.elevation_colormap
 #[derive(Debug, Clone, PartialEq)]
 pub struct ElevationHeatmapConfig {
     pub max_height: f32,
     pub min_height: f32,
     pub elevation_decoder: ElevationDecoder,
-    pub color_map_lut: Vec<f32>, // Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...]
+
+    pub logarithmic: bool,
+    pub log_base: f32,
+    pub log_boundary: f32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

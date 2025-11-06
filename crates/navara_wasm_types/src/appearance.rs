@@ -773,8 +773,9 @@ pub struct RasterTileInternalMaterial {
     pub elevation_epsilon: f32,
     pub elevation_offset: f32,
 
-    #[wasm_bindgen(getter_with_clone)]
-    pub color_map_lut: Vec<f32>,
+    pub logarithmic: bool,
+    pub log_base: f32,
+    pub log_boundary: f32,
 }
 
 #[wasm_bindgen]
@@ -859,11 +860,22 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.elevation_decoder.offset)
                 .unwrap_or(0.0),
-            color_map_lut: m
+
+            logarithmic: m
                 .elevation_heatmap_config
                 .as_ref()
-                .map(|c| c.color_map_lut.clone())
-                .unwrap_or_default(),
+                .map(|c| c.logarithmic)
+                .unwrap_or(false),
+            log_base: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.log_base)
+                .unwrap_or(10.0),
+            log_boundary: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.log_boundary)
+                .unwrap_or(10.0),
         }
     }
 }
@@ -974,6 +986,7 @@ pub struct ElevationHeatmapMaterial {
     pub max_height: Option<f32>,
     pub min_height: Option<f32>,
     pub elevation_decoder: Option<ElevationDecoder>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub color_map_lut: Vec<f32>, // Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...]. Empty vec means no color map.
+    pub logarithmic: bool,
+    pub log_base: f32,
+    pub log_boundary: f32,
 }

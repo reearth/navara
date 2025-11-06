@@ -1007,6 +1007,12 @@ impl App {
         }
     }
 
+    pub fn set_globe_elevation_colormap(&mut self, value: Vec<f32>) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.elevation_colormap = value;
+        }
+    }
+
     // === Globe definition ===
 }
 

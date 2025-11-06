@@ -13,6 +13,7 @@ export type GlobeHandler = {
   getShouldComputeNormalFromVertex: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
+  getElevationColormap: () => Float32Array | undefined;
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
@@ -21,6 +22,7 @@ export type GlobeHandler = {
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
+  setElevationColormap: (value: Float32Array) => void;
 };
 
 export type GlobeOptions = Partial<Omit<GlobeWasm, "constructor" | "free">>;
@@ -64,6 +66,9 @@ export class Globe implements Omit<GlobeWasm, "free"> {
     }
     if (options?.wireframe != null) {
       this.wireframe = options.wireframe;
+    }
+    if (options?.elevationColormap != null) {
+      this.elevationColormap = options.elevationColormap;
     }
   }
 
@@ -128,5 +133,13 @@ export class Globe implements Omit<GlobeWasm, "free"> {
 
   set wireframe(value: boolean) {
     this.handler.setWireframe(value);
+  }
+
+  get elevationColormap(): Float32Array {
+    return this.handler.getElevationColormap() ?? new Float32Array();
+  }
+
+  set elevationColormap(value: Float32Array) {
+    this.handler.setElevationColormap(value);
   }
 }
