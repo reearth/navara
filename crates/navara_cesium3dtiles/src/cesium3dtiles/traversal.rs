@@ -190,7 +190,7 @@ pub fn select_tiles_bfs(
 
     // Second pass: mark rendered tiles (still uses depth-first for rendering)
     let mut rendered_tiles_count = 0;
-    mark_rendered_tiles(
+    mark_rendered_tiles_bfs(
         commands,
         buf,
         layer_id,
@@ -282,7 +282,7 @@ fn process_tile_bfs(
                 ))
                 .id();
             tile.data_requester_id = Some(e);
-            tile.state.is_data_loaded = true;
+            // tile.state.is_data_loaded = true;
             return TraversalResult::JsonChildFound;
         }
     }
@@ -405,9 +405,7 @@ fn mark_leaves(
                 TraversalResult::JsonChildFound => {
                     tile.state.any_children_has_json = true;
                 }
-                TraversalResult::NotSelected => {
-                    
-                }
+                TraversalResult::NotSelected => {}
             };
 
             all_children_loaded = all_children_loaded
@@ -465,13 +463,11 @@ fn mark_leaves(
             tile.state.is_data_loaded = true;
             return TraversalResult::JsonChildFound;
         }
-
     }
 
     // Use this tile if children aren't found.
     TraversalResult::Selected
 }
-
 
 fn construct_child_tile_url(base_url: &Url, child_url: &str) -> Url {
     let mut new_url: Url = base_url.clone().join(child_url).unwrap();
@@ -531,29 +527,30 @@ fn mark_rendered_tiles(
     let leaf = state.touched && state.leaf;
 
     if (leaf && tile.is_renderable_content) {
-            if state.is_data_loaded {
-                let is_visible = state.is_visible;
-                update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
-                if is_visible {
-                    *rendered_tiles_count += 1;
-                }
-            } else if state.is_visible {
-                request_tile_content(
-                    commands,
-                    buf,
-                    base_url,
-                    tile,
-                    requesters,
-                    if tile.state.are_all_children_loaded {
-                        Priority::Low
-                    } else {
-                        Priority::Medium
-                    },
-                );
-            } else {
-                toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        if state.is_data_loaded {
+            let is_visible = state.is_visible;
+            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
+            if is_visible {
+                *rendered_tiles_count += 1;
             }
-            return;
+        } else if state.is_visible {
+            request_tile_content(
+                commands,
+                buf,
+                base_url,
+                tile,
+                requesters,
+                if tile.state.are_all_children_loaded {
+                    Priority::Low
+                } else {
+                    Priority::Medium
+                },
+            );
+        } else {
+            toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        }
+        // tile.state.touched = false;
+        // return;
     } else {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
     }
@@ -567,8 +564,9 @@ fn mark_rendered_tiles(
 
     let mut all_children_loaded = true;
     for child_tile in children.iter_mut() {
-        all_children_loaded =
-            all_children_loaded && child_tile.state.is_data_loaded && child_tile.is_renderable_content;
+        all_children_loaded = all_children_loaded
+            && child_tile.state.is_data_loaded
+            && child_tile.is_renderable_content;
         mark_rendered_tiles(
             commands,
             buf,
@@ -583,10 +581,197 @@ fn mark_rendered_tiles(
 
     // if !all_children_loaded && !leaf && tile.is_renderable_content &&tile.state.is_data_loaded {
     //     info!("backup render tile");
-    //     update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, true); 
+    //     update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, true);
     // } else if all_children_loaded && !leaf {
     //     toggle_rendered_tile_visible(rendered_tiles, tile, false);
     // }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn mark_rendered_tiles_bfs(
+    commands: &mut Commands,
+    buf: &mut ResMut<BufferStore>,
+    layer_id: Entity,
+    base_url: &Url,
+    tile: &mut Cesium3dTileContent,
+    requesters: &Cesium3dTileContentRequesterQuery,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    rendered_tiles_count: &mut u32,
+) {
+    // Helper struct to hold tile references and metadata for BFS traversal
+    struct TileQueueItem {
+        tile: *mut Cesium3dTileContent,
+    }
+
+    // Initialize BFS queue with root tile
+    let mut queue: VecDeque<TileQueueItem> = VecDeque::new();
+
+    queue.push_back(TileQueueItem {
+        tile: tile as *mut Cesium3dTileContent,
+    });
+
+    // Process tiles level by level
+    while let Some(item) = queue.pop_front() {
+        // SAFETY: We maintain exclusive access to tiles through the traversal
+        let current_tile = unsafe { &mut *item.tile };
+
+        // Process current tile
+        let tile_is_rendered = process_rendered_tile(
+            commands,
+            buf,
+            layer_id,
+            base_url,
+            current_tile,
+            requesters,
+            rendered_tiles
+        );
+
+        // if the tile is rendered, skip processing its children
+        if tile_is_rendered {
+            continue;
+        }
+
+        let children = match current_tile.children.as_mut() {
+            Some(c) => c,
+            None => return,
+        };
+
+        let mut all_children_loaded = true;
+        for child_tile in children.iter_mut() {
+            // Add child to queue for processing
+            queue.push_back(TileQueueItem {
+                tile: child_tile as *mut Cesium3dTileContent,
+            });
+        }
+    }
+}
+
+/// Breadth-first reverse version of mark_rendered_tiles
+/// Collects all tiles level-by-level, then processes them from deepest to shallowest
+#[allow(clippy::too_many_arguments)]
+fn mark_rendered_tiles_reverse_bfs(
+    commands: &mut Commands,
+    buf: &mut ResMut<BufferStore>,
+    layer_id: Entity,
+    base_url: &Url,
+    tile: &mut Cesium3dTileContent,
+    requesters: &Cesium3dTileContentRequesterQuery,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    rendered_tiles_count: &mut u32,
+) {
+    // Helper struct to hold tile references for traversal
+    struct TileQueueItem {
+        tile: *mut Cesium3dTileContent,
+    }
+
+    // First pass: Collect all tiles in breadth-first order
+    let mut queue: VecDeque<TileQueueItem> = VecDeque::new();
+    let mut tiles_by_level: Vec<Vec<*mut Cesium3dTileContent>> = Vec::new();
+
+    queue.push_back(TileQueueItem {
+        tile: tile as *mut Cesium3dTileContent,
+    });
+
+    // Collect tiles level by level
+    while !queue.is_empty() {
+        let level_size = queue.len();
+        let mut current_level = Vec::new();
+
+        for _ in 0..level_size {
+            if let Some(item) = queue.pop_front() {
+                current_level.push(item.tile);
+
+                // SAFETY: We maintain exclusive access to tiles through the traversal
+                let current_tile = unsafe { &mut *item.tile };
+
+                // Add children to queue for next level
+                if let Some(children) = &mut current_tile.children {
+                    for child in children.iter_mut() {
+                        queue.push_back(TileQueueItem {
+                            tile: child as *mut Cesium3dTileContent,
+                        });
+                    }
+                }
+            }
+        }
+
+        if !current_level.is_empty() {
+            tiles_by_level.push(current_level);
+        }
+    }
+
+    // Second pass: Process tiles in reverse order (deepest first)
+    for level in tiles_by_level.iter().rev() {
+        for tile_ptr in level {
+            // SAFETY: We maintain exclusive access to tiles through the traversal
+            let current_tile = unsafe { &mut **tile_ptr };
+
+            process_rendered_tile(
+                commands,
+                buf,
+                layer_id,
+                base_url,
+                current_tile,
+                requesters,
+                rendered_tiles,
+            );
+        }
+    }
+}
+
+/// Helper function to process a single tile for rendering
+/// Extracted from mark_rendered_tiles for reuse
+#[allow(clippy::too_many_arguments)]
+fn process_rendered_tile(
+    commands: &mut Commands,
+    buf: &mut ResMut<BufferStore>,
+    layer_id: Entity,
+    base_url: &Url,
+    tile: &mut Cesium3dTileContent,
+    requesters: &Cesium3dTileContentRequesterQuery,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+) -> bool {
+    let touched_last_frame = tile.state.touched_last_frame;
+    tile.state.touched_last_frame = tile.state.touched;
+
+    let state = &tile.state;
+
+    // This tile has been invisible before this frame.
+    if !state.touched && !touched_last_frame {
+        toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        return false;
+    }
+
+    let leaf = state.touched && state.leaf;
+    let mut tile_is_rendered = false;
+
+    if leaf && tile.is_renderable_content {
+        if state.is_data_loaded {
+            let is_visible = state.is_visible;
+            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
+            tile_is_rendered = true;
+        } else if state.is_visible {
+            request_tile_content(
+                commands,
+                buf,
+                base_url,
+                tile,
+                requesters,
+                if tile.state.are_all_children_loaded {
+                    Priority::Low
+                } else {
+                    Priority::Medium
+                },
+            );
+        } else {
+            toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        }
+    } else {
+        toggle_rendered_tile_visible(rendered_tiles, tile, false);
+    }
+
+    tile.state.touched = false;
+    return tile_is_rendered;
 }
 
 #[allow(clippy::too_many_arguments)]
