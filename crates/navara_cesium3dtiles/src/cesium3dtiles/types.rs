@@ -23,7 +23,6 @@ pub type Cesium3dTileContentRequesterQuery<'a, 'world, 'state> = Query<
             With<B3dmDataRequesterMarker>,
             With<PntsDataRequesterMarker>,
             With<GlbDataRequesterMarker>,
-            // With<GlbDataRequesterMarker>
         )>,
         Without<Deleted>,
     ),
@@ -41,7 +40,6 @@ pub type ChangedCesium3dTileContentRequesterQuery<'a, 'world, 'state> = Query<
             With<B3dmDataRequesterMarker>,
             With<PntsDataRequesterMarker>,
             With<GlbDataRequesterMarker>,
-            // With<GlbDataRequesterMarker>
         )>,
         Or<(Added<DataRequester>, Changed<DataRequester>)>,
         Without<Deleted>,

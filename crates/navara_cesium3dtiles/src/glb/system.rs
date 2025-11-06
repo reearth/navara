@@ -25,7 +25,6 @@ use super::{requester::GlbDataRequesterMarker, RenderedCesium3dTileContentGlbMar
 #[allow(clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,
-    // mut buf: ResMut<BufferStore>,
     requesters: Query<
         (
             &Cesium3dTileContentDataRequesterMarker,
@@ -43,8 +42,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
-    // info!("requesters: {:?}", requesters);
-    // info!("rendered tiles: {:?}", rendered_tiles);
     for mut tile in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => v,
@@ -84,8 +81,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
             Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)),
         ));
         tile.feature_id = Some(entity.id());
-
-        // buf.remove(&req.handle);
     }
 }
 

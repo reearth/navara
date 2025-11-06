@@ -39,7 +39,6 @@ pub(crate) fn request_tile_content(
             return false;
         }
     };
-    // info!( "Requesting tile content: {} with extension {:?}", content_url, extension);
     match extension {
         DataRequesterExtension::Pnts => {
             let id = commands
@@ -74,7 +73,6 @@ pub(crate) fn request_tile_content(
             true
         }
         DataRequesterExtension::Glb => {
-            // info!("Requesting GLB tile content: {}", content_url);
             let id = commands
                 .spawn((
                     Cesium3dTileContentDataRequesterMarker,

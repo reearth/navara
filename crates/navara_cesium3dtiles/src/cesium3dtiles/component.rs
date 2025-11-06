@@ -62,7 +62,6 @@ pub struct Cesium3dTileContent {
     pub data_requester_id: Option<Entity>,
     pub rendered_tile_id: Option<Entity>,
     pub children: Option<Vec<Cesium3dTileContent>>,
-    // pub parent: Option<*mut Cesium3dTileContent>,
     pub refine: Refine,
     // If the content's URI isn't a model file, it's false.
     pub is_renderable_content: bool,
@@ -74,10 +73,7 @@ pub struct Cesium3dTileContent {
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
         let (uri, is_renderable_content) = match &tile.content {
-            Some(content) => {
-                // info!("Creating Cesium3dTileContent for tile: {:?}", content.uri);
-                (Some(content.uri.clone()), !content.uri.contains(".json"))
-            }
+            Some(content) => (Some(content.uri.clone()), !content.uri.contains(".json")),
             None => (None, false),
         };
 
@@ -129,7 +125,6 @@ impl Cesium3dTileContent {
             data_requester_id: None,
             rendered_tile_id: None,
             children: None,
-            // parent: parent.map(|p| p as *const _ as *mut _),
             is_renderable_content,
             bounding_volume,
             refine: match tile
@@ -196,7 +191,6 @@ pub struct Cesium3dTileContentState {
     pub meet_sse: bool,
     pub is_data_loaded: bool,
     pub are_all_children_loaded: bool,
-    pub any_children_has_json: bool,
     pub distance_from_camera: f32,
     pub sse: f32,
 }
@@ -210,7 +204,6 @@ impl Cesium3dTileContentState {
         self.are_all_children_loaded = false;
         self.distance_from_camera = 0.;
         self.sse = 0.;
-        self.any_children_has_json = false;
     }
 }
 

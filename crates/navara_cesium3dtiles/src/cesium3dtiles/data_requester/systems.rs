@@ -26,7 +26,6 @@ pub fn filter_requestable_data_requester(
                 With<B3dmDataRequesterMarker>,
                 With<PntsDataRequesterMarker>,
                 With<GlbDataRequesterMarker>,
-                // With<GlbDataRequesterMarker>
             )>,
             Added<DataRequester>,
             Without<Deleted>,
@@ -42,7 +41,6 @@ pub fn filter_requestable_data_requester(
                 With<B3dmDataRequesterMarker>,
                 With<PntsDataRequesterMarker>,
                 With<GlbDataRequesterMarker>,
-                // With<GlbDataRequesterMarker>
             )>,
             Without<Deleted>,
         ),

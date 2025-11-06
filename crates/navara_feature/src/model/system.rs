@@ -4,7 +4,6 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 
-use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::WGS84_32;
@@ -64,7 +63,6 @@ pub fn transfer_mesh(
     ) in &mut models
     {
         if deleted_marker.is_some() {
-            info!("Skip transferring deleted model entity: {:?}", entity);
             continue;
         }
 
