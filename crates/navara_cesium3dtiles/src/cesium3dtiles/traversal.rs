@@ -40,6 +40,13 @@ pub enum TraversalResult {
     JsonChildFound,
 }
 
+
+enum TileRenderingStatus {
+    Rendered,
+    Requested,
+    NotRendered,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn select_tiles(
     commands: &mut Commands,
@@ -304,6 +311,7 @@ fn mark_rendered_tiles_bfs(
     // Helper struct to hold tile references and metadata for BFS traversal
     struct TileQueueItem {
         tile: *mut Cesium3dTileContent,
+        parent: *mut Cesium3dTileContent,
     }
 
     // Initialize BFS queue with root tile
@@ -311,6 +319,7 @@ fn mark_rendered_tiles_bfs(
 
     queue.push_back(TileQueueItem {
         tile: tile as *mut Cesium3dTileContent,
+        parent: std::ptr::null_mut(),
     });
 
     // Process tiles level by level
@@ -319,7 +328,7 @@ fn mark_rendered_tiles_bfs(
         let current_tile = unsafe { &mut *item.tile };
 
         // Process current tile
-        let tile_is_rendered = process_rendered_tile(
+        let tile_status = process_rendered_tile(
             commands,
             buf,
             layer_id,
@@ -330,20 +339,29 @@ fn mark_rendered_tiles_bfs(
         );
 
         // if the tile is rendered, skip processing its children
-        if tile_is_rendered && matches!(current_tile.refine, Refine::Replace) {
+        if matches!(tile_status, TileRenderingStatus::Rendered) && matches!(current_tile.refine, Refine::Replace) {
             continue;
         }
+
+        // if matches!(tile_status, TileRenderingStatus::Requested) && !item.parent.is_null() {
+        //     let parent_tile = unsafe { &mut *item.parent };
+        //     if parent_tile.is_renderable_content && parent_tile.state.is_data_loaded {
+        //         update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, parent_tile, true);
+        //     }
+        //     continue;
+        // }
 
         let children = match current_tile.children.as_mut() {
             Some(c) => c,
             None => continue,
         };
 
-        let mut all_children_loaded = true;
+        // Add children to queue for processing
         for child_tile in children.iter_mut() {
-            // Add child to queue for processing
+
             queue.push_back(TileQueueItem {
                 tile: child_tile as *mut Cesium3dTileContent,
+                parent: item.tile,
             });
         }
     }
@@ -360,7 +378,7 @@ fn process_rendered_tile(
     tile: &mut Cesium3dTileContent,
     requesters: &Cesium3dTileContentRequesterQuery,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
-) -> bool {
+) -> TileRenderingStatus {
     let touched_last_frame = tile.state.touched_last_frame;
     tile.state.touched_last_frame = tile.state.touched;
 
@@ -369,17 +387,17 @@ fn process_rendered_tile(
     // This tile has been invisible before this frame.
     if !state.touched && !touched_last_frame {
         toggle_rendered_tile_visible(rendered_tiles, tile, false);
-        return false;
+        return TileRenderingStatus::NotRendered;
     }
 
     let leaf = state.touched && state.leaf;
-    let mut tile_is_rendered = false;
+    let mut tile_is_rendered: TileRenderingStatus = TileRenderingStatus::NotRendered;
 
     if leaf && tile.is_renderable_content {
         if state.is_data_loaded {
             let is_visible = state.is_visible;
             update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
-            tile_is_rendered = true;
+            tile_is_rendered = TileRenderingStatus::Rendered;
         } else if state.is_visible {
             request_tile_content(
                 commands,
@@ -393,6 +411,7 @@ fn process_rendered_tile(
                     Priority::Medium
                 },
             );
+            tile_is_rendered = TileRenderingStatus::Requested;
         } else {
             toggle_rendered_tile_visible(rendered_tiles, tile, false);
         }
