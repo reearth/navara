@@ -757,6 +757,24 @@ pub struct RasterTileInternalMaterial {
     texture_fragments: Option<Vec<Option<TextureFragment>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+
+    // Elevation Heatmap fields
+    #[wasm_bindgen(getter_with_clone)]
+    pub is_elevation_heatmaps: Vec<u8>,
+    // Shared elevation heatmap configuration (all heatmap layers use the same settings)
+    pub elevation_min_height: f32,
+    pub elevation_max_height: f32,
+    pub elevation_r_scaler: f32,
+    pub elevation_g_scaler: f32,
+    pub elevation_b_scaler: f32,
+    pub elevation_boundary: f32,
+    pub elevation_max_offset: f32,
+    pub elevation_min_offset: f32,
+    pub elevation_epsilon: f32,
+    pub elevation_offset: f32,
+
+    pub logarithmic: bool,
+    pub log_boundary: f32,
 }
 
 #[wasm_bindgen]
@@ -788,6 +806,70 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             }),
             cast_shadow: m.cast_shadow,
             receive_shadow: m.receive_shadow,
+
+            // Elevation Heatmap fields
+            is_elevation_heatmaps: m.is_elevation_heatmaps.iter().map(|b| b.to_u8()).collect(),
+            elevation_min_height: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.min_height)
+                .unwrap_or(0.0),
+            elevation_max_height: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.max_height)
+                .unwrap_or(1000.0),
+            elevation_r_scaler: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.r_scaler)
+                .unwrap_or(0.0),
+            elevation_g_scaler: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.g_scaler)
+                .unwrap_or(0.0),
+            elevation_b_scaler: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.b_scaler)
+                .unwrap_or(0.0),
+            elevation_boundary: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.boundary)
+                .unwrap_or(0.0),
+            elevation_max_offset: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.max_offset)
+                .unwrap_or(0.0),
+            elevation_min_offset: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.min_offset)
+                .unwrap_or(0.0),
+            elevation_epsilon: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.epsilon)
+                .unwrap_or(1.0),
+            elevation_offset: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.offset)
+                .unwrap_or(0.0),
+
+            logarithmic: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.logarithmic)
+                .unwrap_or(false),
+            log_boundary: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.log_boundary)
+                .unwrap_or(10.0),
         }
     }
 }
@@ -890,4 +972,14 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
             tile_size: Some(value.tile_size),
         }
     }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElevationHeatmapMaterial {
+    pub max_height: Option<f32>,
+    pub min_height: Option<f32>,
+    pub elevation_decoder: Option<ElevationDecoder>,
+    pub logarithmic: bool,
+    pub log_boundary: f32,
 }

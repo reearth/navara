@@ -15,4 +15,5 @@ export type CommonUniforms = {
   fov: RefThree<number>;
   screenHeightPx: RefThree<number>;
   time: RefThree<number>;
+  colorMapTexture: RefThree<Texture>;
 };

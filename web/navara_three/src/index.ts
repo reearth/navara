@@ -1,5 +1,11 @@
 import { EventManager, EventHandler, Globe } from "@navara/core";
-import type { CameraPosition, GlobeOptions, Nullable, XYZ } from "@navara/core";
+import type {
+  CameraPosition,
+  ColorMap,
+  GlobeOptions,
+  Nullable,
+  XYZ,
+} from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -16,6 +22,7 @@ import {
   Texture,
   Vector2,
   LinearFilter,
+  ClampToEdgeWrapping,
   Group,
   Material,
   PCFSoftShadowMap,
@@ -356,6 +363,9 @@ export default class ThreeView<
     getWireframe: () => {
       return this._core?.getGlobeWireframe();
     },
+    getElevationColormap: () => {
+      return this._core?.getGlobeElevationColormap();
+    },
     setTransparent: (value: boolean) => {
       this._core?.setGlobeTransparent(value);
     },
@@ -379,6 +389,21 @@ export default class ThreeView<
     },
     setWireframe: (value: boolean) => {
       this._core?.setGlobeWireframe(value);
+    },
+    setElevationColormap: (value: ColorMap) => {
+      this._core?.setGlobeElevationColormap(value.flatten());
+
+      const canvas = value.createImage();
+      const texture = new Texture(canvas);
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
+      texture.minFilter = LinearFilter;
+      texture.magFilter = LinearFilter;
+      texture.generateMipmaps = false;
+      texture.flipY = false;
+      texture.needsUpdate = true;
+
+      this._uniforms.colorMapTexture.value = texture;
     },
   };
   private _workerTaskHandler: WorkerTaskHandler = {
@@ -539,6 +564,7 @@ export default class ThreeView<
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
       time: { value: 0 },
+      colorMapTexture: { value: null },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.

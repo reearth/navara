@@ -289,22 +289,74 @@ impl App {
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
-        let appearances = match &mut desc {
-            LayerDescription::GeoJson(layer) => &layer.appearances,
-            LayerDescription::B3dm(layer) => &layer.appearances,
-            LayerDescription::Pnts(layer) => &layer.appearances,
-            LayerDescription::Cesium3dTiles(layer) => &layer.appearances,
-            LayerDescription::Mvt(layer) => &layer.appearances,
-            LayerDescription::Tiles(layer) => &vec![layer.appearance.take().unwrap()],
-            _ => return,
-        };
-        for appearance in appearances {
-            self.app
-                .world_mut()
-                .send_event(navara_layer_event::UpdateLayerEvent {
-                    layer_id: LayerId(layer_id.to_owned()),
-                    appearance: appearance.clone(),
-                });
+        match &mut desc {
+            LayerDescription::GeoJson(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::B3dm(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Pnts(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Cesium3dTiles(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Mvt(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Tiles(layer) => {
+                if let Some(appearance) = layer.appearance.take() {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance,
+                            elevation_heatmap_config: layer.elevation_heatmap_config.clone(),
+                        });
+                }
+            }
+            _ => (),
         }
     }
 
@@ -952,6 +1004,12 @@ impl App {
     pub fn set_globe_wireframe(&mut self, value: bool) {
         if let Some(mut globe) = self.get_globe_mut() {
             globe.wireframe = value;
+        }
+    }
+
+    pub fn set_globe_elevation_colormap(&mut self, value: Vec<f32>) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.elevation_colormap = value;
         }
     }
 

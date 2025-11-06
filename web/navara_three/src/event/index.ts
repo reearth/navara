@@ -1,4 +1,4 @@
-import type { EventHandler, EventManager } from "@navara/core";
+import type { ColorMap, EventHandler, EventManager } from "@navara/core";
 import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
@@ -107,6 +107,7 @@ export type GlobeHandler = {
   getShouldComputeNormalFromVertex: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
+  getElevationColormap: () => Float32Array | undefined;
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
@@ -115,6 +116,7 @@ export type GlobeHandler = {
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
+  setElevationColormap: (value: ColorMap) => void;
 };
 
 export type FeatureHandler = {
