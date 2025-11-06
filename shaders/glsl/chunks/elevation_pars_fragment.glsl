@@ -1,13 +1,10 @@
 #ifdef USE_ELEVATION_HEATMAP
+  #include branchFreeTernary;
+
   uniform sampler2D uColorMapTexture;
-  uniform float uElevationMinHeight;
-  uniform float uElevationMaxHeight;
   uniform vec3 uElevationRGBScaler;
-  uniform float uElevationBoundary;
-  uniform float uElevationMaxOffset;
-  uniform float uElevationMinOffset;
-  uniform float uElevationEpsilon;
-  uniform float uElevationOffset;
+  uniform vec3 uElevationMinMaxHeightAndBoundary;
+  uniform vec4 uElevationMinMaxOffsetAndEpsilonAndOffset;
   uniform bool uLogarithmic; // Whether to apply logarithmic scaling
   uniform float uLogBase; // Logarithmic base
   uniform float uLogBoundary; // Boundary for pseudo-logarithmic scaling
@@ -23,25 +20,25 @@
     float h;
     // Use epsilon-based comparison for floating point equality check
     float epsilon_cmp = 1.0; // Tolerance for boundary comparison
-    if (abs(x - uElevationBoundary) > epsilon_cmp) {
-      if (x > uElevationBoundary) {
-        h = x + uElevationMaxOffset;
+    if (abs(x - uElevationMinMaxHeightAndBoundary.z) > epsilon_cmp) {
+      if (x > uElevationMinMaxHeightAndBoundary.z) {
+        h = x + uElevationMinMaxOffsetAndEpsilonAndOffset.y;
       } else {
-        h = x + uElevationMinOffset;
+        h = x + uElevationMinMaxOffsetAndEpsilonAndOffset.x;
       }
     } else {
       h = 0.0;
     }
 
-    h = h * uElevationEpsilon + uElevationOffset;
+    h = h * uElevationMinMaxOffsetAndEpsilonAndOffset.z + uElevationMinMaxOffsetAndEpsilonAndOffset.w;
     if(h < 0.0) {
       h = 0.0;
     }
 
     // Apply logarithmic scaling if enabled
-    float minHeight = uLogarithmic ? pseudoLog(uElevationMinHeight) : uElevationMinHeight;
-    float maxHeight = uLogarithmic ? pseudoLog(uElevationMaxHeight) : uElevationMaxHeight;
-    float value = uLogarithmic ? pseudoLog(h) : h;
+    float minHeight = nvr_branchFreeTernary(uLogarithmic, pseudoLog(uElevationMinMaxHeightAndBoundary.x), uElevationMinMaxHeightAndBoundary.x);
+    float maxHeight = nvr_branchFreeTernary(uLogarithmic, pseudoLog(uElevationMinMaxHeightAndBoundary.y), uElevationMinMaxHeightAndBoundary.y);
+    float value = nvr_branchFreeTernary(uLogarithmic, pseudoLog(h), h);
 
     h = clamp(
         (value - minHeight) / (maxHeight - minHeight),

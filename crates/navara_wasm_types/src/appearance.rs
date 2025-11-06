@@ -774,7 +774,6 @@ pub struct RasterTileInternalMaterial {
     pub elevation_offset: f32,
 
     pub logarithmic: bool,
-    pub log_base: f32,
     pub log_boundary: f32,
 }
 
@@ -866,11 +865,6 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.logarithmic)
                 .unwrap_or(false),
-            log_base: m
-                .elevation_heatmap_config
-                .as_ref()
-                .map(|c| c.log_base)
-                .unwrap_or(10.0),
             log_boundary: m
                 .elevation_heatmap_config
                 .as_ref()
@@ -987,6 +981,5 @@ pub struct ElevationHeatmapMaterial {
     pub min_height: Option<f32>,
     pub elevation_decoder: Option<ElevationDecoder>,
     pub logarithmic: bool,
-    pub log_base: f32,
     pub log_boundary: f32,
 }

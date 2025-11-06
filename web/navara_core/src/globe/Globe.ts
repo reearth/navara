@@ -1,5 +1,5 @@
 import type { Globe as GlobeWasm } from "@navara/engine";
-
+import { ColorMap } from "../color";
 /**
  * Handler for accessing individual Globe properties from WASM.
  * This provides a reference-based interface instead of copying the entire Globe object.
@@ -22,10 +22,12 @@ export type GlobeHandler = {
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
-  setElevationColormap: (value: Float32Array) => void;
+  setElevationColormap: (value: ColorMap) => void;
 };
 
-export type GlobeOptions = Partial<Omit<GlobeWasm, "constructor" | "free">>;
+export type GlobeOptions = Partial<Omit<GlobeWasm, "constructor" | "free">> & {
+  elevationColormap?: ColorMap;
+};
 
 /**
  * Globe configuration manager.
@@ -33,7 +35,7 @@ export type GlobeOptions = Partial<Omit<GlobeWasm, "constructor" | "free">>;
  * Provides an interface for accessing and modifying globe properties
  * that are shared across different material types (VectorTile, RasterTile, RasterTerrain).
  */
-export class Globe implements Omit<GlobeWasm, "free"> {
+export class Globe implements Omit<GlobeWasm, "free" | "elevationColormap"> {
   private handler: GlobeHandler;
 
   constructor(handler: GlobeHandler, options?: GlobeOptions) {
@@ -135,11 +137,11 @@ export class Globe implements Omit<GlobeWasm, "free"> {
     this.handler.setWireframe(value);
   }
 
-  get elevationColormap(): Float32Array {
-    return this.handler.getElevationColormap() ?? new Float32Array();
+  get elevationColormap(): Float32Array | undefined {
+    return this.handler.getElevationColormap();
   }
 
-  set elevationColormap(value: Float32Array) {
+  set elevationColormap(value: ColorMap) {
     this.handler.setElevationColormap(value);
   }
 }

@@ -12,7 +12,6 @@ pub struct ElevationHeatmapConfig {
     pub elevation_decoder: ElevationDecoder,
 
     pub logarithmic: bool,
-    pub log_base: f32,
     pub log_boundary: f32,
 }
 

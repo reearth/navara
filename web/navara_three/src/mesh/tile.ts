@@ -455,14 +455,11 @@ export class TileMesh
 
       // Elevation Heatmap uniforms
       shader.uniforms.uIsElevationHeatmaps = m.userData.isElevationHeatmaps;
-      shader.uniforms.uElevationMinHeight = m.userData.elevationMinHeight;
-      shader.uniforms.uElevationMaxHeight = m.userData.elevationMaxHeight;
       shader.uniforms.uElevationRGBScaler = m.userData.elevationRGBScaler;
-      shader.uniforms.uElevationBoundary = m.userData.elevationBoundary;
-      shader.uniforms.uElevationMaxOffset = m.userData.elevationMaxOffset;
-      shader.uniforms.uElevationMinOffset = m.userData.elevationMinOffset;
-      shader.uniforms.uElevationEpsilon = m.userData.elevationEpsilon;
-      shader.uniforms.uElevationOffset = m.userData.elevationOffset;
+      shader.uniforms.uElevationMinMaxHeightAndBoundary =
+        m.userData.elevationMinMaxHeightAndBoundary;
+      shader.uniforms.uElevationMinMaxOffsetAndEpsilonAndOffset =
+        m.userData.elevationMinMaxOffsetAndEpsilonAndOffset;
       shader.uniforms.uLogarithmic = m.userData.logarithmic;
       shader.uniforms.uLogBase = m.userData.logBase;
       shader.uniforms.uLogBoundary = m.userData.logBoundary;
@@ -935,44 +932,19 @@ if (uPickable > 0.) {
         value: [...new Array(maxTextures)].fill(false),
       };
     }
-    if (!m.userData.elevationMinHeight) {
-      m.userData.elevationMinHeight = {
-        value: 0,
-      };
-    }
-    if (!m.userData.elevationMaxHeight) {
-      m.userData.elevationMaxHeight = {
-        value: 0,
-      };
-    }
     if (!m.userData.elevationRGBScaler) {
       m.userData.elevationRGBScaler = {
         value: new Vector3(0, 0, 0),
       };
     }
-    if (!m.userData.elevationBoundary) {
-      m.userData.elevationBoundary = {
-        value: 0,
+    if (!m.userData.elevationMinMaxHeightAndBoundary) {
+      m.userData.elevationMinMaxHeightAndBoundary = {
+        value: new Vector3(0, 0, 0), // minHeight, maxHeight, boundary
       };
     }
-    if (!m.userData.elevationMaxOffset) {
-      m.userData.elevationMaxOffset = {
-        value: 0,
-      };
-    }
-    if (!m.userData.elevationMinOffset) {
-      m.userData.elevationMinOffset = {
-        value: 0,
-      };
-    }
-    if (!m.userData.elevationEpsilon) {
-      m.userData.elevationEpsilon = {
-        value: 0,
-      };
-    }
-    if (!m.userData.elevationOffset) {
-      m.userData.elevationOffset = {
-        value: 0,
+    if (!m.userData.elevationMinMaxOffsetAndEpsilonAndOffset) {
+      m.userData.elevationMinMaxOffsetAndEpsilonAndOffset = {
+        value: { x: 0, y: 0, z: 0, w: 0 }, // minOffset, maxOffset, epsilon, offset
       };
     }
     if (!m.userData.logarithmic) {
@@ -1021,22 +993,27 @@ if (uPickable > 0.) {
       }
     }
 
-    m.userData.elevationMinHeight.value = mat.elevation_min_height;
-    m.userData.elevationMaxHeight.value = mat.elevation_max_height;
-    m.userData.elevationBoundary.value = mat.elevation_boundary;
-    m.userData.elevationMaxOffset.value = mat.elevation_max_offset;
-    m.userData.elevationMinOffset.value = mat.elevation_min_offset;
-    m.userData.elevationEpsilon.value = mat.elevation_epsilon;
-    m.userData.elevationOffset.value = mat.elevation_offset;
-
     m.userData.elevationRGBScaler.value = new Vector3(
       mat.elevation_r_scaler,
       mat.elevation_g_scaler,
       mat.elevation_b_scaler,
     );
 
+    m.userData.elevationMinMaxHeightAndBoundary.value = new Vector3(
+      mat.elevation_min_height,
+      mat.elevation_max_height,
+      mat.elevation_boundary,
+    );
+
+    m.userData.elevationMinMaxOffsetAndEpsilonAndOffset.value = {
+      x: mat.elevation_min_offset,
+      y: mat.elevation_max_offset,
+      z: mat.elevation_epsilon,
+      w: mat.elevation_offset,
+    };
+
     m.userData.logarithmic.value = mat.logarithmic;
-    m.userData.logBase.value = mat.log_base;
+    m.userData.logBase.value = Math.log(mat.log_boundary);
     m.userData.logBoundary.value = mat.log_boundary;
 
     if (!m.userData.defines) {

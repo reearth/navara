@@ -66,7 +66,7 @@ export const run = async (view: ThreeView) => {
   });
 
   // Set the elevation colormap on the globe
-  view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
+  view.globe.elevationColormap = PLATEAU_COLOR_MAP;
 
   const layerDef: LayerDescription = {
     type: "tiles",
@@ -82,7 +82,6 @@ export const run = async (view: ThreeView) => {
       min_height: 0,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
       logarithmic: true,
-      log_base: 6.907755,
       log_boundary: 1000,
     },
   };
@@ -111,11 +110,10 @@ export const run = async (view: ThreeView) => {
     max_height: 3000,
     min_height: 0,
     logarithmic: true,
-    log_base: 6.907755,
     log_boundary: 1000,
   };
 
-  view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
+  view.globe.elevationColormap = PLATEAU_COLOR_MAP;
   view.globe.color = 0x9481ad;
 
   const changeFunc = () => {
@@ -125,14 +123,13 @@ export const run = async (view: ThreeView) => {
     layerDef.elevation_heatmap.max_height = params.max_height;
     layerDef.elevation_heatmap.min_height = params.min_height;
     layerDef.elevation_heatmap.logarithmic = params.logarithmic;
-    layerDef.elevation_heatmap.log_base = params.log_base;
     layerDef.elevation_heatmap.log_boundary = params.log_boundary;
 
     if (params.color_map === "plateau") {
-      view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
+      view.globe.elevationColormap = PLATEAU_COLOR_MAP;
       view.globe.color = 0x9481ad;
     } else if (params.color_map === "turbo") {
-      view.globe.elevationColormap = TURBO_COLOR_MAP.flatten();
+      view.globe.elevationColormap = TURBO_COLOR_MAP;
       view.globe.color = 0x784986;
     }
     view.updateLayerById(layerInst.id, layerDef);
@@ -150,6 +147,5 @@ export const run = async (view: ThreeView) => {
   folder.addBinding(params, "max_height").on("change", changeFunc);
   folder.addBinding(params, "min_height").on("change", changeFunc);
   folder.addBinding(params, "logarithmic").on("change", changeFunc);
-  folder.addBinding(params, "log_base").on("change", changeFunc);
   folder.addBinding(params, "log_boundary").on("change", changeFunc);
 };
