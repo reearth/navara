@@ -147,5 +147,7 @@ export const run = async (view: ThreeView) => {
   folder.addBinding(params, "max_height").on("change", changeFunc);
   folder.addBinding(params, "min_height").on("change", changeFunc);
   folder.addBinding(params, "logarithmic").on("change", changeFunc);
-  folder.addBinding(params, "log_boundary").on("change", changeFunc);
+  folder
+    .addBinding(params, "log_boundary", { min: 0 })
+    .on("change", changeFunc);
 };

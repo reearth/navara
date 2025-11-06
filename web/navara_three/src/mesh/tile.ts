@@ -33,6 +33,7 @@ import {
   Texture,
   Vector2,
   Vector3,
+  Vector4,
   AddOperation,
   WebGLRenderTarget,
   type MagnificationTextureFilter,
@@ -944,7 +945,7 @@ if (uPickable > 0.) {
     }
     if (!m.userData.elevationMinMaxOffsetAndEpsilonAndOffset) {
       m.userData.elevationMinMaxOffsetAndEpsilonAndOffset = {
-        value: { x: 0, y: 0, z: 0, w: 0 }, // minOffset, maxOffset, epsilon, offset
+        value: new Vector4(0, 0, 0, 0), // minOffset, maxOffset, epsilon, offset
       };
     }
     if (!m.userData.logarithmic) {
@@ -993,24 +994,24 @@ if (uPickable > 0.) {
       }
     }
 
-    m.userData.elevationRGBScaler.value = new Vector3(
+    m.userData.elevationRGBScaler.value.set(
       mat.elevation_r_scaler,
       mat.elevation_g_scaler,
       mat.elevation_b_scaler,
     );
 
-    m.userData.elevationMinMaxHeightAndBoundary.value = new Vector3(
+    m.userData.elevationMinMaxHeightAndBoundary.value.set(
       mat.elevation_min_height,
       mat.elevation_max_height,
       mat.elevation_boundary,
     );
 
-    m.userData.elevationMinMaxOffsetAndEpsilonAndOffset.value = {
-      x: mat.elevation_min_offset,
-      y: mat.elevation_max_offset,
-      z: mat.elevation_epsilon,
-      w: mat.elevation_offset,
-    };
+    m.userData.elevationMinMaxOffsetAndEpsilonAndOffset.value.set(
+      mat.elevation_min_offset,
+      mat.elevation_max_offset,
+      mat.elevation_epsilon,
+      mat.elevation_offset,
+    );
 
     m.userData.logarithmic.value = mat.logarithmic;
     m.userData.logBase.value = Math.log(mat.log_boundary);
