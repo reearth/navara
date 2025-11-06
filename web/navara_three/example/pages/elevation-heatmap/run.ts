@@ -116,6 +116,7 @@ export const run = async (view: ThreeView) => {
   };
 
   view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
+  view.globe.color = 0x9481ad;
 
   const changeFunc = () => {
     if (!layerDef.elevation_heatmap) {
@@ -129,8 +130,10 @@ export const run = async (view: ThreeView) => {
 
     if (params.color_map === "plateau") {
       view.globe.elevationColormap = PLATEAU_COLOR_MAP.flatten();
+      view.globe.color = 0x9481ad;
     } else if (params.color_map === "turbo") {
       view.globe.elevationColormap = TURBO_COLOR_MAP.flatten();
+      view.globe.color = 0x784986;
     }
     view.updateLayerById(layerInst.id, layerDef);
   };
