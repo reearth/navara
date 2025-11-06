@@ -189,7 +189,6 @@ pub fn select_tiles_bfs(
     }
 
     // Second pass: mark rendered tiles (still uses depth-first for rendering)
-    let mut rendered_tiles_count = 0;
     mark_rendered_tiles_bfs(
         commands,
         buf,
@@ -198,7 +197,6 @@ pub fn select_tiles_bfs(
         tile,
         requesters,
         rendered_tiles,
-        &mut rendered_tiles_count,
     );
 }
 
@@ -290,6 +288,120 @@ fn process_tile_bfs(
     // Note: Children state tracking would need to be done in a second pass
     // for a true BFS implementation, as we process level by level
     TraversalResult::NotSelected
+}
+
+
+#[allow(clippy::too_many_arguments)]
+fn mark_rendered_tiles_bfs(
+    commands: &mut Commands,
+    buf: &mut ResMut<BufferStore>,
+    layer_id: Entity,
+    base_url: &Url,
+    tile: &mut Cesium3dTileContent,
+    requesters: &Cesium3dTileContentRequesterQuery,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+) {
+    // Helper struct to hold tile references and metadata for BFS traversal
+    struct TileQueueItem {
+        tile: *mut Cesium3dTileContent,
+    }
+
+    // Initialize BFS queue with root tile
+    let mut queue: VecDeque<TileQueueItem> = VecDeque::new();
+
+    queue.push_back(TileQueueItem {
+        tile: tile as *mut Cesium3dTileContent,
+    });
+
+    // Process tiles level by level
+    while let Some(item) = queue.pop_front() {
+        // SAFETY: We maintain exclusive access to tiles through the traversal
+        let current_tile = unsafe { &mut *item.tile };
+
+        // Process current tile
+        let tile_is_rendered = process_rendered_tile(
+            commands,
+            buf,
+            layer_id,
+            base_url,
+            current_tile,
+            requesters,
+            rendered_tiles
+        );
+
+        // if the tile is rendered, skip processing its children
+        if tile_is_rendered && matches!(current_tile.refine, Refine::Replace) {
+            continue;
+        }
+
+        let children = match current_tile.children.as_mut() {
+            Some(c) => c,
+            None => continue,
+        };
+
+        let mut all_children_loaded = true;
+        for child_tile in children.iter_mut() {
+            // Add child to queue for processing
+            queue.push_back(TileQueueItem {
+                tile: child_tile as *mut Cesium3dTileContent,
+            });
+        }
+    }
+}
+
+/// Helper function to process a single tile for rendering
+/// Extracted from mark_rendered_tiles for reuse
+#[allow(clippy::too_many_arguments)]
+fn process_rendered_tile(
+    commands: &mut Commands,
+    buf: &mut ResMut<BufferStore>,
+    layer_id: Entity,
+    base_url: &Url,
+    tile: &mut Cesium3dTileContent,
+    requesters: &Cesium3dTileContentRequesterQuery,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+) -> bool {
+    let touched_last_frame = tile.state.touched_last_frame;
+    tile.state.touched_last_frame = tile.state.touched;
+
+    let state = &tile.state;
+
+    // This tile has been invisible before this frame.
+    if !state.touched && !touched_last_frame {
+        toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        return false;
+    }
+
+    let leaf = state.touched && state.leaf;
+    let mut tile_is_rendered = false;
+
+    if leaf && tile.is_renderable_content {
+        if state.is_data_loaded {
+            let is_visible = state.is_visible;
+            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
+            tile_is_rendered = true;
+        } else if state.is_visible {
+            request_tile_content(
+                commands,
+                buf,
+                base_url,
+                tile,
+                requesters,
+                if tile.state.are_all_children_loaded {
+                    Priority::Low
+                } else {
+                    Priority::Medium
+                },
+            );
+        } else {
+            toggle_rendered_tile_visible(rendered_tiles, tile, false);
+        }
+    } else {
+        toggle_rendered_tile_visible(rendered_tiles, tile, false);
+    }
+
+    tile.state.touched = false;
+    return tile_is_rendered;
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -587,64 +699,6 @@ fn mark_rendered_tiles(
     // }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn mark_rendered_tiles_bfs(
-    commands: &mut Commands,
-    buf: &mut ResMut<BufferStore>,
-    layer_id: Entity,
-    base_url: &Url,
-    tile: &mut Cesium3dTileContent,
-    requesters: &Cesium3dTileContentRequesterQuery,
-    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
-    rendered_tiles_count: &mut u32,
-) {
-    // Helper struct to hold tile references and metadata for BFS traversal
-    struct TileQueueItem {
-        tile: *mut Cesium3dTileContent,
-    }
-
-    // Initialize BFS queue with root tile
-    let mut queue: VecDeque<TileQueueItem> = VecDeque::new();
-
-    queue.push_back(TileQueueItem {
-        tile: tile as *mut Cesium3dTileContent,
-    });
-
-    // Process tiles level by level
-    while let Some(item) = queue.pop_front() {
-        // SAFETY: We maintain exclusive access to tiles through the traversal
-        let current_tile = unsafe { &mut *item.tile };
-
-        // Process current tile
-        let tile_is_rendered = process_rendered_tile(
-            commands,
-            buf,
-            layer_id,
-            base_url,
-            current_tile,
-            requesters,
-            rendered_tiles
-        );
-
-        // if the tile is rendered, skip processing its children
-        if tile_is_rendered {
-            continue;
-        }
-
-        let children = match current_tile.children.as_mut() {
-            Some(c) => c,
-            None => return,
-        };
-
-        let mut all_children_loaded = true;
-        for child_tile in children.iter_mut() {
-            // Add child to queue for processing
-            queue.push_back(TileQueueItem {
-                tile: child_tile as *mut Cesium3dTileContent,
-            });
-        }
-    }
-}
 
 /// Breadth-first reverse version of mark_rendered_tiles
 /// Collects all tiles level-by-level, then processes them from deepest to shallowest
@@ -717,61 +771,6 @@ fn mark_rendered_tiles_reverse_bfs(
             );
         }
     }
-}
-
-/// Helper function to process a single tile for rendering
-/// Extracted from mark_rendered_tiles for reuse
-#[allow(clippy::too_many_arguments)]
-fn process_rendered_tile(
-    commands: &mut Commands,
-    buf: &mut ResMut<BufferStore>,
-    layer_id: Entity,
-    base_url: &Url,
-    tile: &mut Cesium3dTileContent,
-    requesters: &Cesium3dTileContentRequesterQuery,
-    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
-) -> bool {
-    let touched_last_frame = tile.state.touched_last_frame;
-    tile.state.touched_last_frame = tile.state.touched;
-
-    let state = &tile.state;
-
-    // This tile has been invisible before this frame.
-    if !state.touched && !touched_last_frame {
-        toggle_rendered_tile_visible(rendered_tiles, tile, false);
-        return false;
-    }
-
-    let leaf = state.touched && state.leaf;
-    let mut tile_is_rendered = false;
-
-    if leaf && tile.is_renderable_content {
-        if state.is_data_loaded {
-            let is_visible = state.is_visible;
-            update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
-            tile_is_rendered = true;
-        } else if state.is_visible {
-            request_tile_content(
-                commands,
-                buf,
-                base_url,
-                tile,
-                requesters,
-                if tile.state.are_all_children_loaded {
-                    Priority::Low
-                } else {
-                    Priority::Medium
-                },
-            );
-        } else {
-            toggle_rendered_tile_visible(rendered_tiles, tile, false);
-        }
-    } else {
-        toggle_rendered_tile_visible(rendered_tiles, tile, false);
-    }
-
-    tile.state.touched = false;
-    return tile_is_rendered;
 }
 
 #[allow(clippy::too_many_arguments)]
