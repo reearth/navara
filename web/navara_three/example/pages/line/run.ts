@@ -18,6 +18,8 @@ const gArcLinesDef = [
     segments: 64,
     height: 0,
     arcHeightScale: 0.3,
+    transparent: false,
+    opacity: 1,
     srcColor: 0xffffff,
     tgtColor: Math.floor(Math.random() * 0xffffff),
     geometry: [
@@ -302,6 +304,8 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     selectedGroup: 0,
     thickness: gArcLinesDef[0].thickness || 1,
     segments: gArcLinesDef[0].segments || 64,
+    transparent: gArcLinesDef[0].transparent || false,
+    opacity: gArcLinesDef[0].opacity || 1,
     srcColor: intToHexColor(gArcLinesDef[0].srcColor || 0xffffff),
     tgtColor: intToHexColor(gArcLinesDef[0].tgtColor || 0xffffff),
     height: gArcLinesDef[0].height || 0,
@@ -313,6 +317,8 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     if (selectedArcLine) {
       params.thickness = selectedArcLine.thickness || 1;
       params.segments = selectedArcLine.segments || 64;
+      params.transparent = selectedArcLine.transparent || false;
+      params.opacity = selectedArcLine.opacity || 1;
       params.srcColor = intToHexColor(selectedArcLine.srcColor || 0xffffff);
       params.tgtColor = intToHexColor(selectedArcLine.tgtColor || 0xffffff);
       params.height = selectedArcLine.height || 0;
@@ -325,6 +331,8 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     if (gArcLinesDef[selectedIndex]) {
       gArcLinesDef[selectedIndex].thickness = params.thickness;
       gArcLinesDef[selectedIndex].segments = params.segments;
+      gArcLinesDef[selectedIndex].transparent = params.transparent;
+      gArcLinesDef[selectedIndex].opacity = params.opacity;
       gArcLinesDef[selectedIndex].srcColor = parseInt(
         params.srcColor.replace("#", ""),
         16,
@@ -365,6 +373,15 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
 
   folder
     .addBinding(params, "segments", { min: 2, max: 128, step: 1 })
+    .on("change", () => {
+      onChange();
+    });
+
+  folder.addBinding(params, "transparent").on("change", () => {
+    onChange();
+  });
+  folder
+    .addBinding(params, "opacity", { min: 0, max: 1, step: 0.01 })
     .on("change", () => {
       onChange();
     });

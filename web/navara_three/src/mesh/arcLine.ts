@@ -26,7 +26,8 @@ import { overrideShaderMaterialForMRT } from "../material";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
-  // opacity: number; // Opacity of the arc line
+  transparent: boolean; // Enable `opacity`.
+  opacity: number; // Opacity of the arc line
   segments: number; // Number of segments per arc line
   srcColor: number; // Source color of the arc line
   tgtColor: number; // Target color of the arc line
@@ -37,7 +38,8 @@ export type ArcLineConfig = {
 
 export const DefaultArcLineConfig: ArcLineConfig = {
   thickness: 1,
-  // opacity: 1,
+  transparent: false,
+  opacity: 1,
   segments: 64,
   srcColor: 0xffffff,
   tgtColor: 0xffffff,
@@ -128,6 +130,8 @@ export class ArcLine extends Object3D {
 
     // Create material
     const material = this.createMaterial();
+    material.transparent = config.transparent;
+
     const mesh = new Mesh(geo, material);
 
     return mesh;
@@ -234,7 +238,7 @@ export class ArcLine extends Object3D {
         config.height,
         dist * config.arcHeightScale,
         config.thickness,
-        1.0,
+        config.opacity,
       );
 
       // Set segments
@@ -360,6 +364,7 @@ export class ArcLine extends Object3D {
 
   updateConfig(newConfig: Partial<ArcLineConfig>[]) {
     const changedConfigs = new Set<number>();
+    const changedConfigsForMaterial = new Set<number>();
     const configsNeedingRebuild = new Set<number>();
 
     newConfig.forEach((cfg, i) => {
@@ -408,6 +413,20 @@ export class ArcLine extends Object3D {
           cfg.thickness !== this._config[i].thickness
         ) {
           this._config[i].thickness = cfg.thickness;
+          hasChanges = true;
+        }
+        if (
+          cfg.transparent !== undefined &&
+          cfg.transparent !== this._config[i].transparent
+        ) {
+          this._config[i].transparent = cfg.transparent;
+          changedConfigsForMaterial.add(i);
+        }
+        if (
+          cfg.opacity !== undefined &&
+          cfg.opacity !== this._config[i].opacity
+        ) {
+          this._config[i].opacity = cfg.opacity;
           hasChanges = true;
         }
         if (
@@ -473,9 +492,31 @@ export class ArcLine extends Object3D {
       }
     });
 
+    // Update material
+    changedConfigs.forEach((configIndex) => {
+      if (
+        !configsNeedingRebuild.has(configIndex) &&
+        this._subMeshes[configIndex]
+      ) {
+        this.updateMaterials(
+          this._config[configIndex],
+          this._subMeshes[configIndex],
+        );
+      }
+    });
+
     // Only update bounding sphere if there were actual changes
     if (changedConfigs.size > 0) {
       this.updateBoundingSphere();
+    }
+  }
+
+  updateMaterials(
+    config: ArcLineConfig,
+    subMesh: Mesh<InstancedBufferGeometry, ShaderMaterial>,
+  ) {
+    if (subMesh.material.transparent !== config.transparent) {
+      subMesh.material.transparent = config.transparent;
     }
   }
 
