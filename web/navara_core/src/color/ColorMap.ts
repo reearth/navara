@@ -8,12 +8,17 @@ export type ColorMapType = "sequential" | "diverging";
 // TODO: Handle the color calculation in Rust by https://github.com/Ogeon/palette.
 // Ref: https://github.com/eukarya-inc/PLATEAU-VIEW/blob/26c98fa36e6cfe5776c04d1d2cbf77cc69eb264d/extension/src/prototypes/color-maps/ColorMap.ts
 export class ColorMap<T extends ColorMapType = ColorMapType> {
+  lut: ColorTuple[];
   constructor(
     readonly type: T,
     readonly name: string,
-    readonly lut: LUT,
+    lut: LUT,
   ) {
     invariant(lut.length > 1);
+    this.lut = lut.map(
+      // Color might be converted to linear color space, so make sure SRGB is used.
+      (color) => (Array.isArray(color) ? color : color.srgb().toArray()),
+    );
   }
 
   #linear?: ScaleLinear<ColorTuple, ColorTuple> | undefined;

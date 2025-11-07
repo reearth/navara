@@ -56,6 +56,12 @@ export class Color implements CoreColor {
     return this.#color.toArray() as [r: number, g: number, b: number];
   }
 
+  srgb() {
+    const copy = new Color();
+    copy.#color = new ThreeColor().copyLinearToSRGB(this.#color);
+    return copy as this;
+  }
+
   get raw() {
     return this.#color;
   }
