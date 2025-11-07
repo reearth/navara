@@ -493,7 +493,7 @@ export class ArcLine extends Object3D {
     });
 
     // Update material
-    changedConfigs.forEach((configIndex) => {
+    changedConfigsForMaterial.forEach((configIndex) => {
       if (
         !configsNeedingRebuild.has(configIndex) &&
         this._subMeshes[configIndex]
