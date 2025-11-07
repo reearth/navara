@@ -40,6 +40,8 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
       for (const cfg of configs) {
         lineConfig.push({
           thickness: cfg.thickness ?? DefaultArcLineConfig.thickness,
+          transparent: cfg.transparent ?? DefaultArcLineConfig.transparent,
+          opacity: cfg.opacity ?? DefaultArcLineConfig.opacity,
           segments: cfg.segments ?? DefaultArcLineConfig.segments,
           srcColor: cfg.srcColor ?? DefaultArcLineConfig.srcColor,
           tgtColor: cfg.tgtColor ?? DefaultArcLineConfig.tgtColor,
