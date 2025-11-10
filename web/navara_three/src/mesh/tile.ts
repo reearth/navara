@@ -13,8 +13,8 @@ import type {
   MeshChanged,
   Globe,
 } from "@navara/engine";
-import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
+import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
