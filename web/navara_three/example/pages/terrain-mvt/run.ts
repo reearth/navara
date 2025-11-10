@@ -83,6 +83,7 @@ export const run = async (view: ThreeView) => {
     },
     vector_tile: {
       max_zoom: 16,
+      layers: ["road", "contour", "waterarea"],
     },
   });
 
