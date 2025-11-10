@@ -114,9 +114,6 @@ export abstract class MeshLayerDeclaration<
 
     // Link to selective effects
     if (this.effects && this.view.selectiveRegistry && this.raw) {
-      // Update world matrix before linking (required for proper cloning)
-      this.raw.updateMatrixWorld(true);
-
       for (const effectId of this.effects) {
         this.view.selectiveRegistry.link(effectId, this.raw, this.id);
       }
@@ -191,7 +188,6 @@ export abstract class MeshLayerDeclaration<
       if (this.view.selectiveRegistry && this.raw) {
         for (const effectId of newEffects) {
           if (!prevEffects.includes(effectId)) {
-            this.raw.updateMatrixWorld(true);
             this.view.selectiveRegistry.link(effectId, this.raw, this.id);
           }
         }

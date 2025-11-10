@@ -57,13 +57,7 @@ export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
 export type LayerDescription =
   // | MVTLayer
-  | TilesLayer
-  | TerrainLayer
-  | GeoJsonLayer
-  | B3dmLayer
-  | PntsLayer
-  | Cesium3dTilesLayer
-  | MvtLayer
+  | ResourceLayerDescription
   | MeshLayerDeclarationDescription
   | LightLayerDeclarationDescription
   | EffectLayerDeclarationDescription;
@@ -162,6 +156,17 @@ export type Cesium3dTilesLayer = Layer<
   LayerEffectOptions;
 export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }> &
   LayerEffectOptions;
+
+export type ResourceLayerDescription = LayerEffectOptions &
+  (
+    | TilesLayer
+    | TerrainLayer
+    | GeoJsonLayer
+    | B3dmLayer
+    | PntsLayer
+    | Cesium3dTilesLayer
+    | MvtLayer
+  );
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 export type DrapedMaterialCache = Map<string, Material>;

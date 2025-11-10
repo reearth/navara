@@ -109,6 +109,7 @@ import {
   type RenderFlag,
   type TileMapByHandle,
   type MeshLayerDeclarationDescription,
+  type ResourceLayerDescription,
   type LightLayerDeclarationDescription,
   type EffectLayerDeclarationDescription,
   type DrapedMaterialCache,
@@ -522,7 +523,6 @@ export default class ThreeView<
       draped: new Scene(),
       opaque: new Scene(),
       transparent: new Scene(),
-      postprocessing: new Map(),
       skyEnvMap: new Scene(),
     };
 
@@ -997,50 +997,27 @@ export default class ThreeView<
       ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
     }
 
-    // Existing resource layer process
-    const layerId = this._core?.addLayer(l);
-    invariant(layerId);
-    invariant(this._core);
-
-    // Register effects if specified in layer config
-    if ("effects" in l && Array.isArray(l.effects) && l.effects.length > 0) {
-      const ignoreDepth =
-        "ignoreDepth" in l ? (l.ignoreDepth as boolean) : undefined;
-      const emissiveIntensity =
-        "emissive_intensity" in l
-          ? (l.emissive_intensity as number)
-          : undefined;
-      const keepClones = l.type === "cesium3dtiles";
-      this.viewContext.registerLayerEffects(
-        layerId,
-        l.effects as string[],
-        ignoreDepth,
-        emissiveIntensity,
-        { keepClones },
-      );
+    if (this.isResourceLayerDescription(l)) {
+      return this.addResourceLayer(l) as L extends LayerDeclaration
+        ? never
+        : Layer; // TODO: Remove this cast later.
     }
 
-    const layer = new Layer(layerId, this._core, this.viewContext, l.type);
-    this.layersManager.add(layer);
-
-    return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
+    throw new Error(
+      `Unsupported layer type: ${(l as { type?: string })?.type}`,
+    );
   }
 
   updateLayerById(layerId: string, l: LayerDescription) {
     invariant(this._core);
 
     // Update effects if specified in the update
-    if ("effects" in l) {
-      const effects = l.effects as string[] | undefined;
-      const emissiveIntensity =
-        "emissive_intensity" in l
-          ? (l.emissive_intensity as number)
-          : undefined;
+    if (this.isResourceLayerDescription(l) && l.effects) {
       const keepClones = l.type === "cesium3dtiles";
       this.viewContext.updateLayerEffects(
         layerId,
-        effects,
-        emissiveIntensity,
+        l.effects,
+        l.emissive_intensity,
         keepClones ? { keepClones: true } : undefined,
       );
     }
@@ -1052,6 +1029,40 @@ export default class ThreeView<
     invariant(this._core);
 
     this.layersManager.get(layerId)?.delete();
+  }
+
+  private addResourceLayer(l: ResourceLayerDescription): Layer {
+    const layerId = this._core?.addLayer(l);
+    invariant(layerId);
+    invariant(this._core);
+
+    if (l.effects?.length) {
+      const keepClones = l.type === "cesium3dtiles";
+      this.viewContext.registerLayerEffects(
+        layerId,
+        l.effects,
+        l.ignoreDepth,
+        l.emissive_intensity,
+        { keepClones },
+      );
+    }
+
+    const layer = new Layer(layerId, this._core, this.viewContext, l.type);
+    this.layersManager.add(layer);
+    return layer;
+  }
+
+  private isResourceLayerDescription(
+    layer: LayerDescription,
+  ): layer is LayerDescription & ResourceLayerDescription {
+    switch (layer.type) {
+      case "mesh":
+      case "light":
+      case "effect":
+        return false;
+      default:
+        return true;
+    }
   }
 
   private registerBuiltIns(): void {
