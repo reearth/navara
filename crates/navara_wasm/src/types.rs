@@ -6,14 +6,14 @@ use navara_layer::{
     TerrainDataType, TerrainLayer, TilesLayer,
 };
 
-use navara_material::Appearance;
+use navara_material::{Appearance, ElevationHeatmapConfig};
 use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
 use navara_wasm_types::{
-    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
-    RasterTerrainMaterial, RasterTileMaterial, TextMaterial, VectorTileMaterial,
+    BillboardMaterial, ElevationHeatmapMaterial, ModelMaterial, PointMaterial, PolygonMaterial,
+    PolylineMaterial, RasterTerrainMaterial, RasterTileMaterial, TextMaterial, VectorTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -27,6 +27,8 @@ pub struct TileLayerDescription {
 
     #[wasm_bindgen(getter_with_clone)]
     pub raster_tile: Option<RasterTileMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub elevation_heatmap: Option<ElevationHeatmapMaterial>,
 }
 
 impl TileLayerDescription {
@@ -312,10 +314,23 @@ impl LayerDescription {
 
                 let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
+                // Parse elevation_heatmap config
+                let elevation_heatmap_config =
+                    layer.elevation_heatmap.as_ref().and_then(|heatmap| {
+                        Some(ElevationHeatmapConfig {
+                            max_height: heatmap.max_height.unwrap_or(1000.0),
+                            min_height: heatmap.min_height.unwrap_or(0.0),
+                            elevation_decoder: heatmap.elevation_decoder?.into(),
+                            logarithmic: heatmap.logarithmic,
+                            log_boundary: heatmap.log_boundary,
+                        })
+                    });
+
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearance: layer.appearance(),
+                    elevation_heatmap_config,
                 }))
             }
             "terrain" => {

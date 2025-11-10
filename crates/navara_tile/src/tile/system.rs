@@ -276,6 +276,11 @@ pub fn transfer_mesh(
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
+
+        // Elevation Heatmap fields
+        let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
+        let mut shared_heatmap_config = None;
+
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let should_show = texture_fragment_entity_ids
                 .as_ref()
@@ -286,8 +291,20 @@ pub fn transfer_mesh(
             shows.push(should_show && a.show);
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
+
+            // Mark whether this layer is an elevation heatmap
+            if let Some(heatmap_config) = &l.elevation_heatmap_config {
+                is_elevation_heatmaps.push(true);
+                // Use the first heatmap config as shared configuration
+                if shared_heatmap_config.is_none() {
+                    shared_heatmap_config = Some(heatmap_config);
+                }
+            } else {
+                is_elevation_heatmaps.push(false);
+            }
         }
 
+        // Extract shared elevation heatmap configuration (or use defaults)
         let (cast_shadow, receive_shadow) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
             .map_or((false, false), |appearance| {
@@ -301,6 +318,10 @@ pub fn transfer_mesh(
             texture_fragments: texture_fragment_entity_ids.clone(),
             cast_shadow: Some(cast_shadow),
             receive_shadow: Some(receive_shadow),
+
+            // Elevation Heatmap fields
+            is_elevation_heatmaps,
+            elevation_heatmap_config: shared_heatmap_config.cloned(),
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -581,6 +602,11 @@ pub fn update_layer(
             if let Some(a) = &mut layer.appearance {
                 a.set(&u.appearance);
             }
+
+            // Update elevation_heatmap_config if provided
+            if u.elevation_heatmap_config.is_some() {
+                layer.elevation_heatmap_config = u.elevation_heatmap_config.clone();
+            }
         }
         commands.entity(e).despawn();
     }
@@ -719,11 +745,14 @@ pub fn update_mesh_material(
         let prev_shows = &appearance.shows;
         let prev_colors = &appearance.colors;
         let prev_opacities = &appearance.opacities;
+        let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
 
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
+        let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
+        let mut elevation_heatmap_config = None;
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // If this tile isn't ready, the remaining tiles aren't ready either.
             let should_show = texture_fragment_entity_ids
@@ -736,11 +765,15 @@ pub fn update_mesh_material(
             let next_opacity = a.opacity;
             let next_color = a.color;
 
+            // Check if this layer is an elevation heatmap
+            let is_heatmap = l.elevation_heatmap_config.is_some();
+
             if prev_shows.get(i) != Some(&next_show)
                 || prev_opacities.get(i) != Some(&next_opacity)
                 || prev_colors.get(i) != Some(&next_color)
                 || prev_texture_fragments.as_ref().and_then(|t| t.get(i))
                     != texture_fragment_entity_ids.get(i)
+                || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
             {
                 needs_update = true;
             }
@@ -748,6 +781,17 @@ pub fn update_mesh_material(
             shows.push(next_show);
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
+            is_elevation_heatmaps.push(is_heatmap);
+
+            // Use the first elevation_heatmap_config we find (they should all be the same)
+            if is_heatmap && elevation_heatmap_config.is_none() {
+                elevation_heatmap_config = l.elevation_heatmap_config.clone();
+            }
+        }
+
+        // Check if elevation_heatmap_config changed
+        if appearance.elevation_heatmap_config != elevation_heatmap_config {
+            needs_update = true;
         }
 
         if !needs_update {
@@ -775,6 +819,8 @@ pub fn update_mesh_material(
         appearance.shows = shows;
         appearance.opacities = opacities;
         appearance.colors = colors;
+        appearance.is_elevation_heatmaps = is_elevation_heatmaps;
+        appearance.elevation_heatmap_config = elevation_heatmap_config;
     }
 }
 

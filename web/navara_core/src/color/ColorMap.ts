@@ -8,12 +8,17 @@ export type ColorMapType = "sequential" | "diverging";
 // TODO: Handle the color calculation in Rust by https://github.com/Ogeon/palette.
 // Ref: https://github.com/eukarya-inc/PLATEAU-VIEW/blob/26c98fa36e6cfe5776c04d1d2cbf77cc69eb264d/extension/src/prototypes/color-maps/ColorMap.ts
 export class ColorMap<T extends ColorMapType = ColorMapType> {
+  lut: ColorTuple[];
   constructor(
     readonly type: T,
     readonly name: string,
-    readonly lut: LUT,
+    lut: LUT,
   ) {
     invariant(lut.length > 1);
+    this.lut = lut.map(
+      // Color might be converted to linear color space, so make sure SRGB is used.
+      (color) => (Array.isArray(color) ? color : color.srgb().toArray()),
+    );
   }
 
   #linear?: ScaleLinear<ColorTuple, ColorTuple> | undefined;
@@ -62,5 +67,20 @@ export class ColorMap<T extends ColorMapType = ColorMapType> {
       context.fillRect(index, 0, 1, 1);
     });
     return canvas;
+  }
+
+  /**
+   * Flatten the color map LUT into a Float32Array for WASM/GPU usage.
+   * Each color tuple [r, g, b] is flattened into consecutive array elements.
+   * @returns A Float32Array with length = lut.length * 3
+   */
+  flatten(): Float32Array {
+    const flatArray = new Float32Array(this.lut.length * 3);
+    for (let i = 0; i < this.lut.length; i++) {
+      flatArray[i * 3] = this.lut[i][0];
+      flatArray[i * 3 + 1] = this.lut[i][1];
+      flatArray[i * 3 + 2] = this.lut[i][2];
+    }
+    return flatArray;
   }
 }

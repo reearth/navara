@@ -180,6 +180,17 @@ export const LOCAL_DATASETS = {
     url: "/data/blue-marble-clouds/{z}/{x}/{y}.webp",
     attribution: "NASA Blue Marble Clouds(Converted as raster tiles)",
   },
+  blueMarbleNight: {
+    url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
+    attribution: "NASA Earth at Night imagery(Converted as raster tiles)",
+  },
+  airportTrafficVolume: {
+    url: "/data/airport-traffic-volume.geojson",
+    attribution:
+      "Processed and created from the National Land Numerical Information (inter-airport flow volume data) MLIT",
+    attributionUrl:
+      "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-S10b-2014.html",
+  },
   steelDrumGLTF: {
     url: "/glTF/steel_drum/scene.gltf",
     attribution:
@@ -190,6 +201,11 @@ export const LOCAL_DATASETS = {
     url: "/glTF/Soldier/Soldier.glb",
     attribution:
       "https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb",
+  },
+  globeGeoJSON: {
+    url: "/globe.geojson",
+    attribution: "GeoJSON Maps of the globe",
+    attributionUrl: "https://geojson-maps.kyd.au/",
   },
   streetLightGeoJSON: {
     url: "/street_light.geojson",
