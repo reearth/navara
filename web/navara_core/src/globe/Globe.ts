@@ -1,4 +1,5 @@
 import type { Globe as GlobeWasm } from "@navara/engine";
+
 import { ColorMap } from "../color";
 /**
  * Handler for accessing individual Globe properties from WASM.
