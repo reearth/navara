@@ -132,11 +132,12 @@ pub fn update_tiles(
     };
     let zero_tile_handle = zero_tile.handle();
 
+    let has_tile_layer = !tiles.is_empty();
     let is_texture_ready = qt
         .qt
         .get_mut(zero_tile_handle)
         .unwrap()
-        .is_texture_ready(&texture_fragment);
+        .is_texture_ready(&texture_fragment, has_tile_layer);
 
     match traverse_tile(
         &mut commands,
@@ -691,6 +692,8 @@ pub fn update_mesh_material(
     let tile_layers = tile_layers.p0();
     let texture_fragment = texture_fragment.p0();
 
+    let has_tile_layer = !tile_layers.is_empty();
+
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
             continue;
@@ -708,26 +711,27 @@ pub fn update_mesh_material(
         };
 
         let mut parent_z = None;
-        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment) {
-            texture_fragment_entity_ids
-        } else {
-            // Use the parent tile if this tile doesn't have a tile.
-            match cached_rendered_tile
-                .ready_parent_tile_handle
-                .and_then(|h| qt.qt.get(h))
-                .and_then(|parent_tile| {
-                    parent_tile
-                        .texture_fragment_entity_ids
-                        .as_ref()
-                        .map(|v| (v, parent_tile.coords.z))
-                }) {
-                Some((v, parent_z_)) => {
-                    parent_z = Some(parent_z_);
-                    v
+        let texture_fragment_entity_ids =
+            if tile.is_texture_ready(&texture_fragment, has_tile_layer) {
+                texture_fragment_entity_ids
+            } else {
+                // Use the parent tile if this tile doesn't have a tile.
+                match cached_rendered_tile
+                    .ready_parent_tile_handle
+                    .and_then(|h| qt.qt.get(h))
+                    .and_then(|parent_tile| {
+                        parent_tile
+                            .texture_fragment_entity_ids
+                            .as_ref()
+                            .map(|v| (v, parent_tile.coords.z))
+                    }) {
+                    Some((v, parent_z_)) => {
+                        parent_z = Some(parent_z_);
+                        v
+                    }
+                    None => texture_fragment_entity_ids,
                 }
-                None => texture_fragment_entity_ids,
-            }
-        };
+            };
 
         let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile
             .mesh_entity
