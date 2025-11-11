@@ -1076,22 +1076,20 @@ if (uPickable > 0.) {
     }
 
     const textureFragments = m.userData.textureFragments?.value;
-    if (!textureFragments) {
-      return;
-    }
+    const textureFragmentsLen = textureFragments?.length ?? 0;
 
     const numTexturizedVector = this.numTexturizedVector;
 
-    if (textureFragments.length >= this.texturizedSceneIndexFrom) {
+    if (textureFragmentsLen >= this.texturizedSceneIndexFrom) {
       console.error(
-        `Exceeded maximum textures: ${textureFragments.length} layers are provided. Maximum the number of textures is ${this.texturizedSceneIndexFrom}.`,
+        `Exceeded maximum textures: ${textureFragmentsLen} layers are provided. Maximum the number of textures is ${this.texturizedSceneIndexFrom}.`,
       );
     }
 
     const textures = m.userData.textures.value;
 
     // Setting tile textures
-    for (let i = 0; i < textureFragments.length; i++) {
+    for (let i = 0; i < textureFragmentsLen; i++) {
       if (i >= this.texturizedSceneIndexFrom) {
         break;
       }

@@ -7,7 +7,12 @@ import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { PLATEAU_COLOR_MAP, TURBO_COLOR_MAP } from "../../helpers/colors";
+import {
+  PLATEAU_COLOR_MAP,
+  TURBO_COLOR_MAP,
+  PLASMA_COLORMAP,
+  YlGnBu_COLOR_MAP,
+} from "../../helpers/colors";
 import { TERRAIN_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
@@ -38,16 +43,6 @@ export const run = async (view: ThreeView) => {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.white),
       intensity: 1,
     },
-  });
-
-  // Set camera to focus on Mt. Fuji area
-  view.setCamera({
-    lng: 138.7306518555,
-    lat: 35.272277832,
-    height: 30000,
-    heading: 0,
-    pitch: -70,
-    roll: 0,
   });
 
   // Add terrain layer for 3D surface
@@ -131,6 +126,12 @@ export const run = async (view: ThreeView) => {
     } else if (params.color_map === "turbo") {
       view.globe.elevationColormap = TURBO_COLOR_MAP;
       view.globe.color = 0x784986;
+    } else if (params.color_map === "plasma") {
+      view.globe.elevationColormap = PLASMA_COLORMAP;
+      view.globe.color = 0x7a4a91;
+    } else if (params.color_map === "YlGnBu") {
+      view.globe.elevationColormap = YlGnBu_COLOR_MAP;
+      view.globe.color = 0x506b73;
     }
     view.updateLayerById(layerInst.id, layerDef);
   };
@@ -141,7 +142,12 @@ export const run = async (view: ThreeView) => {
 
   folder
     .addBinding(params, "color_map", {
-      options: { plateau: "plateau", turbo: "turbo" },
+      options: {
+        plateau: "plateau",
+        turbo: "turbo",
+        plasma: "plasma",
+        YlGnBu: "YlGnBu",
+      },
     })
     .on("change", changeFunc);
   folder.addBinding(params, "max_height").on("change", changeFunc);
