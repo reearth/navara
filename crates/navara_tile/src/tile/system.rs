@@ -132,11 +132,12 @@ pub fn update_tiles(
     };
     let zero_tile_handle = zero_tile.handle();
 
+    let has_tile_layer = !tiles.is_empty();
     let is_texture_ready = qt
         .qt
         .get_mut(zero_tile_handle)
         .unwrap()
-        .is_texture_ready(&texture_fragment);
+        .is_texture_ready(&texture_fragment, has_tile_layer);
 
     match traverse_tile(
         &mut commands,
@@ -691,6 +692,11 @@ pub fn update_mesh_material(
     let tile_layers = tile_layers.p0();
     let texture_fragment = texture_fragment.p0();
 
+    let has_tile_layer = !tile_layers.is_empty();
+    if !has_tile_layer {
+        return;
+    }
+
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
             continue;
@@ -708,7 +714,7 @@ pub fn update_mesh_material(
         };
 
         let mut parent_z = None;
-        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment) {
+        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment, true) {
             texture_fragment_entity_ids
         } else {
             // Use the parent tile if this tile doesn't have a tile.
