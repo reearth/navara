@@ -60,16 +60,15 @@ pub fn traverse_tile(
     // This is used to show parent's texture if child's texture isn't ready.
     ready_parent_tile_handle: Option<TileHandle>,
 ) -> TraversalResult {
+    let has_tile_layer = !tiles.is_empty();
     match qt.qt.get(handle) {
         Some(tile) => {
-            let has_no_tile = tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
+            let has_no_tile =
+                has_tile_layer && tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
             // If tile layer isn't added, check max_zoom for terrain layer
-            let has_no_terrain = if tiles.is_empty() {
-                terrain_layer.is_none_or(|l| l.is_over_max_zoom(tile.coords.z))
-            } else {
-                false
-            };
-            if has_no_tile && has_no_terrain {
+            let has_no_terrain =
+                !has_tile_layer && terrain_layer.is_none_or(|l| l.is_over_max_zoom(tile.coords.z));
+            if has_no_tile || has_no_terrain {
                 return TraversalResult::NotFound;
             }
         }
@@ -99,7 +98,6 @@ pub fn traverse_tile(
         return TraversalResult::Culled;
     }
 
-    let has_tile_layer = !tiles.is_empty();
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
@@ -127,14 +125,14 @@ pub fn traverse_tile(
 
     let were_children_rendered = tile.were_children_rendered;
 
-    let is_over_min_z = tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z));
-    // If tile layer isn't added, check min_zoom for terrain layer
-    let is_terrain_over_min_z = if tiles.is_empty() {
-        terrain_layer.is_some_and(|l| l.is_over_min_zoom(tile.coords.z))
+    // Check only if terrain is exist.
+    let is_over_min_z = if has_tile_layer {
+        tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z))
     } else {
-        false
+        true
     };
-    let meets_sse = sse <= max_sse && (is_over_min_z || is_terrain_over_min_z);
+
+    let meets_sse = sse <= max_sse && is_over_min_z;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 

@@ -3,12 +3,12 @@ import ThreeView, {
   ToneMappingMode,
 } from "@navara/three";
 import { SphericalHarmonics3 } from "three";
-
-import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
-import { SH_COEFFICIENTS } from "../../helpers/sh";
-import { addCameraControl } from "../../helpers/control";
 import { Pane } from "tweakpane";
+
 import { showAttributions } from "../../helpers/attributions";
+import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
+import { addCameraControl } from "../../helpers/control";
+import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export const run = async (view: ThreeView) => {
   await view.init();
