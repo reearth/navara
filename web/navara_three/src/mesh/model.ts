@@ -549,6 +549,35 @@ export class ModelMesh
               `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
             ).source,
         ).source;
+
+        shader.vertexShader = createReplacer(shader.vertexShader).replace(
+          "#include <common>",
+          `#include <common>
+          vec3 geodetic_normal(vec3 position) {
+            // vec3 globe_raddi = vec3(6378137.0, 6378137.0, 6356752.314);
+            // vec3 globe_raddi_squared = globe_raddi * globe_raddi;
+            vec3 one_over_globe_raddi_squared = vec3(2.458172257647332e-14, 2.458172257647332e-14, 2.474739101760602e-14);
+
+            vec3 normal = position * one_over_globe_raddi_squared;
+            return normalize(normal);
+          }`
+        ).source;
+
+        shader.vertexShader = createReplacer(shader.vertexShader).replace(
+          "#include <project_vertex>",
+            `
+            vec4 mvPosition = vec4( transformed, 1.0 );
+
+            vec4 worldPosition = modelMatrix * mvPosition;
+            vec3 normal = geodetic_normal((worldPosition/worldPosition.w).xyz);
+            worldPosition.xyz += normal * -50.0;
+
+            // mvPosition = viewMatrix * worldPosition;
+            gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            `
+        ).source;
+
+        console.log(shader.vertexShader);
       };
 
       this.setMaterial(material, object);
