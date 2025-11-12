@@ -540,3 +540,6 @@ impl Default for RasterTerrainMaterial {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Component, Default)]
+pub struct EllipsoidTerrainMaterial;

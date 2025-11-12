@@ -62,6 +62,11 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  // view.addLayer({
+  //   type: "terrain",
+  //   ellipsoid: {},
+  // });
+
   view.addLayer({
     type: "mvt",
     data: {

@@ -983,3 +983,19 @@ pub struct ElevationHeatmapMaterial {
     pub logarithmic: bool,
     pub log_boundary: f32,
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EllipsoidTerrainMaterial {}
+
+impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMaterial {
+    fn from(_val: EllipsoidTerrainMaterial) -> Self {
+        navara_material::EllipsoidTerrainMaterial
+    }
+}
+
+impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrainMaterial {
+    fn from(_value: &'a navara_material::EllipsoidTerrainMaterial) -> EllipsoidTerrainMaterial {
+        EllipsoidTerrainMaterial {}
+    }
+}
