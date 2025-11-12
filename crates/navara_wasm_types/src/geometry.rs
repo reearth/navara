@@ -9,9 +9,9 @@ use crate::{copy_f32_array, copy_u32_array, Vec3};
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 pub struct Geometry {
     /// Vector of vertex. The stride is 3.
-    vertices: Vec<FloatType>,
+    vertices: Vec<f32>,
     /// Vector of UV for a texture. The stride is 2.
-    uvs: Vec<FloatType>,
+    uvs: Vec<f32>,
     /// Vector of index that constracts a triangle.
     indices: Vec<u32>,
 }
@@ -19,7 +19,7 @@ pub struct Geometry {
 #[wasm_bindgen]
 impl Geometry {
     #[wasm_bindgen(constructor)]
-    pub fn new(vertices: Vec<FloatType>, indices: Vec<u32>, uvs: Vec<FloatType>) -> Self {
+    pub fn new(vertices: Vec<f32>, indices: Vec<u32>, uvs: Vec<f32>) -> Self {
         Self {
             vertices,
             indices,
@@ -68,7 +68,7 @@ pub struct ReturnedConstructedTerrainMesh {
     geometry: Geometry,
     pub max_height: FloatType,
     pub min_height: FloatType,
-    heights: Vec<FloatType>,
+    heights: Vec<f32>,
     pub rtc_translation: Option<Vec3>,
 }
 
@@ -79,7 +79,7 @@ impl ReturnedConstructedTerrainMesh {
         geometry: Geometry,
         max_height: FloatType,
         min_height: FloatType,
-        heights: Vec<FloatType>,
+        heights: Vec<f32>,
         rtc_translation: Option<Vec3>,
     ) -> Self {
         Self {

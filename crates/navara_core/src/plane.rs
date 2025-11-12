@@ -9,20 +9,20 @@ pub struct Plane {
 impl Plane {
     pub fn from_point_normal(point: Vec3, normal: Vec3) -> Self {
         Self {
-            normal: Dir3::new_unchecked(normal.into()),
+            normal: Dir3::new_unchecked(normal.as_vec3a()),
             distance: normal.dot(point),
         }
     }
 
     pub fn get_distance_to_point(&self, point: Vec3) -> FloatType {
-        self.normal.dot(point.into()) - self.distance
+        self.normal.as_dvec3().dot(point) - self.distance
     }
 }
 
 impl Default for Plane {
     fn default() -> Self {
         Self {
-            normal: Dir3::new_unchecked(Vec3::ONE.normalize().into()),
+            normal: Dir3::new_unchecked(Vec3::ONE.normalize().as_vec3a()),
             distance: 0.,
         }
     }

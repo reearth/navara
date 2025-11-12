@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::f64::{self, consts::PI};
 
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -14,7 +14,7 @@ use bevy_input::{
 };
 use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
-    CRS, WGS84_32,
+    CRS, WGS84_64,
 };
 use navara_frame::FrameManager;
 use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON3, EPSILON6};
@@ -104,7 +104,7 @@ pub fn update(
         }
 
         // flying
-        if let Some((position, orientation)) = flight.update(duration) {
+        if let Some((position, orientation)) = flight.update(duration as FloatType) {
             apply_camera_change(
                 &mut transform,
                 &mut orbit,
@@ -340,7 +340,7 @@ fn handle_orbit_spin(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 
-    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
+    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_64);
 
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
 
@@ -370,9 +370,9 @@ fn get_fixed_rotation_axis_and_pivot(
         // Calculate new fixed axis and pivot based on screen center intersection
         let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
         let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
-        if let Some(t) = ray_ellipsoid_intersect(&ray, WGS84_32) {
+        if let Some(t) = ray_ellipsoid_intersect(&ray, WGS84_64) {
             let hit = ray.get_point(t);
-            let n_xyz = WGS84_32.geodetic_surface_normal_from_vec3(vec3_to_xyz(hit));
+            let n_xyz = WGS84_64.geodetic_surface_normal_from_vec3(vec3_to_xyz(hit));
             let n = xyz_to_vec3(n_xyz).normalize_or_zero();
 
             // Store the surface point as fixed pivot for all future rotations
@@ -382,7 +382,7 @@ fn get_fixed_rotation_axis_and_pivot(
             (n, hit)
         } else {
             // No intersection found, use rotation axis through Earth's core with camera up direction
-            let axis = transform.up().as_vec3(); // Camera up direction (screen up)
+            let axis = transform.up(); // Camera up direction (screen up)
             let pivot = Vec3::ZERO; // Earth's core as pivot
 
             orbit.fixed_rotation_axis = Some(axis);
@@ -398,7 +398,7 @@ fn get_fixed_rotation_axis_and_pivot(
 /// The angle is positive if the rotation from `v_from` to `v_to` follows the right-hand rule
 /// around `axis`, and negative otherwise. Both input vectors and the axis are normalized
 /// internally. The result is in the range [-π, π].
-fn signed_angle_around(v_from: Vec3, v_to: Vec3, axis: Vec3) -> f32 {
+fn signed_angle_around(v_from: Vec3, v_to: Vec3, axis: Vec3) -> f64 {
     let from_n = v_from.normalize_or_zero();
     let to_n = v_to.normalize_or_zero();
     let ax_n = axis.normalize_or_zero();
@@ -422,7 +422,7 @@ fn rotate_around_axis(
     // If a rotation axis is specified, rotate around that axis with the Vec3::ZERO as the pivot.
     if let Some(axis) = axis {
         let a = axis.normalize_or_zero();
-        if a.length_squared() == 0.0 {
+        if a.length_squared() < EPSILON6 {
             return;
         }
 
@@ -441,7 +441,7 @@ fn rotate_around_axis(
     // If no rotation axis is specified, obtain the intersection of the screen center and the ground surface as the pivot,
     // and use the surface normal at the intersection point as the rotation axis.
     let (axis, pivot_point) = get_fixed_rotation_axis_and_pivot(window, transform, frustum, orbit);
-    if axis.length_squared() == 0.0 {
+    if axis.length_squared() < EPSILON6 {
         return;
     }
 
@@ -451,7 +451,7 @@ fn rotate_around_axis(
 
     // Check if camera is nearly on the rotation axis (singular case)
     let is_singular =
-        offset.length_squared() == 0.0 || axis.dot(offset.normalize_or_zero()).abs() > 0.9999;
+        offset.length_squared() < EPSILON6 || axis.dot(offset.normalize_or_zero()).abs() > 0.9999;
 
     // Update position
     transform.translation = pivot_point + rotation * offset;
@@ -462,7 +462,7 @@ fn rotate_around_axis(
     } else {
         // Normal case: look at pivot point while preserving roll
         let old_forward = (pivot_point - old_pos).normalize_or_zero();
-        let old_up = transform.up().as_vec3();
+        let old_up = transform.up();
 
         // Project `axis` onto the plane orthogonal to `old_forward` and normalize it.
         // (i.e. the component of `axis` perpendicular to the viewing direction,
@@ -504,7 +504,7 @@ fn handle_tilt(
     is_cam_moving: bool,
     cam_st: &mut CameraStatus,
 ) {
-    let ellipsoid = WGS84_32;
+    let ellipsoid = WGS84_64;
 
     // TODO: Check whether picking point from terrain or center. If the camera is nearby ground, it should be picked by terrain.
 
@@ -551,12 +551,12 @@ fn handle_tilt(
 fn rotate(
     mm: &mut EventReader<MouseMotion>,
     controller: &CameraController,
-    ratio_x: f32,
-    ratio_y: f32,
+    ratio_x: f64,
+    ratio_y: f64,
 ) -> Option<Vec3> {
     // Use just the latest motion
     let screen_delta = if let Some(ev) = mm.read().last() {
-        Vec3::new(ev.delta.x, ev.delta.y, 0.0)
+        Vec3::new(ev.delta.x as f64, ev.delta.y as f64, 0.0)
     } else {
         return None;
     };
@@ -591,10 +591,10 @@ fn handle_zoom(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 
-    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_32);
+    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_64);
 
     let dist = distance_from_ellipsoid_surface.max(0.);
-    let d = zoom * controller.zoom_speed * dist * 0.0025;
+    let d = (zoom as f64) * controller.zoom_speed * dist * 0.0025;
 
     if !is_cam_moving {
         cam_st.status.push(CameraStatusType::MoveStart);
@@ -603,7 +603,7 @@ fn handle_zoom(
     inertia.zoom(d);
 }
 
-fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f32>) -> f32 {
+fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f64>) -> f64 {
     let camera_pos = transform.transform_point(Vec3::ZERO);
     let direction_to_center = -camera_pos.normalize();
 
@@ -624,7 +624,7 @@ fn apply_inertia(
     apply_zoom(orbit, inertia, controller);
 }
 
-const MAX_SPIN_ANGLE: f32 = PI / 30.;
+const MAX_SPIN_ANGLE: f64 = PI / 30.;
 
 fn apply_spin(
     orbit: &mut Orbit,
@@ -637,7 +637,7 @@ fn apply_spin(
         return;
     }
 
-    let mut next = inertia.spin * (1.0 - ease_out_circ(t));
+    let mut next = inertia.spin * (1.0 - ease_out_circ(t) as f64);
 
     next.y = next.y.clamp(-MAX_SPIN_ANGLE, MAX_SPIN_ANGLE);
 
@@ -647,7 +647,7 @@ fn apply_spin(
 
     let inverse = orbit.world_quat.inverse();
 
-    let local_camera_forward = inverse * transform.forward().as_vec3();
+    let local_camera_forward = inverse * transform.forward();
 
     let next_vert_quat = orbit.vertical_quat * vertical_delta;
     let next_up = next_vert_quat * Vec3::Z;
@@ -671,7 +671,7 @@ fn apply_zoom(orbit: &mut Orbit, inertia: &mut CameraInertia, controller: &Camer
     if t > 1. {
         return;
     }
-    let next_zoom = inertia.zoom * (1. - ease_out_circ(t));
+    let next_zoom = inertia.zoom * (1. - ease_out_circ(t) as f64);
     let next = orbit.local_position - orbit.local_forward * next_zoom;
     let length = next.length();
     if length >= controller.maximum_zoom_distance && next_zoom > 0. {
@@ -773,7 +773,7 @@ fn apply_camera_change(
         // Create ground point (ignoring altitude for now)
         let ground_point = Vec3::new(pos.x, pos.y, 0.0);
         // Convert geographic coordinates to world-space position
-        let pivot = CRS::Geographic.to_vec3(WGS84_32, ground_point, 0.0);
+        let pivot = CRS::Geographic.to_vec3(WGS84_64, ground_point, 0.0);
         let target_dir = pivot.normalize_or_zero();
 
         // Calculate camera offset from ground point
@@ -808,7 +808,7 @@ fn apply_camera_change(
 
 /// Calculates the world rotation quaternion based on target direction and heading
 /// Handles special case when looking directly up/down (Z-axis)
-fn calculate_world_quat(target_dir: Vec3, heading: f32) -> Quat {
+fn calculate_world_quat(target_dir: Vec3, heading: f64) -> Quat {
     // Calculate right vector - special case when looking straight up/down
     let right = if target_dir.abs_diff_eq(Vec3::Z, EPSILON3)
         || target_dir.abs_diff_eq(-Vec3::Z, EPSILON3)
@@ -840,8 +840,8 @@ fn apply_orientation_changes(
     world_quat: Quat,
     local_forward: Vec3,
     local_up: Vec3,
-    pitch: f32,
-    roll: f32,
+    pitch: f64,
+    roll: f64,
 ) -> (Vec3, Vec3) {
     // Transform local vectors to world space
     let mut world_up = world_quat * local_up;
@@ -866,17 +866,17 @@ fn handle_camera_translate(
     transform: &mut Transform,
     orbit: &mut Orbit,
     inertia: &mut CameraInertia,
-    amount: &f32,
+    amount: &f64,
     direction: &CamDirType,
 ) -> bool {
-    if *amount < EPSILON3 {
+    if *amount < EPSILON6 {
         return false;
     }
 
     // Get the camera's local forward, right, and up directions
-    let forward = transform.forward().as_vec3();
-    let right = transform.right().as_vec3();
-    let up = transform.up().as_vec3();
+    let forward = transform.forward();
+    let right = transform.right();
+    let up = transform.up();
 
     // Determine the movement direction vector based on the input direction
     let dir_vec = match direction {
@@ -908,7 +908,7 @@ fn apply_camera_translate(
     if t > 1. {
         return;
     }
-    let next_trans = inertia.translate * (1. - ease_out_circ(t));
+    let next_trans = inertia.translate * (1. - ease_out_circ(t) as f64);
     let next = transform.translation + next_trans;
     let length = next.length();
     if length >= controller.maximum_zoom_distance {
@@ -921,16 +921,16 @@ fn apply_camera_translate(
 }
 
 fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {
-    let ellipsoid = WGS84_32;
+    let ellipsoid = WGS84_64;
     let world_target = CRS::Geographic.to_vec3(ellipsoid, *target, 0.0);
 
     let enu_transform = east_north_up_to_fixed_frame(world_target, ellipsoid);
-    let offset_world = enu_transform.transform_vector3(*offset);
+    let offset_world = (enu_transform * offset.extend(0.0)).truncate();
 
     let camera_position = world_target + offset_world;
 
     let forward = (world_target - camera_position).normalize();
-    let mut up = enu_transform.transform_vector3(Vec3::Z).normalize();
+    let mut up = (enu_transform * Vec3::Z.extend(0.0)).truncate().normalize();
 
     // Handle edge case where forward and up vectors are colinear (or nearly so)
     if forward
@@ -939,7 +939,7 @@ fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, of
         .abs()
         .equal_diff_epsilon(1.0, EPSILON6)
     {
-        up = enu_transform.transform_vector3(Vec3::Y).normalize();
+        up = (enu_transform * Vec3::Y.extend(0.0)).truncate().normalize();
     }
 
     transform.translation = camera_position;
@@ -948,22 +948,6 @@ fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, of
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 }
-
-// TODO
-// // Transform systems
-// pub fn update_camera_transform() {...}
-// pub fn update_view_matrix() {...}
-
-// // Constraint systems
-// pub fn apply_height_limits() {...}
-// pub fn handle_collisions() {...} ref: https://github.com/CesiumGS/cesium/blob/main/packages/engine/Source/Core/IntersectionTests.js
-
-// // Mode-specific systems  ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/SceneMode.js#L7
-// pub fn update_3d() {...}
-// pub fn update_2d() {...}
-
-// // Flight/animation systems
-// pub fn update_camera_flight() {...}
 
 #[allow(clippy::type_complexity)]
 pub fn update_frustum(

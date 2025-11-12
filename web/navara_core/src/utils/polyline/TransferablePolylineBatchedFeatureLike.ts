@@ -7,7 +7,7 @@ import type {
 export class TransferablePolylineBatchedFeatureLike
   implements TransferablePolylineBatchedFeature
 {
-  points: Float32Array;
+  points: Float64Array;
   points_sizes: Uint32Array;
   batch_ids: Uint32Array;
   batch_indices: Uint32Array;
@@ -28,7 +28,7 @@ export class TransferablePolylineBatchedFeatureLike
   setBatchIds(_byte_length: number, _f: () => void): void {}
   setBatchIndices(_length: number, _f: () => void) {}
 
-  transferPoints(): Float32Array {
+  transferPoints(): Float64Array {
     throw new Error();
   }
   transferPointsSizes(): Uint32Array {

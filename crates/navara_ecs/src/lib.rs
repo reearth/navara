@@ -13,7 +13,7 @@ use navara_camera::{
     CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
 };
 use navara_component::{Deleted, Rendered};
-use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_32};
+use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_64};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -90,9 +90,14 @@ impl App {
         store.get_u32(&handle)
     }
 
-    pub fn get_buffer_f32(&self, handle: i32) -> Option<&[FloatType]> {
+    pub fn get_buffer_f32(&self, handle: i32) -> Option<&[f32]> {
         let store = self.app.world().get_resource::<BufferStore>()?;
         store.get_f32(&handle)
+    }
+
+    pub fn get_buffer_f64(&self, handle: i32) -> Option<&[f64]> {
+        let store = self.app.world().get_resource::<BufferStore>()?;
+        store.get_f64(&handle)
     }
 
     pub fn set_buffer_u8(&mut self, handle: i32, bits: u64, data: Vec<u8>) {
@@ -126,6 +131,11 @@ impl App {
         Some(store.new_f32(data))
     }
 
+    pub fn new_buffer_f64(&mut self, data: Vec<f64>) -> Option<Handle> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        Some(store.new_f64(data))
+    }
+
     pub fn remove_buffer(&mut self, handle: i32) {
         let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
             return;
@@ -144,6 +154,10 @@ impl App {
     pub fn remove_buffer_f32(&mut self, handle: i32) -> Option<Vec<f32>> {
         let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
         store.remove_f32(&handle)
+    }
+    pub fn remove_buffer_f64(&mut self, handle: i32) -> Option<Vec<f64>> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        store.remove_f64(&handle)
     }
 
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
@@ -840,7 +854,7 @@ impl App {
         let mut query = world.query_filtered::<&Transform, With<CameraMarker>>();
 
         if let Some(transform) = query.iter(world).next() {
-            let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
+            let lle = CRS::Geocentric.to_lle(WGS84_64, transform.translation, 0.0);
             let start = lle.deg();
             return Some(vec![start.lng.val(), start.lat.val(), start.height.val()]);
         }

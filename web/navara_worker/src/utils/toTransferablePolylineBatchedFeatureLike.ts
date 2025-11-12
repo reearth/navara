@@ -5,7 +5,7 @@ export function toTransferablePolylineBatchedFeatureLike(
   like: TransferablePolylineBatchedFeatureLike,
 ) {
   const t = new TransferablePolylineBatchedFeature(like.crs, like.length);
-  t.setPoints(like.points.length, (b: Float32Array) => {
+  t.setPoints(like.points.length, (b: Float64Array) => {
     b.set(like.points);
   });
   t.setPointsSizes(like.points_sizes.length, (b: Uint32Array) => {

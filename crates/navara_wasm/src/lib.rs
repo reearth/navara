@@ -107,6 +107,13 @@ impl Core {
         Some(copy_f32_array(buf))
     }
 
+    #[wasm_bindgen(js_name = getBufferF64)]
+    pub fn get_buffer_f64(&self, handle: i32) -> Option<js_sys::Float64Array> {
+        let buf = self.app.get_buffer_f64(handle)?;
+
+        Some(copy_f64_array(buf))
+    }
+
     #[wasm_bindgen(js_name = setBufferU8)]
     pub fn set_buffer_u8(
         &mut self,
@@ -132,6 +139,11 @@ impl Core {
     #[wasm_bindgen(js_name = newBufferF32)]
     pub fn new_buffer_f32(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
         self.app.new_buffer_f32(transfer_f32_array(byte_length, f))
+    }
+
+    #[wasm_bindgen(js_name = newBufferF64)]
+    pub fn new_buffer_f64(&mut self, byte_length: usize, f: &js_sys::Function) -> Option<Handle> {
+        self.app.new_buffer_f64(transfer_f64_array(byte_length, f))
     }
 
     #[wasm_bindgen(js_name = newBufferU8Cloned)]
@@ -165,6 +177,10 @@ impl Core {
     #[wasm_bindgen(js_name = removeBufferF32)]
     pub fn remove_buffer_f32(&mut self, handle: i32) -> Option<js_sys::Float32Array> {
         Some(copy_f32_array(&self.app.remove_buffer_f32(handle)?))
+    }
+    #[wasm_bindgen(js_name = removeBufferF64)]
+    pub fn remove_buffer_f64(&mut self, handle: i32) -> Option<js_sys::Float64Array> {
+        Some(copy_f64_array(&self.app.remove_buffer_f64(handle)?))
     }
 
     #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
@@ -370,7 +386,7 @@ impl Core {
 
         let mut buf_store = self.app.get_buffer_store_mut()?;
         for (coords, batch_index) in coords_handle {
-            let mut points = buf_store.remove_f32(&coords)?.to_vec();
+            let mut points = buf_store.remove_f64(&coords)?.to_vec();
 
             transferable.add(&mut points, batch_index);
         }
@@ -475,12 +491,12 @@ impl Core {
     }
 
     #[wasm_bindgen(js_name = getCameraPositionLLE)]
-    pub fn get_camera_position_lle(&mut self) -> Option<Vec<FloatType>> {
+    pub fn get_camera_position_lle(&mut self) -> Option<Vec<f64>> {
         self.app.get_camera_position_lle()
     }
 
     #[wasm_bindgen(js_name = getCameraPositionECEF)]
-    pub fn get_camera_position_ecef(&mut self) -> Option<Vec<FloatType>> {
+    pub fn get_camera_position_ecef(&mut self) -> Option<Vec<f64>> {
         self.app.get_camera_position_ecef()
     }
 

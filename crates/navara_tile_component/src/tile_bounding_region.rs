@@ -16,7 +16,7 @@ pub struct TileBoundingRegion<F: Float> {
 }
 
 impl TileBoundingRegion<FloatType> {
-    pub fn from_extent_f32(e: Extent<FloatType, Radians>, ellipsoid: Ellipsoid<FloatType>) -> Self {
+    pub fn from_extent_f64(e: Extent<f64, Radians>, ellipsoid: Ellipsoid<f64>) -> Self {
         let southwest_corner_lle = LLE {
             lng: e.west,
             lat: e.south,
@@ -139,7 +139,9 @@ impl TileBoundingRegion<FloatType> {
 
 #[cfg(test)]
 mod test {
-    use navara_core::{Meters, TileXYZ, WGS84_32, WGS84_A_32, XYZ};
+    use approx::assert_abs_diff_eq;
+    use navara_core::{Angle, Meters, TileXYZ, LLE, WGS84_64, WGS84_A_32};
+    use navara_math::{EPSILON1, EPSILON7};
     use navara_mock::camera::update_camera_transform;
 
     use super::TileBoundingRegion;
@@ -147,66 +149,74 @@ mod test {
     #[test]
     fn get_correct_bounding_region_from_tile() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
-        let tbr = TileBoundingRegion::from_extent_f32(tile_coords.extent(), WGS84_32);
-        debug_assert_eq!(
-            tbr.northeast_corner,
-            XYZ {
-                x: Meters::new(6378137.),
-                y: Meters::new(0.),
-                z: Meters::new(0.),
-            }
+        let tbr = TileBoundingRegion::from_extent_f64(tile_coords.extent(), WGS84_64);
+
+        // northeast_corner
+        assert_abs_diff_eq!(tbr.northeast_corner.x.val(), 6378137., epsilon = EPSILON1);
+        assert_abs_diff_eq!(tbr.northeast_corner.y.val(), 0., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.northeast_corner.z.val(), 0., epsilon = EPSILON7);
+
+        // southwest_corner
+        assert_abs_diff_eq!(
+            tbr.southwest_corner.x.val(),
+            -552058.2246913937,
+            epsilon = EPSILON1
         );
-        debug_assert_eq!(
-            tbr.southwest_corner,
-            XYZ {
-                x: Meters::new(-552057.56),
-                y: Meters::new(0.048262406),
-                z: Meters::new(-6332896.0)
-            }
+        assert_abs_diff_eq!(tbr.southwest_corner.y.val(), 0., epsilon = EPSILON7);
+        assert_abs_diff_eq!(
+            tbr.southwest_corner.z.val(),
+            -6332896.014929536,
+            epsilon = EPSILON1
         );
-        debug_assert_eq!(
-            tbr.north_normal,
-            XYZ {
-                x: Meters::new(0.),
-                y: Meters::new(0.),
-                z: Meters::new(-1.),
-            }
-        );
-        debug_assert_eq!(
-            tbr.east_normal,
-            XYZ {
-                x: Meters::new(0.),
-                y: Meters::new(1.),
-                z: Meters::new(0.),
-            }
-        );
-        debug_assert_eq!(
-            tbr.south_normal,
-            XYZ {
-                x: Meters::new(4.3711385e-8),
-                y: Meters::new(1.),
-                z: Meters::new(3.7849444e-9),
-            }
-        );
-        debug_assert_eq!(
-            tbr.west_normal,
-            XYZ {
-                x: Meters::new(8.742277e-8),
-                y: Meters::new(1.),
-                z: Meters::new(0.),
-            }
-        );
+
+        // north_normal
+        assert_abs_diff_eq!(tbr.north_normal.x.val(), 0., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.north_normal.y.val(), 0., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.north_normal.z.val(), 1., epsilon = EPSILON7);
+
+        // east_normal
+        assert_abs_diff_eq!(tbr.east_normal.x.val(), 0., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.east_normal.y.val(), 1., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.east_normal.z.val(), 0., epsilon = EPSILON7);
+
+        // south_normal
+        assert_abs_diff_eq!(tbr.south_normal.x.val(), 4.3711385e-8, epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.south_normal.y.val(), 1., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.south_normal.z.val(), 3.7849444e-9, epsilon = EPSILON7);
+
+        // west_normal
+        assert_abs_diff_eq!(tbr.west_normal.x.val(), 8.742277e-8, epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.west_normal.y.val(), 1., epsilon = EPSILON7);
+        assert_abs_diff_eq!(tbr.west_normal.z.val(), 0., epsilon = EPSILON7);
     }
 
     #[test]
     fn get_correct_distance_to_camera() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
-        let tbr = TileBoundingRegion::from_extent_f32(tile_coords.extent(), WGS84_32);
+        let tbr = TileBoundingRegion::from_extent_f64(tile_coords.extent(), WGS84_64);
 
-        let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32 * 3.);
-        debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 29916116.0);
+        let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32 as f64 * 3.);
+        let camera_lle = LLE {
+            lng: Angle::new(camera_lle.lng.val()),
+            lat: Angle::new(camera_lle.lat.val()),
+            height: Meters::new(camera_lle.height.val()),
+        };
+        assert_abs_diff_eq!(
+            tbr.distance_to_camera(camera_pos, camera_lle),
+            29916114.303112928,
+            epsilon = EPSILON7
+        );
 
-        let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32);
-        debug_assert_eq!(tbr.distance_to_camera(camera_pos, camera_lle), 9020048.0);
+        let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32 as f64);
+        let camera_lle = LLE {
+            lng: Angle::new(camera_lle.lng.val()),
+            lat: Angle::new(camera_lle.lat.val()),
+            height: Meters::new(camera_lle.height.val()),
+        };
+        assert_abs_diff_eq!(
+            tbr.distance_to_camera(camera_pos, camera_lle),
+            9020047.848073645,
+            epsilon = EPSILON7
+        );
     }
 }

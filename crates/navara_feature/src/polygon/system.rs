@@ -6,7 +6,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::{Aabb, BoundingSphere, CRS, WGS84_32};
+use navara_core::{Aabb, BoundingSphere, CRS, WGS84_64};
 use navara_feature_component::{
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
@@ -116,8 +116,8 @@ pub fn transfer_batched_mesh(
 
         let (distance_to_center_from_ellipsoid_surface, bounding_sphere) = match extent {
             Some(extent) => {
-                let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
-                let distance = WGS84_32
+                let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
+                let distance = WGS84_64
                     .scale_to_geodetic_surface(aabb.center)
                     .map(|surface_point| -aabb.center.distance(surface_point));
                 let sphere = get_bounding_sphere(&aabb);
@@ -205,14 +205,14 @@ pub fn transfer_mesh(
             true, // use_rte = true for individual features
         );
         if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
-            let aabb = Aabb::from_extent_f32(extent, 0., 0.);
-            let surface_point = WGS84_32.scale_to_geodetic_surface(aabb.center);
+            let aabb = Aabb::from_extent_f64(extent, 0., 0.);
+            let surface_point = WGS84_64.scale_to_geodetic_surface(aabb.center);
 
             let mut material = material.clone();
             material.internal = Some(PolygonInternalMaterial {
                 min_max_heights: calc_min_max_height(
-                    material.height,
-                    material.extruded_height.unwrap_or(0.),
+                    material.height as f64,
+                    material.extruded_height.unwrap_or(0.) as FloatType,
                     material.clamp_to_ground,
                     -aabb.center.distance(surface_point.unwrap()),
                 ),
@@ -235,7 +235,7 @@ pub fn transfer_mesh(
                     .as_ref()
                     .unwrap()
                     .size as usize;
-            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+            let batch_id_vec = vec![batch_id.0; pos_cnt];
             polygon_result.geometry.attributes.batch_ids =
                 Some(FloatAttribute::new(batch_id_vec, 1));
 
@@ -315,7 +315,7 @@ pub fn update_polygon(
 
             if should_recalculate_height {
                 if let Some(extent) = extent {
-                    let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+                    let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
                     *bounding_sphere = Some(get_bounding_sphere(&aabb));
                 }
             }
@@ -379,7 +379,10 @@ pub fn update_height_by_terrain(
                     let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
                     (min, max)
                 } else {
-                    (material.height, material.extruded_height.unwrap_or(0.))
+                    (
+                        material.height as f64,
+                        material.extruded_height.unwrap_or(0.) as f64,
+                    )
                 };
 
                 let internal = material.internal.as_mut().unwrap();
@@ -390,7 +393,7 @@ pub fn update_height_by_terrain(
                     distance_to_center_from_ellipsoid_surface,
                 );
 
-                let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+                let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
                 *bounding_sphere = Some(get_bounding_sphere(&aabb));
             }
             _ => unreachable!(),

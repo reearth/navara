@@ -1,3 +1,5 @@
+use std::f64;
+
 use bevy_ecs::{
     entity::Entity,
     query::{Added, With, Without},
@@ -5,7 +7,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::WGS84_32;
+use navara_core::WGS84_64;
 use navara_feature_component::{
     batch::{
         BatchId, BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap,
@@ -83,11 +85,11 @@ pub fn transfer_batched_mesh(
             let transformed_pos =
                 point_geometry
                     .crs
-                    .to_vec3(WGS84_32, point_geometry.coords, material.height);
+                    .to_vec3(WGS84_64, point_geometry.coords, material.height);
 
-            all_coords.push(transformed_pos.x);
-            all_coords.push(transformed_pos.y);
-            all_coords.push(transformed_pos.z);
+            all_coords.push(transformed_pos.x as f32);
+            all_coords.push(transformed_pos.y as f32);
+            all_coords.push(transformed_pos.z as f32);
 
             // Add batch index
             batch_indices.push(batch_index.0);
@@ -109,9 +111,9 @@ pub fn transfer_batched_mesh(
                     crs,
                     material: material.clone(),
                     transform: Transform::from_scale(Vec3::new(
-                        material.size,
-                        material.size,
-                        material.size,
+                        material.size as f64,
+                        material.size as f64,
+                        material.size as f64,
                     )),
                     feature_id: batched_feature_entity,
                     render_info: RenderInformation {
@@ -162,7 +164,7 @@ pub fn transfer_mesh(
     {
         let position = geometry
             .crs
-            .to_vec3(WGS84_32, geometry.coords, material.height);
+            .to_vec3(WGS84_64, geometry.coords, material.height);
 
         let entity = commands
             .spawn((
@@ -173,9 +175,9 @@ pub fn transfer_mesh(
                     crs: geometry.crs.clone(),
                     material: material.clone(),
                     transform: Transform::from_translation(position).with_scale(Vec3::new(
-                        material.size,
-                        material.size,
-                        material.size,
+                        material.size as f64,
+                        material.size as f64,
+                        material.size as f64,
                     )),
                     feature_id: entity,
                     render_info: RenderInformation {
@@ -185,7 +187,7 @@ pub fn transfer_mesh(
                     },
                     geometry: TransferablePointGeometry::with_buf(
                         &mut buf,
-                        position.to_array().to_vec(),
+                        position.as_vec3().to_array().to_vec(),
                         vec![0],
                         vec![batch_id.0],
                     ),
@@ -267,7 +269,7 @@ pub fn update_height_by_terrain_for_batched(
                             &mut qt,
                             &mut buf,
                             &terrain_data_requester,
-                            &geometry.crs.to_lng_lat(WGS84_32, geometry.coords),
+                            &geometry.crs.to_lng_lat(WGS84_64, geometry.coords),
                         )
                         .unwrap_or(0.);
                         render_info.current_terrain_height =
@@ -276,14 +278,14 @@ pub fn update_height_by_terrain_for_batched(
                         render_info.current_terrain_height = 0.;
                     }
                     let position = geometry.crs.to_vec3(
-                        WGS84_32,
+                        WGS84_64,
                         geometry.coords,
-                        material.height + render_info.current_terrain_height,
+                        material.height + render_info.current_terrain_height as f32,
                     );
 
-                    all_coords.push(position.x);
-                    all_coords.push(position.y);
-                    all_coords.push(position.z);
+                    all_coords.push(position.x as f32);
+                    all_coords.push(position.y as f32);
+                    all_coords.push(position.z as f32);
                 }
 
                 buf.remove(&geometry.position.data);
@@ -344,7 +346,7 @@ pub fn update_height_by_terrain(
                         &mut qt,
                         &mut buf,
                         &terrain_data_requester,
-                        &geometry.crs.to_lng_lat(WGS84_32, geometry.coords),
+                        &geometry.crs.to_lng_lat(WGS84_64, geometry.coords),
                     )
                     .unwrap_or(0.);
                     render_info.current_terrain_height =
@@ -353,12 +355,13 @@ pub fn update_height_by_terrain(
                     render_info.current_terrain_height = 0.;
                 }
                 let position = geometry.crs.to_vec3(
-                    WGS84_32,
+                    WGS84_64,
                     geometry.coords,
-                    material.height + render_info.current_terrain_height,
+                    material.height + render_info.current_terrain_height as f32,
                 );
 
-                transferable_geometry.position.data = buf.new_f32(position.to_array().to_vec());
+                transferable_geometry.position.data =
+                    buf.new_f32(position.as_vec3().to_array().to_vec());
             }
             _ => unreachable!(),
         };

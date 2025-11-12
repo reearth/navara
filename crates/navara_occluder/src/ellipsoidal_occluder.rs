@@ -138,29 +138,35 @@ fn is_scaled_space_point_visible(
 #[cfg(test)]
 mod test {
 
-    use navara_core::{WGS84_32, WGS84_A_32};
-    use navara_math::Vec3;
+    use approx::assert_abs_diff_eq;
+    use navara_core::{WGS84_64, WGS84_A_64};
+    use navara_math::{AbsDiffEqVec3, Vec3, EPSILON5};
     use navara_mock::camera::update_camera_transform;
 
     use super::EllipsoidalOccluder;
 
     #[test]
     fn it_should_return_some_or_none() {
-        let (camera_pos, _camera_lle) = update_camera_transform(WGS84_A_32 * 2.);
-        let occluder = EllipsoidalOccluder::new(&camera_pos, WGS84_32);
+        let (camera_pos, _camera_lle) = update_camera_transform(WGS84_A_64 * 2.);
+        let occluder = EllipsoidalOccluder::new(&camera_pos, WGS84_64);
 
-        let center = Vec3::new(WGS84_A_32 / 2., WGS84_A_32 / 2., WGS84_A_32);
-        debug_assert_eq!(
-            occluder.compute_horizontal_culling_point(
-                &WGS84_32,
-                center,
-                vec![Vec3::new(center.x + 100., center.y, center.z - 100.)]
+        let center = Vec3::new(WGS84_A_64 / 2., WGS84_A_64 / 2., WGS84_A_64);
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(
+                occluder
+                    .compute_horizontal_culling_point(
+                        &WGS84_64,
+                        center,
+                        vec![Vec3::new(center.x + 100., center.y, center.z - 100.)]
+                    )
+                    .unwrap()
             ),
-            Some(Vec3::new(0.5000035, 0.5000035, 1.003371))
+            AbsDiffEqVec3(Vec3::new(0.5000035, 0.5000035, 1.003371)),
+            epsilon = Vec3::new(EPSILON5, EPSILON5, EPSILON5)
         );
         debug_assert!(occluder
             .compute_horizontal_culling_point(
-                &WGS84_32,
+                &WGS84_64,
                 center,
                 vec![Vec3::new(-center.x, -center.y, -center.z)]
             )
@@ -169,23 +175,23 @@ mod test {
 
     #[test]
     fn it_should_be_occluded() {
-        let (camera_pos, _camera_lle) = update_camera_transform(WGS84_A_32 * 1.5);
-        let occluder = EllipsoidalOccluder::new(&camera_pos, WGS84_32);
+        let (camera_pos, _camera_lle) = update_camera_transform(WGS84_A_64 * 1.5);
+        let occluder = EllipsoidalOccluder::new(&camera_pos, WGS84_64);
 
-        let center = Vec3::new(WGS84_A_32 / 2., WGS84_A_32 / 2., -WGS84_A_32);
+        let center = Vec3::new(WGS84_A_64 / 2., WGS84_A_64 / 2., -WGS84_A_64);
         let occludee_point = occluder
             .compute_horizontal_culling_point(
-                &WGS84_32,
+                &WGS84_64,
                 center,
                 vec![Vec3::new(center.x + 100., center.y, center.z - 100.)],
             )
             .unwrap();
         debug_assert!(occluder.is_scaled_space_point_visible(occludee_point));
 
-        let center = Vec3::new(WGS84_A_32 / 2., 0., -WGS84_A_32);
+        let center = Vec3::new(WGS84_A_64 / 2., 0., -WGS84_A_64);
         let occludee_point = occluder
             .compute_horizontal_culling_point(
-                &WGS84_32,
+                &WGS84_64,
                 center,
                 vec![Vec3::new(center.x - 100., center.y, center.z + 100.)],
             )

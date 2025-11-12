@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
-use navara_core::{TileXYZ, WGS84_32};
+use navara_core::{TileXYZ, WGS84_64};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -152,11 +152,11 @@ pub fn update_tiles(
         &texture_fragment,
         &terrain_data_requester,
         &window,
-        &WGS84_32,
+        &WGS84_64,
         &occluder,
         &mut meshes,
         &fog,
-        globe.max_sse,
+        globe.max_sse as f64,
         false,
         is_texture_ready.then_some(zero_tile_handle),
     ) {
@@ -346,7 +346,7 @@ pub fn transfer_mesh(
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             let (triangles, rtc_translation) = tile_triangles_flat(
-                WGS84_32,
+                WGS84_64,
                 &extent,
                 if is_root { 65 } else { globe.segments },
                 0.,

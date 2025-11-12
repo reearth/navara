@@ -233,7 +233,7 @@ impl ReturnedTransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
-    pub fn transfer_outer_ring(&mut self) -> js_sys::Float32Array {
+    pub fn transfer_outer_ring(&mut self) -> js_sys::Float64Array {
         self.transferable.transfer_outer_ring()
     }
 
@@ -243,7 +243,7 @@ impl ReturnedTransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferHoles")]
-    pub fn transfer_holes(&mut self) -> js_sys::Float32Array {
+    pub fn transfer_holes(&mut self) -> js_sys::Float64Array {
         self.transferable.transfer_holes()
     }
 
@@ -296,7 +296,7 @@ impl ReturnedTransferablePolylineBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferPoints")]
-    pub fn transfer_points(&mut self) -> js_sys::Float32Array {
+    pub fn transfer_points(&mut self) -> js_sys::Float64Array {
         self.transferable.transfer_points()
     }
 

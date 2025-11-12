@@ -1,13 +1,13 @@
-use super::{std_float, FloatType};
+use std::f64::consts::PI;
 
-pub const TWO_PI: FloatType = 2. * std_float::consts::PI;
+pub const TWO_PI: f64 = 2. * PI;
 
-pub const PI_OVER_TWO: FloatType = std_float::consts::PI / 2.;
+pub const PI_OVER_TWO: f64 = PI / 2.;
 
-pub const RADIANS_PER_DEGREE: FloatType = std_float::consts::PI / 180.;
+pub const RADIANS_PER_DEGREE: f64 = PI / 180.;
 
 // Normalizes an angle to the range [0, 2π).
-pub fn zero_to_two_pi(mut angle: FloatType) -> FloatType {
+pub fn zero_to_two_pi(mut angle: f64) -> f64 {
     angle %= TWO_PI;
     if angle < 0.0 {
         angle += TWO_PI;
@@ -16,10 +16,10 @@ pub fn zero_to_two_pi(mut angle: FloatType) -> FloatType {
 }
 
 // Normalizes an angle to the range [-π, π].
-pub fn negative_pi_to_pi(angle: FloatType) -> FloatType {
-    if (-std_float::consts::PI..=std_float::consts::PI).contains(&angle) {
+pub fn negative_pi_to_pi(angle: f64) -> f64 {
+    if (-PI..=PI).contains(&angle) {
         return angle;
     }
 
-    zero_to_two_pi(angle + std_float::consts::PI) - std_float::consts::PI
+    zero_to_two_pi(angle + PI) - PI
 }

@@ -6,7 +6,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::WGS84_32;
+use navara_core::WGS84_64;
 use navara_feature_component::{
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
@@ -75,25 +75,29 @@ pub fn transfer_mesh(
         } else {
             geometry
                 .crs
-                .to_vec3(WGS84_32, geometry.coords, material.height)
+                .to_vec3(WGS84_64, geometry.coords, material.height)
         };
 
         let transform = if material.should_rotate_in_default {
-            let lnglat = geometry.crs.to_lng_lat(WGS84_32, geometry.coords);
+            let lnglat = geometry.crs.to_lng_lat(WGS84_64, geometry.coords);
             let lng = lnglat.lng.val();
             let lat = lnglat.lat.val();
             let rotation_y = Quat::from_rotation_y(-lat);
             let rotation_z = Quat::from_rotation_z(lng);
-            let adjust_model = Quat::from_rotation_z(-std::f32::consts::PI / 2.0);
+            let adjust_model = Quat::from_rotation_z(-std::f64::consts::PI / 2.0);
             let rotation = rotation_z * rotation_y * adjust_model;
             Transform::from_translation(position)
                 .with_rotation(rotation)
-                .with_scale(Vec3::new(material.size, material.size, material.size))
+                .with_scale(Vec3::new(
+                    material.size as f64,
+                    material.size as f64,
+                    material.size as f64,
+                ))
         } else {
             Transform::from_translation(position).with_scale(Vec3::new(
-                material.size,
-                material.size,
-                material.size,
+                material.size as f64,
+                material.size as f64,
+                material.size as f64,
             ))
         };
         let transform = match adjustment_transform {
@@ -202,7 +206,7 @@ pub fn update_height_by_terrain(
                         &mut qt,
                         &mut buf,
                         &terrain_data_requester,
-                        &geometry.crs.to_lng_lat(WGS84_32, geometry.coords),
+                        &geometry.crs.to_lng_lat(WGS84_64, geometry.coords),
                     )
                     .unwrap_or(0.);
                     render_info.current_terrain_height =
@@ -211,9 +215,9 @@ pub fn update_height_by_terrain(
                     render_info.current_terrain_height = 0.;
                 };
                 let position = geometry.crs.to_vec3(
-                    WGS84_32,
+                    WGS84_64,
                     geometry.coords,
-                    material.height + render_info.current_terrain_height,
+                    material.height + render_info.current_terrain_height as f32,
                 );
 
                 transform.translation = position;

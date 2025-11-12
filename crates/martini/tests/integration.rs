@@ -1,3 +1,4 @@
+use approx::assert_abs_diff_eq;
 use image::{self, load_from_memory};
 use martini::*;
 use navara_math::FloatType;
@@ -73,11 +74,9 @@ fn it_should_generate_mesh() {
     );
 }
 
-pub(crate) fn assert_float_array(a: &[FloatType], b: &[FloatType]) {
+pub(crate) fn assert_float_array(a: &[f32], b: &[f32]) {
     for (i, v) in a.iter().enumerate() {
-        if v != &b[i] {
-            panic!("{} != {}", v, b[i]);
-        }
+        assert_abs_diff_eq!(v, &b[i], epsilon = 0.1);
     }
 }
 

@@ -175,7 +175,7 @@ impl Tile {
         martini: &mut Martini,
         max_error: FloatType,
         transform: &mut F,
-    ) -> (Vec<FloatType>, Vec<u32>, Vec<FloatType>)
+    ) -> (Vec<f32>, Vec<u32>, Vec<f32>)
     where
         F: FnMut((FloatType, FloatType)) -> (FloatType, FloatType, FloatType),
     {
@@ -207,12 +207,12 @@ impl Tile {
 
                 let (x, y, z) = transform((u, v));
 
-                vertices.push(x);
-                vertices.push(y);
-                vertices.push(z);
+                vertices.push(x as f32);
+                vertices.push(y as f32);
+                vertices.push(z as f32);
 
-                uvs.push(u);
-                uvs.push(v);
+                uvs.push(u as f32);
+                uvs.push(v as f32);
 
                 index_map[i] = new_index();
             }

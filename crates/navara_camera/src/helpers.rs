@@ -1,4 +1,4 @@
-use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Ellipsoid, Ray, WGS84_32};
+use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Ellipsoid, Ray, WGS84_64};
 use navara_math::{
     zero_to_two_pi, EqualEpsilon, FloatType, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3,
     PI_OVER_TWO, TWO_PI,
@@ -19,7 +19,7 @@ pub fn get_pick_ray_from_camera(
 
 pub fn ray_ellipsoid_intersect(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Option<FloatType> {
     match ray_ellipsoid(ray, ellipsoid) {
-        i if i.start == f32::INFINITY => {
+        i if i.start == f64::INFINITY => {
             // Calculate an edge of ellipsoid
             let ellipsoid_vec3 = Vec3::new(ellipsoid.a, ellipsoid.a, ellipsoid.b);
             let forward = ellipsoid_vec3 * ray.direction;
@@ -47,18 +47,16 @@ fn get_pick_ray_perspective(
     position_2d: Vec2,
 ) -> Ray {
     // TODO: Cache these calculation in struct
-    let width = window.raw_width() as f64;
-    let height = window.raw_height() as f64;
-    let position = camera_transform.transform_point(Vec3::ZERO).as_dvec3();
-    let forward = camera_transform.forward().as_dvec3();
-    let right = camera_transform.right().as_dvec3();
-    let up = camera_transform.up().as_dvec3();
+    let width = window.raw_width();
+    let height = window.raw_height();
+    let position = camera_transform.transform_point(Vec3::ZERO);
+    let forward = camera_transform.forward();
+    let right = camera_transform.right();
+    let up = camera_transform.up();
 
-    let position_2d = position_2d.as_dvec2();
-
-    let tan_phi = (frustum.fov as f64 * 0.5).tan();
-    let tan_theta = frustum.aspect_ratio as f64 * tan_phi;
-    let near = frustum.near as f64;
+    let tan_phi = (frustum.fov * 0.5).tan();
+    let tan_theta = frustum.aspect_ratio * tan_phi;
+    let near = frustum.near;
 
     let x = (2.0 / width) * position_2d.x - 1.0;
     let y = (2.0 / height) * (height - position_2d.y) - 1.0;
@@ -69,36 +67,34 @@ fn get_pick_ray_perspective(
     let y_dir = up * (y * near * tan_phi);
 
     Ray {
-        origin: position.as_vec3(),
-        direction: (near_center + x_dir + y_dir - position)
-            .as_vec3()
-            .normalize_or_zero(),
+        origin: position,
+        direction: (near_center + x_dir + y_dir - position).normalize_or_zero(),
     }
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/Camera.js#L830
-pub fn get_pitch(transform: &Transform) -> f32 {
-    let ellipsoid = WGS84_32;
+pub fn get_pitch(transform: &Transform) -> f64 {
+    let ellipsoid = WGS84_64;
     let camera_pos = transform.transform_point(Vec3::ZERO);
 
     let enu_transform = east_north_up_to_fixed_frame(camera_pos, ellipsoid);
     let enu_quat = Quat::from_mat4(&enu_transform);
     let inverse = enu_quat.inverse();
-    let local_forward = (inverse * transform.forward().as_vec3()).normalize_or_zero();
+    let local_forward = (inverse * transform.forward()).normalize_or_zero();
 
     (PI_OVER_TWO - local_forward.z.acos()).to_degrees()
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/Camera.js#L817C21-L817C30
-pub fn get_heading(transform: &Transform) -> f32 {
-    let ellipsoid = WGS84_32;
+pub fn get_heading(transform: &Transform) -> f64 {
+    let ellipsoid = WGS84_64;
     let camera_pos = transform.transform_point(Vec3::ZERO);
 
     let enu_transform = east_north_up_to_fixed_frame(camera_pos, ellipsoid);
     let enu_quat = Quat::from_mat4(&enu_transform);
     let inverse = enu_quat.inverse();
-    let local_up = (inverse * transform.up().as_vec3()).normalize_or_zero();
-    let local_forward = (inverse * transform.forward().as_vec3()).normalize_or_zero();
+    let local_up = (inverse * transform.up()).normalize_or_zero();
+    let local_forward = (inverse * transform.forward()).normalize_or_zero();
 
     let heading = if local_forward.z.abs().equal_diff_epsilon(1.0, EPSILON3) {
         local_up.y.atan2(local_up.x) - PI_OVER_TWO
@@ -110,16 +106,16 @@ pub fn get_heading(transform: &Transform) -> f32 {
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/Camera.js#L834
-pub fn get_roll(transform: &Transform) -> f32 {
-    let ellipsoid = WGS84_32;
+pub fn get_roll(transform: &Transform) -> f64 {
+    let ellipsoid = WGS84_64;
     let camera_pos = transform.transform_point(Vec3::ZERO);
 
     let enu_transform = east_north_up_to_fixed_frame(camera_pos, ellipsoid);
     let enu_quat = Quat::from_mat4(&enu_transform);
     let inverse = enu_quat.inverse();
-    let local_up = (inverse * transform.up().as_vec3()).normalize_or_zero();
-    let local_forward = (inverse * transform.forward().as_vec3()).normalize_or_zero();
-    let local_right = (inverse * transform.right().as_vec3()).normalize_or_zero();
+    let local_up = (inverse * transform.up()).normalize_or_zero();
+    let local_forward = (inverse * transform.forward()).normalize_or_zero();
+    let local_right = (inverse * transform.right()).normalize_or_zero();
 
     // Checks if the forward vector is nearly vertical (Z ≈ ±1).
     if local_forward.z.abs().equal_diff_epsilon(1.0, EPSILON3) {
@@ -149,8 +145,8 @@ mod test {
         };
         let camera = Transform::from_translation(Vec3::Z);
 
-        assert_eq!(camera.up().as_vec3(), Vec3::Y);
-        assert_eq!(camera.right().as_vec3(), Vec3::X);
+        assert_eq!(camera.up(), Vec3::Y);
+        assert_eq!(camera.right(), Vec3::X);
 
         let frustum = CameraFrustum::new(
             &camera,

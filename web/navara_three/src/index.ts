@@ -264,6 +264,10 @@ export default class ThreeView<
       const b = this._core?.getBufferF32(handle);
       return b ?? null;
     },
+    f64: (handle) => {
+      const b = this._core?.getBufferF64(handle);
+      return b ?? null;
+    },
     u32: (handle) => {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
@@ -278,6 +282,10 @@ export default class ThreeView<
     },
     removeF32: (handle) => {
       const b = this._core?.removeBufferF32(handle);
+      return b ?? null;
+    },
+    removeF64: (handle) => {
+      const b = this._core?.removeBufferF64(handle);
       return b ?? null;
     },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
@@ -302,6 +310,12 @@ export default class ThreeView<
     },
     newF32: (b: Float32Array) => {
       return this._core?.newBufferF32(b.length, (buf: Float32Array) => {
+        buf.set(b);
+      });
+      // return this._core?.newBufferF32Cloned(b);
+    },
+    newF64: (b: Float64Array) => {
+      return this._core?.newBufferF64(b.length, (buf: Float64Array) => {
         buf.set(b);
       });
       // return this._core?.newBufferF32Cloned(b);
@@ -1273,7 +1287,7 @@ export default class ThreeView<
       checkFinite(camPos.lng) &&
       checkFinite(camPos.lat) &&
       checkFinite(camPos.height)
-        ? new Float32Array([camPos.lng, camPos.lat, camPos.height])
+        ? new Float64Array([camPos.lng, camPos.lat, camPos.height])
         : null;
 
     this._core?.changeCamera(
@@ -1314,7 +1328,7 @@ export default class ThreeView<
       return;
     }
 
-    this._core?.moveCameraWithDirection(new Float32Array(dir), amount);
+    this._core?.moveCameraWithDirection(new Float64Array(dir), amount);
   }
 
   flyTo(
@@ -1323,7 +1337,7 @@ export default class ThreeView<
     duration?: number,
     maxHeight?: number,
   ) {
-    const position = new Float32Array([camPos.lng, camPos.lat, camPos.height]);
+    const position = new Float64Array([camPos.lng, camPos.lat, camPos.height]);
 
     this._core?.flyTo(
       position,
@@ -1337,8 +1351,8 @@ export default class ThreeView<
 
   lookAt(target: ApiLLE, offset: Vector3) {
     this._core?.lookAt(
-      new Float32Array([target.lng, target.lat, target.height]),
-      new Float32Array([offset.x, offset.y, offset.z]),
+      new Float64Array([target.lng, target.lat, target.height]),
+      new Float64Array([offset.x, offset.y, offset.z]),
     );
   }
 
@@ -1373,7 +1387,7 @@ export default class ThreeView<
     const isZero = axis.x === 0 && axis.y === 0 && axis.z === 0;
 
     this._core?.rotateAroundAxis(
-      isZero ? undefined : new Float32Array([axis.x, axis.y, axis.z]),
+      isZero ? undefined : new Float64Array([axis.x, axis.y, axis.z]),
       angle,
     );
   }

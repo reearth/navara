@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
-use navara_core::{TileXYZ, WGS84_32};
+use navara_core::{TileXYZ, WGS84_64};
 use navara_feature_component::{
     batch::{BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
     billboard::BillboardMarker,
@@ -148,7 +148,7 @@ pub fn update_tiles(
                 &camera,
                 frustum,
                 &window,
-                &WGS84_32,
+                &WGS84_64,
                 occluder,
                 &mvt_data_requester,
                 &rendered_tiles,

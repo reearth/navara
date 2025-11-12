@@ -1,4 +1,4 @@
-use crate::{Angle, Extent, Meters, Radians, LLE, WGS84_32};
+use crate::{Angle, Extent, Meters, Radians, LLE, WGS84_64};
 use navara_math::{FloatType, Vec3};
 
 use super::Plane;
@@ -36,7 +36,7 @@ impl Aabb {
         Self { center, extents }
     }
 
-    pub fn from_points(ps: &[f32]) -> Self {
+    pub fn from_points(ps: &[f64]) -> Self {
         let first_vec = Vec3::new(ps[0], ps[1], ps[2]);
         let mut max = first_vec;
         let mut min = first_vec;
@@ -60,12 +60,12 @@ impl Aabb {
         Self { center, extents }
     }
 
-    pub fn from_extent_f32(
+    pub fn from_extent_f64(
         extent: Extent<FloatType, Radians>,
         min_height: FloatType,
         max_height: FloatType,
     ) -> Self {
-        let ellipsoid = WGS84_32;
+        let ellipsoid = WGS84_64;
 
         let mut nw = LLE {
             lng: extent.west,
@@ -171,18 +171,18 @@ impl Aabb {
         min_height: FloatType,
         max_height: FloatType,
     ) {
-        let next = Self::from_extent_f32(extent, min_height, max_height);
+        let next = Self::from_extent_f64(extent, min_height, max_height);
         self.center = next.center;
         self.extents = next.extents;
     }
 
     pub fn is_on_or_forward_plane(&self, plane: &Plane) -> bool {
-        let r = self.extents.dot(plane.normal.abs().into());
+        let r = self.extents.dot(plane.normal.abs().as_dvec3());
 
         plane.get_distance_to_point(self.center) >= -r
     }
 
-    pub fn distance_to_point(&self, p: Vec3) -> f32 {
+    pub fn distance_to_point(&self, p: Vec3) -> f64 {
         let min = self.center - self.extents;
         let max = self.center + self.extents;
 
@@ -198,7 +198,8 @@ impl Aabb {
 
 #[cfg(test)]
 mod test {
-    use navara_math::Vec3;
+    use approx::assert_abs_diff_eq;
+    use navara_math::{Vec3, EPSILON7};
 
     use super::{Aabb, Plane};
 
@@ -239,6 +240,6 @@ mod test {
 
         let point = Vec3::new(3., 3., -3.);
         let aabb = Aabb::from_vec3(&[Vec3::new(-1., -1., -1.), Vec3::new(1., 1., 1.)]);
-        assert_eq!(aabb.distance_to_point(point), 3.4641016);
+        assert_abs_diff_eq!(aabb.distance_to_point(point), 3.4641016, epsilon = EPSILON7);
     }
 }
