@@ -1,17 +1,17 @@
 use wasm_bindgen::prelude::*;
 
 use navara_camera::{get_pick_ray_from_camera, ray_ellipsoid_intersect};
-use navara_core::{xyz_to_vec3, CRS, WGS84_32};
+use navara_core::{xyz_to_vec3, CRS, WGS84_64};
 use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
-    CameraFrustum, Transform, Vec2 as Vec2Wasm, Vec3 as Vec3Wasm, Window, LLE,
+    CameraFrustum, Transform as TransformWasm, Vec2 as Vec2Wasm, Vec3 as Vec3Wasm, Window, LLE,
 };
 
 #[wasm_bindgen(js_name = geodeticToXyz)]
 pub fn geodetic_to_ecef(lle: LLE) -> Vec3Wasm {
     let lle_pt = Vec3::new(lle.lng.to_degrees(), lle.lat.to_degrees(), lle.height);
 
-    let ecef_pt = CRS::Geographic.to_vec3(WGS84_32, lle_pt, 0.0);
+    let ecef_pt = CRS::Geographic.to_vec3(WGS84_64, lle_pt, 0.0);
 
     Vec3Wasm {
         x: ecef_pt.x,
@@ -22,7 +22,7 @@ pub fn geodetic_to_ecef(lle: LLE) -> Vec3Wasm {
 
 #[wasm_bindgen(js_name = xyzToGeodetic)]
 pub fn ecef_to_geodetic(vec3: Vec3Wasm) -> LLE {
-    let lle = CRS::Geocentric.to_lle(WGS84_32, vec3.into(), 0.0);
+    let lle = CRS::Geocentric.to_lle(WGS84_64, vec3.into(), 0.0);
     lle.into()
 }
 
@@ -39,7 +39,7 @@ pub fn angle_to_degree(radian: FloatType) -> FloatType {
 #[wasm_bindgen(js_name = screenToWorld)]
 pub fn screen_to_world(
     window: Window,
-    transform: Transform,
+    transform: TransformWasm,
     frustum: CameraFrustum,
     screen_pos: Vec2Wasm,
 ) -> Option<Vec3Wasm> {
@@ -56,7 +56,7 @@ pub fn screen_to_world(
 
     let ray = get_pick_ray_from_camera(&window, &transform, &frustum, screen_pos.into());
 
-    let Some(point) = ray_ellipsoid_intersect(&ray, WGS84_32) else {
+    let Some(point) = ray_ellipsoid_intersect(&ray, WGS84_64) else {
         // If no intersection, return the origin point
         return None;
     };
@@ -66,39 +66,39 @@ pub fn screen_to_world(
 
 #[wasm_bindgen(js_name = geodeticSurfaceNormal)]
 pub fn geodetic_surface_normal(lle: LLE) -> Vec3Wasm {
-    let normal = WGS84_32.geodetic_surface_normal_from_lle((&lle).into());
+    let normal = WGS84_64.geodetic_surface_normal_from_lle((&lle).into());
     let normal_vec3 = xyz_to_vec3(normal).normalize();
     normal_vec3.into()
 }
 
 #[wasm_bindgen(js_name = eastNorthUpToFixedFrame)]
-pub fn east_north_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
-    let mat4 = navara_core::east_north_up_to_fixed_frame(origin.into(), WGS84_32);
+pub fn east_north_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f64> {
+    let mat4 = navara_core::east_north_up_to_fixed_frame(origin.into(), WGS84_64);
     mat4.to_cols_array().to_vec()
 }
 
 #[wasm_bindgen(js_name = northEastDownToFixedFrame)]
-pub fn north_east_down_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
-    let mat4 = navara_core::north_east_down_to_fixed_frame(origin.into(), WGS84_32);
+pub fn north_east_down_to_fixed_frame(origin: Vec3Wasm) -> Vec<f64> {
+    let mat4 = navara_core::north_east_down_to_fixed_frame(origin.into(), WGS84_64);
     mat4.to_cols_array().to_vec()
 }
 
 #[wasm_bindgen(js_name = northUpEastToFixedFrame)]
-pub fn north_up_east_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
-    let mat4 = navara_core::north_up_east_to_fixed_frame(origin.into(), WGS84_32);
+pub fn north_up_east_to_fixed_frame(origin: Vec3Wasm) -> Vec<f64> {
+    let mat4 = navara_core::north_up_east_to_fixed_frame(origin.into(), WGS84_64);
     mat4.to_cols_array().to_vec()
 }
 
 #[wasm_bindgen(js_name = northWestUpToFixedFrame)]
-pub fn north_west_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f32> {
-    let mat4 = navara_core::north_west_up_to_fixed_frame(origin.into(), WGS84_32);
+pub fn north_west_up_to_fixed_frame(origin: Vec3Wasm) -> Vec<f64> {
+    let mat4 = navara_core::north_west_up_to_fixed_frame(origin.into(), WGS84_64);
     mat4.to_cols_array().to_vec()
 }
 
 #[wasm_bindgen(js_name = worldToScreen)]
 pub fn world_to_screen(
     window: Window,
-    transform: Transform,
+    transform: TransformWasm,
     frustum: CameraFrustum,
     world_pos: Vec3Wasm,
 ) -> Option<Vec2Wasm> {
@@ -116,22 +116,22 @@ pub fn world_to_screen(
     let world_pos: Vec3 = world_pos.into();
 
     let camera_pos = transform.transform_point(Vec3::ZERO);
-    let forward = transform.forward().as_vec3();
-    let right = transform.right().as_vec3();
-    let up = transform.up().as_vec3();
+    let forward = transform.forward();
+    let right = transform.right();
+    let up = transform.up();
 
     // Vector from camera to world position
     let to_world = world_pos - camera_pos;
 
     // Check if point is behind camera
     let distance_along_forward = to_world.dot(forward);
-    if distance_along_forward <= frustum.near as f32 {
+    if distance_along_forward <= frustum.near {
         return None;
     }
 
     // Project to camera's near plane
-    let scale = frustum.near as f32 / distance_along_forward;
-    let near_point = camera_pos + forward * frustum.near as f32;
+    let scale = frustum.near / distance_along_forward;
+    let near_point = camera_pos + forward * frustum.near;
     let projected_point = camera_pos + to_world * scale;
 
     // Get offset from near plane center
@@ -142,8 +142,8 @@ pub fn world_to_screen(
     let y_offset = offset.dot(up);
 
     // Calculate screen coordinates using perspective projection
-    let tan_phi = (frustum.fov * 0.5).tan();
-    let tan_theta = frustum.aspect_ratio * tan_phi;
+    let tan_phi = (frustum.fov * 0.5).tan() as f64;
+    let tan_theta = frustum.aspect_ratio * tan_phi as f64;
 
     let near = frustum.near;
     let x_ndc = x_offset / (near * tan_theta);

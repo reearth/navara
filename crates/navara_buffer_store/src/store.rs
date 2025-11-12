@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::Resource;
-use navara_math::FloatType;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -13,7 +12,8 @@ pub enum BufferType {
 pub enum Buffer {
     U8(Vec<u8>),
     U32(Vec<u32>),
-    F32(Vec<FloatType>),
+    F32(Vec<f32>),
+    F64(Vec<f64>),
 }
 
 pub type Handle = i32;
@@ -51,9 +51,16 @@ impl BufferStore {
         }
     }
 
-    pub fn get_f32(&self, handle: &Handle) -> Option<&[FloatType]> {
+    pub fn get_f32(&self, handle: &Handle) -> Option<&[f32]> {
         match self.buffers.get(handle)? {
             Buffer::F32(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    pub fn get_f64(&self, handle: &Handle) -> Option<&[f64]> {
+        match self.buffers.get(handle)? {
+            Buffer::F64(b) => Some(b),
             _ => None,
         }
     }
@@ -66,8 +73,12 @@ impl BufferStore {
         self.buffers.insert(handle, Buffer::U32(data));
     }
 
-    pub fn set_f32(&mut self, handle: Handle, data: Vec<FloatType>) {
+    pub fn set_f32(&mut self, handle: Handle, data: Vec<f32>) {
         self.buffers.insert(handle, Buffer::F32(data));
+    }
+
+    pub fn set_f64(&mut self, handle: Handle, data: Vec<f64>) {
+        self.buffers.insert(handle, Buffer::F64(data));
     }
 
     pub fn new_u8(&mut self, data: Vec<u8>) -> Handle {
@@ -82,9 +93,15 @@ impl BufferStore {
         handle
     }
 
-    pub fn new_f32(&mut self, data: Vec<FloatType>) -> Handle {
+    pub fn new_f32(&mut self, data: Vec<f32>) -> Handle {
         let handle = self.new_handle();
         self.set_f32(handle, data);
+        handle
+    }
+
+    pub fn new_f64(&mut self, data: Vec<f64>) -> Handle {
+        let handle = self.new_handle();
+        self.set_f64(handle, data);
         handle
     }
 
@@ -95,6 +112,13 @@ impl BufferStore {
     pub fn remove_f32(&mut self, handle: &Handle) -> Option<Vec<f32>> {
         match self.buffers.remove(handle)? {
             Buffer::F32(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    pub fn remove_f64(&mut self, handle: &Handle) -> Option<Vec<f64>> {
+        match self.buffers.remove(handle)? {
+            Buffer::F64(b) => Some(b),
             _ => None,
         }
     }

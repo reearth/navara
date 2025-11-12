@@ -47,6 +47,28 @@ impl<'a> From<&'a navara_core::Extent<f32, Radians>> for ExtentRadianF32 {
     }
 }
 
+impl From<ExtentRadianF32> for navara_core::Extent<f64, Radians> {
+    fn from(val: ExtentRadianF32) -> Self {
+        Self {
+            west: Angle::new(val.west as f64),
+            south: Angle::new(val.south as f64),
+            east: Angle::new(val.east as f64),
+            north: Angle::new(val.north as f64),
+        }
+    }
+}
+
+impl<'a> From<&'a navara_core::Extent<f64, Radians>> for ExtentRadianF32 {
+    fn from(val: &'a navara_core::Extent<f64, Radians>) -> Self {
+        ExtentRadianF32 {
+            west: val.west.val() as f32,
+            south: val.south.val() as f32,
+            east: val.east.val() as f32,
+            north: val.north.val() as f32,
+        }
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 pub struct BoundingSphere {

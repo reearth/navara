@@ -55,7 +55,7 @@ pub fn construct_polygon(
     let mut indices = vec![];
     let mut index_offset = 0;
 
-    let mut combined_extent: Option<Extent<f32, Radians>> = None;
+    let mut combined_extent: Option<Extent<f64, Radians>> = None;
     for idx in 0..features.length {
         let (transferable_hierarchy, batch_idx, batch_id) =
             features.to_transferable_hierarchy_by_index(idx);
@@ -164,7 +164,7 @@ pub fn construct_polygon(
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
         for _i in 0..position_length {
-            batch_ids.push(batch_id.0 as FloatType);
+            batch_ids.push(batch_id.0);
 
             batch_indices.push(batch_idx.0);
         }
@@ -216,7 +216,7 @@ pub fn construct_polygon(
 /// Calculate the geometric center of a tile extent in ECEF coordinates
 /// This is used as the RTC (Relative-To-Center) translation origin
 fn calculate_tile_center(extent: &Extent<FloatType, Radians>) -> Vec3 {
-    let aabb = Aabb::from_extent_f32(*extent, 0., 1.);
+    let aabb = Aabb::from_extent_f64(*extent, 0., 1.);
 
     aabb.center
 }
@@ -231,9 +231,9 @@ fn translate_positions_to_center(attributes: &mut PolygonGeometryAttributes, cen
         // Iterate through positions in chunks (x, y, z)
         for i in 0..(positions.len() / component_count) {
             let idx = i * component_count;
-            positions[idx] -= center.x; // X
-            positions[idx + 1] -= center.y; // Y
-            positions[idx + 2] -= center.z; // Z
+            positions[idx] -= center.x as f32; // X
+            positions[idx + 1] -= center.y as f32; // Y
+            positions[idx + 2] -= center.z as f32; // Z
         }
     }
 }
@@ -303,7 +303,7 @@ pub fn construct_flat_polygon(
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
         for _i in 0..position_length {
-            batch_ids.push(batch_id.0 as FloatType);
+            batch_ids.push(batch_id.0);
 
             batch_indices.push(batch_idx.0);
         }

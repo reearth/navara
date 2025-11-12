@@ -12,9 +12,9 @@ pub struct PolylineGeometry {
 }
 
 impl PolylineGeometry {
-    pub fn with_buf(buf: &mut BufferStore, coords: Vec<f32>, crs: CRS) -> Self {
+    pub fn with_buf(buf: &mut BufferStore, coords: Vec<f64>, crs: CRS) -> Self {
         Self {
-            coords: buf.new_f32(coords),
+            coords: buf.new_f64(coords),
             crs,
         }
     }

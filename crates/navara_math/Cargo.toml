@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy_math.workspace = true
+bevy_ecs.workspace = true
 bevy_transform.workspace = true
 cfg-if.workspace = true
 radians.workspace = true

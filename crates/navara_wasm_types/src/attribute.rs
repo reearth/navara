@@ -1,4 +1,3 @@
-use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
 use crate::{copy_f32_array, copy_u32_array};
@@ -6,14 +5,14 @@ use crate::{copy_f32_array, copy_u32_array};
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FloatAttribute {
-    pub(crate) data: Vec<FloatType>,
+    pub(crate) data: Vec<f32>,
     pub size: u8,
 }
 
 #[wasm_bindgen]
 impl FloatAttribute {
     #[wasm_bindgen(constructor)]
-    pub fn new(data: Vec<FloatType>, size: u8) -> Self {
+    pub fn new(data: Vec<f32>, size: u8) -> Self {
         Self { data, size }
     }
 

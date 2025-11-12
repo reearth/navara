@@ -1,23 +1,23 @@
 use navara_math::EPSILON12;
 use radians::{Angle, Radians};
 
-use crate::{Ellipsoid, Meters, LLE, WGS84_FE_32};
+use crate::{Ellipsoid, Meters, LLE, WGS84_FE_64};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/16696798115dbc7412453f3ea589f3f42a666315/packages/engine/Source/Core/EllipsoidGeodesic.js
 pub struct EllipsoidGeodesic {
-    pub start: LLE<f32, Radians>,
-    pub end: LLE<f32, Radians>,
-    pub distance: f32,
-    pub start_heading: f32,
-    pub end_heading: f32,
+    pub start: LLE<f64, Radians>,
+    pub end: LLE<f64, Radians>,
+    pub distance: f64,
+    pub start_heading: f64,
+    pub end_heading: f64,
     pub constants: VincentyDirectFormulaConstants,
 }
 
 impl EllipsoidGeodesic {
     pub fn new(
-        start: LLE<f32, Radians>,
-        end: LLE<f32, Radians>,
-        ellipsoid: &Ellipsoid<f32>,
+        start: LLE<f64, Radians>,
+        end: LLE<f64, Radians>,
+        ellipsoid: &Ellipsoid<f64>,
     ) -> Self {
         let inverse_formula_result =
             vincenty_inverse_formula(ellipsoid.a, ellipsoid.b, &start, &end);
@@ -35,11 +35,11 @@ impl EllipsoidGeodesic {
     }
 
     pub fn from(
-        start: LLE<f32, Radians>,
-        end: LLE<f32, Radians>,
-        distance: f32,
-        start_heading: f32,
-        end_heading: f32,
+        start: LLE<f64, Radians>,
+        end: LLE<f64, Radians>,
+        distance: f64,
+        start_heading: f64,
+        end_heading: f64,
         constants: VincentyDirectFormulaConstants,
     ) -> Self {
         Self {
@@ -54,9 +54,9 @@ impl EllipsoidGeodesic {
 
     pub fn interpolate_distance(
         &self,
-        ellipsoid: &Ellipsoid<f32>,
-        distance: f32,
-    ) -> LLE<f32, Radians> {
+        ellipsoid: &Ellipsoid<f64>,
+        distance: f64,
+    ) -> LLE<f64, Radians> {
         let constants = &self.constants;
 
         let s = constants.distance_ratio + distance / ellipsoid.b;
@@ -107,18 +107,18 @@ impl EllipsoidGeodesic {
         let ss = constants.sine_u * sine_sigma;
 
         let lambda =
-            (sine_sigma * constants.sine_heading).atan2(cc - ss * constants.cosine_heading) as f64;
+            (sine_sigma * constants.sine_heading).atan2(cc - ss * constants.cosine_heading);
 
-        let l = (lambda
+        let l = lambda
             - compute_delta_lambda(
-                constants.f as f64,
-                constants.sine_alpha as f64,
-                constants.cosine_squared_alpha as f64,
-                sigma as f64,
-                sine_sigma as f64,
-                cosine_sigma as f64,
-                cosine_twice_sigma_midpoint as f64,
-            )) as f32;
+                constants.f,
+                constants.sine_alpha,
+                constants.cosine_squared_alpha,
+                sigma,
+                sine_sigma,
+                cosine_sigma,
+                cosine_twice_sigma_midpoint,
+            );
 
         LLE {
             lng: Angle::new(self.start.lng.val() + l),
@@ -129,22 +129,22 @@ impl EllipsoidGeodesic {
 }
 
 struct VincentyInverseFormulaResult {
-    distance: f32,
-    start_heading: f32,
-    end_heading: f32,
-    u_squared: f32,
-    eff: f32,
+    distance: f64,
+    start_heading: f64,
+    end_heading: f64,
+    u_squared: f64,
+    eff: f64,
 }
 
 // Ref: https://en.wikipedia.org/wiki/Vincenty%27s_formulae#Inverse%20problem:~:text=and%20the%20equator-,Inverse%20problem,-%5Bedit%5D
 fn vincenty_inverse_formula(
-    a: f32,
-    b: f32,
-    first: &LLE<f32, Radians>,
-    second: &LLE<f32, Radians>,
+    a: f64,
+    b: f64,
+    first: &LLE<f64, Radians>,
+    second: &LLE<f64, Radians>,
 ) -> VincentyInverseFormulaResult {
-    let eff = WGS84_FE_32;
-    let l = (second.lng.val() - first.lng.val()) as f64;
+    let eff = WGS84_FE_64;
+    let l = second.lng.val() - first.lng.val();
 
     let u1 = ((1. - eff) * first.lat.tan()).atan();
     let u2 = ((1. - eff) * second.lat.tan()).atan();
@@ -162,18 +162,18 @@ fn vincenty_inverse_formula(
     let mut lambda = l;
     let mut lambda_dot: f64;
 
-    let mut cosine_lambda: f32;
-    let mut sine_lambda: f32;
+    let mut cosine_lambda: f64;
+    let mut sine_lambda: f64;
 
-    let mut sigma: f32;
-    let mut cosine_sigma: f32;
-    let mut sine_sigma: f32;
-    let mut cosine_squared_alpha: f32;
-    let mut cosine_twice_sigma_midpoint: f32;
+    let mut sigma: f64;
+    let mut cosine_sigma: f64;
+    let mut sine_sigma: f64;
+    let mut cosine_squared_alpha: f64;
+    let mut cosine_twice_sigma_midpoint: f64;
 
     loop {
-        cosine_lambda = lambda.cos() as f32;
-        sine_lambda = lambda.sin() as f32;
+        cosine_lambda = lambda.cos();
+        sine_lambda = lambda.sin();
 
         let temp = cs - sc * cosine_lambda;
         sine_sigma = (cosine_u2 * cosine_u2 * sine_lambda * sine_lambda + temp * temp).sqrt();
@@ -181,7 +181,7 @@ fn vincenty_inverse_formula(
 
         sigma = sine_sigma.atan2(cosine_sigma);
 
-        let sine_alpha: f32;
+        let sine_alpha: f64;
 
         if sine_sigma == 0. {
             sine_alpha = 0.;
@@ -200,16 +200,16 @@ fn vincenty_inverse_formula(
         }
 
         lambda = l + compute_delta_lambda(
-            eff as f64,
-            sine_alpha as f64,
-            cosine_squared_alpha as f64,
-            sigma as f64,
-            sine_sigma as f64,
-            cosine_sigma as f64,
-            cosine_twice_sigma_midpoint as f64,
+            eff,
+            sine_alpha,
+            cosine_squared_alpha,
+            sigma,
+            sine_sigma,
+            cosine_sigma,
+            cosine_twice_sigma_midpoint,
         );
 
-        if ((lambda - lambda_dot).abs() as f32) <= EPSILON12 {
+        if ((lambda - lambda_dot).abs()) <= EPSILON12 {
             break;
         }
     }
@@ -217,7 +217,7 @@ fn vincenty_inverse_formula(
     let u_squared = (cosine_squared_alpha * (a * a - b * b)) / (b * b);
 
     #[allow(non_snake_case)]
-    let A: f32 = 1.
+    let A = 1.
         + (u_squared * (4096. + u_squared * (u_squared * (320. - 175. * u_squared) - 768.)))
             / 16384.;
     #[allow(non_snake_case)]
@@ -276,26 +276,26 @@ fn compute_c(f: f64, cosine_squared_alpha: f64) -> f64 {
 
 #[derive(Clone)]
 pub struct VincentyDirectFormulaConstants {
-    f: f32,
-    cosine_heading: f32,
-    sine_heading: f32,
-    cosine_u: f32,
-    sine_u: f32,
-    sigma: f32,
-    sine_alpha: f32,
-    cosine_squared_alpha: f32,
-    cosine_alpha: f32,
-    u2_over4: f32,
-    u4_over16: f32,
-    u6_over64: f32,
-    u8_over256: f32,
-    distance_ratio: f32,
+    f: f64,
+    cosine_heading: f64,
+    sine_heading: f64,
+    cosine_u: f64,
+    sine_u: f64,
+    sigma: f64,
+    sine_alpha: f64,
+    cosine_squared_alpha: f64,
+    cosine_alpha: f64,
+    u2_over4: f64,
+    u4_over16: f64,
+    u6_over64: f64,
+    u8_over256: f64,
+    distance_ratio: f64,
 }
 
 // Calculate constants of vincenty direct formula.
 // Ref: https://en.wikipedia.org/wiki/Vincenty%27s_formulae#Inverse%20problem:~:text=in%20absolute%20value.-,Direct%20problem,-%5Bedit%5D
 fn prepare_vincenty_direct_formula_constants(
-    start_lat: f32,
+    start_lat: f64,
     inverse_formula: &VincentyInverseFormulaResult,
 ) -> VincentyDirectFormulaConstants {
     let u_squared = inverse_formula.u_squared;
@@ -354,11 +354,14 @@ fn prepare_vincenty_direct_formula_constants(
 
 #[cfg(test)]
 mod test {
+    use std::f64::consts::PI;
+
     use approx::assert_abs_diff_eq;
-    use navara_math::{std_float::consts::PI, EPSILON11, EPSILON7};
+    use navara_math::{EPSILON11, EPSILON7};
+
     use radians::Angle;
 
-    use crate::{Meters, LLE, WGS84_32};
+    use crate::{Meters, LLE, WGS84_64};
 
     use super::EllipsoidGeodesic;
 
@@ -374,7 +377,7 @@ mod test {
             lat: Angle::new(0.),
             height: Meters::new(0.),
         };
-        let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
 
         assert_eq!(g.distance, 0.);
     }
@@ -392,7 +395,7 @@ mod test {
             lat: Angle::new(0.),
             height: Meters::new(0.),
         };
-        let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
 
         assert_abs_diff_eq!(g.start_heading, pi_over_two, epsilon = EPSILON11);
         assert_abs_diff_eq!(g.end_heading, pi_over_two, epsilon = EPSILON11);
@@ -412,10 +415,10 @@ mod test {
             lat: Angle::new(PI),
             height: Meters::new(0.),
         };
-        let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
 
-        assert_abs_diff_eq!(g.start_heading, 0., epsilon = EPSILON11);
-        assert_abs_diff_eq!(g.end_heading, 0., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.start_heading, PI, epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.end_heading, PI, epsilon = EPSILON11);
         assert_abs_diff_eq!(g.distance, 10001966., epsilon = 1.1);
     }
 
@@ -432,10 +435,10 @@ mod test {
             lat: Angle::new(PI),
             height: Meters::new(0.),
         };
-        let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
 
-        assert_abs_diff_eq!(g.start_heading, 0., epsilon = EPSILON11);
-        assert_abs_diff_eq!(g.end_heading, 0., epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.start_heading, PI, epsilon = EPSILON11);
+        assert_abs_diff_eq!(g.end_heading, PI, epsilon = EPSILON11);
         assert_abs_diff_eq!(g.distance, 10001966., epsilon = 1.1);
     }
 
@@ -453,10 +456,10 @@ mod test {
             lat: Angle::new(thirty_degrees),
             height: Meters::new(0.),
         };
-        let g = EllipsoidGeodesic::new(start, end, &WGS84_32);
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
 
-        let first = g.interpolate_distance(&WGS84_32, 0.);
-        let last = g.interpolate_distance(&WGS84_32, g.distance);
+        let first = g.interpolate_distance(&WGS84_64, 0.);
+        let last = g.interpolate_distance(&WGS84_64, g.distance);
 
         assert_abs_diff_eq!(start.lng.val(), first.lng.val(), epsilon = EPSILON7);
         assert_abs_diff_eq!(start.lat.val(), first.lat.val(), epsilon = EPSILON7);

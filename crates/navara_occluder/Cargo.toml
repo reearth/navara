@@ -12,5 +12,8 @@ navara_camera = { path = "../navara_camera" }
 navara_math = { path = "../navara_math" }
 navara_mock = { path = "../navara_mock" }
 
+[dev-dependencies]
+approx.workspace = true
+
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

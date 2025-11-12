@@ -1,6 +1,6 @@
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/EllipsoidTangentPlane.js
 
-use navara_math::{FloatType, RawDVec3, Vec2, Vec3};
+use navara_math::{FloatType, Vec2, Vec3};
 
 use crate::{ray_plane, transform::east_north_up_to_fixed_frame, Aabb, Ellipsoid, Plane, Ray};
 
@@ -15,15 +15,6 @@ pub struct EllipsoidTangentPlane {
 impl EllipsoidTangentPlane {
     pub fn from_points(points: &[Vec3], ellipsoid: Ellipsoid<FloatType>) -> Self {
         let aabb = Aabb::from_vec3(points);
-        Self::new(aabb.center, ellipsoid)
-    }
-
-    pub fn from_dvec3_points(points: &[RawDVec3], ellipsoid: Ellipsoid<FloatType>) -> Self {
-        let vec3_points: Vec<Vec3> = points
-            .iter()
-            .map(|p| Vec3::new(p.x as FloatType, p.y as FloatType, p.z as FloatType))
-            .collect();
-        let aabb = Aabb::from_vec3(&vec3_points);
         Self::new(aabb.center, ellipsoid)
     }
 
@@ -90,29 +81,17 @@ impl EllipsoidTangentPlane {
         }
         result
     }
-
-    pub fn project_dvec3_points_onto_plane(&self, points: &[RawDVec3]) -> Vec<Vec2> {
-        let mut result = vec![];
-        for p in points {
-            let point = Vec3::new(p.x as FloatType, p.y as FloatType, p.z as FloatType);
-            let intersection_point = self.project_point_onto_plane(point);
-            if let Some(i) = intersection_point {
-                result.push(i);
-            }
-        }
-        result
-    }
 }
 
 #[cfg(test)]
 mod test {
     use navara_math::{Vec2, Vec3};
 
-    use crate::{ellipsoid_tangent_plane::EllipsoidTangentPlane, UNIT_SPHERE_32};
+    use crate::{ellipsoid_tangent_plane::EllipsoidTangentPlane, UNIT_SPHERE_64};
 
     #[test]
     fn it_should_be_undefined_if_the_point_is_unsolvable() {
-        let ellipsoid = UNIT_SPHERE_32;
+        let ellipsoid = UNIT_SPHERE_64;
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let tangent_plane = EllipsoidTangentPlane::new(origin, ellipsoid);
         let positions = Vec3::new(0.0, 0.0, 1.0);
@@ -122,7 +101,7 @@ mod test {
 
     #[test]
     fn it_should_be_projection_for_point() {
-        let ellipsoid = UNIT_SPHERE_32;
+        let ellipsoid = UNIT_SPHERE_64;
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let tangent_plane = EllipsoidTangentPlane::new(origin, ellipsoid);
         let positions = Vec3::new(1.0, 0.0, 1.0);
@@ -132,7 +111,7 @@ mod test {
 
     #[test]
     fn it_should_be_projection_for_points() {
-        let ellipsoid = UNIT_SPHERE_32;
+        let ellipsoid = UNIT_SPHERE_64;
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let tangent_plane = EllipsoidTangentPlane::new(origin, ellipsoid);
         let positions = &[

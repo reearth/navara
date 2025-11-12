@@ -1,18 +1,18 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{calc_transform, ElevationDecoder, CRS};
-use navara_math::{FloatType, Transform, Vec2, Vec3};
+use navara_math::{Transform, Vec2, Vec3};
 
 /// Configuration for elevation heatmap rendering.
 /// Shared across all elevation heatmap layers in a tile.
 /// Note: color_map_lut is now stored in Globe.elevation_colormap
 #[derive(Debug, Clone, PartialEq)]
 pub struct ElevationHeatmapConfig {
-    pub max_height: f32,
-    pub min_height: f32,
+    pub max_height: f64,
+    pub min_height: f64,
     pub elevation_decoder: ElevationDecoder,
 
     pub logarithmic: bool,
-    pub log_boundary: f32,
+    pub log_boundary: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -62,10 +62,10 @@ impl Appearance {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PointMaterial {
     pub show: bool,
-    pub size: FloatType,
+    pub size: f32,
     pub color: u32,
     pub center: Vec2,
-    pub height: FloatType,
+    pub height: f32,
     /// near, far
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
@@ -110,10 +110,10 @@ impl PointMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct BillboardMaterial {
     pub show: bool,
-    pub size: FloatType,
+    pub size: f32,
     pub color: u32,
     pub center: Vec2,
-    pub height: FloatType,
+    pub height: f32,
     pub url: String,
     /// near, far
     pub scale_by_distance: bool,
@@ -162,10 +162,10 @@ impl BillboardMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct TextMaterial {
     pub show: bool,
-    pub size: FloatType,
+    pub size: f32,
     pub color: u32,
     pub center: Vec2,
-    pub height: FloatType,
+    pub height: f32,
     /// near, far
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
@@ -174,8 +174,8 @@ pub struct TextMaterial {
     pub font: String,
     pub background_color: Option<u32>,
     pub border_color: u32,
-    pub border_width: FloatType, // 0 ~ 0.5, the ratio of the border to the height
-    pub corner_radius: FloatType, // 0 ~ 0.5, the ratio of the corner radius to the height
+    pub border_width: f32,  // 0 ~ 0.5, the ratio of the border to the height
+    pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
     pub padding: Vec2,
     // outline
     pub outline_blur: f32,    // outlineBlur Defalut:0
@@ -268,7 +268,7 @@ impl PolylineMaterial {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolylineInternalMaterial {
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -352,7 +352,7 @@ impl PolygonMaterial {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolygonInternalMaterial {
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -361,8 +361,8 @@ pub struct ModelMaterial {
     pub cast_shadow: bool,
     pub receive_shadow: bool,
     pub url: String,
-    pub size: FloatType,
-    pub height: FloatType,
+    pub size: f32,
+    pub height: f32,
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
