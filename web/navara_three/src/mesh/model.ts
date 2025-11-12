@@ -158,7 +158,9 @@ export class ModelMesh
 
     if (meshMaterial.__internal__?.point_cloud) {
       // Point cloud specific initialization can go here
-      this.overridePntsMaterial();
+      this.overridePntsMaterial(
+        meshMaterial
+      );
     }
 
     this.userData.prev = {};
@@ -525,13 +527,15 @@ export class ModelMesh
     });
   }
 
-  private overridePntsMaterial() {
+  private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {
     this.traverse((object: Object3D) => {
       if (!(object instanceof Points)) {
         return;
       }
 
       const material = object.material;
+      material.userData.uAddHeight = { value: meshMaterial.height ?? 0.0 };
+
       material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
@@ -553,6 +557,7 @@ export class ModelMesh
         shader.vertexShader = createReplacer(shader.vertexShader).replace(
           "#include <common>",
           `#include <common>
+          uniform float uAddHeight;
           vec3 geodetic_normal(vec3 position) {
             // vec3 globe_raddi = vec3(6378137.0, 6378137.0, 6356752.314);
             // vec3 globe_raddi_squared = globe_raddi * globe_raddi;
@@ -570,14 +575,14 @@ export class ModelMesh
 
             vec4 worldPosition = modelMatrix * mvPosition;
             vec3 normal = geodetic_normal((worldPosition/worldPosition.w).xyz);
-            worldPosition.xyz += normal * -50.0;
+            worldPosition.xyz += normal * uAddHeight;
 
             // mvPosition = viewMatrix * worldPosition;
             gl_Position = projectionMatrix * viewMatrix * worldPosition;
             `
         ).source;
-
-        console.log(shader.vertexShader);
+        
+         shader.uniforms.uAddHeight = material.userData.uAddHeight;
       };
 
       this.setMaterial(material, object);
@@ -670,8 +675,13 @@ export class ModelMesh
     if (distMaterial instanceof PointsMaterial) {
       if (distMaterial.userData.prev.point_size !== src.point_size) {
         const next = src.point_size ?? 0;
+        distMaterial.userData.prev.point_size = distMaterial.size;
         distMaterial.size = next;
-        distMaterial.userData.prev.point_size = next;
+      }
+      if (distMaterial.userData.prev.uAddHeight !== src.height) {
+        const next = src.height ?? 0;
+        distMaterial.userData.prev.uAddHeight = distMaterial.userData.uAddHeight.value;
+        distMaterial.userData.uAddHeight.value = next;
       }
     }
     if (

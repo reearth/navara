@@ -17,7 +17,8 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       point_size: 0.3,
-      height: 10000,
+      height: 0,
+      max_sse: 20,
     },
   },
   {
@@ -27,6 +28,7 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
       show: true,
       point_size: 0.3,
       height: 0,
+      max_sse: 20,
     },
   },
 ];
