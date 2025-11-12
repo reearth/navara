@@ -136,14 +136,24 @@ impl RasterTile {
             };
         }
 
-        let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
+        // For ellipsoid terrain, terrain is always ready (no data loading needed)
+        let is_ellipsoid_terrain = terrain_layer
+            .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::Ellipsoid))
+            .unwrap_or(false);
+
+        let is_terrain_ready = if is_ellipsoid_terrain {
+            true
+        } else {
+            self.is_terrain_ready(terrain_data_requester)
+        };
+
         let should_upsample = self.should_upsampling(
-            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
         ) && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
 
         // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
         let should_be_rendered_without_terrain = !self.should_upsampling(
-            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
         ) && matches!(
             self.get_terrain_data_requester(terrain_data_requester)
                 .map(|t| t.status),

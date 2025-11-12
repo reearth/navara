@@ -12,8 +12,9 @@ use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
 use navara_wasm_types::{
-    BillboardMaterial, ElevationHeatmapMaterial, ModelMaterial, PointMaterial, PolygonMaterial,
-    PolylineMaterial, RasterTerrainMaterial, RasterTileMaterial, TextMaterial, VectorTileMaterial,
+    BillboardMaterial, ElevationHeatmapMaterial, EllipsoidTerrainMaterial, ModelMaterial,
+    PointMaterial, PolygonMaterial, PolylineMaterial, RasterTerrainMaterial, RasterTileMaterial,
+    TextMaterial, VectorTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -51,11 +52,24 @@ pub struct TerrainLayerDescription {
 
     #[wasm_bindgen(getter_with_clone)]
     pub raster_terrain: Option<RasterTerrainMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub ellipsoid: Option<EllipsoidTerrainMaterial>,
+}
+
+pub enum TerrainMaterial {
+    Raster(navara_material::RasterTerrainMaterial),
+    Ellipsoid(navara_material::EllipsoidTerrainMaterial),
 }
 
 impl TerrainLayerDescription {
-    pub fn appearance(&mut self) -> Option<navara_material::RasterTerrainMaterial> {
-        self.raster_terrain.take().map(|v| v.into())
+    pub fn appearance(&mut self) -> Option<TerrainMaterial> {
+        if let Some(v) = self.raster_terrain.take() {
+            return Some(TerrainMaterial::Raster(v.into()));
+        }
+        if let Some(v) = self.ellipsoid.take() {
+            return Some(TerrainMaterial::Ellipsoid(v.into()));
+        }
+        None
     }
 }
 
@@ -333,21 +347,43 @@ impl LayerDescription {
 
                 let mut data: Option<LayerDescriptionUrl> = None;
                 if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok();
                 }
-
-                let url = data.as_ref().unwrap().url.as_str();
 
                 let mut layer: TerrainLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
+                let appearance = layer.appearance();
+
+                // Determine terrain type and prepare data
+                let (terrain_type, layer_data) = if appearance.is_some() {
+                    match &appearance {
+                        Some(TerrainMaterial::Ellipsoid(_)) => (TerrainDataType::Ellipsoid, None),
+                        Some(TerrainMaterial::Raster(_)) => {
+                            let url = data.as_ref()?.url.as_str();
+                            (
+                                TerrainDataType::from_url(url),
+                                Some(LayerData {
+                                    url: String::from(url),
+                                }),
+                            )
+                        }
+                        None => (TerrainDataType::Unknown, None),
+                    }
+                } else {
+                    (TerrainDataType::Unknown, None)
+                };
+
+                let terrain_appearance = appearance.map(|mat| match mat {
+                    TerrainMaterial::Raster(r) => navara_layer::TerrainAppearance::Raster(r),
+                    TerrainMaterial::Ellipsoid(e) => navara_layer::TerrainAppearance::Ellipsoid(e),
+                });
+
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
                     layer_id: layer_id.to_string(),
-                    data: Some(LayerData {
-                        url: String::from(url),
-                    }),
-                    appearance: layer.appearance(),
-                    terrain_type: TerrainDataType::from_url(url),
+                    data: layer_data,
+                    appearance: terrain_appearance,
+                    terrain_type,
                 }))
             }
             "geojson" => {
