@@ -1,18 +1,58 @@
-import ThreeView from "@navara/three";
+import ThreeView, { ToneMappingMode } from "@navara/three";
+import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS } from "../../helpers/constants";
+import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
+import { addCameraControl, addDateControl } from "../../helpers/control";
 
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  defaultAtmospheres.sun.update({
+    sun: {
+      castShadow: true,
+    },
+  });
 
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
     raster_tile: {
       max_zoom: 23,
+    },
+  });
+
+  // Enable shadow for raster tile.
+  view.addLayer({
+    type: "terrain",
+    ellipsoid: {
+      cast_shadow: true,
+      receive_shadow: true,
+    },
+  });
+
+  view.toneMappingExposure = 5;
+  view.addLayer({
+    type: "effect",
+    toneMapping: {
+      mode: ToneMappingMode.NEUTRAL,
+    },
+  });
+
+  view.addLayer({
+    type: "cesium3dtiles",
+    data: {
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
+    },
+    model: {
+      show: true,
+      color: 0xffffff,
+      metalness: 0,
+      roughness: 1,
+      cast_shadow: true,
+      receive_shadow: true,
+      height: -50,
     },
   });
 
@@ -58,5 +98,22 @@ export const run = async (view: ThreeView) => {
     polygon: {},
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  view.setCamera({
+    lng: 139.7511145474829,
+    lat: 35.67364356091717,
+    height: 902.0,
+    heading: 64.41840149763287,
+    pitch: -36.00000121921312,
+    roll: 0,
+  });
+
+  const pane = new Pane();
+
+  addDateControl(view, pane);
+  addCameraControl(view, pane);
+
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    TILES_3D_DATASETS.plateauChiyoda,
+  ]);
 };
