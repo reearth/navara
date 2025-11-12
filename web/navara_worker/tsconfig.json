@@ -1,11 +1,4 @@
 {
   "extends": "../tsconfig.common.json",
-  "compilerOptions": {
-    "paths": {
-      "@navara/core": ["../navara_core/src"],
-      "@navara/engine": ["../../node_modules/navara_wasm"],
-      "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"]
-    }
-  },
   "include": ["./src"],
 }
