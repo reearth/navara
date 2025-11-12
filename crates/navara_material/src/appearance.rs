@@ -519,7 +519,6 @@ pub struct RasterTerrainMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
-    pub segments: usize,
     pub max_zoom: usize,
     pub min_zoom: usize,
     pub elevation_decoder: ElevationDecoder,
@@ -532,7 +531,6 @@ impl Default for RasterTerrainMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
-            segments: 64,
             max_zoom: 20,
             min_zoom: 0,
             elevation_decoder: ElevationDecoder::default(),
@@ -541,5 +539,21 @@ impl Default for RasterTerrainMaterial {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Component, Default)]
-pub struct EllipsoidTerrainMaterial;
+#[derive(Debug, Clone, PartialEq, Component)]
+pub struct EllipsoidTerrainMaterial {
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
+    pub max_zoom: usize,
+    pub min_zoom: usize,
+}
+
+impl Default for EllipsoidTerrainMaterial {
+    fn default() -> Self {
+        Self {
+            cast_shadow: false,
+            receive_shadow: false,
+            max_zoom: 20,
+            min_zoom: 0,
+        }
+    }
+}

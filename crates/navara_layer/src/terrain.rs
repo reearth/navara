@@ -13,21 +13,14 @@ impl TerrainAppearance {
     pub fn max_zoom(&self) -> usize {
         match self {
             TerrainAppearance::Raster(mat) => mat.max_zoom,
-            TerrainAppearance::Ellipsoid(_) => 20,
+            TerrainAppearance::Ellipsoid(mat) => mat.max_zoom,
         }
     }
 
     pub fn min_zoom(&self) -> usize {
         match self {
             TerrainAppearance::Raster(mat) => mat.min_zoom,
-            TerrainAppearance::Ellipsoid(_) => 0,
-        }
-    }
-
-    pub fn segments(&self) -> usize {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.segments,
-            TerrainAppearance::Ellipsoid(_) => 64,
+            TerrainAppearance::Ellipsoid(mat) => mat.min_zoom,
         }
     }
 
@@ -35,13 +28,6 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => Some(&mat.elevation_decoder),
             TerrainAppearance::Ellipsoid(_) => None,
-        }
-    }
-
-    pub fn as_ellipsoid(&self) -> Option<&EllipsoidTerrainMaterial> {
-        match self {
-            TerrainAppearance::Raster(_) => None,
-            TerrainAppearance::Ellipsoid(mat) => Some(mat),
         }
     }
 
@@ -55,14 +41,14 @@ impl TerrainAppearance {
     pub fn cast_shadow(&self) -> bool {
         match self {
             TerrainAppearance::Raster(mat) => mat.cast_shadow,
-            TerrainAppearance::Ellipsoid(_) => false,
+            TerrainAppearance::Ellipsoid(mat) => mat.cast_shadow,
         }
     }
 
     pub fn receive_shadow(&self) -> bool {
         match self {
             TerrainAppearance::Raster(mat) => mat.receive_shadow,
-            TerrainAppearance::Ellipsoid(_) => false,
+            TerrainAppearance::Ellipsoid(mat) => mat.receive_shadow,
         }
     }
 

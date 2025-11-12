@@ -37,7 +37,6 @@ export const run = async (view: ThreeView) => {
       url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
-      segments: 64,
       max_zoom: 15,
       min_zoom: 5,
       elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
