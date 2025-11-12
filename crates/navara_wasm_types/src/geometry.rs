@@ -138,15 +138,15 @@ impl From<ReturnedConstructedTerrainMesh> for navara_geometry::ReturnedConstruct
 
 #[wasm_bindgen]
 pub struct UpsamplableTerrainGeometry {
-    uvs: Vec<FloatType>,
-    heights: Vec<FloatType>,
+    uvs: Vec<f32>,
+    heights: Vec<f32>,
     indices: Vec<u32>,
 }
 
 #[wasm_bindgen]
 impl UpsamplableTerrainGeometry {
     #[wasm_bindgen(constructor)]
-    pub fn new(uvs: Vec<FloatType>, indices: Vec<u32>, heights: Vec<FloatType>) -> Self {
+    pub fn new(uvs: Vec<f32>, indices: Vec<u32>, heights: Vec<f32>) -> Self {
         Self {
             uvs,
             indices,

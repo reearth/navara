@@ -14,8 +14,8 @@ use navara_math::{FloatType, Vec3};
 
 #[derive(Debug)]
 pub struct UpsamplableTerrainGeometry<'a> {
-    pub uvs: &'a [FloatType],
-    pub heights: &'a [FloatType],
+    pub uvs: &'a [f32],
+    pub heights: &'a [f32],
     pub indices: &'a [u32],
 }
 
@@ -122,8 +122,8 @@ impl UpsampledTerrainGeometry {
 
 // TODO: Execute this function in worker
 fn clip(
-    uvs: &[f64],
-    heights: &[f64],
+    uvs: &[f32],
+    heights: &[f32],
     indices: &[u32],
     is_east: bool,
     is_north: bool,
@@ -157,9 +157,9 @@ fn clip(
         let h1 = heights[polygon_indices[1] as usize];
         let h2 = heights[polygon_indices[2] as usize];
 
-        let origin_u_coords = [u0, u1, u2];
-        let origin_v_coords = [v0, v1, v2];
-        let origin_h_coords = [h0, h1, h2];
+        let origin_u_coords = [u0 as f64, u1 as f64, u2 as f64];
+        let origin_v_coords = [v0 as f64, v1 as f64, v2 as f64];
+        let origin_h_coords = [h0 as f64, h1 as f64, h2 as f64];
 
         let clipped_u_indices =
             clip_2d_triangle_at_threshold(threashold, is_east, &origin_u_coords);
