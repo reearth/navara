@@ -1,7 +1,6 @@
 use navara_core::{Extent, Radians};
 use navara_feature_component::polyline::construct_polyline_feature;
 use navara_geometry::PolylineGeometryAttributes;
-use navara_math::FloatType;
 use navara_wasm_types::{
     polyline::{ConstructedPolylineGeometry, PolylineGeometry, TransferablePolylineBatchedFeature},
     PolylineMaterial,
@@ -20,7 +19,7 @@ pub fn construct_polyline_batched_feature(
     let mut indices = vec![];
     let mut index_offset = 0;
 
-    let mut combined_extent: Option<Extent<f32, Radians>> = None;
+    let mut combined_extent: Option<Extent<f64, Radians>> = None;
 
     for idx in 0..features.length {
         let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
@@ -80,7 +79,7 @@ pub fn construct_polyline_batched_feature(
         let mut batch_ids = vec![];
         let mut batch_indices = vec![];
         for _i in 0..position_length {
-            batch_ids.push(batch_id.0 as FloatType);
+            batch_ids.push(batch_id.0);
 
             batch_indices.push(batch_index.0);
         }

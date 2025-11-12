@@ -1,9 +1,9 @@
 use navara_buffer_store::{BufferStore, Handle};
-use navara_math::{FloatType, RawDVec3, Vec2};
+use navara_math::{Vec2, Vec3};
 
 #[derive(Debug)]
 pub struct Polygon {
-    pub positions: Vec<RawDVec3>,
+    pub positions: Vec<Vec3>,
     pub hole_indices: Vec<u32>,
     pub positions_2d: Vec<Vec2>,
 }
@@ -18,7 +18,7 @@ pub enum WindingOrder {
 
 #[derive(Default, Debug)]
 pub struct HierarchyDVec3 {
-    pub outer_ring: Vec<RawDVec3>,
+    pub outer_ring: Vec<Vec3>,
     pub holes: Option<Vec<HierarchyDVec3>>,
     pub expected_winding_order: WindingOrder, // for outer ring
 }
@@ -66,7 +66,7 @@ impl HierarchyDVec3 {
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Hierarchy {
-    pub outer_ring: Vec<FloatType>,
+    pub outer_ring: Vec<f64>,
     pub holes: Option<Vec<Hierarchy>>,
     pub expected_winding_order: WindingOrder, // for outer ring
 }
@@ -77,7 +77,7 @@ impl Hierarchy {
             Some(h_holes) => {
                 let mut holes = vec![];
                 for hole in h_holes {
-                    let outer_ring = buf.remove_f32(&hole.outer_ring)?;
+                    let outer_ring = buf.remove_f64(&hole.outer_ring)?;
 
                     holes.push(Hierarchy {
                         outer_ring,
@@ -90,7 +90,7 @@ impl Hierarchy {
             None => None,
         };
 
-        let outer_ring = buf.remove_f32(&value.outer_ring)?;
+        let outer_ring = buf.remove_f64(&value.outer_ring)?;
         Some(Hierarchy {
             outer_ring,
             holes,
@@ -102,13 +102,13 @@ impl Hierarchy {
         value: &TransferableHierarchy,
         buf: &BufferStore,
     ) -> Option<Self> {
-        let outer_ring = buf.get_f32(&value.outer_ring)?;
+        let outer_ring = buf.get_f64(&value.outer_ring)?;
 
         let holes = match &value.holes {
             Some(h_holes) => {
                 let mut holes = vec![];
                 for hole in h_holes {
-                    let outer_ring = buf.get_f32(&hole.outer_ring)?;
+                    let outer_ring = buf.get_f64(&hole.outer_ring)?;
 
                     holes.push(Hierarchy {
                         outer_ring: outer_ring.to_vec(),
@@ -128,12 +128,12 @@ impl Hierarchy {
     }
 
     pub fn transfer(self, buf: &mut BufferStore) -> TransferableHierarchy {
-        let outer_ring = buf.new_f32(self.outer_ring);
+        let outer_ring = buf.new_f64(self.outer_ring);
         let holes = match self.holes {
             Some(h_holes) => {
                 let mut holes = vec![];
                 for hole in h_holes {
-                    let outer_ring = buf.new_f32(hole.outer_ring);
+                    let outer_ring = buf.new_f64(hole.outer_ring);
                     holes.push(TransferableHierarchy {
                         outer_ring,
                         holes: None,
@@ -155,7 +155,7 @@ impl Hierarchy {
 
 // Use the area method to determine the orientation of a polygon.
 // ref: https://github.com/CesiumGS/cesium/blob/91821cc54d274ad7a28ecc164a4c5c867849e111/packages/engine/Source/Core/PolygonPipeline.js#L56
-fn check_winding_order_dvec3(positions: &[RawDVec3]) -> WindingOrder {
+fn check_winding_order_dvec3(positions: &[Vec3]) -> WindingOrder {
     let length = positions.len();
     if length < 3 {
         return WindingOrder::Unknown;
@@ -189,7 +189,7 @@ pub struct TransferableHierarchy {
 
 #[cfg(test)]
 mod test {
-    use navara_math::RawDVec3;
+    use navara_math::Vec3;
 
     use crate::WindingOrder;
 
@@ -200,10 +200,10 @@ mod test {
         #[rustfmt::skip]
         assert!(matches!(
             check_winding_order_dvec3(&[
-                RawDVec3::new(0., 0., 0.),
-                RawDVec3::new(2., 0., 0.),
-                RawDVec3::new(2., 1., 0.),
-                RawDVec3::new(0., 1., 0.),
+                Vec3::new(0., 0., 0.),
+                Vec3::new(2., 0., 0.),
+                Vec3::new(2., 1., 0.),
+                Vec3::new(0., 1., 0.),
             ]),
             WindingOrder::CounterClockwise
         ));
@@ -214,10 +214,10 @@ mod test {
         #[rustfmt::skip]
         assert!(matches!(
             check_winding_order_dvec3(&[
-                RawDVec3::new(0., 0., 0.),
-                RawDVec3::new(0., 2., 0.),
-                RawDVec3::new(1., 2., 0.),
-                RawDVec3::new(1., 0., 0.),
+                Vec3::new(0., 0., 0.),
+                Vec3::new(0., 2., 0.),
+                Vec3::new(1., 2., 0.),
+                Vec3::new(1., 0., 0.),
             ]),
             WindingOrder::Clockwise
         ));

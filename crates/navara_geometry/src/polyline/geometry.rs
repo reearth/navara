@@ -17,8 +17,8 @@ pub struct PolylineGeometry {
 }
 
 pub struct PolylineGeometryOptions {
-    pub positions: Vec<LLE<f32, Radians>>,
-    pub granularity: f32,
+    pub positions: Vec<LLE<f64, Radians>>,
+    pub granularity: f64,
     pub crs: CRS,
     pub clamp_to_ground: bool,
 }
@@ -36,7 +36,7 @@ impl Default for PolylineGeometryOptions {
 
 // Ref: https://github.com/CesiumGS/cesium/blob/165e0fb4fcc9a448b15de6a2df46db23c71fffda/packages/engine/Source/Core/GroundPolylineGeometry.js#L458
 pub fn create_polyline_geometry(
-    ellipsoid: Ellipsoid<f32>,
+    ellipsoid: Ellipsoid<f64>,
     options: PolylineGeometryOptions,
 ) -> Option<PolylineGeometry> {
     let granularity = options.granularity;
@@ -182,7 +182,7 @@ pub fn create_polyline_geometry(
 
 #[cfg(test)]
 mod test {
-    use navara_core::{LLE, WGS84_32};
+    use navara_core::{LLE, WGS84_64};
     use radians::Degrees;
 
     use super::{create_polyline_geometry, PolylineGeometryOptions};
@@ -190,11 +190,11 @@ mod test {
     #[test]
     fn it_computes_positions_and_attributes_for_polylines() {
         let geometry = create_polyline_geometry(
-            WGS84_32,
+            WGS84_64,
             PolylineGeometryOptions {
                 positions: vec![
-                    LLE::<f32, Degrees>::from_float(0.01, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.02, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
                 ],
                 granularity: 0.0,
                 ..Default::default()
@@ -215,11 +215,11 @@ mod test {
         // }
 
         let geometry = create_polyline_geometry(
-            WGS84_32,
+            WGS84_64,
             PolylineGeometryOptions {
                 positions: vec![
-                    LLE::<f32, Degrees>::from_float(0.01, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.02, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
                 ],
                 granularity: 600.0,
                 ..Default::default()
@@ -231,12 +231,12 @@ mod test {
         assert_eq!(geometry.attributes.position.data.len(), 48);
 
         let geometry = create_polyline_geometry(
-            WGS84_32,
+            WGS84_64,
             PolylineGeometryOptions {
                 positions: vec![
-                    LLE::<f32, Degrees>::from_float(0.01, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.02, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.0201, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.0201, 0., 0.).rad(),
                 ],
                 granularity: 600.0,
                 ..Default::default()

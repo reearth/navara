@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 use navara_component::Deleted;
 use navara_core::{
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
-    Aabb, Ellipsoid, Extent, Radians, TileXYZ, WGS84_32,
+    Aabb, Ellipsoid, Extent, Radians, TileXYZ, WGS84_64,
 };
 use navara_data_requester::DataRequesterStatus;
 use navara_math::Vec3;
@@ -69,8 +69,8 @@ impl VectorTile {
         Self {
             coords,
             extent: coords.extent(),
-            aabb: Aabb::from_extent_f32(extent, 0., max_height),
-            bounding_region: Some(TileBoundingRegion::from_extent_f32(extent, WGS84_32)),
+            aabb: Aabb::from_extent_f64(extent, 0., max_height),
+            bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
             visited_at: 0,
             data_requester_entity_id: None,

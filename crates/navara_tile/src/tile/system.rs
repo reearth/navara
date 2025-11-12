@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
-use navara_core::{TileXYZ, WGS84_32};
+use navara_core::{TileXYZ, WGS84_64};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -153,11 +153,11 @@ pub fn update_tiles(
         &texture_fragment,
         &terrain_data_requester,
         &window,
-        &WGS84_32,
+        &WGS84_64,
         &occluder,
         &mut meshes,
         &fog,
-        globe.max_sse,
+        globe.max_sse as f64,
         false,
         is_texture_ready.then_some(zero_tile_handle),
     ) {
@@ -234,7 +234,7 @@ pub fn transfer_mesh(
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
 
-    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size);
+    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size());
 
     for (rendered_tile_id, mut rendered_tile, order) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>()
@@ -270,6 +270,9 @@ pub fn transfer_mesh(
         let extent = tile.extent;
 
         let should_render_terrain = terrain_layer.is_some();
+        let is_ellipsoid_terrain = terrain_layer
+            .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::Ellipsoid))
+            .unwrap_or(false);
 
         let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
 
@@ -309,7 +312,7 @@ pub fn transfer_mesh(
         let (cast_shadow, receive_shadow) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
             .map_or((false, false), |appearance| {
-                (appearance.cast_shadow, appearance.receive_shadow)
+                (appearance.cast_shadow(), appearance.receive_shadow())
             });
 
         let appearance = RasterTileInternalMaterial {
@@ -338,16 +341,17 @@ pub fn transfer_mesh(
 
         let should_upsample_terrain =
             tile.should_upsampling(
-                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
             ) && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain
+            || is_ellipsoid_terrain
             || (terrain_layer
-                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z)
+                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom() >= tile.coords.z)
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             let (triangles, rtc_translation) = tile_triangles_flat(
-                WGS84_32,
+                WGS84_64,
                 &extent,
                 if is_root { 65 } else { globe.segments },
                 0.,

@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub struct TerrainInformation {
-    pub max_height: f32,
+    pub max_height: f64,
 }
 
 impl TerrainInformation {

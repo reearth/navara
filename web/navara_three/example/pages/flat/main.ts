@@ -4,6 +4,6 @@ import { run } from "./run";
 
 const view = new ThreeView({
   debug: true,
-  shouldComputeNormalFromVertex: false,
+  shadow: true,
 });
 run(view);

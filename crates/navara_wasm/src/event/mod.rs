@@ -240,7 +240,7 @@ impl<'a>
             gen: ev.gen,
             bits: ev.bits,
             lle: ev.comp.lle.into(),
-            height: ev.comp.height.map(|h| h as f64),
+            height: ev.comp.height,
         }
     }
 }

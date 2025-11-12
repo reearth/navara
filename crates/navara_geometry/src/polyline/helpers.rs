@@ -7,10 +7,10 @@ use crate::helpers::vec::{direction, get_position, tangent_direction};
 use super::constants::{WALL_INITIAL_MAX_HEIGHT, WALL_INITIAL_MIN_HEIGHT};
 
 pub fn compute_right_normal(
-    start: &LLE<f32, Radians>,
-    end: &LLE<f32, Radians>,
-    max_height: f32,
-    ellipsoid: Ellipsoid<f32>,
+    start: &LLE<f64, Radians>,
+    end: &LLE<f64, Radians>,
+    max_height: f64,
+    ellipsoid: Ellipsoid<f64>,
 ) -> Vec3 {
     let start_bottom = get_position(ellipsoid, start, 0.);
     let start_top = get_position(ellipsoid, start, max_height);
@@ -23,15 +23,15 @@ pub fn compute_right_normal(
 }
 
 pub fn interpolate_segment<F>(
-    ellipsoid: Ellipsoid<f32>,
-    start: LLE<f32, Radians>,
-    end: LLE<f32, Radians>,
-    min_height: f32,
-    max_height: f32,
-    granularity: f32,
+    ellipsoid: Ellipsoid<f64>,
+    start: LLE<f64, Radians>,
+    end: LLE<f64, Radians>,
+    min_height: f64,
+    max_height: f64,
+    granularity: f64,
     mut interpolated: F,
 ) where
-    F: FnMut(Vec3, Vec3, Vec3, LLE<f32, Radians>),
+    F: FnMut(Vec3, Vec3, Vec3, LLE<f64, Radians>),
 {
     if granularity == 0. {
         return;
@@ -47,7 +47,7 @@ pub fn interpolate_segment<F>(
     let interpolated_normal = compute_right_normal(&start, &end, max_height, ellipsoid);
 
     let segments = (surface_distance / granularity).ceil() as usize;
-    let interpoint_distance = surface_distance / segments as f32;
+    let interpoint_distance = surface_distance / segments as f64;
     let mut distance_from_start = interpoint_distance;
     let points_to_add = segments - 1;
 
@@ -68,8 +68,8 @@ pub fn interpolate_segment<F>(
     }
 }
 
-const COSINE_90: f32 = 0.;
-const COSINE_180: f32 = -1.;
+const COSINE_90: f64 = 0.;
+const COSINE_180: f64 = -1.;
 pub fn compute_vertex_miter_normal(
     previous_bottom: Vec3,
     vertex_bottom: Vec3,
@@ -95,12 +95,12 @@ pub fn compute_vertex_miter_normal(
     result
 }
 
-fn miter_break_small() -> f32 {
-    Angle::<f32, Degrees>::new(30.).rad().cos()
+fn miter_break_small() -> f64 {
+    Angle::<f64, Degrees>::new(30.).rad().cos()
 }
 
-fn miter_break_large() -> f32 {
-    Angle::<f32, Degrees>::new(150.).rad().cos()
+fn miter_break_large() -> f64 {
+    Angle::<f64, Degrees>::new(150.).rad().cos()
 }
 
 // If the end normal angle is too steep compared to the direction of the line segment,
@@ -131,7 +131,7 @@ pub fn break_miter(
     None
 }
 
-pub fn adjust_height(bottom: Vec3, top: Vec3, min_height: f32, max_height: f32) -> (Vec3, Vec3) {
+pub fn adjust_height(bottom: Vec3, top: Vec3, min_height: f64, max_height: f64) -> (Vec3, Vec3) {
     let adjust_height_normal = (top - bottom).normalize();
 
     let distance_for_bottom = min_height - WALL_INITIAL_MIN_HEIGHT;
@@ -148,10 +148,11 @@ pub fn adjust_height(bottom: Vec3, top: Vec3, min_height: f32, max_height: f32) 
 
 #[cfg(test)]
 mod test {
-    use std::f32::consts::PI;
+    use std::f64::consts::PI;
 
-    use navara_core::{LLE, WGS84_32};
-    use navara_math::Vec3;
+    use approx::assert_abs_diff_eq;
+    use navara_core::{LLE, WGS84_64};
+    use navara_math::{AbsDiffEqVec3, Vec3, EPSILON4, EPSILON7};
 
     use crate::polyline::{constants::WALL_INITIAL_MAX_HEIGHT, helpers::break_miter};
 
@@ -163,17 +164,25 @@ mod test {
             &LLE::from_float(0., 0., 0.),
             &LLE::from_float(PI, PI, 0.),
             WALL_INITIAL_MAX_HEIGHT,
-            WGS84_32,
+            WGS84_64,
         );
-        assert_eq!(result, Vec3::new(0.0, -0.7047281, -0.70947754));
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(result),
+            AbsDiffEqVec3(Vec3::new(0.0, -0.7047281, -0.70947754)),
+            epsilon = Vec3::new(EPSILON7, EPSILON7, EPSILON7)
+        );
 
         let result = compute_right_normal(
             &LLE::from_float(PI, PI, 0.),
             &LLE::from_float(0., 0., 0.),
             WALL_INITIAL_MAX_HEIGHT,
-            WGS84_32,
+            WGS84_64,
         );
-        assert_eq!(result, Vec3::new(4.152909e-10, 0.7047281, 0.70947754));
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(result),
+            AbsDiffEqVec3(Vec3::new(4.152909e-10, 0.7047281, 0.70947754)),
+            epsilon = Vec3::new(EPSILON7, EPSILON7, EPSILON7)
+        );
     }
 
     #[test]
@@ -199,6 +208,10 @@ mod test {
     fn it_should_adjust_height() {
         let (bottom, top) = adjust_height(Vec3::ZERO, Vec3::ONE, 0., 1.);
         assert_eq!(bottom, Vec3::ZERO);
-        assert_eq!(top, Vec3::new(-575.7729, -575.7729, -575.7729));
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(top),
+            AbsDiffEqVec3(Vec3::new(-575.7729, -575.7729, -575.7729)),
+            epsilon = Vec3::new(EPSILON4, EPSILON4, EPSILON4)
+        );
     }
 }

@@ -367,7 +367,7 @@ fn get_geometry_info_from_b3dm(
     let batch_length = b3dm.feature_table.json.batch_length.unwrap() as usize;
 
     Some((
-        Vec3::new(center[0] as f32, center[1] as f32, center[2] as f32),
+        Vec3::new(center[0], center[1], center[2]),
         glb_bin_handle,
         b3dm.batch_table,
         batch_length,

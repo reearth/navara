@@ -19,8 +19,8 @@ impl Ord for Order {
 
 #[derive(Component, PartialEq, Debug, Clone)]
 pub struct OrderByDistance {
-    pub sse: f32,
-    pub distance: f32,
+    pub sse: f64,
+    pub distance: f64,
 }
 
 impl PartialOrd for OrderByDistance {

@@ -1,9 +1,9 @@
-use navara_math::{FloatType, Quat, RawDVec3, Transform, Vec3};
+use navara_math::{Quat, Transform, Vec3};
 
 // pub use radians::*;
 use crate::{
     unit::{Angle, Degrees, Float, Meters, Radians, Unit},
-    Ellipsoid, WGS84_32,
+    Ellipsoid, WGS84_64,
 };
 
 #[derive(PartialEq)]
@@ -164,45 +164,22 @@ pub struct XYZ<F: Float> {
     pub z: Meters<F>,
 }
 
-impl From<XYZ<f32>> for Vec3 {
-    fn from(val: XYZ<FloatType>) -> Self {
+impl From<XYZ<f64>> for Vec3 {
+    fn from(val: XYZ<f64>) -> Self {
         xyz_to_vec3(val)
     }
 }
-impl From<Vec3> for XYZ<f32> {
+impl From<Vec3> for XYZ<f64> {
     fn from(val: Vec3) -> Self {
         vec3_to_xyz(val)
     }
 }
 
-impl From<XYZ<f64>> for RawDVec3 {
-    fn from(val: XYZ<f64>) -> Self {
-        xyz_to_dvec3(val)
-    }
-}
-impl From<RawDVec3> for XYZ<f64> {
-    fn from(val: RawDVec3) -> Self {
-        dvec3_to_xyz(val)
-    }
-}
-
-pub fn xyz_to_vec3(xyz: XYZ<f32>) -> Vec3 {
+pub fn xyz_to_vec3(xyz: XYZ<f64>) -> Vec3 {
     Vec3::new(xyz.x.val(), xyz.y.val(), xyz.z.val())
 }
 
-pub fn vec3_to_xyz(vec: Vec3) -> XYZ<f32> {
-    XYZ {
-        x: Meters::new(vec.x),
-        y: Meters::new(vec.y),
-        z: Meters::new(vec.z),
-    }
-}
-
-pub fn xyz_to_dvec3(xyz: XYZ<f64>) -> RawDVec3 {
-    RawDVec3::new(xyz.x.val(), xyz.y.val(), xyz.z.val())
-}
-
-pub fn dvec3_to_xyz(vec: RawDVec3) -> XYZ<f64> {
+pub fn vec3_to_xyz(vec: Vec3) -> XYZ<f64> {
     XYZ {
         x: Meters::new(vec.x),
         y: Meters::new(vec.y),
@@ -235,7 +212,7 @@ impl CRS {
         }
     }
 
-    pub fn to_vec3(&self, ellipsoid: Ellipsoid<f32>, coords: Vec3, height: f32) -> Vec3 {
+    pub fn to_vec3(&self, ellipsoid: Ellipsoid<f64>, coords: Vec3, height: f32) -> Vec3 {
         match self {
             CRS::Geographic => {
                 let lng = coords.x;
@@ -246,7 +223,7 @@ impl CRS {
                     LLE {
                         lng: Angle::new(lng),
                         lat: Angle::new(lat),
-                        height: Meters::new(alt + height),
+                        height: Meters::new(alt + height as f64),
                     }
                     .rad()
                     .to_xyz(ellipsoid),
@@ -257,7 +234,7 @@ impl CRS {
                     return coords;
                 }
                 let mut lle = vec3_to_xyz(coords).to_lle(ellipsoid);
-                lle.height = Meters::new(lle.height.val() + height);
+                lle.height = Meters::new(lle.height.val() + height as f64);
                 lle.to_xyz(ellipsoid).into()
             }
             CRS::ESPG { code: _ } => unimplemented!(),
@@ -266,10 +243,10 @@ impl CRS {
 
     pub fn to_lle(
         &self,
-        ellipsoid: Ellipsoid<f32>,
+        ellipsoid: Ellipsoid<f64>,
         coords: Vec3,
         height: f32,
-    ) -> LLE<f32, Radians> {
+    ) -> LLE<f64, Radians> {
         match self {
             CRS::Geographic => {
                 let lng = coords.x;
@@ -279,20 +256,20 @@ impl CRS {
                 LLE {
                     lng: Angle::new(lng),
                     lat: Angle::new(lat),
-                    height: Meters::new(alt + height),
+                    height: Meters::new(alt + height as f64),
                 }
                 .rad()
             }
             CRS::Geocentric => {
                 let mut lle = vec3_to_xyz(coords).to_lle(ellipsoid);
-                lle.height = Meters::new(lle.height.val() + height);
+                lle.height = Meters::new(lle.height.val() + height as f64);
                 lle
             }
             CRS::ESPG { code: _ } => unimplemented!(),
         }
     }
 
-    pub fn to_lng_lat(&self, ellipsoid: Ellipsoid<f32>, coords: Vec3) -> LngLat<f32, Radians> {
+    pub fn to_lng_lat(&self, ellipsoid: Ellipsoid<f64>, coords: Vec3) -> LngLat<f64, Radians> {
         match self {
             CRS::Geographic => {
                 let lng = coords.x;
@@ -323,17 +300,20 @@ pub fn calc_transform(
     m_size: f32,
     need_rotate: bool,
 ) -> Transform {
-    let position = crs.to_vec3(WGS84_32, *coordinates, m_height);
+    let position = crs.to_vec3(WGS84_64, *coordinates, m_height);
 
-    let mut transform =
-        Transform::from_translation(position).with_scale(Vec3::new(m_size, m_size, m_size));
+    let mut transform = Transform::from_translation(position).with_scale(Vec3::new(
+        m_size as f64,
+        m_size as f64,
+        m_size as f64,
+    ));
 
     if need_rotate {
         let lng = coordinates.x.to_radians();
         let lat = coordinates.y.to_radians();
         let rotation_y = Quat::from_rotation_y(-lat);
         let rotation_z = Quat::from_rotation_z(lng);
-        let adjust_model = Quat::from_rotation_z(-std::f32::consts::PI / 2.0);
+        let adjust_model = Quat::from_rotation_z(-std::f64::consts::PI / 2.0);
         let rotation = rotation_z * rotation_y * adjust_model;
         transform = transform.with_rotation(rotation);
     }

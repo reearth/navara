@@ -15,14 +15,14 @@ pub struct Intersection {
 pub fn ray_plane(ray: &Ray, plane: Plane) -> Option<Vec3> {
     let origin = ray.origin;
     let direction = ray.direction;
-    let normal = plane.normal;
+    let normal = plane.normal.as_dvec3();
 
-    let denominator = normal.dot(direction.into());
+    let denominator = normal.dot(direction);
     if denominator.equal_epsilon(EPSILON15) {
         return None;
     }
 
-    let t = (plane.distance - normal.dot(origin.into())) / denominator;
+    let t = (plane.distance - normal.dot(origin)) / denominator;
     if t < 0. {
         return None;
     }
@@ -50,8 +50,8 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Intersection
         if qw >= 0.0 {
             // Looking outward or tangent (0 intersections).
             return Intersection {
-                start: f32::INFINITY,
-                end: f32::INFINITY,
+                start: f64::INFINITY,
+                end: f64::INFINITY,
             };
         }
 
@@ -64,8 +64,8 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Intersection
         if qw2 < product {
             // Imaginary roots (0 intersections).
             return Intersection {
-                start: f32::INFINITY,
-                end: f32::INFINITY,
+                start: f64::INFINITY,
+                end: f64::INFINITY,
             };
         } else if qw2 > product {
             // Distinct roots (2 intersections).
@@ -116,8 +116,8 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Intersection
 
     // qw >= 0.0.  Looking outward or tangent.
     Intersection {
-        start: f32::INFINITY,
-        end: f32::INFINITY,
+        start: f64::INFINITY,
+        end: f64::INFINITY,
     }
 }
 
@@ -126,7 +126,7 @@ mod test {
     use approx::assert_abs_diff_eq;
     use navara_math::{Dir3, Vec3, EPSILON14};
 
-    use crate::{ray_plane, Plane, Ray, UNIT_SPHERE_32};
+    use crate::{ray_plane, Plane, Ray, UNIT_SPHERE_64};
 
     use super::ray_ellipsoid;
 
@@ -185,7 +185,7 @@ mod test {
                 origin: Vec3::new(2., 0., 0.),
                 direction: Vec3::new(-1., 0., 0.),
             },
-            UNIT_SPHERE_32,
+            UNIT_SPHERE_64,
         );
         assert_abs_diff_eq!(result.start, 1.0, epsilon = EPSILON14);
         assert_abs_diff_eq!(result.end, 3.0, epsilon = EPSILON14);
@@ -195,7 +195,7 @@ mod test {
                 origin: Vec3::new(1., 1., 0.),
                 direction: Vec3::new(-1., 0., 0.),
             },
-            UNIT_SPHERE_32,
+            UNIT_SPHERE_64,
         );
         assert_abs_diff_eq!(result.start, 1.0, epsilon = EPSILON14);
         assert_abs_diff_eq!(result.end, 1.0, epsilon = EPSILON14);
@@ -205,7 +205,7 @@ mod test {
                 origin: Vec3::new(0., -2., 0.),
                 direction: Vec3::new(0., 1., 0.),
             },
-            UNIT_SPHERE_32,
+            UNIT_SPHERE_64,
         );
         assert_abs_diff_eq!(result.start, 1.0, epsilon = EPSILON14);
         assert_abs_diff_eq!(result.end, 3.0, epsilon = EPSILON14);
@@ -215,7 +215,7 @@ mod test {
                 origin: Vec3::new(0., -2., 0.),
                 direction: Vec3::new(0., -1., 0.),
             },
-            UNIT_SPHERE_32,
+            UNIT_SPHERE_64,
         );
         assert!(result.start.is_infinite());
     }

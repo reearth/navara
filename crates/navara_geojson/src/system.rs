@@ -34,22 +34,12 @@ use navara_layer::{GeoJsonLayerData, GeoJsonLayerDataRequesterMarker};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 
 fn coords(f: &[f64]) -> Vec3 {
-    Vec3::new(
-        f[0] as FloatType,
-        f[1] as FloatType,
-        *f.get(2).unwrap_or(&0.) as FloatType,
-    )
+    Vec3::new(f[0], f[1], *f.get(2).unwrap_or(&0.))
 }
 
-fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<FloatType> {
+fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<f64> {
     f.iter()
-        .flat_map(|p| {
-            [
-                p[0] as FloatType,
-                p[1] as FloatType,
-                *p.get(2).unwrap_or(&0.) as FloatType,
-            ]
-        })
+        .flat_map(|p| [p[0], p[1], *p.get(2).unwrap_or(&0.)])
         .collect::<Vec<_>>()
 }
 
@@ -553,7 +543,7 @@ pub fn parse_geojson(
 mod test {
     use bevy_app::{App, Update};
     use navara_buffer_store::BufferStore;
-    use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_32};
+    use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_64};
     use navara_event_store::EventStore;
     use navara_feature::FeaturePlugin;
     use navara_feature_component::render::RenderableFeature;
@@ -642,10 +632,10 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
             xyz_to_vec3(
                 LLE {
@@ -653,10 +643,10 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
         ];
 
@@ -742,10 +732,10 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
             xyz_to_vec3(
                 LLE {
@@ -753,10 +743,10 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
         ];
 
@@ -847,10 +837,10 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
             xyz_to_vec3(
                 LLE {
@@ -858,10 +848,10 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
         ];
 
@@ -947,10 +937,10 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
             xyz_to_vec3(
                 LLE {
@@ -958,10 +948,10 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height),
+                    height: Meters::new(0. + material.height as f64),
                 }
                 .rad()
-                .to_xyz(WGS84_32),
+                .to_xyz(WGS84_64),
             ),
         ];
 

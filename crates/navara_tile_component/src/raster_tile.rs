@@ -3,7 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
-    Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_32,
+    Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_64,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
@@ -85,8 +85,8 @@ impl RasterTile {
         Self {
             coords,
             extent: coords.extent(),
-            aabb: Aabb::from_extent_f32(extent, 0., max_height),
-            bounding_region: Some(TileBoundingRegion::from_extent_f32(extent, WGS84_32)),
+            aabb: Aabb::from_extent_f64(extent, 0., max_height),
+            bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
             visited_at: 0,
             terrain_data: None,
@@ -136,14 +136,24 @@ impl RasterTile {
             };
         }
 
-        let is_terrain_ready = self.is_terrain_ready(terrain_data_requester);
+        // For ellipsoid terrain, terrain is always ready (no data loading needed)
+        let is_ellipsoid_terrain = terrain_layer
+            .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::Ellipsoid))
+            .unwrap_or(false);
+
+        let is_terrain_ready = if is_ellipsoid_terrain {
+            true
+        } else {
+            self.is_terrain_ready(terrain_data_requester)
+        };
+
         let should_upsample = self.should_upsampling(
-            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
         ) && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
 
         // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
         let should_be_rendered_without_terrain = !self.should_upsampling(
-            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+            terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
         ) && matches!(
             self.get_terrain_data_requester(terrain_data_requester)
                 .map(|t| t.status),
@@ -282,7 +292,7 @@ impl RasterTile {
             .as_ref()
             .and_then(|t| t.upsample(&region, upsamplable_geometry))?;
 
-        let aabb = Aabb::from_extent_f32(
+        let aabb = Aabb::from_extent_f64(
             self.extent,
             upsampled_mesh.min_height,
             upsampled_mesh.max_height,
@@ -426,7 +436,7 @@ pub fn compute_terrain_height_at_point(
 /// Compute a terrain height at specified point.
 pub fn sample_terrain_height_within_extent(
     qt: &mut RasterTileQuadtree,
-    extent: Extent<f32, Radians>,
+    extent: Extent<f64, Radians>,
 ) -> (FloatType, FloatType) {
     let tiles = find_contained_children(qt, &|t| {
         t.extent.intersects(extent)

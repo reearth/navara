@@ -1,10 +1,9 @@
 use navara_feature_component::batch::{BatchId, BatchIndex};
 use navara_geometry::Hierarchy;
-use navara_math::FloatType;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    copy_f32_array, copy_u32_array, copy_u8_array, transfer_f32_array, transfer_u32_array,
+    copy_f64_array, copy_u32_array, copy_u8_array, transfer_f64_array, transfer_u32_array,
     transfer_u8_array, CRS,
 };
 
@@ -14,10 +13,10 @@ use super::{TransferableHierarchy, TransferableHoles, WindingOrder};
 #[wasm_bindgen]
 #[derive(Debug, Default)]
 pub struct TransferablePolygonBatchedFeature {
-    outer_ring: Vec<FloatType>,
+    outer_ring: Vec<f64>,
     outer_ring_sizes: Vec<u32>,
     /// All holes for a batched feature
-    holes: Vec<FloatType>,
+    holes: Vec<f64>,
     /// Total holes for one feature.
     holes_total_sizes: Vec<u32>,
     /// Each hole size
@@ -59,7 +58,7 @@ impl TransferablePolygonBatchedFeature {
 
     #[wasm_bindgen(js_name = "setOuterRing")]
     pub fn set_outer_ring(&mut self, byte_length: usize, f: &js_sys::Function) {
-        self.outer_ring = transfer_f32_array(byte_length, f)
+        self.outer_ring = transfer_f64_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setOuterRingSizes")]
     pub fn set_outer_ring_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
@@ -67,7 +66,7 @@ impl TransferablePolygonBatchedFeature {
     }
     #[wasm_bindgen(js_name = "setHoles")]
     pub fn set_holes(&mut self, byte_length: usize, f: &js_sys::Function) {
-        self.holes = transfer_f32_array(byte_length, f)
+        self.holes = transfer_f64_array(byte_length, f)
     }
     #[wasm_bindgen(js_name = "setHolesSizes")]
     pub fn set_holes_sizes(&mut self, byte_length: usize, f: &js_sys::Function) {
@@ -105,8 +104,8 @@ impl TransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
-    pub fn transfer_outer_ring(&mut self) -> js_sys::Float32Array {
-        copy_f32_array(&self.outer_ring)
+    pub fn transfer_outer_ring(&mut self) -> js_sys::Float64Array {
+        copy_f64_array(&self.outer_ring)
     }
 
     #[wasm_bindgen(js_name = "transferOuterRingSizes")]
@@ -115,8 +114,8 @@ impl TransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferHoles")]
-    pub fn transfer_holes(&mut self) -> js_sys::Float32Array {
-        copy_f32_array(&self.holes)
+    pub fn transfer_holes(&mut self) -> js_sys::Float64Array {
+        copy_f64_array(&self.holes)
     }
 
     #[wasm_bindgen(js_name = "transferHolesBoundaries")]
@@ -280,7 +279,7 @@ impl TransferablePolygonBatchedFeature {
 
         let batch_idx = self.batch_indices[idx] as usize;
 
-        let batch_id = BatchId(self.batch_ids[batch_idx] as FloatType);
+        let batch_id = BatchId(self.batch_ids[batch_idx] as f32);
 
         (
             transferable_hierarchy,

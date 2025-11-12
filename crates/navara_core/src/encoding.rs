@@ -7,8 +7,8 @@ use navara_math::Vec3;
 /// are transformed to be relative to the camera.
 #[derive(Debug, Clone, Copy)]
 pub struct EncodedFloat {
-    pub high: f32,
-    pub low: f32,
+    pub high: f64,
+    pub low: f64,
 }
 
 impl EncodedFloat {
@@ -34,8 +34,8 @@ impl EncodedFloat {
         };
 
         Self {
-            high: double_high as f32,
-            low: (value - double_high) as f32,
+            high: double_high,
+            low: (value - double_high),
         }
     }
 
@@ -50,7 +50,7 @@ impl EncodedFloat {
     /// assert!((decoded - 6371000.123456).abs() < 0.001);
     /// ```
     pub fn decode(&self) -> f64 {
-        self.high as f64 + self.low as f64
+        self.high + self.low
     }
 }
 
@@ -73,9 +73,9 @@ impl EncodedVec3 {
     /// let encoded = EncodedVec3::encode(pos);
     /// ```
     pub fn encode(position: Vec3) -> Self {
-        let x = EncodedFloat::encode(position.x as f64);
-        let y = EncodedFloat::encode(position.y as f64);
-        let z = EncodedFloat::encode(position.z as f64);
+        let x = EncodedFloat::encode(position.x);
+        let y = EncodedFloat::encode(position.y);
+        let z = EncodedFloat::encode(position.z);
 
         Self {
             high: Vec3::new(x.high, y.high, z.high),
@@ -136,8 +136,8 @@ mod tests {
         let encoded = EncodedVec3::encode(pos);
 
         // Verify encoding preserves value
-        let decoded_x = encoded.high.x as f64 + encoded.low.x as f64;
-        assert!((decoded_x - pos.x as f64).abs() < 0.001);
+        let decoded_x = encoded.high.x + encoded.low.x;
+        assert!((decoded_x - pos.x).abs() < 0.001);
     }
 
     #[test]

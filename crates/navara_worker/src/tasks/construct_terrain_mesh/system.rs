@@ -20,7 +20,7 @@ pub fn setup_martini(
     layers: Query<&TerrainLayer, Added<TerrainLayer>>,
 ) {
     for layer in layers.iter() {
-        let size = layer.appearance.as_ref().unwrap().tile_size;
+        let size = layer.appearance.as_ref().unwrap().tile_size();
         if cached_martini.get(&size).is_some() {
             continue;
         }

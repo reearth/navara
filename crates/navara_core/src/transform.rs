@@ -165,7 +165,7 @@ mod test {
             north_east_down_to_fixed_frame, north_up_east_to_fixed_frame,
             north_west_up_to_fixed_frame,
         },
-        UNIT_SPHERE_32,
+        UNIT_SPHERE_64,
     };
 
     use super::east_north_up_to_fixed_frame;
@@ -177,7 +177,7 @@ mod test {
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Y); // east
         assert_eq!(result.y_axis, Vec4::Z); // north
         assert_eq!(result.z_axis, Vec4::X); // up
@@ -189,7 +189,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Y); // east
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.y_axis),
@@ -209,7 +209,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, -1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Y); // east
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.y_axis),
@@ -229,7 +229,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = east_north_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Y); // east
         assert_eq!(result.y_axis, Vec4::NEG_X); // north
         assert_eq!(result.z_axis, Vec4::Z); // up
@@ -243,7 +243,7 @@ mod test {
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Z); // east
         assert_eq!(result.y_axis, Vec4::Y); // north
         assert_eq!(result.z_axis, Vec4::NEG_X); // up
@@ -255,7 +255,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.x_axis),
             AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
@@ -275,7 +275,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, -1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.x_axis),
             AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
@@ -295,7 +295,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_east_down_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::NEG_X); // east
         assert_eq!(result.y_axis, Vec4::Y); // north
         assert_eq!(result.z_axis, Vec4::NEG_Z); // up
@@ -309,7 +309,7 @@ mod test {
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Z); // east
         assert_eq!(result.y_axis, Vec4::X); // north
         assert_eq!(result.z_axis, Vec4::Y); // up
@@ -321,7 +321,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.x_axis),
             AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
@@ -341,7 +341,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, -1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.x_axis),
             AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
@@ -361,7 +361,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_up_east_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::NEG_X); // east
         assert_eq!(result.y_axis, Vec4::Z); // north
         assert_eq!(result.z_axis, Vec4::Y); // up
@@ -375,7 +375,7 @@ mod test {
         let origin = Vec3::new(1.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::Z); // east
         assert_eq!(result.y_axis, Vec4::NEG_Y); // north
         assert_eq!(result.z_axis, Vec4::X); // up
@@ -387,7 +387,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.x_axis),
             AbsDiffEqVec4(Vec4::new(-0.841471, 0.0, 0.0, 0.0)),
@@ -407,7 +407,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, -1.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_abs_diff_eq!(
             AbsDiffEqVec4(result.x_axis),
             AbsDiffEqVec4(Vec4::new(0.841471, 0., 0., 0.)),
@@ -427,7 +427,7 @@ mod test {
         let origin = Vec3::new(0.0, 0.0, 0.0);
         let expected_translation = Vec4::new(origin.x, origin.y, origin.z, 1.0);
 
-        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_32);
+        let result = north_west_up_to_fixed_frame(origin, UNIT_SPHERE_64);
         assert_eq!(result.x_axis, Vec4::NEG_X); // east
         assert_eq!(result.y_axis, Vec4::NEG_Y); // north
         assert_eq!(result.z_axis, Vec4::Z); // up

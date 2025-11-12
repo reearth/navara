@@ -167,8 +167,8 @@ fn get_geometry_info_from_pnts(
     // NOTE: buffer is removed here to prevent duplicating data.
     buf.remove(handle);
 
-    let positions_center: Vec<f32> = match feature_table_json["RTC_CENTER"].as_array() {
-        Some(arr) => arr.iter().map(|e| e.as_f64().unwrap() as f32).collect(),
+    let positions_center: Vec<f64> = match feature_table_json["RTC_CENTER"].as_array() {
+        Some(arr) => arr.iter().map(|e| e.as_f64().unwrap()).collect(),
         None => vec![0.0, 0.0, 0.0],
     };
 

@@ -68,7 +68,7 @@ impl TerrainData for RasterDEMData {
                     let g = bytes[k + 1] as i64;
                     let b = bytes[k + 2] as i64;
 
-                    result.push(decode_height_from_dem(r, g, b, 0., &self.decoder))
+                    result.push(decode_height_from_dem(r, g, b, 0., &self.decoder) as f32)
                 }
             }
 
@@ -107,8 +107,8 @@ impl TerrainData for RasterDEMData {
         let martini_size = martini.size as usize;
 
         let mut heights = vec![];
-        let mut max_height = 0.0f32;
-        let mut min_height = 9999.0f32;
+        let mut max_height: f64 = 0.0;
+        let mut min_height: f64 = 9999.0;
 
         let read_height = |x: usize, y: usize| {
             let x = x.min(martini_size - 2);
@@ -122,7 +122,7 @@ impl TerrainData for RasterDEMData {
             decode_height_from_dem(r, g, b, geoid_height, &self.decoder)
         };
 
-        let aabb = Aabb::from_extent_f32(
+        let aabb = Aabb::from_extent_f64(
             *extent,
             0.,
             tile.max_height, // Use parent max_height
@@ -152,7 +152,7 @@ impl TerrainData for RasterDEMData {
                     height: Meters::new(h),
                 });
 
-                heights.push(h);
+                heights.push(h as f32);
                 max_height = max_height.max(h);
                 min_height = min_height.min(h);
 
@@ -220,7 +220,7 @@ impl TerrainData for RasterDEMData {
 /// Height is retrieved by a relative index of longitude and latitude to the specified point.
 fn compute_terrain_height_from_tile(
     extent: &Extent<FloatType, Radians>,
-    heights: &[FloatType],
+    heights: &[f32],
     point: &LngLat<FloatType, Radians>,
 ) -> Option<FloatType> {
     let length = heights.len();
@@ -240,7 +240,10 @@ fn compute_terrain_height_from_tile(
     let x = ((dist_wlng / dist_ew) * (width - 1) as FloatType).round() as usize;
     let y = ((dist_slat / dist_ns) * (width - 1) as FloatType).round() as usize;
 
-    heights.get((x + y * width).min(length - 1)).copied()
+    heights
+        .get((x + y * width).min(length - 1))
+        .copied()
+        .map(|v| v as f64)
 }
 
 #[cfg(test)]
