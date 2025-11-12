@@ -295,7 +295,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 impl From<PolylineInternalMaterial> for navara_material::PolylineInternalMaterial {
@@ -542,7 +542,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 impl From<PolygonInternalMaterial> for navara_material::PolygonInternalMaterial {
@@ -762,19 +762,19 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub is_elevation_heatmaps: Vec<u8>,
     // Shared elevation heatmap configuration (all heatmap layers use the same settings)
-    pub elevation_min_height: f32,
-    pub elevation_max_height: f32,
-    pub elevation_r_scaler: f32,
-    pub elevation_g_scaler: f32,
-    pub elevation_b_scaler: f32,
-    pub elevation_boundary: f32,
-    pub elevation_max_offset: f32,
-    pub elevation_min_offset: f32,
-    pub elevation_epsilon: f32,
-    pub elevation_offset: f32,
+    pub elevation_min_height: f64,
+    pub elevation_max_height: f64,
+    pub elevation_r_scaler: f64,
+    pub elevation_g_scaler: f64,
+    pub elevation_b_scaler: f64,
+    pub elevation_boundary: f64,
+    pub elevation_max_offset: f64,
+    pub elevation_min_offset: f64,
+    pub elevation_epsilon: f64,
+    pub elevation_offset: f64,
 
     pub logarithmic: bool,
-    pub log_boundary: f32,
+    pub log_boundary: f64,
 }
 
 #[wasm_bindgen]
@@ -977,9 +977,9 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElevationHeatmapMaterial {
-    pub max_height: Option<f32>,
-    pub min_height: Option<f32>,
+    pub max_height: Option<f64>,
+    pub min_height: Option<f64>,
     pub elevation_decoder: Option<ElevationDecoder>,
     pub logarithmic: bool,
-    pub log_boundary: f32,
+    pub log_boundary: f64,
 }

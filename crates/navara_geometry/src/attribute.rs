@@ -1,14 +1,13 @@
 use navara_buffer_store::Handle;
-use navara_math::FloatType;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FloatAttribute {
-    pub data: Vec<FloatType>,
+    pub data: Vec<f32>,
     pub size: u8,
 }
 
 impl FloatAttribute {
-    pub fn new(data: Vec<FloatType>, size: u8) -> Self {
+    pub fn new(data: Vec<f32>, size: u8) -> Self {
         Self { data, size }
     }
 }

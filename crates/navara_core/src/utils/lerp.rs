@@ -1,4 +1,6 @@
-use navara_math::{std_float::consts::PI, FloatType, One, EPSILON10, TWO_PI};
+use std::f64::consts::PI;
+
+use navara_math::{FloatType, One, EPSILON10, TWO_PI};
 
 use crate::Float;
 

@@ -9,8 +9,8 @@
 // Ellipsoid height is generally much closer.
 // The initial max height is arbitrary.
 // Both heights are corrected using ApproximateTerrainHeights for computing the actual volume geometry.
-pub(super) const WALL_INITIAL_MIN_HEIGHT: f32 = 0.;
-pub(super) const WALL_INITIAL_MAX_HEIGHT: f32 = 1000.;
+pub(super) const WALL_INITIAL_MIN_HEIGHT: f64 = 0.;
+pub(super) const WALL_INITIAL_MAX_HEIGHT: f64 = 1000.;
 
 // Ref: https://github.com/CesiumGS/cesium/blob/165e0fb4fcc9a448b15de6a2df46db23c71fffda/packages/engine/Source/Core/GroundPolylineGeometry.js#L1011
 pub(super) const REFERENCE_INDICES: [u32; 36] = [

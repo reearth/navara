@@ -1,4 +1,4 @@
-use navara_math::{FloatType, RawDVec3, Vec3, EPSILON12};
+use navara_math::{FloatType, Vec3, EPSILON12};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/8016d9f99f0dd8c661f3f7f7f80d17fc0ef082be/packages/engine/Source/Core/scaleToGeodeticSurface.js#L147
 pub fn scale_to_geodetic_surface(
@@ -8,13 +8,13 @@ pub fn scale_to_geodetic_surface(
     center_tolerance_squared: f64,
 ) -> Option<Vec3> {
     // NOTE: This solves an optimization problem, and precision is important, so we need to force cast f64.
-    let position_x = p.x as f64;
-    let position_y = p.y as f64;
-    let position_z = p.z as f64;
+    let position_x = p.x;
+    let position_y = p.y;
+    let position_z = p.z;
 
-    let one_over_radii_x = one_over_radii[0] as f64;
-    let one_over_radii_y = one_over_radii[1] as f64;
-    let one_over_radii_z = one_over_radii[2] as f64;
+    let one_over_radii_x = one_over_radii[0];
+    let one_over_radii_y = one_over_radii[1];
+    let one_over_radii_z = one_over_radii[2];
 
     let x2 = position_x * position_x * one_over_radii_x * one_over_radii_x;
     let y2 = position_y * position_y * one_over_radii_y * one_over_radii_y;
@@ -36,20 +36,20 @@ pub fn scale_to_geodetic_surface(
         };
     }
 
-    let one_over_radii_squared_x = one_over_radii_squared[0] as f64;
-    let one_over_radii_squared_y = one_over_radii_squared[1] as f64;
-    let one_over_radii_squared_z = one_over_radii_squared[2] as f64;
+    let one_over_radii_squared_x = one_over_radii_squared[0];
+    let one_over_radii_squared_y = one_over_radii_squared[1];
+    let one_over_radii_squared_z = one_over_radii_squared[2];
 
     // Use the gradient at the intersection point in place of the true unit normal.
     // The difference in magnitude will be absorbed in the multiplier.
-    let gradient = RawDVec3::new(
-        intersection.x as f64 * one_over_radii_squared_x * 2.0,
-        intersection.y as f64 * one_over_radii_squared_y * 2.0,
-        intersection.z as f64 * one_over_radii_squared_z * 2.0,
+    let gradient = Vec3::new(
+        intersection.x * one_over_radii_squared_x * 2.0,
+        intersection.y * one_over_radii_squared_y * 2.0,
+        intersection.z * one_over_radii_squared_z * 2.0,
     );
 
     // Compute the initial guess at the normal vector multiplier, lambda.
-    let mut lambda = ((1.0 - ratio) * p.length() as f64) / (0.5 * gradient.length());
+    let mut lambda = ((1.0 - ratio) * p.length()) / (0.5 * gradient.length());
     let mut correction = 0.0;
 
     let mut func;
@@ -91,7 +91,7 @@ pub fn scale_to_geodetic_surface(
 
         correction = func / derivative;
 
-        if func.abs() <= EPSILON12 as f64 {
+        if func.abs() <= EPSILON12 {
             break;
         }
     }

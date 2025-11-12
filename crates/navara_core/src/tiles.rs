@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_tile_extent() {
-        const PI: FloatType = std::f32::consts::PI;
+        const PI: FloatType = std::f64::consts::PI;
         let max_lat = 2.0 * (((PI - 2.0 * PI * 0.0).exp().atan()) - PI / 4.0);
         let min_lat = 2.0 * (((PI - 2.0 * PI * 1.0).exp().atan()) - PI / 4.0);
 

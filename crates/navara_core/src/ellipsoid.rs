@@ -57,6 +57,14 @@ pub const UNIT_SPHERE_32: Ellipsoid<f32> = Ellipsoid {
     center_tolerance_squared: 0.1,
 };
 
+pub const UNIT_SPHERE_64: Ellipsoid<f64> = Ellipsoid {
+    a: 1.,
+    b: 1.,
+    one_over_radii: [1., 1., 1.],
+    one_over_radii_squared: [1., 1., 1.],
+    center_tolerance_squared: 0.1,
+};
+
 impl<F: Float + One<F>> Ellipsoid<F> {
     pub fn semi_major_axis(&self) -> F {
         self.a
@@ -194,7 +202,7 @@ impl Ellipsoid<FloatType> {
             p,
             &self.one_over_radii,
             &self.one_over_radii_squared,
-            self.center_tolerance_squared as f64,
+            self.center_tolerance_squared,
         )
     }
 }
@@ -214,6 +222,7 @@ impl<F: Float + One<F>> XYZ<F> {
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
+    use navara_math::AbsDiffEqVec3;
 
     use super::*;
     use crate::Deg;
@@ -274,30 +283,34 @@ mod tests {
         // X
         let expected = Vec3::new(1.0, 0.0, 0.0);
         let p = Vec3::new(9.0, 0.0, 0.0);
-        assert_eq!(
-            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
-            expected
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(UNIT_SPHERE_64.scale_to_geodetic_surface(p).unwrap()),
+            AbsDiffEqVec3(expected),
+            epsilon = Vec3::new(0.00001, 0.00001, 0.00001)
         );
         // Y
         let expected = Vec3::new(0.0, 1.0, 0.0);
         let p = Vec3::new(0.0, 8.0, 0.0);
-        assert_eq!(
-            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
-            expected
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(UNIT_SPHERE_64.scale_to_geodetic_surface(p).unwrap()),
+            AbsDiffEqVec3(expected),
+            epsilon = Vec3::new(0.00001, 0.00001, 0.00001)
         );
         // Z
         let expected = Vec3::new(0.0, 0.0, 1.0);
         let p = Vec3::new(0.0, 0.0, 8.0);
-        assert_eq!(
-            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
-            expected
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(UNIT_SPHERE_64.scale_to_geodetic_surface(p).unwrap()),
+            AbsDiffEqVec3(expected),
+            epsilon = Vec3::new(0.00001, 0.00001, 0.00001)
         );
         // XYZ
         let expected = Vec3::new(0.45584232, 0.5698029, 0.68376344);
         let p = Vec3::new(4.0, 5.0, 6.0);
-        assert_eq!(
-            UNIT_SPHERE_32.scale_to_geodetic_surface(p).unwrap(),
-            expected
+        assert_abs_diff_eq!(
+            AbsDiffEqVec3(UNIT_SPHERE_64.scale_to_geodetic_surface(p).unwrap()),
+            AbsDiffEqVec3(expected),
+            epsilon = Vec3::new(0.00001, 0.00001, 0.00001)
         );
     }
 }

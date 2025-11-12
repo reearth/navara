@@ -20,10 +20,10 @@ pub struct EllipsoidGeodesic {
 impl EllipsoidGeodesic {
     #[wasm_bindgen(constructor)]
     pub fn new(start: LLE, end: LLE) -> EllipsoidGeodesic {
-        let start_lle: navara_core::LLE<f32, navara_core::Radians> = (&start).into();
-        let end_lle: navara_core::LLE<f32, navara_core::Radians> = (&end).into();
+        let start_lle: navara_core::LLE<f64, navara_core::Radians> = (&start).into();
+        let end_lle: navara_core::LLE<f64, navara_core::Radians> = (&end).into();
 
-        let inner = navara_core::EllipsoidGeodesic::new(start_lle, end_lle, &navara_core::WGS84_32);
+        let inner = navara_core::EllipsoidGeodesic::new(start_lle, end_lle, &navara_core::WGS84_64);
 
         EllipsoidGeodesic {
             start,
@@ -47,7 +47,7 @@ impl EllipsoidGeodesic {
     }
 
     #[wasm_bindgen(js_name = "interpolateGeodeticPoints")]
-    pub fn interpolate_geodetic_points(&self, granularity: Option<f32>) -> Vec<LLE> {
+    pub fn interpolate_geodetic_points(&self, granularity: Option<f64>) -> Vec<LLE> {
         let granularity = granularity.unwrap_or(9999.0);
 
         if granularity == 0.0 || self.distance < granularity {
@@ -57,7 +57,7 @@ impl EllipsoidGeodesic {
         let ellipsoid_line = self.inner();
 
         let segments = (self.distance / granularity).ceil() as usize;
-        let interpoint_distance = self.distance / segments as f32;
+        let interpoint_distance = self.distance / segments as f64;
         let mut distance_from_start = interpoint_distance;
         let points_to_add = segments - 1;
 
@@ -65,7 +65,7 @@ impl EllipsoidGeodesic {
 
         for _ in 0..points_to_add {
             let interpolated_cartographic =
-                ellipsoid_line.interpolate_distance(&navara_core::WGS84_32, distance_from_start);
+                ellipsoid_line.interpolate_distance(&navara_core::WGS84_64, distance_from_start);
             result.push(interpolated_cartographic.into());
             distance_from_start += interpoint_distance;
         }
@@ -75,10 +75,10 @@ impl EllipsoidGeodesic {
     }
 
     #[wasm_bindgen(js_name = "interpolateDistance")]
-    pub fn interpolate_distance(&self, distance: f32) -> LLE {
+    pub fn interpolate_distance(&self, distance: f64) -> LLE {
         let inner = self.inner();
         inner
-            .interpolate_distance(&navara_core::WGS84_32, distance)
+            .interpolate_distance(&navara_core::WGS84_64, distance)
             .into()
     }
 }

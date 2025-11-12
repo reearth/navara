@@ -16,9 +16,10 @@ use navara_feature_component::{
     render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
     BatchedFeatureMarker,
 };
+use navara_geometry::FloatAttribute;
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
-use navara_math::{FloatType, Transform, Vec3};
+use navara_math::{Transform, Vec3};
 
 use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
 use navara_tile_component::{
@@ -28,8 +29,6 @@ use navara_worker::construct_polyline_batched_feature::{
     ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,
     ConstructPolylineBatchedFeatureResult, ConstructPolylineBatchedFeatureWorkerTaskBundle,
 };
-
-use navara_geometry::FloatAttribute;
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
@@ -151,7 +150,7 @@ pub fn transfer_mesh(
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polylines {
         // `coords` has a lifetime for sure.
         let constructed_feature = {
-            let coords = buf.remove_f32(&geometry.coords).unwrap();
+            let coords = buf.remove_f64(&geometry.coords).unwrap();
             construct_polyline_feature(material, coords, &geometry.crs)
         };
 
@@ -163,7 +162,7 @@ pub fn transfer_mesh(
 
             let pos_cnt = geometry.attributes.position.data.len()
                 / geometry.attributes.position.size as usize;
-            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+            let batch_id_vec = vec![batch_id.0; pos_cnt];
 
             geometry.attributes.batch_ids = Some(FloatAttribute::new(batch_id_vec, 1));
 

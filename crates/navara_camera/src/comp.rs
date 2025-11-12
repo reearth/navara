@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::{adjust_angle_for_lerp, lerp, Aabb, Plane, CRS, WGS84_32, WGS84_B_32};
+use navara_core::{adjust_angle_for_lerp, lerp, Aabb, Plane, CRS, WGS84_64, WGS84_B_64};
 use navara_math::{
     negative_pi_to_pi, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, EPSILON10,
 };
@@ -79,15 +79,13 @@ impl CameraFrustum {
 
         self.planes = [
             // Near
-            Plane::from_point_normal(near_center, forward.as_vec3()),
+            Plane::from_point_normal(near_center, forward),
             // Far
-            Plane::from_point_normal(far_center, -forward.as_vec3()),
+            Plane::from_point_normal(far_center, -forward),
             // Right
             Plane::from_point_normal(
                 transform.translation,
-                (front_far - right * half_h_side)
-                    .cross(up.as_vec3())
-                    .normalize(),
+                (front_far - right * half_h_side).cross(up).normalize(),
             ),
             // Left
             Plane::from_point_normal(
@@ -102,9 +100,7 @@ impl CameraFrustum {
             // Bottom
             Plane::from_point_normal(
                 transform.translation,
-                (front_far + up * half_v_side)
-                    .cross(right.as_vec3())
-                    .normalize(),
+                (front_far + up * half_v_side).cross(right).normalize(),
             ),
         ];
     }
@@ -164,8 +160,8 @@ impl Default for CameraController {
             enable_tilt: true,
             enable_look: true,
             enable_translate: true,
-            minimum_zoom_distance: WGS84_B_32,
-            maximum_zoom_distance: WGS84_B_32 * 10.0,
+            minimum_zoom_distance: WGS84_B_64,
+            maximum_zoom_distance: WGS84_B_64 * 10.0,
             spin_speed: 2.0,
             rotate_speed: 1.,
             zoom_speed: 0.6,
@@ -210,7 +206,7 @@ impl CameraInertia {
         self.translate = Vec3::ZERO;
     }
 
-    pub fn zoom(&mut self, v: f32) {
+    pub fn zoom(&mut self, v: f64) {
         self.zoom = v;
         self.zoom_time = 0.;
         self.spin = Vec3::ZERO;
@@ -309,7 +305,7 @@ impl Orbit {
         self.local_forward = if tilt {
             inverse * -direction.normalize_or_zero()
         } else {
-            inverse * transform.forward().as_vec3()
+            inverse * transform.forward()
         };
 
         self.local_position = inverse * direction;
@@ -319,15 +315,15 @@ impl Orbit {
             self.horizontal_rotation_axis = Vec3::Z;
 
             if self.local_up.dot(self.local_forward).abs() >= 0.99999 {
-                self.local_up = inverse * transform.up().as_vec3();
+                self.local_up = inverse * transform.up();
                 self.vertical_rotation_axis = self.local_forward.cross(self.local_up);
             } else {
-                self.vertical_rotation_axis = inverse * transform.right().as_vec3();
+                self.vertical_rotation_axis = inverse * transform.right();
             };
 
             return;
         } else {
-            self.vertical_rotation_axis = inverse * transform.right().as_vec3();
+            self.vertical_rotation_axis = inverse * transform.right();
         }
 
         if self.tilt_quat == Quat::IDENTITY {
@@ -356,7 +352,7 @@ impl Orbit {
         }
 
         let z_base = Vec3::Z;
-        let z_cam = transform.up().as_vec3();
+        let z_cam = transform.up();
 
         // Get difference between camera z axis and base z axis.
         let axis = z_base.cross(z_cam);
@@ -405,7 +401,7 @@ impl CameraFlight {
         duration: &Option<FloatType>,
         max_height: &Option<FloatType>,
     ) -> bool {
-        let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
+        let lle = CRS::Geocentric.to_lle(WGS84_64, transform.translation, 0.0);
         let start = lle.deg();
 
         self.set_start_options(
@@ -582,7 +578,7 @@ impl CameraFlight {
     fn get_altitude(&self, transform: &Transform, frustum: &CameraFrustum) -> FloatType {
         let cam_start = transform.translation;
         let cam_end = CRS::Geographic.to_vec3(
-            WGS84_32,
+            WGS84_64,
             Vec3::new(
                 self.end_options.lon,
                 self.end_options.lat,
@@ -592,8 +588,8 @@ impl CameraFlight {
         );
         let diff = cam_end - cam_start;
 
-        let up = transform.up().as_vec3();
-        let right = transform.right().as_vec3();
+        let up = transform.up();
+        let right = transform.right();
 
         let dx = (up * diff.dot(up)).length();
         let dy = (right * diff.dot(right)).length();
@@ -637,8 +633,9 @@ impl CameraFlight {
 
 #[cfg(test)]
 mod test {
+    use approx::assert_abs_diff_eq;
     use navara_core::{Aabb, Angle, Plane};
-    use navara_math::{Transform, Vec3};
+    use navara_math::{Transform, Vec3, EPSILON5};
 
     use super::CameraFrustum;
 
@@ -656,33 +653,41 @@ mod test {
             frustum.planes[1],
             Plane::from_point_normal(Vec3::new(0., 0., 990.), Vec3::new(0., 0., -1.))
         );
-        debug_assert_eq!(
-            frustum.planes[2],
+        assert_abs_diff_eq!(
+            frustum.planes[2].distance,
             Plane::from_point_normal(
                 Vec3::new(0., 0., -10.),
-                Vec3::new(-0.90630776, 0.0, 0.42261827)
+                Vec3::new(-0.9063078, 0.0, 0.42261827)
             )
+            .distance,
+            epsilon = EPSILON5
         );
-        debug_assert_eq!(
-            frustum.planes[3],
+        assert_abs_diff_eq!(
+            frustum.planes[3].distance,
             Plane::from_point_normal(
                 Vec3::new(0., 0., -10.),
-                Vec3::new(0.90630776, 0.0, 0.42261827)
+                Vec3::new(-0.9063078, 0.0, 0.42261827)
             )
+            .distance,
+            epsilon = EPSILON5
         );
-        debug_assert_eq!(
-            frustum.planes[4],
+        assert_abs_diff_eq!(
+            frustum.planes[4].distance,
             Plane::from_point_normal(
                 Vec3::new(0., 0., -10.),
-                Vec3::new(0.0, 0.90630776, 0.42261827)
+                Vec3::new(-0.9063078, 0.0, 0.42261827)
             )
+            .distance,
+            epsilon = EPSILON5
         );
-        debug_assert_eq!(
-            frustum.planes[5],
+        assert_abs_diff_eq!(
+            frustum.planes[5].distance,
             Plane::from_point_normal(
                 Vec3::new(0., 0., -10.),
-                Vec3::new(0.0, -0.90630776, 0.42261827)
+                Vec3::new(-0.9063078, 0.0, 0.42261827)
             )
+            .distance,
+            epsilon = EPSILON5
         );
     }
 

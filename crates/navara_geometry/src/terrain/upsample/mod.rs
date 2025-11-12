@@ -14,8 +14,8 @@ use navara_math::{FloatType, Vec3};
 
 #[derive(Debug)]
 pub struct UpsamplableTerrainGeometry<'a> {
-    pub uvs: &'a [FloatType],
-    pub heights: &'a [FloatType],
+    pub uvs: &'a [f32],
+    pub heights: &'a [f32],
     pub indices: &'a [u32],
 }
 
@@ -27,7 +27,7 @@ pub struct UpsamplableTerrainGeometry<'a> {
 #[derive(Debug)]
 pub struct UpsampledTerrainGeometry {
     pub uvs: Option<Vec<FloatType>>,
-    pub heights: Option<Vec<FloatType>>,
+    pub heights: Option<Vec<f32>>,
     pub indices: Option<Vec<u32>>,
     pub max_height: FloatType,
     pub min_height: FloatType,
@@ -69,7 +69,7 @@ impl UpsampledTerrainGeometry {
         ellipsoid: Ellipsoid<FloatType>,
         extent: &Extent<FloatType, Radians>,
         center: &Vec3,
-    ) -> (Geometry, Vec<FloatType>) {
+    ) -> (Geometry, Vec<f32>) {
         let mut vertices = vec![];
         let mut uvs = vec![];
 
@@ -97,16 +97,16 @@ impl UpsampledTerrainGeometry {
             let lle = LLE {
                 lng: Angle::new(lerp(extent.west.val(), extent.east.val(), u)),
                 lat: Angle::new(lerp(extent.south.val(), extent.north.val(), v)),
-                height: Meters::new(heights[i]),
+                height: Meters::new(heights[i] as f64),
             };
             let xyz = lle.to_xyz(ellipsoid);
 
-            vertices.push(xyz.x.val() - center.x);
-            vertices.push(xyz.y.val() - center.y);
-            vertices.push(xyz.z.val() - center.z);
+            vertices.push((xyz.x.val() - center.x) as f32);
+            vertices.push((xyz.y.val() - center.y) as f32);
+            vertices.push((xyz.z.val() - center.z) as f32);
 
-            uvs.push(u);
-            uvs.push(v);
+            uvs.push(u as f32);
+            uvs.push(v as f32);
         }
 
         (
@@ -122,18 +122,12 @@ impl UpsampledTerrainGeometry {
 
 // TODO: Execute this function in worker
 fn clip(
-    uvs: &[FloatType],
-    heights: &[FloatType],
+    uvs: &[f32],
+    heights: &[f32],
     indices: &[u32],
     is_east: bool,
     is_north: bool,
-) -> (
-    Vec<FloatType>,
-    Vec<FloatType>,
-    Vec<u32>,
-    FloatType,
-    FloatType,
-) {
+) -> (Vec<f64>, Vec<f32>, Vec<u32>, f64, f64) {
     let threashold = 0.5;
 
     let mut clipped_coord_map = ClippedCoordMap::new();
@@ -142,8 +136,8 @@ fn clip(
     let mut new_heights = vec![];
     let mut new_indices = vec![];
 
-    let mut max_height = 0.0f32;
-    let mut min_height = 99999.0f32;
+    let mut max_height = 0.0;
+    let mut min_height = 99999.0;
 
     for polygon_indices in indices.chunks(3) {
         let [u0, v0] = [
@@ -163,9 +157,9 @@ fn clip(
         let h1 = heights[polygon_indices[1] as usize];
         let h2 = heights[polygon_indices[2] as usize];
 
-        let origin_u_coords = [u0, u1, u2];
-        let origin_v_coords = [v0, v1, v2];
-        let origin_h_coords = [h0, h1, h2];
+        let origin_u_coords = [u0 as f64, u1 as f64, u2 as f64];
+        let origin_v_coords = [v0 as f64, v1 as f64, v2 as f64];
+        let origin_h_coords = [h0 as f64, h1 as f64, h2 as f64];
 
         let clipped_u_indices =
             clip_2d_triangle_at_threshold(threashold, is_east, &origin_u_coords);
@@ -254,7 +248,7 @@ fn clip(
 fn construct_polygon(
     clipped_indices: &[ClippedIndex],
     new_uvs: &mut Vec<FloatType>,
-    new_heights: &mut Vec<FloatType>,
+    new_heights: &mut Vec<f32>,
     new_indices: &mut Vec<u32>,
     [interpolated_u_coords, interpolated_v_coords, interpolated_h_coords]: [[FloatType; 3]; 3],
     clipped_coord_map: &mut ClippedCoordMap,
@@ -274,7 +268,7 @@ fn construct_polygon(
 
             new_uvs.push(u);
             new_uvs.push(v);
-            new_heights.push(h);
+            new_heights.push(h as f32);
 
             new_index
         };
@@ -356,7 +350,9 @@ impl ClippedCoordMap {
 
 #[cfg(test)]
 mod test {
+    use approx::assert_abs_diff_eq;
     use navara_core::TileRegion;
+    use navara_math::EPSILON5;
 
     use crate::UpsamplableTerrainGeometry;
 
@@ -373,15 +369,26 @@ mod test {
             &TileRegion::NorthEast,
         );
 
-        assert_eq!(
-            mesh.uvs.unwrap(),
-            [0.8, 0.9, 0.5, 0.85714287, 0.5, 0.5, 0.57142854, 0.5]
+        fn assert_all_f32(results: &[f32], expects: &[f32]) {
+            for (idx, result) in results.iter().enumerate() {
+                assert_abs_diff_eq!(*result, expects[idx], epsilon = EPSILON5 as f32);
+            }
+        }
+        fn assert_all_f64(results: &[f64], expects: &[f64]) {
+            for (idx, result) in results.iter().enumerate() {
+                assert_abs_diff_eq!(*result, expects[idx], epsilon = EPSILON5);
+            }
+        }
+
+        assert_all_f64(
+            &mesh.uvs.unwrap(),
+            &[0.8, 0.9, 0.5, 0.85714287, 0.5, 0.5, 0.57142854, 0.5],
         );
-        assert_eq!(
-            mesh.heights.unwrap(),
-            [100.0, 57.14286, 61.111115, 71.42857]
+        assert_all_f32(
+            &mesh.heights.unwrap(),
+            &[100.0, 57.14286, 61.111115, 71.42857],
         );
-        assert_eq!(mesh.indices.unwrap(), [0, 1, 2, 0, 2, 3]);
+        assert_eq!(&mesh.indices.unwrap(), &[0, 1, 2, 0, 2, 3]);
 
         let mesh = UpsampledTerrainGeometry::new(
             UpsamplableTerrainGeometry {
@@ -392,11 +399,11 @@ mod test {
             &TileRegion::NorthEast,
         );
 
-        assert_eq!(
-            mesh.uvs.unwrap(),
-            [0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 0.75, 0.5, 1.0, 0.5]
+        assert_all_f64(
+            &mesh.uvs.unwrap(),
+            &[0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 0.75, 0.5, 1.0, 0.5],
         );
-        assert_eq!(mesh.heights.unwrap(), [50.0, 50.0, 25.0, 62.5, 75.0]);
+        assert_all_f32(&mesh.heights.unwrap(), &[50.0, 50.0, 25.0, 62.5, 75.0]);
         assert_eq!(mesh.indices.unwrap(), [1, 2, 3, 1, 3, 4, 2, 0, 3]);
     }
 }

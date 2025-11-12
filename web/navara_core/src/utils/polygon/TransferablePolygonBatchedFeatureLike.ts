@@ -11,12 +11,12 @@ export class TransferablePolygonBatchedFeatureLike
   batch_indices: Uint32Array;
   crs: CRS;
   expected_winding_orders: Uint8Array;
-  holes: Float32Array;
+  holes: Float64Array;
   holes_boundaries: Uint32Array;
   holes_sizes: Uint32Array;
   holes_total_sizes: Uint32Array;
   length: number;
-  outer_ring: Float32Array;
+  outer_ring: Float64Array;
   outer_ring_sizes: Uint32Array;
 
   constructor(t: ReturnedTransferablePolygonBatchedFeature) {
@@ -52,13 +52,13 @@ export class TransferablePolygonBatchedFeatureLike
   transferExpectedWindingOrders(): Uint8Array {
     throw new Error();
   }
-  transferOuterRing(): Float32Array {
+  transferOuterRing(): Float64Array {
     throw new Error();
   }
   transferOuterRingSizes(): Uint32Array {
     throw new Error();
   }
-  transferHoles(): Float32Array {
+  transferHoles(): Float64Array {
     throw new Error();
   }
   transferHolesBoundaries(): Uint32Array {

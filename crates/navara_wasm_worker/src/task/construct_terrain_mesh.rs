@@ -1,4 +1,4 @@
-use navara_core::WGS84_32;
+use navara_core::WGS84_64;
 use navara_tile_component::{MartiniComponent, RasterDEMData, RasterTile};
 use navara_wasm_transferable::{TransferableMartini, TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::ReturnedConstructedTerrainMesh;
@@ -20,6 +20,6 @@ pub fn construct_terrain_mesh(
     tile.terrain_data
         .as_ref()
         .unwrap()
-        .construct_terrain_mesh(WGS84_32, &tile, bytes, 0., martini.get_mut())
+        .construct_terrain_mesh(WGS84_64, &tile, bytes, 0., martini.get_mut())
         .into()
 }

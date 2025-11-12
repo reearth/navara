@@ -6,13 +6,13 @@ export function toTransferablePolygonBatchedFeatureLike(
 ) {
   const t = new TransferablePolygonBatchedFeature(like.crs, like.length);
 
-  t.setOuterRing(like.outer_ring.length, (b: Float32Array) => {
+  t.setOuterRing(like.outer_ring.length, (b: Float64Array) => {
     b.set(like.outer_ring);
   });
   t.setOuterRingSizes(like.outer_ring_sizes.length, (b: Uint32Array) => {
     b.set(like.outer_ring_sizes);
   });
-  t.setHoles(like.holes.length, (b: Float32Array) => {
+  t.setHoles(like.holes.length, (b: Float64Array) => {
     b.set(like.holes);
   });
   t.setHolesSizes(like.holes_sizes.length, (b: Uint32Array) => {

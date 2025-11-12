@@ -56,9 +56,9 @@ pub fn uv_transform(child: TileXYZ, parent_z: usize) -> TileUvTransform {
     let rel_x = x_c as u32 % div; // Relative x position within parent
     let rel_y = div - 1 - (y_c as u32 % div); // Relative y position within parent (origin=bottom-left)
 
-    let s = 1.0 / div as f32;
+    let s = 1.0 / div as f64;
     TileUvTransform {
-        offset: Vec2::new(rel_x as f32 * s, rel_y as f32 * s),
+        offset: Vec2::new(rel_x as f64 * s, rel_y as f64 * s),
         scale: Vec2::splat(s),
     }
 }
@@ -131,7 +131,7 @@ pub fn tile_triangles_flat(
     segments: usize,
     height: FloatType,
 ) -> (Geometry, Vec3) {
-    let aabb = Aabb::from_extent_f32(*extent, 0., 0.);
+    let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
     let tile_center = aabb.center;
 
     // Generate geometry directly in local RTC space
@@ -173,12 +173,12 @@ pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
             };
             let xyz = lle.to_xyz(ellipsoid);
 
-            vertices.push(xyz.x.val() - center.x);
-            vertices.push(xyz.y.val() - center.y);
-            vertices.push(xyz.z.val() - center.z);
+            vertices.push((xyz.x.val() - center.x) as f32);
+            vertices.push((xyz.y.val() - center.y) as f32);
+            vertices.push((xyz.z.val() - center.z) as f32);
 
-            uvs.push(i as FloatType / segments as FloatType);
-            uvs.push(j as FloatType / segments as FloatType);
+            uvs.push(i as f32 / segments as f32);
+            uvs.push(j as f32 / segments as f32);
 
             if i != segments && j != segments {
                 let a = i * (segments + 1) + j;
