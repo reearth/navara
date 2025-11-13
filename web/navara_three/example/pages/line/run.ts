@@ -22,6 +22,7 @@ const gArcLinesDef = [
     opacity: 1,
     srcColor: 0xffffff,
     tgtColor: Math.floor(Math.random() * 0xffffff),
+    gradation: 0,
     geometry: [
       { lng: 139.75711454748298, lat: 35.67564356091717 },
       { lng: 126.44, lat: 37.4633 }, // ICN
@@ -310,6 +311,8 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     tgtColor: intToHexColor(gArcLinesDef[0].tgtColor || 0xffffff),
     height: gArcLinesDef[0].height || 0,
     arcHeightScale: gArcLinesDef[0].arcHeightScale || 0.3,
+    gradation: gArcLinesDef[0].gradation || 0,
+    gradAnim: false,
   };
 
   const updateParams = (index: number) => {
@@ -323,6 +326,7 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
       params.tgtColor = intToHexColor(selectedArcLine.tgtColor || 0xffffff);
       params.height = selectedArcLine.height || 0;
       params.arcHeightScale = selectedArcLine.arcHeightScale || 0.3;
+      params.gradation = selectedArcLine.gradation || 0;
     }
   };
 
@@ -343,6 +347,7 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
       );
       gArcLinesDef[selectedIndex].height = params.height;
       gArcLinesDef[selectedIndex].arcHeightScale = params.arcHeightScale;
+      gArcLinesDef[selectedIndex].gradation = params.gradation;
       arcLineLayer.update({ arcLines: gArcLinesDef });
     }
   };
@@ -403,6 +408,29 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     .on("change", () => {
       onChange();
     });
+
+  folder
+    .addBinding(params, "gradation", { min: 0, max: 1, step: 0.01 })
+    .on("change", () => {
+      onChange();
+    });
+
+  folder.addBinding(params, "gradAnim");
+
+  const animateFunc = () => {
+    if (params.gradAnim) {
+      gArcLinesDef.forEach((arcLineDef) => {
+        arcLineDef.gradation = (arcLineDef.gradation || 0) + 0.005;
+        if (arcLineDef.gradation > 1) {
+          arcLineDef.gradation = 0;
+        }
+      });
+
+      arcLineLayer.update({ arcLines: gArcLinesDef });
+    }
+    requestAnimationFrame(animateFunc);
+  };
+  animateFunc();
 };
 
 const addSmoothLines = (view: ThreeView, pane: Pane) => {
