@@ -71,8 +71,7 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
 
 export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
-  implements FeatureMesh, PickableMesh
-{
+  implements FeatureMesh, PickableMesh {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
 
@@ -561,35 +560,27 @@ export class ModelMesh
           "#include <common>",
           `#include <common>
           uniform float uAddHeight;
-          vec3 geodetic_normal(vec3 position) {
-            // vec3 globe_raddi = vec3(6378137.0, 6378137.0, 6356752.314);
-            // vec3 globe_raddi_squared = globe_raddi * globe_raddi;
-            vec3 one_over_globe_raddi_squared = vec3(2.458172257647332e-14, 2.458172257647332e-14, 2.474739101760602e-14);
-
-            vec3 normal = position * one_over_globe_raddi_squared;
-            return normalize(normal);
-          }`
+         `
         ).source;
 
         shader.vertexShader = createReplacer(shader.vertexShader).replace(
           "#include <project_vertex>",
-            `
-            vec4 mvPosition = vec4( transformed, 1.0 );
-
-            vec4 worldPosition = modelMatrix * mvPosition;
-            // vec3 normal = geodetic_normal((worldPosition/worldPosition.w).xyz);
+          createReplacer(ShaderChunk.project_vertex).replace(
+            "vec4 mvPosition = vec4( transformed, 1.0 );",
+            `vec4 mvPosition = vec4( transformed, 1.0 );
+            // point cloud geodetic normal in world space - precomputed
             vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
-            worldPosition.xyz += normal * uAddHeight;
-
-            // mvPosition = viewMatrix * worldPosition;
-            gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            vec4 mvNormal = viewMatrix * vec4(normal, 0.0);`
+          ).replace(
+            "gl_Position = projectionMatrix * mvPosition;",
+            `mvPosition += mvNormal * uAddHeight;
+            gl_Position = projectionMatrix * mvPosition;
             `
+          ).source
         ).source;
-        
-         shader.uniforms.uAddHeight = material.userData.uAddHeight;
-         console.log(shader.vertexShader);
-      };
 
+        shader.uniforms.uAddHeight = material.userData.uAddHeight;
+      };
 
       this.setMaterial(material, object);
     });
