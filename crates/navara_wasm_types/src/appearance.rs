@@ -1,5 +1,3 @@
-use js_sys::Array;
-use navara_math::Vec3;
 use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;

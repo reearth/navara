@@ -9,7 +9,6 @@ import {
   type MaterialLayerDescription,
 } from "../../helpers/panel";
 
-
 const gGeoLayersDef: MaterialLayerDescription[] = [
   {
     type: "cesium3dtiles",

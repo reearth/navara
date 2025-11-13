@@ -449,7 +449,7 @@ impl ModelMaterial {
 pub struct ModelInternalMaterial {
     pub point_cloud: bool,
     pub draco_compressed: bool,
-    pub point_cloud_geodetic_normal: Vec3
+    pub point_cloud_geodetic_normal: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
