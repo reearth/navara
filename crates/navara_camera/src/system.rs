@@ -603,6 +603,19 @@ fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellips
         origin: camera_pos,
         direction: camera_forward,
     };
+
+    if let Some(distance) = ray_ellipsoid_intersect(&ray, ellipsoid) {
+        return distance;
+    }
+
+    // If we can't find the intersection point with the camera's forward direction,
+    // it means the camera's forward vector is out of ellipsoid surface.
+    // In that case, we can simply use the camera's position as the direction as workaround.
+    let ray = Ray {
+        origin: camera_pos,
+        direction: -camera_pos.normalize(),
+    };
+
     ray_ellipsoid_intersect(&ray, ellipsoid).unwrap_or(0.)
 }
 
