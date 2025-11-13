@@ -52,6 +52,7 @@ pub struct DataRequester {
 pub enum DataRequesterExtension {
     #[default]
     Png,
+    WebP,
     Json,
     B3dm,
     Pnts,
@@ -64,6 +65,7 @@ impl DataRequesterExtension {
     pub fn from_str(v: &str) -> Self {
         match v {
             "png" => Self::Png,
+            "webp" => Self::WebP,
             "json" => Self::Json,
             "b3dm" => Self::B3dm,
             "pnts" => Self::Pnts,
@@ -77,6 +79,7 @@ impl DataRequesterExtension {
     pub fn to_string(&self) -> String {
         match self {
             Self::Png => "png".to_string(),
+            Self::WebP => "webp".to_string(),
             Self::Json => "json".to_string(),
             Self::B3dm => "b3dm".to_string(),
             Self::Pnts => "pnts".to_string(),
@@ -92,6 +95,7 @@ impl DataRequesterExtension {
             v if v.ends_with("b3dm") => Self::B3dm,
             v if v.ends_with("pnts") => Self::Pnts,
             v if v.ends_with("png") => Self::Png,
+            v if v.ends_with("webp") => Self::WebP,
             v => unimplemented!("The extension of {} isn't supported", v),
         }
     }

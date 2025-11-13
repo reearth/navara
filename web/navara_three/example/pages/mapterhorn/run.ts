@@ -1,0 +1,87 @@
+import ThreeView, {
+  TERRARIUM_ELEVATION_DECODER,
+  ToneMappingMode,
+} from "@navara/three";
+import { Pane } from "tweakpane";
+
+import { showAttributions } from "../../helpers/attributions";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
+import { addDateControl } from "../../helpers/control";
+
+export const run = async (view: ThreeView) => {
+  await view.init();
+
+  view.toneMappingExposure = 3;
+  view.addLayer({
+    type: "effect",
+    toneMapping: {
+      mode: ToneMappingMode.NEUTRAL,
+    },
+  });
+
+  view.addLayer({
+    type: "effect",
+    smaa: {},
+  });
+
+  view.addLayer({
+    type: "light",
+    sun: {
+      intensity: 1,
+    },
+  });
+  view.addLayer({
+    type: "mesh",
+    sky: {},
+  });
+
+  view.addLayer({
+    type: "light",
+    ambient: {
+      intensity: 0.1,
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TILE_DATASETS.openstreetmap.url,
+    },
+    raster_tile: {
+      max_zoom: 23,
+    },
+  });
+
+  view.addLayer({
+    type: "terrain",
+    data: {
+      url: TERRAIN_DATASETS.mapterhorn.url,
+    },
+    raster_terrain: {
+      max_zoom: 12,
+      min_zoom: 5,
+      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
+      cast_shadow: true,
+      receive_shadow: true,
+      tile_size: 512,
+    },
+  });
+
+  view.setCamera({
+    lng: 173.8798307478,
+    lat: -39.4173953796,
+    height: 5562.8,
+    heading: 48.2357314422,
+    pitch: -17.7300470005,
+    roll: 360.0,
+  });
+
+  const pane = new Pane();
+
+  const date = new Date();
+  date.setUTCHours(18);
+
+  addDateControl(view, pane, date);
+
+  showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+};

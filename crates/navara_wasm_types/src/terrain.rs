@@ -49,6 +49,10 @@ impl ElevationDecoder {
     pub fn mapbox() -> Self {
         navara_core::MAPBOX_ELEVATION_DECODER.into()
     }
+
+    pub fn terrarium() -> Self {
+        navara_core::TERRARIUM_ELEVATION_DECODER.into()
+    }
 }
 
 impl From<ElevationDecoder> for navara_core::ElevationDecoder {

@@ -4,3 +4,4 @@ import { ElevationDecoder } from "@navara/engine";
 // If we can use top-level-await, we don't need to do it.
 export const JAPAN_GSI_ELEVATION_DECODER = () => ElevationDecoder.japanGSI();
 export const MAPBOX_ELEVATION_DECODER = () => ElevationDecoder.mapbox();
+export const TERRARIUM_ELEVATION_DECODER = () => ElevationDecoder.terrarium();
