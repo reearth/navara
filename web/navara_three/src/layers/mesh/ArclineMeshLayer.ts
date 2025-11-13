@@ -48,6 +48,7 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
           height: cfg.height ?? DefaultArcLineConfig.height,
           arcHeightScale:
             cfg.arcHeightScale ?? DefaultArcLineConfig.arcHeightScale,
+          gradation: cfg.gradation ?? DefaultArcLineConfig.gradation,
           geometry: cfg.geometry ?? DefaultArcLineConfig.geometry,
         });
       }
