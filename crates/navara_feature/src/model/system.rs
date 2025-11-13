@@ -37,7 +37,7 @@ pub fn transfer_mesh(
             &GlobalBatchIds,
             Option<&mut FeatureId>,
             &ModelGeometry,
-            &ModelMaterial,
+            &mut ModelMaterial,
             // For GLB
             Option<&ModelBin>,
             Option<&Transform>,
@@ -56,7 +56,7 @@ pub fn transfer_mesh(
         global_batch_ids,
         mut feature_id,
         geometry,
-        material,
+        mut material,
         bin,
         adjustment_transform,
         deleted_marker,
@@ -114,6 +114,18 @@ pub fn transfer_mesh(
             }
             None => transform,
         };
+
+        if material
+            .internal
+            .as_ref()
+            .is_some_and(|internal| internal.point_cloud)
+        {
+            let geodetic_normal = WGS84_64.geodetic_surface_normal_from_vec3(
+                transform.transform_point(Vec3::ZERO).into()
+            ).into();
+
+            material.internal.as_mut().unwrap().point_cloud_geodetic_normal = Vec3::normalize(geodetic_normal);            
+        }
 
         let entity = commands.spawn((
             ModelMarker,

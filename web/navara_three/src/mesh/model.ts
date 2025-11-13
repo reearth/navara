@@ -58,6 +58,7 @@ import {
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
+import { Vec3 } from "navara_wasm_worker";
 
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
@@ -536,6 +537,8 @@ export class ModelMesh
       const material = object.material;
       material.userData.uAddHeight = { value: meshMaterial.height ?? 0.0 };
 
+      const geodetic_normal: Vec3 = meshMaterial.__internal__?.point_cloud_geodetic_normal ?? new Vec3(0, 0, 0);
+
       material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
@@ -574,7 +577,8 @@ export class ModelMesh
             vec4 mvPosition = vec4( transformed, 1.0 );
 
             vec4 worldPosition = modelMatrix * mvPosition;
-            vec3 normal = geodetic_normal((worldPosition/worldPosition.w).xyz);
+            // vec3 normal = geodetic_normal((worldPosition/worldPosition.w).xyz);
+            vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
             worldPosition.xyz += normal * uAddHeight;
 
             // mvPosition = viewMatrix * worldPosition;
@@ -583,7 +587,9 @@ export class ModelMesh
         ).source;
         
          shader.uniforms.uAddHeight = material.userData.uAddHeight;
+         console.log(shader.vertexShader);
       };
+
 
       this.setMaterial(material, object);
     });
