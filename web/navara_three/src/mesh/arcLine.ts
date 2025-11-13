@@ -33,6 +33,7 @@ export type ArcLineConfig = {
   tgtColor: number; // Target color of the arc line
   height: number; // height from globe surface
   arcHeightScale: number; // Scale factor for arc height relative to distance between endpoints
+  gradation: number; // Gradation factor for color interpolation along the arc
   geometry: LngLat[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
 };
 
@@ -45,6 +46,7 @@ export const DefaultArcLineConfig: ArcLineConfig = {
   tgtColor: 0xffffff,
   height: 0,
   arcHeightScale: 0.3,
+  gradation: 0.5,
   geometry: [],
 };
 
@@ -99,8 +101,8 @@ export class ArcLine extends Object3D {
     }
 
     const instanceSourceTarget = new Float32Array(numInstances * 4);
-    const instanceParams = new Float32Array(numInstances * 4);
-    const instanceSegments = new Float32Array(numInstances);
+    const instanceParams1 = new Float32Array(numInstances * 4);
+    const instanceParams2 = new Float32Array(numInstances * 2);
     const instanceSrcColor = new Float32Array(numInstances * 3);
     const instanceTgtColor = new Float32Array(numInstances * 3);
 
@@ -109,12 +111,12 @@ export class ArcLine extends Object3D {
       new InstancedBufferAttribute(instanceSourceTarget, 4),
     );
     geo.setAttribute(
-      "aInstanceParams",
-      new InstancedBufferAttribute(instanceParams, 4),
+      "aInstanceParams1",
+      new InstancedBufferAttribute(instanceParams1, 4),
     );
     geo.setAttribute(
-      "aInstanceSegments",
-      new InstancedBufferAttribute(instanceSegments, 1),
+      "aInstanceParams2",
+      new InstancedBufferAttribute(instanceParams2, 2),
     );
     geo.setAttribute(
       "aInstanceSrcColor",
@@ -197,8 +199,8 @@ export class ArcLine extends Object3D {
     if (numInstances === 0) return;
 
     const instanceSourceTarget = geo.getAttribute("aInstanceSourceTarget");
-    const instanceParams = geo.getAttribute("aInstanceParams");
-    const instanceSegments = geo.getAttribute("aInstanceSegments");
+    const instanceParams1 = geo.getAttribute("aInstanceParams1");
+    const instanceParams2 = geo.getAttribute("aInstanceParams2");
     const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
     const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
 
@@ -233,7 +235,7 @@ export class ArcLine extends Object3D {
       );
 
       // Pack params: height, arcHeight, thickness, opacity
-      instanceParams.setXYZW(
+      instanceParams1.setXYZW(
         i,
         config.height,
         dist * config.arcHeightScale,
@@ -242,7 +244,7 @@ export class ArcLine extends Object3D {
       );
 
       // Set segments
-      instanceSegments.setX(i, segments);
+      instanceParams2.setXY(i, segments, config.gradation);
 
       const srcColor = new Color(config.srcColor);
       const tgtColor = new Color(config.tgtColor);
@@ -251,8 +253,8 @@ export class ArcLine extends Object3D {
     }
 
     instanceSourceTarget.needsUpdate = true;
-    instanceParams.needsUpdate = true;
-    instanceSegments.needsUpdate = true;
+    instanceParams1.needsUpdate = true;
+    instanceParams2.needsUpdate = true;
     instanceSrcColor.needsUpdate = true;
     instanceTgtColor.needsUpdate = true;
   }
@@ -452,6 +454,13 @@ export class ArcLine extends Object3D {
           cfg.arcHeightScale !== this._config[i].arcHeightScale
         ) {
           this._config[i].arcHeightScale = cfg.arcHeightScale;
+          hasChanges = true;
+        }
+        if (
+          cfg.gradation !== undefined &&
+          cfg.gradation !== this._config[i].gradation
+        ) {
+          this._config[i].gradation = cfg.gradation;
           hasChanges = true;
         }
 
