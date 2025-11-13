@@ -1,1 +1,1 @@
-export const IMAGE_EXTENSIONS = ["png"];
+export const IMAGE_EXTENSIONS = ["png", "webp"];

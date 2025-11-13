@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority};
@@ -42,9 +44,10 @@ pub(crate) fn request_terrain_data(
             TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
             TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
         };
+        let extension = DataRequesterExtension::from_url(&url::Url::from_str(&url).unwrap());
         let entity = commands.spawn((
             TerrainDataRequesterMarker(handle),
-            DataRequester::from_store(url, buf, DataRequesterExtension::Png),
+            DataRequester::from_store(url, buf, extension),
             OrderByDistance {
                 sse: tile.sse,
                 distance: tile.distance_from_camera,
