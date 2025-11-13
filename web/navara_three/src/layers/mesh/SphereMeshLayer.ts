@@ -1,4 +1,9 @@
-import { Mesh, MeshLambertMaterial, SphereGeometry } from "three";
+import {
+  Mesh,
+  MeshLambertMaterial,
+  SphereGeometry,
+  type Object3DEventMap,
+} from "three";
 
 import {
   MeshLayerDeclaration,
@@ -6,6 +11,9 @@ import {
   type ViewContext,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+
+type SphereMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
   sphere?: {
@@ -33,7 +41,7 @@ export type SphereMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class SphereMeshLayer extends MeshLayerDeclaration<
   SphereMeshLayerConfig,
   SphereMeshLayerUpdate,
-  Mesh<SphereGeometry, MeshLambertMaterial>
+  Mesh<SphereGeometry, MeshLambertMaterial, SphereMeshEventMap>
 > {
   private config: SphereMeshLayerConfig;
 
@@ -69,7 +77,11 @@ export class SphereMeshLayer extends MeshLayerDeclaration<
       transparent: cfg.transparent ?? false,
     });
 
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Mesh<
+      SphereGeometry,
+      MeshLambertMaterial,
+      SphereMeshEventMap
+    >(geometry, material);
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;

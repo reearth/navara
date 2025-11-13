@@ -1,4 +1,9 @@
-import { CylinderGeometry, Mesh, MeshLambertMaterial } from "three";
+import {
+  CylinderGeometry,
+  Mesh,
+  MeshLambertMaterial,
+  type Object3DEventMap,
+} from "three";
 
 import {
   MeshLayerDeclaration,
@@ -6,6 +11,9 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+
+type CylinderMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
   cylinder?: {
@@ -34,7 +42,7 @@ export type CylinderMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class CylinderMeshLayer extends MeshLayerDeclaration<
   CylinderMeshLayerConfig,
   CylinderMeshLayerUpdate,
-  Mesh<CylinderGeometry, MeshLambertMaterial>
+  Mesh<CylinderGeometry, MeshLambertMaterial, CylinderMeshEventMap>
 > {
   private config: CylinderMeshLayerConfig;
 
@@ -69,7 +77,11 @@ export class CylinderMeshLayer extends MeshLayerDeclaration<
       transparent: cfg.transparent ?? false,
     });
 
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Mesh<
+      CylinderGeometry,
+      MeshLambertMaterial,
+      CylinderMeshEventMap
+    >(geometry, material);
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;

@@ -1,6 +1,7 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
-import { Object3D } from "three";
+import { Object3D, type Material } from "three";
 
+import { setupMeshEventHandlers as setupMeshEventHandlersUtil } from "../mesh/meshEventHandlers";
 import type { Scenes } from "../scene";
 
 import {
@@ -17,12 +18,12 @@ export type MeshLayerConfig = {
   scale?: XYZ;
   rotation?: XYZ;
   effects?: string[];
-  ignoreDepth?: boolean;
+  selectiveDepthTest?: boolean;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation" | "effects"
+  "position" | "scale" | "rotation" | "effects" | "selectiveDepthTest"
 > &
   LayerDeclarationConfigUpdate;
 
@@ -55,7 +56,7 @@ export abstract class MeshLayerDeclaration<
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
   private effects?: string[];
-  private ignoreDepth?: boolean;
+  private selectiveDepthTest?: boolean;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
@@ -63,7 +64,7 @@ export abstract class MeshLayerDeclaration<
     this.scale = config.scale;
     this.rotation = config.rotation;
     this.effects = config.effects;
-    this.ignoreDepth = config.ignoreDepth;
+    this.selectiveDepthTest = config.selectiveDepthTest;
   }
 
   protected getPassKey(): PassKey {
@@ -107,15 +108,60 @@ export abstract class MeshLayerDeclaration<
 
     this.onPassKeyChange();
 
-    // Register layer effects with ignoreDepth setting
+    // Register layer effects with selectiveDepthTest setting
     if (this.effects && this.effects.length > 0) {
-      this.view.registerLayerEffects(this.id, this.effects, this.ignoreDepth);
+      this.view.registerLayerEffects(
+        this.id,
+        this.effects,
+        this.selectiveDepthTest,
+      );
     }
 
-    // Link to selective effects
-    if (this.effects && this.view.selectiveRegistry && this.raw) {
-      for (const effectId of this.effects) {
-        this.view.selectiveRegistry.link(effectId, this.raw, this.id);
+    // Setup mesh event handlers for all mesh types
+    this.setupMeshEventHandlers();
+
+    // Setup CSM event handlers if layer emits material lifecycle events
+    this.setupCSMEventHandlers();
+  }
+
+  /**
+   * Setup event handlers for primitive mesh objects.
+   * This enables emissive and layerEffects control via events instead of direct manipulation.
+   */
+  protected setupMeshEventHandlers() {
+    if (!this.raw) return;
+    setupMeshEventHandlersUtil(this.raw, this.view, this.id);
+  }
+
+  /**
+   * Setup CSM event handlers for material lifecycle management.
+   * This method is called automatically in onCreate() and listens for
+   * materialCreated and materialDisposed events from child layers.
+   */
+  private setupCSMEventHandlers() {
+    // Type-safe check if the layer has CSM-related events
+    const hasCSMEvents =
+      "on" in this && typeof this.on === "function" && "emit" in this;
+
+    if (hasCSMEvents) {
+      // Listen for materialCreated event
+      try {
+        // @ts-expect-error - Dynamic event listening for CSM support
+        this.on("materialCreated", (material: Material) => {
+          this.view.emit("_csmMounted", material);
+        });
+      } catch {
+        // Layer doesn't emit materialCreated, skip
+      }
+
+      // Listen for materialDisposed event
+      try {
+        // @ts-expect-error - Dynamic event listening for CSM support
+        this.on("materialDisposed", (material: Material) => {
+          this.view.emit("_csmUnmounted", material);
+        });
+      } catch {
+        // Layer doesn't emit materialDisposed, skip
       }
     }
   }
@@ -160,38 +206,26 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // Handle effects update
+    // Handle effects update - delegate to ViewContext for proper cache synchronization
     if (updates.effects !== undefined) {
-      const prevEffects = this.effects || [];
-      const newEffects = updates.effects || [];
+      // Update local effects cache (for backward compatibility)
+      this.effects = updates.effects.length > 0 ? updates.effects : undefined;
 
-      // Unlink effects that are no longer needed
-      if (this.view.selectiveRegistry && this.raw) {
-        for (const effectId of prevEffects) {
-          if (!newEffects.includes(effectId)) {
-            this.view.selectiveRegistry.unlink(effectId, this.raw);
-          }
-        }
-      }
+      // Delegate to ViewContext to handle all effect updates, including:
+      // - layerEffects cache update
+      // - SelectiveEffectRegistry linking/unlinking
+      // - Event dispatching to mesh objects
+      this.view.updateLayerEffects(this.id, updates.effects);
+    }
 
-      // Update effects (normalize empty array to undefined)
-      this.effects = newEffects.length > 0 ? updates.effects : undefined;
-
-      // Update ViewContext registry
-      if (newEffects.length > 0) {
-        this.view.registerLayerEffects(this.id, newEffects, this.ignoreDepth);
-      } else {
-        this.view.unregisterLayerEffects(this.id);
-      }
-
-      // Link new effects (only new ones)
-      if (this.view.selectiveRegistry && this.raw) {
-        for (const effectId of newEffects) {
-          if (!prevEffects.includes(effectId)) {
-            this.view.selectiveRegistry.link(effectId, this.raw, this.id);
-          }
-        }
-      }
+    // Handle selectiveDepthTest update - always delegate to ViewContext for consistency
+    if (updates.selectiveDepthTest !== undefined) {
+      this.selectiveDepthTest = updates.selectiveDepthTest;
+      // Use ViewContext API to ensure all layers (including MeshLayerDeclaration) follow same pipeline:
+      // 1. SelectiveEffectRegistry settings are updated
+      // 2. Existing clones are moved between sceneDepthEnabled/sceneDepthDisabled
+      // This ensures Cube/Sphere behave consistently with Layer types
+      this.view.setLayerSelectiveDepthTest(this.id, this.selectiveDepthTest);
     }
 
     this.onPassKeyChange();
@@ -213,6 +247,112 @@ export abstract class MeshLayerDeclaration<
     }
 
     super.onDestroy();
+  }
+
+  // ==========================================
+  // Effect Management Methods
+  // ==========================================
+  // These methods now use ViewContext as the single source of truth,
+  // ensuring proper synchronization with SelectiveEffectRegistry
+
+  /**
+   * Enable a specific effect for this layer
+   * @param effectId - The ID of the effect to enable
+   */
+  enableEffect(effectId: string): void {
+    const current = this.view.getLayerEffects(this.id) ?? [];
+    if (!current.includes(effectId)) {
+      this.view.updateLayerEffects(this.id, [...current, effectId]);
+    }
+  }
+
+  /**
+   * Disable a specific effect for this layer
+   * @param effectId - The ID of the effect to disable
+   */
+  disableEffect(effectId: string): void {
+    const current = this.view.getLayerEffects(this.id) ?? [];
+    const updated = current.filter((id) => id !== effectId);
+    this.view.updateLayerEffects(this.id, updated);
+  }
+
+  /**
+   * Toggle a specific effect for this layer
+   * @param effectId - The ID of the effect to toggle
+   * @param enabled - Optional explicit state. If not provided, toggles current state
+   */
+  toggleEffect(effectId: string, enabled?: boolean): void {
+    const shouldEnable = enabled ?? !this.hasEffect(effectId);
+    if (shouldEnable) {
+      this.enableEffect(effectId);
+    } else {
+      this.disableEffect(effectId);
+    }
+  }
+
+  /**
+   * Check if this layer has a specific effect enabled
+   * @param effectId - The ID of the effect to check
+   * @returns true if the effect is enabled
+   */
+  hasEffect(effectId: string): boolean {
+    const effects = this.view.getLayerEffects(this.id) ?? [];
+    return effects.includes(effectId);
+  }
+
+  /**
+   * Get all currently active effects for this layer
+   * @returns Array of effect IDs
+   */
+  getEffects(): string[] {
+    return this.view.getLayerEffects(this.id) ?? [];
+  }
+
+  /**
+   * Set all effects for this layer, replacing any existing effects
+   * @param effectIds - Array of effect IDs to set
+   */
+  setEffects(effectIds: string[]): void {
+    this.view.updateLayerEffects(this.id, effectIds);
+  }
+
+  /**
+   * Clear all effects from this layer
+   */
+  clearEffects(): void {
+    this.view.updateLayerEffects(this.id, []);
+  }
+
+  /**
+   * Set selective depth test for this layer
+   * @param enabled - Whether to enable depth test for selective effects
+   */
+  setSelectiveDepthTest(enabled: boolean): void {
+    this.view.setLayerSelectiveDepthTest(this.id, enabled);
+  }
+
+  /**
+   * Get the current selective depth test setting for this layer
+   * @returns The current selective depth test setting
+   */
+  getSelectiveDepthTest(): boolean {
+    return this.view.getLayerSelectiveDepthTest(this.id);
+  }
+
+  /**
+   * Set emissive color for this layer
+   * @param color - The emissive color as a hex number (e.g., 0xffffff), or undefined to use material color
+   */
+  setEmissiveColor(color: number | undefined): void {
+    this.view.setLayerEmissiveColor(this.id, color);
+  }
+
+  /**
+   * Get the current emissive color for this layer
+   * @returns The current emissive color, or undefined if using material color
+   */
+  getEmissiveColor(): number | undefined {
+    return this.view.getLayerEmissiveColor(this.id);
   }
 
   update?(time: number): void;

@@ -11,6 +11,7 @@ import {
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
+import type { ViewContext } from "../../core";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
 import {
@@ -30,6 +31,8 @@ export async function renderModel(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   viewEvents: EventHandler<ViewEvents>,
+  viewContext?: ViewContext,
+  _layerId?: string,
 ) {
   const loader = initializeGltfLoader();
   const dracoLoader = initializeDracoLoader();
@@ -92,7 +95,15 @@ export async function renderModel(
     return;
   }
 
-  const scene = new ModelMesh(rawScene, m, uniforms, buf, viewEvents);
+  const scene = new ModelMesh(
+    rawScene,
+    m,
+    uniforms,
+    buf,
+    viewEvents,
+    viewContext,
+  );
+
   return scene;
 }
 
@@ -100,6 +111,8 @@ export function processModelChanged(
   obj: ModelMesh,
   m: NavaraModelMesh,
   active: boolean,
+  _viewContext?: ViewContext,
+  _layerId?: string,
 ) {
   obj._update(m.material, active);
 }

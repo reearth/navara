@@ -47,4 +47,41 @@ export class LayerHandle<
   get sort(): number | undefined {
     return this.layer.sort;
   }
+
+  /**
+   * Set selective depth test for this layer
+   * @param enabled - Whether to enable depth test for selective effects
+   */
+  setSelectiveDepthTest(enabled: boolean): void {
+    // Check if layer is a MeshLayerDeclaration (has view context)
+    if ("view" in this.layer && "id" in this.layer) {
+      const layer = this.layer as unknown as {
+        view: {
+          setLayerSelectiveDepthTest: (id: string, enabled: boolean) => void;
+        };
+        id: string;
+      };
+      layer.view.setLayerSelectiveDepthTest(layer.id, enabled);
+    }
+  }
+
+  /**
+   * Set emissive color for this layer
+   * @param color - The emissive color as a hex number (e.g., 0xffffff)
+   */
+  setEmissiveColor(color: number | undefined): void {
+    // Check if layer has view context
+    if ("view" in this.layer && "id" in this.layer) {
+      const layer = this.layer as unknown as {
+        view: {
+          setLayerEmissiveColor: (
+            id: string,
+            color: number | undefined,
+          ) => void;
+        };
+        id: string;
+      };
+      layer.view.setLayerEmissiveColor(layer.id, color);
+    }
+  }
 }

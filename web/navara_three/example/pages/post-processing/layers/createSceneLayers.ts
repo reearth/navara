@@ -4,10 +4,11 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   type BoxMeshLayer,
-  type Layer,
   type LayerHandle,
   type SphereMeshLayer,
+  Layer,
 } from "@navara/three";
+import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 
 import {
@@ -17,11 +18,40 @@ import {
   TILES_3D_DATASETS,
 } from "../../../helpers/constants";
 
+type GeoJsonModelState = Record<string, unknown>;
+
+export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
+  layer: Layer;
+  updateModel: (overrides: Partial<TState>) => void;
+  setSelectiveDepthTest: (value: boolean) => void;
+};
+
+export type DrumModelState = {
+  show: boolean;
+  size: number;
+  height: number;
+  clamp_to_ground: boolean;
+  url: string;
+  should_rotate_in_default: boolean;
+  color?: number;
+};
+
+export type SoldierModelState = {
+  show: boolean;
+  size: number;
+  height: number;
+  clamp_to_ground: boolean;
+  url: string;
+  animation_active_clip?: string;
+  animation_speed?: number;
+  color?: number;
+};
+
 export type SceneLayers = {
   cubeLayer: LayerHandle<BoxMeshLayer>;
   sphereLayer: LayerHandle<SphereMeshLayer>;
-  drumLayer: Layer;
-  soldierLayer: Layer;
+  drumLayer: GeoJsonModelLayer<DrumModelState>;
+  soldierLayer: GeoJsonModelLayer<SoldierModelState>;
   chiyodaLayer: Layer;
   chuoLayer: Layer;
 };
@@ -54,6 +84,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       y: cubePosition.y,
       z: cubePosition.z,
     },
+    selectiveDepthTest: true, // Explicitly set initial value for consistent behavior
   });
 
   const sphereLayer = view.addLayer<SphereMeshLayer>({
@@ -72,11 +103,12 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       y: spherePosition.y,
       z: spherePosition.z,
     },
+    selectiveDepthTest: true, // Explicitly set initial value for consistent behavior
   });
 
-  const drumLayer = view.addLayer({
-    type: "geojson",
-    data: {
+  const drumLayer = createGeoJsonModelLayer<DrumModelState>({
+    view,
+    feature: {
       type: "FeatureCollection",
       features: [
         {
@@ -97,12 +129,12 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       should_rotate_in_default: true,
     },
-    ignoreDepth: true,
+    selectiveDepthTest: false,
   });
 
-  const soldierLayer = view.addLayer({
-    type: "geojson",
-    data: {
+  const soldierLayer = createGeoJsonModelLayer<SoldierModelState>({
+    view,
+    feature: {
       type: "FeatureCollection",
       features: [
         {
@@ -124,7 +156,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       animation_active_clip: "Walk",
       animation_speed: 1.0,
     },
-    ignoreDepth: true,
+    selectiveDepthTest: false,
   });
 
   view.addLayer({
@@ -162,6 +194,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       cast_shadow: true,
       receive_shadow: true,
     },
+    selectiveDepthTest: true,
   });
 
   const chuoLayer = view.addLayer({
@@ -177,6 +210,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       cast_shadow: true,
       receive_shadow: true,
     },
+    selectiveDepthTest: true,
   });
 
   return {
@@ -186,5 +220,44 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     soldierLayer,
     chiyodaLayer,
     chuoLayer,
+  };
+};
+
+type CreateGeoJsonModelLayerOptions<TState extends GeoJsonModelState> = {
+  view: ThreeView;
+  feature: FeatureCollection;
+  model: TState;
+  selectiveDepthTest: boolean;
+};
+
+const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
+  view,
+  feature,
+  model,
+  selectiveDepthTest,
+}: CreateGeoJsonModelLayerOptions<TState>): GeoJsonModelLayer<TState> => {
+  const currentModelState = { ...model };
+
+  const layer = view.addLayer({
+    type: "geojson",
+    data: feature,
+    model: currentModelState,
+    selectiveDepthTest,
+  });
+
+  const updateModel = (overrides: Partial<TState>) => {
+    Object.assign(currentModelState, overrides);
+    layer.update({
+      type: "geojson",
+      data: feature,
+      model: { ...currentModelState },
+    });
+  };
+
+  return {
+    layer,
+    updateModel,
+    setSelectiveDepthTest: (value: boolean) =>
+      layer.setSelectiveDepthTest?.(value),
   };
 };

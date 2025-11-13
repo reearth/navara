@@ -1,23 +1,18 @@
 import type { EventHandler, Globe } from "@navara/core";
-import {
-  Mesh,
-  MeshPhysicalMaterial,
-  MeshStandardMaterial,
-  Object3D,
-  type Material,
-  type PerspectiveCamera,
-} from "three";
+import { Object3D, type Material, type PerspectiveCamera } from "three";
 
 import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
 import { Layer } from "../layer";
 import type { LayersManager } from "../layersManager";
+import type { CustomObject3DEvent } from "../object3DEvent";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
 import { LayerHandle } from "./LayerHandle";
 import { MeshLayerDeclaration } from "./MeshLayerDeclaration";
+import { PostEffectManager } from "./PostEffectManager";
 import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 export type ViewDebugOptions = {
@@ -35,8 +30,8 @@ export class ViewContext {
   public selectiveRegistry?: SelectiveEffectRegistry;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
-  private layerEffects = new Map<string, string[]>();
-  private layerEmissiveIntensity = new Map<string, number>();
+
+  private readonly postEffects: PostEffectManager;
 
   constructor(
     public scenes: Scenes,
@@ -52,6 +47,14 @@ export class ViewContext {
     this.eventHandler = eventHandler;
     this.selectiveRegistry = selectiveRegistry;
     this.debugOptions = debugOptions ?? {};
+
+    this.postEffects = new PostEffectManager({
+      layersManager,
+      selectiveRegistry: this.selectiveRegistry,
+      dispatchEvent: this.dispatchCustomEvent.bind(this),
+      getLayerHandleObject: this.getLayerHandleObject.bind(this),
+      requestRender: this.requestRender.bind(this),
+    });
   }
 
   setGlobe(globe: Globe) {
@@ -69,42 +72,51 @@ export class ViewContext {
   registerLayerEffects(
     layerId: string,
     effects: string[],
-    ignoreDepth?: boolean,
+    selectiveDepthTest?: boolean,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
-    this.layerEffects.set(layerId, effects);
-
-    // Register emissive intensity if provided
-    if (emissiveIntensity !== undefined) {
-      this.layerEmissiveIntensity.set(layerId, emissiveIntensity);
-    }
-
-    // Register depth setting if provided
-    if (ignoreDepth !== undefined && this.selectiveRegistry) {
-      this.selectiveRegistry.registerLayerDepth(layerId, ignoreDepth);
-    }
-
-    if (this.selectiveRegistry) {
-      this.selectiveRegistry.registerLayerKeepClones(
-        layerId,
-        options?.keepClones,
-      );
-    }
+    this.postEffects.registerLayerEffects(
+      layerId,
+      effects,
+      selectiveDepthTest,
+      emissiveIntensity,
+      options,
+    );
   }
 
   getLayerEffects(layerId: string): string[] | undefined {
-    return this.layerEffects.get(layerId);
+    return this.postEffects.getLayerEffects(layerId);
   }
 
   getLayerEmissiveIntensity(layerId: string): number {
-    return this.layerEmissiveIntensity.get(layerId) ?? 0.3;
+    return this.postEffects.getLayerEmissiveIntensity(layerId);
+  }
+
+  getLayerEmissiveColor(layerId: string): number | undefined {
+    return this.postEffects.getLayerEmissiveColor(layerId);
+  }
+
+  setLayerEmissiveColor(
+    layerId: string,
+    emissiveColor: number | undefined,
+  ): void {
+    this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
+  }
+
+  getLayerSelectiveDepthTest(layerId: string): boolean {
+    return this.postEffects.getLayerSelectiveDepthTest(layerId);
+  }
+
+  setLayerSelectiveDepthTest(
+    layerId: string,
+    selectiveDepthTest: boolean,
+  ): void {
+    this.postEffects.setLayerSelectiveDepthTest(layerId, selectiveDepthTest);
   }
 
   unregisterLayerEffects(layerId: string): void {
-    this.layerEffects.delete(layerId);
-    this.layerEmissiveIntensity.delete(layerId);
-    this.selectiveRegistry?.registerLayerKeepClones(layerId, false);
+    this.postEffects.unregisterLayerEffects(layerId);
   }
 
   updateLayerEffects(
@@ -113,141 +125,24 @@ export class ViewContext {
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
-    const layer = this.layersManager.get(layerId);
-    if (!layer) return;
-
-    // Get previous effects
-    const prevEffects = this.layerEffects.get(layerId) ?? [];
-    const newEffects = effects ?? [];
-
-    this.updateLayerEffectCaches(
+    this.postEffects.updateLayerEffects(
       layerId,
-      newEffects,
+      effects,
       emissiveIntensity,
       options,
     );
-
-    if (!this.selectiveRegistry) return;
-
-    if (layer instanceof Layer) {
-      // Update effects for each feature's mesh
-      for (const evaluator of layer._getFeatureEvaluators()) {
-        const obj = evaluator.obj;
-        if (!obj) continue;
-
-        this.updateSelectiveLinks(obj, layerId, prevEffects, newEffects);
-        this.applyEmissive(obj, layerId, newEffects, emissiveIntensity);
-      }
-      return;
-    }
-
-    if (layer instanceof LayerHandle) {
-      const obj = this.getLayerHandleObject(layer);
-      if (!obj) return;
-
-      this.updateSelectiveLinks(obj, layerId, prevEffects, newEffects);
-      this.applyEmissive(obj, layerId, newEffects, emissiveIntensity);
-    }
   }
 
-  private updateLayerEffectCaches(
-    layerId: string,
-    newEffects: string[],
-    emissiveIntensity: number | undefined,
-    options?: { keepClones?: boolean },
-  ): void {
-    if (newEffects.length > 0) {
-      this.layerEffects.set(layerId, newEffects);
-    } else {
-      this.layerEffects.delete(layerId);
-    }
+  private dispatchCustomEvent(obj: Object3D, event: CustomObject3DEvent): void {
+    // Ensure target is set correctly
+    const eventWithTarget = { ...event, target: obj };
 
-    if (emissiveIntensity !== undefined) {
-      this.layerEmissiveIntensity.set(layerId, emissiveIntensity);
-    } else if (!this.layerEmissiveIntensity.has(layerId)) {
-      this.layerEmissiveIntensity.set(
-        layerId,
-        this.getLayerEmissiveIntensity(layerId),
-      );
-    }
-
-    if (options?.keepClones !== undefined && this.selectiveRegistry) {
-      this.selectiveRegistry.registerLayerKeepClones(
-        layerId,
-        options.keepClones,
-      );
-    }
-  }
-
-  private updateSelectiveLinks(
-    obj: Object3D,
-    layerId: string,
-    prevEffects: string[],
-    newEffects: string[],
-  ): void {
-    if (!this.selectiveRegistry) return;
-
-    for (const effectId of prevEffects) {
-      if (!newEffects.includes(effectId)) {
-        this.selectiveRegistry.unlink(effectId, obj);
-      }
-    }
-
-    const needsLink = newEffects.some(
-      (effectId) => !prevEffects.includes(effectId),
+    // Three.js event system requires casting through unknown for custom events
+    // The event structure is validated by TypeScript at creation time and by type guards at consumption time
+    const dispatchMethod = obj.dispatchEvent.bind(obj);
+    dispatchMethod(
+      eventWithTarget as unknown as Parameters<typeof dispatchMethod>[0],
     );
-    if (needsLink) {
-      obj.updateMatrixWorld(true);
-    }
-
-    for (const effectId of newEffects) {
-      if (!prevEffects.includes(effectId)) {
-        this.selectiveRegistry.link(effectId, obj, layerId);
-      }
-    }
-  }
-
-  private applyEmissive(
-    obj: Object3D,
-    layerId: string,
-    newEffects: string[],
-    emissiveIntensity: number | undefined,
-  ): void {
-    const intensity =
-      emissiveIntensity ?? this.layerEmissiveIntensity.get(layerId) ?? 0.3;
-
-    this.forEachMesh(obj, (mesh) => {
-      const materials = Array.isArray(mesh.material)
-        ? mesh.material
-        : [mesh.material];
-
-      for (const material of materials) {
-        if (
-          material instanceof MeshStandardMaterial ||
-          material instanceof MeshPhysicalMaterial
-        ) {
-          if (newEffects.length > 0) {
-            material.emissive.copy(material.color);
-            material.emissiveIntensity = intensity;
-          } else {
-            material.emissiveIntensity = 0;
-          }
-        }
-      }
-    });
-  }
-
-  private forEachMesh(obj: Object3D, fn: (mesh: Mesh) => void): void {
-    if (obj instanceof Mesh) {
-      fn(obj);
-      return;
-    }
-
-    obj.traverse((child) => {
-      if (child instanceof Mesh) {
-        fn(child);
-      }
-    });
   }
 
   private getLayerHandleObject(layerHandle: LayerHandle): Object3D | undefined {
@@ -257,5 +152,17 @@ export class ViewContext {
     }
 
     return undefined;
+  }
+
+  private requestRender(layer: Layer | LayerHandle | undefined): void {
+    if (!layer) return;
+
+    if (layer instanceof Layer) {
+      layer.forceUpdate();
+      return;
+    }
+
+    // For MeshLayerDeclaration (wrapped by LayerHandle), emit _needsUpdate so ThreeView.forceUpdate() runs
+    layer.ref.emit("_needsUpdate");
   }
 }

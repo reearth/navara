@@ -132,7 +132,7 @@ type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 // Common options for layer effects
 type LayerEffectOptions = {
   effects?: string[];
-  ignoreDepth?: boolean;
+  selectiveDepthTest?: boolean;
   emissive_intensity?: number;
 };
 

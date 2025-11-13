@@ -44,8 +44,12 @@ import {
 } from "three";
 
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
+import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
-import type { CustomObject3DEventMap } from "../object3DEvent";
+import type {
+  CustomObject3DEventMap,
+  LayerEffectsChangedEvent,
+} from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -74,6 +78,7 @@ export class ModelMesh
 {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
+  private viewContext?: ViewContext;
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
@@ -114,10 +119,13 @@ export class ModelMesh
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
+    viewContext?: ViewContext,
   ) {
     super();
+    this.viewContext = viewContext;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
+    this.setupEffectHandling();
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
@@ -210,6 +218,107 @@ export class ModelMesh
         this.lastUpdateTime = t;
         this.mixer.update(dt);
       });
+    }
+  }
+
+  private setupEffectHandling(): void {
+    this.addEventListener("layerEffectsChanged", (event) => {
+      if (
+        "effects" in event &&
+        "emissiveIntensity" in event &&
+        "layerId" in event
+      ) {
+        this.handleEffectsChanged(event as unknown as LayerEffectsChangedEvent);
+      }
+    });
+
+    // Handle emissive event (same logic as meshEventHandlers)
+    this.addEventListener("emissive", (event) => {
+      const emissiveEvent = event as unknown as {
+        emissiveIntensity: number;
+        emissiveColor?: number;
+      };
+
+      this.traverseMesh((mesh) => {
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+
+        for (const material of materials) {
+          if (
+            material instanceof MeshStandardMaterial ||
+            material instanceof MeshPhysicalMaterial
+          ) {
+            // Use custom emissive color if provided, otherwise use material color
+            if (emissiveEvent.emissiveColor !== undefined) {
+              material.emissive.set(emissiveEvent.emissiveColor);
+            } else {
+              material.emissive.copy(material.color);
+            }
+            material.emissiveIntensity = emissiveEvent.emissiveIntensity;
+          }
+        }
+      });
+    });
+  }
+
+  private handleEffectsChanged(event: LayerEffectsChangedEvent): void {
+    const { effects, emissiveIntensity, layerId, prevEffects } = event;
+
+    // Apply emissive to all child meshes
+    this.traverseMesh((mesh) => {
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+
+      for (const material of materials) {
+        if (
+          material instanceof MeshStandardMaterial ||
+          material instanceof MeshPhysicalMaterial
+        ) {
+          if (effects.length > 0) {
+            material.emissive.copy(material.color);
+            material.emissiveIntensity = emissiveIntensity;
+          } else {
+            material.emissiveIntensity = 0;
+          }
+        }
+      }
+    });
+
+    // Update SelectiveRegistry links
+    if (this.viewContext?.selectiveRegistry) {
+      this.updateSelectiveLinks(effects, prevEffects, layerId);
+    }
+  }
+
+  private updateSelectiveLinks(
+    effects: string[],
+    prevEffects: string[],
+    layerId: string,
+  ): void {
+    if (!this.viewContext?.selectiveRegistry) return;
+
+    // Unlink removed effects
+    for (const effectId of prevEffects) {
+      if (!effects.includes(effectId)) {
+        this.viewContext.selectiveRegistry.unlink(effectId, this);
+      }
+    }
+
+    // Update world matrix if needed for new links
+    const needsLink = effects.some(
+      (effectId) => !prevEffects.includes(effectId),
+    );
+    if (needsLink) {
+      this.updateMatrixWorld(true);
+    }
+
+    // Link new effects
+    for (const effectId of effects) {
+      if (!prevEffects.includes(effectId)) {
+        this.viewContext.selectiveRegistry.link(effectId, this, layerId);
+      }
     }
   }
 

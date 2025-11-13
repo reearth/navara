@@ -53,6 +53,8 @@ export function renderFeature(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
+  viewContext: ViewContext,
+  layerId?: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf);
@@ -61,7 +63,14 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewEvents);
+    return renderModel(
+      f.model,
+      buf,
+      uniforms,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms, viewEvents);
@@ -111,6 +120,8 @@ export async function processRenderableFeatureAdded(
     uniforms,
     tileHandle,
     viewEvents,
+    viewContext,
+    ev.layer_id,
   )
     ?.then((r) => {
       const type = (() => {
@@ -154,15 +165,14 @@ export async function processRenderableFeatureAdded(
   const effects = viewContext.getLayerEffects(featureLayerId);
 
   if (effects && effects.length > 0 && viewContext.selectiveRegistry) {
-    if (obj instanceof ModelMesh) {
-      // For ModelMesh, link all child meshes
-      // Update world matrix first since obj was just added to scene
-      obj.updateMatrixWorld(true);
-      obj.traverseMesh((mesh) => {
+    // ModelMesh handles effects via its own event handler
+    if (!(obj instanceof ModelMesh)) {
+      if (obj instanceof Mesh) {
+        // For other mesh types, link directly
         // Set emissive for bloom effects (only for objects with effects)
-        const material = Array.isArray(mesh.material)
-          ? mesh.material[0]
-          : mesh.material;
+        const material = Array.isArray(obj.material)
+          ? obj.material[0]
+          : obj.material;
         if (
           material instanceof MeshStandardMaterial ||
           material instanceof MeshPhysicalMaterial
@@ -173,26 +183,8 @@ export async function processRenderableFeatureAdded(
           material.emissiveIntensity = emissiveIntensity;
         }
         for (const effectId of effects) {
-          viewContext.selectiveRegistry?.link(effectId, mesh, featureLayerId);
+          viewContext.selectiveRegistry.link(effectId, obj, featureLayerId);
         }
-      });
-    } else if (obj instanceof Mesh) {
-      // For other mesh types, link directly
-      // Set emissive for bloom effects (only for objects with effects)
-      const material = Array.isArray(obj.material)
-        ? obj.material[0]
-        : obj.material;
-      if (
-        material instanceof MeshStandardMaterial ||
-        material instanceof MeshPhysicalMaterial
-      ) {
-        const emissiveIntensity =
-          viewContext.getLayerEmissiveIntensity(featureLayerId);
-        material.emissive.set(material.color);
-        material.emissiveIntensity = emissiveIntensity;
-      }
-      for (const effectId of effects) {
-        viewContext.selectiveRegistry.link(effectId, obj, featureLayerId);
       }
     }
   }
@@ -252,6 +244,7 @@ export async function processRenderableFeatureChanged(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
@@ -279,7 +272,7 @@ export async function processRenderableFeatureChanged(
     processTextChanged(obj, text, buf, active, renderFlag);
   }
   if (obj instanceof ModelMesh && model) {
-    processModelChanged(obj, model, active);
+    processModelChanged(obj, model, active, viewContext, layerId);
   }
   if (obj instanceof PolylineMesh && polyline) {
     processPolylineChanged(obj, polyline, active);

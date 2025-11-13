@@ -46,12 +46,20 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayerBase<
         ? (config as SelectiveOutlineConfig).selectiveOutline
         : {};
 
+    // Type-safe config extraction with optional properties
+    type ConfigWithOptionalProps = EffectLayerConfig & {
+      resolutionScale?: number;
+      debugMask?: boolean;
+    };
+
+    const typedConfig = config as ConfigWithOptionalProps;
+
     // Ensure config has selective: true
     const selectiveConfig: SelectiveEffectConfig = {
       ...config,
       selective: true,
-      resolutionScale: (config as any).resolutionScale ?? 1.0,
-      debugMask: (config as any).debugMask ?? false,
+      resolutionScale: typedConfig.resolutionScale ?? 1.0,
+      debugMask: typedConfig.debugMask ?? false,
     };
 
     super(view, selectiveConfig);

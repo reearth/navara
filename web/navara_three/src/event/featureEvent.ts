@@ -1,11 +1,17 @@
 import type { EventHandler, FeatureId } from "@navara/core";
-import { type Object3D } from "three";
+import {
+  Mesh,
+  MeshPhysicalMaterial,
+  MeshStandardMaterial,
+  type Object3D,
+} from "three";
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core/ViewContext";
 import { FeatureEvaluator } from "../evaluations";
 import { Layer } from "../layer";
 import { LayersManager } from "../layersManager";
+import { ModelMesh } from "../mesh/model";
 
 import type { FeatureHandler } from ".";
 
@@ -34,8 +40,40 @@ export const handleFeatureCreatedEventByLayerId = (
     // Update world matrix before linking (required for proper cloning)
     obj.updateMatrixWorld(true);
 
-    for (const effectId of effects) {
-      viewContext.selectiveRegistry.link(effectId, obj, layerId);
+    // ModelMesh handles effects via events
+    if (obj instanceof ModelMesh) {
+      const emissiveIntensity = viewContext.getLayerEmissiveIntensity(layerId);
+      obj.dispatchEvent({
+        type: "layerEffectsChanged",
+        target: obj,
+        effects,
+        emissiveIntensity,
+        layerId,
+        prevEffects: [], // Initial creation has no previous effects
+      });
+    } else {
+      // For other mesh types, link directly
+      for (const effectId of effects) {
+        viewContext.selectiveRegistry.link(effectId, obj, layerId);
+      }
+
+      // Apply emissive for non-ModelMesh types
+      if (obj instanceof Mesh) {
+        const materials = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
+
+        for (const material of materials) {
+          if (
+            material instanceof MeshStandardMaterial ||
+            material instanceof MeshPhysicalMaterial
+          ) {
+            material.emissive.copy(material.color);
+            material.emissiveIntensity =
+              viewContext.getLayerEmissiveIntensity(layerId);
+          }
+        }
+      }
     }
   }
 

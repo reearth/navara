@@ -16,8 +16,8 @@ export type SelectiveEffectOptions = {
 
 export type SelectiveEffectResources = {
   scene: Scene; // Legacy scene for compatibility
-  sceneDepthEnabled: Scene; // Scene for objects with depthTest enabled
-  sceneDepthDisabled: Scene; // Scene for objects with depthTest disabled
+  sceneDepthEnabled: Scene; // Scene for objects with selectiveDepthTest enabled
+  sceneDepthDisabled: Scene; // Scene for objects with selectiveDepthTest disabled
   maskRT: WebGLRenderTarget;
   highlightRT: WebGLRenderTarget; // Legacy render target for compatibility
   objects: WeakMap<Object3D, Object3D>; // source -> clone
@@ -36,7 +36,7 @@ export class SelectiveEffectRegistry {
   private resources = new Map<string, SelectiveEffectResources>();
   private width: number;
   private height: number;
-  private layerDepthSettings = new Map<string, boolean>();
+  private layerSelectiveDepthSettings = new Map<string, boolean>();
   private layerKeepClones = new Map<string, boolean>();
 
   constructor(width: number, height: number) {
@@ -121,17 +121,68 @@ export class SelectiveEffectRegistry {
   }
 
   /**
-   * Link an object to a selective effect by creating a clone
+   * Register selective depth test setting for a layer
    */
-  private forEachMesh(source: Object3D, fn: (mesh: Mesh) => void): void {
-    if (source instanceof Mesh) {
-      fn(source);
-      return;
+  registerLayerSelectiveDepthTest(
+    layerId: string,
+    selectiveDepthTest: boolean,
+  ): void {
+    this.layerSelectiveDepthSettings.set(layerId, selectiveDepthTest);
+  }
+
+  /**
+   * Get selective depth test setting for a layer
+   */
+  getLayerSelectiveDepthTest(layerId: string): boolean {
+    return this.layerSelectiveDepthSettings.get(layerId) ?? true;
+  }
+
+  /**
+   * Update selective depth test for all clones of a layer
+   * Moves clones between sceneDepthEnabled and sceneDepthDisabled
+   * Optimized to only process clones that actually need to move
+   */
+  updateLayerSelectiveDepthTest(
+    layerId: string,
+    selectiveDepthTest: boolean,
+  ): void {
+    // Check if value actually changed (should already be checked in ViewContext, but double-check)
+    const currentSetting = this.layerSelectiveDepthSettings.get(layerId);
+    if (currentSetting === selectiveDepthTest) {
+      return; // No change, skip processing
     }
 
-    source.traverse((child) => {
+    // Update the setting
+    this.layerSelectiveDepthSettings.set(layerId, selectiveDepthTest);
+
+    // Move clones for this layer between scenes (optimized: only affected clones)
+    for (const resources of this.resources.values()) {
+      // Collect sourceIds for this layer to minimize Map iterations
+      const affectedSourceIds: string[] = [];
+      for (const [
+        sourceId,
+        mappedLayerId,
+      ] of resources.objectLayerMap.entries()) {
+        if (mappedLayerId === layerId) {
+          affectedSourceIds.push(sourceId);
+        }
+      }
+
+      // Process only affected clones
+      for (const sourceId of affectedSourceIds) {
+        const clone = resources.cloneMap.get(sourceId);
+        if (!clone) continue;
+
+        // Re-attach clone to appropriate scene based on new depth test setting
+        this.attachCloneToScene(resources, clone, layerId);
+      }
+    }
+  }
+
+  private forEachMesh(object: Object3D, callback: (mesh: Mesh) => void): void {
+    object.traverse((child) => {
       if (child instanceof Mesh) {
-        fn(child);
+        callback(child);
       }
     });
   }
@@ -155,14 +206,14 @@ export class SelectiveEffectRegistry {
   ): void {
     if (!layerId) return;
 
-    const ignoreDepth = this.shouldIgnoreDepth(layerId);
+    const depthTest = this.getLayerSelectiveDepthTest(layerId);
     resources.sceneDepthEnabled.remove(clone);
     resources.sceneDepthDisabled.remove(clone);
 
-    if (ignoreDepth) {
-      resources.sceneDepthDisabled.add(clone);
-    } else {
+    if (depthTest) {
       resources.sceneDepthEnabled.add(clone);
+    } else {
+      resources.sceneDepthDisabled.add(clone);
     }
   }
 
@@ -181,14 +232,16 @@ export class SelectiveEffectRegistry {
       const mappedLayerId = resources.objectLayerMap.get(mesh.uuid) ?? layerId;
 
       if (existing) {
-        // Refresh existing clone state
-        this.syncCloneTransform(mesh, existing as Mesh);
-        if (mappedLayerId) {
-          resources.objectLayerMap.set(mesh.uuid, mappedLayerId);
+        // Refresh existing clone state - validate both are Mesh instances
+        if (existing instanceof Mesh) {
+          this.syncCloneTransform(mesh, existing);
+          if (mappedLayerId) {
+            resources.objectLayerMap.set(mesh.uuid, mappedLayerId);
+          }
+          resources.sourceMap.set(mesh.uuid, mesh);
+          resources.cloneMap.set(mesh.uuid, existing);
+          this.attachCloneToScene(resources, existing, mappedLayerId);
         }
-        resources.sourceMap.set(mesh.uuid, mesh);
-        resources.cloneMap.set(mesh.uuid, existing);
-        this.attachCloneToScene(resources, existing, mappedLayerId);
         return;
       }
 
@@ -273,11 +326,11 @@ export class SelectiveEffectRegistry {
     for (const resources of this.resources.values()) {
       const syncMesh = (mesh: Mesh) => {
         const clone = resources.objects.get(mesh);
-        if (!clone) {
+        if (!clone || !(clone instanceof Mesh)) {
           return;
         }
 
-        this.syncCloneTransform(mesh, clone as Mesh);
+        this.syncCloneTransform(mesh, clone);
       };
 
       for (const mesh of meshes) {
@@ -342,13 +395,6 @@ export class SelectiveEffectRegistry {
     }
   }
 
-  /**
-   * Register depth setting for a layer
-   */
-  registerLayerDepth(layerId: string, ignoreDepth: boolean): void {
-    this.layerDepthSettings.set(layerId, ignoreDepth);
-  }
-
   registerLayerKeepClones(
     layerId: string,
     keepClones: boolean | undefined,
@@ -359,13 +405,6 @@ export class SelectiveEffectRegistry {
       this.layerKeepClones.delete(layerId);
       this.cleanupLayerClones(layerId);
     }
-  }
-
-  /**
-   * Check if a layer should ignore depth
-   */
-  shouldIgnoreDepth(layerId: string): boolean {
-    return this.layerDepthSettings.get(layerId) ?? false;
   }
 
   shouldKeepClones(layerId: string): boolean {

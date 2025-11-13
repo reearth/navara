@@ -110,6 +110,14 @@ export class Layer extends EventHandler<LayerEvent> {
       );
     }
 
+    // Update selectiveDepthTest if specified in the update
+    if ("selectiveDepthTest" in l) {
+      this.viewContext.setLayerSelectiveDepthTest(
+        this.id,
+        l.selectiveDepthTest as boolean,
+      );
+    }
+
     this.core.updateLayer(this.id, l);
   }
 
@@ -144,6 +152,10 @@ export class Layer extends EventHandler<LayerEvent> {
    */
   disableEffect(effectId: string): void {
     const current = this.viewContext.getLayerEffects(this.id) ?? [];
+    // Skip if effect is not currently enabled (optimization)
+    if (!current.includes(effectId)) {
+      return;
+    }
     const updated = current.filter((id) => id !== effectId);
     this.viewContext.updateLayerEffects(
       this.id,
@@ -229,6 +241,38 @@ export class Layer extends EventHandler<LayerEvent> {
    */
   getEmissiveIntensity(): number {
     return this.viewContext.getLayerEmissiveIntensity(this.id);
+  }
+
+  /**
+   * Set the emissive color for this layer's materials
+   * @param color - The emissive color as a hex number (e.g., 0xff0000 for red), or undefined to use material color
+   */
+  setEmissiveColor(color: number | undefined): void {
+    this.viewContext.setLayerEmissiveColor(this.id, color);
+  }
+
+  /**
+   * Get the current emissive color for this layer
+   * @returns The emissive color as a hex number, or undefined if using material color
+   */
+  getEmissiveColor(): number | undefined {
+    return this.viewContext.getLayerEmissiveColor(this.id);
+  }
+
+  /**
+   * Set the selective depth test for this layer
+   * @param enabled - Whether selective depth test should be enabled
+   */
+  setSelectiveDepthTest(enabled: boolean): void {
+    this.viewContext.setLayerSelectiveDepthTest(this.id, enabled);
+  }
+
+  /**
+   * Get the current selective depth test setting for this layer
+   * @returns true if selective depth test is enabled
+   */
+  getSelectiveDepthTest(): boolean {
+    return this.viewContext.getLayerSelectiveDepthTest(this.id);
   }
 
   private getEffectOptions(): { keepClones: boolean } | undefined {

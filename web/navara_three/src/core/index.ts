@@ -39,3 +39,4 @@ export {
   type SelectiveEffectOptions,
   type SelectiveEffectResources,
 } from "./SelectiveEffectRegistry";
+export { PostEffectManager } from "./PostEffectManager";

@@ -1,4 +1,10 @@
-import { BoxGeometry, Mesh, MeshLambertMaterial } from "three";
+import {
+  BoxGeometry,
+  Mesh,
+  MeshLambertMaterial,
+  type Material,
+  type Object3DEventMap,
+} from "three";
 
 import {
   MeshLayerDeclaration,
@@ -6,6 +12,15 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+
+// Custom event map (for Navara EventHandler)
+type BoxMeshLayerEvents = {
+  materialCreated: (material: Material) => void;
+  materialDisposed: (material: Material) => void;
+};
+
+type BoxMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
   box?: {
@@ -32,7 +47,8 @@ export type BoxMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class BoxMeshLayer extends MeshLayerDeclaration<
   BoxMeshLayerConfig,
   BoxMeshLayerUpdate,
-  Mesh<BoxGeometry, MeshLambertMaterial>
+  Mesh<BoxGeometry, MeshLambertMaterial, BoxMeshEventMap>,
+  BoxMeshLayerEvents
 > {
   private config: BoxMeshLayerConfig;
 
@@ -61,18 +77,22 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
     // If emissive is not specified, use color as emissive (for bloom effects)
     const material = new MeshLambertMaterial({
       color: cfg.color ?? 0xffffff,
-      emissive: cfg.emissive ?? 0,
+      emissive: cfg.emissive ?? cfg.color ?? 0,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
 
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Mesh<BoxGeometry, MeshLambertMaterial, BoxMeshEventMap>(
+      geometry,
+      material,
+    );
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.emit("_csmMounted", material);
+    // Emit Navara custom event
+    this.emit("materialCreated", material);
 
     return mesh;
   }
@@ -144,7 +164,9 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.emit("_csmUnmounted", this._instance.material);
+      // Emit Navara custom event
+      this.emit("materialDisposed", this._instance.material);
+
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

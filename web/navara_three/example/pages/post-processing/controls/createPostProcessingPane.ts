@@ -1,13 +1,67 @@
 import type {
+  BoxMeshLayer,
   Layer,
   LayerHandle,
   SelectiveBloomEffectLayer,
+  SphereMeshLayer,
 } from "@navara/three";
-import { Pane } from "tweakpane";
+import { Pane, type FolderApi } from "tweakpane";
 
-import { LOCAL_DATASETS, TILES_3D_DATASETS } from "../../../helpers/constants";
+import { TILES_3D_DATASETS } from "../../../helpers/constants";
 import type { SelectiveEffects } from "../effects/setupSelectiveEffects";
-import type { SceneLayers } from "../layers/createSceneLayers";
+import type {
+  GeoJsonModelLayer,
+  SceneLayers,
+  DrumModelState,
+  SoldierModelState,
+} from "../layers/createSceneLayers";
+
+// ============================================
+// Helper Functions for Common UI Patterns
+// ============================================
+
+/**
+ * Add effect toggle controls (Bloom & Outline) to a folder for Layer
+ */
+const addLayerEffectControls = (
+  folder: FolderApi,
+  layer: Layer,
+  bloomId: string,
+  outlineId: string,
+  params: { bloomEnabled: boolean; outlineEnabled: boolean },
+) => {
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", (ev) => {
+      layer.toggleEffect(bloomId, ev.value);
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", (ev) => {
+      layer.toggleEffect(outlineId, ev.value);
+    });
+};
+
+/**
+ * Add emissive intensity control to a folder for Layer
+ */
+const addLayerEmissiveIntensityControl = (
+  folder: FolderApi,
+  layer: Layer,
+  params: { emissiveIntensity: number },
+) => {
+  folder
+    .addBinding(params, "emissiveIntensity", {
+      min: 0.0,
+      max: 1.0,
+      step: 0.01,
+      label: "Emissive Intensity",
+    })
+    .on("change", () => {
+      layer.setEmissiveIntensity(params.emissiveIntensity);
+    });
+};
 
 type PaneDependencies = SceneLayers &
   SelectiveEffects & {
@@ -34,8 +88,36 @@ export const createPostProcessingPane = ({
   pane.element.style.right = "0px";
 
   setupBloomFolder(pane, selectiveBloom);
-  setupCubeFolder(pane, cubeLayer, selectiveBloom.id, selectiveOutline.id);
-  setupSphereFolder(pane, sphereLayer, selectiveBloom.id);
+  setupMeshFolder(pane, {
+    title: "Cube (Red)",
+    layer: cubeLayer,
+    configKey: "box",
+    bloomId: selectiveBloom.id,
+    outlineId: selectiveOutline.id,
+    params: {
+      emissiveColor: 0xff0000,
+      emissiveIntensity: 1.1,
+      visible: true,
+      selectiveDepthTest: true,
+      bloomEnabled: false,
+      outlineEnabled: false,
+    },
+  });
+  setupMeshFolder(pane, {
+    title: "Sphere (Blue)",
+    layer: sphereLayer,
+    configKey: "sphere",
+    bloomId: selectiveBloom.id,
+    outlineId: selectiveOutline.id,
+    params: {
+      emissiveColor: 0x0000ff,
+      emissiveIntensity: 1.0,
+      visible: true,
+      selectiveDepthTest: true,
+      bloomEnabled: true,
+      outlineEnabled: false,
+    },
+  });
   setupDrumFolder(pane, drumLayer, selectiveBloom.id, selectiveOutline.id);
   setupSoldierFolder(
     pane,
@@ -43,13 +125,38 @@ export const createPostProcessingPane = ({
     selectiveBloom.id,
     selectiveOutline.id,
   );
-  setupChiyodaFolder(
-    pane,
-    chiyodaLayer,
-    selectiveBloom.id,
-    selectiveOutline.id,
-  );
-  setupChuoFolder(pane, chuoLayer, selectiveBloom.id, selectiveOutline.id);
+  setupTilesFolder(pane, {
+    title: "Chiyoda Buildings",
+    layer: chiyodaLayer,
+    datasetUrl: TILES_3D_DATASETS.plateauChiyoda.url,
+    bloomId: selectiveBloom.id,
+    outlineId: selectiveOutline.id,
+    params: {
+      baseColor: 0xffffff,
+      emissiveColor: 0xffffff,
+      visible: true,
+      selectiveDepthTest: true,
+      emissiveIntensity: 0.3,
+      bloomEnabled: true,
+      outlineEnabled: true,
+    },
+  });
+  setupTilesFolder(pane, {
+    title: "Chuo Buildings",
+    layer: chuoLayer,
+    datasetUrl: TILES_3D_DATASETS.plateauChuo.url,
+    bloomId: selectiveBloom.id,
+    outlineId: selectiveOutline.id,
+    params: {
+      baseColor: 0xffffff,
+      emissiveColor: 0xffffff,
+      visible: true,
+      selectiveDepthTest: true,
+      emissiveIntensity: 0.3,
+      bloomEnabled: false,
+      outlineEnabled: false,
+    },
+  });
 
   return pane;
 };
@@ -134,24 +241,54 @@ const setupBloomFolder = (
   });
 };
 
-const setupCubeFolder = (
-  pane: Pane,
-  cubeLayer: LayerHandle<any>,
-  bloomId: string,
-  outlineId: string,
-) => {
-  const params = {
-    emissiveIntensity: 1.1,
-    visible: true,
-    bloomEnabled: false,
-    outlineEnabled: false,
-  };
+type MeshLayerHandle = LayerHandle<BoxMeshLayer | SphereMeshLayer>;
 
-  const folder = pane.addFolder({ title: "Cube (Red)" });
+type MeshFolderOptions = {
+  title: string;
+  layer: MeshLayerHandle;
+  configKey: "box" | "sphere";
+  bloomId: string;
+  outlineId: string;
+  params: {
+    emissiveColor: number;
+    emissiveIntensity: number;
+    visible: boolean;
+    selectiveDepthTest: boolean;
+    bloomEnabled: boolean;
+    outlineEnabled: boolean;
+  };
+};
+
+const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
+  const { title, layer, bloomId, outlineId, configKey } = options;
+  const params = { ...options.params };
+
+  const folder = pane.addFolder({ title });
 
   folder.addBinding(params, "visible").on("change", (ev) => {
-    cubeLayer.ref.visible = ev.value;
+    layer.ref.visible = ev.value;
   });
+
+  folder
+    .addBinding(params, "selectiveDepthTest", {
+      label: "Selective Depth Test",
+    })
+    .on("change", (ev) => {
+      layer.setSelectiveDepthTest(ev.value);
+    });
+
+  folder
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
+    })
+    .on("change", (ev) => {
+      layer.ref.onUpdateConfig(
+        buildMeshConfig(configKey, {
+          emissive: ev.value,
+        }),
+      );
+    });
 
   folder
     .addBinding(params, "emissiveIntensity", {
@@ -160,11 +297,11 @@ const setupCubeFolder = (
       step: 0.1,
     })
     .on("change", (ev) => {
-      cubeLayer.ref.onUpdateConfig({
-        box: {
+      layer.ref.onUpdateConfig(
+        buildMeshConfig(configKey, {
           emissiveIntensity: ev.value,
-        },
-      });
+        }),
+      );
     });
 
   folder
@@ -172,10 +309,7 @@ const setupCubeFolder = (
       label: "Bloom",
     })
     .on("change", (ev) => {
-      const effects = [];
-      if (params.outlineEnabled) effects.push(outlineId);
-      if (ev.value) effects.push(bloomId);
-      cubeLayer.ref.onUpdateConfig({ effects });
+      layer.ref.toggleEffect(bloomId, ev.value);
     });
 
   folder
@@ -183,108 +317,159 @@ const setupCubeFolder = (
       label: "Outline",
     })
     .on("change", (ev) => {
-      const effects = [];
-      if (ev.value) effects.push(outlineId);
-      if (params.bloomEnabled) effects.push(bloomId);
-      cubeLayer.ref.onUpdateConfig({ effects });
+      layer.ref.toggleEffect(outlineId, ev.value);
     });
 
-  cubeLayer.ref.onUpdateConfig({
-    box: {
+  // Initialize emissive
+  layer.ref.onUpdateConfig(
+    buildMeshConfig(configKey, {
+      emissive: params.emissiveColor,
       emissiveIntensity: params.emissiveIntensity,
-    },
-  });
+    }),
+  );
+
+  // Mesh-specific default effects
+  if (params.bloomEnabled) {
+    layer.ref.enableEffect(bloomId);
+  }
+  if (params.outlineEnabled) {
+    layer.ref.enableEffect(outlineId);
+  }
 };
 
-const setupSphereFolder = (
-  pane: Pane,
-  sphereLayer: LayerHandle<any>,
-  bloomId: string,
+const buildMeshConfig = (
+  configKey: "box" | "sphere",
+  config: { emissive?: number; emissiveIntensity?: number },
 ) => {
-  const params = {
-    emissiveIntensity: 1.0,
-    visible: true,
-    bloomEnabled: true,
-  };
-
-  const folder = pane.addFolder({ title: "Sphere (Blue)" });
-
-  folder.addBinding(params, "visible").on("change", (ev) => {
-    sphereLayer.ref.visible = ev.value;
-  });
-
-  folder
-    .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 10.0,
-      step: 0.1,
-    })
-    .on("change", (ev) => {
-      sphereLayer.ref.onUpdateConfig({
-        sphere: {
-          emissiveIntensity: ev.value,
-        },
-      });
-    });
-
-  folder
-    .addBinding(params, "bloomEnabled", {
-      label: "Bloom",
-    })
-    .on("change", (ev) => {
-      sphereLayer.ref.onUpdateConfig({
-        effects: ev.value ? [bloomId] : [],
-      });
-    });
-
-  sphereLayer.ref.onUpdateConfig({
-    effects: params.bloomEnabled ? [bloomId] : [],
-  });
+  if (configKey === "box") {
+    return { box: config };
+  }
+  return { sphere: config };
 };
 
-const setupGeoJsonVisibilityBinding =
-  (
-    layer: Layer,
-    coordinates: [number, number],
-    url: string,
-    extras?: () => Record<string, unknown>,
-  ) =>
-  (visible: boolean) => {
+type TilesFolderOptions = {
+  title: string;
+  layer: Layer;
+  datasetUrl: string;
+  bloomId: string;
+  outlineId: string;
+  params: {
+    baseColor: number;
+    emissiveColor: number;
+    visible: boolean;
+    selectiveDepthTest: boolean;
+    emissiveIntensity: number;
+    bloomEnabled: boolean;
+    outlineEnabled: boolean;
+  };
+};
+
+const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
+  const {
+    title,
+    layer,
+    datasetUrl,
+    bloomId,
+    outlineId,
+    params: initialParams,
+  } = options;
+
+  const params = { ...initialParams };
+
+  const folder = pane.addFolder({ title });
+
+  const updateTileModel = ({
+    show = params.visible,
+    color = params.baseColor,
+  }: {
+    show?: boolean;
+    color?: number;
+  } = {}) => {
     layer.update({
-      type: "geojson",
+      type: "cesium3dtiles",
       data: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              coordinates,
-              type: "Point",
-            },
-          },
-        ],
+        url: datasetUrl,
       },
       model: {
-        show: visible,
-        size: 100,
-        height: 0,
-        clamp_to_ground: true,
-        url,
-        ...(extras ? extras() : {}),
+        show,
+        color,
+        metalness: 0.1,
+        roughness: 0.1,
+        cast_shadow: true,
+        receive_shadow: true,
       },
-      ignoreDepth: true,
     });
   };
+
+  folder
+    .addBinding(params, "baseColor", {
+      color: { type: "int" },
+      label: "Base Color",
+    })
+    .on("change", (ev) => {
+      params.baseColor = ev.value;
+      updateTileModel({ color: ev.value });
+    });
+
+  folder
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
+    })
+    .on("change", (ev) => {
+      params.emissiveColor = ev.value;
+      layer.setEmissiveColor(ev.value);
+    });
+
+  folder.addBinding(params, "visible").on("change", (ev) => {
+    params.visible = ev.value;
+    updateTileModel({ show: ev.value, color: params.baseColor });
+  });
+
+  folder
+    .addBinding(params, "selectiveDepthTest", {
+      label: "Selective Depth Test",
+    })
+    .on("change", (ev) => {
+      layer.setSelectiveDepthTest?.(ev.value);
+    });
+
+  addLayerEmissiveIntensityControl(folder, layer, params);
+
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", (ev) => {
+      layer.toggleEffect(bloomId, ev.value);
+      if (ev.value) {
+        layer.setEmissiveColor(params.emissiveColor);
+      }
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", (ev) => {
+      layer.toggleEffect(outlineId, ev.value);
+      if (ev.value) {
+        layer.setEmissiveColor(params.emissiveColor);
+      }
+    });
+
+  if (params.bloomEnabled) layer.enableEffect(bloomId);
+  if (params.outlineEnabled) layer.enableEffect(outlineId);
+  layer.setEmissiveColor(params.emissiveColor);
+};
 
 const setupDrumFolder = (
   pane: Pane,
-  drumLayer: Layer,
+  drumLayer: GeoJsonModelLayer<DrumModelState>,
   bloomId: string,
   outlineId: string,
 ) => {
   const params = {
     visible: true,
+    selectiveDepthTest: false,
+    baseColor: 0xffffff,
+    emissiveColor: 0xffffff,
     emissiveIntensity: 0.3,
     bloomEnabled: false,
     outlineEnabled: false,
@@ -292,54 +477,57 @@ const setupDrumFolder = (
 
   const folder = pane.addFolder({ title: "Drum Model" });
 
-  const updateVisibility = setupGeoJsonVisibilityBinding(
-    drumLayer,
-    [139.7682, 35.6763],
-    LOCAL_DATASETS.steelDrumGLTF.url,
-    () => ({ should_rotate_in_default: true }),
-  );
+  const updateDrumModel = () => {
+    drumLayer.setSelectiveDepthTest(params.selectiveDepthTest);
+    drumLayer.updateModel({
+      show: params.visible,
+      color: params.baseColor,
+    });
+  };
+  const applyDrumEmissiveColor = (color: number | undefined) => {
+    drumLayer.layer.setEmissiveColor(color);
+  };
 
-  folder.addBinding(params, "visible").on("change", (ev) => {
-    updateVisibility(ev.value);
+  folder.addBinding(params, "visible").on("change", () => {
+    updateDrumModel();
   });
 
   folder
-    .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 1.0,
-      step: 0.01,
-      label: "Emissive",
+    .addBinding(params, "selectiveDepthTest", {
+      label: "Selective Depth Test",
     })
     .on("change", () => {
-      drumLayer.setEmissiveIntensity(params.emissiveIntensity);
+      updateDrumModel();
     });
 
   folder
-    .addBinding(params, "bloomEnabled", {
-      label: "Bloom",
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
     })
-    .on("change", () => {
-      drumLayer.setEffects(composeEffects(params, bloomId, outlineId));
+    .on("change", (ev) => {
+      applyDrumEmissiveColor(ev.value);
     });
 
-  folder
-    .addBinding(params, "outlineEnabled", {
-      label: "Outline",
-    })
-    .on("change", () => {
-      drumLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
+  addLayerEmissiveIntensityControl(folder, drumLayer.layer, params);
+  addLayerEffectControls(folder, drumLayer.layer, bloomId, outlineId, params);
+
+  // Initialize emissive color to match params
+  applyDrumEmissiveColor(params.emissiveColor);
 };
 
 const setupSoldierFolder = (
   pane: Pane,
-  soldierLayer: Layer,
+  soldierLayer: GeoJsonModelLayer<SoldierModelState>,
   bloomId: string,
   outlineId: string,
 ) => {
   const params = {
     visible: true,
+    selectiveDepthTest: false,
     animationSpeed: 1.0,
+    baseColor: 0xffffff,
+    emissiveColor: 0xffffff,
     emissiveIntensity: 0.3,
     bloomEnabled: false,
     outlineEnabled: false,
@@ -347,19 +535,29 @@ const setupSoldierFolder = (
 
   const folder = pane.addFolder({ title: "Soldier Model" });
 
-  const updateVisibility = setupGeoJsonVisibilityBinding(
-    soldierLayer,
-    [139.7505, 35.677],
-    LOCAL_DATASETS.soldierGLTF.url,
-    () => ({
-      animation_active_clip: "Walk",
+  const updateSoldierModel = () => {
+    soldierLayer.setSelectiveDepthTest(params.selectiveDepthTest);
+    soldierLayer.updateModel({
+      show: params.visible,
       animation_speed: params.animationSpeed,
-    }),
-  );
+      color: params.baseColor,
+    });
+  };
+  const applySoldierEmissiveColor = (color: number | undefined) => {
+    soldierLayer.layer.setEmissiveColor(color);
+  };
 
-  folder.addBinding(params, "visible").on("change", (ev) => {
-    updateVisibility(ev.value);
+  folder.addBinding(params, "visible").on("change", () => {
+    updateSoldierModel();
   });
+
+  folder
+    .addBinding(params, "selectiveDepthTest", {
+      label: "Selective Depth Test",
+    })
+    .on("change", () => {
+      updateSoldierModel();
+    });
 
   folder
     .addBinding(params, "animationSpeed", {
@@ -367,235 +565,27 @@ const setupSoldierFolder = (
       max: 3.0,
       step: 0.1,
     })
+    .on("change", () => {
+      updateSoldierModel();
+    });
+
+  folder
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
+    })
     .on("change", (ev) => {
-      params.animationSpeed = ev.value;
-      soldierLayer.update({
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [
-            {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                coordinates: [139.7505, 35.677],
-                type: "Point",
-              },
-            },
-          ],
-        },
-        model: {
-          show: params.visible,
-          size: 100,
-          height: 0,
-          clamp_to_ground: true,
-          url: LOCAL_DATASETS.soldierGLTF.url,
-          animation_active_clip: "Walk",
-          animation_speed: ev.value,
-        },
-        ignoreDepth: true,
-      });
+      applySoldierEmissiveColor(ev.value);
     });
 
-  folder
-    .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 1.0,
-      step: 0.01,
-      label: "Emissive",
-    })
-    .on("change", () => {
-      soldierLayer.setEmissiveIntensity(params.emissiveIntensity);
-    });
+  addLayerEmissiveIntensityControl(folder, soldierLayer.layer, params);
+  addLayerEffectControls(
+    folder,
+    soldierLayer.layer,
+    bloomId,
+    outlineId,
+    params,
+  );
 
-  folder
-    .addBinding(params, "bloomEnabled", {
-      label: "Bloom",
-    })
-    .on("change", () => {
-      soldierLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", {
-      label: "Outline",
-    })
-    .on("change", () => {
-      soldierLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
-};
-
-const setupChiyodaFolder = (
-  pane: Pane,
-  chiyodaLayer: Layer,
-  bloomId: string,
-  outlineId: string,
-) => {
-  const params = {
-    color: { r: 255, g: 255, b: 255 },
-    visible: true,
-    emissiveIntensity: 0.3,
-    bloomEnabled: true,
-    outlineEnabled: true,
-  };
-
-  const folder = pane.addFolder({ title: "Chiyoda Buildings" });
-
-  folder
-    .addBinding(params, "color", { color: { type: "float" } })
-    .on("change", (ev) => {
-      const color = (ev.value.r << 16) | (ev.value.g << 8) | ev.value.b;
-      chiyodaLayer.update({
-        type: "cesium3dtiles",
-        data: {
-          url: TILES_3D_DATASETS.plateauChiyoda.url,
-        },
-        model: {
-          show: params.visible,
-          color,
-          metalness: 0.1,
-          roughness: 0.1,
-          cast_shadow: true,
-          receive_shadow: true,
-        },
-      });
-    });
-
-  folder.addBinding(params, "visible").on("change", (ev) => {
-    chiyodaLayer.update({
-      type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChiyoda.url,
-      },
-      model: {
-        show: ev.value,
-        color: 0xffffff,
-        metalness: 0.1,
-        roughness: 0.1,
-        cast_shadow: true,
-        receive_shadow: true,
-      },
-    });
-  });
-
-  folder
-    .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 1.0,
-      step: 0.01,
-      label: "Emissive",
-    })
-    .on("change", () => {
-      chiyodaLayer.setEmissiveIntensity(params.emissiveIntensity);
-    });
-
-  folder
-    .addBinding(params, "bloomEnabled", {
-      label: "Bloom",
-    })
-    .on("change", () => {
-      chiyodaLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", {
-      label: "Outline",
-    })
-    .on("change", () => {
-      chiyodaLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
-
-  chiyodaLayer.setEffects(composeEffects(params, bloomId, outlineId));
-};
-
-const setupChuoFolder = (
-  pane: Pane,
-  chuoLayer: Layer,
-  bloomId: string,
-  outlineId: string,
-) => {
-  const params = {
-    color: { r: 255, g: 255, b: 255 },
-    visible: true,
-    emissiveIntensity: 0.3,
-    bloomEnabled: false,
-    outlineEnabled: false,
-  };
-
-  const folder = pane.addFolder({ title: "Chuo Buildings" });
-
-  folder
-    .addBinding(params, "color", { color: { type: "float" } })
-    .on("change", (ev) => {
-      const color = (ev.value.r << 16) | (ev.value.g << 8) | ev.value.b;
-      chuoLayer.update({
-        type: "cesium3dtiles",
-        data: {
-          url: TILES_3D_DATASETS.plateauChuo.url,
-        },
-        model: {
-          show: params.visible,
-          color,
-          metalness: 0.1,
-          roughness: 0.1,
-          cast_shadow: true,
-          receive_shadow: true,
-        },
-      });
-    });
-
-  folder.addBinding(params, "visible").on("change", (ev) => {
-    chuoLayer.update({
-      type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChuo.url,
-      },
-      model: {
-        show: ev.value,
-        color: 0xffffff,
-        metalness: 0.1,
-        roughness: 0.1,
-        cast_shadow: true,
-        receive_shadow: true,
-      },
-    });
-  });
-
-  folder
-    .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 1.0,
-      step: 0.01,
-      label: "Emissive",
-    })
-    .on("change", () => {
-      chuoLayer.setEmissiveIntensity(params.emissiveIntensity);
-    });
-
-  folder
-    .addBinding(params, "bloomEnabled", {
-      label: "Bloom",
-    })
-    .on("change", () => {
-      chuoLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", {
-      label: "Outline",
-    })
-    .on("change", () => {
-      chuoLayer.setEffects(composeEffects(params, bloomId, outlineId));
-    });
-};
-
-const composeEffects = (
-  params: { bloomEnabled: boolean; outlineEnabled?: boolean },
-  bloomId: string,
-  outlineId: string,
-): string[] => {
-  const effects: string[] = [];
-  if (params.outlineEnabled) effects.push(outlineId);
-  if (params.bloomEnabled) effects.push(bloomId);
-  return effects;
+  applySoldierEmissiveColor(params.emissiveColor);
 };

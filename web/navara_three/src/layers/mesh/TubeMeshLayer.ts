@@ -5,6 +5,7 @@ import {
   MeshLambertMaterial,
   TubeGeometry,
   Vector3,
+  type Object3DEventMap,
 } from "three";
 
 import {
@@ -13,6 +14,9 @@ import {
   type ViewContext,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+
+type TubeMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
   tube?: {
@@ -39,7 +43,7 @@ export type TubeMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class TubeMeshLayer extends MeshLayerDeclaration<
   TubeMeshLayerConfig,
   TubeMeshLayerUpdate,
-  Mesh<TubeGeometry, MeshLambertMaterial>
+  Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>
 > {
   private config: TubeMeshLayerConfig;
 
@@ -80,7 +84,10 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
       transparent: cfg.transparent ?? false,
     });
 
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>(
+      geometry,
+      material,
+    );
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;

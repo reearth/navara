@@ -1,4 +1,9 @@
-import { Mesh, MeshLambertMaterial, PlaneGeometry } from "three";
+import {
+  Mesh,
+  MeshLambertMaterial,
+  PlaneGeometry,
+  type Object3DEventMap,
+} from "three";
 
 import {
   MeshLayerDeclaration,
@@ -6,6 +11,9 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+
+type PlaneMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
   plane?: {
@@ -30,7 +38,7 @@ export type PlaneMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class PlaneMeshLayer extends MeshLayerDeclaration<
   PlaneMeshLayerConfig,
   PlaneMeshLayerUpdate,
-  Mesh<PlaneGeometry, MeshLambertMaterial>
+  Mesh<PlaneGeometry, MeshLambertMaterial, PlaneMeshEventMap>
 > {
   private config: PlaneMeshLayerConfig;
 
@@ -62,7 +70,11 @@ export class PlaneMeshLayer extends MeshLayerDeclaration<
       transparent: cfg.transparent ?? false,
     });
 
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Mesh<
+      PlaneGeometry,
+      MeshLambertMaterial,
+      PlaneMeshEventMap
+    >(geometry, material);
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
