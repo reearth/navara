@@ -6,7 +6,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{Deleted, Priority};
-use navara_core::CRS;
+use navara_core::{Aabb, CRS};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     batch::{FeatureBatchId, GlobalBatchIds},
@@ -257,7 +257,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         Without<Deleted>,
     >,
     mut rendered_tiles: Query<
-        (&mut RenderedCesium3dTileContent, &TileTransform),
+        (&mut RenderedCesium3dTileContent, &TileTransform, &Aabb),
         (
             With<RenderedCesium3dTileContentPntsMarker>,
             Added<RenderedCesium3dTileContent>,
@@ -265,7 +265,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
-    for (mut tile, transform) in &mut rendered_tiles {
+    for (mut tile, transform, aabb) in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => v,
             Err(_) => {
@@ -314,6 +314,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             appearance,
             ModelBin(postions_handle),
             transform.transform,
+            aabb.clone(),
         ));
         tile.feature_id = Some(entity.id());
 

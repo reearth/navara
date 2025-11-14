@@ -7,6 +7,9 @@ import {
   Group,
   Float32BufferAttribute,
   PointsMaterial,
+  Box3,
+  Vector3,
+  BoxHelper,
 } from "three";
 
 import type { BufferLoader } from "../";
@@ -66,6 +69,26 @@ export async function renderModel(
         if (geometry) {
           const points: Points = new Points(geometry, material);
           group.add(points);
+
+          // Add bounding box helper using the precomputed AABB
+          const aabb_min = [
+            m.aabb.center_x - m.aabb.extent_x,
+            m.aabb.center_y - m.aabb.extent_y,
+            m.aabb.center_z - m.aabb.extent_z,
+          ];
+          const aabb_max = [
+            m.aabb.center_x + m.aabb.extent_x,
+            m.aabb.center_y + m.aabb.extent_y,
+            m.aabb.center_z + m.aabb.extent_z,
+          ];
+
+          geometry.boundingBox = new Box3(
+            new Vector3(aabb_min[0], aabb_min[1], aabb_min[2]),
+            new Vector3(aabb_max[0], aabb_max[1], aabb_max[2]),
+          );
+
+          const boxHelper = new BoxHelper(points, 0xff0000);
+          group.add(boxHelper);
         }
         return group;
       }

@@ -1,9 +1,10 @@
 use crate::{Angle, Extent, Meters, Radians, LLE, WGS84_64};
 use navara_math::{FloatType, Vec3};
+use bevy_ecs::component::Component;
 
 use super::Plane;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Component)]
 pub struct Aabb {
     pub center: Vec3,
     pub extents: Vec3,

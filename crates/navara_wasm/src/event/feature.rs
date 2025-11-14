@@ -12,7 +12,7 @@ use crate::{
 use navara_wasm_types::{
     polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
     BillboardMaterial, BoundingSphere, ModelMaterial, PointMaterial, PolygonMaterial,
-    PolylineMaterial, TextMaterial, Vec3, CRS,
+    PolylineMaterial, TextMaterial, Vec3, CRS, Aabb,
 };
 
 #[wasm_bindgen]
@@ -85,6 +85,7 @@ pub struct ModelMesh {
     pub material: ModelMaterial,
     pub transform: Transform,
     pub bin: Option<Handle>,
+    pub aabb: Aabb,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableModelGeometry,
     pub active: bool,
@@ -197,12 +198,14 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 bin,
                 geometry,
                 active,
+                aabb,
                 ..
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
                     transform: transform.into(),
                     bin: bin.as_ref().map(|v| v.0),
+                    aabb: aabb.clone().into(),
                     geometry: geometry.into(),
                     active: *active,
                 }),
