@@ -202,8 +202,6 @@ pub fn update(
 
         after_inertia(&mut inertia, duration, &mut controller, &mut cam_st);
 
-        orbit.update_horizontal_rotation_axis_on_tilt(&transform);
-
         if !cam_st.initialized {
             cam_st.initialized = true;
             // Set initial camera move status if camera status is empty.
@@ -344,7 +342,7 @@ fn handle_orbit_spin(
 
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
 
-    let Some(spin) = rotate(mm, controller, ratio * 1.5, ratio) else {
+    let Some(spin) = rotate(mm, controller, ratio, ratio) else {
         return;
     };
 
@@ -431,10 +429,6 @@ fn rotate_around_axis(
         transform.translation = rotation * transform.translation;
         transform.rotation = (rotation * transform.rotation).normalize();
 
-        orbit.tilt_quat = rotation;
-        orbit.tilting = true;
-        orbit.update_horizontal_rotation_axis_on_tilt(transform);
-
         return;
     }
 
@@ -484,9 +478,7 @@ fn rotate_around_axis(
         }
     }
 
-    orbit.tilt_quat = rotation;
-    orbit.tilting = true;
-    orbit.update_horizontal_rotation_axis_on_tilt(transform);
+    orbit.tilt_quat = transform.rotation;
 }
 
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
@@ -605,12 +597,25 @@ fn handle_zoom(
 
 fn calc_distance_from_ellipsoid_surface(transform: &Transform, ellipsoid: Ellipsoid<f64>) -> f64 {
     let camera_pos = transform.transform_point(Vec3::ZERO);
-    let direction_to_center = -camera_pos.normalize();
+    let camera_forward = transform.forward();
 
     let ray = Ray {
         origin: camera_pos,
-        direction: direction_to_center,
+        direction: camera_forward,
     };
+
+    if let Some(distance) = ray_ellipsoid_intersect(&ray, ellipsoid) {
+        return distance;
+    }
+
+    // If we can't find the intersection point with the camera's forward direction,
+    // it means the camera's forward vector is out of ellipsoid surface.
+    // In that case, we can simply use the camera's position as the direction as workaround.
+    let ray = Ray {
+        origin: camera_pos,
+        direction: -camera_pos.normalize(),
+    };
+
     ray_ellipsoid_intersect(&ray, ellipsoid).unwrap_or(0.)
 }
 
@@ -803,7 +808,16 @@ fn apply_camera_change(
     transform.look_to(world_forward, world_up);
 
     // Update orbit state with new quaternion
-    orbit.set_quat(transform, world_quat, Vec3::ZERO, false);
+    orbit.set_quat(
+        transform,
+        Quat::from_mat3(&Mat3::from_cols(
+            world_forward.cross(world_up),
+            world_forward,
+            world_up,
+        )),
+        Vec3::ZERO,
+        false,
+    );
 }
 
 /// Calculates the world rotation quaternion based on target direction and heading
@@ -920,6 +934,7 @@ fn apply_camera_translate(
     transform.translation = next;
 }
 
+// TODO: Always spin around `target`. It should be reset by `look_at(center)`.
 fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {
     let ellipsoid = WGS84_64;
     let world_target = CRS::Geographic.to_vec3(ellipsoid, *target, 0.0);
@@ -945,8 +960,12 @@ fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, of
     transform.translation = camera_position;
     transform.look_to(forward, up);
 
-    let world = orbit.get_default_world_quat();
-    orbit.set_quat(transform, world, Vec3::ZERO, false);
+    orbit.set_quat(
+        transform,
+        Quat::from_mat4(&enu_transform),
+        world_target,
+        true,
+    );
 }
 
 #[allow(clippy::type_complexity)]

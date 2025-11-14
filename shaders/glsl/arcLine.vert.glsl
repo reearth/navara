@@ -28,8 +28,8 @@ attribute vec2 aVertexData; // x=aT, y=aSide
 
 // Instance attributes - per arc instance
 attribute vec4 aInstanceSourceTarget; // x=srcLon, y=srcLat, z=tgtLon, w=tgtLat
-attribute vec4 aInstanceParams; // x=height, y=arcHeight, z=thickness, w=opacity
-attribute float aInstanceSegments; // Number of segments
+attribute vec4 aInstanceParams1; // x=height, y=arcHeight, z=thickness, w=opacity
+attribute vec2 aInstanceParams2; // x=segments, y=gradation
 attribute vec3 aInstanceSrcColor;
 attribute vec3 aInstanceTgtColor;
 
@@ -47,10 +47,12 @@ void main() {
   float aSide = aVertexData.y;
   
   // Unpack instance params
-  float aInstanceHeight = aInstanceParams.x;
-  float aInstanceArcHeight = aInstanceParams.y;
-  float aInstanceThickness = aInstanceParams.z;
-  float aInstanceOpacity = aInstanceParams.w;
+  float aInstanceHeight = aInstanceParams1.x;
+  float aInstanceArcHeight = aInstanceParams1.y;
+  float aInstanceThickness = aInstanceParams1.z;
+  float aInstanceOpacity = aInstanceParams1.w;
+  float aInstanceSegments = aInstanceParams2.x;
+  float aInstanceGradation = aInstanceParams2.y;
   
   // Unpack source/target coordinates
   vec2 aInstanceSource = aInstanceSourceTarget.xy;
@@ -97,6 +99,6 @@ void main() {
   #include <logdepthbuf_vertex>
 
   // Color interpolation
-  vColor = mix(aInstanceSrcColor, aInstanceTgtColor, t);
+  vColor = mix(aInstanceSrcColor, aInstanceTgtColor, clamp(t + (0.5 - aInstanceGradation) * 2.0, 0.0, 1.0));
   vOpacity = aInstanceOpacity;
 }

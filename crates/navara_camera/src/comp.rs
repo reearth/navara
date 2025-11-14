@@ -242,10 +242,8 @@ pub struct Orbit {
     pub horizontal_rotation_axis: Vec3,
     pub vertical_rotation_axis: Vec3,
     pub local_up: Vec3,
-    pub tilt_horizontal_rotation_axis: Vec3,
     pub local_forward: Vec3,
     pub local_position: Vec3,
-    pub tilting: bool,
     // Fixed rotation axis and pivot for consistent rotation
     pub fixed_rotation_axis: Option<Vec3>,
     pub fixed_rotation_pivot: Option<Vec3>,
@@ -263,13 +261,11 @@ impl Default for Orbit {
             tilt_quat: Quat::IDENTITY,
             default_world_quat: None,
             local_up: Vec3::Z,
-            tilt_horizontal_rotation_axis: Vec3::Z,
             local_position: Vec3::NEG_Y * r,
             local_forward: Vec3::Y,
             vertical_rotation_axis: Vec3::NEG_X,
             horizontal_rotation_axis: Vec3::Z,
             pivot: Vec3::ZERO,
-            tilting: false,
             fixed_rotation_axis: None,
             fixed_rotation_pivot: None,
         }
@@ -288,7 +284,6 @@ impl Orbit {
         self.horizon_quat = Quat::IDENTITY;
         self.vertical_quat = Quat::IDENTITY;
         self.world_quat = world;
-        self.tilting = tilt;
 
         if tilt {
             self.tilt_quat = world;
@@ -330,7 +325,13 @@ impl Orbit {
             return;
         }
 
-        self.horizontal_rotation_axis = inverse * self.tilt_horizontal_rotation_axis;
+        // Get the up direction from the tilt quaternion
+        let tilt_up = self.tilt_quat * Vec3::Z;
+        // Get the vertical rotation axis in world space
+        let world_vertical_axis = self.world_quat * self.vertical_rotation_axis;
+        let tilt_horizontal_rotation_axis = tilt_up.cross(world_vertical_axis).normalize_or_zero();
+
+        self.horizontal_rotation_axis = inverse * tilt_horizontal_rotation_axis;
         self.local_up = self
             .vertical_rotation_axis
             .cross(self.local_forward)
@@ -344,29 +345,6 @@ impl Orbit {
         if forwards_dot < 0. {
             self.horizontal_rotation_axis *= -1.;
         }
-    }
-
-    pub fn update_horizontal_rotation_axis_on_tilt(&mut self, transform: &Transform) {
-        if !self.tilting {
-            return;
-        }
-
-        let z_base = Vec3::Z;
-        let z_cam = transform.up();
-
-        // Get difference between camera z axis and base z axis.
-        let axis = z_base.cross(z_cam);
-        let axis_len2 = axis.length_squared();
-
-        // Calculate an angle.
-        let dot = z_base.dot(z_cam).clamp(-1.0, 1.0);
-        let angle = axis_len2.sqrt().atan2(dot);
-
-        // Make a quaternion to rotate around.
-        let normalized_axis = axis / axis_len2.sqrt();
-        let q = Quat::from_axis_angle(normalized_axis, angle);
-
-        self.tilt_horizontal_rotation_axis = q * z_base;
     }
 }
 
