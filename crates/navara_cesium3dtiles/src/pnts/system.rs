@@ -90,6 +90,7 @@ pub fn construct_model_by_pnts_layer(
         appearance.internal = Some(ModelInternalMaterial {
             draco_compressed,
             point_cloud: true,
+            point_cloud_geodetic_normal: Vec3::ZERO,
         });
 
         commands.spawn((
@@ -296,6 +297,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         appearance.internal = Some(ModelInternalMaterial {
             draco_compressed,
             point_cloud: true,
+            point_cloud_geodetic_normal: Vec3::ZERO,
         });
 
         let entity = commands.spawn((

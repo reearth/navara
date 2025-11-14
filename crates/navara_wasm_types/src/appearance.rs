@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, Vec2};
+use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -688,6 +688,8 @@ pub struct ModelInternalMaterial {
     pub point_cloud: bool,
     #[wasm_bindgen(getter_with_clone)]
     pub draco_compressed: bool,
+    #[wasm_bindgen(getter_with_clone)]
+    pub point_cloud_geodetic_normal: WasmVec3,
 }
 
 impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMaterial {
@@ -695,6 +697,7 @@ impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMater
         ModelInternalMaterial {
             point_cloud: value.point_cloud,
             draco_compressed: value.draco_compressed,
+            point_cloud_geodetic_normal: value.point_cloud_geodetic_normal.into(),
         }
     }
 }
@@ -704,6 +707,7 @@ impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
         navara_material::ModelInternalMaterial {
             point_cloud: value.point_cloud,
             draco_compressed: value.draco_compressed,
+            point_cloud_geodetic_normal: value.point_cloud_geodetic_normal.into(),
         }
     }
 }
