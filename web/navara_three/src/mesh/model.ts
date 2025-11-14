@@ -542,47 +542,44 @@ export class ModelMesh
       material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
+        shader.uniforms.uAddHeight = material.userData.uAddHeight;
+
         // Update vertex shader
         const colorDivisior = 65535.0;
-        shader.vertexShader = createReplacer(shader.vertexShader).replace(
-          "#include <color_vertex>",
-          createReplacer(ShaderChunk.color_vertex)
-            .replace(
-              "vColor = vec4( 1.0 );",
-              `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
-            )
-            .replace(
-              "vColor = vec3( 1.0 );",
-              `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
-            ).source,
-        ).source;
-
-        shader.vertexShader = createReplacer(shader.vertexShader).replace(
-          "#include <common>",
-          `#include <common>
-          uniform float uAddHeight;
-         `,
-        ).source;
-
-        shader.vertexShader = createReplacer(shader.vertexShader).replace(
-          "#include <project_vertex>",
-          createReplacer(ShaderChunk.project_vertex)
-            .replace(
-              "vec4 mvPosition = vec4( transformed, 1.0 );",
-              `vec4 mvPosition = vec4( transformed, 1.0 );
-            // point cloud geodetic normal in world space - precomputed
-            vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
-            vec4 mvNormal = viewMatrix * vec4(normal, 0.0);`,
-            )
-            .replace(
-              "gl_Position = projectionMatrix * mvPosition;",
-              `mvPosition += mvNormal * uAddHeight;
-            gl_Position = projectionMatrix * mvPosition;
-            `,
-            ).source,
-        ).source;
-
-        shader.uniforms.uAddHeight = material.userData.uAddHeight;
+        shader.vertexShader = createReplacer(shader.vertexShader)
+          .replace(
+            "#include <color_vertex>",
+            createReplacer(ShaderChunk.color_vertex)
+              .replace(
+                "vColor = vec4( 1.0 );",
+                `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
+              )
+              .replace(
+                "vColor = vec3( 1.0 );",
+                `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
+              ).source,
+          )
+          .replace(
+            "#include <common>",
+            `#include <common>
+          uniform float uAddHeight;`,
+          )
+          .replace(
+            "#include <project_vertex>",
+            createReplacer(ShaderChunk.project_vertex)
+              .replace(
+                "vec4 mvPosition = vec4( transformed, 1.0 );",
+                `vec4 mvPosition = vec4( transformed, 1.0 );
+               // point cloud geodetic normal in world space - precomputed
+               vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
+               vec4 mvNormal = viewMatrix * vec4(normal, 0.0);`,
+              )
+              .replace(
+                "gl_Position = projectionMatrix * mvPosition;",
+                `mvPosition += mvNormal * uAddHeight;
+               gl_Position = projectionMatrix * mvPosition;`,
+              ).source,
+          ).source;
       };
 
       this.setMaterial(material, object);

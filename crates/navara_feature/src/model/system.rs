@@ -115,20 +115,12 @@ pub fn transfer_mesh(
             None => transform,
         };
 
-        if material
-            .internal
-            .as_ref()
-            .is_some_and(|internal| internal.point_cloud)
-        {
+        if let Some(material_internal) = material.internal.as_mut() {
             let geodetic_normal = WGS84_64
                 .geodetic_surface_normal_from_vec3(transform.transform_point(Vec3::ZERO).into())
                 .into();
 
-            material
-                .internal
-                .as_mut()
-                .unwrap()
-                .point_cloud_geodetic_normal = Vec3::normalize(geodetic_normal);
+            material_internal.point_cloud_geodetic_normal = Vec3::normalize(geodetic_normal);
         }
 
         let entity = commands.spawn((
