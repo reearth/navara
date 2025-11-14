@@ -463,7 +463,7 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
   dashFolder.addBinding(params, "dashAnimation");
 
   dashFolder.addBinding(params, "dashAnimationSpeed", {
-    min: 1,
+    min: -100000,
     max: 100000,
     step: 1,
   });
