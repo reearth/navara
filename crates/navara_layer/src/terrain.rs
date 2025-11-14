@@ -102,7 +102,7 @@ pub enum TerrainDataType {
 impl TerrainDataType {
     pub fn from_url(url: &str) -> Self {
         match url.split('?').next() {
-            Some(s) if ["png", "pngraw"].iter().any(|e| s.ends_with(e)) => {
+            Some(s) if ["png", "pngraw", "webp"].iter().any(|e| s.ends_with(e)) => {
                 TerrainDataType::RasterDEM
             }
             Some(s) if ["terrain"].iter().any(|e| s.ends_with(e)) => TerrainDataType::QuantizedMesh,
@@ -127,6 +127,10 @@ mod test {
         );
         assert_eq!(
             TerrainDataType::from_url("https://example.com/terrain.pngraw"),
+            TerrainDataType::RasterDEM
+        );
+        assert_eq!(
+            TerrainDataType::from_url("https://example.com/terrain.webp"),
             TerrainDataType::RasterDEM
         );
 

@@ -40,6 +40,11 @@ export const TERRAIN_DATASETS = {
       "Geospatial Information Authority of Japan Tiles - Digital Elevation Map",
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
   },
+  mapterhorn: {
+    url: "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp",
+    attribution: "© Mapterhorn",
+    attributionUrl: "https://mapterhorn.com/attribution",
+  },
   mapbox: {
     url: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
       import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN

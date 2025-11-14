@@ -42,3 +42,18 @@ pub const MAPBOX_ELEVATION_DECODER: ElevationDecoder = ElevationDecoder {
     max_offset: 0.,
     min_offset: 0.,
 };
+
+// https://github.com/tilezen/joerd/blob/0b86765156d0612d837548c2cf70376c43b3405c/docs/formats.md#terrarium
+// elevation = {offset} + ({R} * {r_scaler} + {G} * {g_scaler} + {B} * {b_scaler})
+pub const TERRARIUM_ELEVATION_DECODER: ElevationDecoder = ElevationDecoder {
+    r_scaler: 256.,
+    g_scaler: 1.,
+    b_scaler: 1.0 / 256.0,
+    offset: -32768.,
+
+    // Unused
+    epsilon: 1.,
+    boundary: 0.,
+    max_offset: 0.,
+    min_offset: 0.,
+};
