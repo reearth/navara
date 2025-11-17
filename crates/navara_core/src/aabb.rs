@@ -1,6 +1,6 @@
 use crate::{Angle, Extent, Meters, Radians, LLE, WGS84_64};
-use navara_math::{FloatType, Vec3};
 use bevy_ecs::component::Component;
+use navara_math::{FloatType, Vec3};
 
 use super::Plane;
 

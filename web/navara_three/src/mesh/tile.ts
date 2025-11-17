@@ -74,7 +74,8 @@ const NUM_ADDITIONAL_TEXTURES = 3; // For water normal map, color map, etc.
 
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
-  implements PickableMesh {
+  implements PickableMesh
+{
   handle: TileHandle;
   tileHandler: TileHandler;
   maxTextures: number;
@@ -215,11 +216,11 @@ export class TileMesh
       const parentHandle =
         // Parent tile should be used if this tile isn't available, or
         !state?.isRendered ||
-          // this tile is still preparing in rendering engine(It means this texturized scene doesn't have a mesh except for the parent tile).
-          !this.texturizedSceneByTileCoordinates.hasCurrentMesh(
-            this.handle,
-            layerId,
-          )
+        // this tile is still preparing in rendering engine(It means this texturized scene doesn't have a mesh except for the parent tile).
+        !this.texturizedSceneByTileCoordinates.hasCurrentMesh(
+          this.handle,
+          layerId,
+        )
           ? state?.parentHandle
           : undefined;
 
@@ -357,21 +358,21 @@ export class TileMesh
     }
 
     if (mat.show_bounding_box) {
-    geometry.boundingBox = new Box3(
-      new Vector3(
-        mesh.aabb.center.x - mesh.aabb.extent.x,
-        mesh.aabb.center.y - mesh.aabb.extent.y,
-        mesh.aabb.center.z - mesh.aabb.extent.z,
-      ),
-      new Vector3(
-        mesh.aabb.center.x + mesh.aabb.extent.x,
-        mesh.aabb.center.y + mesh.aabb.extent.y,
-        mesh.aabb.center.z + mesh.aabb.extent.z,
-      ),
-    );
-    const bb = new Box3Helper(geometry.boundingBox, 0x00ff00);
-    this.add(bb);
-  }
+      geometry.boundingBox = new Box3(
+        new Vector3(
+          mesh.aabb.center.x - mesh.aabb.extent.x,
+          mesh.aabb.center.y - mesh.aabb.extent.y,
+          mesh.aabb.center.z - mesh.aabb.extent.z,
+        ),
+        new Vector3(
+          mesh.aabb.center.x + mesh.aabb.extent.x,
+          mesh.aabb.center.y + mesh.aabb.extent.y,
+          mesh.aabb.center.z + mesh.aabb.extent.z,
+        ),
+      );
+      const bb = new Box3Helper(geometry.boundingBox, 0x00ff00);
+      this.add(bb);
+    }
     this.geometry = geometry;
 
     this.material = this.initMaterial(mat, viewEvents, uniforms, globe);

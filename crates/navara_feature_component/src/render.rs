@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity, system::ResMut};
 use navara_buffer_store::{BufferStore, Handle};
-use navara_core::{BoundingSphere, Extent, Radians, CRS, Aabb};
+use navara_core::{Aabb, BoundingSphere, Extent, Radians, CRS};
 use navara_geometry::{TransferableFloatAttribute, TransferableUintAttribute};
 use navara_layer::LayerId;
 use navara_material::{

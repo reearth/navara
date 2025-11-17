@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery, Cesium3dTileContent,
-    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform 
+    Cesium3dTileContentMetadata, TileOrderByDistance, TileTransform,
 };
 
 pub enum TraversalResult {

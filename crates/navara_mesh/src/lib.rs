@@ -14,12 +14,12 @@ mod cache;
 pub use cache::*;
 use navara_buffer_store::Handle;
 use navara_component::Deleted;
+use navara_core::Aabb;
 use navara_event_store::EventStore;
 use navara_geometry::TileUvTransform;
 use navara_globe::Globe;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
-use navara_core::Aabb;
 
 #[derive(Component, Debug, Default)]
 pub struct ObjectMarker;

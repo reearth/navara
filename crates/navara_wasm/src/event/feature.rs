@@ -10,9 +10,9 @@ use crate::{
     Transform,
 };
 use navara_wasm_types::{
-    polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
+    polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature, Aabb,
     BillboardMaterial, BoundingSphere, ModelMaterial, PointMaterial, PolygonMaterial,
-    PolylineMaterial, TextMaterial, Vec3, CRS, Aabb,
+    PolylineMaterial, TextMaterial, Vec3, CRS,
 };
 
 #[wasm_bindgen]

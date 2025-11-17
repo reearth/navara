@@ -315,7 +315,11 @@ pub fn transfer_mesh(
         let (cast_shadow, receive_shadow, terrain_show_bounding_box) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
             .map_or((false, false, false), |appearance| {
-                (appearance.cast_shadow(), appearance.receive_shadow(), appearance.show_bounding_box())
+                (
+                    appearance.cast_shadow(),
+                    appearance.receive_shadow(),
+                    appearance.show_bounding_box(),
+                )
             });
 
         let appearance = RasterTileInternalMaterial {
@@ -391,8 +395,9 @@ pub fn transfer_mesh(
                         render_order,
                         uv_transform: Default::default(),
                         aabb: Aabb {
-                            center: Transform::from_translation(-rtc_translation).transform_point(tile_aabb.center.clone()),
-                            extents: tile_aabb.extents.clone(),
+                            center: Transform::from_translation(-rtc_translation)
+                                .transform_point(tile_aabb.center),
+                            extents: tile_aabb.extents,
                         },
                     },
                     material: appearance,
@@ -494,8 +499,9 @@ pub fn transfer_mesh(
                         render_order,
                         uv_transform: Default::default(),
                         aabb: Aabb {
-                            center: Transform::from_translation(-rtc_translation).transform_point(tile_aabb.center.clone()),
-                            extents: tile_aabb.extents.clone(),
+                            center: Transform::from_translation(-rtc_translation)
+                                .transform_point(tile_aabb.center),
+                            extents: tile_aabb.extents,
                         },
                     },
                     material: appearance,
@@ -584,9 +590,10 @@ pub fn transfer_mesh(
                     render_order,
                     uv_transform: Default::default(),
                     aabb: Aabb {
-                            center: Transform::from_translation(-rtc_translation).transform_point(tile_aabb.center.clone()),
-                            extents: tile_aabb.extents.clone(),
-                        },
+                        center: Transform::from_translation(-rtc_translation)
+                            .transform_point(tile_aabb.center),
+                        extents: tile_aabb.extents,
+                    },
                 },
                 material: appearance,
                 object: ObjectBundle {

@@ -97,7 +97,10 @@ export async function renderModel(
       if (m.material.show_bounding_box) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
-            const boxHelper = new Box3Helper(child.geometry.boundingBox, 0x0000ff);
+            const boxHelper = new Box3Helper(
+              child.geometry.boundingBox,
+              0x0000ff,
+            );
             child.add(boxHelper);
           }
         });
@@ -115,10 +118,13 @@ export async function renderModel(
       // Attach animations to the scene for downstream access
       const userData = model.scene.userData as SceneUserData;
       userData.gltfAnimations = model.animations;
-       if (m.material.show_bounding_box) {
+      if (m.material.show_bounding_box) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
-            const boxHelper = new Box3Helper(child.geometry.boundingBox, 0x0000ff);
+            const boxHelper = new Box3Helper(
+              child.geometry.boundingBox,
+              0x0000ff,
+            );
             child.add(boxHelper);
           }
         });
