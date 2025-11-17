@@ -6,8 +6,8 @@ import {
   degreeToRadian,
   LLE,
 } from "@navara/three_api";
-import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
+import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import {
   Object3D,
   Mesh,
