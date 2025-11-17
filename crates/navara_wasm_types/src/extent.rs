@@ -1,5 +1,6 @@
 use navara_core::{Angle, Radians};
 use navara_math::{FloatType, Vec3};
+use crate::Vec3 as WasmVec3;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -118,34 +119,22 @@ impl From<BoundingSphere> for navara_core::BoundingSphere {
 
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct Aabb {
-    pub center_x: FloatType,
-    pub center_y: FloatType,
-    pub center_z: FloatType,
-    pub extent_x: FloatType,
-    pub extent_y: FloatType,
-    pub extent_z: FloatType,
+    pub center: WasmVec3,
+    pub extent: WasmVec3,
 }
 
 #[wasm_bindgen]
 impl Aabb {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        center_x: FloatType,
-        center_y: FloatType,
-        center_z: FloatType,
-        extent_x: FloatType,
-        extent_y: FloatType,
-        extent_z: FloatType,
+        center: WasmVec3,
+        extent: WasmVec3,
     ) -> Self {
         Self {
-            center_x,
-            center_y,
-            center_z,
-            extent_x,
-            extent_y,
-            extent_z,
+            center,
+            extent,
         }
     }
 }
@@ -153,12 +142,8 @@ impl Aabb {
 impl From<navara_core::Aabb> for Aabb {
     fn from(val: navara_core::Aabb) -> Self {
         Aabb {
-            center_x: val.center.x,
-            center_y: val.center.y,
-            center_z: val.center.z,
-            extent_x: val.extents.x,
-            extent_y: val.extents.y,
-            extent_z: val.extents.z,
+            center: val.center.into(),
+            extent: val.extents.into(),
         }
     }
 }
@@ -166,8 +151,8 @@ impl From<navara_core::Aabb> for Aabb {
 impl From<Aabb> for navara_core::Aabb {
     fn from(val: Aabb) -> Self {
         navara_core::Aabb {
-            center: Vec3::new(val.center_x, val.center_y, val.center_z),
-            extents: Vec3::new(val.extent_x, val.extent_y, val.extent_z),
+            center: val.center.into(),
+            extents: val.extent.into(),
         }
     }
 }

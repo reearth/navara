@@ -58,6 +58,13 @@ impl TerrainAppearance {
             TerrainAppearance::Ellipsoid(_) => true,
         }
     }
+
+    pub fn show_bounding_box(&self) -> bool {
+        match self {
+            TerrainAppearance::Raster(mat) => mat.show_bounding_box,
+            TerrainAppearance::Ellipsoid(mat) => mat.show_bounding_box,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]

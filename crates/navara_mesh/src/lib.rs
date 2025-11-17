@@ -19,6 +19,7 @@ use navara_geometry::TileUvTransform;
 use navara_globe::Globe;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
+use navara_core::Aabb;
 
 #[derive(Component, Debug, Default)]
 pub struct ObjectMarker;
@@ -29,7 +30,7 @@ pub struct ObjectBundle {
     pub marker: ObjectMarker,
 }
 
-#[derive(Debug, Clone, Component, PartialEq)]
+#[derive(Debug, Clone, Component)]
 pub struct Mesh {
     pub vertices: Handle,
     pub uvs: Handle,
@@ -37,6 +38,7 @@ pub struct Mesh {
     pub active: bool,
     pub render_order: i32,
     pub uv_transform: TileUvTransform,
+    pub aabb: Aabb,
 }
 
 #[derive(Bundle, Debug)]
