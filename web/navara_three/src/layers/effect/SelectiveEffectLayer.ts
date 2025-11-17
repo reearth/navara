@@ -1,8 +1,10 @@
+import { DepthCopyPass } from "postprocessing";
 import {
   Color,
   MeshBasicMaterial,
   Vector2,
   DoubleSide,
+  RGBADepthPacking,
   type WebGLRenderer,
 } from "three";
 
@@ -14,6 +16,7 @@ import {
 } from "../../core/EffectLayerDeclaration";
 import type { SelectiveEffectResources } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
+import { CustomRenderPass } from "../../passes";
 
 // Base configuration for selective effects
 export type SelectiveEffectConfig = {
@@ -89,13 +92,6 @@ const MASK_MATERIAL_DEPTH_DISABLED = new MeshBasicMaterial({
   side: DoubleSide, // Render both sides to handle model orientation
 });
 
-// Depth-only material for rendering depth from main scene
-const DEPTH_ONLY_MATERIAL = new MeshBasicMaterial({
-  colorWrite: false,
-  depthTest: true,
-  depthWrite: true,
-});
-
 /**
  * Base class for selective effect layers
  * Provides mask rendering and debug visualization
@@ -106,10 +102,16 @@ export abstract class SelectiveEffectLayerBase<
 > extends EffectLayerDeclaration<Config, UpdateConfig> {
   protected resources!: SelectiveEffectResources;
   protected config: Config;
+  private depthCopyPass: DepthCopyPass;
 
   constructor(view: ViewContext, config: Config) {
     super(view, config);
     this.config = config;
+
+    // Initialize depth copy pass for reusing depth from CustomRenderPass
+    this.depthCopyPass = new DepthCopyPass({
+      depthPacking: RGBADepthPacking,
+    });
   }
 
   onCreate(): void {
@@ -141,10 +143,16 @@ export abstract class SelectiveEffectLayerBase<
    * - Zero scene.traverse() calls
    * - Uses overrideMaterial for fastest rendering
    * - No material cloning or restoration needed
+   * - Reuses depth from CustomRenderPass to avoid expensive MRT scene rendering
    */
   protected renderMask(renderer: WebGLRenderer): void {
     const { sceneDepthEnabled, sceneDepthDisabled, maskRT } = this.resources;
-    const mainScene = this.view.scenes.mrt;
+
+    // Get MRT pass to reuse its depth buffer
+    const mrtPass = this.view.renderPassOrchestrator.getPass("mrt");
+    if (!mrtPass || !(mrtPass instanceof CustomRenderPass)) {
+      throw new Error("MRT pass not found or invalid type");
+    }
 
     // Save renderer state
     const originalClearColor = new Color();
@@ -157,11 +165,14 @@ export abstract class SelectiveEffectLayerBase<
     renderer.setClearColor(0x000000, 1);
     renderer.clear(true, true, true);
 
-    // 1. Render depth from main scene (all objects)
-    // This ensures objects without effects contribute to depth buffer
-    mainScene.overrideMaterial = DEPTH_ONLY_MATERIAL;
-    renderer.render(mainScene, this.view.camera);
-    mainScene.overrideMaterial = null;
+    // 1. Copy depth from CustomRenderPass (avoids expensive MRT scene rendering)
+    // CustomRenderPass.allDepthCopyPass already contains all depth information
+    // from globe, MRT, and opaque scenes
+    this.depthCopyPass.setDepthTexture(mrtPass.allDepthCopyPass.texture);
+    this.depthCopyPass.render(renderer, maskRT, null);
+
+    // Set actual renderTarget again because it's changed in copy pass
+    renderer.setRenderTarget(maskRT);
 
     // 2. Render mask silhouettes with depthTest enabled
     // overrideMaterial applies to all objects in scene - no traverse needed!
@@ -221,6 +232,9 @@ export abstract class SelectiveEffectLayerBase<
   }
 
   onDestroy(): void {
+    // Dispose depth copy pass
+    this.depthCopyPass.dispose();
+
     if (this.view.selectiveRegistry) {
       this.view.selectiveRegistry.destroy(this.id);
     }
