@@ -72,20 +72,20 @@ export async function renderModel(
           group.add(points);
 
           // Add bounding box helper using the precomputed AABB
-          if (m.material.show_bounding_box) {
-            geometry.boundingBox = new Box3(
-              new Vector3(
-                m.aabb.center.x - m.aabb.extent.x,
-                m.aabb.center.y - m.aabb.extent.y,
-                m.aabb.center.z - m.aabb.extent.z,
-              ),
-              new Vector3(
-                m.aabb.center.x + m.aabb.extent.x,
-                m.aabb.center.y + m.aabb.extent.y,
-                m.aabb.center.z + m.aabb.extent.z,
-              ),
-            );
+          geometry.boundingBox = new Box3(
+            new Vector3(
+              m.aabb.center.x - m.aabb.extent.x,
+              m.aabb.center.y - m.aabb.extent.y,
+              m.aabb.center.z - m.aabb.extent.z,
+            ),
+            new Vector3(
+              m.aabb.center.x + m.aabb.extent.x,
+              m.aabb.center.y + m.aabb.extent.y,
+              m.aabb.center.z + m.aabb.extent.z,
+            ),
+          );
 
+          if (m.material.show_bounding_box) {
             const boxHelper = new Box3Helper(geometry.boundingBox, 0xff0000);
             group.add(boxHelper);
           }

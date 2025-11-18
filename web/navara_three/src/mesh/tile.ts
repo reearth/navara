@@ -357,19 +357,19 @@ export class TileMesh
       geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
     }
 
+    geometry.boundingBox = new Box3(
+      new Vector3(
+        mesh.aabb.center.x - mesh.aabb.extent.x,
+        mesh.aabb.center.y - mesh.aabb.extent.y,
+        mesh.aabb.center.z - mesh.aabb.extent.z,
+      ),
+      new Vector3(
+        mesh.aabb.center.x + mesh.aabb.extent.x,
+        mesh.aabb.center.y + mesh.aabb.extent.y,
+        mesh.aabb.center.z + mesh.aabb.extent.z,
+      ),
+    );
     if (mat.show_bounding_box) {
-      geometry.boundingBox = new Box3(
-        new Vector3(
-          mesh.aabb.center.x - mesh.aabb.extent.x,
-          mesh.aabb.center.y - mesh.aabb.extent.y,
-          mesh.aabb.center.z - mesh.aabb.extent.z,
-        ),
-        new Vector3(
-          mesh.aabb.center.x + mesh.aabb.extent.x,
-          mesh.aabb.center.y + mesh.aabb.extent.y,
-          mesh.aabb.center.z + mesh.aabb.extent.z,
-        ),
-      );
       const bb = new Box3Helper(geometry.boundingBox, 0x00ff00);
       this.add(bb);
     }
