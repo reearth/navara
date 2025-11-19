@@ -18,6 +18,7 @@ import type {
   StarsLayerConfig,
   BoxMeshLayerConfig,
   SphereMeshLayerConfig,
+  HaloMeshLayerConfig,
   CylinderMeshLayerConfig,
   PlaneMeshLayerConfig,
   GLTFModelLayerConfig,
@@ -72,6 +73,7 @@ export type MeshLayerDeclarationDescription =
   | StarsLayerConfig
   | BoxMeshLayerConfig
   | SphereMeshLayerConfig
+  | HaloMeshLayerConfig
   | CylinderMeshLayerConfig
   | TubeMeshLayerConfig
   | PlaneMeshLayerConfig

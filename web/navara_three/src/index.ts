@@ -84,6 +84,7 @@ import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
 import { SmoothLineMeshLayer } from "./layers/mesh/SmoothLineMeshLayer";
 import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
 import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
+import { HaloMeshLayer } from "./layers/mesh/HaloMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
 import { LayersManager } from "./layersManager";
@@ -1020,6 +1021,7 @@ export default class ThreeView<
     this.registerMesh("stars", StarsLayer);
     this.registerMesh("box", BoxMeshLayer);
     this.registerMesh("sphere", SphereMeshLayer);
+    this.registerMesh("halo", HaloMeshLayer);
     this.registerMesh("cylinder", CylinderMeshLayer);
     this.registerMesh("tube", TubeMeshLayer);
     this.registerMesh("plane", PlaneMeshLayer);
