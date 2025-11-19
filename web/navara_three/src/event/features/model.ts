@@ -11,6 +11,7 @@ import {
   Vector3,
   Box3Helper,
   Mesh,
+  Sphere,
 } from "three";
 
 import type { BufferLoader } from "../";
@@ -72,17 +73,25 @@ export async function renderModel(
           group.add(points);
 
           // Add bounding box helper using the precomputed AABB
+          const aabb_center = new Vector3(
+            m.aabb.center.x,
+            m.aabb.center.y,
+            m.aabb.center.z,
+          );
+          const aabb_extent = new Vector3(
+            m.aabb.extent.x,
+            m.aabb.extent.y,
+            m.aabb.extent.z,
+          );
+
           geometry.boundingBox = new Box3(
-            new Vector3(
-              m.aabb.center.x - m.aabb.extent.x,
-              m.aabb.center.y - m.aabb.extent.y,
-              m.aabb.center.z - m.aabb.extent.z,
-            ),
-            new Vector3(
-              m.aabb.center.x + m.aabb.extent.x,
-              m.aabb.center.y + m.aabb.extent.y,
-              m.aabb.center.z + m.aabb.extent.z,
-            ),
+            aabb_center.clone().sub(aabb_extent),
+            aabb_center.clone().add(aabb_extent),
+          );
+
+          geometry.boundingSphere = new Sphere(
+            aabb_center,
+            aabb_extent.length(),
           );
 
           if (m.material.show_bounding_box) {
