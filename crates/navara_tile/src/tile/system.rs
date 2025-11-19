@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
-use navara_core::{TileXYZ, WGS84_64};
+use navara_core::{Aabb, TileXYZ, WGS84_64};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -251,6 +251,7 @@ pub fn transfer_mesh(
         }
 
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
+        let tile_aabb = tile.aabb().clone();
         let is_root = tile.is_root();
         let render_order = if is_root { -1 } else { 0 };
 
@@ -284,6 +285,7 @@ pub fn transfer_mesh(
         // Elevation Heatmap fields
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut shared_heatmap_config = None;
+        let mut tile_show_bounding_box = false;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let should_show = texture_fragment_entity_ids
@@ -295,6 +297,7 @@ pub fn transfer_mesh(
             shows.push(should_show && a.show);
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
+            tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
 
             // Mark whether this layer is an elevation heatmap
             if let Some(heatmap_config) = &l.elevation_heatmap_config {
@@ -309,10 +312,14 @@ pub fn transfer_mesh(
         }
 
         // Extract shared elevation heatmap configuration (or use defaults)
-        let (cast_shadow, receive_shadow) = terrain_layer
+        let (cast_shadow, receive_shadow, terrain_show_bounding_box) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
-            .map_or((false, false), |appearance| {
-                (appearance.cast_shadow(), appearance.receive_shadow())
+            .map_or((false, false, false), |appearance| {
+                (
+                    appearance.cast_shadow(),
+                    appearance.receive_shadow(),
+                    appearance.show_bounding_box(),
+                )
             });
 
         let appearance = RasterTileInternalMaterial {
@@ -322,6 +329,7 @@ pub fn transfer_mesh(
             texture_fragments: texture_fragment_entity_ids.clone(),
             cast_shadow: Some(cast_shadow),
             receive_shadow: Some(receive_shadow),
+            show_bounding_box: Some(tile_show_bounding_box || terrain_show_bounding_box),
 
             // Elevation Heatmap fields
             is_elevation_heatmaps,
@@ -386,6 +394,11 @@ pub fn transfer_mesh(
                         active: false,
                         render_order,
                         uv_transform: Default::default(),
+                        aabb: Aabb {
+                            center: Transform::from_translation(-rtc_translation)
+                                .transform_point(tile_aabb.center),
+                            extents: tile_aabb.extents,
+                        },
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -485,6 +498,11 @@ pub fn transfer_mesh(
                         active: false,
                         render_order,
                         uv_transform: Default::default(),
+                        aabb: Aabb {
+                            center: Transform::from_translation(-rtc_translation)
+                                .transform_point(tile_aabb.center),
+                            extents: tile_aabb.extents,
+                        },
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -571,6 +589,11 @@ pub fn transfer_mesh(
                     active: false,
                     render_order,
                     uv_transform: Default::default(),
+                    aabb: Aabb {
+                        center: Transform::from_translation(-rtc_translation)
+                            .transform_point(tile_aabb.center),
+                        extents: tile_aabb.extents,
+                    },
                 },
                 material: appearance,
                 object: ObjectBundle {

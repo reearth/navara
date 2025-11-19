@@ -383,6 +383,7 @@ pub struct ModelMaterial {
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
     pub point_size: f32,
+    pub show_bounding_box: bool,
     pub internal: Option<ModelInternalMaterial>,
 }
 
@@ -415,6 +416,7 @@ impl Default for ModelMaterial {
             animation_active_clip: None,
             animation_speed: None,
             point_size: 0.3,
+            show_bounding_box: false,
             internal: None,
         }
     }
@@ -485,6 +487,7 @@ pub struct RasterTileMaterial {
     pub max_zoom: usize,
     pub min_zoom: usize,
     pub tms: bool,
+    pub show_bounding_box: bool,
 }
 
 impl Default for RasterTileMaterial {
@@ -496,6 +499,7 @@ impl Default for RasterTileMaterial {
             max_zoom: 20,
             min_zoom: 0,
             tms: false,
+            show_bounding_box: false,
         }
     }
 }
@@ -509,6 +513,7 @@ pub struct RasterTileInternalMaterial {
     pub texture_fragments: Option<Vec<Option<Entity>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
 
     // Elevation Heatmap fields
     pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
@@ -520,6 +525,7 @@ pub struct RasterTerrainMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    pub show_bounding_box: bool,
     pub max_zoom: usize,
     pub min_zoom: usize,
     pub elevation_decoder: ElevationDecoder,
@@ -532,6 +538,7 @@ impl Default for RasterTerrainMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
+            show_bounding_box: false,
             max_zoom: 20,
             min_zoom: 0,
             elevation_decoder: ElevationDecoder::default(),
@@ -544,6 +551,7 @@ impl Default for RasterTerrainMaterial {
 pub struct EllipsoidTerrainMaterial {
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    pub show_bounding_box: bool,
     pub max_zoom: usize,
     pub min_zoom: usize,
 }
@@ -553,6 +561,7 @@ impl Default for EllipsoidTerrainMaterial {
         Self {
             cast_shadow: false,
             receive_shadow: false,
+            show_bounding_box: false,
             max_zoom: 20,
             min_zoom: 0,
         }

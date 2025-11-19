@@ -3,10 +3,9 @@ use bevy_ecs::{
     query::{Added, With},
     system::{Commands, Query, ResMut},
 };
-
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::WGS84_64;
+use navara_core::{Aabb, WGS84_64};
 use navara_feature_component::{
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
@@ -41,6 +40,7 @@ pub fn transfer_mesh(
             // For GLB
             Option<&ModelBin>,
             Option<&Transform>,
+            Option<&Aabb>,
             // For glTF
             // Option<&ModelJson>,
             Option<&DeletedFeatureMarker>,
@@ -59,6 +59,7 @@ pub fn transfer_mesh(
         mut material,
         bin,
         adjustment_transform,
+        aabb,
         deleted_marker,
     ) in &mut models
     {
@@ -115,6 +116,14 @@ pub fn transfer_mesh(
             None => transform,
         };
 
+        let model_transform_inv = transform.compute_matrix().inverse();
+        let aabb = match aabb {
+            Some(aabb) => Aabb {
+                center: model_transform_inv.transform_point3(aabb.center),
+                extents: aabb.extents,
+            },
+            None => Aabb::default(),
+        };
         if let Some(material_internal) = material.internal.as_mut() {
             let geodetic_normal = WGS84_64
                 .geodetic_surface_normal_from_vec3(transform.transform_point(Vec3::ZERO).into())
@@ -144,6 +153,7 @@ pub fn transfer_mesh(
                         size: 1,
                     }),
                 },
+                aabb,
                 feature_batch_id: feature_batch_id.0,
                 active: true,
                 batch_length: global_batch_ids.batch_length,

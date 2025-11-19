@@ -39,6 +39,9 @@ import {
   type MagnificationTextureFilter,
   type MinificationTextureFilter,
   ShaderChunk,
+  Box3,
+  Box3Helper,
+  Sphere,
 } from "three";
 
 import {
@@ -355,6 +358,28 @@ export class TileMesh
       geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
     }
 
+    const aabb_center = new Vector3(
+      mesh.aabb.center.x,
+      mesh.aabb.center.y,
+      mesh.aabb.center.z,
+    );
+    const aabb_extent = new Vector3(
+      mesh.aabb.extent.x,
+      mesh.aabb.extent.y,
+      mesh.aabb.extent.z,
+    );
+
+    geometry.boundingBox = new Box3(
+      aabb_center.clone().sub(aabb_extent),
+      aabb_center.clone().add(aabb_extent),
+    );
+
+    geometry.boundingSphere = new Sphere(aabb_center, aabb_extent.length());
+
+    if (mat.show_bounding_box) {
+      const bb = new Box3Helper(geometry.boundingBox, 0x00ff00);
+      this.add(bb);
+    }
     this.geometry = geometry;
 
     this.material = this.initMaterial(mat, viewEvents, uniforms, globe);

@@ -7,6 +7,7 @@ license = "MIT/Apache-2.0"
 [dependencies]
 radians.workspace = true
 bevy_log.workspace = true
+bevy_ecs.workspace = true
 navara_math = { path = "../navara_math" }
 approx.workspace = true
 regex = "1.11.2"
