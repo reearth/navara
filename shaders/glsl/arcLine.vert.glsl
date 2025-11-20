@@ -18,9 +18,7 @@
 precision highp float;
 
 uniform vec2  uViewport;
-uniform highp float uR;
 uniform float uA;
-uniform float uB;
 uniform float uE2;
 
 // Packed vertex attributes  
@@ -29,12 +27,15 @@ attribute vec2 aVertexData; // x=aT, y=aSide
 // Instance attributes - per arc instance
 attribute vec4 aInstanceSourceTarget; // x=srcLon, y=srcLat, z=tgtLon, w=tgtLat
 attribute vec4 aInstanceParams1; // x=height, y=arcHeight, z=thickness, w=opacity
-attribute vec2 aInstanceParams2; // x=segments, y=gradation
+attribute vec3 aInstanceParams2; // x=segments, y=gradation, z=lineLength
+attribute vec4 aInstanceDash;    // x=dashed, y=dashSize, z=gapSize, w=dashOffset
 attribute vec3 aInstanceSrcColor;
 attribute vec3 aInstanceTgtColor;
 
 out vec3 vColor;
 out float vOpacity;
+out float vLineDistance;
+out vec4 vDash;
 
 #include <common>
 #include <logdepthbuf_pars_vertex>
@@ -43,7 +44,7 @@ out float vOpacity;
 
 void main() {
   // Unpack vertex data
-  float aT = aVertexData.x;
+  float t = aVertexData.x;
   float aSide = aVertexData.y;
   
   // Unpack instance params
@@ -58,10 +59,9 @@ void main() {
   vec2 aInstanceSource = aInstanceSourceTarget.xy;
   vec2 aInstanceTarget = aInstanceSourceTarget.zw;
   
-  float t = aT;
   float dt = 1.0 / aInstanceSegments;
 
-  float t_dir2 = t + dt;
+  float t_dir2 = clamp(t + dt, 0.0, 1.0);
   float t_pos2 = min(1.0, t + dt);
 
   vec3 source3D = lonLatToEllipsoid(aInstanceSource.x, aInstanceSource.y, uA, uE2);
@@ -101,4 +101,7 @@ void main() {
   // Color interpolation
   vColor = mix(aInstanceSrcColor, aInstanceTgtColor, clamp(t + (0.5 - aInstanceGradation) * 2.0, 0.0, 1.0));
   vOpacity = aInstanceOpacity;
+
+  vLineDistance = t * aInstanceParams2.z;
+  vDash = aInstanceDash;
 }

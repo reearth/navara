@@ -328,6 +328,7 @@ fn update_or_spawn_rendered_tile(
 
     if visible {
         if tile.uri.ends_with("pnts") {
+            let aabb = tile.bounding_volume.as_ref().unwrap();
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
@@ -345,6 +346,7 @@ fn update_or_spawn_rendered_tile(
                         TileTransform {
                             transform: tile.transform.unwrap_or_default(),
                         },
+                        aabb.clone(),
                     ))
                     .id(),
             );

@@ -1,3 +1,4 @@
+use crate::Vec3 as WasmVec3;
 use navara_core::{Angle, Radians};
 use navara_math::{FloatType, Vec3};
 use serde::Serialize;
@@ -112,6 +113,39 @@ impl From<BoundingSphere> for navara_core::BoundingSphere {
         navara_core::BoundingSphere {
             center: Vec3::new(val.center_x, val.center_y, val.center_z),
             radius: val.radius,
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Aabb {
+    pub center: WasmVec3,
+    pub extent: WasmVec3,
+}
+
+#[wasm_bindgen]
+impl Aabb {
+    #[wasm_bindgen(constructor)]
+    pub fn new(center: WasmVec3, extent: WasmVec3) -> Self {
+        Self { center, extent }
+    }
+}
+
+impl From<navara_core::Aabb> for Aabb {
+    fn from(val: navara_core::Aabb) -> Self {
+        Aabb {
+            center: val.center.into(),
+            extent: val.extents.into(),
+        }
+    }
+}
+
+impl From<Aabb> for navara_core::Aabb {
+    fn from(val: Aabb) -> Self {
+        navara_core::Aabb {
+            center: val.center.into(),
+            extents: val.extent.into(),
         }
     }
 }

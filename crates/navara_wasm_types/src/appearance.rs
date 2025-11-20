@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, Vec2};
+use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -606,6 +606,7 @@ pub struct ModelMaterial {
     pub animation_speed: Option<f32>,
     // Point size for point clouds data.
     pub point_size: Option<f32>,
+    pub show_bounding_box: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
 }
@@ -642,6 +643,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             animation_active_clip: val.animation_active_clip,
             animation_speed: val.animation_speed,
             point_size: val.point_size.unwrap_or(default.point_size),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             internal: val.__internal__.clone().map(|v| v.into()),
         }
     }
@@ -676,6 +678,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             animation_active_clip: value.animation_active_clip.clone(),
             animation_speed: value.animation_speed,
             point_size: Some(value.point_size),
+            show_bounding_box: Some(value.show_bounding_box),
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
         }
     }
@@ -688,6 +691,8 @@ pub struct ModelInternalMaterial {
     pub point_cloud: bool,
     #[wasm_bindgen(getter_with_clone)]
     pub draco_compressed: bool,
+    #[wasm_bindgen(getter_with_clone)]
+    pub point_cloud_geodetic_normal: WasmVec3,
 }
 
 impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMaterial {
@@ -695,6 +700,7 @@ impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMater
         ModelInternalMaterial {
             point_cloud: value.point_cloud,
             draco_compressed: value.draco_compressed,
+            point_cloud_geodetic_normal: value.point_cloud_geodetic_normal.into(),
         }
     }
 }
@@ -704,6 +710,7 @@ impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
         navara_material::ModelInternalMaterial {
             point_cloud: value.point_cloud,
             draco_compressed: value.draco_compressed,
+            point_cloud_geodetic_normal: value.point_cloud_geodetic_normal.into(),
         }
     }
 }
@@ -717,6 +724,7 @@ pub struct RasterTileMaterial {
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
     pub tms: Option<bool>,
+    pub show_bounding_box: Option<bool>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
@@ -729,6 +737,7 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             tms: val.tms.unwrap_or(default.tms),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
         }
     }
 }
@@ -741,6 +750,7 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
             tms: Some(value.tms),
+            show_bounding_box: Some(value.show_bounding_box),
         }
     }
 }
@@ -757,6 +767,7 @@ pub struct RasterTileInternalMaterial {
     texture_fragments: Option<Vec<Option<TextureFragment>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
 
     // Elevation Heatmap fields
     #[wasm_bindgen(getter_with_clone)]
@@ -806,6 +817,7 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             }),
             cast_shadow: m.cast_shadow,
             receive_shadow: m.receive_shadow,
+            show_bounding_box: m.show_bounding_box,
 
             // Elevation Heatmap fields
             is_elevation_heatmaps: m.is_elevation_heatmaps.iter().map(|b| b.to_u8()).collect(),
@@ -924,6 +936,7 @@ pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
     pub elevation_decoder: Option<ElevationDecoder>,
@@ -937,6 +950,7 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
             show: val.show.unwrap_or(default.show),
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             tile_size: val.tile_size.unwrap_or(default.tile_size),
@@ -954,6 +968,7 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            show_bounding_box: Some(value.show_bounding_box),
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
             elevation_decoder: Some(ElevationDecoder {
@@ -986,6 +1001,7 @@ pub struct ElevationHeatmapMaterial {
 pub struct EllipsoidTerrainMaterial {
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
 }
@@ -996,6 +1012,7 @@ impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMateria
         navara_material::EllipsoidTerrainMaterial {
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
         }
@@ -1007,6 +1024,7 @@ impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrai
         EllipsoidTerrainMaterial {
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            show_bounding_box: Some(value.show_bounding_box),
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
         }

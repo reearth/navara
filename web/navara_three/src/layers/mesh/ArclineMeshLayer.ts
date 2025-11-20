@@ -49,6 +49,10 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
           arcHeightScale:
             cfg.arcHeightScale ?? DefaultArcLineConfig.arcHeightScale,
           gradation: cfg.gradation ?? DefaultArcLineConfig.gradation,
+          dashed: cfg.dashed ?? DefaultArcLineConfig.dashed,
+          dashSize: cfg.dashSize ?? DefaultArcLineConfig.dashSize,
+          gapSize: cfg.gapSize ?? DefaultArcLineConfig.gapSize,
+          dashOffset: cfg.dashOffset ?? DefaultArcLineConfig.dashOffset,
           geometry: cfg.geometry ?? DefaultArcLineConfig.geometry,
         });
       }

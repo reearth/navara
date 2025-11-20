@@ -3,6 +3,7 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
+import { addDateControl } from "../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
@@ -15,6 +16,8 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       point_size: 0.3,
+      height: 0,
+      max_sse: 16,
     },
   },
   {
@@ -23,6 +26,8 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     model: {
       show: true,
       point_size: 0.3,
+      height: 0,
+      max_sse: 16,
     },
   },
 ];
@@ -56,6 +61,7 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addCtrlPanel(gGeoLayersDef, view, pane);
+  addDateControl(view, pane);
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
 
