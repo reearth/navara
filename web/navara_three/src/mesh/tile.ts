@@ -631,7 +631,7 @@ vUv = vUv * uScale + uOffset;
     }
   `,
   )}
-  diffuseColor = sampledDiffuseColor;
+  diffuseColor.rgb = sampledDiffuseColor.rgb;
   `,
         )
         .replaceWithCondition(
