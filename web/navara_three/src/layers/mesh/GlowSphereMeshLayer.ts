@@ -49,7 +49,6 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
     );
 
     // Create material from properties
-    // TODO: handle logarithmic depth buffer
     const material = new ShaderMaterial();
     material.vertexShader = GlowSphereVS;
     material.fragmentShader = GlowSphereFS;
@@ -113,8 +112,6 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
       if (cfg.show !== undefined) {
         material.visible = cfg.show;
       }
-
-      console.log("GlowSphereMeshLayer updated material:", updates);
 
       // Update the stored config with the new values
       if (origin) {
