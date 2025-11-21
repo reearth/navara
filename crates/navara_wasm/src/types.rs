@@ -6,8 +6,9 @@ use navara_layer::{
     TerrainDataType, TerrainLayer, TilesLayer,
 };
 
-use navara_material::{Appearance, ElevationHeatmapConfig};
+use navara_material::{Appearance, ElevationHeatmapConfig, LayerEffectConfig};
 use navara_parser::geojson::GeoJson;
+use navara_wasm_types::LayerEffectOptions;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -97,10 +98,6 @@ pub struct GeoJsonLayerDescription {
     pub polygon: Option<PolygonMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub model: Option<ModelMaterial>,
-
-    // Effects
-    #[wasm_bindgen(getter_with_clone)]
-    pub effects: Option<Vec<String>>,
 }
 
 impl GeoJsonLayerDescription {
@@ -207,10 +204,6 @@ pub struct Cesium3dTilesLayerDescription {
     // Appearances
     #[wasm_bindgen(getter_with_clone)]
     pub model: Option<ModelMaterial>,
-
-    // Effects
-    #[wasm_bindgen(getter_with_clone)]
-    pub effects: Option<Vec<String>>,
 }
 
 impl Cesium3dTilesLayerDescription {
@@ -326,7 +319,8 @@ impl LayerDescription {
                     data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
                 }
 
-                let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let mut layer: TileLayerDescription =
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
                 // Parse elevation_heatmap config
                 let elevation_heatmap_config =
@@ -359,7 +353,7 @@ impl LayerDescription {
                 }
 
                 let mut layer: TerrainLayerDescription =
-                    serde_wasm_bindgen::from_value(value).ok()?;
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
                 let appearance = layer.appearance();
 
@@ -387,11 +381,13 @@ impl LayerDescription {
                     TerrainMaterial::Ellipsoid(e) => navara_layer::TerrainAppearance::Ellipsoid(e),
                 });
 
+                let effect_config = extract_effect_config(&value);
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
                     layer_id: layer_id.to_string(),
                     data: layer_data,
                     appearance: terrain_appearance,
                     terrain_type,
+                    effect_config,
                 }))
             }
             "geojson" => {
@@ -417,14 +413,15 @@ impl LayerDescription {
                 }
 
                 let mut layer: GeoJsonLayerDescription =
-                    serde_wasm_bindgen::from_value(value).ok()?;
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
+                let effect_config = extract_effect_config(&value);
                 Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
                     layer_id: layer_id.to_string(),
                     data: geo_data,
                     appearances: layer.appearances(),
                     crs: layer.crs(),
-                    effects: layer.effects.clone(),
+                    effect_config,
                 }))
             }
             "b3dm" => {
@@ -438,13 +435,16 @@ impl LayerDescription {
                     data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
                 }
 
-                let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let mut layer: B3dmLayerDescription =
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
+                let effect_config = extract_effect_config(&value);
                 Some(navara_layer::LayerDescription::B3dm(B3dmLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(),
                     crs: layer.crs(),
+                    effect_config,
                 }))
             }
             "pnts" => {
@@ -458,13 +458,16 @@ impl LayerDescription {
                     data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
                 }
 
-                let mut layer: PntsLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let mut layer: PntsLayerDescription =
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
+                let effect_config = extract_effect_config(&value);
                 Some(navara_layer::LayerDescription::Pnts(PntsLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(),
                     crs: layer.crs(),
+                    effect_config,
                 }))
             }
             "mvt" => {
@@ -478,13 +481,16 @@ impl LayerDescription {
                     data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
                 }
 
-                let mut layer: MvtLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let mut layer: MvtLayerDescription =
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
+                let effect_config = extract_effect_config(&value);
                 Some(navara_layer::LayerDescription::Mvt(MvtLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(),
                     crs: layer.crs(),
+                    effect_config,
                 }))
             }
             "cesium3dtiles" => {
@@ -499,19 +505,28 @@ impl LayerDescription {
                 }
 
                 let mut layer: Cesium3dTilesLayerDescription =
-                    serde_wasm_bindgen::from_value(value).ok()?;
+                    serde_wasm_bindgen::from_value(value.clone()).ok()?;
 
+                let effect_config = extract_effect_config(&value);
                 Some(navara_layer::LayerDescription::Cesium3dTiles(
                     Cesium3dTilesLayer {
                         layer_id: layer_id.to_string(),
                         data: data.map(|d| LayerData { url: d.url }),
                         appearances: layer.appearances(),
                         crs: layer.crs(),
-                        effects: layer.effects.clone(),
+                        effect_config,
                     },
                 ))
             }
             _ => None,
         }
     }
+}
+
+fn extract_effect_config(value: &JsValue) -> LayerEffectConfig {
+    value
+        .clone()
+        .into_serde::<LayerEffectOptions>()
+        .map(LayerEffectOptions::into_config)
+        .unwrap_or_default()
 }

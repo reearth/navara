@@ -1,7 +1,7 @@
 use bevy_ecs::component::Component;
 use navara_core::CRS;
 
-use navara_material::{Appearance, ModelMaterial};
+use navara_material::{Appearance, LayerEffectConfig, ModelMaterial};
 
 use crate::LayerData;
 
@@ -11,6 +11,7 @@ pub struct B3dmLayer {
     pub data: Option<LayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
+    pub effect_config: LayerEffectConfig,
 }
 
 #[derive(Debug, Component)]

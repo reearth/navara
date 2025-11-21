@@ -20,10 +20,18 @@ import {
 
 type GeoJsonModelState = Record<string, unknown>;
 
+export type LayerEffectPayload = {
+  effect_id: string[];
+  selectiveDepthTest: boolean;
+  emissive_color?: number;
+  emissive_intensity?: number;
+};
+
 export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
   layer: Layer;
   updateModel: (overrides: Partial<TState>) => void;
   setSelectiveDepthTest: (value: boolean) => void;
+  updateEffectState: (payload: LayerEffectPayload) => void;
 };
 
 export type DrumModelState = {
@@ -254,10 +262,20 @@ const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
     });
   };
 
+  const updateEffectState = (payload: LayerEffectPayload) => {
+    layer.update({
+      type: "geojson",
+      data: feature,
+      model: { ...currentModelState },
+      ...payload,
+    });
+  };
+
   return {
     layer,
     updateModel,
     setSelectiveDepthTest: (value: boolean) =>
       layer.setSelectiveDepthTest?.(value),
+    updateEffectState,
   };
 };

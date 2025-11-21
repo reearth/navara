@@ -131,42 +131,36 @@ type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 
 // Common options for layer effects
 type LayerEffectOptions = {
+  effect_id?: string[];
+  /** @deprecated Use effect_id instead */
   effects?: string[];
   selectiveDepthTest?: boolean;
   emissive_intensity?: number;
+  emissive_color?: number;
 };
 
-export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }> &
-  LayerEffectOptions;
-export type TerrainLayer = Layer<
-  TerrainLayerDescription & { type: "terrain" }
-> &
-  LayerEffectOptions;
+export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
+export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
 export type GeoJsonLayer = Layer<
   GeoJsonLayerDescription & { type: "geojson" }
 > &
   LayerEffectOptions;
-export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }> &
-  LayerEffectOptions;
-export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }> &
-  LayerEffectOptions;
+export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
+export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }>;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
 > &
   LayerEffectOptions;
-export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }> &
-  LayerEffectOptions;
+export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 
-export type ResourceLayerDescription = LayerEffectOptions &
-  (
-    | TilesLayer
-    | TerrainLayer
-    | GeoJsonLayer
-    | B3dmLayer
-    | PntsLayer
-    | Cesium3dTilesLayer
-    | MvtLayer
-  );
+export type ResourceLayerDescription =
+  | TilesLayer
+  | TerrainLayer
+  | GeoJsonLayer
+  | B3dmLayer
+  | PntsLayer
+  | Cesium3dTilesLayer
+  | MvtLayer;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 export type DrapedMaterialCache = Map<string, Material>;

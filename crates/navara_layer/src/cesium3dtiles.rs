@@ -1,7 +1,7 @@
 use bevy_ecs::component::Component;
 use navara_core::CRS;
 
-use navara_material::{Appearance, ModelMaterial};
+use navara_material::{Appearance, LayerEffectConfig, ModelMaterial};
 
 use crate::LayerData;
 
@@ -11,7 +11,7 @@ pub struct Cesium3dTilesLayer {
     pub data: Option<LayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
-    pub effects: Option<Vec<String>>,
+    pub effect_config: LayerEffectConfig,
 }
 
 #[derive(Debug, Component)]

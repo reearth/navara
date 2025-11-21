@@ -1025,18 +1025,37 @@ export default class ThreeView<
   updateLayerById(layerId: string, l: LayerDescription) {
     invariant(this._core);
 
-    // Update effects if specified in the update
-    if (this.isResourceLayerDescription(l) && l.effects) {
-      const keepClones = l.type === "cesium3dtiles";
-      this.viewContext.updateLayerEffects(
-        layerId,
-        l.effects,
-        l.emissive_intensity,
-        keepClones ? { keepClones: true } : undefined,
-      );
+    const targetLayer = this.layersManager.get(layerId);
+
+    if (
+      this.isResourceLayerDescription(l) &&
+      targetLayer instanceof Layer &&
+      this.layerSupportsEffectConfig(l)
+    ) {
+      const effectIds = l.effect_id ?? l.effects;
+      if (effectIds) {
+        const keepClones = l.type === "cesium3dtiles";
+        this.viewContext.updateLayerEffects(
+          layerId,
+          effectIds,
+          l.emissive_intensity,
+          keepClones ? { keepClones: true } : undefined,
+        );
+      }
+
+      if (l.emissive_color !== undefined) {
+        this.viewContext.setLayerEmissiveColor(layerId, l.emissive_color);
+      }
+
+      if (l.selectiveDepthTest !== undefined) {
+        this.viewContext.setLayerSelectiveDepthTest(
+          layerId,
+          l.selectiveDepthTest,
+        );
+      }
     }
 
-    this.layersManager.get(layerId)?.update(l);
+    targetLayer?.update(l as unknown as ActualLayerDescription);
   }
 
   deleteLayerById(layerId: string) {
@@ -1050,20 +1069,23 @@ export default class ThreeView<
     invariant(layerId);
     invariant(this._core);
 
-    if (l.effects?.length) {
-      const keepClones = l.type === "cesium3dtiles";
-      // selectiveDepthTest: false means depth testing is disabled for selective effects
-      // selectiveDepthTest: true (default) means depth testing is enabled for selective effects
-      this.viewContext.registerLayerEffects(
-        layerId,
-        l.effects,
-        l.selectiveDepthTest === false,
-        l.emissive_intensity,
-        keepClones ? { keepClones: true } : undefined,
-      );
+    if (this.layerSupportsEffectConfig(l)) {
+      const effectIds = l.effect_id ?? l.effects;
+      if (effectIds?.length) {
+        const keepClones = l.type === "cesium3dtiles";
+        // selectiveDepthTest: false means depth testing is disabled for selective effects
+        // selectiveDepthTest: true (default) means depth testing is enabled for selective effects
+        this.viewContext.registerLayerEffects(
+          layerId,
+          effectIds,
+          l.selectiveDepthTest === false,
+          l.emissive_intensity,
+          keepClones ? { keepClones: true } : undefined,
+        );
+      }
     }
 
-    const layer = new Layer(layerId, this._core, this.viewContext, l.type);
+    const layer = new Layer(layerId, this._core, this.viewContext, l.type, l);
     this.layersManager.add(layer);
     return layer;
   }
@@ -1079,6 +1101,19 @@ export default class ThreeView<
       default:
         return true;
     }
+  }
+
+  private layerSupportsEffectConfig(
+    layer: ResourceLayerDescription,
+  ): layer is ResourceLayerDescription & {
+    type: "geojson" | "cesium3dtiles";
+    effect_id?: string[];
+    effects?: string[];
+    emissive_intensity?: number;
+    emissive_color?: number;
+    selectiveDepthTest?: boolean;
+  } {
+    return layer.type === "geojson" || layer.type === "cesium3dtiles";
   }
 
   private registerBuiltIns(): void {

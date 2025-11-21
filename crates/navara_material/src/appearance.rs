@@ -15,6 +15,14 @@ pub struct ElevationHeatmapConfig {
     pub log_boundary: f64,
 }
 
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct LayerEffectConfig {
+    pub effect_ids: Option<Vec<String>>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
+    pub selective_depth_test: Option<bool>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
     Point(PointMaterial),

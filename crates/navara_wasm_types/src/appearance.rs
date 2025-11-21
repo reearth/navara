@@ -4,6 +4,59 @@ use wasm_bindgen::prelude::*;
 
 use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LayerEffectConfig {
+    #[serde(rename = "effect_id", alias = "effects")]
+    pub effect_id: Option<Vec<String>>,
+    #[serde(rename = "selective_depth_test", alias = "selectiveDepthTest")]
+    pub selective_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
+}
+
+impl From<LayerEffectConfig> for navara_material::LayerEffectConfig {
+    fn from(value: LayerEffectConfig) -> Self {
+        navara_material::LayerEffectConfig {
+            effect_ids: value.effect_id,
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
+            selective_depth_test: value.selective_depth_test,
+        }
+    }
+}
+
+impl From<navara_material::LayerEffectConfig> for LayerEffectConfig {
+    fn from(value: navara_material::LayerEffectConfig) -> Self {
+        LayerEffectConfig {
+            effect_id: value.effect_ids,
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
+            selective_depth_test: value.selective_depth_test,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LayerEffectOptions {
+    #[serde(rename = "effect_id", alias = "effects")]
+    pub effect_id: Option<Vec<String>>,
+    #[serde(rename = "selectiveDepthTest")]
+    pub selective_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
+}
+
+impl LayerEffectOptions {
+    pub fn into_config(self) -> navara_material::LayerEffectConfig {
+        navara_material::LayerEffectConfig {
+            effect_ids: self.effect_id,
+            emissive_intensity: self.emissive_intensity,
+            emissive_color: self.emissive_color,
+            selective_depth_test: self.selective_depth_test,
+        }
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {

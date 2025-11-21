@@ -273,6 +273,10 @@ export class EventManager {
       onAbort?: (ev: GetJsEventValue<RemoveKey>) => void;
     },
   ) {
+    if (!options.add?.key || !options.remove?.key) {
+      return;
+    }
+
     const {
       shouldProcess,
       generateEventId = defaultGenerateEventId,

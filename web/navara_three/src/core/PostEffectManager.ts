@@ -1,10 +1,3 @@
-import type { Object3D } from "three";
-
-import { Layer } from "../layer";
-import type { LayersManager } from "../layersManager";
-import type { CustomObject3DEvent } from "../object3DEvent";
-
-import type { LayerHandle } from "./LayerHandle";
 import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type LayerEffectConfig = {
@@ -15,11 +8,7 @@ type LayerEffectConfig = {
 };
 
 type PostEffectManagerOptions = {
-  layersManager: LayersManager;
   selectiveRegistry?: SelectiveEffectRegistry;
-  dispatchEvent: (obj: Object3D, event: CustomObject3DEvent) => void;
-  getLayerHandleObject: (layerHandle: LayerHandle) => Object3D | undefined;
-  requestRender: (layer: Layer | LayerHandle | undefined) => void;
 };
 
 export class PostEffectManager {
@@ -94,11 +83,8 @@ export class PostEffectManager {
     config.emissiveColor = emissiveColor;
     this.layerConfigs.set(layerId, config);
 
-    const layer = this.options.layersManager.get(layerId);
-    if (!layer) return;
-
-    const intensity = this.getLayerEmissiveIntensity(layerId);
-    this.dispatchEmissive(layer, layerId, intensity, emissiveColor);
+    // Cache update only - actual effect application happens via layer.update()
+    // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
   setLayerSelectiveDepthTest(
@@ -119,10 +105,8 @@ export class PostEffectManager {
       selectiveDepthTest,
     );
 
-    const layer = this.options.layersManager.get(layerId);
-    if (!layer) return;
-
-    this.dispatchSelectiveDepthTest(layer, layerId, selectiveDepthTest);
+    // Cache update only - actual effect application happens via layer.update()
+    // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
   updateLayerEffects(
@@ -131,11 +115,6 @@ export class PostEffectManager {
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
-    const layer = this.options.layersManager.get(layerId);
-    if (!layer) return;
-
-    const prevConfig = this.layerConfigs.get(layerId);
-    const prevEffects = prevConfig?.effects ?? [];
     const newEffects = effects ?? [];
 
     this.updateLayerEffectCaches(
@@ -145,62 +124,8 @@ export class PostEffectManager {
       options,
     );
 
-    if (!this.options.selectiveRegistry) return;
-
-    const intensity = this.getLayerEmissiveIntensity(layerId);
-    const emissiveColor = this.getLayerEmissiveColor(layerId);
-
-    if (layer instanceof Layer) {
-      for (const evaluator of layer._getFeatureEvaluators()) {
-        const obj = evaluator.obj;
-        if (!obj) continue;
-
-        this.options.dispatchEvent(obj, {
-          type: "layerEffectsChanged",
-          target: obj,
-          effects: newEffects,
-          emissiveIntensity: intensity,
-          layerId,
-          prevEffects,
-        });
-
-        if (newEffects.length > 0) {
-          this.options.dispatchEvent(obj, {
-            type: "emissive",
-            target: obj,
-            emissiveIntensity: intensity,
-            emissiveColor,
-            layerId,
-          });
-        }
-      }
-      this.options.requestRender(layer);
-      return;
-    }
-
-    const obj = this.options.getLayerHandleObject(layer);
-    if (!obj) return;
-
-    this.options.dispatchEvent(obj, {
-      type: "layerEffectsChanged",
-      target: obj,
-      effects: newEffects,
-      emissiveIntensity: intensity,
-      layerId,
-      prevEffects,
-    });
-
-    if (newEffects.length > 0) {
-      this.options.dispatchEvent(obj, {
-        type: "emissive",
-        target: obj,
-        emissiveIntensity: intensity,
-        emissiveColor,
-        layerId,
-      });
-    }
-
-    this.options.requestRender(layer);
+    // Cache update only - actual effect application happens via layer.update()
+    // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
   private ensureConfig(layerId: string): LayerEffectConfig {
@@ -215,76 +140,6 @@ export class PostEffectManager {
     return this.layerConfigs.get(layerId)!;
   }
 
-  private dispatchEmissive(
-    layer: Layer | LayerHandle,
-    layerId: string,
-    emissiveIntensity: number,
-    emissiveColor: number | undefined,
-  ): void {
-    if (layer instanceof Layer) {
-      for (const evaluator of layer._getFeatureEvaluators()) {
-        const obj = evaluator.obj;
-        if (!obj) continue;
-
-        this.options.dispatchEvent(obj, {
-          type: "emissive",
-          target: obj,
-          emissiveIntensity,
-          emissiveColor,
-          layerId,
-        });
-      }
-      this.options.requestRender(layer);
-      return;
-    }
-
-    const obj = this.options.getLayerHandleObject(layer);
-    if (!obj) return;
-
-    this.options.dispatchEvent(obj, {
-      type: "emissive",
-      target: obj,
-      emissiveIntensity,
-      emissiveColor,
-      layerId,
-    });
-
-    this.options.requestRender(layer);
-  }
-
-  private dispatchSelectiveDepthTest(
-    layer: Layer | LayerHandle,
-    layerId: string,
-    selectiveDepthTest: boolean,
-  ): void {
-    if (layer instanceof Layer) {
-      for (const evaluator of layer._getFeatureEvaluators()) {
-        const obj = evaluator.obj;
-        if (!obj) continue;
-
-        this.options.dispatchEvent(obj, {
-          type: "selectiveDepthTestChanged",
-          target: obj,
-          selectiveDepthTest,
-          layerId,
-        });
-      }
-      this.options.requestRender(layer);
-      return;
-    }
-
-    const obj = this.options.getLayerHandleObject(layer);
-    if (!obj) return;
-
-    this.options.dispatchEvent(obj, {
-      type: "selectiveDepthTestChanged",
-      target: obj,
-      selectiveDepthTest,
-      layerId,
-    });
-
-    this.options.requestRender(layer);
-  }
 
   private updateLayerEffectCaches(
     layerId: string,

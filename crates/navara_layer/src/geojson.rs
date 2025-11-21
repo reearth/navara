@@ -3,7 +3,7 @@ use bevy_ecs::entity::Entity;
 use navara_core::CRS;
 use navara_parser::geojson::GeoJson;
 
-use navara_material::Appearance;
+use navara_material::{Appearance, LayerEffectConfig};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GeoJsonLayerData {
@@ -17,7 +17,7 @@ pub struct GeoJsonLayer {
     pub data: Option<GeoJsonLayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
-    pub effects: Option<Vec<String>>,
+    pub effect_config: LayerEffectConfig,
 }
 
 #[derive(Debug, Component)]

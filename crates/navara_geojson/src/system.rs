@@ -548,8 +548,7 @@ mod test {
     use navara_feature::FeaturePlugin;
     use navara_feature_component::render::RenderableFeature;
     use navara_layer::{GeoJsonLayer, LayerStore};
-    use navara_material::Appearance;
-    use navara_material::{BillboardMaterial, PointMaterial};
+    use navara_material::{Appearance, BillboardMaterial, LayerEffectConfig, PointMaterial};
     use navara_parser::geojson::GeoJson;
     use navara_tile_component::RasterTileQuadtree;
 
@@ -575,7 +574,7 @@ mod test {
             data: Some(navara_layer::GeoJsonLayerData::GeoJson(geojson)),
             crs: None,
             appearances,
-            effects: None,
+            effect_config: LayerEffectConfig::default(),
         }
     }
 

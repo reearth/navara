@@ -7,13 +7,23 @@ use navara_event_store::{
 };
 use navara_feature_component::render::RenderableFeature;
 use navara_globe::Globe;
-use navara_layer::LayerId;
-use navara_material::RasterTileInternalMaterial;
+use navara_layer::{LayerDescStore, LayerDescription, LayerId};
+use navara_material::{LayerEffectConfig, RasterTileInternalMaterial};
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{OverscaledTileHandle, TerrainHeightObserver, TileMeshMarker};
 use navara_worker::DelegatedWorkerTasksParameters;
+
+#[derive(Debug)]
+pub struct RenderableFeatureEvent<'a> {
+    pub component_event: ReconstructableComponentEvent<(
+        &'a RenderableFeature,
+        &'a LayerId,
+        Option<&'a OverscaledTileHandle>,
+    )>,
+    pub effect_config: Option<LayerEffectConfig>,
+}
 
 #[derive(Debug, Default)]
 pub struct Events<'a> {
@@ -46,20 +56,8 @@ pub struct Events<'a> {
     pub worker_task_delegated:
         Vec<ReconstructableComponentEvent<&'a DelegatedWorkerTasksParameters>>,
     pub worker_task_removed: Vec<EntityEvent>,
-    pub renderable_feature_added: Vec<
-        ReconstructableComponentEvent<(
-            &'a RenderableFeature,
-            &'a LayerId,
-            Option<&'a OverscaledTileHandle>,
-        )>,
-    >,
-    pub renderable_feature_changed: Vec<
-        ReconstructableComponentEvent<(
-            &'a RenderableFeature,
-            &'a LayerId,
-            Option<&'a OverscaledTileHandle>,
-        )>,
-    >,
+    pub renderable_feature_added: Vec<RenderableFeatureEvent<'a>>,
+    pub renderable_feature_changed: Vec<RenderableFeatureEvent<'a>>,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
     pub update_sample_terrain_height: Vec<ReconstructableComponentEvent<&'a TerrainHeightObserver>>,
 }
@@ -69,6 +67,7 @@ impl<'a> Events<'a> {
         let mut events = Self::default();
 
         let mut is_changed = false;
+        let layer_desc_store = world.get_resource::<LayerDescStore>();
 
         if let Some(e) = store.camera_transform_updated {
             events.camera_transform_updated = world.get::<Transform>(e);
@@ -145,15 +144,31 @@ impl<'a> Events<'a> {
         }
 
         for e in store.renderable_feature_added.iter() {
-            if let Some(e) = ReconstructableComponentEvent::from_world_2_and_option(*e, world) {
-                events.renderable_feature_added.push(e);
+            if let Some(component_event) =
+                ReconstructableComponentEvent::from_world_2_and_option(*e, world)
+            {
+                let effect_config = resolve_effect_config(layer_desc_store, component_event.comp.1);
+                events
+                    .renderable_feature_added
+                    .push(RenderableFeatureEvent {
+                        component_event,
+                        effect_config,
+                    });
                 is_changed = true;
             }
         }
 
         for e in store.renderable_feature_changed.iter() {
-            if let Some(e) = ReconstructableComponentEvent::from_world_2_and_option(*e, world) {
-                events.renderable_feature_changed.push(e);
+            if let Some(component_event) =
+                ReconstructableComponentEvent::from_world_2_and_option(*e, world)
+            {
+                let effect_config = resolve_effect_config(layer_desc_store, component_event.comp.1);
+                events
+                    .renderable_feature_changed
+                    .push(RenderableFeatureEvent {
+                        component_event,
+                        effect_config,
+                    });
                 is_changed = true;
             }
         }
@@ -173,5 +188,18 @@ impl<'a> Events<'a> {
         }
 
         is_changed.then_some(events)
+    }
+}
+
+fn resolve_effect_config(
+    store: Option<&LayerDescStore>,
+    layer_id: &LayerId,
+) -> Option<LayerEffectConfig> {
+    let layer_store = store?;
+    let desc = layer_store.map.get(&layer_id.0)?;
+    match desc {
+        LayerDescription::GeoJson(layer) => Some(layer.effect_config.clone()),
+        LayerDescription::Cesium3dTiles(layer) => Some(layer.effect_config.clone()),
+        _ => None,
     }
 }

@@ -5,14 +5,7 @@ import {
   type RenderableFeature,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
-import {
-  Mesh,
-  Sprite,
-  Object3D,
-  Material,
-  MeshStandardMaterial,
-  MeshPhysicalMaterial,
-} from "three";
+import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
@@ -31,8 +24,10 @@ import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import {
+  applyEffectPayloadToObject,
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
+  type FeatureEffectPayload,
 } from "./featureEvent";
 import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
@@ -46,6 +41,34 @@ import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
 import { setTransform, type BufferLoader, type FeatureHandler } from ".";
+
+type EngineLayerEffectConfig = {
+  effect_id?: string[];
+  emissive_intensity?: number;
+  emissive_color?: number;
+  selective_depth_test?: boolean;
+};
+
+const extractEffectPayloadFromEvent = (
+  ev: RenderableFeatureAddedEvent | RenderableFeatureChangedEvent,
+): FeatureEffectPayload | undefined => {
+  const effectConfig = (
+    ev as unknown as {
+      effect_config?: EngineLayerEffectConfig | null;
+    }
+  ).effect_config;
+
+  if (!effectConfig) {
+    return undefined;
+  }
+
+  return {
+    effectIds: effectConfig.effect_id ?? undefined,
+    emissiveIntensity: effectConfig.emissive_intensity ?? undefined,
+    emissiveColor: effectConfig.emissive_color ?? undefined,
+    selectiveDepthTest: effectConfig.selective_depth_test ?? undefined,
+  };
+};
 
 export function renderFeature(
   f: RenderableFeature,
@@ -114,6 +137,8 @@ export async function processRenderableFeatureAdded(
     onConcurrency(1);
   }
 
+  const effectPayload = extractEffectPayloadFromEvent(ev);
+
   const obj = await renderFeature(
     feature,
     buf,
@@ -162,33 +187,6 @@ export async function processRenderableFeatureAdded(
 
   // Link to selective effects from layer config cache
   // Must be done after obj is added to scene so world matrices are valid
-  const effects = viewContext.getLayerEffects(featureLayerId);
-
-  if (effects && effects.length > 0 && viewContext.selectiveRegistry) {
-    // ModelMesh handles effects via its own event handler
-    if (!(obj instanceof ModelMesh)) {
-      if (obj instanceof Mesh) {
-        // For other mesh types, link directly
-        // Set emissive for bloom effects (only for objects with effects)
-        const material = Array.isArray(obj.material)
-          ? obj.material[0]
-          : obj.material;
-        if (
-          material instanceof MeshStandardMaterial ||
-          material instanceof MeshPhysicalMaterial
-        ) {
-          const emissiveIntensity =
-            viewContext.getLayerEmissiveIntensity(featureLayerId);
-          material.emissive.set(material.color);
-          material.emissiveIntensity = emissiveIntensity;
-        }
-        for (const effectId of effects) {
-          viewContext.selectiveRegistry.link(effectId, obj, featureLayerId);
-        }
-      }
-    }
-  }
-
   if (obj instanceof PolygonMesh && obj.userData.draped && tileHandle) {
     obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
@@ -224,6 +222,7 @@ export async function processRenderableFeatureAdded(
     viewContext,
     featureLayerId,
     ev.bits,
+    effectPayload,
   );
   handleFeatureUpdatedEventByLayerId(
     viewEvents,
@@ -326,6 +325,9 @@ export async function processRenderableFeatureChanged(
   }
 
   obj.updateMatrix();
+
+  const effectPayload = extractEffectPayloadFromEvent(ev);
+  applyEffectPayloadToObject(obj, viewContext, layerId, effectPayload);
 
   handleFeatureUpdatedEventByLayerId(
     viewEvents,

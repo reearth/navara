@@ -5,6 +5,13 @@ import type { ViewContext } from "./core";
 import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
+export type LayerEffectState = {
+  effectIds?: string[];
+  emissiveIntensity?: number;
+  emissiveColor?: number;
+  selectiveDepthTest?: boolean;
+};
+
 export type LayerEvent = {
   featureCreated: (evaluator: FeatureEvaluator) => void;
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
@@ -24,12 +31,15 @@ export class Layer extends EventHandler<LayerEvent> {
     FeatureEvaluator
   >();
   private needUpdate = false;
+  private cachedDescription?: LayerDescription;
+  private effectState?: LayerEffectState;
 
   constructor(
     id: string,
     core: Core,
     viewContext: ViewContext,
     layerType?: string,
+    initialDescription?: LayerDescription,
   ) {
     super();
 
@@ -37,6 +47,14 @@ export class Layer extends EventHandler<LayerEvent> {
     this.core = core;
     this.viewContext = viewContext;
     this.layerType = layerType;
+
+    if (initialDescription) {
+      this.cachedDescription = cloneLayerDescription(initialDescription);
+      if (this.supportsLayerEffects()) {
+        this.effectState =
+          this.extractEffectPayloadFromDescription(initialDescription);
+      }
+    }
   }
 
   /**
@@ -95,30 +113,22 @@ export class Layer extends EventHandler<LayerEvent> {
   }
 
   update(l: LayerDescription) {
-    // Update effects if specified in the update
-    if ("effects" in l) {
-      const effects = l.effects as string[] | undefined;
-      const emissiveIntensity =
-        "emissive_intensity" in l
-          ? (l.emissive_intensity as number)
-          : undefined;
-      this.viewContext.updateLayerEffects(
-        this.id,
-        effects,
-        emissiveIntensity,
-        this.getEffectOptions(),
-      );
+    let effectPayload: LayerEffectState | undefined;
+    if (this.supportsLayerEffects()) {
+      effectPayload = this.extractEffectPayloadFromDescription(l);
+      if (effectPayload) {
+        const previousState = this.effectState;
+        this.effectState = this.mergeEffectState(effectPayload, false);
+        this.applyEffectStateToViewContext(previousState);
+        this.updateCachedDescriptionEffects();
+      }
     }
 
-    // Update selectiveDepthTest if specified in the update
-    if ("selectiveDepthTest" in l) {
-      this.viewContext.setLayerSelectiveDepthTest(
-        this.id,
-        l.selectiveDepthTest as boolean,
-      );
-    }
-
-    this.core.updateLayer(this.id, l);
+    const descriptor = this.supportsLayerEffects()
+      ? this.withEffectState(l)
+      : l;
+    const merged = this.mergeDescription(descriptor);
+    this.core.updateLayer(this.id, merged);
   }
 
   delete() {
@@ -135,14 +145,14 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param effectId - The ID of the effect to enable
    */
   enableEffect(effectId: string): void {
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
     const current = this.viewContext.getLayerEffects(this.id) ?? [];
     if (!current.includes(effectId)) {
-      this.viewContext.updateLayerEffects(
-        this.id,
-        [...current, effectId],
-        undefined,
-        this.getEffectOptions(),
-      );
+      this.updateEffectConfig({
+        effect_id: [...current, effectId],
+      });
     }
   }
 
@@ -151,18 +161,18 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param effectId - The ID of the effect to disable
    */
   disableEffect(effectId: string): void {
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
     const current = this.viewContext.getLayerEffects(this.id) ?? [];
     // Skip if effect is not currently enabled (optimization)
     if (!current.includes(effectId)) {
       return;
     }
     const updated = current.filter((id) => id !== effectId);
-    this.viewContext.updateLayerEffects(
-      this.id,
-      updated,
-      undefined,
-      this.getEffectOptions(),
-    );
+    this.updateEffectConfig({
+      effect_id: updated,
+    });
   }
 
   /**
@@ -171,6 +181,9 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param enabled - Optional explicit state. If not provided, toggles current state
    */
   toggleEffect(effectId: string, enabled?: boolean): void {
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
     const shouldEnable = enabled ?? !this.hasEffect(effectId);
     if (shouldEnable) {
       this.enableEffect(effectId);
@@ -184,24 +197,24 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param effectIds - Array of effect IDs to set
    */
   setEffects(effectIds: string[]): void {
-    this.viewContext.updateLayerEffects(
-      this.id,
-      effectIds,
-      undefined,
-      this.getEffectOptions(),
-    );
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
+    this.updateEffectConfig({
+      effect_id: effectIds,
+    });
   }
 
   /**
    * Clear all effects from this layer
    */
   clearEffects(): void {
-    this.viewContext.updateLayerEffects(
-      this.id,
-      [],
-      undefined,
-      this.getEffectOptions(),
-    );
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
+    this.updateEffectConfig({
+      effect_id: [],
+    });
   }
 
   /**
@@ -227,12 +240,12 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param value - The emissive intensity value (typically 0.0 to 10.0)
    */
   setEmissiveIntensity(value: number): void {
-    this.viewContext.updateLayerEffects(
-      this.id,
-      this.viewContext.getLayerEffects(this.id),
-      value,
-      this.getEffectOptions(),
-    );
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
+    this.updateEffectConfig({
+      emissive_intensity: value,
+    });
   }
 
   /**
@@ -248,7 +261,12 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param color - The emissive color as a hex number (e.g., 0xff0000 for red), or undefined to use material color
    */
   setEmissiveColor(color: number | undefined): void {
-    this.viewContext.setLayerEmissiveColor(this.id, color);
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
+    this.updateEffectConfig({
+      emissive_color: color,
+    });
   }
 
   /**
@@ -264,7 +282,12 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param enabled - Whether selective depth test should be enabled
    */
   setSelectiveDepthTest(enabled: boolean): void {
-    this.viewContext.setLayerSelectiveDepthTest(this.id, enabled);
+    if (!this.supportsLayerEffects()) {
+      return;
+    }
+    this.updateEffectConfig({
+      selectiveDepthTest: enabled,
+    });
   }
 
   /**
@@ -275,9 +298,281 @@ export class Layer extends EventHandler<LayerEvent> {
     return this.viewContext.getLayerSelectiveDepthTest(this.id);
   }
 
+  getLayerType(): string | undefined {
+    return this.layerType;
+  }
+
+  private supportsLayerEffects(): boolean {
+    return this.layerType === "geojson" 
+        || this.layerType === "cesium3dtiles"
+        || this.layerType === "b3dm"
+        || this.layerType === "pnts"
+        || this.layerType === "mvt"
+        || this.layerType === "terrain";
+  }
+
+  private mergeDescription(update: LayerDescription): LayerDescription {
+    this.cachedDescription = mergeLayerDescriptions(
+      this.cachedDescription,
+      update,
+    );
+    return this.cachedDescription;
+  }
+
+  private withEffectState(desc: LayerDescription): LayerDescription {
+    if (!this.effectState) {
+      return desc;
+    }
+    const effectFields = this.buildEffectDescriptionFromState();
+    if (!effectFields) {
+      return desc;
+    }
+    return mergeLayerDescriptions(desc, effectFields as LayerDescription);
+  }
+
+  private buildEffectDescriptionFromState():
+    | LayerEffectUpdatePayload
+    | undefined {
+    if (!this.effectState) {
+      return undefined;
+    }
+
+    const { effectIds, emissiveColor, emissiveIntensity, selectiveDepthTest } =
+      this.effectState;
+
+    if (
+      effectIds === undefined &&
+      emissiveColor === undefined &&
+      emissiveIntensity === undefined &&
+      selectiveDepthTest === undefined
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect_id: effectIds !== undefined ? [...effectIds] : undefined,
+      emissive_color: emissiveColor,
+      emissive_intensity: emissiveIntensity,
+      selectiveDepthTest,
+    };
+  }
+
+  private mergeEffectState(
+    update: LayerEffectState,
+    overwriteMissing: boolean,
+  ): LayerEffectState | undefined {
+    const next: LayerEffectState = overwriteMissing
+      ? {}
+      : { ...(this.effectState ?? {}) };
+
+    if (update.effectIds !== undefined) {
+      next.effectIds = [...update.effectIds];
+    } else if (overwriteMissing) {
+      delete next.effectIds;
+    }
+
+    if (update.emissiveIntensity !== undefined) {
+      next.emissiveIntensity = update.emissiveIntensity;
+    } else if (overwriteMissing) {
+      delete next.emissiveIntensity;
+    }
+
+    if (update.emissiveColor !== undefined) {
+      next.emissiveColor = update.emissiveColor;
+    } else if (overwriteMissing) {
+      delete next.emissiveColor;
+    }
+
+    if (update.selectiveDepthTest !== undefined) {
+      next.selectiveDepthTest = update.selectiveDepthTest;
+    } else if (overwriteMissing) {
+      delete next.selectiveDepthTest;
+    }
+
+    return Object.keys(next).length > 0 ? next : undefined;
+  }
+
+  private applyEffectStateToViewContext(
+    previousState?: LayerEffectState,
+  ): void {
+    const current = this.effectState;
+
+    const effectIdsChanged = !areArraysEqual(
+      current?.effectIds,
+      previousState?.effectIds,
+    );
+    const emissiveIntensityChanged =
+      current?.emissiveIntensity !== previousState?.emissiveIntensity;
+    const emissiveColorChanged =
+      current?.emissiveColor !== previousState?.emissiveColor;
+    const selectiveDepthTestChanged =
+      current?.selectiveDepthTest !== previousState?.selectiveDepthTest;
+
+    if (effectIdsChanged || emissiveIntensityChanged) {
+      this.viewContext.updateLayerEffects(
+        this.id,
+        current?.effectIds,
+        current?.emissiveIntensity,
+        this.getEffectOptions(),
+      );
+    }
+
+    if (emissiveColorChanged) {
+      // Update ViewContext config state (no immediate dispatch for ResourceLayer).
+      // PostEffectManager will skip event dispatch for Layer instances,
+      // as they use the declarative Rust → FeatureEvent flow.
+      this.viewContext.setLayerEmissiveColor(this.id, current?.emissiveColor);
+    }
+
+    if (selectiveDepthTestChanged) {
+      this.viewContext.setLayerSelectiveDepthTest(
+        this.id,
+        current?.selectiveDepthTest ?? true,
+      );
+    }
+  }
+
+  _applyExternalEffectState(payload: LayerEffectState): void {
+    if (!this.supportsLayerEffects()) return;
+
+    const previousState = this.effectState;
+    this.effectState = this.mergeEffectState(payload, true);
+    this.applyEffectStateToViewContext(previousState);
+    this.updateCachedDescriptionEffects();
+  }
+
+  private updateCachedDescriptionEffects() {
+    if (!this.cachedDescription) {
+      return;
+    }
+    const effectDescription = this.buildEffectDescriptionFromState();
+    if (!effectDescription) {
+      return;
+    }
+    this.cachedDescription = mergeLayerDescriptions(
+      this.cachedDescription,
+      effectDescription as LayerDescription,
+    );
+  }
+
+  private updateEffectConfig(payload: LayerEffectUpdatePayload): void {
+    this.update(payload as LayerDescription);
+  }
+
+  private extractEffectPayloadFromDescription(
+    desc: LayerDescription,
+  ): LayerEffectState | undefined {
+    const partial = desc as LayerEffectUpdatePayload;
+    const effectIds = partial.effect_id ?? partial.effects;
+    if (
+      effectIds === undefined &&
+      partial.emissive_color === undefined &&
+      partial.emissive_intensity === undefined &&
+      partial.selectiveDepthTest === undefined
+    ) {
+      return undefined;
+    }
+
+    return {
+      effectIds: effectIds !== undefined ? [...effectIds] : undefined,
+      emissiveColor: partial.emissive_color,
+      emissiveIntensity: partial.emissive_intensity,
+      selectiveDepthTest: partial.selectiveDepthTest,
+    };
+  }
+
   private getEffectOptions(): { keepClones: boolean } | undefined {
     return this.layerType === "cesium3dtiles"
       ? { keepClones: true }
       : undefined;
   }
 }
+
+type LayerEffectUpdatePayload = {
+  effect_id?: string[];
+  effects?: string[];
+  emissive_color?: number;
+  emissive_intensity?: number;
+  selectiveDepthTest?: boolean;
+};
+
+type StructuredCloneFn = <T>(value: T) => T;
+
+const getStructuredClone = (): StructuredCloneFn | undefined => {
+  const global = globalThis as typeof globalThis & {
+    structuredClone?: StructuredCloneFn;
+  };
+
+  return typeof global.structuredClone === "function"
+    ? global.structuredClone.bind(global)
+    : undefined;
+};
+
+const structuredCloneFn = getStructuredClone();
+
+const deepClone = <T>(value: T): T => {
+  if (structuredCloneFn) {
+    return structuredCloneFn(value);
+  }
+  return JSON.parse(JSON.stringify(value)) as T;
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
+
+const mergePlainObjects = (
+  target: Record<string, unknown>,
+  update: Record<string, unknown>,
+): Record<string, unknown> => {
+  for (const [key, value] of Object.entries(update)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (isPlainObject(value)) {
+      const existing = target[key];
+      if (isPlainObject(existing)) {
+        target[key] = mergePlainObjects(
+          existing as Record<string, unknown>,
+          value as Record<string, unknown>,
+        );
+      } else {
+        target[key] = deepClone(value);
+      }
+      continue;
+    }
+
+    target[key] = deepClone(value);
+  }
+
+  return target;
+};
+
+const mergeLayerDescriptions = (
+  base: LayerDescription | undefined,
+  update: LayerDescription,
+): LayerDescription => {
+  if (!base) {
+    return deepClone(update);
+  }
+  const baseClone = deepClone(base) as Record<string, unknown>;
+  return mergePlainObjects(
+    baseClone,
+    update as unknown as Record<string, unknown>,
+  ) as LayerDescription;
+};
+
+const cloneLayerDescription = (desc: LayerDescription): LayerDescription =>
+  deepClone(desc);
+
+const areArraysEqual = (next?: string[], prev?: string[]): boolean => {
+  if (next === prev) return true;
+  if (!next || !prev) return false;
+  if (next.length !== prev.length) return false;
+  return next.every((value, index) => value === prev[index]);
+};

@@ -1,7 +1,7 @@
 use crate::LayerData;
 use bevy_ecs::component::Component;
 use navara_core::ElevationDecoder;
-use navara_material::{EllipsoidTerrainMaterial, RasterTerrainMaterial};
+use navara_material::{EllipsoidTerrainMaterial, LayerEffectConfig, RasterTerrainMaterial};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TerrainAppearance {
@@ -67,12 +67,13 @@ impl TerrainAppearance {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Component)]
+#[derive(Debug, Clone, PartialEq, Component)]
 pub struct TerrainLayer {
     pub layer_id: String,
     pub data: Option<LayerData>,
     pub terrain_type: TerrainDataType,
     pub appearance: Option<TerrainAppearance>,
+    pub effect_config: LayerEffectConfig,
 }
 
 impl TerrainLayer {

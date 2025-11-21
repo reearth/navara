@@ -17,13 +17,13 @@ export type MeshLayerConfig = {
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
-  effects?: string[];
+  effect_id?: string[];
   selectiveDepthTest?: boolean;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation" | "effects" | "selectiveDepthTest"
+  "position" | "scale" | "rotation" | "effect_id" | "selectiveDepthTest"
 > &
   LayerDeclarationConfigUpdate;
 
@@ -63,7 +63,7 @@ export abstract class MeshLayerDeclaration<
     this.position = config.position;
     this.scale = config.scale;
     this.rotation = config.rotation;
-    this.effects = config.effects;
+    this.effects = config.effect_id;
     this.selectiveDepthTest = config.selectiveDepthTest;
   }
 
@@ -122,6 +122,48 @@ export abstract class MeshLayerDeclaration<
 
     // Setup CSM event handlers if layer emits material lifecycle events
     this.setupCSMEventHandlers();
+
+    // Apply initial effects
+    this.applyEffects();
+  }
+
+  /**
+   * Apply effects to the mesh declaratively.
+   * This method dispatches events to trigger effect application through the event system.
+   * It's called automatically when effects are updated via onUpdateConfig().
+   */
+  private applyEffects(): void {
+    if (!this.raw || !this.view.selectiveRegistry) return;
+
+    const currentEffects = this.effects ?? [];
+    const prevEffects = (this.raw.userData.prevEffects as string[]) ?? [];
+
+    // Dispatch layerEffectsChanged event to trigger SelectiveEffectRegistry updates
+    this.raw.dispatchEvent({
+      type: "layerEffectsChanged",
+      target: this.raw,
+      effects: currentEffects,
+      prevEffects: prevEffects,
+      layerId: this.id,
+      emissiveIntensity: this.view.getLayerEmissiveIntensity(this.id),
+    } as never);
+
+    // Dispatch emissive event if effects are active
+    if (currentEffects.length > 0) {
+      const emissiveIntensity = this.view.getLayerEmissiveIntensity(this.id);
+      const emissiveColor = this.view.getLayerEmissiveColor(this.id);
+      
+      this.raw.dispatchEvent({
+        type: "emissive",
+        target: this.raw,
+        emissiveIntensity,
+        emissiveColor,
+        layerId: this.id,
+      } as never);
+    }
+
+    // Store current effects for next update
+    this.raw.userData.prevEffects = [...currentEffects];
   }
 
   /**
@@ -206,16 +248,16 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // Handle effects update - delegate to ViewContext for proper cache synchronization
-    if (updates.effects !== undefined) {
-      // Update local effects cache (for backward compatibility)
-      this.effects = updates.effects.length > 0 ? updates.effects : undefined;
+    // Handle effect_id update - delegate to ViewContext for proper cache synchronization
+    if (updates.effect_id !== undefined) {
+      // Update local effects cache
+      this.effects = updates.effect_id.length > 0 ? updates.effect_id : undefined;
 
-      // Delegate to ViewContext to handle all effect updates, including:
-      // - layerEffects cache update
-      // - SelectiveEffectRegistry linking/unlinking
-      // - Event dispatching to mesh objects
-      this.view.updateLayerEffects(this.id, updates.effects);
+      // Update ViewContext cache
+      this.view.updateLayerEffects(this.id, updates.effect_id);
+      
+      // Apply effects declaratively
+      this.applyEffects();
     }
 
     // Handle selectiveDepthTest update - always delegate to ViewContext for consistency
@@ -226,6 +268,25 @@ export abstract class MeshLayerDeclaration<
       // 2. Existing clones are moved between sceneDepthEnabled/sceneDepthDisabled
       // This ensures Cube/Sphere behave consistently with Layer types
       this.view.setLayerSelectiveDepthTest(this.id, this.selectiveDepthTest);
+    }
+
+    if ("emissive_intensity" in updates) {
+      this.view.updateLayerEffects(
+        this.id,
+        this.view.getLayerEffects(this.id),
+        updates.emissive_intensity as number,
+      );
+      // Re-apply effects with new intensity
+      this.applyEffects();
+    }
+
+    if ("emissive_color" in updates) {
+      this.view.setLayerEmissiveColor(
+        this.id,
+        updates.emissive_color as number | undefined,
+      );
+      // Re-apply effects with new color
+      this.applyEffects();
     }
 
     this.onPassKeyChange();

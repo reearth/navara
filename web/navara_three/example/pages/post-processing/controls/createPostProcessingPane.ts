@@ -14,32 +14,65 @@ import type {
   SceneLayers,
   DrumModelState,
   SoldierModelState,
+  LayerEffectPayload,
 } from "../layers/createSceneLayers";
 
 // ============================================
 // Helper Functions for Common UI Patterns
 // ============================================
 
+type LayerEffectState = {
+  effects: string[];
+  emissiveColor?: number;
+  emissiveIntensity: number;
+  selectiveDepthTest: boolean;
+};
+
+const buildEffectPayload = (
+  state: LayerEffectState,
+): LayerEffectPayload => ({
+  effect_id: [...state.effects],
+  selectiveDepthTest: state.selectiveDepthTest,
+  emissive_color: state.emissiveColor,
+  emissive_intensity: state.emissiveIntensity,
+});
+
+const setEffectEnabled = (
+  state: LayerEffectState,
+  effectId: string,
+  enabled: boolean,
+) => {
+  const hasEffect = state.effects.includes(effectId);
+  if (enabled && !hasEffect) {
+    state.effects = [...state.effects, effectId];
+  } else if (!enabled && hasEffect) {
+    state.effects = state.effects.filter((id) => id !== effectId);
+  }
+};
+
 /**
- * Add effect toggle controls (Bloom & Outline) to a folder for Layer
+ * Add effect toggle controls (Bloom & Outline) to a folder
  */
 const addLayerEffectControls = (
   folder: FolderApi,
-  layer: Layer,
+  params: { bloomEnabled: boolean; outlineEnabled: boolean },
+  state: LayerEffectState,
   bloomId: string,
   outlineId: string,
-  params: { bloomEnabled: boolean; outlineEnabled: boolean },
+  onChange: () => void,
 ) => {
   folder
     .addBinding(params, "bloomEnabled", { label: "Bloom" })
     .on("change", (ev) => {
-      layer.toggleEffect(bloomId, ev.value);
+      setEffectEnabled(state, bloomId, ev.value);
+      onChange();
     });
 
   folder
     .addBinding(params, "outlineEnabled", { label: "Outline" })
     .on("change", (ev) => {
-      layer.toggleEffect(outlineId, ev.value);
+      setEffectEnabled(state, outlineId, ev.value);
+      onChange();
     });
 };
 
@@ -48,18 +81,25 @@ const addLayerEffectControls = (
  */
 const addLayerEmissiveIntensityControl = (
   folder: FolderApi,
-  layer: Layer,
   params: { emissiveIntensity: number },
+  onChange: (value: number) => void,
+  sliderOptions?: { min?: number; max?: number; step?: number; label?: string },
 ) => {
+  const {
+    min = 0.0,
+    max = 1.0,
+    step = 0.01,
+    label = "Emissive Intensity",
+  } = sliderOptions ?? {};
   folder
     .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 1.0,
-      step: 0.01,
-      label: "Emissive Intensity",
+      min,
+      max,
+      step,
+      label,
     })
-    .on("change", () => {
-      layer.setEmissiveIntensity(params.emissiveIntensity);
+    .on("change", (ev) => {
+      onChange(ev.value);
     });
 };
 
@@ -262,6 +302,29 @@ type MeshFolderOptions = {
 const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   const { title, layer, bloomId, outlineId, configKey } = options;
   const params = { ...options.params };
+  const effectState: LayerEffectState = {
+    effects: [],
+    emissiveColor: params.emissiveColor,
+    emissiveIntensity: params.emissiveIntensity,
+    selectiveDepthTest: params.selectiveDepthTest,
+  };
+
+  if (params.bloomEnabled) {
+    effectState.effects.push(bloomId);
+  }
+  if (params.outlineEnabled) {
+    effectState.effects.push(outlineId);
+  }
+
+  const applyMeshState = () => {
+    layer.ref.onUpdateConfig({
+      ...buildMeshConfig(configKey, {
+        emissive: effectState.emissiveColor,
+        emissiveIntensity: effectState.emissiveIntensity,
+      }),
+      ...buildEffectPayload(effectState),
+    });
+  };
 
   const folder = pane.addFolder({ title });
 
@@ -274,7 +337,8 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
       label: "Selective Depth Test",
     })
     .on("change", (ev) => {
-      layer.setSelectiveDepthTest(ev.value);
+      effectState.selectiveDepthTest = ev.value;
+      applyMeshState();
     });
 
   folder
@@ -283,58 +347,30 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
       label: "Emissive Color",
     })
     .on("change", (ev) => {
-      layer.ref.onUpdateConfig(
-        buildMeshConfig(configKey, {
-          emissive: ev.value,
-        }),
-      );
+      effectState.emissiveColor = ev.value;
+      applyMeshState();
     });
 
-  folder
-    .addBinding(params, "emissiveIntensity", {
-      min: 0.0,
-      max: 10.0,
-      step: 0.1,
-    })
-    .on("change", (ev) => {
-      layer.ref.onUpdateConfig(
-        buildMeshConfig(configKey, {
-          emissiveIntensity: ev.value,
-        }),
-      );
-    });
-
-  folder
-    .addBinding(params, "bloomEnabled", {
-      label: "Bloom",
-    })
-    .on("change", (ev) => {
-      layer.ref.toggleEffect(bloomId, ev.value);
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", {
-      label: "Outline",
-    })
-    .on("change", (ev) => {
-      layer.ref.toggleEffect(outlineId, ev.value);
-    });
-
-  // Initialize emissive
-  layer.ref.onUpdateConfig(
-    buildMeshConfig(configKey, {
-      emissive: params.emissiveColor,
-      emissiveIntensity: params.emissiveIntensity,
-    }),
+  addLayerEmissiveIntensityControl(
+    folder,
+    params,
+    (value) => {
+      effectState.emissiveIntensity = value;
+      applyMeshState();
+    },
+    { min: 0.0, max: 10.0, step: 0.1 },
   );
 
-  // Mesh-specific default effects
-  if (params.bloomEnabled) {
-    layer.ref.enableEffect(bloomId);
-  }
-  if (params.outlineEnabled) {
-    layer.ref.enableEffect(outlineId);
-  }
+  addLayerEffectControls(
+    folder,
+    params,
+    effectState,
+    bloomId,
+    outlineId,
+    applyMeshState,
+  );
+
+  applyMeshState();
 };
 
 const buildMeshConfig = (
@@ -375,29 +411,33 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
   } = options;
 
   const params = { ...initialParams };
+  const effectState: LayerEffectState = {
+    effects: [],
+    emissiveColor: params.emissiveColor,
+    emissiveIntensity: params.emissiveIntensity,
+    selectiveDepthTest: params.selectiveDepthTest,
+  };
+
+  if (params.bloomEnabled) effectState.effects.push(bloomId);
+  if (params.outlineEnabled) effectState.effects.push(outlineId);
 
   const folder = pane.addFolder({ title });
 
-  const updateTileModel = ({
-    show = params.visible,
-    color = params.baseColor,
-  }: {
-    show?: boolean;
-    color?: number;
-  } = {}) => {
+  const updateTilesLayer = () => {
     layer.update({
       type: "cesium3dtiles",
       data: {
         url: datasetUrl,
       },
       model: {
-        show,
-        color,
+        show: params.visible,
+        color: params.baseColor,
         metalness: 0.1,
         roughness: 0.1,
         cast_shadow: true,
         receive_shadow: true,
       },
+      ...buildEffectPayload(effectState),
     });
   };
 
@@ -408,7 +448,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
     })
     .on("change", (ev) => {
       params.baseColor = ev.value;
-      updateTileModel({ color: ev.value });
+      updateTilesLayer();
     });
 
   folder
@@ -418,12 +458,13 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
     })
     .on("change", (ev) => {
       params.emissiveColor = ev.value;
-      layer.setEmissiveColor(ev.value);
+      effectState.emissiveColor = ev.value;
+      updateTilesLayer();
     });
 
   folder.addBinding(params, "visible").on("change", (ev) => {
     params.visible = ev.value;
-    updateTileModel({ show: ev.value, color: params.baseColor });
+    updateTilesLayer();
   });
 
   folder
@@ -431,32 +472,25 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
       label: "Selective Depth Test",
     })
     .on("change", (ev) => {
-      layer.setSelectiveDepthTest?.(ev.value);
+      effectState.selectiveDepthTest = ev.value;
+      updateTilesLayer();
     });
 
-  addLayerEmissiveIntensityControl(folder, layer, params);
+  addLayerEmissiveIntensityControl(folder, params, (value) => {
+    effectState.emissiveIntensity = value;
+    updateTilesLayer();
+  });
 
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", (ev) => {
-      layer.toggleEffect(bloomId, ev.value);
-      if (ev.value) {
-        layer.setEmissiveColor(params.emissiveColor);
-      }
-    });
+  addLayerEffectControls(
+    folder,
+    params,
+    effectState,
+    bloomId,
+    outlineId,
+    updateTilesLayer,
+  );
 
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", (ev) => {
-      layer.toggleEffect(outlineId, ev.value);
-      if (ev.value) {
-        layer.setEmissiveColor(params.emissiveColor);
-      }
-    });
-
-  if (params.bloomEnabled) layer.enableEffect(bloomId);
-  if (params.outlineEnabled) layer.enableEffect(outlineId);
-  layer.setEmissiveColor(params.emissiveColor);
+  updateTilesLayer();
 };
 
 const setupDrumFolder = (
@@ -474,18 +508,24 @@ const setupDrumFolder = (
     bloomEnabled: false,
     outlineEnabled: false,
   };
+  const effectState: LayerEffectState = {
+    effects: [],
+    emissiveColor: params.emissiveColor,
+    emissiveIntensity: params.emissiveIntensity,
+    selectiveDepthTest: params.selectiveDepthTest,
+  };
 
   const folder = pane.addFolder({ title: "Drum Model" });
 
   const updateDrumModel = () => {
-    drumLayer.setSelectiveDepthTest(params.selectiveDepthTest);
     drumLayer.updateModel({
       show: params.visible,
       color: params.baseColor,
     });
   };
-  const applyDrumEmissiveColor = (color: number | undefined) => {
-    drumLayer.layer.setEmissiveColor(color);
+  const applyDrumEffects = () => {
+    effectState.selectiveDepthTest = params.selectiveDepthTest;
+    drumLayer.updateEffectState(buildEffectPayload(effectState));
   };
 
   folder.addBinding(params, "visible").on("change", () => {
@@ -497,7 +537,7 @@ const setupDrumFolder = (
       label: "Selective Depth Test",
     })
     .on("change", () => {
-      updateDrumModel();
+      applyDrumEffects();
     });
 
   folder
@@ -506,14 +546,26 @@ const setupDrumFolder = (
       label: "Emissive Color",
     })
     .on("change", (ev) => {
-      applyDrumEmissiveColor(ev.value);
+      params.emissiveColor = ev.value;
+      effectState.emissiveColor = ev.value;
+      applyDrumEffects();
     });
 
-  addLayerEmissiveIntensityControl(folder, drumLayer.layer, params);
-  addLayerEffectControls(folder, drumLayer.layer, bloomId, outlineId, params);
+  addLayerEmissiveIntensityControl(folder, params, (value) => {
+    effectState.emissiveIntensity = value;
+    applyDrumEffects();
+  });
+  addLayerEffectControls(
+    folder,
+    params,
+    effectState,
+    bloomId,
+    outlineId,
+    applyDrumEffects,
+  );
 
-  // Initialize emissive color to match params
-  applyDrumEmissiveColor(params.emissiveColor);
+  updateDrumModel();
+  applyDrumEffects();
 };
 
 const setupSoldierFolder = (
@@ -532,19 +584,25 @@ const setupSoldierFolder = (
     bloomEnabled: false,
     outlineEnabled: false,
   };
+  const effectState: LayerEffectState = {
+    effects: [],
+    emissiveColor: params.emissiveColor,
+    emissiveIntensity: params.emissiveIntensity,
+    selectiveDepthTest: params.selectiveDepthTest,
+  };
 
   const folder = pane.addFolder({ title: "Soldier Model" });
 
   const updateSoldierModel = () => {
-    soldierLayer.setSelectiveDepthTest(params.selectiveDepthTest);
     soldierLayer.updateModel({
       show: params.visible,
       animation_speed: params.animationSpeed,
       color: params.baseColor,
     });
   };
-  const applySoldierEmissiveColor = (color: number | undefined) => {
-    soldierLayer.layer.setEmissiveColor(color);
+  const applySoldierEffects = () => {
+    effectState.selectiveDepthTest = params.selectiveDepthTest;
+    soldierLayer.updateEffectState(buildEffectPayload(effectState));
   };
 
   folder.addBinding(params, "visible").on("change", () => {
@@ -556,7 +614,7 @@ const setupSoldierFolder = (
       label: "Selective Depth Test",
     })
     .on("change", () => {
-      updateSoldierModel();
+      applySoldierEffects();
     });
 
   folder
@@ -575,17 +633,24 @@ const setupSoldierFolder = (
       label: "Emissive Color",
     })
     .on("change", (ev) => {
-      applySoldierEmissiveColor(ev.value);
+      params.emissiveColor = ev.value;
+      effectState.emissiveColor = ev.value;
+      applySoldierEffects();
     });
 
-  addLayerEmissiveIntensityControl(folder, soldierLayer.layer, params);
+  addLayerEmissiveIntensityControl(folder, params, (value) => {
+    effectState.emissiveIntensity = value;
+    applySoldierEffects();
+  });
   addLayerEffectControls(
     folder,
-    soldierLayer.layer,
+    params,
+    effectState,
     bloomId,
     outlineId,
-    params,
+    applySoldierEffects,
   );
 
-  applySoldierEmissiveColor(params.emissiveColor);
+  updateSoldierModel();
+  applySoldierEffects();
 };

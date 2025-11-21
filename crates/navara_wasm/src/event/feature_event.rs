@@ -1,6 +1,6 @@
-use navara_wasm_types::OverscaledTileHandle;
+use navara_wasm_types::{LayerEffectConfig, OverscaledTileHandle};
 use serde::Serialize;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*, JsValue};
 
 use super::feature::RenderableFeature;
 
@@ -18,33 +18,28 @@ pub struct RenderableFeatureAddedEvent {
     pub layer_id: String,
     pub overscaled_tile_handle: Option<OverscaledTileHandle>,
     #[wasm_bindgen(getter_with_clone)]
-    pub effects: Option<Vec<String>>,
+    #[serde(skip_serializing)]
+    pub effect_config: JsValue,
 }
 
-impl<'a>
-    From<
-        navara_event_store::ReconstructableComponentEvent<(
-            &'a navara_feature_component::render::RenderableFeature,
-            &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::OverscaledTileHandle>,
-        )>,
-    > for RenderableFeatureAddedEvent
-{
-    fn from(
-        ev: navara_event_store::ReconstructableComponentEvent<(
-            &'a navara_feature_component::render::RenderableFeature,
-            &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::OverscaledTileHandle>,
-        )>,
-    ) -> Self {
+impl<'a> From<navara_event::RenderableFeatureEvent<'a>> for RenderableFeatureAddedEvent {
+    fn from(ev: navara_event::RenderableFeatureEvent<'a>) -> Self {
+        let effect_config = ev
+            .effect_config
+            .clone()
+            .and_then(|config| {
+                let wasm_config: LayerEffectConfig = config.into();
+                serde_wasm_bindgen::to_value(&wasm_config).ok()
+            })
+            .unwrap_or(JsValue::NULL);
         Self {
-            ind: ev.ind,
-            gen: ev.gen,
-            bits: ev.bits,
-            feature: RenderableFeature::from(ev.comp.0),
-            layer_id: ev.comp.1 .0.clone(),
-            overscaled_tile_handle: ev.comp.2.map(|v| v.into()),
-            effects: None, // Note: Effects are retrieved from layer config on TypeScript side
+            ind: ev.component_event.ind,
+            gen: ev.component_event.gen,
+            bits: ev.component_event.bits,
+            feature: RenderableFeature::from(ev.component_event.comp.0),
+            layer_id: ev.component_event.comp.1 .0.clone(),
+            overscaled_tile_handle: ev.component_event.comp.2.map(|v| v.into()),
+            effect_config,
         }
     }
 }
@@ -62,31 +57,29 @@ pub struct RenderableFeatureChangedEvent {
     #[wasm_bindgen(getter_with_clone)]
     pub layer_id: String,
     pub overscaled_tile_handle: Option<OverscaledTileHandle>,
+    #[wasm_bindgen(getter_with_clone)]
+    #[serde(skip_serializing)]
+    pub effect_config: JsValue,
 }
 
-impl<'a>
-    From<
-        navara_event_store::ReconstructableComponentEvent<(
-            &'a navara_feature_component::render::RenderableFeature,
-            &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::OverscaledTileHandle>,
-        )>,
-    > for RenderableFeatureChangedEvent
-{
-    fn from(
-        ev: navara_event_store::ReconstructableComponentEvent<(
-            &'a navara_feature_component::render::RenderableFeature,
-            &'a navara_layer::LayerId,
-            Option<&'a navara_tile_component::OverscaledTileHandle>,
-        )>,
-    ) -> Self {
+impl<'a> From<navara_event::RenderableFeatureEvent<'a>> for RenderableFeatureChangedEvent {
+    fn from(ev: navara_event::RenderableFeatureEvent<'a>) -> Self {
+        let effect_config = ev
+            .effect_config
+            .clone()
+            .and_then(|config| {
+                let wasm_config: LayerEffectConfig = config.into();
+                serde_wasm_bindgen::to_value(&wasm_config).ok()
+            })
+            .unwrap_or(JsValue::NULL);
         Self {
-            ind: ev.ind,
-            gen: ev.gen,
-            bits: ev.bits,
-            feature: RenderableFeature::from(ev.comp.0),
-            layer_id: ev.comp.1 .0.clone(),
-            overscaled_tile_handle: ev.comp.2.map(|v| v.into()),
+            ind: ev.component_event.ind,
+            gen: ev.component_event.gen,
+            bits: ev.component_event.bits,
+            feature: RenderableFeature::from(ev.component_event.comp.0),
+            layer_id: ev.component_event.comp.1 .0.clone(),
+            overscaled_tile_handle: ev.component_event.comp.2.map(|v| v.into()),
+            effect_config,
         }
     }
 }
