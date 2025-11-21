@@ -29,10 +29,10 @@ export {
   type SphereMeshLayerUpdate,
 } from "./SphereMeshLayer";
 export {
-  HaloMeshLayer,
-  type HaloMeshLayerConfig,
-  type HaloMeshLayerUpdate,
-} from "./HaloMeshLayer";
+  GlowSphereMeshLayer,
+  type GlowSphereMeshLayerConfig,
+  type GlowSphereMeshLayerUpdate,
+} from "./GlowSphereMeshLayer";
 export {
   CylinderMeshLayer,
   type CylinderMeshLayerConfig,

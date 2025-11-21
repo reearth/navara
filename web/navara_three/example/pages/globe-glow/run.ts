@@ -1,25 +1,41 @@
-import ThreeView, { AmbientLightLayer, HaloMeshLayer } from "@navara/three";
+import ThreeView, { AmbientLightLayer } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
+import {
+  addCtrlPanel,
+  type MaterialLayerDescription,
+} from "../../helpers/panel";
 
+const gLayer: MaterialLayerDescription[] = [
+  {
+    type: "mesh",
+    glowSphere: {
+      radius: 6378137 * 1.25,
+      coefficient: 0.5,
+      exponent: 2,
+      glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
+    },
+    position: { x: 0, y: 0, z: 0 },
+  },
+];
 
 export const run = async (view: ThreeView) => {
   await view.init();
 
   view.setCamera({
-      lng: 90,
-      lat: 0.1,
-      height: 12600000,
-      heading: 0,
-      pitch: -90,
-      roll: 0,
-    });
-    
+    lng: 90,
+    lat: 0.1,
+    height: 12600000,
+    heading: 0,
+    pitch: -90,
+    roll: 0,
+  });
+
   view.addLayer<AmbientLightLayer>({
     type: "light",
-    ambient: {}
+    ambient: {},
   });
 
   view.addLayer({
@@ -30,20 +46,11 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  view.addLayer<HaloMeshLayer>({
-    type: "mesh",
-    halo: {
-      radius:  6378137 * 1.15,
-    },
-    // TODO: make this position implicit
-    position: { x: 0, y: 0, z: 0 },
-  });
-
   const pane = new Pane({
     title: "Parameters",
     expanded: true,
   });
-
+  addCtrlPanel(gLayer, view, pane);
   addCameraControl(view, pane);
   addDateControl(view, pane);
 };
