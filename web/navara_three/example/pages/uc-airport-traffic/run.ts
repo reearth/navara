@@ -139,7 +139,8 @@ export async function run() {
   });
 
   showAttributions([
-    LOCAL_DATASETS.globeGeoJSON,
+    LOCAL_DATASETS.blueMarbleNight,
+    TILE_DATASETS.gsiSeamlessphoto,
     LOCAL_DATASETS.airportTrafficVolume,
   ]);
 }
