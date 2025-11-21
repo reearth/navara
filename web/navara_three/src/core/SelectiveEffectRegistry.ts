@@ -5,6 +5,7 @@ import {
   Object3D,
   Mesh,
   WebGLRenderer,
+  DoubleSide,
 } from "three";
 
 import { BufferView } from "../bufferView";
@@ -68,6 +69,19 @@ export class SelectiveEffectRegistry {
 
     const sceneDepthDisabled = new Scene();
     sceneDepthDisabled.name = `SelectiveEffect_${effectId}_DepthDisabled`;
+
+    // Mark scenes so we can detect selective mask rendering in onBeforeRender
+    // and differentiate depth test behavior between them.
+    (
+      sceneDepthEnabled.userData as {
+        selectiveMask?: { enabled: boolean; depthTest: boolean };
+      }
+    ).selectiveMask = { enabled: true, depthTest: true };
+    (
+      sceneDepthDisabled.userData as {
+        selectiveMask?: { enabled: boolean; depthTest: boolean };
+      }
+    ).selectiveMask = { enabled: true, depthTest: false };
 
     const maskRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
@@ -207,6 +221,8 @@ export class SelectiveEffectRegistry {
     if (!layerId) return;
 
     const depthTest = this.getLayerSelectiveDepthTest(layerId);
+
+    // Ensure clones are detached from both scenes before re-attaching.
     resources.sceneDepthEnabled.remove(clone);
     resources.sceneDepthDisabled.remove(clone);
 
@@ -223,6 +239,144 @@ export class SelectiveEffectRegistry {
       console.warn(`Selective effect ${effectId} not found`);
       return;
     }
+
+    const selectiveMaskBeforeRender = (
+      _renderer: WebGLRenderer,
+      scene: Scene,
+      _camera: Object3D,
+      _geometry: unknown,
+      material: unknown,
+    ) => {
+      const maskInfo = (
+        scene.userData as {
+          selectiveMask?: { enabled: boolean; depthTest: boolean };
+        }
+      ).selectiveMask;
+      if (!maskInfo?.enabled) return;
+
+      const meshMaterial = material as {
+        color?: { set: (color: number) => void };
+        emissive?: { set: (color: number) => void };
+        depthTest?: boolean;
+        depthWrite?: boolean;
+        side?: number;
+        transparent?: boolean;
+        opacity?: number;
+        userData?: Record<string, unknown>;
+      };
+
+      meshMaterial.userData ??= {};
+      const store = (
+        meshMaterial.userData as {
+          __selectivePrevState?: {
+            color?: unknown;
+            emissive?: unknown;
+            depthTest?: boolean;
+            depthWrite?: boolean;
+            side?: number;
+            transparent?: boolean;
+            opacity?: number;
+            active?: boolean;
+          };
+        }
+      ).__selectivePrevState ?? {
+        active: false,
+      };
+
+      if (!store.active) {
+        if ("color" in meshMaterial && meshMaterial.color) {
+          store.color = meshMaterial.color;
+        }
+        if ("emissive" in meshMaterial && meshMaterial.emissive) {
+          store.emissive = meshMaterial.emissive;
+        }
+        store.depthTest = meshMaterial.depthTest;
+        store.depthWrite = meshMaterial.depthWrite;
+        store.side = meshMaterial.side;
+        store.transparent = meshMaterial.transparent;
+        store.opacity = meshMaterial.opacity;
+        store.active = true;
+        (
+          meshMaterial.userData as { __selectivePrevState?: typeof store }
+        ).__selectivePrevState = store;
+      }
+
+      if (meshMaterial.color) {
+        meshMaterial.color.set(0xffffff);
+      }
+      if (meshMaterial.emissive) {
+        meshMaterial.emissive.set(0x000000);
+      }
+      meshMaterial.depthTest = maskInfo.depthTest;
+      meshMaterial.depthWrite = true;
+      meshMaterial.side = DoubleSide;
+      meshMaterial.transparent = false;
+      meshMaterial.opacity = 1.0;
+    };
+
+    const selectiveMaskAfterRender = (
+      _renderer: WebGLRenderer,
+      scene: Scene,
+      _camera: Object3D,
+      _geometry: unknown,
+      material: unknown,
+    ) => {
+      const maskInfo = (
+        scene.userData as {
+          selectiveMask?: { enabled: boolean; depthTest: boolean };
+        }
+      ).selectiveMask;
+      if (!maskInfo?.enabled) return;
+
+      const meshMaterial = material as {
+        color?: { copy: (color: unknown) => void };
+        emissive?: { copy: (color: unknown) => void };
+        depthTest?: boolean;
+        depthWrite?: boolean;
+        side?: number;
+        transparent?: boolean;
+        opacity?: number;
+        userData?: {
+          __selectivePrevState?: {
+            color?: unknown;
+            emissive?: unknown;
+            depthTest?: boolean;
+            depthWrite?: boolean;
+            side?: number;
+            transparent?: boolean;
+            opacity?: number;
+            active?: boolean;
+          };
+        };
+      };
+
+      const store = meshMaterial.userData?.__selectivePrevState;
+      if (!store?.active) return;
+
+      if (meshMaterial.color && store.color) {
+        meshMaterial.color.copy(store.color);
+      }
+      if (meshMaterial.emissive && store.emissive) {
+        meshMaterial.emissive.copy(store.emissive);
+      }
+      if (store.depthTest !== undefined) {
+        meshMaterial.depthTest = store.depthTest;
+      }
+      if (store.depthWrite !== undefined) {
+        meshMaterial.depthWrite = store.depthWrite;
+      }
+      if (store.side !== undefined) {
+        meshMaterial.side = store.side;
+      }
+      if (store.transparent !== undefined) {
+        meshMaterial.transparent = store.transparent;
+      }
+      if (store.opacity !== undefined) {
+        meshMaterial.opacity = store.opacity;
+      }
+
+      store.active = false;
+    };
 
     // Ensure world matrices are up to date before traversing children
     sourceObject.updateMatrixWorld(true);
@@ -248,6 +402,15 @@ export class SelectiveEffectRegistry {
       const clone = mesh.clone();
       clone.userData.isSelectiveClone = true;
       clone.userData.sourceId = mesh.uuid;
+
+      // Attach selective mask hooks to clones so we can override only for
+      // selective mask scenes without touching original mesh materials.
+      if (!clone.onBeforeRender) {
+        clone.onBeforeRender = selectiveMaskBeforeRender as never;
+      }
+      if (!clone.onAfterRender) {
+        clone.onAfterRender = selectiveMaskAfterRender as never;
+      }
 
       // Copy world space transform so detached clone renders correctly
       clone.position.setFromMatrixPosition(mesh.matrixWorld);

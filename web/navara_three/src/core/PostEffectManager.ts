@@ -140,7 +140,6 @@ export class PostEffectManager {
     return this.layerConfigs.get(layerId)!;
   }
 
-
   private updateLayerEffectCaches(
     layerId: string,
     newEffects: string[],

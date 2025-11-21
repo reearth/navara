@@ -146,20 +146,21 @@ class OutlinePass extends PostProcessingPass {
         
         varying vec2 vUv;
         
-        // Sobel edge detection
+        // Sobel edge detection using luminance (not just red channel)
         float detectEdge(vec2 uv) {
           vec2 offset = vec2(thickness) / resolution;
+          const vec3 luma = vec3(0.299, 0.587, 0.114);
           
           // Sample 3x3 grid
-          float tl = texture2D(tMask, uv + vec2(-offset.x, offset.y)).r;
-          float t  = texture2D(tMask, uv + vec2(0.0, offset.y)).r;
-          float tr = texture2D(tMask, uv + vec2(offset.x, offset.y)).r;
-          float l  = texture2D(tMask, uv + vec2(-offset.x, 0.0)).r;
-          float c  = texture2D(tMask, uv).r;
-          float r  = texture2D(tMask, uv + vec2(offset.x, 0.0)).r;
-          float bl = texture2D(tMask, uv + vec2(-offset.x, -offset.y)).r;
-          float b  = texture2D(tMask, uv + vec2(0.0, -offset.y)).r;
-          float br = texture2D(tMask, uv + vec2(offset.x, -offset.y)).r;
+          float tl = dot(texture2D(tMask, uv + vec2(-offset.x, offset.y)).rgb, luma);
+          float t  = dot(texture2D(tMask, uv + vec2(0.0, offset.y)).rgb, luma);
+          float tr = dot(texture2D(tMask, uv + vec2(offset.x, offset.y)).rgb, luma);
+          float l  = dot(texture2D(tMask, uv + vec2(-offset.x, 0.0)).rgb, luma);
+          float c  = dot(texture2D(tMask, uv).rgb, luma);
+          float r  = dot(texture2D(tMask, uv + vec2(offset.x, 0.0)).rgb, luma);
+          float bl = dot(texture2D(tMask, uv + vec2(-offset.x, -offset.y)).rgb, luma);
+          float b  = dot(texture2D(tMask, uv + vec2(0.0, -offset.y)).rgb, luma);
+          float br = dot(texture2D(tMask, uv + vec2(offset.x, -offset.y)).rgb, luma);
           
           // Sobel operator
           float gx = (tr + 2.0*r + br) - (tl + 2.0*l + bl);

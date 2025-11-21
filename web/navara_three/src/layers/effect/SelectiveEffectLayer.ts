@@ -1,12 +1,5 @@
 import { DepthCopyPass } from "postprocessing";
-import {
-  Color,
-  MeshBasicMaterial,
-  Vector2,
-  DoubleSide,
-  RGBADepthPacking,
-  type WebGLRenderer,
-} from "three";
+import { Color, Vector2, RGBADepthPacking, type WebGLRenderer } from "three";
 
 import { BufferView } from "../../bufferView";
 import {
@@ -75,22 +68,6 @@ export type SelectiveOutlineUpdate = {
   resolutionScale?: number;
   debugMask?: boolean;
 } & EffectLayerUpdate;
-
-// Mask material for rendering white silhouettes (depth enabled)
-const MASK_MATERIAL_DEPTH_ENABLED = new MeshBasicMaterial({
-  color: new Color(1, 1, 1),
-  depthTest: true,
-  depthWrite: true,
-  side: DoubleSide, // Render both sides to handle model orientation
-});
-
-// Mask material for rendering white silhouettes (depth disabled)
-const MASK_MATERIAL_DEPTH_DISABLED = new MeshBasicMaterial({
-  color: new Color(1, 1, 1),
-  depthTest: false,
-  depthWrite: false,
-  side: DoubleSide, // Render both sides to handle model orientation
-});
 
 /**
  * Base class for selective effect layers
@@ -175,16 +152,10 @@ export abstract class SelectiveEffectLayerBase<
     renderer.setRenderTarget(maskRT);
 
     // 2. Render mask silhouettes with depthTest enabled
-    // overrideMaterial applies to all objects in scene - no traverse needed!
-    sceneDepthEnabled.overrideMaterial = MASK_MATERIAL_DEPTH_ENABLED;
     renderer.render(sceneDepthEnabled, this.view.camera);
-    sceneDepthEnabled.overrideMaterial = null;
 
     // 3. Render mask silhouettes with depthTest disabled
-    // overrideMaterial applies to all objects in scene - no traverse needed!
-    sceneDepthDisabled.overrideMaterial = MASK_MATERIAL_DEPTH_DISABLED;
     renderer.render(sceneDepthDisabled, this.view.camera);
-    sceneDepthDisabled.overrideMaterial = null;
 
     // Restore renderer state
     renderer.setRenderTarget(prevRenderTarget);

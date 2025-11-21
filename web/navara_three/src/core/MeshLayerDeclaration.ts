@@ -152,7 +152,7 @@ export abstract class MeshLayerDeclaration<
     if (currentEffects.length > 0) {
       const emissiveIntensity = this.view.getLayerEmissiveIntensity(this.id);
       const emissiveColor = this.view.getLayerEmissiveColor(this.id);
-      
+
       this.raw.dispatchEvent({
         type: "emissive",
         target: this.raw,
@@ -251,11 +251,12 @@ export abstract class MeshLayerDeclaration<
     // Handle effect_id update - delegate to ViewContext for proper cache synchronization
     if (updates.effect_id !== undefined) {
       // Update local effects cache
-      this.effects = updates.effect_id.length > 0 ? updates.effect_id : undefined;
+      this.effects =
+        updates.effect_id.length > 0 ? updates.effect_id : undefined;
 
       // Update ViewContext cache
       this.view.updateLayerEffects(this.id, updates.effect_id);
-      
+
       // Apply effects declaratively
       this.applyEffects();
     }

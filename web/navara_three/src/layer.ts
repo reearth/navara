@@ -303,12 +303,14 @@ export class Layer extends EventHandler<LayerEvent> {
   }
 
   private supportsLayerEffects(): boolean {
-    return this.layerType === "geojson" 
-        || this.layerType === "cesium3dtiles"
-        || this.layerType === "b3dm"
-        || this.layerType === "pnts"
-        || this.layerType === "mvt"
-        || this.layerType === "terrain";
+    return (
+      this.layerType === "geojson" ||
+      this.layerType === "cesium3dtiles" ||
+      this.layerType === "b3dm" ||
+      this.layerType === "pnts" ||
+      this.layerType === "mvt" ||
+      this.layerType === "terrain"
+    );
   }
 
   private mergeDescription(update: LayerDescription): LayerDescription {

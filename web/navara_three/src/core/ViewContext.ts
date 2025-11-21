@@ -124,5 +124,4 @@ export class ViewContext {
       options,
     );
   }
-
 }

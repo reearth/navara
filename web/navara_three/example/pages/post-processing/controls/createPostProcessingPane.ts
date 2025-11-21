@@ -28,9 +28,7 @@ type LayerEffectState = {
   selectiveDepthTest: boolean;
 };
 
-const buildEffectPayload = (
-  state: LayerEffectState,
-): LayerEffectPayload => ({
+const buildEffectPayload = (state: LayerEffectState): LayerEffectPayload => ({
   effect_id: [...state.effects],
   selectiveDepthTest: state.selectiveDepthTest,
   emissive_color: state.emissiveColor,
@@ -332,14 +330,14 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
     layer.ref.visible = ev.value;
   });
 
-  folder
-    .addBinding(params, "selectiveDepthTest", {
-      label: "Selective Depth Test",
-    })
-    .on("change", (ev) => {
-      effectState.selectiveDepthTest = ev.value;
-      applyMeshState();
-    });
+  //older
+  // .addBinding(params, "selectiveDepthTest", {
+  //   label: "Selective Depth Test",
+  // })
+  // .on("change", (ev) => {
+  //   effectState.selectiveDepthTest = ev.value;
+  //   applyMeshState();
+  // });
 
   folder
     .addBinding(params, "emissiveColor", {
@@ -467,14 +465,14 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
     updateTilesLayer();
   });
 
-  folder
-    .addBinding(params, "selectiveDepthTest", {
-      label: "Selective Depth Test",
-    })
-    .on("change", (ev) => {
-      effectState.selectiveDepthTest = ev.value;
-      updateTilesLayer();
-    });
+  //folder
+  //  .addBinding(params, "selectiveDepthTest", {
+  //    label: "Selective Depth Test",
+  //  })
+  //  .on("change", (ev) => {
+  //    effectState.selectiveDepthTest = ev.value;
+  //    updateTilesLayer();
+  //  });
 
   addLayerEmissiveIntensityControl(folder, params, (value) => {
     effectState.emissiveIntensity = value;
@@ -532,13 +530,13 @@ const setupDrumFolder = (
     updateDrumModel();
   });
 
-  folder
-    .addBinding(params, "selectiveDepthTest", {
-      label: "Selective Depth Test",
-    })
-    .on("change", () => {
-      applyDrumEffects();
-    });
+  //folder
+  //  .addBinding(params, "selectiveDepthTest", {
+  //    label: "Selective Depth Test",
+  //  })
+  //  .on("change", () => {
+  //    applyDrumEffects();
+  //  });
 
   folder
     .addBinding(params, "emissiveColor", {
@@ -609,13 +607,13 @@ const setupSoldierFolder = (
     updateSoldierModel();
   });
 
-  folder
-    .addBinding(params, "selectiveDepthTest", {
-      label: "Selective Depth Test",
-    })
-    .on("change", () => {
-      applySoldierEffects();
-    });
+  //folder
+  //  .addBinding(params, "selectiveDepthTest", {
+  //    label: "Selective Depth Test",
+  //  })
+  //  .on("change", () => {
+  //    applySoldierEffects();
+  //  });
 
   folder
     .addBinding(params, "animationSpeed", {
