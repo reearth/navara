@@ -129,7 +129,7 @@ export const addCtrlPanel = (
       selectedBatchIds.clear();
 
       layerInstMap.forEach((layer) => {
-        layer.forceUpdate?.();
+        layer.forceUpdate();
       });
     }
   });
@@ -205,10 +205,6 @@ export const addCtrlPanel = (
     outline_opacity: 1.0,
     surface_show: true,
     point_size: 0.3,
-    exponent: 5,
-    coefficient: 0.5,
-    glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
-    radius: 6378137 * 1.25,
   };
 
   pane
@@ -458,22 +454,6 @@ export const addCtrlPanel = (
         material.point_size = paneParams.point_size;
       }
 
-      if ("radius" in material) {
-        material.radius = paneParams.radius;
-      }
-
-      if ("exponent" in material) {
-        material.exponent = paneParams.exponent;
-      }
-
-      if ("coefficient" in material) {
-        material.coefficient = paneParams.coefficient;
-      }
-
-      if ("glowColor" in material) {
-        material.glowColor = paneParams.glowColor;
-      }
-
       view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
@@ -705,29 +685,6 @@ function createParamCtrl(
       );
     }
 
-    if ("radius" in material) {
-      paneParams.radius = material.radius;
-      f.addBinding(paneParams, "radius").on("change", changeFunc);
-    }
-
-    if ("exponent" in material) {
-      paneParams.exponent = material.exponent;
-      f.addBinding(paneParams, "exponent").on("change", changeFunc);
-    }
-
-    if ("coefficient" in material) {
-      paneParams.coefficient = material.coefficient;
-      f.addBinding(paneParams, "coefficient").on("change", changeFunc);
-    }
-
-    if ("glowColor" in material) {
-      paneParams.glowColor = material.glowColor;
-      f.addBinding(paneParams, "glowColor", { color: { type: "float" } }).on(
-        "change",
-        changeFunc,
-      );
-    }
-
     return f;
   }
 
@@ -777,9 +734,6 @@ function getMaterialOptions(layer: MaterialLayerDescription) {
   }
   if ("polygon" in layer) {
     materials.push("polygon");
-  }
-  if ("glowSphere" in layer) {
-    materials.push("glowSphere");
   }
 
   const ret: any = {};
