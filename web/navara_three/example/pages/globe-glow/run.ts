@@ -15,6 +15,7 @@ const gPaneParams = {
   glowCoefficient: 0.5,
   glowExponent: 2.0,
   glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
+  visible: true,
 };
 
 export const run = async (view: ThreeView) => {
@@ -59,7 +60,7 @@ export const run = async (view: ThreeView) => {
   });
 
   addCameraControl(view, pane);
-  addPanel(pane);
+  addPanel(view, pane);
 };
 
 const addCameraControl = (view: ThreeView, pane: Pane) => {
@@ -94,7 +95,7 @@ const addCameraControl = (view: ThreeView, pane: Pane) => {
     });
 };
 
-function addPanel(pane: Pane) {
+function addPanel(view: ThreeView, pane: Pane) {
   if (!gGlowSphereMeshLayer) return;
 
   const folder = pane.addFolder({ title: "Glow Sphere Layer" });
@@ -129,5 +130,33 @@ function addPanel(pane: Pane) {
         glowColor: ev.value,
       },
     });
+  });
+
+  folder.addBinding(gPaneParams, "visible").on("change", (ev) => {
+    if (gGlowSphereMeshLayer && gGlowSphereMeshLayer.visible !== undefined) {
+      gGlowSphereMeshLayer.visible = ev.value;
+    }
+  });
+
+  folder.addButton({ title: "Delete Layer" }).on("click", (ev) => {
+    if (gGlowSphereMeshLayer) {
+      gGlowSphereMeshLayer.delete();
+      view.forceUpdate();
+      gGlowSphereMeshLayer = undefined;
+      ev.target.title = "Add Layer";
+    } else {
+      gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
+        type: "mesh",
+        glowSphere: {
+          radius: 6378137 * 1.25,
+          coefficient: 0.5,
+          exponent: 2.0,
+          glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
+        },
+        position: { x: 0, y: 0, z: 0 },
+      });
+      view.forceUpdate();
+      ev.target.title = "Delete Layer";
+    }
   });
 }

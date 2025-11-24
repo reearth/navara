@@ -1,5 +1,5 @@
-import GlowSphereFS from "@shaders/glsl/GlowSphere.frag.glsl";
-import GlowSphereVS from "@shaders/glsl/GlowSphere.vert.glsl";
+import GlowSphereFS from "@shaders/glsl/glowSphere.frag.glsl";
+import GlowSphereVS from "@shaders/glsl/glowSphere.vert.glsl";
 import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector4 } from "three";
 
 import {
