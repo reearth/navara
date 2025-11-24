@@ -109,10 +109,6 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
         );
       }
 
-      if (cfg.show !== undefined) {
-        material.visible = cfg.show;
-      }
-
       // Update the stored config with the new values
       if (origin) {
         Object.assign(origin, cfg);

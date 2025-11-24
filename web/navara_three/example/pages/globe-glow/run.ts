@@ -1,25 +1,21 @@
-import ThreeView, { AmbientLightLayer } from "@navara/three";
+import ThreeView, {
+  AmbientLightLayer,
+  GlowSphereMeshLayer,
+  LayerHandle,
+} from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
-import { addDateControl } from "../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialLayerDescription,
-} from "../../helpers/panel";
 
-const gLayer: MaterialLayerDescription[] = [
-  {
-    type: "mesh",
-    glowSphere: {
-      radius: 6378137 * 1.25,
-      coefficient: 0.5,
-      exponent: 2,
-      glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
-    },
-    position: { x: 0, y: 0, z: 0 },
-  },
-];
+let gGlowSphereMeshLayer: LayerHandle<GlowSphereMeshLayer> | undefined =
+  undefined;
+
+const gPaneParams = {
+  glowRadius: 6378137 * 1.25,
+  glowCoefficient: 0.5,
+  glowExponent: 2.0,
+  glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
+};
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -38,6 +34,17 @@ export const run = async (view: ThreeView) => {
     ambient: {},
   });
 
+  gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
+    type: "mesh",
+    glowSphere: {
+      radius: gPaneParams.glowRadius,
+      coefficient: gPaneParams.glowCoefficient,
+      exponent: gPaneParams.glowExponent,
+      glowColor: gPaneParams.glowColor,
+    },
+    position: { x: 0, y: 0, z: 0 },
+  });
+
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
@@ -50,9 +57,9 @@ export const run = async (view: ThreeView) => {
     title: "Parameters",
     expanded: true,
   });
-  addCtrlPanel(gLayer, view, pane);
+
   addCameraControl(view, pane);
-  addDateControl(view, pane);
+  addPanel(pane);
 };
 
 const addCameraControl = (view: ThreeView, pane: Pane) => {
@@ -86,3 +93,41 @@ const addCameraControl = (view: ThreeView, pane: Pane) => {
       });
     });
 };
+
+function addPanel(pane: Pane) {
+  if (!gGlowSphereMeshLayer) return;
+
+  const folder = pane.addFolder({ title: "Glow Sphere Layer" });
+
+  folder.addBinding(gPaneParams, "glowRadius").on("change", (ev) => {
+    gGlowSphereMeshLayer?.update({
+      glowSphere: {
+        radius: ev.value,
+      },
+    });
+  });
+
+  folder.addBinding(gPaneParams, "glowCoefficient").on("change", (ev) => {
+    gGlowSphereMeshLayer?.update({
+      glowSphere: {
+        coefficient: ev.value,
+      },
+    });
+  });
+
+  folder.addBinding(gPaneParams, "glowExponent").on("change", (ev) => {
+    gGlowSphereMeshLayer?.update({
+      glowSphere: {
+        exponent: ev.value,
+      },
+    });
+  });
+
+  folder.addBinding(gPaneParams, "glowColor").on("change", (ev) => {
+    gGlowSphereMeshLayer?.update({
+      glowSphere: {
+        glowColor: ev.value,
+      },
+    });
+  });
+}
