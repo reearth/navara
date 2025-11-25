@@ -123,7 +123,11 @@ impl<F: Float + One<F>> Ellipsoid<F> {
         let theta = (z * a).atan2(p * b);
 
         let lon = y.atan2(x);
-        let lat = (z + e2 * a * (theta.sin().powi(3))).atan2(p - e2 * a * (theta.cos().powi(3)));
+
+        // Bowring's formula: use second eccentricity squared (e'²) for numerator
+        let e_prime_squared = (a.powi(2) - b.powi(2)) / b.powi(2);
+        let lat = (z + e_prime_squared * b * (theta.sin().powi(3)))
+            .atan2(p - e2 * a * (theta.cos().powi(3)));
 
         let n = a / (F::one() - e2 * lat.sin().powi(2)).sqrt();
         let x_surface = n * lat.cos() * lon.cos();
