@@ -21,14 +21,20 @@ import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 type LayerDescription = {
   glowSphere?: {
     /**
-     * The radius of the glow sphere in meters.
+     * The scale factor for the glow sphere radius relative to the WGS84 semi-major axis.
      *
-     * Should be slightly larger than the planet/globe radius to create
-     * the atmospheric glow effect around the surface.
+     * This value is multiplied by the WGS84 semi-major axis (Earth's equatorial radius)
+     * to determine the final glow sphere radius. Values greater than 1.0 create a glow
+     * sphere larger than Earth, which is necessary for the atmospheric effect to be visible
+     * around the surface. The sphere also respects Earth's flattening factor to maintain
+     * an oblate spheroid shape matching the planet.
      *
-     * @default WGS84 semi-major axis * 1.1 (approx. 7,024,638 meters)
+     * @default 1.0 (same size as Earth's equatorial radius: ~6,378,137 meters)
+     * @example 1.1 - Glow sphere 10% larger than Earth (typical atmospheric effect)
+     * @example 1.05 - Subtle glow close to the surface
+     * @example 1.2 - Extended atmospheric glow
      */
-    radius?: number;
+    radiusScale?: number;
 
     /**
      * The coefficient controlling the glow threshold in the Fresnel calculation.
@@ -108,7 +114,7 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
 
     // Create geometry from parameters
     const geometry = new SphereGeometry(
-      cfg.radius ?? getWGS84SemiMajorAxis() * 1.1,
+      (cfg.radiusScale ?? 1) * getWGS84SemiMajorAxis(),
       64,
       32,
       0,
@@ -152,10 +158,11 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
       const origin = this.config.glowSphere;
 
       // Update geometry if dimensions changed
-      if (cfg.radius !== undefined) {
+      if (cfg.radiusScale !== undefined) {
         this._instance.geometry.dispose();
         this._instance.geometry = new SphereGeometry(
-          cfg.radius ?? origin?.radius,
+          (cfg.radiusScale ?? origin?.radiusScale ?? 1) *
+            getWGS84SemiMajorAxis(),
           64,
           32,
           0,

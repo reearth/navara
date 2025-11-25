@@ -1,4 +1,3 @@
-import { getWGS84SemiMajorAxis } from "@navara/engine-api";
 import ThreeView, {
   AmbientLightLayer,
   GlowSphereMeshLayer,
@@ -13,7 +12,7 @@ let gGlowSphereMeshLayer: LayerHandle<GlowSphereMeshLayer> | undefined =
   undefined;
 
 const gPaneParams = {
-  glowRadius: undefined as number | undefined,
+  glowRadiusScale: 1.25,
   glowCoefficient: 0.5,
   glowExponent: 2.0,
   glowColor: 0x8cf3ff,
@@ -23,8 +22,6 @@ const gPaneParams = {
 
 export const run = async (view: ThreeView) => {
   await view.init();
-
-  gPaneParams.glowRadius = getWGS84SemiMajorAxis() * 1.25;
 
   view.setCamera({
     lng: 90,
@@ -43,7 +40,7 @@ export const run = async (view: ThreeView) => {
   gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
     type: "mesh",
     glowSphere: {
-      radius: gPaneParams.glowRadius,
+      radiusScale: gPaneParams.glowRadiusScale,
       coefficient: gPaneParams.glowCoefficient,
       exponent: gPaneParams.glowExponent,
       glowColor: gPaneParams.glowColor,
@@ -72,10 +69,10 @@ function addPanel(view: ThreeView, pane: Pane) {
 
   const folder = pane.addFolder({ title: "Glow Sphere Layer" });
 
-  folder.addBinding(gPaneParams, "glowRadius").on("change", (ev) => {
+  folder.addBinding(gPaneParams, "glowRadiusScale").on("change", (ev) => {
     gGlowSphereMeshLayer?.update({
       glowSphere: {
-        radius: ev.value,
+        radiusScale: ev.value,
       },
     });
   });
@@ -132,7 +129,7 @@ function addPanel(view: ThreeView, pane: Pane) {
       gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
         type: "mesh",
         glowSphere: {
-          radius: getWGS84SemiMajorAxis() * 1.25,
+          radiusScale: 1.25,
           coefficient: 0.5,
           exponent: 2.0,
           glowColor: 0x8cf3ff,
