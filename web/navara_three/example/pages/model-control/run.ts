@@ -147,11 +147,6 @@ export const run = async (view: ThreeView) => {
       params.valueChanged = true;
     });
   pane
-    .addBinding(params, "runSpeed", { min: 1, max: 1000 })
-    .on("change", () => {
-      params.valueChanged = true;
-    });
-  pane
     .addBinding(params, "rotationSpeed", { min: 0.1, max: 5 })
     .on("change", () => {
       params.valueChanged = true;
