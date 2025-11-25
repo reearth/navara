@@ -139,7 +139,7 @@ pub fn update_tiles(
         .unwrap()
         .is_texture_ready(&texture_fragment, has_tile_layer);
 
-    match traverse_tile(
+    let traversal_result = traverse_tile(
         &mut commands,
         tiles,
         &terrain_layer,
@@ -160,7 +160,22 @@ pub fn update_tiles(
         globe.max_sse as f64,
         false,
         is_texture_ready.then_some(zero_tile_handle),
-    ) {
+    );
+
+    let is_over_min_z = if !tiles.is_empty() {
+        tiles.iter().any(|t| {
+            t.0.is_over_min_zoom(qt.qt.get(zero_tile_handle).unwrap().coords.z)
+        })
+    } else {
+        true
+    };
+
+    // Avoid rendering level zero tile if this tile isn't allowed.
+    if !is_over_min_z {
+        return;
+    }
+
+    match traversal_result {
         TraversalResult::TileRendered => {
             spawn_tile_entity(
                 &mut commands,
