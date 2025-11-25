@@ -275,7 +275,7 @@ mod tests {
         let height = lle.height;
 
         // Calculated by Cesium
-        let expected = (2.439_118_4, 0.622_666_8, 581.580);
+        let expected = (2.439_118_4, 0.622_666_8, 581.0);
 
         assert_abs_diff_eq!(lng.val(), expected.0, epsilon = 0.0001);
         assert_abs_diff_eq!(lat.val(), expected.1, epsilon = 0.0001);
