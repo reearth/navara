@@ -1,3 +1,5 @@
+import { getWGS84SemiMajorAxis } from "@navara/engine-api";
+import { Color } from "@navara/three";
 import GlowSphereFS from "@shaders/glsl/glowSphere.frag.glsl";
 import GlowSphereVS from "@shaders/glsl/glowSphere.vert.glsl";
 import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector4 } from "three";
@@ -9,12 +11,79 @@ import {
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 
+/**
+ * Configuration for the glow sphere mesh layer.
+ *
+ * Implements a Fresnel-based glow effect that creates an halo
+ * around a spherical body. The glow intensity varies based on the viewing angle,
+ * with maximum intensity at the center and minimum at the center.
+ */
 type LayerDescription = {
   glowSphere?: {
+    /**
+     * The radius of the glow sphere in meters.
+     *
+     * Should be slightly larger than the planet/globe radius to create
+     * the atmospheric glow effect around the surface.
+     *
+     * @default WGS84 semi-major axis * 1.1 (approx. 7,024,638 meters)
+     */
     radius?: number;
+
+    /**
+     * The coefficient controlling the glow threshold in the Fresnel calculation.
+     *
+     * This value is subtracted from the facing ratio (dot product of surface normal
+     * and view direction) to control where the glow begins. Higher values create
+     * a more pronounced glow that extends further toward the edges of the sphere.
+     *
+     * Formula: `intensity = pow(max(coefficient - facing_ratio, 0.0), exponent)`
+     *
+     * @default 0.5
+     * @range Typically 0.0 to 1.0, though values outside this range are valid
+     */
     coefficient?: number;
+
+    /**
+     * The exponent controlling the glow falloff intensity in the Fresnel calculation.
+     *
+     * Higher values create a sharper, more concentrated glow at the center.
+     * Lower values create a softer, more diffuse glow that extends outward.
+     * This parameter controls how quickly the glow intensity decreases from
+     * the center toward the edges of the sphere.
+     *
+     * Formula: `intensity = pow(max(coefficient - facing_ratio, 0.0), exponent)`
+     *
+     * @default 5.0
+     * @range Typically 1.0 to 10.0, though higher values are valid
+     */
     exponent?: number;
-    glowColor?: { r: number; g: number; b: number; a: number };
+
+    /**
+     * The color of the glow effect as a hexadecimal value.
+     *
+     * Accepts standard hex color formats (e.g., 0x8cf3ff for light cyan).
+     * The RGB components determine the hue of the glow, which is then
+     * modulated by the calculated Fresnel intensity and the opacity value.
+     *
+     * @default 0x8cf3ff - Light cyan
+     * @example 0xff0000 - Red glow
+     * @example 0x00ff00 - Green glow
+     * @example 0x0080ff - Blue glow
+     */
+    glowColor?: number;
+
+    /**
+     * The opacity/alpha channel of the glow effect.
+     *
+     * Controls the overall transparency of the glow layer. This value is used
+     * as the alpha component in the shader's color uniform. Lower values create
+     * a more subtle, transparent glow, while higher values make it more opaque.
+     *
+     * @default 0.5
+     * @range 0.0 (fully transparent) to 1.0 (fully opaque)
+     */
+    opacity?: number;
   };
 };
 
@@ -39,7 +108,7 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
 
     // Create geometry from parameters
     const geometry = new SphereGeometry(
-      cfg.radius ?? 6378137 * 1.1,
+      cfg.radius ?? getWGS84SemiMajorAxis() * 1.1,
       64,
       32,
       0,
@@ -55,15 +124,17 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
     material.transparent = true;
     material.side = BackSide;
 
+    const color = new Color().setHex(cfg.glowColor ?? 0x8cf3ff).toArray();
+
     material.uniforms = {
       exponent: { value: cfg.exponent ?? 5 },
       coefficient: { value: cfg.coefficient ?? 0.5 },
       glowColor: {
         value: new Vector4(
-          cfg.glowColor?.r ?? 0.549,
-          cfg.glowColor?.g ?? 0.894,
-          cfg.glowColor?.b ?? 1.0,
-          cfg.glowColor?.a ?? 0.5,
+          color[0] ?? 0.549,
+          color[1] ?? 0.894,
+          color[2] ?? 1.0,
+          cfg.opacity ?? 0.5,
         ),
       },
     };
@@ -100,12 +171,16 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
         material.uniforms["exponent"].value = cfg.exponent;
       }
 
-      if (cfg.glowColor !== undefined) {
+      if (cfg.glowColor !== undefined || cfg.opacity !== undefined) {
+        const color = new Color()
+          .setHex(cfg.glowColor ?? origin?.glowColor ?? 0x8cf3ff)
+          .toArray();
+
         material.uniforms["glowColor"].value = new Vector4(
-          cfg.glowColor?.r ?? 0.549,
-          cfg.glowColor?.g ?? 0.894,
-          cfg.glowColor?.b ?? 1.0,
-          cfg.glowColor?.a ?? 0.5,
+          color[0] ?? 0.549,
+          color[1] ?? 0.894,
+          color[2] ?? 1.0,
+          cfg.opacity ?? origin?.opacity ?? 0.5,
         );
       }
 

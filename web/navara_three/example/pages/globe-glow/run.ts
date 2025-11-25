@@ -1,3 +1,4 @@
+import { getWGS84SemiMajorAxis, getWGS84Flattening } from "@navara/engine-api";
 import ThreeView, {
   AmbientLightLayer,
   GlowSphereMeshLayer,
@@ -6,20 +7,24 @@ import ThreeView, {
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
+import { addCameraControl } from "../../helpers/control";
 
 let gGlowSphereMeshLayer: LayerHandle<GlowSphereMeshLayer> | undefined =
   undefined;
 
 const gPaneParams = {
-  glowRadius: 6378137 * 1.25,
+  glowRadius: undefined as number | undefined,
   glowCoefficient: 0.5,
   glowExponent: 2.0,
-  glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
+  glowColor: 0x8cf3ff,
+  glowOpacity: 0.5,
   visible: true,
 };
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  gPaneParams.glowRadius = getWGS84SemiMajorAxis() * 1.25;
 
   view.setCamera({
     lng: 90,
@@ -43,7 +48,7 @@ export const run = async (view: ThreeView) => {
       exponent: gPaneParams.glowExponent,
       glowColor: gPaneParams.glowColor,
     },
-    position: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 - getWGS84Flattening() },
   });
 
   view.addLayer({
@@ -61,38 +66,6 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addPanel(view, pane);
-};
-
-const addCameraControl = (view: ThreeView, pane: Pane) => {
-  pane
-    .addButton({
-      title: "Globe view",
-    })
-    .on("click", () => {
-      view.flyTo({
-        lng: 90,
-        lat: 0.1,
-        height: 12600000,
-        heading: 0,
-        pitch: -90,
-        roll: 0,
-      });
-    });
-
-  pane
-    .addButton({
-      title: "Kakegawa castle view",
-    })
-    .on("click", () => {
-      view.flyTo({
-        lat: 34.7734947205,
-        lng: 138.0163726807,
-        height: 424.66,
-        heading: 326.62109375,
-        pitch: -56.2649879456,
-        roll: 360.0,
-      });
-    });
 };
 
 function addPanel(view: ThreeView, pane: Pane) {
@@ -124,13 +97,25 @@ function addPanel(view: ThreeView, pane: Pane) {
     });
   });
 
-  folder.addBinding(gPaneParams, "glowColor").on("change", (ev) => {
-    gGlowSphereMeshLayer?.update({
-      glowSphere: {
-        glowColor: ev.value,
-      },
+  folder
+    .addBinding(gPaneParams, "glowColor", { view: "color" })
+    .on("change", (ev) => {
+      gGlowSphereMeshLayer?.update({
+        glowSphere: {
+          glowColor: ev.value,
+        },
+      });
     });
-  });
+
+  folder
+    .addBinding(gPaneParams, "glowOpacity", { min: 0, max: 1 })
+    .on("change", (ev) => {
+      gGlowSphereMeshLayer?.update({
+        glowSphere: {
+          opacity: ev.value,
+        },
+      });
+    });
 
   folder.addBinding(gPaneParams, "visible").on("change", (ev) => {
     if (gGlowSphereMeshLayer && gGlowSphereMeshLayer.visible !== undefined) {
@@ -148,12 +133,12 @@ function addPanel(view: ThreeView, pane: Pane) {
       gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
         type: "mesh",
         glowSphere: {
-          radius: 6378137 * 1.25,
+          radius: getWGS84SemiMajorAxis() * 1.25,
           coefficient: 0.5,
           exponent: 2.0,
-          glowColor: { r: 0.549, g: 0.894, b: 1.0, a: 0.5 },
+          glowColor: 0x8cf3ff,
         },
-        position: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 - getWGS84Flattening() },
       });
       view.forceUpdate();
       ev.target.title = "Delete Layer";
