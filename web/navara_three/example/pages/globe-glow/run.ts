@@ -1,4 +1,4 @@
-import { getWGS84SemiMajorAxis, getWGS84Flattening } from "@navara/engine-api";
+import { getWGS84SemiMajorAxis } from "@navara/engine-api";
 import ThreeView, {
   AmbientLightLayer,
   GlowSphereMeshLayer,
@@ -48,7 +48,6 @@ export const run = async (view: ThreeView) => {
       exponent: gPaneParams.glowExponent,
       glowColor: gPaneParams.glowColor,
     },
-    scale: { x: 1, y: 1, z: 1 - getWGS84Flattening() },
   });
 
   view.addLayer({
@@ -138,7 +137,6 @@ function addPanel(view: ThreeView, pane: Pane) {
           exponent: 2.0,
           glowColor: 0x8cf3ff,
         },
-        scale: { x: 1, y: 1, z: 1 - getWGS84Flattening() },
       });
       view.forceUpdate();
       ev.target.title = "Delete Layer";

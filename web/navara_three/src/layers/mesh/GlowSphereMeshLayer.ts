@@ -1,9 +1,9 @@
-import { getWGS84SemiMajorAxis } from "@navara/engine-api";
-import { Color } from "@navara/three";
+import { getWGS84SemiMajorAxis, getWGS84Flattening } from "@navara/engine-api";
 import GlowSphereFS from "@shaders/glsl/glowSphere.frag.glsl";
 import GlowSphereVS from "@shaders/glsl/glowSphere.vert.glsl";
 import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector4 } from "three";
 
+import { Color } from "../../Color";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -116,6 +116,9 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
       0,
       Math.PI,
     );
+
+    // Apply flattening to simulate oblate spheroid shape
+    geometry.scale(1, 1, 1 - getWGS84Flattening());
 
     // Create material from properties
     const material = new ShaderMaterial();
