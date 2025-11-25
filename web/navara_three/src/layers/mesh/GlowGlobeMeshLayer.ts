@@ -1,6 +1,6 @@
 import { getWGS84SemiMajorAxis, getWGS84Flattening } from "@navara/engine-api";
-import GlowSphereFS from "@shaders/glsl/glowSphere.frag.glsl";
-import GlowSphereVS from "@shaders/glsl/glowSphere.vert.glsl";
+import GlowGlobeFS from "@shaders/glsl/glowGlobe.frag.glsl";
+import GlowGlobeVS from "@shaders/glsl/glowGlobe.vert.glsl";
 import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector4 } from "three";
 
 import { Color } from "../../Color";
@@ -11,26 +11,26 @@ import {
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 
-/**
- * Configuration for the glow sphere mesh layer.
- *
- * Implements a Fresnel-based glow effect that creates an halo
- * around a spherical body. The glow intensity varies based on the viewing angle,
- * with maximum intensity at the center and minimum at the center.
- */
 type LayerDescription = {
-  glowSphere?: {
+  /**
+   * Configuration for the glow globe mesh layer.
+   *
+   * Implements a Fresnel-based glow effect that creates a halo
+   * around a spherical body. The glow intensity varies based on the viewing angle,
+   * with maximum intensity at the center and minimum at the edges.
+   */
+  glowGlobe?: {
     /**
-     * The scale factor for the glow sphere radius relative to the WGS84 semi-major axis.
+     * The scale factor for the glow globe radius relative to the WGS84 semi-major axis.
      *
      * This value is multiplied by the WGS84 semi-major axis (Earth's equatorial radius)
-     * to determine the final glow sphere radius. Values greater than 1.0 create a glow
-     * sphere larger than Earth, which is necessary for the atmospheric effect to be visible
-     * around the surface. The sphere also respects Earth's flattening factor to maintain
+     * to determine the final glow globe radius. Values greater than 1.0 create a glow
+     * globe larger than Earth, which is necessary for the atmospheric effect to be visible
+     * around the surface. The globe also respects Earth's flattening factor to maintain
      * an oblate spheroid shape matching the planet.
      *
-     * @default 1.0 (same size as Earth's equatorial radius: ~6,378,137 meters)
-     * @example 1.1 - Glow sphere 10% larger than Earth (typical atmospheric effect)
+     * @default 1.2 (120% of Earth's equatorial radius: ~7,653,764 meters)
+     * @example 1.1 - Glow globe 10% larger than Earth (typical atmospheric effect)
      * @example 1.05 - Subtle glow close to the surface
      * @example 1.2 - Extended atmospheric glow
      */
@@ -41,7 +41,7 @@ type LayerDescription = {
      *
      * This value is subtracted from the facing ratio (dot product of surface normal
      * and view direction) to control where the glow begins. Higher values create
-     * a more pronounced glow that extends further toward the edges of the sphere.
+     * a more pronounced glow that extends further toward the edges of the globe.
      *
      * Formula: `intensity = pow(max(coefficient - facing_ratio, 0.0), exponent)`
      *
@@ -56,7 +56,7 @@ type LayerDescription = {
      * Higher values create a sharper, more concentrated glow at the center.
      * Lower values create a softer, more diffuse glow that extends outward.
      * This parameter controls how quickly the glow intensity decreases from
-     * the center toward the edges of the sphere.
+     * the center toward the edges of the globe.
      *
      * Formula: `intensity = pow(max(coefficient - facing_ratio, 0.0), exponent)`
      *
@@ -93,28 +93,37 @@ type LayerDescription = {
   };
 };
 
-export type GlowSphereMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export const DEFAULT_GLOW_GLOBE_OPTIONS: Required<
+  NonNullable<LayerDescription["glowGlobe"]>
+> = {
+  radiusScale: 1.2,
+  coefficient: 0.5,
+  exponent: 5.0,
+  glowColor: 0x8cf3ff,
+  opacity: 0.5,
+};
 
-export type GlowSphereMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type GlowGlobeMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export class GlowSphereMeshLayer extends MeshLayerDeclaration<
-  GlowSphereMeshLayerConfig,
-  GlowSphereMeshLayerUpdate,
+export type GlowGlobeMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+
+export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
+  GlowGlobeMeshLayerConfig,
+  GlowGlobeMeshLayerUpdate,
   Mesh<SphereGeometry, ShaderMaterial>
 > {
-  private config: GlowSphereMeshLayerConfig;
-
-  constructor(view: ViewContext, config: GlowSphereMeshLayerConfig) {
+  private config: GlowGlobeMeshLayerConfig;
+  constructor(view: ViewContext, config: GlowGlobeMeshLayerConfig) {
     super(view, config);
     this.config = config;
   }
 
   createMesh() {
-    const cfg = this.config.glowSphere ?? {};
+    const cfg = { ...DEFAULT_GLOW_GLOBE_OPTIONS, ...this.config.glowGlobe };
 
     // Create geometry from parameters
     const geometry = new SphereGeometry(
-      (cfg.radiusScale ?? 1) * getWGS84SemiMajorAxis(),
+      cfg.radiusScale * getWGS84SemiMajorAxis(),
       64,
       32,
       0,
@@ -128,23 +137,18 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
 
     // Create material from properties
     const material = new ShaderMaterial();
-    material.vertexShader = GlowSphereVS;
-    material.fragmentShader = GlowSphereFS;
+    material.vertexShader = GlowGlobeVS;
+    material.fragmentShader = GlowGlobeFS;
     material.transparent = true;
     material.side = BackSide;
 
-    const color = new Color().setHex(cfg.glowColor ?? 0x8cf3ff).toArray();
+    const color = new Color().setHex(cfg.glowColor).toArray();
 
     material.uniforms = {
-      exponent: { value: cfg.exponent ?? 5 },
-      coefficient: { value: cfg.coefficient ?? 0.5 },
+      exponent: { value: cfg.exponent },
+      coefficient: { value: cfg.coefficient },
       glowColor: {
-        value: new Vector4(
-          color[0] ?? 0.549,
-          color[1] ?? 0.894,
-          color[2] ?? 1.0,
-          cfg.opacity ?? 0.5,
-        ),
+        value: new Vector4(color[0], color[1], color[2], cfg.opacity),
       },
     };
 
@@ -152,17 +156,16 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
     return new Mesh(geometry, material);
   }
 
-  onUpdateConfig(updates: GlowSphereMeshLayerUpdate): void {
-    if (updates.glowSphere && this._instance) {
-      const cfg = updates.glowSphere;
-      const origin = this.config.glowSphere;
+  onUpdateConfig(updates: GlowGlobeMeshLayerUpdate): void {
+    if (updates.glowGlobe && this._instance) {
+      const cfg = updates.glowGlobe;
+      const origin = this.config.glowGlobe;
 
       // Update geometry if dimensions changed
       if (cfg.radiusScale !== undefined) {
         this._instance.geometry.dispose();
-        this._instance.geometry = new SphereGeometry(
-          (cfg.radiusScale ?? origin?.radiusScale ?? 1) *
-            getWGS84SemiMajorAxis(),
+        const new_geometry = new SphereGeometry(
+          cfg.radiusScale * getWGS84SemiMajorAxis(),
           64,
           32,
           0,
@@ -170,6 +173,8 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
           0,
           Math.PI,
         );
+        new_geometry.scale(1, 1, 1 - getWGS84Flattening());
+        this._instance.geometry = new_geometry;
       }
 
       const material = this._instance.material as ShaderMaterial;
@@ -183,14 +188,18 @@ export class GlowSphereMeshLayer extends MeshLayerDeclaration<
 
       if (cfg.glowColor !== undefined || cfg.opacity !== undefined) {
         const color = new Color()
-          .setHex(cfg.glowColor ?? origin?.glowColor ?? 0x8cf3ff)
+          .setHex(
+            cfg.glowColor ??
+              origin?.glowColor ??
+              DEFAULT_GLOW_GLOBE_OPTIONS.glowColor,
+          )
           .toArray();
 
         material.uniforms["glowColor"].value = new Vector4(
-          color[0] ?? 0.549,
-          color[1] ?? 0.894,
-          color[2] ?? 1.0,
-          cfg.opacity ?? origin?.opacity ?? 0.5,
+          color[0],
+          color[1],
+          color[2],
+          cfg.opacity ?? origin?.opacity ?? DEFAULT_GLOW_GLOBE_OPTIONS.opacity,
         );
       }
 

@@ -1,6 +1,6 @@
 import ThreeView, {
   AmbientLightLayer,
-  GlowSphereMeshLayer,
+  GlowGlobeMeshLayer,
   LayerHandle,
 } from "@navara/three";
 import { Pane } from "tweakpane";
@@ -8,13 +8,13 @@ import { Pane } from "tweakpane";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 
-let gGlowSphereMeshLayer: LayerHandle<GlowSphereMeshLayer> | undefined =
+let gGlowGlobeMeshLayer: LayerHandle<GlowGlobeMeshLayer> | undefined =
   undefined;
 
 const gPaneParams = {
-  glowRadiusScale: 1.25,
+  glowRadiusScale: 1.2,
   glowCoefficient: 0.5,
-  glowExponent: 2.0,
+  glowExponent: 5.0,
   glowColor: 0x8cf3ff,
   glowOpacity: 0.5,
   visible: true,
@@ -23,23 +23,14 @@ const gPaneParams = {
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.setCamera({
-    lng: 90,
-    lat: 0.1,
-    height: 12600000,
-    heading: 0,
-    pitch: -90,
-    roll: 0,
-  });
-
   view.addLayer<AmbientLightLayer>({
     type: "light",
     ambient: {},
   });
 
-  gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
+  gGlowGlobeMeshLayer = view.addLayer<GlowGlobeMeshLayer>({
     type: "mesh",
-    glowSphere: {
+    glowGlobe: {
       radiusScale: gPaneParams.glowRadiusScale,
       coefficient: gPaneParams.glowCoefficient,
       exponent: gPaneParams.glowExponent,
@@ -65,29 +56,29 @@ export const run = async (view: ThreeView) => {
 };
 
 function addPanel(view: ThreeView, pane: Pane) {
-  if (!gGlowSphereMeshLayer) return;
+  if (!gGlowGlobeMeshLayer) return;
 
-  const folder = pane.addFolder({ title: "Glow Sphere Layer" });
+  const folder = pane.addFolder({ title: "Glow Globe Layer" });
 
   folder.addBinding(gPaneParams, "glowRadiusScale").on("change", (ev) => {
-    gGlowSphereMeshLayer?.update({
-      glowSphere: {
+    gGlowGlobeMeshLayer?.update({
+      glowGlobe: {
         radiusScale: ev.value,
       },
     });
   });
 
   folder.addBinding(gPaneParams, "glowCoefficient").on("change", (ev) => {
-    gGlowSphereMeshLayer?.update({
-      glowSphere: {
+    gGlowGlobeMeshLayer?.update({
+      glowGlobe: {
         coefficient: ev.value,
       },
     });
   });
 
   folder.addBinding(gPaneParams, "glowExponent").on("change", (ev) => {
-    gGlowSphereMeshLayer?.update({
-      glowSphere: {
+    gGlowGlobeMeshLayer?.update({
+      glowGlobe: {
         exponent: ev.value,
       },
     });
@@ -96,8 +87,8 @@ function addPanel(view: ThreeView, pane: Pane) {
   folder
     .addBinding(gPaneParams, "glowColor", { view: "color" })
     .on("change", (ev) => {
-      gGlowSphereMeshLayer?.update({
-        glowSphere: {
+      gGlowGlobeMeshLayer?.update({
+        glowGlobe: {
           glowColor: ev.value,
         },
       });
@@ -106,33 +97,34 @@ function addPanel(view: ThreeView, pane: Pane) {
   folder
     .addBinding(gPaneParams, "glowOpacity", { min: 0, max: 1 })
     .on("change", (ev) => {
-      gGlowSphereMeshLayer?.update({
-        glowSphere: {
+      gGlowGlobeMeshLayer?.update({
+        glowGlobe: {
           opacity: ev.value,
         },
       });
     });
 
   folder.addBinding(gPaneParams, "visible").on("change", (ev) => {
-    if (gGlowSphereMeshLayer && gGlowSphereMeshLayer.visible !== undefined) {
-      gGlowSphereMeshLayer.visible = ev.value;
+    if (gGlowGlobeMeshLayer && gGlowGlobeMeshLayer.visible !== undefined) {
+      gGlowGlobeMeshLayer.visible = ev.value;
     }
   });
 
   folder.addButton({ title: "Delete Layer" }).on("click", (ev) => {
-    if (gGlowSphereMeshLayer) {
-      gGlowSphereMeshLayer.delete();
+    if (gGlowGlobeMeshLayer) {
+      gGlowGlobeMeshLayer.delete();
       view.forceUpdate();
-      gGlowSphereMeshLayer = undefined;
+      gGlowGlobeMeshLayer = undefined;
       ev.target.title = "Add Layer";
     } else {
-      gGlowSphereMeshLayer = view.addLayer<GlowSphereMeshLayer>({
+      gGlowGlobeMeshLayer = view.addLayer<GlowGlobeMeshLayer>({
         type: "mesh",
-        glowSphere: {
-          radiusScale: 1.25,
-          coefficient: 0.5,
-          exponent: 2.0,
-          glowColor: 0x8cf3ff,
+        glowGlobe: {
+          radiusScale: gPaneParams.glowRadiusScale,
+          coefficient: gPaneParams.glowCoefficient,
+          exponent: gPaneParams.glowExponent,
+          glowColor: gPaneParams.glowColor,
+          opacity: gPaneParams.glowOpacity,
         },
       });
       view.forceUpdate();

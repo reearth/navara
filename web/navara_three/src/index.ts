@@ -77,7 +77,7 @@ import { LightProbeLayer } from "./layers/light/LightProbeLayer";
 import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
 import { BoxMeshLayer } from "./layers/mesh/BoxMeshLayer";
 import { CylinderMeshLayer } from "./layers/mesh/CylinderMeshLayer";
-import { GlowSphereMeshLayer } from "./layers/mesh/GlowSphereMeshLayer";
+import { GlowGlobeMeshLayer } from "./layers/mesh/GlowGlobeMeshLayer";
 import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
 import { PlaneMeshLayer } from "./layers/mesh/PlaneMeshLayer";
 import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
@@ -1021,7 +1021,7 @@ export default class ThreeView<
     this.registerMesh("stars", StarsLayer);
     this.registerMesh("box", BoxMeshLayer);
     this.registerMesh("sphere", SphereMeshLayer);
-    this.registerMesh("glowSphere", GlowSphereMeshLayer);
+    this.registerMesh("glowGlobe", GlowGlobeMeshLayer);
     this.registerMesh("cylinder", CylinderMeshLayer);
     this.registerMesh("tube", TubeMeshLayer);
     this.registerMesh("plane", PlaneMeshLayer);
