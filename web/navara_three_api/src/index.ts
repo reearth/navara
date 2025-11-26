@@ -49,9 +49,7 @@ export function geodeticToVector3(lle: LLE): Vector3 {
 
 export function vector3ToGeodetic(xyz: Vector3): LLE {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
-  const result = xyzToGeodetic(vec3);
-  vec3.free();
-  return result;
+  return xyzToGeodetic(vec3);
 }
 
 export function degreeToRadian(degree: number): number {
@@ -116,7 +114,6 @@ export function geodeticSurfaceNormal(lle: LLE): Vector3 {
 export function eastNorthUpToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvEastNorthUpToFixedFrame(vec3);
-  vec3.free();
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
 }
@@ -124,7 +121,6 @@ export function eastNorthUpToFixedFrame(origin: Vector3): Matrix4 {
 export function northEastDownToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvNorthEastDownToFixedFrame(vec3);
-  vec3.free();
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
 }
@@ -132,7 +128,6 @@ export function northEastDownToFixedFrame(origin: Vector3): Matrix4 {
 export function northUpEastToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvNorthUpEastToFixedFrame(vec3);
-  vec3.free();
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
 }
@@ -140,7 +135,6 @@ export function northUpEastToFixedFrame(origin: Vector3): Matrix4 {
 export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvNorthWestUpToFixedFrame(vec3);
-  vec3.free();
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
 }

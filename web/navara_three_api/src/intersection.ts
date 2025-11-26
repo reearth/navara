@@ -22,8 +22,6 @@ export function getPlaneFromPointNormal(
   const normalVec3 = new Vec3(normal.x, normal.y, normal.z);
 
   const result = nvGetPlaneFromPointNormal(pointVec3, normalVec3);
-  pointVec3.free();
-  normalVec3.free();
 
   return result;
 }
@@ -63,9 +61,6 @@ export function getPickRay(
     new Vec2(vec2.x, vec2.y),
   );
 
-  transform.free();
-  frustum.free();
-
   return result;
 }
 
@@ -85,6 +80,5 @@ export function getRayPlaneIntersection(
 export function getHeightFromEllipsoid(point: Vector3): number {
   const vec3 = new Vec3(point.x, point.y, point.z);
   const result = nvGetHeightFromEllipsoid(vec3);
-  vec3.free();
   return result;
 }
