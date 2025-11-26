@@ -29,8 +29,12 @@ export const calcCameraPosition = (
   );
   const high = encoded.high;
   const low = encoded.low;
-  return {
+  const result = {
     high: new Vector3(high.x, high.y, high.z),
     low: new Vector3(low.x, low.y, low.z),
   };
+
+  encoded.free();
+
+  return result;
 };

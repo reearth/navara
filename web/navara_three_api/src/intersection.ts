@@ -21,7 +21,11 @@ export function getPlaneFromPointNormal(
   const pointVec3 = new Vec3(point.x, point.y, point.z);
   const normalVec3 = new Vec3(normal.x, normal.y, normal.z);
 
-  return nvGetPlaneFromPointNormal(pointVec3, normalVec3);
+  const result = nvGetPlaneFromPointNormal(pointVec3, normalVec3);
+  pointVec3.free();
+  normalVec3.free();
+
+  return result;
 }
 
 export function getPickRay(
@@ -52,21 +56,30 @@ export function getPickRay(
     camera.aspect,
   );
 
-  return nvGetPickRay(window, transform, frustum, new Vec2(vec2.x, vec2.y));
+  const result = nvGetPickRay(window, transform, frustum, new Vec2(vec2.x, vec2.y));
+
+  transform.free();
+  frustum.free();
+
+  return result;
 }
 
 export function getRayPlaneIntersection(
   ray: Ray,
   plane: Plane,
 ): Vector3 | undefined {
-  const result = nvGetRayPlaneIntersection(ray, plane);
-  if (result) {
-    return new Vector3(result.x, result.y, result.z);
+  const intersection = nvGetRayPlaneIntersection(ray, plane);
+  if (intersection) {
+    const result = new Vector3(intersection.x, intersection.y, intersection.z);
+    intersection.free();
+    return result;
   }
   return undefined;
 }
 
 export function getHeightFromEllipsoid(point: Vector3): number {
   const vec3 = new Vec3(point.x, point.y, point.z);
-  return nvGetHeightFromEllipsoid(vec3);
+  const result = nvGetHeightFromEllipsoid(vec3);
+  vec3.free();
+  return result;
 }
