@@ -437,14 +437,12 @@ impl LayerDescription {
 
                 let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-                Some(navara_layer::LayerDescription::B3dm(Box::new(
-                    B3dmLayer {
-                        layer_id: layer_id.to_string(),
-                        data: data.map(|d| LayerData { url: d.url }),
-                        appearances: layer.appearances(),
-                        crs: layer.crs(),
-                    },
-                )))
+                Some(navara_layer::LayerDescription::B3dm(Box::new(B3dmLayer {
+                    layer_id: layer_id.to_string(),
+                    data: data.map(|d| LayerData { url: d.url }),
+                    appearances: layer.appearances(),
+                    crs: layer.crs(),
+                })))
             }
             "pnts" => {
                 let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
