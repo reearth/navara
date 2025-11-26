@@ -97,9 +97,6 @@ export function convertScreenToWorld(
     new Vec2(vec2.x, vec2.y),
   );
 
-  transform.free();
-  frustum.free();
-
   if (!pos) {
     return undefined;
   }
@@ -182,9 +179,6 @@ export function convertWorldToScreen(
     frustum,
     new Vec3(worldPos.x, worldPos.y, worldPos.z),
   );
-
-  transform.free();
-  frustum.free();
 
   if (!screenPos) {
     return undefined;
