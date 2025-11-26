@@ -1,5 +1,5 @@
 use crate::{
-    b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles_bfs,
+    b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
     glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
     RenderedCesium3dTileContent,
 };
@@ -128,7 +128,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 continue;
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
-            select_tiles_bfs(
+            select_tiles(
                 &mut commands,
                 &mut buf,
                 tree.layer_id,
