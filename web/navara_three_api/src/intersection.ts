@@ -56,7 +56,12 @@ export function getPickRay(
     camera.aspect,
   );
 
-  const result = nvGetPickRay(window, transform, frustum, new Vec2(vec2.x, vec2.y));
+  const result = nvGetPickRay(
+    window,
+    transform,
+    frustum,
+    new Vec2(vec2.x, vec2.y),
+  );
 
   transform.free();
   frustum.free();

@@ -43,8 +43,16 @@ const constructData = async () => {
     const destination = { lng: coords[1][0], lat: coords[1][1] };
 
     // Calculate distance between src and dest using Vector3
-    const srcVec = geodeticToVector3(new LLE(degreeToRadian(source.lat), degreeToRadian(source.lng), 0));
-    const destVec = geodeticToVector3(new LLE(degreeToRadian(destination.lat), degreeToRadian(destination.lng), 0));
+    const srcVec = geodeticToVector3(
+      new LLE(degreeToRadian(source.lat), degreeToRadian(source.lng), 0),
+    );
+    const destVec = geodeticToVector3(
+      new LLE(
+        degreeToRadian(destination.lat),
+        degreeToRadian(destination.lng),
+        0,
+      ),
+    );
     const distance = srcVec.distanceTo(destVec);
 
     const trafficVolume = feature.properties.S10b_006;
