@@ -15,12 +15,12 @@ pub struct ElevationHeatmapConfig {
     pub log_boundary: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct LayerEffectConfig {
-    pub effect_ids: Option<Vec<String>>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct PostEffectConfig {
+    pub effect_id: Option<Vec<String>>,
+    pub selective_depth_test: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
-    pub selective_depth_test: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -80,6 +80,7 @@ pub struct PointMaterial {
     pub depth_test: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
+    pub post_effect_config: Option<PostEffectConfig>,
 }
 
 impl Default for PointMaterial {
@@ -94,6 +95,7 @@ impl Default for PointMaterial {
             scale_by_distance: true,
             depth_test: true,
             transparent: true,
+            post_effect_config: None,
         }
     }
 }
@@ -130,6 +132,7 @@ pub struct BillboardMaterial {
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     pub alpha_test: f32,
+    pub post_effect_config: Option<PostEffectConfig>,
 }
 
 impl Default for BillboardMaterial {
@@ -146,6 +149,7 @@ impl Default for BillboardMaterial {
             depth_test: true,
             transparent: false,
             alpha_test: 0.1,
+            post_effect_config: None,
         }
     }
 }
@@ -248,6 +252,7 @@ pub struct PolylineMaterial {
     pub use_ground_normals: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
+    pub post_effect_config: Option<PostEffectConfig>,
 }
 
 impl Default for PolylineMaterial {
@@ -262,6 +267,7 @@ impl Default for PolylineMaterial {
             use_ground_normals: false,
             height: 1.,
             internal: None,
+            post_effect_config: None,
         }
     }
 }
@@ -311,6 +317,7 @@ pub struct PolygonMaterial {
     pub apply_water_normal: bool,
     pub specular: bool,
     pub ior: f32,
+    pub post_effect_config: Option<PostEffectConfig>,
 }
 
 impl Default for PolygonMaterial {
@@ -346,6 +353,8 @@ impl Default for PolygonMaterial {
             apply_water_normal: false,
             specular: false,
             ior: 1.33333,
+
+            post_effect_config: None,
         }
     }
 }
@@ -393,6 +402,8 @@ pub struct ModelMaterial {
     pub point_size: f32,
     pub show_bounding_box: bool,
     pub internal: Option<ModelInternalMaterial>,
+    // post effect
+    pub post_effect_config: Option<PostEffectConfig>,
 }
 
 impl Default for ModelMaterial {
@@ -426,6 +437,7 @@ impl Default for ModelMaterial {
             point_size: 0.3,
             show_bounding_box: false,
             internal: None,
+            post_effect_config: None,
         }
     }
 }

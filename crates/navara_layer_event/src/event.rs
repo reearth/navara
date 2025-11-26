@@ -7,7 +7,7 @@ use navara_layer::{
     UpdateGeoJsonLayerMarker, UpdateMvtLayerMarker, UpdatePntsLayerMarker,
     UpdateRasterTileLayerMarker,
 };
-use navara_material::{Appearance, ElevationHeatmapConfig, LayerEffectConfig};
+use navara_material::{Appearance, ElevationHeatmapConfig};
 
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -17,7 +17,6 @@ pub struct UpdateLayerEvent {
     pub layer_id: LayerId,
     pub appearance: Appearance,
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>,
-    pub effect_config: Option<LayerEffectConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Event)]
@@ -28,16 +27,16 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
         let AddLayerEvent(desc) = ev;
         match desc {
             LayerDescription::Tiles(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::Terrain(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::GeoJson(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::B3dm(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::Pnts(t) => {
                 commands.spawn(t.clone());
@@ -54,13 +53,10 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
 
 pub fn process_update_events(
     mut commands: Commands,
-    mut layer_desc_store: ResMut<LayerDescStore>,
+    layer_desc_store: ResMut<LayerDescStore>,
     mut events: EventReader<UpdateLayerEvent>,
 ) {
     for ev in events.read() {
-        if let Some(effect_config) = &ev.effect_config {
-            update_layer_effect_config(&mut layer_desc_store.map, &ev.layer_id.0, effect_config);
-        }
         let layer_desc = match layer_desc_store.map.get(&ev.layer_id.0) {
             Some(l) => l,
             None => continue,
@@ -111,30 +107,6 @@ pub fn process_update_events(
             }
             _ => {}
         }
-    }
-}
-
-fn update_layer_effect_config(
-    store: &mut std::collections::HashMap<String, LayerDescription>,
-    layer_id: &str,
-    new_config: &LayerEffectConfig,
-) {
-    let Some(desc) = store.get_mut(layer_id) else {
-        return;
-    };
-
-    match desc {
-        LayerDescription::GeoJson(layer) => {
-            if &layer.effect_config != new_config {
-                layer.effect_config = new_config.clone();
-            }
-        }
-        LayerDescription::Cesium3dTiles(layer) => {
-            if &layer.effect_config != new_config {
-                layer.effect_config = new_config.clone();
-            }
-        }
-        _ => {}
     }
 }
 

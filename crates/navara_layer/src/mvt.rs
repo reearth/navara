@@ -1,7 +1,7 @@
 use bevy_ecs::component::Component;
 use navara_core::{is_tile_url, CRS};
 
-use navara_material::{Appearance, LayerEffectConfig, VectorTileMaterial};
+use navara_material::{Appearance, VectorTileMaterial};
 
 use crate::LayerData;
 
@@ -11,7 +11,6 @@ pub struct MvtLayer {
     pub data: Option<LayerData>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
-    pub effect_config: LayerEffectConfig,
 }
 
 impl MvtLayer {

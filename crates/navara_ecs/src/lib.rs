@@ -312,7 +312,6 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
-                            effect_config: Some(layer.effect_config.clone()),
                         });
                 }
             }
@@ -324,7 +323,6 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
-                            effect_config: None,
                         });
                 }
             }
@@ -336,7 +334,6 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
-                            effect_config: None,
                         });
                 }
             }
@@ -348,7 +345,6 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
-                            effect_config: Some(layer.effect_config.clone()),
                         });
                 }
             }
@@ -360,7 +356,6 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
-                            effect_config: None,
                         });
                 }
             }
@@ -372,7 +367,6 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance,
                             elevation_heatmap_config: layer.elevation_heatmap_config.clone(),
-                            effect_config: None,
                         });
                 }
             }
