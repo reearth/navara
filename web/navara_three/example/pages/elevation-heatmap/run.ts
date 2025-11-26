@@ -1,5 +1,5 @@
 import ThreeView, {
-  JAPAN_GSI_ELEVATION_DECODER,
+  TERRARIUM_ELEVATION_DECODER,
   ToneMappingMode,
   type LayerDescription,
 } from "@navara/three";
@@ -49,12 +49,13 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_DATASETS.gsi.url,
+      url: TERRAIN_DATASETS.mapterhorn.url,
     },
     raster_terrain: {
-      max_zoom: 15,
+      max_zoom: 12,
       min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
+      tile_size: 512,
       cast_shadow: false,
       receive_shadow: false,
     },
@@ -66,16 +67,15 @@ export const run = async (view: ThreeView) => {
   const layerDef: LayerDescription = {
     type: "tiles",
     data: {
-      url: TERRAIN_DATASETS.gsi.url, // Use terrain DEM URL
+      url: TERRAIN_DATASETS.mapterhorn.url,
     },
     raster_tile: {
       max_zoom: 15,
-      min_zoom: 6,
     },
     elevation_heatmap: {
       max_height: 3000,
       min_height: 0,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
       logarithmic: true,
       log_boundary: 1000,
     },
@@ -98,7 +98,7 @@ export const run = async (view: ThreeView) => {
   const pane = new Pane();
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  showAttributions([TERRAIN_DATASETS.gsi]);
+  showAttributions([TERRAIN_DATASETS.mapterhorn]);
 
   const params = {
     color_map: "plateau",
