@@ -1,7 +1,11 @@
 import ThreeView, {
   ToneMappingMode,
   type ArclineMeshLayer,
+  type GlowGlobeMeshLayer,
   Color,
+  geodeticToVector3,
+  LLE,
+  degreeToRadian,
 } from "@navara/three";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
@@ -38,13 +42,26 @@ const constructData = async () => {
     const source = { lng: coords[0][0], lat: coords[0][1] };
     const destination = { lng: coords[1][0], lat: coords[1][1] };
 
+    // Calculate distance between src and dest using Vector3
+    const srcVec = geodeticToVector3(
+      new LLE(degreeToRadian(source.lat), degreeToRadian(source.lng), 0),
+    );
+    const destVec = geodeticToVector3(
+      new LLE(
+        degreeToRadian(destination.lat),
+        degreeToRadian(destination.lng),
+        0,
+      ),
+    );
+    const distance = srcVec.distanceTo(destVec);
+
     const trafficVolume = feature.properties.S10b_006;
     // Apply pseudo-log transformation: log(x + 1)
     const trafficVolumeLog = Math.log(trafficVolume + 1);
     const normalizedTraffic = trafficVolumeLog / maxTrafficLog;
 
     // Scale thickness based on traffic volume (0.5 to 3)
-    const thickness = 1.5;
+    const thickness = 1.2;
 
     // Get colors based on traffic volume using ColorMap
     const [r, g, b] = PLASMA_COLORMAP.linear(normalizedTraffic);
@@ -61,7 +78,12 @@ const constructData = async () => {
       arcHeightScale: 0.3,
       srcColor,
       tgtColor,
+      dashed: true,
+      dashSize: 500000,
+      dashOffset: Math.random() * 1000000,
+      gapSize: 800000,
       geometry: [source, destination],
+      distance, // Store distance for animation speed calculation
     };
   });
 
@@ -82,11 +104,6 @@ export async function run() {
   view.addLayer({
     type: "light",
     ambient: {},
-  });
-
-  view.addLayer({
-    type: "mesh",
-    sky: {},
   });
 
   view.addLayer({
@@ -117,6 +134,7 @@ export async function run() {
     },
     raster_tile: {
       max_zoom: 6,
+      min_zoom: 2,
     },
   });
 
@@ -127,16 +145,47 @@ export async function run() {
     },
     raster_tile: {
       max_zoom: 6,
+      min_zoom: 1,
       opacity: 0.8,
+    },
+  });
+
+  // Add globe glow mesh layer
+  view.addLayer<GlowGlobeMeshLayer>({
+    type: "mesh",
+    glowGlobe: {
+      radiusScale: 1.2,
+      coefficient: 0.5,
+      exponent: 4.0,
+      glowColor: 0x938cff,
+      opacity: 0.5,
     },
   });
 
   const { arcLines } = await constructData();
 
-  view.addLayer<ArclineMeshLayer>({
+  const arcLineLayer = view.addLayer<ArclineMeshLayer>({
     type: "mesh",
     arcLines,
   });
+
+  // Dash animation - moves from src to dest
+  // Speed is proportional to distance - longer routes animate faster
+  const dashAnimFunc = () => {
+    arcLines.forEach((arcLineDef) => {
+      // Calculate speed based on distance (normalized and scaled)
+      const baseSpeed = 5000;
+      const distance = arcLineDef.distance || 1;
+      const speedMultiplier = Math.sqrt(distance / 2000000);
+      const speed = baseSpeed * speedMultiplier;
+
+      arcLineDef.dashOffset = (arcLineDef.dashOffset ?? 0) + speed;
+    });
+
+    arcLineLayer.update({ arcLines });
+    requestAnimationFrame(dashAnimFunc);
+  };
+  dashAnimFunc();
 
   showAttributions([
     LOCAL_DATASETS.blueMarbleNight,
