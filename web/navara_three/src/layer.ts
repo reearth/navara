@@ -3,8 +3,8 @@ import type { Core } from "@navara/engine";
 
 import type { ViewContext } from "./core";
 import { FeatureEvaluator } from "./evaluations";
-import type { LayerDescription } from "./type";
 import { applyEffectPayloadToObject } from "./event/featureEvent";
+import type { LayerDescription } from "./type";
 
 export type LayerEffectState = {
   effectIds?: string[];
@@ -105,11 +105,7 @@ export class Layer extends EventHandler<LayerEvent> {
       // Re-apply layer effects declaratively based on current ViewContext state.
       // This ensures that external changes to effectIds/emissive settings are
       // propagated to existing feature objects (e.g., Drum/Soldier/Chiyoda/Chuo).
-      applyEffectPayloadToObject(
-        evaluator.obj,
-        this.viewContext,
-        this.id,
-      );
+      applyEffectPayloadToObject(evaluator.obj, this.viewContext, this.id);
       this.emit("featureUpdated", evaluator, updatedAt);
     }
     this.emit("afterFeatureUpdated");
