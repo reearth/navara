@@ -4,6 +4,7 @@ import type { Core } from "@navara/engine";
 import type { ViewContext } from "./core";
 import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
+import { applyEffectPayloadToObject } from "./event/featureEvent";
 
 export type LayerEffectState = {
   effectIds?: string[];
@@ -101,6 +102,14 @@ export class Layer extends EventHandler<LayerEvent> {
 
     // Process all evaluators with the registered callbacks
     for (const evaluator of this.featureEvaluators.values()) {
+      // Re-apply layer effects declaratively based on current ViewContext state.
+      // This ensures that external changes to effectIds/emissive settings are
+      // propagated to existing feature objects (e.g., Drum/Soldier/Chiyoda/Chuo).
+      applyEffectPayloadToObject(
+        evaluator.obj,
+        this.viewContext,
+        this.id,
+      );
       this.emit("featureUpdated", evaluator, updatedAt);
     }
     this.emit("afterFeatureUpdated");
@@ -417,6 +426,8 @@ export class Layer extends EventHandler<LayerEvent> {
         current?.emissiveIntensity,
         this.getEffectOptions(),
       );
+      // Mark for update so existing feature objects receive updated effect state.
+      this.needUpdate = true;
     }
 
     if (emissiveColorChanged) {
@@ -424,6 +435,7 @@ export class Layer extends EventHandler<LayerEvent> {
       // PostEffectManager will skip event dispatch for Layer instances,
       // as they use the declarative Rust → FeatureEvent flow.
       this.viewContext.setLayerEmissiveColor(this.id, current?.emissiveColor);
+      this.needUpdate = true;
     }
 
     if (postEffectDepthTestChanged) {
@@ -431,6 +443,7 @@ export class Layer extends EventHandler<LayerEvent> {
         this.id,
         current?.postEffectDepthTest ?? true,
       );
+      this.needUpdate = true;
     }
   }
 

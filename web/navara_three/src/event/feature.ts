@@ -42,32 +42,22 @@ import { renderText, processTextChanged } from "./features/text";
 
 import { setTransform, type BufferLoader, type FeatureHandler } from ".";
 
-type EngineLayerEffectConfig = {
-  effect_ids?: string[];
-  emissive_intensity?: number;
-  emissive_color?: number;
-  post_effect_depth_test?: boolean;
-};
-
+/**
+ * Extract per-feature effect payload from engine events.
+ *
+ * Currently, effect configuration (effectIds, emissive properties, depth test)
+ * is managed at the layer level via ViewContext / PostEffectManager.
+ * We intentionally do not read per-feature `effect_ids` here so that:
+ * - style (e.g. model material) and
+ * - effect linkage (effectIds)
+ * have clearly separated responsibilities.
+ *
+ * Layer-level state is resolved in `resolveEffectPayload` instead.
+ */
 const extractEffectPayloadFromEvent = (
-  ev: RenderableFeatureAddedEvent | RenderableFeatureChangedEvent,
+  _ev: RenderableFeatureAddedEvent | RenderableFeatureChangedEvent,
 ): FeatureEffectPayload | undefined => {
-  const effectConfig = (
-    ev as unknown as {
-      effect_config?: EngineLayerEffectConfig | null;
-    }
-  ).effect_config;
-
-  if (!effectConfig) {
-    return undefined;
-  }
-
-  return {
-    effectIds: effectConfig.effect_ids ?? undefined,
-    emissiveIntensity: effectConfig.emissive_intensity ?? undefined,
-    emissiveColor: effectConfig.emissive_color ?? undefined,
-    postEffectDepthTest: effectConfig.post_effect_depth_test ?? undefined,
-  };
+  return undefined;
 };
 
 export function renderFeature(

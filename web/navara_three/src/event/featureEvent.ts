@@ -59,9 +59,6 @@ const resolveEffectPayload = (
  *
  * This function consolidates material manipulation logic to facilitate future migration
  * to shader-based emissive rendering.
- *
- * TODO: Future enhancement - migrate to shader-based emissive rendering
- * to eliminate direct material manipulation entirely.
  */
 const applyEmissiveToMeshMaterials = (
   obj: Object3D,

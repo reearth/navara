@@ -1077,7 +1077,7 @@ export default class ThreeView<
         this.viewContext.registerLayerEffects(
           layerId,
           effectIds,
-          l.postEffectDepthTest === false,
+          l.postEffectDepthTest,
           l.emissive_intensity,
           keepClones ? { keepClones: true } : undefined,
         );

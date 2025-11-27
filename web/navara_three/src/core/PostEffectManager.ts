@@ -55,7 +55,7 @@ export class PostEffectManager {
 
   getLayerEffects(layerId: string): string[] | undefined {
     const config = this.layerConfigs.get(layerId);
-    return config?.effectIds.length ? config.effectIds : undefined;
+    return config?.effectIds;
   }
 
   getLayerEmissiveIntensity(layerId: string): number {
