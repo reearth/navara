@@ -247,6 +247,7 @@ pub struct Orbit {
     // Fixed rotation axis and pivot for consistent rotation
     pub fixed_rotation_axis: Option<Vec3>,
     pub fixed_rotation_pivot: Option<Vec3>,
+    pub is_tilting: bool,
 }
 
 impl Default for Orbit {
@@ -268,6 +269,7 @@ impl Default for Orbit {
             pivot: Vec3::ZERO,
             fixed_rotation_axis: None,
             fixed_rotation_pivot: None,
+            is_tilting: false,
         }
     }
 }
@@ -284,6 +286,7 @@ impl Orbit {
         self.horizon_quat = Quat::IDENTITY;
         self.vertical_quat = Quat::IDENTITY;
         self.world_quat = world;
+        self.is_tilting = tilt;
 
         if tilt {
             self.tilt_quat = world;

@@ -491,7 +491,6 @@ fn get_tilt_quat_by_ray(
 ) -> (Vec3, Quat) {
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
-    // TODO: Support movement underground.
     let center = if let Some(t) = ray_ellipsoid_intersect(&ray, ellipsoid) {
         ray.get_point(t)
     } else {
@@ -685,7 +684,7 @@ fn apply_spin(
     let next_align = next_forward.dot(next_up);
 
     // Restrict the vertical rotation near the poles.
-    if next_align.abs() > 0.995 {
+    if orbit.is_tilting && next_align.abs() > 0.995 {
         let y = inertia.spin.y;
         let is_vertical_rotation_skipped =
             (next_align < 0. && y < 0.) || (next_align > 0. && y > 0.);
