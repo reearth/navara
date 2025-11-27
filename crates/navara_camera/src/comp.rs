@@ -329,22 +329,19 @@ impl Orbit {
         let tilt_up = self.tilt_quat * Vec3::Z;
         // Get the vertical rotation axis in world space
         let world_vertical_axis = self.world_quat * self.vertical_rotation_axis;
-        let tilt_horizontal_rotation_axis = tilt_up.cross(world_vertical_axis).normalize_or_zero();
+
+        // Make the rotation direction opposite, since `tilt_up` is opposite when you move the camera a lot.
+        let tilt_horizontal_rotation_axis = if tilt_up.dot(-position.normalize()) > 0.0 {
+            world_vertical_axis.cross(tilt_up).normalize_or_zero()
+        } else {
+            tilt_up.cross(world_vertical_axis).normalize_or_zero()
+        };
 
         self.horizontal_rotation_axis = inverse * tilt_horizontal_rotation_axis;
         self.local_up = self
             .vertical_rotation_axis
             .cross(self.local_forward)
             .normalize();
-
-        let orthogonal_forward = self
-            .horizontal_rotation_axis
-            .cross(self.vertical_rotation_axis)
-            .normalize();
-        let forwards_dot = orthogonal_forward.dot(self.local_forward);
-        if forwards_dot < 0. {
-            self.horizontal_rotation_axis *= -1.;
-        }
     }
 }
 

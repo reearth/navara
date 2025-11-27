@@ -106,6 +106,8 @@ pub fn update(
         // flying
         if let Some((position, orientation)) = flight.update(duration as FloatType) {
             apply_camera_change(
+                &window,
+                frustum,
                 &mut transform,
                 &mut orbit,
                 &Some(position),
@@ -230,7 +232,7 @@ fn process_camera_event(
             position,
             orientation,
         } => {
-            apply_camera_change(transform, orbit, position, orientation);
+            apply_camera_change(window, frustum, transform, orbit, position, orientation);
 
             // stop camera movement when changing position or orientation
             inertia.stop_all(controller);
@@ -481,6 +483,38 @@ fn rotate_around_axis(
     orbit.tilt_quat = transform.rotation;
 }
 
+fn get_tilt_quat_by_ray(
+    window: &Window,
+    transform: &Transform,
+    frustum: &CameraFrustum,
+    ellipsoid: Ellipsoid<f64>,
+) -> (Vec3, Quat) {
+    let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
+    let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
+    // TODO: Support movement underground.
+    let center = if let Some(t) = ray_ellipsoid_intersect(&ray, ellipsoid) {
+        ray.get_point(t)
+    } else {
+        // If no intersection found, find the intersection point from the camera forward and the distance from the surface.
+        let camera_world_pos = transform.translation;
+
+        let distance = ray_ellipsoid_intersect(
+            &Ray {
+                origin: camera_world_pos,
+                direction: -camera_world_pos.normalize(),
+            },
+            ellipsoid,
+        )
+        .unwrap_or(0.);
+
+        camera_world_pos + transform.forward() * distance
+    };
+
+    let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
+
+    (center, Quat::from_mat4(&enu_transform))
+}
+
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
 #[allow(clippy::too_many_arguments)]
 fn handle_tilt(
@@ -512,22 +546,13 @@ fn handle_tilt(
         return;
     }
 
-    let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
-    let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
-    // TODO: Support movement underground.
-    let Some(point) = ray_ellipsoid_intersect(&ray, ellipsoid) else {
-        // No intersection found, cannot tilt
-        return;
-    };
-
-    let center = ray.get_point(point);
-    let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
-
     if orbit.default_world_quat.is_none() {
         orbit.default_world_quat = Some(orbit.world_quat);
     }
 
-    orbit.set_quat(transform, Quat::from_mat4(&enu_transform), center, true);
+    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, ellipsoid);
+
+    orbit.set_quat(transform, enu_quat, center, true);
 
     let Some(spin) = rotate(mm, controller, 1., 1.) else {
         return;
@@ -740,6 +765,8 @@ fn after_inertia(
 /// - `cc.heading`: rotation around the local up axis (degrees)
 /// - `cc.pitch`: tilt around the camera's right axis (degrees)
 fn apply_camera_change(
+    window: &Window,
+    frustum: &CameraFrustum,
     transform: &mut Transform,
     orbit: &mut Orbit,
     position: &Option<Vec3>,
@@ -807,17 +834,10 @@ fn apply_camera_change(
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);
 
+    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, WGS84_64);
+
     // Update orbit state with new quaternion
-    orbit.set_quat(
-        transform,
-        Quat::from_mat3(&Mat3::from_cols(
-            world_forward.cross(world_up),
-            world_forward,
-            world_up,
-        )),
-        Vec3::ZERO,
-        false,
-    );
+    orbit.set_quat(transform, enu_quat, center, true);
 }
 
 /// Calculates the world rotation quaternion based on target direction and heading
