@@ -63,15 +63,15 @@ export class ViewContext {
 
   registerLayerEffects(
     layerId: string,
-    effects: string[],
-    selectiveDepthTest?: boolean,
+    effectIds: string[],
+    postEffectDepthTest?: boolean,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
     this.postEffects.registerLayerEffects(
       layerId,
-      effects,
-      selectiveDepthTest,
+      effectIds,
+      postEffectDepthTest,
       emissiveIntensity,
       options,
     );
@@ -96,15 +96,15 @@ export class ViewContext {
     this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
 
-  getLayerSelectiveDepthTest(layerId: string): boolean {
-    return this.postEffects.getLayerSelectiveDepthTest(layerId);
+  getLayerPostEffectDepthTest(layerId: string): boolean {
+    return this.postEffects.getLayerPostEffectDepthTest(layerId);
   }
 
-  setLayerSelectiveDepthTest(
+  setLayerPostEffectDepthTest(
     layerId: string,
-    selectiveDepthTest: boolean,
+    postEffectDepthTest: boolean,
   ): void {
-    this.postEffects.setLayerSelectiveDepthTest(layerId, selectiveDepthTest);
+    this.postEffects.setLayerPostEffectDepthTest(layerId, postEffectDepthTest);
   }
 
   unregisterLayerEffects(layerId: string): void {
@@ -113,13 +113,13 @@ export class ViewContext {
 
   updateLayerEffects(
     layerId: string,
-    effects: string[] | undefined,
+    effectIds: string[] | undefined,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
     this.postEffects.updateLayerEffects(
       layerId,
-      effects,
+      effectIds,
       emissiveIntensity,
       options,
     );

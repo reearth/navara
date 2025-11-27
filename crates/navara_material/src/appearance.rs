@@ -16,14 +16,6 @@ pub struct ElevationHeatmapConfig {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PostEffectConfig {
-    pub effect_id: Option<Vec<String>>,
-    pub selective_depth_test: Option<bool>,
-    pub emissive_intensity: Option<f32>,
-    pub emissive_color: Option<u32>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
     Point(PointMaterial),
     Billboard(BillboardMaterial),
@@ -80,7 +72,11 @@ pub struct PointMaterial {
     pub depth_test: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
-    pub post_effect_config: Option<PostEffectConfig>,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    pub post_effect_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for PointMaterial {
@@ -95,7 +91,11 @@ impl Default for PointMaterial {
             scale_by_distance: true,
             depth_test: true,
             transparent: true,
-            post_effect_config: None,
+            // post effect
+            effect_ids: None,
+            post_effect_depth_test: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -132,7 +132,11 @@ pub struct BillboardMaterial {
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     pub alpha_test: f32,
-    pub post_effect_config: Option<PostEffectConfig>,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    pub post_effect_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for BillboardMaterial {
@@ -149,7 +153,11 @@ impl Default for BillboardMaterial {
             depth_test: true,
             transparent: false,
             alpha_test: 0.1,
-            post_effect_config: None,
+            // post effect
+            effect_ids: None,
+            post_effect_depth_test: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -252,7 +260,11 @@ pub struct PolylineMaterial {
     pub use_ground_normals: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
-    pub post_effect_config: Option<PostEffectConfig>,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    pub post_effect_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for PolylineMaterial {
@@ -267,7 +279,11 @@ impl Default for PolylineMaterial {
             use_ground_normals: false,
             height: 1.,
             internal: None,
-            post_effect_config: None,
+            // post effect
+            effect_ids: None,
+            post_effect_depth_test: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -317,7 +333,11 @@ pub struct PolygonMaterial {
     pub apply_water_normal: bool,
     pub specular: bool,
     pub ior: f32,
-    pub post_effect_config: Option<PostEffectConfig>,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    pub post_effect_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for PolygonMaterial {
@@ -354,7 +374,11 @@ impl Default for PolygonMaterial {
             specular: false,
             ior: 1.33333,
 
-            post_effect_config: None,
+            // post effect
+            effect_ids: None,
+            post_effect_depth_test: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -403,7 +427,10 @@ pub struct ModelMaterial {
     pub show_bounding_box: bool,
     pub internal: Option<ModelInternalMaterial>,
     // post effect
-    pub post_effect_config: Option<PostEffectConfig>,
+    pub effect_ids: Option<Vec<String>>,
+    pub post_effect_depth_test: Option<bool>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for ModelMaterial {
@@ -437,7 +464,11 @@ impl Default for ModelMaterial {
             point_size: 0.3,
             show_bounding_box: false,
             internal: None,
-            post_effect_config: None,
+            // post effect
+            effect_ids: None,
+            post_effect_depth_test: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }

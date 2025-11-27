@@ -19,7 +19,7 @@ export type FeatureEffectPayload = {
   effectIds?: string[];
   emissiveIntensity?: number;
   emissiveColor?: number;
-  selectiveDepthTest?: boolean;
+  postEffectDepthTest?: boolean;
 };
 
 const resolveEffectPayload = (
@@ -32,7 +32,7 @@ const resolveEffectPayload = (
   }
 
   const effectIds = viewContext.getLayerEffects(layerId);
-  const selectiveDepthTest = viewContext.getLayerSelectiveDepthTest(layerId);
+  const postEffectDepthTest = viewContext.getLayerPostEffectDepthTest(layerId);
   const emissiveIntensity = viewContext.getLayerEmissiveIntensity(layerId);
   const emissiveColor = viewContext.getLayerEmissiveColor(layerId);
 
@@ -40,7 +40,7 @@ const resolveEffectPayload = (
     (!effectIds || effectIds.length === 0) &&
     emissiveColor === undefined &&
     emissiveIntensity === undefined &&
-    selectiveDepthTest === undefined
+    postEffectDepthTest === undefined
   ) {
     return undefined;
   }
@@ -49,7 +49,7 @@ const resolveEffectPayload = (
     effectIds: effectIds ?? undefined,
     emissiveIntensity,
     emissiveColor: emissiveColor ?? undefined,
-    selectiveDepthTest,
+    postEffectDepthTest,
   };
 };
 
@@ -128,10 +128,10 @@ export const applyEffectPayloadToObject = (
       obj.dispatchEvent({
         type: "layerEffectsChanged",
         target: obj,
-        effects: nextEffects,
+        effectIds: nextEffects,
         emissiveIntensity,
         layerId,
-        prevEffects,
+        prevEffectIds: prevEffects,
       });
     } else if (viewContext.selectiveRegistry) {
       // Regular Mesh: Direct selective registry management + material updates
@@ -175,11 +175,11 @@ export const applyEffectPayloadToObject = (
   }
 
   // Register selective depth test if specified
-  if (effectPayload.selectiveDepthTest !== undefined) {
+  if (effectPayload.postEffectDepthTest !== undefined) {
     if (nextEffects && nextEffects.length > 0) {
-      viewContext.selectiveRegistry?.registerLayerSelectiveDepthTest(
+      viewContext.selectiveRegistry?.registerLayerPostEffectDepthTest(
         layerId,
-        effectPayload.selectiveDepthTest,
+        effectPayload.postEffectDepthTest,
       );
     }
   }

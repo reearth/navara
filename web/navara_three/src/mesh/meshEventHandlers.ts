@@ -100,35 +100,35 @@ export function setupMeshEventHandlers(
     if (!viewContext.selectiveRegistry) return;
     if (!isLayerEffectsChangedEvent(event)) return;
 
-    const { prevEffects, effects } = event;
+    const { prevEffectIds, effectIds } = event;
 
     // Unlink removed effects
-    for (const effectId of prevEffects) {
-      if (!effects.includes(effectId)) {
+    for (const effectId of prevEffectIds) {
+      if (!effectIds.includes(effectId)) {
         viewContext.selectiveRegistry.unlink(effectId, mesh);
       }
     }
 
     // Update matrix world if needed for new effects
-    const needsLink = effects.some(
-      (effectId) => !prevEffects.includes(effectId),
+    const needsLink = effectIds.some(
+      (effectIds) => !prevEffectIds.includes(effectIds),
     );
     if (needsLink) {
       mesh.updateMatrixWorld(true);
     }
 
     // Link added effects
-    for (const effectId of effects) {
-      if (!prevEffects.includes(effectId)) {
+    for (const effectId of effectIds) {
+      if (!prevEffectIds.includes(effectId)) {
         viewContext.selectiveRegistry.link(effectId, mesh, layerId);
       }
     }
   });
 
-  // Note: selectiveDepthTest should NOT modify original mesh materials
+  // Note: postEffectDepthTest should NOT modify original mesh materials
   // Original meshes should always have depthTest=true for main scene rendering
   // Only clones in SelectiveEffectRegistry should have their depthTest modified
-  // This is handled directly in SelectiveEffectRegistry.link() and updateLayerSelectiveDepthTest()
+  // This is handled directly in SelectiveEffectRegistry.link() and updateLayerpostEffectDepthTest()
 }
 
 /**

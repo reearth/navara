@@ -17,8 +17,8 @@ export type SelectiveEffectOptions = {
 
 export type SelectiveEffectResources = {
   scene: Scene; // Legacy scene for compatibility
-  sceneDepthEnabled: Scene; // Scene for objects with selectiveDepthTest enabled
-  sceneDepthDisabled: Scene; // Scene for objects with selectiveDepthTest disabled
+  sceneDepthEnabled: Scene; // Scene for objects with postEffectDepthTest enabled
+  sceneDepthDisabled: Scene; // Scene for objects with postEffectDepthTest disabled
   maskRT: WebGLRenderTarget;
   highlightRT: WebGLRenderTarget; // Legacy render target for compatibility
   objects: WeakMap<Object3D, Object3D>; // source -> clone
@@ -137,17 +137,17 @@ export class SelectiveEffectRegistry {
   /**
    * Register selective depth test setting for a layer
    */
-  registerLayerSelectiveDepthTest(
+  registerLayerPostEffectDepthTest(
     layerId: string,
-    selectiveDepthTest: boolean,
+    postEffectDepthTest: boolean,
   ): void {
-    this.layerSelectiveDepthSettings.set(layerId, selectiveDepthTest);
+    this.layerSelectiveDepthSettings.set(layerId, postEffectDepthTest);
   }
 
   /**
    * Get selective depth test setting for a layer
    */
-  getLayerSelectiveDepthTest(layerId: string): boolean {
+  getLayerPostEffectDepthTest(layerId: string): boolean {
     return this.layerSelectiveDepthSettings.get(layerId) ?? true;
   }
 
@@ -156,18 +156,18 @@ export class SelectiveEffectRegistry {
    * Moves clones between sceneDepthEnabled and sceneDepthDisabled
    * Optimized to only process clones that actually need to move
    */
-  updateLayerSelectiveDepthTest(
+  updateLayerPostEffectDepthTest(
     layerId: string,
-    selectiveDepthTest: boolean,
+    postEffectDepthTest: boolean,
   ): void {
     // Check if value actually changed (should already be checked in ViewContext, but double-check)
     const currentSetting = this.layerSelectiveDepthSettings.get(layerId);
-    if (currentSetting === selectiveDepthTest) {
+    if (currentSetting === postEffectDepthTest) {
       return; // No change, skip processing
     }
 
     // Update the setting
-    this.layerSelectiveDepthSettings.set(layerId, selectiveDepthTest);
+    this.layerSelectiveDepthSettings.set(layerId, postEffectDepthTest);
 
     // Move clones for this layer between scenes (optimized: only affected clones)
     for (const resources of this.resources.values()) {
@@ -220,7 +220,7 @@ export class SelectiveEffectRegistry {
   ): void {
     if (!layerId) return;
 
-    const depthTest = this.getLayerSelectiveDepthTest(layerId);
+    const depthTest = this.getLayerPostEffectDepthTest(layerId);
 
     // Ensure clones are detached from both scenes before re-attaching.
     resources.sceneDepthEnabled.remove(clone);

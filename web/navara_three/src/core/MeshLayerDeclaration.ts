@@ -17,13 +17,13 @@ export type MeshLayerConfig = {
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
-  effect_id?: string[];
-  selectiveDepthTest?: boolean;
+  effectIds?: string[];
+  postEffectDepthTest?: boolean;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation" | "effect_id" | "selectiveDepthTest"
+  "position" | "scale" | "rotation" | "effectIds" | "postEffectDepthTest"
 > &
   LayerDeclarationConfigUpdate;
 
@@ -55,16 +55,16 @@ export abstract class MeshLayerDeclaration<
   public scale?: XYZ;
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
-  private effects?: string[];
-  private selectiveDepthTest?: boolean;
+  private effectIds?: string[];
+  private postEffectDepthTest?: boolean;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
     this.position = config.position;
     this.scale = config.scale;
     this.rotation = config.rotation;
-    this.effects = config.effect_id;
-    this.selectiveDepthTest = config.selectiveDepthTest;
+    this.effectIds = config.effectIds;
+    this.postEffectDepthTest = config.postEffectDepthTest;
   }
 
   protected getPassKey(): PassKey {
@@ -108,12 +108,12 @@ export abstract class MeshLayerDeclaration<
 
     this.onPassKeyChange();
 
-    // Register layer effects with selectiveDepthTest setting
-    if (this.effects && this.effects.length > 0) {
+    // Register layer effects with postEffectDepthTest setting
+    if (this.effectIds && this.effectIds.length > 0) {
       this.view.registerLayerEffects(
         this.id,
-        this.effects,
-        this.selectiveDepthTest,
+        this.effectIds,
+        this.postEffectDepthTest,
       );
     }
 
@@ -135,15 +135,15 @@ export abstract class MeshLayerDeclaration<
   private applyEffects(): void {
     if (!this.raw || !this.view.selectiveRegistry) return;
 
-    const currentEffects = this.effects ?? [];
+    const currentEffects = this.effectIds ?? [];
     const prevEffects = (this.raw.userData.prevEffects as string[]) ?? [];
 
     // Dispatch layerEffectsChanged event to trigger SelectiveEffectRegistry updates
     this.raw.dispatchEvent({
       type: "layerEffectsChanged",
       target: this.raw,
-      effects: currentEffects,
-      prevEffects: prevEffects,
+      effectIds: currentEffects,
+      prevEffectIds: prevEffects,
       layerId: this.id,
       emissiveIntensity: this.view.getLayerEmissiveIntensity(this.id),
     } as never);
@@ -248,27 +248,27 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // Handle effect_id update - delegate to ViewContext for proper cache synchronization
-    if (updates.effect_id !== undefined) {
+    // Handle effectIds update - delegate to ViewContext for proper cache synchronization
+    if (updates.effectIds !== undefined) {
       // Update local effects cache
-      this.effects =
-        updates.effect_id.length > 0 ? updates.effect_id : undefined;
+      this.effectIds =
+        updates.effectIds.length > 0 ? updates.effectIds : undefined;
 
       // Update ViewContext cache
-      this.view.updateLayerEffects(this.id, updates.effect_id);
+      this.view.updateLayerEffects(this.id, updates.effectIds);
 
       // Apply effects declaratively
       this.applyEffects();
     }
 
-    // Handle selectiveDepthTest update - always delegate to ViewContext for consistency
-    if (updates.selectiveDepthTest !== undefined) {
-      this.selectiveDepthTest = updates.selectiveDepthTest;
+    // Handle postEffectDepthTest update - always delegate to ViewContext for consistency
+    if (updates.postEffectDepthTest !== undefined) {
+      this.postEffectDepthTest = updates.postEffectDepthTest;
       // Use ViewContext API to ensure all layers (including MeshLayerDeclaration) follow same pipeline:
       // 1. SelectiveEffectRegistry settings are updated
       // 2. Existing clones are moved between sceneDepthEnabled/sceneDepthDisabled
       // This ensures Cube/Sphere behave consistently with Layer types
-      this.view.setLayerSelectiveDepthTest(this.id, this.selectiveDepthTest);
+      this.view.setLayerPostEffectDepthTest(this.id, this.postEffectDepthTest);
     }
 
     if ("emissive_intensity" in updates) {
@@ -389,16 +389,16 @@ export abstract class MeshLayerDeclaration<
    * Set selective depth test for this layer
    * @param enabled - Whether to enable depth test for selective effects
    */
-  setSelectiveDepthTest(enabled: boolean): void {
-    this.view.setLayerSelectiveDepthTest(this.id, enabled);
+  setPostEffectDepthTest(enabled: boolean): void {
+    this.view.setLayerPostEffectDepthTest(this.id, enabled);
   }
 
   /**
    * Get the current selective depth test setting for this layer
    * @returns The current selective depth test setting
    */
-  getSelectiveDepthTest(): boolean {
-    return this.view.getLayerSelectiveDepthTest(this.id);
+  getPostEffectDepthTest(): boolean {
+    return this.view.getLayerPostEffectDepthTest(this.id);
   }
 
   /**

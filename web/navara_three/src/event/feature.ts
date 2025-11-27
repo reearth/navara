@@ -43,10 +43,10 @@ import { renderText, processTextChanged } from "./features/text";
 import { setTransform, type BufferLoader, type FeatureHandler } from ".";
 
 type EngineLayerEffectConfig = {
-  effect_id?: string[];
+  effect_ids?: string[];
   emissive_intensity?: number;
   emissive_color?: number;
-  selective_depth_test?: boolean;
+  post_effect_depth_test?: boolean;
 };
 
 const extractEffectPayloadFromEvent = (
@@ -63,10 +63,10 @@ const extractEffectPayloadFromEvent = (
   }
 
   return {
-    effectIds: effectConfig.effect_id ?? undefined,
+    effectIds: effectConfig.effect_ids ?? undefined,
     emissiveIntensity: effectConfig.emissive_intensity ?? undefined,
     emissiveColor: effectConfig.emissive_color ?? undefined,
-    selectiveDepthTest: effectConfig.selective_depth_test ?? undefined,
+    postEffectDepthTest: effectConfig.post_effect_depth_test ?? undefined,
   };
 };
 

@@ -225,7 +225,7 @@ export class ModelMesh
   private setupEffectHandling(): void {
     this.addEventListener("layerEffectsChanged", (event) => {
       if (
-        "effects" in event &&
+        "effectIds" in event &&
         "emissiveIntensity" in event &&
         "layerId" in event
       ) {
@@ -264,7 +264,7 @@ export class ModelMesh
   }
 
   private handleEffectsChanged(event: LayerEffectsChangedEvent): void {
-    const { effects, emissiveIntensity, layerId, prevEffects } = event;
+    const { effectIds, emissiveIntensity, layerId, prevEffectIds } = event;
 
     // Apply emissive to all child meshes
     this.traverseMesh((mesh) => {
@@ -277,7 +277,7 @@ export class ModelMesh
           material instanceof MeshStandardMaterial ||
           material instanceof MeshPhysicalMaterial
         ) {
-          if (effects.length > 0) {
+          if (effectIds.length > 0) {
             material.emissive.copy(material.color);
             material.emissiveIntensity = emissiveIntensity;
           } else {
@@ -289,35 +289,35 @@ export class ModelMesh
 
     // Update SelectiveRegistry links
     if (this.viewContext?.selectiveRegistry) {
-      this.updateSelectiveLinks(effects, prevEffects, layerId);
+      this.updateSelectiveLinks(effectIds, prevEffectIds, layerId);
     }
   }
 
   private updateSelectiveLinks(
-    effects: string[],
-    prevEffects: string[],
+    effectIds: string[],
+    prevEffectIds: string[],
     layerId: string,
   ): void {
     if (!this.viewContext?.selectiveRegistry) return;
 
     // Unlink removed effects
-    for (const effectId of prevEffects) {
-      if (!effects.includes(effectId)) {
+    for (const effectId of prevEffectIds) {
+      if (!effectIds.includes(effectId)) {
         this.viewContext.selectiveRegistry.unlink(effectId, this);
       }
     }
 
     // Update world matrix if needed for new links
-    const needsLink = effects.some(
-      (effectId) => !prevEffects.includes(effectId),
+    const needsLink = effectIds.some(
+      (effectId) => !prevEffectIds.includes(effectId),
     );
     if (needsLink) {
       this.updateMatrixWorld(true);
     }
 
     // Link new effects
-    for (const effectId of effects) {
-      if (!prevEffects.includes(effectId)) {
+    for (const effectId of effectIds) {
+      if (!prevEffectIds.includes(effectId)) {
         this.viewContext.selectiveRegistry.link(effectId, this, layerId);
       }
     }

@@ -1,10 +1,10 @@
 import type { Event, Object3DEventMap } from "three";
 
 export type LayerEffectsChangedEventData = {
-  effects: string[];
+  effectIds: string[];
   emissiveIntensity: number;
   layerId: string;
-  prevEffects: string[];
+  prevEffectIds: string[];
 };
 
 export type LayerEffectsChangedEvent = Event & LayerEffectsChangedEventData;
@@ -17,26 +17,26 @@ export type EmissiveEventData = {
 
 export type EmissiveEvent = Event & EmissiveEventData;
 
-export type SelectiveDepthTestChangedEventData = {
-  selectiveDepthTest: boolean;
+export type PostEffectDepthTestChangedEventData = {
+  postEffectDepthTest: boolean;
   layerId: string;
 };
 
-export type SelectiveDepthTestChangedEvent = Event &
-  SelectiveDepthTestChangedEventData;
+export type PostEffectDepthTestChangedEvent = Event &
+  PostEffectDepthTestChangedEventData;
 
 export type CustomObject3DEventMap = Object3DEventMap & {
   removedFromWorld: undefined;
   needsUpdate: undefined;
   layerEffectsChanged: LayerEffectsChangedEvent;
   emissive: EmissiveEvent;
-  selectiveDepthTestChanged: SelectiveDepthTestChangedEvent;
+  postEffectDepthTestChanged: PostEffectDepthTestChangedEvent;
 };
 
 export type CustomObject3DEvent =
   | LayerEffectsChangedEvent
   | EmissiveEvent
-  | SelectiveDepthTestChangedEvent;
+  | PostEffectDepthTestChangedEvent;
 
 export function isEmissiveEvent(event: unknown): event is EmissiveEvent {
   return (
@@ -57,20 +57,20 @@ export function isLayerEffectsChangedEvent(
     "type" in event &&
     (event as { type?: string }).type === "layerEffectsChanged" &&
     Array.isArray(
-      (event as Partial<LayerEffectsChangedEventData>).effects ?? null,
+      (event as Partial<LayerEffectsChangedEventData>).effectIds ?? null,
     )
   );
 }
 
-export function isSelectiveDepthTestChangedEvent(
+export function isPostEffectDepthTestChangedEvent(
   event: unknown,
-): event is SelectiveDepthTestChangedEvent {
+): event is PostEffectDepthTestChangedEvent {
   return (
     typeof event === "object" &&
     event !== null &&
     "type" in event &&
-    (event as { type?: string }).type === "selectiveDepthTestChanged" &&
-    typeof (event as Partial<SelectiveDepthTestChangedEventData>)
-      .selectiveDepthTest === "boolean"
+    (event as { type?: string }).type === "postEffectDepthTestChanged" &&
+    typeof (event as Partial<PostEffectDepthTestChangedEventData>)
+      .postEffectDepthTest === "boolean"
   );
 }

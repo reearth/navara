@@ -9,7 +9,7 @@ export type LayerEffectState = {
   effectIds?: string[];
   emissiveIntensity?: number;
   emissiveColor?: number;
-  selectiveDepthTest?: boolean;
+  postEffectDepthTest?: boolean;
 };
 
 export type LayerEvent = {
@@ -151,7 +151,7 @@ export class Layer extends EventHandler<LayerEvent> {
     const current = this.viewContext.getLayerEffects(this.id) ?? [];
     if (!current.includes(effectId)) {
       this.updateEffectConfig({
-        effect_id: [...current, effectId],
+        effectIds: [...current, effectId],
       });
     }
   }
@@ -171,7 +171,7 @@ export class Layer extends EventHandler<LayerEvent> {
     }
     const updated = current.filter((id) => id !== effectId);
     this.updateEffectConfig({
-      effect_id: updated,
+      effectIds: updated,
     });
   }
 
@@ -201,7 +201,7 @@ export class Layer extends EventHandler<LayerEvent> {
       return;
     }
     this.updateEffectConfig({
-      effect_id: effectIds,
+      effectIds: effectIds,
     });
   }
 
@@ -213,7 +213,7 @@ export class Layer extends EventHandler<LayerEvent> {
       return;
     }
     this.updateEffectConfig({
-      effect_id: [],
+      effectIds: [],
     });
   }
 
@@ -281,12 +281,12 @@ export class Layer extends EventHandler<LayerEvent> {
    * Set the selective depth test for this layer
    * @param enabled - Whether selective depth test should be enabled
    */
-  setSelectiveDepthTest(enabled: boolean): void {
+  setPostEffectDepthTest(enabled: boolean): void {
     if (!this.supportsLayerEffects()) {
       return;
     }
     this.updateEffectConfig({
-      selectiveDepthTest: enabled,
+      postEffectDepthTest: enabled,
     });
   }
 
@@ -294,8 +294,8 @@ export class Layer extends EventHandler<LayerEvent> {
    * Get the current selective depth test setting for this layer
    * @returns true if selective depth test is enabled
    */
-  getSelectiveDepthTest(): boolean {
-    return this.viewContext.getLayerSelectiveDepthTest(this.id);
+  getPostEffectDepthTest(): boolean {
+    return this.viewContext.getLayerPostEffectDepthTest(this.id);
   }
 
   getLayerType(): string | undefined {
@@ -339,23 +339,23 @@ export class Layer extends EventHandler<LayerEvent> {
       return undefined;
     }
 
-    const { effectIds, emissiveColor, emissiveIntensity, selectiveDepthTest } =
+    const { effectIds, emissiveColor, emissiveIntensity, postEffectDepthTest } =
       this.effectState;
 
     if (
       effectIds === undefined &&
       emissiveColor === undefined &&
       emissiveIntensity === undefined &&
-      selectiveDepthTest === undefined
+      postEffectDepthTest === undefined
     ) {
       return undefined;
     }
 
     return {
-      effect_id: effectIds !== undefined ? [...effectIds] : undefined,
+      effectIds: effectIds !== undefined ? [...effectIds] : undefined,
       emissive_color: emissiveColor,
       emissive_intensity: emissiveIntensity,
-      selectiveDepthTest,
+      postEffectDepthTest,
     };
   }
 
@@ -385,10 +385,10 @@ export class Layer extends EventHandler<LayerEvent> {
       delete next.emissiveColor;
     }
 
-    if (update.selectiveDepthTest !== undefined) {
-      next.selectiveDepthTest = update.selectiveDepthTest;
+    if (update.postEffectDepthTest !== undefined) {
+      next.postEffectDepthTest = update.postEffectDepthTest;
     } else if (overwriteMissing) {
-      delete next.selectiveDepthTest;
+      delete next.postEffectDepthTest;
     }
 
     return Object.keys(next).length > 0 ? next : undefined;
@@ -407,8 +407,8 @@ export class Layer extends EventHandler<LayerEvent> {
       current?.emissiveIntensity !== previousState?.emissiveIntensity;
     const emissiveColorChanged =
       current?.emissiveColor !== previousState?.emissiveColor;
-    const selectiveDepthTestChanged =
-      current?.selectiveDepthTest !== previousState?.selectiveDepthTest;
+    const postEffectDepthTestChanged =
+      current?.postEffectDepthTest !== previousState?.postEffectDepthTest;
 
     if (effectIdsChanged || emissiveIntensityChanged) {
       this.viewContext.updateLayerEffects(
@@ -426,10 +426,10 @@ export class Layer extends EventHandler<LayerEvent> {
       this.viewContext.setLayerEmissiveColor(this.id, current?.emissiveColor);
     }
 
-    if (selectiveDepthTestChanged) {
-      this.viewContext.setLayerSelectiveDepthTest(
+    if (postEffectDepthTestChanged) {
+      this.viewContext.setLayerPostEffectDepthTest(
         this.id,
-        current?.selectiveDepthTest ?? true,
+        current?.postEffectDepthTest ?? true,
       );
     }
   }
@@ -465,12 +465,12 @@ export class Layer extends EventHandler<LayerEvent> {
     desc: LayerDescription,
   ): LayerEffectState | undefined {
     const partial = desc as LayerEffectUpdatePayload;
-    const effectIds = partial.effect_id ?? partial.effects;
+    const effectIds = partial.effectIds;
     if (
       effectIds === undefined &&
       partial.emissive_color === undefined &&
       partial.emissive_intensity === undefined &&
-      partial.selectiveDepthTest === undefined
+      partial.postEffectDepthTest === undefined
     ) {
       return undefined;
     }
@@ -479,7 +479,7 @@ export class Layer extends EventHandler<LayerEvent> {
       effectIds: effectIds !== undefined ? [...effectIds] : undefined,
       emissiveColor: partial.emissive_color,
       emissiveIntensity: partial.emissive_intensity,
-      selectiveDepthTest: partial.selectiveDepthTest,
+      postEffectDepthTest: partial.postEffectDepthTest,
     };
   }
 
@@ -491,11 +491,10 @@ export class Layer extends EventHandler<LayerEvent> {
 }
 
 type LayerEffectUpdatePayload = {
-  effect_id?: string[];
-  effects?: string[];
+  effectIds?: string[];
   emissive_color?: number;
   emissive_intensity?: number;
-  selectiveDepthTest?: boolean;
+  postEffectDepthTest?: boolean;
 };
 
 type StructuredCloneFn = <T>(value: T) => T;

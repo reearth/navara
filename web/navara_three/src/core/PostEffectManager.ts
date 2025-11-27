@@ -1,10 +1,10 @@
 import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type LayerEffectConfig = {
-  effects: string[];
+  effectIds: string[];
   emissiveIntensity: number;
   emissiveColor?: number;
-  selectiveDepthTest: boolean;
+  postEffectDepthTest: boolean;
 };
 
 type PostEffectManagerOptions = {
@@ -18,25 +18,25 @@ export class PostEffectManager {
 
   registerLayerEffects(
     layerId: string,
-    effects: string[],
-    selectiveDepthTest?: boolean,
+    effectIds: string[],
+    postEffectDepthTest?: boolean,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
     const config = this.ensureConfig(layerId);
 
-    config.effects = effects;
+    config.effectIds = effectIds;
     if (emissiveIntensity !== undefined) {
       config.emissiveIntensity = emissiveIntensity;
     }
-    if (selectiveDepthTest !== undefined) {
-      config.selectiveDepthTest = selectiveDepthTest;
+    if (postEffectDepthTest !== undefined) {
+      config.postEffectDepthTest = postEffectDepthTest;
     }
 
-    if (selectiveDepthTest !== undefined && this.options.selectiveRegistry) {
-      this.options.selectiveRegistry.registerLayerSelectiveDepthTest(
+    if (postEffectDepthTest !== undefined && this.options.selectiveRegistry) {
+      this.options.selectiveRegistry.registerLayerPostEffectDepthTest(
         layerId,
-        selectiveDepthTest,
+        postEffectDepthTest,
       );
     }
 
@@ -55,7 +55,7 @@ export class PostEffectManager {
 
   getLayerEffects(layerId: string): string[] | undefined {
     const config = this.layerConfigs.get(layerId);
-    return config?.effects.length ? config.effects : undefined;
+    return config?.effectIds.length ? config.effectIds : undefined;
   }
 
   getLayerEmissiveIntensity(layerId: string): number {
@@ -66,8 +66,8 @@ export class PostEffectManager {
     return this.layerConfigs.get(layerId)?.emissiveColor;
   }
 
-  getLayerSelectiveDepthTest(layerId: string): boolean {
-    return this.layerConfigs.get(layerId)?.selectiveDepthTest ?? true;
+  getLayerPostEffectDepthTest(layerId: string): boolean {
+    return this.layerConfigs.get(layerId)?.postEffectDepthTest ?? true;
   }
 
   setLayerEmissiveColor(
@@ -87,22 +87,22 @@ export class PostEffectManager {
     // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
-  setLayerSelectiveDepthTest(
+  setLayerPostEffectDepthTest(
     layerId: string,
-    selectiveDepthTest: boolean,
+    postEffectDepthTest: boolean,
   ): void {
     const config = this.ensureConfig(layerId);
 
-    if (config.selectiveDepthTest === selectiveDepthTest) {
+    if (config.postEffectDepthTest === postEffectDepthTest) {
       return;
     }
 
-    config.selectiveDepthTest = selectiveDepthTest;
+    config.postEffectDepthTest = postEffectDepthTest;
     this.layerConfigs.set(layerId, config);
 
-    this.options.selectiveRegistry?.updateLayerSelectiveDepthTest(
+    this.options.selectiveRegistry?.updateLayerPostEffectDepthTest(
       layerId,
-      selectiveDepthTest,
+      postEffectDepthTest,
     );
 
     // Cache update only - actual effect application happens via layer.update()
@@ -111,15 +111,14 @@ export class PostEffectManager {
 
   updateLayerEffects(
     layerId: string,
-    effects: string[] | undefined,
+    effectIds: string[] | undefined,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
-    const newEffects = effects ?? [];
-
+    const newEffectIds = effectIds ?? [];
     this.updateLayerEffectCaches(
       layerId,
-      newEffects,
+      newEffectIds,
       emissiveIntensity,
       options,
     );
@@ -131,9 +130,9 @@ export class PostEffectManager {
   private ensureConfig(layerId: string): LayerEffectConfig {
     if (!this.layerConfigs.has(layerId)) {
       this.layerConfigs.set(layerId, {
-        effects: [],
+        effectIds: [],
         emissiveIntensity: 0.3,
-        selectiveDepthTest: true,
+        postEffectDepthTest: true,
       });
     }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -142,13 +141,13 @@ export class PostEffectManager {
 
   private updateLayerEffectCaches(
     layerId: string,
-    newEffects: string[],
+    newEffectIds: string[],
     emissiveIntensity: number | undefined,
     options?: { keepClones?: boolean },
   ): void {
     const config = this.ensureConfig(layerId);
 
-    config.effects = newEffects;
+    config.effectIds = newEffectIds;
     if (emissiveIntensity !== undefined) {
       config.emissiveIntensity = emissiveIntensity;
     }

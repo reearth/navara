@@ -1033,7 +1033,7 @@ export default class ThreeView<
       targetLayer instanceof Layer &&
       this.layerSupportsEffectConfig(l)
     ) {
-      const effectIds = l.effect_id ?? l.effects;
+      const effectIds = l.effectIds;
       if (effectIds) {
         const keepClones = l.type === "cesium3dtiles";
         this.viewContext.updateLayerEffects(
@@ -1048,10 +1048,10 @@ export default class ThreeView<
         this.viewContext.setLayerEmissiveColor(layerId, l.emissive_color);
       }
 
-      if (l.selectiveDepthTest !== undefined) {
-        this.viewContext.setLayerSelectiveDepthTest(
+      if (l.postEffectDepthTest !== undefined) {
+        this.viewContext.setLayerPostEffectDepthTest(
           layerId,
-          l.selectiveDepthTest,
+          l.postEffectDepthTest,
         );
       }
     }
@@ -1071,15 +1071,13 @@ export default class ThreeView<
     invariant(this._core);
 
     if (this.layerSupportsEffectConfig(l)) {
-      const effectIds = l.effect_id ?? l.effects;
+      const effectIds = l.effectIds;
       if (effectIds?.length) {
         const keepClones = l.type === "cesium3dtiles";
-        // selectiveDepthTest: false means depth testing is disabled for selective effects
-        // selectiveDepthTest: true (default) means depth testing is enabled for selective effects
         this.viewContext.registerLayerEffects(
           layerId,
           effectIds,
-          l.selectiveDepthTest === false,
+          l.postEffectDepthTest === false,
           l.emissive_intensity,
           keepClones ? { keepClones: true } : undefined,
         );
@@ -1108,11 +1106,10 @@ export default class ThreeView<
     layer: ResourceLayerDescription,
   ): layer is ResourceLayerDescription & {
     type: "geojson" | "cesium3dtiles";
-    effect_id?: string[];
-    effects?: string[];
+    effectIds?: string[];
     emissive_intensity?: number;
     emissive_color?: number;
-    selectiveDepthTest?: boolean;
+    postEffectDepthTest?: boolean;
   } {
     return layer.type === "geojson" || layer.type === "cesium3dtiles";
   }
