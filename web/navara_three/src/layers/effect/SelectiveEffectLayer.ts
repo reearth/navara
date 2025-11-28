@@ -1,5 +1,13 @@
 import { DepthCopyPass } from "postprocessing";
-import { Color, Vector2, RGBADepthPacking, type WebGLRenderer } from "three";
+import {
+  Color,
+  Vector2,
+  RGBADepthPacking,
+  Mesh,
+  MeshStandardMaterial,
+  MeshPhysicalMaterial,
+  type WebGLRenderer,
+} from "three";
 
 import { BufferView } from "../../bufferView";
 import {
@@ -7,7 +15,10 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
-import type { PostEffectResources } from "../../core/SelectiveEffectRegistry";
+import {
+  ensurePostEffectUserData,
+  type PostEffectResources,
+} from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { CustomRenderPass } from "../../passes";
 
@@ -98,9 +109,7 @@ export abstract class PostEffectLayerBase<
     }
 
     const debugMask =
-      this.config.debugMask ??
-      this.view.debugOptions.postEffectMask ??
-      false;
+      this.config.debugMask ?? this.view.debugOptions.postEffectMask ?? false;
     this.config.debugMask = debugMask;
 
     this.resources = this.view.postEffectRegistry.create(this.id, {
@@ -113,17 +122,65 @@ export abstract class PostEffectLayerBase<
 
   /**
    * Render mask to maskRT
-   * Uses separate scenes for depthTest enabled/disabled objects
-   * This completely eliminates the need for scene traversal
+   * Uses separate scenes for depthTest enabled/disabled objects.
    *
-   * Performance optimizations:
-   * - Zero scene.traverse() calls
+   * Performance notes:
+   * - Traversal is limited to post-effect clone scenes (not the main world scene)
    * - Reuses depth from CustomRenderPass to avoid expensive MRT scene rendering
    * - Keeps existing vertex/fragment shaders (no renderer.overrideMaterial)
-   * - Mask rendering behavior is controlled per-object via PostEffectRegistry
+   * - Mask behavior is controlled per-object via PostEffectRegistry
    */
   protected renderMask(renderer: WebGLRenderer): void {
     const { sceneDepthEnabled, sceneDepthDisabled, maskRT } = this.resources;
+
+    // Collect unique materials from both scenes to toggle mask mode / depthTest
+    const materials = new Set<MeshStandardMaterial | MeshPhysicalMaterial>();
+    const originalDepthTest = new Map<
+      MeshStandardMaterial | MeshPhysicalMaterial,
+      boolean
+    >();
+
+    // First pass: occlusion-enabled group (depthTest = true, maskMode = 1.0)
+    sceneDepthEnabled.traverse((obj) => {
+      if (obj instanceof Mesh) {
+        const m = obj.material;
+        const arr = Array.isArray(m) ? m : [m];
+        for (const mat of arr) {
+          if (
+            mat instanceof MeshStandardMaterial ||
+            mat instanceof MeshPhysicalMaterial
+          ) {
+            const ud = ensurePostEffectUserData(mat);
+            ud.maskMode.value = 1.0;
+            if (!originalDepthTest.has(mat)) {
+              originalDepthTest.set(mat, mat.depthTest);
+            }
+            materials.add(mat);
+          }
+        }
+      }
+    });
+
+    // Second pass: occlusion-disabled group (depthTest = false, maskMode = 0.5)
+    sceneDepthDisabled.traverse((obj) => {
+      if (obj instanceof Mesh) {
+        const m = obj.material;
+        const arr = Array.isArray(m) ? m : [m];
+        for (const mat of arr) {
+          if (
+            mat instanceof MeshStandardMaterial ||
+            mat instanceof MeshPhysicalMaterial
+          ) {
+            const ud = ensurePostEffectUserData(mat);
+            ud.maskMode.value = 0.5;
+            if (!originalDepthTest.has(mat)) {
+              originalDepthTest.set(mat, mat.depthTest);
+            }
+            materials.add(mat);
+          }
+        }
+      }
+    });
 
     // Get MRT pass to reuse its depth buffer
     const mrtPass = this.view.renderPassOrchestrator.getPass("mrt");
@@ -152,14 +209,30 @@ export abstract class PostEffectLayerBase<
     renderer.setRenderTarget(maskRT);
 
     // 2. Render mask silhouettes with depthTest enabled
+    for (const mat of materials) {
+      mat.depthTest = true;
+    }
     renderer.render(sceneDepthEnabled, this.view.camera);
 
     // 3. Render mask silhouettes with depthTest disabled
+    for (const mat of materials) {
+      mat.depthTest = false;
+    }
     renderer.render(sceneDepthDisabled, this.view.camera);
 
     // Restore renderer state
     renderer.setRenderTarget(prevRenderTarget);
     renderer.setClearColor(originalClearColor, originalClearAlpha);
+
+    // Reset mask mode and depthTest
+    for (const mat of materials) {
+      const ud = ensurePostEffectUserData(mat);
+      ud.maskMode.value = 0;
+      const original = originalDepthTest.get(mat);
+      if (original !== undefined) {
+        mat.depthTest = original;
+      }
+    }
   }
 
   /**

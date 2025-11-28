@@ -464,7 +464,7 @@ export default class ThreeView<
 
   // Registry support
   private registries: Registries;
-  public postRegistry: PostEffectRegistry;
+  public postEffectRegistry: PostEffectRegistry;
   private viewContext!: ViewContext;
 
   constructor(options: Options = {}) {
@@ -609,7 +609,7 @@ export default class ThreeView<
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
     // Initialize PostEffectRegistry
-    this.postRegistry = new PostEffectRegistry(width, height);
+    this.postEffectRegistry = new PostEffectRegistry(width, height);
 
     // Set up Registry
     this.viewContext = new ViewContext(
@@ -623,7 +623,7 @@ export default class ThreeView<
         drapedMaterials: this._drapedFeatureMaterials,
       },
       this,
-      this.postRegistry,
+      this.postEffectRegistry,
       {
         postEffectMask: this._options.postEffects?.debugMask,
       },

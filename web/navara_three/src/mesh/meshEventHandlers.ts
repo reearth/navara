@@ -1,10 +1,6 @@
 import { Mesh, Object3D } from "three";
 
-import {
-  postEffectMaskAfterRender,
-  postEffectMaskBeforeRender,
-  updatePostEffectLinksForObject,
-} from "../core/SelectiveEffectRegistry";
+import { updatePostEffectLinksForObject } from "../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../core/ViewContext";
 import { isEmissiveEvent, isLayerEffectsChangedEvent } from "../object3DEvent";
 
@@ -76,18 +72,6 @@ export function setupMeshEventHandlers(
 
   if (!hasEventDispatcher) return;
 
-  // Attach common postEffect mask handlers to all Mesh instances under this mesh.
-  mesh.traverse((object) => {
-    if (object instanceof Mesh) {
-      if (!object.onBeforeRender) {
-        object.onBeforeRender = postEffectMaskBeforeRender as never;
-      }
-      if (!object.onAfterRender) {
-        object.onAfterRender = postEffectMaskAfterRender as never;
-      }
-    }
-  });
-
   // Cache materials once to avoid repeated traversals
   const materialCache = cacheMaterials(mesh);
 
@@ -122,10 +106,10 @@ export function setupMeshEventHandlers(
     );
   });
 
-  // Note: postEffectOcclusion should NOT modify original mesh materials
-  // Original meshes should always have depthTest=true for main scene rendering
-  // Only clones in PostEffectRegistry should have their depthTest modified
-  // This is handled directly in PostEffectRegistry.link() and updateLayerpostEffectOcclusion()
+  // Note: postEffectOcclusion should NOT modify original mesh materials.
+  // Original meshes should always have depthTest=true for main scene rendering.
+  // Only clones in PostEffectRegistry should have their depthTest modified.
+  // See PostEffectRegistry for how occlusion is applied to clones.
 }
 
 /**

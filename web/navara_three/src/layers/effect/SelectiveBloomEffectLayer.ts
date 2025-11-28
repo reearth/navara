@@ -159,6 +159,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       uniforms: {
         tBase: { value: null },
         tBloom: { value: null },
+        tMask: { value: null },
         bloomIntensity: { value: 1.0 },
         debugMode: { value: 0 }, // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
       },
@@ -172,6 +173,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       fragmentShader: `
         uniform sampler2D tBase;
         uniform sampler2D tBloom;
+        uniform sampler2D tMask;
         uniform float bloomIntensity;
         uniform int debugMode;
 
@@ -180,6 +182,8 @@ class PostEffectBloomPass extends PostProcessingPass {
         void main() {
           vec4 baseColor = texture2D(tBase, vUv);
           vec4 bloomColor = texture2D(tBloom, vUv);
+          vec4 maskColor = texture2D(tMask, vUv);
+          float maskValue = maskColor.a;
           
           if (debugMode == 1) {
             // Show base only
@@ -192,7 +196,12 @@ class PostEffectBloomPass extends PostProcessingPass {
             gl_FragColor = vec4(bloomColor.rgb * 100.0, 1.0);
           } else {
             // Normal composite
-            gl_FragColor = vec4(baseColor.rgb + bloomColor.rgb * bloomIntensity, baseColor.a);
+            // Use mask alpha as a gate so that bloom respects postEffectOcclusion:
+            // - Occlusion-enabled objects only contribute where they are visible in the mask
+            // - Occlusion-disabled objects write to the mask even when occluded, so bloom "bleeds" through
+            float gate = step(0.0, maskValue - 0.01);
+            vec3 finalBloom = bloomColor.rgb * bloomIntensity * gate;
+            gl_FragColor = vec4(baseColor.rgb + finalBloom, baseColor.a);
           }
         }
       `,
@@ -249,6 +258,9 @@ class PostEffectBloomPass extends PostProcessingPass {
     outputBuffer: WebGLRenderTarget | null,
     deltaTime?: number,
   ): void {
+    // Update mask for current frame (uses postEffectOcclusion and scene depth)
+    this.layer["renderMask"](renderer);
+
     // Get camera and postEffect scenes from resources
     const camera = this.layer["view"].camera;
     const { sceneDepthEnabled, sceneDepthDisabled } = this.layer["resources"];
@@ -291,10 +303,13 @@ class PostEffectBloomPass extends PostProcessingPass {
       renderTargetsHorizontal?: WebGLRenderTarget[];
     };
     const bloomOutput =
-      bloomInternals.renderTargetsHorizontal?.[0] || this.postEffectRenderTarget;
+      bloomInternals.renderTargetsHorizontal?.[0] ||
+      this.postEffectRenderTarget;
 
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
     this.compositeMaterial.uniforms.tBloom.value = bloomOutput.texture;
+    this.compositeMaterial.uniforms.tMask.value =
+      this.layer["resources"].maskRT.texture;
     this.compositeMaterial.uniforms.bloomIntensity.value = 10.0;
     this.compositeMaterial.uniforms.debugMode.value = this.layer.debugMode;
 

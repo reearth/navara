@@ -4,10 +4,9 @@ import {
   RGBAFormat,
   Object3D,
   Mesh,
-  WebGLRenderer,
-  DoubleSide,
   MeshStandardMaterial,
   MeshPhysicalMaterial,
+  type WebGLRenderer,
 } from "three";
 
 import { BufferView } from "../bufferView";
@@ -18,7 +17,6 @@ export type PostEffectOptions = {
 };
 
 export type PostEffectResources = {
-  scene: Scene; // Legacy scene for compatibility
   sceneDepthEnabled: Scene; // Scene for objects with postEffectOcclusion enabled
   sceneDepthDisabled: Scene; // Scene for objects with postEffectOcclusion disabled
   maskRT: WebGLRenderTarget;
@@ -31,150 +29,26 @@ export type PostEffectResources = {
   maskDebug?: BufferView;
 };
 
-// Mask rendering hook: temporarily overrides material state based on scene.userData.postEffectMask
-export const postEffectMaskBeforeRender = (
-  _renderer: WebGLRenderer,
-  scene: Scene,
-  _camera: Object3D,
-  _geometry: unknown,
-  material: unknown,
-) => {
-  const maskInfo = (
-    scene.userData as {
-      postEffectMask?: { enabled: boolean; depthTest: boolean };
-    }
-  ).postEffectMask;
-  if (!maskInfo?.enabled) return;
-
-  const meshMaterial = material as {
-    color?: { set: (color: number) => void };
-    emissive?: { set: (color: number) => void };
-    depthTest?: boolean;
-    depthWrite?: boolean;
-    side?: number;
-    transparent?: boolean;
-    opacity?: number;
-    userData?: Record<string, unknown>;
-  };
-
-  meshMaterial.userData ??= {};
-  const store = (
-    meshMaterial.userData as {
-      __postEffectPrevState?: {
-        color?: unknown;
-        emissive?: unknown;
-        depthTest?: boolean;
-        depthWrite?: boolean;
-        side?: number;
-        transparent?: boolean;
-        opacity?: number;
-        active?: boolean;
-      };
-    }
-  ).__postEffectPrevState ?? {
-    active: false,
-  };
-
-  if (!store.active) {
-    if ("color" in meshMaterial && meshMaterial.color) {
-      store.color = meshMaterial.color;
-    }
-    if ("emissive" in meshMaterial && meshMaterial.emissive) {
-      store.emissive = meshMaterial.emissive;
-    }
-    store.depthTest = meshMaterial.depthTest;
-    store.depthWrite = meshMaterial.depthWrite;
-    store.side = meshMaterial.side;
-    store.transparent = meshMaterial.transparent;
-    store.opacity = meshMaterial.opacity;
-    store.active = true;
-    (
-      meshMaterial.userData as { __postEffectPrevState?: typeof store }
-    ).__postEffectPrevState = store;
-  }
-
-  if (meshMaterial.color) {
-    meshMaterial.color.set(0xffffff);
-  }
-  if (meshMaterial.emissive) {
-    meshMaterial.emissive.set(0x000000);
-  }
-  meshMaterial.depthTest = maskInfo.depthTest;
-  meshMaterial.depthWrite = true;
-  meshMaterial.side = DoubleSide;
-  meshMaterial.transparent = false;
-  meshMaterial.opacity = 1.0;
-};
-
-// Mask rendering hook: restores material state from userData.__postEffectPrevState
-export const postEffectMaskAfterRender = (
-  _renderer: WebGLRenderer,
-  scene: Scene,
-  _camera: Object3D,
-  _geometry: unknown,
-  material: unknown,
-) => {
-  const maskInfo = (
-    scene.userData as {
-      postEffectMask?: { enabled: boolean; depthTest: boolean };
-    }
-  ).postEffectMask;
-  if (!maskInfo?.enabled) return;
-
-  const meshMaterial = material as {
-    color?: { copy: (color: unknown) => void };
-    emissive?: { copy: (color: unknown) => void };
-    depthTest?: boolean;
-    depthWrite?: boolean;
-    side?: number;
-    transparent?: boolean;
-    opacity?: number;
-    userData?: {
-      __postEffectPrevState?: {
-        color?: unknown;
-        emissive?: unknown;
-        depthTest?: boolean;
-        depthWrite?: boolean;
-        side?: number;
-        transparent?: boolean;
-        opacity?: number;
-        active?: boolean;
-      };
-    };
-  };
-
-  const store = meshMaterial.userData?.__postEffectPrevState;
-  if (!store?.active) return;
-
-  if (meshMaterial.color && store.color) {
-    meshMaterial.color.copy(store.color);
-  }
-  if (meshMaterial.emissive && store.emissive) {
-    meshMaterial.emissive.copy(store.emissive);
-  }
-  if (store.depthTest !== undefined) {
-    meshMaterial.depthTest = store.depthTest;
-  }
-  if (store.depthWrite !== undefined) {
-    meshMaterial.depthWrite = store.depthWrite;
-  }
-  if (store.side !== undefined) {
-    meshMaterial.side = store.side;
-  }
-  if (store.transparent !== undefined) {
-    meshMaterial.transparent = store.transparent;
-  }
-  if (store.opacity !== undefined) {
-    meshMaterial.opacity = store.opacity;
-  }
-
-  store.active = false;
-};
-
 export type EmissiveParams = {
   emissiveIntensity: number;
   emissiveColor?: number;
 };
+
+export type PostEffectUserData = {
+  // Mask mode value used by selective effects.
+  // 0.0 = disabled, 1.0 = occlusion-enabled mask, 0.5 = occlusion-disabled mask, etc.
+  maskMode: { value: number };
+};
+
+export function ensurePostEffectUserData(
+  material: MeshStandardMaterial | MeshPhysicalMaterial,
+): PostEffectUserData {
+  const ud = (material.userData.postEffect ??= {});
+  if (!("maskMode" in ud) || typeof ud.maskMode?.value !== "number") {
+    ud.maskMode = { value: 0 };
+  }
+  return ud as PostEffectUserData;
+}
 
 export function applyEmissiveEffect(
   material: MeshStandardMaterial | MeshPhysicalMaterial,
@@ -254,28 +128,11 @@ export class PostEffectRegistry {
     const width = Math.floor(this.width * resolutionScale);
     const height = Math.floor(this.height * resolutionScale);
 
-    // Legacy scene for compatibility (not actively used)
-    const scene = new Scene();
-    scene.name = `PostEffect_${effectId}`;
-
     const sceneDepthEnabled = new Scene();
     sceneDepthEnabled.name = `PostEffect_${effectId}_DepthEnabled`;
 
     const sceneDepthDisabled = new Scene();
     sceneDepthDisabled.name = `PostEffect_${effectId}_DepthDisabled`;
-
-    // Mark scenes so we can detect post effect mask rendering in onBeforeRender
-    // and differentiate depth test behavior between them.
-    (
-      sceneDepthEnabled.userData as {
-        postEffectMask?: { enabled: boolean; depthTest: boolean };
-      }
-    ).postEffectMask = { enabled: true, depthTest: true };
-    (
-      sceneDepthDisabled.userData as {
-        postEffectMask?: { enabled: boolean; depthTest: boolean };
-      }
-    ).postEffectMask = { enabled: true, depthTest: false };
 
     const maskRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
@@ -284,7 +141,7 @@ export class PostEffectRegistry {
     });
     maskRT.texture.name = `PostEffectMask_${effectId}`;
 
-    // Legacy render target for compatibility (not actively used)
+    // Legacy render target kept for compatibility (not used by current mask pipeline)
     const highlightRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
       depthBuffer: true,
@@ -303,7 +160,6 @@ export class PostEffectRegistry {
     }
 
     const resources: PostEffectResources = {
-      scene,
       sceneDepthEnabled,
       sceneDepthDisabled,
       maskRT,
@@ -435,9 +291,10 @@ export class PostEffectRegistry {
     }
 
     // NOTE:
-    // マスク用の onBeforeRender / onAfterRender は Mesh / Model 側で付与される前提とする。
-    // ここではクローン生成とシーン振り分けのみを行い、クローンは元の Mesh から
-    // 付与済みのハンドラ（postEffectMaskBeforeRender/AfterRender）をそのままコピーして使う。
+    // Mask rendering is controlled by material.userData.postEffect.maskMode (uPostEffectMaskMode)
+    // and PostEffectLayerBase.renderMask(), which toggles the mask mode per pass.
+    // This method only creates clones, assigns them to the correct scenes, and keeps
+    // the material instance shared between source meshes and their clones.
 
     // Ensure world matrices are up to date before traversing children
     sourceObject.updateMatrixWorld(true);
@@ -587,7 +444,6 @@ export class PostEffectRegistry {
     }
 
     // Clear scenes
-    resources.scene.clear();
     resources.sceneDepthEnabled.clear();
     resources.sceneDepthDisabled.clear();
 

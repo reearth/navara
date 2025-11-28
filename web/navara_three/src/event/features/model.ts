@@ -17,10 +17,6 @@ import {
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
 import type { ViewContext } from "../../core";
-import {
-  postEffectMaskAfterRender,
-  postEffectMaskBeforeRender,
-} from "../../core/SelectiveEffectRegistry";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
 import {
@@ -152,18 +148,6 @@ export async function renderModel(
   if (!rawScene) {
     return;
   }
-
-  // Attach common postEffect mask handlers to all Mesh instances in the model scene.
-  rawScene.traverse((object) => {
-    if (object instanceof Mesh) {
-      if (!object.onBeforeRender) {
-        object.onBeforeRender = postEffectMaskBeforeRender as never;
-      }
-      if (!object.onAfterRender) {
-        object.onAfterRender = postEffectMaskAfterRender as never;
-      }
-    }
-  });
 
   const scene = new ModelMesh(
     rawScene,

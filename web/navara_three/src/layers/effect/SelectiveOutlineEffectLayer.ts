@@ -15,6 +15,7 @@ import type { EffectLayerConfig } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
+import { CustomRenderPass } from "../../passes";
 
 import {
   PostEffectLayerBase,
@@ -120,6 +121,7 @@ class OutlinePass extends PostProcessingPass {
       uniforms: {
         tDiffuse: { value: null },
         tMask: { value: null },
+        tSceneDepth: { value: null },
         resolution: { value: size },
         outlineColor: { value: layer.outlineColor },
         thickness: { value: layer.thickness },
@@ -135,6 +137,7 @@ class OutlinePass extends PostProcessingPass {
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform sampler2D tMask;
+        uniform sampler2D tSceneDepth;
         uniform vec2 resolution;
         uniform vec3 outlineColor;
         uniform float thickness;
@@ -172,9 +175,38 @@ class OutlinePass extends PostProcessingPass {
           // Apply outline where edge is detected
           float threshold = edgeStrength * 0.1;
           if (edge > threshold) {
+            // Use mask value to distinguish occlusion-enabled / disabled pixels.
+            // 1.0   : occlusion-enabled mask
+            // 0.5   : occlusion-disabled mask
+            // 0.0   : no mask
+            // Use alpha channel as the mask carrier so RGB can be used for color if needed.
+            vec4 maskSample = texture2D(tMask, vUv);
+            float maskValue = maskSample.a;
+            float objDepth = maskSample.r;
+            float sceneDepth = texture2D(tSceneDepth, vUv).r;
+
             // Mix original color with outline color based on edge strength
             float outlineWeight = clamp(edge * 2.0, 0.0, 1.0);
-            gl_FragColor = vec4(mix(color.rgb, outlineColor, outlineWeight), 1.0);
+
+            if (maskValue > 0.75) {
+              // Occlusion-enabled:
+              // Only draw outline where the object is in front of the scene depth.
+              // Small epsilon to account for depth precision.
+              float eps = 0.0005;
+              if (objDepth <= sceneDepth + eps) {
+                gl_FragColor = vec4(
+                  mix(color.rgb, outlineColor, outlineWeight),
+                  1.0
+                );
+              } else {
+                gl_FragColor = color;
+              }
+            } else if (maskValue > 0.25) {
+              // Occlusion-disabled: render strong outline regardless of background
+              gl_FragColor = vec4(outlineColor, 1.0);
+            } else {
+              gl_FragColor = color;
+            }
           } else {
             gl_FragColor = color;
           }
@@ -197,6 +229,13 @@ class OutlinePass extends PostProcessingPass {
     inputBuffer: WebGLRenderTarget,
     outputBuffer: WebGLRenderTarget | null,
   ) {
+    // Update scene depth texture from MRT pass (CustomRenderPass)
+    const mrtPass = this.layer["view"].renderPassOrchestrator.getPass("mrt");
+    if (mrtPass && mrtPass instanceof CustomRenderPass) {
+      this.outlineMaterial.uniforms.tSceneDepth.value =
+        mrtPass.gbufferRenderTarget.depthTexture;
+    }
+
     // 1. Render mask
     this.layer["renderMask"](renderer);
 

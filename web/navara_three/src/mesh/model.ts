@@ -24,18 +24,14 @@ import {
   Color,
   DataTexture,
   Group,
-  Camera,
   Mesh,
-  Material,
   Points,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
   RGBADepthPacking,
-  Scene,
   Texture,
-  WebGLRenderer,
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
   ShaderChunk,
@@ -53,8 +49,7 @@ import type { ViewContext } from "../core";
 import {
   applyEmissiveEffect,
   type EmissiveParams,
-  postEffectMaskAfterRender,
-  postEffectMaskBeforeRender,
+  ensurePostEffectUserData,
   updatePostEffectLinksForObject,
 } from "../core/SelectiveEffectRegistry";
 import type { BufferLoader } from "../event";
@@ -406,6 +401,9 @@ export class ModelMesh
         value: meshMaterial.ior ?? 1.33333,
       };
 
+      // Initialize post effect user data (mask mode)
+      ensurePostEffectUserData(mesh.material);
+
       this.water = !!meshMaterial.water;
       this.setMaterial(meshMaterial, mesh);
 
@@ -424,6 +422,8 @@ export class ModelMesh
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
+        const postEffectUD = ensurePostEffectUserData(mesh.material);
+
         shader.defines ??= {};
         Object.assign(shader.defines, mesh.material.userData.defines);
         if (this.water && uniforms.tSkyEnvMap.value) {
@@ -445,6 +445,7 @@ export class ModelMesh
         shader.uniforms.uIor = mesh.material.userData.ior;
         shader.uniforms.uTime = uniforms.time;
         shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
+        shader.uniforms.uPostEffectMaskMode = postEffectUD.maskMode;
 
         if (mesh.material.userData.batchDataTexture) {
           shader.uniforms.batchDataTexture =
@@ -511,6 +512,7 @@ export class ModelMesh
                   uniform bool uSpecular;
                   uniform float uIor;
                   uniform float uTime;
+                  uniform float uPostEffectMaskMode;
                   // uniform float reflectivity;
                   in float nvr_vBatchId;
 
@@ -521,6 +523,13 @@ export class ModelMesh
                   ${ShadowMapDepthParsFragment}
 
                   void main() {
+                    if (uPostEffectMaskMode > 0.0) {
+                      float maskValue = uPostEffectMaskMode;
+                      // Encode object depth into RGB and mask mode into alpha for outline passes.
+                      float depth = gl_FragCoord.z;
+                      gl_FragColor = vec4(vec3(depth), maskValue);
+                      return;
+                    }
                     ${ShowFragment}
                     ${ShadowMapDepthFragment}
                   `,
@@ -611,30 +620,6 @@ export class ModelMesh
         f(object);
       }
     });
-  }
-
-  override onBeforeRender(
-    renderer: WebGLRenderer,
-    scene: Scene,
-    camera: Camera,
-    geometry: BufferGeometry,
-    material: Material,
-    _group: Group,
-  ): void {
-    // group は現在は使っていないが、Object3D.onBeforeRender のシグネチャに合わせて保持しておく。
-    postEffectMaskBeforeRender(renderer, scene, camera, geometry, material);
-  }
-
-  override onAfterRender(
-    renderer: WebGLRenderer,
-    scene: Scene,
-    camera: Camera,
-    geometry: BufferGeometry,
-    material: Material,
-    _group: Group,
-  ): void {
-    // group は現在は使っていないが、Object3D.onAfterRender のシグネチャに合わせて保持しておく。
-    postEffectMaskAfterRender(renderer, scene, camera, geometry, material);
   }
 
   private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {

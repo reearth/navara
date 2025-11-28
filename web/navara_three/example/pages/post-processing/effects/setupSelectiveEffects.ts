@@ -4,12 +4,12 @@ import ThreeView, {
   type PostEffectBloomEffectLayer,
 } from "@navara/three";
 
-export type PostEffectEffects = {
+export type PostEffects = {
   postEffectOutline: Layer;
   postEffectBloom: LayerHandle<PostEffectBloomEffectLayer>;
 };
 
-export const setupPostEffectEffects = (view: ThreeView): PostEffectEffects => {
+export const setupPostEffects = (view: ThreeView): PostEffects => {
   const postEffectOutline = view.addLayer({
     type: "effect",
     postEffectOutline: {
