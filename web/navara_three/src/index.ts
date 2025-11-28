@@ -1358,6 +1358,17 @@ export default class ThreeView<
     );
   }
 
+  cameraFollow(enabled: boolean, target?: ApiLLE, offset?: Vector3) {
+    const targetArray = target
+      ? new Float64Array([target.lng, target.lat, target.height])
+      : undefined;
+    const offsetArray = offset
+      ? new Float64Array([offset.x, offset.y, offset.z])
+      : undefined;
+
+    this._core?.cameraFollow(enabled, targetArray, offsetArray);
+  }
+
   sampleTerrainHeight(pos: ApiLLE): number | undefined {
     const lle = new LLE(pos.lat, pos.lng, 0);
     return this._core?.sampleTerrainHeight(lle);

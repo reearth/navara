@@ -149,6 +149,10 @@ pub struct CameraController {
     pub zoom_duration: f32,
     pub translate_duration: f32,
     pub inertia: FloatType,
+    pub enable_follow: bool,
+    pub follow_target_cur: Option<Vec3>,
+    pub follow_target_pre: Option<Vec3>,
+    pub follow_offset: Option<Vec3>,
 }
 
 impl Default for CameraController {
@@ -169,6 +173,10 @@ impl Default for CameraController {
             zoom_duration: 100.,
             translate_duration: 500.,
             inertia: 0.5,
+            enable_follow: false,
+            follow_target_cur: None,
+            follow_target_pre: None,
+            follow_offset: None,
         }
     }
 }
