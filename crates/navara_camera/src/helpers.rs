@@ -33,7 +33,6 @@ pub fn ray_ellipsoid_intersect(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Op
         }
         i if i.start != 0. => Some(i.start),
         i if i.end != 0. => Some(i.end),
-        // TODO: Handle the case where intersection point couldn't find.
         _ => None,
     }
 }

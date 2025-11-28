@@ -247,6 +247,7 @@ pub struct Orbit {
     // Fixed rotation axis and pivot for consistent rotation
     pub fixed_rotation_axis: Option<Vec3>,
     pub fixed_rotation_pivot: Option<Vec3>,
+    pub is_tilting: bool,
 }
 
 impl Default for Orbit {
@@ -268,6 +269,7 @@ impl Default for Orbit {
             pivot: Vec3::ZERO,
             fixed_rotation_axis: None,
             fixed_rotation_pivot: None,
+            is_tilting: false,
         }
     }
 }
@@ -284,6 +286,7 @@ impl Orbit {
         self.horizon_quat = Quat::IDENTITY;
         self.vertical_quat = Quat::IDENTITY;
         self.world_quat = world;
+        self.is_tilting = tilt;
 
         if tilt {
             self.tilt_quat = world;
@@ -329,22 +332,19 @@ impl Orbit {
         let tilt_up = self.tilt_quat * Vec3::Z;
         // Get the vertical rotation axis in world space
         let world_vertical_axis = self.world_quat * self.vertical_rotation_axis;
-        let tilt_horizontal_rotation_axis = tilt_up.cross(world_vertical_axis).normalize_or_zero();
+
+        // Make the rotation direction opposite, since `tilt_up` is opposite when you move the camera a lot.
+        let tilt_horizontal_rotation_axis = if tilt_up.dot(-position.normalize()) > 0.0 {
+            world_vertical_axis.cross(tilt_up).normalize_or_zero()
+        } else {
+            tilt_up.cross(world_vertical_axis).normalize_or_zero()
+        };
 
         self.horizontal_rotation_axis = inverse * tilt_horizontal_rotation_axis;
         self.local_up = self
             .vertical_rotation_axis
             .cross(self.local_forward)
             .normalize();
-
-        let orthogonal_forward = self
-            .horizontal_rotation_axis
-            .cross(self.vertical_rotation_axis)
-            .normalize();
-        let forwards_dot = orthogonal_forward.dot(self.local_forward);
-        if forwards_dot < 0. {
-            self.horizontal_rotation_axis *= -1.;
-        }
     }
 }
 
