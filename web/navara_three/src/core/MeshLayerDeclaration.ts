@@ -18,12 +18,12 @@ export type MeshLayerConfig = {
   scale?: XYZ;
   rotation?: XYZ;
   effectIds?: string[];
-  postEffectDepthTest?: boolean;
+  postEffectOcclusion?: boolean;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation" | "effectIds" | "postEffectDepthTest"
+  "position" | "scale" | "rotation" | "effectIds" | "postEffectOcclusion"
 > &
   LayerDeclarationConfigUpdate;
 
@@ -56,7 +56,7 @@ export abstract class MeshLayerDeclaration<
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
   private effectIds?: string[];
-  private postEffectDepthTest?: boolean;
+  private postEffectOcclusion?: boolean;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
@@ -64,7 +64,7 @@ export abstract class MeshLayerDeclaration<
     this.scale = config.scale;
     this.rotation = config.rotation;
     this.effectIds = config.effectIds;
-    this.postEffectDepthTest = config.postEffectDepthTest;
+    this.postEffectOcclusion = config.postEffectOcclusion;
   }
 
   protected getPassKey(): PassKey {
@@ -108,12 +108,12 @@ export abstract class MeshLayerDeclaration<
 
     this.onPassKeyChange();
 
-    // Register layer effects with postEffectDepthTest setting
+    // Register layer effects with postEffectOcclusion setting
     if (this.effectIds && this.effectIds.length > 0) {
       this.view.registerLayerEffects(
         this.id,
         this.effectIds,
-        this.postEffectDepthTest,
+        this.postEffectOcclusion,
       );
     }
 
@@ -261,14 +261,14 @@ export abstract class MeshLayerDeclaration<
       this.applyEffects();
     }
 
-    // Handle postEffectDepthTest update - always delegate to ViewContext for consistency
-    if (updates.postEffectDepthTest !== undefined) {
-      this.postEffectDepthTest = updates.postEffectDepthTest;
+    // Handle postEffectOcclusion update - always delegate to ViewContext for consistency
+    if (updates.postEffectOcclusion !== undefined) {
+      this.postEffectOcclusion = updates.postEffectOcclusion;
       // Use ViewContext API to ensure all layers (including MeshLayerDeclaration) follow same pipeline:
       // 1. SelectiveEffectRegistry settings are updated
       // 2. Existing clones are moved between sceneDepthEnabled/sceneDepthDisabled
       // This ensures Cube/Sphere behave consistently with Layer types
-      this.view.setLayerPostEffectDepthTest(this.id, this.postEffectDepthTest);
+      this.view.setLayerPostEffectOcclusion(this.id, this.postEffectOcclusion);
     }
 
     if ("emissive_intensity" in updates) {
@@ -389,16 +389,16 @@ export abstract class MeshLayerDeclaration<
    * Set selective depth test for this layer
    * @param enabled - Whether to enable depth test for selective effects
    */
-  setPostEffectDepthTest(enabled: boolean): void {
-    this.view.setLayerPostEffectDepthTest(this.id, enabled);
+  setPostEffectOcclusion(enabled: boolean): void {
+    this.view.setLayerPostEffectOcclusion(this.id, enabled);
   }
 
   /**
    * Get the current selective depth test setting for this layer
    * @returns The current selective depth test setting
    */
-  getPostEffectDepthTest(): boolean {
-    return this.view.getLayerPostEffectDepthTest(this.id);
+  getPostEffectOcclusion(): boolean {
+    return this.view.getLayerPostEffectOcclusion(this.id);
   }
 
   /**

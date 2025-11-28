@@ -74,7 +74,7 @@ pub struct PointMaterial {
     pub transparent: bool,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -93,7 +93,7 @@ impl Default for PointMaterial {
             transparent: true,
             // post effect
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }
@@ -134,7 +134,7 @@ pub struct BillboardMaterial {
     pub alpha_test: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -155,7 +155,7 @@ impl Default for BillboardMaterial {
             alpha_test: 0.1,
             // post effect
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }
@@ -262,7 +262,7 @@ pub struct PolylineMaterial {
     pub internal: Option<PolylineInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -281,7 +281,7 @@ impl Default for PolylineMaterial {
             internal: None,
             // post effect
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }
@@ -335,7 +335,7 @@ pub struct PolygonMaterial {
     pub ior: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -376,7 +376,7 @@ impl Default for PolygonMaterial {
 
             // post effect
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }
@@ -428,7 +428,7 @@ pub struct ModelMaterial {
     pub internal: Option<ModelInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -466,7 +466,7 @@ impl Default for ModelMaterial {
             internal: None,
             // post effect
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }

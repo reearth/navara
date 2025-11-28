@@ -18,7 +18,7 @@ pub struct PointMaterial {
     // post effect
     #[wasm_bindgen(getter_with_clone)]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -37,9 +37,9 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             transparent: val.transparent.unwrap_or(default.transparent),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_depth_test: val
-                .post_effect_depth_test
-                .or(default.post_effect_depth_test),
+            post_effect_occlusion: val
+                .post_effect_occlusion
+                .or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -58,7 +58,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             depth_test: Some(value.depth_test),
             transparent: Some(value.transparent),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -90,7 +90,7 @@ pub struct BillboardMaterial {
     // post effect
     #[wasm_bindgen(getter_with_clone)]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -111,9 +111,9 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             transparent: val.transparent.unwrap_or(default.transparent),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_depth_test: val
-                .post_effect_depth_test
-                .or(default.post_effect_depth_test),
+            post_effect_occlusion: val
+                .post_effect_occlusion
+                .or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -134,7 +134,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -246,7 +246,7 @@ pub struct PolylineMaterial {
     // post effect
     #[wasm_bindgen(getter_with_clone)]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -277,7 +277,7 @@ impl PolylineMaterial {
             width,
             __internal__,
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }
@@ -298,9 +298,9 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_depth_test: val
-                .post_effect_depth_test
-                .or(default.post_effect_depth_test),
+            post_effect_occlusion: val
+                .post_effect_occlusion
+                .or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -319,7 +319,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -339,7 +339,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             height: Some(value.height),
             __internal__: value.internal.map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -428,7 +428,7 @@ pub struct PolygonMaterial {
     // post effect
     #[wasm_bindgen(getter_with_clone)]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -484,7 +484,7 @@ impl PolygonMaterial {
             specular: None,
             ior: None,
             effect_ids: None,
-            post_effect_depth_test: None,
+            post_effect_occlusion: None,
             emissive_intensity: None,
             emissive_color: None,
         }
@@ -528,9 +528,9 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             specular: val.specular.unwrap_or(default.specular),
             ior: val.ior.unwrap_or(default.ior),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_depth_test: val
-                .post_effect_depth_test
-                .or(default.post_effect_depth_test),
+            post_effect_occlusion: val
+                .post_effect_occlusion
+                .or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -570,7 +570,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             specular: Some(value.specular),
             ior: Some(value.ior),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -610,7 +610,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             specular: Some(value.specular),
             ior: Some(value.ior),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -691,7 +691,7 @@ pub struct ModelMaterial {
     // post effect
     #[wasm_bindgen(getter_with_clone)]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_depth_test: Option<bool>,
+    pub post_effect_occlusion: Option<bool>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -731,9 +731,9 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             internal: val.__internal__.clone().map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_depth_test: val
-                .post_effect_depth_test
-                .or(default.post_effect_depth_test),
+            post_effect_occlusion: val
+                .post_effect_occlusion
+                .or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -772,7 +772,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             show_bounding_box: Some(value.show_bounding_box),
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
-            post_effect_depth_test: value.post_effect_depth_test,
+            post_effect_occlusion: value.post_effect_occlusion,
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }

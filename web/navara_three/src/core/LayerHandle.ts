@@ -52,16 +52,16 @@ export class LayerHandle<
    * Set selective depth test for this layer
    * @param enabled - Whether to enable depth test for selective effects
    */
-  setPostEffectDepthTest(enabled: boolean): void {
+  setPostEffectOcclusion(enabled: boolean): void {
     // Check if layer is a MeshLayerDeclaration (has view context)
     if ("view" in this.layer && "id" in this.layer) {
       const layer = this.layer as unknown as {
         view: {
-          setLayerPostEffectDepthTest: (id: string, enabled: boolean) => void;
+          setLayerPostEffectOcclusion: (id: string, enabled: boolean) => void;
         };
         id: string;
       };
-      layer.view.setLayerPostEffectDepthTest(layer.id, enabled);
+      layer.view.setLayerPostEffectOcclusion(layer.id, enabled);
     }
   }
 

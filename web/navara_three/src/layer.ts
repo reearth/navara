@@ -10,7 +10,7 @@ export type LayerEffectState = {
   effectIds?: string[];
   emissiveIntensity?: number;
   emissiveColor?: number;
-  postEffectDepthTest?: boolean;
+  postEffectOcclusion?: boolean;
 };
 
 export type LayerEvent = {
@@ -286,12 +286,12 @@ export class Layer extends EventHandler<LayerEvent> {
    * Set the selective depth test for this layer
    * @param enabled - Whether selective depth test should be enabled
    */
-  setPostEffectDepthTest(enabled: boolean): void {
+  setPostEffectOcclusion(enabled: boolean): void {
     if (!this.supportsLayerEffects()) {
       return;
     }
     this.updateEffectConfig({
-      postEffectDepthTest: enabled,
+      postEffectOcclusion: enabled,
     });
   }
 
@@ -299,8 +299,8 @@ export class Layer extends EventHandler<LayerEvent> {
    * Get the current selective depth test setting for this layer
    * @returns true if selective depth test is enabled
    */
-  getPostEffectDepthTest(): boolean {
-    return this.viewContext.getLayerPostEffectDepthTest(this.id);
+  getPostEffectOcclusion(): boolean {
+    return this.viewContext.getLayerPostEffectOcclusion(this.id);
   }
 
   getLayerType(): string | undefined {
@@ -344,14 +344,14 @@ export class Layer extends EventHandler<LayerEvent> {
       return undefined;
     }
 
-    const { effectIds, emissiveColor, emissiveIntensity, postEffectDepthTest } =
+    const { effectIds, emissiveColor, emissiveIntensity, postEffectOcclusion } =
       this.effectState;
 
     if (
       effectIds === undefined &&
       emissiveColor === undefined &&
       emissiveIntensity === undefined &&
-      postEffectDepthTest === undefined
+      postEffectOcclusion === undefined
     ) {
       return undefined;
     }
@@ -360,7 +360,7 @@ export class Layer extends EventHandler<LayerEvent> {
       effectIds: effectIds !== undefined ? [...effectIds] : undefined,
       emissive_color: emissiveColor,
       emissive_intensity: emissiveIntensity,
-      postEffectDepthTest,
+      postEffectOcclusion,
     };
   }
 
@@ -390,10 +390,10 @@ export class Layer extends EventHandler<LayerEvent> {
       delete next.emissiveColor;
     }
 
-    if (update.postEffectDepthTest !== undefined) {
-      next.postEffectDepthTest = update.postEffectDepthTest;
+    if (update.postEffectOcclusion !== undefined) {
+      next.postEffectOcclusion = update.postEffectOcclusion;
     } else if (overwriteMissing) {
-      delete next.postEffectDepthTest;
+      delete next.postEffectOcclusion;
     }
 
     return Object.keys(next).length > 0 ? next : undefined;
@@ -412,8 +412,8 @@ export class Layer extends EventHandler<LayerEvent> {
       current?.emissiveIntensity !== previousState?.emissiveIntensity;
     const emissiveColorChanged =
       current?.emissiveColor !== previousState?.emissiveColor;
-    const postEffectDepthTestChanged =
-      current?.postEffectDepthTest !== previousState?.postEffectDepthTest;
+    const postEffectOcclusionChanged =
+      current?.postEffectOcclusion !== previousState?.postEffectOcclusion;
 
     if (effectIdsChanged || emissiveIntensityChanged) {
       this.viewContext.updateLayerEffects(
@@ -434,10 +434,10 @@ export class Layer extends EventHandler<LayerEvent> {
       this.needUpdate = true;
     }
 
-    if (postEffectDepthTestChanged) {
-      this.viewContext.setLayerPostEffectDepthTest(
+    if (postEffectOcclusionChanged) {
+      this.viewContext.setLayerPostEffectOcclusion(
         this.id,
-        current?.postEffectDepthTest ?? true,
+        current?.postEffectOcclusion ?? true,
       );
       this.needUpdate = true;
     }
@@ -479,7 +479,7 @@ export class Layer extends EventHandler<LayerEvent> {
       effectIds === undefined &&
       partial.emissive_color === undefined &&
       partial.emissive_intensity === undefined &&
-      partial.postEffectDepthTest === undefined
+      partial.postEffectOcclusion === undefined
     ) {
       return undefined;
     }
@@ -488,7 +488,7 @@ export class Layer extends EventHandler<LayerEvent> {
       effectIds: effectIds !== undefined ? [...effectIds] : undefined,
       emissiveColor: partial.emissive_color,
       emissiveIntensity: partial.emissive_intensity,
-      postEffectDepthTest: partial.postEffectDepthTest,
+      postEffectOcclusion: partial.postEffectOcclusion,
     };
   }
 
@@ -503,7 +503,7 @@ type LayerEffectUpdatePayload = {
   effectIds?: string[];
   emissive_color?: number;
   emissive_intensity?: number;
-  postEffectDepthTest?: boolean;
+  postEffectOcclusion?: boolean;
 };
 
 type StructuredCloneFn = <T>(value: T) => T;

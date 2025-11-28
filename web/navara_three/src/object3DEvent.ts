@@ -17,26 +17,26 @@ export type EmissiveEventData = {
 
 export type EmissiveEvent = Event & EmissiveEventData;
 
-export type PostEffectDepthTestChangedEventData = {
-  postEffectDepthTest: boolean;
+export type PostEffectOcclusionChangedEventData = {
+  postEffectOcclusion: boolean;
   layerId: string;
 };
 
-export type PostEffectDepthTestChangedEvent = Event &
-  PostEffectDepthTestChangedEventData;
+export type PostEffectOcclusionChangedEvent = Event &
+  PostEffectOcclusionChangedEventData;
 
 export type CustomObject3DEventMap = Object3DEventMap & {
   removedFromWorld: undefined;
   needsUpdate: undefined;
   layerEffectsChanged: LayerEffectsChangedEvent;
   emissive: EmissiveEvent;
-  postEffectDepthTestChanged: PostEffectDepthTestChangedEvent;
+  postEffectOcclusionChanged: PostEffectOcclusionChangedEvent;
 };
 
 export type CustomObject3DEvent =
   | LayerEffectsChangedEvent
   | EmissiveEvent
-  | PostEffectDepthTestChangedEvent;
+  | PostEffectOcclusionChangedEvent;
 
 export function isEmissiveEvent(event: unknown): event is EmissiveEvent {
   return (
@@ -62,15 +62,15 @@ export function isLayerEffectsChangedEvent(
   );
 }
 
-export function isPostEffectDepthTestChangedEvent(
+export function isPostEffectOcclusionChangedEvent(
   event: unknown,
-): event is PostEffectDepthTestChangedEvent {
+): event is PostEffectOcclusionChangedEvent {
   return (
     typeof event === "object" &&
     event !== null &&
     "type" in event &&
-    (event as { type?: string }).type === "postEffectDepthTestChanged" &&
-    typeof (event as Partial<PostEffectDepthTestChangedEventData>)
-      .postEffectDepthTest === "boolean"
+    (event as { type?: string }).type === "postEffectOcclusionChanged" &&
+    typeof (event as Partial<PostEffectOcclusionChangedEventData>)
+      .postEffectOcclusion === "boolean"
   );
 }

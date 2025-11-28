@@ -4,7 +4,7 @@ type LayerEffectConfig = {
   effectIds: string[];
   emissiveIntensity: number;
   emissiveColor?: number;
-  postEffectDepthTest: boolean;
+  postEffectOcclusion: boolean;
 };
 
 type PostEffectManagerOptions = {
@@ -19,7 +19,7 @@ export class PostEffectManager {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectDepthTest?: boolean,
+    postEffectOcclusion?: boolean,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
@@ -29,14 +29,14 @@ export class PostEffectManager {
     if (emissiveIntensity !== undefined) {
       config.emissiveIntensity = emissiveIntensity;
     }
-    if (postEffectDepthTest !== undefined) {
-      config.postEffectDepthTest = postEffectDepthTest;
+    if (postEffectOcclusion !== undefined) {
+      config.postEffectOcclusion = postEffectOcclusion;
     }
 
-    if (postEffectDepthTest !== undefined && this.options.selectiveRegistry) {
-      this.options.selectiveRegistry.registerLayerPostEffectDepthTest(
+    if (postEffectOcclusion !== undefined && this.options.selectiveRegistry) {
+      this.options.selectiveRegistry.registerLayerPostEffectOcclusion(
         layerId,
-        postEffectDepthTest,
+        postEffectOcclusion,
       );
     }
 
@@ -66,8 +66,8 @@ export class PostEffectManager {
     return this.layerConfigs.get(layerId)?.emissiveColor;
   }
 
-  getLayerPostEffectDepthTest(layerId: string): boolean {
-    return this.layerConfigs.get(layerId)?.postEffectDepthTest ?? true;
+  getLayerPostEffectOcclusion(layerId: string): boolean {
+    return this.layerConfigs.get(layerId)?.postEffectOcclusion ?? true;
   }
 
   setLayerEmissiveColor(
@@ -87,22 +87,22 @@ export class PostEffectManager {
     // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
-  setLayerPostEffectDepthTest(
+  setLayerPostEffectOcclusion(
     layerId: string,
-    postEffectDepthTest: boolean,
+    postEffectOcclusion: boolean,
   ): void {
     const config = this.ensureConfig(layerId);
 
-    if (config.postEffectDepthTest === postEffectDepthTest) {
+    if (config.postEffectOcclusion === postEffectOcclusion) {
       return;
     }
 
-    config.postEffectDepthTest = postEffectDepthTest;
+    config.postEffectOcclusion = postEffectOcclusion;
     this.layerConfigs.set(layerId, config);
 
-    this.options.selectiveRegistry?.updateLayerPostEffectDepthTest(
+    this.options.selectiveRegistry?.updateLayerPostEffectOcclusion(
       layerId,
-      postEffectDepthTest,
+      postEffectOcclusion,
     );
 
     // Cache update only - actual effect application happens via layer.update()
@@ -132,7 +132,7 @@ export class PostEffectManager {
       this.layerConfigs.set(layerId, {
         effectIds: [],
         emissiveIntensity: 0.3,
-        postEffectDepthTest: true,
+        postEffectOcclusion: true,
       });
     }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

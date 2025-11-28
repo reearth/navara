@@ -1048,10 +1048,10 @@ export default class ThreeView<
         this.viewContext.setLayerEmissiveColor(layerId, l.emissive_color);
       }
 
-      if (l.postEffectDepthTest !== undefined) {
-        this.viewContext.setLayerPostEffectDepthTest(
+      if (l.postEffectOcclusion !== undefined) {
+        this.viewContext.setLayerPostEffectOcclusion(
           layerId,
-          l.postEffectDepthTest,
+          l.postEffectOcclusion,
         );
       }
     }
@@ -1077,7 +1077,7 @@ export default class ThreeView<
         this.viewContext.registerLayerEffects(
           layerId,
           effectIds,
-          l.postEffectDepthTest,
+          l.postEffectOcclusion,
           l.emissive_intensity,
           keepClones ? { keepClones: true } : undefined,
         );
@@ -1109,7 +1109,7 @@ export default class ThreeView<
     effectIds?: string[];
     emissive_intensity?: number;
     emissive_color?: number;
-    postEffectDepthTest?: boolean;
+    postEffectOcclusion?: boolean;
   } {
     return layer.type === "geojson" || layer.type === "cesium3dtiles";
   }

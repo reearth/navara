@@ -125,10 +125,10 @@ export function setupMeshEventHandlers(
     }
   });
 
-  // Note: postEffectDepthTest should NOT modify original mesh materials
+  // Note: postEffectOcclusion should NOT modify original mesh materials
   // Original meshes should always have depthTest=true for main scene rendering
   // Only clones in SelectiveEffectRegistry should have their depthTest modified
-  // This is handled directly in SelectiveEffectRegistry.link() and updateLayerpostEffectDepthTest()
+  // This is handled directly in SelectiveEffectRegistry.link() and updateLayerpostEffectOcclusion()
 }
 
 /**

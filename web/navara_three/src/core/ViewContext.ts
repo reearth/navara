@@ -64,14 +64,14 @@ export class ViewContext {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectDepthTest?: boolean,
+    postEffectOcclusion?: boolean,
     emissiveIntensity?: number,
     options?: { keepClones?: boolean },
   ): void {
     this.postEffects.registerLayerEffects(
       layerId,
       effectIds,
-      postEffectDepthTest,
+      postEffectOcclusion,
       emissiveIntensity,
       options,
     );
@@ -96,15 +96,15 @@ export class ViewContext {
     this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
 
-  getLayerPostEffectDepthTest(layerId: string): boolean {
-    return this.postEffects.getLayerPostEffectDepthTest(layerId);
+  getLayerPostEffectOcclusion(layerId: string): boolean {
+    return this.postEffects.getLayerPostEffectOcclusion(layerId);
   }
 
-  setLayerPostEffectDepthTest(
+  setLayerPostEffectOcclusion(
     layerId: string,
-    postEffectDepthTest: boolean,
+    postEffectOcclusion: boolean,
   ): void {
-    this.postEffects.setLayerPostEffectDepthTest(layerId, postEffectDepthTest);
+    this.postEffects.setLayerPostEffectOcclusion(layerId, postEffectOcclusion);
   }
 
   unregisterLayerEffects(layerId: string): void {

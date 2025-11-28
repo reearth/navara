@@ -25,12 +25,12 @@ type LayerEffectState = {
   effectIds: string[];
   emissiveColor?: number;
   emissiveIntensity: number;
-  postEffectDepthTest: boolean;
+  postEffectOcclusion: boolean;
 };
 
 const buildEffectPayload = (state: LayerEffectState): LayerEffectPayload => ({
   effectIds: [...state.effectIds],
-  postEffectDepthTest: state.postEffectDepthTest,
+  postEffectOcclusion: state.postEffectOcclusion,
   emissive_color: state.emissiveColor,
   emissive_intensity: state.emissiveIntensity,
 });
@@ -136,7 +136,7 @@ export const createPostProcessingPane = ({
       emissiveColor: 0xff0000,
       emissiveIntensity: 1.1,
       visible: true,
-      postEffectDepthTest: true,
+      postEffectOcclusion: true,
       bloomEnabled: false,
       outlineEnabled: false,
     },
@@ -151,7 +151,7 @@ export const createPostProcessingPane = ({
       emissiveColor: 0x0000ff,
       emissiveIntensity: 1.0,
       visible: true,
-      postEffectDepthTest: true,
+      postEffectOcclusion: true,
       bloomEnabled: true,
       outlineEnabled: false,
     },
@@ -173,7 +173,7 @@ export const createPostProcessingPane = ({
       baseColor: 0xffffff,
       emissiveColor: 0xffffff,
       visible: true,
-      postEffectDepthTest: true,
+      postEffectOcclusion: true,
       emissiveIntensity: 0.3,
       bloomEnabled: true,
       outlineEnabled: true,
@@ -189,7 +189,7 @@ export const createPostProcessingPane = ({
       baseColor: 0xffffff,
       emissiveColor: 0xffffff,
       visible: true,
-      postEffectDepthTest: true,
+      postEffectOcclusion: true,
       emissiveIntensity: 0.3,
       bloomEnabled: false,
       outlineEnabled: false,
@@ -291,7 +291,7 @@ type MeshFolderOptions = {
     emissiveColor: number;
     emissiveIntensity: number;
     visible: boolean;
-    postEffectDepthTest: boolean;
+    postEffectOcclusion: boolean;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
   };
@@ -304,7 +304,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
     effectIds: [],
     emissiveColor: params.emissiveColor,
     emissiveIntensity: params.emissiveIntensity,
-    postEffectDepthTest: params.postEffectDepthTest,
+    postEffectOcclusion: params.postEffectOcclusion,
   };
 
   if (params.bloomEnabled) {
@@ -331,11 +331,11 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   });
 
   //older
-  // .addBinding(params, "postEffectDepthTest", {
+  // .addBinding(params, "postEffectOcclusion", {
   //   label: "Selective Depth Test",
   // })
   // .on("change", (ev) => {
-  //   effectState.postEffectDepthTest = ev.value;
+  //   effectState.postEffectOcclusion = ev.value;
   //   applyMeshState();
   // });
 
@@ -391,7 +391,7 @@ type TilesFolderOptions = {
     baseColor: number;
     emissiveColor: number;
     visible: boolean;
-    postEffectDepthTest: boolean;
+    postEffectOcclusion: boolean;
     emissiveIntensity: number;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
@@ -413,7 +413,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
     effectIds: [],
     emissiveColor: params.emissiveColor,
     emissiveIntensity: params.emissiveIntensity,
-    postEffectDepthTest: params.postEffectDepthTest,
+    postEffectOcclusion: params.postEffectOcclusion,
   };
 
   if (params.bloomEnabled) effectState.effectIds.push(bloomId);
@@ -466,11 +466,11 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
   });
 
   //folder
-  //  .addBinding(params, "postEffectDepthTest", {
+  //  .addBinding(params, "postEffectOcclusion", {
   //    label: "Selective Depth Test",
   //  })
   //  .on("change", (ev) => {
-  //    effectState.postEffectDepthTest = ev.value;
+  //    effectState.postEffectOcclusion = ev.value;
   //    updateTilesLayer();
   //  });
 
@@ -499,7 +499,7 @@ const setupDrumFolder = (
 ) => {
   const params = {
     visible: true,
-    postEffectDepthTest: false,
+    postEffectOcclusion: false,
     baseColor: 0xffffff,
     emissiveColor: 0xffffff,
     emissiveIntensity: 0.3,
@@ -510,7 +510,7 @@ const setupDrumFolder = (
     effectIds: [],
     emissiveColor: params.emissiveColor,
     emissiveIntensity: params.emissiveIntensity,
-    postEffectDepthTest: params.postEffectDepthTest,
+    postEffectOcclusion: params.postEffectOcclusion,
   };
 
   const folder = pane.addFolder({ title: "Drum Model" });
@@ -522,7 +522,7 @@ const setupDrumFolder = (
     });
   };
   const applyDrumEffects = () => {
-    effectState.postEffectDepthTest = params.postEffectDepthTest;
+    effectState.postEffectOcclusion = params.postEffectOcclusion;
     drumLayer.updateEffectState(buildEffectPayload(effectState));
   };
 
@@ -531,7 +531,7 @@ const setupDrumFolder = (
   });
 
   //folder
-  //  .addBinding(params, "postEffectDepthTest", {
+  //  .addBinding(params, "postEffectOcclusion", {
   //    label: "Selective Depth Test",
   //  })
   //  .on("change", () => {
@@ -574,7 +574,7 @@ const setupSoldierFolder = (
 ) => {
   const params = {
     visible: true,
-    postEffectDepthTest: false,
+    postEffectOcclusion: false,
     animationSpeed: 1.0,
     baseColor: 0xffffff,
     emissiveColor: 0xffffff,
@@ -586,7 +586,7 @@ const setupSoldierFolder = (
     effectIds: [],
     emissiveColor: params.emissiveColor,
     emissiveIntensity: params.emissiveIntensity,
-    postEffectDepthTest: params.postEffectDepthTest,
+    postEffectOcclusion: params.postEffectOcclusion,
   };
 
   const folder = pane.addFolder({ title: "Soldier Model" });
@@ -599,7 +599,7 @@ const setupSoldierFolder = (
     });
   };
   const applySoldierEffects = () => {
-    effectState.postEffectDepthTest = params.postEffectDepthTest;
+    effectState.postEffectOcclusion = params.postEffectOcclusion;
     soldierLayer.updateEffectState(buildEffectPayload(effectState));
   };
 
@@ -608,7 +608,7 @@ const setupSoldierFolder = (
   });
 
   //folder
-  //  .addBinding(params, "postEffectDepthTest", {
+  //  .addBinding(params, "postEffectOcclusion", {
   //    label: "Selective Depth Test",
   //  })
   //  .on("change", () => {

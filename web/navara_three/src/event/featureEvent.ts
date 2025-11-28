@@ -19,7 +19,7 @@ export type FeatureEffectPayload = {
   effectIds?: string[];
   emissiveIntensity?: number;
   emissiveColor?: number;
-  postEffectDepthTest?: boolean;
+  postEffectOcclusion?: boolean;
 };
 
 const resolveEffectPayload = (
@@ -32,7 +32,7 @@ const resolveEffectPayload = (
   }
 
   const effectIds = viewContext.getLayerEffects(layerId);
-  const postEffectDepthTest = viewContext.getLayerPostEffectDepthTest(layerId);
+  const postEffectOcclusion = viewContext.getLayerPostEffectOcclusion(layerId);
   const emissiveIntensity = viewContext.getLayerEmissiveIntensity(layerId);
   const emissiveColor = viewContext.getLayerEmissiveColor(layerId);
 
@@ -40,7 +40,7 @@ const resolveEffectPayload = (
     (!effectIds || effectIds.length === 0) &&
     emissiveColor === undefined &&
     emissiveIntensity === undefined &&
-    postEffectDepthTest === undefined
+    postEffectOcclusion === undefined
   ) {
     return undefined;
   }
@@ -49,7 +49,7 @@ const resolveEffectPayload = (
     effectIds: effectIds ?? undefined,
     emissiveIntensity,
     emissiveColor: emissiveColor ?? undefined,
-    postEffectDepthTest,
+    postEffectOcclusion,
   };
 };
 
@@ -172,11 +172,11 @@ export const applyEffectPayloadToObject = (
   }
 
   // Register selective depth test if specified
-  if (effectPayload.postEffectDepthTest !== undefined) {
+  if (effectPayload.postEffectOcclusion !== undefined) {
     if (nextEffects && nextEffects.length > 0) {
-      viewContext.selectiveRegistry?.registerLayerPostEffectDepthTest(
+      viewContext.selectiveRegistry?.registerLayerPostEffectOcclusion(
         layerId,
-        effectPayload.postEffectDepthTest,
+        effectPayload.postEffectOcclusion,
       );
     }
   }
