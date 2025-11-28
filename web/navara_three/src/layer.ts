@@ -283,8 +283,8 @@ export class Layer extends EventHandler<LayerEvent> {
   }
 
   /**
-   * Set the selective depth test for this layer
-   * @param enabled - Whether selective depth test should be enabled
+   * Set the Post Effect Occlusion for this layer
+   * @param enabled - Whether Post Effect Occlusion should be enabled
    */
   setPostEffectOcclusion(enabled: boolean): void {
     if (!this.supportsLayerEffects()) {
@@ -296,8 +296,8 @@ export class Layer extends EventHandler<LayerEvent> {
   }
 
   /**
-   * Get the current selective depth test setting for this layer
-   * @returns true if selective depth test is enabled
+   * Get the current Post Effect Occlusion setting for this layer
+   * @returns true if Post Effect Occlusion is enabled
    */
   getPostEffectOcclusion(): boolean {
     return this.viewContext.getLayerPostEffectOcclusion(this.id);

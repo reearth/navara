@@ -6,16 +6,18 @@ import {
   Mesh,
   WebGLRenderer,
   DoubleSide,
+  MeshStandardMaterial,
+  MeshPhysicalMaterial,
 } from "three";
 
 import { BufferView } from "../bufferView";
 
-export type SelectiveEffectOptions = {
+export type PostEffectOptions = {
   resolutionScale?: number;
   debugMask?: boolean;
 };
 
-export type SelectiveEffectResources = {
+export type PostEffectResources = {
   scene: Scene; // Legacy scene for compatibility
   sceneDepthEnabled: Scene; // Scene for objects with postEffectOcclusion enabled
   sceneDepthDisabled: Scene; // Scene for objects with postEffectOcclusion disabled
@@ -25,19 +27,211 @@ export type SelectiveEffectResources = {
   objectLayerMap: Map<string, string>; // sourceId -> layerId cache
   sourceMap: Map<string, Object3D>; // sourceId -> source object cache
   cloneMap: Map<string, Object3D>; // sourceId -> clone cache
-  options: SelectiveEffectOptions;
+  options: PostEffectOptions;
   maskDebug?: BufferView;
 };
 
+// Mask rendering hook: temporarily overrides material state based on scene.userData.postEffectMask
+export const postEffectMaskBeforeRender = (
+  _renderer: WebGLRenderer,
+  scene: Scene,
+  _camera: Object3D,
+  _geometry: unknown,
+  material: unknown,
+) => {
+  const maskInfo = (
+    scene.userData as {
+      postEffectMask?: { enabled: boolean; depthTest: boolean };
+    }
+  ).postEffectMask;
+  if (!maskInfo?.enabled) return;
+
+  const meshMaterial = material as {
+    color?: { set: (color: number) => void };
+    emissive?: { set: (color: number) => void };
+    depthTest?: boolean;
+    depthWrite?: boolean;
+    side?: number;
+    transparent?: boolean;
+    opacity?: number;
+    userData?: Record<string, unknown>;
+  };
+
+  meshMaterial.userData ??= {};
+  const store = (
+    meshMaterial.userData as {
+      __postEffectPrevState?: {
+        color?: unknown;
+        emissive?: unknown;
+        depthTest?: boolean;
+        depthWrite?: boolean;
+        side?: number;
+        transparent?: boolean;
+        opacity?: number;
+        active?: boolean;
+      };
+    }
+  ).__postEffectPrevState ?? {
+    active: false,
+  };
+
+  if (!store.active) {
+    if ("color" in meshMaterial && meshMaterial.color) {
+      store.color = meshMaterial.color;
+    }
+    if ("emissive" in meshMaterial && meshMaterial.emissive) {
+      store.emissive = meshMaterial.emissive;
+    }
+    store.depthTest = meshMaterial.depthTest;
+    store.depthWrite = meshMaterial.depthWrite;
+    store.side = meshMaterial.side;
+    store.transparent = meshMaterial.transparent;
+    store.opacity = meshMaterial.opacity;
+    store.active = true;
+    (
+      meshMaterial.userData as { __postEffectPrevState?: typeof store }
+    ).__postEffectPrevState = store;
+  }
+
+  if (meshMaterial.color) {
+    meshMaterial.color.set(0xffffff);
+  }
+  if (meshMaterial.emissive) {
+    meshMaterial.emissive.set(0x000000);
+  }
+  meshMaterial.depthTest = maskInfo.depthTest;
+  meshMaterial.depthWrite = true;
+  meshMaterial.side = DoubleSide;
+  meshMaterial.transparent = false;
+  meshMaterial.opacity = 1.0;
+};
+
+// Mask rendering hook: restores material state from userData.__postEffectPrevState
+export const postEffectMaskAfterRender = (
+  _renderer: WebGLRenderer,
+  scene: Scene,
+  _camera: Object3D,
+  _geometry: unknown,
+  material: unknown,
+) => {
+  const maskInfo = (
+    scene.userData as {
+      postEffectMask?: { enabled: boolean; depthTest: boolean };
+    }
+  ).postEffectMask;
+  if (!maskInfo?.enabled) return;
+
+  const meshMaterial = material as {
+    color?: { copy: (color: unknown) => void };
+    emissive?: { copy: (color: unknown) => void };
+    depthTest?: boolean;
+    depthWrite?: boolean;
+    side?: number;
+    transparent?: boolean;
+    opacity?: number;
+    userData?: {
+      __postEffectPrevState?: {
+        color?: unknown;
+        emissive?: unknown;
+        depthTest?: boolean;
+        depthWrite?: boolean;
+        side?: number;
+        transparent?: boolean;
+        opacity?: number;
+        active?: boolean;
+      };
+    };
+  };
+
+  const store = meshMaterial.userData?.__postEffectPrevState;
+  if (!store?.active) return;
+
+  if (meshMaterial.color && store.color) {
+    meshMaterial.color.copy(store.color);
+  }
+  if (meshMaterial.emissive && store.emissive) {
+    meshMaterial.emissive.copy(store.emissive);
+  }
+  if (store.depthTest !== undefined) {
+    meshMaterial.depthTest = store.depthTest;
+  }
+  if (store.depthWrite !== undefined) {
+    meshMaterial.depthWrite = store.depthWrite;
+  }
+  if (store.side !== undefined) {
+    meshMaterial.side = store.side;
+  }
+  if (store.transparent !== undefined) {
+    meshMaterial.transparent = store.transparent;
+  }
+  if (store.opacity !== undefined) {
+    meshMaterial.opacity = store.opacity;
+  }
+
+  store.active = false;
+};
+
+export type EmissiveParams = {
+  emissiveIntensity: number;
+  emissiveColor?: number;
+};
+
+export function applyEmissiveEffect(
+  material: MeshStandardMaterial | MeshPhysicalMaterial,
+  params: EmissiveParams,
+): void {
+  const { emissiveIntensity, emissiveColor } = params;
+
+  if (emissiveColor !== undefined) {
+    material.emissive.set(emissiveColor);
+  } else {
+    material.emissive.copy(material.color);
+  }
+
+  material.emissiveIntensity = emissiveIntensity;
+}
+
+export function updatePostEffectLinksForObject(
+  target: Object3D,
+  registry: PostEffectRegistry | undefined,
+  effectIds: string[],
+  prevEffectIds: string[],
+  layerId: string,
+): void {
+  if (!registry) return;
+
+  // Unlink removed effects
+  for (const effectId of prevEffectIds) {
+    if (!effectIds.includes(effectId)) {
+      registry.unlink(effectId, target);
+    }
+  }
+
+  // Update world matrix if needed for new links
+  const needsLink = effectIds.some(
+    (effectId) => !prevEffectIds.includes(effectId),
+  );
+  if (needsLink) {
+    target.updateMatrixWorld(true);
+  }
+
+  // Link new effects
+  for (const effectId of effectIds) {
+    if (!prevEffectIds.includes(effectId)) {
+      registry.link(effectId, target, layerId);
+    }
+  }
+}
+
 /**
- * Registry for managing selective effect resources
+ * Registry for managing post effect resources
  * Each effect gets its own Scene and render targets
  */
-export class SelectiveEffectRegistry {
-  private resources = new Map<string, SelectiveEffectResources>();
+export class PostEffectRegistry {
+  private resources = new Map<string, PostEffectResources>();
   private width: number;
   private height: number;
-  private layerSelectiveDepthSettings = new Map<string, boolean>();
+  private layerPostEffectDepthSettings = new Map<string, boolean>();
   private layerKeepClones = new Map<string, boolean>();
 
   constructor(width: number, height: number) {
@@ -46,14 +240,14 @@ export class SelectiveEffectRegistry {
   }
 
   /**
-   * Create resources for a selective effect
+   * Create resources for a post effect
    */
   create(
     effectId: string,
-    options: SelectiveEffectOptions = {},
-  ): SelectiveEffectResources {
+    options: PostEffectOptions = {},
+  ): PostEffectResources {
     if (this.resources.has(effectId)) {
-      throw new Error(`Selective effect ${effectId} already exists`);
+      throw new Error(`Post effect ${effectId} already exists`);
     }
 
     const resolutionScale = options.resolutionScale ?? 1.0;
@@ -62,33 +256,33 @@ export class SelectiveEffectRegistry {
 
     // Legacy scene for compatibility (not actively used)
     const scene = new Scene();
-    scene.name = `SelectiveEffect_${effectId}`;
+    scene.name = `PostEffect_${effectId}`;
 
     const sceneDepthEnabled = new Scene();
-    sceneDepthEnabled.name = `SelectiveEffect_${effectId}_DepthEnabled`;
+    sceneDepthEnabled.name = `PostEffect_${effectId}_DepthEnabled`;
 
     const sceneDepthDisabled = new Scene();
-    sceneDepthDisabled.name = `SelectiveEffect_${effectId}_DepthDisabled`;
+    sceneDepthDisabled.name = `PostEffect_${effectId}_DepthDisabled`;
 
-    // Mark scenes so we can detect selective mask rendering in onBeforeRender
+    // Mark scenes so we can detect post effect mask rendering in onBeforeRender
     // and differentiate depth test behavior between them.
     (
       sceneDepthEnabled.userData as {
-        selectiveMask?: { enabled: boolean; depthTest: boolean };
+        postEffectMask?: { enabled: boolean; depthTest: boolean };
       }
-    ).selectiveMask = { enabled: true, depthTest: true };
+    ).postEffectMask = { enabled: true, depthTest: true };
     (
       sceneDepthDisabled.userData as {
-        selectiveMask?: { enabled: boolean; depthTest: boolean };
+        postEffectMask?: { enabled: boolean; depthTest: boolean };
       }
-    ).selectiveMask = { enabled: true, depthTest: false };
+    ).postEffectMask = { enabled: true, depthTest: false };
 
     const maskRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
       depthBuffer: true,
       stencilBuffer: true,
     });
-    maskRT.texture.name = `SelectiveMask_${effectId}`;
+    maskRT.texture.name = `PostEffectMask_${effectId}`;
 
     // Legacy render target for compatibility (not actively used)
     const highlightRT = new WebGLRenderTarget(width, height, {
@@ -96,7 +290,7 @@ export class SelectiveEffectRegistry {
       depthBuffer: true,
       stencilBuffer: true,
     });
-    highlightRT.texture.name = `SelectiveHighlight_${effectId}`;
+    highlightRT.texture.name = `PostEffectHighlight_${effectId}`;
 
     const objects = new WeakMap<Object3D, Object3D>();
     const objectLayerMap = new Map<string, string>();
@@ -108,7 +302,7 @@ export class SelectiveEffectRegistry {
       maskDebug = new BufferView(width, height);
     }
 
-    const resources: SelectiveEffectResources = {
+    const resources: PostEffectResources = {
       scene,
       sceneDepthEnabled,
       sceneDepthDisabled,
@@ -130,29 +324,29 @@ export class SelectiveEffectRegistry {
   /**
    * Get resources for an effect
    */
-  get(effectId: string): SelectiveEffectResources | undefined {
+  get(effectId: string): PostEffectResources | undefined {
     return this.resources.get(effectId);
   }
 
   /**
-   * Register selective depth test setting for a layer
+   * Register Post Effect Occlusion setting for a layer
    */
   registerLayerPostEffectOcclusion(
     layerId: string,
     postEffectOcclusion: boolean,
   ): void {
-    this.layerSelectiveDepthSettings.set(layerId, postEffectOcclusion);
+    this.layerPostEffectDepthSettings.set(layerId, postEffectOcclusion);
   }
 
   /**
-   * Get selective depth test setting for a layer
+   * Get Post Effect Occlusion setting for a layer
    */
   getLayerPostEffectOcclusion(layerId: string): boolean {
-    return this.layerSelectiveDepthSettings.get(layerId) ?? true;
+    return this.layerPostEffectDepthSettings.get(layerId) ?? true;
   }
 
   /**
-   * Update selective depth test for all clones of a layer
+   * Update Post Effect Occlusion for all clones of a layer
    * Moves clones between sceneDepthEnabled and sceneDepthDisabled
    * Optimized to only process clones that actually need to move
    */
@@ -161,13 +355,13 @@ export class SelectiveEffectRegistry {
     postEffectOcclusion: boolean,
   ): void {
     // Check if value actually changed (should already be checked in ViewContext, but double-check)
-    const currentSetting = this.layerSelectiveDepthSettings.get(layerId);
+    const currentSetting = this.layerPostEffectDepthSettings.get(layerId);
     if (currentSetting === postEffectOcclusion) {
       return; // No change, skip processing
     }
 
     // Update the setting
-    this.layerSelectiveDepthSettings.set(layerId, postEffectOcclusion);
+    this.layerPostEffectDepthSettings.set(layerId, postEffectOcclusion);
 
     // Move clones for this layer between scenes (optimized: only affected clones)
     for (const resources of this.resources.values()) {
@@ -214,7 +408,7 @@ export class SelectiveEffectRegistry {
   }
 
   private attachCloneToScene(
-    resources: SelectiveEffectResources,
+    resources: PostEffectResources,
     clone: Object3D,
     layerId?: string,
   ): void {
@@ -236,147 +430,14 @@ export class SelectiveEffectRegistry {
   link(effectId: string, sourceObject: Object3D, layerId?: string): void {
     const resources = this.resources.get(effectId);
     if (!resources) {
-      console.warn(`Selective effect ${effectId} not found`);
+      console.warn(`Post effect ${effectId} not found`);
       return;
     }
 
-    const selectiveMaskBeforeRender = (
-      _renderer: WebGLRenderer,
-      scene: Scene,
-      _camera: Object3D,
-      _geometry: unknown,
-      material: unknown,
-    ) => {
-      const maskInfo = (
-        scene.userData as {
-          selectiveMask?: { enabled: boolean; depthTest: boolean };
-        }
-      ).selectiveMask;
-      if (!maskInfo?.enabled) return;
-
-      const meshMaterial = material as {
-        color?: { set: (color: number) => void };
-        emissive?: { set: (color: number) => void };
-        depthTest?: boolean;
-        depthWrite?: boolean;
-        side?: number;
-        transparent?: boolean;
-        opacity?: number;
-        userData?: Record<string, unknown>;
-      };
-
-      meshMaterial.userData ??= {};
-      const store = (
-        meshMaterial.userData as {
-          __selectivePrevState?: {
-            color?: unknown;
-            emissive?: unknown;
-            depthTest?: boolean;
-            depthWrite?: boolean;
-            side?: number;
-            transparent?: boolean;
-            opacity?: number;
-            active?: boolean;
-          };
-        }
-      ).__selectivePrevState ?? {
-        active: false,
-      };
-
-      if (!store.active) {
-        if ("color" in meshMaterial && meshMaterial.color) {
-          store.color = meshMaterial.color;
-        }
-        if ("emissive" in meshMaterial && meshMaterial.emissive) {
-          store.emissive = meshMaterial.emissive;
-        }
-        store.depthTest = meshMaterial.depthTest;
-        store.depthWrite = meshMaterial.depthWrite;
-        store.side = meshMaterial.side;
-        store.transparent = meshMaterial.transparent;
-        store.opacity = meshMaterial.opacity;
-        store.active = true;
-        (
-          meshMaterial.userData as { __selectivePrevState?: typeof store }
-        ).__selectivePrevState = store;
-      }
-
-      if (meshMaterial.color) {
-        meshMaterial.color.set(0xffffff);
-      }
-      if (meshMaterial.emissive) {
-        meshMaterial.emissive.set(0x000000);
-      }
-      meshMaterial.depthTest = maskInfo.depthTest;
-      meshMaterial.depthWrite = true;
-      meshMaterial.side = DoubleSide;
-      meshMaterial.transparent = false;
-      meshMaterial.opacity = 1.0;
-    };
-
-    const selectiveMaskAfterRender = (
-      _renderer: WebGLRenderer,
-      scene: Scene,
-      _camera: Object3D,
-      _geometry: unknown,
-      material: unknown,
-    ) => {
-      const maskInfo = (
-        scene.userData as {
-          selectiveMask?: { enabled: boolean; depthTest: boolean };
-        }
-      ).selectiveMask;
-      if (!maskInfo?.enabled) return;
-
-      const meshMaterial = material as {
-        color?: { copy: (color: unknown) => void };
-        emissive?: { copy: (color: unknown) => void };
-        depthTest?: boolean;
-        depthWrite?: boolean;
-        side?: number;
-        transparent?: boolean;
-        opacity?: number;
-        userData?: {
-          __selectivePrevState?: {
-            color?: unknown;
-            emissive?: unknown;
-            depthTest?: boolean;
-            depthWrite?: boolean;
-            side?: number;
-            transparent?: boolean;
-            opacity?: number;
-            active?: boolean;
-          };
-        };
-      };
-
-      const store = meshMaterial.userData?.__selectivePrevState;
-      if (!store?.active) return;
-
-      if (meshMaterial.color && store.color) {
-        meshMaterial.color.copy(store.color);
-      }
-      if (meshMaterial.emissive && store.emissive) {
-        meshMaterial.emissive.copy(store.emissive);
-      }
-      if (store.depthTest !== undefined) {
-        meshMaterial.depthTest = store.depthTest;
-      }
-      if (store.depthWrite !== undefined) {
-        meshMaterial.depthWrite = store.depthWrite;
-      }
-      if (store.side !== undefined) {
-        meshMaterial.side = store.side;
-      }
-      if (store.transparent !== undefined) {
-        meshMaterial.transparent = store.transparent;
-      }
-      if (store.opacity !== undefined) {
-        meshMaterial.opacity = store.opacity;
-      }
-
-      store.active = false;
-    };
+    // NOTE:
+    // マスク用の onBeforeRender / onAfterRender は Mesh / Model 側で付与される前提とする。
+    // ここではクローン生成とシーン振り分けのみを行い、クローンは元の Mesh から
+    // 付与済みのハンドラ（postEffectMaskBeforeRender/AfterRender）をそのままコピーして使う。
 
     // Ensure world matrices are up to date before traversing children
     sourceObject.updateMatrixWorld(true);
@@ -400,17 +461,8 @@ export class SelectiveEffectRegistry {
       }
 
       const clone = mesh.clone();
-      clone.userData.isSelectiveClone = true;
+      clone.userData.isPostEffectClone = true;
       clone.userData.sourceId = mesh.uuid;
-
-      // Attach selective mask hooks to clones so we can override only for
-      // selective mask scenes without touching original mesh materials.
-      if (!clone.onBeforeRender) {
-        clone.onBeforeRender = selectiveMaskBeforeRender as never;
-      }
-      if (!clone.onAfterRender) {
-        clone.onAfterRender = selectiveMaskAfterRender as never;
-      }
 
       // Copy world space transform so detached clone renders correctly
       clone.position.setFromMatrixPosition(mesh.matrixWorld);
@@ -442,7 +494,7 @@ export class SelectiveEffectRegistry {
   }
 
   /**
-   * Unlink an object from a selective effect
+   * Unlink an object from a postEffect effect
    */
   unlink(effectId: string, sourceObject: Object3D): void {
     const resources = this.resources.get(effectId);
@@ -600,7 +652,7 @@ export class SelectiveEffectRegistry {
   }
 
   /**
-   * Render debug buffer views for all selective effects
+   * Render debug buffer views for all postEffect effects
    */
   renderDebugViews(renderer: WebGLRenderer): void {
     for (const resources of this.resources.values()) {

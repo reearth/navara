@@ -35,8 +35,8 @@ export {
 export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
 export {
-  SelectiveEffectRegistry,
-  type SelectiveEffectOptions,
-  type SelectiveEffectResources,
+  PostEffectRegistry,
+  type PostEffectOptions,
+  type PostEffectResources,
 } from "./SelectiveEffectRegistry";
 export { PostEffectManager } from "./PostEffectManager";

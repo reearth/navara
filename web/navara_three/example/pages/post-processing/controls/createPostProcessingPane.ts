@@ -2,13 +2,13 @@ import type {
   BoxMeshLayer,
   Layer,
   LayerHandle,
-  SelectiveBloomEffectLayer,
+  PostEffectBloomEffectLayer,
   SphereMeshLayer,
 } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
 import { TILES_3D_DATASETS } from "../../../helpers/constants";
-import type { SelectiveEffects } from "../effects/setupSelectiveEffects";
+import type { PostEffects } from "../effects/setupSelectiveEffects";
 import type {
   GeoJsonModelLayer,
   SceneLayers,
@@ -102,14 +102,14 @@ const addLayerEmissiveIntensityControl = (
 };
 
 type PaneDependencies = SceneLayers &
-  SelectiveEffects & {
+  PostEffects & {
     paneTitle?: string;
   };
 
 export const createPostProcessingPane = ({
-  paneTitle = "Selective Bloom Parameters",
-  selectiveBloom,
-  selectiveOutline,
+  paneTitle = "PostEffect Bloom Parameters",
+  postEffectBloom,
+  postEffectOutline,
   cubeLayer,
   sphereLayer,
   drumLayer,
@@ -125,13 +125,13 @@ export const createPostProcessingPane = ({
   pane.element.style.width = "340px";
   pane.element.style.right = "0px";
 
-  setupBloomFolder(pane, selectiveBloom);
+  setupBloomFolder(pane, postEffectBloom);
   setupMeshFolder(pane, {
     title: "Cube (Red)",
     layer: cubeLayer,
     configKey: "box",
-    bloomId: selectiveBloom.id,
-    outlineId: selectiveOutline.id,
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
     params: {
       emissiveColor: 0xff0000,
       emissiveIntensity: 1.1,
@@ -145,8 +145,8 @@ export const createPostProcessingPane = ({
     title: "Sphere (Blue)",
     layer: sphereLayer,
     configKey: "sphere",
-    bloomId: selectiveBloom.id,
-    outlineId: selectiveOutline.id,
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
     params: {
       emissiveColor: 0x0000ff,
       emissiveIntensity: 1.0,
@@ -156,19 +156,19 @@ export const createPostProcessingPane = ({
       outlineEnabled: false,
     },
   });
-  setupDrumFolder(pane, drumLayer, selectiveBloom.id, selectiveOutline.id);
+  setupDrumFolder(pane, drumLayer, postEffectBloom.id, postEffectOutline.id);
   setupSoldierFolder(
     pane,
     soldierLayer,
-    selectiveBloom.id,
-    selectiveOutline.id,
+    postEffectBloom.id,
+    postEffectOutline.id,
   );
   setupTilesFolder(pane, {
     title: "Chiyoda Buildings",
     layer: chiyodaLayer,
     datasetUrl: TILES_3D_DATASETS.plateauChiyoda.url,
-    bloomId: selectiveBloom.id,
-    outlineId: selectiveOutline.id,
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
     params: {
       baseColor: 0xffffff,
       emissiveColor: 0xffffff,
@@ -183,8 +183,8 @@ export const createPostProcessingPane = ({
     title: "Chuo Buildings",
     layer: chuoLayer,
     datasetUrl: TILES_3D_DATASETS.plateauChuo.url,
-    bloomId: selectiveBloom.id,
-    outlineId: selectiveOutline.id,
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
     params: {
       baseColor: 0xffffff,
       emissiveColor: 0xffffff,
@@ -201,7 +201,7 @@ export const createPostProcessingPane = ({
 
 const setupBloomFolder = (
   pane: Pane,
-  selectiveBloom: LayerHandle<SelectiveBloomEffectLayer>,
+  postEffectBloom: LayerHandle<PostEffectBloomEffectLayer>,
 ) => {
   const params = {
     strength: 0.1,
@@ -220,8 +220,8 @@ const setupBloomFolder = (
       step: 0.01,
     })
     .on("change", (ev) => {
-      selectiveBloom.ref.onUpdateConfig({
-        selectiveBloom: {
+      postEffectBloom.ref.onUpdateConfig({
+        postEffectBloom: {
           strength: ev.value,
         },
       });
@@ -234,8 +234,8 @@ const setupBloomFolder = (
       step: 0.01,
     })
     .on("change", (ev) => {
-      selectiveBloom.ref.onUpdateConfig({
-        selectiveBloom: {
+      postEffectBloom.ref.onUpdateConfig({
+        postEffectBloom: {
           radius: ev.value,
         },
       });
@@ -248,8 +248,8 @@ const setupBloomFolder = (
       step: 0.01,
     })
     .on("change", (ev) => {
-      selectiveBloom.ref.onUpdateConfig({
-        selectiveBloom: {
+      postEffectBloom.ref.onUpdateConfig({
+        postEffectBloom: {
           threshold: ev.value,
         },
       });
@@ -265,15 +265,15 @@ const setupBloomFolder = (
       },
     })
     .on("change", (ev) => {
-      selectiveBloom.ref.onUpdateConfig({
-        selectiveBloom: {
+      postEffectBloom.ref.onUpdateConfig({
+        postEffectBloom: {
           debugMode: ev.value,
         },
       });
     });
 
   folder.addBinding(params, "debugMask").on("change", (ev) => {
-    selectiveBloom.ref.onUpdateConfig({
+    postEffectBloom.ref.onUpdateConfig({
       debugMask: ev.value,
     });
   });
@@ -330,14 +330,14 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
     layer.ref.visible = ev.value;
   });
 
-  //older
-  // .addBinding(params, "postEffectOcclusion", {
-  //   label: "Selective Depth Test",
-  // })
-  // .on("change", (ev) => {
-  //   effectState.postEffectOcclusion = ev.value;
-  //   applyMeshState();
-  // });
+  folder
+    .addBinding(params, "postEffectOcclusion", {
+      label: "Post Effect Occlusion",
+    })
+    .on("change", (ev) => {
+      effectState.postEffectOcclusion = ev.value;
+      applyMeshState();
+    });
 
   folder
     .addBinding(params, "emissiveColor", {
@@ -465,14 +465,14 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
     updateTilesLayer();
   });
 
-  //folder
-  //  .addBinding(params, "postEffectOcclusion", {
-  //    label: "Selective Depth Test",
-  //  })
-  //  .on("change", (ev) => {
-  //    effectState.postEffectOcclusion = ev.value;
-  //    updateTilesLayer();
-  //  });
+  folder
+    .addBinding(params, "postEffectOcclusion", {
+      label: "Post Effect Occlusion",
+    })
+    .on("change", (ev) => {
+      effectState.postEffectOcclusion = ev.value;
+      updateTilesLayer();
+    });
 
   addLayerEmissiveIntensityControl(folder, params, (value) => {
     effectState.emissiveIntensity = value;
@@ -530,13 +530,13 @@ const setupDrumFolder = (
     updateDrumModel();
   });
 
-  //folder
-  //  .addBinding(params, "postEffectOcclusion", {
-  //    label: "Selective Depth Test",
-  //  })
-  //  .on("change", () => {
-  //    applyDrumEffects();
-  //  });
+  folder
+    .addBinding(params, "postEffectOcclusion", {
+      label: "Post Effect Occlusion",
+    })
+    .on("change", () => {
+      applyDrumEffects();
+    });
 
   folder
     .addBinding(params, "emissiveColor", {
@@ -607,13 +607,13 @@ const setupSoldierFolder = (
     updateSoldierModel();
   });
 
-  //folder
-  //  .addBinding(params, "postEffectOcclusion", {
-  //    label: "Selective Depth Test",
-  //  })
-  //  .on("change", () => {
-  //    applySoldierEffects();
-  //  });
+  folder
+    .addBinding(params, "postEffectOcclusion", {
+      label: "Post Effect Occlusion",
+    })
+    .on("change", () => {
+      applySoldierEffects();
+    });
 
   folder
     .addBinding(params, "animationSpeed", {

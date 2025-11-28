@@ -9,10 +9,10 @@ import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
 import { PostEffectManager } from "./PostEffectManager";
-import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
+import type { PostEffectRegistry } from "./SelectiveEffectRegistry";
 
 export type ViewDebugOptions = {
-  selectiveEffectMask?: boolean;
+  postEffectMask?: boolean;
 };
 
 type Private = {
@@ -23,7 +23,7 @@ type Private = {
 // Restrict public API for a layer declaration.
 export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
-  public selectiveRegistry?: SelectiveEffectRegistry;
+  public postEffectRegistry?: PostEffectRegistry;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
 
@@ -37,15 +37,15 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public _privates: Private,
     eventHandler?: EventHandler<ViewEvents>,
-    selectiveRegistry?: SelectiveEffectRegistry,
+    postEffectRegistry?: PostEffectRegistry,
     debugOptions?: ViewDebugOptions,
   ) {
     this.eventHandler = eventHandler;
-    this.selectiveRegistry = selectiveRegistry;
+    this.postEffectRegistry = postEffectRegistry;
     this.debugOptions = debugOptions ?? {};
 
     this.postEffects = new PostEffectManager({
-      selectiveRegistry: this.selectiveRegistry,
+      postEffectRegistry: this.postEffectRegistry,
     });
   }
 

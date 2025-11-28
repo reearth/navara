@@ -37,9 +37,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             transparent: val.transparent.unwrap_or(default.transparent),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_occlusion: val
-                .post_effect_occlusion
-                .or(default.post_effect_occlusion),
+            post_effect_occlusion: val.post_effect_occlusion.or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -111,9 +109,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             transparent: val.transparent.unwrap_or(default.transparent),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_occlusion: val
-                .post_effect_occlusion
-                .or(default.post_effect_occlusion),
+            post_effect_occlusion: val.post_effect_occlusion.or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -298,9 +294,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_occlusion: val
-                .post_effect_occlusion
-                .or(default.post_effect_occlusion),
+            post_effect_occlusion: val.post_effect_occlusion.or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -528,9 +522,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             specular: val.specular.unwrap_or(default.specular),
             ior: val.ior.unwrap_or(default.ior),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_occlusion: val
-                .post_effect_occlusion
-                .or(default.post_effect_occlusion),
+            post_effect_occlusion: val.post_effect_occlusion.or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }
@@ -731,9 +723,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             internal: val.__internal__.clone().map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
-            post_effect_occlusion: val
-                .post_effect_occlusion
-                .or(default.post_effect_occlusion),
+            post_effect_occlusion: val.post_effect_occlusion.or(default.post_effect_occlusion),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
         }

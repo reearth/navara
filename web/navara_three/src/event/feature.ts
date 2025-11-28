@@ -27,7 +27,6 @@ import {
   applyEffectPayloadToObject,
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
-  type FeatureEffectPayload,
 } from "./featureEvent";
 import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
@@ -41,24 +40,6 @@ import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
 import { setTransform, type BufferLoader, type FeatureHandler } from ".";
-
-/**
- * Extract per-feature effect payload from engine events.
- *
- * Currently, effect configuration (effectIds, emissive properties, depth test)
- * is managed at the layer level via ViewContext / PostEffectManager.
- * We intentionally do not read per-feature `effect_ids` here so that:
- * - style (e.g. model material) and
- * - effect linkage (effectIds)
- * have clearly separated responsibilities.
- *
- * Layer-level state is resolved in `resolveEffectPayload` instead.
- */
-const extractEffectPayloadFromEvent = (
-  _ev: RenderableFeatureAddedEvent | RenderableFeatureChangedEvent,
-): FeatureEffectPayload | undefined => {
-  return undefined;
-};
 
 export function renderFeature(
   f: RenderableFeature,
@@ -126,8 +107,6 @@ export async function processRenderableFeatureAdded(
     // Start parallel process
     onConcurrency(1);
   }
-
-  const effectPayload = extractEffectPayloadFromEvent(ev);
 
   const obj = await renderFeature(
     feature,
@@ -212,7 +191,6 @@ export async function processRenderableFeatureAdded(
     viewContext,
     featureLayerId,
     ev.bits,
-    effectPayload,
   );
   handleFeatureUpdatedEventByLayerId(
     viewEvents,
@@ -316,8 +294,7 @@ export async function processRenderableFeatureChanged(
 
   obj.updateMatrix();
 
-  const effectPayload = extractEffectPayloadFromEvent(ev);
-  applyEffectPayloadToObject(obj, viewContext, layerId, effectPayload);
+  applyEffectPayloadToObject(obj, viewContext, layerId);
 
   handleFeatureUpdatedEventByLayerId(
     viewEvents,

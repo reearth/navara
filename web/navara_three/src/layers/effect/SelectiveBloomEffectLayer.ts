@@ -18,24 +18,20 @@ import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
-  SelectiveEffectLayerBase,
-  type SelectiveBloomConfig,
-  type SelectiveBloomUpdate,
+  PostEffectLayerBase,
+  type PostEffectBloomConfig,
+  type PostEffectBloomUpdate,
 } from "./SelectiveEffectLayer";
 
 const DEFAULT_STRENGTH = 1.5;
 const DEFAULT_RADIUS = 0.4;
 const DEFAULT_THRESHOLD = 0.85;
 
-/**
- * Selective Bloom Effect Layer
- * Applies UnrealBloomPass only to objects registered in the selective registry
- */
-export class SelectiveBloomEffectLayer extends SelectiveEffectLayerBase<
-  SelectiveBloomConfig,
-  SelectiveBloomUpdate
+export class PostEffectBloomEffectLayer extends PostEffectLayerBase<
+  PostEffectBloomConfig,
+  PostEffectBloomUpdate
 > {
-  static key = "selectiveBloom";
+  static key = "postEffectBloom";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
@@ -44,71 +40,71 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayerBase<
   public bloomThreshold: number;
   public debugMode: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
 
-  private bloomPass?: SelectiveBloomPass;
+  private bloomPass?: PostEffectBloomPass;
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const baseConfig = config as Partial<SelectiveBloomConfig>;
-    const selectiveBloomConfig =
-      "selectiveBloom" in config ? baseConfig.selectiveBloom : undefined;
+    const baseConfig = config as Partial<PostEffectBloomConfig>;
+    const postEffectBloomConfig =
+      "postEffectBloom" in config ? baseConfig.postEffectBloom : undefined;
 
-    const selectiveConfig: SelectiveBloomConfig = {
-      ...(config as SelectiveBloomConfig),
-      selective: true,
+    const postEffectConfig: PostEffectBloomConfig = {
+      ...(config as PostEffectBloomConfig),
+      postEffect: true,
       resolutionScale: baseConfig.resolutionScale ?? 1.0,
       debugMask: baseConfig.debugMask ?? false,
-      selectiveBloom: {
-        strength: selectiveBloomConfig?.strength ?? DEFAULT_STRENGTH,
-        radius: selectiveBloomConfig?.radius ?? DEFAULT_RADIUS,
-        threshold: selectiveBloomConfig?.threshold ?? DEFAULT_THRESHOLD,
+      postEffectBloom: {
+        strength: postEffectBloomConfig?.strength ?? DEFAULT_STRENGTH,
+        radius: postEffectBloomConfig?.radius ?? DEFAULT_RADIUS,
+        threshold: postEffectBloomConfig?.threshold ?? DEFAULT_THRESHOLD,
       },
     };
 
-    super(view, selectiveConfig);
+    super(view, postEffectConfig);
 
     this.bloomStrength =
-      this.config.selectiveBloom?.strength ?? DEFAULT_STRENGTH;
-    this.bloomRadius = this.config.selectiveBloom?.radius ?? DEFAULT_RADIUS;
+      this.config.postEffectBloom?.strength ?? DEFAULT_STRENGTH;
+    this.bloomRadius = this.config.postEffectBloom?.radius ?? DEFAULT_RADIUS;
     this.bloomThreshold =
-      this.config.selectiveBloom?.threshold ?? DEFAULT_THRESHOLD;
-    this.debugMode = this.config.selectiveBloom?.debugMode ?? 0; // Default to normal mode
+      this.config.postEffectBloom?.threshold ?? DEFAULT_THRESHOLD;
+    this.debugMode = this.config.postEffectBloom?.debugMode ?? 0; // Default to normal mode
   }
 
   createPass() {
-    const rawPass = new SelectiveBloomPass(this);
+    const rawPass = new PostEffectBloomPass(this);
     this.bloomPass = rawPass;
     const pass = new Pass(rawPass, null, { enabled: true });
 
-    return pass as Pass<SelectiveBloomPass, null> & BaseInstance;
+    return pass as Pass<PostEffectBloomPass, null> & BaseInstance;
   }
 
-  onUpdateConfig(updates: SelectiveBloomUpdate): void {
+  onUpdateConfig(updates: PostEffectBloomUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (updates.selectiveBloom) {
-      const next = updates.selectiveBloom;
+    if (updates.postEffectBloom) {
+      const next = updates.postEffectBloom;
 
-      if (!this.config.selectiveBloom) {
-        this.config.selectiveBloom = {};
+      if (!this.config.postEffectBloom) {
+        this.config.postEffectBloom = {};
       }
 
       if (next.strength !== undefined) {
         this.bloomStrength = next.strength;
-        this.config.selectiveBloom.strength = next.strength;
+        this.config.postEffectBloom.strength = next.strength;
       }
 
       if (next.radius !== undefined) {
         this.bloomRadius = next.radius;
-        this.config.selectiveBloom.radius = next.radius;
+        this.config.postEffectBloom.radius = next.radius;
       }
 
       if (next.threshold !== undefined) {
         this.bloomThreshold = next.threshold;
-        this.config.selectiveBloom.threshold = next.threshold;
+        this.config.postEffectBloom.threshold = next.threshold;
       }
 
       if (next.debugMode !== undefined) {
         this.debugMode = next.debugMode;
-        this.config.selectiveBloom.debugMode = next.debugMode;
+        this.config.postEffectBloom.debugMode = next.debugMode;
       }
 
       this.bloomPass?.setParameters(
@@ -121,16 +117,16 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayerBase<
 }
 
 /**
- * Custom PostProcessing Pass for Selective Bloom
+ * Custom PostProcessing Pass for PostEffect Bloom
  * Uses Three.js Layer system (similar to official examples)
  * 1. Renders only selected objects to a separate buffer using layers
  * 2. Applies UnrealBloomPass to that buffer (bloom spreads naturally)
  * 3. Composites bloom result back to the original scene
  */
-class SelectiveBloomPass extends PostProcessingPass {
-  private layer: SelectiveBloomEffectLayer;
+class PostEffectBloomPass extends PostProcessingPass {
+  private layer: PostEffectBloomEffectLayer;
   private bloom: UnrealBloomPass;
-  private selectiveRenderTarget: WebGLRenderTarget;
+  private postEffectRenderTarget: WebGLRenderTarget;
 
   private fullscreenCamera: OrthographicCamera;
   private fullscreenGeometry: PlaneGeometry;
@@ -144,8 +140,8 @@ class SelectiveBloomPass extends PostProcessingPass {
   private debugView1?: BufferView;
   private debugView2?: BufferView;
 
-  constructor(layer: SelectiveBloomEffectLayer) {
-    super("SelectiveBloomPass");
+  constructor(layer: PostEffectBloomEffectLayer) {
+    super("PostEffectBloomPass");
     this.layer = layer;
 
     const renderer =
@@ -212,11 +208,11 @@ class SelectiveBloomPass extends PostProcessingPass {
     this.compositeScene.add(compositeQuad);
 
     // Render target for selected objects only
-    this.selectiveRenderTarget = new WebGLRenderTarget(
+    this.postEffectRenderTarget = new WebGLRenderTarget(
       initialWidth,
       initialHeight,
     );
-    this.selectiveRenderTarget.texture.name = `SelectiveBloom_Selective_${layer.id}`;
+    this.postEffectRenderTarget.texture.name = `PostEffectBloom_PostEffect_${layer.id}`;
 
     this.bloom = new UnrealBloomPass(
       new Vector2(initialWidth, initialHeight),
@@ -243,7 +239,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     }
 
     this.size.set(width, height);
-    this.selectiveRenderTarget.setSize(width, height);
+    this.postEffectRenderTarget.setSize(width, height);
     this.bloom.setSize(width, height);
   }
 
@@ -253,15 +249,15 @@ class SelectiveBloomPass extends PostProcessingPass {
     outputBuffer: WebGLRenderTarget | null,
     deltaTime?: number,
   ): void {
-    // Get camera and selective scenes from resources
+    // Get camera and postEffect scenes from resources
     const camera = this.layer["view"].camera;
     const { sceneDepthEnabled, sceneDepthDisabled } = this.layer["resources"];
 
     // Step 1: Update sizes
     this.updateSizes(inputBuffer.width, inputBuffer.height);
 
-    // Step 2: Render selected objects to selectiveRenderTarget
-    renderer.setRenderTarget(this.selectiveRenderTarget);
+    // Step 2: Render selected objects to postEffectRenderTarget
+    renderer.setRenderTarget(this.postEffectRenderTarget);
     renderer.setClearColor(0x000000, 0);
     renderer.clear(true, true, true);
 
@@ -271,18 +267,18 @@ class SelectiveBloomPass extends PostProcessingPass {
     // Render depth-disabled objects
     renderer.render(sceneDepthDisabled, camera);
 
-    // Step 3: Apply UnrealBloomPass to the selective render
+    // Step 3: Apply UnrealBloomPass to the postEffect render
     this.setParameters(
       this.layer.bloomStrength,
       this.layer.bloomRadius,
       this.layer.bloomThreshold,
     );
 
-    // UnrealBloomPass manages render targets internally and writes directly to selectiveRenderTarget
+    // UnrealBloomPass manages render targets internally and writes directly to postEffectRenderTarget
     this.bloom.render(
       renderer,
-      this.selectiveRenderTarget,
-      this.selectiveRenderTarget,
+      this.postEffectRenderTarget,
+      this.postEffectRenderTarget,
       deltaTime ?? 0,
       false,
     );
@@ -295,7 +291,7 @@ class SelectiveBloomPass extends PostProcessingPass {
       renderTargetsHorizontal?: WebGLRenderTarget[];
     };
     const bloomOutput =
-      bloomInternals.renderTargetsHorizontal?.[0] || this.selectiveRenderTarget;
+      bloomInternals.renderTargetsHorizontal?.[0] || this.postEffectRenderTarget;
 
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
     this.compositeMaterial.uniforms.tBloom.value = bloomOutput.texture;
@@ -305,13 +301,13 @@ class SelectiveBloomPass extends PostProcessingPass {
     renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
-    // Optional bloom debug overlay - show both selective and bloom outputs
+    // Optional bloom debug overlay - show both postEffect and bloom outputs
     // This should be done AFTER composite to not interfere with output
     if (this.layer["config"].debugMask) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
-          this.selectiveRenderTarget.width,
-          this.selectiveRenderTarget.height,
+          this.postEffectRenderTarget.width,
+          this.postEffectRenderTarget.height,
         );
       }
 
@@ -319,8 +315,8 @@ class SelectiveBloomPass extends PostProcessingPass {
         this.debugView2 = new BufferView(bloomOutput.width, bloomOutput.height);
       }
 
-      // Show selective render (input to bloom)
-      this.debugView1.render(renderer, this.selectiveRenderTarget);
+      // Show postEffect render (input to bloom)
+      this.debugView1.render(renderer, this.postEffectRenderTarget);
 
       // Show bloom output
       this.debugView2.render(renderer, bloomOutput);
@@ -331,7 +327,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     if (typeof this.bloom.dispose === "function") {
       this.bloom.dispose();
     }
-    this.selectiveRenderTarget.dispose();
+    this.postEffectRenderTarget.dispose();
     this.fullscreenGeometry.dispose();
     this.compositeMaterial.dispose();
     this.debugView1?.dispose();

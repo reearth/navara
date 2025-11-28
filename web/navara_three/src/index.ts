@@ -35,7 +35,7 @@ import { MAP_CONCURRENCY } from "./concurrency";
 import {
   LayerDeclaration,
   ViewContext,
-  SelectiveEffectRegistry,
+  PostEffectRegistry,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
@@ -65,9 +65,9 @@ import {
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
-  TestSelectiveEffectLayer,
+  PostEffectBloomEffectLayer,
+  PostEffectOutlineEffectLayer,
+  TestPostEffectLayer,
   ToneMappingEffectLayer,
   RainDropEffectLayer,
   TransparentPassEffectLayer,
@@ -156,7 +156,7 @@ export type Options = {
   atmosphere?: AtmosphereOptions;
   backgroundColor?: number;
   picking?: Picking;
-  selectiveEffects?: {
+  postEffects?: {
     debugMask?: boolean;
   };
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
@@ -464,7 +464,7 @@ export default class ThreeView<
 
   // Registry support
   private registries: Registries;
-  public selectiveRegistry: SelectiveEffectRegistry;
+  public postRegistry: PostEffectRegistry;
   private viewContext!: ViewContext;
 
   constructor(options: Options = {}) {
@@ -608,8 +608,8 @@ export default class ThreeView<
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
-    // Initialize SelectiveEffectRegistry
-    this.selectiveRegistry = new SelectiveEffectRegistry(width, height);
+    // Initialize PostEffectRegistry
+    this.postRegistry = new PostEffectRegistry(width, height);
 
     // Set up Registry
     this.viewContext = new ViewContext(
@@ -623,9 +623,9 @@ export default class ThreeView<
         drapedMaterials: this._drapedFeatureMaterials,
       },
       this,
-      this.selectiveRegistry,
+      this.postRegistry,
       {
-        selectiveEffectMask: this._options.selectiveEffects?.debugMask,
+        postEffectMask: this._options.postEffects?.debugMask,
       },
     );
     this.registries = new Registries(this.viewContext);
@@ -837,8 +837,8 @@ export default class ThreeView<
       this._terrainPicker.dispose();
     }
 
-    // Dispose SelectiveEffectRegistry
-    this.selectiveRegistry.dispose();
+    // Dispose PostEffectRegistry
+    this.postEffectRegistry.dispose();
 
     this.renderer.setAnimationLoop(null);
     if (
@@ -865,8 +865,8 @@ export default class ThreeView<
       this.renderer.setPixelRatio(pixelRatio);
     }
 
-    // Update SelectiveEffectRegistry
-    this.selectiveRegistry.setSize(w, h);
+    // Update PostEffectRegistry
+    this.postEffectRegistry.setSize(w, h);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
@@ -978,7 +978,7 @@ export default class ThreeView<
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
-    this.selectiveRegistry.renderDebugViews(
+    this.postEffectRegistry.renderDebugViews(
       this.renderPassOrchestrator.effectComposer.getRenderer(),
     );
     this._pickHelper?.renderDebugCanvas();
@@ -1158,10 +1158,10 @@ export default class ThreeView<
     this.registerEffect("ssr", SSREffectLayer);
     this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
 
-    // Selective effects
-    this.registerEffect("testSelective", TestSelectiveEffectLayer);
-    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
-    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
+    // PostEffect effects
+    this.registerEffect("testPostEffect", TestPostEffectLayer);
+    this.registerEffect("postEffectBloom", PostEffectBloomEffectLayer);
+    this.registerEffect("postEffectOutline", PostEffectOutlineEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);

@@ -1,5 +1,10 @@
-import { Object3D } from "three";
+import { Mesh, Object3D } from "three";
 
+import {
+  postEffectMaskAfterRender,
+  postEffectMaskBeforeRender,
+  updatePostEffectLinksForObject,
+} from "../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../core/ViewContext";
 import { isEmissiveEvent, isLayerEffectsChangedEvent } from "../object3DEvent";
 
@@ -59,11 +64,6 @@ function cacheMaterials(mesh: Object3D): MaterialCache {
 
 /**
  * Setup event handlers for mesh objects to enable event-driven effects control.
- * This function registers handlers for emissive and layerEffectsChanged events.
- *
- * @param mesh - The mesh object to setup handlers for
- * @param viewContext - The ViewContext instance for accessing SelectiveEffectRegistry
- * @param layerId - The layer ID associated with this mesh
  */
 export function setupMeshEventHandlers(
   mesh: Object3D,
@@ -75,6 +75,18 @@ export function setupMeshEventHandlers(
     "addEventListener" in mesh && typeof mesh.addEventListener === "function";
 
   if (!hasEventDispatcher) return;
+
+  // Attach common postEffect mask handlers to all Mesh instances under this mesh.
+  mesh.traverse((object) => {
+    if (object instanceof Mesh) {
+      if (!object.onBeforeRender) {
+        object.onBeforeRender = postEffectMaskBeforeRender as never;
+      }
+      if (!object.onAfterRender) {
+        object.onAfterRender = postEffectMaskAfterRender as never;
+      }
+    }
+  });
 
   // Cache materials once to avoid repeated traversals
   const materialCache = cacheMaterials(mesh);
@@ -97,38 +109,23 @@ export function setupMeshEventHandlers(
 
   // Handle layerEffectsChanged event
   addCustomEventListener(mesh, "layerEffectsChanged", (event) => {
-    if (!viewContext.selectiveRegistry) return;
     if (!isLayerEffectsChangedEvent(event)) return;
 
     const { prevEffectIds, effectIds } = event;
 
-    // Unlink removed effects
-    for (const effectId of prevEffectIds) {
-      if (!effectIds.includes(effectId)) {
-        viewContext.selectiveRegistry.unlink(effectId, mesh);
-      }
-    }
-
-    // Update matrix world if needed for new effects
-    const needsLink = effectIds.some(
-      (effectIds) => !prevEffectIds.includes(effectIds),
+    updatePostEffectLinksForObject(
+      mesh,
+      viewContext.postEffectRegistry,
+      effectIds,
+      prevEffectIds,
+      layerId,
     );
-    if (needsLink) {
-      mesh.updateMatrixWorld(true);
-    }
-
-    // Link added effects
-    for (const effectId of effectIds) {
-      if (!prevEffectIds.includes(effectId)) {
-        viewContext.selectiveRegistry.link(effectId, mesh, layerId);
-      }
-    }
   });
 
   // Note: postEffectOcclusion should NOT modify original mesh materials
   // Original meshes should always have depthTest=true for main scene rendering
-  // Only clones in SelectiveEffectRegistry should have their depthTest modified
-  // This is handled directly in SelectiveEffectRegistry.link() and updateLayerpostEffectOcclusion()
+  // Only clones in PostEffectRegistry should have their depthTest modified
+  // This is handled directly in PostEffectRegistry.link() and updateLayerpostEffectOcclusion()
 }
 
 /**

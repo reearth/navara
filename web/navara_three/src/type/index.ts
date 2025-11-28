@@ -41,13 +41,13 @@ import type {
   LensFlareConfig,
   MRTPassConfig,
   RainDropConfig,
-  SelectiveBloomConfig,
-  SelectiveOutlineConfig,
+  PostEffectBloomConfig,
+  PostEffectOutlineConfig,
   SkyEnvMapPassConfig,
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
-  TestSelectiveConfig,
+  TestPostEffectConfig,
   ToneMappingConfig,
   TransparentPassConfig,
   DepthOfFieldConfig,
@@ -96,12 +96,12 @@ export type EffectLayerDeclarationDescription =
   | MRTPassConfig
   | SkyEnvMapPassConfig
   | RainDropConfig
-  | SelectiveBloomConfig
-  | SelectiveOutlineConfig
+  | PostEffectBloomConfig
+  | PostEffectOutlineConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig
-  | TestSelectiveConfig
+  | TestPostEffectConfig
   | ToneMappingConfig
   | TransparentPassConfig
   | DepthOfFieldConfig;

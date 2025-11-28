@@ -49,7 +49,7 @@ export class LayerHandle<
   }
 
   /**
-   * Set selective depth test for this layer
+   * Set Post Effect Occlusion for this layer
    * @param enabled - Whether to enable depth test for selective effects
    */
   setPostEffectOcclusion(enabled: boolean): void {

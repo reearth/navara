@@ -10,68 +10,68 @@ import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
-  SelectiveEffectLayerBase,
-  type SelectiveEffectConfig,
-  type SelectiveEffectUpdate,
+  PostEffectLayerBase,
+  type PostEffectConfig,
+  type PostEffectUpdate,
 } from "./SelectiveEffectLayer";
 
-// Test selective effect configuration
-export type TestSelectiveConfig = {
-  testSelective: {
+// Test post effect configuration (uses PostEffect infrastructure)
+export type TestPostEffectConfig = {
+  testPostEffect: {
     debugMask?: boolean;
     resolutionScale?: number;
   };
 } & EffectLayerConfig;
 
 /**
- * Test layer for selective effect
+ * Test layer for post effect
  * Renders mask for debugging and passes through the input buffer
  */
-export class TestSelectiveEffectLayer extends SelectiveEffectLayerBase<
-  SelectiveEffectConfig,
-  SelectiveEffectUpdate
+export class TestPostEffectLayer extends PostEffectLayerBase<
+  PostEffectConfig,
+  PostEffectUpdate
 > {
-  static key = "testSelective";
+  static key = "testPostEffect";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    // Extract testSelective config
-    const testSelectiveConfig =
-      "testSelective" in config
-        ? (config as TestSelectiveConfig).testSelective
+    // Extract testPostEffect config
+    const testPostEffectConfig =
+      "testPostEffect" in config
+        ? (config as TestPostEffectConfig).testPostEffect
         : {};
 
-    // Ensure config has selective: true
-    const selectiveConfig: SelectiveEffectConfig = {
+    // Ensure config has selective: true (PostEffectConfig requires selective flag)
+    const postEffectConfig: PostEffectConfig = {
       ...config,
       selective: true,
-      resolutionScale: testSelectiveConfig.resolutionScale ?? 1.0,
-      debugMask: testSelectiveConfig.debugMask ?? false,
+      resolutionScale: testPostEffectConfig.resolutionScale ?? 1.0,
+      debugMask: testPostEffectConfig.debugMask ?? false,
     };
 
-    super(view, selectiveConfig);
+    super(view, postEffectConfig);
   }
 
   createPass() {
     // Create custom pass (follows SSAO pattern)
-    const rawPass = new TestSelectivePass(this);
+    const rawPass = new TestPostEffectPass(this);
     const pass = new Pass(rawPass, null, { enabled: true });
 
-    return pass as Pass<TestSelectivePass, null> & BaseInstance;
+    return pass as Pass<TestPostEffectPass, null> & BaseInstance;
   }
 }
 
 /**
- * Custom PostProcessing Pass for TestSelectiveEffect
- * Defined after TestSelectiveEffectLayer to access protected members
+ * Custom PostProcessing Pass for TestPostEffect
+ * Defined after TestPostEffectLayer to access protected members
  */
-class TestSelectivePass extends PostProcessingPass {
-  private layer: TestSelectiveEffectLayer;
+class TestPostEffectPass extends PostProcessingPass {
+  private layer: TestPostEffectLayer;
   private copyPass: PostProcessingCopyPass;
 
-  constructor(layer: TestSelectiveEffectLayer) {
-    super("TestSelectivePass");
+  constructor(layer: TestPostEffectLayer) {
+    super("TestPostEffectPass");
     this.layer = layer;
 
     // Create CopyPass for copying input to output

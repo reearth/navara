@@ -1,4 +1,4 @@
-import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
+import type { PostEffectRegistry } from "./SelectiveEffectRegistry";
 
 type LayerEffectConfig = {
   effectIds: string[];
@@ -8,11 +8,16 @@ type LayerEffectConfig = {
 };
 
 type PostEffectManagerOptions = {
-  selectiveRegistry?: SelectiveEffectRegistry;
+  postEffectRegistry?: PostEffectRegistry;
 };
 
 export class PostEffectManager {
   private readonly layerConfigs = new Map<string, LayerEffectConfig>();
+
+  /**
+   * Layer-level single source of truth for effect configuration.
+   * PostEffectRegistry only consumes these layer settings; no per-object overrides are applied here.
+   */
 
   constructor(private readonly options: PostEffectManagerOptions) {}
 
@@ -33,15 +38,15 @@ export class PostEffectManager {
       config.postEffectOcclusion = postEffectOcclusion;
     }
 
-    if (postEffectOcclusion !== undefined && this.options.selectiveRegistry) {
-      this.options.selectiveRegistry.registerLayerPostEffectOcclusion(
+    if (postEffectOcclusion !== undefined && this.options.postEffectRegistry) {
+      this.options.postEffectRegistry.registerLayerPostEffectOcclusion(
         layerId,
         postEffectOcclusion,
       );
     }
 
-    if (this.options.selectiveRegistry) {
-      this.options.selectiveRegistry.registerLayerKeepClones(
+    if (this.options.postEffectRegistry) {
+      this.options.postEffectRegistry.registerLayerKeepClones(
         layerId,
         options?.keepClones,
       );
@@ -50,7 +55,7 @@ export class PostEffectManager {
 
   unregisterLayerEffects(layerId: string): void {
     this.layerConfigs.delete(layerId);
-    this.options.selectiveRegistry?.registerLayerKeepClones(layerId, false);
+    this.options.postEffectRegistry?.registerLayerKeepClones(layerId, false);
   }
 
   getLayerEffects(layerId: string): string[] | undefined {
@@ -100,7 +105,7 @@ export class PostEffectManager {
     config.postEffectOcclusion = postEffectOcclusion;
     this.layerConfigs.set(layerId, config);
 
-    this.options.selectiveRegistry?.updateLayerPostEffectOcclusion(
+    this.options.postEffectRegistry?.updateLayerPostEffectOcclusion(
       layerId,
       postEffectOcclusion,
     );
@@ -152,8 +157,8 @@ export class PostEffectManager {
       config.emissiveIntensity = emissiveIntensity;
     }
 
-    if (options?.keepClones !== undefined && this.options.selectiveRegistry) {
-      this.options.selectiveRegistry.registerLayerKeepClones(
+    if (options?.keepClones !== undefined && this.options.postEffectRegistry) {
+      this.options.postEffectRegistry.registerLayerKeepClones(
         layerId,
         options.keepClones,
       );

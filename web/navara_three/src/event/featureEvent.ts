@@ -7,6 +7,11 @@ import {
 } from "three";
 
 import type { ViewEvents } from "..";
+import {
+  applyEmissiveEffect,
+  type EmissiveParams,
+  updatePostEffectLinksForObject,
+} from "../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../core/ViewContext";
 import { FeatureEvaluator } from "../evaluations";
 import { Layer } from "../layer";
@@ -15,7 +20,7 @@ import { ModelMesh } from "../mesh/model";
 
 import type { FeatureHandler } from ".";
 
-export type FeatureEffectPayload = {
+type ResolvedEffectPayload = {
   effectIds?: string[];
   emissiveIntensity?: number;
   emissiveColor?: number;
@@ -25,12 +30,7 @@ export type FeatureEffectPayload = {
 const resolveEffectPayload = (
   viewContext: ViewContext,
   layerId: string,
-  payload?: FeatureEffectPayload,
-): FeatureEffectPayload | undefined => {
-  if (payload) {
-    return payload;
-  }
-
+): ResolvedEffectPayload | undefined => {
   const effectIds = viewContext.getLayerEffects(layerId);
   const postEffectOcclusion = viewContext.getLayerPostEffectOcclusion(layerId);
   const emissiveIntensity = viewContext.getLayerEmissiveIntensity(layerId);
@@ -53,16 +53,9 @@ const resolveEffectPayload = (
   };
 };
 
-/**
- * Apply emissive properties to mesh materials.
- * This is the ONLY place where materials are directly manipulated for layer effects.
- *
- * This function consolidates material manipulation logic to facilitate future migration
- * to shader-based emissive rendering.
- */
 const applyEmissiveToMeshMaterials = (
   obj: Object3D,
-  effectPayload: FeatureEffectPayload,
+  effectPayload: ResolvedEffectPayload,
   viewContext: ViewContext,
   layerId: string,
 ): void => {
@@ -83,13 +76,14 @@ const applyEmissiveToMeshMaterials = (
       material instanceof MeshStandardMaterial ||
       material instanceof MeshPhysicalMaterial
     ) {
-      if (hasEffects) {
-        material.emissive.set(
-          emissiveColor !== undefined ? emissiveColor : material.color,
-        );
-        material.emissiveIntensity = emissiveIntensity;
-      } else {
+      if (!hasEffects) {
+        // effectIds が空の場合は emissive を無効化
         material.emissiveIntensity = 0;
+      } else {
+        applyEmissiveEffect(material, {
+          emissiveIntensity,
+          emissiveColor: emissiveColor ?? undefined,
+        } satisfies EmissiveParams);
       }
     }
   }
@@ -99,18 +93,20 @@ export const applyEffectPayloadToObject = (
   obj: Object3D,
   viewContext: ViewContext,
   layerId: string,
-  payload?: FeatureEffectPayload,
 ) => {
-  const effectPayload = resolveEffectPayload(viewContext, layerId, payload);
+  const effectPayload = resolveEffectPayload(viewContext, layerId);
   if (!effectPayload) return;
 
   // Store effect state in userData for future shader-based rendering
   obj.userData.effectState = effectPayload;
 
   const nextEffects = effectPayload.effectIds;
-  const prevEffects: string[] = Array.isArray(obj.userData.layerEffects)
-    ? (obj.userData.layerEffects as string[])
-    : [];
+  const prevEffectsRaw = obj.userData.layerEffects;
+  const prevEffects: string[] =
+    Array.isArray(prevEffectsRaw) &&
+    prevEffectsRaw.every((id): id is string => typeof id === "string")
+      ? prevEffectsRaw
+      : [];
 
   const emissiveIntensity =
     effectPayload.emissiveIntensity ??
@@ -130,30 +126,16 @@ export const applyEffectPayloadToObject = (
         layerId,
         prevEffectIds: prevEffects,
       });
-    } else if (viewContext.selectiveRegistry) {
-      // Regular Mesh: Direct selective registry management + material updates
-
-      // 1. Unlink removed effects from selective registry
-      for (const effectId of prevEffects) {
-        if (!nextEffects.includes(effectId)) {
-          viewContext.selectiveRegistry.unlink(effectId, obj);
-        }
-      }
-
-      // 2. Update matrix if any new effects need linking
-      const needsLink = nextEffects.some(
-        (effectId) => !prevEffects.includes(effectId),
+    } else if (viewContext.postEffectRegistry) {
+      // Regular Mesh: PostEffectRegistry のユーティリティを使って link/unlink し、
+      // emissive も共通ロジックで更新する。
+      updatePostEffectLinksForObject(
+        obj,
+        viewContext.postEffectRegistry,
+        nextEffects,
+        prevEffects,
+        layerId,
       );
-      if (needsLink) {
-        obj.updateMatrixWorld(true);
-      }
-
-      // 3. Link new effects to selective registry
-      for (const effectId of nextEffects) {
-        if (!prevEffects.includes(effectId)) {
-          viewContext.selectiveRegistry.link(effectId, obj, layerId);
-        }
-      }
 
       // 4. Apply emissive material updates (consolidated in helper function)
       applyEmissiveToMeshMaterials(obj, effectPayload, viewContext, layerId);
@@ -171,10 +153,10 @@ export const applyEffectPayloadToObject = (
     });
   }
 
-  // Register selective depth test if specified
+  // Register Post Effect Occlusion if specified
   if (effectPayload.postEffectOcclusion !== undefined) {
     if (nextEffects && nextEffects.length > 0) {
-      viewContext.selectiveRegistry?.registerLayerPostEffectOcclusion(
+      viewContext.postEffectRegistry?.registerLayerPostEffectOcclusion(
         layerId,
         effectPayload.postEffectOcclusion,
       );
@@ -190,7 +172,6 @@ export const handleFeatureCreatedEventByLayerId = (
   viewContext: ViewContext,
   layerId: string,
   featureId: FeatureId,
-  effectPayload?: FeatureEffectPayload,
 ) => {
   const layer = layersManager.get(layerId);
 
@@ -202,7 +183,7 @@ export const handleFeatureCreatedEventByLayerId = (
     layer._registerFeatureEvaluator(featureId, evaluator);
   }
 
-  applyEffectPayloadToObject(obj, viewContext, layerId, effectPayload);
+  applyEffectPayloadToObject(obj, viewContext, layerId);
 
   // Emit the evaluator
   viewEvents.emit("layer", "featureCreated", layerId, evaluator);

@@ -17,21 +17,17 @@ import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
-  SelectiveEffectLayerBase,
-  type SelectiveEffectConfig,
-  type SelectiveOutlineConfig,
-  type SelectiveOutlineUpdate,
+  PostEffectLayerBase,
+  type PostEffectConfig,
+  type PostEffectOutlineConfig,
+  type PostEffectOutlineUpdate,
 } from "./SelectiveEffectLayer";
 
-/**
- * Selective Outline Effect Layer
- * Renders outline edges for selected objects using Sobel edge detection
- */
-export class SelectiveOutlineEffectLayer extends SelectiveEffectLayerBase<
-  SelectiveEffectConfig,
-  SelectiveOutlineUpdate
+export class PostEffectOutlineEffectLayer extends PostEffectLayerBase<
+  PostEffectConfig,
+  PostEffectOutlineUpdate
 > {
-  static key = "selectiveOutline";
+  static key = "postEffectOutline";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
@@ -40,10 +36,10 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayerBase<
   public edgeStrength: number;
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    // Extract selectiveOutline config
-    const selectiveOutlineConfig =
-      "selectiveOutline" in config
-        ? (config as SelectiveOutlineConfig).selectiveOutline
+    // Extract postEffectOutline config
+    const postEffectOutlineConfig =
+      "postEffectOutline" in config
+        ? (config as PostEffectOutlineConfig).postEffectOutline
         : {};
 
     // Type-safe config extraction with optional properties
@@ -54,20 +50,20 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayerBase<
 
     const typedConfig = config as ConfigWithOptionalProps;
 
-    // Ensure config has selective: true
-    const selectiveConfig: SelectiveEffectConfig = {
+    // Ensure config has postEffect: true
+    const postEffectConfig: PostEffectConfig = {
       ...config,
-      selective: true,
+      postEffect: true,
       resolutionScale: typedConfig.resolutionScale ?? 1.0,
       debugMask: typedConfig.debugMask ?? false,
     };
 
-    super(view, selectiveConfig);
+    super(view, postEffectConfig);
 
     // Initialize outline parameters
-    this.outlineColor = new Color(selectiveOutlineConfig.color ?? 0x00ff00);
-    this.thickness = selectiveOutlineConfig.thickness ?? 2.0;
-    this.edgeStrength = selectiveOutlineConfig.edgeStrength ?? 1.0;
+    this.outlineColor = new Color(postEffectOutlineConfig.color ?? 0x00ff00);
+    this.thickness = postEffectOutlineConfig.thickness ?? 2.0;
+    this.edgeStrength = postEffectOutlineConfig.edgeStrength ?? 1.0;
   }
 
   createPass() {
@@ -78,11 +74,11 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayerBase<
     return pass as Pass<OutlinePass, null> & BaseInstance;
   }
 
-  onUpdateConfig(updates: SelectiveOutlineUpdate): void {
+  onUpdateConfig(updates: PostEffectOutlineUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (updates.selectiveOutline) {
-      const outlineConfig = updates.selectiveOutline;
+    if (updates.postEffectOutline) {
+      const outlineConfig = updates.postEffectOutline;
 
       if (outlineConfig.color !== undefined) {
         this.outlineColor.setHex(outlineConfig.color);
@@ -104,13 +100,13 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayerBase<
  * Uses Sobel edge detection to render outlines
  */
 class OutlinePass extends PostProcessingPass {
-  private layer: SelectiveOutlineEffectLayer;
+  private layer: PostEffectOutlineEffectLayer;
   private outlineMaterial: ShaderMaterial;
   private fsScene: Scene;
   private fsCamera: OrthographicCamera;
   private quad: Mesh;
 
-  constructor(layer: SelectiveOutlineEffectLayer) {
+  constructor(layer: PostEffectOutlineEffectLayer) {
     super("OutlinePass");
     this.layer = layer;
 

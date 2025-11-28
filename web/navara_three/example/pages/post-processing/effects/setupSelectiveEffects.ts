@@ -1,18 +1,18 @@
 import ThreeView, {
   type Layer,
   type LayerHandle,
-  type SelectiveBloomEffectLayer,
+  type PostEffectBloomEffectLayer,
 } from "@navara/three";
 
-export type SelectiveEffects = {
-  selectiveOutline: Layer;
-  selectiveBloom: LayerHandle<SelectiveBloomEffectLayer>;
+export type PostEffectEffects = {
+  postEffectOutline: Layer;
+  postEffectBloom: LayerHandle<PostEffectBloomEffectLayer>;
 };
 
-export const setupSelectiveEffects = (view: ThreeView): SelectiveEffects => {
-  const selectiveOutline = view.addLayer({
+export const setupPostEffectEffects = (view: ThreeView): PostEffectEffects => {
+  const postEffectOutline = view.addLayer({
     type: "effect",
-    selectiveOutline: {
+    postEffectOutline: {
       color: 0xff0000,
       thickness: 2.0,
       edgeStrength: 1.0,
@@ -21,9 +21,9 @@ export const setupSelectiveEffects = (view: ThreeView): SelectiveEffects => {
     resolutionScale: 1.0,
   });
 
-  const selectiveBloom = view.addLayer<SelectiveBloomEffectLayer>({
+  const postEffectBloom = view.addLayer<PostEffectBloomEffectLayer>({
     type: "effect",
-    selectiveBloom: {
+    postEffectBloom: {
       strength: 0.1,
       radius: 0.5,
       threshold: 0.0,
@@ -35,5 +35,5 @@ export const setupSelectiveEffects = (view: ThreeView): SelectiveEffects => {
 
   view.addDefaultEffectLayers();
 
-  return { selectiveOutline, selectiveBloom };
+  return { postEffectOutline, postEffectBloom };
 };

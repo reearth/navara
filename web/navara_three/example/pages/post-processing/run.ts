@@ -9,7 +9,7 @@ import {
 } from "../../helpers/constants";
 
 import { createPostProcessingPane } from "./controls/createPostProcessingPane";
-import { setupSelectiveEffects } from "./effects/setupSelectiveEffects";
+import { setupPostEffects } from "./effects/setupSelectiveEffects";
 import { createSceneLayers } from "./layers/createSceneLayers";
 
 export const run = async (view: ThreeView) => {
@@ -37,7 +37,7 @@ export const run = async (view: ThreeView) => {
   date.setHours(8);
   view.atmosphere.date = date;
 
-  const { selectiveOutline, selectiveBloom } = setupSelectiveEffects(view);
+  const { postEffectOutline, postEffectBloom } = setupPostEffects(view);
   const {
     cubeLayer,
     sphereLayer,
@@ -56,8 +56,8 @@ export const run = async (view: ThreeView) => {
   ]);
 
   createPostProcessingPane({
-    selectiveOutline,
-    selectiveBloom,
+    postEffectOutline,
+    postEffectBloom,
     cubeLayer,
     sphereLayer,
     drumLayer,

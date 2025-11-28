@@ -7,26 +7,26 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
-import type { SelectiveEffectResources } from "../../core/SelectiveEffectRegistry";
+import type { PostEffectResources } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { CustomRenderPass } from "../../passes";
 
-// Base configuration for selective effects
-export type SelectiveEffectConfig = {
-  selective: true;
+// Base configuration for post effects
+export type PostEffectConfig = {
+  postEffect: true;
   resolutionScale?: number;
   debugMask?: boolean;
 } & EffectLayerConfig;
 
-export type SelectiveEffectUpdate = {
+export type PostEffectUpdate = {
   resolutionScale?: number;
   debugMask?: boolean;
 } & EffectLayerUpdate;
 
-// Selective Bloom configuration
-export type SelectiveBloomConfig = {
-  selective: true;
-  selectiveBloom: {
+// PostEffect Bloom configuration
+export type PostEffectBloomConfig = {
+  postEffect: true;
+  postEffectBloom: {
     strength?: number;
     radius?: number;
     threshold?: number;
@@ -36,8 +36,8 @@ export type SelectiveBloomConfig = {
   debugMask?: boolean;
 } & EffectLayerConfig;
 
-export type SelectiveBloomUpdate = {
-  selectiveBloom?: {
+export type PostEffectBloomUpdate = {
+  postEffectBloom?: {
     strength?: number;
     radius?: number;
     threshold?: number;
@@ -47,10 +47,10 @@ export type SelectiveBloomUpdate = {
   debugMask?: boolean;
 } & EffectLayerUpdate;
 
-// Selective Outline configuration
-export type SelectiveOutlineConfig = {
-  selective: true;
-  selectiveOutline: {
+// PostEffect Outline configuration
+export type PostEffectOutlineConfig = {
+  postEffect: true;
+  postEffectOutline: {
     color?: number;
     thickness?: number;
     edgeStrength?: number;
@@ -59,8 +59,8 @@ export type SelectiveOutlineConfig = {
   debugMask?: boolean;
 } & EffectLayerConfig;
 
-export type SelectiveOutlineUpdate = {
-  selectiveOutline?: {
+export type PostEffectOutlineUpdate = {
+  postEffectOutline?: {
     color?: number;
     thickness?: number;
     edgeStrength?: number;
@@ -70,14 +70,14 @@ export type SelectiveOutlineUpdate = {
 } & EffectLayerUpdate;
 
 /**
- * Base class for selective effect layers
+ * Base class for post effect layers
  * Provides mask rendering and debug visualization
  */
-export abstract class SelectiveEffectLayerBase<
-  Config extends SelectiveEffectConfig = SelectiveEffectConfig,
-  UpdateConfig extends SelectiveEffectUpdate = SelectiveEffectUpdate,
+export abstract class PostEffectLayerBase<
+  Config extends PostEffectConfig = PostEffectConfig,
+  UpdateConfig extends PostEffectUpdate = PostEffectUpdate,
 > extends EffectLayerDeclaration<Config, UpdateConfig> {
-  protected resources!: SelectiveEffectResources;
+  protected resources!: PostEffectResources;
   protected config: Config;
   private depthCopyPass: DepthCopyPass;
 
@@ -92,18 +92,18 @@ export abstract class SelectiveEffectLayerBase<
   }
 
   onCreate(): void {
-    // Create selective effect resources
-    if (!this.view.selectiveRegistry) {
-      throw new Error("SelectiveEffectRegistry not initialized");
+    // Create post effect resources
+    if (!this.view.postEffectRegistry) {
+      throw new Error("PostEffectRegistry not initialized");
     }
 
     const debugMask =
       this.config.debugMask ??
-      this.view.debugOptions.selectiveEffectMask ??
+      this.view.debugOptions.postEffectMask ??
       false;
     this.config.debugMask = debugMask;
 
-    this.resources = this.view.selectiveRegistry.create(this.id, {
+    this.resources = this.view.postEffectRegistry.create(this.id, {
       resolutionScale: this.config.resolutionScale ?? 1.0,
       debugMask,
     });
@@ -118,9 +118,9 @@ export abstract class SelectiveEffectLayerBase<
    *
    * Performance optimizations:
    * - Zero scene.traverse() calls
-   * - Uses overrideMaterial for fastest rendering
-   * - No material cloning or restoration needed
    * - Reuses depth from CustomRenderPass to avoid expensive MRT scene rendering
+   * - Keeps existing vertex/fragment shaders (no renderer.overrideMaterial)
+   * - Mask rendering behavior is controlled per-object via PostEffectRegistry
    */
   protected renderMask(renderer: WebGLRenderer): void {
     const { sceneDepthEnabled, sceneDepthDisabled, maskRT } = this.resources;
@@ -177,13 +177,13 @@ export abstract class SelectiveEffectLayerBase<
   onUpdateConfig(updates: UpdateConfig): void {
     super.onUpdateConfig(updates);
 
-    if (updates.resolutionScale !== undefined && this.view.selectiveRegistry) {
+    if (updates.resolutionScale !== undefined && this.view.postEffectRegistry) {
       // Update resolution scale
       this.resources.options.resolutionScale = updates.resolutionScale;
       const renderer =
         this.view.renderPassOrchestrator.effectComposer.getRenderer();
       const size = renderer.getSize(new Vector2());
-      this.view.selectiveRegistry.setSize(size.x, size.y);
+      this.view.postEffectRegistry.setSize(size.x, size.y);
     }
 
     if (updates.debugMask !== undefined) {
@@ -206,8 +206,8 @@ export abstract class SelectiveEffectLayerBase<
     // Dispose depth copy pass
     this.depthCopyPass.dispose();
 
-    if (this.view.selectiveRegistry) {
-      this.view.selectiveRegistry.destroy(this.id);
+    if (this.view.postEffectRegistry) {
+      this.view.postEffectRegistry.destroy(this.id);
     }
     super.onDestroy();
   }

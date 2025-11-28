@@ -24,14 +24,18 @@ import {
   Color,
   DataTexture,
   Group,
+  Camera,
   Mesh,
+  Material,
   Points,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
   RGBADepthPacking,
+  Scene,
   Texture,
+  WebGLRenderer,
   type NormalBufferAttributes,
   type WebGLProgramParametersWithUniforms,
   ShaderChunk,
@@ -46,9 +50,17 @@ import {
 
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
+import {
+  applyEmissiveEffect,
+  type EmissiveParams,
+  postEffectMaskAfterRender,
+  postEffectMaskBeforeRender,
+  updatePostEffectLinksForObject,
+} from "../core/SelectiveEffectRegistry";
 import type { BufferLoader } from "../event";
 import type {
   CustomObject3DEventMap,
+  EmissiveEvent,
   LayerEffectsChangedEvent,
 } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -223,21 +235,18 @@ export class ModelMesh
   }
 
   private setupEffectHandling(): void {
-    this.addEventListener("layerEffectsChanged", (event) => {
-      if (
-        "effectIds" in event &&
-        "emissiveIntensity" in event &&
-        "layerId" in event
-      ) {
-        this.handleEffectsChanged(event as unknown as LayerEffectsChangedEvent);
-      }
-    });
+    this.addEventListener(
+      "layerEffectsChanged",
+      (event: LayerEffectsChangedEvent) => {
+        this.handleEffectsChanged(event);
+      },
+    );
 
     // Handle emissive event (same logic as meshEventHandlers)
-    this.addEventListener("emissive", (event) => {
-      const emissiveEvent = event as unknown as {
-        emissiveIntensity: number;
-        emissiveColor?: number;
+    this.addEventListener("emissive", (event: EmissiveEvent) => {
+      const emissiveParams: EmissiveParams = {
+        emissiveIntensity: event.emissiveIntensity,
+        emissiveColor: event.emissiveColor,
       };
 
       this.traverseMesh((mesh) => {
@@ -250,13 +259,7 @@ export class ModelMesh
             material instanceof MeshStandardMaterial ||
             material instanceof MeshPhysicalMaterial
           ) {
-            // Use custom emissive color if provided, otherwise use material color
-            if (emissiveEvent.emissiveColor !== undefined) {
-              material.emissive.set(emissiveEvent.emissiveColor);
-            } else {
-              material.emissive.copy(material.color);
-            }
-            material.emissiveIntensity = emissiveEvent.emissiveIntensity;
+            applyEmissiveEffect(material, emissiveParams);
           }
         }
       });
@@ -278,8 +281,9 @@ export class ModelMesh
           material instanceof MeshPhysicalMaterial
         ) {
           if (effectIds.length > 0) {
-            material.emissive.copy(material.color);
-            material.emissiveIntensity = emissiveIntensity;
+            applyEmissiveEffect(material, {
+              emissiveIntensity,
+            });
           } else {
             material.emissiveIntensity = 0;
           }
@@ -287,40 +291,14 @@ export class ModelMesh
       }
     });
 
-    // Update SelectiveRegistry links
-    if (this.viewContext?.selectiveRegistry) {
-      this.updateSelectiveLinks(effectIds, prevEffectIds, layerId);
-    }
-  }
-
-  private updateSelectiveLinks(
-    effectIds: string[],
-    prevEffectIds: string[],
-    layerId: string,
-  ): void {
-    if (!this.viewContext?.selectiveRegistry) return;
-
-    // Unlink removed effects
-    for (const effectId of prevEffectIds) {
-      if (!effectIds.includes(effectId)) {
-        this.viewContext.selectiveRegistry.unlink(effectId, this);
-      }
-    }
-
-    // Update world matrix if needed for new links
-    const needsLink = effectIds.some(
-      (effectId) => !prevEffectIds.includes(effectId),
+    // Update PostEffectRegistry links
+    updatePostEffectLinksForObject(
+      this,
+      this.viewContext?.postEffectRegistry,
+      effectIds,
+      prevEffectIds,
+      layerId,
     );
-    if (needsLink) {
-      this.updateMatrixWorld(true);
-    }
-
-    // Link new effects
-    for (const effectId of effectIds) {
-      if (!prevEffectIds.includes(effectId)) {
-        this.viewContext.selectiveRegistry.link(effectId, this, layerId);
-      }
-    }
   }
 
   _initBatchedMaterial(
@@ -633,6 +611,30 @@ export class ModelMesh
         f(object);
       }
     });
+  }
+
+  override onBeforeRender(
+    renderer: WebGLRenderer,
+    scene: Scene,
+    camera: Camera,
+    geometry: BufferGeometry,
+    material: Material,
+    _group: Group,
+  ): void {
+    // group は現在は使っていないが、Object3D.onBeforeRender のシグネチャに合わせて保持しておく。
+    postEffectMaskBeforeRender(renderer, scene, camera, geometry, material);
+  }
+
+  override onAfterRender(
+    renderer: WebGLRenderer,
+    scene: Scene,
+    camera: Camera,
+    geometry: BufferGeometry,
+    material: Material,
+    _group: Group,
+  ): void {
+    // group は現在は使っていないが、Object3D.onAfterRender のシグネチャに合わせて保持しておく。
+    postEffectMaskAfterRender(renderer, scene, camera, geometry, material);
   }
 
   private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {

@@ -133,12 +133,12 @@ export abstract class MeshLayerDeclaration<
    * It's called automatically when effects are updated via onUpdateConfig().
    */
   private applyEffects(): void {
-    if (!this.raw || !this.view.selectiveRegistry) return;
+    if (!this.raw || !this.view.postEffectRegistry) return;
 
     const currentEffects = this.effectIds ?? [];
     const prevEffects = (this.raw.userData.prevEffects as string[]) ?? [];
 
-    // Dispatch layerEffectsChanged event to trigger SelectiveEffectRegistry updates
+    // Dispatch layerEffectsChanged event to trigger PostEffectRegistry updates
     this.raw.dispatchEvent({
       type: "layerEffectsChanged",
       target: this.raw,
@@ -265,7 +265,7 @@ export abstract class MeshLayerDeclaration<
     if (updates.postEffectOcclusion !== undefined) {
       this.postEffectOcclusion = updates.postEffectOcclusion;
       // Use ViewContext API to ensure all layers (including MeshLayerDeclaration) follow same pipeline:
-      // 1. SelectiveEffectRegistry settings are updated
+      // 1. PostEffectRegistry settings are updated
       // 2. Existing clones are moved between sceneDepthEnabled/sceneDepthDisabled
       // This ensures Cube/Sphere behave consistently with Layer types
       this.view.setLayerPostEffectOcclusion(this.id, this.postEffectOcclusion);
@@ -315,7 +315,7 @@ export abstract class MeshLayerDeclaration<
   // Effect Management Methods
   // ==========================================
   // These methods now use ViewContext as the single source of truth,
-  // ensuring proper synchronization with SelectiveEffectRegistry
+  // ensuring proper synchronization with PostEffectRegistry
 
   /**
    * Enable a specific effect for this layer
@@ -386,16 +386,16 @@ export abstract class MeshLayerDeclaration<
   }
 
   /**
-   * Set selective depth test for this layer
-   * @param enabled - Whether to enable depth test for selective effects
+   * Set Post Effect Occlusion for this layer
+   * @param enabled - Whether to enable depth test for post effects
    */
   setPostEffectOcclusion(enabled: boolean): void {
     this.view.setLayerPostEffectOcclusion(this.id, enabled);
   }
 
   /**
-   * Get the current selective depth test setting for this layer
-   * @returns The current selective depth test setting
+   * Get the current Post Effect Occlusion setting for this layer
+   * @returns The current Post Effect Occlusion setting
    */
   getPostEffectOcclusion(): boolean {
     return this.view.getLayerPostEffectOcclusion(this.id);
