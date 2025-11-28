@@ -1,7 +1,7 @@
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
     glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
-    RenderedCesium3dTileContent,
+    RenderedCesium3dTileContent, Cesium3dTilesJsonTileSet, Cesium3dTilesJsonTileSetState
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -10,7 +10,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
     world::Ref,
 };
-use bevy_log::error;
+use bevy_log::{error, info};
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
@@ -58,6 +58,7 @@ pub fn request_metadata(
 pub fn construct_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSet>,
     requesters: Query<
         (
             Entity,
@@ -100,6 +101,15 @@ pub fn construct_cesium_3d_tiles_tree(
         };
 
         commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
+        // TODO: update the event to indicate the loaded tileset's tree is constructed
+        let tile_json_url = req.url.clone().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+        info!("Constructed Cesium 3D Tiles tree with uri: {}", tile_json_url);
+        sync_json_tilesets
+            .json_node_to_tileset_state_map
+            .insert(
+                tile_json_url,
+                Cesium3dTilesJsonTileSetState { is_constucted: true },
+            );
     }
 }
 
@@ -107,6 +117,7 @@ pub fn construct_cesium_3d_tiles_tree(
 pub fn traverse_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSet>,
     window: Res<Window>,
     mut tiles: Query<(&Cesium3dTilesMetadata, &mut Cesium3dTilesTree)>,
     camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
@@ -131,6 +142,7 @@ pub fn traverse_cesium_3d_tiles_tree(
             select_tiles(
                 &mut commands,
                 &mut buf,
+                &mut sync_json_tilesets,
                 tree.layer_id,
                 tree.max_sse,
                 &tree.base_url.clone(),

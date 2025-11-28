@@ -73,7 +73,7 @@ pub struct Cesium3dTileContent {
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
         let (uri, is_renderable_content) = match &tile.content {
-            Some(content) => (Some(content.uri.clone()), !content.uri.contains(".json")),
+            Some(content) => (Some(content.uri.clone()), (!content.uri.contains(".json")) && (!content.uri.is_empty())),
             None => (None, false),
         };
 
@@ -188,7 +188,6 @@ pub struct Cesium3dTileContentState {
     pub is_visible: bool,
     /// Whether this content was touched while traversing.
     pub touched: bool,
-    pub meet_sse: bool,
     pub is_data_loaded: bool,
     pub are_all_children_loaded: bool,
     pub distance_from_camera: f32,

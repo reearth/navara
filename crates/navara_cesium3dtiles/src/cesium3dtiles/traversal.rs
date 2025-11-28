@@ -1,3 +1,4 @@
+use core::sync;
 use std::collections::HashMap;
 
 use bevy_ecs::{
@@ -5,6 +6,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 
+use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
 use navara_component::Priority;
@@ -18,6 +20,7 @@ use url::Url;
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, glb::RenderedCesium3dTileContentGlbMarker,
     pnts::RenderedCesium3dTileContentPntsMarker, RenderedCesium3dTileContent,
+    Cesium3dTilesJsonTileSet, Cesium3dTilesJsonTileSetState, Cesium3dTileSetState
 };
 
 use super::{
@@ -33,7 +36,7 @@ pub enum TraversalResult {
     Selected,
     ChildrenSelected,
     ChildrenSelectedPartially,
-    JsonChildFound,
+    // JsonChildFound,
     Culled,
 }
 
@@ -41,6 +44,7 @@ pub enum TraversalResult {
 pub fn select_tiles(
     commands: &mut Commands,
     buf: &mut ResMut<BufferStore>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSet>,
     layer_id: Entity,
     max_sse: f32,
     base_url: &Url,
@@ -54,9 +58,10 @@ pub fn select_tiles(
     renderable_features: &Query<&RenderableFeature>,
     window: &Window,
 ) {
-    if let TraversalResult::Selected = mark_leaves(
+    if let TraversalResult::Selected = mark_leaves_2(
         commands,
         buf,
+        sync_json_tilesets,
         base_url,
         layer_id,
         max_sse,
@@ -76,6 +81,7 @@ pub fn select_tiles(
     mark_rendered_tiles(
         commands,
         buf,
+        sync_json_tilesets,
         layer_id,
         base_url,
         tile,
@@ -89,6 +95,7 @@ pub fn select_tiles(
 fn mark_leaves(
     commands: &mut Commands,
     buf: &mut ResMut<BufferStore>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSet>,
     base_url: &Url,
     layer_id: Entity,
     max_sse: f32,
@@ -106,9 +113,9 @@ fn mark_leaves(
 
     let is_visible =
         !matches!(&tile.bounding_volume, Some(aabb) if !frustum.intersection_with_aabb(aabb));
-    if !is_visible {
-        return TraversalResult::Culled;
-    }
+    // if !is_visible {
+    //     return TraversalResult::Culled;
+    // }
 
     tile.state.is_visible = is_visible;
 
@@ -124,21 +131,40 @@ fn mark_leaves(
     tile.state.distance_from_camera = distance_from_camera;
     tile.state.sse = sse;
 
-    let data_requester = match tile.data_requester_id {
-        Some(id) => requesters.get(id).ok().map(
-            |d: (
-                &super::Cesium3dTileContentDataRequesterMarker,
-                &navara_data_requester::DataRequester,
-            )| d.1,
-        ),
-        None => None,
-    };
-    let is_data_ready =
-        data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success));
+    let mut is_data_ready: bool;
+    
+    if tile.is_renderable_content {
+        let data_requester = match tile.data_requester_id {
+            Some(id) => requesters.get(id).ok().map(
+                |d: (
+                    &super::Cesium3dTileContentDataRequesterMarker,
+                    &navara_data_requester::DataRequester,
+                )| d.1,
+            ),
+            None => None,
+        };
+        is_data_ready = data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success));
+    } else {
+        let uri = tile_meta.content.as_ref().map_or("".to_string(), |c| c.uri.clone()).split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+        is_data_ready = sync_json_tilesets
+            .json_node_to_tileset_state_map
+            .get(&uri)
+            .is_some_and(|state| state.is_constucted == true);
+
+        info!("sync json tilesets: {:?}", sync_json_tilesets.json_node_to_tileset_state_map);
+        info!("sync json size: {}", sync_json_tilesets.json_node_to_tileset_state_map.len());
+
+        is_data_ready = is_data_ready || uri.is_empty();
+        info!("non renderable content: checking if {} loaded: {}", uri, is_data_ready);
+    }
+
     tile.state.is_data_loaded = is_data_ready;
 
     tile.state.touched = true;
 
+    if !is_visible {
+        return TraversalResult::Culled;
+    }
     let meets_sse = sse < max_sse;
     if meets_sse {
         return TraversalResult::Selected;
@@ -166,10 +192,12 @@ fn mark_leaves(
             let tile_children = tile.children.as_mut().unwrap();
             let child_tile = tile_children.get_mut(i).unwrap();
 
+            let mut child_is_culled = false;
             // TODO: check the logic again here
             match mark_leaves(
                 commands,
                 buf,
+                sync_json_tilesets,
                 base_url,
                 layer_id,
                 max_sse,
@@ -191,20 +219,22 @@ fn mark_leaves(
                     any_children_rendered = true;
                 }
                 // Cull this tile partially
-                TraversalResult::Culled => {}
+                TraversalResult::Culled => {
+                    child_is_culled = true;
+                    // all_children_rendered = false;
+                }
                 TraversalResult::ChildrenSelectedPartially => {
                     any_children_rendered = true;
-                    all_children_rendered = false;
-                }
-                TraversalResult::JsonChildFound => {
-                    all_children_loaded = false;
                     all_children_rendered = false;
                 }
             };
 
             all_children_loaded = all_children_loaded
-                && (child_tile.state.are_all_children_loaded || child_tile.state.is_data_loaded)
+                && (child_tile.state.are_all_children_loaded || child_tile.state.is_data_loaded || child_is_culled);
+            if child_tile.is_renderable_content && !child_is_culled {
+                all_children_rendered = all_children_rendered
                 && child_tile.is_rendered(rendered_tiles, features, renderable_features);
+            }
         }
         tile.state.are_all_children_loaded = all_children_loaded;
         if any_children_rendered {
@@ -231,7 +261,7 @@ fn mark_leaves(
         }
     }
 
-    //     // Handle JSON child tiles
+    // Handle JSON child tiles
     if let Some(content) = &tile_meta.content {
         if content.uri.contains(".json") {
             if tile_meta.children.is_none() && tile.data_requester_id.is_none() {
@@ -248,9 +278,14 @@ fn mark_leaves(
                     ))
                     .id();
                 tile.data_requester_id = Some(e);
-                // tile.state.is_data_loaded = true;
+                // TODO: trigger an event to indicate a child tileset json is requested, and some how be able to tie the json node to it's new tileset tree.
+                let uri = content.uri.clone().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+                info!("Requesting child tileset json with uri: {}", uri);
+                sync_json_tilesets
+                    .json_node_to_tileset_state_map
+                    .insert(uri, Cesium3dTilesJsonTileSetState::default());
             }
-            return TraversalResult::JsonChildFound;
+            // return TraversalResult::Selected;
         }
     }
 
@@ -258,10 +293,193 @@ fn mark_leaves(
     TraversalResult::Selected
 }
 
+
+
+#[allow(clippy::too_many_arguments)]
+fn mark_leaves_2(
+    commands: &mut Commands,
+    buf: &mut ResMut<BufferStore>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSet>,
+    base_url: &Url,
+    layer_id: Entity,
+    max_sse: f32,
+    tile_meta: &Cesium3dTileContentMetadata,
+    tile: &mut Cesium3dTileContent,
+    camera_position: Vec3,
+    frustum: &CameraFrustum,
+    requesters: &Cesium3dTileContentRequesterQuery,
+    window: &Window,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    features: &Query<&FeatureId>,
+    renderable_features: &Query<&RenderableFeature>,
+) -> TraversalResult {
+    
+    tile.reset_state();
+
+    let is_visible = !matches!(&tile.bounding_volume, Some(aabb) if !frustum.intersection_with_aabb(aabb));
+    
+    tile.state.is_visible = is_visible;
+    
+    let (distance_from_camera, sse) = match &tile.bounding_volume {
+        Some(aabb) => {
+            let distance_from_camera = aabb.distance_to_point(camera_position);
+            let sse = (tile_meta.geometric_error)
+                / (distance_from_camera * (frustum.sse_denominator / window.height)) as f64;
+            (distance_from_camera, sse as f32)
+        }
+        None => (0., 0.),
+    };
+
+    tile.state.distance_from_camera = distance_from_camera;
+    tile.state.sse = sse;
+
+    let mut is_data_ready: bool = false;
+    
+    if tile.is_renderable_content {
+        let data_requester = match tile.data_requester_id {
+            Some(id) => requesters.get(id).ok().map(
+                |d: (
+                    &super::Cesium3dTileContentDataRequesterMarker,
+                    &navara_data_requester::DataRequester,
+                )| d.1,
+            ),
+            None => None,
+        };
+        is_data_ready = data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success));
+    } else {
+        let uri = tile_meta.content.as_ref().map_or("".to_string(), |c| c.uri.clone()).split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+        let json_tile_set_constucted = sync_json_tilesets
+            .json_node_to_tileset_state_map
+            .get(&uri)
+            .is_some_and(|state| state.is_constucted == true);
+
+        if json_tile_set_constucted {
+                let is_loaded = sync_json_tilesets
+                .tileset_state_map
+                .get(&uri)
+                .is_some_and(|state| state.has_rendered_tiles == true);
+
+            info!("sync json tilesets: {:?}", sync_json_tilesets.tileset_state_map);
+            is_data_ready = is_loaded;
+        }
+            
+        is_data_ready = is_data_ready || uri.is_empty();
+    }
+
+    tile.state.is_data_loaded = is_data_ready;
+
+    tile.state.touched = true;
+
+    if !is_visible {
+        return TraversalResult::Culled;
+    }
+
+    // filter out empty tiles - no content 
+    if (sse <= max_sse) && tile.is_renderable_content {
+        return TraversalResult::Selected;
+    }
+
+    if let Some(tile_meta_children) = &tile_meta.children {
+        if tile.children.is_none() {
+            tile.children = Some(Vec::with_capacity(tile_meta_children.len()));
+        }
+
+        let mut all_children_loaded = true;
+        let mut any_children_selected = false;
+        for (i, child_tile_meta) in tile_meta_children.iter().enumerate() {
+            match tile.children.as_ref().unwrap().get(i) {
+                Some(_) => {}
+                None => {
+                    let c = Cesium3dTileContent::new(child_tile_meta, Some(tile));
+                    let tile_children = tile.children.as_mut().unwrap();
+                    tile_children.push(c);
+                }
+            };
+
+            let tile_children = tile.children.as_mut().unwrap();
+            let child_tile = tile_children.get_mut(i).unwrap();
+
+             match mark_leaves_2(
+                commands,
+                buf,
+                sync_json_tilesets,
+                base_url,
+                layer_id,
+                max_sse,
+                child_tile_meta,
+                child_tile,
+                camera_position,
+                frustum,
+                requesters,
+                window,
+                rendered_tiles,
+                features,
+                renderable_features,
+            ) {
+                TraversalResult::Selected => {
+                    child_tile.state.leaf = true;
+                    any_children_selected = true;
+                }
+                TraversalResult::Culled => { continue; }
+                TraversalResult::ChildrenSelected => { any_children_selected = true; }
+                TraversalResult::ChildrenSelectedPartially => {} // not used here, remove later
+            }
+
+            let child_is_loaded = if child_tile.is_renderable_content {
+                child_tile.state.is_data_loaded && child_tile.is_rendered(rendered_tiles, features, renderable_features)
+            } else {
+                child_tile.state.is_data_loaded
+            };
+
+            all_children_loaded = all_children_loaded
+                && (child_tile.state.are_all_children_loaded || child_is_loaded);
+        }
+
+        tile.state.are_all_children_loaded = all_children_loaded;
+
+        if any_children_selected {
+            return TraversalResult::ChildrenSelected;
+        } else {
+            return TraversalResult::Culled;
+        }
+    }
+
+    // Handle JSON child tiles
+    if let Some(content) = &tile_meta.content {
+        if content.uri.contains(".json") {
+            if tile_meta.children.is_none() && tile.data_requester_id.is_none() {
+                // spawn a data requester to load the child tileset json.
+                let url = construct_child_tile_url(base_url, content.uri.as_str())
+                    .as_str()
+                    .to_string();
+
+                let e = commands
+                    .spawn((
+                        Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                        Priority::Medium,
+                        DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+                    ))
+                    .id();
+                tile.data_requester_id = Some(e);
+                // TODO: trigger an event to indicate a child tileset json is requested, and some how be able to tie the json node to it's new tileset tree.
+                let uri = content.uri.clone().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+                info!("Requesting child tileset json with uri: {}", uri);
+                sync_json_tilesets
+                    .json_node_to_tileset_state_map
+                    .insert(uri, Cesium3dTilesJsonTileSetState::default());
+            }
+        }
+    }
+
+    return TraversalResult::Selected;
+}
+
+
 #[allow(clippy::too_many_arguments)]
 fn mark_rendered_tiles(
     commands: &mut Commands,
     buf: &mut ResMut<BufferStore>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSet>,
     layer_id: Entity,
     base_url: &Url,
     tile: &mut Cesium3dTileContent,
@@ -287,6 +505,11 @@ fn mark_rendered_tiles(
             update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
             if is_visible {
                 *rendered_tiles_count += 1;
+                let uri = base_url.as_str().to_string().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+                sync_json_tilesets.tileset_state_map
+                    .entry(uri)
+                    .and_modify(|s| s.has_rendered_tiles = true)
+                    .or_insert(Cesium3dTileSetState { has_rendered_tiles: true });
             }
         } else if state.is_visible {
             request_tile_content(
@@ -319,6 +542,7 @@ fn mark_rendered_tiles(
         mark_rendered_tiles(
             commands,
             buf,
+            sync_json_tilesets,
             layer_id,
             base_url,
             child_tile,
