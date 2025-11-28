@@ -42,10 +42,10 @@ export class TestPostEffectLayer extends PostEffectLayerBase<
         ? (config as TestPostEffectConfig).testPostEffect
         : {};
 
-    // Ensure config has selective: true (PostEffectConfig requires selective flag)
+    // Ensure config has postEffect: true (PostEffectConfig requires this flag)
     const postEffectConfig: PostEffectConfig = {
       ...config,
-      selective: true,
+      postEffect: true,
       resolutionScale: testPostEffectConfig.resolutionScale ?? 1.0,
       debugMask: testPostEffectConfig.debugMask ?? false,
     };
