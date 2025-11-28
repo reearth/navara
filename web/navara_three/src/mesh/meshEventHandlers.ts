@@ -1,4 +1,4 @@
-import { Mesh, Object3D } from "three";
+import { Object3D } from "three";
 
 import { updatePostEffectLinksForObject } from "../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../core/ViewContext";
