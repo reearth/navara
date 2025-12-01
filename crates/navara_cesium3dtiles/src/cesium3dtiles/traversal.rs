@@ -324,8 +324,7 @@ fn mark_rendered_tiles(
 
     let state = &tile.state;
 
-    let leaf = state.leaf;
-    if (leaf || !tile.state.are_all_children_loaded) && tile.is_renderable_content {
+    if (state.leaf || !tile.state.are_all_children_loaded) && tile.is_renderable_content {
         if state.is_data_loaded {
             let is_visible = state.is_visible;
             update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);

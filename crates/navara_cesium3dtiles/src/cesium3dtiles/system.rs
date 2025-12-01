@@ -101,7 +101,7 @@ pub fn construct_cesium_3d_tiles_tree(
         };
 
         commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
-        // TODO: update the event to indicate the loaded tileset's tree is constructed
+
         let tile_json_url = req
             .url
             .clone()
