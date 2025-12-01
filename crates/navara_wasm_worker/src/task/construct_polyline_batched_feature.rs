@@ -1,5 +1,7 @@
 use navara_core::{Extent, Radians};
-use navara_feature_component::polyline::construct_polyline_feature;
+use navara_feature_component::polyline::{
+    construct_flat_polyline_feature, construct_polyline_feature,
+};
 use navara_geometry::PolylineGeometryAttributes;
 use navara_wasm_types::{
     polyline::{ConstructedPolylineGeometry, PolylineGeometry, TransferablePolylineBatchedFeature},
@@ -9,6 +11,18 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen(js_name = constructPolylineBatchedFeature)]
 pub fn construct_polyline_batched_feature(
+    features: TransferablePolylineBatchedFeature,
+    material: PolylineMaterial,
+    flat: bool,
+) -> Option<ConstructedPolylineGeometry> {
+    if flat {
+        construct_flat_polyline(features, material)
+    } else {
+        construct_polyline(features, material)
+    }
+}
+
+fn construct_polyline(
     mut features: TransferablePolylineBatchedFeature,
     material: PolylineMaterial,
 ) -> Option<ConstructedPolylineGeometry> {
@@ -108,7 +122,103 @@ pub fn construct_polyline_batched_feature(
     }
 
     Some(ConstructedPolylineGeometry::new(
-        (&combined_extent.unwrap()).into(),
+        Some((&combined_extent?).into()),
+        PolylineGeometry::new(combined_attributes.into(), indices),
+    ))
+}
+
+fn construct_flat_polyline(
+    mut features: TransferablePolylineBatchedFeature,
+    material: PolylineMaterial,
+) -> Option<ConstructedPolylineGeometry> {
+    let material: navara_material::PolylineMaterial = material.into();
+
+    let mut combined_attributes = PolylineGeometryAttributes::with_batch_id();
+    let mut indices = vec![];
+    let mut index_offset = 0;
+
+    for idx in 0..features.length {
+        let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
+
+        let Some(mut constructed_geometry) = construct_flat_polyline_feature(geometry, &material)
+        else {
+            continue;
+        };
+
+        let position_length = constructed_geometry.attributes.position.data.len()
+            / constructed_geometry.attributes.position.size as usize;
+        if position_length == 0 {
+            continue;
+        }
+
+        combined_attributes
+            .position
+            .data
+            .append(&mut constructed_geometry.attributes.position.data);
+        combined_attributes
+            .start
+            .data
+            .append(&mut constructed_geometry.attributes.start.data);
+        combined_attributes
+            .forward_offset
+            .data
+            .append(&mut constructed_geometry.attributes.forward_offset.data);
+        combined_attributes
+            .start_normals
+            .data
+            .append(&mut constructed_geometry.attributes.start_normals.data);
+        combined_attributes
+            .end_normal_and_texture_coordinate_normalization_x
+            .data
+            .append(
+                &mut constructed_geometry
+                    .attributes
+                    .end_normal_and_texture_coordinate_normalization_x
+                    .data,
+            );
+        combined_attributes
+            .right_normal_and_texture_coordinate_normalization_y
+            .data
+            .append(
+                &mut constructed_geometry
+                    .attributes
+                    .right_normal_and_texture_coordinate_normalization_y
+                    .data,
+            );
+
+        let mut batch_ids = vec![];
+        let mut batch_indices = vec![];
+        for _i in 0..position_length {
+            batch_ids.push(batch_id.0);
+            batch_indices.push(batch_index.0);
+        }
+        combined_attributes
+            .batch_ids
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut batch_ids);
+        combined_attributes
+            .batch_index
+            .as_mut()
+            .unwrap()
+            .data
+            .append(&mut batch_indices);
+
+        if index_offset == 0 {
+            indices.append(&mut constructed_geometry.indices);
+        } else {
+            for i in constructed_geometry.indices {
+                indices.push(i + index_offset);
+            }
+        }
+
+        index_offset += position_length as u32;
+    }
+
+    // Flat polylines don't have extent since they're in flat coordinates
+    Some(ConstructedPolylineGeometry::new(
+        None,
         PolylineGeometry::new(combined_attributes.into(), indices),
     ))
 }

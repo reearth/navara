@@ -3,6 +3,8 @@ import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
 } from "@navara/engine";
+import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
+import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
@@ -49,6 +51,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, viewEvents);
+
+    // Set draped flag for texturized rendering
+    this.userData.draped = mesh.should_be_texturized;
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
@@ -166,17 +171,27 @@ export class PolylineMesh extends BatchedFeatureMesh<
       nvr_uPickable: uPickable,
     };
 
-    // Use the original shader files with modifications for batch texture
-    this.material.vertexShader = PolylineVertShader;
-    this.material.fragmentShader =
-      `${packing}\n` +
-      (meshMaterial.clamp_to_ground
-        ? GroundPolylineFragShader
-        : PolylineFragShader);
+    const isTexturized = mesh.should_be_texturized;
+
+    // Select shaders based on rendering mode
+    if (isTexturized) {
+      // Flat polyline for texturized tile rendering
+      this.material.vertexShader = FlatPolylineVertShader;
+      this.material.fragmentShader = FlatPolylineFragShader;
+    } else {
+      // 3D polyline for globe rendering
+      this.material.vertexShader = PolylineVertShader;
+      this.material.fragmentShader =
+        `${packing}\n` +
+        (meshMaterial.clamp_to_ground
+          ? GroundPolylineFragShader
+          : PolylineFragShader);
+    }
 
     this.material.depthTest = false;
     this.material.visible = !!meshMaterial.show;
-    this.material.lights = true;
+    // Disable lighting for texturized rendering - the texture will be applied to the lit tile
+    this.material.lights = !isTexturized;
     this.material.vertexColors = false;
     this.material.userData.uPickable = uPickable;
 

@@ -1,5 +1,8 @@
 use navara_core::{Extent, Radians, CRS, WGS84_64};
-use navara_geometry::{create_polyline_geometry, PolylineGeometryOptions};
+use navara_geometry::{
+    create_flat_polyline_geometry, create_polyline_geometry, FlatPolylineGeometryOptions,
+    PolylineGeometryOptions,
+};
 use navara_material::PolylineMaterial;
 use navara_math::Vec3;
 
@@ -28,4 +31,22 @@ pub fn construct_polyline_feature(
         },
     )
     .map(|g| (extent, g))
+}
+
+/// Constructs a flat polyline feature geometry suitable for texture rendering.
+/// The positions are kept as raw Cartesian coordinates without globe projection.
+pub fn construct_flat_polyline_feature(
+    coords: Vec<f64>,
+    material: &PolylineMaterial,
+) -> Option<navara_geometry::PolylineGeometry> {
+    let mut positions = vec![];
+    for i in 0..coords.len() / 3 {
+        let i = i * 3;
+        positions.push(Vec3::new(coords[i], coords[i + 1], coords[i + 2]));
+    }
+
+    create_flat_polyline_geometry(FlatPolylineGeometryOptions {
+        positions,
+        width: material.width,
+    })
 }

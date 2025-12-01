@@ -453,7 +453,7 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       url: MVT_DATASETS.plateauGifuTran.url,
     },
     polyline: {
-      width: 3,
+      width: 5,
       height: 1,
       clamp_to_ground: true,
       use_ground_normals: true,

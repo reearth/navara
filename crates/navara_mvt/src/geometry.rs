@@ -280,30 +280,50 @@ fn handle_geometry(
             }
         }
         Geometry::MultiLineString(v) => {
-            if !appearances
+            let Some(Appearance::Polyline(appearance)) = appearances
                 .iter()
-                .any(|a| matches!(a, Appearance::Polyline(_)))
-            {
+                .find(|a| matches!(a, Appearance::Polyline(_)))
+            else {
                 return;
-            }
+            };
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
+
+            let flat = appearance.clamp_to_ground;
 
             let MultiLineString(lines) = v;
 
-            construct_lines_geometry(commands, buf, feature_ids, lines, batch_index, converter);
+            construct_lines_geometry(
+                commands,
+                buf,
+                feature_ids,
+                lines,
+                batch_index,
+                converter,
+                flat,
+            );
         }
         Geometry::LineString(line) => {
-            if !appearances
+            let Some(Appearance::Polyline(appearance)) = appearances
                 .iter()
-                .any(|a| matches!(a, Appearance::Polyline(_)))
-            {
+                .find(|a| matches!(a, Appearance::Polyline(_)))
+            else {
                 return;
-            }
+            };
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
 
-            construct_line_geometry(commands, buf, feature_ids, line, batch_index, converter);
+            let flat = appearance.clamp_to_ground;
+
+            construct_line_geometry(
+                commands,
+                buf,
+                feature_ids,
+                line,
+                batch_index,
+                converter,
+                flat,
+            );
         }
         Geometry::GeometryCollection(geoms) => {
             for geom in &geoms.0 {
@@ -379,10 +399,19 @@ fn construct_lines_geometry(
     lines: &[LineString<f32>],
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
+    flat: bool,
 ) -> usize {
     let mut count = 0;
     for line in lines {
-        construct_line_geometry(commands, buf, feature_ids, line, batch_index, converter);
+        construct_line_geometry(
+            commands,
+            buf,
+            feature_ids,
+            line,
+            batch_index,
+            converter,
+            flat,
+        );
         count += line.0.len();
     }
 
@@ -397,9 +426,14 @@ fn construct_line_geometry(
     line: &LineString<f32>,
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
+    flat: bool,
 ) {
     let LineString(points) = line;
-    let geo_points = converter.project_points(points);
+    let geo_points = if flat {
+        converter.project_points_on_center(points)
+    } else {
+        converter.project_points(points)
+    };
 
     if geo_points.is_empty() {
         return;
