@@ -3,7 +3,7 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
-import { addDateControl } from "../../helpers/control";
+import { addDateControl, addCameraControl } from "../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
@@ -13,7 +13,7 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
   {
     type: "cesium3dtiles",
     data: {
-      url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=YourAPIKey",
+      url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=your_api_key",
     },
     model: { max_sse: 120 },
   },
@@ -31,36 +31,4 @@ export const run = async (view: ThreeView) => {
   addCtrlPanel(gGeoLayersDef, view, pane);
   addDateControl(view, pane);
   showAttributions([TILE_DATASETS.openstreetmap]);
-};
-
-const addCameraControl = (view: ThreeView, pane: Pane) => {
-  pane
-    .addButton({
-      title: "Globe view",
-    })
-    .on("click", () => {
-      view.flyTo({
-        lng: 90,
-        lat: 0.1,
-        height: 12600000,
-        heading: 0,
-        pitch: -90,
-        roll: 0,
-      });
-    });
-
-  pane
-    .addButton({
-      title: "Yamanashi - Kyonaka view",
-    })
-    .on("click", () => {
-      view.flyTo({
-        lat: 35.4904441833,
-        lng: 138.1674957275,
-        height: 34945.88,
-        heading: 53.2889709473,
-        pitch: -49.3131942749,
-        roll: 0.0,
-      });
-    });
 };
