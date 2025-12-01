@@ -73,7 +73,10 @@ pub struct Cesium3dTileContent {
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
         let (uri, is_renderable_content) = match &tile.content {
-            Some(content) => (Some(content.uri.clone()), (!content.uri.contains(".json")) && (!content.uri.is_empty())),
+            Some(content) => (
+                Some(content.uri.clone()),
+                (!content.uri.contains(".json")) && (!content.uri.is_empty()),
+            ),
             None => (None, false),
         };
 

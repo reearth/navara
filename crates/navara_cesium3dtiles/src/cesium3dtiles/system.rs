@@ -1,7 +1,7 @@
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
     glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
-    RenderedCesium3dTileContent, Cesium3dTilesJsonTileSet, Cesium3dTilesJsonTileSetState
+    Cesium3dTilesJsonTileSet, Cesium3dTilesJsonTileSetState, RenderedCesium3dTileContent,
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -10,7 +10,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
     world::Ref,
 };
-use bevy_log::{error, info};
+use bevy_log::error;
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
@@ -102,14 +102,23 @@ pub fn construct_cesium_3d_tiles_tree(
 
         commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
         // TODO: update the event to indicate the loaded tileset's tree is constructed
-        let tile_json_url = req.url.clone().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
-        info!("Constructed Cesium 3D Tiles tree with uri: {}", tile_json_url);
-        sync_json_tilesets
-            .json_node_to_tileset_state_map
-            .insert(
-                tile_json_url,
-                Cesium3dTilesJsonTileSetState { is_constucted: true },
-            );
+        let tile_json_url = req
+            .url
+            .clone()
+            .split('?')
+            .next()
+            .unwrap_or("")
+            .split('/')
+            .next_back()
+            .unwrap_or("")
+            .to_string();
+
+        sync_json_tilesets.json_node_to_tileset_state_map.insert(
+            tile_json_url,
+            Cesium3dTilesJsonTileSetState {
+                is_constucted: true,
+            },
+        );
     }
 }
 

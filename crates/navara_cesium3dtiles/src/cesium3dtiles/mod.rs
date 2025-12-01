@@ -1,7 +1,7 @@
 mod component;
-mod resource;
 pub(crate) mod data_requester;
 mod order;
+mod resource;
 pub(crate) mod system;
 mod traversal;
 mod types;
