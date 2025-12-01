@@ -65,9 +65,11 @@ pub fn traverse_tile(
         Some(tile) => {
             let has_no_tile =
                 has_tile_layer && tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
-            // If tile layer isn't added, check max_zoom for terrain layer
-            let has_no_terrain =
-                !has_tile_layer && terrain_layer.is_none_or(|l| l.is_over_max_zoom(tile.coords.z));
+            // If tile layer isn't added, check overscaled_max_zoom for terrain layer.
+            // The reason why we check `overscaled_max_zoom` is that the terrain is upsampled even if actual tile isn't exist.
+            // The terrain is upsampled until it reaches `overscaled_max_zoom`.
+            let has_no_terrain = !has_tile_layer
+                && terrain_layer.is_none_or(|l| l.is_over_overscaled_max_zoom(tile.coords.z));
             if has_no_tile || has_no_terrain {
                 return TraversalResult::NotFound;
             }

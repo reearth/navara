@@ -44,6 +44,17 @@ impl<F: Float + std::fmt::Display, U: Unit<F>> std::fmt::Display for Extent<F, U
     }
 }
 
+impl<F: Float, U: Unit<F>> Default for Extent<F, U> {
+    fn default() -> Self {
+        Self {
+            west: Angle::new(F::ZERO),
+            south: Angle::new(F::ZERO),
+            east: Angle::new(F::ZERO),
+            north: Angle::new(F::ZERO),
+        }
+    }
+}
+
 impl<F: Float, U: Unit<F>> Extent<F, U> {
     pub fn from_points(ps: &[LngLat<F, U>]) -> Self {
         let first_p = ps.first().cloned().unwrap();

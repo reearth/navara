@@ -849,9 +849,9 @@ if (uPickable > 0.) {
       const mesh = this.texturizedScenes.children[sceneIdx].children[0];
       if (mesh instanceof Mesh && mesh.material instanceof Material) {
         m.userData.reflectivities.value[lastIdx] =
-          mesh.material.userData.reflectivity.value;
+          mesh.material.userData.reflectivity?.value ?? 0;
         m.userData.roughnesses.value[lastIdx] =
-          mesh.material.userData.roughness.value;
+          mesh.material.userData.roughness?.value ?? 0;
         if (mesh instanceof PolygonMesh) {
           m.userData.waters.value[lastIdx] = mesh.water;
           m.userData.waterScaleNormals.value[lastIdx] =

@@ -15,12 +15,14 @@ import { waitWasm } from "./waitWasm";
 export async function constructPolylineBatchedFeature(
   transferableBatchedFeatureLike: TransferablePolylineBatchedFeatureLike,
   materialLike: PolylineMaterialLike,
+  flat: boolean,
 ): Promise<ConstructedPolylineGeometryLike | undefined> {
   await waitWasm();
 
   const geometry = constructPolylineBatchedFeatureImpl(
     toTransferablePolylineBatchedFeatureLike(transferableBatchedFeatureLike),
     toPolylineMaterialLike(materialLike),
+    flat,
   );
 
   if (!geometry) {

@@ -38,6 +38,7 @@ pub struct PolygonRenderInformation {
 pub struct PolylineRenderInformation {
     pub should_recalculate_height: bool,
     pub is_rendered: bool,
+    pub should_be_texturized: bool,
 }
 
 // From data oriented design perspective, this is too bad structure.

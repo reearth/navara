@@ -31,6 +31,11 @@ export const run = async (view: ThreeView) => {
   });
 
   view.addLayer({
+    type: "effect",
+    smaa: {},
+  });
+
+  view.addLayer({
     type: "light",
     lightProbe: {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.white),
@@ -72,13 +77,6 @@ export const run = async (view: ThreeView) => {
     data: {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
-    polyline: {
-      show: true,
-      color: 0x3d1623,
-      width: 2,
-      height: 1,
-      clamp_to_ground: true,
-    },
     polygon: {
       color: 0x00aaff,
       height: 10,
@@ -88,7 +86,41 @@ export const run = async (view: ThreeView) => {
     },
     vector_tile: {
       max_zoom: 16,
-      layers: ["road", "contour", "waterarea"],
+      layers: ["waterarea"],
+    },
+  });
+  view.addLayer({
+    type: "mvt",
+    data: {
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    },
+    polyline: {
+      show: true,
+      color: 0xc320d8,
+      width: 2,
+      height: 1,
+      clamp_to_ground: true,
+    },
+    vector_tile: {
+      max_zoom: 16,
+      layers: ["contour"],
+    },
+  });
+  view.addLayer({
+    type: "mvt",
+    data: {
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    },
+    polyline: {
+      show: true,
+      color: 0x777777,
+      width: 3,
+      height: 1,
+      clamp_to_ground: true,
+    },
+    vector_tile: {
+      max_zoom: 16,
+      layers: ["road"],
     },
   });
 

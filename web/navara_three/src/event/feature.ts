@@ -140,14 +140,20 @@ export async function processRenderableFeatureAdded(
 
   meshes.set(id, obj);
 
-  if (obj instanceof PolygonMesh && obj.userData.draped && tileHandle) {
+  if (
+    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
+    obj.userData.draped &&
+    tileHandle
+  ) {
     obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
     });
     obj.addEventListener("needsUpdate", () => {
       texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
     });
-  } else if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
+  }
+
+  if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
     drapedFeatureMaterials.set(id, obj.material);
     obj.addEventListener("removedFromWorld", () => {
       drapedFeatureMaterials.delete(id);
@@ -234,8 +240,12 @@ export async function processRenderableFeatureChanged(
     }
   }
 
-  // Handle a draped mesh
-  if (obj instanceof PolygonMesh && obj.userData.draped != null && tileHandle) {
+  // Handle a draped polygon mesh and polyline mesh
+  if (
+    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
+    obj.userData.draped != null &&
+    tileHandle
+  ) {
     if (obj.userData.draped) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
@@ -244,7 +254,8 @@ export async function processRenderableFeatureChanged(
       texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
     }
     texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
-  } else if (
+  }
+  if (
     obj instanceof PolygonMesh &&
     obj.userData.draped != null &&
     !tileHandle
