@@ -25,5 +25,8 @@ navara_fog = { path = "../navara_fog" }
 martini = { path = "../martini" }
 fxhash.workspace = true
 
+[dev-dependencies]
+approx.workspace = true
+
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

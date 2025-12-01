@@ -47,10 +47,10 @@ impl Default for PolylineGeometryAttributes {
 
 // Ref: https://github.com/CesiumGS/cesium/blob/165e0fb4fcc9a448b15de6a2df46db23c71fffda/packages/engine/Source/Core/GroundPolylineGeometry.js#L1055
 pub(super) fn generate_geometry_attributes(
-    bottom_positions_array: Vec<f32>,
-    top_positions_array: Vec<f32>,
-    normals_array: Vec<f32>,
-    _cartographics_array: Vec<f32>,
+    bottom_positions_array: Vec<f64>,
+    top_positions_array: Vec<f64>,
+    normals_array: Vec<f64>,
+    _cartographics_array: Vec<f64>,
     clamp_to_ground: bool,
 ) -> (PolylineGeometryAttributes, Vec<u32>) {
     let segment_count = bottom_positions_array.len() / 3 - 1;
@@ -178,7 +178,7 @@ pub(super) fn generate_geometry_attributes(
                 vec4_index,
             );
             end_normal_and_texture_coordinate_normalization_x[w_index] =
-                tex_coords_normal_3d_x * right_plane_side;
+                (tex_coords_normal_3d_x * right_plane_side) as f32;
 
             append_flatten_vec3_with_index(
                 &mut right_normal_and_texture_coordinate_normalization_y,
@@ -190,7 +190,7 @@ pub(super) fn generate_geometry_attributes(
             if tex_coord_normal == 0. && top_bottom_side < 0. {
                 tex_coord_normal = 9.; // Some value greater than 1.0.
             }
-            right_normal_and_texture_coordinate_normalization_y[w_index] = tex_coord_normal;
+            right_normal_and_texture_coordinate_normalization_y[w_index] = tex_coord_normal as f32;
         }
 
         // Adjust height of volume in 3D

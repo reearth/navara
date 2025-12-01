@@ -1,12 +1,12 @@
 import type { LngLat } from "@navara/core";
 import {
   getWGS84SemiMajorAxis,
-  getWGS84SemiMinorAxis,
   getWGS84EccentricitySquared,
   geodeticToVector3,
   degreeToRadian,
   LLE,
 } from "@navara/three_api";
+import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import {
   Object3D,
@@ -26,23 +26,35 @@ import { overrideShaderMaterialForMRT } from "../material";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
-  // opacity: number; // Opacity of the arc line
+  transparent: boolean; // Enable `opacity`.
+  opacity: number; // Opacity of the arc line
   segments: number; // Number of segments per arc line
   srcColor: number; // Source color of the arc line
   tgtColor: number; // Target color of the arc line
   height: number; // height from globe surface
   arcHeightScale: number; // Scale factor for arc height relative to distance between endpoints
+  gradation: number; // Gradation factor for color interpolation along the arc
+  dashed: boolean; // Enable dashed line
+  dashSize: number; // Length of each dash (in world units)
+  gapSize: number; // Length of gap between dashes (in world units)
+  dashOffset: number; // Offset for dash pattern (in world units)
   geometry: LngLat[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
 };
 
 export const DefaultArcLineConfig: ArcLineConfig = {
   thickness: 1,
-  // opacity: 1,
+  transparent: false,
+  opacity: 1,
   segments: 64,
   srcColor: 0xffffff,
   tgtColor: 0xffffff,
   height: 0,
   arcHeightScale: 0.3,
+  gradation: 0.5,
+  dashed: false,
+  dashSize: 1,
+  gapSize: 1,
+  dashOffset: 0,
   geometry: [],
 };
 
@@ -97,8 +109,9 @@ export class ArcLine extends Object3D {
     }
 
     const instanceSourceTarget = new Float32Array(numInstances * 4);
-    const instanceParams = new Float32Array(numInstances * 4);
-    const instanceSegments = new Float32Array(numInstances);
+    const instanceParams1 = new Float32Array(numInstances * 4);
+    const instanceParams2 = new Float32Array(numInstances * 3);
+    const instanceDash = new Float32Array(numInstances * 4);
     const instanceSrcColor = new Float32Array(numInstances * 3);
     const instanceTgtColor = new Float32Array(numInstances * 3);
 
@@ -107,12 +120,16 @@ export class ArcLine extends Object3D {
       new InstancedBufferAttribute(instanceSourceTarget, 4),
     );
     geo.setAttribute(
-      "aInstanceParams",
-      new InstancedBufferAttribute(instanceParams, 4),
+      "aInstanceParams1",
+      new InstancedBufferAttribute(instanceParams1, 4),
     );
     geo.setAttribute(
-      "aInstanceSegments",
-      new InstancedBufferAttribute(instanceSegments, 1),
+      "aInstanceParams2",
+      new InstancedBufferAttribute(instanceParams2, 3),
+    );
+    geo.setAttribute(
+      "aInstanceDash",
+      new InstancedBufferAttribute(instanceDash, 4),
     );
     geo.setAttribute(
       "aInstanceSrcColor",
@@ -128,9 +145,70 @@ export class ArcLine extends Object3D {
 
     // Create material
     const material = this.createMaterial();
+    material.transparent = config.transparent;
+
     const mesh = new Mesh(geo, material);
 
     return mesh;
+  }
+
+  /**
+   * Calculate the arc length between two points considering elevation.
+   * Uses circular arc approximation for better performance.
+   *        ╱‾‾‾╲
+   *      ╱   h   ╲  ← sagitta (arcHeight)
+   *     ╱_________╲
+   *          c        ← chord (surfaceDistance)
+   * Given chord length (surface distance) and sagitta (arc height),
+   * we calculate the arc length using the formula:
+   * - Radius: R = c²/(8h) + h/2
+   * - Central angle: θ = 2 * arcsin(c/(2R))
+   * - Arc length: L = R * θ
+   */
+  private calculateArcLength(
+    point1: LngLat,
+    point2: LngLat,
+    arcHeight: number,
+  ): number {
+    const WGS84_A = getWGS84SemiMajorAxis();
+
+    // Calculate geodesic distance on ellipsoid surface using Haversine formula
+    // (approximation using spherical Earth with WGS84 semi-major axis)
+    const lat1 = degreeToRadian(point1.lat);
+    const lat2 = degreeToRadian(point2.lat);
+    const lng1 = degreeToRadian(point1.lng);
+    const lng2 = degreeToRadian(point2.lng);
+
+    const dLat = lat2 - lat1;
+    const dLng = lng2 - lng1;
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const surfaceDistance = WGS84_A * c;
+
+    // If no arc height, return surface distance
+    if (arcHeight === 0) {
+      return surfaceDistance;
+    }
+
+    // Use circular arc approximation for fast calculation
+    const chordLength = surfaceDistance;
+    const sagitta = arcHeight;
+
+    // Calculate radius of the circular arc: R = c²/(8h) + h/2
+    const R = (chordLength * chordLength) / (8 * sagitta) + sagitta / 2;
+
+    // Calculate central angle: θ = 2 * arcsin(c/(2R))
+    const halfChord = chordLength / 2;
+    const sinHalfTheta = Math.min(1, halfChord / R); // Clamp to avoid numerical errors
+    const theta = 2 * Math.asin(sinHalfTheta);
+
+    // Calculate arc length: L = R * θ
+    const arcLength = R * theta;
+
+    return arcLength;
   }
 
   private fillSingleConfigAttributes(
@@ -193,8 +271,9 @@ export class ArcLine extends Object3D {
     if (numInstances === 0) return;
 
     const instanceSourceTarget = geo.getAttribute("aInstanceSourceTarget");
-    const instanceParams = geo.getAttribute("aInstanceParams");
-    const instanceSegments = geo.getAttribute("aInstanceSegments");
+    const instanceParams1 = geo.getAttribute("aInstanceParams1");
+    const instanceParams2 = geo.getAttribute("aInstanceParams2");
+    const instanceDash = geo.getAttribute("aInstanceDash");
     const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
     const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
 
@@ -219,6 +298,12 @@ export class ArcLine extends Object3D {
       const pos2 = geodeticToVector3(lle2);
       const dist = pos1.distanceTo(pos2);
 
+      // Calculate arc height
+      const arcHeight = dist * config.arcHeightScale;
+
+      // Calculate arc length considering the elevation
+      const arcLength = this.calculateArcLength(geom1, geom2, arcHeight);
+
       // Pack source/target: srcLon, srcLat, tgtLon, tgtLat
       instanceSourceTarget.setXYZW(
         i,
@@ -229,16 +314,25 @@ export class ArcLine extends Object3D {
       );
 
       // Pack params: height, arcHeight, thickness, opacity
-      instanceParams.setXYZW(
+      instanceParams1.setXYZW(
         i,
         config.height,
-        dist * config.arcHeightScale,
+        arcHeight,
         config.thickness,
-        1.0,
+        config.opacity,
       );
 
-      // Set segments
-      instanceSegments.setX(i, segments);
+      // Set segments, gradation, and lineLength (use arc length)
+      instanceParams2.setXYZ(i, segments, config.gradation, arcLength);
+
+      // Set dash parameters: dashed, dashSize, gapSize, dashOffset
+      instanceDash.setXYZW(
+        i,
+        config.dashed ? 1.0 : 0.0,
+        config.dashSize,
+        config.gapSize,
+        config.dashOffset,
+      );
 
       const srcColor = new Color(config.srcColor);
       const tgtColor = new Color(config.tgtColor);
@@ -247,45 +341,24 @@ export class ArcLine extends Object3D {
     }
 
     instanceSourceTarget.needsUpdate = true;
-    instanceParams.needsUpdate = true;
-    instanceSegments.needsUpdate = true;
+    instanceParams1.needsUpdate = true;
+    instanceParams2.needsUpdate = true;
+    instanceDash.needsUpdate = true;
     instanceSrcColor.needsUpdate = true;
     instanceTgtColor.needsUpdate = true;
   }
 
   private createMaterial(): ShaderMaterial {
     const WGS84_A = getWGS84SemiMajorAxis();
-    const WGS84_B = getWGS84SemiMinorAxis();
     const WGS84_E2 = getWGS84EccentricitySquared();
 
     const material = new ShaderMaterial();
     material.vertexShader = ArclineVertShader;
-    material.fragmentShader = `
-      in float vOpacity;
-      in vec3 vColor;
-
-      #include <logdepthbuf_pars_fragment>
-
-      void main() {
-        // Calculate screen-space normal for line geometry
-        vec3 fdx = dFdx(gl_FragCoord.xyz);
-        vec3 fdy = dFdy(gl_FragCoord.xyz);
-        vec3 normal = normalize(cross(fdx, fdy));
-        
-        // Ensure normal faces camera
-        if (normal.z < 0.0) normal = -normal;
-        
-        gl_FragColor = vec4(vColor, vOpacity);
-        
-        #include <logdepthbuf_fragment>
-      }
-    `;
+    material.fragmentShader = ArclineFragShader;
 
     material.uniforms = {
       uViewport: { value: new Vector2(1920, 1080) },
-      uR: { value: WGS84_A },
       uA: { value: WGS84_A },
-      uB: { value: WGS84_B },
       uE2: { value: WGS84_E2 },
     };
 
@@ -360,6 +433,7 @@ export class ArcLine extends Object3D {
 
   updateConfig(newConfig: Partial<ArcLineConfig>[]) {
     const changedConfigs = new Set<number>();
+    const changedConfigsForMaterial = new Set<number>();
     const configsNeedingRebuild = new Set<number>();
 
     newConfig.forEach((cfg, i) => {
@@ -411,6 +485,20 @@ export class ArcLine extends Object3D {
           hasChanges = true;
         }
         if (
+          cfg.transparent !== undefined &&
+          cfg.transparent !== this._config[i].transparent
+        ) {
+          this._config[i].transparent = cfg.transparent;
+          changedConfigsForMaterial.add(i);
+        }
+        if (
+          cfg.opacity !== undefined &&
+          cfg.opacity !== this._config[i].opacity
+        ) {
+          this._config[i].opacity = cfg.opacity;
+          hasChanges = true;
+        }
+        if (
           cfg.srcColor !== undefined &&
           cfg.srcColor !== this._config[i].srcColor
         ) {
@@ -433,6 +521,38 @@ export class ArcLine extends Object3D {
           cfg.arcHeightScale !== this._config[i].arcHeightScale
         ) {
           this._config[i].arcHeightScale = cfg.arcHeightScale;
+          hasChanges = true;
+        }
+        if (
+          cfg.gradation !== undefined &&
+          cfg.gradation !== this._config[i].gradation
+        ) {
+          this._config[i].gradation = cfg.gradation;
+          hasChanges = true;
+        }
+        if (cfg.dashed !== undefined && cfg.dashed !== this._config[i].dashed) {
+          this._config[i].dashed = cfg.dashed;
+          hasChanges = true;
+        }
+        if (
+          cfg.dashSize !== undefined &&
+          cfg.dashSize !== this._config[i].dashSize
+        ) {
+          this._config[i].dashSize = cfg.dashSize;
+          hasChanges = true;
+        }
+        if (
+          cfg.gapSize !== undefined &&
+          cfg.gapSize !== this._config[i].gapSize
+        ) {
+          this._config[i].gapSize = cfg.gapSize;
+          hasChanges = true;
+        }
+        if (
+          cfg.dashOffset !== undefined &&
+          cfg.dashOffset !== this._config[i].dashOffset
+        ) {
+          this._config[i].dashOffset = cfg.dashOffset;
           hasChanges = true;
         }
 
@@ -473,9 +593,31 @@ export class ArcLine extends Object3D {
       }
     });
 
+    // Update material
+    changedConfigsForMaterial.forEach((configIndex) => {
+      if (
+        !configsNeedingRebuild.has(configIndex) &&
+        this._subMeshes[configIndex]
+      ) {
+        this.updateMaterials(
+          this._config[configIndex],
+          this._subMeshes[configIndex],
+        );
+      }
+    });
+
     // Only update bounding sphere if there were actual changes
     if (changedConfigs.size > 0) {
       this.updateBoundingSphere();
+    }
+  }
+
+  updateMaterials(
+    config: ArcLineConfig,
+    subMesh: Mesh<InstancedBufferGeometry, ShaderMaterial>,
+  ) {
+    if (subMesh.material.transparent !== config.transparent) {
+      subMesh.material.transparent = config.transparent;
     }
   }
 

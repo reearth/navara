@@ -416,6 +416,7 @@ async function processConstructPolylineBatchedFeature(
   const promise = constructPolylineBatchedFeature(
     new TransferablePolylineBatchedFeatureLike(transferable),
     new PolylineMaterialLike(transferable.material),
+    params.flat,
   );
   workerPoolPromises.set(id, promise);
   const result = await promise;
@@ -501,15 +502,18 @@ async function processConstructPolylineBatchedFeature(
     indices,
   );
 
+  const extent = result.extent;
   const constructPolylineBatchedFeatureResult =
     new ConstructPolylineBatchedFeatureResult(
       geometry,
-      new ExtentRadianF32(
-        result.extent.west,
-        result.extent.south,
-        result.extent.east,
-        result.extent.north,
-      ),
+      extent
+        ? new ExtentRadianF32(
+            extent.west,
+            extent.south,
+            extent.east,
+            extent.north,
+          )
+        : undefined,
     );
 
   const delegatedTaskResult =

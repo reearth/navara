@@ -29,6 +29,7 @@ navara_fog = { path = "../navara_fog" }
 navara_event_store = { path = "../navara_event_store" }
 instant.workspace = true
 fxhash.workspace = true
+url.workspace = true
 
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

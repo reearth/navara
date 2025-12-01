@@ -88,7 +88,7 @@ impl Cesium3dTileContent {
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
-                Some(Aabb::from_extent_f32(
+                Some(Aabb::from_extent_f64(
                     Extent::from_points(&[
                         LngLat::new(south as FloatType, west as FloatType),
                         LngLat::new(north as FloatType, east as FloatType),

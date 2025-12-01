@@ -6,7 +6,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{Deleted, Priority};
-use navara_core::CRS;
+use navara_core::{Aabb, CRS};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     batch::{FeatureBatchId, GlobalBatchIds},
@@ -90,6 +90,7 @@ pub fn construct_model_by_pnts_layer(
         appearance.internal = Some(ModelInternalMaterial {
             draco_compressed,
             point_cloud: true,
+            point_cloud_geodetic_normal: Vec3::ZERO,
         });
 
         commands.spawn((
@@ -167,8 +168,8 @@ fn get_geometry_info_from_pnts(
     // NOTE: buffer is removed here to prevent duplicating data.
     buf.remove(handle);
 
-    let positions_center: Vec<f32> = match feature_table_json["RTC_CENTER"].as_array() {
-        Some(arr) => arr.iter().map(|e| e.as_f64().unwrap() as f32).collect(),
+    let positions_center: Vec<f64> = match feature_table_json["RTC_CENTER"].as_array() {
+        Some(arr) => arr.iter().map(|e| e.as_f64().unwrap()).collect(),
         None => vec![0.0, 0.0, 0.0],
     };
 
@@ -257,7 +258,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         Without<Deleted>,
     >,
     mut rendered_tiles: Query<
-        (&mut RenderedCesium3dTileContent, &TileTransform),
+        (&mut RenderedCesium3dTileContent, &TileTransform, &Aabb),
         (
             With<RenderedCesium3dTileContentPntsMarker>,
             Added<RenderedCesium3dTileContent>,
@@ -265,7 +266,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
-    for (mut tile, transform) in &mut rendered_tiles {
+    for (mut tile, transform, aabb) in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => v,
             Err(_) => {
@@ -296,6 +297,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         appearance.internal = Some(ModelInternalMaterial {
             draco_compressed,
             point_cloud: true,
+            point_cloud_geodetic_normal: Vec3::ZERO,
         });
 
         let entity = commands.spawn((
@@ -314,6 +316,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             appearance,
             ModelBin(postions_handle),
             transform.transform,
+            aabb.clone(),
         ));
         tile.feature_id = Some(entity.id());
 

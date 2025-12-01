@@ -1,4 +1,4 @@
-import { encode_camera } from "navara_wasm_api";
+import { encode_camera } from "@navara/engine-api";
 import { Matrix4, Vector3 } from "three";
 
 export const calcModelMatrixRTE = (
@@ -29,8 +29,12 @@ export const calcCameraPosition = (
   );
   const high = encoded.high;
   const low = encoded.low;
-  return {
+  const result = {
     high: new Vector3(high.x, high.y, high.z),
     low: new Vector3(low.x, low.y, low.z),
   };
+
+  encoded.free();
+
+  return result;
 };

@@ -18,8 +18,15 @@ const gArcLinesDef = [
     segments: 64,
     height: 0,
     arcHeightScale: 0.3,
+    transparent: false,
+    opacity: 1,
     srcColor: 0xffffff,
     tgtColor: Math.floor(Math.random() * 0xffffff),
+    gradation: 0,
+    dashed: false,
+    dashSize: 200000,
+    dashOffset: 0,
+    gapSize: 200000,
     geometry: [
       { lng: 139.75711454748298, lat: 35.67564356091717 },
       { lng: 126.44, lat: 37.4633 }, // ICN
@@ -302,10 +309,20 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     selectedGroup: 0,
     thickness: gArcLinesDef[0].thickness || 1,
     segments: gArcLinesDef[0].segments || 64,
+    transparent: gArcLinesDef[0].transparent || false,
+    opacity: gArcLinesDef[0].opacity || 1,
     srcColor: intToHexColor(gArcLinesDef[0].srcColor || 0xffffff),
     tgtColor: intToHexColor(gArcLinesDef[0].tgtColor || 0xffffff),
     height: gArcLinesDef[0].height || 0,
     arcHeightScale: gArcLinesDef[0].arcHeightScale || 0.3,
+    gradation: gArcLinesDef[0].gradation || 0,
+    gradAnim: false,
+    dashed: gArcLinesDef[0].dashed || false,
+    dashSize: gArcLinesDef[0].dashSize || 200000,
+    dashOffset: gArcLinesDef[0].dashOffset || 0,
+    gapSize: gArcLinesDef[0].gapSize || 200000,
+    dashAnimation: false,
+    dashAnimationSpeed: 10000,
   };
 
   const updateParams = (index: number) => {
@@ -313,10 +330,17 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     if (selectedArcLine) {
       params.thickness = selectedArcLine.thickness || 1;
       params.segments = selectedArcLine.segments || 64;
+      params.transparent = selectedArcLine.transparent || false;
+      params.opacity = selectedArcLine.opacity || 1;
       params.srcColor = intToHexColor(selectedArcLine.srcColor || 0xffffff);
       params.tgtColor = intToHexColor(selectedArcLine.tgtColor || 0xffffff);
       params.height = selectedArcLine.height || 0;
       params.arcHeightScale = selectedArcLine.arcHeightScale || 0.3;
+      params.gradation = selectedArcLine.gradation || 0;
+      params.dashed = selectedArcLine.dashed || false;
+      params.dashSize = selectedArcLine.dashSize || 200000;
+      params.dashOffset = selectedArcLine.dashOffset || 0;
+      params.gapSize = selectedArcLine.gapSize || 200000;
     }
   };
 
@@ -325,6 +349,8 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     if (gArcLinesDef[selectedIndex]) {
       gArcLinesDef[selectedIndex].thickness = params.thickness;
       gArcLinesDef[selectedIndex].segments = params.segments;
+      gArcLinesDef[selectedIndex].transparent = params.transparent;
+      gArcLinesDef[selectedIndex].opacity = params.opacity;
       gArcLinesDef[selectedIndex].srcColor = parseInt(
         params.srcColor.replace("#", ""),
         16,
@@ -335,6 +361,11 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
       );
       gArcLinesDef[selectedIndex].height = params.height;
       gArcLinesDef[selectedIndex].arcHeightScale = params.arcHeightScale;
+      gArcLinesDef[selectedIndex].gradation = params.gradation;
+      gArcLinesDef[selectedIndex].dashed = params.dashed;
+      gArcLinesDef[selectedIndex].dashSize = params.dashSize;
+      gArcLinesDef[selectedIndex].dashOffset = params.dashOffset;
+      gArcLinesDef[selectedIndex].gapSize = params.gapSize;
       arcLineLayer.update({ arcLines: gArcLinesDef });
     }
   };
@@ -369,6 +400,15 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
       onChange();
     });
 
+  folder.addBinding(params, "transparent").on("change", () => {
+    onChange();
+  });
+  folder
+    .addBinding(params, "opacity", { min: 0, max: 1, step: 0.01 })
+    .on("change", () => {
+      onChange();
+    });
+
   folder.addBinding(params, "srcColor").on("change", () => {
     onChange();
   });
@@ -386,6 +426,83 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     .on("change", () => {
       onChange();
     });
+
+  folder
+    .addBinding(params, "gradation", { min: 0, max: 1, step: 0.01 })
+    .on("change", () => {
+      onChange();
+    });
+
+  folder.addBinding(params, "gradAnim");
+
+  // Dash controls subfolder
+  const dashFolder = folder.addFolder({
+    title: "Dash Settings",
+  });
+
+  dashFolder.addBinding(params, "dashed").on("change", () => {
+    onChange();
+  });
+
+  dashFolder
+    .addBinding(params, "dashSize", { min: 1, max: 1000000, step: 1 })
+    .on("change", () => {
+      onChange();
+    });
+
+  dashFolder.addBinding(params, "dashOffset").on("change", () => {
+    onChange();
+  });
+
+  dashFolder
+    .addBinding(params, "gapSize", { min: 1, max: 1000000, step: 1 })
+    .on("change", () => {
+      onChange();
+    });
+
+  dashFolder.addBinding(params, "dashAnimation");
+
+  dashFolder.addBinding(params, "dashAnimationSpeed", {
+    min: -100000,
+    max: 100000,
+    step: 1,
+  });
+
+  const gradAnimFunc = () => {
+    if (params.gradAnim) {
+      gArcLinesDef.forEach((arcLineDef) => {
+        arcLineDef.gradation = (arcLineDef.gradation || 0) + 0.005;
+        if (arcLineDef.gradation > 1) {
+          arcLineDef.gradation = 0;
+        }
+      });
+
+      arcLineLayer.update({ arcLines: gArcLinesDef });
+    }
+    requestAnimationFrame(gradAnimFunc);
+  };
+  gradAnimFunc();
+
+  const dashAnimFunc = () => {
+    if (params.dashAnimation) {
+      gArcLinesDef.forEach((arcLineDef, i) => {
+        arcLineDef.dashOffset =
+          (arcLineDef.dashOffset ?? 0) + params.dashAnimationSpeed;
+
+        if (i == params.selectedGroup) {
+          params.dashOffset = arcLineDef.dashOffset;
+        }
+      });
+
+      arcLineLayer.update({ arcLines: gArcLinesDef });
+
+      if (dashFolder) {
+        dashFolder.refresh();
+      }
+    }
+    requestAnimationFrame(dashAnimFunc);
+  };
+  dashAnimFunc();
 };
 
 const addSmoothLines = (view: ThreeView, pane: Pane) => {

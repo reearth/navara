@@ -1,4 +1,4 @@
-import type { EventHandler, EventManager } from "@navara/core";
+import type { ColorMap, EventHandler, EventManager } from "@navara/core";
 import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
@@ -59,14 +59,17 @@ import {
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
+  f64: (handle: number) => Float64Array | null;
   u32: (handle: number) => Uint32Array | null;
   removeU8: (handle: number) => Uint8Array | null;
   removeF32: (handle: number) => Float32Array | null;
+  removeF64: (handle: number) => Float64Array | null;
   removeU32: (handle: number) => Uint32Array | null;
   setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
   newU8: (bytes: Uint8Array) => number | undefined;
   newU32: (bytes: Uint32Array) => number | undefined;
   newF32: (bytes: Float32Array) => number | undefined;
+  newF64: (bytes: Float64Array) => number | undefined;
   remove: (handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
@@ -107,6 +110,7 @@ export type GlobeHandler = {
   getShouldComputeNormalFromVertex: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
+  getElevationColormap: () => Float32Array | undefined;
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
@@ -115,6 +119,7 @@ export type GlobeHandler = {
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
+  setElevationColormap: (value: ColorMap) => void;
 };
 
 export type FeatureHandler = {

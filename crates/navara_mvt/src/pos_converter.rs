@@ -50,7 +50,7 @@ impl PosConverter {
             let (x, y) = self.project_point(pt);
             ret.push(x);
             ret.push(y);
-            ret.push(0.0 as FloatType);
+            ret.push(0.0_f64);
         }
 
         ret
@@ -62,12 +62,12 @@ impl PosConverter {
         let mut ret = Vec::with_capacity(points.len() * 3);
 
         for pt in points {
-            let x = (pt.x - half_extent) / half_extent; // Xを [-1, 1] にスケーリング
-            let y = -(pt.y - half_extent) / half_extent; // Yを [-1, 1] にスケーリングしつつ反転
+            let x = (pt.x - half_extent) / half_extent;
+            let y = -(pt.y - half_extent) / half_extent;
             let z = 0.0;
 
-            ret.push(x);
-            ret.push(y);
+            ret.push(x as f64);
+            ret.push(y as f64);
             ret.push(z);
         }
 

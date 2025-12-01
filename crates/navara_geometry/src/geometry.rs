@@ -6,9 +6,9 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Geometry {
     /// Vector of vertex. The stride is 3.
-    pub vertices: Vec<FloatType>,
+    pub vertices: Vec<f32>,
     /// Vector of UV for a texture. The stride is 2.
-    pub uvs: Vec<FloatType>,
+    pub uvs: Vec<f32>,
     /// Vector of index that constracts a triangle.
     pub indices: Vec<u32>,
 }
@@ -35,6 +35,6 @@ pub struct ReturnedConstructedTerrainMesh {
     pub geometry: Geometry,
     pub max_height: FloatType,
     pub min_height: FloatType,
-    pub heights: Vec<FloatType>,
+    pub heights: Vec<f32>,
     pub rtc_translation: Option<Vec3>,
 }

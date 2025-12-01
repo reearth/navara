@@ -13,7 +13,7 @@ use navara_camera::{
     CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
 };
 use navara_component::{Deleted, Rendered};
-use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_32};
+use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_64};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -90,9 +90,14 @@ impl App {
         store.get_u32(&handle)
     }
 
-    pub fn get_buffer_f32(&self, handle: i32) -> Option<&[FloatType]> {
+    pub fn get_buffer_f32(&self, handle: i32) -> Option<&[f32]> {
         let store = self.app.world().get_resource::<BufferStore>()?;
         store.get_f32(&handle)
+    }
+
+    pub fn get_buffer_f64(&self, handle: i32) -> Option<&[f64]> {
+        let store = self.app.world().get_resource::<BufferStore>()?;
+        store.get_f64(&handle)
     }
 
     pub fn set_buffer_u8(&mut self, handle: i32, bits: u64, data: Vec<u8>) {
@@ -126,6 +131,11 @@ impl App {
         Some(store.new_f32(data))
     }
 
+    pub fn new_buffer_f64(&mut self, data: Vec<f64>) -> Option<Handle> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        Some(store.new_f64(data))
+    }
+
     pub fn remove_buffer(&mut self, handle: i32) {
         let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
             return;
@@ -144,6 +154,10 @@ impl App {
     pub fn remove_buffer_f32(&mut self, handle: i32) -> Option<Vec<f32>> {
         let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
         store.remove_f32(&handle)
+    }
+    pub fn remove_buffer_f64(&mut self, handle: i32) -> Option<Vec<f64>> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        store.remove_f64(&handle)
     }
 
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
@@ -289,22 +303,74 @@ impl App {
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
-        let appearances = match &mut desc {
-            LayerDescription::GeoJson(layer) => &layer.appearances,
-            LayerDescription::B3dm(layer) => &layer.appearances,
-            LayerDescription::Pnts(layer) => &layer.appearances,
-            LayerDescription::Cesium3dTiles(layer) => &layer.appearances,
-            LayerDescription::Mvt(layer) => &layer.appearances,
-            LayerDescription::Tiles(layer) => &vec![layer.appearance.take().unwrap()],
-            _ => return,
-        };
-        for appearance in appearances {
-            self.app
-                .world_mut()
-                .send_event(navara_layer_event::UpdateLayerEvent {
-                    layer_id: LayerId(layer_id.to_owned()),
-                    appearance: appearance.clone(),
-                });
+        match &mut desc {
+            LayerDescription::GeoJson(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::B3dm(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Pnts(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Cesium3dTiles(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Mvt(layer) => {
+                for appearance in &layer.appearances {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance: appearance.clone(),
+                            elevation_heatmap_config: None,
+                        });
+                }
+            }
+            LayerDescription::Tiles(layer) => {
+                if let Some(appearance) = layer.appearance.take() {
+                    self.app
+                        .world_mut()
+                        .send_event(navara_layer_event::UpdateLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            appearance,
+                            elevation_heatmap_config: layer.elevation_heatmap_config.clone(),
+                        });
+                }
+            }
+            _ => (),
         }
     }
 
@@ -772,6 +838,22 @@ impl App {
         });
     }
 
+    pub fn camera_follow(
+        &mut self,
+        enabled: bool,
+        target: Option<Vec<FloatType>>,
+        offset: Option<Vec<FloatType>>,
+    ) {
+        let target_vec3 = target.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+        let offset_vec3 = offset.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+
+        self.app.world_mut().send_event(CameraEvent::Follow {
+            enabled,
+            target: target_vec3,
+            offset: offset_vec3,
+        });
+    }
+
     pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<&CameraStatus, With<CameraMarker>>();
@@ -788,7 +870,7 @@ impl App {
         let mut query = world.query_filtered::<&Transform, With<CameraMarker>>();
 
         if let Some(transform) = query.iter(world).next() {
-            let lle = CRS::Geocentric.to_lle(WGS84_32, transform.translation, 0.0);
+            let lle = CRS::Geocentric.to_lle(WGS84_64, transform.translation, 0.0);
             let start = lle.deg();
             return Some(vec![start.lng.val(), start.lat.val(), start.height.val()]);
         }
@@ -952,6 +1034,12 @@ impl App {
     pub fn set_globe_wireframe(&mut self, value: bool) {
         if let Some(mut globe) = self.get_globe_mut() {
             globe.wireframe = value;
+        }
+    }
+
+    pub fn set_globe_elevation_colormap(&mut self, value: Vec<f32>) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.elevation_colormap = value;
         }
     }
 

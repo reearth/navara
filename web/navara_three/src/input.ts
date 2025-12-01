@@ -29,9 +29,10 @@ export function registerInputEvents(
   const mousemove = (event: MouseEvent) => {
     const width = element.clientWidth;
     const height = element.clientHeight;
+    const aspectRatio = width / height;
     core.input({
       type: "mousemove",
-      x: event.clientX / width,
+      x: (event.clientX / width) * aspectRatio,
       y: event.clientY / height,
     });
   };

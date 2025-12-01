@@ -16,20 +16,20 @@ use navara_feature_component::{
     render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
     BatchedFeatureMarker,
 };
+use navara_geometry::FloatAttribute;
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
-use navara_math::{FloatType, Transform, Vec3};
+use navara_math::{Transform, Vec3};
 
 use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, RasterTileQuadtree, TileMeshMarker,
+    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileExtent,
+    TileMeshMarker,
 };
 use navara_worker::construct_polyline_batched_feature::{
     ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,
     ConstructPolylineBatchedFeatureResult, ConstructPolylineBatchedFeatureWorkerTaskBundle,
 };
-
-use navara_geometry::FloatAttribute;
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
@@ -44,6 +44,8 @@ pub fn transfer_batched_mesh(
             &FeatureBatchId,
             &GlobalBatchIds,
             Option<&mut FeatureId>,
+            Option<&OverscaledTileHandle>,
+            Option<&TileExtent>,
         ),
         With<PolylineMarker>,
     >,
@@ -61,6 +63,8 @@ pub fn transfer_batched_mesh(
         feature_batch_id,
         global_batch_ids,
         feature_id,
+        tile_coordinates,
+        tile_extent_component,
     ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
@@ -78,6 +82,9 @@ pub fn transfer_batched_mesh(
                     ConstructPolylineBatchedFeatureMarker,
                     ConstructPolylineBatchedFeatureParameters {
                         batched_feature: batched_feature_entity,
+                        // If it uses `clamp_to_ground` and it is tile, it should be flat.
+                        flat: material.clamp_to_ground && tile_coordinates.is_some(),
+                        tile_extent: tile_extent_component.map(|t| t.extent),
                     },
                 ))
                 .id();
@@ -95,29 +102,35 @@ pub fn transfer_batched_mesh(
             min_max_heights: vec![0., 0.],
         });
 
-        let entity = commands
-            .spawn((
-                PolylineMarker,
-                layer_id.clone(),
-                RenderableFeature::Polyline {
-                    // TODO: Calculate coordinate to update transform
-                    coordinates: Vec3::new(0., 0., 0.),
-                    crs: CRS::Geocentric,
-                    material,
-                    geometry: geometry.clone(),
-                    extent: *extent,
-                    transform: Transform::default(),
-                    feature_id: None,
-                    render_info: PolylineRenderInformation {
-                        should_recalculate_height: true,
-                        is_rendered: false,
-                    },
-                    active: false,
-                    feature_batch_id: feature_batch_id.0,
-                    batch_length: global_batch_ids.batch_length,
+        let clamp_to_ground = material.clamp_to_ground;
+        let mut entity_cmd = commands.spawn((
+            PolylineMarker,
+            layer_id.clone(),
+            RenderableFeature::Polyline {
+                // TODO: Calculate coordinate to update transform
+                coordinates: Vec3::new(0., 0., 0.),
+                crs: CRS::Geocentric,
+                material,
+                geometry: geometry.clone(),
+                extent: *extent,
+                transform: Transform::default(),
+                feature_id: None,
+                render_info: PolylineRenderInformation {
+                    should_recalculate_height: true,
+                    is_rendered: false,
+                    should_be_texturized: clamp_to_ground && tile_coordinates.is_some(),
                 },
-            ))
-            .id();
+                active: false,
+                feature_batch_id: feature_batch_id.0,
+                batch_length: global_batch_ids.batch_length,
+            },
+        ));
+
+        if let Some(coords) = tile_coordinates {
+            entity_cmd.insert(coords.clone());
+        }
+
+        let entity = entity_cmd.id();
 
         if let Some(mut feature_id) = feature_id {
             feature_id.0 = Some(entity);
@@ -151,7 +164,7 @@ pub fn transfer_mesh(
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polylines {
         // `coords` has a lifetime for sure.
         let constructed_feature = {
-            let coords = buf.remove_f32(&geometry.coords).unwrap();
+            let coords = buf.remove_f64(&geometry.coords).unwrap();
             construct_polyline_feature(material, coords, &geometry.crs)
         };
 
@@ -163,7 +176,7 @@ pub fn transfer_mesh(
 
             let pos_cnt = geometry.attributes.position.data.len()
                 / geometry.attributes.position.size as usize;
-            let batch_id_vec = vec![batch_id.0 as FloatType; pos_cnt];
+            let batch_id_vec = vec![batch_id.0; pos_cnt];
 
             geometry.attributes.batch_ids = Some(FloatAttribute::new(batch_id_vec, 1));
 
@@ -183,6 +196,7 @@ pub fn transfer_mesh(
                         render_info: PolylineRenderInformation {
                             should_recalculate_height: clamp_to_ground,
                             is_rendered: false,
+                            should_be_texturized: false, // non-batched features are not texturized
                         },
                         extent,
                         active: true,
@@ -220,7 +234,9 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty || !material.clamp_to_ground)
+                if (is_tile_meshes_empty
+                    || !material.clamp_to_ground
+                    || render_info.should_be_texturized)
                     && !render_info.should_recalculate_height
                 {
                     continue;

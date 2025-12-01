@@ -6,14 +6,15 @@ use navara_layer::{
     TerrainDataType, TerrainLayer, TilesLayer,
 };
 
-use navara_material::Appearance;
+use navara_material::{Appearance, ElevationHeatmapConfig};
 use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
 use navara_wasm_types::{
-    BillboardMaterial, ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
-    RasterTerrainMaterial, RasterTileMaterial, TextMaterial, VectorTileMaterial,
+    BillboardMaterial, ElevationHeatmapMaterial, EllipsoidTerrainMaterial, ModelMaterial,
+    PointMaterial, PolygonMaterial, PolylineMaterial, RasterTerrainMaterial, RasterTileMaterial,
+    TextMaterial, VectorTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -27,6 +28,8 @@ pub struct TileLayerDescription {
 
     #[wasm_bindgen(getter_with_clone)]
     pub raster_tile: Option<RasterTileMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub elevation_heatmap: Option<ElevationHeatmapMaterial>,
 }
 
 impl TileLayerDescription {
@@ -49,11 +52,24 @@ pub struct TerrainLayerDescription {
 
     #[wasm_bindgen(getter_with_clone)]
     pub raster_terrain: Option<RasterTerrainMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub ellipsoid: Option<EllipsoidTerrainMaterial>,
+}
+
+pub enum TerrainMaterial {
+    Raster(navara_material::RasterTerrainMaterial),
+    Ellipsoid(navara_material::EllipsoidTerrainMaterial),
 }
 
 impl TerrainLayerDescription {
-    pub fn appearance(&mut self) -> Option<navara_material::RasterTerrainMaterial> {
-        self.raster_terrain.take().map(|v| v.into())
+    pub fn appearance(&mut self) -> Option<TerrainMaterial> {
+        if let Some(v) = self.raster_terrain.take() {
+            return Some(TerrainMaterial::Raster(v.into()));
+        }
+        if let Some(v) = self.ellipsoid.take() {
+            return Some(TerrainMaterial::Ellipsoid(v.into()));
+        }
+        None
     }
 }
 
@@ -304,10 +320,23 @@ impl LayerDescription {
 
                 let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
+                // Parse elevation_heatmap config
+                let elevation_heatmap_config =
+                    layer.elevation_heatmap.as_ref().and_then(|heatmap| {
+                        Some(ElevationHeatmapConfig {
+                            max_height: heatmap.max_height.unwrap_or(1000.0),
+                            min_height: heatmap.min_height.unwrap_or(0.0),
+                            elevation_decoder: heatmap.elevation_decoder?.into(),
+                            logarithmic: heatmap.logarithmic,
+                            log_boundary: heatmap.log_boundary,
+                        })
+                    });
+
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearance: layer.appearance(),
+                    elevation_heatmap_config,
                 }))
             }
             "terrain" => {
@@ -318,21 +347,43 @@ impl LayerDescription {
 
                 let mut data: Option<LayerDescriptionUrl> = None;
                 if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok();
                 }
-
-                let url = data.as_ref().unwrap().url.as_str();
 
                 let mut layer: TerrainLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
+                let appearance = layer.appearance();
+
+                // Determine terrain type and prepare data
+                let (terrain_type, layer_data) = if appearance.is_some() {
+                    match &appearance {
+                        Some(TerrainMaterial::Ellipsoid(_)) => (TerrainDataType::Ellipsoid, None),
+                        Some(TerrainMaterial::Raster(_)) => {
+                            let url = data.as_ref()?.url.as_str();
+                            (
+                                TerrainDataType::from_url(url),
+                                Some(LayerData {
+                                    url: String::from(url),
+                                }),
+                            )
+                        }
+                        None => (TerrainDataType::Unknown, None),
+                    }
+                } else {
+                    (TerrainDataType::Unknown, None)
+                };
+
+                let terrain_appearance = appearance.map(|mat| match mat {
+                    TerrainMaterial::Raster(r) => navara_layer::TerrainAppearance::Raster(r),
+                    TerrainMaterial::Ellipsoid(e) => navara_layer::TerrainAppearance::Ellipsoid(e),
+                });
+
                 Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
                     layer_id: layer_id.to_string(),
-                    data: Some(LayerData {
-                        url: String::from(url),
-                    }),
-                    appearance: layer.appearance(),
-                    terrain_type: TerrainDataType::from_url(url),
+                    data: layer_data,
+                    appearance: terrain_appearance,
+                    terrain_type,
                 }))
             }
             "geojson" => {

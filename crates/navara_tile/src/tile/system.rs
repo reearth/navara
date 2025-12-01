@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
-use navara_core::{TileXYZ, WGS84_32};
+use navara_core::{Aabb, TileXYZ, WGS84_64};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -132,13 +132,14 @@ pub fn update_tiles(
     };
     let zero_tile_handle = zero_tile.handle();
 
+    let has_tile_layer = !tiles.is_empty();
     let is_texture_ready = qt
         .qt
         .get_mut(zero_tile_handle)
         .unwrap()
-        .is_texture_ready(&texture_fragment);
+        .is_texture_ready(&texture_fragment, has_tile_layer);
 
-    match traverse_tile(
+    let traversal_result = traverse_tile(
         &mut commands,
         tiles,
         &terrain_layer,
@@ -152,14 +153,29 @@ pub fn update_tiles(
         &texture_fragment,
         &terrain_data_requester,
         &window,
-        &WGS84_32,
+        &WGS84_64,
         &occluder,
         &mut meshes,
         &fog,
-        globe.max_sse,
+        globe.max_sse as f64,
         false,
         is_texture_ready.then_some(zero_tile_handle),
-    ) {
+    );
+
+    let is_over_min_z = if !tiles.is_empty() {
+        tiles.iter().any(|t| {
+            t.0.is_over_min_zoom(qt.qt.get(zero_tile_handle).unwrap().coords.z)
+        })
+    } else {
+        true
+    };
+
+    // Avoid rendering level zero tile if this tile isn't allowed.
+    if !is_over_min_z {
+        return;
+    }
+
+    match traversal_result {
         TraversalResult::TileRendered => {
             spawn_tile_entity(
                 &mut commands,
@@ -233,7 +249,7 @@ pub fn transfer_mesh(
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
 
-    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size);
+    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size());
 
     for (rendered_tile_id, mut rendered_tile, order) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>()
@@ -250,6 +266,7 @@ pub fn transfer_mesh(
         }
 
         let tile = qt.qt.get(rendered_tile.tile_handle).unwrap();
+        let tile_aabb = tile.aabb().clone();
         let is_root = tile.is_root();
         let render_order = if is_root { -1 } else { 0 };
 
@@ -269,6 +286,9 @@ pub fn transfer_mesh(
         let extent = tile.extent;
 
         let should_render_terrain = terrain_layer.is_some();
+        let is_ellipsoid_terrain = terrain_layer
+            .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::Ellipsoid))
+            .unwrap_or(false);
 
         let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
 
@@ -276,6 +296,12 @@ pub fn transfer_mesh(
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
+
+        // Elevation Heatmap fields
+        let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
+        let mut shared_heatmap_config = None;
+        let mut tile_show_bounding_box = false;
+
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let should_show = texture_fragment_entity_ids
                 .as_ref()
@@ -286,12 +312,29 @@ pub fn transfer_mesh(
             shows.push(should_show && a.show);
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
+            tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
+
+            // Mark whether this layer is an elevation heatmap
+            if let Some(heatmap_config) = &l.elevation_heatmap_config {
+                is_elevation_heatmaps.push(true);
+                // Use the first heatmap config as shared configuration
+                if shared_heatmap_config.is_none() {
+                    shared_heatmap_config = Some(heatmap_config);
+                }
+            } else {
+                is_elevation_heatmaps.push(false);
+            }
         }
 
-        let (cast_shadow, receive_shadow) = terrain_layer
+        // Extract shared elevation heatmap configuration (or use defaults)
+        let (cast_shadow, receive_shadow, terrain_show_bounding_box) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
-            .map_or((false, false), |appearance| {
-                (appearance.cast_shadow, appearance.receive_shadow)
+            .map_or((false, false, false), |appearance| {
+                (
+                    appearance.cast_shadow(),
+                    appearance.receive_shadow(),
+                    appearance.show_bounding_box(),
+                )
             });
 
         let appearance = RasterTileInternalMaterial {
@@ -301,6 +344,11 @@ pub fn transfer_mesh(
             texture_fragments: texture_fragment_entity_ids.clone(),
             cast_shadow: Some(cast_shadow),
             receive_shadow: Some(receive_shadow),
+            show_bounding_box: Some(tile_show_bounding_box || terrain_show_bounding_box),
+
+            // Elevation Heatmap fields
+            is_elevation_heatmaps,
+            elevation_heatmap_config: shared_heatmap_config.cloned(),
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -316,16 +364,17 @@ pub fn transfer_mesh(
 
         let should_upsample_terrain =
             tile.should_upsampling(
-                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom),
+                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
             ) && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain
+            || is_ellipsoid_terrain
             || (terrain_layer
-                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom >= tile.coords.z)
+                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom() >= tile.coords.z)
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             let (triangles, rtc_translation) = tile_triangles_flat(
-                WGS84_32,
+                WGS84_64,
                 &extent,
                 if is_root { 65 } else { globe.segments },
                 0.,
@@ -360,6 +409,11 @@ pub fn transfer_mesh(
                         active: false,
                         render_order,
                         uv_transform: Default::default(),
+                        aabb: Aabb {
+                            center: Transform::from_translation(-rtc_translation)
+                                .transform_point(tile_aabb.center),
+                            extents: tile_aabb.extents,
+                        },
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -459,6 +513,11 @@ pub fn transfer_mesh(
                         active: false,
                         render_order,
                         uv_transform: Default::default(),
+                        aabb: Aabb {
+                            center: Transform::from_translation(-rtc_translation)
+                                .transform_point(tile_aabb.center),
+                            extents: tile_aabb.extents,
+                        },
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -545,6 +604,11 @@ pub fn transfer_mesh(
                     active: false,
                     render_order,
                     uv_transform: Default::default(),
+                    aabb: Aabb {
+                        center: Transform::from_translation(-rtc_translation)
+                            .transform_point(tile_aabb.center),
+                        extents: tile_aabb.extents,
+                    },
                 },
                 material: appearance,
                 object: ObjectBundle {
@@ -580,6 +644,11 @@ pub fn update_layer(
 
             if let Some(a) = &mut layer.appearance {
                 a.set(&u.appearance);
+            }
+
+            // Update elevation_heatmap_config if provided
+            if u.elevation_heatmap_config.is_some() {
+                layer.elevation_heatmap_config = u.elevation_heatmap_config.clone();
             }
         }
         commands.entity(e).despawn();
@@ -665,6 +734,11 @@ pub fn update_mesh_material(
     let tile_layers = tile_layers.p0();
     let texture_fragment = texture_fragment.p0();
 
+    let has_tile_layer = !tile_layers.is_empty();
+    if !has_tile_layer {
+        return;
+    }
+
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
             continue;
@@ -682,7 +756,7 @@ pub fn update_mesh_material(
         };
 
         let mut parent_z = None;
-        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment) {
+        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment, true) {
             texture_fragment_entity_ids
         } else {
             // Use the parent tile if this tile doesn't have a tile.
@@ -719,11 +793,14 @@ pub fn update_mesh_material(
         let prev_shows = &appearance.shows;
         let prev_colors = &appearance.colors;
         let prev_opacities = &appearance.opacities;
+        let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
 
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
+        let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
+        let mut elevation_heatmap_config = None;
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // If this tile isn't ready, the remaining tiles aren't ready either.
             let should_show = texture_fragment_entity_ids
@@ -736,11 +813,15 @@ pub fn update_mesh_material(
             let next_opacity = a.opacity;
             let next_color = a.color;
 
+            // Check if this layer is an elevation heatmap
+            let is_heatmap = l.elevation_heatmap_config.is_some();
+
             if prev_shows.get(i) != Some(&next_show)
                 || prev_opacities.get(i) != Some(&next_opacity)
                 || prev_colors.get(i) != Some(&next_color)
                 || prev_texture_fragments.as_ref().and_then(|t| t.get(i))
                     != texture_fragment_entity_ids.get(i)
+                || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
             {
                 needs_update = true;
             }
@@ -748,6 +829,17 @@ pub fn update_mesh_material(
             shows.push(next_show);
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
+            is_elevation_heatmaps.push(is_heatmap);
+
+            // Use the first elevation_heatmap_config we find (they should all be the same)
+            if is_heatmap && elevation_heatmap_config.is_none() {
+                elevation_heatmap_config = l.elevation_heatmap_config.clone();
+            }
+        }
+
+        // Check if elevation_heatmap_config changed
+        if appearance.elevation_heatmap_config != elevation_heatmap_config {
+            needs_update = true;
         }
 
         if !needs_update {
@@ -775,6 +867,8 @@ pub fn update_mesh_material(
         appearance.shows = shows;
         appearance.opacities = opacities;
         appearance.colors = colors;
+        appearance.is_elevation_heatmaps = is_elevation_heatmaps;
+        appearance.elevation_heatmap_config = elevation_heatmap_config;
     }
 }
 

@@ -17,8 +17,8 @@ pub struct PolylineGeometry {
 }
 
 pub struct PolylineGeometryOptions {
-    pub positions: Vec<LLE<f32, Radians>>,
-    pub granularity: f32,
+    pub positions: Vec<LLE<f64, Radians>>,
+    pub granularity: f64,
     pub crs: CRS,
     pub clamp_to_ground: bool,
 }
@@ -36,7 +36,7 @@ impl Default for PolylineGeometryOptions {
 
 // Ref: https://github.com/CesiumGS/cesium/blob/165e0fb4fcc9a448b15de6a2df46db23c71fffda/packages/engine/Source/Core/GroundPolylineGeometry.js#L458
 pub fn create_polyline_geometry(
-    ellipsoid: Ellipsoid<f32>,
+    ellipsoid: Ellipsoid<f64>,
     options: PolylineGeometryOptions,
 ) -> Option<PolylineGeometry> {
     let granularity = options.granularity;
@@ -180,21 +180,183 @@ pub fn create_polyline_geometry(
     })
 }
 
+/// Options for creating flat polyline geometry in Cartesian coordinates
+pub struct FlatPolylineGeometryOptions {
+    /// Positions in Cartesian coordinates (already converted from source CRS)
+    pub positions: Vec<navara_math::Vec3>,
+    /// Line width
+    pub width: f32,
+}
+
+impl Default for FlatPolylineGeometryOptions {
+    fn default() -> Self {
+        Self {
+            positions: vec![],
+            width: 1.0,
+        }
+    }
+}
+
+/// Creates a flat polyline geometry from positions in Cartesian coordinates.
+/// This function creates simple quad strips for the polyline, suitable for 2D texture rendering.
+/// The geometry uses X/Y positions for the flat plane.
+pub fn create_flat_polyline_geometry(
+    options: FlatPolylineGeometryOptions,
+) -> Option<PolylineGeometry> {
+    let positions = &options.positions;
+
+    if positions.len() < 2 {
+        return None;
+    }
+
+    let mut flat_positions = vec![];
+    let mut start_positions = vec![];
+    let mut forward_offsets = vec![];
+    let mut start_normals = vec![];
+    let mut end_normal_and_tex_x = vec![];
+    let mut right_normal_and_tex_y = vec![];
+    let mut indices = vec![];
+
+    let mut total_length = 0.0_f32;
+    let mut segment_lengths = vec![];
+
+    // Calculate segment lengths for texture coordinate normalization
+    for i in 0..(positions.len() - 1) {
+        let p0 = positions[i];
+        let p1 = positions[i + 1];
+        let dx = (p1.x - p0.x) as f32;
+        let dy = (p1.y - p0.y) as f32;
+        let len = (dx * dx + dy * dy).sqrt();
+        segment_lengths.push(len);
+        total_length += len;
+    }
+
+    let mut accumulated_length = 0.0_f32;
+    let mut vertex_index = 0u32;
+
+    for i in 0..(positions.len() - 1) {
+        let p0 = positions[i];
+        let p1 = positions[i + 1];
+
+        // Direction vector
+        let dx = (p1.x - p0.x) as f32;
+        let dy = (p1.y - p0.y) as f32;
+        let len = segment_lengths[i];
+        if len < 1e-10 {
+            continue;
+        }
+
+        // Normalize direction
+        let dir_x = dx / len;
+        let dir_y = dy / len;
+
+        // Right normal (perpendicular to direction)
+        let right_x = -dir_y;
+        let right_y = dir_x;
+
+        // Texture coordinates
+        let tex_x_start = if total_length > 0.0 {
+            accumulated_length / total_length
+        } else {
+            0.0
+        };
+        let tex_x_end = if total_length > 0.0 {
+            (accumulated_length + len) / total_length
+        } else {
+            1.0
+        };
+
+        // Create 4 vertices for this segment (2 at start, 2 at end)
+        // Each vertex has: position (3), start (3), forward_offset (3), start_normal (3),
+        // end_normal_and_tex_x (4), right_normal_and_tex_y (4)
+
+        // Vertex 0: start, left side
+        flat_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
+        start_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
+        forward_offsets.extend_from_slice(&[dir_x, dir_y, 0.0]);
+        start_normals.extend_from_slice(&[right_x, right_y, 0.0]);
+        end_normal_and_tex_x.extend_from_slice(&[right_x, right_y, 0.0, tex_x_start]);
+        right_normal_and_tex_y.extend_from_slice(&[right_x, right_y, 0.0, 1.0]); // left side = 1.0
+
+        // Vertex 1: start, right side
+        flat_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
+        start_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
+        forward_offsets.extend_from_slice(&[dir_x, dir_y, 0.0]);
+        start_normals.extend_from_slice(&[right_x, right_y, 0.0]);
+        end_normal_and_tex_x.extend_from_slice(&[right_x, right_y, 0.0, tex_x_start]);
+        right_normal_and_tex_y.extend_from_slice(&[right_x, right_y, 0.0, -1.0]); // right side = -1.0
+
+        // Vertex 2: end, left side
+        flat_positions.extend_from_slice(&[p1.x as f32, p1.y as f32, 0.0]);
+        start_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
+        forward_offsets.extend_from_slice(&[dir_x, dir_y, 0.0]);
+        start_normals.extend_from_slice(&[right_x, right_y, 0.0]);
+        end_normal_and_tex_x.extend_from_slice(&[right_x, right_y, 0.0, tex_x_end]);
+        right_normal_and_tex_y.extend_from_slice(&[right_x, right_y, 0.0, 1.0]); // left side = 1.0
+
+        // Vertex 3: end, right side
+        flat_positions.extend_from_slice(&[p1.x as f32, p1.y as f32, 0.0]);
+        start_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
+        forward_offsets.extend_from_slice(&[dir_x, dir_y, 0.0]);
+        start_normals.extend_from_slice(&[right_x, right_y, 0.0]);
+        end_normal_and_tex_x.extend_from_slice(&[right_x, right_y, 0.0, tex_x_end]);
+        right_normal_and_tex_y.extend_from_slice(&[right_x, right_y, 0.0, -1.0]); // right side = -1.0
+
+        // Two triangles: (0, 1, 2), (1, 3, 2)
+        indices.push(vertex_index);
+        indices.push(vertex_index + 1);
+        indices.push(vertex_index + 2);
+        indices.push(vertex_index + 1);
+        indices.push(vertex_index + 3);
+        indices.push(vertex_index + 2);
+
+        vertex_index += 4;
+        accumulated_length += len;
+    }
+
+    if flat_positions.is_empty() {
+        return None;
+    }
+
+    Some(PolylineGeometry {
+        attributes: PolylineGeometryAttributes {
+            position: crate::FloatAttribute::new(flat_positions, 3),
+            start: crate::FloatAttribute::new(start_positions, 3),
+            forward_offset: crate::FloatAttribute::new(forward_offsets, 3),
+            start_normals: crate::FloatAttribute::new(start_normals, 3),
+            end_normal_and_texture_coordinate_normalization_x: crate::FloatAttribute::new(
+                end_normal_and_tex_x,
+                4,
+            ),
+            right_normal_and_texture_coordinate_normalization_y: crate::FloatAttribute::new(
+                right_normal_and_tex_y,
+                4,
+            ),
+            batch_ids: None,
+            batch_index: None,
+        },
+        indices,
+    })
+}
+
 #[cfg(test)]
 mod test {
-    use navara_core::{LLE, WGS84_32};
+    use navara_core::{LLE, WGS84_64};
     use radians::Degrees;
 
-    use super::{create_polyline_geometry, PolylineGeometryOptions};
+    use super::{
+        create_flat_polyline_geometry, create_polyline_geometry, FlatPolylineGeometryOptions,
+        PolylineGeometryOptions,
+    };
 
     #[test]
     fn it_computes_positions_and_attributes_for_polylines() {
         let geometry = create_polyline_geometry(
-            WGS84_32,
+            WGS84_64,
             PolylineGeometryOptions {
                 positions: vec![
-                    LLE::<f32, Degrees>::from_float(0.01, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.02, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
                 ],
                 granularity: 0.0,
                 ..Default::default()
@@ -215,11 +377,11 @@ mod test {
         // }
 
         let geometry = create_polyline_geometry(
-            WGS84_32,
+            WGS84_64,
             PolylineGeometryOptions {
                 positions: vec![
-                    LLE::<f32, Degrees>::from_float(0.01, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.02, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
                 ],
                 granularity: 600.0,
                 ..Default::default()
@@ -231,12 +393,12 @@ mod test {
         assert_eq!(geometry.attributes.position.data.len(), 48);
 
         let geometry = create_polyline_geometry(
-            WGS84_32,
+            WGS84_64,
             PolylineGeometryOptions {
                 positions: vec![
-                    LLE::<f32, Degrees>::from_float(0.01, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.02, 0., 0.).rad(),
-                    LLE::<f32, Degrees>::from_float(0.0201, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.0201, 0., 0.).rad(),
                 ],
                 granularity: 600.0,
                 ..Default::default()
@@ -246,5 +408,36 @@ mod test {
 
         assert_eq!(geometry.indices.len(), 36 * 3);
         assert_eq!(geometry.attributes.position.data.len(), 24 * 3);
+    }
+
+    #[test]
+    fn it_computes_flat_polyline_geometry() {
+        use navara_math::Vec3;
+
+        // Single segment
+        let geometry = create_flat_polyline_geometry(FlatPolylineGeometryOptions {
+            positions: vec![Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0)],
+            width: 1.0,
+        })
+        .unwrap();
+
+        // 1 segment = 4 vertices, 6 indices (2 triangles)
+        assert_eq!(geometry.indices.len(), 6);
+        assert_eq!(geometry.attributes.position.data.len() / 3, 4);
+
+        // Two segments
+        let geometry = create_flat_polyline_geometry(FlatPolylineGeometryOptions {
+            positions: vec![
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(1.0, 0.0, 0.0),
+                Vec3::new(2.0, 1.0, 0.0),
+            ],
+            width: 1.0,
+        })
+        .unwrap();
+
+        // 2 segments = 8 vertices, 12 indices (4 triangles)
+        assert_eq!(geometry.indices.len(), 12);
+        assert_eq!(geometry.attributes.position.data.len() / 3, 8);
     }
 }

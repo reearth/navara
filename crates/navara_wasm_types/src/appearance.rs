@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, Vec2};
+use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -295,7 +295,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 impl From<PolylineInternalMaterial> for navara_material::PolylineInternalMaterial {
@@ -542,7 +542,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 impl From<PolygonInternalMaterial> for navara_material::PolygonInternalMaterial {
@@ -606,6 +606,7 @@ pub struct ModelMaterial {
     pub animation_speed: Option<f32>,
     // Point size for point clouds data.
     pub point_size: Option<f32>,
+    pub show_bounding_box: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
 }
@@ -642,6 +643,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             animation_active_clip: val.animation_active_clip,
             animation_speed: val.animation_speed,
             point_size: val.point_size.unwrap_or(default.point_size),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             internal: val.__internal__.clone().map(|v| v.into()),
         }
     }
@@ -676,6 +678,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             animation_active_clip: value.animation_active_clip.clone(),
             animation_speed: value.animation_speed,
             point_size: Some(value.point_size),
+            show_bounding_box: Some(value.show_bounding_box),
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
         }
     }
@@ -688,6 +691,8 @@ pub struct ModelInternalMaterial {
     pub point_cloud: bool,
     #[wasm_bindgen(getter_with_clone)]
     pub draco_compressed: bool,
+    #[wasm_bindgen(getter_with_clone)]
+    pub point_cloud_geodetic_normal: WasmVec3,
 }
 
 impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMaterial {
@@ -695,6 +700,7 @@ impl<'a> From<&'a navara_material::ModelInternalMaterial> for ModelInternalMater
         ModelInternalMaterial {
             point_cloud: value.point_cloud,
             draco_compressed: value.draco_compressed,
+            point_cloud_geodetic_normal: value.point_cloud_geodetic_normal.into(),
         }
     }
 }
@@ -704,6 +710,7 @@ impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
         navara_material::ModelInternalMaterial {
             point_cloud: value.point_cloud,
             draco_compressed: value.draco_compressed,
+            point_cloud_geodetic_normal: value.point_cloud_geodetic_normal.into(),
         }
     }
 }
@@ -717,6 +724,7 @@ pub struct RasterTileMaterial {
     pub max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
     pub tms: Option<bool>,
+    pub show_bounding_box: Option<bool>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
@@ -729,6 +737,7 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             tms: val.tms.unwrap_or(default.tms),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
         }
     }
 }
@@ -741,6 +750,7 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
             tms: Some(value.tms),
+            show_bounding_box: Some(value.show_bounding_box),
         }
     }
 }
@@ -757,6 +767,25 @@ pub struct RasterTileInternalMaterial {
     texture_fragments: Option<Vec<Option<TextureFragment>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
+
+    // Elevation Heatmap fields
+    #[wasm_bindgen(getter_with_clone)]
+    pub is_elevation_heatmaps: Vec<u8>,
+    // Shared elevation heatmap configuration (all heatmap layers use the same settings)
+    pub elevation_min_height: f64,
+    pub elevation_max_height: f64,
+    pub elevation_r_scaler: f64,
+    pub elevation_g_scaler: f64,
+    pub elevation_b_scaler: f64,
+    pub elevation_boundary: f64,
+    pub elevation_max_offset: f64,
+    pub elevation_min_offset: f64,
+    pub elevation_epsilon: f64,
+    pub elevation_offset: f64,
+
+    pub logarithmic: bool,
+    pub log_boundary: f64,
 }
 
 #[wasm_bindgen]
@@ -788,6 +817,71 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             }),
             cast_shadow: m.cast_shadow,
             receive_shadow: m.receive_shadow,
+            show_bounding_box: m.show_bounding_box,
+
+            // Elevation Heatmap fields
+            is_elevation_heatmaps: m.is_elevation_heatmaps.iter().map(|b| b.to_u8()).collect(),
+            elevation_min_height: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.min_height)
+                .unwrap_or(0.0),
+            elevation_max_height: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.max_height)
+                .unwrap_or(1000.0),
+            elevation_r_scaler: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.r_scaler)
+                .unwrap_or(0.0),
+            elevation_g_scaler: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.g_scaler)
+                .unwrap_or(0.0),
+            elevation_b_scaler: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.b_scaler)
+                .unwrap_or(0.0),
+            elevation_boundary: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.boundary)
+                .unwrap_or(0.0),
+            elevation_max_offset: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.max_offset)
+                .unwrap_or(0.0),
+            elevation_min_offset: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.min_offset)
+                .unwrap_or(0.0),
+            elevation_epsilon: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.epsilon)
+                .unwrap_or(1.0),
+            elevation_offset: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.offset)
+                .unwrap_or(0.0),
+
+            logarithmic: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.logarithmic)
+                .unwrap_or(false),
+            log_boundary: m
+                .elevation_heatmap_config
+                .as_ref()
+                .map(|c| c.log_boundary)
+                .unwrap_or(10.0),
         }
     }
 }
@@ -842,8 +936,10 @@ pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
-    pub segments: Option<usize>,
+    pub show_bounding_box: Option<bool>,
     pub max_zoom: Option<usize>,
+    /// The terrain is upsampled until it reaches `overscaled_max_zoom`.
+    pub overscaled_max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
     pub elevation_decoder: Option<ElevationDecoder>,
     pub tile_size: Option<u32>,
@@ -856,8 +952,11 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
             show: val.show.unwrap_or(default.show),
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            segments: val.segments.unwrap_or(default.segments),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            overscaled_max_zoom: val
+                .overscaled_max_zoom
+                .unwrap_or(default.overscaled_max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             tile_size: val.tile_size.unwrap_or(default.tile_size),
             elevation_decoder: val
@@ -874,8 +973,9 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
-            segments: Some(value.segments),
+            show_bounding_box: Some(value.show_bounding_box),
             max_zoom: Some(value.max_zoom),
+            overscaled_max_zoom: Some(value.overscaled_max_zoom),
             min_zoom: Some(value.min_zoom),
             elevation_decoder: Some(ElevationDecoder {
                 r_scaler: value.elevation_decoder.r_scaler,
@@ -888,6 +988,51 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
                 epsilon: value.elevation_decoder.epsilon,
             }),
             tile_size: Some(value.tile_size),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElevationHeatmapMaterial {
+    pub max_height: Option<f64>,
+    pub min_height: Option<f64>,
+    pub elevation_decoder: Option<ElevationDecoder>,
+    pub logarithmic: bool,
+    pub log_boundary: f64,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EllipsoidTerrainMaterial {
+    pub cast_shadow: Option<bool>,
+    pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
+    pub max_zoom: Option<usize>,
+    pub min_zoom: Option<usize>,
+}
+
+impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMaterial {
+    fn from(val: EllipsoidTerrainMaterial) -> Self {
+        let default = navara_material::EllipsoidTerrainMaterial::default();
+        navara_material::EllipsoidTerrainMaterial {
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
+        }
+    }
+}
+
+impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrainMaterial {
+    fn from(value: &'a navara_material::EllipsoidTerrainMaterial) -> EllipsoidTerrainMaterial {
+        EllipsoidTerrainMaterial {
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
+            show_bounding_box: Some(value.show_bounding_box),
+            max_zoom: Some(value.max_zoom),
+            min_zoom: Some(value.min_zoom),
         }
     }
 }

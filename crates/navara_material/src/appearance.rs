@@ -1,6 +1,19 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{calc_transform, ElevationDecoder, CRS};
-use navara_math::{FloatType, Transform, Vec2, Vec3};
+use navara_math::{Transform, Vec2, Vec3};
+
+/// Configuration for elevation heatmap rendering.
+/// Shared across all elevation heatmap layers in a tile.
+/// Note: color_map_lut is now stored in Globe.elevation_colormap
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElevationHeatmapConfig {
+    pub max_height: f64,
+    pub min_height: f64,
+    pub elevation_decoder: ElevationDecoder,
+
+    pub logarithmic: bool,
+    pub log_boundary: f64,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
@@ -49,10 +62,10 @@ impl Appearance {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct PointMaterial {
     pub show: bool,
-    pub size: FloatType,
+    pub size: f32,
     pub color: u32,
     pub center: Vec2,
-    pub height: FloatType,
+    pub height: f32,
     /// near, far
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
@@ -97,10 +110,10 @@ impl PointMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct BillboardMaterial {
     pub show: bool,
-    pub size: FloatType,
+    pub size: f32,
     pub color: u32,
     pub center: Vec2,
-    pub height: FloatType,
+    pub height: f32,
     pub url: String,
     /// near, far
     pub scale_by_distance: bool,
@@ -149,10 +162,10 @@ impl BillboardMaterial {
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct TextMaterial {
     pub show: bool,
-    pub size: FloatType,
+    pub size: f32,
     pub color: u32,
     pub center: Vec2,
-    pub height: FloatType,
+    pub height: f32,
     /// near, far
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
@@ -161,8 +174,8 @@ pub struct TextMaterial {
     pub font: String,
     pub background_color: Option<u32>,
     pub border_color: u32,
-    pub border_width: FloatType, // 0 ~ 0.5, the ratio of the border to the height
-    pub corner_radius: FloatType, // 0 ~ 0.5, the ratio of the corner radius to the height
+    pub border_width: f32,  // 0 ~ 0.5, the ratio of the border to the height
+    pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
     pub padding: Vec2,
     // outline
     pub outline_blur: f32,    // outlineBlur Defalut:0
@@ -255,7 +268,7 @@ impl PolylineMaterial {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolylineInternalMaterial {
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -339,7 +352,7 @@ impl PolygonMaterial {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolygonInternalMaterial {
-    pub min_max_heights: Vec<f32>,
+    pub min_max_heights: Vec<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -348,8 +361,8 @@ pub struct ModelMaterial {
     pub cast_shadow: bool,
     pub receive_shadow: bool,
     pub url: String,
-    pub size: FloatType,
-    pub height: FloatType,
+    pub size: f32,
+    pub height: f32,
     pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
@@ -370,6 +383,7 @@ pub struct ModelMaterial {
     pub animation_active_clip: Option<String>,
     pub animation_speed: Option<f32>,
     pub point_size: f32,
+    pub show_bounding_box: bool,
     pub internal: Option<ModelInternalMaterial>,
 }
 
@@ -402,6 +416,7 @@ impl Default for ModelMaterial {
             animation_active_clip: None,
             animation_speed: None,
             point_size: 0.3,
+            show_bounding_box: false,
             internal: None,
         }
     }
@@ -436,6 +451,7 @@ impl ModelMaterial {
 pub struct ModelInternalMaterial {
     pub point_cloud: bool,
     pub draco_compressed: bool,
+    pub point_cloud_geodetic_normal: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -471,6 +487,7 @@ pub struct RasterTileMaterial {
     pub max_zoom: usize,
     pub min_zoom: usize,
     pub tms: bool,
+    pub show_bounding_box: bool,
 }
 
 impl Default for RasterTileMaterial {
@@ -482,6 +499,7 @@ impl Default for RasterTileMaterial {
             max_zoom: 20,
             min_zoom: 0,
             tms: false,
+            show_bounding_box: false,
         }
     }
 }
@@ -495,6 +513,11 @@ pub struct RasterTileInternalMaterial {
     pub texture_fragments: Option<Vec<Option<Entity>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub show_bounding_box: Option<bool>,
+
+    // Elevation Heatmap fields
+    pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
+    pub elevation_heatmap_config: Option<ElevationHeatmapConfig>, // Shared config for all heatmap layers
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -502,11 +525,12 @@ pub struct RasterTerrainMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
-    pub segments: usize,
+    pub show_bounding_box: bool,
     pub max_zoom: usize,
     pub min_zoom: usize,
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: u32,
+    pub overscaled_max_zoom: usize,
 }
 
 impl Default for RasterTerrainMaterial {
@@ -515,11 +539,33 @@ impl Default for RasterTerrainMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
-            segments: 64,
+            show_bounding_box: false,
             max_zoom: 20,
             min_zoom: 0,
             elevation_decoder: ElevationDecoder::default(),
             tile_size: 256,
+            overscaled_max_zoom: 24,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Component)]
+pub struct EllipsoidTerrainMaterial {
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
+    pub show_bounding_box: bool,
+    pub max_zoom: usize,
+    pub min_zoom: usize,
+}
+
+impl Default for EllipsoidTerrainMaterial {
+    fn default() -> Self {
+        Self {
+            cast_shadow: false,
+            receive_shadow: false,
+            show_bounding_box: false,
+            max_zoom: 20,
+            min_zoom: 0,
         }
     }
 }

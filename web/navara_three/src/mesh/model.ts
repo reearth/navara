@@ -17,6 +17,7 @@ import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
+import { Vec3 } from "navara_wasm_worker";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -158,7 +159,7 @@ export class ModelMesh
 
     if (meshMaterial.__internal__?.point_cloud) {
       // Point cloud specific initialization can go here
-      this.overridePntsMaterial();
+      this.overridePntsMaterial(meshMaterial);
     }
 
     this.userData.prev = {};
@@ -525,30 +526,60 @@ export class ModelMesh
     });
   }
 
-  private overridePntsMaterial() {
+  private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {
     this.traverse((object: Object3D) => {
       if (!(object instanceof Points)) {
         return;
       }
 
       const material = object.material;
+      material.userData.uAddHeight = { value: meshMaterial.height ?? 0.0 };
+
+      const geodetic_normal: Vec3 =
+        meshMaterial.__internal__?.point_cloud_geodetic_normal ??
+        new Vec3(0, 0, 0);
+
       material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
+        shader.uniforms.uAddHeight = material.userData.uAddHeight;
+
         // Update vertex shader
         const colorDivisior = 65535.0;
-        shader.vertexShader = createReplacer(shader.vertexShader).replace(
-          "#include <color_vertex>",
-          createReplacer(ShaderChunk.color_vertex)
-            .replace(
-              "vColor = vec4( 1.0 );",
-              `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
-            )
-            .replace(
-              "vColor = vec3( 1.0 );",
-              `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
-            ).source,
-        ).source;
+        shader.vertexShader = createReplacer(shader.vertexShader)
+          .replace(
+            "#include <color_vertex>",
+            createReplacer(ShaderChunk.color_vertex)
+              .replace(
+                "vColor = vec4( 1.0 );",
+                `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
+              )
+              .replace(
+                "vColor = vec3( 1.0 );",
+                `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
+              ).source,
+          )
+          .replace(
+            "#include <common>",
+            `#include <common>
+          uniform float uAddHeight;`,
+          )
+          .replace(
+            "#include <project_vertex>",
+            createReplacer(ShaderChunk.project_vertex)
+              .replace(
+                "vec4 mvPosition = vec4( transformed, 1.0 );",
+                `vec4 mvPosition = vec4( transformed, 1.0 );
+               // point cloud geodetic normal in world space - precomputed
+               vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
+               vec4 mvNormal = viewMatrix * vec4(normal, 0.0);`,
+              )
+              .replace(
+                "gl_Position = projectionMatrix * mvPosition;",
+                `mvPosition += mvNormal * uAddHeight;
+               gl_Position = projectionMatrix * mvPosition;`,
+              ).source,
+          ).source;
       };
 
       this.setMaterial(material, object);
@@ -641,8 +672,14 @@ export class ModelMesh
     if (distMaterial instanceof PointsMaterial) {
       if (distMaterial.userData.prev.point_size !== src.point_size) {
         const next = src.point_size ?? 0;
+        distMaterial.userData.prev.point_size = distMaterial.size;
         distMaterial.size = next;
-        distMaterial.userData.prev.point_size = next;
+      }
+      if (distMaterial.userData.prev.uAddHeight !== src.height) {
+        const next = src.height ?? 0;
+        distMaterial.userData.prev.uAddHeight =
+          distMaterial.userData.uAddHeight.value;
+        distMaterial.userData.uAddHeight.value = next;
       }
     }
     if (

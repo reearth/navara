@@ -7,6 +7,11 @@ import {
   Group,
   Float32BufferAttribute,
   PointsMaterial,
+  Box3,
+  Vector3,
+  Box3Helper,
+  Mesh,
+  Sphere,
 } from "three";
 
 import type { BufferLoader } from "../";
@@ -66,11 +71,49 @@ export async function renderModel(
         if (geometry) {
           const points: Points = new Points(geometry, material);
           group.add(points);
+
+          // Add bounding box helper using the precomputed AABB
+          const aabb_center = new Vector3(
+            m.aabb.center.x,
+            m.aabb.center.y,
+            m.aabb.center.z,
+          );
+          const aabb_extent = new Vector3(
+            m.aabb.extent.x,
+            m.aabb.extent.y,
+            m.aabb.extent.z,
+          );
+
+          geometry.boundingBox = new Box3(
+            aabb_center.clone().sub(aabb_extent),
+            aabb_center.clone().add(aabb_extent),
+          );
+
+          geometry.boundingSphere = new Sphere(
+            aabb_center,
+            aabb_extent.length(),
+          );
+
+          if (m.material.show_bounding_box) {
+            const boxHelper = new Box3Helper(geometry.boundingBox, 0xff0000);
+            group.add(boxHelper);
+          }
         }
         return group;
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
+      if (m.material.show_bounding_box) {
+        model.scene.traverse((child) => {
+          if (child instanceof Mesh) {
+            const boxHelper = new Box3Helper(
+              child.geometry.boundingBox,
+              0x0000ff,
+            );
+            child.add(boxHelper);
+          }
+        });
+      }
       bin.set([]);
       // Attach animations to the scene for downstream access
       const userData = model.scene.userData as SceneUserData;
@@ -84,6 +127,17 @@ export async function renderModel(
       // Attach animations to the scene for downstream access
       const userData = model.scene.userData as SceneUserData;
       userData.gltfAnimations = model.animations;
+      if (m.material.show_bounding_box) {
+        model.scene.traverse((child) => {
+          if (child instanceof Mesh) {
+            const boxHelper = new Box3Helper(
+              child.geometry.boundingBox,
+              0x0000ff,
+            );
+            child.add(boxHelper);
+          }
+        });
+      }
       return model.scene;
     }
   })();

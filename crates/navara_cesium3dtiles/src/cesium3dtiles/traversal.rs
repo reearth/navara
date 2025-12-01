@@ -123,8 +123,8 @@ fn mark_leaves(
         Some(aabb) => {
             let distance_from_camera = aabb.distance_to_point(camera_position);
             let sse = (tile_meta.geometric_error)
-                / (distance_from_camera * (frustum.sse_denominator / window.height)) as f64;
-            (distance_from_camera, sse as f32)
+                / (distance_from_camera * (frustum.sse_denominator / window.height));
+            (distance_from_camera as f32, sse as f32)
         }
         None => (0., 0.),
     };
@@ -613,7 +613,8 @@ fn update_or_spawn_rendered_tile(
     }
 
     if visible {
-        if tile.uri.as_ref().unwrap().ends_with("pnts") {
+        if tile.uri.ends_with("pnts") {
+            let aabb = tile.bounding_volume.as_ref().unwrap();
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
@@ -631,6 +632,7 @@ fn update_or_spawn_rendered_tile(
                         TileTransform {
                             transform: tile.transform.unwrap_or_default(),
                         },
+                        aabb.clone(),
                     ))
                     .id(),
             );

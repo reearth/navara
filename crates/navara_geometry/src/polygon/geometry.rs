@@ -1,7 +1,7 @@
-use navara_core::{Ellipsoid, EncodedVec3, Meters, CRS, WGS84_32};
-use navara_math::{EqualEpsilon, FloatType, RawDVec3, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
+use navara_core::{Ellipsoid, EncodedVec3, Meters, CRS, WGS84_64};
+use navara_math::{EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
 
-use crate::{helpers::vec::unpack_flatten_vec3, FloatAttribute};
+use crate::{helpers::vec::unpack_flatten_vec3_from_f32, FloatAttribute};
 
 use super::{
     helpers::{
@@ -37,7 +37,7 @@ impl Default for PolygonGeometryOptions {
                 holes: None,
                 expected_winding_order: WindingOrder::Unknown,
             },
-            granularity: RADIANS_PER_DEGREE,
+            granularity: RADIANS_PER_DEGREE as f32,
             crs: Default::default(),
             clamp_to_ground: false,
             extruded_height: 0.,
@@ -74,11 +74,8 @@ pub fn create_flat_polygon_geometry(
     }
 
     // Simple projection for Cartesian coordinates - just extract x and y
-    let project_to_cartesian_2d = |positions: &[RawDVec3]| -> Vec<Vec2> {
-        positions
-            .iter()
-            .map(|p| Vec2::new(p.x as f32, p.y as f32))
-            .collect()
+    let project_to_cartesian_2d = |positions: &[Vec3]| -> Vec<Vec2> {
+        positions.iter().map(|p| Vec2::new(p.x, p.y)).collect()
     };
 
     let (polygons, _) = polygons_from_hierarchy(polygon_hierarchy, project_to_cartesian_2d);
@@ -109,22 +106,22 @@ pub fn create_flat_polygon_geometry(
         };
 
         for position in &polygon.positions {
-            let vec3_pos = Vec3::new(position.x as f32, position.y as f32, position.z as f32);
+            let vec3_pos = Vec3::new(position.x, position.y, position.z);
 
             if use_rte {
                 // Encode to RTE high/low
                 let encoded = EncodedVec3::encode(vec3_pos);
-                combined_position_high.push(encoded.high.x);
-                combined_position_high.push(encoded.high.y);
-                combined_position_high.push(encoded.high.z);
-                combined_position_low.push(encoded.low.x);
-                combined_position_low.push(encoded.low.y);
-                combined_position_low.push(encoded.low.z);
+                combined_position_high.push(encoded.high.x as f32);
+                combined_position_high.push(encoded.high.y as f32);
+                combined_position_high.push(encoded.high.z as f32);
+                combined_position_low.push(encoded.low.x as f32);
+                combined_position_low.push(encoded.low.y as f32);
+                combined_position_low.push(encoded.low.z as f32);
             } else {
                 // Use regular position
-                combined_position.push(vec3_pos.x);
-                combined_position.push(vec3_pos.y);
-                combined_position.push(vec3_pos.z);
+                combined_position.push(vec3_pos.x as f32);
+                combined_position.push(vec3_pos.y as f32);
+                combined_position.push(vec3_pos.z as f32);
             }
         }
 
@@ -171,17 +168,15 @@ pub fn create_flat_polygon_geometry(
 }
 
 fn create_side_outline(
-    ring: &[RawDVec3],
-    positions: &mut Vec<f32>,
+    ring: &[Vec3],
+    positions: &mut Vec<f64>,
     skip_indices: &mut Vec<u32>,
     scale_normal_cap: &mut Vec<f32>,
     per_position_height: bool,
 ) {
     for p in ring {
-        let mut side_seg = vec![
-            p.x as f32, p.y as f32, p.z as f32, p.x as f32, p.y as f32, p.z as f32,
-        ];
-        let s_n_c = scale_to_geodetic_height_extruded(&mut side_seg, WGS84_32, per_position_height);
+        let mut side_seg = vec![p.x, p.y, p.z, p.x, p.y, p.z];
+        let s_n_c = scale_to_geodetic_height_extruded(&mut side_seg, WGS84_64, per_position_height);
         scale_normal_cap.extend(s_n_c);
 
         positions.extend(side_seg);
@@ -191,7 +186,7 @@ fn create_side_outline(
 
 fn outlines_from_hierarchy(
     hierarchies: &[HierarchyDVec3],
-    granularity: f32,
+    granularity: f64,
     per_position_height: bool,
 ) -> PolygonOutlineGeometry {
     let mut positions = vec![];
@@ -200,8 +195,8 @@ fn outlines_from_hierarchy(
 
     for hierarchy in hierarchies {
         let outer_ring = &(hierarchy.outer_ring);
-        let mut poss = compute_outline_positions(WGS84_32, outer_ring, granularity);
-        let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_32, per_position_height);
+        let mut poss = compute_outline_positions(WGS84_64, outer_ring, granularity);
+        let s_n_c = scale_to_geodetic_height_extruded(&mut poss, WGS84_64, per_position_height);
         scale_normal_cap.extend(s_n_c);
 
         // top end index
@@ -221,9 +216,9 @@ fn outlines_from_hierarchy(
         if let Some(holes_src) = &(hierarchy.holes) {
             for hole_src in holes_src {
                 let mut poss =
-                    compute_outline_positions(WGS84_32, &hole_src.outer_ring, granularity);
+                    compute_outline_positions(WGS84_64, &hole_src.outer_ring, granularity);
                 let s_n_c =
-                    scale_to_geodetic_height_extruded(&mut poss, WGS84_32, per_position_height);
+                    scale_to_geodetic_height_extruded(&mut poss, WGS84_64, per_position_height);
                 scale_normal_cap.extend(s_n_c);
 
                 // top end index
@@ -243,8 +238,11 @@ fn outlines_from_hierarchy(
         }
     }
 
+    // TODO: Support RTE
+    let (positions, _, _) = encode_positions_conditionally(positions, false);
+
     PolygonOutlineGeometry {
-        position: FloatAttribute::new(positions, 3),
+        position: FloatAttribute::new(positions.unwrap(), 3),
         scale_normal_and_cap: FloatAttribute::new(scale_normal_cap, 4),
         skip_indices,
     }
@@ -266,13 +264,14 @@ pub fn create_polygon_geometry(
     }
 
     let (polygons, hierarchies) =
-        polygons_from_hierarchy(polygon_hierarchy, project_to_2d(WGS84_32, outer_positions));
+        polygons_from_hierarchy(polygon_hierarchy, project_to_2d(WGS84_64, outer_positions));
 
     if hierarchies.is_empty() {
         return None;
     }
 
-    let outline_geometry = outlines_from_hierarchy(&hierarchies, granularity, per_position_height);
+    let outline_geometry =
+        outlines_from_hierarchy(&hierarchies, granularity as f64, per_position_height);
 
     let mut geometries = vec![];
 
@@ -280,10 +279,10 @@ pub fn create_polygon_geometry(
     let polygons_length = polygons.len();
     for i in 0..polygons_length {
         let mut split_geometry = create_geometry_from_positions_extruded(
-            WGS84_32,
+            WGS84_64,
             polygon_resource,
             &polygons[i],
-            granularity,
+            granularity as f64,
             &hierarchies[i],
             per_position_height,
             use_rte,
@@ -291,7 +290,7 @@ pub fn create_polygon_geometry(
 
         if !clamp_to_ground {
             let top_bottom_normals = compute_extruded_normals(
-                WGS84_32,
+                WGS84_64,
                 &split_geometry.top_bottom_geometry.attributes,
                 false,
                 per_position_height,
@@ -305,7 +304,7 @@ pub fn create_polygon_geometry(
         for mut wall_geometry in split_geometry.wall_geometries {
             if !clamp_to_ground {
                 let wall_normals = compute_extruded_normals(
-                    WGS84_32,
+                    WGS84_64,
                     &wall_geometry.attributes,
                     true,
                     per_position_height,
@@ -531,7 +530,7 @@ pub fn create_geometry_from_positions_extruded(
 /// Helper function to encode positions conditionally
 #[allow(clippy::type_complexity)]
 fn encode_positions_conditionally(
-    positions: Vec<f32>,
+    positions: Vec<f64>,
     use_rte: bool,
 ) -> (Option<Vec<f32>>, Option<Vec<f32>>, Option<Vec<f32>>) {
     if use_rte {
@@ -541,17 +540,23 @@ fn encode_positions_conditionally(
 
         for chunk in positions.chunks(3) {
             let encoded = EncodedVec3::encode(Vec3::new(chunk[0], chunk[1], chunk[2]));
-            pos_high.push(encoded.high.x);
-            pos_high.push(encoded.high.y);
-            pos_high.push(encoded.high.z);
-            pos_low.push(encoded.low.x);
-            pos_low.push(encoded.low.y);
-            pos_low.push(encoded.low.z);
+            pos_high.push(encoded.high.x as f32);
+            pos_high.push(encoded.high.y as f32);
+            pos_high.push(encoded.high.z as f32);
+            pos_low.push(encoded.low.x as f32);
+            pos_low.push(encoded.low.y as f32);
+            pos_low.push(encoded.low.z as f32);
         }
         (None, Some(pos_high), Some(pos_low))
     } else {
+        let mut pos = Vec::with_capacity(positions.len());
+        for chunk in positions.chunks(3) {
+            pos.push(chunk[0] as f32);
+            pos.push(chunk[1] as f32);
+            pos.push(chunk[2] as f32);
+        }
         // Use regular positions
-        (Some(positions), None, None)
+        (Some(pos), None, None)
     }
 }
 
@@ -568,13 +573,13 @@ fn compute_extruded_normals(
             let pos_low = attributes.position_3d_low.as_ref().unwrap();
             let i = idx * 3;
             Vec3::new(
-                pos_high.data[i] + pos_low.data[i],
-                pos_high.data[i + 1] + pos_low.data[i + 1],
-                pos_high.data[i + 2] + pos_low.data[i + 2],
+                pos_high.data[i] as f64 + pos_low.data[i] as f64,
+                pos_high.data[i + 1] as f64 + pos_low.data[i + 1] as f64,
+                pos_high.data[i + 2] as f64 + pos_low.data[i + 2] as f64,
             )
         } else {
             let positions = attributes.position.as_ref().unwrap();
-            unpack_flatten_vec3(&positions.data, idx * 3)
+            unpack_flatten_vec3_from_f32(&positions.data, idx * 3)
         }
     };
 
@@ -628,18 +633,18 @@ fn compute_extruded_normals(
         let i2 = i0 + 2;
 
         if wall {
-            normals[i0 + bottom_offset * 3] = normal.x;
-            normals[i1 + bottom_offset * 3] = normal.y;
-            normals[i2 + bottom_offset * 3] = normal.z;
+            normals[i0 + bottom_offset * 3] = normal.x as f32;
+            normals[i1 + bottom_offset * 3] = normal.y as f32;
+            normals[i2 + bottom_offset * 3] = normal.z as f32;
         } else {
-            normals[i0 + bottom_offset * 3] = -normal.x;
-            normals[i1 + bottom_offset * 3] = -normal.y;
-            normals[i2 + bottom_offset * 3] = -normal.z;
+            normals[i0 + bottom_offset * 3] = -normal.x as f32;
+            normals[i1 + bottom_offset * 3] = -normal.y as f32;
+            normals[i2 + bottom_offset * 3] = -normal.z as f32;
         }
 
-        normals[i0] = normal.x;
-        normals[i1] = normal.y;
-        normals[i2] = normal.z;
+        normals[i0] = normal.x as f32;
+        normals[i1] = normal.y as f32;
+        normals[i2] = normal.z as f32;
     }
 
     normals

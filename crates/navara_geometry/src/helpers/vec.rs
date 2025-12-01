@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 use navara_core::{xyz_to_vec3, Ellipsoid, Meters, LLE};
-use navara_math::{RawDVec3, Vec3};
+use navara_math::{FloatType, Vec3};
 use radians::Radians;
 
 #[derive(Eq, PartialEq, Hash)]
@@ -17,31 +17,19 @@ pub trait UniqueWithDelta {
     fn z(&self) -> f32;
 }
 
-impl UniqueWithDelta for LLE<f32, Radians> {
+impl UniqueWithDelta for LLE<FloatType, Radians> {
     fn x(&self) -> f32 {
-        self.lng.val()
+        self.lng.val() as f32
     }
     fn y(&self) -> f32 {
-        self.lat.val()
+        self.lat.val() as f32
     }
     fn z(&self) -> f32 {
-        self.height.val()
+        self.height.val() as f32
     }
 }
 
 impl UniqueWithDelta for Vec3 {
-    fn x(&self) -> f32 {
-        self.x
-    }
-    fn y(&self) -> f32 {
-        self.y
-    }
-    fn z(&self) -> f32 {
-        self.z
-    }
-}
-
-impl UniqueWithDelta for RawDVec3 {
     fn x(&self) -> f32 {
         self.x as f32
     }
@@ -93,21 +81,25 @@ where
         .collect::<Vec<V>>()
 }
 
-pub fn append_flatten_vec3(a: &mut Vec<f32>, b: &Vec3) {
+pub fn append_flatten_vec3(a: &mut Vec<f64>, b: &Vec3) {
     a.append(&mut b.to_array().to_vec());
 }
 
 pub fn append_flatten_vec3_with_index(a: &mut [f32], b: &Vec3, i: usize) {
-    a[i] = b.x;
-    a[i + 1] = b.y;
-    a[i + 2] = b.z;
+    a[i] = b.x as f32;
+    a[i + 1] = b.y as f32;
+    a[i + 2] = b.z as f32;
 }
 
-pub fn unpack_flatten_vec3(v: &[f32], i: usize) -> Vec3 {
+pub fn unpack_flatten_vec3(v: &[f64], i: usize) -> Vec3 {
     Vec3::new(v[i], v[i + 1], v[i + 2])
 }
 
-pub fn get_position(ellipsoid: Ellipsoid<f32>, cart: &LLE<f32, Radians>, height: f32) -> Vec3 {
+pub fn unpack_flatten_vec3_from_f32(v: &[f32], i: usize) -> Vec3 {
+    Vec3::new(v[i] as f64, v[i + 1] as f64, v[i + 2] as f64)
+}
+
+pub fn get_position(ellipsoid: Ellipsoid<f64>, cart: &LLE<f64, Radians>, height: f64) -> Vec3 {
     let mut cart = *cart;
     cart.height = Meters::new(height);
     xyz_to_vec3(cart.to_xyz(ellipsoid))
@@ -134,7 +126,7 @@ mod test {
 
     #[test]
     fn it_should_unique_lle_vec() {
-        fn assert_lle_vec(result: Vec<LLE<f32, Radians>>, expects: Vec<LLE<f32, Radians>>) {
+        fn assert_lle_vec(result: Vec<LLE<f64, Radians>>, expects: Vec<LLE<f64, Radians>>) {
             assert_eq!(result.len(), expects.len());
             for (i, r) in result.iter().enumerate() {
                 assert_abs_diff_eq!(r.lng.val(), expects[i].lng.val(), epsilon = EPSILON10);
@@ -143,7 +135,7 @@ mod test {
             }
         }
 
-        let input_vec: Vec<LLE<f32, Radians>> = vec![
+        let input_vec: Vec<LLE<f64, Radians>> = vec![
             LLE::from_float(1.2345, 1.2345, 0.),
             LLE::from_float(1.234, 1.234, 0.),
             LLE::from_float(1.234, 1.234, 1.),
@@ -153,7 +145,7 @@ mod test {
             LLE::from_float(1., 0., 0.),
         ];
 
-        let expects: Vec<LLE<f32, Radians>> = vec![
+        let expects: Vec<LLE<f64, Radians>> = vec![
             input_vec[0],
             input_vec[1],
             input_vec[2],
@@ -165,7 +157,7 @@ mod test {
         let result = unique_with_delta_e(&input_vec, 3);
         assert_lle_vec(result, expects);
 
-        let expects: Vec<LLE<f32, Radians>> = vec![
+        let expects: Vec<LLE<f64, Radians>> = vec![
             input_vec[0],
             input_vec[2],
             input_vec[4],
@@ -175,7 +167,7 @@ mod test {
         let result = unique_with_delta_e(&input_vec, 2);
         assert_lle_vec(result, expects);
 
-        let expects: Vec<LLE<f32, Radians>> =
+        let expects: Vec<LLE<f64, Radians>> =
             vec![input_vec[0], input_vec[2], input_vec[5], input_vec[6]];
         let result = unique_with_delta_e(&input_vec, 1);
         assert_lle_vec(result, expects);
@@ -186,9 +178,9 @@ mod test {
         fn assert_lle_vec(result: Vec<Vec3>, expects: Vec<Vec3>) {
             assert_eq!(result.len(), expects.len());
             for (i, r) in result.iter().enumerate() {
-                assert_abs_diff_eq!(r.x(), expects[i].x(), epsilon = EPSILON10);
-                assert_abs_diff_eq!(r.y(), expects[i].y(), epsilon = EPSILON10);
-                assert_abs_diff_eq!(r.z(), expects[i].z(), epsilon = EPSILON10);
+                assert_abs_diff_eq!(r.x(), expects[i].x(), epsilon = EPSILON10 as f32);
+                assert_abs_diff_eq!(r.y(), expects[i].y(), epsilon = EPSILON10 as f32);
+                assert_abs_diff_eq!(r.z(), expects[i].z(), epsilon = EPSILON10 as f32);
             }
         }
 

@@ -1,5 +1,6 @@
 import type { Globe as GlobeWasm } from "@navara/engine";
 
+import { ColorMap } from "../color";
 /**
  * Handler for accessing individual Globe properties from WASM.
  * This provides a reference-based interface instead of copying the entire Globe object.
@@ -13,6 +14,7 @@ export type GlobeHandler = {
   getShouldComputeNormalFromVertex: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
+  getElevationColormap: () => Float32Array | undefined;
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
@@ -21,9 +23,14 @@ export type GlobeHandler = {
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
+  setElevationColormap: (value: ColorMap) => void;
 };
 
-export type GlobeOptions = Partial<Omit<GlobeWasm, "constructor" | "free">>;
+export type GlobeOptions = Partial<
+  Omit<GlobeWasm, "constructor" | "free" | "elevationColormap">
+> & {
+  elevationColormap?: ColorMap;
+};
 
 /**
  * Globe configuration manager.
@@ -31,8 +38,9 @@ export type GlobeOptions = Partial<Omit<GlobeWasm, "constructor" | "free">>;
  * Provides an interface for accessing and modifying globe properties
  * that are shared across different material types (VectorTile, RasterTile, RasterTerrain).
  */
-export class Globe implements Omit<GlobeWasm, "free"> {
+export class Globe implements Omit<GlobeWasm, "free" | "elevationColormap"> {
   private handler: GlobeHandler;
+  private _elevationColormap?: ColorMap;
 
   constructor(handler: GlobeHandler, options?: GlobeOptions) {
     this.handler = handler;
@@ -64,6 +72,9 @@ export class Globe implements Omit<GlobeWasm, "free"> {
     }
     if (options?.wireframe != null) {
       this.wireframe = options.wireframe;
+    }
+    if (options?.elevationColormap != null) {
+      this.elevationColormap = options.elevationColormap;
     }
   }
 
@@ -128,5 +139,14 @@ export class Globe implements Omit<GlobeWasm, "free"> {
 
   set wireframe(value: boolean) {
     this.handler.setWireframe(value);
+  }
+
+  get elevationColormap(): ColorMap | undefined {
+    return this._elevationColormap;
+  }
+
+  set elevationColormap(value: ColorMap) {
+    this._elevationColormap = value;
+    this.handler.setElevationColormap(value);
   }
 }

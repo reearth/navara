@@ -40,12 +40,19 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
       for (const cfg of configs) {
         lineConfig.push({
           thickness: cfg.thickness ?? DefaultArcLineConfig.thickness,
+          transparent: cfg.transparent ?? DefaultArcLineConfig.transparent,
+          opacity: cfg.opacity ?? DefaultArcLineConfig.opacity,
           segments: cfg.segments ?? DefaultArcLineConfig.segments,
           srcColor: cfg.srcColor ?? DefaultArcLineConfig.srcColor,
           tgtColor: cfg.tgtColor ?? DefaultArcLineConfig.tgtColor,
           height: cfg.height ?? DefaultArcLineConfig.height,
           arcHeightScale:
             cfg.arcHeightScale ?? DefaultArcLineConfig.arcHeightScale,
+          gradation: cfg.gradation ?? DefaultArcLineConfig.gradation,
+          dashed: cfg.dashed ?? DefaultArcLineConfig.dashed,
+          dashSize: cfg.dashSize ?? DefaultArcLineConfig.dashSize,
+          gapSize: cfg.gapSize ?? DefaultArcLineConfig.gapSize,
+          dashOffset: cfg.dashOffset ?? DefaultArcLineConfig.dashOffset,
           geometry: cfg.geometry ?? DefaultArcLineConfig.geometry,
         });
       }

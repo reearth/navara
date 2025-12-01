@@ -18,6 +18,7 @@ import type {
   StarsLayerConfig,
   BoxMeshLayerConfig,
   SphereMeshLayerConfig,
+  GlowGlobeMeshLayerConfig,
   CylinderMeshLayerConfig,
   PlaneMeshLayerConfig,
   GLTFModelLayerConfig,
@@ -46,6 +47,7 @@ import type {
   SSRConfig,
   ToneMappingConfig,
   TransparentPassConfig,
+  DepthOfFieldConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
@@ -71,6 +73,7 @@ export type MeshLayerDeclarationDescription =
   | StarsLayerConfig
   | BoxMeshLayerConfig
   | SphereMeshLayerConfig
+  | GlowGlobeMeshLayerConfig
   | CylinderMeshLayerConfig
   | TubeMeshLayerConfig
   | PlaneMeshLayerConfig
@@ -100,7 +103,8 @@ export type EffectLayerDeclarationDescription =
   | SSAOConfig
   | SSRConfig
   | ToneMappingConfig
-  | TransparentPassConfig;
+  | TransparentPassConfig
+  | DepthOfFieldConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";

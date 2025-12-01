@@ -54,16 +54,23 @@ pub fn traverse_tile(
     occluder: &EllipsoidalOccluder,
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     fog: &Fog,
-    max_sse: f32,
+    max_sse: f64,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
     // This is used to show parent's texture if child's texture isn't ready.
     ready_parent_tile_handle: Option<TileHandle>,
 ) -> TraversalResult {
+    let has_tile_layer = !tiles.is_empty();
     match qt.qt.get(handle) {
         Some(tile) => {
-            let has_no_tile = tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
-            if has_no_tile {
+            let has_no_tile =
+                has_tile_layer && tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
+            // If tile layer isn't added, check overscaled_max_zoom for terrain layer.
+            // The reason why we check `overscaled_max_zoom` is that the terrain is upsampled even if actual tile isn't exist.
+            // The terrain is upsampled until it reaches `overscaled_max_zoom`.
+            let has_no_terrain = !has_tile_layer
+                && terrain_layer.is_none_or(|l| l.is_over_overscaled_max_zoom(tile.coords.z));
+            if has_no_tile || has_no_terrain {
                 return TraversalResult::NotFound;
             }
         }
@@ -93,8 +100,13 @@ pub fn traverse_tile(
         return TraversalResult::Culled;
     }
 
-    let tile_ready_state =
-        tile.is_ready(qt, texture_fragment, terrain_data_requester, terrain_layer);
+    let tile_ready_state = tile.is_ready(
+        qt,
+        texture_fragment,
+        terrain_data_requester,
+        terrain_layer,
+        has_tile_layer,
+    );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
@@ -115,7 +127,13 @@ pub fn traverse_tile(
 
     let were_children_rendered = tile.were_children_rendered;
 
-    let is_over_min_z = tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z));
+    // Check only if terrain is exist.
+    let is_over_min_z = if has_tile_layer {
+        tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z))
+    } else {
+        true
+    };
+
     let meets_sse = sse <= max_sse && is_over_min_z;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;

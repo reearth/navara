@@ -79,6 +79,7 @@ pub struct Mesh {
     pub active: bool,
     pub render_order: i32,
     pub uv_transform: TileUvTransform,
+    pub aabb: navara_wasm_types::Aabb,
 }
 
 #[wasm_bindgen]
@@ -240,7 +241,7 @@ impl<'a>
             gen: ev.gen,
             bits: ev.bits,
             lle: ev.comp.lle.into(),
-            height: ev.comp.height.map(|h| h as f64),
+            height: ev.comp.height,
         }
     }
 }
@@ -336,6 +337,7 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             active: m.active,
             render_order: m.render_order,
             uv_transform: (&m.uv_transform).into(),
+            aabb: m.aabb.clone().into(),
         }
     }
 }

@@ -1,5 +1,11 @@
 import { EventManager, EventHandler, Globe } from "@navara/core";
-import type { CameraPosition, GlobeOptions, Nullable, XYZ } from "@navara/core";
+import type {
+  CameraPosition,
+  ColorMap,
+  GlobeOptions,
+  Nullable,
+  XYZ,
+} from "@navara/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -10,13 +16,13 @@ import initCore, {
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
 import {
-  PerspectiveCamera,
   Scene,
   WebGLRenderer,
   Vector3,
   Texture,
   Vector2,
   LinearFilter,
+  ClampToEdgeWrapping,
   Group,
   Material,
   PCFSoftShadowMap,
@@ -35,15 +41,6 @@ import {
 } from "./core";
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
-import {
-  type AntialiasOptions,
-  type EffectOptions,
-  type LensFlareOptions,
-  type SSAOOptions,
-  type ToneMappingOptions,
-  type CloudsOptions,
-  type AerialPerspectiveOptions,
-} from "./effects";
 import {
   processEvent,
   type BufferLoader,
@@ -70,6 +67,7 @@ import {
   ToneMappingEffectLayer,
   RainDropEffectLayer,
   TransparentPassEffectLayer,
+  DepthOfFieldEffectLayer,
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
@@ -79,6 +77,7 @@ import { LightProbeLayer } from "./layers/light/LightProbeLayer";
 import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
 import { BoxMeshLayer } from "./layers/mesh/BoxMeshLayer";
 import { CylinderMeshLayer } from "./layers/mesh/CylinderMeshLayer";
+import { GlowGlobeMeshLayer } from "./layers/mesh/GlowGlobeMeshLayer";
 import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
 import { PlaneMeshLayer } from "./layers/mesh/PlaneMeshLayer";
 import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
@@ -89,7 +88,6 @@ import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
 import { StarsLayer } from "./layers/mesh/StarsLayer";
 import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
 import { LayersManager } from "./layersManager";
-import type { Light } from "./light";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
@@ -132,6 +130,7 @@ export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
+export * from "./passes";
 export * from "@navara/three_api";
 export * from "./Color";
 
@@ -146,17 +145,10 @@ overrideMaterialsForMRT();
 export type Options = {
   container?: HTMLElement;
   canvas?: HTMLCanvasElement | OffscreenCanvas;
-  initialWidth?: number;
-  initialHeight?: number;
-  initialPixelRatio?: number;
+  pixelRatio?: number;
   disableAutoResize?: boolean;
   debug?: boolean;
-  camera?: PerspectiveCamera;
-  antialias?: AntialiasOptions;
-  light?: Light;
   atmosphere?: AtmosphereOptions;
-  aerialPerspective?: AerialPerspectiveOptions;
-  clouds?: CloudsOptions;
   backgroundColor?: number;
   picking?: Picking;
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
@@ -166,10 +158,6 @@ export type Options = {
   // This affects how the post-processing shader handles floating point numbers. `true` would be high quality.
   // Default=true
   halfFloat?: boolean;
-  toneMapping?: ToneMappingOptions;
-  lensFlare?: LensFlareOptions;
-  dithering?: EffectOptions;
-  ssao?: SSAOOptions;
   logarithmicDepthBuffer?: boolean;
   // It must be passed when instantiated.
   shadow?: boolean;
@@ -277,6 +265,10 @@ export default class ThreeView<
       const b = this._core?.getBufferF32(handle);
       return b ?? null;
     },
+    f64: (handle) => {
+      const b = this._core?.getBufferF64(handle);
+      return b ?? null;
+    },
     u32: (handle) => {
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
@@ -291,6 +283,10 @@ export default class ThreeView<
     },
     removeF32: (handle) => {
       const b = this._core?.removeBufferF32(handle);
+      return b ?? null;
+    },
+    removeF64: (handle) => {
+      const b = this._core?.removeBufferF64(handle);
       return b ?? null;
     },
     setU8: (handle: number, bits: bigint, b: Uint8Array) => {
@@ -315,6 +311,12 @@ export default class ThreeView<
     },
     newF32: (b: Float32Array) => {
       return this._core?.newBufferF32(b.length, (buf: Float32Array) => {
+        buf.set(b);
+      });
+      // return this._core?.newBufferF32Cloned(b);
+    },
+    newF64: (b: Float64Array) => {
+      return this._core?.newBufferF64(b.length, (buf: Float64Array) => {
         buf.set(b);
       });
       // return this._core?.newBufferF32Cloned(b);
@@ -376,6 +378,9 @@ export default class ThreeView<
     getWireframe: () => {
       return this._core?.getGlobeWireframe();
     },
+    getElevationColormap: () => {
+      return this._core?.getGlobeElevationColormap();
+    },
     setTransparent: (value: boolean) => {
       this._core?.setGlobeTransparent(value);
     },
@@ -399,6 +404,21 @@ export default class ThreeView<
     },
     setWireframe: (value: boolean) => {
       this._core?.setGlobeWireframe(value);
+    },
+    setElevationColormap: (value: ColorMap) => {
+      this._core?.setGlobeElevationColormap(value.flatten());
+
+      const canvas = value.createImage();
+      const texture = new Texture(canvas);
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
+      texture.minFilter = LinearFilter;
+      texture.magFilter = LinearFilter;
+      texture.generateMipmaps = false;
+      texture.flipY = false;
+      texture.needsUpdate = true;
+
+      this._uniforms.colorMapTexture.value = texture;
     },
   };
   private _workerTaskHandler: WorkerTaskHandler = {
@@ -469,7 +489,7 @@ export default class ThreeView<
 
     const renderer = new WebGLRenderer({
       // If it's true, some noise will happen. So use other AA algorithm instead.
-      antialias: false,
+      antialias: (options.multisampling ?? 0) > 0,
       logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? true,
       canvas: options.canvas,
       stencil: true,
@@ -486,13 +506,12 @@ export default class ThreeView<
     // Update shadow map manually in CustomRenderPass.
     renderer.shadowMap.autoUpdate = false;
 
-    const { width = options.initialWidth, height = options.initialHeight } =
-      this._getCanvasSize() ?? {};
+    const { width, height } = this._getCanvasSize() ?? {};
     invariant(width && height);
 
-    if (typeof options?.initialPixelRatio === "number" || !isWorker()) {
+    if (typeof options?.pixelRatio === "number" || !isWorker()) {
       const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
-      renderer.setPixelRatio(options.initialPixelRatio ?? defaultPixelRatio);
+      renderer.setPixelRatio(options.pixelRatio ?? defaultPixelRatio);
     }
 
     renderer.setSize(width, height, !isWorker());
@@ -513,17 +532,7 @@ export default class ThreeView<
       skyEnvMap: new Scene(),
     };
 
-    if (options.camera) {
-      this.camera = new ThreeViewCamera(options.camera);
-    } else {
-      const { width = options.initialWidth, height = options.initialHeight } =
-        this._getCanvasSize() ?? {};
-      if (typeof width !== "number" || typeof height !== "number") {
-        throw new Error("Must provide initialWidth and initialHeight");
-      }
-
-      this.camera = new ThreeViewCamera();
-    }
+    this.camera = new ThreeViewCamera();
 
     // Setup render pass orchestrator
     this.renderPassOrchestrator = new RenderPassOrchestrator(this.renderer, {
@@ -570,6 +579,7 @@ export default class ThreeView<
       fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
       time: { value: 0 },
+      colorMapTexture: { value: null },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
@@ -832,7 +842,7 @@ export default class ThreeView<
     this.camera.raw.updateProjectionMatrix();
     this.renderer.setSize(w, h, !isWorker());
     this.renderPassOrchestrator.setSize(w, h);
-    if (pixelRatio) {
+    if (this._options.pixelRatio == null && pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
 
@@ -1011,6 +1021,7 @@ export default class ThreeView<
     this.registerMesh("stars", StarsLayer);
     this.registerMesh("box", BoxMeshLayer);
     this.registerMesh("sphere", SphereMeshLayer);
+    this.registerMesh("glowGlobe", GlowGlobeMeshLayer);
     this.registerMesh("cylinder", CylinderMeshLayer);
     this.registerMesh("tube", TubeMeshLayer);
     this.registerMesh("plane", PlaneMeshLayer);
@@ -1039,7 +1050,7 @@ export default class ThreeView<
     this.registerEffect("lensFlare", LensFlareEffectLayer);
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);
-
+    this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);
@@ -1278,7 +1289,7 @@ export default class ThreeView<
       checkFinite(camPos.lng) &&
       checkFinite(camPos.lat) &&
       checkFinite(camPos.height)
-        ? new Float32Array([camPos.lng, camPos.lat, camPos.height])
+        ? new Float64Array([camPos.lng, camPos.lat, camPos.height])
         : null;
 
     this._core?.changeCamera(
@@ -1319,7 +1330,7 @@ export default class ThreeView<
       return;
     }
 
-    this._core?.moveCameraWithDirection(new Float32Array(dir), amount);
+    this._core?.moveCameraWithDirection(new Float64Array(dir), amount);
   }
 
   flyTo(
@@ -1328,7 +1339,7 @@ export default class ThreeView<
     duration?: number,
     maxHeight?: number,
   ) {
-    const position = new Float32Array([camPos.lng, camPos.lat, camPos.height]);
+    const position = new Float64Array([camPos.lng, camPos.lat, camPos.height]);
 
     this._core?.flyTo(
       position,
@@ -1342,9 +1353,20 @@ export default class ThreeView<
 
   lookAt(target: ApiLLE, offset: Vector3) {
     this._core?.lookAt(
-      new Float32Array([target.lng, target.lat, target.height]),
-      new Float32Array([offset.x, offset.y, offset.z]),
+      new Float64Array([target.lng, target.lat, target.height]),
+      new Float64Array([offset.x, offset.y, offset.z]),
     );
+  }
+
+  cameraFollow(enabled: boolean, target?: ApiLLE, offset?: Vector3) {
+    const targetArray = target
+      ? new Float64Array([target.lng, target.lat, target.height])
+      : undefined;
+    const offsetArray = offset
+      ? new Float64Array([offset.x, offset.y, offset.z])
+      : undefined;
+
+    this._core?.cameraFollow(enabled, targetArray, offsetArray);
   }
 
   sampleTerrainHeight(pos: ApiLLE): number | undefined {
@@ -1378,7 +1400,7 @@ export default class ThreeView<
     const isZero = axis.x === 0 && axis.y === 0 && axis.z === 0;
 
     this._core?.rotateAroundAxis(
-      isZero ? undefined : new Float32Array([axis.x, axis.y, axis.z]),
+      isZero ? undefined : new Float64Array([axis.x, axis.y, axis.z]),
       angle,
     );
   }
@@ -1424,7 +1446,7 @@ export default class ThreeView<
     if (!width || !height) return;
 
     const pixelRatio = isWorker()
-      ? (this._options.initialPixelRatio ?? 1)
+      ? (this._options.pixelRatio ?? 1)
       : window.devicePixelRatio;
     this.resize(width, height, pixelRatio);
   };

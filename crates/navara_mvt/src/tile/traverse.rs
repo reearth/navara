@@ -69,10 +69,10 @@ pub fn traverse_tile(
     tile.is_rendered = false;
 
     // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
-    let is_texturized = layer
-        .appearances
-        .iter()
-        .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
+    let is_texturized = layer.appearances.iter().any(|a| {
+        matches!(a, Appearance::Polygon(p) if p.clamp_to_ground)
+            || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
+    });
 
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
@@ -145,7 +145,7 @@ pub fn traverse_tile(
         globe.max_sse
     } else {
         vector_tile_appearance.max_sse
-    };
+    } as f64;
     let meets_sse = sse <= max_sse;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;

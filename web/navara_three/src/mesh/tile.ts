@@ -13,12 +13,14 @@ import type {
   MeshChanged,
   Globe,
 } from "@navara/engine";
+import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  NearestFilter,
   Material,
   Mesh,
   MeshBasicMaterial,
@@ -27,13 +29,19 @@ import {
   RepeatWrapping,
   RGBAFormat,
   SRGBColorSpace,
+  LinearSRGBColorSpace,
   Texture,
   Vector2,
+  Vector3,
+  Vector4,
   AddOperation,
   WebGLRenderTarget,
   type MagnificationTextureFilter,
   type MinificationTextureFilter,
   ShaderChunk,
+  Box3,
+  Box3Helper,
+  Sphere,
 } from "three";
 
 import {
@@ -63,7 +71,7 @@ export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
-const NUM_ADDITIONAL_TEXTURES = 2;
+const NUM_ADDITIONAL_TEXTURES = 3; // For water normal map, color map, etc.
 
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
@@ -350,6 +358,28 @@ export class TileMesh
       geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
     }
 
+    const aabb_center = new Vector3(
+      mesh.aabb.center.x,
+      mesh.aabb.center.y,
+      mesh.aabb.center.z,
+    );
+    const aabb_extent = new Vector3(
+      mesh.aabb.extent.x,
+      mesh.aabb.extent.y,
+      mesh.aabb.extent.z,
+    );
+
+    geometry.boundingBox = new Box3(
+      aabb_center.clone().sub(aabb_extent),
+      aabb_center.clone().add(aabb_extent),
+    );
+
+    geometry.boundingSphere = new Sphere(aabb_center, aabb_extent.length());
+
+    if (mat.show_bounding_box) {
+      const bb = new Box3Helper(geometry.boundingBox, 0x00ff00);
+      this.add(bb);
+    }
     this.geometry = geometry;
 
     this.material = this.initMaterial(mat, viewEvents, uniforms, globe);
@@ -372,7 +402,7 @@ export class TileMesh
       tileMapByHandle,
       readyParentTileHandle,
     );
-    this.setupTextures(loadedTexes, textureOptions, maxTextures);
+    this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
 
     this.castShadow = !!mat.cast_shadow;
     this.receiveShadow = !!mat.receive_shadow;
@@ -396,12 +426,10 @@ export class TileMesh
       ? new MeshLambertMaterial({
           stencilWrite: false,
           color: globe.color,
-          depthWrite: globe.hideUnderground,
         })
       : new MeshBasicMaterial({
           stencilWrite: false,
           color: globe.color,
-          depthWrite: globe.hideUnderground,
         });
 
     m.userData.uPickable = {
@@ -416,6 +444,7 @@ export class TileMesh
 
     m.userData.defines ??= {};
     m.userData.defines.USE_UV = 1;
+    m.userData.defines.USE_ELEVATION_HEATMAP = 0;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -446,8 +475,20 @@ export class TileMesh
       shader.uniforms.uSpeculars = m.userData.speculars;
       shader.uniforms.uTextures = m.userData.textures;
       shader.uniforms.uWaterNormalMap = m.userData.waterTexture;
+      shader.uniforms.uColorMapTexture = uniforms.colorMapTexture;
       shader.uniforms.uIor = { value: 1.33333 };
       shader.uniforms.uTime = m.userData.uTime;
+
+      // Elevation Heatmap uniforms
+      shader.uniforms.uIsElevationHeatmaps = m.userData.isElevationHeatmaps;
+      shader.uniforms.uElevationRGBScaler = m.userData.elevationRGBScaler;
+      shader.uniforms.uElevationMinMaxHeightAndBoundary =
+        m.userData.elevationMinMaxHeightAndBoundary;
+      shader.uniforms.uElevationMinMaxOffsetAndEpsilonAndOffset =
+        m.userData.elevationMinMaxOffsetAndEpsilonAndOffset;
+      shader.uniforms.uLogarithmic = m.userData.logarithmic;
+      shader.uniforms.uLogBase = m.userData.logBase;
+      shader.uniforms.uLogBoundary = m.userData.logBoundary;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -498,6 +539,7 @@ vUv = vUv * uScale + uOffset;
   uniform float uApplyWaterNormals[${maxTextures}];
   uniform bool uSpeculars[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
+  uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
@@ -507,6 +549,9 @@ vUv = vUv * uScale + uOffset;
   varying vec2 vOrigUv;
 
   #include <common>
+
+  // uColorMapTexture is used for elevation heatmap color mapping
+  ${ElevationParsFragment}
 
   `,
         )
@@ -540,7 +585,22 @@ vUv = vUv * uScale + uOffset;
     // For MVT textures (index >= this.texturizedSceneIndexFrom), use original UV
     // For raster textures, use transformed UV
     vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
-    ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+
+    #ifdef USE_ELEVATION_HEATMAP
+      // Check if this is an elevation heatmap texture
+      if (uIsElevationHeatmaps[${idx}]) {
+        // For elevation heatmap: decode DEM data and apply color mapping
+        vec4 elevationColor = texture2D(uTextures[${idx}], texUv);
+        float normalized_h = decodeElevationNormal(elevationColor);
+        ${texColorVar} = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      }
+      else {
+        ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+      }
+    #else
+      // For regular textures: use color as-is
+      ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+    #endif
 
     float currentReflectivity = uReflectivities[${idx}];
     float currentRoughness = uRoughnesses[${idx}];
@@ -571,7 +631,7 @@ vUv = vUv * uScale + uOffset;
     }
   `,
   )}
-  diffuseColor *= sampledDiffuseColor;
+  diffuseColor.rgb = sampledDiffuseColor.rgb;
   `,
         )
         .replaceWithCondition(
@@ -674,7 +734,12 @@ if (uPickable > 0.) {
         readyParentTileHandle,
       );
       this.setUniforms(changedMaterial, maxTextures);
-      this.setupTextures(loadedTexes, textureOptions, maxTextures);
+      this.setupTextures(
+        loadedTexes,
+        textureOptions,
+        maxTextures,
+        changedMaterial,
+      );
 
       this._setupSceneObserver();
 
@@ -697,9 +762,6 @@ if (uPickable > 0.) {
     }
     if (this.material.opacity !== globe.opacity) {
       this.material.opacity = globe.opacity;
-    }
-    if (this.material.depthWrite !== globe.hideUnderground) {
-      this.material.depthWrite = globe.hideUnderground;
     }
     if (this.material.wireframe !== globe.wireframe) {
       this.material.wireframe = globe.wireframe;
@@ -787,9 +849,9 @@ if (uPickable > 0.) {
       const mesh = this.texturizedScenes.children[sceneIdx].children[0];
       if (mesh instanceof Mesh && mesh.material instanceof Material) {
         m.userData.reflectivities.value[lastIdx] =
-          mesh.material.userData.reflectivity.value;
+          mesh.material.userData.reflectivity?.value ?? 0;
         m.userData.roughnesses.value[lastIdx] =
-          mesh.material.userData.roughness.value;
+          mesh.material.userData.roughness?.value ?? 0;
         if (mesh instanceof PolygonMesh) {
           m.userData.waters.value[lastIdx] = mesh.water;
           m.userData.waterScaleNormals.value[lastIdx] =
@@ -890,11 +952,49 @@ if (uPickable > 0.) {
       };
     }
 
-    // Reset
+    // Elevation Heatmap uniforms
+    if (!m.userData.isElevationHeatmaps) {
+      m.userData.isElevationHeatmaps = {
+        value: [...new Array(maxTextures)].fill(false),
+      };
+    }
+    if (!m.userData.elevationRGBScaler) {
+      m.userData.elevationRGBScaler = {
+        value: new Vector3(0, 0, 0),
+      };
+    }
+    if (!m.userData.elevationMinMaxHeightAndBoundary) {
+      m.userData.elevationMinMaxHeightAndBoundary = {
+        value: new Vector3(0, 0, 0), // minHeight, maxHeight, boundary
+      };
+    }
+    if (!m.userData.elevationMinMaxOffsetAndEpsilonAndOffset) {
+      m.userData.elevationMinMaxOffsetAndEpsilonAndOffset = {
+        value: new Vector4(0, 0, 0, 0), // minOffset, maxOffset, epsilon, offset
+      };
+    }
+    if (!m.userData.logarithmic) {
+      m.userData.logarithmic = {
+        value: false,
+      };
+    }
+    if (!m.userData.logBase) {
+      m.userData.logBase = {
+        value: 10,
+      };
+    }
+    if (!m.userData.logBoundary) {
+      m.userData.logBoundary = {
+        value: 10,
+      };
+    }
+
+    // Reset all texture properties
     for (let i = 0; i < m.userData.shows.value.length; i++) {
       m.userData.shows.value[i] = 0;
       m.userData.colors.value[i] = new Color();
       m.userData.opacities.value[i] = 1;
+      m.userData.isElevationHeatmaps.value[i] = false; // Reset elevation heatmap flags
     }
 
     // All properties have same length.
@@ -907,11 +1007,50 @@ if (uPickable > 0.) {
       m.userData.opacities.value[i] = opacities[i];
     }
 
+    // Update elevation heatmap parameters from Rust material
+    if (mat.is_elevation_heatmaps && mat.is_elevation_heatmaps.length > 0) {
+      for (
+        let i = 0;
+        i < Math.min(mat.is_elevation_heatmaps.length, maxTextures);
+        i++
+      ) {
+        m.userData.isElevationHeatmaps.value[i] =
+          mat.is_elevation_heatmaps[i] !== 0;
+      }
+    }
+
+    m.userData.elevationRGBScaler.value.set(
+      mat.elevation_r_scaler,
+      mat.elevation_g_scaler,
+      mat.elevation_b_scaler,
+    );
+
+    m.userData.elevationMinMaxHeightAndBoundary.value.set(
+      mat.elevation_min_height,
+      mat.elevation_max_height,
+      mat.elevation_boundary,
+    );
+
+    m.userData.elevationMinMaxOffsetAndEpsilonAndOffset.value.set(
+      mat.elevation_min_offset,
+      mat.elevation_max_offset,
+      mat.elevation_epsilon,
+      mat.elevation_offset,
+    );
+
+    m.userData.logarithmic.value = mat.logarithmic;
+    m.userData.logBase.value = Math.log(mat.log_boundary);
+    m.userData.logBoundary.value = mat.log_boundary;
+
     if (!m.userData.defines) {
       m.userData.defines = {
         USE_UV: 1,
+        USE_ELEVATION_HEATMAP: 0,
       };
     }
+
+    m.userData.defines.USE_ELEVATION_HEATMAP =
+      m.userData.isElevationHeatmaps.value.some((v: boolean) => v === true);
   }
 
   private setupTextureFragments(
@@ -946,6 +1085,7 @@ if (uPickable > 0.) {
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     maxTextures: number,
+    mat: RasterTileInternalMaterial,
   ) {
     const m = this.material;
 
@@ -961,22 +1101,20 @@ if (uPickable > 0.) {
     }
 
     const textureFragments = m.userData.textureFragments?.value;
-    if (!textureFragments) {
-      return;
-    }
+    const textureFragmentsLen = textureFragments?.length ?? 0;
 
     const numTexturizedVector = this.numTexturizedVector;
 
-    if (textureFragments.length >= this.texturizedSceneIndexFrom) {
+    if (textureFragmentsLen >= this.texturizedSceneIndexFrom) {
       console.error(
-        `Exceeded maximum textures: ${textureFragments.length} layers are provided. Maximum the number of textures is ${this.texturizedSceneIndexFrom}.`,
+        `Exceeded maximum textures: ${textureFragmentsLen} layers are provided. Maximum the number of textures is ${this.texturizedSceneIndexFrom}.`,
       );
     }
 
     const textures = m.userData.textures.value;
 
     // Setting tile textures
-    for (let i = 0; i < textureFragments.length; i++) {
+    for (let i = 0; i < textureFragmentsLen; i++) {
       if (i >= this.texturizedSceneIndexFrom) {
         break;
       }
@@ -988,12 +1126,29 @@ if (uPickable > 0.) {
         continue;
       }
 
-      if (t.colorSpace !== SRGBColorSpace) {
-        t.colorSpace = SRGBColorSpace;
-        t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
-        t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
+      // Use LinearSRGBColorSpace for elevation heatmap textures to preserve RGB values for DEM data
+      // For regular textures, use SRGBColorSpace for proper color display
+      const isElevationHeatmap =
+        mat.is_elevation_heatmaps && mat.is_elevation_heatmaps[i];
+      const targetColorSpace = isElevationHeatmap
+        ? LinearSRGBColorSpace
+        : SRGBColorSpace;
+
+      if (t.colorSpace !== targetColorSpace) {
+        t.colorSpace = targetColorSpace;
+        // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
+        // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
+        // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
+        t.minFilter = isElevationHeatmap
+          ? NearestFilter
+          : (textureOptions.minFilter as MinificationTextureFilter);
+        t.magFilter = isElevationHeatmap
+          ? NearestFilter
+          : (textureOptions.magFilter as MagnificationTextureFilter);
         t.anisotropy = textureOptions.maxAnisotropy;
-        t.generateMipmaps = textureOptions.useMipmaps;
+        t.generateMipmaps = isElevationHeatmap
+          ? false
+          : textureOptions.useMipmaps;
         t.needsUpdate = true;
       }
 
@@ -1027,14 +1182,8 @@ if (uPickable > 0.) {
   _setPickable(pickable: boolean): void {
     if (pickable) {
       this.material.color.setHex(0);
-
-      // If `transparent` is true, `depthWrite` will be `false` to make underground model pickable.
-      this.userData.orgDepthWrite = this.material.depthWrite;
-      this.material.depthWrite =
-        this.material.depthWrite && !this.material.transparent;
     } else {
       this.material.color.setHex(this.userData.tileOrigColor);
-      this.material.depthWrite = this.userData.orgDepthWrite;
     }
     this.material.userData.uPickable.value = pickable ? 1 : 0;
 

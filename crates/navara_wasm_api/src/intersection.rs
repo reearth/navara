@@ -1,10 +1,11 @@
 use wasm_bindgen::prelude::*;
 
 use navara_camera::get_pick_ray_from_camera;
-use navara_core::{ray_plane, WGS84_32};
+use navara_core::{ray_plane, WGS84_64};
 use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
-    CameraFrustum, Plane, Ray, Transform, Vec2 as Vec2Wasm, Vec3 as Vec3Wasm, Window,
+    CameraFrustum, Plane, Ray, Transform as TransformWasm, Vec2 as Vec2Wasm, Vec3 as Vec3Wasm,
+    Window,
 };
 
 #[wasm_bindgen(js_name = getPlaneFromPointNormal)]
@@ -19,7 +20,7 @@ pub fn get_plane_from_point_normal(point: Vec3Wasm, normal: Vec3Wasm) -> Plane {
 #[wasm_bindgen(js_name = getPickRay)]
 pub fn get_pick_ray(
     window: Window,
-    transform: Transform,
+    transform: TransformWasm,
     frustum: CameraFrustum,
     screen_pos: Vec2Wasm,
 ) -> Ray {
@@ -49,6 +50,6 @@ pub fn get_ray_plane_intersection(ray: Ray, plane: Plane) -> Option<Vec3Wasm> {
 #[wasm_bindgen(js_name = getHeightFromEllipsoid)]
 pub fn get_height_from_ellipsoid(point: Vec3Wasm) -> FloatType {
     let xyz = navara_core::vec3_to_xyz(point.into());
-    let lle = xyz.to_lle(WGS84_32);
+    let lle = xyz.to_lle(WGS84_64);
     lle.height.val()
 }

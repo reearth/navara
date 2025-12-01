@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority};
@@ -26,18 +28,26 @@ pub(crate) fn request_terrain_data(
         return;
     }
     if let Some(t) = terrain_layer {
+        // Skip data loading for terrain types that don't need it
+        match &t.terrain_type {
+            TerrainDataType::Ellipsoid => return, // Ellipsoid terrain doesn't need data loading
+            TerrainDataType::Unknown => return,
+            _ => {}
+        }
+
         let url = tile_url(t.data.as_ref().unwrap().url.as_str(), &tile.coords, false);
         let mut terrain_data = match &t.terrain_type {
             TerrainDataType::RasterDEM => {
-                RasterDEMData::new(t.appearance.as_ref().unwrap().elevation_decoder)
+                RasterDEMData::new(*t.appearance.as_ref().unwrap().elevation_decoder().unwrap())
             } // DEM
             // TODO: Support quantized-mesh
             TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
-            TerrainDataType::Unknown => return,
+            TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
         };
+        let extension = DataRequesterExtension::from_url(&url::Url::from_str(&url).unwrap());
         let entity = commands.spawn((
             TerrainDataRequesterMarker(handle),
-            DataRequester::from_store(url, buf, DataRequesterExtension::Png),
+            DataRequester::from_store(url, buf, extension),
             OrderByDistance {
                 sse: tile.sse,
                 distance: tile.distance_from_camera,

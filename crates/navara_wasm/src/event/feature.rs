@@ -10,7 +10,7 @@ use crate::{
     Transform,
 };
 use navara_wasm_types::{
-    polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature,
+    polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature, Aabb,
     BillboardMaterial, BoundingSphere, ModelMaterial, PointMaterial, PolygonMaterial,
     PolylineMaterial, TextMaterial, Vec3, CRS,
 };
@@ -57,6 +57,8 @@ pub struct PolylineMesh {
     pub geometry: TransferablePolylineGeometry,
     pub transform: Transform,
     pub active: bool,
+    /// Whether the polyline should be rendered as a texturized draped feature
+    pub should_be_texturized: bool,
 }
 
 #[wasm_bindgen]
@@ -85,6 +87,7 @@ pub struct ModelMesh {
     pub material: ModelMaterial,
     pub transform: Transform,
     pub bin: Option<Handle>,
+    pub aabb: Aabb,
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableModelGeometry,
     pub active: bool,
@@ -160,6 +163,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
+                render_info,
                 ..
             } => Self {
                 polyline: Some(PolylineMesh {
@@ -167,6 +171,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     geometry: geometry.into(),
                     transform: transform.into(),
                     active: *active,
+                    should_be_texturized: render_info.should_be_texturized,
                 }),
                 ..Default::default()
             },
@@ -197,12 +202,14 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 bin,
                 geometry,
                 active,
+                aabb,
                 ..
             } => Self {
                 model: Some(ModelMesh {
                     material: material.into(),
                     transform: transform.into(),
                     bin: bin.as_ref().map(|v| v.0),
+                    aabb: aabb.clone().into(),
                     geometry: geometry.into(),
                     active: *active,
                 }),
@@ -233,7 +240,7 @@ impl ReturnedTransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferOuterRing")]
-    pub fn transfer_outer_ring(&mut self) -> js_sys::Float32Array {
+    pub fn transfer_outer_ring(&mut self) -> js_sys::Float64Array {
         self.transferable.transfer_outer_ring()
     }
 
@@ -243,7 +250,7 @@ impl ReturnedTransferablePolygonBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferHoles")]
-    pub fn transfer_holes(&mut self) -> js_sys::Float32Array {
+    pub fn transfer_holes(&mut self) -> js_sys::Float64Array {
         self.transferable.transfer_holes()
     }
 
@@ -296,7 +303,7 @@ impl ReturnedTransferablePolylineBatchedFeature {
     }
 
     #[wasm_bindgen(js_name = "transferPoints")]
-    pub fn transfer_points(&mut self) -> js_sys::Float32Array {
+    pub fn transfer_points(&mut self) -> js_sys::Float64Array {
         self.transferable.transfer_points()
     }
 

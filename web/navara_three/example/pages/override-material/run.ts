@@ -10,7 +10,7 @@ import { SphericalHarmonics3 } from "three";
 import { FolderApi, Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
+import { YlGnBu_COLOR_MAP, PLATEAU_COLOR_MAP } from "../../helpers/colors";
 import {
   TERRAIN_DATASETS,
   TILES_3D_DATASETS,
@@ -453,7 +453,7 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       url: MVT_DATASETS.plateauGifuTran.url,
     },
     polyline: {
-      width: 3,
+      width: 5,
       height: 1,
       clamp_to_ground: true,
       use_ground_normals: true,
@@ -744,12 +744,21 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
 
         // Color: either threshold-based or gradation by height
         const color = (() => {
-          if (PARAMS_COLOR_MODE.color_by_gradation) {
+          if (PARAMS_COLOR_MODE.colorMap !== "None") {
             const mh = typeof measuredHeight === "number" ? measuredHeight : 0;
             const min = 3;
             const max = 235;
             const t = Math.max(0, Math.min(1, (mh - min) / (max - min)));
-            const [r, g, b] = PLATEAU_COLOR_MAP.linear(t);
+            const colorMap = (() => {
+              switch (PARAMS_COLOR_MODE.colorMap) {
+                case "YlGnBu":
+                  return YlGnBu_COLOR_MAP;
+                case "Plateau":
+                default:
+                  return PLATEAU_COLOR_MAP;
+              }
+            })();
+            const [r, g, b] = colorMap.linear(t);
             return new Color().setRGB(r, g, b);
           }
           if (measuredHeight < 30)
@@ -795,12 +804,13 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
   const colorFolder = folder.addFolder({ title: "Color", expanded: false });
 
   const PARAMS_COLOR_MODE = {
-    color_by_gradation: false,
+    colorMap: "None",
   };
 
   colorFolder
-    .addBinding(PARAMS_COLOR_MODE, "color_by_gradation", {
-      label: "Color by gradation",
+    .addBinding(PARAMS_COLOR_MODE, "colorMap", {
+      label: "Color Map",
+      options: { None: "None", Plateau: "Plateau", YlGnBu: "YlGnBu" },
     })
     .on("change", () => onChange());
   for (const key of Object.keys(PARAMS_COLOR)) {

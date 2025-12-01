@@ -4,5 +4,6 @@ export abstract class Color {
   abstract setStyle(style: string): this;
   abstract copy(color: this): this;
   abstract clone(): this;
+  abstract srgb(): this;
   abstract toArray(): [r: number, g: number, b: number];
 }

@@ -1,4 +1,4 @@
-use navara_core::WGS84_32;
+use navara_core::WGS84_64;
 use navara_tile_component::{RasterDEMData, RasterTile};
 use navara_wasm_transferable::{TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
@@ -21,7 +21,7 @@ pub fn upsample_terrain_mesh(
     let upsamplable_geometry: navara_geometry::UpsamplableTerrainGeometry =
         (&upsamplable_geometry).into();
 
-    tile.upsample(WGS84_32, &parent_tile, upsamplable_geometry)
+    tile.upsample(WGS84_64, &parent_tile, upsamplable_geometry)
         .unwrap()
         .into()
 }
