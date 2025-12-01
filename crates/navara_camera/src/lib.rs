@@ -2,6 +2,7 @@
 
 mod comp;
 mod event;
+mod follow;
 mod helpers;
 mod plugin;
 mod system;

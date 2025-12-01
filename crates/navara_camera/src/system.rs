@@ -21,6 +21,7 @@ use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EP
 use navara_window::Window;
 
 use crate::{
+    follow::handle_follow,
     helpers::{
         get_heading, get_pick_ray_from_camera, get_pitch, get_roll, ray_ellipsoid_intersect,
     },
@@ -139,9 +140,21 @@ pub fn update(
                 frustum,
                 &mut flight,
                 &mut cam_st,
-                &controller,
+                &mut controller,
                 is_cam_moving,
             );
+        }
+
+        if controller.enable_follow {
+            handle_follow(
+                &mut transform,
+                &mut orbit,
+                &mut controller,
+                &mb,
+                &mut mm,
+                &mut mw,
+            );
+            continue;
         }
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
@@ -224,7 +237,7 @@ fn process_camera_event(
     frustum: &CameraFrustum,
     flight: &mut CameraFlight,
     cam_st: &mut CameraStatus,
-    controller: &CameraController,
+    controller: &mut CameraController,
     is_cam_moving: bool,
 ) {
     match ce {
@@ -290,6 +303,23 @@ fn process_camera_event(
                 cam_st.status.push(CameraStatusType::Rotate);
             }
         }
+        CameraEvent::Follow {
+            enabled,
+            target,
+            offset,
+        } => {
+            controller.enable_follow = *enabled;
+
+            if controller.enable_follow {
+                controller.follow_target_pre = controller.follow_target_cur;
+                controller.follow_target_cur = *target;
+            } else {
+                controller.follow_target_pre = None;
+                controller.follow_target_cur = None;
+            }
+
+            controller.follow_offset = *offset;
+        }
     }
 }
 
@@ -299,7 +329,7 @@ fn is_camera_moving(inertia: &CameraInertia, controller: &CameraController) -> b
         || inertia.translate_time < controller.translate_duration
 }
 
-fn commit(transform: &mut Transform, orbit: &mut Orbit) {
+pub(crate) fn commit(transform: &mut Transform, orbit: &mut Orbit) {
     let quat = orbit.horizon_quat * orbit.vertical_quat;
     let rotated_local_position = quat * orbit.local_position;
     let rotated_local_up = quat * orbit.local_up;
@@ -954,7 +984,12 @@ fn apply_camera_translate(
 }
 
 // TODO: Always spin around `target`. It should be reset by `look_at(center)`.
-fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {
+pub(crate) fn apply_look_at(
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    target: &Vec3,
+    offset: &Vec3,
+) {
     let ellipsoid = WGS84_64;
     let world_target = CRS::Geographic.to_vec3(ellipsoid, *target, 0.0);
 

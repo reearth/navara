@@ -476,6 +476,16 @@ impl Core {
         self.app.look_at(target, offset);
     }
 
+    #[wasm_bindgen(js_name = cameraFollow)]
+    pub fn camera_follow(
+        &mut self,
+        enabled: bool,
+        target: Option<Vec<FloatType>>,
+        offset: Option<Vec<FloatType>>,
+    ) {
+        self.app.camera_follow(enabled, target, offset);
+    }
+
     #[wasm_bindgen(js_name = getCameraStatus)]
     pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
         if let Some(cam_st) = self.app.get_camera_status() {

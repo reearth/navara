@@ -1,5 +1,5 @@
 import ThreeView, {
-  TERRARIUM_ELEVATION_DECODER,
+  JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
   type GLTFModelLayer,
   type LayerHandle,
@@ -18,15 +18,15 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   LOCAL_DATASETS,
+  TILES_3D_DATASETS,
 } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 
 const params = {
-  cameraDistance: 10000,
-  cameraHeight: 2500,
-  runSpeed: 50,
-  rotationSpeed: 1,
-  valueChanged: true,
+  runSpeed: 25,
+  rotationSpeed: 1.5,
+  modelScale: 5,
+  cameraFollow: true,
 };
 
 export const run = async (view: ThreeView) => {
@@ -76,31 +76,58 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
+      url: TERRAIN_DATASETS.gsi.url,
     },
     raster_terrain: {
-      max_zoom: 12,
+      max_zoom: 15,
       min_zoom: 5,
-      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
-      cast_shadow: true,
-      receive_shadow: true,
-      tile_size: 512,
+      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
+
+  view.addLayer({
+    type: "cesium3dtiles",
+    data: {
+      url: TILES_3D_DATASETS.plateauChiyoda.url,
+    },
+    model: {
+      show: true,
+      color: 0xffffff,
+      metalness: 0,
+      roughness: 1,
+      cast_shadow: true,
+      receive_shadow: true,
+      height: -50,
+    },
+  });
+
+  view.camera.near = 1;
 
   const pane = new Pane();
   addDateControl(view, pane);
 
-  showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+  showAttributions([
+    TERRAIN_DATASETS.mapterhorn,
+    TILE_DATASETS.openstreetmap,
+    TILES_3D_DATASETS.plateauChiyoda,
+  ]);
 
-  const llrFuji = [35.36268, 138.730719, 3540];
+  const startLLE = [35.69127684, 139.75865163, 7];
 
-  const fujiPos = geodeticToVector3(
-    new LLE(degreeToRadian(llrFuji[0]), degreeToRadian(llrFuji[1]), llrFuji[2]),
+  const startPos = geodeticToVector3(
+    new LLE(
+      degreeToRadian(startLLE[0]),
+      degreeToRadian(startLLE[1]),
+      startLLE[2],
+    ),
   );
 
   const normal = geodeticSurfaceNormal(
-    new LLE(degreeToRadian(llrFuji[0]), degreeToRadian(llrFuji[1]), llrFuji[2]),
+    new LLE(
+      degreeToRadian(startLLE[0]),
+      degreeToRadian(startLLE[1]),
+      startLLE[2],
+    ),
   );
   // Calculate rotation to align model with surface normal
   const up = new Vector3(0, 1, 0);
@@ -119,38 +146,37 @@ export const run = async (view: ThreeView) => {
       animation_auto_play: true,
       animation_crossfade_duration: 0.3,
     },
-    scale: { x: 500, y: 500, z: 500 },
-    position: { x: fujiPos.x, y: fujiPos.y, z: fujiPos.z },
+    scale: { x: params.modelScale, y: params.modelScale, z: params.modelScale },
+    position: { x: startPos.x, y: startPos.y, z: startPos.z },
     rotation: { x: euler.x, y: euler.y, z: euler.z },
   });
 
   view.lookAt(
-    new LLE(llrFuji[0], llrFuji[1], llrFuji[2]),
-    new Vector3(0, -20000, 10000),
+    new LLE(startLLE[0], startLLE[1], startLLE[2]),
+    new Vector3(60, 40, 30),
   );
 
   initKeyboardControls(view, modelLayer);
 
+  pane.addBinding(params, "runSpeed", { min: 1, max: 1000 });
+  pane.addBinding(params, "rotationSpeed", { min: 0.1, max: 5 });
   pane
-    .addBinding(params, "cameraDistance", { min: 5000, max: 50000 })
+    .addBinding(params, "modelScale", { min: 1, max: 100 })
     .on("change", () => {
-      params.valueChanged = true;
+      modelLayer.update({
+        scale: {
+          x: params.modelScale,
+          y: params.modelScale,
+          z: params.modelScale,
+        },
+      });
     });
-  pane
-    .addBinding(params, "cameraHeight", { min: 1000, max: 50000 })
-    .on("change", () => {
-      params.valueChanged = true;
-    });
-  pane
-    .addBinding(params, "runSpeed", { min: 1, max: 1000 })
-    .on("change", () => {
-      params.valueChanged = true;
-    });
-  pane
-    .addBinding(params, "rotationSpeed", { min: 0.1, max: 5 })
-    .on("change", () => {
-      params.valueChanged = true;
-    });
+
+  pane.addBinding(params, "cameraFollow").on("change", () => {
+    if (!params.cameraFollow) {
+      view.cameraFollow(false);
+    }
+  });
 };
 
 const initKeyboardControls = (
@@ -228,25 +254,26 @@ const initKeyboardControls = (
     handleKey(event.key, false);
   });
 
-  const animFunc = () => {
-    if (hasMovement || params.valueChanged) {
-      params.valueChanged = false;
+  let lastTime = performance.now();
+  const animFunc = (currentTime: number) => {
+    const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+    lastTime = currentTime;
 
-      const currentYaw = updateModelTransform(view, modelLayer, dir);
-      if (currentYaw !== null) {
-        updateCameraFollow(view, modelLayer.ref.raw, currentYaw);
-      }
+    if (hasMovement) {
+      updateModelTransform(view, modelLayer, dir, deltaTime);
+      updateCameraFollow(view, modelLayer.ref.raw);
     }
 
     requestAnimationFrame(animFunc);
   };
-  animFunc();
+  requestAnimationFrame(animFunc);
 };
 
 const updateModelTransform = (
   view: ThreeView,
   modelLayer: LayerHandle<GLTFModelLayer>,
   dir: Vector3,
+  deltaTime: number,
 ): number | null => {
   const modelObject = modelLayer.ref.raw;
   if (!modelObject) {
@@ -319,7 +346,10 @@ const updateModelTransform = (
   if (dir.y !== 0) {
     // Move along model's forward direction
     // Move forward (dir.y > 0) or backward (dir.y < 0)
-    curPos.addScaledVector(worldForward, params.runSpeed * Math.sign(dir.y));
+    curPos.addScaledVector(
+      worldForward,
+      params.runSpeed * deltaTime * Math.sign(dir.y),
+    );
   }
 
   // Convert quaternion back to euler for update
@@ -352,28 +382,20 @@ const updateModelTransform = (
 const updateCameraFollow = (
   view: ThreeView,
   modelObject: Object3D | undefined,
-  currentYaw: number,
 ) => {
-  if (!modelObject) {
+  if (!modelObject || !params.cameraFollow) {
     return;
   }
 
   const curPos = modelObject.position;
   const curLLE = vector3ToGeodetic(curPos);
 
-  // Camera should be behind the model
-  // If model yaw is 0 (north), camera yaw should be π (south)
-  const cameraYaw = currentYaw + Math.PI;
-  const enuOffsetX = params.cameraDistance * Math.sin(cameraYaw);
-  const enuOffsetY = params.cameraDistance * Math.cos(cameraYaw);
-  const enuOffsetZ = params.cameraHeight;
-
-  view.lookAt(
+  view.cameraFollow(
+    params.cameraFollow,
     new LLE(
       (curLLE.lat * 180) / Math.PI,
       (curLLE.lng * 180) / Math.PI,
       curLLE.height,
     ),
-    new Vector3(enuOffsetX, enuOffsetY, enuOffsetZ),
   );
 };
