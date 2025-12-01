@@ -169,7 +169,7 @@ const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
   };
 
   view.atmosphere.on("sunChanged", () => {
-    const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
+    const isAtNight = view.atmosphere.isAtNight(view.camera.positionECEF);
     lightProbeLayer.update({
       visible: isAtNight,
     });

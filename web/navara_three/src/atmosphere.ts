@@ -1,4 +1,4 @@
-import { EventHandler, Observed } from "@navara/core";
+import { EventHandler, Observed, type XYZ } from "@navara/core";
 import {
   getECIToECEFRotationMatrix,
   getMoonDirectionECEF,
@@ -131,8 +131,8 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
     this.needsUpdate = false;
   }
 
-  isAtNight(position: Vector3): boolean {
-    const normalizedPosition = position.clone().normalize();
+  isAtNight(position: XYZ): boolean {
+    const normalizedPosition = new Vector3(position.x, position.y, position.z).clone().normalize();
     const dotProduct = normalizedPosition.dot(this.sunDirection);
     return dotProduct < 0;
   }
