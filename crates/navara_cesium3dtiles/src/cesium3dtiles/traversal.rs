@@ -1,5 +1,5 @@
 use core::sync;
-use std::collections::HashMap;
+use std::{any, collections::HashMap};
 
 use bevy_ecs::{
     entity::Entity,
@@ -151,11 +151,11 @@ fn mark_leaves(
             .get(&uri)
             .is_some_and(|state| state.is_constucted == true);
 
-        info!("sync json tilesets: {:?}", sync_json_tilesets.json_node_to_tileset_state_map);
-        info!("sync json size: {}", sync_json_tilesets.json_node_to_tileset_state_map.len());
+        // info!("sync json tilesets: {:?}", sync_json_tilesets.json_node_to_tileset_state_map);
+        // info!("sync json size: {}", sync_json_tilesets.json_node_to_tileset_state_map.len());
 
         is_data_ready = is_data_ready || uri.is_empty();
-        info!("non renderable content: checking if {} loaded: {}", uri, is_data_ready);
+        // info!("non renderable content: checking if {} loaded: {}", uri, is_data_ready);
     }
 
     tile.state.is_data_loaded = is_data_ready;
@@ -280,7 +280,7 @@ fn mark_leaves(
                 tile.data_requester_id = Some(e);
                 // TODO: trigger an event to indicate a child tileset json is requested, and some how be able to tie the json node to it's new tileset tree.
                 let uri = content.uri.clone().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
-                info!("Requesting child tileset json with uri: {}", uri);
+                // info!("Requesting child tileset json with uri: {}", uri);
                 sync_json_tilesets
                     .json_node_to_tileset_state_map
                     .insert(uri, Cesium3dTilesJsonTileSetState::default());
@@ -316,7 +316,7 @@ fn mark_leaves_2(
     
     tile.reset_state();
 
-    let is_visible = !matches!(&tile.bounding_volume, Some(aabb) if !frustum.intersection_with_aabb(aabb));
+    let is_visible = matches!(&tile.bounding_volume, Some(aabb) if frustum.intersection_with_aabb(aabb));
     
     tile.state.is_visible = is_visible;
     
@@ -347,7 +347,7 @@ fn mark_leaves_2(
         };
         is_data_ready = data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success));
     } else {
-        let uri = tile_meta.content.as_ref().map_or("".to_string(), |c| c.uri.clone()).split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
+        let uri = tile_meta.content.as_ref().map_or("".to_string(), |c| c.uri.clone()).split('?').next().unwrap_or("").split('/').last().unwrap_or("").to_string();
         let json_tile_set_constucted = sync_json_tilesets
             .json_node_to_tileset_state_map
             .get(&uri)
@@ -359,11 +359,12 @@ fn mark_leaves_2(
                 .get(&uri)
                 .is_some_and(|state| state.has_rendered_tiles == true);
 
-            info!("sync json tilesets: {:?}", sync_json_tilesets.tileset_state_map);
+            // info!("sync json tilesets: {:?}", sync_json_tilesets.tileset_state_map);
             is_data_ready = is_loaded;
+            info!("non renderable content: checking if {} loaded: {}", uri, is_data_ready);
         }
             
-        is_data_ready = is_data_ready || uri.is_empty();
+        // is_data_ready = is_data_ready || uri.is_empty();
     }
 
     tile.state.is_data_loaded = is_data_ready;
@@ -420,7 +421,14 @@ fn mark_leaves_2(
                     child_tile.state.leaf = true;
                     any_children_selected = true;
                 }
-                TraversalResult::Culled => { continue; }
+                TraversalResult::Culled => { 
+                    if child_tile.state.sse <= max_sse || any_children_selected {
+                        child_tile.state.leaf = true;
+                        child_tile.state.is_visible = true;
+                    } else {
+                        continue;
+                    }    
+                 }
                 TraversalResult::ChildrenSelected => { any_children_selected = true; }
                 TraversalResult::ChildrenSelectedPartially => {} // not used here, remove later
             }
@@ -437,10 +445,15 @@ fn mark_leaves_2(
 
         tile.state.are_all_children_loaded = all_children_loaded;
 
+        if matches!(tile.refine, Refine::Add) && any_children_selected {
+            tile.state.leaf = true;
+        }
+
         if any_children_selected {
             return TraversalResult::ChildrenSelected;
         } else {
-            return TraversalResult::Culled;
+            // tile does not meet sse but no children were selected, use this tile
+            return TraversalResult::Selected;
         }
     }
 
@@ -456,14 +469,14 @@ fn mark_leaves_2(
                 let e = commands
                     .spawn((
                         Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-                        Priority::Medium,
+                        Priority::Low,
                         DataRequester::from_store(url, buf, DataRequesterExtension::Json),
                     ))
                     .id();
                 tile.data_requester_id = Some(e);
                 // TODO: trigger an event to indicate a child tileset json is requested, and some how be able to tie the json node to it's new tileset tree.
-                let uri = content.uri.clone().split('?').next().unwrap_or("").to_string().split('/').last().unwrap_or("").to_string();
-                info!("Requesting child tileset json with uri: {}", uri);
+                let uri = content.uri.clone().split('?').next().unwrap_or("").split('/').last().unwrap_or("").to_string();
+                // info!("Requesting child tileset json with uri: {}", uri);
                 sync_json_tilesets
                     .json_node_to_tileset_state_map
                     .insert(uri, Cesium3dTilesJsonTileSetState::default());
@@ -493,12 +506,13 @@ fn mark_rendered_tiles(
     let state = &tile.state;
 
     // This tile has been invisible before this frame.
-    if !state.touched && !touched_last_frame {
-        toggle_rendered_tile_visible(rendered_tiles, tile, false);
-        return;
-    }
+    // if !state.touched && !touched_last_frame {
+    // if !state.touched  {
+    //     toggle_rendered_tile_visible(rendered_tiles, tile, false);
+    //     return;
+    // }
 
-    let leaf = state.touched && state.leaf;
+    let leaf = state.leaf;
     if (leaf || !tile.state.are_all_children_loaded) && tile.is_renderable_content {
         if state.is_data_loaded {
             let is_visible = state.is_visible;
