@@ -75,6 +75,11 @@ pub enum CameraEvent {
         axis: Option<Vec3>, // The axis of rotation in the world coordinate system.
         angle: FloatType,   // The angle to rotate around the axis in radians.
     },
+    Follow {
+        enabled: bool,
+        target: Option<Vec3>, // [longitude, latitude, altitude]
+        offset: Option<Vec3>, // The offset from the target in the local east-north-up reference frame centered at the target.
+    },
 }
 
 #[derive(Event)]
