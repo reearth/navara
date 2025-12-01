@@ -57,6 +57,8 @@ pub struct PolylineMesh {
     pub geometry: TransferablePolylineGeometry,
     pub transform: Transform,
     pub active: bool,
+    /// Whether the polyline should be rendered as a texturized draped feature
+    pub should_be_texturized: bool,
 }
 
 #[wasm_bindgen]
@@ -161,6 +163,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
+                render_info,
                 ..
             } => Self {
                 polyline: Some(PolylineMesh {
@@ -168,6 +171,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     geometry: geometry.into(),
                     transform: transform.into(),
                     active: *active,
+                    should_be_texturized: render_info.should_be_texturized,
                 }),
                 ..Default::default()
             },

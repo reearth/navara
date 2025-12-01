@@ -938,6 +938,8 @@ pub struct RasterTerrainMaterial {
     pub receive_shadow: Option<bool>,
     pub show_bounding_box: Option<bool>,
     pub max_zoom: Option<usize>,
+    /// The terrain is upsampled until it reaches `overscaled_max_zoom`.
+    pub overscaled_max_zoom: Option<usize>,
     pub min_zoom: Option<usize>,
     pub elevation_decoder: Option<ElevationDecoder>,
     pub tile_size: Option<u32>,
@@ -952,6 +954,9 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            overscaled_max_zoom: val
+                .overscaled_max_zoom
+                .unwrap_or(default.overscaled_max_zoom),
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             tile_size: val.tile_size.unwrap_or(default.tile_size),
             elevation_decoder: val
@@ -970,6 +975,7 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
             receive_shadow: Some(value.receive_shadow),
             show_bounding_box: Some(value.show_bounding_box),
             max_zoom: Some(value.max_zoom),
+            overscaled_max_zoom: Some(value.overscaled_max_zoom),
             min_zoom: Some(value.min_zoom),
             elevation_decoder: Some(ElevationDecoder {
                 r_scaler: value.elevation_decoder.r_scaler,

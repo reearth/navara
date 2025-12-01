@@ -42,7 +42,9 @@ export async function initNavaraApi() {
 
 export function geodeticToVector3(lle: LLE): Vector3 {
   const pos = geodeticToXyz(lle);
-  return new Vector3(pos.x, pos.y, pos.z);
+  const result = new Vector3(pos.x, pos.y, pos.z);
+  pos.free();
+  return result;
 }
 
 export function vector3ToGeodetic(xyz: Vector3): LLE {
@@ -96,12 +98,17 @@ export function convertScreenToWorld(
   if (!pos) {
     return undefined;
   }
-  return new Vector3(pos.x, pos.y, pos.z);
+  const result = new Vector3(pos.x, pos.y, pos.z);
+  pos.free();
+
+  return result;
 }
 
 export function geodeticSurfaceNormal(lle: LLE): Vector3 {
   const pos = nvGeodeticSurfaceNormal(lle);
-  return new Vector3(pos.x, pos.y, pos.z);
+  const result = new Vector3(pos.x, pos.y, pos.z);
+  pos.free();
+  return result;
 }
 
 export function eastNorthUpToFixedFrame(origin: Vector3): Matrix4 {
@@ -170,7 +177,10 @@ export function convertWorldToScreen(
   if (!screenPos) {
     return undefined;
   }
-  return new Vector2(screenPos.x, screenPos.y);
+  const result = new Vector2(screenPos.x, screenPos.y);
+  screenPos.free();
+
+  return result;
 }
 
 export function getWGS84SemiMajorAxis(): number {

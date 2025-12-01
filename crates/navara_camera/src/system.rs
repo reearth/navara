@@ -21,6 +21,7 @@ use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EP
 use navara_window::Window;
 
 use crate::{
+    follow::handle_follow,
     helpers::{
         get_heading, get_pick_ray_from_camera, get_pitch, get_roll, ray_ellipsoid_intersect,
     },
@@ -106,6 +107,8 @@ pub fn update(
         // flying
         if let Some((position, orientation)) = flight.update(duration as FloatType) {
             apply_camera_change(
+                &window,
+                frustum,
                 &mut transform,
                 &mut orbit,
                 &Some(position),
@@ -137,9 +140,21 @@ pub fn update(
                 frustum,
                 &mut flight,
                 &mut cam_st,
-                &controller,
+                &mut controller,
                 is_cam_moving,
             );
+        }
+
+        if controller.enable_follow {
+            handle_follow(
+                &mut transform,
+                &mut orbit,
+                &mut controller,
+                &mb,
+                &mut mm,
+                &mut mw,
+            );
+            continue;
         }
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
@@ -222,7 +237,7 @@ fn process_camera_event(
     frustum: &CameraFrustum,
     flight: &mut CameraFlight,
     cam_st: &mut CameraStatus,
-    controller: &CameraController,
+    controller: &mut CameraController,
     is_cam_moving: bool,
 ) {
     match ce {
@@ -230,7 +245,7 @@ fn process_camera_event(
             position,
             orientation,
         } => {
-            apply_camera_change(transform, orbit, position, orientation);
+            apply_camera_change(window, frustum, transform, orbit, position, orientation);
 
             // stop camera movement when changing position or orientation
             inertia.stop_all(controller);
@@ -288,6 +303,23 @@ fn process_camera_event(
                 cam_st.status.push(CameraStatusType::Rotate);
             }
         }
+        CameraEvent::Follow {
+            enabled,
+            target,
+            offset,
+        } => {
+            controller.enable_follow = *enabled;
+
+            if controller.enable_follow {
+                controller.follow_target_pre = controller.follow_target_cur;
+                controller.follow_target_cur = *target;
+            } else {
+                controller.follow_target_pre = None;
+                controller.follow_target_cur = None;
+            }
+
+            controller.follow_offset = *offset;
+        }
     }
 }
 
@@ -297,7 +329,7 @@ fn is_camera_moving(inertia: &CameraInertia, controller: &CameraController) -> b
         || inertia.translate_time < controller.translate_duration
 }
 
-fn commit(transform: &mut Transform, orbit: &mut Orbit) {
+pub(crate) fn commit(transform: &mut Transform, orbit: &mut Orbit) {
     let quat = orbit.horizon_quat * orbit.vertical_quat;
     let rotated_local_position = quat * orbit.local_position;
     let rotated_local_up = quat * orbit.local_up;
@@ -481,6 +513,37 @@ fn rotate_around_axis(
     orbit.tilt_quat = transform.rotation;
 }
 
+fn get_tilt_quat_by_ray(
+    window: &Window,
+    transform: &Transform,
+    frustum: &CameraFrustum,
+    ellipsoid: Ellipsoid<f64>,
+) -> (Vec3, Quat) {
+    let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
+    let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
+    let center = if let Some(t) = ray_ellipsoid_intersect(&ray, ellipsoid) {
+        ray.get_point(t)
+    } else {
+        // If no intersection found, find the intersection point from the camera forward and the distance from the surface.
+        let camera_world_pos = transform.translation;
+
+        let distance = ray_ellipsoid_intersect(
+            &Ray {
+                origin: camera_world_pos,
+                direction: -camera_world_pos.normalize(),
+            },
+            ellipsoid,
+        )
+        .unwrap_or(0.);
+
+        camera_world_pos + transform.forward() * distance
+    };
+
+    let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
+
+    (center, Quat::from_mat4(&enu_transform))
+}
+
 // ref: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2462
 #[allow(clippy::too_many_arguments)]
 fn handle_tilt(
@@ -512,22 +575,13 @@ fn handle_tilt(
         return;
     }
 
-    let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
-    let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
-    // TODO: Support movement underground.
-    let Some(point) = ray_ellipsoid_intersect(&ray, ellipsoid) else {
-        // No intersection found, cannot tilt
-        return;
-    };
-
-    let center = ray.get_point(point);
-    let enu_transform = east_north_up_to_fixed_frame(center, ellipsoid);
-
     if orbit.default_world_quat.is_none() {
         orbit.default_world_quat = Some(orbit.world_quat);
     }
 
-    orbit.set_quat(transform, Quat::from_mat4(&enu_transform), center, true);
+    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, ellipsoid);
+
+    orbit.set_quat(transform, enu_quat, center, true);
 
     let Some(spin) = rotate(mm, controller, 1., 1.) else {
         return;
@@ -660,7 +714,7 @@ fn apply_spin(
     let next_align = next_forward.dot(next_up);
 
     // Restrict the vertical rotation near the poles.
-    if next_align.abs() > 0.995 {
+    if orbit.is_tilting && next_align.abs() > 0.995 {
         let y = inertia.spin.y;
         let is_vertical_rotation_skipped =
             (next_align < 0. && y < 0.) || (next_align > 0. && y > 0.);
@@ -740,6 +794,8 @@ fn after_inertia(
 /// - `cc.heading`: rotation around the local up axis (degrees)
 /// - `cc.pitch`: tilt around the camera's right axis (degrees)
 fn apply_camera_change(
+    window: &Window,
+    frustum: &CameraFrustum,
     transform: &mut Transform,
     orbit: &mut Orbit,
     position: &Option<Vec3>,
@@ -807,17 +863,10 @@ fn apply_camera_change(
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);
 
+    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, WGS84_64);
+
     // Update orbit state with new quaternion
-    orbit.set_quat(
-        transform,
-        Quat::from_mat3(&Mat3::from_cols(
-            world_forward.cross(world_up),
-            world_forward,
-            world_up,
-        )),
-        Vec3::ZERO,
-        false,
-    );
+    orbit.set_quat(transform, enu_quat, center, true);
 }
 
 /// Calculates the world rotation quaternion based on target direction and heading
@@ -935,7 +984,12 @@ fn apply_camera_translate(
 }
 
 // TODO: Always spin around `target`. It should be reset by `look_at(center)`.
-fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {
+pub(crate) fn apply_look_at(
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    target: &Vec3,
+    offset: &Vec3,
+) {
     let ellipsoid = WGS84_64;
     let world_target = CRS::Geographic.to_vec3(ellipsoid, *target, 0.0);
 
