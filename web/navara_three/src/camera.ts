@@ -1,8 +1,4 @@
-import {
-  EventHandler,
-  type LngLatHeight,
-  type XYZ,
-} from "@navara/core";
+import { EventHandler, type LngLatHeight, type XYZ } from "@navara/core";
 import { Core, CameraStatus, CameraStatusType } from "@navara/engine";
 import { PerspectiveCamera } from "three";
 import invariant from "tiny-invariant";
@@ -61,11 +57,11 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
   get positionECEF(): XYZ {
     const pos = this._core?.getCameraPositionECEF();
     invariant(pos);
-      return {
-        x: pos[0],
-        y: pos[1],
-        z: pos[2],
-      };
+    return {
+      x: pos[0],
+      y: pos[1],
+      z: pos[2],
+    };
   }
 
   get positionGeographic(): LngLatHeight {

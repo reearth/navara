@@ -132,7 +132,9 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   }
 
   isAtNight(position: XYZ): boolean {
-    const normalizedPosition = new Vector3(position.x, position.y, position.z).clone().normalize();
+    const normalizedPosition = new Vector3(position.x, position.y, position.z)
+      .clone()
+      .normalize();
     const dotProduct = normalizedPosition.dot(this.sunDirection);
     return dotProduct < 0;
   }
