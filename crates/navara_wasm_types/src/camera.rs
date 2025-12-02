@@ -185,34 +185,42 @@ pub struct CameraControlUpdateEvent {
     /// - Far/Space: near = 1000.0, far = 1e9
     ///
     /// Default: `true`
+    #[wasm_bindgen(js_name = autoAdjustNearFar)]
     pub auto_adjust_near_far: Option<bool>,
     /// The minimum distance (in meters) the camera can zoom in to the Earth surface.
     ///
     /// Default: `WGS84_B_64` (Earth's semi-minor axis, ~6,356,752 meters)
+    #[wasm_bindgen(js_name = minimumZoomDistance)]
     pub minimum_zoom_distance: Option<FloatType>,
     /// The maximum distance (in meters) the camera can zoom out from the Earth surface.
     ///
     /// Default: `WGS84_B_64 * 10.0` (~63,567,523 meters)
+    #[wasm_bindgen(js_name = maximumZoomDistance)]
     pub maximum_zoom_distance: Option<FloatType>,
     /// Multiplier for mouse drag rotation speed.
     ///
     /// Default: `2.0`
+    #[wasm_bindgen(js_name = spinSpeed)]
     pub spin_speed: Option<FloatType>,
     /// Multiplier for scroll wheel zoom speed.
     ///
     /// Default: `0.6`
+    #[wasm_bindgen(js_name = zoomSpeed)]
     pub zoom_speed: Option<FloatType>,
     /// Duration (in milliseconds) for spin inertia animation after releasing mouse drag.
     ///
     /// Default: `500.0`
+    #[wasm_bindgen(js_name = spinDuration)]
     pub spin_duration: Option<f32>,
     /// Duration (in milliseconds) for zoom inertia animation after scroll wheel input.
     ///
     /// Default: `100.0`
+    #[wasm_bindgen(js_name = zoomDuration)]
     pub zoom_duration: Option<f32>,
     /// Duration (in milliseconds) for translation inertia animation.
     ///
     /// Default: `500.0`
+    #[wasm_bindgen(js_name = translateDuration)]
     pub translate_duration: Option<f32>,
 }
 

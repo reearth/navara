@@ -287,14 +287,14 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
 
 const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
   const controlParams = {
-    auto_adjust_near_far: true,
-    minimum_zoom_distance: 6356752,
-    maximum_zoom_distance: 63567523,
-    spin_speed: 2.0,
-    zoom_speed: 0.6,
-    spin_duration: 500.0,
-    zoom_duration: 100.0,
-    translate_duration: 500.0,
+    autoAdjustNearFar: true,
+    minimumZoomDistance: 6356752,
+    maximumZoomDistance: 63567523,
+    spinSpeed: 2.0,
+    zoomSpeed: 0.6,
+    spinDuration: 500.0,
+    zoomDuration: 100.0,
+    translateDuration: 500.0,
   };
 
   const frustumParams = {
@@ -302,7 +302,7 @@ const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
     far: view.camera.far,
   };
 
-  // Default values when auto_adjust_near_far is disabled (mid-altitude defaults)
+  // Default values when autoAdjustNearFar is disabled (mid-altitude defaults)
   const DEFAULT_NEAR = 100.0;
   const DEFAULT_FAR = 1e8;
 
@@ -318,21 +318,21 @@ const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
   // Display current near/far values
   const nearBinding = folder.addBinding(frustumParams, "near", {
     label: "near",
-    disabled: controlParams.auto_adjust_near_far,
+    disabled: controlParams.autoAdjustNearFar,
   });
   const farBinding = folder.addBinding(frustumParams, "far", {
     label: "far",
-    disabled: controlParams.auto_adjust_near_far,
+    disabled: controlParams.autoAdjustNearFar,
   });
 
   // Apply near/far when manually changed
   nearBinding.on("change", () => {
-    if (!controlParams.auto_adjust_near_far) {
+    if (!controlParams.autoAdjustNearFar) {
       view.camera.near = frustumParams.near;
     }
   });
   farBinding.on("change", () => {
-    if (!controlParams.auto_adjust_near_far) {
+    if (!controlParams.autoAdjustNearFar) {
       view.camera.far = frustumParams.far;
     }
   });
@@ -344,14 +344,14 @@ const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
     folder.refresh();
   });
 
-  folder.addBinding(controlParams, "auto_adjust_near_far").on("change", () => {
+  folder.addBinding(controlParams, "autoAdjustNearFar").on("change", () => {
     applyOptions();
     // Update disabled state of near/far inputs
-    nearBinding.disabled = controlParams.auto_adjust_near_far;
-    farBinding.disabled = controlParams.auto_adjust_near_far;
+    nearBinding.disabled = controlParams.autoAdjustNearFar;
+    farBinding.disabled = controlParams.autoAdjustNearFar;
 
     // Set default near/far when disabling auto adjust
-    if (!controlParams.auto_adjust_near_far) {
+    if (!controlParams.autoAdjustNearFar) {
       view.camera.near = DEFAULT_NEAR;
       view.camera.far = DEFAULT_FAR;
       frustumParams.near = DEFAULT_NEAR;
@@ -360,31 +360,31 @@ const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
     }
   });
   folder
-    .addBinding(controlParams, "minimum_zoom_distance", {
+    .addBinding(controlParams, "minimumZoomDistance", {
       min: 1,
       max: 63567523,
     })
     .on("change", applyOptions);
   folder
-    .addBinding(controlParams, "maximum_zoom_distance", {
+    .addBinding(controlParams, "maximumZoomDistance", {
       min: 1,
       max: 635675230,
     })
     .on("change", applyOptions);
   folder
-    .addBinding(controlParams, "spin_speed", { min: 0.1, max: 10.0 })
+    .addBinding(controlParams, "spinSpeed", { min: 0.1, max: 10.0 })
     .on("change", applyOptions);
   folder
-    .addBinding(controlParams, "zoom_speed", { min: 0.1, max: 5.0 })
+    .addBinding(controlParams, "zoomSpeed", { min: 0.1, max: 5.0 })
     .on("change", applyOptions);
   folder
-    .addBinding(controlParams, "spin_duration", { min: 0, max: 2000 })
+    .addBinding(controlParams, "spinDuration", { min: 0, max: 2000 })
     .on("change", applyOptions);
   folder
-    .addBinding(controlParams, "zoom_duration", { min: 0, max: 1000 })
+    .addBinding(controlParams, "zoomDuration", { min: 0, max: 1000 })
     .on("change", applyOptions);
   folder
-    .addBinding(controlParams, "translate_duration", { min: 0, max: 2000 })
+    .addBinding(controlParams, "translateDuration", { min: 0, max: 2000 })
     .on("change", applyOptions);
 };
 

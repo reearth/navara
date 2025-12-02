@@ -143,29 +143,29 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
 
   set options(options: CameraOptions) {
     const event = new CameraControlUpdateEvent();
-    if (options.auto_adjust_near_far !== undefined) {
-      event.auto_adjust_near_far = options.auto_adjust_near_far;
+    if (options.autoAdjustNearFar !== undefined) {
+      event.autoAdjustNearFar = options.autoAdjustNearFar;
     }
-    if (options.minimum_zoom_distance !== undefined) {
-      event.minimum_zoom_distance = options.minimum_zoom_distance;
+    if (options.minimumZoomDistance !== undefined) {
+      event.minimumZoomDistance = options.minimumZoomDistance;
     }
-    if (options.maximum_zoom_distance !== undefined) {
-      event.maximum_zoom_distance = options.maximum_zoom_distance;
+    if (options.maximumZoomDistance !== undefined) {
+      event.maximumZoomDistance = options.maximumZoomDistance;
     }
-    if (options.spin_speed !== undefined) {
-      event.spin_speed = options.spin_speed;
+    if (options.spinSpeed !== undefined) {
+      event.spinSpeed = options.spinSpeed;
     }
-    if (options.zoom_speed !== undefined) {
-      event.zoom_speed = options.zoom_speed;
+    if (options.zoomSpeed !== undefined) {
+      event.zoomSpeed = options.zoomSpeed;
     }
-    if (options.spin_duration !== undefined) {
-      event.spin_duration = options.spin_duration;
+    if (options.spinDuration !== undefined) {
+      event.spinDuration = options.spinDuration;
     }
-    if (options.zoom_duration !== undefined) {
-      event.zoom_duration = options.zoom_duration;
+    if (options.zoomDuration !== undefined) {
+      event.zoomDuration = options.zoomDuration;
     }
-    if (options.translate_duration !== undefined) {
-      event.translate_duration = options.translate_duration;
+    if (options.translateDuration !== undefined) {
+      event.translateDuration = options.translateDuration;
     }
     this._core?.setCameraControl(event);
   }
