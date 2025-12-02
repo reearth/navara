@@ -116,6 +116,8 @@ import { isWorker, convertScreenPos } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
+export type { CameraOptions, CameraEvent } from "./camera";
+
 export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
 export type { Nullable, XYZ, LngLat, LngLatHeight } from "@navara/core";
 export * from "./type";

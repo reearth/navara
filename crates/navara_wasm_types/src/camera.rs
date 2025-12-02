@@ -170,3 +170,79 @@ impl<'a> From<&'a navara_camera::CameraFrustum> for CameraFrustum {
         }
     }
 }
+
+/// An event for updating camera controller settings at runtime.
+///
+/// This event allows partial updates to the [`CameraController`](navara_camera::CameraController)
+/// component. Only fields set to `Some` will be applied; `None` fields are ignored.
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CameraControlUpdateEvent {
+    /// Whether to automatically adjust near/far clipping planes based on camera distance
+    /// from the Earth surface. When enabled, the camera uses three zones:
+    /// - Near ground: near = 1.0, far = 1e6
+    /// - Mid altitude: near = 100.0, far = 1e8
+    /// - Far/Space: near = 1000.0, far = 1e9
+    ///
+    /// Default: `true`
+    #[wasm_bindgen(js_name = autoAdjustNearFar)]
+    pub auto_adjust_near_far: Option<bool>,
+    /// The minimum distance (in meters) the camera can zoom in to the Earth surface.
+    ///
+    /// Default: `WGS84_B_64` (Earth's semi-minor axis, ~6,356,752 meters)
+    #[wasm_bindgen(js_name = minimumZoomDistance)]
+    pub minimum_zoom_distance: Option<FloatType>,
+    /// The maximum distance (in meters) the camera can zoom out from the Earth surface.
+    ///
+    /// Default: `WGS84_B_64 * 10.0` (~63,567,523 meters)
+    #[wasm_bindgen(js_name = maximumZoomDistance)]
+    pub maximum_zoom_distance: Option<FloatType>,
+    /// Multiplier for mouse drag rotation speed.
+    ///
+    /// Default: `2.0`
+    #[wasm_bindgen(js_name = spinSpeed)]
+    pub spin_speed: Option<FloatType>,
+    /// Multiplier for scroll wheel zoom speed.
+    ///
+    /// Default: `0.6`
+    #[wasm_bindgen(js_name = zoomSpeed)]
+    pub zoom_speed: Option<FloatType>,
+    /// Duration (in milliseconds) for spin inertia animation after releasing mouse drag.
+    ///
+    /// Default: `500.0`
+    #[wasm_bindgen(js_name = spinDuration)]
+    pub spin_duration: Option<f32>,
+    /// Duration (in milliseconds) for zoom inertia animation after scroll wheel input.
+    ///
+    /// Default: `100.0`
+    #[wasm_bindgen(js_name = zoomDuration)]
+    pub zoom_duration: Option<f32>,
+    /// Duration (in milliseconds) for translation inertia animation.
+    ///
+    /// Default: `500.0`
+    #[wasm_bindgen(js_name = translateDuration)]
+    pub translate_duration: Option<f32>,
+}
+
+#[wasm_bindgen]
+impl CameraControlUpdateEvent {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl From<CameraControlUpdateEvent> for navara_camera::CameraControlUpdateEvent {
+    fn from(e: CameraControlUpdateEvent) -> Self {
+        Self {
+            auto_adjust_near_far: e.auto_adjust_near_far,
+            minimum_zoom_distance: e.minimum_zoom_distance,
+            maximum_zoom_distance: e.maximum_zoom_distance,
+            spin_speed: e.spin_speed,
+            zoom_speed: e.zoom_speed,
+            spin_duration: e.spin_duration,
+            zoom_duration: e.zoom_duration,
+            translate_duration: e.translate_duration,
+        }
+    }
+}

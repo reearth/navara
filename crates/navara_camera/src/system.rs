@@ -2,9 +2,10 @@ use std::f64::{self, consts::PI};
 
 use bevy_ecs::{
     change_detection::DetectChanges,
+    entity::Entity,
     event::EventReader,
     query::{Added, Changed, Or, With},
-    system::{Commands, Query, Res},
+    system::{Commands, Query, Res, ResMut},
     world::Ref,
 };
 use bevy_input::{
@@ -16,6 +17,7 @@ use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
     CRS, WGS84_64,
 };
+use navara_event_store::EventStore;
 use navara_frame::FrameManager;
 use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON3, EPSILON6};
 use navara_window::Window;
@@ -1024,9 +1026,20 @@ pub(crate) fn apply_look_at(
 
 #[allow(clippy::type_complexity)]
 pub fn update_frustum(
-    mut query: Query<(&mut CameraFrustum, &Transform), Or<(Added<Transform>, Changed<Transform>)>>,
+    mut events: ResMut<EventStore>,
+    mut query: Query<
+        (Entity, &mut CameraFrustum, &Transform, &CameraController),
+        Or<(Added<Transform>, Changed<Transform>)>,
+    >,
 ) {
-    for (mut frustum, transform) in query.iter_mut() {
+    for (e, mut frustum, transform, controller) in query.iter_mut() {
+        if controller.auto_adjust_near_far {
+            let distance = transform.translation.length();
+            if frustum.adjust_near_far(distance, controller) {
+                events.camera_frustum_updated = Some(e);
+            }
+        }
+
         frustum.update_sse_denominator();
         frustum.update_planes(transform);
     }
