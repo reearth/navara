@@ -38,36 +38,36 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     this.text = new Text();
 
     this.userData.scaleByDistance = {
-      value: meshMaterial.scale_by_distance ? 1.0 : 0.0,
+      value: meshMaterial.scaleByDistance ? 1.0 : 0.0,
     };
     this.userData.fontSizePx = {
       value: meshMaterial.size ?? 1.0,
     };
     this.userData.bgColor = {
-      value: meshMaterial.background_color
-        ? new Color(meshMaterial.background_color)
+      value: meshMaterial.backgroundColor
+        ? new Color(meshMaterial.backgroundColor)
         : undefined,
     };
     this.userData.borderColor = {
-      value: meshMaterial.border_color
-        ? new Color(meshMaterial.border_color)
+      value: meshMaterial.borderColor
+        ? new Color(meshMaterial.borderColor)
         : undefined,
     };
     this.userData.borderWidth = {
-      value: meshMaterial.border_width ?? 0.0,
+      value: meshMaterial.borderWidth ?? 0.0,
     };
     this.userData.outlineWidthPx = {
-      value: meshMaterial.outline_width ?? 0.0,
+      value: meshMaterial.outlineWidth ?? 0.0,
     };
     this.userData.outlineBlurPx = {
-      value: meshMaterial.outline_blur ?? 0.0,
+      value: meshMaterial.outlineBlur ?? 0.0,
     };
     this.userData.outlineOffsetPx = {
-      x: meshMaterial?.outline_offset?.x ?? 0.0,
-      y: meshMaterial?.outline_offset?.y ?? 0.0,
+      x: meshMaterial?.outlineOffset?.x ?? 0.0,
+      y: meshMaterial?.outlineOffset?.y ?? 0.0,
     };
     this.userData.cornerRadius = {
-      value: meshMaterial.corner_radius ?? 0.0,
+      value: meshMaterial.cornerRadius ?? 0.0,
     };
     this.userData.bgSize = {
       value: new Vector2(1.0, 1.0),
@@ -102,13 +102,13 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     txt.fontSize = 1;
 
     // Note: outlineWidth is set to 0 initially to avoid sampling priority issues
-    txt.outlineColor = meshMaterial.outline_color
-      ? new Color(meshMaterial.outline_color).getHex()
+    txt.outlineColor = meshMaterial.outlineColor
+      ? new Color(meshMaterial.outlineColor).getHex()
       : 0x000000;
     txt.outlineBlur = 0.0;
     txt.outlineOffsetX = 0.0;
     txt.outlineOffsetY = 0.0;
-    txt.outlineOpacity = meshMaterial.outline_opacity ?? 1.0;
+    txt.outlineOpacity = meshMaterial.outlineOpacity ?? 1.0;
     txt.outlineWidth = 0.0; // Always start with 0 to prevent sampling size optimization issues
 
     (txt.material as Material).onBeforeCompile = (shader) => {
@@ -371,7 +371,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       prev.visible = nextVisible;
     }
 
-    const nextDepthTest = material.depth_test ?? true;
+    const nextDepthTest = material.depthTest ?? true;
     if (nextDepthTest !== prev.depthTest) {
       txt.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
@@ -402,7 +402,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       txt.color = nextColor;
     }
 
-    const nextScaleByDistance = material.scale_by_distance ? 1 : 0;
+    const nextScaleByDistance = material.scaleByDistance ? 1 : 0;
     if (nextScaleByDistance !== prev.scaleByDistance) {
       this.userData.scaleByDistance.value = nextScaleByDistance;
       prev.scaleByDistance = nextScaleByDistance;
@@ -415,44 +415,44 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
-    const nextBackgroundColor = material.background_color
-      ? new Color(material.background_color)
+    const nextBackgroundColor = material.backgroundColor
+      ? new Color(material.backgroundColor)
       : undefined;
     if (nextBackgroundColor !== prev.backgroundColor) {
       this.userData.bgColor.value = nextBackgroundColor;
       prev.backgroundColor = nextBackgroundColor;
     }
 
-    const nextBoarderColor = material.border_color
-      ? new Color(material.border_color)
+    const nextBoarderColor = material.borderColor
+      ? new Color(material.borderColor)
       : undefined;
     if (nextBoarderColor !== prev.borderColor) {
       this.userData.borderColor.value = nextBoarderColor;
       prev.borderColor = nextBoarderColor;
     }
 
-    const nextBorderWidth = Math.max(material.border_width ?? 0.0, 0.0);
+    const nextBorderWidth = Math.max(material.borderWidth ?? 0.0, 0.0);
     if (nextBorderWidth !== prev.borderWidth) {
       this.userData.borderWidth.value = nextBorderWidth;
       prev.borderWidth = nextBorderWidth;
     }
 
-    const nextCornerRadius = Math.max(material.corner_radius ?? 0.0, 0.0);
+    const nextCornerRadius = Math.max(material.cornerRadius ?? 0.0, 0.0);
     if (nextCornerRadius !== prev.cornerRadius) {
       this.userData.cornerRadius.value = nextCornerRadius;
       prev.cornerRadius = nextCornerRadius;
     }
 
     // Update outline properties
-    const nextOutlineWidth = Math.max(material.outline_width ?? 0.0, 0.0);
+    const nextOutlineWidth = Math.max(material.outlineWidth ?? 0.0, 0.0);
     if (nextOutlineWidth !== prev.outlineWidthPx) {
       this.userData.outlineWidthPx.value = nextOutlineWidth;
       prev.outlineWidthPx = nextOutlineWidth;
       outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
-    const nextOutlineColor = material.outline_color
-      ? new Color(material.outline_color)
+    const nextOutlineColor = material.outlineColor
+      ? new Color(material.outlineColor)
       : undefined;
     if (nextOutlineColor !== prev.outlineColor) {
       txt.outlineColor = nextOutlineColor
@@ -461,15 +461,15 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       prev.outlineColor = nextOutlineColor;
     }
 
-    const nextOutlineBlur = Math.max(material.outline_blur ?? 0.0, 0.0);
+    const nextOutlineBlur = Math.max(material.outlineBlur ?? 0.0, 0.0);
     if (nextOutlineBlur !== prev.outlineBlurPx) {
       this.userData.outlineBlurPx.value = nextOutlineBlur;
       prev.outlineBlurPx = nextOutlineBlur;
       outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
-    const nextOutlineOffsetX = material.outline_offset?.x ?? 0.0;
-    const nextOutlineOffsetY = material.outline_offset?.y ?? 0.0;
+    const nextOutlineOffsetX = material.outlineOffset?.x ?? 0.0;
+    const nextOutlineOffsetY = material.outlineOffset?.y ?? 0.0;
     if (
       nextOutlineOffsetX !== prev.outlineOffsetX ||
       nextOutlineOffsetY !== prev.outlineOffsetY
@@ -481,7 +481,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       outlineNeedsSync = this.recalculateOutlineParams() || outlineNeedsSync;
     }
 
-    const nextOutlineOpacity = material.outline_opacity ?? 1.0;
+    const nextOutlineOpacity = material.outlineOpacity ?? 1.0;
     if (nextOutlineOpacity !== prev.outlineOpacity) {
       txt.outlineOpacity = nextOutlineOpacity;
       prev.outlineOpacity = nextOutlineOpacity;

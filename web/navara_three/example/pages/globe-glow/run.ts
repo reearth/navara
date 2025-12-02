@@ -41,8 +41,8 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 

@@ -26,8 +26,8 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TILE_DATASETS.openstreetmap.url,
     },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -36,10 +36,10 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
@@ -50,13 +50,13 @@ export const run = async (view: ThreeView) => {
     },
     point: {
       size: 1000,
-      scale_by_distance: false,
+      scaleByDistance: false,
       color: 0xff0000,
     },
     // text: {
     //   color: 0xff00ff,
     //   size: 30,
-    //   scale_by_distance: true,
+    //   scaleByDistance: true,
     //   text: "MVT",
     // },
     polyline: {
@@ -64,17 +64,17 @@ export const run = async (view: ThreeView) => {
       color: 0x3d1623,
       width: 2,
       height: 1,
-      clamp_to_ground: true,
+      clampToGround: true,
     },
     polygon: {
       color: 0x00aaff,
       height: 10,
-      extruded_height: 0,
-      clamp_to_ground: true,
+      extrudedHeight: 0,
+      clampToGround: true,
       wireframe: false,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
     },
   });
 

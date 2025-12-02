@@ -68,8 +68,8 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TILE_DATASETS.openstreetmap.url,
     },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -78,10 +78,10 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
@@ -95,8 +95,8 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
       height: -50,
     },
   });
@@ -139,12 +139,12 @@ export const run = async (view: ThreeView) => {
     type: "mesh",
     gltfModel: {
       url: LOCAL_DATASETS.soldierGLTF.url,
-      animation_enabled: true,
-      animation_active_clip: "Idle",
-      animation_speed: 1.0,
-      animation_loop: true,
-      animation_auto_play: true,
-      animation_crossfade_duration: 0.3,
+      animationEnabled: true,
+      animationActiveClip: "Idle",
+      animationSpeed: 1.0,
+      animationLoop: true,
+      animationAutoPlay: true,
+      animationCrossfadeDuration: 0.3,
     },
     scale: { x: params.modelScale, y: params.modelScale, z: params.modelScale },
     position: { x: startPos.x, y: startPos.y, z: startPos.z },

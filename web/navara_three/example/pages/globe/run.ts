@@ -39,10 +39,10 @@ export async function run() {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 6,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 6,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
@@ -50,9 +50,9 @@ export async function run() {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    raster_tile: {
+    rasterTile: {
       color: 0xffffff,
-      max_zoom: 18,
+      maxZoom: 18,
       opacity: 1,
     },
   });
