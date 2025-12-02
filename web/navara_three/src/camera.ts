@@ -1,8 +1,4 @@
-import {
-  type CRSTypes,
-  type CameraPositionByCRS,
-  EventHandler,
-} from "@navara/core";
+import { EventHandler, type LngLatHeight, type XYZ } from "@navara/core";
 import {
   Core,
   CameraStatus,
@@ -10,6 +6,7 @@ import {
   CameraControlUpdateEvent,
 } from "@navara/engine";
 import { PerspectiveCamera } from "three";
+import invariant from "tiny-invariant";
 
 import type { ExtractProperties, RemoveFreeRecursively } from "./type";
 
@@ -68,41 +65,30 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     }
   }
 
-  getPosition<CRS extends CRSTypes = "geographic">(
-    crs: CRS = "geographic" as CRS,
-  ): CameraPositionByCRS<CRS> | undefined {
-    const orient = this._core?.getCameraOrientation();
-    if (!orient) {
-      return undefined;
-    }
+  get positionECEF(): XYZ {
+    const pos = this._core?.getCameraPositionECEF();
+    invariant(pos);
+    return {
+      x: pos[0],
+      y: pos[1],
+      z: pos[2],
+    };
+  }
 
-    if (crs === "geographic") {
-      const pos = this._core?.getCameraPositionLLE();
-      if (pos) {
-        return {
-          lng: pos[0],
-          lat: pos[1],
-          height: pos[2],
-          pitch: orient.pitch,
-          heading: orient.heading,
-          roll: orient.roll,
-        } as CameraPositionByCRS<CRS>;
-      }
-    } else if (crs === "ecef") {
-      const pos = this._core?.getCameraPositionECEF();
-      if (pos) {
-        return {
-          x: pos[0],
-          y: pos[1],
-          z: pos[2],
-          pitch: orient.pitch,
-          heading: orient.heading,
-          roll: orient.roll,
-        } as CameraPositionByCRS<CRS>;
-      }
-    }
+  get positionGeographic(): LngLatHeight {
+    const pos = this._core?.getCameraPositionLLE();
+    invariant(pos);
+    return {
+      lng: pos[0],
+      lat: pos[1],
+      height: pos[2],
+    };
+  }
 
-    return undefined;
+  get orientation() {
+    const orientation = this._core?.getCameraOrientation();
+    invariant(orientation);
+    return orientation;
   }
 
   get fovy(): number | undefined {

@@ -1,5 +1,9 @@
-import type { CameraPosition } from "@navara/core";
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, LLE } from "@navara/three";
+import type { CameraOrientation } from "@navara/core";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  LLE,
+  type LngLatHeight,
+} from "@navara/three";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
@@ -68,13 +72,16 @@ export const run = async (view: ThreeView) => {
   });
   view.camera.on("move", () => {
     console.log("move");
-    const position = view.camera.getPosition("geographic");
-    updateCameraParamsToPane(position);
+    const position = view.camera.positionGeographic;
+    const orientation = view.camera.orientation;
+    updateCameraParamsToPane({ ...position, ...orientation });
   });
   view.camera.on("moveend", () => {
     console.log("moveend");
-    const position = view.camera.getPosition("geographic");
-    updateCameraParamsToPane(position);
+    const position = view.camera.positionGeographic;
+    const orientation = view.camera.orientation;
+
+    updateCameraParamsToPane({ ...position, ...orientation });
   });
 
   const pane = new Pane({
@@ -451,7 +458,9 @@ const addToggleButton = (
   });
 };
 
-const updateCameraParamsToPane = (position: CameraPosition | undefined) => {
+const updateCameraParamsToPane = (
+  position: (LngLatHeight & CameraOrientation) | undefined,
+) => {
   const cameraParams = gCameraParams;
 
   if (position && position.lng) {
