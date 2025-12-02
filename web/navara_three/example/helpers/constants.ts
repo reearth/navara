@@ -133,9 +133,7 @@ export const TILES_3D_DATASETS = {
   },
   googlePhotorealTiles: {
     url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.NAVARA_GOOGLE_MAPS_API_KEY}`,
-    attribution: "Google Photorealistic 3D Tiles",
-    attributionUrl:
-      "https://developers.google.com/maps/documentation/tile/3d-tiles",
+    attribution: "Google Maps Photorealistic 3D Tiles",
   },
 } satisfies Record<string, Dataset>;
 
