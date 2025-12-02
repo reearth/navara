@@ -1,7 +1,14 @@
 import { EventHandler, type LngLatHeight, type XYZ } from "@navara/core";
-import { Core, CameraStatus, CameraStatusType } from "@navara/engine";
+import {
+  Core,
+  CameraStatus,
+  CameraStatusType,
+  CameraControlUpdateEvent,
+} from "@navara/engine";
 import { PerspectiveCamera } from "three";
 import invariant from "tiny-invariant";
+
+import type { ExtractProperties, RemoveFreeRecursively } from "./type";
 
 export type CameraEvent = {
   movestart: () => void;
@@ -9,6 +16,10 @@ export type CameraEvent = {
   moveend: () => void;
   frustumChanged: () => void;
 };
+
+export type CameraOptions = ExtractProperties<
+  RemoveFreeRecursively<CameraControlUpdateEvent>
+>;
 
 export class ThreeViewCamera extends EventHandler<CameraEvent> {
   raw: PerspectiveCamera;
@@ -100,11 +111,48 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     this._core?.setFrustum(undefined, val, undefined);
   }
 
+  get near() {
+    return this.raw.near;
+  }
+
   set far(val: number) {
     if (val <= this.raw.near) {
       return;
     }
 
     this._core?.setFrustum(undefined, undefined, val);
+  }
+
+  get far() {
+    return this.raw.far;
+  }
+
+  set options(options: CameraOptions) {
+    const event = new CameraControlUpdateEvent();
+    if (options.autoAdjustNearFar !== undefined) {
+      event.autoAdjustNearFar = options.autoAdjustNearFar;
+    }
+    if (options.minimumZoomDistance !== undefined) {
+      event.minimumZoomDistance = options.minimumZoomDistance;
+    }
+    if (options.maximumZoomDistance !== undefined) {
+      event.maximumZoomDistance = options.maximumZoomDistance;
+    }
+    if (options.spinSpeed !== undefined) {
+      event.spinSpeed = options.spinSpeed;
+    }
+    if (options.zoomSpeed !== undefined) {
+      event.zoomSpeed = options.zoomSpeed;
+    }
+    if (options.spinDuration !== undefined) {
+      event.spinDuration = options.spinDuration;
+    }
+    if (options.zoomDuration !== undefined) {
+      event.zoomDuration = options.zoomDuration;
+    }
+    if (options.translateDuration !== undefined) {
+      event.translateDuration = options.translateDuration;
+    }
+    this._core?.setCameraControl(event);
   }
 }

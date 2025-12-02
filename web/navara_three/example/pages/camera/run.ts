@@ -98,6 +98,7 @@ export const run = async (view: ThreeView) => {
   addFlyToOption(pane, view);
   addLookAtOption(pane, view);
   addRotateOption(pane, view);
+  addCameraControlOptions(pane, view);
 
   showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
@@ -289,6 +290,109 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
   folder.addButton({ title: "Look At", label: "" }).on("click", () => {
     clickFunc();
   });
+};
+
+const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
+  const controlParams = {
+    autoAdjustNearFar: true,
+    minimumZoomDistance: 6356752,
+    maximumZoomDistance: 63567523,
+    spinSpeed: 2.0,
+    zoomSpeed: 0.6,
+    spinDuration: 500.0,
+    zoomDuration: 100.0,
+    translateDuration: 500.0,
+  };
+
+  const frustumParams = {
+    near: view.camera.near,
+    far: view.camera.far,
+  };
+
+  // Default values when autoAdjustNearFar is disabled (mid-altitude defaults)
+  const DEFAULT_NEAR = 100.0;
+  const DEFAULT_FAR = 1e8;
+
+  const folder = pane.addFolder({
+    title: "Camera Control Options",
+    expanded: false,
+  });
+
+  const applyOptions = () => {
+    view.camera.options = controlParams;
+  };
+
+  // Display current near/far values
+  const nearBinding = folder.addBinding(frustumParams, "near", {
+    label: "near",
+    disabled: controlParams.autoAdjustNearFar,
+  });
+  const farBinding = folder.addBinding(frustumParams, "far", {
+    label: "far",
+    disabled: controlParams.autoAdjustNearFar,
+  });
+
+  // Apply near/far when manually changed
+  nearBinding.on("change", () => {
+    if (!controlParams.autoAdjustNearFar) {
+      view.camera.near = frustumParams.near;
+    }
+  });
+  farBinding.on("change", () => {
+    if (!controlParams.autoAdjustNearFar) {
+      view.camera.far = frustumParams.far;
+    }
+  });
+
+  // Update near/far display when frustum changes
+  view.camera.on("frustumChanged", () => {
+    frustumParams.near = view.camera.near;
+    frustumParams.far = view.camera.far;
+    folder.refresh();
+  });
+
+  folder.addBinding(controlParams, "autoAdjustNearFar").on("change", () => {
+    applyOptions();
+    // Update disabled state of near/far inputs
+    nearBinding.disabled = controlParams.autoAdjustNearFar;
+    farBinding.disabled = controlParams.autoAdjustNearFar;
+
+    // Set default near/far when disabling auto adjust
+    if (!controlParams.autoAdjustNearFar) {
+      view.camera.near = DEFAULT_NEAR;
+      view.camera.far = DEFAULT_FAR;
+      frustumParams.near = DEFAULT_NEAR;
+      frustumParams.far = DEFAULT_FAR;
+      folder.refresh();
+    }
+  });
+  folder
+    .addBinding(controlParams, "minimumZoomDistance", {
+      min: 1,
+      max: 63567523,
+    })
+    .on("change", applyOptions);
+  folder
+    .addBinding(controlParams, "maximumZoomDistance", {
+      min: 1,
+      max: 635675230,
+    })
+    .on("change", applyOptions);
+  folder
+    .addBinding(controlParams, "spinSpeed", { min: 0.1, max: 10.0 })
+    .on("change", applyOptions);
+  folder
+    .addBinding(controlParams, "zoomSpeed", { min: 0.1, max: 5.0 })
+    .on("change", applyOptions);
+  folder
+    .addBinding(controlParams, "spinDuration", { min: 0, max: 2000 })
+    .on("change", applyOptions);
+  folder
+    .addBinding(controlParams, "zoomDuration", { min: 0, max: 1000 })
+    .on("change", applyOptions);
+  folder
+    .addBinding(controlParams, "translateDuration", { min: 0, max: 2000 })
+    .on("change", applyOptions);
 };
 
 const addRotateOption = (pane: Pane, view: ThreeView) => {

@@ -88,3 +88,15 @@ pub struct FrustumEvent {
     pub near: Option<FloatType>, // near clipping plane distance
     pub far: Option<FloatType>,  // far clipping plane distance
 }
+
+#[derive(Event)]
+pub struct CameraControlUpdateEvent {
+    pub auto_adjust_near_far: Option<bool>,
+    pub minimum_zoom_distance: Option<FloatType>,
+    pub maximum_zoom_distance: Option<FloatType>,
+    pub spin_speed: Option<FloatType>,
+    pub zoom_speed: Option<FloatType>,
+    pub spin_duration: Option<f32>,
+    pub zoom_duration: Option<f32>,
+    pub translate_duration: Option<f32>,
+}

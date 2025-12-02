@@ -9,8 +9,8 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    get_heading, get_pitch, get_roll, CamDirType, CameraDirection, CameraEvent, CameraFrustum,
-    CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
+    get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
+    CameraEvent, CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_64};
@@ -977,6 +977,10 @@ impl App {
         self.app
             .world_mut()
             .send_event(FrustumEvent { fov, near, far });
+    }
+
+    pub fn set_camera_control(&mut self, event: CameraControlUpdateEvent) {
+        self.app.world_mut().send_event(event);
     }
 
     pub fn get_globe(&self) -> Option<&Globe> {

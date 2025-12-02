@@ -557,6 +557,11 @@ impl Core {
         self.app.set_frustum(fov, near, far);
     }
 
+    #[wasm_bindgen(js_name = setCameraControl)]
+    pub fn set_camera_control(&mut self, event: navara_wasm_types::CameraControlUpdateEvent) {
+        self.app.set_camera_control(event.into());
+    }
+
     // === Globe definition ===
 
     #[wasm_bindgen(js_name = getGlobe)]
