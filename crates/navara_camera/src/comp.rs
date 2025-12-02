@@ -113,6 +113,35 @@ impl CameraFrustum {
         }
         true
     }
+
+    /// Adjusts the near and far clipping planes based on camera distance from Earth.
+    /// Uses linear division to create three zones between minimum and maximum zoom distance.
+    ///
+    /// - Zone 1 (Near ground): near = 1.0, far = 1e6
+    /// - Zone 2 (Mid altitude): near = 100.0, far = 1e8
+    /// - Zone 3 (Far/Space): near = 1000.0, far = 1e9
+    pub fn adjust_near_far(&mut self, distance: FloatType, controller: &CameraController) -> bool {
+        let range = controller.maximum_zoom_distance - controller.minimum_zoom_distance;
+        let threshold1 = controller.minimum_zoom_distance + range / 1000.;
+        let threshold2 = controller.minimum_zoom_distance + range / 30.;
+
+        let (new_near, new_far) = if distance < threshold1 {
+            (1.0, 1e6)
+        } else if distance < threshold2 {
+            (100.0, 1e8)
+        } else {
+            (1000.0, 1e9)
+        };
+
+        let changed = (self.near - new_near).abs() > 0.01 || (self.far - new_far).abs() > 1.0;
+
+        if changed {
+            self.near = new_near;
+            self.far = new_far;
+        }
+
+        changed
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -140,15 +169,14 @@ pub struct CameraController {
     pub enable_tilt: bool,
     pub enable_look: bool,
     pub enable_translate: bool,
+    pub auto_adjust_near_far: bool,
     pub minimum_zoom_distance: FloatType,
     pub maximum_zoom_distance: FloatType,
     pub spin_speed: FloatType,
-    pub rotate_speed: FloatType,
     pub zoom_speed: FloatType,
     pub spin_duration: f32,
     pub zoom_duration: f32,
     pub translate_duration: f32,
-    pub inertia: FloatType,
     pub enable_follow: bool,
     pub follow_target_cur: Option<Vec3>,
     pub follow_target_pre: Option<Vec3>,
@@ -164,15 +192,14 @@ impl Default for CameraController {
             enable_tilt: true,
             enable_look: true,
             enable_translate: true,
+            auto_adjust_near_far: true,
             minimum_zoom_distance: WGS84_B_64,
             maximum_zoom_distance: WGS84_B_64 * 10.0,
             spin_speed: 2.0,
-            rotate_speed: 1.,
             zoom_speed: 0.6,
             spin_duration: 500.,
             zoom_duration: 100.,
             translate_duration: 500.,
-            inertia: 0.5,
             enable_follow: false,
             follow_target_cur: None,
             follow_target_pre: None,

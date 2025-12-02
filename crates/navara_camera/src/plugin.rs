@@ -3,7 +3,7 @@ use navara_event_store::EventStore;
 use navara_math::Transform;
 use navara_window::WindowResizeEvent;
 
-use crate::{CameraEvent, CameraFrustum, FrustumEvent};
+use crate::{CameraControlUpdateEvent, CameraController, CameraEvent, CameraFrustum, FrustumEvent};
 
 use super::CameraMarker;
 use bevy_app::{PostUpdate, Startup, Update};
@@ -23,11 +23,13 @@ impl bevy_app::Plugin for CameraPlugin {
         app.add_systems(Startup, super::system::startup)
             .add_event::<CameraEvent>()
             .add_event::<FrustumEvent>()
+            .add_event::<CameraControlUpdateEvent>()
             .add_systems(
                 Update,
                 (
                     handle_resize,
                     handle_frustum_setting,
+                    handle_camera_control_update,
                     super::system::update,
                     super::system::update_frustum,
                 )
@@ -95,6 +97,40 @@ fn handle_frustum_setting(
             frustum.update_planes(transform);
 
             events.camera_frustum_updated = Some(e);
+        }
+    }
+}
+
+fn handle_camera_control_update(
+    mut camera: Query<(&CameraMarker, &mut CameraController)>,
+    mut ev: EventReader<CameraControlUpdateEvent>,
+) {
+    for event in ev.read() {
+        for (_, mut controller) in &mut camera {
+            if let Some(auto_adjust) = event.auto_adjust_near_far {
+                controller.auto_adjust_near_far = auto_adjust;
+            }
+            if let Some(min_zoom) = event.minimum_zoom_distance {
+                controller.minimum_zoom_distance = min_zoom;
+            }
+            if let Some(max_zoom) = event.maximum_zoom_distance {
+                controller.maximum_zoom_distance = max_zoom;
+            }
+            if let Some(spin_speed) = event.spin_speed {
+                controller.spin_speed = spin_speed;
+            }
+            if let Some(zoom_speed) = event.zoom_speed {
+                controller.zoom_speed = zoom_speed;
+            }
+            if let Some(spin_duration) = event.spin_duration {
+                controller.spin_duration = spin_duration;
+            }
+            if let Some(zoom_duration) = event.zoom_duration {
+                controller.zoom_duration = zoom_duration;
+            }
+            if let Some(translate_duration) = event.translate_duration {
+                controller.translate_duration = translate_duration;
+            }
         }
     }
 }
