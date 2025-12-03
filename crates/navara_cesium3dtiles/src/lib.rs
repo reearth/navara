@@ -14,7 +14,7 @@ pub struct Cesium3dTilesPlugin;
 
 impl Plugin for Cesium3dTilesPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Cesium3dTilesJsonTileSet>();
+        app.init_resource::<Cesium3dTilesJsonTileSetStateMap>();
         app.add_systems(
             Update,
             (

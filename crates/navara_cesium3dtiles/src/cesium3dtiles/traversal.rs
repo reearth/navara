@@ -17,8 +17,9 @@ use url::Url;
 
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, glb::RenderedCesium3dTileContentGlbMarker,
-    pnts::RenderedCesium3dTileContentPntsMarker, Cesium3dTileSetState, Cesium3dTilesJsonTileSet,
-    Cesium3dTilesJsonTileSetState, RenderedCesium3dTileContent,
+    pnts::RenderedCesium3dTileContentPntsMarker, Cesium3dTileSetState,
+    Cesium3dTilesJsonTileSetState, Cesium3dTilesJsonTileSetStateMap,
+    Cesium3dTilesJsonTileSetStateMapKey, RenderedCesium3dTileContent,
 };
 
 use super::{
@@ -40,7 +41,7 @@ pub enum TraversalResult {
 pub fn select_tiles(
     commands: &mut Commands,
     buf: &mut ResMut<BufferStore>,
-    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSet>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
     layer_id: Entity,
     max_sse: f32,
     base_url: &Url,
@@ -85,32 +86,28 @@ pub fn select_tiles(
         &mut rendered_tiles_count,
     );
 
-    if rendered_tiles_count > 0 {
-        let uri = base_url
-            .as_str()
-            .split('?')
-            .next()
-            .unwrap_or("")
-            .split('/')
-            .next_back()
-            .unwrap_or("")
-            .to_string();
-
-        sync_json_tilesets
-            .tileset_state_map
-            .entry(uri)
-            .and_modify(|s| s.has_rendered_tiles = true)
-            .or_insert(Cesium3dTileSetState {
-                has_rendered_tiles: true,
-            });
+    if rendered_tiles_count == 0 {
+        return;
     }
+
+    let Some(key) = Cesium3dTilesJsonTileSetStateMapKey::from_url(layer_id, base_url.as_str())
+    else {
+        return;
+    };
+
+    sync_json_tilesets
+        .entry_tileset_state(key)
+        .and_modify(|s| s.has_rendered_tiles = true)
+        .or_insert(Cesium3dTileSetState {
+            has_rendered_tiles: true,
+        });
 }
 
 #[allow(clippy::too_many_arguments)]
 fn mark_leaves(
     commands: &mut Commands,
     buf: &mut ResMut<BufferStore>,
-    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSet>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
     base_url: &Url,
     layer_id: Entity,
     max_sse: f32,
@@ -155,25 +152,14 @@ fn mark_leaves(
             None => None,
         };
         data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success))
-    } else {
-        let uri = tile_meta
-            .content
-            .as_ref()
-            .map_or("".to_string(), |c| c.uri.clone())
-            .split('?')
-            .next()
-            .unwrap_or("")
-            .split('/')
-            .next_back()
-            .unwrap_or("")
-            .to_string();
-
+    } else if let Some(key) = Cesium3dTilesJsonTileSetStateMapKey::from_tile(layer_id, tile_meta) {
         let is_loaded = sync_json_tilesets
-            .tileset_state_map
-            .get(&uri)
+            .get_tileset_state(&key)
             .is_some_and(|state| state.has_rendered_tiles);
 
         is_loaded
+    } else {
+        false
     };
 
     tile.state.is_data_loaded = is_data_ready;
@@ -289,20 +275,11 @@ fn mark_leaves(
             tile.data_requester_id = Some(e);
             tile.state.is_data_loaded = false;
 
-            let uri = content
-                .uri
-                .clone()
-                .split('?')
-                .next()
-                .unwrap_or("")
-                .split('/')
-                .next_back()
-                .unwrap_or("")
-                .to_string();
-
-            sync_json_tilesets
-                .json_node_to_tileset_state_map
-                .insert(uri, Cesium3dTilesJsonTileSetState::default());
+            if let Some(key) = Cesium3dTilesJsonTileSetStateMapKey::from_url(layer_id, &content.uri)
+            {
+                sync_json_tilesets
+                    .set_json_node_to_tileset_state(key, Cesium3dTilesJsonTileSetState::default());
+            }
         }
     }
 

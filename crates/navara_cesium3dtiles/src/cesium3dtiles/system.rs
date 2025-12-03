@@ -1,7 +1,8 @@
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
     glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
-    Cesium3dTilesJsonTileSet, Cesium3dTilesJsonTileSetState, RenderedCesium3dTileContent,
+    Cesium3dTilesJsonTileSetState, Cesium3dTilesJsonTileSetStateMap,
+    Cesium3dTilesJsonTileSetStateMapKey, RenderedCesium3dTileContent,
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -58,7 +59,7 @@ pub fn request_metadata(
 pub fn construct_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSet>,
+    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
     requesters: Query<
         (
             Entity,
@@ -102,23 +103,14 @@ pub fn construct_cesium_3d_tiles_tree(
 
         commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
 
-        let tile_json_url = req
-            .url
-            .clone()
-            .split('?')
-            .next()
-            .unwrap_or("")
-            .split('/')
-            .next_back()
-            .unwrap_or("")
-            .to_string();
-
-        sync_json_tilesets.json_node_to_tileset_state_map.insert(
-            tile_json_url,
-            Cesium3dTilesJsonTileSetState {
-                is_constucted: true,
-            },
-        );
+        if let Some(key) = Cesium3dTilesJsonTileSetStateMapKey::from_url(marker.0, &req.url) {
+            sync_json_tilesets.set_json_node_to_tileset_state(
+                key,
+                Cesium3dTilesJsonTileSetState {
+                    is_constucted: true,
+                },
+            );
+        }
     }
 }
 
@@ -126,7 +118,7 @@ pub fn construct_cesium_3d_tiles_tree(
 pub fn traverse_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSet>,
+    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
     window: Res<Window>,
     mut tiles: Query<(&Cesium3dTilesMetadata, &mut Cesium3dTilesTree)>,
     camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
