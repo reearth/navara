@@ -7,9 +7,9 @@ export function registerInputEvents(
 ): () => void {
   let mouseEvent:
     | {
-        type: "mousedown" | "mouseup";
-        button: number;
-      }
+      type: "mousedown" | "mouseup";
+      button: number;
+    }
     | undefined;
   const mousedown = (event: MouseEvent) => {
     mouseEvent = {
@@ -36,6 +36,42 @@ export function registerInputEvents(
       y: event.clientY / height,
     });
   };
+
+  const touchstart = (event: TouchEvent) => {
+    event.preventDefault();
+
+    core.input({
+      type: "mousedown",
+      button: 0,
+    });
+
+  };
+
+  const touchend = (event: TouchEvent) => {
+    event.preventDefault();
+
+    core.input({
+      type: "mouseup",
+      button: 0,
+    });
+
+  };
+
+  const touchmove = (event: TouchEvent) => {
+    event.preventDefault();
+
+    const width = element.clientWidth;
+    const height = element.clientHeight;
+
+    for (const touch of event.changedTouches) {
+      core.input({
+        type: "mousemove",
+        x: (touch.clientX / width),
+        y: touch.clientY / height,
+      });
+
+    }
+  }
 
   const wheel = (event: WheelEvent) => {
     core.input({
@@ -72,6 +108,9 @@ export function registerInputEvents(
   element.addEventListener("mouseleave", mouseup);
   element.addEventListener("mouseleave", keyupEmpty);
   element.addEventListener("mousemove", mousemove);
+  element.addEventListener("touchstart", touchstart);
+  element.addEventListener("touchend", touchend);
+  element.addEventListener("touchmove", touchmove);
   element.addEventListener("wheel", wheel);
   document.addEventListener("keydown", keydown);
   document.addEventListener("keyup", keyup);
@@ -82,6 +121,9 @@ export function registerInputEvents(
     element.removeEventListener("mouseleave", mouseup);
     element.removeEventListener("mouseleave", keyupEmpty);
     element.removeEventListener("mousemove", mousemove);
+    element.removeEventListener("touchstart", touchstart);
+    element.removeEventListener("touchend", touchend);
+    element.removeEventListener("touchmove", touchmove);
     element.removeEventListener("wheel", wheel);
     document.removeEventListener("keydown", keydown);
     document.removeEventListener("keyup", keyup);
