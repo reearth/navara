@@ -4,11 +4,11 @@ import { PolylineMaterial } from "@navara/engine-worker";
 export function toPolylineMaterialLike(like: PolylineMaterialLike) {
   return new PolylineMaterial(
     like.show,
-    like.cast_shadow,
-    like.receive_shadow,
+    like.castShadow,
+    like.receiveShadow,
     like.color,
-    like.clamp_to_ground,
-    like.use_ground_normals,
+    like.clampToGround,
+    like.useGroundNormals,
     like.height,
     like.width,
     like.__internal__,

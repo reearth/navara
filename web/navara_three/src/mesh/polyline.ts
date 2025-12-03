@@ -145,15 +145,16 @@ export class PolylineMesh extends BatchedFeatureMesh<
   ) {
     const meshMaterial = mesh.material;
 
-    const [minHeight, maxHeight] = meshMaterial.__internal__
-      ?.min_max_heights ?? [0, 0];
+    const [minHeight, maxHeight] = meshMaterial.__internal__?.minMaxHeights ?? [
+      0, 0,
+    ];
 
     const uPickable = {
       value: 0.0,
     };
 
-    this.castShadow = !!meshMaterial.cast_shadow;
-    this.receiveShadow = !!meshMaterial.receive_shadow;
+    this.castShadow = !!meshMaterial.castShadow;
+    this.receiveShadow = !!meshMaterial.receiveShadow;
 
     this.material.uniforms = {
       ...UniformsLib["lights"],
@@ -161,7 +162,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
         value: [minHeight, maxHeight, meshMaterial.width],
       },
       color: { value: new Color(meshMaterial.color) },
-      useGroundNormals: { value: !!meshMaterial.use_ground_normals },
+      useGroundNormals: { value: !!meshMaterial.useGroundNormals },
       viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
       frustumNearFar: uniforms.frustumNearFar,
       frustumRatio: uniforms.frustumRatio,
@@ -183,7 +184,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       this.material.vertexShader = PolylineVertShader;
       this.material.fragmentShader =
         `${packing}\n` +
-        (meshMaterial.clamp_to_ground
+        (meshMaterial.clampToGround
           ? GroundPolylineFragShader
           : PolylineFragShader);
     }
@@ -226,13 +227,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
       prev.color = next;
     }
 
-    if (prev.use_ground_normals !== material.use_ground_normals) {
+    if (prev.useGroundNormals !== material.useGroundNormals) {
       this.material.uniforms.useGroundNormals.value =
-        !!material.use_ground_normals;
-      prev.use_ground_normals = !!material.use_ground_normals;
+        !!material.useGroundNormals;
+      prev.useGroundNormals = !!material.useGroundNormals;
     }
 
-    const [minHeight, maxHeight] = material.__internal__?.min_max_heights ?? [
+    const [minHeight, maxHeight] = material.__internal__?.minMaxHeights ?? [
       0, 0,
     ];
     const width = material.width;
@@ -257,11 +258,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
       prev.visible = next;
     }
 
-    if (this.castShadow !== material.cast_shadow) {
-      this.castShadow = !!material.cast_shadow;
+    if (this.castShadow !== material.castShadow) {
+      this.castShadow = !!material.castShadow;
     }
-    if (this.receiveShadow !== material.receive_shadow) {
-      this.receiveShadow = !!material.receive_shadow;
+    if (this.receiveShadow !== material.receiveShadow) {
+      this.receiveShadow = !!material.receiveShadow;
     }
   }
 

@@ -15,9 +15,9 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
     model: {
       show: true,
-      point_size: 0.3,
+      pointSize: 0.3,
       height: 0,
-      max_sse: 16,
+      maxSse: 16,
     },
   },
   {
@@ -25,9 +25,9 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url },
     model: {
       show: true,
-      point_size: 0.3,
+      pointSize: 0.3,
       height: 0,
-      max_sse: 16,
+      maxSse: 16,
     },
   },
 ];
@@ -49,8 +49,8 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
