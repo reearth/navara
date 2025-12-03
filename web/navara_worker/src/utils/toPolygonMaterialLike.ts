@@ -4,15 +4,15 @@ import { PolygonMaterial } from "@navara/engine-worker";
 export function toPolygonMaterialLike(like: PolygonMaterialLike) {
   return new PolygonMaterial(
     like.show,
-    like.cast_shadow,
-    like.receive_shadow,
+    like.castShadow,
+    like.receiveShadow,
     like.color,
-    like.clamp_to_ground,
-    like.use_ground_normals,
+    like.clampToGround,
+    like.useGroundNormals,
     like.height,
-    like.extruded_height,
+    like.extrudedHeight,
     like.wireframe,
-    like.per_position_height,
+    like.perPositionHeight,
     like.__internal__,
   );
 }

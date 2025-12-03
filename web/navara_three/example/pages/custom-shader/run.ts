@@ -170,8 +170,8 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -180,11 +180,11 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      receive_shadow: true,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      receiveShadow: true,
     },
   });
 

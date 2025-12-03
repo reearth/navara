@@ -146,8 +146,8 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     const material = this.material;
 
     // Set basic material properties
-    material.color.set(meshMaterial.outline_color ?? 0xffffff);
-    material.linewidth = meshMaterial.outline_width ?? 1;
+    material.color.set(meshMaterial.outlineColor ?? 0xffffff);
+    material.linewidth = meshMaterial.outlineWidth ?? 1;
 
     const resizeHandler = (w: number, h: number) => {
       material.resolution.set(w, h);
@@ -157,7 +157,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     this.resizeEventUnsubscribe = () => viewEvents.off("resize", resizeHandler);
 
     // Set up height adjustment uniforms
-    const uMinMaxHeights = meshMaterial.__internal__?.min_max_heights;
+    const uMinMaxHeights = meshMaterial.__internal__?.minMaxHeights;
     material.userData.uMinMaxHeight = {
       value: uMinMaxHeights,
     };
@@ -232,29 +232,29 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     const lineMaterial = this.material;
 
     // Update color
-    if (prev.color !== material.outline_color) {
-      const nextColor = material.outline_color ?? 0xffffff;
+    if (prev.color !== material.outlineColor) {
+      const nextColor = material.outlineColor ?? 0xffffff;
       lineMaterial.color.set(nextColor);
       prev.color = nextColor;
     }
 
     // Update visibility
     const nextVisible =
-      (material.show ?? true) && (material.outline_show ?? true) && active;
+      (material.show ?? true) && (material.outlineShow ?? true) && active;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
       prev.visible = nextVisible;
     }
 
     // Update line width
-    if (prev.width !== material.outline_width) {
-      const nextWidth = material.outline_width ?? 1;
+    if (prev.width !== material.outlineWidth) {
+      const nextWidth = material.outlineWidth ?? 1;
       lineMaterial.linewidth = nextWidth;
       prev.width = nextWidth;
     }
 
     // Update height values for shader-based adjustment
-    const [min, max] = material.__internal__?.min_max_heights ?? [];
+    const [min, max] = material.__internal__?.minMaxHeights ?? [];
     if (prev.min !== min || prev.max !== max) {
       lineMaterial.userData.uMinMaxHeight.value = [min, max];
       prev.min = min;

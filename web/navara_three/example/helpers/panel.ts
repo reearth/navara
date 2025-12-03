@@ -189,22 +189,22 @@ export const addCtrlPanel = (
     metalness: 0.0,
     text: "",
     font: "",
-    background_color: "#0a70c2",
-    border_color: "#f8e43c",
-    border_width: 0.0,
-    corner_radius: 0.0,
+    backgroundColor: "#0a70c2",
+    borderColor: "#f8e43c",
+    borderWidth: 0.0,
+    cornerRadius: 0.0,
     center: { x: 0, y: 0 },
     padding: { x: 0, y: 0 },
     transparent: false,
 
-    outline_color: "#ffffff",
-    outline_show: true,
-    outline_width: 1,
-    outline_blur: 0.0,
-    outline_offset: { x: 0, y: 0 },
-    outline_opacity: 1.0,
-    surface_show: true,
-    point_size: 0.3,
+    outlineColor: "#ffffff",
+    outlineShow: true,
+    outlineWidth: 1,
+    outlineBlur: 0.0,
+    outlineOffset: { x: 0, y: 0 },
+    outlineOpacity: 1.0,
+    surfaceShow: true,
+    pointSize: 0.3,
   };
 
   pane
@@ -342,28 +342,28 @@ export const addCtrlPanel = (
         material.height = paneParams.height;
       }
 
-      if ("extruded_height" in material) {
-        material.extruded_height = paneParams.extrudedHeight;
+      if ("extrudedHeight" in material) {
+        material.extrudedHeight = paneParams.extrudedHeight;
       }
 
-      if ("clamp_to_ground" in material) {
-        material.clamp_to_ground = paneParams.clampToGround;
+      if ("clampToGround" in material) {
+        material.clampToGround = paneParams.clampToGround;
       }
 
-      if ("use_ground_normals" in material) {
-        material.use_ground_normals = paneParams.useGroundNormals;
+      if ("useGroundNormals" in material) {
+        material.useGroundNormals = paneParams.useGroundNormals;
       }
 
       if ("wireframe" in material) {
         material.wireframe = paneParams.wireframe;
       }
 
-      if ("scale_by_distance" in material) {
-        material.scale_by_distance = paneParams.scaleByDistance;
+      if ("scaleByDistance" in material) {
+        material.scaleByDistance = paneParams.scaleByDistance;
       }
 
-      if ("should_rotate_in_default" in material) {
-        material.should_rotate_in_default = paneParams.shouldRotateInDefault;
+      if ("shouldRotateInDefault" in material) {
+        material.shouldRotateInDefault = paneParams.shouldRotateInDefault;
       }
 
       if ("metalness" in material) {
@@ -382,26 +382,26 @@ export const addCtrlPanel = (
         material.font = paneParams.font;
       }
 
-      if ("background_color" in material) {
-        material.background_color = parseInt(
-          paneParams.background_color.replace("#", ""),
+      if ("backgroundColor" in material) {
+        material.backgroundColor = parseInt(
+          paneParams.backgroundColor.replace("#", ""),
           16,
         );
       }
 
-      if ("border_color" in material) {
-        material.border_color = parseInt(
-          paneParams.border_color.replace("#", ""),
+      if ("borderColor" in material) {
+        material.borderColor = parseInt(
+          paneParams.borderColor.replace("#", ""),
           16,
         );
       }
 
-      if ("border_width" in material) {
-        material.border_width = paneParams.border_width;
+      if ("borderWidth" in material) {
+        material.borderWidth = paneParams.borderWidth;
       }
 
-      if ("corner_radius" in material) {
-        material.corner_radius = paneParams.corner_radius;
+      if ("cornerRadius" in material) {
+        material.cornerRadius = paneParams.cornerRadius;
       }
 
       if ("center" in material) {
@@ -418,40 +418,40 @@ export const addCtrlPanel = (
         material.transparent = paneParams.transparent;
       }
 
-      if ("outline_color" in material) {
-        material.outline_color = parseInt(
-          paneParams.outline_color.replace("#", ""),
+      if ("outlineColor" in material) {
+        material.outlineColor = parseInt(
+          paneParams.outlineColor.replace("#", ""),
           16,
         );
       }
 
-      if ("outline_show" in material) {
-        material.outline_show = paneParams.outline_show;
+      if ("outlineShow" in material) {
+        material.outlineShow = paneParams.outlineShow;
       }
 
-      if ("outline_width" in material) {
-        material.outline_width = paneParams.outline_width;
+      if ("outlineWidth" in material) {
+        material.outlineWidth = paneParams.outlineWidth;
       }
 
-      if ("outline_blur" in material) {
-        material.outline_blur = paneParams.outline_blur;
+      if ("outlineBlur" in material) {
+        material.outlineBlur = paneParams.outlineBlur;
       }
 
-      if ("outline_offset" in material) {
-        material.outline_offset.x = paneParams.outline_offset.x;
-        material.outline_offset.y = paneParams.outline_offset.y;
+      if ("outlineOffset" in material) {
+        material.outlineOffset.x = paneParams.outlineOffset.x;
+        material.outlineOffset.y = paneParams.outlineOffset.y;
       }
 
-      if ("outline_opacity" in material) {
-        material.outline_opacity = paneParams.outline_opacity;
+      if ("outlineOpacity" in material) {
+        material.outlineOpacity = paneParams.outlineOpacity;
       }
 
-      if ("surface_show" in material) {
-        material.surface_show = paneParams.surface_show;
+      if ("surfaceShow" in material) {
+        material.surfaceShow = paneParams.surfaceShow;
       }
 
-      if ("point_size" in material) {
-        material.point_size = paneParams.point_size;
+      if ("pointSize" in material) {
+        material.pointSize = paneParams.pointSize;
       }
 
       view.updateLayerById(layerId, {
@@ -515,18 +515,18 @@ function createParamCtrl(
       f.addBinding(paneParams, "height").on("change", changeFunc);
     }
 
-    if ("extruded_height" in material) {
-      paneParams.extrudedHeight = material.extruded_height;
+    if ("extrudedHeight" in material) {
+      paneParams.extrudedHeight = material.extrudedHeight;
       f.addBinding(paneParams, "extrudedHeight").on("change", changeFunc);
     }
 
-    if ("clamp_to_ground" in material) {
-      paneParams.clampToGround = material.clamp_to_ground;
+    if ("clampToGround" in material) {
+      paneParams.clampToGround = material.clampToGround;
       f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
     }
 
-    if ("use_ground_normals" in material) {
-      paneParams.useGroundNormals = material.use_ground_normals;
+    if ("useGroundNormals" in material) {
+      paneParams.useGroundNormals = material.useGroundNormals;
       f.addBinding(paneParams, "useGroundNormals").on("change", changeFunc);
     }
 
@@ -535,13 +535,13 @@ function createParamCtrl(
       f.addBinding(paneParams, "wireframe").on("change", changeFunc);
     }
 
-    if ("scale_by_distance" in material) {
-      paneParams.scaleByDistance = material.scale_by_distance;
+    if ("scaleByDistance" in material) {
+      paneParams.scaleByDistance = material.scaleByDistance;
       f.addBinding(paneParams, "scaleByDistance").on("change", changeFunc);
     }
 
-    if ("should_rotate_in_default" in material) {
-      paneParams.shouldRotateInDefault = material.should_rotate_in_default;
+    if ("shouldRotateInDefault" in material) {
+      paneParams.shouldRotateInDefault = material.shouldRotateInDefault;
       f.addBinding(paneParams, "shouldRotateInDefault").on(
         "change",
         changeFunc,
@@ -574,37 +574,37 @@ function createParamCtrl(
       f.addBinding(paneParams, "font").on("change", changeFunc);
     }
 
-    if ("background_color" in material) {
-      paneParams.background_color =
-        "#" + material.background_color.toString(16).padStart(6, "0");
-      f.addBinding(paneParams, "background_color").on("change", (ev) => {
+    if ("backgroundColor" in material) {
+      paneParams.backgroundColor =
+        "#" + material.backgroundColor.toString(16).padStart(6, "0");
+      f.addBinding(paneParams, "backgroundColor").on("change", (ev) => {
         if (ev.last) {
           changeFunc();
         }
       });
     }
 
-    if ("border_color" in material) {
-      paneParams.border_color =
-        "#" + material.border_color.toString(16).padStart(6, "0");
-      f.addBinding(paneParams, "border_color").on("change", (ev) => {
+    if ("borderColor" in material) {
+      paneParams.borderColor =
+        "#" + material.borderColor.toString(16).padStart(6, "0");
+      f.addBinding(paneParams, "borderColor").on("change", (ev) => {
         if (ev.last) {
           changeFunc();
         }
       });
     }
 
-    if ("border_width" in material) {
-      paneParams.border_width = material.border_width;
-      f.addBinding(paneParams, "border_width", { min: 0, max: 0.5 }).on(
+    if ("borderWidth" in material) {
+      paneParams.borderWidth = material.borderWidth;
+      f.addBinding(paneParams, "borderWidth", { min: 0, max: 0.5 }).on(
         "change",
         changeFunc,
       );
     }
 
-    if ("corner_radius" in material) {
-      paneParams.corner_radius = material.corner_radius;
-      f.addBinding(paneParams, "corner_radius", { min: 0, max: 0.5 }).on(
+    if ("cornerRadius" in material) {
+      paneParams.cornerRadius = material.cornerRadius;
+      f.addBinding(paneParams, "cornerRadius", { min: 0, max: 0.5 }).on(
         "change",
         changeFunc,
       );
@@ -627,59 +627,59 @@ function createParamCtrl(
       f.addBinding(paneParams, "transparent").on("change", changeFunc);
     }
 
-    if ("outline_color" in material) {
-      paneParams.outline_color =
-        "#" + material.outline_color.toString(16).padStart(6, "0");
-      f.addBinding(paneParams, "outline_color").on("change", (ev) => {
+    if ("outlineColor" in material) {
+      paneParams.outlineColor =
+        "#" + material.outlineColor.toString(16).padStart(6, "0");
+      f.addBinding(paneParams, "outlineColor").on("change", (ev) => {
         if (ev.last) {
           changeFunc();
         }
       });
     }
 
-    if ("outline_show" in material) {
-      paneParams.outline_show = material.outline_show;
-      f.addBinding(paneParams, "outline_show").on("change", changeFunc);
+    if ("outlineShow" in material) {
+      paneParams.outlineShow = material.outlineShow;
+      f.addBinding(paneParams, "outlineShow").on("change", changeFunc);
     }
 
-    if ("outline_width" in material) {
-      paneParams.outline_width = material.outline_width;
-      f.addBinding(paneParams, "outline_width", { min: 0, max: 20 }).on(
+    if ("outlineWidth" in material) {
+      paneParams.outlineWidth = material.outlineWidth;
+      f.addBinding(paneParams, "outlineWidth", { min: 0, max: 20 }).on(
         "change",
         changeFunc,
       );
     }
 
-    if ("outline_blur" in material) {
-      paneParams.outline_blur = material.outline_blur;
-      f.addBinding(paneParams, "outline_blur", { min: 0, max: 10 }).on(
+    if ("outlineBlur" in material) {
+      paneParams.outlineBlur = material.outlineBlur;
+      f.addBinding(paneParams, "outlineBlur", { min: 0, max: 10 }).on(
         "change",
         changeFunc,
       );
     }
 
-    if ("outline_offset" in material) {
-      paneParams.outline_offset.x = material.outline_offset.x;
-      paneParams.outline_offset.y = material.outline_offset.y;
-      f.addBinding(paneParams, "outline_offset").on("change", changeFunc);
+    if ("outlineOffset" in material) {
+      paneParams.outlineOffset.x = material.outlineOffset.x;
+      paneParams.outlineOffset.y = material.outlineOffset.y;
+      f.addBinding(paneParams, "outlineOffset").on("change", changeFunc);
     }
 
-    if ("outline_opacity" in material) {
-      paneParams.outline_opacity = material.outline_opacity;
-      f.addBinding(paneParams, "outline_opacity", { min: 0, max: 1 }).on(
+    if ("outlineOpacity" in material) {
+      paneParams.outlineOpacity = material.outlineOpacity;
+      f.addBinding(paneParams, "outlineOpacity", { min: 0, max: 1 }).on(
         "change",
         changeFunc,
       );
     }
 
-    if ("surface_show" in material) {
-      paneParams.surface_show = material.surface_show;
-      f.addBinding(paneParams, "surface_show").on("change", changeFunc);
+    if ("surfaceShow" in material) {
+      paneParams.surfaceShow = material.surfaceShow;
+      f.addBinding(paneParams, "surfaceShow").on("change", changeFunc);
     }
 
-    if ("point_size" in material) {
-      paneParams.point_size = material.point_size;
-      f.addBinding(paneParams, "point_size", { min: 0, max: 10 }).on(
+    if ("pointSize" in material) {
+      paneParams.pointSize = material.pointSize;
+      f.addBinding(paneParams, "pointSize", { min: 0, max: 10 }).on(
         "change",
         changeFunc,
       );

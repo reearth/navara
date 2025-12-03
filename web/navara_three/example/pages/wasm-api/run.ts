@@ -101,10 +101,10 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
@@ -118,7 +118,7 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TILE_DATASETS.openstreetmap.url,
     },
-    raster_tile: {},
+    rasterTile: {},
   });
 
   view.addLayer({

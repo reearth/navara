@@ -82,8 +82,8 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -92,11 +92,11 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      receive_shadow: true,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      receiveShadow: true,
     },
   });
 
@@ -110,8 +110,8 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
       height: -50,
     },
   });
@@ -192,11 +192,11 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
       metalness: 0.02,
       roughness: 0.3,
       reflectivity: 0.2,
-      receive_shadow: true,
+      receiveShadow: true,
       height: -20,
       water: true,
-      water_scale_normal: 2.0,
-      water_speed: 0.003,
+      waterScaleNormal: 2.0,
+      waterSpeed: 0.003,
       specular: true,
     },
   };
@@ -209,12 +209,12 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
     polygon: {
       color: 0xcef7ff,
       reflectivity: 0.2,
-      clamp_to_ground: true,
+      clampToGround: true,
       wireframe: false,
       water: true,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
       layers: ["waterarea"],
     },
   };

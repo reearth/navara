@@ -4,10 +4,10 @@ import type {
 } from "@navara/engine";
 
 export class PolylineMaterialLike {
-  clamp_to_ground?: boolean;
-  use_ground_normals?: boolean;
-  cast_shadow?: boolean;
-  receive_shadow?: boolean;
+  clampToGround?: boolean;
+  useGroundNormals?: boolean;
+  castShadow?: boolean;
+  receiveShadow?: boolean;
   color?: number;
   height?: number;
   width?: number;
@@ -15,10 +15,10 @@ export class PolylineMaterialLike {
   __internal__?: PolylineInternalMaterial;
 
   constructor(material: PolylineMaterial) {
-    this.clamp_to_ground = material.clamp_to_ground;
-    this.use_ground_normals = material.use_ground_normals;
-    this.receive_shadow = material.receive_shadow;
-    this.cast_shadow = material.cast_shadow;
+    this.clampToGround = material.clampToGround;
+    this.useGroundNormals = material.useGroundNormals;
+    this.receiveShadow = material.receiveShadow;
+    this.castShadow = material.castShadow;
     this.color = material.color;
     this.width = material.width;
     this.height = material.height;

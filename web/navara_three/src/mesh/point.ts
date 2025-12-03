@@ -121,7 +121,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
       prev.color = material.color;
     }
 
-    const nextDepthTest = !!material.depth_test;
+    const nextDepthTest = !!material.depthTest;
     if (prev.depthTest !== nextDepthTest) {
       this.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
@@ -142,7 +142,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
       prev.visible = nextVisible;
     }
 
-    const nextScaleByDistance = !material.scale_by_distance;
+    const nextScaleByDistance = !material.scaleByDistance;
     if (prev.scaleByDistance !== nextScaleByDistance) {
       this.material.sizeAttenuation = nextScaleByDistance;
       prev.scaleByDistance = nextScaleByDistance;
