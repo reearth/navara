@@ -39,22 +39,38 @@ export function registerInputEvents(
 
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
-
-    core.input({
-      type: "mousedown",
-      button: 0,
-    });
+    
+    const width = element.clientWidth;
+    const height = element.clientHeight;
+    
+    for (const touch of event.changedTouches) {
+      core.input({
+        type: "touchstart",
+        x: (touch.clientX / width),
+        y: touch.clientY / height,
+        id: touch.identifier,
+      });
+      // console.log("touchstart", touch.identifier);
+    }
 
   };
 
   const touchend = (event: TouchEvent) => {
     event.preventDefault();
 
-    core.input({
-      type: "mouseup",
-      button: 0,
-    });
+    const width = element.clientWidth;
+    const height = element.clientHeight;
 
+    for (const touch of event.changedTouches) {
+      core.input({
+        type: "touchend",
+        x: (touch.clientX / width),
+        y: touch.clientY / height,
+        id: touch.identifier,
+      });
+      // console.log("touchend", touch.identifier);
+    }
+    
   };
 
   const touchmove = (event: TouchEvent) => {
@@ -65,11 +81,13 @@ export function registerInputEvents(
 
     for (const touch of event.changedTouches) {
       core.input({
-        type: "mousemove",
+        type: "touchmove",
         x: (touch.clientX / width),
         y: touch.clientY / height,
+        id: touch.identifier,
       });
 
+      // console.log("touchmove", touch.identifier);
     }
   }
 
@@ -79,6 +97,7 @@ export function registerInputEvents(
       x: event.deltaX,
       y: event.deltaY,
     });
+    console.log("wheel", event.deltaX, event.deltaY);
   };
 
   const keydown = (event: KeyboardEvent) => {
