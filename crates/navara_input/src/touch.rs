@@ -5,7 +5,7 @@ use bevy_ecs::resource::Resource;
 use bevy_ecs::system::ResMut;
 
 use bevy_log::info;
-use navara_math::Vec2;
+use navara_math::{EqualEpsilon, Vec2};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TouchState {
@@ -96,18 +96,31 @@ fn recognize_gesture(touch_list: &TouchList) -> Option<TouchControl> {
         };
         let (p1_pos, p2_pos) = (p1.position, p2.position);
 
+        let p1_dir = (p1_pos - p1_prev).normalize();
+        let p2_dir = (p2_pos - p2_prev).normalize();
+
+        let dot = p1_dir.dot(p2_dir);
+        // both directions are almost parallel - cos(theata) ~= 1.0
+        if dot.equal_diff_epsilon(1.0, 0.1) {
+            // same direction - two finger swipe
+            return Some(TouchControl {
+                gesture: TouchGesture::DoubleSwipe,
+                delta: p1_pos - p1_prev,
+            });
+        }
+
         let prev_distance = (p1_prev - p2_prev).length();
         let current_distance = (p1_pos - p2_pos).length();
 
         if current_distance > prev_distance {
             return Some(TouchControl {
                 gesture: TouchGesture::Spread,
-                delta: Vec2::new((current_distance - prev_distance) * 1000.0, 0.0),
+                delta: Vec2::new((prev_distance - current_distance) * 10000.0, 0.0),
             });
         } else if current_distance < prev_distance {
             return Some(TouchControl {
                 gesture: TouchGesture::Pinch,
-                delta: Vec2::new((current_distance - prev_distance) * 1000.0, 0.0),
+                delta: Vec2::new((prev_distance - current_distance) * 10000.0, 0.0),
             });
         } else {
             return Some(TouchControl {
