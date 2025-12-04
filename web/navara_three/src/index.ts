@@ -32,6 +32,7 @@ import invariant from "tiny-invariant";
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
+import { getDevicePixelRatio } from "./device";
 import {
   LayerDeclaration,
   ViewContext,
@@ -135,6 +136,7 @@ export * from "./lights";
 export * from "./passes";
 export * from "@navara/three_api";
 export * from "./Color";
+export { isMobileDevice, getDevicePixelRatio } from "./device";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -512,8 +514,8 @@ export default class ThreeView<
     invariant(width && height);
 
     if (typeof options?.pixelRatio === "number" || !isWorker()) {
-      const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
-      renderer.setPixelRatio(options.pixelRatio ?? defaultPixelRatio);
+      const pixelRatio = isWorker() ? 1 : getDevicePixelRatio(options.pixelRatio);
+      renderer.setPixelRatio(pixelRatio);
     }
 
     renderer.setSize(width, height, !isWorker());
