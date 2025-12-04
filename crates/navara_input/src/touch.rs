@@ -4,7 +4,6 @@ use bevy_ecs::event::{Event, EventReader, EventWriter};
 use bevy_ecs::resource::Resource;
 use bevy_ecs::system::ResMut;
 
-use bevy_log::info;
 use navara_math::{EqualEpsilon, Vec2};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -71,12 +70,9 @@ pub fn process_touch_input_events(
         }
 
         if let Some(gesture) = recognize_gesture(&touch_list) {
-            info!("Current gesture: {:?}", gesture);
             gesture_ev.write(gesture);
         }
     }
-    // info!("Current touches: {:?}", touch_list.touches);
-    // info!("-----------------------------------");
 }
 
 #[derive(Debug, Clone, PartialEq, Event)]
