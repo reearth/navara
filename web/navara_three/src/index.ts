@@ -32,7 +32,7 @@ import invariant from "tiny-invariant";
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
-import { getDevicePixelRatio } from "./device";
+import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   LayerDeclaration,
   ViewContext,
@@ -1258,24 +1258,35 @@ export default class ThreeView<
     };
   }
 
-  addDefaultEffectLayers() {
+  addDefaultEffectLayers(options?: { mobile?: boolean }) {
+    const mobile = options?.mobile ?? isMobileDevice();
+
     return {
       aerialPerspective: this.addLayer<AerialPerspectiveEffectLayer>({
         type: "effect",
         aerialPerspective: {},
       } as LayerDescription),
-      lensFlare: this.addLayer<LensFlareEffectLayer>({
-        type: "effect",
-        lensFlare: {},
-      } as LayerDescription),
+      // Skip lens flare on mobile - expensive effect with limited benefit
+      lensFlare: mobile
+        ? undefined
+        : this.addLayer<LensFlareEffectLayer>({
+            type: "effect",
+            lensFlare: {},
+          } as LayerDescription),
       toneMapping: this.addLayer<ToneMappingEffectLayer>({
         type: "effect",
         toneMapping: {},
       } as LayerDescription),
-      smaa: this.addLayer<SMAAEffectLayer>({
-        type: "effect",
-        smaa: {},
-      } as LayerDescription),
+      // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
+      antialiasing: mobile
+        ? this.addLayer<FXAAEffectLayer>({
+            type: "effect",
+            fxaa: {},
+          } as LayerDescription)
+        : this.addLayer<SMAAEffectLayer>({
+            type: "effect",
+            smaa: {},
+          } as LayerDescription),
     };
   }
 
