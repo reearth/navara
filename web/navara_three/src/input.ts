@@ -91,7 +91,6 @@ export function registerInputEvents(
       x: event.deltaX,
       y: event.deltaY,
     });
-    console.log("wheel", event.deltaX, event.deltaY);
   };
 
   const keydown = (event: KeyboardEvent) => {
