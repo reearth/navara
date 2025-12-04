@@ -12,7 +12,7 @@ import ThreeView, {
   SunLightLayer,
   AmbientLightLayer,
   SkyLightProbeLayer,
-  isMobileDevice
+  isMobileDevice,
 } from "@navara/three";
 import type { TextureChannel } from "@takram/three-clouds";
 import { Color, SphericalHarmonics3 } from "three";
@@ -1067,7 +1067,9 @@ const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
       ),
     })
     .on("change", (v) => {
-      defaultEffects.antialiasing.update({ [isMobile ? "fxaa" : "smaa"]: { quality: v.value } });
+      defaultEffects.antialiasing.update({
+        [isMobile ? "fxaa" : "smaa"]: { quality: v.value },
+      });
     });
   folder
     .addBinding(PARAMS, "edgeDetectionMode", {
@@ -1076,7 +1078,9 @@ const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
       ),
     })
     .on("change", (v) => {
-      defaultEffects.antialiasing.update({ [isMobile ? "fxaa" : "smaa"]: { edgeDetectionMode: v.value } });
+      defaultEffects.antialiasing.update({
+        [isMobile ? "fxaa" : "smaa"]: { edgeDetectionMode: v.value },
+      });
     });
 };
 
