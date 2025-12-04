@@ -7,9 +7,9 @@ export function registerInputEvents(
 ): () => void {
   let mouseEvent:
     | {
-      type: "mousedown" | "mouseup";
-      button: number;
-    }
+        type: "mousedown" | "mouseup";
+        button: number;
+      }
     | undefined;
   const mousedown = (event: MouseEvent) => {
     mouseEvent = {
@@ -39,19 +39,18 @@ export function registerInputEvents(
 
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
-    
+
     const width = element.clientWidth;
     const height = element.clientHeight;
-    
+
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchstart",
-        x: (touch.clientX / width),
+        x: touch.clientX / width,
         y: touch.clientY / height,
         id: touch.identifier,
       });
     }
-
   };
 
   const touchend = (event: TouchEvent) => {
@@ -63,12 +62,11 @@ export function registerInputEvents(
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchend",
-        x: (touch.clientX / width),
+        x: touch.clientX / width,
         y: touch.clientY / height,
         id: touch.identifier,
       });
     }
-    
   };
 
   const touchmove = (event: TouchEvent) => {
@@ -80,13 +78,12 @@ export function registerInputEvents(
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchmove",
-        x: (touch.clientX / width),
+        x: touch.clientX / width,
         y: touch.clientY / height,
         id: touch.identifier,
       });
-
     }
-  }
+  };
 
   const wheel = (event: WheelEvent) => {
     core.input({

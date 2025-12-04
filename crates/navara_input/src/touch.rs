@@ -83,7 +83,7 @@ pub struct TouchControl {
 
 fn recognize_gesture(touch_list: &TouchList) -> Option<TouchControl> {
     if touch_list.touches.len() == 2 {
-        let p1 = touch_list.touches.values().nth(0).unwrap();
+        let p1 = touch_list.touches.values().next().unwrap();
         let p2 = touch_list.touches.values().nth(1).unwrap();
 
         let (p1_prev, p2_prev) = match (p1.prev_position, p2.prev_position) {
@@ -137,5 +137,5 @@ fn recognize_gesture(touch_list: &TouchList) -> Option<TouchControl> {
         });
     }
 
-    return None;
+    None
 }

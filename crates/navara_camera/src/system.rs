@@ -9,7 +9,9 @@ use bevy_ecs::{
     world::Ref,
 };
 use bevy_input::{
-    ButtonInput, keyboard::KeyCode, mouse::{MouseButton, MouseMotion, MouseWheel}, touch::Touch
+    keyboard::KeyCode,
+    mouse::{MouseButton, MouseMotion, MouseWheel},
+    ButtonInput,
 };
 use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
@@ -362,7 +364,9 @@ fn handle_orbit_spin(
     is_cam_moving: bool,
     cam_st: &mut CameraStatus,
 ) {
-    let touch_spin = touch_control.as_ref().is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Swipe);
+    let touch_spin = touch_control
+        .as_ref()
+        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Swipe);
 
     if !controller.enable_spin
         || ((!mb.pressed(MouseButton::Left) || is_ctrl || mb.pressed(MouseButton::Right))
@@ -574,7 +578,9 @@ fn handle_tilt(
 
     // TODO: Pick terrain height like here from depth buffer: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2557
 
-    let touch_tilt = touch_control.as_ref().is_some_and(|tc| tc.gesture == navara_input::TouchGesture::DoubleSwipe);
+    let touch_tilt = touch_control
+        .as_ref()
+        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::DoubleSwipe);
 
     if !controller.enable_tilt
         || (((!is_ctrl || !mb.pressed(MouseButton::Left)) && !mb.pressed(MouseButton::Right))
@@ -617,7 +623,7 @@ fn rotate(
     let screen_delta = if let Some(ev) = mm.read().last() {
         Vec3::new(ev.delta.x as f64, ev.delta.y as f64, 0.0)
     } else if let Some(touch) = touch_control {
-            Vec3::new(touch.delta.x as f64, touch.delta.y as f64, 0.0)
+        Vec3::new(touch.delta.x, touch.delta.y, 0.0)
     } else {
         return None;
     };
@@ -640,8 +646,12 @@ fn handle_zoom(
     is_cam_moving: bool,
     cam_st: &mut CameraStatus,
 ) {
-    let touch_zoom = touch_control.as_ref().is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Pinch)
-    || touch_control.as_ref().is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Spread);
+    let touch_zoom = touch_control
+        .as_ref()
+        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Pinch)
+        || touch_control
+            .as_ref()
+            .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Spread);
 
     if !controller.enable_zoom || (mw.is_empty() && !touch_zoom) || is_ctrl {
         return;
@@ -649,7 +659,7 @@ fn handle_zoom(
 
     let zoom = if let Some(ev) = mw.read().last() {
         ev.y
-    } else if let Some(touch) = touch_control {    
+    } else if let Some(touch) = touch_control {
         touch.delta.x as f32
     } else {
         return;

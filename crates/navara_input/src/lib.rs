@@ -9,7 +9,7 @@ mod touch;
 
 pub use keyboard::{ButtonState, Key, KeyCode, KeyboardInput};
 pub use mouse::{MouseButton, MouseButtonInput, MouseMoveInput, MouseScrollInput, MouseScrollUnit};
-pub use touch::{TouchInput, TouchState, TouchGesture, TouchList, TouchControl};
+pub use touch::{TouchControl, TouchGesture, TouchInput, TouchList, TouchState};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Input {
@@ -17,7 +17,7 @@ pub enum Input {
     MouseButton(MouseButtonInput),
     MouseMove(MouseMoveInput),
     MouseScroll(MouseScrollInput),
-    Touch(TouchInput)
+    Touch(TouchInput),
 }
 
 pub struct InputPlugin;
