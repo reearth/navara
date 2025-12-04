@@ -1,29 +1,29 @@
 import type { PolygonInternalMaterial, PolygonMaterial } from "@navara/engine";
 
 export class PolygonMaterialLike {
-  clamp_to_ground?: boolean;
-  use_ground_normals?: boolean;
-  cast_shadow?: boolean;
-  receive_shadow?: boolean;
+  clampToGround?: boolean;
+  useGroundNormals?: boolean;
+  castShadow?: boolean;
+  receiveShadow?: boolean;
   color?: number;
-  extruded_height?: number;
+  extrudedHeight?: number;
   height?: number;
   show?: boolean;
-  per_position_height?: boolean;
+  perPositionHeight?: boolean;
   wireframe?: boolean;
   __internal__?: PolygonInternalMaterial | undefined;
 
   constructor(material: PolygonMaterial) {
-    this.clamp_to_ground = material.clamp_to_ground;
-    this.use_ground_normals = material.use_ground_normals;
-    this.receive_shadow = material.receive_shadow;
-    this.cast_shadow = material.cast_shadow;
+    this.clampToGround = material.clampToGround;
+    this.useGroundNormals = material.useGroundNormals;
+    this.receiveShadow = material.receiveShadow;
+    this.castShadow = material.castShadow;
     this.color = material.color;
-    this.extruded_height = material.extruded_height;
+    this.extrudedHeight = material.extrudedHeight;
     this.height = material.height;
     this.show = material.show;
 
-    this.per_position_height = material.per_position_height;
+    this.perPositionHeight = material.perPositionHeight;
 
     this.wireframe = material.wireframe;
   }

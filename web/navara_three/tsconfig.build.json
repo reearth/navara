@@ -1,6 +1,10 @@
 {
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "dist",
+    "noEmit": false,
     "paths": {
       "@navara/engine": ["../../node_modules/navara_wasm"],
       "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],

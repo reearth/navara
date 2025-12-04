@@ -376,7 +376,7 @@ export class TileMesh
 
     geometry.boundingSphere = new Sphere(aabb_center, aabb_extent.length());
 
-    if (mat.show_bounding_box) {
+    if (mat.showBoundingBox) {
       const bb = new Box3Helper(geometry.boundingBox, 0x00ff00);
       this.add(bb);
     }
@@ -404,8 +404,8 @@ export class TileMesh
     );
     this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
 
-    this.castShadow = !!mat.cast_shadow;
-    this.receiveShadow = !!mat.receive_shadow;
+    this.castShadow = !!mat.castShadow;
+    this.receiveShadow = !!mat.receiveShadow;
 
     this.visible = false;
     this.renderOrder = mesh.render_order;
@@ -746,11 +746,11 @@ if (uPickable > 0.) {
       this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
     }
 
-    if (this.castShadow !== changedMaterial.cast_shadow) {
-      this.castShadow = !!changedMaterial.cast_shadow;
+    if (this.castShadow !== changedMaterial.castShadow) {
+      this.castShadow = !!changedMaterial.castShadow;
     }
-    if (this.receiveShadow !== changedMaterial.receive_shadow) {
-      this.receiveShadow = !!changedMaterial.receive_shadow;
+    if (this.receiveShadow !== changedMaterial.receiveShadow) {
+      this.receiveShadow = !!changedMaterial.receiveShadow;
     }
     if (this.material.color.getHex() !== globe.color) {
       this.material.color.setHex(globe.color);
@@ -849,9 +849,9 @@ if (uPickable > 0.) {
       const mesh = this.texturizedScenes.children[sceneIdx].children[0];
       if (mesh instanceof Mesh && mesh.material instanceof Material) {
         m.userData.reflectivities.value[lastIdx] =
-          mesh.material.userData.reflectivity.value;
+          mesh.material.userData.reflectivity?.value ?? 0;
         m.userData.roughnesses.value[lastIdx] =
-          mesh.material.userData.roughness.value;
+          mesh.material.userData.roughness?.value ?? 0;
         if (mesh instanceof PolygonMesh) {
           m.userData.waters.value[lastIdx] = mesh.water;
           m.userData.waterScaleNormals.value[lastIdx] =
@@ -1008,39 +1008,39 @@ if (uPickable > 0.) {
     }
 
     // Update elevation heatmap parameters from Rust material
-    if (mat.is_elevation_heatmaps && mat.is_elevation_heatmaps.length > 0) {
+    if (mat.isElevationHeatmaps && mat.isElevationHeatmaps.length > 0) {
       for (
         let i = 0;
-        i < Math.min(mat.is_elevation_heatmaps.length, maxTextures);
+        i < Math.min(mat.isElevationHeatmaps.length, maxTextures);
         i++
       ) {
         m.userData.isElevationHeatmaps.value[i] =
-          mat.is_elevation_heatmaps[i] !== 0;
+          mat.isElevationHeatmaps[i] !== 0;
       }
     }
 
     m.userData.elevationRGBScaler.value.set(
-      mat.elevation_r_scaler,
-      mat.elevation_g_scaler,
-      mat.elevation_b_scaler,
+      mat.elevationRScaler,
+      mat.elevationGScaler,
+      mat.elevationBScaler,
     );
 
     m.userData.elevationMinMaxHeightAndBoundary.value.set(
-      mat.elevation_min_height,
-      mat.elevation_max_height,
-      mat.elevation_boundary,
+      mat.elevationMinHeight,
+      mat.elevationMaxHeight,
+      mat.elevationBoundary,
     );
 
     m.userData.elevationMinMaxOffsetAndEpsilonAndOffset.value.set(
-      mat.elevation_min_offset,
-      mat.elevation_max_offset,
-      mat.elevation_epsilon,
-      mat.elevation_offset,
+      mat.elevationMinOffset,
+      mat.elevationMaxOffset,
+      mat.elevationEpsilon,
+      mat.elevationOffset,
     );
 
     m.userData.logarithmic.value = mat.logarithmic;
-    m.userData.logBase.value = Math.log(mat.log_boundary);
-    m.userData.logBoundary.value = mat.log_boundary;
+    m.userData.logBase.value = Math.log(mat.logBoundary);
+    m.userData.logBoundary.value = mat.logBoundary;
 
     if (!m.userData.defines) {
       m.userData.defines = {
@@ -1129,7 +1129,7 @@ if (uPickable > 0.) {
       // Use LinearSRGBColorSpace for elevation heatmap textures to preserve RGB values for DEM data
       // For regular textures, use SRGBColorSpace for proper color display
       const isElevationHeatmap =
-        mat.is_elevation_heatmaps && mat.is_elevation_heatmaps[i];
+        mat.isElevationHeatmaps && mat.isElevationHeatmaps[i];
       const targetColorSpace = isElevationHeatmap
         ? LinearSRGBColorSpace
         : SRGBColorSpace;

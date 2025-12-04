@@ -16,11 +16,11 @@ export const addGeoJsonAnimatedModel = (_view: ThreeView): Layer => {
     model: {
       show: true,
       size: MODEL_CONFIG.size,
-      clamp_to_ground: true,
+      clampToGround: true,
       // Minimal animation config for GeoJSON model
       url: MODEL_CONFIG.url,
-      animation_active_clip: "Walk",
-      animation_speed: 1.0,
+      animationActiveClip: "Walk",
+      animationSpeed: 1.0,
     },
   });
 };
@@ -50,10 +50,10 @@ export const addGeoJsonModelControl = (
         model: {
           show: true,
           size: PARAMS.modelSize,
-          clamp_to_ground: true,
+          clampToGround: true,
           url: MODEL_CONFIG.url,
-          animation_active_clip: PARAMS.currentAnimation,
-          animation_speed: PARAMS.animationSpeed,
+          animationActiveClip: PARAMS.currentAnimation,
+          animationSpeed: PARAMS.animationSpeed,
         },
       });
     } catch (error) {
@@ -67,10 +67,10 @@ export const addGeoJsonModelControl = (
         model: {
           show: true,
           size: PARAMS.modelSize,
-          clamp_to_ground: true,
+          clampToGround: true,
           url: MODEL_CONFIG.url,
-          animation_active_clip: PARAMS.currentAnimation,
-          animation_speed: PARAMS.animationSpeed,
+          animationActiveClip: PARAMS.currentAnimation,
+          animationSpeed: PARAMS.animationSpeed,
         },
       }) as Layer;
       currentGeoJsonLayer.delete();

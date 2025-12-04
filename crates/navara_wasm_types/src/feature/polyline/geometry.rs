@@ -4,14 +4,21 @@ use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
 
 #[wasm_bindgen]
 pub struct ConstructedPolylineGeometry {
-    #[wasm_bindgen(getter_with_clone)]
-    pub extent: ExtentRadianF32,
+    extent: Option<ExtentRadianF32>,
     geometry: PolylineGeometry,
 }
 
 impl ConstructedPolylineGeometry {
-    pub fn new(extent: ExtentRadianF32, geometry: PolylineGeometry) -> Self {
+    pub fn new(extent: Option<ExtentRadianF32>, geometry: PolylineGeometry) -> Self {
         Self { extent, geometry }
+    }
+}
+
+#[wasm_bindgen]
+impl ConstructedPolylineGeometry {
+    #[wasm_bindgen(getter)]
+    pub fn extent(&self) -> Option<ExtentRadianF32> {
+        self.extent
     }
 }
 

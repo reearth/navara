@@ -24,6 +24,13 @@ impl TerrainAppearance {
         }
     }
 
+    pub fn overscaled_max_zoom(&self) -> usize {
+        match self {
+            TerrainAppearance::Raster(mat) => mat.overscaled_max_zoom,
+            TerrainAppearance::Ellipsoid(_) => 30, // Ellipsoid has no max zoom limit
+        }
+    }
+
     pub fn elevation_decoder(&self) -> Option<&ElevationDecoder> {
         match self {
             TerrainAppearance::Raster(mat) => Some(&mat.elevation_decoder),
@@ -83,6 +90,16 @@ impl TerrainLayer {
                 .appearance
                 .as_ref()
                 .is_some_and(|app| z >= app.max_zoom()),
+        }
+    }
+
+    pub fn is_over_overscaled_max_zoom(&self, z: usize) -> bool {
+        match &self.terrain_type {
+            TerrainDataType::Ellipsoid => false, // Ellipsoid has no max zoom limit
+            _ => self
+                .appearance
+                .as_ref()
+                .is_some_and(|app| z >= app.overscaled_max_zoom()),
         }
     }
 

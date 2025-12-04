@@ -132,9 +132,9 @@ export async function run() {
     data: {
       url: TILE_DATASETS.gsiSeamlessphoto.url,
     },
-    raster_tile: {
-      max_zoom: 6,
-      min_zoom: 2,
+    rasterTile: {
+      maxZoom: 6,
+      minZoom: 2,
     },
   });
 
@@ -143,9 +143,9 @@ export async function run() {
     data: {
       url: LOCAL_DATASETS.blueMarbleNight.url,
     },
-    raster_tile: {
-      max_zoom: 6,
-      min_zoom: 1,
+    rasterTile: {
+      maxZoom: 6,
+      minZoom: 1,
       opacity: 0.8,
     },
   });

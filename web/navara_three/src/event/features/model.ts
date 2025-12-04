@@ -49,15 +49,15 @@ export async function renderModel(
         return;
       }
 
-      if (m.material.__internal__?.point_cloud) {
+      if (m.material.__internal__?.pointCloud) {
         let geometry: BufferGeometry | undefined;
         const material = new PointsMaterial({
-          size: m.material.point_size,
+          size: m.material.pointSize,
           vertexColors: true,
           sizeAttenuation: false,
         });
 
-        if (m.material.__internal__?.draco_compressed) {
+        if (m.material.__internal__?.dracoCompressed) {
           geometry = await decompressDraco(
             bin.buffer as ArrayBuffer,
             dracoLoader,
@@ -97,7 +97,7 @@ export async function renderModel(
             aabb_extent.length(),
           );
 
-          if (m.material.show_bounding_box) {
+          if (m.material.showBoundingBox) {
             const boxHelper = new Box3Helper(geometry.boundingBox, 0xff0000);
             group.add(boxHelper);
           }
@@ -106,7 +106,7 @@ export async function renderModel(
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
-      if (m.material.show_bounding_box) {
+      if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
             const boxHelper = new Box3Helper(
@@ -130,7 +130,7 @@ export async function renderModel(
       // Attach animations to the scene for downstream access
       const userData = model.scene.userData as SceneUserData;
       userData.gltfAnimations = model.animations;
-      if (m.material.show_bounding_box) {
+      if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
             const boxHelper = new Box3Helper(

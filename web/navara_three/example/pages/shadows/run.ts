@@ -36,12 +36,12 @@ export async function run() {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 6,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      cast_shadow: true,
-      receive_shadow: true,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 6,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
 
@@ -49,9 +49,9 @@ export async function run() {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    raster_tile: {
+    rasterTile: {
       color: 0xffffff,
-      max_zoom: 18,
+      maxZoom: 18,
       opacity: 1,
     },
   });
@@ -270,8 +270,8 @@ const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
       },
       model: {
         show: true,
-        cast_shadow: true,
-        receive_shadow: true,
+        castShadow: true,
+        receiveShadow: true,
         color: 0xffffff,
         metalness: 0,
         roughness: 1,
@@ -284,8 +284,8 @@ const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
       },
       model: {
         show: true,
-        cast_shadow: true,
-        receive_shadow: true,
+        castShadow: true,
+        receiveShadow: true,
         color: 0xffffff,
         metalness: 0,
         roughness: 1,
@@ -299,34 +299,34 @@ const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
   }
 
   const PARAMS = {
-    cast_shadow: true,
-    receive_shadow: true,
+    castShadow: true,
+    receiveShadow: true,
   };
 
   const fields: FolderFields<typeof PARAMS> = [
     {
-      name: "cast_shadow",
+      name: "castShadow",
       onChange: (v) => {
         buildingLayers.forEach((l, idx) => {
           l.update({
             ...buildingLayerDescriptions[idx],
             model: {
               ...buildingLayerDescriptions[idx].model,
-              cast_shadow: v.value,
+              castShadow: v.value,
             },
           });
         });
       },
     },
     {
-      name: "receive_shadow",
+      name: "receiveShadow",
       onChange: (v) => {
         buildingLayers.forEach((l, idx) => {
           l.update({
             ...buildingLayerDescriptions[idx],
             model: {
               ...buildingLayerDescriptions[idx].model,
-              receive_shadow: v.value,
+              receiveShadow: v.value,
             },
           });
         });

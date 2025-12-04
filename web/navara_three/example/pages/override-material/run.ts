@@ -67,8 +67,8 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: { url: tileUrls.gsiSeamlessphoto },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -78,12 +78,12 @@ export const run = async (view: ThreeView) => {
       data: {
         url: TERRAIN_DATASETS.gsi.url,
       },
-      raster_terrain: {
-        max_zoom: 15,
-        min_zoom: 5,
-        elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-        cast_shadow: true,
-        receive_shadow: true,
+      rasterTerrain: {
+        maxZoom: 15,
+        minZoom: 5,
+        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+        castShadow: true,
+        receiveShadow: true,
       },
     });
   }
@@ -156,13 +156,13 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
           polygon: {
             color: 0xffffff,
             height: 5,
-            extruded_height: 0,
-            clamp_to_ground: false,
-            cast_shadow: true,
-            receive_shadow: true,
-            outline_show: false,
-            outline_width: 2,
-            outline_color: 0xff00ff,
+            extrudedHeight: 0,
+            clampToGround: false,
+            castShadow: true,
+            receiveShadow: true,
+            outlineShow: false,
+            outlineWidth: 2,
+            outlineColor: 0xff00ff,
           },
         };
 
@@ -199,7 +199,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
   folder.addBinding(PARAMS, "outline").on("change", ({ value }) => {
     if (layerDescription) {
       if (layerDescription.polygon) {
-        layerDescription.polygon.outline_show = value;
+        layerDescription.polygon.outlineShow = value;
       }
       layer?.update(layerDescription);
     }
@@ -241,9 +241,9 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         color: 0xffffff,
         size: 0.05,
         height: 1,
-        scale_by_distance: true,
-        clamp_to_ground: true,
-        depth_test: true,
+        scaleByDistance: true,
+        clampToGround: true,
+        depthTest: true,
         url: "/example.png",
       },
     },
@@ -291,8 +291,8 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         color: 0xff0000,
         width: 2,
         height: 1,
-        clamp_to_ground: true,
-        use_ground_normals: true,
+        clampToGround: true,
+        useGroundNormals: true,
       },
     },
     {
@@ -343,9 +343,9 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
       polygon: {
         color: 0x00aaff,
         height: 0,
-        extruded_height: 5000,
-        clamp_to_ground: true,
-        use_ground_normals: true,
+        extrudedHeight: 5000,
+        clampToGround: true,
+        useGroundNormals: true,
         wireframe: false,
       },
     },
@@ -400,8 +400,8 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
     },
     point: {
       size: 0.01,
-      scale_by_distance: true,
-      clamp_to_ground: true,
+      scaleByDistance: true,
+      clampToGround: true,
       color: 0xff0000,
     },
   };
@@ -453,13 +453,13 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       url: MVT_DATASETS.plateauGifuTran.url,
     },
     polyline: {
-      width: 3,
+      width: 5,
       height: 1,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      clampToGround: true,
+      useGroundNormals: true,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
     },
   };
 
@@ -517,13 +517,13 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
     polygon: {
       color: 0xffffff,
       height: 10,
-      extruded_height: 0,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      extrudedHeight: 0,
+      clampToGround: true,
+      useGroundNormals: true,
       wireframe: false,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
       layers: ["FirePreventionDistrict"],
     },
   };
@@ -596,14 +596,14 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
     },
     polygon: {
       height: 0,
-      extruded_height: 0,
-      clamp_to_ground: false,
+      extrudedHeight: 0,
+      clampToGround: false,
       wireframe: false,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
     },
   };
 
@@ -711,8 +711,8 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
       height: -30,
     },
   };
@@ -894,16 +894,16 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
     },
     text: {
       color: 0xffffff,
-      scale_by_distance: true,
-      clamp_to_ground: false,
+      scaleByDistance: true,
+      clampToGround: false,
       size: 20,
       center: {
         x: 0.5,
         y: 0,
       },
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
       layers: ["symbol", "label"],
     },
   };

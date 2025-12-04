@@ -14,27 +14,27 @@ export const run = async (view: ThreeView) => {
       {
         type: "tiles",
         data: { url: TILE_DATASETS.openstreetmap.url },
-        raster_tile: {
+        rasterTile: {
           color: 0xffffff,
-          max_zoom: 23,
+          maxZoom: 23,
           opacity: 1,
         },
       },
       {
         type: "tiles",
         data: { url: TILE_DATASETS.gsiStd.url },
-        raster_tile: {
+        rasterTile: {
           color: 0xffffff,
-          max_zoom: 18,
+          maxZoom: 18,
           opacity: 1,
         },
       },
       {
         type: "tiles",
         data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-        raster_tile: {
+        rasterTile: {
           color: 0xffffff,
-          max_zoom: 18,
+          maxZoom: 18,
           opacity: 1,
         },
       },

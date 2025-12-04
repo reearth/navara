@@ -121,6 +121,8 @@ import { isWorker, convertScreenPos } from "./utils";
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
 
+export type { CameraOptions, CameraEvent } from "./camera";
+
 export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
 export type { Nullable, XYZ, LngLat, LngLatHeight } from "@navara/core";
 export * from "./type";
@@ -1484,6 +1486,17 @@ export default class ThreeView<
       new Float64Array([target.lng, target.lat, target.height]),
       new Float64Array([offset.x, offset.y, offset.z]),
     );
+  }
+
+  cameraFollow(enabled: boolean, target?: ApiLLE, offset?: Vector3) {
+    const targetArray = target
+      ? new Float64Array([target.lng, target.lat, target.height])
+      : undefined;
+    const offsetArray = offset
+      ? new Float64Array([offset.x, offset.y, offset.z])
+      : undefined;
+
+    this._core?.cameraFollow(enabled, targetArray, offsetArray);
   }
 
   sampleTerrainHeight(pos: ApiLLE): number | undefined {

@@ -2,9 +2,10 @@ use std::f64::{self, consts::PI};
 
 use bevy_ecs::{
     change_detection::DetectChanges,
+    entity::Entity,
     event::EventReader,
     query::{Added, Changed, Or, With},
-    system::{Commands, Query, Res},
+    system::{Commands, Query, Res, ResMut},
     world::Ref,
 };
 use bevy_input::{
@@ -16,11 +17,13 @@ use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
     CRS, WGS84_64,
 };
+use navara_event_store::EventStore;
 use navara_frame::FrameManager;
 use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON3, EPSILON6};
 use navara_window::Window;
 
 use crate::{
+    follow::handle_follow,
     helpers::{
         get_heading, get_pick_ray_from_camera, get_pitch, get_roll, ray_ellipsoid_intersect,
     },
@@ -139,9 +142,21 @@ pub fn update(
                 frustum,
                 &mut flight,
                 &mut cam_st,
-                &controller,
+                &mut controller,
                 is_cam_moving,
             );
+        }
+
+        if controller.enable_follow {
+            handle_follow(
+                &mut transform,
+                &mut orbit,
+                &mut controller,
+                &mb,
+                &mut mm,
+                &mut mw,
+            );
+            continue;
         }
 
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
@@ -224,7 +239,7 @@ fn process_camera_event(
     frustum: &CameraFrustum,
     flight: &mut CameraFlight,
     cam_st: &mut CameraStatus,
-    controller: &CameraController,
+    controller: &mut CameraController,
     is_cam_moving: bool,
 ) {
     match ce {
@@ -290,6 +305,23 @@ fn process_camera_event(
                 cam_st.status.push(CameraStatusType::Rotate);
             }
         }
+        CameraEvent::Follow {
+            enabled,
+            target,
+            offset,
+        } => {
+            controller.enable_follow = *enabled;
+
+            if controller.enable_follow {
+                controller.follow_target_pre = controller.follow_target_cur;
+                controller.follow_target_cur = *target;
+            } else {
+                controller.follow_target_pre = None;
+                controller.follow_target_cur = None;
+            }
+
+            controller.follow_offset = *offset;
+        }
     }
 }
 
@@ -299,7 +331,7 @@ fn is_camera_moving(inertia: &CameraInertia, controller: &CameraController) -> b
         || inertia.translate_time < controller.translate_duration
 }
 
-fn commit(transform: &mut Transform, orbit: &mut Orbit) {
+pub(crate) fn commit(transform: &mut Transform, orbit: &mut Orbit) {
     let quat = orbit.horizon_quat * orbit.vertical_quat;
     let rotated_local_position = quat * orbit.local_position;
     let rotated_local_up = quat * orbit.local_up;
@@ -954,7 +986,12 @@ fn apply_camera_translate(
 }
 
 // TODO: Always spin around `target`. It should be reset by `look_at(center)`.
-fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, offset: &Vec3) {
+pub(crate) fn apply_look_at(
+    transform: &mut Transform,
+    orbit: &mut Orbit,
+    target: &Vec3,
+    offset: &Vec3,
+) {
     let ellipsoid = WGS84_64;
     let world_target = CRS::Geographic.to_vec3(ellipsoid, *target, 0.0);
 
@@ -989,9 +1026,20 @@ fn apply_look_at(transform: &mut Transform, orbit: &mut Orbit, target: &Vec3, of
 
 #[allow(clippy::type_complexity)]
 pub fn update_frustum(
-    mut query: Query<(&mut CameraFrustum, &Transform), Or<(Added<Transform>, Changed<Transform>)>>,
+    mut events: ResMut<EventStore>,
+    mut query: Query<
+        (Entity, &mut CameraFrustum, &Transform, &CameraController),
+        Or<(Added<Transform>, Changed<Transform>)>,
+    >,
 ) {
-    for (mut frustum, transform) in query.iter_mut() {
+    for (e, mut frustum, transform, controller) in query.iter_mut() {
+        if controller.auto_adjust_near_far {
+            let distance = transform.translation.length();
+            if frustum.adjust_near_far(distance, controller) {
+                events.camera_frustum_updated = Some(e);
+            }
+        }
+
         frustum.update_sse_denominator();
         frustum.update_planes(transform);
     }

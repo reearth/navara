@@ -89,12 +89,12 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 6,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      cast_shadow: true,
-      receive_shadow: true,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 6,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
 
@@ -108,8 +108,8 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
       height: -50,
     },
   });
@@ -124,8 +124,8 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
       height: -50,
     },
   });
@@ -176,9 +176,9 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
     data: {
       url: PARAMS.type,
     },
-    raster_tile: {
-      max_zoom: 18,
-      min_zoom: 2,
+    rasterTile: {
+      maxZoom: 18,
+      minZoom: 2,
     },
   };
 
@@ -224,9 +224,9 @@ const addCloudsTilesControl = (
     data: {
       url: LOCAL_DATASETS.blueMarbleClouds.url,
     },
-    raster_tile: {
-      max_zoom: 6,
-      min_zoom: 2,
+    rasterTile: {
+      maxZoom: 6,
+      minZoom: 2,
     },
   };
 
@@ -237,13 +237,13 @@ const addCloudsTilesControl = (
   });
 
   const transitionTile = () => {
-    const position = view.camera.getPosition();
+    const position = view.camera.positionGeographic;
     if (!position?.height) return;
     const targetHeight = 35e6;
     const opacity = Math.min(1, position.height / targetHeight);
 
-    if (!description.raster_tile) return;
-    description.raster_tile.opacity = opacity;
+    if (!description.rasterTile) return;
+    description.rasterTile.opacity = opacity;
     cloudsTilesLayer.update(description);
   };
 
@@ -254,8 +254,8 @@ const addCloudsTilesControl = (
     {
       name: "show",
       onChange: (v) => {
-        if (!description.raster_tile) return;
-        description.raster_tile.show = v.value;
+        if (!description.rasterTile) return;
+        description.rasterTile.show = v.value;
         cloudsTilesLayer.update(description);
       },
     },

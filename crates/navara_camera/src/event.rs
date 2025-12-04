@@ -75,6 +75,11 @@ pub enum CameraEvent {
         axis: Option<Vec3>, // The axis of rotation in the world coordinate system.
         angle: FloatType,   // The angle to rotate around the axis in radians.
     },
+    Follow {
+        enabled: bool,
+        target: Option<Vec3>, // [longitude, latitude, altitude]
+        offset: Option<Vec3>, // The offset from the target in the local east-north-up reference frame centered at the target.
+    },
 }
 
 #[derive(Event)]
@@ -82,4 +87,16 @@ pub struct FrustumEvent {
     pub fov: Option<FloatType>,  // field of view in degrees
     pub near: Option<FloatType>, // near clipping plane distance
     pub far: Option<FloatType>,  // far clipping plane distance
+}
+
+#[derive(Event)]
+pub struct CameraControlUpdateEvent {
+    pub auto_adjust_near_far: Option<bool>,
+    pub minimum_zoom_distance: Option<FloatType>,
+    pub maximum_zoom_distance: Option<FloatType>,
+    pub spin_speed: Option<FloatType>,
+    pub zoom_speed: Option<FloatType>,
+    pub spin_duration: Option<f32>,
+    pub zoom_duration: Option<f32>,
+    pub translate_duration: Option<f32>,
 }

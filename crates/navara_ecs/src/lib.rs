@@ -9,8 +9,8 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    get_heading, get_pitch, get_roll, CamDirType, CameraDirection, CameraEvent, CameraFrustum,
-    CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
+    get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
+    CameraEvent, CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_64};
@@ -838,6 +838,22 @@ impl App {
         });
     }
 
+    pub fn camera_follow(
+        &mut self,
+        enabled: bool,
+        target: Option<Vec<FloatType>>,
+        offset: Option<Vec<FloatType>>,
+    ) {
+        let target_vec3 = target.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+        let offset_vec3 = offset.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+
+        self.app.world_mut().send_event(CameraEvent::Follow {
+            enabled,
+            target: target_vec3,
+            offset: offset_vec3,
+        });
+    }
+
     pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<&CameraStatus, With<CameraMarker>>();
@@ -961,6 +977,10 @@ impl App {
         self.app
             .world_mut()
             .send_event(FrustumEvent { fov, near, far });
+    }
+
+    pub fn set_camera_control(&mut self, event: CameraControlUpdateEvent) {
+        self.app.world_mut().send_event(event);
     }
 
     pub fn get_globe(&self) -> Option<&Globe> {

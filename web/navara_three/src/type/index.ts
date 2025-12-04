@@ -116,7 +116,7 @@ export type EffectLayerDeclarationDescription =
 //   color?: number;
 // };
 
-type RemoveFreeRecursively<T> = T extends { free: any }
+export type RemoveFreeRecursively<T> = T extends { free: any }
   ? Omit<{ [K in keyof T]: RemoveFreeRecursively<T[K]> }, "free">
   : T;
 

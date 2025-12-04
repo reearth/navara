@@ -2,6 +2,7 @@ import { EventHandler, Unimplemented } from "@navara/core";
 import {
   ModelMaterial as NavaraModelMaterial,
   ModelMesh as NavaraModelMesh,
+  Vec3,
 } from "@navara/engine";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
@@ -17,7 +18,6 @@ import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
 import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
-import { Vec3 } from "navara_wasm_worker";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -158,7 +158,7 @@ export class ModelMesh
 
     this.waterNormalMapTexture = this.enableWaterNormalMap(
       !!meshMaterial.water,
-      meshMaterial.water_normal_url,
+      meshMaterial.waterNormalUrl,
     );
 
     // For Cesium 3D Tiles
@@ -172,7 +172,7 @@ export class ModelMesh
       );
     }
 
-    if (meshMaterial.__internal__?.point_cloud) {
+    if (meshMaterial.__internal__?.pointCloud) {
       // Point cloud specific initialization can go here
       this.overridePntsMaterial(meshMaterial);
     }
@@ -190,7 +190,7 @@ export class ModelMesh
       this.mixer = new AnimationMixer(target);
 
       // Read initial speed from material if provided
-      const initSpeed = meshMaterial.animation_speed as number | undefined;
+      const initSpeed = meshMaterial.animationSpeed as number | undefined;
       this.animationSpeed = initSpeed ?? 1.0;
 
       gltfAnimations.forEach((clip) => {
@@ -204,7 +204,7 @@ export class ModelMesh
         this.actions.set(clip.name, action);
       });
 
-      const clipName = meshMaterial.animation_active_clip as string | undefined;
+      const clipName = meshMaterial.animationActiveClip as string | undefined;
       if (clipName && this.actions.has(clipName)) {
         const action = this.actions.get(clipName);
         if (!action) {
@@ -363,8 +363,8 @@ export class ModelMesh
 
       const mcolor = meshMaterial.color;
 
-      mesh.castShadow = !!meshMaterial.cast_shadow;
-      mesh.receiveShadow = !!meshMaterial.receive_shadow;
+      mesh.castShadow = !!meshMaterial.castShadow;
+      mesh.receiveShadow = !!meshMaterial.receiveShadow;
 
       mesh.material.userData.color = mcolor;
       mesh.material.userData.uPickable = {
@@ -377,19 +377,19 @@ export class ModelMesh
         value: 0.0,
       };
       mesh.material.userData.waterScaleNormal = {
-        value: meshMaterial.water_scale_normal ?? 0.01,
+        value: meshMaterial.waterScaleNormal ?? 0.01,
       };
       mesh.material.userData.waterSpeed = {
-        value: meshMaterial.water_speed ?? 0.0003,
+        value: meshMaterial.waterSpeed ?? 0.0003,
       };
       mesh.material.userData.shininess = {
         value: meshMaterial.shininess ?? 30.0,
       };
       mesh.material.userData.specularStrength = {
-        value: meshMaterial.specular_strength ?? 1.0,
+        value: meshMaterial.specularStrength ?? 1.0,
       };
       mesh.material.userData.applyWaterNormal = {
-        value: (meshMaterial.apply_water_normal ?? false) ? 1.0 : 0.0,
+        value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
       };
       mesh.material.userData.waterNormalMap = {
         value: this.waterNormalMapTexture,
@@ -632,7 +632,7 @@ export class ModelMesh
       material.userData.uAddHeight = { value: meshMaterial.height ?? 0.0 };
 
       const geodetic_normal: Vec3 =
-        meshMaterial.__internal__?.point_cloud_geodetic_normal ??
+        meshMaterial.__internal__?.pointCloudGeodeticNormal ??
         new Vec3(0, 0, 0);
 
       material.onBeforeCompile = (
@@ -712,7 +712,7 @@ export class ModelMesh
       this.userData.prev.visible = next;
     }
 
-    if (!material.__internal__?.point_cloud) {
+    if (!material.__internal__?.pointCloud) {
       this.traverseMesh((m) => {
         this.setMaterial(material, m);
       });
@@ -724,7 +724,7 @@ export class ModelMesh
 
     // Minimal animation updates: speed and active clip
     if (this.mixer) {
-      const nextSpeed = material.animation_speed as number | undefined;
+      const nextSpeed = material.animationSpeed as number | undefined;
       if (nextSpeed !== undefined && nextSpeed !== this.animationSpeed) {
         this.animationSpeed = nextSpeed;
         if (this.currentAction) {
@@ -732,7 +732,7 @@ export class ModelMesh
         }
       }
 
-      const nextClip = material.animation_active_clip as string | undefined;
+      const nextClip = material.animationActiveClip as string | undefined;
       if (nextClip && this.actions.has(nextClip)) {
         const nextAction = this.actions.get(nextClip);
         if (!nextAction) {
@@ -766,9 +766,9 @@ export class ModelMesh
       distMaterial.userData.prev.color = next;
     }
     if (distMaterial instanceof PointsMaterial) {
-      if (distMaterial.userData.prev.point_size !== src.point_size) {
-        const next = src.point_size ?? 0;
-        distMaterial.userData.prev.point_size = distMaterial.size;
+      if (distMaterial.userData.prev.pointSize !== src.pointSize) {
+        const next = src.pointSize ?? 0;
+        distMaterial.userData.prev.pointSize = distMaterial.size;
         distMaterial.size = next;
       }
       if (distMaterial.userData.prev.uAddHeight !== src.height) {
@@ -802,7 +802,7 @@ export class ModelMesh
           distMaterial.userData.defines.WATER = 1;
 
           distMaterial.userData.waterNormalMap.value =
-            this.enableWaterNormalMap(next, src.water_normal_url);
+            this.enableWaterNormalMap(next, src.waterNormalUrl);
         } else {
           delete distMaterial.userData.defines.WATER;
           distMaterial.userData.waterNormalMap.value = null;
@@ -815,14 +815,14 @@ export class ModelMesh
         distMaterial.userData.prev.reflectivity = next;
       }
       if (
-        distMaterial.userData.prev.waterScaleNormal !== src.water_scale_normal
+        distMaterial.userData.prev.waterScaleNormal !== src.waterScaleNormal
       ) {
-        const next = src.water_scale_normal ?? 0.01;
+        const next = src.waterScaleNormal ?? 0.01;
         distMaterial.userData.waterScaleNormal.value = next;
         distMaterial.userData.prev.waterScaleNormal = next;
       }
-      if (distMaterial.userData.prev.waterSpeed !== src.water_speed) {
-        const next = src.water_speed ?? 0.0003;
+      if (distMaterial.userData.prev.waterSpeed !== src.waterSpeed) {
+        const next = src.waterSpeed ?? 0.0003;
         distMaterial.userData.waterSpeed.value = next;
         distMaterial.userData.prev.waterSpeed = next;
       }
@@ -832,16 +832,16 @@ export class ModelMesh
         distMaterial.userData.prev.shininess = next;
       }
       if (
-        distMaterial.userData.prev.specularStrength !== src.specular_strength
+        distMaterial.userData.prev.specularStrength !== src.specularStrength
       ) {
-        const next = src.specular_strength ?? 0;
+        const next = src.specularStrength ?? 0;
         distMaterial.userData.specularStrength.value = next;
         distMaterial.userData.prev.specularStrength = next;
       }
       if (
-        distMaterial.userData.prev.applyWaterNormal !== src.apply_water_normal
+        distMaterial.userData.prev.applyWaterNormal !== src.applyWaterNormal
       ) {
-        const next = src.apply_water_normal ?? 0;
+        const next = src.applyWaterNormal ?? 0;
         distMaterial.userData.applyWaterNormal.value = next;
         distMaterial.userData.prev.applyWaterNormal = next;
       }
@@ -850,11 +850,11 @@ export class ModelMesh
         distMaterial.userData.specular.value = next;
         distMaterial.userData.prev.specular = next;
       }
-      if (dist.castShadow !== src.cast_shadow) {
-        dist.castShadow = !!src.cast_shadow;
+      if (dist.castShadow !== src.castShadow) {
+        dist.castShadow = !!src.castShadow;
       }
-      if (dist.receiveShadow !== src.receive_shadow) {
-        dist.receiveShadow = !!src.receive_shadow;
+      if (dist.receiveShadow !== src.receiveShadow) {
+        dist.receiveShadow = !!src.receiveShadow;
       }
     }
   }

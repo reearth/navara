@@ -10,10 +10,11 @@ import { queueTask } from "./queueTask";
 export function constructPolylineBatchedFeature(
   transferableBatchedFeatureLike: TransferablePolylineBatchedFeatureLike,
   materialLike: PolylineMaterialLike,
+  flat: boolean,
 ): Promise<ConstructedPolylineGeometryLike | undefined> {
   return queueTask(
     "constructPolylineBatchedFeature",
-    [transferableBatchedFeatureLike, materialLike],
+    [transferableBatchedFeatureLike, materialLike, flat],
     {
       transfer: [
         transferableBatchedFeatureLike.points.buffer,

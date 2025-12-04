@@ -581,6 +581,7 @@ pub struct RasterTerrainMaterial {
     pub min_zoom: usize,
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: u32,
+    pub overscaled_max_zoom: usize,
 }
 
 impl Default for RasterTerrainMaterial {
@@ -594,6 +595,7 @@ impl Default for RasterTerrainMaterial {
             min_zoom: 0,
             elevation_decoder: ElevationDecoder::default(),
             tile_size: 256,
+            overscaled_max_zoom: 24,
         }
     }
 }

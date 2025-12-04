@@ -3,6 +3,8 @@ import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
 } from "@navara/engine";
+import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
+import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
@@ -49,6 +51,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, viewEvents);
+
+    // Set draped flag for texturized rendering
+    this.userData.draped = mesh.should_be_texturized;
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
@@ -140,15 +145,16 @@ export class PolylineMesh extends BatchedFeatureMesh<
   ) {
     const meshMaterial = mesh.material;
 
-    const [minHeight, maxHeight] = meshMaterial.__internal__
-      ?.min_max_heights ?? [0, 0];
+    const [minHeight, maxHeight] = meshMaterial.__internal__?.minMaxHeights ?? [
+      0, 0,
+    ];
 
     const uPickable = {
       value: 0.0,
     };
 
-    this.castShadow = !!meshMaterial.cast_shadow;
-    this.receiveShadow = !!meshMaterial.receive_shadow;
+    this.castShadow = !!meshMaterial.castShadow;
+    this.receiveShadow = !!meshMaterial.receiveShadow;
 
     this.material.uniforms = {
       ...UniformsLib["lights"],
@@ -156,7 +162,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
         value: [minHeight, maxHeight, meshMaterial.width],
       },
       color: { value: new Color(meshMaterial.color) },
-      useGroundNormals: { value: !!meshMaterial.use_ground_normals },
+      useGroundNormals: { value: !!meshMaterial.useGroundNormals },
       viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
       frustumNearFar: uniforms.frustumNearFar,
       frustumRatio: uniforms.frustumRatio,
@@ -166,17 +172,27 @@ export class PolylineMesh extends BatchedFeatureMesh<
       nvr_uPickable: uPickable,
     };
 
-    // Use the original shader files with modifications for batch texture
-    this.material.vertexShader = PolylineVertShader;
-    this.material.fragmentShader =
-      `${packing}\n` +
-      (meshMaterial.clamp_to_ground
-        ? GroundPolylineFragShader
-        : PolylineFragShader);
+    const isTexturized = mesh.should_be_texturized;
+
+    // Select shaders based on rendering mode
+    if (isTexturized) {
+      // Flat polyline for texturized tile rendering
+      this.material.vertexShader = FlatPolylineVertShader;
+      this.material.fragmentShader = FlatPolylineFragShader;
+    } else {
+      // 3D polyline for globe rendering
+      this.material.vertexShader = PolylineVertShader;
+      this.material.fragmentShader =
+        `${packing}\n` +
+        (meshMaterial.clampToGround
+          ? GroundPolylineFragShader
+          : PolylineFragShader);
+    }
 
     this.material.depthTest = false;
     this.material.visible = !!meshMaterial.show;
-    this.material.lights = true;
+    // Disable lighting for texturized rendering - the texture will be applied to the lit tile
+    this.material.lights = !isTexturized;
     this.material.vertexColors = false;
     this.material.userData.uPickable = uPickable;
 
@@ -211,13 +227,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
       prev.color = next;
     }
 
-    if (prev.use_ground_normals !== material.use_ground_normals) {
+    if (prev.useGroundNormals !== material.useGroundNormals) {
       this.material.uniforms.useGroundNormals.value =
-        !!material.use_ground_normals;
-      prev.use_ground_normals = !!material.use_ground_normals;
+        !!material.useGroundNormals;
+      prev.useGroundNormals = !!material.useGroundNormals;
     }
 
-    const [minHeight, maxHeight] = material.__internal__?.min_max_heights ?? [
+    const [minHeight, maxHeight] = material.__internal__?.minMaxHeights ?? [
       0, 0,
     ];
     const width = material.width;
@@ -242,11 +258,11 @@ export class PolylineMesh extends BatchedFeatureMesh<
       prev.visible = next;
     }
 
-    if (this.castShadow !== material.cast_shadow) {
-      this.castShadow = !!material.cast_shadow;
+    if (this.castShadow !== material.castShadow) {
+      this.castShadow = !!material.castShadow;
     }
-    if (this.receiveShadow !== material.receive_shadow) {
-      this.receiveShadow = !!material.receive_shadow;
+    if (this.receiveShadow !== material.receiveShadow) {
+      this.receiveShadow = !!material.receiveShadow;
     }
   }
 

@@ -68,8 +68,8 @@ export const run = async (view: ThreeView) => {
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -79,12 +79,12 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 6,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      receive_shadow: true,
-      cast_shadow: true,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 6,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      receiveShadow: true,
+      castShadow: true,
     },
   });
 
@@ -169,7 +169,7 @@ const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
   };
 
   view.atmosphere.on("sunChanged", () => {
-    const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
+    const isAtNight = view.atmosphere.isAtNight(view.camera.positionECEF);
     lightProbeLayer.update({
       visible: isAtNight,
     });
@@ -360,8 +360,8 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
           metalness: 0.2,
           roughness: 0.8,
           height: -50,
-          cast_shadow: true,
-          receive_shadow: true,
+          castShadow: true,
+          receiveShadow: true,
         },
       };
       const layer = view.addLayer(description);

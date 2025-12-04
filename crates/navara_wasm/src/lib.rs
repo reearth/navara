@@ -476,6 +476,16 @@ impl Core {
         self.app.look_at(target, offset);
     }
 
+    #[wasm_bindgen(js_name = cameraFollow)]
+    pub fn camera_follow(
+        &mut self,
+        enabled: bool,
+        target: Option<Vec<FloatType>>,
+        offset: Option<Vec<FloatType>>,
+    ) {
+        self.app.camera_follow(enabled, target, offset);
+    }
+
     #[wasm_bindgen(js_name = getCameraStatus)]
     pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
         if let Some(cam_st) = self.app.get_camera_status() {
@@ -545,6 +555,11 @@ impl Core {
         far: Option<FloatType>,
     ) {
         self.app.set_frustum(fov, near, far);
+    }
+
+    #[wasm_bindgen(js_name = setCameraControl)]
+    pub fn set_camera_control(&mut self, event: navara_wasm_types::CameraControlUpdateEvent) {
+        self.app.set_camera_control(event.into());
     }
 
     // === Globe definition ===

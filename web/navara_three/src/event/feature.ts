@@ -8,7 +8,6 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
-import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
@@ -24,7 +23,6 @@ import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import {
-  applyEffectPayloadToObject,
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
 } from "./featureEvent";
@@ -47,8 +45,6 @@ export function renderFeature(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
-  viewContext: ViewContext,
-  layerId?: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf);
@@ -57,14 +53,7 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf);
   }
   if (f.model) {
-    return renderModel(
-      f.model,
-      buf,
-      uniforms,
-      viewEvents,
-      viewContext,
-      layerId,
-    );
+    return renderModel(f.model, buf, uniforms, viewEvents);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms, viewEvents);
@@ -88,7 +77,6 @@ export async function processRenderableFeatureAdded(
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
-  viewContext: ViewContext,
   updatedAt: number,
   onConcurrency: (v: number) => void,
 ) {
@@ -114,8 +102,6 @@ export async function processRenderableFeatureAdded(
     uniforms,
     tileHandle,
     viewEvents,
-    viewContext,
-    ev.layer_id,
   )
     ?.then((r) => {
       const type = (() => {
@@ -154,16 +140,20 @@ export async function processRenderableFeatureAdded(
 
   meshes.set(id, obj);
 
-  // Link to selective effects from layer config cache
-  // Must be done after obj is added to scene so world matrices are valid
-  if (obj instanceof PolygonMesh && obj.userData.draped && tileHandle) {
+  if (
+    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
+    obj.userData.draped &&
+    tileHandle
+  ) {
     obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
     });
     obj.addEventListener("needsUpdate", () => {
       texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
     });
-  } else if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
+  }
+
+  if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
     drapedFeatureMaterials.set(id, obj.material);
     obj.addEventListener("removedFromWorld", () => {
       drapedFeatureMaterials.delete(id);
@@ -188,7 +178,6 @@ export async function processRenderableFeatureAdded(
     obj,
     viewEvents,
     layersManager,
-    viewContext,
     featureLayerId,
     ev.bits,
   );
@@ -211,7 +200,6 @@ export async function processRenderableFeatureChanged(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
-  viewContext: ViewContext,
   updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
@@ -239,7 +227,7 @@ export async function processRenderableFeatureChanged(
     processTextChanged(obj, text, buf, active, renderFlag);
   }
   if (obj instanceof ModelMesh && model) {
-    processModelChanged(obj, model, active, viewContext, layerId);
+    processModelChanged(obj, model, active);
   }
   if (obj instanceof PolylineMesh && polyline) {
     processPolylineChanged(obj, polyline, active);
@@ -252,8 +240,12 @@ export async function processRenderableFeatureChanged(
     }
   }
 
-  // Handle a draped mesh
-  if (obj instanceof PolygonMesh && obj.userData.draped != null && tileHandle) {
+  // Handle a draped polygon mesh and polyline mesh
+  if (
+    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
+    obj.userData.draped != null &&
+    tileHandle
+  ) {
     if (obj.userData.draped) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
@@ -262,7 +254,8 @@ export async function processRenderableFeatureChanged(
       texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
     }
     texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
-  } else if (
+  }
+  if (
     obj instanceof PolygonMesh &&
     obj.userData.draped != null &&
     !tileHandle
@@ -293,8 +286,6 @@ export async function processRenderableFeatureChanged(
   }
 
   obj.updateMatrix();
-
-  applyEffectPayloadToObject(obj, viewContext, layerId);
 
   handleFeatureUpdatedEventByLayerId(
     viewEvents,

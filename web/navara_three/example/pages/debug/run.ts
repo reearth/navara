@@ -24,9 +24,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    raster_tile: {
+    rasterTile: {
       color: 0xffffff,
-      max_zoom: 23,
+      maxZoom: 23,
       opacity: 1,
     },
   },
@@ -39,10 +39,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xff00ff,
       size: 0.1,
       height: 1,
-      scale_by_distance: true,
-      clamp_to_ground: true,
+      scaleByDistance: true,
+      clampToGround: true,
       transparent: false,
-      depth_test: true,
+      depthTest: true,
     },
   },
   {
@@ -96,10 +96,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       size: 0.1,
       height: 1,
-      scale_by_distance: true,
-      clamp_to_ground: true,
+      scaleByDistance: true,
+      clampToGround: true,
       transparent: false,
-      depth_test: true,
+      depthTest: true,
     },
   },
 
@@ -130,9 +130,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       size: 0.05,
       height: 1,
-      scale_by_distance: true,
-      clamp_to_ground: true,
-      depth_test: true,
+      scaleByDistance: true,
+      clampToGround: true,
+      depthTest: true,
       transparent: false,
       url: "/example.png",
     },
@@ -156,15 +156,15 @@ const geoLayersDef: MaterialLayerDescription[] = [
     text: {
       color: 0xffffff,
       height: 1,
-      scale_by_distance: true,
-      clamp_to_ground: true,
-      depth_test: true,
+      scaleByDistance: true,
+      clampToGround: true,
+      depthTest: true,
       text: "hello 京都",
       // font: "/font/LoveDays-2v7Oe.ttf",
-      background_color: 0x0a70c2,
-      border_color: 0xf8e43c,
-      border_width: 0.08, // 0 ~ 0.5, the ratio of the border to the height
-      corner_radius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      backgroundColor: 0x0a70c2,
+      borderColor: 0xf8e43c,
+      borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
+      cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
       center: {
         x: 0.5,
@@ -195,15 +195,15 @@ const geoLayersDef: MaterialLayerDescription[] = [
     text: {
       color: 0xffffff,
       height: 1,
-      scale_by_distance: true,
-      clamp_to_ground: true,
-      depth_test: true,
+      scaleByDistance: true,
+      clampToGround: true,
+      depthTest: true,
       text: "hello world!!!",
       // font: "/font/LoveDays-2v7Oe.ttf",
-      background_color: 0x0a70c2,
-      border_color: 0xf8e43c,
-      border_width: 0.08, // 0 ~ 0.5, the ratio of the border to the height
-      corner_radius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      backgroundColor: 0x0a70c2,
+      borderColor: 0xf8e43c,
+      borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
+      cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
       center: {
         x: 0.5,
@@ -213,11 +213,11 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 10,
         y: 0,
       },
-      outline_blur: 0, // px
-      outline_color: 0x000000,
-      outline_offset: { x: 4, y: 0 }, // px
-      outline_opacity: 1.0,
-      outline_width: 4, // px
+      outlineBlur: 0, // px
+      outlineColor: 0x000000,
+      outlineOffset: { x: 4, y: 0 }, // px
+      outlineOpacity: 1.0,
+      outlineWidth: 4, // px
     },
   },
 
@@ -239,14 +239,14 @@ const geoLayersDef: MaterialLayerDescription[] = [
     text: {
       color: 0x000000,
       height: 1,
-      scale_by_distance: true,
-      clamp_to_ground: true,
-      depth_test: true,
+      scaleByDistance: true,
+      clampToGround: true,
+      depthTest: true,
       text: "Mt.Everest",
-      background_color: 0xa4e996,
-      border_color: 0x4aac3b,
-      border_width: 0.1, // 0 ~ 0.5, the ratio of the border to the height
-      corner_radius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      backgroundColor: 0xa4e996,
+      borderColor: 0x4aac3b,
+      borderWidth: 0.1, // 0 ~ 0.5, the ratio of the border to the height
+      cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 30,
       padding: {
         x: 5,
@@ -275,8 +275,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xff0000,
       width: 2,
       height: 1,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      clampToGround: true,
+      useGroundNormals: true,
     },
   },
 
@@ -298,8 +298,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0x00ff00,
       width: 5,
       height: 1,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      clampToGround: true,
+      useGroundNormals: true,
     },
   },
 
@@ -322,9 +322,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
       size: 200000,
       height: 0,
-      clamp_to_ground: true,
+      clampToGround: true,
       url: LOCAL_DATASETS.steelDrumGLTF.url,
-      should_rotate_in_default: true,
+      shouldRotateInDefault: true,
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
@@ -378,16 +378,16 @@ const geoLayersDef: MaterialLayerDescription[] = [
     polygon: {
       color: 0x00aaff,
       height: 0,
-      extruded_height: 5000,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      extrudedHeight: 5000,
+      clampToGround: true,
+      useGroundNormals: true,
       wireframe: false,
-      outline_color: 0x00ff00,
-      outline_width: 3,
-      outline_show: false,
-      surface_show: true,
-      cast_shadow: true,
-      receive_shadow: true,
+      outlineColor: 0x00ff00,
+      outlineWidth: 3,
+      outlineShow: false,
+      surfaceShow: true,
+      castShadow: true,
+      receiveShadow: true,
     },
   },
   {
@@ -416,17 +416,17 @@ const geoLayersDef: MaterialLayerDescription[] = [
     polygon: {
       color: 0xffaa00,
       height: 0,
-      extruded_height: 0,
-      clamp_to_ground: false,
-      use_ground_normals: false,
+      extrudedHeight: 0,
+      clampToGround: false,
+      useGroundNormals: false,
       wireframe: false,
-      outline_color: 0xaaff00,
-      outline_width: 3,
-      outline_show: false,
-      surface_show: true,
-      cast_shadow: true,
-      receive_shadow: true,
-      per_position_height: true,
+      outlineColor: 0xaaff00,
+      outlineWidth: 3,
+      outlineShow: false,
+      surfaceShow: true,
+      castShadow: true,
+      receiveShadow: true,
+      perPositionHeight: true,
     },
   },
   {
@@ -451,8 +451,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
     },
   },
   {
@@ -465,8 +465,8 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
     },
   },
   {
@@ -483,9 +483,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 0.5,
         y: 0,
       },
-      scale_by_distance: true,
-      clamp_to_ground: true,
-      depth_test: true,
+      scaleByDistance: true,
+      clampToGround: true,
+      depthTest: true,
     },
   },
   {
@@ -498,11 +498,11 @@ const geoLayersDef: MaterialLayerDescription[] = [
       color: 0x00ff00,
       width: 2,
       height: 1,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      clampToGround: true,
+      useGroundNormals: true,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
     },
   },
   {
@@ -513,13 +513,13 @@ const geoLayersDef: MaterialLayerDescription[] = [
     polygon: {
       color: 0x00aaff,
       height: 10,
-      extruded_height: 0,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      extrudedHeight: 0,
+      clampToGround: true,
+      useGroundNormals: true,
       wireframe: false,
     },
-    vector_tile: {
-      max_zoom: 15,
+    vectorTile: {
+      maxZoom: 15,
       layers: ["HeightControlDistrict"],
     },
   },
@@ -552,7 +552,7 @@ export const run = async (view: ThreeView) => {
   //   height: 0,
   //   tile_url: "http://localhost:8888/{z}/{x}/{y}.png",
   //   z: 4,
-  //   max_zoom: 21,
+  //   maxZoom: 21,
   //   wireframe: false,
   // });
 
@@ -567,16 +567,16 @@ export const run = async (view: ThreeView) => {
           ? TERRAIN_DATASETS.mapbox.url
           : TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder:
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder:
         // @ts-expect-error : Make switch button later
         terrainType === "mapbox"
           ? MAPBOX_ELEVATION_DECODER()
           : JAPAN_GSI_ELEVATION_DECODER(),
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
     },
   });
 
