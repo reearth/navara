@@ -3,7 +3,6 @@ import path from "path";
 import { ConfigEnv, normalizePath } from "vite";
 import { PluginOption, type UserConfig } from "vite";
 
-import dts from "vite-plugin-dts";
 import tsconfig from "vite-tsconfig-paths";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
@@ -31,7 +30,6 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
     watchPackages(["navara_wasm", "navara_wasm_worker", "navara_wasm_api"]),
     tsconfig(),
-    dts(),
     ...(
       env.mode !== "production" ? [
     wasm(),
