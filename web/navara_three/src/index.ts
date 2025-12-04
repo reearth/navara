@@ -32,7 +32,6 @@ import invariant from "tiny-invariant";
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { MAP_CONCURRENCY } from "./concurrency";
-import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   LayerDeclaration,
   ViewContext,
@@ -42,6 +41,7 @@ import {
 } from "./core";
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
+import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
   type BufferLoader,
@@ -514,7 +514,9 @@ export default class ThreeView<
     invariant(width && height);
 
     if (typeof options?.pixelRatio === "number" || !isWorker()) {
-      const pixelRatio = isWorker() ? 1 : getDevicePixelRatio(options.pixelRatio);
+      const pixelRatio = isWorker()
+        ? 1
+        : getDevicePixelRatio(options.pixelRatio);
       renderer.setPixelRatio(pixelRatio);
     }
 

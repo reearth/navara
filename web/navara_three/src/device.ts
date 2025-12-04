@@ -28,8 +28,7 @@ export function isMobileDevice(): boolean {
   );
 
   // Also check for touch capability + small screen as fallback
-  const hasTouch =
-    "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   const isSmallScreen = window.innerWidth <= 768;
 
   return isMobileUA || (hasTouch && isSmallScreen);
