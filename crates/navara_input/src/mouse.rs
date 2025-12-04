@@ -6,7 +6,6 @@ use bevy_ecs::{
 };
 
 use bevy_input::{mouse::MouseMotion, ButtonState};
-use bevy_log::info;
 use navara_math::RawVec2;
 
 pub type MouseButton = bevy_input::mouse::MouseButton;
@@ -78,11 +77,8 @@ pub fn trigger_mouse_motion_event(
     for event in pos.read() {
         let delta_x = event.x - res.x;
         let delta_y = event.y - res.y;
-        // info!("Mouse moved from ({}, {})", res.x, res.y);
         res.x = event.x;
         res.y = event.y;
-        info!("Mouse moved to ({}, {})", res.x, res.y);
-        // info!("Mouse moved by ({}, {})", delta_x, delta_y);
         if delta_x != 0.0 || delta_y != 0.0 {
             motion.write(MouseMotion {
                 delta: RawVec2::new(delta_x, delta_y),

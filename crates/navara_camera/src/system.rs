@@ -11,7 +11,6 @@ use bevy_ecs::{
 use bevy_input::{
     ButtonInput, keyboard::KeyCode, mouse::{MouseButton, MouseMotion, MouseWheel}, touch::Touch
 };
-use bevy_log::info;
 use navara_core::{
     ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
     CRS, WGS84_64,
@@ -624,9 +623,6 @@ fn rotate(
     };
 
     let pan_delta = Vec2::new(screen_delta.x * ratio_x, screen_delta.y * ratio_y);
-
-    info!("screen delta: ({}, {})", screen_delta.x, screen_delta.y);
-    info!("Pan delta: ({}, {})", pan_delta.x, pan_delta.y);
 
     Some(Vec3::new(-pan_delta.x, -pan_delta.y, 0.0) * controller.spin_speed)
 }

@@ -50,7 +50,6 @@ export function registerInputEvents(
         y: touch.clientY / height,
         id: touch.identifier,
       });
-      // console.log("touchstart", touch.identifier);
     }
 
   };
@@ -68,7 +67,6 @@ export function registerInputEvents(
         y: touch.clientY / height,
         id: touch.identifier,
       });
-      // console.log("touchend", touch.identifier);
     }
     
   };
@@ -87,7 +85,6 @@ export function registerInputEvents(
         id: touch.identifier,
       });
 
-      // console.log("touchmove", touch.identifier);
     }
   }
 
