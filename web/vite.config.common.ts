@@ -6,7 +6,6 @@ import { PluginOption, type UserConfig } from "vite";
 import tsconfig from "vite-tsconfig-paths";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
-import dts from "vite-plugin-dts";
 // This is necessary to watch shared packages.
 // Ref: https://github.com/vitejs/vite/issues/8619#issuecomment-2019967424
 function watchPackages(packageNames: string[]): PluginOption {
@@ -31,10 +30,6 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
     watchPackages(["navara_wasm", "navara_wasm_worker", "navara_wasm_api"]),
     tsconfig(),
-    dts({
-      rollupTypes: true,
-      tsconfigPath: "./tsconfig.json",
-    }),
     ...(
       env.mode !== "production" ? [
     wasm(),
