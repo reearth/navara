@@ -107,6 +107,13 @@ export const TILES_3D_DATASETS = {
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-13102-chuo-ku-2023",
   },
+  plateauToranomonHillsBIM: {
+    url: "https://assets.cms.plateau.reearth.io/assets/fa/eabbc5-b24a-45bf-ba7b-2a0af1fdf8fb/uc_pv1_13100_tokyo/toranomon_hills_others/tileset.json",
+    attribution:
+      "3D City Model (Project PLATEAU) Toranomon Hills BIM Model - MLIT PLATEAU",
+    attributionUrl:
+      "https://www.mlit.go.jp/plateau/use-case/uc20-014/",
+  },
   plateauTakanawa: {
     url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
     attribution:
