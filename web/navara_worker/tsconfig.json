@@ -1,4 +1,7 @@
 {
   "extends": "../tsconfig.common.json",
+  "compilerOptions": {
+    "declarationDir": "dist",
+  },
   "include": ["./src"]
 }
