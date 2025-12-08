@@ -1,6 +1,7 @@
 {
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
+    "noEmit": true,
     "paths": {
       "@navara/three": ["./src"],
       "@navara/three_api": ["../navara_three_api/src"],
