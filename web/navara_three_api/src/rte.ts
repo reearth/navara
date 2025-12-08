@@ -1,4 +1,4 @@
-import { encode_camera } from "@navara/engine-api";
+import { encodePosition } from "@navara/engine-api";
 import { Matrix4, Vector3 } from "three";
 
 export const calcModelMatrixRTE = (
@@ -22,7 +22,7 @@ export const calcCameraPosition = (
 ) => {
   INVERSE_MODEL_MATRIX.copy(modelMatrixWorld).invert();
   CAMERA_MODEL_POSITION.copy(cameraPosition).applyMatrix4(INVERSE_MODEL_MATRIX);
-  const encoded = encode_camera(
+  const encoded = encodePosition(
     CAMERA_MODEL_POSITION.x,
     CAMERA_MODEL_POSITION.y,
     CAMERA_MODEL_POSITION.z,

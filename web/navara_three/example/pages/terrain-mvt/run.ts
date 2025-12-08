@@ -58,12 +58,12 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      cast_shadow: false,
-      receive_shadow: false,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: false,
+      receiveShadow: false,
     },
   });
 
@@ -80,12 +80,12 @@ export const run = async (view: ThreeView) => {
     polygon: {
       color: 0x00aaff,
       height: 10,
-      extruded_height: 0,
-      clamp_to_ground: true,
+      extrudedHeight: 0,
+      clampToGround: true,
       wireframe: false,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
       layers: ["waterarea"],
     },
   });
@@ -99,10 +99,10 @@ export const run = async (view: ThreeView) => {
       color: 0xc320d8,
       width: 2,
       height: 1,
-      clamp_to_ground: true,
+      clampToGround: true,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
       layers: ["contour"],
     },
   });
@@ -116,10 +116,10 @@ export const run = async (view: ThreeView) => {
       color: 0x777777,
       width: 3,
       height: 1,
-      clamp_to_ground: true,
+      clampToGround: true,
     },
-    vector_tile: {
-      max_zoom: 16,
+    vectorTile: {
+      maxZoom: 16,
       layers: ["road"],
     },
   });
@@ -171,8 +171,8 @@ export const run = async (view: ThreeView) => {
     },
     polygon: {
       color: 0x00aaff,
-      clamp_to_ground: true,
-      use_ground_normals: true,
+      clampToGround: true,
+      useGroundNormals: true,
     },
   });
 

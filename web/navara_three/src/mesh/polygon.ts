@@ -243,10 +243,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
     const meshMaterial = mesh.material;
     const mcolor = meshMaterial.color;
 
-    this.castShadow = !!meshMaterial.cast_shadow;
-    this.receiveShadow = !!meshMaterial.receive_shadow;
+    this.castShadow = !!meshMaterial.castShadow;
+    this.receiveShadow = !!meshMaterial.receiveShadow;
 
-    const clampToGround = meshMaterial.clamp_to_ground;
+    const clampToGround = meshMaterial.clampToGround;
     // This mesh should be texturized if it uses clamp-to-ground.
     const isTexturized = !!tileHandle;
     const shouldClipByStencil = !isTexturized && clampToGround;
@@ -263,7 +263,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.transparent = !!meshMaterial.transparent;
     material.opacity = meshMaterial.opacity ?? 1.0;
 
-    const uMinMaxHeights = meshMaterial.__internal__?.min_max_heights;
+    const uMinMaxHeights = meshMaterial.__internal__?.minMaxHeights;
     material.userData.uMinMaxHeight = {
       value: uMinMaxHeights,
     };
@@ -277,7 +277,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       value: shouldClipByStencil,
     };
     material.userData.useGroundNormals = {
-      value: !isTexturized && !!meshMaterial.use_ground_normals,
+      value: !isTexturized && !!meshMaterial.useGroundNormals,
     };
     material.userData.uPickable = {
       value: 0.0,
@@ -293,19 +293,19 @@ export class PolygonMesh extends BatchedFeatureMesh<
       value: meshMaterial.roughness ?? 0,
     };
     material.userData.waterScaleNormal = {
-      value: meshMaterial.water_scale_normal ?? 0,
+      value: meshMaterial.waterScaleNormal ?? 0,
     };
     material.userData.waterSpeed = {
-      value: meshMaterial.water_speed ?? 0,
+      value: meshMaterial.waterSpeed ?? 0,
     };
     material.userData.shininess = {
       value: meshMaterial.shininess ?? 0,
     };
     material.userData.specularStrength = {
-      value: meshMaterial.specular_strength ?? 0,
+      value: meshMaterial.specularStrength ?? 0,
     };
     material.userData.applyWaterNormal = {
-      value: (meshMaterial.apply_water_normal ?? false) ? 1.0 : 0.0,
+      value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
     };
     material.userData.waterNormalMap = {
       value: null,
@@ -366,7 +366,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.defines.USE_ROUGHNESS = 1;
     this.water = !!meshMaterial.water;
 
-    material.userData.waterNormalUrl = meshMaterial.water_normal_url;
+    material.userData.waterNormalUrl = meshMaterial.waterNormalUrl;
 
     this.enableWater();
 
@@ -680,7 +680,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     const next =
-      (material.show ?? true) && (material.surface_show ?? true) && active;
+      (material.show ?? true) && (material.surfaceShow ?? true) && active;
     if (prev.visible !== next) {
       this.visible = next;
       prev.visible = next;
@@ -705,11 +705,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
       prev.opacity = next;
     }
 
-    if (this.castShadow !== material.cast_shadow) {
-      this.castShadow = !!material.cast_shadow;
+    if (this.castShadow !== material.castShadow) {
+      this.castShadow = !!material.castShadow;
     }
-    if (this.receiveShadow !== material.receive_shadow) {
-      this.receiveShadow = !!material.receive_shadow;
+    if (this.receiveShadow !== material.receiveShadow) {
+      this.receiveShadow = !!material.receiveShadow;
     }
 
     if (prev.reflectivity !== material.reflectivity) {
@@ -719,7 +719,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       prev.reflectivity = next;
     }
 
-    const [min, max] = material.__internal__?.min_max_heights ?? [];
+    const [min, max] = material.__internal__?.minMaxHeights ?? [];
     if (prev.min !== min || prev.max !== max) {
       this.material.userData.uMinMaxHeight.value = [min, max];
       prev.min = min;
@@ -732,8 +732,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.material.userData.uIsTexturized.value = isTexturized;
     }
 
-    if (prev.use_ground_normals !== material.use_ground_normals) {
-      const next = !!material.use_ground_normals;
+    if (prev.useGroundNormals !== material.useGroundNormals) {
+      const next = !!material.useGroundNormals;
       this.material.userData.useGroundNormals.value = !isTexturized && next;
       prev.useGroundNormals = next;
     }
@@ -745,13 +745,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     if (
-      this.material.userData.uClampToGround.value !== material.clamp_to_ground
+      this.material.userData.uClampToGround.value !== material.clampToGround
     ) {
-      this.material.userData.uClampToGround.value = material.clamp_to_ground;
+      this.material.userData.uClampToGround.value = material.clampToGround;
 
       this._recalculateBoundingSphere();
     }
-    this.userData.draped = material.clamp_to_ground;
+    this.userData.draped = material.clampToGround;
 
     if (prev.water !== material.water) {
       const next = !!material.water;
@@ -760,14 +760,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.enableWater();
     }
 
-    if (prev.waterScaleNormal !== material.water_scale_normal) {
-      const next = material.water_scale_normal ?? 0;
+    if (prev.waterScaleNormal !== material.waterScaleNormal) {
+      const next = material.waterScaleNormal ?? 0;
       this.material.userData.waterScaleNormal.value = next;
       prev.waterScaleNormal = next;
     }
 
-    if (prev.waterSpeed !== material.water_speed) {
-      const next = material.water_speed ?? 0;
+    if (prev.waterSpeed !== material.waterSpeed) {
+      const next = material.waterSpeed ?? 0;
       this.material.userData.waterSpeed.value = next;
       prev.waterSpeed = next;
     }
@@ -778,14 +778,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
       prev.shininess = next;
     }
 
-    if (prev.specularStrength !== material.specular_strength) {
-      const next = material.specular_strength ?? 0;
+    if (prev.specularStrength !== material.specularStrength) {
+      const next = material.specularStrength ?? 0;
       this.material.userData.specularStrength.value = next;
       prev.specularStrength = next;
     }
 
-    if (prev.applyWaterNormal !== material.apply_water_normal) {
-      const next = material.apply_water_normal ?? 0;
+    if (prev.applyWaterNormal !== material.applyWaterNormal) {
+      const next = material.applyWaterNormal ?? 0;
       this.material.userData.applyWaterNormal.value = next;
       prev.applyWaterNormal = next;
     }

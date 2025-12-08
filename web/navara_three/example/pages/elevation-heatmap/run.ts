@@ -51,13 +51,13 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
-    raster_terrain: {
-      max_zoom: 12,
-      min_zoom: 5,
-      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
-      tile_size: 512,
-      cast_shadow: false,
-      receive_shadow: false,
+    rasterTerrain: {
+      maxZoom: 12,
+      minZoom: 5,
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+      tileSize: 512,
+      castShadow: false,
+      receiveShadow: false,
     },
   });
 
@@ -69,15 +69,15 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
-    raster_tile: {
-      max_zoom: 15,
+    rasterTile: {
+      maxZoom: 15,
     },
-    elevation_heatmap: {
-      max_height: 3000,
-      min_height: 0,
-      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
+    elevationHeatmap: {
+      maxHeight: 3000,
+      minHeight: 0,
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       logarithmic: true,
-      log_boundary: 1000,
+      logBoundary: 1000,
     },
   };
 
@@ -112,13 +112,13 @@ export const run = async (view: ThreeView) => {
   view.globe.color = 0x9481ad;
 
   const changeFunc = () => {
-    if (!layerDef.elevation_heatmap) {
+    if (!layerDef.elevationHeatmap) {
       return;
     }
-    layerDef.elevation_heatmap.max_height = params.max_height;
-    layerDef.elevation_heatmap.min_height = params.min_height;
-    layerDef.elevation_heatmap.logarithmic = params.logarithmic;
-    layerDef.elevation_heatmap.log_boundary = params.log_boundary;
+    layerDef.elevationHeatmap.maxHeight = params.max_height;
+    layerDef.elevationHeatmap.minHeight = params.min_height;
+    layerDef.elevationHeatmap.logarithmic = params.logarithmic;
+    layerDef.elevationHeatmap.logBoundary = params.log_boundary;
 
     if (params.color_map === "plateau") {
       view.globe.elevationColormap = PLATEAU_COLOR_MAP;

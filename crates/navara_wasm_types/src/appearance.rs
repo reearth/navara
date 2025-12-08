@@ -12,8 +12,14 @@ pub struct PointMaterial {
     pub color: Option<u32>,
     pub center: Option<Vec2>,
     pub height: Option<f32>,
+    #[wasm_bindgen(js_name = scaleByDistance)]
+    #[serde(rename = "scaleByDistance")]
     pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = clampToGround)]
+    #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    #[wasm_bindgen(js_name = depthTest)]
+    #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
     pub transparent: Option<bool>,
 }
@@ -67,10 +73,18 @@ pub struct BillboardMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
+    #[wasm_bindgen(js_name = scaleByDistance)]
+    #[serde(rename = "scaleByDistance")]
     pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = clampToGround)]
+    #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    #[wasm_bindgen(js_name = depthTest)]
+    #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
     pub transparent: Option<bool>,
+    #[wasm_bindgen(js_name = alphaTest)]
+    #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
 }
 
@@ -118,27 +132,51 @@ pub struct TextMaterial {
     pub color: Option<u32>,
     pub center: Option<Vec2>,
     pub height: Option<f32>,
+    #[wasm_bindgen(js_name = scaleByDistance)]
+    #[serde(rename = "scaleByDistance")]
     pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = clampToGround)]
+    #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    #[wasm_bindgen(js_name = depthTest)]
+    #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
     /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
     #[wasm_bindgen(getter_with_clone)]
     pub font: Option<String>,
+    #[wasm_bindgen(js_name = backgroundColor)]
+    #[serde(rename = "backgroundColor")]
     pub background_color: Option<u32>,
+    #[wasm_bindgen(js_name = borderColor)]
+    #[serde(rename = "borderColor")]
     pub border_color: Option<u32>,
+    #[wasm_bindgen(js_name = borderWidth)]
+    #[serde(rename = "borderWidth")]
     pub border_width: Option<f32>,
+    #[wasm_bindgen(js_name = cornerRadius)]
+    #[serde(rename = "cornerRadius")]
     pub corner_radius: Option<f32>,
     pub padding: Option<Vec2>,
     // outline
     /// Outline blur radius in CSS pixels. Defaults to `0.0`.
+    #[wasm_bindgen(js_name = outlineBlur)]
+    #[serde(rename = "outlineBlur")]
     pub outline_blur: Option<f32>,
+    #[wasm_bindgen(js_name = outlineColor)]
+    #[serde(rename = "outlineColor")]
     pub outline_color: Option<u32>, // outlineColor Defalut:black
     /// Pixel offset `[x, y]` in CSS pixels. Defaults to `(0.0, 0.0)`.
+    #[wasm_bindgen(js_name = outlineOffset)]
+    #[serde(rename = "outlineOffset")]
     pub outline_offset: Option<Vec2>,
+    #[wasm_bindgen(js_name = outlineOpacity)]
+    #[serde(rename = "outlineOpacity")]
     pub outline_opacity: Option<f32>, // outlineOpacity Default:1
     /// Outline thickness measured in CSS pixels. Defaults to `0.0`.
+    #[wasm_bindgen(js_name = outlineWidth)]
+    #[serde(rename = "outlineWidth")]
     pub outline_width: Option<f32>,
 }
 
@@ -203,11 +241,19 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
     pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
     pub color: Option<u32>,
     pub width: Option<f32>,
+    #[wasm_bindgen(js_name = clampToGround)]
+    #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    #[wasm_bindgen(js_name = useGroundNormals)]
+    #[serde(rename = "useGroundNormals")]
     pub use_ground_normals: Option<bool>,
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
@@ -294,7 +340,8 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineInternalMaterial {
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = minMaxHeights)]
+    #[serde(rename = "minMaxHeights")]
     pub min_max_heights: Vec<f64>,
 }
 
@@ -325,12 +372,22 @@ impl From<navara_material::PolylineInternalMaterial> for PolylineInternalMateria
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonMaterial {
     pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
     pub color: Option<u32>,
+    #[wasm_bindgen(js_name = clampToGround)]
+    #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    #[wasm_bindgen(js_name = useGroundNormals)]
+    #[serde(rename = "useGroundNormals")]
     pub use_ground_normals: Option<bool>,
     pub height: Option<f32>,
+    #[wasm_bindgen(js_name = extrudedHeight)]
+    #[serde(rename = "extrudedHeight")]
     pub extruded_height: Option<f32>,
     pub wireframe: Option<bool>,
     /// Reflectivity for post-process or env map.
@@ -341,6 +398,8 @@ pub struct PolygonMaterial {
     pub __internal__: Option<PolygonInternalMaterial>,
 
     /// Whether or not the height is obtained from the data. If false, the height is constant.
+    #[wasm_bindgen(js_name = perPositionHeight)]
+    #[serde(rename = "perPositionHeight")]
     pub per_position_height: Option<bool>,
     /// Need to enable `transparent`.
     pub opacity: Option<f32>,
@@ -348,24 +407,41 @@ pub struct PolygonMaterial {
     pub transparent: Option<bool>,
 
     /// Currently, this property is supported only in GeoJSON.
+    #[wasm_bindgen(js_name = surfaceShow)]
+    #[serde(rename = "surfaceShow")]
     pub surface_show: Option<bool>,
     /// Currently, this property is supported only in GeoJSON.
+    #[wasm_bindgen(js_name = outlineShow)]
+    #[serde(rename = "outlineShow")]
     pub outline_show: Option<bool>,
     /// Currently, this property is supported only in GeoJSON.
+    #[wasm_bindgen(js_name = outlineColor)]
+    #[serde(rename = "outlineColor")]
     pub outline_color: Option<u32>,
     /// Currently, this property is supported only in GeoJSON.
+    #[wasm_bindgen(js_name = outlineWidth)]
+    #[serde(rename = "outlineWidth")]
     pub outline_width: Option<f32>,
 
     /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = waterNormalUrl)]
+    #[serde(rename = "waterNormalUrl")]
     pub water_normal_url: Option<String>,
     /// Scale water normal. Decreasing this value will make the water surface rough.
+    #[wasm_bindgen(js_name = waterScaleNormal)]
+    #[serde(rename = "waterScaleNormal")]
     pub water_scale_normal: Option<f32>,
     /// Water wave speed.
+    #[wasm_bindgen(js_name = waterSpeed)]
+    #[serde(rename = "waterSpeed")]
     pub water_speed: Option<f32>,
     pub shininess: Option<f32>,
+    #[wasm_bindgen(js_name = specularStrength)]
+    #[serde(rename = "specularStrength")]
     pub specular_strength: Option<f32>,
+    #[wasm_bindgen(js_name = applyWaterNormal)]
+    #[serde(rename = "applyWaterNormal")]
     pub apply_water_normal: Option<bool>,
     /// Enabling this value allows using `shininess` and `specular_strength`.
     pub specular: Option<bool>,
@@ -541,7 +617,8 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolygonInternalMaterial {
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = minMaxHeights)]
+    #[serde(rename = "minMaxHeights")]
     pub min_max_heights: Vec<f64>,
 }
 
@@ -571,14 +648,24 @@ impl From<navara_material::PolygonInternalMaterial> for PolygonInternalMaterial 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMaterial {
     pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
     pub size: Option<f32>,
     pub height: Option<f32>,
+    #[wasm_bindgen(js_name = maxSse)]
+    #[serde(rename = "maxSse")]
     pub max_sse: Option<f32>,
+    #[wasm_bindgen(js_name = clampToGround)]
+    #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    #[wasm_bindgen(js_name = shouldRotateInDefault)]
+    #[serde(rename = "shouldRotateInDefault")]
     pub should_rotate_in_default: Option<bool>,
     pub color: Option<u32>,
     pub metalness: Option<f32>,
@@ -588,24 +675,40 @@ pub struct ModelMaterial {
     pub reflectivity: Option<f32>,
     /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = waterNormalUrl)]
+    #[serde(rename = "waterNormalUrl")]
     pub water_normal_url: Option<String>,
     /// Scale water normal. Decreasing this value will make the water surface rough.
+    #[wasm_bindgen(js_name = waterScaleNormal)]
+    #[serde(rename = "waterScaleNormal")]
     pub water_scale_normal: Option<f32>,
     /// Water wave speed.
+    #[wasm_bindgen(js_name = waterSpeed)]
+    #[serde(rename = "waterSpeed")]
     pub water_speed: Option<f32>,
     pub shininess: Option<f32>,
+    #[wasm_bindgen(js_name = specularStrength)]
+    #[serde(rename = "specularStrength")]
     pub specular_strength: Option<f32>,
+    #[wasm_bindgen(js_name = applyWaterNormal)]
+    #[serde(rename = "applyWaterNormal")]
     pub apply_water_normal: Option<bool>,
     /// Enabling this value allows using `shininess` and `specular_strength`.
     pub specular: Option<bool>,
     pub ior: Option<f32>,
     // animation
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = animationActiveClip)]
+    #[serde(rename = "animationActiveClip")]
     pub animation_active_clip: Option<String>,
+    #[wasm_bindgen(js_name = animationSpeed)]
+    #[serde(rename = "animationSpeed")]
     pub animation_speed: Option<f32>,
     // Point size for point clouds data.
+    #[wasm_bindgen(js_name = pointSize)]
+    #[serde(rename = "pointSize")]
     pub point_size: Option<f32>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
@@ -687,11 +790,14 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInternalMaterial {
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = pointCloud)]
+    #[serde(rename = "pointCloud")]
     pub point_cloud: bool,
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = dracoCompressed)]
+    #[serde(rename = "dracoCompressed")]
     pub draco_compressed: bool,
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = pointCloudGeodeticNormal)]
+    #[serde(rename = "pointCloudGeodeticNormal")]
     pub point_cloud_geodetic_normal: WasmVec3,
 }
 
@@ -721,9 +827,15 @@ pub struct RasterTileMaterial {
     pub show: Option<bool>,
     pub color: Option<u32>,
     pub opacity: Option<f32>,
+    #[wasm_bindgen(js_name = maxZoom)]
+    #[serde(rename = "maxZoom")]
     pub max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
     pub min_zoom: Option<usize>,
     pub tms: Option<bool>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
 }
 
@@ -765,26 +877,55 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub opacities: Vec<f32>,
     texture_fragments: Option<Vec<Option<TextureFragment>>>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
 
     // Elevation Heatmap fields
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = isElevationHeatmaps)]
+    #[serde(rename = "isElevationHeatmaps")]
     pub is_elevation_heatmaps: Vec<u8>,
     // Shared elevation heatmap configuration (all heatmap layers use the same settings)
+    #[wasm_bindgen(js_name = elevationMinHeight)]
+    #[serde(rename = "elevationMinHeight")]
     pub elevation_min_height: f64,
+    #[wasm_bindgen(js_name = elevationMaxHeight)]
+    #[serde(rename = "elevationMaxHeight")]
     pub elevation_max_height: f64,
+    #[wasm_bindgen(js_name = elevationRScaler)]
+    #[serde(rename = "elevationRScaler")]
     pub elevation_r_scaler: f64,
+    #[wasm_bindgen(js_name = elevationGScaler)]
+    #[serde(rename = "elevationGScaler")]
     pub elevation_g_scaler: f64,
+    #[wasm_bindgen(js_name = elevationBScaler)]
+    #[serde(rename = "elevationBScaler")]
     pub elevation_b_scaler: f64,
+    #[wasm_bindgen(js_name = elevationBoundary)]
+    #[serde(rename = "elevationBoundary")]
     pub elevation_boundary: f64,
+    #[wasm_bindgen(js_name = elevationMaxOffset)]
+    #[serde(rename = "elevationMaxOffset")]
     pub elevation_max_offset: f64,
+    #[wasm_bindgen(js_name = elevationMinOffset)]
+    #[serde(rename = "elevationMinOffset")]
     pub elevation_min_offset: f64,
+    #[wasm_bindgen(js_name = elevationEpsilon)]
+    #[serde(rename = "elevationEpsilon")]
     pub elevation_epsilon: f64,
+    #[wasm_bindgen(js_name = elevationOffset)]
+    #[serde(rename = "elevationOffset")]
     pub elevation_offset: f64,
 
     pub logarithmic: bool,
+    #[wasm_bindgen(js_name = logBoundary)]
+    #[serde(rename = "logBoundary")]
     pub log_boundary: f64,
 }
 
@@ -890,13 +1031,23 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorTileMaterial {
     pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = maxZoom)]
+    #[serde(rename = "maxZoom")]
     pub max_zoom: Option<usize>,
     /// `Globe.max_sse` would be used to a material that uses `clamp_to_ground`.
+    #[wasm_bindgen(js_name = maxSse)]
+    #[serde(rename = "maxSse")]
     pub max_sse: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub layers: Option<Vec<String>>,
+    #[wasm_bindgen(js_name = overscaledMaxZoom)]
+    #[serde(rename = "overscaledMaxZoom")]
     pub overscaled_max_zoom: Option<usize>,
 }
 
@@ -934,14 +1085,30 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTerrainMaterial {
     pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
+    #[wasm_bindgen(js_name = maxZoom)]
+    #[serde(rename = "maxZoom")]
     pub max_zoom: Option<usize>,
     /// The terrain is upsampled until it reaches `overscaled_max_zoom`.
+    #[wasm_bindgen(js_name = overscaledMaxZoom)]
+    #[serde(rename = "overscaledMaxZoom")]
     pub overscaled_max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
     pub min_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = elevationDecoder)]
+    #[serde(rename = "elevationDecoder")]
     pub elevation_decoder: Option<ElevationDecoder>,
+    #[wasm_bindgen(js_name = tileSize)]
+    #[serde(rename = "tileSize")]
     pub tile_size: Option<u32>,
 }
 
@@ -995,20 +1162,38 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElevationHeatmapMaterial {
+    #[wasm_bindgen(js_name = maxHeight)]
+    #[serde(rename = "maxHeight")]
     pub max_height: Option<f64>,
+    #[wasm_bindgen(js_name = minHeight)]
+    #[serde(rename = "minHeight")]
     pub min_height: Option<f64>,
+    #[wasm_bindgen(js_name = elevationDecoder)]
+    #[serde(rename = "elevationDecoder")]
     pub elevation_decoder: Option<ElevationDecoder>,
     pub logarithmic: bool,
+    #[wasm_bindgen(js_name = logBoundary)]
+    #[serde(rename = "logBoundary")]
     pub log_boundary: f64,
 }
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EllipsoidTerrainMaterial {
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
     pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
+    #[wasm_bindgen(js_name = maxZoom)]
+    #[serde(rename = "maxZoom")]
     pub max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
     pub min_zoom: Option<usize>,
 }
 

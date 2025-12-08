@@ -10,7 +10,7 @@ import ThreeView, {
   LLE,
 } from "@navara/three";
 import { eastNorthUpToFixedFrame } from "@navara/three_api";
-import { Vector3, Quaternion, Euler, Matrix4, Object3D } from "three";
+import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -23,9 +23,9 @@ import {
 import { addDateControl } from "../../helpers/control";
 
 const params = {
-  runSpeed: 25,
+  runSpeed: 5,
   rotationSpeed: 1.5,
-  modelScale: 5,
+  modelScale: 1,
   cameraFollow: true,
 };
 
@@ -68,8 +68,8 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TILE_DATASETS.openstreetmap.url,
     },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -78,10 +78,10 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
@@ -95,13 +95,15 @@ export const run = async (view: ThreeView) => {
       color: 0xffffff,
       metalness: 0,
       roughness: 1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
       height: -50,
     },
   });
 
-  view.camera.near = 1;
+  view.camera.options = {
+    autoAdjustNearFar: true,
+  };
 
   const pane = new Pane();
   addDateControl(view, pane);
@@ -139,12 +141,13 @@ export const run = async (view: ThreeView) => {
     type: "mesh",
     gltfModel: {
       url: LOCAL_DATASETS.soldierGLTF.url,
-      animation_enabled: true,
-      animation_active_clip: "Idle",
-      animation_speed: 1.0,
-      animation_loop: true,
-      animation_auto_play: true,
-      animation_crossfade_duration: 0.3,
+      animationEnabled: true,
+      animationActiveClip: "Idle",
+      animationSpeed: 1.0,
+      animationLoop: true,
+      animationAutoPlay: true,
+      animationCrossfadeDuration: 0.3,
+      useRTE: true,
     },
     scale: { x: params.modelScale, y: params.modelScale, z: params.modelScale },
     position: { x: startPos.x, y: startPos.y, z: startPos.z },
@@ -153,7 +156,7 @@ export const run = async (view: ThreeView) => {
 
   view.lookAt(
     new LLE(startLLE[0], startLLE[1], startLLE[2]),
-    new Vector3(60, 40, 30),
+    new Vector3(10, 0, 5),
   );
 
   initKeyboardControls(view, modelLayer);
@@ -261,7 +264,11 @@ const initKeyboardControls = (
 
     if (hasMovement) {
       updateModelTransform(view, modelLayer, dir, deltaTime);
-      updateCameraFollow(view, modelLayer.ref.raw);
+
+      const curPos = modelLayer.ref.getWorldPosition();
+      if (curPos) {
+        updateCameraFollow(view, curPos);
+      }
     }
 
     requestAnimationFrame(animFunc);
@@ -274,13 +281,16 @@ const updateModelTransform = (
   modelLayer: LayerHandle<GLTFModelLayer>,
   dir: Vector3,
   deltaTime: number,
-): number | null => {
+) => {
   const modelObject = modelLayer.ref.raw;
   if (!modelObject) {
-    return null;
+    return;
   }
 
-  const curPos = modelObject.position;
+  const curPos = modelLayer.ref.getWorldPosition();
+  if (!curPos) {
+    return;
+  }
 
   // Get current position in geodetic coordinates to calculate surface normal
   const currentLLE = vector3ToGeodetic(curPos);
@@ -379,15 +389,11 @@ const updateModelTransform = (
 /**
  * Update camera position to follow the model
  */
-const updateCameraFollow = (
-  view: ThreeView,
-  modelObject: Object3D | undefined,
-) => {
-  if (!modelObject || !params.cameraFollow) {
+const updateCameraFollow = (view: ThreeView, curPos: Vector3) => {
+  if (!params.cameraFollow) {
     return;
   }
 
-  const curPos = modelObject.position;
   const curLLE = vector3ToGeodetic(curPos);
 
   view.cameraFollow(
@@ -395,7 +401,7 @@ const updateCameraFollow = (
     new LLE(
       (curLLE.lat * 180) / Math.PI,
       (curLLE.lng * 180) / Math.PI,
-      curLLE.height,
+      curLLE.height + params.modelScale, // Add modelScale to keep camera looking at model center height
     ),
   );
 };
