@@ -18,8 +18,8 @@ use wasm_bindgen::prelude::*;
 /// const camera = encodeCamera(6371000.0, 0.0, 0.0);
 /// // Use camera.high_x, camera.low_x, etc. in shaders
 /// ```
-#[wasm_bindgen]
-pub fn encode_camera(x: f64, y: f64, z: f64) -> EncodedVec3 {
+#[wasm_bindgen(js_name = encodePosition)]
+pub fn encode_position(x: f64, y: f64, z: f64) -> EncodedVec3 {
     let encoded = navara_core::EncodedVec3::encode_xyz(x, y, z);
 
     encoded.into()
@@ -30,8 +30,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode_camera() {
-        let camera = encode_camera(6371000.0, 0.0, 0.0);
+    fn test_encode_position() {
+        let camera = encode_position(6371000.0, 0.0, 0.0);
 
         // Verify the encoding preserves the value
         let reconstructed_x = camera.high.x as f64 + camera.low.x as f64;
@@ -39,8 +39,8 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_camera_all_axes() {
-        let camera = encode_camera(6371000.0, 6371000.0, 6371000.0);
+    fn test_encode_position_all_axes() {
+        let camera = encode_position(6371000.0, 6371000.0, 6371000.0);
 
         // Verify all axes are encoded
         let reconstructed_x = camera.high.x as f64 + camera.low.x as f64;
