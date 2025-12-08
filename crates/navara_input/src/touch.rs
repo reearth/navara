@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use bevy_ecs::event::{Event, EventReader, EventWriter};
 use bevy_ecs::resource::Resource;
-use bevy_ecs::system::ResMut;
+use bevy_ecs::system::{Res, ResMut};
 
-use navara_math::{EqualEpsilon, Vec2};
+use bevy_log::info;
+use navara_math::{EqualEpsilon, FloatType, Vec2};
+use navara_window::Window;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TouchState {
@@ -25,8 +27,8 @@ pub enum TouchGesture {
 pub struct TouchPoint {
     pub state: TouchState,
     pub id: i32,
-    pub position: Vec2, // Relative position from client area. 0.0 - 1.0
-    pub prev_position: Option<Vec2>, // Relative position from client area. 0.0 - 1.0
+    pub position: Vec2,
+    pub prev_position: Option<Vec2>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Resource)]
@@ -37,7 +39,7 @@ pub struct TouchList {
 #[derive(Debug, Clone, PartialEq, Event)]
 pub struct TouchInput {
     pub state: TouchState,
-    pub position: Vec2, // Relative position from client area. 0.0 - 1.0
+    pub position: Vec2,
     pub id: i32,
 }
 
@@ -45,6 +47,7 @@ pub fn process_touch_input_events(
     mut ev: EventReader<TouchInput>,
     mut touch_list: ResMut<TouchList>,
     mut gesture_ev: EventWriter<TouchControl>,
+    window: Res<Window>,
 ) {
     for touch in ev.read() {
         match touch.state {
@@ -53,6 +56,13 @@ pub fn process_touch_input_events(
                     .touches
                     .get(&(touch.id))
                     .map_or(touch.position, |t| t.position);
+
+                let duplicate_touch_point = (prev_position.x as i32 == touch.position.x as i32)
+                    && (prev_position.y as i32 == touch.position.y as i32);
+
+                if duplicate_touch_point && touch.state == TouchState::Move {
+                    continue;
+                }
 
                 touch_list.touches.insert(
                     touch.id,
@@ -69,9 +79,11 @@ pub fn process_touch_input_events(
             }
         }
 
-        if let Some(gesture) = recognize_gesture(&touch_list) {
+        if let Some(gesture) = recognize_gesture(&touch_list, &window) {
+            info!("gesture: {:?}", gesture);
             gesture_ev.write(gesture);
         }
+        // info!("touch list: {:?}", touch_list);
     }
 }
 
@@ -81,10 +93,11 @@ pub struct TouchControl {
     pub delta: Vec2,
 }
 
-fn recognize_gesture(touch_list: &TouchList) -> Option<TouchControl> {
+fn recognize_gesture(touch_list: &TouchList, window: &Window) -> Option<TouchControl> {
     if touch_list.touches.len() == 2 {
-        let p1 = touch_list.touches.values().next().unwrap();
-        let p2 = touch_list.touches.values().nth(1).unwrap();
+        let mut touches = touch_list.touches.values();
+        let p1 = touches.next().unwrap();
+        let p2 = touches.next().unwrap();
 
         let (p1_prev, p2_prev) = match (p1.prev_position, p2.prev_position) {
             (Some(pp1), Some(pp2)) => (pp1, pp2),
@@ -96,38 +109,45 @@ fn recognize_gesture(touch_list: &TouchList) -> Option<TouchControl> {
         let p2_dir = (p2_pos - p2_prev).normalize();
 
         let dot = p1_dir.dot(p2_dir);
+
+        info!("dot: {}", dot);
+        info!("p1_dir: {:?}, p2_dir: {:?}", p1_dir, p2_dir);
+        info!("p1_pos: {:?}, p1_prev: {:?}", p1_pos, p1_prev);
+        info!("p2_pos: {:?}, p2_prev: {:?}", p2_pos, p2_prev);
+
         // both directions are almost parallel - cos(theata) ~= 1.0
         if dot.equal_diff_epsilon(1.0, 0.1) {
             // same direction - two finger swipe
             return Some(TouchControl {
                 gesture: TouchGesture::DoubleSwipe,
-                delta: p1_pos - p1_prev,
+                delta: (p1_pos - p1_prev)
+                    / Vec2::new(window.width as FloatType, window.height as FloatType),
             });
         }
 
         let prev_distance = (p1_prev - p2_prev).length();
         let current_distance = (p1_pos - p2_pos).length();
 
+        info!(
+            "prev_distance: {}, current_distance: {}",
+            prev_distance, current_distance
+        );
         if current_distance > prev_distance {
             return Some(TouchControl {
                 gesture: TouchGesture::Spread,
-                delta: Vec2::new((prev_distance - current_distance) * 10000.0, 0.0),
+                delta: Vec2::new((prev_distance - current_distance), 0.0),
             });
         } else if current_distance < prev_distance {
             return Some(TouchControl {
                 gesture: TouchGesture::Pinch,
-                delta: Vec2::new((prev_distance - current_distance) * 10000.0, 0.0),
-            });
-        } else {
-            return Some(TouchControl {
-                gesture: TouchGesture::DoubleSwipe,
-                delta: p1_pos - p1_prev,
+                delta: Vec2::new((prev_distance - current_distance), 0.0),
             });
         }
     } else if touch_list.touches.len() == 1 {
         let touch = touch_list.touches.values().next().unwrap();
         let delta = if let Some(prev_pos) = touch.prev_position {
-            touch.position - prev_pos
+            (touch.position - prev_pos)
+                / Vec2::new(window.width as FloatType, window.height as FloatType)
         } else {
             Vec2::new(0.0, 0.0)
         };

@@ -37,17 +37,15 @@ export function registerInputEvents(
     });
   };
 
+
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
-
-    const width = element.clientWidth;
-    const height = element.clientHeight;
 
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchstart",
-        x: touch.clientX / width,
-        y: touch.clientY / height,
+        x: touch.clientX,
+        y: touch.clientY,
         id: touch.identifier,
       });
     }
@@ -56,14 +54,11 @@ export function registerInputEvents(
   const touchend = (event: TouchEvent) => {
     event.preventDefault();
 
-    const width = element.clientWidth;
-    const height = element.clientHeight;
-
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchend",
-        x: touch.clientX / width,
-        y: touch.clientY / height,
+        x: touch.clientX,
+        y: touch.clientY,
         id: touch.identifier,
       });
     }
@@ -72,16 +67,14 @@ export function registerInputEvents(
   const touchmove = (event: TouchEvent) => {
     event.preventDefault();
 
-    const width = element.clientWidth;
-    const height = element.clientHeight;
-
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchmove",
-        x: touch.clientX / width,
-        y: touch.clientY / height,
+        x: touch.clientX,
+        y: touch.clientY,
         id: touch.identifier,
       });
+      // console.log("touchmove");
     }
   };
 

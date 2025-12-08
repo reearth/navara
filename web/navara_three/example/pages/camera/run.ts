@@ -68,16 +68,16 @@ export const run = async (view: ThreeView) => {
   });
 
   view.camera.on("movestart", () => {
-    console.log("movestart");
+    // console.log("movestart");
   });
   view.camera.on("move", () => {
-    console.log("move");
+    // console.log("move");
     const position = view.camera.positionGeographic;
     const orientation = view.camera.orientation;
     updateCameraParamsToPane({ ...position, ...orientation });
   });
   view.camera.on("moveend", () => {
-    console.log("moveend");
+    // console.log("moveend");
     const position = view.camera.positionGeographic;
     const orientation = view.camera.orientation;
 
