@@ -21,7 +21,7 @@ import {
   type ViewContext,
 } from "../../core";
 
-import { encode_camera } from "@navara/engine-api";
+import { encodePosition } from "@navara/engine-api";
 import { calcModelMatrixRTE } from "@navara/three_api";
 import RteModelParsVertex from "@shaders/glsl/chunks/rte_model_pars_vertex.glsl";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
@@ -122,7 +122,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     // In RTE mode, keep raw.position at (0,0,0)
     // The world position is stored in this.position and encoded in RTE uniforms
-    const useRTE = this.config.gltfModel?.useRTE ?? false;
+    const useRTE = this.config.gltfModel?.useRTE ?? true;
 
     if (this.position && !useRTE) {
       this.raw?.position.copy(this.position);
@@ -237,7 +237,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     );
 
     // Encode the world position as high/low components
-    const encoded = encode_camera(
+    const encoded = encodePosition(
       worldPosition.x,
       worldPosition.y,
       worldPosition.z,
@@ -293,7 +293,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       );
 
       // Encode camera position as high/low components
-      const encoded = encode_camera(
+      const encoded = encodePosition(
         camera.position.x,
         camera.position.y,
         camera.position.z,
