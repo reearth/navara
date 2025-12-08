@@ -1,6 +1,4 @@
-import ThreeView, {
-  JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
@@ -8,7 +6,6 @@ import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
 } from "../../helpers/constants";
-
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -67,7 +64,7 @@ export const run = async (view: ThreeView) => {
   view.setCamera({
     lng: 139.7460838759,
     lat: 35.6625239152,
-    height: 295.60,
+    height: 295.6,
     heading: 21.5815985024,
     pitch: -19,
     roll: 0,
