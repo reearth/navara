@@ -24,8 +24,6 @@ pub enum TouchGesture {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TouchPoint {
-    pub state: TouchState,
-    pub id: i32,
     pub position: Vec2,
     pub prev_position: Option<Vec2>,
 }
@@ -66,8 +64,6 @@ pub fn process_touch_input_events(
                 touch_list.touches.insert(
                     touch.id,
                     TouchPoint {
-                        state: touch.state,
-                        id: touch.id,
                         position: touch.position,
                         prev_position: Some(prev_position),
                     },
