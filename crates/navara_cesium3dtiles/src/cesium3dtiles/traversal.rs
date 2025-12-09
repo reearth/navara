@@ -308,13 +308,15 @@ fn mark_leaves(
     }
 
     // Handle JSON child tiles
-    if let Some(content) = &tile_meta.content {
-        if content.uri.contains(".json")
-            && tile_meta.children.is_none()
-            && tile.data_requester_id.is_none()
+    if let Some(uri) = &tile_meta
+        .content
+        .as_ref()
+        .map(|c| c.uri.as_ref().unwrap_or_else(|| c.url.as_ref().unwrap()))
+    {
+        if uri.contains(".json") && tile_meta.children.is_none() && tile.data_requester_id.is_none()
         {
             // spawn a data requester to load the child tileset json.
-            let url = construct_child_tile_url(base_url, content.uri.as_str())
+            let url = construct_child_tile_url(base_url, uri.as_str())
                 .as_str()
                 .to_string();
 

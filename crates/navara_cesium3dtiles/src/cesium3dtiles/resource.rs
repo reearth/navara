@@ -10,8 +10,11 @@ pub struct Cesium3dTilesJsonTileSetStateMapKey {
 
 impl Cesium3dTilesJsonTileSetStateMapKey {
     pub fn from_tile(layer_id: Entity, tile_meta: &Tile) -> Option<Self> {
-        let uri = tile_meta.content.as_ref().map(|c| c.uri.clone())?;
-        let path = Self::get_path(&uri)?;
+        let uri = tile_meta
+            .content
+            .as_ref()
+            .map(|c| c.uri.as_ref().unwrap_or_else(|| c.url.as_ref().unwrap()))?;
+        let path = Self::get_path(uri)?;
         Some(Self { layer_id, path })
     }
     pub fn from_path(layer_id: Entity, path: &str) -> Option<Self> {

@@ -75,10 +75,16 @@ pub struct Cesium3dTileContent {
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
         let (uri, is_renderable_content) = match &tile.content {
-            Some(content) => (
-                Some(content.uri.clone()),
-                (!content.uri.contains(".json")) && (!content.uri.is_empty()),
-            ),
+            Some(content) => {
+                let uri = content
+                    .uri
+                    .clone()
+                    .unwrap_or_else(|| content.url.clone().unwrap());
+                (
+                    Some(uri.clone()),
+                    (!uri.contains(".json")) && (!uri.is_empty()),
+                )
+            }
             None => (None, false),
         };
 
@@ -135,11 +141,6 @@ impl Cesium3dTileContent {
             _ => None,
         };
         let default_refine = Refine::Replace;
-        let uri = content
-            .uri
-            .clone()
-            .unwrap_or_else(|| content.url.clone().unwrap());
-        let is_renderable_content = !uri.ends_with(".json");
         Self {
             uri,
             data_requester_id: None,
