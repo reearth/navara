@@ -37,7 +37,6 @@ export function registerInputEvents(
     });
   };
 
-
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
 
@@ -74,7 +73,6 @@ export function registerInputEvents(
         y: touch.clientY,
         id: touch.identifier,
       });
-      // console.log("touchmove");
     }
   };
 

@@ -4,7 +4,6 @@ use bevy_ecs::event::{Event, EventReader, EventWriter};
 use bevy_ecs::resource::Resource;
 use bevy_ecs::system::{Res, ResMut};
 
-use bevy_log::info;
 use navara_math::{EqualEpsilon, FloatType, Vec2};
 use navara_window::Window;
 
@@ -80,10 +79,8 @@ pub fn process_touch_input_events(
         }
 
         if let Some(gesture) = recognize_gesture(&touch_list, &window) {
-            info!("gesture: {:?}", gesture);
             gesture_ev.write(gesture);
         }
-        // info!("touch list: {:?}", touch_list);
     }
 }
 
@@ -110,37 +107,29 @@ fn recognize_gesture(touch_list: &TouchList, window: &Window) -> Option<TouchCon
 
         let dot = p1_dir.dot(p2_dir);
 
-        info!("dot: {}", dot);
-        info!("p1_dir: {:?}, p2_dir: {:?}", p1_dir, p2_dir);
-        info!("p1_pos: {:?}, p1_prev: {:?}", p1_pos, p1_prev);
-        info!("p2_pos: {:?}, p2_prev: {:?}", p2_pos, p2_prev);
-
         // both directions are almost parallel - cos(theata) ~= 1.0
         if dot.equal_diff_epsilon(1.0, 0.1) {
             // same direction - two finger swipe
             return Some(TouchControl {
                 gesture: TouchGesture::DoubleSwipe,
-                delta: (p1_pos - p1_prev)
-                    / Vec2::new(window.width as FloatType, window.height as FloatType),
+                delta: ((p1_pos - p1_prev)
+                    / Vec2::new(window.width as FloatType, window.height as FloatType))
+                    * 10.0,
             });
         }
 
         let prev_distance = (p1_prev - p2_prev).length();
         let current_distance = (p1_pos - p2_pos).length();
 
-        info!(
-            "prev_distance: {}, current_distance: {}",
-            prev_distance, current_distance
-        );
         if current_distance > prev_distance {
             return Some(TouchControl {
                 gesture: TouchGesture::Spread,
-                delta: Vec2::new((prev_distance - current_distance), 0.0),
+                delta: Vec2::new((prev_distance - current_distance) * 10.0, 0.0),
             });
         } else if current_distance < prev_distance {
             return Some(TouchControl {
                 gesture: TouchGesture::Pinch,
-                delta: Vec2::new((prev_distance - current_distance), 0.0),
+                delta: Vec2::new((prev_distance - current_distance) * 10.0, 0.0),
             });
         }
     } else if touch_list.touches.len() == 1 {
