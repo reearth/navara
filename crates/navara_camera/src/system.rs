@@ -646,12 +646,12 @@ fn handle_zoom(
     is_cam_moving: bool,
     cam_st: &mut CameraStatus,
 ) {
-    let touch_zoom = touch_control
-        .as_ref()
-        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Pinch)
-        || touch_control
-            .as_ref()
-            .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Spread);
+    let touch_zoom = touch_control.as_ref().is_some_and(|tc| {
+        matches!(
+            tc.gesture,
+            navara_input::TouchGesture::Pinch | navara_input::TouchGesture::Spread
+        )
+    });
 
     if !controller.enable_zoom || (mw.is_empty() && !touch_zoom) || is_ctrl {
         return;
