@@ -15,7 +15,9 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
     data: {
       url: TILES_3D_DATASETS.googlePhotorealTiles.url,
     },
-    model: { max_sse: 120 },
+    model: {
+      maxSse: 60,
+    },
   },
 ];
 

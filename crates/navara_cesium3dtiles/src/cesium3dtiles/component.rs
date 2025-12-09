@@ -6,8 +6,10 @@ use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 use url::{ParseError, Url};
+
+use crate::TileOrderByDistance;
 
 pub type Cesium3dTileContentMetadata = navara_parser::cesium3dtiles::tileset::Tile;
 
@@ -115,9 +117,19 @@ impl Cesium3dTileContent {
 
                 let center_transformed = tile_transform.transform_point(center);
 
+                let x_transformed = tile_transform.transform_vector(x_axis);
+                let y_transformed = tile_transform.transform_vector(y_axis);
+                let z_transformed = tile_transform.transform_vector(z_axis);
+
+                let extents = Vec3::new(
+                    x_transformed.x.abs() + y_transformed.x.abs() + z_transformed.x.abs(),
+                    x_transformed.y.abs() + y_transformed.y.abs() + z_transformed.y.abs(),
+                    x_transformed.z.abs() + y_transformed.z.abs() + z_transformed.z.abs(),
+                );
+
                 Some(Aabb {
                     center: center_transformed,
-                    extents: Vec3::new(x_axis.length(), y_axis.length(), z_axis.length()),
+                    extents,
                 })
             }
             _ => None,
@@ -192,6 +204,7 @@ pub struct Cesium3dTileContentState {
     /// Whether this content was touched while traversing.
     pub touched: bool,
     pub is_data_loaded: bool,
+    pub is_rendered_last_frame: bool,
     pub are_all_children_loaded: bool,
     pub distance_from_camera: f32,
     pub sse: f32,
@@ -221,3 +234,35 @@ pub struct RenderedCesium3dTileContent {
 pub struct TileTransform {
     pub transform: Transform,
 }
+
+#[derive(Component, PartialEq, Debug, Clone)]
+pub struct Cesium3dTilesTreeOrder {
+    pub index: usize,
+    pub distance: TileOrderByDistance,
+}
+
+impl PartialOrd for Cesium3dTilesTreeOrder {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Cesium3dTilesTreeOrder {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.index < other.index {
+            return Ordering::Less;
+        }
+        if self.index > other.index {
+            return Ordering::Greater;
+        }
+        if self.distance < other.distance {
+            return Ordering::Less;
+        }
+        if self.distance > other.distance {
+            return Ordering::Greater;
+        }
+        Ordering::Equal
+    }
+}
+
+impl Eq for Cesium3dTilesTreeOrder {}

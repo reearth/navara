@@ -1,14 +1,13 @@
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
     glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
-    Cesium3dTilesJsonTileSetState, Cesium3dTilesJsonTileSetStateMap,
-    Cesium3dTilesJsonTileSetStateMapKey, RenderedCesium3dTileContent,
+    Cesium3dTilesJsonTileSetStateMap, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
     query::{Added, Changed, Or, With, Without},
-    system::{Commands, Query, Res, ResMut},
+    system::{Commands, ParamSet, Query, Res, ResMut},
     world::Ref,
 };
 use bevy_log::error;
@@ -19,7 +18,7 @@ use navara_component::{Deleted, Priority};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     id::FeatureId,
-    model::{ModelBin, ModelGeometry},
+    model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
 };
 use navara_layer::{
@@ -51,6 +50,11 @@ pub fn request_metadata(
                 &mut buf,
                 DataRequesterExtension::Json,
             ),
+            // The root tileset is always prioritized.
+            Cesium3dTilesTreeOrder {
+                index: 0,
+                distance: Default::default(),
+            },
         ));
     }
 }
@@ -59,18 +63,18 @@ pub fn request_metadata(
 pub fn construct_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
     requesters: Query<
         (
             Entity,
             &Cesium3dTilesMetadataDataRequesterMarker,
             &DataRequester,
+            Option<&Cesium3dTilesTreeOrder>,
         ),
         (Changed<DataRequester>, Without<Deleted>),
     >,
     layers: Query<&Cesium3dTilesLayer>,
 ) {
-    for (e, marker, req) in &requesters {
+    for (e, marker, req, order) in &requesters {
         // TODO: Handle fail
         if !matches!(req.status, DataRequesterStatus::Success) {
             continue;
@@ -101,41 +105,61 @@ pub fn construct_cesium_3d_tiles_tree(
             }
         };
 
-        commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
+        let mut entity = commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
 
-        if let Some(key) = Cesium3dTilesJsonTileSetStateMapKey::from_url(marker.0, &req.url) {
-            sync_json_tilesets.set_json_node_to_tileset_state(
-                key,
-                Cesium3dTilesJsonTileSetState {
-                    is_constucted: true,
-                },
-            );
+        if let Some(order) = order {
+            entity.insert(order.clone());
         }
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn traverse_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
     window: Res<Window>,
-    mut tiles: Query<(&Cesium3dTilesMetadata, &mut Cesium3dTilesTree)>,
+    mut tiles: Query<(
+        &Cesium3dTilesMetadata,
+        &mut Cesium3dTilesTree,
+        &Cesium3dTilesTreeOrder,
+    )>,
     camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
     requesters: Cesium3dTileContentRequesterQuery,
     changed_requesters: ChangedCesium3dTileContentRequesterQuery,
-    mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
+    mut rendered_tiles: ParamSet<(
+        Query<&mut RenderedCesium3dTileContent>,
+        Query<
+            (),
+            Or<(
+                Added<RenderedCesium3dTileContent>,
+                Changed<RenderedCesium3dTileContent>,
+            )>,
+        >,
+    )>,
     features: Query<&FeatureId>,
-    renderable_features: Query<&RenderableFeature>,
+    mut renderable_features: ParamSet<(
+        Query<&RenderableFeature>,
+        Query<(), (Changed<RenderableFeature>, With<ModelMarker>)>,
+    )>,
 ) {
     let is_data_requesters_changed = !changed_requesters.is_empty();
+    let changed_rendered_tiles = !rendered_tiles.p1().is_empty();
+    let changed_renderable_features = !renderable_features.p1().is_empty();
 
-    for (metadata, mut tree) in &mut tiles {
+    let mut rendered_tiles = rendered_tiles.p0();
+    let renderable_features = renderable_features.p0();
+
+    // Sort tree by `Cesium3dTilesTreeOrder` that has a order of each tile.
+    for (metadata, mut tree, order) in &mut tiles.iter_mut().sort::<&Cesium3dTilesTreeOrder>() {
         for (_, camera, frustum) in &camera {
             let needs_update = is_data_requesters_changed
+                || changed_rendered_tiles
+                || changed_renderable_features
                 || camera.is_added()
                 || camera.is_changed()
-                || tree.is_added();
+                || tree.is_added()
+                || sync_json_tilesets.needs_update();
             if !needs_update {
                 continue;
             }
@@ -156,9 +180,12 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &features,
                 &renderable_features,
                 &window,
+                order,
             );
         }
     }
+
+    sync_json_tilesets.set_needs_update(false);
 }
 
 #[allow(clippy::type_complexity)]
@@ -262,5 +289,24 @@ pub fn delete_cesium3dtiles_layer(
             commands.entity(e).despawn();
         }
         commands.entity(e).despawn();
+    }
+}
+
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
+pub fn remove_invisible_tileset(
+    mut commands: Commands,
+    mut tiles: Query<(Entity, &mut Cesium3dTilesTree)>,
+    mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
+) {
+    for (entity, mut tree) in &mut tiles {
+        let tile = &tree.root;
+
+        if tile.state.is_visible {
+            continue;
+        }
+
+        mark_rendered_tiles_invisible(&mut tree.root, &mut rendered_tiles);
+
+        commands.entity(entity).despawn();
     }
 }

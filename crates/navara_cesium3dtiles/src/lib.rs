@@ -48,6 +48,7 @@ impl Plugin for Cesium3dTilesPlugin {
                 b3dm::system::remove_invisible_rendered_tiles,
                 pnts::system::remove_invisible_rendered_tiles,
                 glb::system::remove_invisible_rendered_tiles,
+                cesium3dtiles::system::remove_invisible_tileset,
                 cesium3dtiles::system::delete_cesium3dtiles_layer,
                 cesium3dtiles::system::update_cesium3dtiles_layer,
             )
