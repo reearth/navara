@@ -1029,22 +1029,34 @@ const addCloudsControl = (
 };
 
 const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
+  // Determine the current AA effect type based on device
+  const isMobile = isMobileDevice();
+  const currentEffect = isMobile ? "fxaa" : "smaa";
+
   const PARAMS = {
     enable: false,
-    effect: "antialiasing",
-    quality: "medium",
-    edgeDetectionMode: "color",
-  } as const;
+    // Show user what AA is actually being used (read-only info)
+    effect: currentEffect as "smaa" | "fxaa",
+    quality: "medium" as "ultra" | "high" | "medium" | "low",
+    // edgeDetectionMode is only applicable to SMAA
+    edgeDetectionMode: "color" as "depth" | "luma" | "color",
+  };
 
-  const isMobile = isMobileDevice();
-
-  defaultEffects.antialiasing.update({
-    visible: PARAMS.enable,
-    [isMobile ? "fxaa" : "smaa"]: {
-      quality: PARAMS.quality,
-      edgeDetectionMode: PARAMS.edgeDetectionMode,
-    },
-  });
+  // Initialize with current settings - only apply relevant options per effect type
+  if (currentEffect === "smaa") {
+    defaultEffects.antialiasing.update({
+      visible: PARAMS.enable,
+      smaa: {
+        quality: PARAMS.quality,
+        edgeDetectionMode: PARAMS.edgeDetectionMode,
+      },
+    });
+  } else {
+    defaultEffects.antialiasing.update({
+      visible: PARAMS.enable,
+      fxaa: {},
+    });
+  }
 
   const folder = pane.addFolder({
     title: "Antialias",
@@ -1053,35 +1065,56 @@ const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
   folder.addBinding(PARAMS, "enable").on("change", (v) => {
     defaultEffects.antialiasing.update({ visible: v.value });
   });
-  folder
-    .addBinding(PARAMS, "effect", {
-      options: Object.fromEntries(["smaa", "fxaa"].map((k) => [k, k])),
-    })
-    .on("change", (_v) => {
-      // view.aaEffect.effect = v.value;
-    });
+
+  // Effect type is determined by device - show as read-only info
+  folder.addBinding(PARAMS, "effect", {
+    readonly: true,
+    label: "effect (auto)",
+  });
+
+  // Quality setting - applicable to SMAA only
   folder
     .addBinding(PARAMS, "quality", {
       options: Object.fromEntries(
         ["ultra", "high", "medium", "low"].map((k) => [k, k]),
       ),
+      disabled: currentEffect === "fxaa",
+      label: currentEffect === "fxaa" ? "quality (n/a)" : "quality",
     })
     .on("change", (v) => {
-      defaultEffects.antialiasing.update({
-        [isMobile ? "fxaa" : "smaa"]: { quality: v.value },
-      });
+      if (currentEffect === "smaa") {
+        defaultEffects.antialiasing.update({
+          smaa: { quality: v.value },
+        });
+      }
     });
+
+  // Edge detection mode - SMAA specific, not applicable to FXAA
   folder
     .addBinding(PARAMS, "edgeDetectionMode", {
       options: Object.fromEntries(
         ["depth", "luma", "color"].map((k) => [k, k]),
       ),
+      disabled: currentEffect === "fxaa",
+      label: currentEffect === "fxaa" ? "edgeMode (n/a)" : "edgeDetectionMode",
     })
     .on("change", (v) => {
-      defaultEffects.antialiasing.update({
-        [isMobile ? "fxaa" : "smaa"]: { edgeDetectionMode: v.value },
-      });
+      if (currentEffect === "smaa") {
+        defaultEffects.antialiasing.update({
+          smaa: { edgeDetectionMode: v.value },
+        });
+      }
     });
+
+  // Add tooltip/info for FXAA users
+  if (currentEffect === "fxaa") {
+    folder.addBlade({
+      view: "text",
+      label: "info",
+      parse: (v: string) => v,
+      value: "FXAA used on mobile for performance",
+    });
+  }
 };
 
 // Advanced

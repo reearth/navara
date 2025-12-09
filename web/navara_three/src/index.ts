@@ -1260,35 +1260,55 @@ export default class ThreeView<
     };
   }
 
-  addDefaultEffectLayers(options?: { mobile?: boolean }) {
+  /**
+   * Return type for addDefaultEffectLayers
+   */
+  addDefaultEffectLayers(options?: { mobile?: boolean }): {
+    aerialPerspective: LayerHandle<AerialPerspectiveEffectLayer>;
+    lensFlare: LayerHandle<LensFlareEffectLayer> | undefined;
+    toneMapping: LayerHandle<ToneMappingEffectLayer>;
+    antialiasing: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
+    /** @deprecated Use `antialiasing` instead. This alias is provided for backwards compatibility. */
+    smaa: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
+  } {
     const mobile = options?.mobile ?? isMobileDevice();
 
+    const aerialPerspective = this.addLayer<AerialPerspectiveEffectLayer>({
+      type: "effect",
+      aerialPerspective: {},
+    } as LayerDescription);
+
+    // Skip lens flare on mobile - expensive effect with limited benefit
+    const lensFlare = mobile
+      ? undefined
+      : this.addLayer<LensFlareEffectLayer>({
+          type: "effect",
+          lensFlare: {},
+        } as LayerDescription);
+
+    const toneMapping = this.addLayer<ToneMappingEffectLayer>({
+      type: "effect",
+      toneMapping: {},
+    } as LayerDescription);
+
+    // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
+    const antialiasing = mobile
+      ? this.addLayer<FXAAEffectLayer>({
+          type: "effect",
+          fxaa: {},
+        } as LayerDescription)
+      : this.addLayer<SMAAEffectLayer>({
+          type: "effect",
+          smaa: {},
+        } as LayerDescription);
+
     return {
-      aerialPerspective: this.addLayer<AerialPerspectiveEffectLayer>({
-        type: "effect",
-        aerialPerspective: {},
-      } as LayerDescription),
-      // Skip lens flare on mobile - expensive effect with limited benefit
-      lensFlare: mobile
-        ? undefined
-        : this.addLayer<LensFlareEffectLayer>({
-            type: "effect",
-            lensFlare: {},
-          } as LayerDescription),
-      toneMapping: this.addLayer<ToneMappingEffectLayer>({
-        type: "effect",
-        toneMapping: {},
-      } as LayerDescription),
-      // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
-      antialiasing: mobile
-        ? this.addLayer<FXAAEffectLayer>({
-            type: "effect",
-            fxaa: {},
-          } as LayerDescription)
-        : this.addLayer<SMAAEffectLayer>({
-            type: "effect",
-            smaa: {},
-          } as LayerDescription),
+      aerialPerspective,
+      lensFlare,
+      toneMapping,
+      antialiasing,
+      // Backwards compatibility alias
+      smaa: antialiasing,
     };
   }
 

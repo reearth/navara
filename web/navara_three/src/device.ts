@@ -2,12 +2,21 @@
  * Device detection and adaptive quality utilities for mobile optimization.
  */
 
+/** Cached result of mobile device detection */
+let cachedIsMobile: boolean | undefined;
+
 /**
  * Detects if the current device is a mobile device.
  * Uses user agent and touch capability heuristics.
+ * Result is memoized since it doesn't change during runtime.
  */
 export function isMobileDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
+  if (cachedIsMobile !== undefined) return cachedIsMobile;
+
+  if (typeof navigator === "undefined") {
+    cachedIsMobile = false;
+    return false;
+  }
 
   // Check user agent for mobile indicators
   const userAgent = navigator.userAgent.toLowerCase();
@@ -31,7 +40,8 @@ export function isMobileDevice(): boolean {
   const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   const isSmallScreen = window.innerWidth <= 768;
 
-  return isMobileUA || (hasTouch && isSmallScreen);
+  cachedIsMobile = isMobileUA || (hasTouch && isSmallScreen);
+  return cachedIsMobile;
 }
 
 /** Maximum pixel ratio for mobile devices to balance quality vs performance */
