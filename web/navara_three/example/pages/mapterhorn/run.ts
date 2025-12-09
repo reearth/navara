@@ -47,8 +47,8 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TILE_DATASETS.openstreetmap.url,
     },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -57,13 +57,13 @@ export const run = async (view: ThreeView) => {
     data: {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
-    raster_terrain: {
-      max_zoom: 12,
-      min_zoom: 5,
-      elevation_decoder: TERRARIUM_ELEVATION_DECODER(),
-      cast_shadow: true,
-      receive_shadow: true,
-      tile_size: 512,
+    rasterTerrain: {
+      maxZoom: 12,
+      minZoom: 5,
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
+      tileSize: 512,
     },
   });
 

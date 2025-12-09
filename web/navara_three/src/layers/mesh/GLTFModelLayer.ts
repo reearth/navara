@@ -1,3 +1,7 @@
+import { encodePosition } from "@navara/engine-api";
+import { calcModelMatrixRTE } from "@navara/three_api";
+import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
+import RteModelParsVertex from "@shaders/glsl/chunks/rte_model_pars_vertex.glsl";
 import {
   Group,
   Mesh,
@@ -6,6 +10,10 @@ import {
   AnimationClip,
   LoopRepeat,
   LoopOnce,
+  Camera,
+  Material,
+  Matrix4,
+  Vector3,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -16,21 +24,23 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
+import { createReplacer } from "../../utils";
 
 type LayerDescription = {
   gltfModel?: {
     url: string;
     castShadow?: boolean;
     receiveShadow?: boolean;
+    useRTE?: boolean; // Enable RTE (Relative-To-Eye) rendering for high precision
 
-    // Declarative animation settings - fully aligned with Rust naming
-    animation_enabled?: boolean; // animation_enabled
-    animation_clips?: string[]; // animation_clips (available clips list)
-    animation_active_clip?: string; // animation_active_clip
-    animation_speed?: number; // animation_speed (default: 1.0)
-    animation_loop?: boolean; // animation_loop (default: true)
-    animation_crossfade_duration?: number; // animation_crossfade_duration (default: 0.3)
-    animation_auto_play?: boolean; // animation_auto_play (default: false)
+    // Declarative animation settings
+    animationEnabled?: boolean;
+    animationClips?: string[];
+    animationActiveClip?: string;
+    animationSpeed?: number; // default: 1.0
+    animationLoop?: boolean; // default: true
+    animationCrossfadeDuration?: number; // default: 0.3
+    animationAutoPlay?: boolean; // default: false
   };
 };
 
@@ -95,10 +105,39 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
   >();
   private isBlendMode = false;
 
+  // RTE (Relative-To-Eye) fields
+  private originalWorldPosition: Vector3 = new Vector3();
+  private modelPositionHigh: Vector3 = new Vector3();
+  private modelPositionLow: Vector3 = new Vector3();
+
   constructor(view: ViewContext, config: GLTFModelLayerConfig) {
     super(view, config);
     this.config = config;
     this.loader = new GLTFLoader();
+  }
+
+  override onCreate() {
+    this._instance = this.createMesh();
+
+    // In RTE mode, keep raw.position at (0,0,0)
+    // The world position is stored in this.position and encoded in RTE uniforms
+    const useRTE = this.config.gltfModel?.useRTE ?? true;
+
+    if (this.position && !useRTE) {
+      this.raw?.position.copy(this.position);
+    }
+
+    if (this.scale) {
+      this.raw?.scale.copy(this.scale);
+    }
+
+    if (this.rotation) {
+      this.raw?.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+    }
+
+    this._instance.visible = this.visible;
+
+    this.onPassKeyChange();
   }
 
   createMesh(): Group {
@@ -138,8 +177,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
       // Add the loaded model
       targetGroup.add(gltf.scene);
-
       this.setupModel(targetGroup);
+
       this.emit("_needsUpdate");
       this.emit("load");
     } catch (error) {
@@ -153,11 +192,28 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     if (!modelConfig) return;
 
-    // Setup shadows
+    const useRTE = modelConfig.useRTE ?? false;
+
+    // If RTE is enabled, setup RTE shaders first
+    if (useRTE) {
+      // Encode world position from this.position (not targetGroup.position which is 0,0,0)
+      if (this.position) {
+        this.setPositionRTE(
+          new Vector3(this.position.x, this.position.y, this.position.z),
+        );
+      }
+    }
+
+    // Setup shadows and CSM
     model.traverse((child) => {
       if (child instanceof Mesh) {
         if (modelConfig.castShadow) child.castShadow = true;
         if (modelConfig.receiveShadow) child.receiveShadow = true;
+
+        if (useRTE) {
+          child.frustumCulled = false;
+          this.setupRTEShadersForMesh(child);
+        }
 
         // Setup CSM for materials if shadows are enabled
         if (Array.isArray(child.material)) {
@@ -168,6 +224,157 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
           this.view.emit("_csmMounted", child.material);
         }
       }
+    });
+  }
+
+  private setPositionRTE(worldPosition: Vector3): void {
+    // Store the original world position
+    this.originalWorldPosition.set(
+      worldPosition.x,
+      worldPosition.y,
+      worldPosition.z,
+    );
+
+    // Encode the world position as high/low components
+    const encoded = encodePosition(
+      worldPosition.x,
+      worldPosition.y,
+      worldPosition.z,
+    );
+
+    this.modelPositionHigh.set(encoded.high.x, encoded.high.y, encoded.high.z);
+    this.modelPositionLow.set(encoded.low.x, encoded.low.y, encoded.low.z);
+
+    encoded.free();
+  }
+
+  private setupRTEShadersForMesh(mesh: Mesh): void {
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+
+    materials.forEach((material) => {
+      // Initialize RTE uniforms in material userData
+      material.userData.viewMatrixRTE = {
+        value: new Matrix4(),
+      };
+      material.userData.u_cameraPositionHigh = {
+        value: new Vector3(),
+      };
+      material.userData.u_cameraPositionLow = {
+        value: new Vector3(),
+      };
+      material.userData.u_modelPositionHigh = {
+        value: this.modelPositionHigh,
+      };
+      material.userData.u_modelPositionLow = {
+        value: this.modelPositionLow,
+      };
+      material.userData.useRTE = true;
+    });
+
+    // Setup shader modifications BEFORE triggering recompilation
+    this.modifyMaterialForRTE(materials);
+
+    // Identity matrix for viewMatrixRTE calculation (reused each frame)
+    const IDENTITY_MATRIX = new Matrix4();
+
+    // Setup onBeforeRender callback to update camera uniforms each frame
+    const handleBeforeRender = (camera: Camera, material: Material) => {
+      if (!material.userData.useRTE) return;
+
+      // Calculate view matrix with zeroed translation (rotation only)
+      // Using calcModelMatrixRTE with Identity gives us: camera.matrixWorldInverse with translation zeroed
+      calcModelMatrixRTE(
+        IDENTITY_MATRIX,
+        camera.matrixWorldInverse,
+        material.userData.viewMatrixRTE.value,
+      );
+
+      // Encode camera position as high/low components
+      const encoded = encodePosition(
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+      );
+
+      material.userData.u_cameraPositionHigh.value.set(
+        encoded.high.x,
+        encoded.high.y,
+        encoded.high.z,
+      );
+      material.userData.u_cameraPositionLow.value.set(
+        encoded.low.x,
+        encoded.low.y,
+        encoded.low.z,
+      );
+
+      encoded.free();
+    };
+
+    // Set onBeforeRender for main rendering
+    mesh.onBeforeRender = (_renderer, _scene, camera, _geometry, material) => {
+      handleBeforeRender(camera, material);
+    };
+
+    // Set onBeforeShadow for shadow rendering
+    mesh.onBeforeShadow = (
+      _renderer,
+      _scene,
+      _camera,
+      shadowCamera,
+      _geometry,
+      material,
+    ) => {
+      handleBeforeRender(shadowCamera, material);
+    };
+  }
+
+  private modifyMaterialForRTE(materials: Material[]): void {
+    materials.forEach((material) => {
+      // Store original onBeforeCompile if it exists
+      const originalOnBeforeCompile = material.onBeforeCompile;
+
+      material.onBeforeCompile = (shader, renderer) => {
+        // Call original onBeforeCompile if it existed
+        if (originalOnBeforeCompile) {
+          originalOnBeforeCompile.call(material, shader, renderer);
+        }
+
+        // Add RTE uniforms to shader
+        shader.uniforms.u_cameraPositionHigh =
+          material.userData.u_cameraPositionHigh;
+        shader.uniforms.u_cameraPositionLow =
+          material.userData.u_cameraPositionLow;
+        shader.uniforms.u_modelPositionHigh =
+          material.userData.u_modelPositionHigh;
+        shader.uniforms.u_modelPositionLow =
+          material.userData.u_modelPositionLow;
+        shader.uniforms.viewMatrixRTE = material.userData.viewMatrixRTE;
+
+        // Modify vertex shader with RTE chunks
+        let vertexShader = shader.vertexShader;
+
+        vertexShader = createReplacer(vertexShader)
+          .replace(
+            "#include <common>",
+            `
+            #include <common>
+            ${RteModelParsVertex}
+            `,
+          )
+          .replace("#include <project_vertex>", ProjectVertexRteModel).source;
+
+        shader.vertexShader = vertexShader;
+      };
+
+      // Update cache key to enable shader caching
+      // Materials with the same type will share compiled shaders
+      material.customProgramCacheKey = () => {
+        return "RTE_MODEL_" + material.type;
+      };
+
+      material.needsUpdate = true;
     });
   }
 
@@ -193,32 +400,32 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       // Dynamic animation settings update
       if (this.mixer && this.actions.size > 0) {
         // Speed change
-        if (modelConfig.animation_speed !== undefined) {
-          this.setAnimationSpeed(modelConfig.animation_speed);
+        if (modelConfig.animationSpeed !== undefined) {
+          this.setAnimationSpeed(modelConfig.animationSpeed);
         }
 
         // Loop setting change
-        if (modelConfig.animation_loop !== undefined) {
-          this.setAnimationLoop(modelConfig.animation_loop);
+        if (modelConfig.animationLoop !== undefined) {
+          this.setAnimationLoop(modelConfig.animationLoop);
         }
 
         // Animation switching
-        if (modelConfig.animation_active_clip !== undefined) {
-          const duration = modelConfig.animation_crossfade_duration ?? 0.3;
+        if (modelConfig.animationActiveClip !== undefined) {
+          const duration = modelConfig.animationCrossfadeDuration ?? 0.3;
           if (this.currentAction) {
             this.crossFadeAnimation(
               this.getCurrentAnimationName() ?? "",
-              modelConfig.animation_active_clip,
+              modelConfig.animationActiveClip,
               duration,
             );
           } else {
-            this.playAnimation(modelConfig.animation_active_clip);
+            this.playAnimation(modelConfig.animationActiveClip);
           }
         }
 
         // Animation enabled state change
-        if (modelConfig.animation_enabled !== undefined) {
-          if (modelConfig.animation_enabled) {
+        if (modelConfig.animationEnabled !== undefined) {
+          if (modelConfig.animationEnabled) {
             this.resumeAnimation();
           } else {
             this.pauseAnimation();
@@ -237,7 +444,22 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       this.emit("_needsUpdate");
     }
 
-    super.onUpdateConfig(updates);
+    // Handle position updates for RTE mode
+    if (updates.position !== undefined && this.config.gltfModel?.useRTE) {
+      // Update our stored world position
+      this.position = updates.position;
+
+      // Re-encode the new position (convert XYZ to Vector3)
+      this.setPositionRTE(
+        new Vector3(updates.position.x, updates.position.y, updates.position.z),
+      );
+
+      // Prevent super from setting raw.position by removing it from updates
+      const { position, ...restUpdates } = updates;
+      super.onUpdateConfig(restUpdates);
+    } else {
+      super.onUpdateConfig(updates);
+    }
   }
 
   protected disposeMesh(): void {
@@ -314,8 +536,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     this.mixer = new AnimationMixer(this.gltf.scene);
 
     // Apply configuration values
-    const speed = animConfig?.animation_speed ?? this.animationSpeed;
-    const loop = animConfig?.animation_loop ?? this.isLooping;
+    const speed = animConfig?.animationSpeed ?? this.animationSpeed;
+    const loop = animConfig?.animationLoop ?? this.isLooping;
 
     // Register animation clips
     this.gltf.animations.forEach((clip) => {
@@ -337,13 +559,13 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     this.isLooping = loop;
 
     // Handle auto-play settings
-    if (animConfig?.animation_auto_play && animConfig?.animation_active_clip) {
-      const clipName = animConfig.animation_active_clip;
+    if (animConfig?.animationAutoPlay && animConfig?.animationActiveClip) {
+      const clipName = animConfig.animationActiveClip;
       if (this.clips.has(clipName)) {
         this.playAnimation(clipName);
 
         // Set enabled state
-        if (animConfig.animation_enabled === false) {
+        if (animConfig.animationEnabled === false) {
           this.pauseAnimation();
         }
       } else {
@@ -861,6 +1083,16 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       }
     }
     return null;
+  }
+
+  getWorldPosition(): Vector3 | undefined {
+    if (this.config.gltfModel?.useRTE) {
+      // Return stored world position in RTE mode
+      return this.originalWorldPosition;
+    } else {
+      // Return Three.js position in non-RTE mode
+      return this.raw?.position.clone();
+    }
   }
 
   private lastUpdateTime?: number;

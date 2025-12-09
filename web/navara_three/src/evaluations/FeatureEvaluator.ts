@@ -35,7 +35,7 @@ type AvailableMaterialProperty = ExtractProperties<
 export type EvaluatableMaterialProperty = {
   color: AvailableMaterialProperty["color"];
   show: AvailableMaterialProperty["show"];
-  extrudedHeight: AvailableMaterialProperty["extruded_height"];
+  extrudedHeight: AvailableMaterialProperty["extrudedHeight"];
   height: AvailableMaterialProperty["height"];
   text: AvailableMaterialProperty["text"];
 };

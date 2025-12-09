@@ -90,7 +90,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
         outline_color: 0x111111,
         show: visible,
       },
-      vector_tile: {
+      vectorTile: {
         max_zoom: 16,
       },
     } as MvtLayer;

@@ -51,7 +51,7 @@ export const Layers: FC<SceneLayerToggles> = ({
     () => ({
       type: "tiles",
       data: { url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url },
-      raster_tile: { min_zoom: 2, max_zoom: 18 },
+      rasterTile: { minZoom: 2, maxZoom: 18 },
     }),
     [],
   );
@@ -60,12 +60,12 @@ export const Layers: FC<SceneLayerToggles> = ({
     () => ({
       type: "terrain",
       data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
-      raster_terrain: {
-        min_zoom: 6,
-        max_zoom: 15,
-        elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-        cast_shadow: true,
-        receive_shadow: true,
+      rasterTerrain: {
+        minZoom: 6,
+        maxZoom: 15,
+        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+        castShadow: true,
+        receiveShadow: true,
       },
     }),
     [],
@@ -137,18 +137,18 @@ export const Layers: FC<SceneLayerToggles> = ({
       polygon: {
         color: 0x72501a,
         reflectivity: 0.3,
-        clamp_to_ground: true,
+        clampToGround: true,
         wireframe: false,
         water: waterSurface,
         shininess: 100,
-        specular_strength: 2,
-        water_scale_normal: 0.5,
-        apply_water_normal: false,
-        receive_shadow: true,
+        specularStrength: 2,
+        waterScaleNormal: 0.5,
+        applyWaterNormal: false,
+        receiveShadow: true,
         specular: true,
       },
-      vector_tile: {
-        max_zoom: 16,
+      vectorTile: {
+        maxZoom: 16,
         layers: ["waterarea"],
       },
     }),

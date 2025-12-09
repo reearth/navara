@@ -26,9 +26,11 @@ pub struct TileLayerDescription {
     #[serde(skip_deserializing)]
     pub data: JsValue,
 
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = rasterTile)]
+    #[serde(rename = "rasterTile")]
     pub raster_tile: Option<RasterTileMaterial>,
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = elevationHeatmap)]
+    #[serde(rename = "elevationHeatmap")]
     pub elevation_heatmap: Option<ElevationHeatmapMaterial>,
 }
 
@@ -50,7 +52,8 @@ pub struct TerrainLayerDescription {
     #[serde(skip_deserializing)]
     pub data: JsValue,
 
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = rasterTerrain)]
+    #[serde(rename = "rasterTerrain")]
     pub raster_terrain: Option<RasterTerrainMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub ellipsoid: Option<EllipsoidTerrainMaterial>,
@@ -241,7 +244,8 @@ pub struct MvtLayerDescription {
     pub polyline: Option<PolylineMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMaterial>,
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = vectorTile)]
+    #[serde(rename = "vectorTile")]
     pub vector_tile: Option<VectorTileMaterial>,
 }
 
