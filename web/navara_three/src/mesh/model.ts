@@ -284,6 +284,9 @@ export class ModelMesh
       mesh.castShadow = !!meshMaterial.castShadow;
       mesh.receiveShadow = !!meshMaterial.receiveShadow;
 
+      mesh.material.depthTest = true;
+      mesh.material.depthWrite = true;
+
       mesh.material.userData.color = mcolor;
       mesh.material.userData.uPickable = {
         value: 0.0,
