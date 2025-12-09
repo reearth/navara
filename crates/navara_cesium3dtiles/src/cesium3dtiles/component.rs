@@ -119,12 +119,17 @@ impl Cesium3dTileContent {
             _ => None,
         };
         let default_refine = Refine::Replace;
+        let uri = content
+            .uri
+            .clone()
+            .unwrap_or_else(|| content.url.clone().unwrap());
+        let is_renderable_content = !uri.ends_with(".json");
         Self {
-            uri: content.uri.clone(),
+            uri,
             data_requester_id: None,
             rendered_tile_id: None,
             children: None,
-            is_renderable_content: !content.uri.ends_with(".json"),
+            is_renderable_content,
             bounding_volume,
             refine: match tile
                 .refine
