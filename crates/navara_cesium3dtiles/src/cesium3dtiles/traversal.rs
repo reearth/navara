@@ -533,6 +533,7 @@ fn update_or_spawn_rendered_tile(
                     .id(),
             );
         } else if tile.uri.as_ref().unwrap().contains("glb") {
+            let aabb = tile.bounding_volume.as_ref().unwrap();
             tile.rendered_tile_id = Some(
                 commands
                     .spawn((
@@ -547,6 +548,7 @@ fn update_or_spawn_rendered_tile(
                             data_requester_id: tile.data_requester_id.unwrap(),
                             is_visible: true,
                         },
+                        aabb.clone(),
                     ))
                     .id(),
             );
