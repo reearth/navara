@@ -31,12 +31,17 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
   }
 
   createPass() {
+    // Convert config to SSAOOptions format
+    const ssaoOptions: SSAOOptions = this.config.ssao
+      ? { ...this.config.ssao }
+      : {};
+
     const pass = new SSAO(
       this.view.camera,
       this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientWidth,
       this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientHeight,
       {
-        ...this.config.ssao,
+        ...ssaoOptions,
         enabled: this.config.visible ?? true,
       },
     );

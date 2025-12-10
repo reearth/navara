@@ -51,7 +51,7 @@ export async function run() {
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     rasterTile: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       maxZoom: 18,
       opacity: 1,
     },

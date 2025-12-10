@@ -6,6 +6,7 @@ import {
   type ViewContext,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
+import { Color } from "../../Color";
 
 type LayerDescription = {
   sphere?: {
@@ -16,7 +17,7 @@ type LayerDescription = {
     phiLength?: number;
     thetaStart?: number;
     thetaLength?: number;
-    color?: number;
+    color?: Color;
     emissive?: number;
     emissiveIntensity?: number;
     opacity?: number;
@@ -60,8 +61,9 @@ export class SphereMeshLayer extends MeshLayerDeclaration<
     );
 
     // Create material from properties
+    const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
     const material = new MeshLambertMaterial({
-      color: cfg.color ?? 0xffffff,
+      color: colorValue.raw,
       emissive: cfg.emissive ?? 0,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
@@ -119,7 +121,10 @@ export class SphereMeshLayer extends MeshLayerDeclaration<
         cfg.transparent !== undefined
       ) {
         const material = this._instance.material;
-        if (cfg.color !== undefined) material.color.set(cfg.color);
+        if (cfg.color !== undefined) {
+          const colorValue = cfg.color.raw;
+          material.color.set(colorValue);
+        }
         if (cfg.emissive !== undefined) material.emissive.set(cfg.emissive);
         if (cfg.emissiveIntensity !== undefined)
           material.emissiveIntensity = cfg.emissiveIntensity;

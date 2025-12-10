@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
 } from "@navara/three";
@@ -78,7 +79,7 @@ export const run = async (view: ThreeView) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     polygon: {
-      color: 0x00aaff,
+      color: new Color().setStyle("#00aaff"),
       height: 10,
       extrudedHeight: 0,
       clampToGround: true,
@@ -96,7 +97,7 @@ export const run = async (view: ThreeView) => {
     },
     polyline: {
       show: true,
-      color: 0xc320d8,
+      color: new Color().setStyle("#c320d8"),
       width: 2,
       height: 1,
       clampToGround: true,
@@ -113,7 +114,7 @@ export const run = async (view: ThreeView) => {
     },
     polyline: {
       show: true,
-      color: 0x777777,
+      color: new Color().setStyle("#777777"),
       width: 3,
       height: 1,
       clampToGround: true,
@@ -170,7 +171,7 @@ export const run = async (view: ThreeView) => {
       },
     },
     polygon: {
-      color: 0x00aaff,
+      color: new Color().setStyle("#00aaff"),
       clampToGround: true,
       useGroundNormals: true,
     },

@@ -1,5 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
+  Color,
   type LayerDescription,
 } from "@navara/three";
 import { Pane } from "tweakpane";
@@ -62,7 +63,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 0.5,
       height: -50,
@@ -304,7 +305,7 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     polygon: {
-      color: 0x001e0f,
+      color: new Color().setStyle("#001e0f"),
       reflectivity: 0.02,
       clampToGround: true,
       wireframe: false,
@@ -340,7 +341,7 @@ const addWaterControls = (view: ThreeView, pane: Pane) => {
       },
     },
     polygon: {
-      color: 0x001e0f,
+      color: new Color().setStyle("#001e0f"),
       height: 55,
       extrudedHeight: 1,
       clampToGround: false,

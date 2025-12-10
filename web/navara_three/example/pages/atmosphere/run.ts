@@ -1,5 +1,6 @@
 import { EventHandler } from "@navara/core";
 import ThreeView, {
+  Color,
   DEFAULT_CLOUDS_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
@@ -14,7 +15,7 @@ import ThreeView, {
   SkyLightProbeLayer,
 } from "@navara/three";
 import type { TextureChannel } from "@takram/three-clouds";
-import { Color, SphericalHarmonics3 } from "three";
+import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import type {
@@ -80,7 +81,7 @@ export const run = async (view: ThreeView) => {
     visible: false,
     ambient: {
       intensity: 1,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
     },
   });
 
@@ -105,7 +106,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -121,7 +122,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -327,7 +328,9 @@ const addAtmosphereControl = (
   folder
     .addBinding(PARAMS, "sunLightColor", { color: { type: "int" } })
     .on("change", (v) => {
-      sunLightLayer.update({ sun: { color: v.value } });
+      sunLightLayer.update({
+        sun: { color: new Color().setHex(v.value) },
+      });
     });
   folder.addBinding(PARAMS, "sunApplyLightColor").on("change", (v) => {
     sunLightLayer.update({ sun: { applyColor: v.value } });
@@ -354,7 +357,7 @@ const addAtmosphereControl = (
     .addBinding(PARAMS, "ambientLightColor", { color: { type: "int" } })
     .on("change", (v) => {
       ambientLightLayer.update({
-        ambient: { color: v.value },
+        ambient: { color: new Color().setHex(v.value) },
       });
     });
   folder.addBinding(PARAMS, "ambientLightIntensity").on("change", (v) => {
@@ -1228,6 +1231,6 @@ const addEffectsControl = (
     ssao.update({ ssao: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoColor").on("change", (v) => {
-    ssao.update({ ssao: { color: new Color(v.value) } });
+    ssao.update({ ssao: { color: new Color().setStyle(v.value) } });
   });
 };
