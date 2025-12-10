@@ -488,10 +488,7 @@ function createParamCtrl(
     f.addBinding(paneParams, "show").on("change", changeFunc);
 
     if ("color" in material) {
-      const colorValue =
-        material.color instanceof Color
-          ? material.color.toHex()
-          : material.color;
+      const colorValue = material.color.toHex();
       paneParams.color = "#" + colorValue.toString(16).padStart(6, "0");
       f.addBinding(paneParams, "color").on("change", (ev) => {
         if (ev.last) {
@@ -583,10 +580,7 @@ function createParamCtrl(
     }
 
     if ("backgroundColor" in material) {
-      const colorValue =
-        material.backgroundColor instanceof Color
-          ? material.backgroundColor.toHex()
-          : material.backgroundColor;
+      const colorValue = material.backgroundColor.toHex();
       paneParams.backgroundColor =
         "#" + colorValue.toString(16).padStart(6, "0");
       f.addBinding(paneParams, "backgroundColor").on("change", (ev) => {
@@ -597,10 +591,7 @@ function createParamCtrl(
     }
 
     if ("borderColor" in material) {
-      const colorValue =
-        material.borderColor instanceof Color
-          ? material.borderColor.toHex()
-          : material.borderColor;
+      const colorValue = material.borderColor.toHex();
       paneParams.borderColor = "#" + colorValue.toString(16).padStart(6, "0");
       f.addBinding(paneParams, "borderColor").on("change", (ev) => {
         if (ev.last) {
@@ -643,10 +634,7 @@ function createParamCtrl(
     }
 
     if ("outlineColor" in material) {
-      const colorValue =
-        material.outlineColor instanceof Color
-          ? material.outlineColor.toHex()
-          : material.outlineColor;
+      const colorValue = material.outlineColor.toHex();
       paneParams.outlineColor = "#" + colorValue.toString(16).padStart(6, "0");
       f.addBinding(paneParams, "outlineColor").on("change", (ev) => {
         if (ev.last) {

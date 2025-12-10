@@ -90,7 +90,7 @@ export function BuildingTilesLayer({
       model: {
         show: true,
         id_property: "gml_id",
-        color: 0xffffff,
+        color: new Color().setStyle("#ffffff"),
         metalness: 0,
         roughness: 1,
         cast_shadow: true,

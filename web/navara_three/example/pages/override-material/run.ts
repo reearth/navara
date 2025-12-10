@@ -162,7 +162,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
             receiveShadow: true,
             outlineShow: false,
             outlineWidth: 2,
-            outlineColor: 0xff00ff,
+            outlineColor: new Color().setHex(0xff00ff),
           },
         };
 
@@ -402,7 +402,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       size: 0.01,
       scaleByDistance: true,
       clampToGround: true,
-      color: 0xff0000,
+      color: new Color().setStyle("#ff0000"),
     },
   };
 

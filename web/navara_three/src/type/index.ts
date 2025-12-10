@@ -140,9 +140,9 @@ type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 type ConvertColorFields<T> = {
   [K in keyof T]: K extends `${string}Color` | "color"
     ? T[K] extends number | undefined
-      ? number | Color | undefined
+      ? Color | undefined
       : T[K] extends number
-        ? number | Color
+        ? Color
         : T[K]
     : T[K] extends object | undefined
       ? ConvertColorFields<T[K]> | Extract<T[K], undefined>

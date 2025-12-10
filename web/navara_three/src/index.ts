@@ -966,7 +966,8 @@ export default class ThreeView<
   }
 
   /**
-   * Converts Navara Color objects to numbers in layer descriptions.
+   * Since passing Color class to WASM is tricky, converts Navara Color
+   * objects to numbers in layer descriptions.
    * Handles the two-level structure: layer -> material -> color fields.
    */
   private _convertColorsToNumbers(obj: unknown): unknown {
