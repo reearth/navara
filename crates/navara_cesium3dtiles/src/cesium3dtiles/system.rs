@@ -295,13 +295,15 @@ pub fn delete_cesium3dtiles_layer(
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn remove_invisible_tileset(
     mut commands: Commands,
-    mut tiles: Query<(Entity, &mut Cesium3dTilesTree)>,
+    mut tiles: Query<(Entity, &mut Cesium3dTilesTree, &Cesium3dTilesTreeOrder)>,
     mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
 ) {
-    for (entity, mut tree) in &mut tiles {
+    for (entity, mut tree, order) in &mut tiles {
         let tile = &tree.root;
 
-        if tile.state.is_visible {
+        let is_root_tree = order.index == 0;
+
+        if tile.state.is_visible || is_root_tree {
             continue;
         }
 

@@ -294,7 +294,7 @@ fn mark_leaves(
                 }
             }
 
-            if all_children_rendered {
+            if matches!(tile.refine, Refine::Replace) && all_children_rendered {
                 return TraversalResult::ChildrenSelected;
             }
 
