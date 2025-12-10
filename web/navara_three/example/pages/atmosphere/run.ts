@@ -43,6 +43,8 @@ import {
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
+import { ATMOSPHERE_EXAMPLE_OPTIONS } from "./main";
+
 type DefaultEffects = ReturnType<ThreeView["addDefaultEffectLayers"]>;
 
 export const run = async (view: ThreeView) => {
@@ -1031,7 +1033,8 @@ const addCloudsControl = (
 const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
   // Determine the current AA effect type based on device
   const isMobile = isMobileDevice();
-  const currentEffect = isMobile ? "fxaa" : "smaa";
+  const currentEffect =
+    isMobile && ATMOSPHERE_EXAMPLE_OPTIONS.mobileOptimization ? "fxaa" : "smaa";
 
   const PARAMS = {
     enable: false,

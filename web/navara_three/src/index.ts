@@ -136,7 +136,11 @@ export * from "./lights";
 export * from "./passes";
 export * from "@navara/three_api";
 export * from "./Color";
-export { isMobileDevice, getDevicePixelRatio } from "./device";
+export {
+  isMobileDevice,
+  getDevicePixelRatio,
+  type DevicePixelRatioOptions,
+} from "./device";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -165,6 +169,8 @@ export type Options = {
   logarithmicDepthBuffer?: boolean;
   // It must be passed when instantiated.
   shadow?: boolean;
+  // Enable mobile device optimizations such as lower pixel ratio.
+  mobileOptimization?: boolean;
 } & GlobeOptions;
 
 export type MapMouseEvent = {
@@ -516,7 +522,10 @@ export default class ThreeView<
     if (typeof options?.pixelRatio === "number" || !isWorker()) {
       const pixelRatio = isWorker()
         ? 1
-        : getDevicePixelRatio(options.pixelRatio);
+        : getDevicePixelRatio({
+            override: options.pixelRatio,
+            mobileOptimization: options.mobileOptimization,
+          });
       renderer.setPixelRatio(pixelRatio);
     }
 
@@ -1261,17 +1270,16 @@ export default class ThreeView<
   }
 
   /**
-   * Return type for addDefaultEffectLayers
+   * Adds default effect layers for rendering.
+   * On mobile devices (when mobileOptimization is enabled), uses lighter-weight effects.
    */
-  addDefaultEffectLayers(options?: { mobile?: boolean }): {
+  addDefaultEffectLayers(): {
     aerialPerspective: LayerHandle<AerialPerspectiveEffectLayer>;
     lensFlare: LayerHandle<LensFlareEffectLayer> | undefined;
     toneMapping: LayerHandle<ToneMappingEffectLayer>;
     antialiasing: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
-    /** @deprecated Use `antialiasing` instead. This alias is provided for backwards compatibility. */
-    smaa: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
   } {
-    const mobile = options?.mobile ?? isMobileDevice();
+    const mobile = this._options?.mobileOptimization ? isMobileDevice() : false;
 
     const aerialPerspective = this.addLayer<AerialPerspectiveEffectLayer>({
       type: "effect",
@@ -1307,8 +1315,6 @@ export default class ThreeView<
       lensFlare,
       toneMapping,
       antialiasing,
-      // Backwards compatibility alias
-      smaa: antialiasing,
     };
   }
 
