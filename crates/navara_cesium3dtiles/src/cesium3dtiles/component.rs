@@ -123,9 +123,21 @@ impl Cesium3dTileContent {
 
                 let center_transformed = tile_transform.transform_point(center);
 
+                
+                let x_transformed = tile_transform.transform_vector(x_axis);
+                let y_transformed = tile_transform.transform_vector(y_axis);
+                let z_transformed = tile_transform.transform_vector(z_axis);
+
+                let extents = Vec3::new(
+                    x_transformed.x.abs() + y_transformed.x.abs() + z_transformed.x.abs(),
+                    x_transformed.y.abs() + y_transformed.y.abs() + z_transformed.y.abs(),
+                    x_transformed.z.abs() + y_transformed.z.abs() + z_transformed.z.abs(),
+                );
+
                 Some(Aabb {
                     center: center_transformed,
-                    extents: Vec3::new(x_axis.length(), y_axis.length(), z_axis.length()),
+                    extents,
+
                 })
             }
             _ => None,

@@ -107,11 +107,15 @@ export async function renderModel(
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
             console.log(m.aabb);
+            const t = child.matrixWorld.clone().invert();
             const aabb_center = new Vector3(
               m.aabb.center.x,
               m.aabb.center.y,
               m.aabb.center.z,
             );
+
+            const transformed_center = aabb_center.applyMatrix4(t);
+
             const aabb_extent = new Vector3(
               m.aabb.extent.x,
               m.aabb.extent.y,
@@ -120,8 +124,8 @@ export async function renderModel(
 
             const boxHelper = new Box3Helper(
               new Box3(
-                aabb_center.clone().sub(aabb_extent),
-                aabb_center.clone().add(aabb_extent),
+                transformed_center.clone().sub(aabb_extent),
+                transformed_center.clone().add(aabb_extent),
               ),
               0x0000ff,
             );
