@@ -18,7 +18,7 @@ jobs:
       
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.86.0
+          toolchain: 1.91.1
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
 
@@ -47,9 +47,6 @@ jobs:
       - name: Install cargo-make
         run: cargo install cargo-make --locked
       
-      - name: Install wasm-pack
-        run: cargo install wasm-pack --locked
-
       - name: Prepare
         run: cargo make prepare-ci
       
