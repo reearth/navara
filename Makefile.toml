@@ -12,16 +12,19 @@ default_to_workspace = false
 [env]
 PROJ_NAME = "navara"
 
+[tasks.build-dev-rust-all]
+run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api"], parallel = true }
+
 [tasks.prepare]
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
-run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api","install-deps-web"] }
+run_task = { name = ["build-dev-rust-all", "install-deps-web"] }
 
 [tasks.prepare-ci]
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
-run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api","install-deps-web"] }
+run_task = { name = ["build-rust-all", "install-deps-web"] }
 
 [tasks.build-dev]
-run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api"] }
+run_task = { name = ["build-dev-rust-all"] }
 
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
@@ -46,10 +49,13 @@ run_task = { name = ["format-rust", "format-web"], parallel = true }
 run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
 
 [tasks.build-example]
-run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build-web-example"] }
+run_task = { name = ["build-rust-all", "build-web-example"] }
+
+[tasks.build-rust-all]
+run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api"], parallel = true }
 
 [tasks.build]
-run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build-web"] }
+run_task = { name = ["build-rust-all", "build-web"] }
 
 [tasks.watch]
 run_task = { name = ["watch-rust", "watch-rust-worker", "watch-rust-api"], parallel = true }

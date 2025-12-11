@@ -39,3 +39,7 @@ web-sys = { version = "0.3.79", features = ["console"] }
 
 [workspace.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true
+
+[profile.release]
+# Optimize for small code size (for WASM modules)
+opt-level = "s"
