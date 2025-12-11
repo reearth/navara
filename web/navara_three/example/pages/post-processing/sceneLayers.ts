@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   JAPAN_GSI_ELEVATION_DECODER,
   LLE,
   degreeToRadian,
@@ -74,7 +75,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       width: 200,
       height: 200,
       depth: 200,
-      color: 0xff0000,
+      color: new Color().setHex(0xff0000),
       emissiveIntensity: 1.0,
       opacity: 1.0,
       transparent: true,
@@ -93,7 +94,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     type: "mesh",
     sphere: {
       radius: 100,
-      color: 0x00aaff,
+      color: new Color().setHex(0x00aaff),
       emissiveIntensity: 1.0,
       opacity: 1.0,
       transparent: true,
@@ -190,7 +191,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setHex(0xffffff),
       metalness: 0.1,
       roughness: 0.1,
       castShadow: true,
@@ -206,7 +207,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setHex(0xffffff),
       metalness: 0.1,
       roughness: 0.1,
       castShadow: true,

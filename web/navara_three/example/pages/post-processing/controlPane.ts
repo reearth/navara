@@ -1,5 +1,5 @@
 import type { BoxMeshLayer, Layer, SphereMeshLayer } from "@navara/three";
-import { PostEffectOcclusionMode } from "@navara/three";
+import { Color, PostEffectOcclusionMode } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
 import { TILES_3D_DATASETS } from "../../helpers/constants";
@@ -395,7 +395,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
       },
       model: {
         show: params.visible,
-        color: params.baseColor,
+        color: new Color().setHex(params.baseColor),
         metalness: 0.1,
         roughness: 0.1,
         castShadow: true,
@@ -406,7 +406,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
           bloomId,
           outlineId,
         ),
-        emissiveColor: params.emissiveColor,
+        emissiveColor: new Color().setHex(params.emissiveColor),
         emissiveIntensity: params.emissiveIntensity,
         postEffectOcclusion: params.postEffectOcclusion,
       },
