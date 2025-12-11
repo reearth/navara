@@ -5,6 +5,7 @@ import type {
   GlobeOptions,
   Nullable,
   XYZ,
+  Color as CoreColor,
 } from "@navara/core";
 import initCore, {
   Core,
@@ -152,7 +153,7 @@ export type Options = {
   disableAutoResize?: boolean;
   debug?: boolean;
   atmosphere?: AtmosphereOptions;
-  backgroundColor?: number;
+  backgroundColor?: CoreColor;
   picking?: Picking;
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
   animation?: boolean;
@@ -366,8 +367,9 @@ export default class ThreeView<
     getSegments: () => {
       return this._core?.getGlobeSegments();
     },
-    getColor: () => {
-      return this._core?.getGlobeColor();
+    getColor: (): CoreColor | undefined => {
+      const hexColor = this._core?.getGlobeColor();
+      return hexColor === undefined ? undefined : new Color().setHex(hexColor);
     },
     getHideUnderground: () => {
       return this._core?.getGlobeHideUnderground();
@@ -393,8 +395,8 @@ export default class ThreeView<
     setSegments: (value: number) => {
       this._core?.setGlobeSegments(value);
     },
-    setColor: (value: number) => {
-      this._core?.setGlobeColor(value);
+    setColor: (value: CoreColor) => {
+      this._core?.setGlobeColor(value.toHex());
     },
     setHideUnderground: (value: boolean) => {
       this._core?.setGlobeHideUnderground(value);
@@ -546,7 +548,10 @@ export default class ThreeView<
     this.renderPassOrchestrator.setSize(width, height);
 
     // Background color
-    this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
+    const bgColor = options.backgroundColor
+      ? options.backgroundColor.toHex()
+      : 0x0a0a0f;
+    this.renderer.setClearColor(bgColor);
 
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);

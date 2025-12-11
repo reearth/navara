@@ -92,7 +92,7 @@ const constructData = async () => {
 
 export async function run() {
   const view = new ThreeView({
-    backgroundColor: 0x0b0a0d,
+    backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 
   await view.init();

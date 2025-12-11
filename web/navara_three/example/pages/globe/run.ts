@@ -117,8 +117,10 @@ const addGlobeControl = (view: ThreeView, pane: Pane) => {
 
   const globe = view.globe;
 
+  const colorValue = globe.color ? globe.color.toHex() : 0x9481ad; // Default color
+
   const PARAMS = {
-    color: globe.color,
+    color: "#" + colorValue.toString(16).padStart(6, "0"),
     hideUnderground: globe.hideUnderground,
     transparent: true,
     opacity: 0.5,
@@ -136,7 +138,7 @@ const addGlobeControl = (view: ThreeView, pane: Pane) => {
       },
       onChange: (v) => {
         if (globe) {
-          globe.color = v.value;
+          globe.color = new Color().setStyle(v.value);
         }
       },
     },
