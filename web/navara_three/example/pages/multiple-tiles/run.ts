@@ -1,4 +1,4 @@
-import ThreeView from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
@@ -15,7 +15,7 @@ export const run = async (view: ThreeView) => {
         type: "tiles",
         data: { url: TILE_DATASETS.openstreetmap.url },
         rasterTile: {
-          color: 0xffffff,
+          color: new Color().setStyle("#ffffff"),
           maxZoom: 23,
           opacity: 1,
         },
@@ -24,7 +24,7 @@ export const run = async (view: ThreeView) => {
         type: "tiles",
         data: { url: TILE_DATASETS.gsiStd.url },
         rasterTile: {
-          color: 0xffffff,
+          color: new Color().setStyle("#ffffff"),
           maxZoom: 18,
           opacity: 1,
         },
@@ -33,7 +33,7 @@ export const run = async (view: ThreeView) => {
         type: "tiles",
         data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
         rasterTile: {
-          color: 0xffffff,
+          color: new Color().setStyle("#ffffff"),
           maxZoom: 18,
           opacity: 1,
         },

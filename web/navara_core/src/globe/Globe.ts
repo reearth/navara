@@ -1,6 +1,6 @@
 import type { Globe as GlobeWasm } from "@navara/engine";
 
-import { ColorMap } from "../color";
+import { ColorMap, Color } from "../color";
 /**
  * Handler for accessing individual Globe properties from WASM.
  * This provides a reference-based interface instead of copying the entire Globe object.
@@ -9,7 +9,7 @@ export type GlobeHandler = {
   getTransparent: () => boolean | undefined;
   getMaxSse: () => number | undefined;
   getSegments: () => number | undefined;
-  getColor: () => number | undefined;
+  getColor: () => Color | undefined;
   getHideUnderground: () => boolean | undefined;
   getShouldComputeNormalFromVertex: () => boolean | undefined;
   getOpacity: () => number | undefined;
@@ -18,7 +18,7 @@ export type GlobeHandler = {
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
-  setColor: (value: number) => void;
+  setColor: (value: Color) => void;
   setHideUnderground: (value: boolean) => void;
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;
@@ -27,9 +27,10 @@ export type GlobeHandler = {
 };
 
 export type GlobeOptions = Partial<
-  Omit<GlobeWasm, "constructor" | "free" | "elevationColormap">
+  Omit<GlobeWasm, "constructor" | "free" | "elevationColormap" | "color">
 > & {
   elevationColormap?: ColorMap;
+  color?: Color;
 };
 
 /**
@@ -38,7 +39,9 @@ export type GlobeOptions = Partial<
  * Provides an interface for accessing and modifying globe properties
  * that are shared across different material types (VectorTile, RasterTile, RasterTerrain).
  */
-export class Globe implements Omit<GlobeWasm, "free" | "elevationColormap"> {
+export class Globe
+  implements Omit<GlobeWasm, "free" | "elevationColormap" | "color">
+{
   private handler: GlobeHandler;
   private _elevationColormap?: ColorMap;
 
@@ -93,11 +96,11 @@ export class Globe implements Omit<GlobeWasm, "free" | "elevationColormap"> {
     this.handler.setSegments(value);
   }
 
-  get color(): number {
-    return this.handler.getColor() ?? 0xffffff;
+  get color(): Color | undefined {
+    return this.handler.getColor();
   }
 
-  set color(value: number) {
+  set color(value: Color) {
     this.handler.setColor(value);
   }
 

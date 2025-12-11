@@ -1,4 +1,4 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
@@ -41,7 +41,7 @@ export const run = async (view: ThreeView) => {
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     rasterTile: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       maxZoom: 18,
     },
   });

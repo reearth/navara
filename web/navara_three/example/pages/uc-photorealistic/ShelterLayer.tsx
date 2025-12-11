@@ -2,6 +2,7 @@ import {
   degreeToRadian,
   geodeticToVector3,
   LLE,
+  Color,
   type FogLightDefinition,
   type Layer as NavaraLayer,
   type LayerDescription,
@@ -80,14 +81,14 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       },
       // Render labels using instanced text anchored at point positions.
       text: {
-        color: 0xffffff,
+        color: new Color().setStyle("#ffffff"),
         size: 15,
         clamp_to_ground: true,
         scale_by_distance: true,
         height: 10,
         depth_test: false,
         outline_width: 2,
-        outline_color: 0x111111,
+        outline_color: new Color().setStyle("#111111"),
         show: visible,
       },
       vectorTile: {

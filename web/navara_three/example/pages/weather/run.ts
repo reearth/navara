@@ -10,6 +10,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   LLE,
+  Color,
 } from "@navara/three";
 import { Vector2, Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -107,7 +108,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -146,7 +147,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       height: -50,
@@ -188,7 +189,7 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
     },
     model: {
       show: true,
-      color: 0xffdcad,
+      color: new Color().setStyle("#ffdcad"),
       metalness: 0.02,
       roughness: 0.3,
       reflectivity: 0.2,
@@ -207,7 +208,7 @@ const addWaterControl = (view: ThreeView, pane: Pane) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     polygon: {
-      color: 0xcef7ff,
+      color: new Color().setStyle("#cef7ff"),
       reflectivity: 0.2,
       clampToGround: true,
       wireframe: false,

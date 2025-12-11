@@ -1,6 +1,7 @@
 import {
   type LayerDescription,
   JAPAN_GSI_ELEVATION_DECODER,
+  Color,
 } from "@navara/three";
 import { Layer, useViewContext } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
@@ -135,7 +136,7 @@ export const Layers: FC<SceneLayerToggles> = ({
         url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
       },
       polygon: {
-        color: 0x72501a,
+        color: new Color().setStyle("#72501a"),
         reflectivity: 0.3,
         clampToGround: true,
         wireframe: false,

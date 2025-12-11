@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
 } from "@navara/three";
@@ -53,7 +54,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
     },
@@ -66,7 +67,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
     },
