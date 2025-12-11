@@ -110,7 +110,7 @@ fn recognize_gesture(touch_list: &TouchList, window: &Window) -> Option<TouchCon
                 gesture: TouchGesture::DoubleSwipe,
                 delta: ((p1_pos - p1_prev)
                     / Vec2::new(window.width as FloatType, window.height as FloatType))
-                    * 10.0,
+                    * 5.0,
             });
         }
 
