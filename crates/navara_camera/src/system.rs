@@ -32,7 +32,7 @@ use crate::{
 };
 
 use super::{CameraFrustum, CameraMarker, Orbit};
-use navara_input::MouseMoveInput;
+use navara_input::{MouseMoveInput, TouchControl};
 
 pub fn startup(mut commands: Commands) {
     let orbit = Orbit::default();
@@ -79,6 +79,7 @@ pub fn update(
     mut mm: EventReader<MouseMotion>,
     mut mw: EventReader<MouseWheel>,
     mut _mp: EventReader<MouseMoveInput>,
+    mut tc: EventReader<TouchControl>,
     mut ce: EventReader<CameraEvent>,
     keys: Res<ButtonInput<KeyCode>>,
     frame: Res<FrameManager>,
@@ -162,6 +163,8 @@ pub fn update(
         let is_ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
         let _is_shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
 
+        let touch_control = tc.read().last().map(|ev| ev.to_owned());
+
         // Handle rotations and movements
         handle_orbit_spin(
             &transform,
@@ -170,6 +173,7 @@ pub fn update(
             &mut inertia,
             &mb,
             &mut mm,
+            &touch_control,
             is_ctrl,
             is_cam_moving,
             &mut cam_st,
@@ -181,6 +185,7 @@ pub fn update(
             &controller,
             &mut inertia,
             &mut mw,
+            &touch_control,
             is_ctrl,
             is_cam_moving,
             &mut cam_st,
@@ -193,6 +198,7 @@ pub fn update(
             &mut controller,
             &mb,
             &mut mm,
+            &touch_control,
             is_ctrl,
             &transform,
             frustum,
@@ -353,19 +359,23 @@ fn handle_orbit_spin(
     inertia: &mut CameraInertia,
     mb: &Res<ButtonInput<MouseButton>>,
     mm: &mut EventReader<MouseMotion>,
+    touch_control: &Option<TouchControl>,
     is_ctrl: bool,
     is_cam_moving: bool,
     cam_st: &mut CameraStatus,
 ) {
+    let touch_spin = touch_control
+        .as_ref()
+        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::Swipe);
+
     if !controller.enable_spin
-        || !mb.pressed(MouseButton::Left)
-        || is_ctrl
-        || mb.pressed(MouseButton::Right)
+        || ((!mb.pressed(MouseButton::Left) || is_ctrl || mb.pressed(MouseButton::Right))
+            && !touch_spin)
     {
         return;
     }
 
-    if mm.is_empty() {
+    if mm.is_empty() && !touch_spin {
         return;
     }
 
@@ -376,7 +386,7 @@ fn handle_orbit_spin(
 
     let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
 
-    let Some(spin) = rotate(mm, controller, ratio, ratio) else {
+    let Some(spin) = rotate(mm, touch_control, controller, ratio, ratio) else {
         return;
     };
 
@@ -555,6 +565,7 @@ fn handle_tilt(
     controller: &mut CameraController,
     mb: &Res<ButtonInput<MouseButton>>,
     mm: &mut EventReader<MouseMotion>,
+    touch_control: &Option<TouchControl>,
     is_ctrl: bool,
     transform: &Transform,
     frustum: &CameraFrustum,
@@ -567,13 +578,18 @@ fn handle_tilt(
 
     // TODO: Pick terrain height like here from depth buffer: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2557
 
+    let touch_tilt = touch_control
+        .as_ref()
+        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::DoubleSwipe);
+
     if !controller.enable_tilt
-        || ((!is_ctrl || !mb.pressed(MouseButton::Left)) && !mb.pressed(MouseButton::Right))
+        || (((!is_ctrl || !mb.pressed(MouseButton::Left)) && !mb.pressed(MouseButton::Right))
+            && !touch_tilt)
     {
         return;
     }
 
-    if mm.is_empty() {
+    if mm.is_empty() && !touch_tilt {
         return;
     }
 
@@ -585,7 +601,7 @@ fn handle_tilt(
 
     orbit.set_quat(transform, enu_quat, center, true);
 
-    let Some(spin) = rotate(mm, controller, 1., 1.) else {
+    let Some(spin) = rotate(mm, touch_control, controller, 1., 1.) else {
         return;
     };
 
@@ -598,6 +614,7 @@ fn handle_tilt(
 
 fn rotate(
     mm: &mut EventReader<MouseMotion>,
+    touch_control: &Option<TouchControl>,
     controller: &CameraController,
     ratio_x: f64,
     ratio_y: f64,
@@ -605,6 +622,8 @@ fn rotate(
     // Use just the latest motion
     let screen_delta = if let Some(ev) = mm.read().last() {
         Vec3::new(ev.delta.x as f64, ev.delta.y as f64, 0.0)
+    } else if let Some(touch) = touch_control {
+        Vec3::new(touch.delta.x, touch.delta.y, 0.0)
     } else {
         return None;
     };
@@ -622,16 +641,26 @@ fn handle_zoom(
     controller: &CameraController,
     inertia: &mut CameraInertia,
     mw: &mut EventReader<MouseWheel>,
+    touch_control: &Option<TouchControl>,
     is_ctrl: bool,
     is_cam_moving: bool,
     cam_st: &mut CameraStatus,
 ) {
-    if !controller.enable_zoom || mw.is_empty() || is_ctrl {
+    let touch_zoom = touch_control.as_ref().is_some_and(|tc| {
+        matches!(
+            tc.gesture,
+            navara_input::TouchGesture::Pinch | navara_input::TouchGesture::Spread
+        )
+    });
+
+    if !controller.enable_zoom || (mw.is_empty() && !touch_zoom) || is_ctrl {
         return;
     }
 
     let zoom = if let Some(ev) = mw.read().last() {
         ev.y
+    } else if let Some(touch) = touch_control {
+        touch.delta.x as f32
     } else {
         return;
     };

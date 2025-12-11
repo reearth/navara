@@ -1,3 +1,7 @@
+import { encodePosition } from "@navara/engine-api";
+import { calcModelMatrixRTE } from "@navara/three_api";
+import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
+import RteModelParsVertex from "@shaders/glsl/chunks/rte_model_pars_vertex.glsl";
 import {
   Group,
   Mesh,
@@ -20,11 +24,6 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
-
-import { encodePosition } from "@navara/engine-api";
-import { calcModelMatrixRTE } from "@navara/three_api";
-import RteModelParsVertex from "@shaders/glsl/chunks/rte_model_pars_vertex.glsl";
-import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
 import { createReplacer } from "../../utils";
 
 type LayerDescription = {
