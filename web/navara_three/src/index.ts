@@ -44,6 +44,7 @@ import {
 } from "./core";
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
+import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
   type BufferLoader,
@@ -141,6 +142,11 @@ export * from "./lights";
 export * from "./passes";
 export * from "@navara/three_api";
 export * from "./Color";
+export {
+  isMobileDevice,
+  getDevicePixelRatio,
+  type DevicePixelRatioOptions,
+} from "./device";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -172,6 +178,8 @@ export type Options = {
   logarithmicDepthBuffer?: boolean;
   // It must be passed when instantiated.
   shadow?: boolean;
+  // Enable mobile device optimizations such as lower pixel ratio.
+  mobileOptimization?: boolean;
 } & GlobeOptions;
 
 export type MapMouseEvent = {
@@ -523,8 +531,13 @@ export default class ThreeView<
     invariant(width && height);
 
     if (typeof options?.pixelRatio === "number" || !isWorker()) {
-      const defaultPixelRatio = isWorker() ? 1 : window.devicePixelRatio;
-      renderer.setPixelRatio(options.pixelRatio ?? defaultPixelRatio);
+      const pixelRatio = isWorker()
+        ? 1
+        : getDevicePixelRatio({
+            override: options.pixelRatio,
+            mobileOptimization: options.mobileOptimization,
+          });
+      renderer.setPixelRatio(pixelRatio);
     }
 
     renderer.setSize(width, height, !isWorker());
@@ -1386,24 +1399,52 @@ export default class ThreeView<
     };
   }
 
-  addDefaultEffectLayers() {
+  /**
+   * Adds default effect layers for rendering.
+   * On mobile devices (when mobileOptimization is enabled), uses lighter-weight effects.
+   */
+  addDefaultEffectLayers(): {
+    aerialPerspective: LayerHandle<AerialPerspectiveEffectLayer>;
+    lensFlare: LayerHandle<LensFlareEffectLayer> | undefined;
+    toneMapping: LayerHandle<ToneMappingEffectLayer>;
+    antialiasing: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
+  } {
+    const mobile = this._options?.mobileOptimization ? isMobileDevice() : false;
+
+    const aerialPerspective = this.addLayer<AerialPerspectiveEffectLayer>({
+      type: "effect",
+      aerialPerspective: {},
+    } as LayerDescription);
+
+    // Skip lens flare on mobile - expensive effect with limited benefit
+    const lensFlare = mobile
+      ? undefined
+      : this.addLayer<LensFlareEffectLayer>({
+          type: "effect",
+          lensFlare: {},
+        } as LayerDescription);
+
+    const toneMapping = this.addLayer<ToneMappingEffectLayer>({
+      type: "effect",
+      toneMapping: {},
+    } as LayerDescription);
+
+    // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
+    const antialiasing = mobile
+      ? this.addLayer<FXAAEffectLayer>({
+          type: "effect",
+          fxaa: {},
+        } as LayerDescription)
+      : this.addLayer<SMAAEffectLayer>({
+          type: "effect",
+          smaa: {},
+        } as LayerDescription);
+
     return {
-      aerialPerspective: this.addLayer<AerialPerspectiveEffectLayer>({
-        type: "effect",
-        aerialPerspective: {},
-      } as LayerDescription),
-      lensFlare: this.addLayer<LensFlareEffectLayer>({
-        type: "effect",
-        lensFlare: {},
-      } as LayerDescription),
-      toneMapping: this.addLayer<ToneMappingEffectLayer>({
-        type: "effect",
-        toneMapping: {},
-      } as LayerDescription),
-      smaa: this.addLayer<SMAAEffectLayer>({
-        type: "effect",
-        smaa: {},
-      } as LayerDescription),
+      aerialPerspective,
+      lensFlare,
+      toneMapping,
+      antialiasing,
     };
   }
 
