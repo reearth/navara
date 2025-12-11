@@ -1,7 +1,6 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
 import {
   Object3D,
-  type Material,
   Mesh,
   type WebGLRenderer,
   MeshStandardMaterial,
@@ -142,9 +141,6 @@ export abstract class MeshLayerDeclaration<
     // Setup onBeforeRender callback for post effect depth control
     this.setupMeshOnBeforeRender();
 
-    // Setup CSM event handlers if layer emits material lifecycle events
-    this.setupCSMEventHandlers();
-
     // Apply initial effects
     this.applyEffects();
   }
@@ -267,39 +263,6 @@ export abstract class MeshLayerDeclaration<
     };
   }
 
-  /**
-   * Setup CSM event handlers for material lifecycle management.
-   * This method is called automatically in onCreate() and listens for
-   * materialCreated and materialDisposed events from child layers.
-   */
-  private setupCSMEventHandlers() {
-    // Type-safe check if the layer has CSM-related events
-    const hasCSMEvents =
-      "on" in this && typeof this.on === "function" && "emit" in this;
-
-    if (hasCSMEvents) {
-      // Listen for materialCreated event
-      try {
-        // @ts-expect-error - Dynamic event listening for CSM support
-        this.on("materialCreated", (material: Material) => {
-          this.view.emit("_csmMounted", material);
-        });
-      } catch {
-        // Layer doesn't emit materialCreated, skip
-      }
-
-      // Listen for materialDisposed event
-      try {
-        // @ts-expect-error - Dynamic event listening for CSM support
-        this.on("materialDisposed", (material: Material) => {
-          this.view.emit("_csmUnmounted", material);
-        });
-      } catch {
-        // Layer doesn't emit materialDisposed, skip
-      }
-    }
-  }
-
   removeFromScene(passKey: PassKey) {
     const scenes = this.view.scenes;
 
@@ -396,112 +359,6 @@ export abstract class MeshLayerDeclaration<
     }
 
     super.onDestroy();
-  }
-
-  // ==========================================
-  // Effect Management Methods
-  // ==========================================
-  // These methods now use ViewContext as the single source of truth,
-  // ensuring proper synchronization with PostEffectRegistry
-
-  /**
-   * Enable a specific effect for this layer
-   * @param effectId - The ID of the effect to enable
-   */
-  enableEffect(effectId: string): void {
-    const current = this.view.getLayerEffects(this.id) ?? [];
-    if (!current.includes(effectId)) {
-      this.view.updateLayerEffects(this.id, [...current, effectId]);
-    }
-  }
-
-  /**
-   * Disable a specific effect for this layer
-   * @param effectId - The ID of the effect to disable
-   */
-  disableEffect(effectId: string): void {
-    const current = this.view.getLayerEffects(this.id) ?? [];
-    const updated = current.filter((id) => id !== effectId);
-    this.view.updateLayerEffects(this.id, updated);
-  }
-
-  /**
-   * Toggle a specific effect for this layer
-   * @param effectId - The ID of the effect to toggle
-   * @param enabled - Optional explicit state. If not provided, toggles current state
-   */
-  toggleEffect(effectId: string, enabled?: boolean): void {
-    const shouldEnable = enabled ?? !this.hasEffect(effectId);
-    if (shouldEnable) {
-      this.enableEffect(effectId);
-    } else {
-      this.disableEffect(effectId);
-    }
-  }
-
-  /**
-   * Check if this layer has a specific effect enabled
-   * @param effectId - The ID of the effect to check
-   * @returns true if the effect is enabled
-   */
-  hasEffect(effectId: string): boolean {
-    const effects = this.view.getLayerEffects(this.id) ?? [];
-    return effects.includes(effectId);
-  }
-
-  /**
-   * Get all currently active effects for this layer
-   * @returns Array of effect IDs
-   */
-  getEffects(): string[] {
-    return this.view.getLayerEffects(this.id) ?? [];
-  }
-
-  /**
-   * Set all effects for this layer, replacing any existing effects
-   * @param effectIds - Array of effect IDs to set
-   */
-  setEffects(effectIds: string[]): void {
-    this.view.updateLayerEffects(this.id, effectIds);
-  }
-
-  /**
-   * Clear all effects from this layer
-   */
-  clearEffects(): void {
-    this.view.updateLayerEffects(this.id, []);
-  }
-
-  /**
-   * Set Post Effect Occlusion for this layer
-   * @param mode - Occlusion mode: 0 = Normal, 1 = No Depth Test, 2 = Silhouette
-   */
-  setPostEffectOcclusion(mode: number): void {
-    this.view.setLayerPostEffectOcclusion(this.id, mode);
-  }
-
-  /**
-   * Get the current Post Effect Occlusion setting for this layer
-   * @returns The current Post Effect Occlusion mode
-   */
-  getPostEffectOcclusion(): number {
-    return this.view.getLayerPostEffectOcclusion(this.id);
-  }
-
-  /**
-   * Set emissive color for this layer
-   * @param color - The emissive color as a hex number (e.g., 0xffffff), or undefined to use material color
-   */
-  setEmissiveColor(color: number | undefined): void {
-    this.view.setLayerEmissiveColor(this.id, color);
-  }
-
-  /**
-   * Get the current emissive color for this layer
-   * @returns The current emissive color, or undefined if using material color
-   */
-  getEmissiveColor(): number | undefined {
-    return this.view.getLayerEmissiveColor(this.id);
   }
 
   update?(time: number): void;

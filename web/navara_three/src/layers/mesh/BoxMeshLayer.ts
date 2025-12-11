@@ -2,7 +2,6 @@ import {
   BoxGeometry,
   Mesh,
   MeshLambertMaterial,
-  type Material,
   type Object3DEventMap,
 } from "three";
 
@@ -14,12 +13,6 @@ import {
   type ViewContext,
 } from "../../core";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
-
-// Custom event map (for Navara EventHandler)
-type BoxMeshLayerEvents = {
-  materialCreated: (material: Material) => void;
-  materialDisposed: (material: Material) => void;
-};
 
 type BoxMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
@@ -48,8 +41,7 @@ export type BoxMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class BoxMeshLayer extends MeshLayerDeclaration<
   BoxMeshLayerConfig,
   BoxMeshLayerUpdate,
-  Mesh<BoxGeometry, MeshLambertMaterial, BoxMeshEventMap>,
-  BoxMeshLayerEvents
+  Mesh<BoxGeometry, MeshLambertMaterial, BoxMeshEventMap>
 > {
   private config: BoxMeshLayerConfig;
 
@@ -92,8 +84,8 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    // Emit Navara custom event
-    this.emit("materialCreated", material);
+    // Emit CSM event for shadow map integration
+    this.view.emit("_csmMounted", material);
 
     return mesh;
   }
@@ -168,8 +160,8 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      // Emit Navara custom event
-      this.emit("materialDisposed", this._instance.material);
+      // Emit CSM event for shadow map cleanup
+      this.view.emit("_csmUnmounted", this._instance.material);
 
       this._instance.geometry.dispose();
       this._instance.material.dispose();

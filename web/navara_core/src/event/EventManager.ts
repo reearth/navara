@@ -273,7 +273,8 @@ export class EventManager {
       onAbort?: (ev: GetJsEventValue<RemoveKey>) => void;
     },
   ) {
-    if (!options.add?.key || !options.remove?.key) {
+    // Allow processing if at least one event type is specified
+    if (!options.add?.key && !options.remove?.key && !options.change?.key) {
       return;
     }
 
@@ -285,51 +286,60 @@ export class EventManager {
 
     this.removeDuplicatedTransactionEvents(options);
 
-    const transaction = this.transactionManager
-      .getOrInsert(transactionKey)
-      .then(() =>
+    let transaction = this.transactionManager.getOrInsert(transactionKey);
+
+    // Process add events if specified
+    const addOption = options.add;
+    if (addOption?.key) {
+      transaction = transaction.then(() =>
         this.forEachStackAsync(
-          options.add.key,
+          addOption.key,
           (event) => {
             if (onAbort) {
               this.addedEventIds.add(generateEventId({ type: "add", event }));
             }
             return cb({ type: "add", event });
           },
-          options.add.max,
+          addOption.max,
           shouldProcess
             ? (event) => shouldProcess({ type: "add", event })
             : undefined,
         ),
-      )
-      .then(() => {
+      );
+    }
+
+    // Process remove events if specified
+    const removeOption = options.remove;
+    if (removeOption?.key) {
+      transaction = transaction.then(() => {
         if (onAbort) {
           this.addedEventIds.clear();
         }
         return this.forEachStackAsync(
-          options.remove.key,
+          removeOption.key,
           (event) => cb({ type: "remove", event }),
-          options.remove.max,
+          removeOption.max,
           shouldProcess
             ? (event) => shouldProcess({ type: "remove", event })
             : undefined,
         );
       });
 
-    // Handle an abort process to an add event.
-    if (onAbort && this.addedEventIds.size) {
-      for (const event of this.stacks[options.remove.key]) {
-        if (!event) continue;
-        const removeEv = event as GetJsEventValue<RemoveKey>;
-        const id = generateEventId({ type: "remove", event: removeEv });
-        if (id && this.addedEventIds.has(id)) {
-          onAbort(removeEv);
-          this.addedEventIds.delete(id);
+      // Handle an abort process to an add event.
+      if (onAbort && this.addedEventIds.size) {
+        for (const event of this.stacks[removeOption.key]) {
+          if (!event) continue;
+          const removeEv = event as GetJsEventValue<RemoveKey>;
+          const id = generateEventId({ type: "remove", event: removeEv });
+          if (id && this.addedEventIds.has(id)) {
+            onAbort(removeEv);
+            this.addedEventIds.delete(id);
+          }
         }
       }
     }
 
-    if (options.change) {
+    if (options.change?.key) {
       const change = options.change;
       transaction
         .then(() =>

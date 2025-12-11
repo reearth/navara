@@ -59,6 +59,20 @@ const applyEmissiveToMeshMaterials = (
   });
 };
 
+/**
+ * Synchronizes effect/style settings from ViewContext to Three.js Object3D.
+ * This function is the bridge between Rust-managed styles and Three.js rendering.
+ *
+ * Called when:
+ * - A feature is created (handleFeatureCreatedEventByLayerId)
+ * - A feature's material properties change (processRenderableFeatureChanged)
+ *
+ * Note: While the Source of Truth for effects is Rust, this function is still
+ * necessary to apply those effects to Three.js materials (emissive, registry links, etc.)
+ *
+ * For ModelMesh objects: Dispatches 'layerEffectsChanged' event
+ * For Regular meshes: Directly updates PostEffectRegistry links and emissive materials
+ */
 export const applyEffectPayloadToObject = (
   obj: Object3D,
   viewContext: ViewContext,

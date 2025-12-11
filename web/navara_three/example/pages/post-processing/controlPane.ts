@@ -1,4 +1,10 @@
-import type { BoxMeshLayer, Layer, SphereMeshLayer } from "@navara/three";
+import type {
+  BoxMeshLayer,
+  BoxMeshLayerUpdate,
+  Layer,
+  SphereMeshLayer,
+  SphereMeshLayerUpdate,
+} from "@navara/three";
 import { Color, PostEffectOcclusionMode } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
@@ -251,7 +257,10 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
   });
 };
 
-type MeshLayerHandle = { ref: BoxMeshLayer | SphereMeshLayer };
+type MeshLayerHandle = {
+  ref: BoxMeshLayer | SphereMeshLayer;
+  update: (updates: BoxMeshLayerUpdate | SphereMeshLayerUpdate) => void;
+};
 
 type MeshFolderOptions = {
   title: string;
@@ -282,7 +291,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   };
 
   const applyMeshState = () => {
-    layer.ref.onUpdateConfig({
+    layer.update({
       ...buildMeshConfig(configKey, {
         emissive: params.emissiveColor,
         emissiveIntensity: params.emissiveIntensity,
@@ -297,7 +306,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   const folder = pane.addFolder({ title });
 
   folder.addBinding(params, "visible").on("change", (ev) => {
-    layer.ref.visible = ev.value;
+    layer.update({ visible: ev.value });
   });
 
   folder
