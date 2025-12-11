@@ -46,6 +46,8 @@ import {
   WATER_NORMAL_URL,
   type ViewEvents,
 } from "..";
+import type { ViewContext } from "../core";
+import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
@@ -55,6 +57,16 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
+
+function arraysEqual(
+  a: string[] | undefined,
+  b: string[] | undefined,
+): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
@@ -89,9 +101,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
+    viewContext?: ViewContext,
+    layerId?: string,
   ) {
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
+
+    // Store viewContext and layerId for PostEffect handling
+    this.userData.viewContext = viewContext;
+    this.userData.layerId = layerId;
 
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
@@ -800,6 +818,32 @@ export class PolygonMesh extends BatchedFeatureMesh<
       const next = material.ior ?? 1.33333;
       this.material.userData.ior.value = next;
       prev.ior = next;
+    }
+
+    // PostEffect: effectIds handling
+    const viewContext = this.userData.viewContext as ViewContext | undefined;
+    const layerId = this.userData.layerId as string | undefined;
+    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      updatePostEffectLinksForObject(
+        this,
+        viewContext?.postEffectRegistry,
+        material.effectIds ?? [],
+        prev.effectIds ?? [],
+        layerId,
+      );
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+    }
+
+    // PostEffect: emissiveColor handling
+    if (prev.emissiveColor !== material.emissiveColor) {
+      this.material.emissive.set(material.emissiveColor ?? 0);
+      prev.emissiveColor = material.emissiveColor;
+    }
+
+    // PostEffect: emissiveIntensity handling
+    if (prev.emissiveIntensity !== material.emissiveIntensity) {
+      this.material.emissiveIntensity = material.emissiveIntensity ?? 0;
+      prev.emissiveIntensity = material.emissiveIntensity;
     }
   }
 

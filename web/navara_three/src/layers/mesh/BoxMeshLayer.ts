@@ -25,12 +25,14 @@ type LayerDescription = {
     heightSegments?: number;
     depthSegments?: number;
     color?: Color;
-    emissive?: number;
+    emissiveColor?: number;
     emissiveIntensity?: number;
     opacity?: number;
     transparent?: boolean;
     castShadow?: boolean;
     receiveShadow?: boolean;
+    effectIds?: string[];
+    postEffectOcclusion?: number;
   };
 };
 
@@ -46,6 +48,13 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
   private config: BoxMeshLayerConfig;
 
   constructor(view: ViewContext, config: BoxMeshLayerConfig) {
+    // 初期effectIds/postEffectOcclusionを基底クラスに伝搬
+    if (config.box?.effectIds) {
+      config.effectIds = config.box.effectIds;
+    }
+    if (config.box?.postEffectOcclusion !== undefined) {
+      config.postEffectOcclusion = config.box.postEffectOcclusion;
+    }
     super(view, config);
     this.config = config;
   }
@@ -70,7 +79,7 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: cfg.emissive ?? 0,
+      emissive: cfg.emissiveColor ?? 0,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
@@ -123,7 +132,7 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
       // Update material if material properties changed
       if (
         cfg.color !== undefined ||
-        cfg.emissive !== undefined ||
+        cfg.emissiveColor !== undefined ||
         cfg.emissiveIntensity !== undefined ||
         cfg.opacity !== undefined ||
         cfg.transparent !== undefined
@@ -134,7 +143,8 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
             const colorValue = cfg.color.raw;
             material.color.set(colorValue);
           }
-          if (cfg.emissive !== undefined) material.emissive.set(cfg.emissive);
+          if (cfg.emissiveColor !== undefined)
+            material.emissive.set(cfg.emissiveColor);
           if (cfg.emissiveIntensity !== undefined)
             material.emissiveIntensity = cfg.emissiveIntensity;
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
@@ -150,6 +160,14 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
 
       if (cfg.receiveShadow !== undefined) {
         this._instance.receiveShadow = cfg.receiveShadow;
+      }
+
+      // effectIds/postEffectOcclusionを基底クラスに伝搬
+      if (cfg.effectIds !== undefined) {
+        updates.effectIds = cfg.effectIds;
+      }
+      if (cfg.postEffectOcclusion !== undefined) {
+        updates.postEffectOcclusion = cfg.postEffectOcclusion;
       }
 
       this.emit("_needsUpdate");

@@ -17,6 +17,8 @@ import {
 } from "three";
 
 import type { ViewEvents } from "..";
+import type { ViewContext } from "../core";
+import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
@@ -26,6 +28,16 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
+
+function arraysEqual(
+  a: string[] | undefined,
+  b: string[] | undefined,
+): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
@@ -263,6 +275,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
     if (this.receiveShadow !== material.receiveShadow) {
       this.receiveShadow = !!material.receiveShadow;
+    }
+
+    // PostEffect: effectIds handling
+    // ShaderMaterial doesn't have built-in emissive, so only effectIds is handled
+    const viewContext = this.userData.viewContext as ViewContext | undefined;
+    const layerId = this.userData.layerId as string | undefined;
+    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      updatePostEffectLinksForObject(
+        this,
+        viewContext?.postEffectRegistry,
+        material.effectIds ?? [],
+        prev.effectIds ?? [],
+        layerId,
+      );
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 

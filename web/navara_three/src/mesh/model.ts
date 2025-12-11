@@ -51,7 +51,6 @@ import {
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
-  applyEmissiveToObject3D,
   ensurePostEffectUserData,
   getPostEffectConfig,
   getMaskPassType,
@@ -79,6 +78,16 @@ import {
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
+
+function arraysEqual(
+  a: string[] | undefined,
+  b: string[] | undefined,
+): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
@@ -248,16 +257,7 @@ export class ModelMesh
   }
 
   private handleEffectsChanged(event: LayerEffectsChangedEvent): void {
-    const {
-      effectIds,
-      emissiveIntensity,
-      emissiveColor,
-      layerId,
-      prevEffectIds,
-    } = event;
-
-    // Apply emissive to all child meshes (unconditionally)
-    applyEmissiveToObject3D(this, { emissiveIntensity, emissiveColor });
+    const { effectIds, layerId, prevEffectIds } = event;
 
     // Update PostEffectRegistry links
     updatePostEffectLinksForObject(
@@ -844,6 +844,23 @@ export class ModelMesh
         }
       }
     }
+
+    // PostEffect: effectIds handling at ModelMesh level
+    const prev = this.userData.prev as {
+      effectIds?: string[];
+      [key: string]: unknown;
+    };
+    const layerId = this.userData.layerId as string | undefined;
+    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      updatePostEffectLinksForObject(
+        this,
+        this.viewContext?.postEffectRegistry,
+        material.effectIds ?? [],
+        prev.effectIds ?? [],
+        layerId,
+      );
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+    }
   }
 
   private setMaterial(
@@ -952,6 +969,20 @@ export class ModelMesh
       }
       if (dist.receiveShadow !== src.receiveShadow) {
         dist.receiveShadow = !!src.receiveShadow;
+      }
+
+      // PostEffect: emissiveColor handling
+      if (distMaterial.userData.prev.emissiveColor !== src.emissiveColor) {
+        distMaterial.emissive.set(src.emissiveColor ?? 0);
+        distMaterial.userData.prev.emissiveColor = src.emissiveColor;
+      }
+
+      // PostEffect: emissiveIntensity handling
+      if (
+        distMaterial.userData.prev.emissiveIntensity !== src.emissiveIntensity
+      ) {
+        distMaterial.emissiveIntensity = src.emissiveIntensity ?? 0;
+        distMaterial.userData.prev.emissiveIntensity = src.emissiveIntensity;
       }
     }
   }

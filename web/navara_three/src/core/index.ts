@@ -55,7 +55,6 @@ export {
   getMaskPassType,
   resolvePostEffectOcclusion,
   resolveActiveEffects,
-  applyEmissiveToObject3D,
   hasBloomEffect,
   hasOutlineEffect,
   getPostEffectConfig,

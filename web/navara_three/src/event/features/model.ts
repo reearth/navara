@@ -37,7 +37,7 @@ export async function renderModel(
   uniforms: CommonUniforms,
   viewEvents: EventHandler<ViewEvents>,
   viewContext?: ViewContext,
-  _layerId?: string,
+  layerId?: string,
 ) {
   const loader = initializeGltfLoader();
   const dracoLoader = initializeDracoLoader();
@@ -157,6 +157,10 @@ export async function renderModel(
     viewEvents,
     viewContext,
   );
+
+  if (layerId) {
+    scene.userData.layerId = layerId;
+  }
 
   return scene;
 }

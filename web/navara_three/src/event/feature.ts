@@ -24,7 +24,6 @@ import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import {
-  applyEffectPayloadToObject,
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
 } from "./featureEvent";
@@ -51,10 +50,10 @@ export function renderFeature(
   layerId: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf);
+    return renderPoint(f.point, buf, viewContext, layerId);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf);
+    return renderBillboard(f.billboard, buf, viewContext, layerId);
   }
   if (f.model) {
     return renderModel(
@@ -67,10 +66,25 @@ export function renderFeature(
     );
   }
   if (f.polyline) {
-    return renderPolyline(f.polyline, buf, uniforms, viewEvents);
+    return renderPolyline(
+      f.polyline,
+      buf,
+      uniforms,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.polygon) {
-    return renderPolygon(f.polygon, buf, uniforms, tileHandle, viewEvents);
+    return renderPolygon(
+      f.polygon,
+      buf,
+      uniforms,
+      tileHandle,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.text) {
     return renderText(f.text, buf, uniforms);
@@ -203,7 +217,6 @@ export async function processRenderableFeatureAdded(
     obj,
     viewEvents,
     layersManager,
-    viewContext,
     featureLayerId,
     ev.bits,
   );
@@ -258,9 +271,6 @@ export async function processRenderableFeatureChanged(
         material.postEffectOcclusion,
       );
     }
-
-    // Apply effects to Object3D after updating ViewContext
-    applyEffectPayloadToObject(obj, viewContext, layerId);
   }
 
   const active =

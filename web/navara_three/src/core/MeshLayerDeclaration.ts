@@ -1,14 +1,6 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
-import {
-  Object3D,
-  Mesh,
-  type WebGLRenderer,
-  MeshStandardMaterial,
-  MeshPhysicalMaterial,
-  MeshLambertMaterial,
-} from "three";
+import { Object3D } from "three";
 
-import { setupMeshEventHandlers as setupMeshEventHandlersUtil } from "../mesh/meshEventHandlers";
 import type { Scenes } from "../scene";
 
 import {
@@ -17,16 +9,18 @@ import {
   type LayerDeclarationConfig,
   type LayerDeclarationConfigUpdate,
 } from "./LayerDeclaration";
-import {
-  ensurePostEffectUserData,
-  getMaskPassType,
-  MaskPassTypes,
-  type PostEffectConfig,
-  PostEffectOcclusionMode,
-  resolveActiveEffects,
-  resolvePostEffectOcclusion,
-} from "./PostEffectHelper";
+import { updatePostEffectLinksForObject } from "./PostEffectHelper";
 import type { ViewContext } from "./ViewContext";
+
+function arraysEqual(
+  a: string[] | undefined,
+  b: string[] | undefined,
+): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 export type MeshLayerConfig = {
   type: "mesh";
@@ -39,11 +33,12 @@ export type MeshLayerConfig = {
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation" | "effectIds" | "postEffectOcclusion"
-> & {
-  emissiveColor?: number;
-  emissiveIntensity?: number;
-} & LayerDeclarationConfigUpdate;
+  "position" | "scale" | "rotation"
+> &
+  LayerDeclarationConfigUpdate & {
+    effectIds?: string[];
+    postEffectOcclusion?: number;
+  };
 
 type PassKey = keyof Pick<
   Scenes,
@@ -73,16 +68,16 @@ export abstract class MeshLayerDeclaration<
   public scale?: XYZ;
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
-  private effectIds?: string[];
-  private postEffectOcclusion?: number;
+  private _effectIds: string[] = [];
+  private _postEffectOcclusion?: number;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
     this.position = config.position;
     this.scale = config.scale;
     this.rotation = config.rotation;
-    this.effectIds = config.effectIds;
-    this.postEffectOcclusion = config.postEffectOcclusion;
+    this._effectIds = config.effectIds ?? [];
+    this._postEffectOcclusion = config.postEffectOcclusion;
   }
 
   protected getPassKey(): PassKey {
@@ -110,6 +105,12 @@ export abstract class MeshLayerDeclaration<
   onCreate() {
     this._instance = this.createMesh();
 
+    // PostEffect用にviewContext/layerIdをuserDataに保存
+    if (this.raw) {
+      this.raw.userData.viewContext = this.view;
+      this.raw.userData.layerId = this.id;
+    }
+
     if (this.position) {
       this.raw?.position.copy(this.position);
     }
@@ -124,143 +125,26 @@ export abstract class MeshLayerDeclaration<
 
     this._instance.visible = this.visible;
 
-    this.onPassKeyChange();
-
-    // Register layer effects with postEffectOcclusion setting
-    if (this.effectIds && this.effectIds.length > 0) {
-      this.view.registerLayerEffects(
+    // 初期effectIdsをリンク
+    if (this._effectIds.length > 0 && this.raw) {
+      updatePostEffectLinksForObject(
+        this.raw,
+        this.view.postEffectRegistry,
+        this._effectIds,
+        [],
         this.id,
-        this.effectIds,
-        this.postEffectOcclusion,
       );
     }
 
-    // Setup mesh event handlers for all mesh types
-    this.setupMeshEventHandlers();
+    // 初期postEffectOcclusionを登録
+    if (this._postEffectOcclusion !== undefined) {
+      this.view.postEffectRegistry?.registerLayerPostEffectOcclusion(
+        this.id,
+        this._postEffectOcclusion,
+      );
+    }
 
-    // Setup onBeforeRender callback for post effect depth control
-    this.setupMeshOnBeforeRender();
-
-    // Apply initial effects
-    this.applyEffects();
-  }
-
-  /**
-   * Apply effects to the mesh declaratively.
-   * This method dispatches events to trigger effect application through the event system.
-   * It's called automatically when effects are updated via onUpdateConfig().
-   *
-   * Unified with model.ts: layerEffectsChanged event includes emissive info,
-   * and the handler (meshEventHandlers.ts) applies emissive based on layer settings.
-   */
-  private applyEffects(): void {
-    if (!this.raw || !this.view.postEffectRegistry) return;
-
-    const currentEffects = this.effectIds ?? [];
-    const prevEffects = (this.raw.userData.prevEffects as string[]) ?? [];
-
-    // Dispatch layerEffectsChanged event with emissive info (same as model.ts)
-    // The handler will check Bloom status and apply emissive accordingly
-    // Cast needed because Three.js dispatchEvent only accepts Object3DEventMap events
-    const event = {
-      type: "layerEffectsChanged" as const,
-      target: this.raw,
-      effectIds: currentEffects,
-      prevEffectIds: prevEffects,
-      layerId: this.id,
-      emissiveIntensity: this.view.getLayerEmissiveIntensity(this.id),
-      emissiveColor: this.view.getLayerEmissiveColor(this.id),
-    };
-    (this.raw.dispatchEvent as (e: typeof event) => void)(event);
-
-    // Store current effects for next update
-    this.raw.userData.prevEffects = [...currentEffects];
-  }
-
-  /**
-   * Setup event handlers for primitive mesh objects.
-   * This enables emissive and layerEffects control via events instead of direct manipulation.
-   */
-  protected setupMeshEventHandlers() {
-    if (!this.raw) return;
-    setupMeshEventHandlersUtil(this.raw, this.view, this.id);
-  }
-
-  /**
-   * Setup onBeforeRender callback for post effect depth control.
-   * This enables Cube & Sphere layers to respond to postEffectOcclusion settings
-   * by adjusting depth test/write during mask rendering passes, similar to ModelMesh.
-   */
-  private setupMeshOnBeforeRender(): void {
-    if (!this.raw) return;
-
-    // Only setup for Mesh objects (Box, Sphere, etc.)
-    if (!(this.raw instanceof Mesh)) return;
-
-    const mesh = this.raw as Mesh;
-
-    mesh.onBeforeRender = (renderer: WebGLRenderer) => {
-      // 1. Build config from layer properties (not userData - MeshLayerDeclaration doesn't use it)
-      // Note: postEffectOcclusion is NOT included - SoT is registry, accessed via this.id
-      const config: PostEffectConfig = {
-        effectIds: this.effectIds ?? [],
-      };
-
-      // 2. Initialize Material userData for PostEffect (if material supports it)
-      // Include MeshLambertMaterial for Cube/Sphere primitives
-      if (
-        mesh.material instanceof MeshStandardMaterial ||
-        mesh.material instanceof MeshPhysicalMaterial ||
-        mesh.material instanceof MeshLambertMaterial
-      ) {
-        ensurePostEffectUserData(mesh.material);
-
-        const registry = this.view.postEffectRegistry;
-
-        // 3. Determine mask pass type from RenderTarget name
-        const pass = getMaskPassType(renderer.getRenderTarget());
-
-        // 4. Resolve active effects for this pass
-        const { hasBloom, activeInThisPass } = resolveActiveEffects(
-          config,
-          registry,
-          pass,
-        );
-
-        // 5. Set Bloom enabled flag
-        mesh.material.userData.uBloomEnabled ??= { value: 0.0 };
-        mesh.material.userData.uBloomEnabled.value = hasBloom ? 1.0 : 0.0;
-
-        // 5b. Set Outline mask pass flag (for future shader customization)
-        // Note: MeshLambertMaterial doesn't have custom shaders yet, but flag is set for consistency
-        mesh.material.userData.uOutlineMaskPass ??= { value: 0.0 };
-        mesh.material.userData.uOutlineMaskPass.value =
-          pass === MaskPassTypes.Outline && activeInThisPass ? 1.0 : 0.0;
-
-        // 6. Control depth test/write and colorWrite during mask rendering passes
-        if (pass !== MaskPassTypes.None) {
-          if (activeInThisPass) {
-            // This pass is for rendering this object
-            const occlusion = resolvePostEffectOcclusion(registry, this.id);
-            const isSilhouette =
-              occlusion === PostEffectOcclusionMode.Silhouette;
-            mesh.material.depthTest = !isSilhouette;
-            mesh.material.depthWrite = !isSilhouette;
-            mesh.material.colorWrite = true;
-          } else {
-            // This pass is not for this object - suppress drawing
-            mesh.material.depthTest = true;
-            mesh.material.depthWrite = true;
-            mesh.material.colorWrite = false;
-          }
-        } else {
-          // Normal rendering
-          mesh.material.depthTest = true;
-          mesh.material.depthWrite = true;
-          mesh.material.colorWrite = true;
-        }
-      }
-    };
+    this.onPassKeyChange();
   }
 
   removeFromScene(passKey: PassKey) {
@@ -303,41 +187,30 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // Handle effectIds update - delegate to ViewContext for proper cache synchronization
-    if (updates.effectIds !== undefined) {
-      // Update local effects cache
-      this.effectIds =
-        updates.effectIds.length > 0 ? updates.effectIds : undefined;
+    // effectIds更新処理
+    if (updates.effectIds !== undefined && this.raw) {
+      const prevEffectIds = this._effectIds;
+      const nextEffectIds = updates.effectIds ?? [];
 
-      // Update ViewContext cache
-      this.view.updateLayerEffects(this.id, updates.effectIds);
-
-      // Apply effects declaratively
-      this.applyEffects();
+      if (!arraysEqual(prevEffectIds, nextEffectIds)) {
+        updatePostEffectLinksForObject(
+          this.raw,
+          this.view.postEffectRegistry,
+          nextEffectIds,
+          prevEffectIds,
+          this.id,
+        );
+        this._effectIds = [...nextEffectIds];
+      }
     }
 
-    // Handle postEffectOcclusion update - always delegate to ViewContext for consistency
+    // postEffectOcclusion更新処理
     if (updates.postEffectOcclusion !== undefined) {
-      this.postEffectOcclusion = updates.postEffectOcclusion;
-      // Use ViewContext API to ensure all layers (including MeshLayerDeclaration) follow same pipeline:
-      // 1. PostEffectRegistry settings are updated
-      // 2. Existing clones are moved between sceneDepthEnabled/sceneDepthDisabled
-      // This ensures Cube/Sphere behave consistently with Layer types
-      this.view.setLayerPostEffectOcclusion(this.id, this.postEffectOcclusion);
-    }
-
-    if (updates.emissiveIntensity !== undefined) {
-      this.view.updateLayerEffects(
+      this._postEffectOcclusion = updates.postEffectOcclusion;
+      this.view.postEffectRegistry?.updateLayerPostEffectOcclusion(
         this.id,
-        this.view.getLayerEffects(this.id),
-        updates.emissiveIntensity,
+        updates.postEffectOcclusion,
       );
-      this.applyEffects();
-    }
-
-    if (updates.emissiveColor !== undefined) {
-      this.view.setLayerEmissiveColor(this.id, updates.emissiveColor);
-      this.applyEffects();
     }
 
     this.onPassKeyChange();
@@ -354,6 +227,18 @@ export abstract class MeshLayerDeclaration<
   }
 
   onDestroy(): void {
+    // PostEffectのリンク解除
+    if (this._effectIds.length > 0 && this.raw) {
+      updatePostEffectLinksForObject(
+        this.raw,
+        this.view.postEffectRegistry,
+        [],
+        this._effectIds,
+        this.id,
+      );
+      this._effectIds = [];
+    }
+
     if (this.raw && this.raw.parent) {
       this.raw.parent.remove(this.raw);
     }

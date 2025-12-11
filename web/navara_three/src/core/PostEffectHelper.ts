@@ -316,30 +316,6 @@ export function resolveActiveEffects(
 }
 
 /**
- * Apply emissive effect to all meshes in an Object3D hierarchy
- * Emissive is a native material parameter applied unconditionally.
- */
-export function applyEmissiveToObject3D(
-  obj: Object3D,
-  params: EmissiveParams,
-): void {
-  obj.traverse((child) => {
-    if (!(child instanceof Mesh)) return;
-    const materials = Array.isArray(child.material)
-      ? child.material
-      : [child.material];
-    for (const material of materials) {
-      if (
-        material instanceof MeshStandardMaterial ||
-        material instanceof MeshPhysicalMaterial
-      ) {
-        applyEmissiveEffect(material, params);
-      }
-    }
-  });
-}
-
-/**
  * Helper for managing post effect render targets and metadata
  */
 export class PostEffectHelper {

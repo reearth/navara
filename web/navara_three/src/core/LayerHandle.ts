@@ -1,7 +1,5 @@
 import { EventHandler } from "@navara/core";
 
-import type { LayerDescription } from "../type";
-
 import {
   LayerDeclaration,
   type LayerDeclarationConfigUpdate,
@@ -18,25 +16,12 @@ export class LayerHandle<
     super();
   }
 
-  /* eslint-disable @typescript-eslint/unified-signatures */
-  // Overload: Accept LayerDescription directly (for React/generic usage)
-  update(updates: LayerDescription): void;
-  // Overload: Type-safe signature for specific layer types
   update(
     updates: T extends LayerDeclaration<infer _A, infer B>
       ? B
       : LayerDeclarationConfigUpdate,
-  ): void;
-  /* eslint-enable @typescript-eslint/unified-signatures */
-  // Implementation
-  update(
-    updates:
-      | LayerDescription
-      | (T extends LayerDeclaration<infer _A, infer B>
-          ? B
-          : LayerDeclarationConfigUpdate),
   ): void {
-    this.layer.onUpdateConfig(updates as LayerDeclarationConfigUpdate);
+    this.layer.onUpdateConfig(updates);
   }
 
   get ref(): T {

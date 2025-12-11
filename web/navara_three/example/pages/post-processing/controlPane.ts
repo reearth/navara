@@ -100,7 +100,7 @@ export const createControlPane = ({
       emissiveIntensity: 1.1,
       visible: true,
       postEffectOcclusion: PostEffectOcclusionMode.Normal,
-      bloomEnabled: false,
+      bloomEnabled: true,
       outlineEnabled: false,
     },
   });
@@ -272,34 +272,29 @@ type MeshFolderOptions = {
     emissiveColor: number;
     emissiveIntensity: number;
     visible: boolean;
-    postEffectOcclusion: number; // 0 = DepthEnabled, 2 = Silhouette
+    postEffectOcclusion: number;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
   };
 };
 
 const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
-  const { title, layer, bloomId, outlineId, configKey } = options;
+  const { title, layer, configKey, bloomId, outlineId } = options;
   const params = { ...options.params };
-
-  // Helper to compute effectIds from current params
-  const getEffectIds = (): string[] => {
-    const ids: string[] = [];
-    if (params.bloomEnabled) ids.push(bloomId);
-    if (params.outlineEnabled) ids.push(outlineId);
-    return ids;
-  };
 
   const applyMeshState = () => {
     layer.update({
       ...buildMeshConfig(configKey, {
-        emissive: params.emissiveColor,
+        emissiveColor: params.emissiveColor,
         emissiveIntensity: params.emissiveIntensity,
+        effectIds: getEffectIds(
+          params.bloomEnabled,
+          params.outlineEnabled,
+          bloomId,
+          outlineId,
+        ),
+        postEffectOcclusion: params.postEffectOcclusion,
       }),
-      effectIds: getEffectIds(),
-      postEffectOcclusion: params.postEffectOcclusion,
-      emissiveColor: params.emissiveColor,
-      emissiveIntensity: params.emissiveIntensity,
     });
   };
 
@@ -308,18 +303,6 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   folder.addBinding(params, "visible").on("change", (ev) => {
     layer.update({ visible: ev.value });
   });
-
-  folder
-    .addBinding(params, "postEffectOcclusion", {
-      label: "Occlusion Mode",
-      options: {
-        DepthEnabled: PostEffectOcclusionMode.Normal,
-        Silhouette: PostEffectOcclusionMode.Silhouette,
-      },
-    })
-    .on("change", () => {
-      applyMeshState();
-    });
 
   folder
     .addBinding(params, "emissiveColor", {
@@ -340,6 +323,18 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   );
 
   folder
+    .addBinding(params, "postEffectOcclusion", {
+      label: "Occlusion Mode",
+      options: {
+        DepthEnabled: PostEffectOcclusionMode.Normal,
+        Silhouette: PostEffectOcclusionMode.Silhouette,
+      },
+    })
+    .on("change", () => {
+      applyMeshState();
+    });
+
+  folder
     .addBinding(params, "bloomEnabled", { label: "Bloom" })
     .on("change", () => {
       applyMeshState();
@@ -356,7 +351,12 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
 
 const buildMeshConfig = (
   configKey: "box" | "sphere",
-  config: { emissive?: number; emissiveIntensity?: number },
+  config: {
+    emissiveColor?: number;
+    emissiveIntensity?: number;
+    effectIds?: string[];
+    postEffectOcclusion?: number;
+  },
 ) => {
   if (configKey === "box") {
     return { box: config };

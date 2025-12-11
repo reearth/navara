@@ -1,10 +1,22 @@
 import { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
+import type { ViewContext } from "../core";
+import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import { setTransform, type BufferLoader } from "../event";
 import { applyTextureAspect } from "../texture";
 
 import { BillboardMesh } from "./billboard";
 import { InstancedMesh } from "./instanced";
+
+function arraysEqual(
+  a: string[] | undefined,
+  b: string[] | undefined,
+): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
   async _init(m: NavaraBillboardMesh, buf: BufferLoader) {
@@ -85,5 +97,24 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
         }
       }),
     );
+
+    // PostEffect: effectIds handling at container level
+    // SpriteMaterial doesn't support emissive, so only effectIds is handled
+    if (!this.userData.prev) {
+      this.userData.prev = {};
+    }
+    const prev = this.userData.prev as { effectIds?: string[] };
+    const viewContext = this.userData.viewContext as ViewContext | undefined;
+    const layerId = this.userData.layerId as string | undefined;
+    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      updatePostEffectLinksForObject(
+        this,
+        viewContext?.postEffectRegistry,
+        material.effectIds ?? [],
+        prev.effectIds ?? [],
+        layerId,
+      );
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+    }
   }
 }

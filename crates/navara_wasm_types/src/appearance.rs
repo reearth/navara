@@ -22,15 +22,21 @@ pub struct PointMaterial {
     pub depth_test: Option<bool>,
     pub transparent: Option<bool>,
     // post effect
+    /// IDs of post effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for post effect mask passes:
+    /// 0 = Normal (depthTest + depthWrite enabled)
+    /// 2 = Silhouette (no depthTest/depthWrite)
     #[wasm_bindgen(js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
     pub post_effect_occlusion: Option<u8>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
     #[wasm_bindgen(js_name = emissiveColor)]
     #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
@@ -107,15 +113,21 @@ pub struct BillboardMaterial {
     #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
     // post effect
+    /// IDs of post effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for post effect mask passes:
+    /// 0 = Normal (depthTest + depthWrite enabled)
+    /// 2 = Silhouette (no depthTest/depthWrite)
     #[wasm_bindgen(js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
     pub post_effect_occlusion: Option<u8>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
     #[wasm_bindgen(js_name = emissiveColor)]
     #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
@@ -300,15 +312,21 @@ pub struct PolylineMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
     // post effect
+    /// IDs of post effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for post effect mask passes:
+    /// 0 = Normal (depthTest + depthWrite enabled)
+    /// 2 = Silhouette (no depthTest/depthWrite)
     #[wasm_bindgen(js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
     pub post_effect_occlusion: Option<u8>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
     #[wasm_bindgen(js_name = emissiveColor)]
     #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
@@ -517,15 +535,21 @@ pub struct PolygonMaterial {
     pub specular: Option<bool>,
     pub ior: Option<f32>,
     // post effect
+    /// IDs of post effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for post effect mask passes:
+    /// 0 = Normal (depthTest + depthWrite enabled)
+    /// 2 = Silhouette (no depthTest/depthWrite)
     #[wasm_bindgen(js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
     pub post_effect_occlusion: Option<u8>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
     #[wasm_bindgen(js_name = emissiveColor)]
     #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
@@ -812,15 +836,21 @@ pub struct ModelMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
     // post effect
+    /// IDs of post effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for post effect mask passes:
+    /// 0 = Normal (depthTest + depthWrite enabled)
+    /// 2 = Silhouette (no depthTest/depthWrite)
     #[wasm_bindgen(js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
     pub post_effect_occlusion: Option<u8>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
     #[wasm_bindgen(js_name = emissiveColor)]
     #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
