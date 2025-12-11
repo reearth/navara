@@ -4,6 +4,8 @@
 # Generate JS bindings for API WASM module
 [tasks.bindgen-rust-api]
 script = ['''
+#!/usr/bin/env bash
+
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web
 if command -v wasm-opt &> /dev/null; then
     wasm-opt -O4 web/wasm/navara_engine_api/navara_wasm_api_bg.wasm -o web/wasm/navara_engine_api/navara_wasm_api_bg.wasm

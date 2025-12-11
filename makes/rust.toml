@@ -18,6 +18,8 @@ cargo build --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker
 # Optional: Install binaryen for wasm-opt optimization: https://github.com/WebAssembly/binaryen
 [tasks.bindgen-rust]
 script = ['''
+#!/usr/bin/env bash
+
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web
 if command -v wasm-opt &> /dev/null; then
     wasm-opt -O4 web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm

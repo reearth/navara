@@ -4,6 +4,8 @@
 # Generate JS bindings for worker WASM module
 [tasks.bindgen-rust-worker]
 script = ['''
+#!/usr/bin/env bash
+
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_worker.wasm --out-dir web/wasm/navara_engine_worker --target web
 if command -v wasm-opt &> /dev/null; then
     wasm-opt -O4 web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm -o web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm
