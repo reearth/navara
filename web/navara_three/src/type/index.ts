@@ -11,6 +11,7 @@ import type {
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D, Material } from "three";
 
+import type { Color } from "../Color";
 import type {
   RainMeshLayerConfig,
   SnowMeshLayerConfig,
@@ -50,7 +51,6 @@ import type {
   DepthOfFieldConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
-import type { Color } from "../Color";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 

@@ -3,6 +3,7 @@ import { N8AOPostPass, type QualityMode } from "n8ao";
 import { Scene, type Camera } from "three";
 
 import { Color } from "../Color";
+
 import { Pass, type EffectOptions } from "./effect";
 
 export { ToneMappingMode } from "postprocessing";

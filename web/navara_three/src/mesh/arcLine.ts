@@ -21,8 +21,8 @@ import {
   Box3,
 } from "three";
 
-import { overrideShaderMaterialForMRT } from "../material";
 import { Color } from "../Color";
+import { overrideShaderMaterialForMRT } from "../material";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
