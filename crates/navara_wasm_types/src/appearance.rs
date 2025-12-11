@@ -951,7 +951,7 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                     .map(|t| {
                         t.map(|t| TextureFragment {
                             ind: t.index(),
-                            gen: t.generation(),
+                            r#gen: t.generation(),
                         })
                     })
                     .collect()

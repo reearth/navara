@@ -9,7 +9,7 @@ use super::feature::RenderableFeature;
 pub struct RenderableFeatureAddedEvent {
     // Entity
     pub ind: u32,
-    pub gen: u32,
+    pub r#gen: u32,
     pub bits: u64,
 
     #[wasm_bindgen(getter_with_clone)]
@@ -37,7 +37,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            gen: ev.gen,
+            r#gen: ev.r#gen,
             bits: ev.bits,
             feature: RenderableFeature::from(ev.comp.0),
             layer_id: ev.comp.1 .0.clone(),
@@ -51,7 +51,7 @@ impl<'a>
 pub struct RenderableFeatureChangedEvent {
     // Entity
     pub ind: u32,
-    pub gen: u32,
+    pub r#gen: u32,
     pub bits: u64,
 
     #[wasm_bindgen(getter_with_clone)]
@@ -79,7 +79,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            gen: ev.gen,
+            r#gen: ev.r#gen,
             bits: ev.bits,
             feature: RenderableFeature::from(ev.comp.0),
             layer_id: ev.comp.1 .0.clone(),
@@ -93,7 +93,7 @@ impl<'a>
 pub struct RenderableFeatureRemovedEvent {
     // Entity
     pub ind: u32,
-    pub gen: u32,
+    pub r#gen: u32,
     pub bits: u64,
 
     #[wasm_bindgen(getter_with_clone)]
@@ -108,7 +108,7 @@ impl<'a> From<navara_event_store::ReconstructableComponentEvent<&'a navara_layer
     ) -> Self {
         Self {
             ind: ev.ind,
-            gen: ev.gen,
+            r#gen: ev.r#gen,
             bits: ev.bits,
             layer_id: ev.comp.0.clone(),
         }
