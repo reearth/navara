@@ -7,6 +7,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticSurfaceNormal,
   LLE,
+  Color,
 } from "@navara/three";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
@@ -89,7 +90,7 @@ export const addTestModelForNormal = (
       direction: normal,
       origin: pos,
       length: 5000000,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       headLength: 400000,
       headWidth: 70000,
     },

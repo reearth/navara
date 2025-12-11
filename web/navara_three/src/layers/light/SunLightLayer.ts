@@ -1,6 +1,7 @@
-import { Color, Material } from "three";
+import { Material } from "three";
 import invariant from "tiny-invariant";
 
+import { Color } from "../../Color";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
@@ -12,9 +13,9 @@ import { SunLight, type SunLightOptions } from "../../lights";
 type LayerDescription = {
   /**
    * Sun light configuration options. Includes all CSM (Cascaded Shadow Maps) settings.
-   * Color is specified as a number (hex value) instead of THREE.Color instance.
+   * Color can be specified as a number (hex value) or Navara Color instance.
    */
-  sun?: Omit<SunLightOptions, "color"> & { color?: number };
+  sun?: Omit<SunLightOptions, "color"> & { color?: Color };
 };
 
 export type SunLightLayerConfig = LightLayerConfig & LayerDescription;
@@ -35,7 +36,7 @@ export class SunLightLayer extends LightLayerDeclaration<
 
   createLight() {
     const options = this.config.sun ?? {};
-    const color = options.color ? new Color(options.color) : undefined;
+    const color = options.color ? options.color.raw : undefined;
 
     const sunLight = new SunLight(this.view.camera, {
       ...options,
@@ -76,7 +77,7 @@ export class SunLightLayer extends LightLayerDeclaration<
 
       // Update color
       if (updates.sun.color !== undefined) {
-        this._instance.color = new Color(updates.sun.color);
+        this._instance.color = updates.sun.color.raw;
       }
 
       if (updates.sun.applyColor !== undefined) {

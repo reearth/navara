@@ -5,6 +5,7 @@ import type {
   GlobeOptions,
   Nullable,
   XYZ,
+  Color as CoreColor,
 } from "@navara/core";
 import initCore, {
   Core,
@@ -31,6 +32,7 @@ import invariant from "tiny-invariant";
 
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
+import { Color } from "./Color";
 import { MAP_CONCURRENCY } from "./concurrency";
 import {
   LayerDeclaration,
@@ -110,7 +112,6 @@ import {
   type RenderFlag,
   type TileMapByHandle,
   type MeshLayerDeclarationDescription,
-  type ResourceLayerDescription,
   type LightLayerDeclarationDescription,
   type EffectLayerDeclarationDescription,
   type DrapedMaterialCache,
@@ -156,7 +157,7 @@ export type Options = {
   disableAutoResize?: boolean;
   debug?: boolean;
   atmosphere?: AtmosphereOptions;
-  backgroundColor?: number;
+  backgroundColor?: CoreColor;
   picking?: Picking;
   postEffects?: {
     debugMask?: boolean;
@@ -373,8 +374,9 @@ export default class ThreeView<
     getSegments: () => {
       return this._core?.getGlobeSegments();
     },
-    getColor: () => {
-      return this._core?.getGlobeColor();
+    getColor: (): CoreColor | undefined => {
+      const hexColor = this._core?.getGlobeColor();
+      return hexColor === undefined ? undefined : new Color().setHex(hexColor);
     },
     getHideUnderground: () => {
       return this._core?.getGlobeHideUnderground();
@@ -400,8 +402,8 @@ export default class ThreeView<
     setSegments: (value: number) => {
       this._core?.setGlobeSegments(value);
     },
-    setColor: (value: number) => {
-      this._core?.setGlobeColor(value);
+    setColor: (value: CoreColor) => {
+      this._core?.setGlobeColor(value.toHex());
     },
     setHideUnderground: (value: boolean) => {
       this._core?.setGlobeHideUnderground(value);
@@ -554,7 +556,10 @@ export default class ThreeView<
     this.renderPassOrchestrator.setSize(width, height);
 
     // Background color
-    this.renderer.setClearColor(options.backgroundColor ?? 0x0a0a0f);
+    const bgColor = options.backgroundColor
+      ? options.backgroundColor.toHex()
+      : 0x0a0a0f;
+    this.renderer.setClearColor(bgColor);
 
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
@@ -992,6 +997,35 @@ export default class ThreeView<
     this.emit("postRender", updatedAt);
   }
 
+  /**
+   * Since passing Color class to WASM is tricky, converts Navara Color
+   * objects to numbers in layer descriptions.
+   * Handles the two-level structure: layer -> material -> color fields.
+   */
+  private _convertColorsToNumbers(obj: unknown): unknown {
+    if (obj === null || obj === undefined || typeof obj !== "object") {
+      return obj;
+    }
+
+    // Process the object's properties (shallow copy)
+    const result: Record<string, unknown> = { ...obj };
+
+    for (const [key, value] of Object.entries(result)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        // Nested object (e.g., point, billboard, text, model, etc.)
+        const nestedResult: Record<string, unknown> = { ...value };
+        for (const [nestedKey, nestedValue] of Object.entries(nestedResult)) {
+          if (nestedValue instanceof Color) {
+            nestedResult[nestedKey] = nestedValue.toHex();
+          }
+        }
+        result[key] = nestedResult;
+      }
+    }
+
+    return result;
+  }
+
   addLayer<L = unknown>(
     l: LayerDescription,
   ): L extends LayerDeclaration ? LayerHandle<L> : Layer {
@@ -1016,53 +1050,35 @@ export default class ThreeView<
       ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
     }
 
-    if (this.isResourceLayerDescription(l)) {
-      return this.addResourceLayer(l) as L extends LayerDeclaration
-        ? never
-        : Layer; // TODO: Remove this cast later.
-    }
+    // Convert all Color objects to numbers before passing to Rust
+    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
 
-    throw new Error(
-      `Unsupported layer type: ${(l as { type?: string })?.type}`,
+    // Existing resource layer process
+    const layerId = this._core?.addLayer(processedLayer);
+    invariant(layerId);
+    invariant(this._core);
+
+    const layer = new Layer(
+      layerId,
+      this._core,
+      this._convertColorsToNumbers.bind(this),
     );
+    this.layersManager.add(layer);
+
+    return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
   }
 
   updateLayerById(layerId: string, l: LayerDescription) {
     invariant(this._core);
-    const targetLayer = this.layersManager.get(layerId);
-    targetLayer?.update(l as unknown as ActualLayerDescription);
+    // Convert all Color objects to numbers before updating
+    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
+    this.layersManager.get(layerId)?.update(processedLayer);
   }
 
   deleteLayerById(layerId: string) {
     invariant(this._core);
 
     this.layersManager.get(layerId)?.delete();
-  }
-
-  private addResourceLayer(l: ResourceLayerDescription): Layer {
-    const layerId = this._core?.addLayer(l);
-    invariant(layerId);
-    invariant(this._core);
-
-    // Note: Layer effects are registered via RenderableFeatureAdded event from Core (SoT)
-    // No need to pre-register here - Core will emit the event with material data
-
-    const layer = new Layer(layerId, this._core, this.viewContext, l.type, l);
-    this.layersManager.add(layer);
-    return layer;
-  }
-
-  private isResourceLayerDescription(
-    layer: LayerDescription,
-  ): layer is LayerDescription & ResourceLayerDescription {
-    switch (layer.type) {
-      case "mesh":
-      case "light":
-      case "effect":
-        return false;
-      default:
-        return true;
-    }
   }
 
   private registerBuiltIns(): void {
@@ -1133,7 +1149,6 @@ export default class ThreeView<
     // Extract layer config and mesh-specific config
     const { type, ...meshConfigs } = config;
     const flatConfig = { ...config, ...meshConfigs };
-
     // Create mesh layer instance
     const meshLayer = this.registries.mesh.create(meshType, flatConfig);
 

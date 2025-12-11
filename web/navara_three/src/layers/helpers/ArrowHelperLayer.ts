@@ -1,6 +1,7 @@
 import type { XYZ } from "@navara/core";
 import { ArrowHelper, Vector3 } from "three";
 
+import { Color } from "../../Color";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -12,7 +13,7 @@ type LayerDescription = {
     direction: XYZ;
     origin?: XYZ;
     length?: number;
-    color?: number;
+    color?: Color;
     headLength?: number;
     headWidth?: number;
   };
@@ -53,7 +54,8 @@ export class ArrowHelperLayer extends MeshLayerDeclaration<
       ? new Vector3(cfg.origin.x, cfg.origin.y, cfg.origin.z)
       : new Vector3(0, 0, 0);
     const length = cfg.length ?? 1;
-    const color = cfg.color ?? 0xffff00;
+    const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
+    const color = colorValue.raw;
     const headLength = cfg.headLength;
     const headWidth = cfg.headWidth;
 
@@ -82,7 +84,8 @@ export class ArrowHelperLayer extends MeshLayerDeclaration<
       }
 
       if (cfg.color !== undefined) {
-        this._instance.setColor(cfg.color);
+        const color = cfg.color.raw;
+        this._instance.setColor(color);
       }
 
       this.emit("_needsUpdate");

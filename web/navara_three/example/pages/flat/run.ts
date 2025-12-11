@@ -1,4 +1,4 @@
-import ThreeView, { ToneMappingMode } from "@navara/three";
+import ThreeView, { Color, ToneMappingMode } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -47,7 +47,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -72,7 +72,7 @@ export const run = async (view: ThreeView) => {
       },
     },
     polyline: {
-      color: 0xff0000,
+      color: new Color().setStyle("#ff0000"),
       width: 2,
     },
   });

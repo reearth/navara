@@ -6,6 +6,7 @@ import {
   type Object3DEventMap,
 } from "three";
 
+import { Color } from "../../Color";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -30,7 +31,7 @@ type LayerDescription = {
     widthSegments?: number;
     heightSegments?: number;
     depthSegments?: number;
-    color?: number;
+    color?: Color;
     emissive?: number;
     emissiveIntensity?: number;
     opacity?: number;
@@ -74,10 +75,10 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
     );
 
     // Create material from properties
-    // If emissive is not specified, use color as emissive (for bloom effects)
+    const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
     const material = new MeshLambertMaterial({
-      color: cfg.color ?? 0xffffff,
-      emissive: cfg.emissive ?? cfg.color ?? 0,
+      color: colorValue.raw,
+      emissive: cfg.emissive ?? 0,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
@@ -137,7 +138,10 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
       ) {
         const material = this._instance.material;
         if (material instanceof MeshLambertMaterial) {
-          if (cfg.color !== undefined) material.color.set(cfg.color);
+          if (cfg.color !== undefined) {
+            const colorValue = cfg.color.raw;
+            material.color.set(colorValue);
+          }
           if (cfg.emissive !== undefined) material.emissive.set(cfg.emissive);
           if (cfg.emissiveIntensity !== undefined)
             material.emissiveIntensity = cfg.emissiveIntensity;

@@ -67,6 +67,45 @@ export function registerInputEvents(
     });
   };
 
+  const touchstart = (event: TouchEvent) => {
+    event.preventDefault();
+
+    for (const touch of event.changedTouches) {
+      core.input({
+        type: "touchstart",
+        x: touch.clientX,
+        y: touch.clientY,
+        id: touch.identifier,
+      });
+    }
+  };
+
+  const touchend = (event: TouchEvent) => {
+    event.preventDefault();
+
+    for (const touch of event.changedTouches) {
+      core.input({
+        type: "touchend",
+        x: touch.clientX,
+        y: touch.clientY,
+        id: touch.identifier,
+      });
+    }
+  };
+
+  const touchmove = (event: TouchEvent) => {
+    event.preventDefault();
+
+    for (const touch of event.changedTouches) {
+      core.input({
+        type: "touchmove",
+        x: touch.clientX,
+        y: touch.clientY,
+        id: touch.identifier,
+      });
+    }
+  };
+
   const wheel = (event: WheelEvent) => {
     safeInput(core, {
       type: "wheel",
@@ -102,6 +141,9 @@ export function registerInputEvents(
   element.addEventListener("mouseleave", mouseup);
   element.addEventListener("mouseleave", keyupEmpty);
   element.addEventListener("mousemove", mousemove);
+  element.addEventListener("touchstart", touchstart);
+  element.addEventListener("touchend", touchend);
+  element.addEventListener("touchmove", touchmove);
   element.addEventListener("wheel", wheel);
   document.addEventListener("keydown", keydown);
   document.addEventListener("keyup", keyup);
@@ -112,6 +154,9 @@ export function registerInputEvents(
     element.removeEventListener("mouseleave", mouseup);
     element.removeEventListener("mouseleave", keyupEmpty);
     element.removeEventListener("mousemove", mousemove);
+    element.removeEventListener("touchstart", touchstart);
+    element.removeEventListener("touchend", touchend);
+    element.removeEventListener("touchmove", touchmove);
     element.removeEventListener("wheel", wheel);
     document.removeEventListener("keydown", keydown);
     document.removeEventListener("keyup", keyup);

@@ -66,18 +66,19 @@ type LayerDescription = {
     exponent?: number;
 
     /**
-     * The color of the glow effect as a hexadecimal value.
+     * The color of the glow effect as a hexadecimal value or NavaraColor instance.
      *
-     * Accepts standard hex color formats (e.g., 0x8cf3ff for light cyan).
-     * The RGB components determine the hue of the glow, which is then
-     * modulated by the calculated Fresnel intensity and the opacity value.
+     * Accepts standard hex color formats (e.g., 0x8cf3ff for light cyan) or
+     * a NavaraColor instance. The RGB components determine the hue of the glow,
+     * which is then modulated by the calculated Fresnel intensity and the opacity value.
      *
      * @default 0x8cf3ff - Light cyan
      * @example 0xff0000 - Red glow
      * @example 0x00ff00 - Green glow
      * @example 0x0080ff - Blue glow
+     * @example new Color().setHex(0xff0000) - Red glow using Color instance
      */
-    glowColor?: number;
+    glowColor?: Color;
 
     /**
      * The opacity/alpha channel of the glow effect.
@@ -99,7 +100,7 @@ export const DEFAULT_GLOW_GLOBE_OPTIONS: Required<
   radiusScale: 1.2,
   coefficient: 0.5,
   exponent: 5.0,
-  glowColor: 0x8cf3ff,
+  glowColor: new Color().setHex(0x8cf3ff),
   opacity: 0.5,
 };
 
@@ -142,7 +143,7 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
     material.transparent = true;
     material.side = BackSide;
 
-    const color = new Color().setHex(cfg.glowColor).toArray();
+    const color = cfg.glowColor.toArray();
 
     material.uniforms = {
       exponent: { value: cfg.exponent },
@@ -187,13 +188,12 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
       }
 
       if (cfg.glowColor !== undefined || cfg.opacity !== undefined) {
-        const color = new Color()
-          .setHex(
-            cfg.glowColor ??
-              origin?.glowColor ??
-              DEFAULT_GLOW_GLOBE_OPTIONS.glowColor,
-          )
-          .toArray();
+        let color = cfg.glowColor?.toArray();
+        if (!color) {
+          color =
+            origin?.glowColor?.toArray() ||
+            DEFAULT_GLOW_GLOBE_OPTIONS.glowColor.toArray();
+        }
 
         material.uniforms["glowColor"].value = new Vector4(
           color[0],

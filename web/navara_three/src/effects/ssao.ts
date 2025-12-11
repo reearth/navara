@@ -1,6 +1,8 @@
 import type { Nullable } from "@navara/core";
 import { N8AOPostPass, type QualityMode } from "n8ao";
-import { Color, Scene, type Camera } from "three";
+import { Scene, type Camera } from "three";
+
+import { Color } from "../Color";
 
 import { Pass, type EffectOptions } from "./effect";
 
@@ -22,7 +24,7 @@ export const DEFAULT_SSAO_OPTIONS: Required<SSAOOptions> = {
   samples: null,
   radius: null,
   intensity: 1,
-  color: new Color(0),
+  color: new Color().setHex(0),
   halfRes: false,
   quality: "Low",
 };
@@ -142,7 +144,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     this.options.color = v;
 
     if (!this.rawPass) return;
-    this.rawPass.configuration.color = v;
+    this.rawPass.configuration.color = v.raw;
 
     this.emit("_needsUpdate");
   }
