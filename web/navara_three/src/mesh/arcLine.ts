@@ -16,21 +16,21 @@ import {
   BufferAttribute,
   InstancedBufferAttribute,
   Vector2,
-  Color,
   DoubleSide,
   Sphere,
   Box3,
 } from "three";
 
 import { overrideShaderMaterialForMRT } from "../material";
+import { Color } from "../Color";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
   transparent: boolean; // Enable `opacity`.
   opacity: number; // Opacity of the arc line
   segments: number; // Number of segments per arc line
-  srcColor: number; // Source color of the arc line
-  tgtColor: number; // Target color of the arc line
+  srcColor: Color; // Source color of the arc line
+  tgtColor: Color; // Target color of the arc line
   height: number; // height from globe surface
   arcHeightScale: number; // Scale factor for arc height relative to distance between endpoints
   gradation: number; // Gradation factor for color interpolation along the arc
@@ -46,8 +46,8 @@ export const DefaultArcLineConfig: ArcLineConfig = {
   transparent: false,
   opacity: 1,
   segments: 64,
-  srcColor: 0xffffff,
-  tgtColor: 0xffffff,
+  srcColor: new Color().setHex(0xffffff),
+  tgtColor: new Color().setHex(0xffffff),
   height: 0,
   arcHeightScale: 0.3,
   gradation: 0.5,
@@ -334,8 +334,8 @@ export class ArcLine extends Object3D {
         config.dashOffset,
       );
 
-      const srcColor = new Color(config.srcColor);
-      const tgtColor = new Color(config.tgtColor);
+      const srcColor = config.srcColor.raw;
+      const tgtColor = config.tgtColor.raw;
       instanceSrcColor.setXYZ(i, srcColor.r, srcColor.g, srcColor.b);
       instanceTgtColor.setXYZ(i, tgtColor.r, tgtColor.g, tgtColor.b);
     }
@@ -498,19 +498,17 @@ export class ArcLine extends Object3D {
           this._config[i].opacity = cfg.opacity;
           hasChanges = true;
         }
-        if (
-          cfg.srcColor !== undefined &&
-          cfg.srcColor !== this._config[i].srcColor
-        ) {
-          this._config[i].srcColor = cfg.srcColor;
-          hasChanges = true;
+        if (cfg.srcColor !== undefined) {
+          if (cfg.srcColor.toHex() !== this._config[i].srcColor.toHex()) {
+            this._config[i].srcColor = cfg.srcColor;
+            hasChanges = true;
+          }
         }
-        if (
-          cfg.tgtColor !== undefined &&
-          cfg.tgtColor !== this._config[i].tgtColor
-        ) {
-          this._config[i].tgtColor = cfg.tgtColor;
-          hasChanges = true;
+        if (cfg.tgtColor !== undefined) {
+          if (cfg.tgtColor.toHex() !== this._config[i].tgtColor.toHex()) {
+            this._config[i].tgtColor = cfg.tgtColor;
+            hasChanges = true;
+          }
         }
         if (cfg.height !== undefined && cfg.height !== this._config[i].height) {
           this._config[i].height = cfg.height;

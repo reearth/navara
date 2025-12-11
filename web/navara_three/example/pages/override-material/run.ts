@@ -154,7 +154,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
           type: "geojson",
           data,
           polygon: {
-            color: 0xffffff,
+            color: new Color().setStyle("#ffffff"),
             height: 5,
             extrudedHeight: 0,
             clampToGround: false,
@@ -162,7 +162,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
             receiveShadow: true,
             outlineShow: false,
             outlineWidth: 2,
-            outlineColor: 0xff00ff,
+            outlineColor: new Color().setHex(0xff00ff),
           },
         };
 
@@ -238,7 +238,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         ],
       },
       billboard: {
-        color: 0xffffff,
+        color: new Color().setStyle("#ffffff"),
         size: 0.05,
         height: 1,
         scaleByDistance: true,
@@ -288,7 +288,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
       },
       polyline: {
         show: true,
-        color: 0xff0000,
+        color: new Color().setStyle("#ff0000"),
         width: 2,
         height: 1,
         clampToGround: true,
@@ -341,7 +341,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         ],
       },
       polygon: {
-        color: 0x00aaff,
+        color: new Color().setStyle("#00aaff"),
         height: 0,
         extrudedHeight: 5000,
         clampToGround: true,
@@ -402,7 +402,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       size: 0.01,
       scaleByDistance: true,
       clampToGround: true,
-      color: 0xff0000,
+      color: new Color().setStyle("#ff0000"),
     },
   };
 
@@ -515,7 +515,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
       url: MVT_DATASETS.plateauTokyoFirePrevention.url,
     },
     polygon: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       height: 10,
       extrudedHeight: 0,
       clampToGround: true,
@@ -708,7 +708,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -893,7 +893,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     text: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       scaleByDistance: true,
       clampToGround: false,
       size: 20,
