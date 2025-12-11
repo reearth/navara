@@ -22,10 +22,17 @@ pub struct PointMaterial {
     pub depth_test: Option<bool>,
     pub transparent: Option<bool>,
     // post effect
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<bool>,
+    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    #[serde(rename = "postEffectOcclusion")]
+    pub post_effect_occlusion: Option<u8>,
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
 }
 
@@ -100,10 +107,17 @@ pub struct BillboardMaterial {
     #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
     // post effect
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<bool>,
+    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    #[serde(rename = "postEffectOcclusion")]
+    pub post_effect_occlusion: Option<u8>,
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
 }
 
@@ -286,10 +300,17 @@ pub struct PolylineMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
     // post effect
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<bool>,
+    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    #[serde(rename = "postEffectOcclusion")]
+    pub post_effect_occlusion: Option<u8>,
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
 }
 
@@ -496,10 +517,17 @@ pub struct PolygonMaterial {
     pub specular: Option<bool>,
     pub ior: Option<f32>,
     // post effect
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<bool>,
+    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    #[serde(rename = "postEffectOcclusion")]
+    pub post_effect_occlusion: Option<u8>,
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
 }
 
@@ -784,10 +812,17 @@ pub struct ModelMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
     // post effect
-    #[wasm_bindgen(getter_with_clone)]
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<bool>,
+    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    #[serde(rename = "postEffectOcclusion")]
+    pub post_effect_occlusion: Option<u8>,
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
     pub emissive_intensity: Option<f32>,
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
     pub emissive_color: Option<u32>,
 }
 

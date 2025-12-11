@@ -1,77 +1,34 @@
-import type {
-  BoxMeshLayer,
-  Layer,
-  LayerHandle,
-  PostEffectBloomEffectLayer,
-  SphereMeshLayer,
-} from "@navara/three";
+import type { BoxMeshLayer, Layer, SphereMeshLayer } from "@navara/three";
+import { PostEffectOcclusionMode } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
-import { TILES_3D_DATASETS } from "../../../helpers/constants";
-import type { PostEffects } from "../effects/setupSelectiveEffects";
+import { TILES_3D_DATASETS } from "../../helpers/constants";
+
+import type { PostEffects } from "./run";
 import type {
   GeoJsonModelLayer,
   SceneLayers,
   DrumModelState,
   SoldierModelState,
-  LayerEffectPayload,
-} from "../layers/createSceneLayers";
+} from "./sceneLayers";
 
 // ============================================
 // Helper Functions for Common UI Patterns
 // ============================================
 
-type LayerEffectState = {
-  effectIds: string[];
-  emissiveColor?: number;
-  emissiveIntensity: number;
-  postEffectOcclusion: boolean;
-};
-
-const buildEffectPayload = (state: LayerEffectState): LayerEffectPayload => ({
-  effectIds: [...state.effectIds],
-  postEffectOcclusion: state.postEffectOcclusion,
-  emissive_color: state.emissiveColor,
-  emissive_intensity: state.emissiveIntensity,
-});
-
-const setEffectEnabled = (
-  state: LayerEffectState,
-  effectId: string,
-  enabled: boolean,
-) => {
-  const hasEffect = state.effectIds.includes(effectId);
-  if (enabled && !hasEffect) {
-    state.effectIds = [...state.effectIds, effectId];
-  } else if (!enabled && hasEffect) {
-    state.effectIds = state.effectIds.filter((id) => id !== effectId);
-  }
-};
-
 /**
- * Add effect toggle controls (Bloom & Outline) to a folder
+ * Helper to compute effectIds from bloom/outline enabled flags
  */
-const addLayerEffectControls = (
-  folder: FolderApi,
-  params: { bloomEnabled: boolean; outlineEnabled: boolean },
-  state: LayerEffectState,
+const getEffectIds = (
+  bloomEnabled: boolean,
+  outlineEnabled: boolean,
   bloomId: string,
   outlineId: string,
-  onChange: () => void,
-) => {
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", (ev) => {
-      setEffectEnabled(state, bloomId, ev.value);
-      onChange();
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", (ev) => {
-      setEffectEnabled(state, outlineId, ev.value);
-      onChange();
-    });
+): string[] => {
+  const ids: string[] = [];
+  if (bloomEnabled) ids.push(bloomId);
+  if (outlineEnabled) ids.push(outlineId);
+  return ids;
 };
 
 /**
@@ -106,7 +63,7 @@ type PaneDependencies = SceneLayers &
     paneTitle?: string;
   };
 
-export const createPostProcessingPane = ({
+export const createControlPane = ({
   paneTitle = "PostEffect Bloom Parameters",
   postEffectBloom,
   postEffectOutline,
@@ -136,7 +93,7 @@ export const createPostProcessingPane = ({
       emissiveColor: 0xff0000,
       emissiveIntensity: 1.1,
       visible: true,
-      postEffectOcclusion: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
       bloomEnabled: false,
       outlineEnabled: false,
     },
@@ -151,7 +108,7 @@ export const createPostProcessingPane = ({
       emissiveColor: 0x0000ff,
       emissiveIntensity: 1.0,
       visible: true,
-      postEffectOcclusion: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
       bloomEnabled: true,
       outlineEnabled: false,
     },
@@ -173,7 +130,7 @@ export const createPostProcessingPane = ({
       baseColor: 0xffffff,
       emissiveColor: 0xffffff,
       visible: true,
-      postEffectOcclusion: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
       emissiveIntensity: 0.3,
       bloomEnabled: true,
       outlineEnabled: true,
@@ -189,7 +146,7 @@ export const createPostProcessingPane = ({
       baseColor: 0xffffff,
       emissiveColor: 0xffffff,
       visible: true,
-      postEffectOcclusion: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
       emissiveIntensity: 0.3,
       bloomEnabled: false,
       outlineEnabled: false,
@@ -199,14 +156,12 @@ export const createPostProcessingPane = ({
   return pane;
 };
 
-const setupBloomFolder = (
-  pane: Pane,
-  postEffectBloom: LayerHandle<PostEffectBloomEffectLayer>,
-) => {
+const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
+  // Sync with PostEffectBloomLayer DEFAULT_* values
   const params = {
-    strength: 0.1,
-    radius: 0.5,
-    threshold: 0.0,
+    strength: 0.8, // Match DEFAULT_STRENGTH
+    radius: 0.2, // Match DEFAULT_RADIUS
+    threshold: 0.0, // Match DEFAULT_THRESHOLD
     debugMode: 0,
     debugMask: true,
   };
@@ -220,7 +175,8 @@ const setupBloomFolder = (
       step: 0.01,
     })
     .on("change", (ev) => {
-      postEffectBloom.ref.onUpdateConfig({
+      postEffectBloom.update({
+        type: "effect",
         postEffectBloom: {
           strength: ev.value,
         },
@@ -234,7 +190,8 @@ const setupBloomFolder = (
       step: 0.01,
     })
     .on("change", (ev) => {
-      postEffectBloom.ref.onUpdateConfig({
+      postEffectBloom.update({
+        type: "effect",
         postEffectBloom: {
           radius: ev.value,
         },
@@ -248,7 +205,8 @@ const setupBloomFolder = (
       step: 0.01,
     })
     .on("change", (ev) => {
-      postEffectBloom.ref.onUpdateConfig({
+      postEffectBloom.update({
+        type: "effect",
         postEffectBloom: {
           threshold: ev.value,
         },
@@ -265,7 +223,8 @@ const setupBloomFolder = (
       },
     })
     .on("change", (ev) => {
-      postEffectBloom.ref.onUpdateConfig({
+      postEffectBloom.update({
+        type: "effect",
         postEffectBloom: {
           debugMode: ev.value,
         },
@@ -273,13 +232,26 @@ const setupBloomFolder = (
     });
 
   folder.addBinding(params, "debugMask").on("change", (ev) => {
-    postEffectBloom.ref.onUpdateConfig({
+    postEffectBloom.update({
+      type: "effect",
       debugMask: ev.value,
     });
   });
+
+  // Apply initial parameters to Bloom layer
+  postEffectBloom.update({
+    type: "effect",
+    postEffectBloom: {
+      strength: params.strength,
+      radius: params.radius,
+      threshold: params.threshold,
+      debugMode: params.debugMode,
+    },
+    debugMask: params.debugMask,
+  });
 };
 
-type MeshLayerHandle = LayerHandle<BoxMeshLayer | SphereMeshLayer>;
+type MeshLayerHandle = { ref: BoxMeshLayer | SphereMeshLayer };
 
 type MeshFolderOptions = {
   title: string;
@@ -291,7 +263,7 @@ type MeshFolderOptions = {
     emissiveColor: number;
     emissiveIntensity: number;
     visible: boolean;
-    postEffectOcclusion: boolean;
+    postEffectOcclusion: number; // 0 = DepthEnabled, 2 = Silhouette
     bloomEnabled: boolean;
     outlineEnabled: boolean;
   };
@@ -300,27 +272,25 @@ type MeshFolderOptions = {
 const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   const { title, layer, bloomId, outlineId, configKey } = options;
   const params = { ...options.params };
-  const effectState: LayerEffectState = {
-    effectIds: [],
-    emissiveColor: params.emissiveColor,
-    emissiveIntensity: params.emissiveIntensity,
-    postEffectOcclusion: params.postEffectOcclusion,
-  };
 
-  if (params.bloomEnabled) {
-    effectState.effectIds.push(bloomId);
-  }
-  if (params.outlineEnabled) {
-    effectState.effectIds.push(outlineId);
-  }
+  // Helper to compute effectIds from current params
+  const getEffectIds = (): string[] => {
+    const ids: string[] = [];
+    if (params.bloomEnabled) ids.push(bloomId);
+    if (params.outlineEnabled) ids.push(outlineId);
+    return ids;
+  };
 
   const applyMeshState = () => {
     layer.ref.onUpdateConfig({
       ...buildMeshConfig(configKey, {
-        emissive: effectState.emissiveColor,
-        emissiveIntensity: effectState.emissiveIntensity,
+        emissive: params.emissiveColor,
+        emissiveIntensity: params.emissiveIntensity,
       }),
-      ...buildEffectPayload(effectState),
+      effectIds: getEffectIds(),
+      postEffectOcclusion: params.postEffectOcclusion,
+      emissiveColor: params.emissiveColor,
+      emissiveIntensity: params.emissiveIntensity,
     });
   };
 
@@ -332,10 +302,13 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
 
   folder
     .addBinding(params, "postEffectOcclusion", {
-      label: "Post Effect Occlusion",
+      label: "Occlusion Mode",
+      options: {
+        DepthEnabled: PostEffectOcclusionMode.Normal,
+        Silhouette: PostEffectOcclusionMode.Silhouette,
+      },
     })
-    .on("change", (ev) => {
-      effectState.postEffectOcclusion = ev.value;
+    .on("change", () => {
       applyMeshState();
     });
 
@@ -344,29 +317,30 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
       color: { type: "int" },
       label: "Emissive Color",
     })
-    .on("change", (ev) => {
-      effectState.emissiveColor = ev.value;
+    .on("change", () => {
       applyMeshState();
     });
 
   addLayerEmissiveIntensityControl(
     folder,
     params,
-    (value) => {
-      effectState.emissiveIntensity = value;
+    () => {
       applyMeshState();
     },
     { min: 0.0, max: 10.0, step: 0.1 },
   );
 
-  addLayerEffectControls(
-    folder,
-    params,
-    effectState,
-    bloomId,
-    outlineId,
-    applyMeshState,
-  );
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      applyMeshState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      applyMeshState();
+    });
 
   applyMeshState();
 };
@@ -391,7 +365,7 @@ type TilesFolderOptions = {
     baseColor: number;
     emissiveColor: number;
     visible: boolean;
-    postEffectOcclusion: boolean;
+    postEffectOcclusion: number; // 0 = DepthEnabled, 2 = Silhouette
     emissiveIntensity: number;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
@@ -409,19 +383,11 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
   } = options;
 
   const params = { ...initialParams };
-  const effectState: LayerEffectState = {
-    effectIds: [],
-    emissiveColor: params.emissiveColor,
-    emissiveIntensity: params.emissiveIntensity,
-    postEffectOcclusion: params.postEffectOcclusion,
-  };
-
-  if (params.bloomEnabled) effectState.effectIds.push(bloomId);
-  if (params.outlineEnabled) effectState.effectIds.push(outlineId);
 
   const folder = pane.addFolder({ title });
 
-  const updateTilesLayer = () => {
+  // Unified update function using declarative API
+  const updateTilesState = () => {
     layer.update({
       type: "cesium3dtiles",
       data: {
@@ -432,10 +398,18 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
         color: params.baseColor,
         metalness: 0.1,
         roughness: 0.1,
-        cast_shadow: true,
-        receive_shadow: true,
+        castShadow: true,
+        receiveShadow: true,
+        effectIds: getEffectIds(
+          params.bloomEnabled,
+          params.outlineEnabled,
+          bloomId,
+          outlineId,
+        ),
+        emissiveColor: params.emissiveColor,
+        emissiveIntensity: params.emissiveIntensity,
+        postEffectOcclusion: params.postEffectOcclusion,
       },
-      ...buildEffectPayload(effectState),
     });
   };
 
@@ -444,9 +418,8 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
       color: { type: "int" },
       label: "Base Color",
     })
-    .on("change", (ev) => {
-      params.baseColor = ev.value;
-      updateTilesLayer();
+    .on("change", () => {
+      updateTilesState();
     });
 
   folder
@@ -454,41 +427,44 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
       color: { type: "int" },
       label: "Emissive Color",
     })
-    .on("change", (ev) => {
-      params.emissiveColor = ev.value;
-      effectState.emissiveColor = ev.value;
-      updateTilesLayer();
+    .on("change", () => {
+      updateTilesState();
     });
 
-  folder.addBinding(params, "visible").on("change", (ev) => {
-    params.visible = ev.value;
-    updateTilesLayer();
+  folder.addBinding(params, "visible").on("change", () => {
+    updateTilesState();
   });
 
   folder
     .addBinding(params, "postEffectOcclusion", {
-      label: "Post Effect Occlusion",
+      label: "Occlusion Mode",
+      options: {
+        DepthEnabled: PostEffectOcclusionMode.Normal,
+        Silhouette: PostEffectOcclusionMode.Silhouette,
+      },
     })
-    .on("change", (ev) => {
-      effectState.postEffectOcclusion = ev.value;
-      updateTilesLayer();
+    .on("change", () => {
+      updateTilesState();
     });
 
-  addLayerEmissiveIntensityControl(folder, params, (value) => {
-    effectState.emissiveIntensity = value;
-    updateTilesLayer();
+  addLayerEmissiveIntensityControl(folder, params, () => {
+    updateTilesState();
   });
 
-  addLayerEffectControls(
-    folder,
-    params,
-    effectState,
-    bloomId,
-    outlineId,
-    updateTilesLayer,
-  );
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updateTilesState();
+    });
 
-  updateTilesLayer();
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updateTilesState();
+    });
+
+  // Apply initial state
+  updateTilesState();
 };
 
 const setupDrumFolder = (
@@ -499,43 +475,47 @@ const setupDrumFolder = (
 ) => {
   const params = {
     visible: true,
-    postEffectOcclusion: false,
+    postEffectOcclusion: PostEffectOcclusionMode.Normal,
     baseColor: 0xffffff,
     emissiveColor: 0xffffff,
     emissiveIntensity: 0.3,
     bloomEnabled: false,
     outlineEnabled: false,
   };
-  const effectState: LayerEffectState = {
-    effectIds: [],
-    emissiveColor: params.emissiveColor,
-    emissiveIntensity: params.emissiveIntensity,
-    postEffectOcclusion: params.postEffectOcclusion,
-  };
 
   const folder = pane.addFolder({ title: "Drum Model" });
 
-  const updateDrumModel = () => {
+  // Unified update function using declarative API
+  const updateDrumState = () => {
     drumLayer.updateModel({
       show: params.visible,
       color: params.baseColor,
-    });
-  };
-  const applyDrumEffects = () => {
-    effectState.postEffectOcclusion = params.postEffectOcclusion;
-    drumLayer.updateEffectState(buildEffectPayload(effectState));
+      effectIds: getEffectIds(
+        params.bloomEnabled,
+        params.outlineEnabled,
+        bloomId,
+        outlineId,
+      ),
+      emissiveColor: params.emissiveColor,
+      emissiveIntensity: params.emissiveIntensity,
+      postEffectOcclusion: params.postEffectOcclusion,
+    } as Partial<DrumModelState>);
   };
 
   folder.addBinding(params, "visible").on("change", () => {
-    updateDrumModel();
+    updateDrumState();
   });
 
   folder
     .addBinding(params, "postEffectOcclusion", {
-      label: "Post Effect Occlusion",
+      label: "Occlusion Mode",
+      options: {
+        DepthEnabled: PostEffectOcclusionMode.Normal,
+        Silhouette: PostEffectOcclusionMode.Silhouette,
+      },
     })
     .on("change", () => {
-      applyDrumEffects();
+      updateDrumState();
     });
 
   folder
@@ -543,27 +523,28 @@ const setupDrumFolder = (
       color: { type: "int" },
       label: "Emissive Color",
     })
-    .on("change", (ev) => {
-      params.emissiveColor = ev.value;
-      effectState.emissiveColor = ev.value;
-      applyDrumEffects();
+    .on("change", () => {
+      updateDrumState();
     });
 
-  addLayerEmissiveIntensityControl(folder, params, (value) => {
-    effectState.emissiveIntensity = value;
-    applyDrumEffects();
+  addLayerEmissiveIntensityControl(folder, params, () => {
+    updateDrumState();
   });
-  addLayerEffectControls(
-    folder,
-    params,
-    effectState,
-    bloomId,
-    outlineId,
-    applyDrumEffects,
-  );
 
-  updateDrumModel();
-  applyDrumEffects();
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updateDrumState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updateDrumState();
+    });
+
+  // Apply initial state
+  updateDrumState();
 };
 
 const setupSoldierFolder = (
@@ -574,7 +555,7 @@ const setupSoldierFolder = (
 ) => {
   const params = {
     visible: true,
-    postEffectOcclusion: false,
+    postEffectOcclusion: PostEffectOcclusionMode.Normal,
     animationSpeed: 1.0,
     baseColor: 0xffffff,
     emissiveColor: 0xffffff,
@@ -582,37 +563,41 @@ const setupSoldierFolder = (
     bloomEnabled: false,
     outlineEnabled: false,
   };
-  const effectState: LayerEffectState = {
-    effectIds: [],
-    emissiveColor: params.emissiveColor,
-    emissiveIntensity: params.emissiveIntensity,
-    postEffectOcclusion: params.postEffectOcclusion,
-  };
 
   const folder = pane.addFolder({ title: "Soldier Model" });
 
-  const updateSoldierModel = () => {
+  // Unified update function using declarative API
+  const updateSoldierState = () => {
     soldierLayer.updateModel({
       show: params.visible,
-      animation_speed: params.animationSpeed,
+      animationSpeed: params.animationSpeed,
       color: params.baseColor,
-    });
-  };
-  const applySoldierEffects = () => {
-    effectState.postEffectOcclusion = params.postEffectOcclusion;
-    soldierLayer.updateEffectState(buildEffectPayload(effectState));
+      effectIds: getEffectIds(
+        params.bloomEnabled,
+        params.outlineEnabled,
+        bloomId,
+        outlineId,
+      ),
+      emissiveColor: params.emissiveColor,
+      emissiveIntensity: params.emissiveIntensity,
+      postEffectOcclusion: params.postEffectOcclusion,
+    } as Partial<SoldierModelState>);
   };
 
   folder.addBinding(params, "visible").on("change", () => {
-    updateSoldierModel();
+    updateSoldierState();
   });
 
   folder
     .addBinding(params, "postEffectOcclusion", {
-      label: "Post Effect Occlusion",
+      label: "Occlusion Mode",
+      options: {
+        DepthEnabled: PostEffectOcclusionMode.Normal,
+        Silhouette: PostEffectOcclusionMode.Silhouette,
+      },
     })
     .on("change", () => {
-      applySoldierEffects();
+      updateSoldierState();
     });
 
   folder
@@ -622,7 +607,7 @@ const setupSoldierFolder = (
       step: 0.1,
     })
     .on("change", () => {
-      updateSoldierModel();
+      updateSoldierState();
     });
 
   folder
@@ -630,25 +615,26 @@ const setupSoldierFolder = (
       color: { type: "int" },
       label: "Emissive Color",
     })
-    .on("change", (ev) => {
-      params.emissiveColor = ev.value;
-      effectState.emissiveColor = ev.value;
-      applySoldierEffects();
+    .on("change", () => {
+      updateSoldierState();
     });
 
-  addLayerEmissiveIntensityControl(folder, params, (value) => {
-    effectState.emissiveIntensity = value;
-    applySoldierEffects();
+  addLayerEmissiveIntensityControl(folder, params, () => {
+    updateSoldierState();
   });
-  addLayerEffectControls(
-    folder,
-    params,
-    effectState,
-    bloomId,
-    outlineId,
-    applySoldierEffects,
-  );
 
-  updateSoldierModel();
-  applySoldierEffects();
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updateSoldierState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updateSoldierState();
+    });
+
+  // Apply initial state
+  updateSoldierState();
 };

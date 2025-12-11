@@ -3,6 +3,7 @@ import type { Event, Object3DEventMap } from "three";
 export type LayerEffectsChangedEventData = {
   effectIds: string[];
   emissiveIntensity: number;
+  emissiveColor?: number;
   layerId: string;
   prevEffectIds: string[];
 };
@@ -18,7 +19,7 @@ export type EmissiveEventData = {
 export type EmissiveEvent = Event & EmissiveEventData;
 
 export type PostEffectOcclusionChangedEventData = {
-  postEffectOcclusion: boolean;
+  postEffectOcclusion: number; // 0 = DepthEnabled, 2 = Silhouette
   layerId: string;
 };
 
@@ -71,6 +72,6 @@ export function isPostEffectOcclusionChangedEvent(
     "type" in event &&
     (event as { type?: string }).type === "postEffectOcclusionChanged" &&
     typeof (event as Partial<PostEffectOcclusionChangedEventData>)
-      .postEffectOcclusion === "boolean"
+      .postEffectOcclusion === "number"
   );
 }

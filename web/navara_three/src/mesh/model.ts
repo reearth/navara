@@ -36,6 +36,10 @@ import {
   type WebGLProgramParametersWithUniforms,
   ShaderChunk,
   PointsMaterial,
+  Camera,
+  Material,
+  Scene,
+  WebGLRenderer,
 } from "three";
 import {
   AnimationAction,
@@ -47,15 +51,20 @@ import {
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
-  applyEmissiveEffect,
-  type EmissiveParams,
+  applyEmissiveToObject3D,
   ensurePostEffectUserData,
+  getPostEffectConfig,
+  getMaskPassType,
+  MaskPassTypes,
+  POST_EFFECT_OCCLUSION_SKIP,
+  PostEffectOcclusionMode,
+  resolveActiveEffects,
+  resolvePostEffectOcclusion,
   updatePostEffectLinksForObject,
-} from "../core/SelectiveEffectRegistry";
+} from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import type {
   CustomObject3DEventMap,
-  EmissiveEvent,
   LayerEffectsChangedEvent,
 } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -236,55 +245,19 @@ export class ModelMesh
         this.handleEffectsChanged(event);
       },
     );
-
-    // Handle emissive event (same logic as meshEventHandlers)
-    this.addEventListener("emissive", (event: EmissiveEvent) => {
-      const emissiveParams: EmissiveParams = {
-        emissiveIntensity: event.emissiveIntensity,
-        emissiveColor: event.emissiveColor,
-      };
-
-      this.traverseMesh((mesh) => {
-        const materials = Array.isArray(mesh.material)
-          ? mesh.material
-          : [mesh.material];
-
-        for (const material of materials) {
-          if (
-            material instanceof MeshStandardMaterial ||
-            material instanceof MeshPhysicalMaterial
-          ) {
-            applyEmissiveEffect(material, emissiveParams);
-          }
-        }
-      });
-    });
   }
 
   private handleEffectsChanged(event: LayerEffectsChangedEvent): void {
-    const { effectIds, emissiveIntensity, layerId, prevEffectIds } = event;
+    const {
+      effectIds,
+      emissiveIntensity,
+      emissiveColor,
+      layerId,
+      prevEffectIds,
+    } = event;
 
-    // Apply emissive to all child meshes
-    this.traverseMesh((mesh) => {
-      const materials = Array.isArray(mesh.material)
-        ? mesh.material
-        : [mesh.material];
-
-      for (const material of materials) {
-        if (
-          material instanceof MeshStandardMaterial ||
-          material instanceof MeshPhysicalMaterial
-        ) {
-          if (effectIds.length > 0) {
-            applyEmissiveEffect(material, {
-              emissiveIntensity,
-            });
-          } else {
-            material.emissiveIntensity = 0;
-          }
-        }
-      }
-    });
+    // Apply emissive to all child meshes (unconditionally)
+    applyEmissiveToObject3D(this, { emissiveIntensity, emissiveColor });
 
     // Update PostEffectRegistry links
     updatePostEffectLinksForObject(
@@ -403,6 +376,15 @@ export class ModelMesh
       mesh.material.userData.ior = {
         value: meshMaterial.ior ?? 1.33333,
       };
+      mesh.material.userData.uBloomMaskPass = {
+        value: 0.0,
+      };
+      mesh.material.userData.uOutlineMaskPass = {
+        value: 0.0,
+      };
+      mesh.material.userData.uPostEffectOcclusion = {
+        value: POST_EFFECT_OCCLUSION_SKIP, // -1 = not in mask pass, 0 = Normal, 2 = Silhouette
+      };
 
       // Initialize post effect user data (mask mode)
       ensurePostEffectUserData(mesh.material);
@@ -425,8 +407,6 @@ export class ModelMesh
       mesh.material.onBeforeCompile = (
         shader: WebGLProgramParametersWithUniforms,
       ) => {
-        const postEffectUD = ensurePostEffectUserData(mesh.material);
-
         shader.defines ??= {};
         Object.assign(shader.defines, mesh.material.userData.defines);
         if (this.water && uniforms.tSkyEnvMap.value) {
@@ -448,7 +428,11 @@ export class ModelMesh
         shader.uniforms.uIor = mesh.material.userData.ior;
         shader.uniforms.uTime = uniforms.time;
         shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
-        shader.uniforms.uPostEffectMaskMode = postEffectUD.maskMode;
+        shader.uniforms.uBloomMaskPass = mesh.material.userData.uBloomMaskPass;
+        shader.uniforms.uOutlineMaskPass =
+          mesh.material.userData.uOutlineMaskPass;
+        shader.uniforms.uPostEffectOcclusion =
+          mesh.material.userData.uPostEffectOcclusion;
 
         if (mesh.material.userData.batchDataTexture) {
           shader.uniforms.batchDataTexture =
@@ -515,8 +499,10 @@ export class ModelMesh
                   uniform bool uSpecular;
                   uniform float uIor;
                   uniform float uTime;
-                  uniform float uPostEffectMaskMode;
                   // uniform float reflectivity;
+                  uniform float uBloomMaskPass;
+                  uniform float uOutlineMaskPass;
+                  uniform float uPostEffectOcclusion;
                   in float nvr_vBatchId;
 
                   ${ShowParsFragment}
@@ -526,13 +512,6 @@ export class ModelMesh
                   ${ShadowMapDepthParsFragment}
 
                   void main() {
-                    if (uPostEffectMaskMode > 0.0) {
-                      float maskValue = uPostEffectMaskMode;
-                      // Encode object depth into RGB and mask mode into alpha for outline passes.
-                      float depth = gl_FragCoord.z;
-                      gl_FragColor = vec4(vec3(depth), maskValue);
-                      return;
-                    }
                     ${ShowFragment}
                     ${ShadowMapDepthFragment}
                   `,
@@ -579,6 +558,20 @@ export class ModelMesh
           .replace(
             "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
             `
+            // Bloom mask pass: output only emissive radiance
+            // Pass separation handles occlusion mode
+            if (uBloomMaskPass > 0.5) {
+              gl_FragColor = vec4(totalEmissiveRadiance, 1.0);
+              return;
+            }
+
+            // Outline mask pass: output white
+            // Uses original material to ensure depthTexture is written correctly
+            if (uOutlineMaskPass > 0.5) {
+              gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+              return;
+            }
+
             vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
             #if defined(WATER) && defined(USE_SKY_ENVMAP)
               vec3 envColor = getSkyEnv(geometryNormal, tSkyEnvMap, vPosition);
@@ -609,8 +602,109 @@ export class ModelMesh
 
       this.initDepthMaterial(mesh);
 
+      // Setup onBeforeRender for PostEffect state handling
+      this.setupMeshOnBeforeRender(mesh);
+
       viewEvents.emit("_csmMounted", mesh.material);
     });
+  }
+
+  onBeforeRender(
+    _renderer: WebGLRenderer,
+    _scene: Scene,
+    _camera: Camera,
+    _geometry: BufferGeometry,
+    _material: Material,
+    _group: Group,
+  ): void {}
+
+  /**
+   * Setup onBeforeRender callback for a mesh to handle PostEffect rendering
+   *
+   * Mesh determines its own depth/mask flags via onBeforeRender.
+   * Mask passes filter visibility externally; depth and mask flags are controlled here.
+   */
+  private setupMeshOnBeforeRender(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+  ): void {
+    mesh.onBeforeRender = (renderer: WebGLRenderer) => {
+      // 1. Get PostEffectConfig from mesh (link() sets config on child meshes, not parent)
+      const config = getPostEffectConfig(mesh);
+      if (!config) {
+        // Reset mask pass flag when no config
+        mesh.material.userData.uBloomMaskPass ??= { value: 0.0 };
+        mesh.material.userData.uBloomMaskPass.value = 0.0;
+        return;
+      }
+
+      const registry = this.viewContext?.postEffectRegistry;
+      const layerId = this.getPostEffectLayerId();
+
+      // 2. Determine mask pass type from RenderTarget name
+      const pass = getMaskPassType(renderer.getRenderTarget());
+
+      // 3. Resolve active effects for this pass
+      const { hasBloom, activeInThisPass } = resolveActiveEffects(
+        config,
+        registry,
+        pass,
+      );
+
+      // 4. Set Bloom enabled flag (for uBloomEnabled uniform in shader)
+      mesh.material.userData.uBloomEnabled ??= { value: 0.0 };
+      mesh.material.userData.uBloomEnabled.value = hasBloom ? 1.0 : 0.0;
+
+      // 5. Set Bloom mask pass flag (for shader branch to output emissive only)
+      mesh.material.userData.uBloomMaskPass ??= { value: 0.0 };
+      mesh.material.userData.uBloomMaskPass.value =
+        pass === MaskPassTypes.Bloom && activeInThisPass ? 1.0 : 0.0;
+
+      // 5b. Set Outline mask pass flag (for shader branch to output white)
+      mesh.material.userData.uOutlineMaskPass ??= { value: 0.0 };
+      mesh.material.userData.uOutlineMaskPass.value =
+        pass === MaskPassTypes.Outline && activeInThisPass ? 1.0 : 0.0;
+
+      // 6. Control depth test/write, colorWrite, and occlusion mode during mask passes
+      mesh.material.userData.uPostEffectOcclusion ??= {
+        value: POST_EFFECT_OCCLUSION_SKIP,
+      };
+
+      if (pass !== MaskPassTypes.None) {
+        if (activeInThisPass) {
+          // This pass is for rendering this object
+          const occlusion = resolvePostEffectOcclusion(registry, layerId);
+          const isSilhouette = occlusion === PostEffectOcclusionMode.Silhouette;
+          mesh.material.depthTest = !isSilhouette;
+          mesh.material.depthWrite = !isSilhouette;
+          mesh.material.colorWrite = true;
+          // Set occlusion mode for shader alpha output (0 = Normal, 2 = Silhouette)
+          mesh.material.userData.uPostEffectOcclusion.value = occlusion;
+        } else {
+          // This pass is not for this object - suppress drawing
+          mesh.material.depthTest = true;
+          mesh.material.depthWrite = true;
+          mesh.material.colorWrite = false;
+          mesh.material.userData.uPostEffectOcclusion.value =
+            POST_EFFECT_OCCLUSION_SKIP;
+        }
+      } else {
+        // Normal rendering
+        mesh.material.depthTest = true;
+        mesh.material.depthWrite = true;
+        mesh.material.colorWrite = true;
+        mesh.material.userData.uPostEffectOcclusion.value =
+          POST_EFFECT_OCCLUSION_SKIP;
+      }
+    };
+  }
+
+  /**
+   * Get postEffectLayerId from PostEffectConfig (type-safe getter)
+   * Note: layerId is stored in userData.postEffectConfig.layerId by PostEffectHelper.link()
+   */
+  private getPostEffectLayerId(): string | undefined {
+    const config = getPostEffectConfig(this);
+    return config?.layerId;
   }
 
   private traversePoints(

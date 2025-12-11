@@ -131,26 +131,14 @@ export type ExtractProperties<T> = {
 
 type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
 
-// Common options for layer effects
-type LayerEffectOptions = {
-  effectIds?: string[];
-  postEffectOcclusion?: boolean;
-  emissive_intensity?: number;
-  emissive_color?: number;
-};
-
 export type TilesLayer = Layer<TileLayerDescription & { type: "tiles" }>;
 export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
-export type GeoJsonLayer = Layer<
-  GeoJsonLayerDescription & { type: "geojson" }
-> &
-  LayerEffectOptions;
+export type GeoJsonLayer = Layer<GeoJsonLayerDescription & { type: "geojson" }>;
 export type B3dmLayer = Layer<B3dmLayerDescription & { type: "b3dm" }>;
 export type PntsLayer = Layer<PntsLayerDescription & { type: "pnts" }>;
 export type Cesium3dTilesLayer = Layer<
   Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }
-> &
-  LayerEffectOptions;
+>;
 export type MvtLayer = Layer<MvtLayerDescription & { type: "mvt" }>;
 
 export type ResourceLayerDescription =

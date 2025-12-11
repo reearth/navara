@@ -1,17 +1,12 @@
 import type { EventHandler, FeatureId } from "@navara/core";
-import {
-  Mesh,
-  MeshPhysicalMaterial,
-  MeshStandardMaterial,
-  type Object3D,
-} from "three";
+import type { Object3D } from "three";
 
 import type { ViewEvents } from "..";
 import {
-  applyEmissiveEffect,
-  type EmissiveParams,
+  applyEmissiveToObject3D,
   updatePostEffectLinksForObject,
-} from "../core/SelectiveEffectRegistry";
+  type PostEffectConfig,
+} from "../core/PostEffectHelper";
 import type { ViewContext } from "../core/ViewContext";
 import { FeatureEvaluator } from "../evaluations";
 import { Layer } from "../layer";
@@ -24,7 +19,7 @@ type ResolvedEffectPayload = {
   effectIds?: string[];
   emissiveIntensity?: number;
   emissiveColor?: number;
-  postEffectOcclusion?: boolean;
+  postEffectOcclusion?: number;
 };
 
 const resolveEffectPayload = (
@@ -36,12 +31,9 @@ const resolveEffectPayload = (
   const emissiveIntensity = viewContext.getLayerEmissiveIntensity(layerId);
   const emissiveColor = viewContext.getLayerEmissiveColor(layerId);
 
-  if (
-    (!effectIds || effectIds.length === 0) &&
-    emissiveColor === undefined &&
-    emissiveIntensity === undefined &&
-    postEffectOcclusion === undefined
-  ) {
+  // If effectIds is empty, treat post effects as disabled and return undefined
+  // (even when postEffectOcclusion or emissive values are present)
+  if (!effectIds || effectIds.length === 0) {
     return undefined;
   }
 
@@ -53,40 +45,18 @@ const resolveEffectPayload = (
   };
 };
 
+/**
+ * Apply emissive effect to mesh materials using common helper
+ */
 const applyEmissiveToMeshMaterials = (
   obj: Object3D,
   effectPayload: ResolvedEffectPayload,
-  viewContext: ViewContext,
-  layerId: string,
 ): void => {
-  if (!(obj instanceof Mesh)) return;
-
-  const emissiveIntensity =
-    effectPayload.emissiveIntensity ??
-    viewContext.getLayerEmissiveIntensity(layerId);
-  const emissiveColor =
-    effectPayload.emissiveColor ?? viewContext.getLayerEmissiveColor(layerId);
-  const hasEffects =
-    effectPayload.effectIds && effectPayload.effectIds.length > 0;
-
-  const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-
-  for (const material of materials) {
-    if (
-      material instanceof MeshStandardMaterial ||
-      material instanceof MeshPhysicalMaterial
-    ) {
-      if (!hasEffects) {
-        // effectIds が空の場合は emissive を無効化
-        material.emissiveIntensity = 0;
-      } else {
-        applyEmissiveEffect(material, {
-          emissiveIntensity,
-          emissiveColor: emissiveColor ?? undefined,
-        } satisfies EmissiveParams);
-      }
-    }
-  }
+  // effectPayload already contains emissiveIntensity from resolveEffectPayload
+  applyEmissiveToObject3D(obj, {
+    emissiveIntensity: effectPayload.emissiveIntensity ?? 0,
+    emissiveColor: effectPayload.emissiveColor,
+  });
 };
 
 export const applyEffectPayloadToObject = (
@@ -94,19 +64,61 @@ export const applyEffectPayloadToObject = (
   viewContext: ViewContext,
   layerId: string,
 ) => {
-  const effectPayload = resolveEffectPayload(viewContext, layerId);
-  if (!effectPayload) return;
+  // Read prevEffects from userData first
+  const prevEffectsRaw = obj.userData.postEffectConfig?.effectIds;
+  const prevEffects: string[] = Array.isArray(prevEffectsRaw)
+    ? prevEffectsRaw
+    : [];
 
-  // Store effect state in userData for future shader-based rendering
-  obj.userData.effectState = effectPayload;
+  const effectPayload = resolveEffectPayload(viewContext, layerId);
+
+  // If effectPayload is undefined (no effectIds), still apply emissive
+  // This ensures emissive works even without post effects (Bloom, etc.)
+  if (!effectPayload) {
+    const emissiveIntensity = viewContext.getLayerEmissiveIntensity(layerId);
+    const emissiveColor = viewContext.getLayerEmissiveColor(layerId);
+
+    // Apply emissive to object regardless of effectIds
+    if (obj instanceof ModelMesh) {
+      obj.dispatchEvent({
+        type: "layerEffectsChanged",
+        target: obj,
+        effectIds: [],
+        emissiveIntensity,
+        emissiveColor,
+        layerId,
+        prevEffectIds: prevEffects,
+      });
+    } else {
+      applyEmissiveToObject3D(obj, { emissiveIntensity, emissiveColor });
+    }
+
+    // Clear post effect links if any existed
+    if (prevEffects.length > 0 && viewContext.postEffectRegistry) {
+      updatePostEffectLinksForObject(
+        obj,
+        viewContext.postEffectRegistry,
+        [], // Empty array → unlink all
+        prevEffects,
+        layerId,
+      );
+    }
+    delete obj.userData.postEffectConfig;
+    delete obj.userData.postEffectLayerId;
+    return;
+  }
+
+  // Store PostEffectConfig for new rendering approach
+  // Note: postEffectOcclusion is NOT stored - SoT is registry, accessed via layerId
+  const config: PostEffectConfig = {
+    effectIds: effectPayload.effectIds ?? [],
+    emissiveIntensity: effectPayload.emissiveIntensity,
+    emissiveColor: effectPayload.emissiveColor,
+    layerId, // Store layerId for registry lookup (SoT access)
+  };
+  obj.userData.postEffectConfig = config;
 
   const nextEffects = effectPayload.effectIds;
-  const prevEffectsRaw = obj.userData.layerEffects;
-  const prevEffects: string[] =
-    Array.isArray(prevEffectsRaw) &&
-    prevEffectsRaw.every((id): id is string => typeof id === "string")
-      ? prevEffectsRaw
-      : [];
 
   const emissiveIntensity =
     effectPayload.emissiveIntensity ??
@@ -114,21 +126,23 @@ export const applyEffectPayloadToObject = (
   const emissiveColor =
     effectPayload.emissiveColor ?? viewContext.getLayerEmissiveColor(layerId);
 
-  if (nextEffects) {
-    obj.userData.layerEffects = [...nextEffects];
-    if (obj instanceof ModelMesh) {
-      // ModelMesh: Use event-based updates
-      obj.dispatchEvent({
-        type: "layerEffectsChanged",
-        target: obj,
-        effectIds: nextEffects,
-        emissiveIntensity,
-        layerId,
-        prevEffectIds: prevEffects,
-      });
-    } else if (viewContext.postEffectRegistry) {
-      // Regular Mesh: PostEffectRegistry のユーティリティを使って link/unlink し、
-      // emissive も共通ロジックで更新する。
+  // Always dispatch layerEffectsChanged for ModelMesh, or update for Regular Mesh
+  // even if nextEffects is empty array (to handle Bloom Off case)
+  if (obj instanceof ModelMesh) {
+    // ModelMesh: Use event-based updates
+    obj.dispatchEvent({
+      type: "layerEffectsChanged",
+      target: obj,
+      effectIds: nextEffects ?? [],
+      emissiveIntensity,
+      emissiveColor,
+      layerId,
+      prevEffectIds: prevEffects,
+    });
+  } else if (viewContext.postEffectRegistry) {
+    // Regular meshes: use PostEffectRegistry helpers to link/unlink
+    // and update emissive via the shared logic
+    if (nextEffects) {
       updatePostEffectLinksForObject(
         obj,
         viewContext.postEffectRegistry,
@@ -136,21 +150,10 @@ export const applyEffectPayloadToObject = (
         prevEffects,
         layerId,
       );
-
-      // 4. Apply emissive material updates (consolidated in helper function)
-      applyEmissiveToMeshMaterials(obj, effectPayload, viewContext, layerId);
     }
-  }
 
-  // ModelMesh: Dispatch emissive event
-  if (obj instanceof ModelMesh) {
-    obj.dispatchEvent({
-      type: "emissive",
-      target: obj,
-      emissiveIntensity,
-      emissiveColor,
-      layerId,
-    });
+    // 4. Apply emissive material updates (consolidated in helper function)
+    applyEmissiveToMeshMaterials(obj, effectPayload);
   }
 
   // Register Post Effect Occlusion if specified

@@ -35,8 +35,33 @@ export {
 export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
 export {
-  PostEffectRegistry,
+  // Helper class
+  PostEffectHelper,
+  // Types
   type PostEffectOptions,
   type PostEffectResources,
-} from "./SelectiveEffectRegistry";
+  type PostEffectConfig,
+  type PostEffectOcclusion,
+  type MaskPassType,
+  type ActiveEffectsResult,
+  type EmissiveParams,
+  // Constants
+  BLOOM_EFFECT_KEY,
+  OUTLINE_EFFECT_KEY,
+  MASK_RT_PREFIX,
+  PostEffectOcclusionMode,
+  MaskPassTypes,
+  // Common helpers
+  getMaskPassType,
+  resolvePostEffectOcclusion,
+  resolveActiveEffects,
+  applyEmissiveToObject3D,
+  hasBloomEffect,
+  hasOutlineEffect,
+  getPostEffectConfig,
+  hasPostEffectConfig,
+  applyEmissiveEffect,
+  ensurePostEffectUserData,
+  updatePostEffectLinksForObject,
+} from "./PostEffectHelper";
 export { PostEffectManager } from "./PostEffectManager";

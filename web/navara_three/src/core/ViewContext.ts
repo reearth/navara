@@ -8,8 +8,8 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
+import type { PostEffectHelper } from "./PostEffectHelper";
 import { PostEffectManager } from "./PostEffectManager";
-import type { PostEffectRegistry } from "./SelectiveEffectRegistry";
 
 export type ViewDebugOptions = {
   postEffectMask?: boolean;
@@ -23,7 +23,7 @@ type Private = {
 // Restrict public API for a layer declaration.
 export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
-  public postEffectRegistry?: PostEffectRegistry;
+  public postEffectRegistry?: PostEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
 
@@ -37,11 +37,11 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public _privates: Private,
     eventHandler?: EventHandler<ViewEvents>,
-    postEffectRegistry?: PostEffectRegistry,
+    postEffectHelper?: PostEffectHelper,
     debugOptions?: ViewDebugOptions,
   ) {
     this.eventHandler = eventHandler;
-    this.postEffectRegistry = postEffectRegistry;
+    this.postEffectRegistry = postEffectHelper;
     this.debugOptions = debugOptions ?? {};
 
     this.postEffects = new PostEffectManager({
@@ -64,16 +64,14 @@ export class ViewContext {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectOcclusion?: boolean,
+    postEffectOcclusion?: number,
     emissiveIntensity?: number,
-    options?: { keepClones?: boolean },
   ): void {
     this.postEffects.registerLayerEffects(
       layerId,
       effectIds,
       postEffectOcclusion,
       emissiveIntensity,
-      options,
     );
   }
 
@@ -96,13 +94,13 @@ export class ViewContext {
     this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
 
-  getLayerPostEffectOcclusion(layerId: string): boolean {
+  getLayerPostEffectOcclusion(layerId: string): number {
     return this.postEffects.getLayerPostEffectOcclusion(layerId);
   }
 
   setLayerPostEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: boolean,
+    postEffectOcclusion: number,
   ): void {
     this.postEffects.setLayerPostEffectOcclusion(layerId, postEffectOcclusion);
   }
@@ -115,13 +113,7 @@ export class ViewContext {
     layerId: string,
     effectIds: string[] | undefined,
     emissiveIntensity?: number,
-    options?: { keepClones?: boolean },
   ): void {
-    this.postEffects.updateLayerEffects(
-      layerId,
-      effectIds,
-      emissiveIntensity,
-      options,
-    );
+    this.postEffects.updateLayerEffects(layerId, effectIds, emissiveIntensity);
   }
 }

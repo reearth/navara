@@ -1,0 +1,571 @@
+import { Pass as PostProcessingPass } from "postprocessing";
+import {
+  Color,
+  Mesh,
+  OrthographicCamera,
+  PlaneGeometry,
+  Scene,
+  ShaderMaterial,
+  Vector2,
+  WebGLRenderTarget,
+  type WebGLRenderer,
+  RGBAFormat,
+  DepthTexture,
+  UnsignedShortType,
+} from "three";
+
+import { BufferView } from "../../bufferView";
+import type {
+  EffectLayerConfig,
+  EffectLayerUpdate,
+} from "../../core/EffectLayerDeclaration";
+import type { BaseInstance } from "../../core/LayerDeclaration";
+import {
+  hasOutlineEffect,
+  PostEffectOcclusionMode,
+} from "../../core/PostEffectHelper";
+import type { ViewContext } from "../../core/ViewContext";
+import { Pass } from "../../effects";
+
+import {
+  PostEffectLayer,
+  renderMaskForMode,
+  createDepthClipMaterial,
+  createFullscreenQuad,
+  applyDepthClip,
+} from "./PostEffectLayer";
+
+// PostEffect Outline configuration
+export type PostEffectOutlineConfig = {
+  postEffect: true;
+  postEffectOutline: {
+    color?: number;
+    thickness?: number;
+    edgeStrength?: number;
+  };
+  resolutionScale?: number;
+  debugMask?: boolean;
+} & EffectLayerConfig;
+
+export type PostEffectOutlineUpdate = {
+  postEffectOutline?: {
+    color?: number;
+    thickness?: number;
+    edgeStrength?: number;
+  };
+  resolutionScale?: number;
+  debugMask?: boolean;
+} & EffectLayerUpdate;
+
+const DEFAULT_COLOR = 0xffffff;
+const DEFAULT_THICKNESS = 1.0;
+const DEFAULT_EDGE_STRENGTH = 1.0;
+
+/**
+ * Post Effect Outline Layer
+ * Uses scene.traverse() and per-pixel occlusionMode for efficient outline rendering
+ */
+export class PostEffectOutlineLayer extends PostEffectLayer<
+  PostEffectOutlineConfig,
+  PostEffectOutlineUpdate
+> {
+  static key = "postEffectOutline";
+  static insertAfter = ["mrt"];
+  static insertBefore = ["transparent"];
+
+  public outlineColor: number;
+  public outlineThickness: number;
+  public outlineEdgeStrength: number;
+
+  private outlinePass?: PostEffectOutlinePass;
+
+  protected getEffectKey(): string {
+    return PostEffectOutlineLayer.key;
+  }
+
+  constructor(view: ViewContext, config: EffectLayerConfig) {
+    const baseConfig = config as Partial<PostEffectOutlineConfig>;
+    const postEffectOutlineConfig =
+      "postEffectOutline" in config ? baseConfig.postEffectOutline : undefined;
+
+    const postEffectConfig: PostEffectOutlineConfig = {
+      ...(config as PostEffectOutlineConfig),
+      postEffect: true,
+      resolutionScale: baseConfig.resolutionScale ?? 1.0,
+      debugMask: baseConfig.debugMask ?? false,
+      postEffectOutline: {
+        color: postEffectOutlineConfig?.color ?? DEFAULT_COLOR,
+        thickness: postEffectOutlineConfig?.thickness ?? DEFAULT_THICKNESS,
+        edgeStrength:
+          postEffectOutlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
+      },
+    };
+
+    super(view, postEffectConfig);
+
+    this.outlineColor = this.config.postEffectOutline?.color ?? DEFAULT_COLOR;
+    this.outlineThickness =
+      this.config.postEffectOutline?.thickness ?? DEFAULT_THICKNESS;
+    this.outlineEdgeStrength =
+      this.config.postEffectOutline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
+  }
+
+  createPass() {
+    const rawPass = new PostEffectOutlinePass(this);
+    this.outlinePass = rawPass;
+    const pass = new Pass(rawPass, null, { enabled: true });
+
+    return pass as Pass<PostEffectOutlinePass, null> & BaseInstance;
+  }
+
+  onUpdateConfig(updates: PostEffectOutlineUpdate): void {
+    super.onUpdateConfig(updates);
+
+    if (updates.postEffectOutline) {
+      const next = updates.postEffectOutline;
+
+      if (!this.config.postEffectOutline) {
+        this.config.postEffectOutline = {};
+      }
+
+      if (next.color !== undefined) {
+        this.outlineColor = next.color;
+        this.config.postEffectOutline.color = next.color;
+      }
+
+      if (next.thickness !== undefined) {
+        this.outlineThickness = next.thickness;
+        this.config.postEffectOutline.thickness = next.thickness;
+      }
+
+      if (next.edgeStrength !== undefined) {
+        this.outlineEdgeStrength = next.edgeStrength;
+        this.config.postEffectOutline.edgeStrength = next.edgeStrength;
+      }
+
+      this.outlinePass?.setParameters(
+        this.outlineColor,
+        this.outlineThickness,
+        this.outlineEdgeStrength,
+      );
+    }
+  }
+}
+
+/**
+ * Custom PostProcessing Pass for PostEffect Outline
+ * Implements pass separation for per-object occlusion handling
+ */
+class PostEffectOutlinePass extends PostProcessingPass {
+  private layer: PostEffectOutlineLayer;
+
+  // Pass separation: separate render targets for DepthEnabled and Silhouette
+  private depthEnabledMaskRT: WebGLRenderTarget;
+  private silhouetteMaskRT: WebGLRenderTarget;
+  private depthEnabledEdgeRT: WebGLRenderTarget;
+  private silhouetteEdgeRT: WebGLRenderTarget;
+
+  // Depth clip pass: clips mask by Base depth (DepthEnabled only)
+  private depthClipRT: WebGLRenderTarget;
+  private depthClipMaterial: ShaderMaterial;
+  private depthClipScene: Scene;
+
+  private fullscreenCamera: OrthographicCamera;
+  private fullscreenGeometry: PlaneGeometry;
+
+  private edgeDetectScene: Scene;
+  private edgeDetectMaterial: ShaderMaterial;
+
+  private compositeScene: Scene;
+  private compositeMaterial: ShaderMaterial;
+
+  private size = new Vector2();
+
+  // Note: outlineMaskMaterial removed - now using original materials with uOutlineMaskPass flag
+
+  // Debug views
+  private debugView1?: BufferView;
+  private debugView2?: BufferView;
+
+  constructor(layer: PostEffectOutlineLayer) {
+    super("PostEffectOutlinePass");
+    this.layer = layer;
+
+    const renderer =
+      layer["view"].renderPassOrchestrator.effectComposer.getRenderer();
+    const renderSize = renderer.getSize(new Vector2());
+    const resolutionScale = layer["config"].resolutionScale ?? 1.0;
+    const initialWidth = Math.floor(renderSize.x * resolutionScale);
+    const initialHeight = Math.floor(renderSize.y * resolutionScale);
+
+    // Create shared fullscreen rendering infrastructure
+    const fullscreenQuad = createFullscreenQuad();
+    this.fullscreenCamera = fullscreenQuad.camera;
+    this.fullscreenGeometry = fullscreenQuad.geometry;
+
+    // Note: outlineMaskMaterial removed - now using original materials with uOutlineMaskPass flag
+    // This ensures depthTexture is written correctly by Three.js standard materials
+
+    // Edge detection material (Sobel filter)
+    this.edgeDetectMaterial = new ShaderMaterial({
+      uniforms: {
+        tMask: { value: null },
+        resolution: { value: new Vector2(initialWidth, initialHeight) },
+        edgeStrength: { value: 1.0 },
+        thickness: { value: 1.0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tMask;
+        uniform vec2 resolution;
+        uniform float edgeStrength;
+        uniform float thickness;
+
+        varying vec2 vUv;
+
+        // RGB-based mask sampling (aligned with Bloom approach)
+        // - Mask presence is determined by RGB brightness (white=mask, black=no mask)
+        float sampleMask(vec2 uv) {
+          vec3 rgb = texture2D(tMask, uv).rgb;
+          return length(rgb) > 0.1 ? 1.0 : 0.0;
+        }
+
+        void main() {
+          vec2 texel = 1.0 / resolution;
+          vec2 offset = texel * thickness;  // Scale sample interval by thickness
+
+          // Sobel kernel with thickness-based offset
+          float tl = sampleMask(vUv + offset * vec2(-1.0,  1.0));
+          float t  = sampleMask(vUv + offset * vec2( 0.0,  1.0));
+          float tr = sampleMask(vUv + offset * vec2( 1.0,  1.0));
+          float l  = sampleMask(vUv + offset * vec2(-1.0,  0.0));
+          float r  = sampleMask(vUv + offset * vec2( 1.0,  0.0));
+          float bl = sampleMask(vUv + offset * vec2(-1.0, -1.0));
+          float b  = sampleMask(vUv + offset * vec2( 0.0, -1.0));
+          float br = sampleMask(vUv + offset * vec2( 1.0, -1.0));
+
+          // Sobel operator
+          float gx = -tl - 2.0*l - bl + tr + 2.0*r + br;
+          float gy = -tl - 2.0*t - tr + bl + 2.0*b + br;
+
+          float edge = length(vec2(gx, gy)) * edgeStrength;
+          edge = clamp(edge, 0.0, 1.0);
+
+          gl_FragColor = vec4(vec3(edge), 1.0);
+        }
+      `,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    this.edgeDetectScene = new Scene();
+    const edgeQuad = new Mesh(this.fullscreenGeometry, this.edgeDetectMaterial);
+    this.edgeDetectScene.add(edgeQuad);
+
+    // Depth clip material: clips mask by Base depth (shared implementation)
+    this.depthClipMaterial = createDepthClipMaterial();
+
+    this.depthClipScene = new Scene();
+    const depthClipQuad = new Mesh(
+      this.fullscreenGeometry,
+      this.depthClipMaterial,
+    );
+    this.depthClipScene.add(depthClipQuad);
+
+    // Composite material to blend outline with base scene
+    // Blends two edge results: DepthEnabled + Silhouette
+    this.compositeMaterial = new ShaderMaterial({
+      uniforms: {
+        tBase: { value: null },
+        tDepthEnabledEdge: { value: null },
+        tSilhouetteEdge: { value: null },
+        outlineColor: { value: new Color(0xffffff) },
+        thickness: { value: 1.0 },
+        resolution: { value: new Vector2(initialWidth, initialHeight) },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tBase;
+        uniform sampler2D tDepthEnabledEdge;
+        uniform sampler2D tSilhouetteEdge;
+        uniform vec3 outlineColor;
+        uniform float thickness;
+        uniform vec2 resolution;
+
+        varying vec2 vUv;
+
+        float sampleEdge(sampler2D tEdge, vec2 uv, vec2 texel, float thickness) {
+          float edgeCenter = texture2D(tEdge, uv).r;
+          float edgeHPos = texture2D(tEdge, uv + texel * vec2(thickness, 0.0)).r;
+          float edgeHNeg = texture2D(tEdge, uv + texel * vec2(-thickness, 0.0)).r;
+          float edgeVPos = texture2D(tEdge, uv + texel * vec2(0.0, thickness)).r;
+          float edgeVNeg = texture2D(tEdge, uv + texel * vec2(0.0, -thickness)).r;
+          return max(edgeCenter, max(max(edgeHPos, edgeHNeg), max(edgeVPos, edgeVNeg)));
+        }
+
+        void main() {
+          vec4 baseColor = texture2D(tBase, vUv);
+          vec2 texel = 1.0 / resolution;
+
+          // Sample both edge results with thickness-based dilation
+          float depthEnabledEdge = sampleEdge(tDepthEnabledEdge, vUv, texel, thickness);
+          float silhouetteEdge = sampleEdge(tSilhouetteEdge, vUv, texel, thickness);
+
+          // Combine edges (max blend)
+          float totalEdge = clamp(max(depthEnabledEdge, silhouetteEdge), 0.0, 1.0);
+
+          // Blend outline with base
+          vec3 finalColor = mix(baseColor.rgb, outlineColor, totalEdge);
+          gl_FragColor = vec4(finalColor, baseColor.a);
+        }
+      `,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    // Initialize uniforms from layer configuration
+    this.setParameters(
+      layer.outlineColor,
+      layer.outlineThickness,
+      layer.outlineEdgeStrength,
+    );
+
+    this.compositeScene = new Scene();
+    const compositeQuad = new Mesh(
+      this.fullscreenGeometry,
+      this.compositeMaterial,
+    );
+    this.compositeScene.add(compositeQuad);
+
+    // Separate render targets for DepthEnabled and Silhouette passes
+
+    // DepthEnabled mask with accessible depth texture (for depth clip)
+    this.depthEnabledMaskRT = new WebGLRenderTarget(
+      initialWidth,
+      initialHeight,
+      {
+        format: RGBAFormat,
+        depthBuffer: true,
+        stencilBuffer: true,
+      },
+    );
+    this.depthEnabledMaskRT.texture.name = `PostEffectMask_postEffectOutline_DepthEnabled_${layer.id}`;
+    this.depthEnabledMaskRT.depthTexture = new DepthTexture(
+      initialWidth,
+      initialHeight,
+      UnsignedShortType,
+    );
+
+    // Silhouette mask (no depth texture needed - no depth clip for silhouette)
+    this.silhouetteMaskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
+      format: RGBAFormat,
+      depthBuffer: true,
+      stencilBuffer: true,
+    });
+    this.silhouetteMaskRT.texture.name = `PostEffectMask_postEffectOutline_Silhouette_${layer.id}`;
+
+    // DepthEnabled edge detection result
+    this.depthEnabledEdgeRT = new WebGLRenderTarget(
+      initialWidth,
+      initialHeight,
+      {
+        format: RGBAFormat,
+        depthBuffer: false,
+        stencilBuffer: false,
+      },
+    );
+    this.depthEnabledEdgeRT.texture.name = `PostEffectOutline_DepthEnabledEdge_${layer.id}`;
+
+    // Silhouette edge detection result
+    this.silhouetteEdgeRT = new WebGLRenderTarget(initialWidth, initialHeight, {
+      format: RGBAFormat,
+      depthBuffer: false,
+      stencilBuffer: false,
+    });
+    this.silhouetteEdgeRT.texture.name = `PostEffectOutline_SilhouetteEdge_${layer.id}`;
+
+    // Render target for depth-clipped mask (DepthEnabled only)
+    this.depthClipRT = new WebGLRenderTarget(initialWidth, initialHeight, {
+      format: RGBAFormat,
+      depthBuffer: false,
+      stencilBuffer: false,
+    });
+    this.depthClipRT.texture.name = `PostEffectOutline_DepthClip_${layer.id}`;
+
+    this.size.set(initialWidth, initialHeight);
+
+    this.needsSwap = true;
+  }
+
+  setParameters(color: number, thickness: number, edgeStrength: number): void {
+    this.compositeMaterial.uniforms.outlineColor.value.setHex(color);
+    this.compositeMaterial.uniforms.thickness.value = thickness;
+    this.edgeDetectMaterial.uniforms.edgeStrength.value = edgeStrength;
+    this.edgeDetectMaterial.uniforms.thickness.value = thickness;
+  }
+
+  private updateSizes(width: number, height: number): void {
+    if (this.size.x === width && this.size.y === height) {
+      return;
+    }
+
+    this.size.set(width, height);
+
+    // Update all render targets
+    this.depthEnabledMaskRT.setSize(width, height);
+    if (this.depthEnabledMaskRT.depthTexture) {
+      this.depthEnabledMaskRT.depthTexture.dispose();
+      this.depthEnabledMaskRT.depthTexture = new DepthTexture(
+        width,
+        height,
+        UnsignedShortType,
+      );
+    }
+
+    this.silhouetteMaskRT.setSize(width, height);
+    this.depthEnabledEdgeRT.setSize(width, height);
+    this.silhouetteEdgeRT.setSize(width, height);
+    this.depthClipRT.setSize(width, height);
+
+    this.edgeDetectMaterial.uniforms.resolution.value.set(width, height);
+    this.compositeMaterial.uniforms.resolution.value.set(width, height);
+  }
+
+  /**
+   * Render Outline mask for a specific occlusion mode
+   * Uses shared renderMaskForMode implementation
+   */
+  private renderOutlineMaskForMode(
+    renderer: WebGLRenderer,
+    targetMode: number,
+    targetRT: WebGLRenderTarget,
+  ): void {
+    renderMaskForMode(
+      renderer,
+      this.layer["view"].camera,
+      this.layer["view"].scenes,
+      this.layer["view"].postEffectRegistry,
+      targetMode,
+      targetRT,
+      hasOutlineEffect,
+    );
+  }
+
+  render(
+    renderer: WebGLRenderer,
+    inputBuffer: WebGLRenderTarget,
+    outputBuffer: WebGLRenderTarget | null,
+    _deltaTime?: number,
+  ): void {
+    // Step 1: Update sizes
+    this.updateSizes(inputBuffer.width, inputBuffer.height);
+
+    // ============================================
+    // Pass 1: DepthEnabled objects (with depth clip)
+    // ============================================
+
+    // Step 2a: Render DepthEnabled mask
+    this.renderOutlineMaskForMode(
+      renderer,
+      PostEffectOcclusionMode.Normal,
+      this.depthEnabledMaskRT,
+    );
+
+    // Step 3a: Apply depth clip (shared implementation)
+    applyDepthClip(
+      renderer,
+      this.depthClipMaterial,
+      this.depthClipScene,
+      this.fullscreenCamera,
+      this.depthEnabledMaskRT,
+      this.layer["getBaseDepthTexture"](),
+      this.depthClipRT,
+    );
+
+    // Step 4a: Apply edge detection (Sobel filter) to depth-clipped mask
+    this.edgeDetectMaterial.uniforms.tMask.value = this.depthClipRT.texture;
+    renderer.setRenderTarget(this.depthEnabledEdgeRT);
+    renderer.render(this.edgeDetectScene, this.fullscreenCamera);
+
+    // ============================================
+    // Pass 2: Silhouette objects (no depth clip)
+    // ============================================
+
+    // Step 2b: Render Silhouette mask
+    this.renderOutlineMaskForMode(
+      renderer,
+      PostEffectOcclusionMode.Silhouette,
+      this.silhouetteMaskRT,
+    );
+
+    // Step 4b: Apply edge detection directly (no depth clip for Silhouette)
+    this.edgeDetectMaterial.uniforms.tMask.value =
+      this.silhouetteMaskRT.texture;
+    renderer.setRenderTarget(this.silhouetteEdgeRT);
+    renderer.render(this.edgeDetectScene, this.fullscreenCamera);
+
+    // ============================================
+    // Step 5: Composite both edge results
+    // ============================================
+    this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
+    this.compositeMaterial.uniforms.tDepthEnabledEdge.value =
+      this.depthEnabledEdgeRT.texture;
+    this.compositeMaterial.uniforms.tSilhouetteEdge.value =
+      this.silhouetteEdgeRT.texture;
+
+    renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
+    renderer.render(this.compositeScene, this.fullscreenCamera);
+
+    // Optional debug views
+    if (this.layer["config"].debugMask) {
+      if (!this.debugView1) {
+        this.debugView1 = new BufferView(
+          this.depthEnabledMaskRT.width,
+          this.depthEnabledMaskRT.height,
+        );
+      }
+
+      if (!this.debugView2) {
+        this.debugView2 = new BufferView(
+          this.depthEnabledEdgeRT.width,
+          this.depthEnabledEdgeRT.height,
+        );
+      }
+
+      this.debugView1.render(renderer, this.depthEnabledMaskRT);
+      this.debugView2.render(renderer, this.depthEnabledEdgeRT);
+    }
+  }
+
+  dispose(): void {
+    // Dispose all render targets
+    this.depthEnabledMaskRT.depthTexture?.dispose();
+    this.depthEnabledMaskRT.dispose();
+    this.silhouetteMaskRT.dispose();
+    this.depthEnabledEdgeRT.dispose();
+    this.silhouetteEdgeRT.dispose();
+    this.depthClipRT.dispose();
+
+    // Dispose geometry and materials
+    this.fullscreenGeometry.dispose();
+    this.depthClipMaterial.dispose();
+    this.edgeDetectMaterial.dispose();
+    this.compositeMaterial.dispose();
+
+    // Dispose debug views
+    this.debugView1?.dispose();
+    this.debugView2?.dispose();
+  }
+}

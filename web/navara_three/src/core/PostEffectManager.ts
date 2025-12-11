@@ -1,14 +1,18 @@
-import type { PostEffectRegistry } from "./SelectiveEffectRegistry";
+import {
+  DEFAULT_EMISSIVE_INTENSITY,
+  PostEffectOcclusionMode,
+  type PostEffectHelper,
+} from "./PostEffectHelper";
 
 type LayerEffectConfig = {
   effectIds: string[];
   emissiveIntensity: number;
   emissiveColor?: number;
-  postEffectOcclusion: boolean;
+  postEffectOcclusion: number;
 };
 
 type PostEffectManagerOptions = {
-  postEffectRegistry?: PostEffectRegistry;
+  postEffectRegistry?: PostEffectHelper;
 };
 
 export class PostEffectManager {
@@ -24,9 +28,8 @@ export class PostEffectManager {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectOcclusion?: boolean,
+    postEffectOcclusion?: number,
     emissiveIntensity?: number,
-    options?: { keepClones?: boolean },
   ): void {
     const config = this.ensureConfig(layerId);
 
@@ -44,18 +47,10 @@ export class PostEffectManager {
         postEffectOcclusion,
       );
     }
-
-    if (this.options.postEffectRegistry) {
-      this.options.postEffectRegistry.registerLayerKeepClones(
-        layerId,
-        options?.keepClones,
-      );
-    }
   }
 
   unregisterLayerEffects(layerId: string): void {
     this.layerConfigs.delete(layerId);
-    this.options.postEffectRegistry?.registerLayerKeepClones(layerId, false);
   }
 
   getLayerEffects(layerId: string): string[] | undefined {
@@ -64,15 +59,21 @@ export class PostEffectManager {
   }
 
   getLayerEmissiveIntensity(layerId: string): number {
-    return this.layerConfigs.get(layerId)?.emissiveIntensity ?? 0.3;
+    return (
+      this.layerConfigs.get(layerId)?.emissiveIntensity ??
+      DEFAULT_EMISSIVE_INTENSITY
+    );
   }
 
   getLayerEmissiveColor(layerId: string): number | undefined {
     return this.layerConfigs.get(layerId)?.emissiveColor;
   }
 
-  getLayerPostEffectOcclusion(layerId: string): boolean {
-    return this.layerConfigs.get(layerId)?.postEffectOcclusion ?? true;
+  getLayerPostEffectOcclusion(layerId: string): number {
+    return (
+      this.layerConfigs.get(layerId)?.postEffectOcclusion ??
+      PostEffectOcclusionMode.Normal
+    );
   }
 
   setLayerEmissiveColor(
@@ -86,15 +87,11 @@ export class PostEffectManager {
     }
 
     config.emissiveColor = emissiveColor;
-    this.layerConfigs.set(layerId, config);
-
-    // Cache update only - actual effect application happens via layer.update()
-    // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
   setLayerPostEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: boolean,
+    postEffectOcclusion: number,
   ): void {
     const config = this.ensureConfig(layerId);
 
@@ -103,65 +100,45 @@ export class PostEffectManager {
     }
 
     config.postEffectOcclusion = postEffectOcclusion;
-    this.layerConfigs.set(layerId, config);
 
     this.options.postEffectRegistry?.updateLayerPostEffectOcclusion(
       layerId,
       postEffectOcclusion,
     );
-
-    // Cache update only - actual effect application happens via layer.update()
-    // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
   }
 
   updateLayerEffects(
     layerId: string,
     effectIds: string[] | undefined,
     emissiveIntensity?: number,
-    options?: { keepClones?: boolean },
   ): void {
     const newEffectIds = effectIds ?? [];
-    this.updateLayerEffectCaches(
-      layerId,
-      newEffectIds,
-      emissiveIntensity,
-      options,
-    );
-
-    // Cache update only - actual effect application happens via layer.update()
-    // which triggers Rust event stream or MeshLayerDeclaration.onUpdateConfig()
+    this.updateLayerEffectCaches(layerId, newEffectIds, emissiveIntensity);
   }
 
   private ensureConfig(layerId: string): LayerEffectConfig {
-    if (!this.layerConfigs.has(layerId)) {
-      this.layerConfigs.set(layerId, {
+    let config = this.layerConfigs.get(layerId);
+    if (!config) {
+      config = {
         effectIds: [],
-        emissiveIntensity: 0.3,
-        postEffectOcclusion: true,
-      });
+        emissiveIntensity: DEFAULT_EMISSIVE_INTENSITY,
+        postEffectOcclusion: PostEffectOcclusionMode.Normal,
+      };
+      this.layerConfigs.set(layerId, config);
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this.layerConfigs.get(layerId)!;
+    return config;
   }
 
   private updateLayerEffectCaches(
     layerId: string,
     newEffectIds: string[],
     emissiveIntensity: number | undefined,
-    options?: { keepClones?: boolean },
   ): void {
     const config = this.ensureConfig(layerId);
 
     config.effectIds = newEffectIds;
     if (emissiveIntensity !== undefined) {
       config.emissiveIntensity = emissiveIntensity;
-    }
-
-    if (options?.keepClones !== undefined && this.options.postEffectRegistry) {
-      this.options.postEffectRegistry.registerLayerKeepClones(
-        layerId,
-        options.keepClones,
-      );
     }
   }
 }

@@ -1,62 +1,11 @@
 import { Object3D } from "three";
 
-import { updatePostEffectLinksForObject } from "../core/SelectiveEffectRegistry";
+import {
+  applyEmissiveToObject3D,
+  updatePostEffectLinksForObject,
+} from "../core/PostEffectHelper";
 import type { ViewContext } from "../core/ViewContext";
-import { isEmissiveEvent, isLayerEffectsChangedEvent } from "../object3DEvent";
-
-// Cache materials to avoid repeated traversals
-type MaterialCache = {
-  emissiveMaterials: {
-    emissive: { copy: (color: unknown) => void; set: (color: number) => void };
-    emissiveIntensity: number;
-    color: unknown;
-  }[];
-  depthTestMaterials: { depthTest: boolean }[];
-};
-
-/**
- * Cache materials for a mesh object to avoid repeated traversals
- */
-function cacheMaterials(mesh: Object3D): MaterialCache {
-  const emissiveMaterials: MaterialCache["emissiveMaterials"] = [];
-  const depthTestMaterials: MaterialCache["depthTestMaterials"] = [];
-
-  mesh.traverse((obj) => {
-    if ("material" in obj && obj.material) {
-      const materials = Array.isArray(obj.material)
-        ? obj.material
-        : [obj.material];
-
-      for (const material of materials) {
-        // Cache materials with emissive property
-        if (
-          typeof material === "object" &&
-          material !== null &&
-          "emissive" in material &&
-          "emissiveIntensity" in material &&
-          "color" in material
-        ) {
-          emissiveMaterials.push(
-            material as MaterialCache["emissiveMaterials"][number],
-          );
-        }
-
-        // Cache materials with depthTest property
-        if (
-          typeof material === "object" &&
-          material !== null &&
-          "depthTest" in material
-        ) {
-          depthTestMaterials.push(
-            material as MaterialCache["depthTestMaterials"][number],
-          );
-        }
-      }
-    }
-  });
-
-  return { emissiveMaterials, depthTestMaterials };
-}
+import { isLayerEffectsChangedEvent } from "../object3DEvent";
 
 /**
  * Setup event handlers for mesh objects to enable event-driven effects control.
@@ -72,31 +21,23 @@ export function setupMeshEventHandlers(
 
   if (!hasEventDispatcher) return;
 
-  // Cache materials once to avoid repeated traversals
-  const materialCache = cacheMaterials(mesh);
-
-  // Handle emissive event
-  addCustomEventListener(mesh, "emissive", (event) => {
-    if (!isEmissiveEvent(event)) return;
-
-    // Use cached materials instead of traversing
-    for (const material of materialCache.emissiveMaterials) {
-      // Use custom emissive color if provided, otherwise use material color
-      if (event.emissiveColor !== undefined) {
-        material.emissive.set(event.emissiveColor);
-      } else {
-        material.emissive.copy(material.color);
-      }
-      material.emissiveIntensity = event.emissiveIntensity;
-    }
-  });
-
   // Handle layerEffectsChanged event
-  addCustomEventListener(mesh, "layerEffectsChanged", (event) => {
+  // Cast required because Three.js addEventListener is typed for Object3DEventMap only
+  (
+    mesh.addEventListener as (
+      type: string,
+      listener: (e: unknown) => void,
+    ) => void
+  )("layerEffectsChanged", (event) => {
     if (!isLayerEffectsChangedEvent(event)) return;
 
-    const { prevEffectIds, effectIds } = event;
+    const { prevEffectIds, effectIds, emissiveIntensity, emissiveColor } =
+      event;
 
+    // Apply emissive unconditionally using common helper
+    applyEmissiveToObject3D(mesh, { emissiveIntensity, emissiveColor });
+
+    // Update PostEffectRegistry links
     updatePostEffectLinksForObject(
       mesh,
       viewContext.postEffectRegistry,
@@ -106,23 +47,7 @@ export function setupMeshEventHandlers(
     );
   });
 
-  // Note: postEffectOcclusion should NOT modify original mesh materials.
-  // Original meshes should always have depthTest=true for main scene rendering.
-  // Only clones in PostEffectRegistry should have their depthTest modified.
-  // See PostEffectRegistry for how occlusion is applied to clones.
-}
-
-/**
- * Helper function to add custom event listeners in a type-safe manner.
- */
-function addCustomEventListener<T extends string>(
-  obj: Object3D,
-  type: T,
-  listener: (event: unknown) => void,
-): void {
-  const addListener = obj.addEventListener.bind(obj);
-  addListener(
-    type as Parameters<typeof addListener>[0],
-    listener as Parameters<typeof addListener>[1],
-  );
+  // Meshes render autonomously and adjust their own depth settings
+  // via onBeforeRender callbacks based on the current render target.
+  // No clones are used.
 }

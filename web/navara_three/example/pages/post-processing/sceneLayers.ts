@@ -3,6 +3,7 @@ import ThreeView, {
   LLE,
   degreeToRadian,
   geodeticToVector3,
+  PostEffectOcclusionMode,
   type BoxMeshLayer,
   type LayerHandle,
   type SphereMeshLayer,
@@ -16,43 +17,36 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
-} from "../../../helpers/constants";
+} from "../../helpers/constants";
 
 type GeoJsonModelState = Record<string, unknown>;
-
-export type LayerEffectPayload = {
-  effectIds: string[];
-  postEffectOcclusion: boolean;
-  emissive_color?: number;
-  emissive_intensity?: number;
-};
 
 export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
   layer: Layer;
   updateModel: (overrides: Partial<TState>) => void;
-  setPostEffectOcclusion: (value: boolean) => void;
-  updateEffectState: (payload: LayerEffectPayload) => void;
 };
 
 export type DrumModelState = {
   show: boolean;
   size: number;
   height: number;
-  clamp_to_ground: boolean;
+  clampToGround: boolean;
   url: string;
-  should_rotate_in_default: boolean;
+  shouldRotateInDefault: boolean;
   color?: number;
+  postEffectOcclusion?: number;
 };
 
 export type SoldierModelState = {
   show: boolean;
   size: number;
   height: number;
-  clamp_to_ground: boolean;
+  clampToGround: boolean;
   url: string;
-  animation_active_clip?: string;
-  animation_speed?: number;
+  animationActiveClip?: string;
+  animationSpeed?: number;
   color?: number;
+  postEffectOcclusion?: number;
 };
 
 export type SceneLayers = {
@@ -92,7 +86,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       y: cubePosition.y,
       z: cubePosition.z,
     },
-    postEffectOcclusion: true, // Explicitly set initial value for consistent behavior
+    postEffectOcclusion: PostEffectOcclusionMode.Normal,
   });
 
   const sphereLayer = view.addLayer<SphereMeshLayer>({
@@ -111,7 +105,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       y: spherePosition.y,
       z: spherePosition.z,
     },
-    postEffectOcclusion: true, // Explicitly set initial value for consistent behavior
+    postEffectOcclusion: PostEffectOcclusionMode.Normal,
   });
 
   const drumLayer = createGeoJsonModelLayer<DrumModelState>({
@@ -133,11 +127,11 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       show: true,
       size: 100,
       height: 0,
-      clamp_to_ground: true,
+      clampToGround: true,
       url: LOCAL_DATASETS.steelDrumGLTF.url,
-      should_rotate_in_default: true,
+      shouldRotateInDefault: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
     },
-    postEffectOcclusion: false,
   });
 
   const soldierLayer = createGeoJsonModelLayer<SoldierModelState>({
@@ -159,12 +153,12 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       show: true,
       size: 100,
       height: 0,
-      clamp_to_ground: true,
+      clampToGround: true,
       url: LOCAL_DATASETS.soldierGLTF.url,
-      animation_active_clip: "Walk",
-      animation_speed: 1.0,
+      animationActiveClip: "Walk",
+      animationSpeed: 1.0,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
     },
-    postEffectOcclusion: false,
   });
 
   view.addLayer({
@@ -172,20 +166,20 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     data: {
       url: TERRAIN_DATASETS.gsi.url,
     },
-    raster_terrain: {
-      max_zoom: 15,
-      min_zoom: 5,
-      elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-      cast_shadow: true,
-      receive_shadow: true,
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
 
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    raster_tile: {
-      max_zoom: 23,
+    rasterTile: {
+      maxZoom: 23,
     },
   });
 
@@ -199,10 +193,10 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
     },
-    postEffectOcclusion: true,
   });
 
   const chuoLayer = view.addLayer({
@@ -215,10 +209,10 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       color: 0xffffff,
       metalness: 0.1,
       roughness: 0.1,
-      cast_shadow: true,
-      receive_shadow: true,
+      castShadow: true,
+      receiveShadow: true,
+      postEffectOcclusion: PostEffectOcclusionMode.Normal,
     },
-    postEffectOcclusion: true,
   });
 
   return {
@@ -235,14 +229,12 @@ type CreateGeoJsonModelLayerOptions<TState extends GeoJsonModelState> = {
   view: ThreeView;
   feature: FeatureCollection;
   model: TState;
-  postEffectOcclusion: boolean;
 };
 
 const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
   view,
   feature,
   model,
-  postEffectOcclusion,
 }: CreateGeoJsonModelLayerOptions<TState>): GeoJsonModelLayer<TState> => {
   const currentModelState = { ...model };
 
@@ -250,7 +242,6 @@ const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
     type: "geojson",
     data: feature,
     model: currentModelState,
-    postEffectOcclusion,
   });
 
   const updateModel = (overrides: Partial<TState>) => {
@@ -262,20 +253,8 @@ const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
     });
   };
 
-  const updateEffectState = (payload: LayerEffectPayload) => {
-    layer.update({
-      type: "geojson",
-      data: feature,
-      model: { ...currentModelState },
-      ...payload,
-    });
-  };
-
   return {
     layer,
     updateModel,
-    setPostEffectOcclusion: (value: boolean) =>
-      layer.setPostEffectOcclusion?.(value),
-    updateEffectState,
   };
 };

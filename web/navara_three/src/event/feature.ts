@@ -8,6 +8,7 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
+import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
@@ -23,6 +24,7 @@ import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import {
+  applyEffectPayloadToObject,
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
 } from "./featureEvent";
@@ -45,6 +47,8 @@ export function renderFeature(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
+  viewContext: ViewContext,
+  layerId: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf);
@@ -53,7 +57,14 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewEvents);
+    return renderModel(
+      f.model,
+      buf,
+      uniforms,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms, viewEvents);
@@ -77,6 +88,7 @@ export async function processRenderableFeatureAdded(
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
   onConcurrency: (v: number) => void,
 ) {
@@ -88,6 +100,8 @@ export async function processRenderableFeatureAdded(
   const overscaledTileHandle = ev.overscaled_tile_handle;
 
   const tileHandle = overscaledTileHandle?.handle;
+
+  const featureLayerId = ev.layer_id;
 
   const useParallel = !!model;
 
@@ -102,6 +116,8 @@ export async function processRenderableFeatureAdded(
     uniforms,
     tileHandle,
     viewEvents,
+    viewContext,
+    featureLayerId,
   )
     ?.then((r) => {
       const type = (() => {
@@ -123,8 +139,6 @@ export async function processRenderableFeatureAdded(
     });
 
   if (!obj) return;
-
-  const featureLayerId = ev.layer_id;
 
   // Sprite should be handled by mesh itself.
   const transform = (polyline ?? polygon ?? model)?.transform;
@@ -173,11 +187,23 @@ export async function processRenderableFeatureAdded(
     });
   }
 
+  // Register initial effects from Rust material if not already registered for this layer
+  const material = feature.model?.material ?? feature.polygon?.material;
+  if (material && viewContext.getLayerEffects(featureLayerId) === undefined) {
+    viewContext.registerLayerEffects(
+      featureLayerId,
+      material.effectIds ?? [],
+      material.postEffectOcclusion,
+      material.emissiveIntensity,
+    );
+  }
+
   handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
     viewEvents,
     layersManager,
+    viewContext,
     featureLayerId,
     ev.bits,
   );
@@ -190,7 +216,6 @@ export async function processRenderableFeatureAdded(
   );
 }
 
-// TODO: Update material in this function.
 export async function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
@@ -200,6 +225,7 @@ export async function processRenderableFeatureChanged(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
@@ -212,6 +238,30 @@ export async function processRenderableFeatureChanged(
   const tileHandle = overscaledTileHandle?.handle;
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
+
+  // Update PostEffect configuration from material (Core is SoT)
+  const material = model?.material ?? polygon?.material;
+  if (material) {
+    viewContext.updateLayerEffects(
+      layerId,
+      material.effectIds,
+      material.emissiveIntensity,
+    );
+
+    if (material.emissiveColor !== undefined) {
+      viewContext.setLayerEmissiveColor(layerId, material.emissiveColor);
+    }
+
+    if (material.postEffectOcclusion !== undefined) {
+      viewContext.setLayerPostEffectOcclusion(
+        layerId,
+        material.postEffectOcclusion,
+      );
+    }
+
+    // Apply effects to Object3D after updating ViewContext
+    applyEffectPayloadToObject(obj, viewContext, layerId);
+  }
 
   const active =
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??

@@ -1,4 +1,4 @@
-import ThreeView from "@navara/three";
+import ThreeView, { type Layer } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
@@ -8,9 +8,13 @@ import {
   LOCAL_DATASETS,
 } from "../../helpers/constants";
 
-import { createPostProcessingPane } from "./controls/createPostProcessingPane";
-import { setupPostEffects } from "./effects/setupSelectiveEffects";
-import { createSceneLayers } from "./layers/createSceneLayers";
+import { createControlPane } from "./controlPane";
+import { createSceneLayers } from "./sceneLayers";
+
+export type PostEffects = {
+  postEffectOutline: Layer;
+  postEffectBloom: Layer;
+};
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -37,7 +41,31 @@ export const run = async (view: ThreeView) => {
   date.setHours(8);
   view.atmosphere.date = date;
 
-  const { postEffectOutline, postEffectBloom } = setupPostEffects(view);
+  // Post effects setup
+  const postEffectOutline = view.addLayer({
+    type: "effect",
+    postEffectOutline: {
+      color: 0xff0000,
+      thickness: 2.0,
+      edgeStrength: 1.0,
+    },
+    debugMask: false,
+    resolutionScale: 1.0,
+  });
+
+  const postEffectBloom = view.addLayer({
+    type: "effect",
+    postEffectBloom: {
+      strength: 0.1,
+      radius: 0.5,
+      threshold: 0.0,
+      debugMode: 0,
+    },
+    debugMask: true,
+    resolutionScale: 1.0,
+  });
+
+  view.addDefaultEffectLayers();
   const {
     cubeLayer,
     sphereLayer,
@@ -55,7 +83,7 @@ export const run = async (view: ThreeView) => {
     LOCAL_DATASETS.steelDrumGLTF,
   ]);
 
-  createPostProcessingPane({
+  createControlPane({
     postEffectOutline,
     postEffectBloom,
     cubeLayer,
