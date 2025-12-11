@@ -1,35 +1,22 @@
-[tasks.build-rust-worker]
+# ============================================================================
+#                               BUILD TASKS
+# ============================================================================
+# Generate JS bindings for worker WASM module
+[tasks.bindgen-rust-worker]
 script = ['''
-cd crates/navara_wasm_worker
-wasm-pack build --release --target web --out-dir ../../web/wasm/navara_engine_worker
+wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_worker.wasm --out-dir web/wasm/navara_engine_worker --target web
+if command -v wasm-opt &> /dev/null; then
+    wasm-opt -O4 web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm -o web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm
+fi
 ''']
 
-[tasks.build-dev-rust-worker]
+[tasks.bindgen-rust-worker.windows]
 script = ['''
-cd crates/navara_wasm_worker
-wasm-pack build --dev --target web --out-dir ../../web/wasm/navara_engine_worker
+wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_worker.wasm --out-dir web/wasm/navara_engine_worker --target web
+where wasm-opt >nul 2>&1 && wasm-opt -O4 web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm -o web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm || echo "wasm-opt not found, skipping optimization"
 ''']
 
-[tasks.watch-rust-worker]
+[tasks.bindgen-dev-rust-worker]
 script = ['''
-cd crates/navara_wasm_worker
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_worker" --poll
-''']
-
-[tasks.watch-rust-worker.windows]
-script = ['''
-cd crates/navara_wasm_worker
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_worker /Mir > nul" --poll
-''']
-
-[tasks.watch-release-rust-worker]
-script = ['''
-cd crates/navara_wasm_worker
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --release --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_worker" --poll
-''']
-
-[tasks.watch-release-rust-worker.windows]
-script = ['''
-cd crates/navara_wasm_worker
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --release --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_worker /Mir > nul" --poll
+wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm_worker.wasm --out-dir web/wasm/navara_engine_worker --target web --keep-debug
 ''']
