@@ -1065,7 +1065,7 @@ fn get_prop_from_batch_table(
     if let serde_json::Value::Object(map) = batch_table_json {
         for (key, value) in map {
             match value {
-                serde_json::Value::Object(_m) => {
+                serde_json::Value::Object(ref _m) => {
                     if let Ok(v) = in_batch_table.read_property_from_binary(*in_batch_id, value) {
                         prop.insert(key.clone(), v);
                     }

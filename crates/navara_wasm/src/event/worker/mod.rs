@@ -8,7 +8,7 @@ use crate::entity::ReconstructableEntity;
 #[derive(Debug, Clone, Serialize)]
 pub struct WorkerTaskDelegatedEvent {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub bits: u64,
 
     #[wasm_bindgen(getter_with_clone)]
@@ -47,7 +47,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
             bits: ev.bits,
             task: ev.comp.into(),
         }

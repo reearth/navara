@@ -38,7 +38,7 @@ pub struct Events {
 #[derive(Debug, Clone, Serialize)]
 pub struct ObjectTransformEvent {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub transform: Transform,
 }
 
@@ -46,7 +46,7 @@ pub struct ObjectTransformEvent {
 #[derive(Debug, Clone, Serialize)]
 pub struct MeshAdded {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub tile_handle: TileHandle,
     pub ready_parent_tile_handle: Option<TileHandle>,
     pub mesh: Mesh,
@@ -61,7 +61,7 @@ pub struct MeshAdded {
 #[derive(Debug, Clone, Serialize)]
 pub struct MeshChanged {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub ready_parent_tile_handle: Option<TileHandle>,
     pub mesh: Mesh,
     #[wasm_bindgen(getter_with_clone)]
@@ -94,7 +94,7 @@ pub struct TileUvTransform {
 pub struct DataRequestEvent {
     // Entity
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub bits: u64,
 
     pub handle: i32, // handle
@@ -109,7 +109,7 @@ pub struct DataRequestEvent {
 pub struct DataRequesterRemovedEvent {
     // Entity
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub bits: u64,
 
     pub handle: i32,
@@ -127,7 +127,7 @@ pub enum TextureFragmentStatus {
 #[derive(Debug, Clone, Serialize)]
 pub struct TextureFragmentRequestedEvent {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub bits: u64,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
@@ -139,7 +139,7 @@ pub struct TextureFragmentRequestedEvent {
 #[derive(Debug, Clone, Serialize)]
 pub struct TerrainHeightUpdatedEvent {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
     pub bits: u64,
     pub lle: LLE,
     pub height: Option<f64>,
@@ -149,7 +149,7 @@ pub struct TerrainHeightUpdatedEvent {
 #[derive(Debug, Clone, Serialize)]
 pub struct EntityEvent {
     pub ind: u32,
-    pub r#gen: u32,
+    pub gen: u32,
 }
 
 impl From<navara_event::Events<'_>> for Events {
@@ -219,7 +219,7 @@ impl From<navara_event_store::EntityEvent> for EntityEvent {
     fn from(ev: navara_event_store::EntityEvent) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
         }
     }
 }
@@ -238,7 +238,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
             bits: ev.bits,
             lle: ev.comp.lle.into(),
             height: ev.comp.height,
@@ -252,7 +252,7 @@ impl<'a> From<navara_event_store::ComponentEvent<&'a navara_math::Transform>>
     fn from(ev: navara_event_store::ComponentEvent<&'a navara_math::Transform>) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
             transform: ev.comp.into(),
         }
     }
@@ -284,7 +284,7 @@ impl
     ) -> Self {
         Self {
             ind: ev.comp.ind,
-            r#gen: ev.comp.r#gen,
+            gen: ev.comp.gen,
             tile_handle: ev.comp.comp.0.handle,
             ready_parent_tile_handle: ev.comp.comp.0.ready_parent_tile_handle,
             mesh: ev.comp.comp.1.into(),
@@ -319,7 +319,7 @@ impl
     ) -> Self {
         Self {
             ind: ev.comp.ind,
-            r#gen: ev.comp.r#gen,
+            gen: ev.comp.gen,
             ready_parent_tile_handle: ev.comp.comp.0.ready_parent_tile_handle,
             mesh: ev.comp.comp.1.into(),
             material: ev.comp.comp.2.into(),
@@ -363,7 +363,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
             bits: ev.bits,
             handle: ev.comp.handle,
             extension: ev.comp.extension.to_string(),
@@ -384,7 +384,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
             bits: ev.bits,
             handle: ev.comp.handle,
         }
@@ -405,7 +405,7 @@ impl<'a>
     ) -> Self {
         Self {
             ind: ev.ind,
-            r#gen: ev.r#gen,
+            gen: ev.gen,
             bits: ev.bits,
             url: ev.comp.url.clone(),
             status: ev.comp.status.clone().into(),

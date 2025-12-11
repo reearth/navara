@@ -11,7 +11,7 @@ use super::{types::Polygon, HierarchyDVec3, PolygonResource, WindingOrder};
 pub fn project_to_2d(
     ellipsoid: Ellipsoid<FloatType>,
     outer_positions: &[Vec3],
-) -> impl Fn(&[Vec3]) -> Vec<Vec2> + use<> {
+) -> impl Fn(&[Vec3]) -> Vec<Vec2> {
     // TODO: Add a logic for a large extent polygon: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometry.js#L1165-L1189
     let tangent_plane = EllipsoidTangentPlane::from_points(outer_positions, ellipsoid);
     move |p| tangent_plane.project_points_onto_plane(p)
