@@ -1,17 +1,14 @@
 [package]
 name = "navara_data_requester"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_buffer_store = { path = "../navara_buffer_store" }
-navara_event_store = { path = "../navara_event_store" }
-navara_component = { path = "../navara_component" }
 url.workspace = true
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
-
+navara_buffer_store.workspace = true
+navara_event_store.workspace = true
+navara_component.workspace = true

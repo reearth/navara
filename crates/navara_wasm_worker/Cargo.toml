@@ -1,37 +1,32 @@
 [package]
 name = "navara_wasm_worker"
 version = "0.1.0"
-edition = "2024"
-license = "MIT/Apache-2.0"
+edition.workspace = true
+license.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen.workspace = true
-
 js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
-gloo-utils = { workspace = true, features = ["serde"] }
+gloo-utils.workspace = true
 nanoid.workspace = true
-web-sys = { workspace = true, features = ["console"] }
-
-navara_wasm_utils = { path = "../navara_wasm_utils" }
-navara_wasm_types = { path = "../navara_wasm_types" }
-navara_wasm_transferable = { path = "../navara_wasm_transferable" }
-navara_tile_component = { path = "../navara_tile_component" }
-navara_core = { path = "../navara_core" }
-navara_math = { path = "../navara_math" }
-navara_geometry = { path = "../navara_geometry" }
-navara_feature_component = { path = "../navara_feature_component" }
-navara_material = { path = "../navara_material" }
+web-sys.workspace = true
+navara_wasm_utils.workspace = true
+navara_wasm_types.workspace = true
+navara_wasm_transferable.workspace = true
+navara_tile_component.workspace = true
+navara_core.workspace = true
+navara_math.workspace = true
+navara_geometry.workspace = true
+navara_feature_component.workspace = true
+navara_material.workspace = true
 
 [package.metadata.wasm-pack.profile.profiling]
 wasm-opt = false
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ['-O4']
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true

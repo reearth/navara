@@ -1,12 +1,10 @@
 [package]
 name = "navara_mock"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
-navara_math = { path = "../navara_math" }
-navara_core = { path = "../navara_core" }
-navara_camera = { path = "../navara_camera" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_math.workspace = true
+navara_core.workspace = true
+navara_camera.workspace = true

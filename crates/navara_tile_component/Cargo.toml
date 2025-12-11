@@ -1,32 +1,30 @@
 [package]
 name = "navara_tile_component"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_quadtree = { path = "../navara_quadtree", features = ["bevy"] }
-navara_core = { path = "../navara_core" }
-navara_geometry = { path = "../navara_geometry" }
-navara_layer = { path = "../navara_layer" }
-navara_math = { path = "../navara_math" }
-navara_texture_fragment = { path = "../navara_texture_fragment" }
-navara_window = { path = "../navara_window" }
-navara_camera = { path = "../navara_camera" }
-navara_data_requester = { path = "../navara_data_requester" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-navara_occluder = { path = "../navara_occluder" }
-navara_mesh = { path = "../navara_mesh" }
-navara_component = { path = "../navara_component" }
-navara_mock = { path = "../navara_mock" }
-navara_fog = { path = "../navara_fog" }
-martini = { path = "../martini" }
 fxhash.workspace = true
+navara_quadtree = { workspace = true, features = ["bevy"] }
+navara_core.workspace = true
+navara_geometry.workspace = true
+navara_layer.workspace = true
+navara_math.workspace = true
+navara_texture_fragment.workspace = true
+navara_window.workspace = true
+navara_camera.workspace = true
+navara_data_requester.workspace = true
+navara_buffer_store.workspace = true
+navara_occluder.workspace = true
+navara_mesh.workspace = true
+navara_component.workspace = true
+navara_mock.workspace = true
+navara_fog.workspace = true
+martini.workspace = true
 
 [dev-dependencies]
 approx.workspace = true
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true

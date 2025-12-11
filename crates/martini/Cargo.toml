@@ -1,18 +1,12 @@
 [package]
 name = "martini"
 version = "0.1.0"
-edition = "2024"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
-navara_math = { path = "../navara_math" }
+navara_math.workspace = true
 
 [dev-dependencies]
-image = "0.25.8"
+image.workspace = true
 approx.workspace = true
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true

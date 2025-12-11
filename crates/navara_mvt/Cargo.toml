@@ -1,7 +1,8 @@
 [package]
 name = "navara_mvt"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
@@ -10,26 +11,23 @@ bevy_log.workspace = true
 geo-types.workspace = true
 fxhash.workspace = true
 serde_json.workspace = true
-navara_core = { path = "../navara_core" }
-navara_material = { path = "../navara_material" }
-navara_math = { path = "../navara_math" }
-navara_parser = { path = "../navara_parser" }
-navara_feature_component = { path = "../navara_feature_component" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-navara_data_requester = { path = "../navara_data_requester" }
-navara_event_store = { path = "../navara_event_store" }
-navara_geometry = { path = "../navara_geometry" }
-navara_layer = { path = "../navara_layer" }
-navara_component = { path = "../navara_component" }
-navara_tile_component = { path = "../navara_tile_component" }
-navara_quadtree = { path = "../navara_quadtree" }
-navara_camera = { path = "../navara_camera" }
-navara_window = { path = "../navara_window" }
-navara_occluder = { path = "../navara_occluder" }
-navara_frame = { path = "../navara_frame" }
-navara_worker = { path = "../navara_worker" }
-navara_fog = { path = "../navara_fog" }
-navara_globe = { path = "../navara_globe" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_core.workspace = true
+navara_material.workspace = true
+navara_math.workspace = true
+navara_parser.workspace = true
+navara_feature_component.workspace = true
+navara_buffer_store.workspace = true
+navara_data_requester.workspace = true
+navara_event_store.workspace = true
+navara_geometry.workspace = true
+navara_layer.workspace = true
+navara_component.workspace = true
+navara_tile_component.workspace = true
+navara_quadtree.workspace = true
+navara_camera.workspace = true
+navara_window.workspace = true
+navara_occluder.workspace = true
+navara_frame.workspace = true
+navara_worker.workspace = true
+navara_fog.workspace = true
+navara_globe.workspace = true

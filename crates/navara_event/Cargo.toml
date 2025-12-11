@@ -1,23 +1,21 @@
 [package]
 name = "navara_event"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
-navara_event_store = { path = "../navara_event_store" }
-navara_math = { path = "../navara_math" }
-navara_texture_fragment = { path = "../navara_texture_fragment" }
-navara_feature_component = { path = "../navara_feature_component" }
-navara_mesh = { path = "../navara_mesh" }
-navara_material = { path = "../navara_material" }
-navara_tile_component = { path = "../navara_tile_component" }
-navara_data_requester = { path = "../navara_data_requester" }
-navara_worker = { path = "../navara_worker" }
-navara_layer = { path = "../navara_layer" }
-navara_camera = { path = "../navara_camera" }
-navara_globe = { path = "../navara_globe" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_event_store.workspace = true
+navara_math.workspace = true
+navara_texture_fragment.workspace = true
+navara_feature_component.workspace = true
+navara_mesh.workspace = true
+navara_material.workspace = true
+navara_tile_component.workspace = true
+navara_data_requester.workspace = true
+navara_worker.workspace = true
+navara_layer.workspace = true
+navara_camera.workspace = true
+navara_globe.workspace = true

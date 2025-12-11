@@ -1,13 +1,11 @@
 [package]
 name = "navara_fog"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_math = { path = "../navara_math" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_math.workspace = true

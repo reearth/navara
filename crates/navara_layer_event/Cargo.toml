@@ -1,21 +1,16 @@
 [package]
 name = "navara_layer_event"
 version = "0.1.0"
-edition = "2024"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_layer = { path = "../navara_layer" }
-navara_feature = { path = "../navara_feature" }
-navara_material = { path = "../navara_material" }
-navara_core = { path = "../navara_core" }
-navara_math = { path = "../navara_math" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_layer.workspace = true
+navara_feature.workspace = true
+navara_material.workspace = true
+navara_core.workspace = true
+navara_math.workspace = true
+navara_buffer_store.workspace = true

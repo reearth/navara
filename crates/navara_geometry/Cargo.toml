@@ -1,9 +1,8 @@
 [package]
 name = "navara_geometry"
 version = "0.1.0"
-edition = "2024"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition.workspace = true
+license.workspace = true
 
 [features]
 default = ["bevy"]
@@ -15,11 +14,8 @@ bevy_ecs = { workspace = true, optional = true }
 radians.workspace = true
 itertools.workspace = true
 serde.workspace = true
-navara_core = { path = "../navara_core" }
-navara_math = { path = "../navara_math" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-earcutr = "0.5.0"
+earcutr.workspace = true
 approx.workspace = true
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_core.workspace = true
+navara_math.workspace = true
+navara_buffer_store.workspace = true
