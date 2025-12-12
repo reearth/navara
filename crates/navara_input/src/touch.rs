@@ -20,7 +20,7 @@ pub enum TouchGesture {
     DoubleSwipe, // two finger swipe up/down - for tilting
     Spread,      // zoom in
     Pinch,       // zoom out
-    Rotate,      // rotate gesture (not implemented yet)
+    Rotate,      // rotate
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,6 +39,12 @@ pub struct TouchInput {
     pub state: TouchState,
     pub position: Vec2,
     pub id: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Event)]
+pub struct TouchControl {
+    pub gesture: TouchGesture,
+    pub delta: Vec2,
 }
 
 pub fn process_touch_input_events(
@@ -79,12 +85,6 @@ pub fn process_touch_input_events(
             gesture_ev.write(gesture);
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Event)]
-pub struct TouchControl {
-    pub gesture: TouchGesture,
-    pub delta: Vec2,
 }
 
 fn recognize_gesture(touch_list: &mut TouchList, window: &Window) -> Option<TouchControl> {
@@ -209,7 +209,6 @@ fn recognize_double_swipe_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<Fl
     let dot = p1_dir.dot(p2_dir);
 
     // both directions are almost parallel - cos(theata) ~= 1.0
-    // same direction - two finger swipe
     if dot.equal_diff_epsilon(1.0, 0.1) {
         return Some(p1_pos.y - p1_prev.y);
     }
@@ -230,6 +229,7 @@ fn recognize_spread_pinch_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<Fl
     if current_distance != prev_distance {
         return Some(prev_distance - current_distance);
     }
+
     None
 }
 
@@ -263,5 +263,6 @@ fn recognize_swipe_gesture(p: &TouchPoint) -> Option<Vec2> {
     if let Some(prev_pos) = p.prev_position {
         return Some(p.position - prev_pos);
     }
+
     None
 }
