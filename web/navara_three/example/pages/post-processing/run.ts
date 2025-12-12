@@ -12,7 +12,7 @@ import { createControlPane } from "./controlPane";
 import { createSceneLayers } from "./sceneLayers";
 
 export const BLOOM_CONFIG = {
-  strength: 1.0, 
+  strength: 1.0,
   radius: 0.5,
   threshold: 0.0,
   debugMode: 0,
