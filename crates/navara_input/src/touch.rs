@@ -5,6 +5,7 @@ use bevy_ecs::resource::Resource;
 use bevy_ecs::system::{Res, ResMut};
 
 use bevy_input::touch;
+use bevy_log::info;
 use navara_math::{EqualEpsilon, FloatType, Vec2};
 use navara_window::Window;
 
@@ -78,8 +79,10 @@ pub fn process_touch_input_events(
         }
 
         if let Some(gesture) = recognize_gesture(&mut touch_list, &window) {
+            info!("Recognized gesture: {:?}", gesture);
             gesture_ev.write(gesture);
         }
+        info!("active gestures: {:?}", touch_list.active_gesture);
     }
 }
 
@@ -95,29 +98,118 @@ fn recognize_gesture(touch_list: &mut TouchList, window: &Window) -> Option<Touc
         let p1 = touches.next().unwrap();
         let p2 = touches.next().unwrap();
 
-        if let Some(delta) = recognize_double_swipe_gesture(p1, p2) {
-            touch_list.active_gesture = Some(TouchGesture::DoubleSwipe);
-            let gesture = TouchControl {
-                gesture: TouchGesture::DoubleSwipe,
-                delta: Vec2::new(0.0, delta / window.height as FloatType),
-            };
-            return Some(gesture);
-        } else if let Some(delta) = recognize_spread_pinch_gesture(p1, p2) {
-            if delta > 0.0 {
-                touch_list.active_gesture = Some(TouchGesture::Pinch);
-                let gesture = TouchControl {
-                    gesture: TouchGesture::Pinch,
-                    delta: Vec2::splat(delta),
-                };
-                return Some(gesture);
-            } else {
-                touch_list.active_gesture = Some(TouchGesture::Spread);
-                let gesture = TouchControl {
-                    gesture: TouchGesture::Spread,
-                    delta: Vec2::splat(delta),
-                };
-                return Some(gesture);
-            };
+        match touch_list.active_gesture {
+            Some(TouchGesture::DoubleSwipe) => {
+                if let Some(delta) = recognize_double_swipe_gesture(p1, p2) {
+                    let gesture = TouchControl {
+                        gesture: TouchGesture::DoubleSwipe,
+                        delta: Vec2::new(0.0, delta / window.height as FloatType),
+                    };
+                    return Some(gesture);
+                }
+            }
+            Some(TouchGesture::Rotate) => {
+                if let Some(delta) = recognize_rotate_gesture(p1, p2) {
+                    let gesture = TouchControl {
+                        gesture: TouchGesture::Rotate,
+                        delta: Vec2::new(delta / 360.0, 0.0),
+                    };
+                    return Some(gesture);
+                }
+            }
+            Some(TouchGesture::Pinch) | Some(TouchGesture::Spread) => {
+                if let Some(delta) = recognize_spread_pinch_gesture(p1, p2) {
+                    if delta > 0.0 {
+                        let gesture = TouchControl {
+                            gesture: TouchGesture::Pinch,
+                            delta: Vec2::splat(delta),
+                        };
+                        return Some(gesture);
+                    } else {
+                        let gesture = TouchControl {
+                            gesture: TouchGesture::Spread,
+                            delta: Vec2::splat(delta),
+                        };
+                        return Some(gesture);
+                    };
+                }
+            }
+            None => {
+                // recognize new gesture
+                // first check for double swipe
+                if let Some(delta) = recognize_double_swipe_gesture(p1, p2) {
+                    touch_list.active_gesture = Some(TouchGesture::DoubleSwipe);
+                    let gesture = TouchControl {
+                        gesture: TouchGesture::DoubleSwipe,
+                        delta: Vec2::new(0.0, delta / window.height as FloatType),
+                    };
+                    return Some(gesture);
+                } else {
+                    // disambiguate between rotate and spread/pinch
+                    let rotate_delta = recognize_rotate_gesture(p1, p2);
+                    let spread_pinch_delta = recognize_spread_pinch_gesture(p1, p2);
+
+                    if rotate_delta.is_some() && spread_pinch_delta.is_some() {
+                        // both gestures recognized - choose the dominant one
+                        let rotate_delta_degrees = rotate_delta.unwrap();
+                        let spread_pinch_delta_pixels = spread_pinch_delta.unwrap();
+
+                        let circle_radius = (p1.position - p2.position).length();
+                        let rotate_arc_length_pixels = 
+                            (rotate_delta_degrees.to_radians()) * circle_radius;
+
+                        if rotate_arc_length_pixels >= spread_pinch_delta_pixels {
+                            touch_list.active_gesture = Some(TouchGesture::Rotate);
+                            let gesture = TouchControl {
+                                gesture: TouchGesture::Rotate,
+                                delta: Vec2::new(rotate_delta.unwrap() / 360.0, 0.0),
+                            };
+                            return Some(gesture);
+                        } else {
+                            let delta = spread_pinch_delta.unwrap();
+                            if delta > 0.0 {
+                                touch_list.active_gesture = Some(TouchGesture::Pinch);
+                                let gesture = TouchControl {
+                                    gesture: TouchGesture::Pinch,
+                                    delta: Vec2::splat(delta),
+                                };
+                                return Some(gesture);
+                            } else {
+                                touch_list.active_gesture = Some(TouchGesture::Spread);
+                                let gesture = TouchControl {
+                                    gesture: TouchGesture::Spread,
+                                    delta: Vec2::splat(delta),
+                                };
+                                return Some(gesture);
+                            };
+                        }
+                    } else if let Some(delta) = rotate_delta {
+                        touch_list.active_gesture = Some(TouchGesture::Rotate);
+                        let gesture = TouchControl {
+                            gesture: TouchGesture::Rotate,
+                            delta: Vec2::new(delta / 360.0, 0.0),
+                        };
+                        return Some(gesture);
+                    } else if let Some(delta) = spread_pinch_delta {
+                        if delta > 0.0 {
+                            touch_list.active_gesture = Some(TouchGesture::Pinch);
+                            let gesture = TouchControl {
+                                gesture: TouchGesture::Pinch,
+                                delta: Vec2::splat(delta),
+                            };
+                            return Some(gesture);
+                        } else {
+                            touch_list.active_gesture = Some(TouchGesture::Spread);
+                            let gesture = TouchControl {
+                                gesture: TouchGesture::Spread,
+                                delta: Vec2::splat(delta),
+                            };
+                            return Some(gesture);
+                        };
+                    }
+                }
+            }
+            _ => (),
         }
     } else if touch_list.touches.len() == 1 {
         let p = touch_list.touches.values().next().unwrap();
@@ -183,20 +275,27 @@ fn recognize_rotate_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<FloatTyp
     };
     let (p1_pos, p2_pos) = (p1.position, p2.position);
 
-    let delta_x = (p1_pos.x - p2_pos.x).abs();
-    let delta_y = (p1_pos.y - p2_pos.y).abs();
+    let delta_x = p1_pos.x - p2_pos.x;
+    let delta_y = p1_pos.y - p2_pos.y;
     let angle_current = delta_y.atan2(delta_x);
 
-    let delta_x_prev = (p1_prev.x - p2_prev.x).abs();
-    let delta_y_prev = (p1_prev.y - p2_prev.y).abs();
+    let delta_x_prev = p1_prev.x - p2_prev.x;
+    let delta_y_prev = p1_prev.y - p2_prev.y;
     let angle_prev = delta_y_prev.atan2(delta_x_prev);
 
-    let delta = angle_current - angle_prev;
-    if delta.abs() > f64::to_radians(5.0) {
-        return Some(delta);
-    }
+    let mut delta = (angle_current - angle_prev).to_degrees();
 
-    None
+    // info!("delta_x: {}, delta_y: {}, current angle: {}", delta_x, delta_y, angle_current.to_degrees());
+    // info!("delta_x_prev: {}, delta_y_prev: {}, prev angle: {}", delta_x_prev, delta_y_prev, angle_prev.to_degrees());
+    // info!("delta: {}", delta);
+    if delta > 180.0 {
+        delta -= 360.0;
+    } else if delta < -180.0 {
+        delta += 360.0;
+    }
+    // info!("Normalized delta: {}", delta);
+
+    Some(delta)
 }
 
 fn recognize_swipe_gesture(p: &TouchPoint) -> Option<Vec2> {

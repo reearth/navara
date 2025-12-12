@@ -578,9 +578,12 @@ fn handle_tilt(
 
     // TODO: Pick terrain height like here from depth buffer: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2557
 
-    let touch_tilt = touch_control
-        .as_ref()
-        .is_some_and(|tc| tc.gesture == navara_input::TouchGesture::DoubleSwipe);
+    let touch_tilt = touch_control.as_ref().is_some_and(|tc| {
+        matches!(
+            tc.gesture,
+            navara_input::TouchGesture::DoubleSwipe | navara_input::TouchGesture::Rotate
+        )
+    });
 
     if !controller.enable_tilt
         || (((!is_ctrl || !mb.pressed(MouseButton::Left)) && !mb.pressed(MouseButton::Right))
