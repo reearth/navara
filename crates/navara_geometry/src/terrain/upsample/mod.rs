@@ -114,6 +114,7 @@ impl UpsampledTerrainGeometry {
                 vertices,
                 uvs,
                 indices: self.indices.take().unwrap(),
+                ..Default::default()
             },
             heights,
         )

@@ -3,14 +3,24 @@ use navara_math::{FloatType, Vec3};
 use serde::Serialize;
 
 /// A struct to construct a geometry.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Geometry {
     /// Vector of vertex. The stride is 3.
     pub vertices: Vec<f32>,
     /// Vector of UV for a texture. The stride is 2.
     pub uvs: Vec<f32>,
-    /// Vector of index that constracts a triangle.
+    /// Vector of index that constructs a triangle.
     pub indices: Vec<u32>,
+    /// Vector of skirt vertex. The stride is 3.
+    /// These are separate from main vertices to allow different shadow/normal handling.
+    pub skirt_vertices: Option<Vec<f32>>,
+    /// Vector of skirt UV. The stride is 2.
+    pub skirt_uvs: Option<Vec<f32>>,
+    /// Vector of skirt index that constructs a triangle.
+    pub skirt_indices: Option<Vec<u32>>,
+    /// Mapping from skirt vertex index to edge vertex index in main geometry.
+    /// This allows copying normals from edge vertices to skirt vertices.
+    pub skirt_indices_to_edge: Option<Vec<u32>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -19,6 +29,10 @@ pub struct TransferableGeometry {
     pub vertices: Handle,
     pub uvs: Handle,
     pub indices: Handle,
+    pub skirt_vertices: Option<Handle>,
+    pub skirt_uvs: Option<Handle>,
+    pub skirt_indices: Option<Handle>,
+    pub skirt_indices_to_edge: Option<Handle>,
 }
 
 impl TransferableGeometry {
@@ -27,6 +41,10 @@ impl TransferableGeometry {
             vertices: buf.new_f32(geo.vertices),
             uvs: buf.new_f32(geo.uvs),
             indices: buf.new_u32(geo.indices),
+            skirt_vertices: geo.skirt_vertices.map(|v| buf.new_f32(v)),
+            skirt_uvs: geo.skirt_uvs.map(|v| buf.new_f32(v)),
+            skirt_indices: geo.skirt_indices.map(|v| buf.new_u32(v)),
+            skirt_indices_to_edge: geo.skirt_indices_to_edge.map(|v| buf.new_u32(v)),
         }
     }
 }

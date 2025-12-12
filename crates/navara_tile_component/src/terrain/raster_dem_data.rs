@@ -184,6 +184,7 @@ impl TerrainData for RasterDEMData {
                 vertices,
                 indices,
                 uvs,
+                ..Default::default()
             },
             max_height,
             min_height,

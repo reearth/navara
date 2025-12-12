@@ -200,6 +200,7 @@ pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
         vertices,
         uvs,
         indices,
+        ..Default::default()
     }
 }
 
