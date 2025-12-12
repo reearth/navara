@@ -4,8 +4,6 @@ use bevy_ecs::event::{Event, EventReader, EventWriter};
 use bevy_ecs::resource::Resource;
 use bevy_ecs::system::{Res, ResMut};
 
-use bevy_input::{gestures, touch};
-use bevy_log::info;
 use navara_math::{EqualEpsilon, FloatType, Vec2};
 use navara_window::Window;
 
@@ -78,7 +76,6 @@ pub fn process_touch_input_events(
         }
 
         if let Some(gesture) = recognize_gesture(&mut touch_list, &window) {
-            info!("Recognized gesture: {:?}", gesture);
             gesture_ev.write(gesture);
         }
     }
@@ -101,16 +98,9 @@ fn recognize_gesture(touch_list: &mut TouchList, window: &Window) -> Option<Touc
         let rotate_delta = recognize_rotate_gesture(p1, p2);
         let spread_pinch_delta = recognize_spread_pinch_gesture(p1, p2);
 
-        info!(
-            "Recognized gesture deltas - rotate: {:?}, spread/pinch: {:?}, double swipe: {:?}",
-            rotate_delta,
-            spread_pinch_delta,
-            double_swipe_delta
-        );
         let dominant_gesture =
             disambiguate_gesture(rotate_delta, spread_pinch_delta, double_swipe_delta, p1, p2);
 
-        info!("Dominant gesture: {:?}", dominant_gesture);
         match dominant_gesture {
             Some(TouchGesture::Rotate) => {
                 let gesture = TouchControl {
@@ -191,8 +181,6 @@ fn disambiguate_gesture(
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
         .map(|(i, _)| i)?;
-
-    info!("gesture deltas: {:?}", gesture_deltas);
 
     match max_delta_index {
         0 => Some(TouchGesture::Rotate),

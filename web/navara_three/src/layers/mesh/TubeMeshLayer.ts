@@ -7,13 +7,13 @@ import {
   Vector3,
 } from "three";
 
+import { Color } from "../../Color";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
-import { Color } from "../../Color";
 
 type LayerDescription = {
   tube?: {
