@@ -93,13 +93,9 @@ pub fn process_touch_input_events(
     for touch in ev.read() {
         match touch.state {
             TouchState::Start | TouchState::Move => {
-                let prev_position = touch_list
-                    .touches
-                    .get(&touch.id)
-                    .map(|t| t.position);
+                let prev_position = touch_list.touches.get(&touch.id).map(|t| t.position);
 
-                let is_duplicate_position =
-                    prev_position.map_or(false, |prev| prev == touch.position);
+                let is_duplicate_position = prev_position == Some(touch.position);
 
                 if is_duplicate_position && touch.state == TouchState::Move {
                     continue;
@@ -140,7 +136,7 @@ fn recognize_two_finger_gesture(touch_list: &TouchList, window: &Window) -> Opti
     let mut touches: Vec<_> = touch_list.touches.iter().collect();
     touches.sort_by_key(|(id, _)| *id);
 
-    let p1 = *touches.get(0)?.1;
+    let p1 = *touches.first()?.1;
     let p2 = *touches.get(1)?.1;
 
     let gesture_candidates = GestureCandidates {
@@ -162,7 +158,10 @@ fn recognize_two_finger_gesture(touch_list: &TouchList, window: &Window) -> Opti
         },
         TouchGesture::DoubleSwipe => TouchControl {
             gesture: TouchGesture::DoubleSwipe,
-            delta: Vec2::new(0.0, gesture_candidates.double_swipe? / window.height as FloatType),
+            delta: Vec2::new(
+                0.0,
+                gesture_candidates.double_swipe? / window.height as FloatType,
+            ),
         },
         TouchGesture::Swipe => return None, // Not applicable for two fingers
     };
