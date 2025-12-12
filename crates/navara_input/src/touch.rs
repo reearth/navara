@@ -11,6 +11,18 @@ use navara_window::Window;
 /// A dot product within this range of 1.0 indicates nearly parallel vectors.
 const PARALLEL_DOT_EPSILON: FloatType = 0.1;
 
+/// Minimum per-frame delta (in pixels) to consider a swipe gesture.
+const MIN_SWIPE_DELTA_PX: FloatType = 1.0;
+
+/// Minimum per-frame delta (in pixels) to consider a double swipe gesture.
+const MIN_DOUBLE_SWIPE_DELTA_PX: FloatType = 1.0;
+
+/// Minimum per-frame distance change (in pixels) to consider a pinch or spread gesture.
+const MIN_SPREAD_PINCH_DELTA_PX: FloatType = 1.0;
+
+/// Minimum per-frame angle change (in degrees) to consider a rotation gesture.
+const MIN_ROTATE_DELTA_DEGREES: FloatType = 0.5;
+
 /// Full rotation in degrees, used for angle normalization.
 const FULL_ROTATION_DEGREES: FloatType = 360.0;
 
@@ -84,9 +96,10 @@ pub fn process_touch_input_events(
                 let prev_position = touch_list
                     .touches
                     .get(&touch.id)
-                    .map_or(touch.position, |t| t.position);
+                    .map(|t| t.position);
 
-                let is_duplicate_position = prev_position == touch.position;
+                let is_duplicate_position =
+                    prev_position.map_or(false, |prev| prev == touch.position);
 
                 if is_duplicate_position && touch.state == TouchState::Move {
                     continue;
@@ -96,7 +109,7 @@ pub fn process_touch_input_events(
                     touch.id,
                     TouchPoint {
                         position: touch.position,
-                        prev_position: Some(prev_position),
+                        prev_position,
                     },
                 );
             }
@@ -124,36 +137,32 @@ fn recognize_gesture(touch_list: &TouchList, window: &Window) -> Option<TouchCon
 
 /// Recognizes gestures from two simultaneous touch points.
 fn recognize_two_finger_gesture(touch_list: &TouchList, window: &Window) -> Option<TouchControl> {
-    let mut touches = touch_list.touches.values();
-    let p1 = touches.next()?;
-    let p2 = touches.next()?;
+    let mut touches: Vec<_> = touch_list.touches.iter().collect();
+    touches.sort_by_key(|(id, _)| *id);
+
+    let p1 = *touches.get(0)?.1;
+    let p2 = *touches.get(1)?.1;
 
     let gesture_candidates = GestureCandidates {
-        double_swipe: recognize_double_swipe_gesture(p1, p2),
-        rotate: recognize_rotate_gesture(p1, p2),
-        spread_pinch: recognize_spread_pinch_gesture(p1, p2),
+        double_swipe: recognize_double_swipe_gesture(&p1, &p2),
+        rotate: recognize_rotate_gesture(&p1, &p2),
+        spread_pinch: recognize_spread_pinch_gesture(&p1, &p2),
     };
 
-    let dominant_gesture = gesture_candidates.disambiguate(p1, p2)?;
+    let dominant_gesture = gesture_candidates.disambiguate(&p1, &p2)?;
 
     let control = match dominant_gesture {
         TouchGesture::Rotate => TouchControl {
             gesture: TouchGesture::Rotate,
-            delta: Vec2::new(
-                gesture_candidates.rotate.unwrap_or(0.0) / FULL_ROTATION_DEGREES,
-                0.0,
-            ),
+            delta: Vec2::new(gesture_candidates.rotate? / FULL_ROTATION_DEGREES, 0.0),
         },
         TouchGesture::Pinch | TouchGesture::Spread => TouchControl {
             gesture: dominant_gesture,
-            delta: Vec2::splat(gesture_candidates.spread_pinch.unwrap_or(0.0)),
+            delta: Vec2::splat(gesture_candidates.spread_pinch?),
         },
         TouchGesture::DoubleSwipe => TouchControl {
             gesture: TouchGesture::DoubleSwipe,
-            delta: Vec2::new(
-                0.0,
-                gesture_candidates.double_swipe.unwrap_or(0.0) / window.height as FloatType,
-            ),
+            delta: Vec2::new(0.0, gesture_candidates.double_swipe? / window.height as FloatType),
         },
         TouchGesture::Swipe => return None, // Not applicable for two fingers
     };
@@ -200,19 +209,19 @@ impl GestureCandidates {
         let double_swipe_magnitude = self.double_swipe.map(|d| d.abs());
 
         // Find the gesture with maximum magnitude
-        let mut max_magnitude = FloatType::NEG_INFINITY;
+        let mut max_magnitude: Option<FloatType> = None;
         let mut dominant = None;
 
         if let Some(mag) = rotate_magnitude {
-            if mag > max_magnitude {
-                max_magnitude = mag;
+            if max_magnitude.map(|m| mag > m).unwrap_or(true) {
+                max_magnitude = Some(mag);
                 dominant = Some(TouchGesture::Rotate);
             }
         }
 
         if let Some(mag) = spread_pinch_magnitude {
-            if mag > max_magnitude {
-                max_magnitude = mag;
+            if max_magnitude.map(|m| mag > m).unwrap_or(true) {
+                max_magnitude = Some(mag);
                 // Positive delta means prev_distance > current_distance (fingers moving together)
                 dominant = if self.spread_pinch.unwrap_or(0.0) > 0.0 {
                     Some(TouchGesture::Pinch)
@@ -223,7 +232,7 @@ impl GestureCandidates {
         }
 
         if let Some(mag) = double_swipe_magnitude {
-            if mag > max_magnitude {
+            if max_magnitude.map(|m| mag > m).unwrap_or(true) {
                 dominant = Some(TouchGesture::DoubleSwipe);
             }
         }
@@ -239,14 +248,26 @@ fn recognize_double_swipe_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<Fl
     let p1_prev = p1.prev_position?;
     let p2_prev = p2.prev_position?;
 
-    let p1_dir = (p1.position - p1_prev).normalize();
-    let p2_dir = (p2.position - p2_prev).normalize();
+    let p1_delta = p1.position - p1_prev;
+    let p2_delta = p2.position - p2_prev;
+    let p1_len = p1_delta.length();
+    let p2_len = p2_delta.length();
+
+    if p1_len < MIN_DOUBLE_SWIPE_DELTA_PX || p2_len < MIN_DOUBLE_SWIPE_DELTA_PX {
+        return None;
+    }
+
+    let p1_dir = p1_delta / p1_len;
+    let p2_dir = p2_delta / p2_len;
 
     let dot = p1_dir.dot(p2_dir);
 
-    // Both directions are almost parallel when cos(theta) ≈ 1.0
+    // Both directions are almost parallel when cos(theta) ~ 1.0
     if dot.equal_diff_epsilon(1.0, PARALLEL_DOT_EPSILON) {
-        return Some(p1.position.y - p1_prev.y);
+        let delta_y = p1.position.y - p1_prev.y;
+        if delta_y.abs() >= MIN_DOUBLE_SWIPE_DELTA_PX {
+            return Some(delta_y);
+        }
     }
 
     None
@@ -263,9 +284,11 @@ fn recognize_spread_pinch_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<Fl
     let prev_distance = (p1_prev - p2_prev).length();
     let current_distance = (p1.position - p2.position).length();
 
-    // Only return a delta if there's actual movement
-    if (current_distance - prev_distance).abs() > FloatType::EPSILON {
-        return Some(prev_distance - current_distance);
+    let delta = prev_distance - current_distance;
+
+    // Only return a delta if there's actual movement beyond noise
+    if delta.abs() >= MIN_SPREAD_PINCH_DELTA_PX {
+        return Some(delta);
     }
 
     None
@@ -290,12 +313,14 @@ fn recognize_rotate_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<FloatTyp
         delta += FULL_ROTATION_DEGREES;
     }
 
-    Some(delta)
+    (delta.abs() >= MIN_ROTATE_DELTA_DEGREES).then_some(delta)
 }
 
 /// Detects single finger swipe movement.
 ///
 /// Returns the position delta vector if there's a previous position to compare against.
 fn recognize_swipe_gesture(p: &TouchPoint) -> Option<Vec2> {
-    p.prev_position.map(|prev_pos| p.position - prev_pos)
+    p.prev_position
+        .map(|prev_pos| p.position - prev_pos)
+        .filter(|delta| delta.length() >= MIN_SWIPE_DELTA_PX)
 }
