@@ -49,7 +49,7 @@ export class SphereMeshLayer extends MeshLayerDeclaration<
   private config: SphereMeshLayerConfig;
 
   constructor(view: ViewContext, config: SphereMeshLayerConfig) {
-    // 初期effectIds/postEffectOcclusionを基底クラスに伝搬
+    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
     if (config.sphere?.effectIds) {
       config.effectIds = config.sphere.effectIds;
     }
@@ -164,7 +164,7 @@ export class SphereMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // effectIds/postEffectOcclusionを基底クラスに伝搬
+      // Propagate effectIds/postEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

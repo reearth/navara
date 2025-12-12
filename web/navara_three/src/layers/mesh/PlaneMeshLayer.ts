@@ -46,7 +46,7 @@ export class PlaneMeshLayer extends MeshLayerDeclaration<
   private config: PlaneMeshLayerConfig;
 
   constructor(view: ViewContext, config: PlaneMeshLayerConfig) {
-    // 初期effectIds/postEffectOcclusionを基底クラスに伝搬
+    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
     if (config.plane?.effectIds) {
       config.effectIds = config.plane.effectIds;
     }
@@ -154,7 +154,7 @@ export class PlaneMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // effectIds/postEffectOcclusionを基底クラスに伝搬
+      // Propagate effectIds/postEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

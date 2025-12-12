@@ -26,6 +26,7 @@ import {
   Vector2,
   Vector3,
   WebGLRenderTarget,
+  type IUniform,
   type WebGLRenderer,
 } from "three";
 import {
@@ -54,13 +55,13 @@ export class UnrealBloomPassRGBA extends Pass {
   private nMips = 5;
   private renderTargetBright!: WebGLRenderTarget;
 
-  private highPassUniforms: any;
+  private highPassUniforms: Record<string, IUniform>;
   private materialHighPassFilter!: ShaderMaterial;
   private separableBlurMaterials: ShaderMaterial[] = [];
   private compositeMaterial!: ShaderMaterial;
   private bloomTintColors: Vector3[] = [];
 
-  private copyUniforms: any;
+  private copyUniforms: Record<string, IUniform>;
   private blendMaterial!: ShaderMaterial;
 
   private _oldClearColor = new Color();

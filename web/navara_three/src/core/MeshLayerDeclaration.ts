@@ -105,7 +105,7 @@ export abstract class MeshLayerDeclaration<
   onCreate() {
     this._instance = this.createMesh();
 
-    // PostEffect用にviewContext/layerIdをuserDataに保存
+    // Store viewContext/layerId in userData for PostEffect
     if (this.raw) {
       this.raw.userData.viewContext = this.view;
       this.raw.userData.layerId = this.id;
@@ -125,7 +125,9 @@ export abstract class MeshLayerDeclaration<
 
     this._instance.visible = this.visible;
 
-    // 初期effectIdsをリンク
+    // ----------------------------------------------------------------------------
+    // PostEffect: effectIds / occlusion wiring
+    // ----------------------------------------------------------------------------
     if (this._effectIds.length > 0 && this.raw) {
       updatePostEffectLinksForObject(
         this.raw,
@@ -136,7 +138,7 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // 初期postEffectOcclusionを登録
+    // Register initial postEffectOcclusion
     if (this._postEffectOcclusion !== undefined) {
       this.view.postEffectRegistry?.registerLayerPostEffectOcclusion(
         this.id,
@@ -187,7 +189,9 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // effectIds更新処理
+    // ----------------------------------------------------------------------------
+    // PostEffect: effectIds / occlusion wiring
+    // ----------------------------------------------------------------------------
     if (updates.effectIds !== undefined && this.raw) {
       const prevEffectIds = this._effectIds;
       const nextEffectIds = updates.effectIds ?? [];
@@ -204,7 +208,7 @@ export abstract class MeshLayerDeclaration<
       }
     }
 
-    // postEffectOcclusion更新処理
+    // Update postEffectOcclusion
     if (updates.postEffectOcclusion !== undefined) {
       this._postEffectOcclusion = updates.postEffectOcclusion;
       this.view.postEffectRegistry?.updateLayerPostEffectOcclusion(
@@ -227,7 +231,9 @@ export abstract class MeshLayerDeclaration<
   }
 
   onDestroy(): void {
-    // PostEffectのリンク解除
+    // ----------------------------------------------------------------------------
+    // PostEffect: effectIds cleanup
+    // ----------------------------------------------------------------------------
     if (this._effectIds.length > 0 && this.raw) {
       updatePostEffectLinksForObject(
         this.raw,

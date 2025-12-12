@@ -50,7 +50,7 @@ export class CylinderMeshLayer extends MeshLayerDeclaration<
   private config: CylinderMeshLayerConfig;
 
   constructor(view: ViewContext, config: CylinderMeshLayerConfig) {
-    // 初期effectIds/postEffectOcclusionを基底クラスに伝搬
+    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;
     }
@@ -169,7 +169,7 @@ export class CylinderMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // effectIds/postEffectOcclusionを基底クラスに伝搬
+      // Propagate effectIds/postEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

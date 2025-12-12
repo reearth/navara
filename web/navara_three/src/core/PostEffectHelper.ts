@@ -84,11 +84,6 @@ export type PostEffectResources = {
   maskDebug?: BufferView;
 };
 
-export type EmissiveParams = {
-  emissiveIntensity: number;
-  emissiveColor?: number;
-};
-
 /**
  * Post Effect Config
  * Represents the configuration of post effects for an object.
@@ -207,21 +202,6 @@ export function ensurePostEffectUserData(
     ud.postEffectOcclusion = { value: POST_EFFECT_OCCLUSION_SKIP };
   }
   return ud as PostEffectUserData;
-}
-
-export function applyEmissiveEffect(
-  material: MeshStandardMaterial | MeshPhysicalMaterial,
-  params: EmissiveParams,
-): void {
-  const { emissiveIntensity, emissiveColor } = params;
-
-  if (emissiveColor !== undefined) {
-    material.emissive.set(emissiveColor);
-  } else {
-    material.emissive.copy(material.color);
-  }
-
-  material.emissiveIntensity = emissiveIntensity;
 }
 
 export function updatePostEffectLinksForObject(

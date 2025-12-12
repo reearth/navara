@@ -59,14 +59,14 @@ export type PostEffectBloomUpdate = {
   debugMask?: boolean;
 } & EffectLayerUpdate;
 
-// Reduced defaults for tighter bloom closer to old look
-const DEFAULT_STRENGTH = 0.8; // 1.5 → 0.8 (47% reduction)
-const DEFAULT_RADIUS = 0.2; // 0.4 → 0.2 (50% reduction)
-const DEFAULT_THRESHOLD = 0.0; // 0.85 → 0.0 (mask-based bloom, no threshold needed)
+// Default bloom parameters for mask-based selective bloom
+const DEFAULT_STRENGTH = 0.8;
+const DEFAULT_RADIUS = 0.2;
+const DEFAULT_THRESHOLD = 0.0;
 
 /**
  * Post Effect Bloom Layer
- * Uses scene.traverse() instead of clone scenes for better performance and maintainability
+ * Traverses the main scene and renders only objects with Bloom effect enabled
  */
 export class PostEffectBloomLayer extends PostEffectLayer<
   PostEffectBloomConfig,
@@ -163,8 +163,7 @@ export class PostEffectBloomLayer extends PostEffectLayer<
 
 /**
  * Custom PostProcessing Pass for PostEffect Bloom
- * Instead of using clone scenes, directly traverses the main scene
- * and renders only objects with Bloom effect enabled
+ * Renders only objects with Bloom effect enabled
  */
 class PostEffectBloomPass extends PostProcessingPass {
   private layer: PostEffectBloomLayer;

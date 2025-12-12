@@ -51,7 +51,7 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
   private config: TubeMeshLayerConfig;
 
   constructor(view: ViewContext, config: TubeMeshLayerConfig) {
-    // 初期effectIds/postEffectOcclusionを基底クラスに伝搬
+    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
     if (config.tube?.effectIds) {
       config.effectIds = config.tube.effectIds;
     }
@@ -181,7 +181,7 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // effectIds/postEffectOcclusionを基底クラスに伝搬
+      // Propagate effectIds/postEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

@@ -1234,22 +1234,6 @@ export default class ThreeView<
     // Find which effect type from config
     const effectType = this.registries.effect.findEffectType(config);
     if (!effectType) {
-      // Check if it's a known deprecated effect
-      const configKeys = Object.keys(config);
-      const deprecatedEffects = ["postEffectOutline"]; // TODO: Remove after Outline is stable
-      const hasDeprecatedEffect = configKeys.some((key) =>
-        deprecatedEffects.includes(key),
-      );
-
-      if (hasDeprecatedEffect) {
-        console.warn(
-          "[Navara] Deprecated effect type detected and ignored:",
-          configKeys.filter((k) => deprecatedEffects.includes(k)).join(", "),
-        );
-        // Return a dummy layer handle that does nothing
-        return this.createDummyLayerHandle();
-      }
-
       throw new Error("No effect type specified in configuration");
     }
 
@@ -1290,28 +1274,6 @@ export default class ThreeView<
 
   registerEffect(name: string, effectClass: EffectLayerConstructor): void {
     this.registries.effect.register(name, effectClass);
-  }
-
-  /**
-   * Create a dummy layer handle for deprecated effects
-   * Returns a handle that does nothing but prevents errors
-   */
-  private createDummyLayerHandle(): LayerHandle {
-    // Create a minimal dummy layer that satisfies LayerDeclaration interface
-    // Used for deprecated effect layers that no longer exist
-    const dummyLayer: Pick<
-      LayerDeclaration,
-      "id" | "onUpdateConfig" | "onDestroy" | "visible" | "sort"
-    > = {
-      id: `deprecated-${Math.random().toString(36).slice(2)}`,
-      onUpdateConfig: () => {},
-      onDestroy: () => {},
-      visible: true,
-      sort: undefined,
-    };
-
-    // LayerHandle only uses these properties, so this cast is safe
-    return new LayerHandle(dummyLayer as LayerDeclaration);
   }
 
   // Track materials that have been set up with CSM to prevent duplicate shader injection

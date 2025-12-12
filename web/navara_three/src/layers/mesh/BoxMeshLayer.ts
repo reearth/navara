@@ -48,7 +48,7 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
   private config: BoxMeshLayerConfig;
 
   constructor(view: ViewContext, config: BoxMeshLayerConfig) {
-    // 初期effectIds/postEffectOcclusionを基底クラスに伝搬
+    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
     if (config.box?.effectIds) {
       config.effectIds = config.box.effectIds;
     }
@@ -162,7 +162,7 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // effectIds/postEffectOcclusionを基底クラスに伝搬
+      // Propagate effectIds/postEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

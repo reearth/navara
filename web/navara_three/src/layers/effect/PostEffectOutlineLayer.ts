@@ -181,8 +181,6 @@ class PostEffectOutlinePass extends PostProcessingPass {
 
   private size = new Vector2();
 
-  // Note: outlineMaskMaterial removed - now using original materials with uOutlineMaskPass flag
-
   // Debug views
   private debugView1?: BufferView;
   private debugView2?: BufferView;
@@ -202,9 +200,6 @@ class PostEffectOutlinePass extends PostProcessingPass {
     const fullscreenQuad = createFullscreenQuad();
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
-
-    // Note: outlineMaskMaterial removed - now using original materials with uOutlineMaskPass flag
-    // This ensures depthTexture is written correctly by Three.js standard materials
 
     // Edge detection material (Sobel filter)
     this.edgeDetectMaterial = new ShaderMaterial({

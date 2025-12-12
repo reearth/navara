@@ -11,6 +11,15 @@ import {
 import { createControlPane } from "./controlPane";
 import { createSceneLayers } from "./sceneLayers";
 
+export const BLOOM_CONFIG = {
+  strength: 1.0, 
+  radius: 0.5,
+  threshold: 0.0,
+  debugMode: 0,
+  debugMask: true,
+  resolutionScale: 1.0,
+} as const;
+
 export type PostEffects = {
   postEffectOutline: Layer;
   postEffectBloom: Layer;
@@ -56,13 +65,13 @@ export const run = async (view: ThreeView) => {
   const postEffectBloom = view.addLayer({
     type: "effect",
     postEffectBloom: {
-      strength: 0.1,
-      radius: 0.5,
-      threshold: 0.0,
-      debugMode: 0,
+      strength: BLOOM_CONFIG.strength,
+      radius: BLOOM_CONFIG.radius,
+      threshold: BLOOM_CONFIG.threshold,
+      debugMode: BLOOM_CONFIG.debugMode,
     },
-    debugMask: true,
-    resolutionScale: 1.0,
+    debugMask: BLOOM_CONFIG.debugMask,
+    resolutionScale: BLOOM_CONFIG.resolutionScale,
   });
 
   view.addDefaultEffectLayers();

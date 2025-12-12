@@ -20,6 +20,79 @@ import {
   TILES_3D_DATASETS,
 } from "../../helpers/constants";
 
+// ============================================
+// Initial Configurations (Single Source of Truth)
+// ============================================
+
+/**
+ * Cube mesh initial configuration
+ */
+export const CUBE_CONFIG = {
+  emissiveColor: 0xff0000,
+  emissiveIntensity: 1.0,
+  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  bloomEnabled: true,
+  outlineEnabled: false,
+} as const;
+
+/**
+ * Sphere mesh initial configuration
+ */
+export const SPHERE_CONFIG = {
+  emissiveColor: 0x00aaff,
+  emissiveIntensity: 1.0,
+  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  bloomEnabled: true,
+  outlineEnabled: false,
+} as const;
+
+/**
+ * Drum model initial configuration
+ */
+export const DRUM_CONFIG = {
+  emissiveColor: 0xffffff,
+  emissiveIntensity: 0.3,
+  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  bloomEnabled: false,
+  outlineEnabled: false,
+} as const;
+
+/**
+ * Soldier model initial configuration
+ */
+export const SOLDIER_CONFIG = {
+  emissiveColor: 0xffffff,
+  emissiveIntensity: 0.3,
+  animationSpeed: 1.0,
+  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  bloomEnabled: false,
+  outlineEnabled: false,
+} as const;
+
+/**
+ * Chiyoda buildings initial configuration
+ */
+export const CHIYODA_CONFIG = {
+  baseColor: 0xffffff,
+  emissiveColor: 0xffffff,
+  emissiveIntensity: 0.3,
+  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  bloomEnabled: true,
+  outlineEnabled: true,
+} as const;
+
+/**
+ * Chuo buildings initial configuration
+ */
+export const CHUO_CONFIG = {
+  baseColor: 0xffffff,
+  emissiveColor: 0xffffff,
+  emissiveIntensity: 0.3,
+  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  bloomEnabled: false,
+  outlineEnabled: false,
+} as const;
+
 type GeoJsonModelState = Record<string, unknown>;
 
 export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
@@ -35,6 +108,8 @@ export type DrumModelState = {
   url: string;
   shouldRotateInDefault: boolean;
   color?: number;
+  emissiveColor?: number;
+  emissiveIntensity?: number;
   postEffectOcclusion?: number;
 };
 
@@ -47,6 +122,8 @@ export type SoldierModelState = {
   animationActiveClip?: string;
   animationSpeed?: number;
   color?: number;
+  emissiveColor?: number;
+  emissiveIntensity?: number;
   postEffectOcclusion?: number;
 };
 
@@ -131,6 +208,8 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       clampToGround: true,
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       shouldRotateInDefault: true,
+      emissiveColor: 0xffffff,
+      emissiveIntensity: 0.3,
       postEffectOcclusion: PostEffectOcclusionMode.Normal,
     },
   });
@@ -158,6 +237,8 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       url: LOCAL_DATASETS.soldierGLTF.url,
       animationActiveClip: "Walk",
       animationSpeed: 1.0,
+      emissiveColor: 0xffffff,
+      emissiveIntensity: 0.3,
       postEffectOcclusion: PostEffectOcclusionMode.Normal,
     },
   });

@@ -44,7 +44,6 @@ export {
   type PostEffectOcclusion,
   type MaskPassType,
   type ActiveEffectsResult,
-  type EmissiveParams,
   // Constants
   BLOOM_EFFECT_KEY,
   OUTLINE_EFFECT_KEY,
@@ -59,7 +58,6 @@ export {
   hasOutlineEffect,
   getPostEffectConfig,
   hasPostEffectConfig,
-  applyEmissiveEffect,
   ensurePostEffectUserData,
   updatePostEffectLinksForObject,
 } from "./PostEffectHelper";

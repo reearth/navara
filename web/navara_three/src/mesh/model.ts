@@ -62,10 +62,7 @@ import {
   updatePostEffectLinksForObject,
 } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
-import type {
-  CustomObject3DEventMap,
-  LayerEffectsChangedEvent,
-} from "../object3DEvent";
+import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -151,7 +148,6 @@ export class ModelMesh
     this.viewContext = viewContext;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
-    this.setupEffectHandling();
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
@@ -245,28 +241,6 @@ export class ModelMesh
         this.mixer.update(dt);
       });
     }
-  }
-
-  private setupEffectHandling(): void {
-    this.addEventListener(
-      "layerEffectsChanged",
-      (event: LayerEffectsChangedEvent) => {
-        this.handleEffectsChanged(event);
-      },
-    );
-  }
-
-  private handleEffectsChanged(event: LayerEffectsChangedEvent): void {
-    const { effectIds, layerId, prevEffectIds } = event;
-
-    // Update PostEffectRegistry links
-    updatePostEffectLinksForObject(
-      this,
-      this.viewContext?.postEffectRegistry,
-      effectIds,
-      prevEffectIds,
-      layerId,
-    );
   }
 
   _initBatchedMaterial(

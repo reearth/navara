@@ -10,13 +10,33 @@ import { Pane, type FolderApi } from "tweakpane";
 
 import { TILES_3D_DATASETS } from "../../helpers/constants";
 
-import type { PostEffects } from "./run";
+import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
   GeoJsonModelLayer,
   SceneLayers,
   DrumModelState,
   SoldierModelState,
 } from "./sceneLayers";
+import {
+  CUBE_CONFIG,
+  SPHERE_CONFIG,
+  DRUM_CONFIG,
+  SOLDIER_CONFIG,
+  CHIYODA_CONFIG,
+  CHUO_CONFIG,
+} from "./sceneLayers";
+
+// ============================================
+// Constants
+// ============================================
+
+/**
+ * Occlusion mode options for Tweakpane dropdown
+ */
+const OCCLUSION_MODE_OPTIONS = {
+  DepthEnabled: PostEffectOcclusionMode.Normal,
+  Silhouette: PostEffectOcclusionMode.Silhouette,
+} as const;
 
 // ============================================
 // Helper Functions for Common UI Patterns
@@ -96,12 +116,8 @@ export const createControlPane = ({
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
     params: {
-      emissiveColor: 0xff0000,
-      emissiveIntensity: 1.1,
+      ...CUBE_CONFIG,
       visible: true,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
-      bloomEnabled: true,
-      outlineEnabled: false,
     },
   });
   setupMeshFolder(pane, {
@@ -111,12 +127,8 @@ export const createControlPane = ({
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
     params: {
-      emissiveColor: 0x0000ff,
-      emissiveIntensity: 1.0,
+      ...SPHERE_CONFIG,
       visible: true,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
-      bloomEnabled: true,
-      outlineEnabled: false,
     },
   });
   setupDrumFolder(pane, drumLayer, postEffectBloom.id, postEffectOutline.id);
@@ -133,13 +145,8 @@ export const createControlPane = ({
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
     params: {
-      baseColor: 0xffffff,
-      emissiveColor: 0xffffff,
+      ...CHIYODA_CONFIG,
       visible: true,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
-      emissiveIntensity: 0.3,
-      bloomEnabled: true,
-      outlineEnabled: true,
     },
   });
   setupTilesFolder(pane, {
@@ -149,13 +156,8 @@ export const createControlPane = ({
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
     params: {
-      baseColor: 0xffffff,
-      emissiveColor: 0xffffff,
+      ...CHUO_CONFIG,
       visible: true,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
-      emissiveIntensity: 0.3,
-      bloomEnabled: false,
-      outlineEnabled: false,
     },
   });
 
@@ -163,13 +165,12 @@ export const createControlPane = ({
 };
 
 const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
-  // Sync with PostEffectBloomLayer DEFAULT_* values
   const params = {
-    strength: 0.8, // Match DEFAULT_STRENGTH
-    radius: 0.2, // Match DEFAULT_RADIUS
-    threshold: 0.0, // Match DEFAULT_THRESHOLD
-    debugMode: 0,
-    debugMask: true,
+    strength: BLOOM_CONFIG.strength,
+    radius: BLOOM_CONFIG.radius,
+    threshold: BLOOM_CONFIG.threshold,
+    debugMode: BLOOM_CONFIG.debugMode,
+    debugMask: BLOOM_CONFIG.debugMask,
   };
 
   const folder = pane.addFolder({ title: "Bloom Settings" });
@@ -243,18 +244,6 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
       debugMask: ev.value,
     });
   });
-
-  // Apply initial parameters to Bloom layer
-  postEffectBloom.update({
-    type: "effect",
-    postEffectBloom: {
-      strength: params.strength,
-      radius: params.radius,
-      threshold: params.threshold,
-      debugMode: params.debugMode,
-    },
-    debugMask: params.debugMask,
-  });
 };
 
 type MeshLayerHandle = {
@@ -325,10 +314,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   folder
     .addBinding(params, "postEffectOcclusion", {
       label: "Occlusion Mode",
-      options: {
-        DepthEnabled: PostEffectOcclusionMode.Normal,
-        Silhouette: PostEffectOcclusionMode.Silhouette,
-      },
+      options: OCCLUSION_MODE_OPTIONS,
     })
     .on("change", () => {
       applyMeshState();
@@ -395,7 +381,6 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
 
   const folder = pane.addFolder({ title });
 
-  // Unified update function using declarative API
   const updateTilesState = () => {
     layer.update({
       type: "cesium3dtiles",
@@ -447,10 +432,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
   folder
     .addBinding(params, "postEffectOcclusion", {
       label: "Occlusion Mode",
-      options: {
-        DepthEnabled: PostEffectOcclusionMode.Normal,
-        Silhouette: PostEffectOcclusionMode.Silhouette,
-      },
+      options: OCCLUSION_MODE_OPTIONS,
     })
     .on("change", () => {
       updateTilesState();
@@ -483,18 +465,13 @@ const setupDrumFolder = (
   outlineId: string,
 ) => {
   const params = {
+    ...DRUM_CONFIG,
     visible: true,
-    postEffectOcclusion: PostEffectOcclusionMode.Normal,
     baseColor: 0xffffff,
-    emissiveColor: 0xffffff,
-    emissiveIntensity: 0.3,
-    bloomEnabled: false,
-    outlineEnabled: false,
   };
 
   const folder = pane.addFolder({ title: "Drum Model" });
 
-  // Unified update function using declarative API
   const updateDrumState = () => {
     drumLayer.updateModel({
       show: params.visible,
@@ -518,10 +495,7 @@ const setupDrumFolder = (
   folder
     .addBinding(params, "postEffectOcclusion", {
       label: "Occlusion Mode",
-      options: {
-        DepthEnabled: PostEffectOcclusionMode.Normal,
-        Silhouette: PostEffectOcclusionMode.Silhouette,
-      },
+      options: OCCLUSION_MODE_OPTIONS,
     })
     .on("change", () => {
       updateDrumState();
@@ -563,19 +537,13 @@ const setupSoldierFolder = (
   outlineId: string,
 ) => {
   const params = {
+    ...SOLDIER_CONFIG,
     visible: true,
-    postEffectOcclusion: PostEffectOcclusionMode.Normal,
-    animationSpeed: 1.0,
     baseColor: 0xffffff,
-    emissiveColor: 0xffffff,
-    emissiveIntensity: 0.3,
-    bloomEnabled: false,
-    outlineEnabled: false,
   };
 
   const folder = pane.addFolder({ title: "Soldier Model" });
 
-  // Unified update function using declarative API
   const updateSoldierState = () => {
     soldierLayer.updateModel({
       show: params.visible,
@@ -600,10 +568,7 @@ const setupSoldierFolder = (
   folder
     .addBinding(params, "postEffectOcclusion", {
       label: "Occlusion Mode",
-      options: {
-        DepthEnabled: PostEffectOcclusionMode.Normal,
-        Silhouette: PostEffectOcclusionMode.Silhouette,
-      },
+      options: OCCLUSION_MODE_OPTIONS,
     })
     .on("change", () => {
       updateSoldierState();
