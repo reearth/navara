@@ -1,11 +1,23 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  Color,
+  type GLTFModelLayer,
+  geodeticToVector3,
+  degreeToRadian,
+  geodeticSurfaceNormal,
+  LLE,
+} from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
+  LOCAL_DATASETS,
 } from "../../helpers/constants";
+
+import { Vector3, Quaternion, Euler } from "three";
+import { controlGLTFModel } from "../../helpers/modelControl";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -60,25 +72,58 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  // Toranomon Hills
-  view.setCamera({
-    lng: 139.7460838759,
-    lat: 35.6625239152,
-    height: 295.6,
-    heading: 21.5815985024,
-    pitch: -19,
-    roll: 0,
+  const startLLE = [35.666944688585495, 139.74895236744666, 38];
+
+  const startPos = geodeticToVector3(
+    new LLE(
+      degreeToRadian(startLLE[0]),
+      degreeToRadian(startLLE[1]),
+      startLLE[2],
+    ),
+  );
+
+  const normal = geodeticSurfaceNormal(
+    new LLE(
+      degreeToRadian(startLLE[0]),
+      degreeToRadian(startLLE[1]),
+      startLLE[2],
+    ),
+  );
+  // Calculate rotation to align model with surface normal
+  const up = new Vector3(0, 1, 0);
+  const quaternion = new Quaternion().setFromUnitVectors(up, normal);
+  const euler = new Euler().setFromQuaternion(quaternion);
+
+  // Add GLTF model at Mount Fuji summit
+  const modelLayer = view.addLayer<GLTFModelLayer>({
+    type: "mesh",
+    gltfModel: {
+      url: LOCAL_DATASETS.soldierGLTF.url,
+      animationEnabled: true,
+      animationActiveClip: "Idle",
+      animationSpeed: 1.0,
+      animationLoop: true,
+      animationAutoPlay: true,
+      animationCrossfadeDuration: 0.3,
+      useRTE: true,
+    },
+    position: { x: startPos.x, y: startPos.y, z: startPos.z },
+    rotation: { x: euler.x, y: euler.y, z: euler.z },
   });
 
-  // Takanawa
-  // view.setCamera({
-  //   lng: 139.7597808838,
-  //   lat: 35.6186485291,
-  //   height: 1106.74,
-  //   heading: 315.9337768555,
-  //   pitch: -23.1623802185,
-  //   roll: 0.0,
-  // });
+  modelLayer.ref.on("load", () => {
+    controlGLTFModel(view, modelLayer, {
+      runSpeed: 10,
+      rotationSpeed: 3,
+      cameraFollow: true,
+      allowUnderground: true,
+    });
+  });
+
+  view.lookAt(
+    new LLE(startLLE[0], startLLE[1], startLLE[2] + 1), // Add 1 to height to look at model center
+    new Vector3(10, 10, 5),
+  );
 
   showAttributions([
     TERRAIN_DATASETS.gsi,
