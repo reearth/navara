@@ -1111,6 +1111,7 @@ pub struct RasterTerrainMaterial {
     #[serde(rename = "tileSize")]
     pub tile_size: Option<u32>,
     /// Whether to render skirts along tile boundaries to hide gaps.
+    /// You should disable `skirt` if you want to visualize an underground model.
     pub skirt: Option<bool>,
     /// Multiplier for the automatically calculated skirt height.
     /// A value of 1.0 uses the default calculated height.

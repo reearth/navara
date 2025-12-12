@@ -285,7 +285,7 @@ pub fn make_wgs84_down_dir_fn(
 }
 
 const MAX_SKIRT_HEIGHT: f64 = 10000.0;
-const MIN_SKIRT_HEIGHT: f64 = 1000.0;
+const MIN_SKIRT_HEIGHT: f64 = 100.0;
 
 /// Calculate the skirt height based on geometric error at the given zoom level.
 ///
