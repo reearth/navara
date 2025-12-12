@@ -12,13 +12,22 @@ use crate::geometry::TransferableGeometry;
 pub struct UpsampleTerrainMeshParameters {
     #[wasm_bindgen(getter_with_clone)]
     pub tile_handle: TileHandle,
+    /// Whether to render skirts along tile boundaries.
+    pub skirt: bool,
+    /// Multiplier for the automatically calculated skirt height.
+    #[wasm_bindgen(js_name = skirtExaggeration)]
+    pub skirt_exaggeration: f32,
 }
 
 #[wasm_bindgen]
 impl UpsampleTerrainMeshParameters {
     #[wasm_bindgen(constructor)]
-    pub fn new(tile_handle: TileHandle) -> Self {
-        Self { tile_handle }
+    pub fn new(tile_handle: TileHandle, skirt: bool, skirt_exaggeration: f32) -> Self {
+        Self {
+            tile_handle,
+            skirt,
+            skirt_exaggeration,
+        }
     }
 }
 
@@ -30,6 +39,8 @@ impl<'a> From<&'a navara_worker::upsample_terrain_mesh::UpsampleTerrainMeshParam
     ) -> UpsampleTerrainMeshParameters {
         UpsampleTerrainMeshParameters {
             tile_handle: val.tile_handle,
+            skirt: val.skirt,
+            skirt_exaggeration: val.skirt_exaggeration,
         }
     }
 }

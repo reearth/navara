@@ -20,6 +20,8 @@ export async function constructTerrainMesh(
   tile: TransferableTileLike,
   rasterDEMData: TransferableRasterDEMDataLike,
   size: number,
+  skirt: boolean,
+  skirtExaggeration: number,
 ): Promise<{
   result: ReturnedConstructedTerrainMeshLike;
 }> {
@@ -33,6 +35,8 @@ export async function constructTerrainMesh(
     toTransferableTile(tile),
     toTransferableRasterDEMDataLike(rasterDEMData),
     martini,
+    skirt,
+    skirtExaggeration,
   );
   const { result, transfers } = transferReturnedConstructedTerrainMesh(mesh);
   mesh.free();

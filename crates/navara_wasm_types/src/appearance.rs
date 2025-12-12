@@ -1110,6 +1110,13 @@ pub struct RasterTerrainMaterial {
     #[wasm_bindgen(js_name = tileSize)]
     #[serde(rename = "tileSize")]
     pub tile_size: Option<u32>,
+    /// Whether to render skirts along tile boundaries to hide gaps.
+    pub skirt: Option<bool>,
+    /// Multiplier for the automatically calculated skirt height.
+    /// A value of 1.0 uses the default calculated height.
+    #[wasm_bindgen(js_name = skirtExaggeration)]
+    #[serde(rename = "skirtExaggeration")]
+    pub skirt_exaggeration: Option<f32>,
 }
 
 impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
@@ -1130,6 +1137,8 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
                 .elevation_decoder
                 .unwrap_or(default.elevation_decoder.into())
                 .into(),
+            skirt: val.skirt.unwrap_or(default.skirt),
+            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
         }
     }
 }
@@ -1155,6 +1164,8 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
                 epsilon: value.elevation_decoder.epsilon,
             }),
             tile_size: Some(value.tile_size),
+            skirt: Some(value.skirt),
+            skirt_exaggeration: Some(value.skirt_exaggeration),
         }
     }
 }

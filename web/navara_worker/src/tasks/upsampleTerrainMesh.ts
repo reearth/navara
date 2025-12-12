@@ -18,6 +18,8 @@ export async function upsampleTerrainMesh(
   parentTile: TransferableTileLike,
   rasterDEMData: TransferableRasterDEMDataLike,
   upsamplableGeometry: UpsamplableTerrainGeometryLike,
+  skirt: boolean,
+  skirtExaggeration: number,
 ): Promise<ReturnedConstructedTerrainMeshLike> {
   await waitWasm();
 
@@ -26,6 +28,8 @@ export async function upsampleTerrainMesh(
     toTransferableTile(parentTile),
     toTransferableRasterDEMDataLike(rasterDEMData),
     toUpsamplableTerrainGeometry(upsamplableGeometry),
+    skirt,
+    skirtExaggeration,
   );
   const { result, transfers } = transferReturnedConstructedTerrainMesh(mesh);
   mesh.free();
