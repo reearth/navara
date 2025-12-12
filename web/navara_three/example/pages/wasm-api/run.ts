@@ -26,6 +26,7 @@ import ThreeView, {
   Window as NavaraWindow,
   LLE,
   EllipsoidGeodesic,
+  Color,
 } from "@navara/three";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -128,7 +129,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
     },
@@ -257,7 +258,7 @@ const placeOneBall = (
       type: "mesh",
       sphere: {
         radius: 1,
-        color: color,
+        color: new Color().setHex(color),
         emissive: 0x072534,
       },
       position: { x: pos.x, y: pos.y, z: pos.z },
@@ -293,7 +294,7 @@ const addTestModelForNormal = (view: ThreeView) => {
       direction: normal,
       origin: pos,
       length: 5000000,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       headLength: 400000,
       headWidth: 70000,
     },
@@ -642,7 +643,7 @@ const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
       openEnded: false,
       thetaStart: 0,
       thetaLength: Math.PI * 2,
-      color: 0xffff00,
+      color: new Color().setStyle("#ffff00"),
     },
   });
 
@@ -792,7 +793,7 @@ const createPolylineMesh = (view: ThreeView) => {
       radialSegments: 16,
       closed: false,
       tension: 0.5,
-      color: 0x00ffff,
+      color: new Color().setStyle("#00ffff"),
     },
   });
 };

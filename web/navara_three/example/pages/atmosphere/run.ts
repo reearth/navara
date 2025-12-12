@@ -1,5 +1,6 @@
 import { EventHandler } from "@navara/core";
 import ThreeView, {
+  Color,
   DEFAULT_CLOUDS_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
@@ -12,9 +13,10 @@ import ThreeView, {
   SunLightLayer,
   AmbientLightLayer,
   SkyLightProbeLayer,
+  isMobileDevice,
 } from "@navara/three";
 import type { TextureChannel } from "@takram/three-clouds";
-import { Color, SphericalHarmonics3 } from "three";
+import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import type {
@@ -41,6 +43,8 @@ import {
   type FolderFields,
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
+
+import { ATMOSPHERE_EXAMPLE_OPTIONS } from "./main";
 
 type DefaultEffects = ReturnType<ThreeView["addDefaultEffectLayers"]>;
 
@@ -80,7 +84,7 @@ export const run = async (view: ThreeView) => {
     visible: false,
     ambient: {
       intensity: 1,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
     },
   });
 
@@ -105,7 +109,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -121,7 +125,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
@@ -327,7 +331,9 @@ const addAtmosphereControl = (
   folder
     .addBinding(PARAMS, "sunLightColor", { color: { type: "int" } })
     .on("change", (v) => {
-      sunLightLayer.update({ sun: { color: v.value } });
+      sunLightLayer.update({
+        sun: { color: new Color().setHex(v.value) },
+      });
     });
   folder.addBinding(PARAMS, "sunApplyLightColor").on("change", (v) => {
     sunLightLayer.update({ sun: { applyColor: v.value } });
@@ -354,7 +360,7 @@ const addAtmosphereControl = (
     .addBinding(PARAMS, "ambientLightColor", { color: { type: "int" } })
     .on("change", (v) => {
       ambientLightLayer.update({
-        ambient: { color: v.value },
+        ambient: { color: new Color().setHex(v.value) },
       });
     });
   folder.addBinding(PARAMS, "ambientLightIntensity").on("change", (v) => {
@@ -1028,53 +1034,93 @@ const addCloudsControl = (
 };
 
 const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
+  // Determine the current AA effect type based on device
+  const isMobile = isMobileDevice();
+  const currentEffect =
+    isMobile && ATMOSPHERE_EXAMPLE_OPTIONS.mobileOptimization ? "fxaa" : "smaa";
+
   const PARAMS = {
     enable: false,
-    effect: "smaa",
-    quality: "medium",
-    edgeDetectionMode: "color",
-  } as const;
+    // Show user what AA is actually being used (read-only info)
+    effect: currentEffect as "smaa" | "fxaa",
+    quality: "medium" as "ultra" | "high" | "medium" | "low",
+    // edgeDetectionMode is only applicable to SMAA
+    edgeDetectionMode: "color" as "depth" | "luma" | "color",
+  };
 
-  defaultEffects.smaa.update({
-    visible: PARAMS.enable,
-    smaa: {
-      quality: PARAMS.quality,
-      edgeDetectionMode: PARAMS.edgeDetectionMode,
-    },
-  });
+  // Initialize with current settings - only apply relevant options per effect type
+  if (currentEffect === "smaa") {
+    defaultEffects.antialiasing.update({
+      visible: PARAMS.enable,
+      smaa: {
+        quality: PARAMS.quality,
+        edgeDetectionMode: PARAMS.edgeDetectionMode,
+      },
+    });
+  } else {
+    defaultEffects.antialiasing.update({
+      visible: PARAMS.enable,
+      fxaa: {},
+    });
+  }
 
   const folder = pane.addFolder({
     title: "Antialias",
   });
 
   folder.addBinding(PARAMS, "enable").on("change", (v) => {
-    defaultEffects.smaa.update({ visible: v.value });
+    defaultEffects.antialiasing.update({ visible: v.value });
   });
-  folder
-    .addBinding(PARAMS, "effect", {
-      options: Object.fromEntries(["smaa", "fxaa"].map((k) => [k, k])),
-    })
-    .on("change", (_v) => {
-      // view.aaEffect.effect = v.value;
-    });
+
+  // Effect type is determined by device - show as read-only info
+  folder.addBinding(PARAMS, "effect", {
+    readonly: true,
+    label: "effect (auto)",
+  });
+
+  // Quality setting - applicable to SMAA only
   folder
     .addBinding(PARAMS, "quality", {
       options: Object.fromEntries(
         ["ultra", "high", "medium", "low"].map((k) => [k, k]),
       ),
+      disabled: currentEffect === "fxaa",
+      label: currentEffect === "fxaa" ? "quality (n/a)" : "quality",
     })
     .on("change", (v) => {
-      defaultEffects.smaa.update({ smaa: { quality: v.value } });
+      if (currentEffect === "smaa") {
+        defaultEffects.antialiasing.update({
+          smaa: { quality: v.value },
+        });
+      }
     });
+
+  // Edge detection mode - SMAA specific, not applicable to FXAA
   folder
     .addBinding(PARAMS, "edgeDetectionMode", {
       options: Object.fromEntries(
         ["depth", "luma", "color"].map((k) => [k, k]),
       ),
+      disabled: currentEffect === "fxaa",
+      label: currentEffect === "fxaa" ? "edgeMode (n/a)" : "edgeDetectionMode",
     })
     .on("change", (v) => {
-      defaultEffects.smaa.update({ smaa: { edgeDetectionMode: v.value } });
+      if (currentEffect === "smaa") {
+        defaultEffects.antialiasing.update({
+          smaa: { edgeDetectionMode: v.value },
+        });
+      }
     });
+
+  // Add tooltip/info for FXAA users
+  if (currentEffect === "fxaa") {
+    folder.addBlade({
+      view: "text",
+      label: "info",
+      parse: (v: string) => v,
+      value: "FXAA used on mobile for performance",
+    });
+  }
 };
 
 // Advanced
@@ -1160,7 +1206,7 @@ const addEffectsControl = (
     toneMapping: { mode: PARAMS.toneMappingMode },
   });
   view.toneMappingExposure = PARAMS.toneMappingExposure;
-  defaultEffects.lensFlare.update({
+  defaultEffects.lensFlare?.update({
     visible: PARAMS.lensFlare,
     lensFlare: { intensity: PARAMS.lensFlareIntensity },
   });
@@ -1193,12 +1239,12 @@ const addEffectsControl = (
       view.toneMappingExposure = v.value;
     });
   folder.addBinding(PARAMS, "lensFlare").on("change", (v) => {
-    defaultEffects.lensFlare.update({ visible: v.value });
+    defaultEffects.lensFlare?.update({ visible: v.value });
   });
   folder
     .addBinding(PARAMS, "lensFlareIntensity", { step: 0.001 })
     .on("change", (v) => {
-      defaultEffects.lensFlare.update({ lensFlare: { intensity: v.value } });
+      defaultEffects.lensFlare?.update({ lensFlare: { intensity: v.value } });
     });
   folder.addBinding(PARAMS, "ssao").on("change", (v) => {
     ssao.update({ visible: v.value });
@@ -1228,6 +1274,6 @@ const addEffectsControl = (
     ssao.update({ ssao: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "ssaoColor").on("change", (v) => {
-    ssao.update({ ssao: { color: new Color(v.value) } });
+    ssao.update({ ssao: { color: new Color().setStyle(v.value) } });
   });
 };

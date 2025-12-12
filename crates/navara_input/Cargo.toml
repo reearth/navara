@@ -9,6 +9,7 @@ bevy_ecs.workspace = true
 bevy_input.workspace = true
 bevy_log.workspace = true
 navara_math = { path = "../navara_math" }
+navara_window = { path = "../navara_window" }
 
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

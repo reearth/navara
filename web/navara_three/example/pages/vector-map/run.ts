@@ -1,4 +1,4 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
 import { Vector3 } from "three";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -51,23 +51,23 @@ export const run = async (view: ThreeView) => {
     point: {
       size: 1000,
       scaleByDistance: false,
-      color: 0xff0000,
+      color: new Color().setStyle("#ff0000"),
     },
     // text: {
-    //   color: 0xff00ff,
+    //   color: new Color().setStyle("#ff00ff"),
     //   size: 30,
     //   scaleByDistance: true,
     //   text: "MVT",
     // },
     polyline: {
       show: true,
-      color: 0x3d1623,
+      color: new Color().setStyle("#3d1623"),
       width: 2,
       height: 1,
       clampToGround: true,
     },
     polygon: {
-      color: 0x00aaff,
+      color: new Color().setStyle("#00aaff"),
       height: 10,
       extrudedHeight: 0,
       clampToGround: true,

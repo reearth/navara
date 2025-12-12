@@ -8,6 +8,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticSurfaceNormal,
   LLE,
+  Color,
 } from "@navara/three";
 import { eastNorthUpToFixedFrame } from "@navara/three_api";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
@@ -92,7 +93,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0,
       roughness: 1,
       castShadow: true,
