@@ -62,6 +62,10 @@ export class Color implements CoreColor {
     return copy as this;
   }
 
+  toHex(): number {
+    return this.#color.getHex();
+  }
+
   get raw() {
     return this.#color;
   }

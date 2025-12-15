@@ -1,6 +1,7 @@
 import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   ToneMappingMode,
+  Color,
   type LayerDescription,
 } from "@navara/three";
 import { SphericalHarmonics3 } from "three";
@@ -109,7 +110,7 @@ export const run = async (view: ThreeView) => {
   };
 
   view.globe.elevationColormap = PLATEAU_COLOR_MAP;
-  view.globe.color = 0x9481ad;
+  view.globe.color = new Color().setStyle("#9481ad");
 
   const changeFunc = () => {
     if (!layerDef.elevationHeatmap) {
@@ -122,16 +123,16 @@ export const run = async (view: ThreeView) => {
 
     if (params.color_map === "plateau") {
       view.globe.elevationColormap = PLATEAU_COLOR_MAP;
-      view.globe.color = 0x9481ad;
+      view.globe.color = new Color().setStyle("#9481ad");
     } else if (params.color_map === "turbo") {
       view.globe.elevationColormap = TURBO_COLOR_MAP;
-      view.globe.color = 0x784986;
+      view.globe.color = new Color().setStyle("#784986");
     } else if (params.color_map === "plasma") {
       view.globe.elevationColormap = PLASMA_COLORMAP;
-      view.globe.color = 0x7a4a91;
+      view.globe.color = new Color().setStyle("#7a4a91");
     } else if (params.color_map === "YlGnBu") {
       view.globe.elevationColormap = YlGnBu_COLOR_MAP;
-      view.globe.color = 0x506b73;
+      view.globe.color = new Color().setStyle("#506b73");
     }
     view.updateLayerById(layerInst.id, layerDef);
   };

@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
@@ -25,7 +26,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
     rasterTile: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       maxZoom: 23,
       opacity: 1,
     },
@@ -36,7 +37,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: GEOJSON_DATASETS.calderdaleDefibrillators.url,
     },
     point: {
-      color: 0xff00ff,
+      color: new Color().setStyle("#ff00ff"),
       size: 0.1,
       height: 1,
       scaleByDistance: true,
@@ -93,7 +94,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       ],
     },
     point: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       size: 0.1,
       height: 1,
       scaleByDistance: true,
@@ -127,7 +128,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       ],
     },
     billboard: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       size: 0.05,
       height: 1,
       scaleByDistance: true,
@@ -154,15 +155,15 @@ const geoLayersDef: MaterialLayerDescription[] = [
       ],
     },
     text: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
       depthTest: true,
       text: "hello 京都",
       // font: "/font/LoveDays-2v7Oe.ttf",
-      backgroundColor: 0x0a70c2,
-      borderColor: 0xf8e43c,
+      backgroundColor: new Color().setStyle("#0a70c2"),
+      borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
       cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
@@ -193,15 +194,15 @@ const geoLayersDef: MaterialLayerDescription[] = [
       ],
     },
     text: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
       depthTest: true,
       text: "hello world!!!",
       // font: "/font/LoveDays-2v7Oe.ttf",
-      backgroundColor: 0x0a70c2,
-      borderColor: 0xf8e43c,
+      backgroundColor: new Color().setStyle("#0a70c2"),
+      borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
       cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
@@ -214,7 +215,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         y: 0,
       },
       outlineBlur: 0, // px
-      outlineColor: 0x000000,
+      outlineColor: new Color().setStyle("#000000"),
       outlineOffset: { x: 4, y: 0 }, // px
       outlineOpacity: 1.0,
       outlineWidth: 4, // px
@@ -237,14 +238,14 @@ const geoLayersDef: MaterialLayerDescription[] = [
       ],
     },
     text: {
-      color: 0x000000,
+      color: new Color().setStyle("#000000"),
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
       depthTest: true,
       text: "Mt.Everest",
-      backgroundColor: 0xa4e996,
-      borderColor: 0x4aac3b,
+      backgroundColor: new Color().setStyle("#a4e996"),
+      borderColor: new Color().setStyle("#4aac3b"),
       borderWidth: 0.1, // 0 ~ 0.5, the ratio of the border to the height
       cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 30,
@@ -272,7 +273,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     polyline: {
       show: true,
-      color: 0xff0000,
+      color: new Color().setStyle("#ff0000"),
       width: 2,
       height: 1,
       clampToGround: true,
@@ -295,7 +296,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     polyline: {
       show: true,
-      color: 0x00ff00,
+      color: new Color().setStyle("#00ff00"),
       width: 5,
       height: 1,
       clampToGround: true,
@@ -325,7 +326,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       shouldRotateInDefault: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0.1,
       roughness: 0.1,
     },
@@ -376,13 +377,13 @@ const geoLayersDef: MaterialLayerDescription[] = [
       },
     },
     polygon: {
-      color: 0x00aaff,
+      color: new Color().setStyle("#00aaff"),
       height: 0,
       extrudedHeight: 5000,
       clampToGround: true,
       useGroundNormals: true,
       wireframe: false,
-      outlineColor: 0x00ff00,
+      outlineColor: new Color().setStyle("#00ff00"),
       outlineWidth: 3,
       outlineShow: false,
       surfaceShow: true,
@@ -414,13 +415,13 @@ const geoLayersDef: MaterialLayerDescription[] = [
       ],
     },
     polygon: {
-      color: 0xffaa00,
+      color: new Color().setStyle("#ffaa00"),
       height: 0,
       extrudedHeight: 0,
       clampToGround: false,
       useGroundNormals: false,
       wireframe: false,
-      outlineColor: 0xaaff00,
+      outlineColor: new Color().setStyle("#aaff00"),
       outlineWidth: 3,
       outlineShow: false,
       surfaceShow: true,
@@ -436,7 +437,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0.1,
       roughness: 0.1,
     },
@@ -448,7 +449,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0.1,
       roughness: 0.1,
       castShadow: true,
@@ -462,7 +463,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0.1,
       roughness: 0.1,
       castShadow: true,
@@ -475,7 +476,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: MVT_DATASETS.plateauWakayamaGen.url,
     },
     point: {
-      color: 0xff0000,
+      color: new Color().setStyle("#ff0000"),
       size: 0.01,
       height: 1,
       // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
@@ -495,7 +496,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     polyline: {
       show: true,
-      color: 0x00ff00,
+      color: new Color().setStyle("#00ff00"),
       width: 2,
       height: 1,
       clampToGround: true,
@@ -511,7 +512,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: MVT_DATASETS.plateauTokyoHeightControl.url,
     },
     polygon: {
-      color: 0x00aaff,
+      color: new Color().setStyle("#00aaff"),
       height: 10,
       extrudedHeight: 0,
       clampToGround: true,

@@ -1,4 +1,9 @@
-import type { ColorMap, EventHandler, EventManager } from "@navara/core";
+import type {
+  Color as CoreColor,
+  ColorMap,
+  EventHandler,
+  EventManager,
+} from "@navara/core";
 import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
@@ -105,7 +110,7 @@ export type GlobeHandler = {
   getTransparent: () => boolean | undefined;
   getMaxSse: () => number | undefined;
   getSegments: () => number | undefined;
-  getColor: () => number | undefined;
+  getColor: () => CoreColor | undefined;
   getHideUnderground: () => boolean | undefined;
   getShouldComputeNormalFromVertex: () => boolean | undefined;
   getOpacity: () => number | undefined;
@@ -114,7 +119,7 @@ export type GlobeHandler = {
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
-  setColor: (value: number) => void;
+  setColor: (value: CoreColor) => void;
   setHideUnderground: (value: boolean) => void;
   setShouldComputeNormalFromVertex: (value: boolean) => void;
   setOpacity: (value: number) => void;

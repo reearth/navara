@@ -43,6 +43,7 @@ export async function run() {
       maxZoom: 15,
       minZoom: 6,
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      skirt: false,
     },
   });
 
@@ -51,7 +52,7 @@ export async function run() {
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     rasterTile: {
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       maxZoom: 18,
       opacity: 1,
     },
@@ -117,8 +118,10 @@ const addGlobeControl = (view: ThreeView, pane: Pane) => {
 
   const globe = view.globe;
 
+  const colorValue = globe.color ? globe.color.toHex() : 0x9481ad; // Default color
+
   const PARAMS = {
-    color: globe.color,
+    color: "#" + colorValue.toString(16).padStart(6, "0"),
     hideUnderground: globe.hideUnderground,
     transparent: true,
     opacity: 0.5,
@@ -136,7 +139,7 @@ const addGlobeControl = (view: ThreeView, pane: Pane) => {
       },
       onChange: (v) => {
         if (globe) {
-          globe.color = v.value;
+          globe.color = new Color().setStyle(v.value);
         }
       },
     },

@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   AmbientLightLayer,
   GlowGlobeMeshLayer,
   LayerHandle,
@@ -34,7 +35,7 @@ export const run = async (view: ThreeView) => {
       radiusScale: gPaneParams.glowRadiusScale,
       coefficient: gPaneParams.glowCoefficient,
       exponent: gPaneParams.glowExponent,
-      glowColor: gPaneParams.glowColor,
+      glowColor: new Color().setHex(gPaneParams.glowColor),
     },
   });
 
@@ -89,7 +90,7 @@ function addPanel(view: ThreeView, pane: Pane) {
     .on("change", (ev) => {
       gGlowGlobeMeshLayer?.update({
         glowGlobe: {
-          glowColor: ev.value,
+          glowColor: new Color().setHex(ev.value),
         },
       });
     });
@@ -123,7 +124,7 @@ function addPanel(view: ThreeView, pane: Pane) {
           radiusScale: gPaneParams.glowRadiusScale,
           coefficient: gPaneParams.glowCoefficient,
           exponent: gPaneParams.glowExponent,
-          glowColor: gPaneParams.glowColor,
+          glowColor: new Color().setHex(gPaneParams.glowColor),
           opacity: gPaneParams.glowOpacity,
         },
       });

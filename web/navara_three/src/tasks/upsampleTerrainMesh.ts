@@ -13,10 +13,19 @@ export function upsampleTerrainMesh(
   parentTileLike: TransferableTileLike,
   rasterDEMDataLike: TransferableRasterDEMDataLike,
   upsamplableGeometryLike: UpsamplableTerrainGeometryLike,
+  skirt: boolean,
+  skirtExaggeration: number,
 ): Promise<ReturnedConstructedTerrainMeshLike> {
   return queueTask(
     "upsampleTerrainMesh",
-    [tileLike, parentTileLike, rasterDEMDataLike, upsamplableGeometryLike],
+    [
+      tileLike,
+      parentTileLike,
+      rasterDEMDataLike,
+      upsamplableGeometryLike,
+      skirt,
+      skirtExaggeration,
+    ],
     {
       transfer: [
         upsamplableGeometryLike.uvs.buffer,

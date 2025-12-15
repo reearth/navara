@@ -1,6 +1,7 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   CloudsEffectLayer,
+  Color,
   type ArclineMeshLayer,
   type SmoothLineMeshLayer,
 } from "@navara/three";
@@ -20,8 +21,8 @@ const gArcLinesDef = [
     arcHeightScale: 0.3,
     transparent: false,
     opacity: 1,
-    srcColor: 0xffffff,
-    tgtColor: Math.floor(Math.random() * 0xffffff),
+    srcColor: new Color().setHex(0xffffff),
+    tgtColor: new Color().setHex(Math.floor(Math.random() * 0xffffff)),
     gradation: 0,
     dashed: false,
     dashSize: 200000,
@@ -52,8 +53,8 @@ const gArcLinesDef = [
   },
   {
     // Oceania
-    srcColor: 0xffffff,
-    tgtColor: Math.floor(Math.random() * 0xffffff),
+    srcColor: new Color().setHex(0xffffff),
+    tgtColor: new Color().setHex(Math.floor(Math.random() * 0xffffff)),
     geometry: [
       { lng: 139.75711454748298, lat: 35.67564356091717 },
       { lng: 151.1772, lat: -33.9461 }, // SYD
@@ -67,8 +68,8 @@ const gArcLinesDef = [
   },
   {
     // Europe
-    srcColor: 0xffffff,
-    tgtColor: Math.floor(Math.random() * 0xffffff),
+    srcColor: new Color().setHex(0xffffff),
+    tgtColor: new Color().setHex(Math.floor(Math.random() * 0xffffff)),
     geometry: [
       { lng: 139.75711454748298, lat: 35.67564356091717 },
       { lng: -0.4543, lat: 51.4706 }, // LHR
@@ -82,8 +83,8 @@ const gArcLinesDef = [
   },
   {
     // North America
-    srcColor: 0xffffff,
-    tgtColor: Math.floor(Math.random() * 0xffffff),
+    srcColor: new Color().setHex(0xffffff),
+    tgtColor: new Color().setHex(Math.floor(Math.random() * 0xffffff)),
     geometry: [
       { lng: 139.75711454748298, lat: 35.67564356091717 },
       { lng: -118.4085, lat: 33.9416 }, // LAX
@@ -97,8 +98,8 @@ const gArcLinesDef = [
   },
   {
     // South America
-    srcColor: 0xffffff,
-    tgtColor: Math.floor(Math.random() * 0xffffff),
+    srcColor: new Color().setHex(0xffffff),
+    tgtColor: new Color().setHex(Math.floor(Math.random() * 0xffffff)),
     geometry: [
       { lng: 139.75711454748298, lat: 35.67564356091717 },
       { lng: -46.4731, lat: -23.4356 }, // GRU
@@ -311,8 +312,8 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
     segments: gArcLinesDef[0].segments || 64,
     transparent: gArcLinesDef[0].transparent || false,
     opacity: gArcLinesDef[0].opacity || 1,
-    srcColor: intToHexColor(gArcLinesDef[0].srcColor || 0xffffff),
-    tgtColor: intToHexColor(gArcLinesDef[0].tgtColor || 0xffffff),
+    srcColor: intToHexColor(gArcLinesDef[0].srcColor?.toHex() ?? 0xffffff),
+    tgtColor: intToHexColor(gArcLinesDef[0].tgtColor?.toHex() ?? 0xffffff),
     height: gArcLinesDef[0].height || 0,
     arcHeightScale: gArcLinesDef[0].arcHeightScale || 0.3,
     gradation: gArcLinesDef[0].gradation || 0,
@@ -332,8 +333,12 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
       params.segments = selectedArcLine.segments || 64;
       params.transparent = selectedArcLine.transparent || false;
       params.opacity = selectedArcLine.opacity || 1;
-      params.srcColor = intToHexColor(selectedArcLine.srcColor || 0xffffff);
-      params.tgtColor = intToHexColor(selectedArcLine.tgtColor || 0xffffff);
+      params.srcColor = intToHexColor(
+        selectedArcLine.srcColor?.toHex() ?? 0xffffff,
+      );
+      params.tgtColor = intToHexColor(
+        selectedArcLine.tgtColor?.toHex() ?? 0xffffff,
+      );
       params.height = selectedArcLine.height || 0;
       params.arcHeightScale = selectedArcLine.arcHeightScale || 0.3;
       params.gradation = selectedArcLine.gradation || 0;
@@ -351,13 +356,11 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
       gArcLinesDef[selectedIndex].segments = params.segments;
       gArcLinesDef[selectedIndex].transparent = params.transparent;
       gArcLinesDef[selectedIndex].opacity = params.opacity;
-      gArcLinesDef[selectedIndex].srcColor = parseInt(
-        params.srcColor.replace("#", ""),
-        16,
+      gArcLinesDef[selectedIndex].srcColor = new Color().setHex(
+        parseInt(params.srcColor.replace("#", ""), 16),
       );
-      gArcLinesDef[selectedIndex].tgtColor = parseInt(
-        params.tgtColor.replace("#", ""),
-        16,
+      gArcLinesDef[selectedIndex].tgtColor = new Color().setHex(
+        parseInt(params.tgtColor.replace("#", ""), 16),
       );
       gArcLinesDef[selectedIndex].height = params.height;
       gArcLinesDef[selectedIndex].arcHeightScale = params.arcHeightScale;

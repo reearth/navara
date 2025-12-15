@@ -11,6 +11,7 @@ pub struct Input {
     pub button: Option<u32>,
     pub key_code: Option<String>,
     pub key: Option<String>,
+    pub id: Option<i32>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -25,6 +26,12 @@ pub enum InputType {
     MouseUp,
     #[serde(rename = "mousemove")]
     MouseMove,
+    #[serde(rename = "touchstart")]
+    TouchStart,
+    #[serde(rename = "touchend")]
+    TouchEnd,
+    #[serde(rename = "touchmove")]
+    TouchMove,
     #[serde(rename = "wheel")]
     Wheel,
 }
@@ -89,6 +96,21 @@ impl Input {
                     })
                 })
             }),
+            InputType::TouchStart => Some(navara_input::Input::Touch(navara_input::TouchInput {
+                state: navara_input::TouchState::Start,
+                position: navara_math::Vec2::new(self.x? as f64, self.y? as f64),
+                id: self.id?,
+            })),
+            InputType::TouchEnd => Some(navara_input::Input::Touch(navara_input::TouchInput {
+                state: navara_input::TouchState::End,
+                position: navara_math::Vec2::new(self.x? as f64, self.y? as f64),
+                id: self.id?,
+            })),
+            InputType::TouchMove => Some(navara_input::Input::Touch(navara_input::TouchInput {
+                state: navara_input::TouchState::Move,
+                position: navara_math::Vec2::new(self.x? as f64, self.y? as f64),
+                id: self.id?,
+            })),
         }
     }
 

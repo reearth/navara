@@ -39,6 +39,14 @@ pub struct Mesh {
     pub render_order: i32,
     pub uv_transform: TileUvTransform,
     pub aabb: Aabb,
+    /// Skirt vertices (separate from main geometry for shadow/normal handling).
+    pub skirt_vertices: Option<Handle>,
+    /// Skirt UVs.
+    pub skirt_uvs: Option<Handle>,
+    /// Skirt indices.
+    pub skirt_indices: Option<Handle>,
+    /// Mapping from skirt vertex index to edge vertex index in main geometry.
+    pub skirt_indices_to_edge: Option<Handle>,
 }
 
 #[derive(Bundle, Debug)]

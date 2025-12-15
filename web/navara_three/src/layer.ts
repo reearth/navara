@@ -21,12 +21,18 @@ export class Layer extends EventHandler<LayerEvent> {
     FeatureEvaluator
   >();
   private needUpdate = false;
+  private convertColors?: (obj: unknown) => unknown;
 
-  constructor(id: string, core: Core) {
+  constructor(
+    id: string,
+    core: Core,
+    convertColors?: (obj: unknown) => unknown,
+  ) {
     super();
 
     this.id = id;
     this.core = core;
+    this.convertColors = convertColors;
   }
 
   /**
@@ -77,7 +83,11 @@ export class Layer extends EventHandler<LayerEvent> {
   }
 
   update(l: LayerDescription) {
-    this.core.updateLayer(this.id, l);
+    // Convert Color objects to numbers if converter is provided
+    const processedLayer = this.convertColors
+      ? (this.convertColors(l) as LayerDescription)
+      : l;
+    this.core.updateLayer(this.id, processedLayer);
   }
 
   delete() {
