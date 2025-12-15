@@ -13,7 +13,7 @@ import { eastNorthUpToFixedFrame } from "@navara/three_api";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 export interface ModelControlParams {
-  runSpeed?: number; // Speed when running forward/backward
+  walkSpeed?: number; // Speed when walking forward/backward
   rotationSpeed?: number; // Speed of turning left/right
   cameraFollow?: boolean; // Whether to follow the model with the camera
   modelScale?: number; // Scale factor for the model
@@ -30,7 +30,7 @@ export const controlGLTFModel = (
 ) => {
   const keys = new Set<string>();
   let dir = new Vector3(0, 0, 0);
-  let isMoving = false;
+  let currentState: "Idle" | "Walk" | "Run" = "Idle";
   let hasMovement = false;
 
   params.cameraFollow = params.cameraFollow ?? true;
@@ -66,15 +66,20 @@ export const controlGLTFModel = (
 
     hasMovement = dir.x !== 0 || dir.y !== 0 || dir.z !== 0;
 
-    // Update model animation based on movement
-    if (hasMovement && !isMoving) {
-      // Start running
-      modelLayer.ref.crossFadeAnimation("Idle", "Run", 0.3);
-      isMoving = true;
-    } else if (!hasMovement && isMoving) {
-      // Stop running
-      modelLayer.ref.crossFadeAnimation("Run", "Idle", 0.3);
-      isMoving = false;
+    // Update model animation based on movement and dash state
+    let targetState: "Idle" | "Walk" | "Run";
+    if (!hasMovement) {
+      targetState = "Idle";
+    } else if (params.dash && params.dash > 1) {
+      targetState = "Run";
+    } else {
+      targetState = "Walk";
+    }
+
+    // Transition to new state if changed
+    if (targetState !== currentState) {
+      modelLayer.ref.crossFadeAnimation(currentState, targetState, 0.3);
+      currentState = targetState;
     }
   };
 
@@ -187,7 +192,7 @@ const updateModelTransform = (
 
   params.height =
     (params.height ?? currentLLE.height) +
-    dir.z * (params.runSpeed ?? 1) * deltaTime;
+    dir.z * (params.walkSpeed ?? 1) * deltaTime;
 
   // Build rotation based on ENU (East-North-Up) frame using WASM API
   const enuMatrix = eastNorthUpToFixedFrame(curPos);
@@ -249,7 +254,7 @@ const updateModelTransform = (
     // Move forward (dir.y > 0) or backward (dir.y < 0)
     curPos.addScaledVector(
       worldForward,
-      (params.runSpeed ?? 1) *
+      (params.walkSpeed ?? 1) *
         (params.dash ?? 1) *
         deltaTime *
         Math.sign(dir.y),

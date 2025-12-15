@@ -46,6 +46,7 @@ export const run = async (view: ThreeView) => {
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       castShadow: true,
       receiveShadow: true,
+      skirt: false,
     },
   });
 
@@ -113,7 +114,7 @@ export const run = async (view: ThreeView) => {
 
   modelLayer.ref.on("load", () => {
     controlGLTFModel(view, modelLayer, {
-      runSpeed: 10,
+      walkSpeed: 5,
       rotationSpeed: 3,
       cameraFollow: true,
       allowUnderground: true,

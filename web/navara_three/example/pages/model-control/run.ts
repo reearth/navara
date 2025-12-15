@@ -27,7 +27,7 @@ import {
 } from "../../helpers/modelControl";
 
 const params: ModelControlParams = {
-  runSpeed: 5,
+  walkSpeed: 5,
   rotationSpeed: 2,
   modelScale: 1,
   cameraFollow: true,
@@ -166,7 +166,7 @@ export const run = async (view: ThreeView) => {
     new Vector3(10, 10, 5),
   );
 
-  pane.addBinding(params, "runSpeed", { min: 1, max: 1000 });
+  pane.addBinding(params, "walkSpeed", { min: 1, max: 1000 });
   pane.addBinding(params, "rotationSpeed", { min: 0.1, max: 5 });
   pane
     .addBinding(params, "modelScale", { min: 1, max: 100 })
