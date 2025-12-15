@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-rust-version = "1.83.0"
+rust-version = "1.86.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
 
