@@ -60,7 +60,7 @@ console_error_panic_hook = "0.1.7"
 # --- Testing ---
 wasm-bindgen-test = "0.3.52"
 prost = "0.13.5"
-image = "0.25.8"
+image = { version = "0.25.8", default-features = false, features = ["png"] }
 
 # --- External Git Dependencies ---
 cesiumtiles = { git = "https://github.com/reearth/cesiumtiles-rs.git" }

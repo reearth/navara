@@ -145,6 +145,8 @@ async function processConstructTerrainMesh(
     new TransferableTileLike(tile),
     new TransferableRasterDEMDataLike(elevationDecoder),
     params.tile_size,
+    params.skirt,
+    params.skirtExaggeration,
   );
   workerPoolPromises.set(id, promise);
   const { result } = await promise;
@@ -161,6 +163,29 @@ async function processConstructTerrainMesh(
   }
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
+
+  // Set skirt data if available
+  if (result.skirt_vertices && result.skirt_uvs && result.skirt_indices) {
+    const skirtVertices = bufHandler.newF32(result.skirt_vertices);
+    const skirtUvs = bufHandler.newF32(result.skirt_uvs);
+    const skirtIndices = bufHandler.newU32(result.skirt_indices);
+    const skirtIndicesToEdge = result.skirt_indices_to_edge
+      ? bufHandler.newU32(result.skirt_indices_to_edge)
+      : undefined;
+
+    if (skirtVertices != null) {
+      geometry.skirt_vertices = skirtVertices;
+    }
+    if (skirtUvs != null) {
+      geometry.skirt_uvs = skirtUvs;
+    }
+    if (skirtIndices != null) {
+      geometry.skirt_indices = skirtIndices;
+    }
+    if (skirtIndicesToEdge != null) {
+      geometry.skirt_indices_to_edge = skirtIndicesToEdge;
+    }
+  }
 
   const rtcTranslation = result.rtc_translation;
   const constructTerrainMeshResult = new ConstructTerrainMeshResult(
@@ -231,6 +256,8 @@ async function processUpsampleTerrainMesh(
     new TransferableTileLike(parentTile),
     new TransferableRasterDEMDataLike(elevationDecoder),
     upsamplableTerrainGeometry,
+    params.skirt,
+    params.skirtExaggeration,
   );
   workerPoolPromises.set(id, promise);
   const result = await promise;
@@ -247,6 +274,29 @@ async function processUpsampleTerrainMesh(
   }
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
+
+  // Set skirt data if available
+  if (result.skirt_vertices && result.skirt_uvs && result.skirt_indices) {
+    const skirtVertices = bufHandler.newF32(result.skirt_vertices);
+    const skirtUvs = bufHandler.newF32(result.skirt_uvs);
+    const skirtIndices = bufHandler.newU32(result.skirt_indices);
+    const skirtIndicesToEdge = result.skirt_indices_to_edge
+      ? bufHandler.newU32(result.skirt_indices_to_edge)
+      : undefined;
+
+    if (skirtVertices != null) {
+      geometry.skirt_vertices = skirtVertices;
+    }
+    if (skirtUvs != null) {
+      geometry.skirt_uvs = skirtUvs;
+    }
+    if (skirtIndices != null) {
+      geometry.skirt_indices = skirtIndices;
+    }
+    if (skirtIndicesToEdge != null) {
+      geometry.skirt_indices_to_edge = skirtIndicesToEdge;
+    }
+  }
 
   const rtcTranslation = result.rtc_translation;
   const upsampleTerrainMeshResult = new UpsampleTerrainMeshResult(
