@@ -25,7 +25,7 @@ jobs:
       # Cache Rust build artifacts and dependencies
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "rust-deps-v"
+          shared-key: "rust-deps"
           cache-on-failure: true
           # Cache cargo-make and wasm-pack binaries
           cache-all-crates: true
@@ -78,7 +78,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "rust-docs-v"
+          shared-key: "rust-docs"
 
       - name: Install protoc
         uses: taiki-e/install-action@v2
