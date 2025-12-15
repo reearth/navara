@@ -18,7 +18,7 @@ jobs:
       
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.86.0
+          toolchain: stable
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
 
@@ -74,7 +74,7 @@ jobs:
       
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.86.0
+          toolchain: stable
 
       - uses: Swatinem/rust-cache@v2
         with:
