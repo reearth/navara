@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-rust-version = "1.86.0"
+rust-version = "1.83.0"
 
 [workspace.dependencies]
 bevy_app = "0.16.1"
