@@ -103,26 +103,11 @@ export async function renderModel(
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
-      if (true) {
+      if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
-            console.log(m.aabb);
-            const aabb_center = new Vector3(
-              m.aabb.center.x,
-              m.aabb.center.y,
-              m.aabb.center.z,
-            );
-            const aabb_extent = new Vector3(
-              m.aabb.extent.x,
-              m.aabb.extent.y,
-              m.aabb.extent.z,
-            );
-
             const boxHelper = new Box3Helper(
-              new Box3(
-                aabb_center.clone().sub(aabb_extent),
-                aabb_center.clone().add(aabb_extent),
-              ),
+              child.geometry.boundingBox,
               0x0000ff,
             );
             child.add(boxHelper);

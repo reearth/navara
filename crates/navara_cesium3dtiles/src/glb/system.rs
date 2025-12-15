@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
-use navara_core::{Aabb, CRS};
+use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
     batch::{FeatureBatchId, GlobalBatchIds},
@@ -34,7 +34,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         Without<Deleted>,
     >,
     mut rendered_tiles: Query<
-        (&mut RenderedCesium3dTileContent, &Aabb),
+        &mut RenderedCesium3dTileContent,
         (
             With<RenderedCesium3dTileContentGlbMarker>,
             Added<RenderedCesium3dTileContent>,
@@ -42,7 +42,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
 ) {
-    for (mut tile, aabb) in &mut rendered_tiles {
+    for mut tile in &mut rendered_tiles {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => v,
             Err(_) => continue,
@@ -79,7 +79,6 @@ pub fn construct_model_by_cesium3dtiles_layer(
             // TODO: Check asset property in tileset.json.
             // TODO: Clamp the height to terrain height.
             Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)),
-            aabb.clone(),
         ));
         tile.feature_id = Some(entity.id());
     }
