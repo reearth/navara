@@ -1,35 +1,5 @@
 import type { Core } from "@navara/engine";
 
-// Input queue to hold inputs until next RAF frame
-// This prevents recursive borrowing when Core.update is running and JS callbacks trigger input events
-const pendingInputs: { core: Core; input: Record<string, unknown> }[] = [];
-let rafScheduled = false;
-
-// Flush all pending inputs in next RAF frame
-// RAF callback is safe because it runs after Rust call stack has fully unwound
-const flushInputs = () => {
-  rafScheduled = false;
-  if (pendingInputs.length === 0) return;
-
-  // Process all queued inputs
-  const items = pendingInputs.splice(0, pendingInputs.length);
-
-  for (const { core, input } of items) {
-    core.input(input);
-  }
-};
-
-// Safe input wrapper using RAF queue pattern
-// DOM events only queue inputs, never call Core.input directly
-const safeInput = (core: Core, input: Record<string, unknown>) => {
-  pendingInputs.push({ core, input });
-
-  if (!rafScheduled) {
-    rafScheduled = true;
-    requestAnimationFrame(flushInputs);
-  }
-};
-
 // TODO: Need to think about how to propagate these event to worker.
 export function registerInputEvents(
   core: Core,
@@ -46,10 +16,10 @@ export function registerInputEvents(
       type: "mousedown",
       button: event.button,
     };
-    safeInput(core, mouseEvent);
+    core.input(mouseEvent);
   };
   const mouseup = () => {
-    safeInput(core, {
+    core.input({
       ...(mouseEvent ?? {}),
       type: "mouseup",
     });
@@ -60,7 +30,7 @@ export function registerInputEvents(
     const width = element.clientWidth;
     const height = element.clientHeight;
     const aspectRatio = width / height;
-    safeInput(core, {
+    core.input({
       type: "mousemove",
       x: (event.clientX / width) * aspectRatio,
       y: event.clientY / height,
@@ -107,7 +77,7 @@ export function registerInputEvents(
   };
 
   const wheel = (event: WheelEvent) => {
-    safeInput(core, {
+    core.input({
       type: "wheel",
       x: event.deltaX,
       y: event.deltaY,
@@ -115,7 +85,7 @@ export function registerInputEvents(
   };
 
   const keydown = (event: KeyboardEvent) => {
-    safeInput(core, {
+    core.input({
       type: "keydown",
       key_code: event.code,
       key: event.key,
@@ -123,7 +93,7 @@ export function registerInputEvents(
   };
 
   const keyup = (event: KeyboardEvent) => {
-    safeInput(core, {
+    core.input({
       type: "keyup",
       key_code: event?.code,
       key: event?.key,
@@ -131,7 +101,7 @@ export function registerInputEvents(
   };
   // This is used to emit a key up event without any params.
   const keyupEmpty = () => {
-    safeInput(core, {
+    core.input({
       type: "keyup",
     });
   };
