@@ -312,7 +312,7 @@ fn recognize_rotate_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<FloatTyp
         delta += FULL_ROTATION_DEGREES;
     }
 
-    (delta.abs() >= MIN_ROTATE_DELTA_DEGREES).then_some(delta)
+    (delta.abs() >= MIN_ROTATE_DELTA_DEGREES).then_some(-delta)
 }
 
 /// Detects single finger swipe movement.
