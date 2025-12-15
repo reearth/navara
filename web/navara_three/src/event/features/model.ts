@@ -169,8 +169,6 @@ export function processModelChanged(
   obj: ModelMesh,
   m: NavaraModelMesh,
   active: boolean,
-  _viewContext?: ViewContext,
-  _layerId?: string,
 ) {
   obj._update(m.material, active);
 }
