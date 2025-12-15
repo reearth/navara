@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.86.0
           targets: wasm32-unknown-unknown
@@ -72,9 +72,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: 1.86.0
 
       - uses: Swatinem/rust-cache@v2
         with:
