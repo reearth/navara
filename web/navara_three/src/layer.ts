@@ -60,14 +60,6 @@ export class Layer extends EventHandler<LayerEvent> {
   }
 
   /**
-   * Iterate over all feature evaluators registered on this layer
-   * @internal Exposed for ViewContext effect updates
-   */
-  _getFeatureEvaluators(): Iterable<FeatureEvaluator> {
-    return this.featureEvaluators.values();
-  }
-
-  /**
    * Process feature updates for all registered features
    * @internal Used by the animation loop
    */
