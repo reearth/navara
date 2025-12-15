@@ -582,6 +582,11 @@ pub struct RasterTerrainMaterial {
     pub elevation_decoder: ElevationDecoder,
     pub tile_size: u32,
     pub overscaled_max_zoom: usize,
+    /// Whether to render skirts along tile boundaries to hide gaps.
+    pub skirt: bool,
+    /// Multiplier for the automatically calculated skirt height.
+    /// A value of 1.0 uses the default calculated height.
+    pub skirt_exaggeration: f32,
 }
 
 impl Default for RasterTerrainMaterial {
@@ -596,6 +601,8 @@ impl Default for RasterTerrainMaterial {
             elevation_decoder: ElevationDecoder::default(),
             tile_size: 256,
             overscaled_max_zoom: 24,
+            skirt: true,
+            skirt_exaggeration: 1.0,
         }
     }
 }

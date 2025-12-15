@@ -13,6 +13,10 @@ pub struct UpsampleTerrainMeshMarker;
 #[derive(Component, Clone, Debug, Serialize)]
 pub struct UpsampleTerrainMeshParameters {
     pub tile_handle: TileHandle,
+    /// Whether to render skirts along tile boundaries.
+    pub skirt: bool,
+    /// Multiplier for the automatically calculated skirt height.
+    pub skirt_exaggeration: f32,
 }
 #[derive(Component, Clone, Debug, Serialize)]
 pub struct UpsampleTerrainMeshResult {

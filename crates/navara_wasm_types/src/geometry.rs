@@ -12,8 +12,16 @@ pub struct Geometry {
     vertices: Vec<f32>,
     /// Vector of UV for a texture. The stride is 2.
     uvs: Vec<f32>,
-    /// Vector of index that constracts a triangle.
+    /// Vector of index that constructs a triangle.
     indices: Vec<u32>,
+    /// Vector of skirt vertex. The stride is 3.
+    skirt_vertices: Option<Vec<f32>>,
+    /// Vector of skirt UV. The stride is 2.
+    skirt_uvs: Option<Vec<f32>>,
+    /// Vector of skirt index that constructs a triangle.
+    skirt_indices: Option<Vec<u32>>,
+    /// Mapping from skirt vertex index to edge vertex index in main geometry.
+    skirt_indices_to_edge: Option<Vec<u32>>,
 }
 
 #[wasm_bindgen]
@@ -24,6 +32,10 @@ impl Geometry {
             vertices,
             indices,
             uvs,
+            skirt_vertices: None,
+            skirt_uvs: None,
+            skirt_indices: None,
+            skirt_indices_to_edge: None,
         }
     }
 
@@ -41,6 +53,33 @@ impl Geometry {
     pub fn transfer_indices(&self) -> Uint32Array {
         copy_u32_array(&self.indices)
     }
+
+    #[wasm_bindgen(js_name = "transferSkirtVertices")]
+    pub fn transfer_skirt_vertices(&self) -> Option<Float32Array> {
+        self.skirt_vertices.as_ref().map(|v| copy_f32_array(v))
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtUvs")]
+    pub fn transfer_skirt_uvs(&self) -> Option<Float32Array> {
+        self.skirt_uvs.as_ref().map(|v| copy_f32_array(v))
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtIndices")]
+    pub fn transfer_skirt_indices(&self) -> Option<Uint32Array> {
+        self.skirt_indices.as_ref().map(|v| copy_u32_array(v))
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtIndicesToEdge")]
+    pub fn transfer_skirt_indices_to_edge(&self) -> Option<Uint32Array> {
+        self.skirt_indices_to_edge
+            .as_ref()
+            .map(|v| copy_u32_array(v))
+    }
+
+    #[wasm_bindgen(js_name = "hasSkirt")]
+    pub fn has_skirt(&self) -> bool {
+        self.skirt_vertices.is_some()
+    }
 }
 
 impl From<navara_geometry::Geometry> for Geometry {
@@ -49,6 +88,10 @@ impl From<navara_geometry::Geometry> for Geometry {
             vertices: d.vertices,
             uvs: d.uvs,
             indices: d.indices,
+            skirt_vertices: d.skirt_vertices,
+            skirt_uvs: d.skirt_uvs,
+            skirt_indices: d.skirt_indices,
+            skirt_indices_to_edge: d.skirt_indices_to_edge,
         }
     }
 }
@@ -59,6 +102,10 @@ impl From<Geometry> for navara_geometry::Geometry {
             vertices: d.vertices,
             uvs: d.uvs,
             indices: d.indices,
+            skirt_vertices: d.skirt_vertices,
+            skirt_uvs: d.skirt_uvs,
+            skirt_indices: d.skirt_indices,
+            skirt_indices_to_edge: d.skirt_indices_to_edge,
         }
     }
 }
@@ -109,6 +156,31 @@ impl ReturnedConstructedTerrainMesh {
     #[wasm_bindgen(js_name = "transferHeights")]
     pub fn transfer_heights(&self) -> Float32Array {
         copy_f32_array(&self.heights)
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtVertices")]
+    pub fn transfer_skirt_vertices(&self) -> Option<Float32Array> {
+        self.geometry.transfer_skirt_vertices()
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtUvs")]
+    pub fn transfer_skirt_uvs(&self) -> Option<Float32Array> {
+        self.geometry.transfer_skirt_uvs()
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtIndices")]
+    pub fn transfer_skirt_indices(&self) -> Option<Uint32Array> {
+        self.geometry.transfer_skirt_indices()
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtIndicesToEdge")]
+    pub fn transfer_skirt_indices_to_edge(&self) -> Option<Uint32Array> {
+        self.geometry.transfer_skirt_indices_to_edge()
+    }
+
+    #[wasm_bindgen(js_name = "hasSkirt")]
+    pub fn has_skirt(&self) -> bool {
+        self.geometry.has_skirt()
     }
 }
 
