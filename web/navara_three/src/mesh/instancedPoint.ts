@@ -3,19 +3,10 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 import type { ViewContext } from "../core";
 import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import { setTransform, type BufferLoader } from "../event";
+import { arraysEqual } from "../utils";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { PointMesh } from "./point";
-
-function arraysEqual(
-  a: string[] | undefined,
-  b: string[] | undefined,
-): boolean {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-  return a.every((v, i) => v === b[i]);
-}
 
 export class InstancedPointMesh extends InstancedMesh<PointMesh> {
   constructor(
@@ -91,9 +82,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
     // PostEffect: effectIds handling at container level
     // SpriteMaterial doesn't support emissive, so only effectIds is handled
-    if (!this.userData.prev) {
-      this.userData.prev = {};
-    }
+    this.userData.prev ??= {};
     const prev = this.userData.prev as { effectIds?: string[] };
     const viewContext = this.userData.viewContext as ViewContext | undefined;
     const layerId = this.userData.layerId as string | undefined;

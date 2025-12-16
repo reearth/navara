@@ -9,18 +9,9 @@ import {
   type LayerDeclarationConfig,
   type LayerDeclarationConfigUpdate,
 } from "./LayerDeclaration";
+import { arraysEqual } from "../utils";
 import { updatePostEffectLinksForObject } from "./PostEffectHelper";
 import type { ViewContext } from "./ViewContext";
-
-function arraysEqual(
-  a: string[] | undefined,
-  b: string[] | undefined,
-): boolean {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-  return a.every((v, i) => v === b[i]);
-}
 
 export type MeshLayerConfig = {
   type: "mesh";

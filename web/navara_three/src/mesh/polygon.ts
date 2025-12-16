@@ -50,23 +50,13 @@ import type { ViewContext } from "../core";
 import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
-import { createReplacer } from "../utils";
+import { arraysEqual, createReplacer } from "../utils";
 
 import {
   BatchedFeatureMesh,
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
-
-function arraysEqual(
-  a: string[] | undefined,
-  b: string[] | undefined,
-): boolean {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-  return a.every((v, i) => v === b[i]);
-}
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
