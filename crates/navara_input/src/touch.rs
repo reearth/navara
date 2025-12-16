@@ -176,10 +176,7 @@ fn recognize_single_finger_gesture(
 
     Some(TouchControl {
         gesture: TouchGesture::Swipe,
-        delta: Vec2::new(
-            delta.x / window.width,
-            delta.y / window.height,
-        ),
+        delta: Vec2::new(delta.x / window.width, delta.y / window.height),
     })
 }
 
