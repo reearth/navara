@@ -134,6 +134,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             ${HeightParsVertex}
             ${BillboardMatrix}
             ${PixelToWorld}
+            out vec3 vWorldPosition;
             `,
         )
         .replace(
@@ -149,6 +150,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
             // Anchor with additional height offset along globe normal
             vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+            vWorldPosition = worldAnchor.xyz;
             vec3 globeNormal = normalize(worldAnchor.xyz);
             worldAnchor.xyz += globeNormal * uAddHeight;
             vec4 anchorMv = viewMatrix * worldAnchor;
@@ -157,12 +159,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     
             gl_Position = projectionMatrix * newMvPosition;
             `,
-        )
-        .replace("vFragDepth = 1.0 + gl_Position.w;",
-          `
-              vFragDepth = 1.0 + gl_Position.w;
-              // vFragDepth -= 0.5; // Adjust offset 
-          `).source;
+        ).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
@@ -170,7 +167,23 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           `
       ${BatchDefinitioin}
       ${Pick}
-      void main() {
+        in vec3 vWorldPosition;
+
+        bool nvr_horizon_culled(vec3 worldPos, vec3 cameraPosition) {
+          const vec3 EARTH_RADIUS = vec3(6378137.0, 6378137.0,6356752.3142451793);
+
+          vec3 cameraPositionScaled = cameraPosition / EARTH_RADIUS;
+          vec3 worldPosScaled = worldPos / EARTH_RADIUS;
+
+          vec3 vt = cameraPositionScaled - worldPosScaled;
+          vec3 vc = cameraPositionScaled;
+          float a = dot(vc, vc) - 1.0;
+
+          return  dot(vt, vc) > a;
+        }
+
+        void main() {
+          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
             `,
         )
         .replace(
@@ -179,7 +192,9 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             if (nvr_uPickable > 0.0) {
               vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
               gl_FragColor = vec4(pickColor.xyz, 1.0);
-            }`,
+            }
+            gl_FragDepth = 0.0;  
+            `,
         ).source;
     };
 
@@ -223,6 +238,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         ${HeightParsVertex}
         ${BillboardMatrix}
         ${PixelToWorld}
+        out vec3 vWorldPosition;
         void main() {
           vUv = uv;
         `,
@@ -242,6 +258,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
         // Anchor with additional height offset along globe normal
         vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        vWorldPosition = worldAnchor.xyz;
         vec3 globeNormal = normalize(worldAnchor.xyz);
         worldAnchor.xyz += globeNormal * uAddHeight;
         vec4 anchorMv = viewMatrix * worldAnchor;
@@ -250,17 +267,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
         gl_Position = projectionMatrix * newMvPosition;
         `,
-        )
-        .replace("#include <logdepthbuf_vertex>",
-          `
-          #include <logdepthbuf_vertex>
-            // #ifdef USE_LOGARITHMIC_DEPTH_BUFFER
-
-            //   vFragDepth = 1.0 + gl_Position.w;
-            //   vFragDepth -= 0.5; // Adjust offset 
-            //   vIsPerspective = float( isPerspectiveMatrix( projectionMatrix ) );
-            // #endif
-          `).source;
+        ).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
@@ -315,7 +322,30 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               // If inside the inner shape, overwrite with fill color
               gl_FragColor = vec4(nvr_uFillColor, 1.0);
           }
+          
+          gl_FragDepth = 0.0;
         `,
+        )
+        .replace( 
+          "void main() {",
+        `
+        in vec3 vWorldPosition;
+
+        bool nvr_horizon_culled(vec3 worldPos, vec3 cameraPosition) {
+          const vec3 EARTH_RADIUS = vec3(6378137.0, 6378137.0,6356752.3142451793);
+
+          vec3 cameraPositionScaled = cameraPosition / EARTH_RADIUS;
+          vec3 worldPosScaled = worldPos / EARTH_RADIUS;
+
+          vec3 vt = cameraPositionScaled - worldPosScaled;
+          vec3 vc = cameraPositionScaled;
+          float a = dot(vc, vc) - 1.0;
+
+          return  dot(vt, vc) > a;
+        }
+
+        void main() {
+          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;`
         ).source;
     };
 
