@@ -9,27 +9,12 @@ script = ['''
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web
 if command -v wasm-opt &> /dev/null; then
     wasm-opt -O4 web/wasm/navara_engine_api/navara_wasm_api_bg.wasm -o web/wasm/navara_engine_api/navara_wasm_api_bg.wasm
+  else
+    echo "wasm-opt not found, skipping optimization"
 fi
 
 # Generate package.json for pnpm workspace
-cat > web/wasm/navara_engine_api/package.json << 'EOF'
-{
-  "name": "navara_wasm_api",
-  "type": "module",
-  "version": "0.1.0",
-  "license": "MIT/Apache-2.0",
-  "files": [
-    "navara_wasm_api_bg.wasm",
-    "navara_wasm_api.js",
-    "navara_wasm_api.d.ts"
-  ],
-  "main": "navara_wasm_api.js",
-  "types": "navara_wasm_api.d.ts",
-  "sideEffects": [
-    "./snippets/*"
-  ]
-}
-EOF
+cp crates/navara_wasm_api/_package.json web/wasm/navara_engine_api/package.json
 ''']
 
 [tasks.bindgen-rust-api.windows]
@@ -37,7 +22,8 @@ script = ['''
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web
 where wasm-opt >nul 2>&1 && wasm-opt -O4 web/wasm/navara_engine_api/navara_wasm_api_bg.wasm -o web/wasm/navara_engine_api/navara_wasm_api_bg.wasm || echo "wasm-opt not found, skipping optimization"
 
-echo {"name": "navara_wasm_api", "type": "module", "version": "0.1.0", "license": "MIT/Apache-2.0","files":["navara_wasm_api_bg.wasm","navara_wasm_api.js","navara_wasm_api.d.ts"], "main": "navara_wasm_api.js", "types": "navara_wasm_api.d.ts"} > web/wasm/navara_engine_api/package.json
+ REM Generate package.json for pnpm workspace
+copy /Y "crates\navara_wasm_api\_package.json" "web\wasm\navara_engine_api\package.json"
 ''']
 
 [tasks.bindgen-dev-rust-api]
@@ -47,29 +33,13 @@ script = ['''
 wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web --keep-debug
 
 # Generate package.json for pnpm workspace
-cat > web/wasm/navara_engine_api/package.json << 'EOF'
-{
-  "name": "navara_wasm_api",
-  "type": "module",
-  "version": "0.1.0",
-  "license": "MIT/Apache-2.0",
-  "files": [
-    "navara_wasm_api_bg.wasm",
-    "navara_wasm_api.js",
-    "navara_wasm_api.d.ts"
-  ],
-  "main": "navara_wasm_api.js",
-  "types": "navara_wasm_api.d.ts",
-  "sideEffects": [
-    "./snippets/*"
-  ]
-}
-EOF
+cp crates/navara_wasm_api/_package.json web/wasm/navara_engine_api/package.json
 ''']
 
 [tasks.bindgen-dev-rust-api.windows]
 script = ['''
 wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web --keep-debug
 
-echo {"name": "navara_wasm_api", "type": "module", "version": "0.1.0", "license": "MIT/Apache-2.0", "main": "navara_wasm_api.js", "types": "navara_wasm_api.d.ts"} > web/wasm/navara_engine_api/package.json
+REM Generate package.json for pnpm workspace
+copy /Y "crates\navara_wasm_api\_package.json" "web\wasm\navara_engine_api\package.json"
 ''']
