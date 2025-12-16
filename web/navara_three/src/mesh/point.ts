@@ -48,6 +48,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
           uniform vec2 center;
           ${HeightParsVertex}
           out vec2 sprite_uv;
+          out vec3 vWorldPosition;
           `,
         )
         .replace(
@@ -55,6 +56,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
           `
           // Offset anchor world position along globe normal by addHeight
           vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          vWorldPosition = worldPosition.xyz;
           vec3 globeNormal = normalize(worldPosition.xyz);
           worldPosition.xyz += globeNormal * uAddHeight;
           vec4 mvPosition = viewMatrix * worldPosition;
@@ -97,8 +99,32 @@ export class PointMesh extends Sprite implements FeatureMesh {
             vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
             gl_FragColor = vec4(pickColor.xyz, 1.0);
           }
+          gl_FragDepth = 0.0;
           `,
+        )
+        .replace(
+          `void main() {`,
+        `
+        in vec3 vWorldPosition;
+
+        bool nvr_horizon_culled(vec3 worldPos, vec3 cameraPosition) {
+          const vec3 EARTH_RADIUS = vec3(6378137.0, 6378137.0,6356752.3142451793);
+
+          vec3 cameraPositionScaled = cameraPosition / EARTH_RADIUS;
+          vec3 worldPosScaled = worldPos / EARTH_RADIUS;
+
+          vec3 vt = cameraPositionScaled - worldPosScaled;
+          vec3 vc = cameraPositionScaled;
+          float a = dot(vc, vc) - 1.0;
+
+          return  dot(vt, vc) > a;
+        }
+
+        void main() {
+          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
+            `,
         ).source;
+
     };
 
     if (meshMaterial.center) {

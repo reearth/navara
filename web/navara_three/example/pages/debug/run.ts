@@ -31,78 +31,78 @@ const geoLayersDef: MaterialLayerDescription[] = [
       opacity: 1,
     },
   },
-  // {
-  //   type: "geojson",
-  //   data: {
-  //     url: GEOJSON_DATASETS.calderdaleDefibrillators.url,
-  //   },
-  //   point: {
-  //     color: new Color().setStyle("#ff00ff"),
-  //     size: 0.1,
-  //     height: 1,
-  //     scaleByDistance: true,
-  //     clampToGround: true,
-  //     transparent: false,
-  //     depthTest: true,
-  //   },
-  // },
-  // {
-  //   type: "geojson",
-  //   data: {
-  //     type: "FeatureCollection",
-  //     features: [
-  //       {
-  //         type: "Feature",
-  //         properties: {},
-  //         geometry: {
-  //           coordinates: [139.70513431449842, 35.69279782617761],
-  //           type: "Point",
-  //         },
-  //       },
-  //       {
-  //         type: "Feature",
-  //         properties: {},
-  //         geometry: {
-  //           coordinates: [140.13033810546995, 35.60447056434825],
-  //           type: "Point",
-  //         },
-  //       },
-  //       {
-  //         type: "Feature",
-  //         properties: {},
-  //         geometry: {
-  //           coordinates: [139.64591330307843, 35.85950281451436],
-  //           type: "Point",
-  //         },
-  //       },
-  //       {
-  //         type: "Feature",
-  //         properties: {},
-  //         geometry: {
-  //           coordinates: [139.63564871528018, 35.44128807202607],
-  //           type: "Point",
-  //         },
-  //       },
-  //       {
-  //         type: "Feature",
-  //         properties: {},
-  //         geometry: {
-  //           coordinates: [139.28453080888477, 35.51560883529815],
-  //           type: "Point",
-  //         },
-  //       },
-  //     ],
-  //   },
-  //   point: {
-  //     color: new Color().setStyle("#ffffff"),
-  //     size: 0.1,
-  //     height: 1,
-  //     scaleByDistance: true,
-  //     clampToGround: true,
-  //     transparent: false,
-  //     depthTest: true,
-  //   },
-  // },
+  {
+    type: "geojson",
+    data: {
+      url: GEOJSON_DATASETS.calderdaleDefibrillators.url,
+    },
+    point: {
+      color: new Color().setStyle("#ff00ff"),
+      size: 0.1,
+      height: 1,
+      scaleByDistance: true,
+      clampToGround: true,
+      transparent: false,
+      depthTest: true,
+    },
+  },
+  {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [139.70513431449842, 35.69279782617761],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [140.13033810546995, 35.60447056434825],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [139.64591330307843, 35.85950281451436],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [139.63564871528018, 35.44128807202607],
+            type: "Point",
+          },
+        },
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            coordinates: [139.28453080888477, 35.51560883529815],
+            type: "Point",
+          },
+        },
+      ],
+    },
+    point: {
+      color: new Color().setStyle("#ffffff"),
+      size: 0.1,
+      height: 1,
+      scaleByDistance: true,
+      clampToGround: true,
+      transparent: false,
+      depthTest: true,
+    },
+  },
 
   {
     type: "geojson",
