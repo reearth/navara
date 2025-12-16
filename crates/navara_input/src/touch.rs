@@ -158,10 +158,7 @@ fn recognize_two_finger_gesture(touch_list: &TouchList, window: &Window) -> Opti
         },
         TouchGesture::DoubleSwipe => TouchControl {
             gesture: TouchGesture::DoubleSwipe,
-            delta: Vec2::new(
-                0.0,
-                gesture_candidates.double_swipe? / window.height as f64,
-            ),
+            delta: Vec2::new(0.0, gesture_candidates.double_swipe? / window.height),
         },
         TouchGesture::Swipe => return None, // Not applicable for two fingers
     };
@@ -180,8 +177,8 @@ fn recognize_single_finger_gesture(
     Some(TouchControl {
         gesture: TouchGesture::Swipe,
         delta: Vec2::new(
-            delta.x / window.width as f64,
-            delta.y / window.height as f64,
+            delta.x / window.width,
+            delta.y / window.height,
         ),
     })
 }
