@@ -15,6 +15,7 @@ import {
   PlaneGeometry,
   Vector2,
   Vector3,
+  LessDepth,
 } from "three";
 import { Text } from "troika-three-text";
 
@@ -111,6 +112,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     txt.outlineOpacity = meshMaterial.outlineOpacity ?? 1.0;
     txt.outlineWidth = 0.0; // Always start with 0 to prevent sampling size optimization issues
 
+    txt.material.depthFunc = LessDepth;
     (txt.material as Material).onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
@@ -215,6 +217,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     const backgroundMaterial = new MeshBasicMaterial();
     const background = new Mesh(new PlaneGeometry(), backgroundMaterial);
 
+    background.material.depthFunc = LessDepth;
     background.material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;

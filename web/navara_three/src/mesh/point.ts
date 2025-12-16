@@ -4,7 +4,7 @@ import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
-import { Color, Sprite, SpriteMaterial } from "three";
+import { Color, LessDepth, Sprite, SpriteMaterial } from "three";
 
 import { createReplacer } from "../utils";
 
@@ -33,6 +33,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    material.depthFunc = LessDepth;  
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);

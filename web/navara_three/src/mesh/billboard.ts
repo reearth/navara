@@ -3,7 +3,7 @@ import { BillboardMaterial as NavaraBillboardMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
-import { Color, Sprite, SpriteMaterial } from "three";
+import { Color, Sprite, SpriteMaterial, LessDepth} from "three";
 import invariant from "tiny-invariant";
 
 import { TEXTURE_LOADER } from "../event/loaders";
@@ -41,6 +41,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    material.depthFunc = LessDepth;
     material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
