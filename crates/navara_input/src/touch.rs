@@ -1,33 +1,33 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use bevy_ecs::event::{Event, EventReader, EventWriter};
 use bevy_ecs::resource::Resource;
 use bevy_ecs::system::{Res, ResMut};
 
-use navara_math::{EqualEpsilon, FloatType, Vec2};
+use navara_math::{EqualEpsilon, Vec2};
 use navara_window::Window;
 
 /// Epsilon threshold for detecting parallel finger movement in double swipe gestures.
 /// A dot product within this range of 1.0 indicates nearly parallel vectors.
-const PARALLEL_DOT_EPSILON: FloatType = 0.1;
+const PARALLEL_DOT_EPSILON: f64 = 0.1;
 
 /// Minimum per-frame delta (in pixels) to consider a swipe gesture.
-const MIN_SWIPE_DELTA_PX: FloatType = 1.0;
+const MIN_SWIPE_DELTA_PX: f64 = 1.0;
 
 /// Minimum per-frame delta (in pixels) to consider a double swipe gesture.
-const MIN_DOUBLE_SWIPE_DELTA_PX: FloatType = 1.0;
+const MIN_DOUBLE_SWIPE_DELTA_PX: f64 = 1.0;
 
 /// Minimum per-frame distance change (in pixels) to consider a pinch or spread gesture.
-const MIN_SPREAD_PINCH_DELTA_PX: FloatType = 1.0;
+const MIN_SPREAD_PINCH_DELTA_PX: f64 = 1.0;
 
 /// Minimum per-frame angle change (in degrees) to consider a rotation gesture.
-const MIN_ROTATE_DELTA_DEGREES: FloatType = 0.5;
+const MIN_ROTATE_DELTA_DEGREES: f64 = 0.5;
 
 /// Full rotation in degrees, used for angle normalization.
-const FULL_ROTATION_DEGREES: FloatType = 360.0;
+const FULL_ROTATION_DEGREES: f64 = 360.0;
 
 /// Half rotation in degrees, used for angle wrapping.
-const HALF_ROTATION_DEGREES: FloatType = 180.0;
+const HALF_ROTATION_DEGREES: f64 = 180.0;
 
 /// Represents the current state of a touch point.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -62,7 +62,7 @@ pub struct TouchPoint {
 /// Resource tracking all active touch points by their unique identifiers.
 #[derive(Default, Debug, Clone, PartialEq, Resource)]
 pub struct TouchList {
-    pub touches: HashMap<i32, TouchPoint>,
+    pub touches: FxHashMap<i32, TouchPoint>,
 }
 
 /// Event representing raw touch input from the platform.
@@ -160,7 +160,7 @@ fn recognize_two_finger_gesture(touch_list: &TouchList, window: &Window) -> Opti
             gesture: TouchGesture::DoubleSwipe,
             delta: Vec2::new(
                 0.0,
-                gesture_candidates.double_swipe? / window.height as FloatType,
+                gesture_candidates.double_swipe? / window.height as f64,
             ),
         },
         TouchGesture::Swipe => return None, // Not applicable for two fingers
@@ -180,17 +180,17 @@ fn recognize_single_finger_gesture(
     Some(TouchControl {
         gesture: TouchGesture::Swipe,
         delta: Vec2::new(
-            delta.x / window.width as FloatType,
-            delta.y / window.height as FloatType,
+            delta.x / window.width as f64,
+            delta.y / window.height as f64,
         ),
     })
 }
 
 /// Holds candidate gesture deltas for disambiguation.
 struct GestureCandidates {
-    rotate: Option<FloatType>,
-    spread_pinch: Option<FloatType>,
-    double_swipe: Option<FloatType>,
+    rotate: Option<f64>,
+    spread_pinch: Option<f64>,
+    double_swipe: Option<f64>,
 }
 
 impl GestureCandidates {
@@ -208,7 +208,7 @@ impl GestureCandidates {
         let double_swipe_magnitude = self.double_swipe.map(|d| d.abs());
 
         // Find the gesture with maximum magnitude
-        let mut max_magnitude: Option<FloatType> = None;
+        let mut max_magnitude: Option<f64> = None;
         let mut dominant = None;
 
         if let Some(mag) = rotate_magnitude {
@@ -243,7 +243,7 @@ impl GestureCandidates {
 /// Detects parallel two-finger swipe movement.
 ///
 /// Returns the Y-axis delta if both fingers are moving in nearly the same direction.
-fn recognize_double_swipe_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<FloatType> {
+fn recognize_double_swipe_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<f64> {
     let p1_prev = p1.prev_position?;
     let p2_prev = p2.prev_position?;
 
@@ -276,7 +276,7 @@ fn recognize_double_swipe_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<Fl
 ///
 /// Returns positive delta when fingers move together (pinch),
 /// negative delta when fingers move apart (spread).
-fn recognize_spread_pinch_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<FloatType> {
+fn recognize_spread_pinch_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<f64> {
     let p1_prev = p1.prev_position?;
     let p2_prev = p2.prev_position?;
 
@@ -296,7 +296,7 @@ fn recognize_spread_pinch_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<Fl
 /// Detects rotation gesture based on angular change between two touch points.
 ///
 /// Returns the rotation delta in degrees, normalized to [-180, 180] range.
-fn recognize_rotate_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<FloatType> {
+fn recognize_rotate_gesture(p1: &TouchPoint, p2: &TouchPoint) -> Option<f64> {
     let p1_prev = p1.prev_position?;
     let p2_prev = p2.prev_position?;
 
