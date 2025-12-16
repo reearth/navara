@@ -1,12 +1,12 @@
 import type { XYZ } from "@navara/core";
 import { ArrowHelper, Vector3 } from "three";
 
+import { Color } from "../../Color";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
 } from "../../core";
-import { Color } from "../../Color";
 
 type LayerDescription = {
   arrowHelper?: {

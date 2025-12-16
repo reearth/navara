@@ -1,12 +1,12 @@
 import { BoxGeometry, Mesh, MeshLambertMaterial } from "three";
 
+import { Color } from "../../Color";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
-import { Color } from "../../Color";
 
 type LayerDescription = {
   box?: {
