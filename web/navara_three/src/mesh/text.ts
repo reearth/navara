@@ -157,7 +157,12 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     
             gl_Position = projectionMatrix * newMvPosition;
             `,
-        ).source;
+        )
+        .replace("vFragDepth = 1.0 + gl_Position.w;",
+          `
+              vFragDepth = 1.0 + gl_Position.w;
+              // vFragDepth -= 0.5; // Adjust offset 
+          `).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
@@ -245,7 +250,17 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
         gl_Position = projectionMatrix * newMvPosition;
         `,
-        ).source;
+        )
+        .replace("#include <logdepthbuf_vertex>",
+          `
+          #include <logdepthbuf_vertex>
+            // #ifdef USE_LOGARITHMIC_DEPTH_BUFFER
+
+            //   vFragDepth = 1.0 + gl_Position.w;
+            //   vFragDepth -= 0.5; // Adjust offset 
+            //   vIsPerspective = float( isPerspectiveMatrix( projectionMatrix ) );
+            // #endif
+          `).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(

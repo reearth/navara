@@ -46,7 +46,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       // Pass height uniform to shader
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
-
+      
       // Declare uniform in vertex shader and apply to position
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -84,8 +84,14 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
           gl_FragColor = vec4(pickColor.xyz, 1.0);
         }
+        gl_FragDepth = 0.0;
         `,
         ).source;
+
+      // console.log("==============================================");
+      // console.log("BillboardShader", shader.fragmentShader);
+      // console.log("==============================================");
+
     };
 
     this.userData.batchId = batchId;
