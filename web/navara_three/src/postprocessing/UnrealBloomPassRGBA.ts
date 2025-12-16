@@ -50,7 +50,7 @@ export class UnrealBloomPassRGBA extends Pass {
   public resolution: Vector2;
   public clearColor: Color;
 
-  private renderTargetsHorizontal: WebGLRenderTarget[] = [];
+  public readonly renderTargetsHorizontal: WebGLRenderTarget[] = [];
   private renderTargetsVertical: WebGLRenderTarget[] = [];
   private nMips = 5;
   private renderTargetBright!: WebGLRenderTarget;

@@ -18,7 +18,6 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
@@ -45,6 +44,20 @@ export class PolylineMesh extends BatchedFeatureMesh<
   BufferGeometry<Attributes>,
   ShaderMaterial
 > {
+  /** ViewContext for PostEffect handling */
+  private _viewContext?: ViewContext;
+  /** Layer ID for PostEffect handling */
+  private _layerId?: string;
+
+  /**
+   * Set PostEffect context (viewContext and layerId)
+   * Called from feature rendering to enable PostEffect handling
+   */
+  setPostEffectContext(viewContext: ViewContext, layerId: string): void {
+    this._viewContext = viewContext;
+    this._layerId = layerId;
+  }
+
   constructor(
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
@@ -135,7 +148,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
 
     geometry.setIndex(new BufferAttribute(indices, 1));
-    // geometry.computeVertexNormals();
 
     this.userData.batchIds = batchIds;
     this.userData.batchIdSize = batchIdSize;
@@ -270,15 +282,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     // PostEffect: effectIds handling
     // ShaderMaterial doesn't have built-in emissive, so only effectIds is handled
-    const viewContext = this.userData.viewContext as ViewContext | undefined;
-    const layerId = this.userData.layerId as string | undefined;
-    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
-      updatePostEffectLinksForObject(
+    if (this._layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      this._viewContext?.postEffectRegistry?.updateLinksForObject(
         this,
-        viewContext?.postEffectRegistry,
         material.effectIds ?? [],
         prev.effectIds ?? [],
-        layerId,
+        this._layerId,
       );
       prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }

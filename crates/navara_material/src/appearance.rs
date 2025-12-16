@@ -74,7 +74,8 @@ pub struct PointMaterial {
     pub transparent: bool,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<u8>,
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    pub post_effect_occlusion: Option<String>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -134,7 +135,8 @@ pub struct BillboardMaterial {
     pub alpha_test: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<u8>,
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    pub post_effect_occlusion: Option<String>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -262,7 +264,8 @@ pub struct PolylineMaterial {
     pub internal: Option<PolylineInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<u8>,
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    pub post_effect_occlusion: Option<String>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -335,7 +338,8 @@ pub struct PolygonMaterial {
     pub ior: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<u8>,
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    pub post_effect_occlusion: Option<String>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }
@@ -428,7 +432,8 @@ pub struct ModelMaterial {
     pub internal: Option<ModelInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
-    pub post_effect_occlusion: Option<u8>,
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    pub post_effect_occlusion: Option<String>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
 }

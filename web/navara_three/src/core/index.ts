@@ -42,6 +42,7 @@ export {
   type PostEffectResources,
   type PostEffectConfig,
   type PostEffectOcclusion,
+  type PostEffectOcclusionValue,
   type MaskPassType,
   type ActiveEffectsResult,
   // Constants
@@ -59,6 +60,7 @@ export {
   getPostEffectConfig,
   hasPostEffectConfig,
   ensurePostEffectUserData,
-  updatePostEffectLinksForObject,
+  applyMaskPassUniforms,
+  parsePostEffectOcclusion,
 } from "./PostEffectHelper";
 export { PostEffectManager } from "./PostEffectManager";

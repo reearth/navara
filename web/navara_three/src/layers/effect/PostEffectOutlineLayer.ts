@@ -38,20 +38,24 @@ import {
 // PostEffect Outline configuration
 export type PostEffectOutlineConfig = {
   postEffect: true;
-  postEffectOutline: {
+  outline: {
     color?: number;
     thickness?: number;
     edgeStrength?: number;
+    resolutionScale?: number;
+    debugMask?: boolean;
   };
   resolutionScale?: number;
   debugMask?: boolean;
 } & EffectLayerConfig;
 
 export type PostEffectOutlineUpdate = {
-  postEffectOutline?: {
+  outline?: {
     color?: number;
     thickness?: number;
     edgeStrength?: number;
+    resolutionScale?: number;
+    debugMask?: boolean;
   };
   resolutionScale?: number;
   debugMask?: boolean;
@@ -63,13 +67,13 @@ const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
  * Post Effect Outline Layer
- * Uses scene.traverse() and per-pixel occlusionMode for efficient outline rendering
+ * Renders selective outline using mask-based filtering via renderMaskForMode()
  */
 export class PostEffectOutlineLayer extends PostEffectLayer<
   PostEffectOutlineConfig,
   PostEffectOutlineUpdate
 > {
-  static key = "postEffectOutline";
+  static key = "outline";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
@@ -85,29 +89,28 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
     const baseConfig = config as Partial<PostEffectOutlineConfig>;
-    const postEffectOutlineConfig =
-      "postEffectOutline" in config ? baseConfig.postEffectOutline : undefined;
+    const outlineConfig = "outline" in config ? baseConfig.outline : undefined;
 
     const postEffectConfig: PostEffectOutlineConfig = {
       ...(config as PostEffectOutlineConfig),
       postEffect: true,
-      resolutionScale: baseConfig.resolutionScale ?? 1.0,
-      debugMask: baseConfig.debugMask ?? false,
-      postEffectOutline: {
-        color: postEffectOutlineConfig?.color ?? DEFAULT_COLOR,
-        thickness: postEffectOutlineConfig?.thickness ?? DEFAULT_THICKNESS,
-        edgeStrength:
-          postEffectOutlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
+      resolutionScale: outlineConfig?.resolutionScale ?? 1.0,
+      debugMask: outlineConfig?.debugMask ?? false,
+      outline: {
+        color: outlineConfig?.color ?? DEFAULT_COLOR,
+        thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
+        edgeStrength: outlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
+        resolutionScale: outlineConfig?.resolutionScale ?? 1.0,
+        debugMask: outlineConfig?.debugMask ?? false,
       },
     };
 
     super(view, postEffectConfig);
 
-    this.outlineColor = this.config.postEffectOutline?.color ?? DEFAULT_COLOR;
-    this.outlineThickness =
-      this.config.postEffectOutline?.thickness ?? DEFAULT_THICKNESS;
+    this.outlineColor = this.config.outline?.color ?? DEFAULT_COLOR;
+    this.outlineThickness = this.config.outline?.thickness ?? DEFAULT_THICKNESS;
     this.outlineEdgeStrength =
-      this.config.postEffectOutline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
+      this.config.outline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
   }
 
   createPass() {
@@ -119,28 +122,47 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
   }
 
   onUpdateConfig(updates: PostEffectOutlineUpdate): void {
+    // Handle debugMask/resolutionScale from outline first
+    if (updates.outline) {
+      const next = updates.outline;
+      if (next.debugMask !== undefined) {
+        super.onUpdateConfig({ debugMask: next.debugMask });
+      }
+      if (next.resolutionScale !== undefined) {
+        super.onUpdateConfig({ resolutionScale: next.resolutionScale });
+      }
+    }
+
     super.onUpdateConfig(updates);
 
-    if (updates.postEffectOutline) {
-      const next = updates.postEffectOutline;
+    if (updates.outline) {
+      const next = updates.outline;
 
-      if (!this.config.postEffectOutline) {
-        this.config.postEffectOutline = {};
+      if (!this.config.outline) {
+        this.config.outline = {};
       }
 
       if (next.color !== undefined) {
         this.outlineColor = next.color;
-        this.config.postEffectOutline.color = next.color;
+        this.config.outline.color = next.color;
       }
 
       if (next.thickness !== undefined) {
         this.outlineThickness = next.thickness;
-        this.config.postEffectOutline.thickness = next.thickness;
+        this.config.outline.thickness = next.thickness;
       }
 
       if (next.edgeStrength !== undefined) {
         this.outlineEdgeStrength = next.edgeStrength;
-        this.config.postEffectOutline.edgeStrength = next.edgeStrength;
+        this.config.outline.edgeStrength = next.edgeStrength;
+      }
+
+      if (next.debugMask !== undefined) {
+        this.config.outline.debugMask = next.debugMask;
+      }
+
+      if (next.resolutionScale !== undefined) {
+        this.config.outline.resolutionScale = next.resolutionScale;
       }
 
       this.outlinePass?.setParameters(
@@ -190,9 +212,9 @@ class PostEffectOutlinePass extends PostProcessingPass {
     this.layer = layer;
 
     const renderer =
-      layer["view"].renderPassOrchestrator.effectComposer.getRenderer();
+      layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer["config"].resolutionScale ?? 1.0;
+    const resolutionScale = layer.layerConfig.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -356,7 +378,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
         stencilBuffer: true,
       },
     );
-    this.depthEnabledMaskRT.texture.name = `PostEffectMask_postEffectOutline_DepthEnabled_${layer.id}`;
+    this.depthEnabledMaskRT.texture.name = `PostEffectMask_outline_DepthEnabled_${layer.id}`;
     this.depthEnabledMaskRT.depthTexture = new DepthTexture(
       initialWidth,
       initialHeight,
@@ -369,7 +391,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
       depthBuffer: true,
       stencilBuffer: true,
     });
-    this.silhouetteMaskRT.texture.name = `PostEffectMask_postEffectOutline_Silhouette_${layer.id}`;
+    this.silhouetteMaskRT.texture.name = `PostEffectMask_outline_Silhouette_${layer.id}`;
 
     // DepthEnabled edge detection result
     this.depthEnabledEdgeRT = new WebGLRenderTarget(
@@ -449,9 +471,9 @@ class PostEffectOutlinePass extends PostProcessingPass {
   ): void {
     renderMaskForMode(
       renderer,
-      this.layer["view"].camera,
-      this.layer["view"].scenes,
-      this.layer["view"].postEffectRegistry,
+      this.layer.viewContext.camera,
+      this.layer.viewContext.scenes,
+      this.layer.viewContext.postEffectRegistry,
       targetMode,
       targetRT,
       hasOutlineEffect,
@@ -485,7 +507,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
       this.depthClipScene,
       this.fullscreenCamera,
       this.depthEnabledMaskRT,
-      this.layer["getBaseDepthTexture"](),
+      this.layer.getBaseDepthTexture(),
       this.depthClipRT,
     );
 
@@ -524,7 +546,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer["config"].debugMask) {
+    if (this.layer.layerConfig.debugMask) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

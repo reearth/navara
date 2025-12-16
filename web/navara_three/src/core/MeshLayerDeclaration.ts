@@ -2,6 +2,7 @@ import type { BaseEventMap, XYZ } from "@navara/core";
 import { Object3D } from "three";
 
 import type { Scenes } from "../scene";
+import { arraysEqual } from "../utils";
 
 import {
   LayerDeclaration,
@@ -9,8 +10,10 @@ import {
   type LayerDeclarationConfig,
   type LayerDeclarationConfigUpdate,
 } from "./LayerDeclaration";
-import { arraysEqual } from "../utils";
-import { updatePostEffectLinksForObject } from "./PostEffectHelper";
+import {
+  type PostEffectOcclusion,
+  parsePostEffectOcclusion,
+} from "./PostEffectHelper";
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
@@ -19,7 +22,7 @@ export type MeshLayerConfig = {
   scale?: XYZ;
   rotation?: XYZ;
   effectIds?: string[];
-  postEffectOcclusion?: number;
+  postEffectOcclusion?: PostEffectOcclusion;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
@@ -28,7 +31,7 @@ export type MeshLayerUpdate = Pick<
 > &
   LayerDeclarationConfigUpdate & {
     effectIds?: string[];
-    postEffectOcclusion?: number;
+    postEffectOcclusion?: PostEffectOcclusion;
   };
 
 type PassKey = keyof Pick<
@@ -60,7 +63,7 @@ export abstract class MeshLayerDeclaration<
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
   private _effectIds: string[] = [];
-  private _postEffectOcclusion?: number;
+  private _postEffectOcclusion?: PostEffectOcclusion;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
@@ -96,12 +99,6 @@ export abstract class MeshLayerDeclaration<
   onCreate() {
     this._instance = this.createMesh();
 
-    // Store viewContext/layerId in userData for PostEffect
-    if (this.raw) {
-      this.raw.userData.viewContext = this.view;
-      this.raw.userData.layerId = this.id;
-    }
-
     if (this.position) {
       this.raw?.position.copy(this.position);
     }
@@ -120,9 +117,8 @@ export abstract class MeshLayerDeclaration<
     // PostEffect: effectIds / occlusion wiring
     // ----------------------------------------------------------------------------
     if (this._effectIds.length > 0 && this.raw) {
-      updatePostEffectLinksForObject(
+      this.view.postEffectRegistry?.updateLinksForObject(
         this.raw,
-        this.view.postEffectRegistry,
         this._effectIds,
         [],
         this.id,
@@ -131,10 +127,13 @@ export abstract class MeshLayerDeclaration<
 
     // Register initial postEffectOcclusion
     if (this._postEffectOcclusion !== undefined) {
-      this.view.postEffectRegistry?.registerLayerPostEffectOcclusion(
-        this.id,
-        this._postEffectOcclusion,
-      );
+      const occlusion = parsePostEffectOcclusion(this._postEffectOcclusion);
+      if (occlusion !== undefined) {
+        this.view.postEffectRegistry?.registerLayerPostEffectOcclusion(
+          this.id,
+          occlusion,
+        );
+      }
     }
 
     this.onPassKeyChange();
@@ -188,9 +187,8 @@ export abstract class MeshLayerDeclaration<
       const nextEffectIds = updates.effectIds ?? [];
 
       if (!arraysEqual(prevEffectIds, nextEffectIds)) {
-        updatePostEffectLinksForObject(
+        this.view.postEffectRegistry?.updateLinksForObject(
           this.raw,
-          this.view.postEffectRegistry,
           nextEffectIds,
           prevEffectIds,
           this.id,
@@ -202,10 +200,13 @@ export abstract class MeshLayerDeclaration<
     // Update postEffectOcclusion
     if (updates.postEffectOcclusion !== undefined) {
       this._postEffectOcclusion = updates.postEffectOcclusion;
-      this.view.postEffectRegistry?.updateLayerPostEffectOcclusion(
-        this.id,
-        updates.postEffectOcclusion,
-      );
+      const occlusion = parsePostEffectOcclusion(updates.postEffectOcclusion);
+      if (occlusion !== undefined) {
+        this.view.postEffectRegistry?.updateLayerPostEffectOcclusion(
+          this.id,
+          occlusion,
+        );
+      }
     }
 
     this.onPassKeyChange();
@@ -226,9 +227,8 @@ export abstract class MeshLayerDeclaration<
     // PostEffect: effectIds cleanup
     // ----------------------------------------------------------------------------
     if (this._effectIds.length > 0 && this.raw) {
-      updatePostEffectLinksForObject(
+      this.view.postEffectRegistry?.updateLinksForObject(
         this.raw,
-        this.view.postEffectRegistry,
         [],
         this._effectIds,
         this.id,

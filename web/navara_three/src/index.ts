@@ -1140,8 +1140,8 @@ export default class ThreeView<
 
     // PostEffect effects
     this.registerEffect("testPostEffect", TestPostEffectLayer);
-    this.registerEffect("postEffectBloom", PostEffectBloomLayer);
-    this.registerEffect("postEffectOutline", PostEffectOutlineLayer);
+    this.registerEffect("bloom", PostEffectBloomLayer);
+    this.registerEffect("outline", PostEffectOutlineLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);

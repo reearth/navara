@@ -159,7 +159,7 @@ export async function renderModel(
   );
 
   if (layerId) {
-    scene.userData.layerId = layerId;
+    scene.setLayerId(layerId);
   }
 
   return scene;

@@ -26,12 +26,10 @@ pub struct PointMaterial {
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    /// Depth behavior for post effect mask passes:
-    /// 0 = Normal (depthTest + depthWrite enabled)
-    /// 2 = Silhouette (no depthTest/depthWrite)
-    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
-    pub post_effect_occlusion: Option<u8>,
+    pub post_effect_occlusion: Option<String>,
     /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
@@ -75,7 +73,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             depth_test: Some(value.depth_test),
             transparent: Some(value.transparent),
             effect_ids: value.effect_ids.clone(),
-            post_effect_occlusion: value.post_effect_occlusion,
+            post_effect_occlusion: value.post_effect_occlusion.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -117,12 +115,10 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    /// Depth behavior for post effect mask passes:
-    /// 0 = Normal (depthTest + depthWrite enabled)
-    /// 2 = Silhouette (no depthTest/depthWrite)
-    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
-    pub post_effect_occlusion: Option<u8>,
+    pub post_effect_occlusion: Option<String>,
     /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
@@ -170,7 +166,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
             effect_ids: value.effect_ids.clone(),
-            post_effect_occlusion: value.post_effect_occlusion,
+            post_effect_occlusion: value.post_effect_occlusion.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -316,12 +312,10 @@ pub struct PolylineMaterial {
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    /// Depth behavior for post effect mask passes:
-    /// 0 = Normal (depthTest + depthWrite enabled)
-    /// 2 = Silhouette (no depthTest/depthWrite)
-    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
-    pub post_effect_occlusion: Option<u8>,
+    pub post_effect_occlusion: Option<String>,
     /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
@@ -398,7 +392,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
-            post_effect_occlusion: value.post_effect_occlusion,
+            post_effect_occlusion: value.post_effect_occlusion.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -539,12 +533,10 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    /// Depth behavior for post effect mask passes:
-    /// 0 = Normal (depthTest + depthWrite enabled)
-    /// 2 = Silhouette (no depthTest/depthWrite)
-    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
-    pub post_effect_occlusion: Option<u8>,
+    pub post_effect_occlusion: Option<String>,
     /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
@@ -690,7 +682,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             specular: Some(value.specular),
             ior: Some(value.ior),
             effect_ids: value.effect_ids.clone(),
-            post_effect_occlusion: value.post_effect_occlusion,
+            post_effect_occlusion: value.post_effect_occlusion.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }
@@ -840,12 +832,10 @@ pub struct ModelMaterial {
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
-    /// Depth behavior for post effect mask passes:
-    /// 0 = Normal (depthTest + depthWrite enabled)
-    /// 2 = Silhouette (no depthTest/depthWrite)
-    #[wasm_bindgen(js_name = postEffectOcclusion)]
+    /// Depth behavior for post effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = postEffectOcclusion)]
     #[serde(rename = "postEffectOcclusion")]
-    pub post_effect_occlusion: Option<u8>,
+    pub post_effect_occlusion: Option<String>,
     /// Emissive glow intensity (default: 0.3 when Bloom enabled)
     #[wasm_bindgen(js_name = emissiveIntensity)]
     #[serde(rename = "emissiveIntensity")]
@@ -930,7 +920,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             show_bounding_box: Some(value.show_bounding_box),
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
-            post_effect_occlusion: value.post_effect_occlusion,
+            post_effect_occlusion: value.post_effect_occlusion.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
         }

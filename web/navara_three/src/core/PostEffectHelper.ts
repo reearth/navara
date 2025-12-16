@@ -8,6 +8,7 @@ import {
   MeshStandardMaterial,
   MeshPhysicalMaterial,
   MeshLambertMaterial,
+  Material,
   type WebGLRenderer,
 } from "three";
 
@@ -17,14 +18,11 @@ import { BufferView } from "../bufferView";
 // Constants
 // ============================================================================
 
-/** Default emissive intensity when Bloom is enabled */
-export const DEFAULT_EMISSIVE_INTENSITY = 0.3 as const;
-
 /** Effect key for Bloom post effect */
-export const BLOOM_EFFECT_KEY = "postEffectBloom" as const;
+export const BLOOM_EFFECT_KEY = "bloom" as const;
 
 /** Effect key for Outline post effect */
-export const OUTLINE_EFFECT_KEY = "postEffectOutline" as const;
+export const OUTLINE_EFFECT_KEY = "outline" as const;
 
 /** Prefix for mask render target names */
 export const MASK_RT_PREFIX = "PostEffectMask_" as const;
@@ -34,23 +32,47 @@ export const MASK_RT_PREFIX = "PostEffectMask_" as const;
 // ============================================================================
 
 /**
- * Post effect occlusion modes
+ * Post effect occlusion modes (numeric values for shader uniforms)
  * - Normal: Standard depth test/write (default)
- * - NoDepthTest: No depth test (reserved for future use)
  * - Silhouette: No depth test/write, renders as silhouette
  */
 export const PostEffectOcclusionMode = {
   Normal: 0,
-  NoDepthTest: 1,
   Silhouette: 2,
 } as const;
 
-export type PostEffectOcclusion =
+export type PostEffectOcclusionValue =
   (typeof PostEffectOcclusionMode)[keyof typeof PostEffectOcclusionMode];
 
 /**
- * Value used to skip mask pass logic during normal rendering.
- * onBeforeRender will set this to 0 (Normal) or 2 (Silhouette) during mask passes.
+ * Post effect occlusion mode type for API layer.
+ * Used in Rust/WASM API and TypeScript public interfaces.
+ */
+export type PostEffectOcclusion = "normal" | "silhouette";
+
+/**
+ * Convert string occlusion value to numeric value for shader uniforms
+ * @param value - String occlusion value ("normal" | "silhouette") or undefined
+ * @returns Numeric PostEffectOcclusionValue, or undefined if input is undefined
+ */
+export function parsePostEffectOcclusion(
+  value: PostEffectOcclusion | undefined,
+): PostEffectOcclusionValue | undefined {
+  if (value === undefined) return undefined;
+  switch (value) {
+    case "normal":
+      return PostEffectOcclusionMode.Normal;
+    case "silhouette":
+      return PostEffectOcclusionMode.Silhouette;
+    default:
+      // Fallback to normal for unknown values
+      return PostEffectOcclusionMode.Normal;
+  }
+}
+
+/**
+ * Sentinel value for "no mask pass active".
+ * Set to Normal/Silhouette during mask passes via onBeforeRender.
  */
 export const POST_EFFECT_OCCLUSION_SKIP = -1 as const;
 
@@ -183,56 +205,73 @@ export function getPostEffectConfig(
   return obj.userData.postEffectConfig;
 }
 
-type PostEffectUserData = {
-  // Post effect occlusion mode value.
-  // 0 = Normal (DepthTest+Write), 2 = Silhouette (No DepthTest/Write)
-  postEffectOcclusion: { value: number };
-};
-
+/**
+ * Initialize shader uniform uPostEffectOcclusion on material.userData.
+ * Value is SKIP by default, set to Normal/Silhouette during mask passes via onBeforeRender.
+ */
 export function ensurePostEffectUserData(
   material: MeshStandardMaterial | MeshPhysicalMaterial | MeshLambertMaterial,
-): PostEffectUserData {
-  const ud = (material.userData.postEffect ??= {});
-  if (
-    !("postEffectOcclusion" in ud) ||
-    typeof ud.postEffectOcclusion?.value !== "number"
-  ) {
-    // Initialize to skip mask pass logic during normal rendering
-    // onBeforeRender will set this to 0 or 2 during mask passes
-    ud.postEffectOcclusion = { value: POST_EFFECT_OCCLUSION_SKIP };
-  }
-  return ud as PostEffectUserData;
+): void {
+  material.userData.uPostEffectOcclusion ??= {
+    value: POST_EFFECT_OCCLUSION_SKIP,
+  };
 }
 
-export function updatePostEffectLinksForObject(
-  target: Object3D,
+/**
+ * Apply mask pass uniforms and material settings for PostEffect rendering.
+ * This is the Adapter layer between SoT (PostEffectHelper) and mesh callers.
+ *
+ * Sets:
+ * - uBloomMaskPass: 1.0 if bloom pass and active, else 0.0
+ * - uOutlineMaskPass: 1.0 if outline pass and active, else 0.0
+ * - uPostEffectOcclusion: Normal/Silhouette during mask passes, SKIP otherwise
+ * - depthTest/depthWrite/colorWrite: controlled during mask passes
+ */
+export function applyMaskPassUniforms(
+  material: Material,
+  pass: MaskPassType,
+  activeInThisPass: boolean,
   registry: PostEffectHelper | undefined,
-  effectIds: string[],
-  prevEffectIds: string[],
-  layerId: string,
+  layerId: string | undefined,
 ): void {
-  if (!registry) return;
+  // Initialize uniforms if not present
+  material.userData.uBloomMaskPass ??= { value: 0.0 };
+  material.userData.uOutlineMaskPass ??= { value: 0.0 };
+  material.userData.uPostEffectOcclusion ??= {
+    value: POST_EFFECT_OCCLUSION_SKIP,
+  };
 
-  // Unlink removed effects
-  for (const effectId of prevEffectIds) {
-    if (!effectIds.includes(effectId)) {
-      registry.unlink(effectId, target);
+  // Set Bloom mask pass flag
+  material.userData.uBloomMaskPass.value =
+    pass === MaskPassTypes.Bloom && activeInThisPass ? 1.0 : 0.0;
+
+  // Set Outline mask pass flag
+  material.userData.uOutlineMaskPass.value =
+    pass === MaskPassTypes.Outline && activeInThisPass ? 1.0 : 0.0;
+
+  // Control depth test/write, colorWrite, and occlusion mode
+  if (pass !== MaskPassTypes.None) {
+    if (activeInThisPass) {
+      // This pass is for rendering this object
+      const occlusion = resolvePostEffectOcclusion(registry, layerId);
+      const isSilhouette = occlusion === PostEffectOcclusionMode.Silhouette;
+      material.depthTest = !isSilhouette;
+      material.depthWrite = !isSilhouette;
+      material.colorWrite = true;
+      material.userData.uPostEffectOcclusion.value = occlusion;
+    } else {
+      // This pass is not for this object - suppress drawing
+      material.depthTest = true;
+      material.depthWrite = true;
+      material.colorWrite = false;
+      material.userData.uPostEffectOcclusion.value = POST_EFFECT_OCCLUSION_SKIP;
     }
-  }
-
-  // Update world matrix if needed for new links
-  const needsLink = effectIds.some(
-    (effectId) => !prevEffectIds.includes(effectId),
-  );
-  if (needsLink) {
-    target.updateMatrixWorld(true);
-  }
-
-  // Link new effects
-  for (const effectId of effectIds) {
-    if (!prevEffectIds.includes(effectId)) {
-      registry.link(effectId, target, layerId);
-    }
+  } else {
+    // Normal rendering
+    material.depthTest = true;
+    material.depthWrite = true;
+    material.colorWrite = true;
+    material.userData.uPostEffectOcclusion.value = POST_EFFECT_OCCLUSION_SKIP;
   }
 }
 
@@ -242,7 +281,7 @@ export function updatePostEffectLinksForObject(
 
 /**
  * Determine mask pass type from RenderTarget name
- * Uses RT name convention: "PostEffectMask_postEffectBloom" / "PostEffectMask_postEffectOutline"
+ * Uses RT name convention: "PostEffectMask_bloom" / "PostEffectMask_outline"
  */
 export function getMaskPassType(rt: WebGLRenderTarget | null): MaskPassType {
   const name = rt?.texture?.name ?? "";
@@ -254,14 +293,13 @@ export function getMaskPassType(rt: WebGLRenderTarget | null): MaskPassType {
 }
 
 /**
- * Resolve PostEffectOcclusion value from registry
- * Used as the runtime source of truth for occlusion during mask passes.
- * Returns number value (0=Normal, 1=NoDepthTest, 2=Silhouette)
+ * Resolve PostEffectOcclusionValue from registry for mask pass rendering.
+ * @returns Normal or Silhouette (never SKIP)
  */
 export function resolvePostEffectOcclusion(
   registry: PostEffectHelper | undefined,
   layerId: string | undefined,
-): number {
+): PostEffectOcclusionValue {
   if (registry && layerId) {
     return registry.getLayerPostEffectOcclusion(layerId);
   }
@@ -300,10 +338,13 @@ export function resolveActiveEffects(
  */
 export class PostEffectHelper {
   private resources = new Map<string, PostEffectResources>();
-  private effectKeys = new Map<string, string>(); // effectId -> effectKey (e.g., "postEffectBloom")
+  private effectKeys = new Map<string, string>(); // effectId -> effectKey (e.g., "bloom")
   private width: number;
   private height: number;
-  private layerPostEffectDepthSettings = new Map<string, number>();
+  private layerPostEffectDepthSettings = new Map<
+    string,
+    PostEffectOcclusionValue
+  >();
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -351,7 +392,7 @@ export class PostEffectHelper {
   }
 
   /**
-   * Get effect key (e.g., "postEffectBloom") for an effect ID
+   * Get effect key (e.g., "bloom") for an effect ID
    */
   getEffectKey(effectId: string): string | undefined {
     return this.effectKeys.get(effectId);
@@ -369,7 +410,7 @@ export class PostEffectHelper {
    */
   registerLayerPostEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: number,
+    postEffectOcclusion: PostEffectOcclusionValue,
   ): void {
     this.layerPostEffectDepthSettings.set(layerId, postEffectOcclusion);
   }
@@ -377,7 +418,7 @@ export class PostEffectHelper {
   /**
    * Get Post Effect Occlusion setting for a layer
    */
-  getLayerPostEffectOcclusion(layerId: string): number {
+  getLayerPostEffectOcclusion(layerId: string): PostEffectOcclusionValue {
     return (
       this.layerPostEffectDepthSettings.get(layerId) ??
       PostEffectOcclusionMode.Normal
@@ -389,7 +430,7 @@ export class PostEffectHelper {
    */
   updateLayerPostEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: number,
+    postEffectOcclusion: PostEffectOcclusionValue,
   ): void {
     this.layerPostEffectDepthSettings.set(layerId, postEffectOcclusion);
   }
@@ -410,6 +451,39 @@ export class PostEffectHelper {
         callback(child);
       }
     });
+  }
+
+  /**
+   * Update post effect links for an object
+   * Handles linking new effects and unlinking removed effects
+   */
+  updateLinksForObject(
+    target: Object3D,
+    effectIds: string[],
+    prevEffectIds: string[],
+    layerId: string,
+  ): void {
+    // Unlink removed effects
+    for (const effectId of prevEffectIds) {
+      if (!effectIds.includes(effectId)) {
+        this.unlink(effectId, target);
+      }
+    }
+
+    // Update world matrix if needed for new links
+    const needsLink = effectIds.some(
+      (effectId) => !prevEffectIds.includes(effectId),
+    );
+    if (needsLink) {
+      target.updateMatrixWorld(true);
+    }
+
+    // Link new effects
+    for (const effectId of effectIds) {
+      if (!prevEffectIds.includes(effectId)) {
+        this.link(effectId, target, layerId);
+      }
+    }
   }
 
   /**

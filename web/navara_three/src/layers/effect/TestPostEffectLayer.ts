@@ -23,6 +23,8 @@ import type { BaseInstance } from "../../core/LayerDeclaration";
 import {
   getPostEffectConfig,
   ensurePostEffectUserData,
+  POST_EFFECT_OCCLUSION_SKIP,
+  type PostEffectOcclusionValue,
 } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
@@ -98,7 +100,7 @@ class TestPostEffectPass extends PostProcessingPass {
 
     // Create CopyPass for copying input to output
     this.copyPass = new PostProcessingCopyPass();
-    // This pass only visualises the mask, so avoid swapping buffers.
+    // This pass renders the debug mask and copies input to output, avoiding buffer swap.
     this.needsSwap = false;
   }
 
@@ -107,9 +109,9 @@ class TestPostEffectPass extends PostProcessingPass {
    * This is a simplified version that renders all objects with any post effect enabled
    */
   private renderMask(renderer: WebGLRenderer): void {
-    const camera = this.layer["view"].camera;
-    const scenes = this.layer["view"].scenes;
-    const maskRT = this.layer["resources"].maskRT;
+    const camera = this.layer.viewContext.camera;
+    const scenes = this.layer.viewContext.scenes;
+    const maskRT = this.layer.postEffectResources.maskRT;
 
     // Collect materials that need state changes
     const materialsToModify = new Map<
@@ -117,7 +119,9 @@ class TestPostEffectPass extends PostProcessingPass {
       {
         originalDepthTest: boolean;
         originalDepthWrite: boolean;
-        originalPostEffectOcclusion: number;
+        originalPostEffectOcclusion:
+          | PostEffectOcclusionValue
+          | typeof POST_EFFECT_OCCLUSION_SKIP;
       }
     >();
 
@@ -151,12 +155,13 @@ class TestPostEffectPass extends PostProcessingPass {
               material instanceof MeshPhysicalMaterial
             ) {
               if (!materialsToModify.has(material)) {
-                const postEffectUD = ensurePostEffectUserData(material);
+                // Ensure uPostEffectOcclusion uniform exists
+                ensurePostEffectUserData(material);
                 materialsToModify.set(material, {
                   originalDepthTest: material.depthTest,
                   originalDepthWrite: material.depthWrite,
                   originalPostEffectOcclusion:
-                    postEffectUD.postEffectOcclusion.value,
+                    material.userData.uPostEffectOcclusion.value,
                 });
               }
             }
@@ -178,8 +183,7 @@ class TestPostEffectPass extends PostProcessingPass {
 
     // Render all objects with postEffectOcclusion = 0 (Normal)
     for (const [material] of materialsToModify.entries()) {
-      const postEffectUD = ensurePostEffectUserData(material);
-      postEffectUD.postEffectOcclusion.value = 0;
+      material.userData.uPostEffectOcclusion.value = 0;
       material.depthTest = true;
       material.depthWrite = true;
     }
@@ -196,8 +200,7 @@ class TestPostEffectPass extends PostProcessingPass {
 
     // Restore material states
     for (const [material, state] of materialsToModify.entries()) {
-      const postEffectUD = ensurePostEffectUserData(material);
-      postEffectUD.postEffectOcclusion.value =
+      material.userData.uPostEffectOcclusion.value =
         state.originalPostEffectOcclusion;
       material.depthTest = state.originalDepthTest;
       material.depthWrite = state.originalDepthWrite;
@@ -213,8 +216,8 @@ class TestPostEffectPass extends PostProcessingPass {
     this.renderMask(renderer);
 
     // Render debug visualization if enabled
-    if (this.layer["config"].debugMask) {
-      this.layer["renderDebugMask"]();
+    if (this.layer.layerConfig.debugMask) {
+      this.layer.renderDebugMask();
     }
 
     // Copy input to output using CopyPass

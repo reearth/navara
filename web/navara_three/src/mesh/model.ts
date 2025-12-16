@@ -51,15 +51,11 @@ import {
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
+  applyMaskPassUniforms,
   ensurePostEffectUserData,
   getPostEffectConfig,
   getMaskPassType,
-  MaskPassTypes,
-  POST_EFFECT_OCCLUSION_SKIP,
-  PostEffectOcclusionMode,
   resolveActiveEffects,
-  resolvePostEffectOcclusion,
-  updatePostEffectLinksForObject,
 } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
@@ -92,6 +88,16 @@ export class ModelMesh
   water = false;
   private waterNormalMapTexture: Texture | null = null;
   private viewContext?: ViewContext;
+  /** Layer ID for PostEffect handling */
+  private _layerId?: string;
+
+  /**
+   * Set layer ID for PostEffect handling
+   * Called from feature rendering to enable PostEffect handling
+   */
+  setLayerId(layerId: string): void {
+    this._layerId = layerId;
+  }
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
@@ -346,11 +352,8 @@ export class ModelMesh
       mesh.material.userData.uOutlineMaskPass = {
         value: 0.0,
       };
-      mesh.material.userData.uPostEffectOcclusion = {
-        value: POST_EFFECT_OCCLUSION_SKIP, // -1 = not in mask pass, 0 = Normal, 2 = Silhouette
-      };
 
-      // Initialize post effect user data (mask mode)
+      // Initialize post effect user data (includes uPostEffectOcclusion shader uniform)
       ensurePostEffectUserData(mesh.material);
 
       this.water = !!meshMaterial.water;
@@ -594,13 +597,6 @@ export class ModelMesh
     mesh.onBeforeRender = (renderer: WebGLRenderer) => {
       // 1. Get PostEffectConfig from mesh (link() sets config on child meshes, not parent)
       const config = getPostEffectConfig(mesh);
-      if (!config) {
-        // Reset mask pass flag when no config
-        mesh.material.userData.uBloomMaskPass ??= { value: 0.0 };
-        mesh.material.userData.uBloomMaskPass.value = 0.0;
-        return;
-      }
-
       const registry = this.viewContext?.postEffectRegistry;
       const layerId = this.getPostEffectLayerId();
 
@@ -608,67 +604,24 @@ export class ModelMesh
       const pass = getMaskPassType(renderer.getRenderTarget());
 
       // 3. Resolve active effects for this pass
-      const { hasBloom, activeInThisPass } = resolveActiveEffects(
-        config,
-        registry,
+      const { activeInThisPass } = resolveActiveEffects(config, registry, pass);
+
+      // 4. Apply mask pass uniforms and material settings via Adapter helper
+      applyMaskPassUniforms(
+        mesh.material,
         pass,
+        activeInThisPass,
+        registry,
+        layerId,
       );
-
-      // 4. Set Bloom enabled flag (for uBloomEnabled uniform in shader)
-      mesh.material.userData.uBloomEnabled ??= { value: 0.0 };
-      mesh.material.userData.uBloomEnabled.value = hasBloom ? 1.0 : 0.0;
-
-      // 5. Set Bloom mask pass flag (for shader branch to output emissive only)
-      mesh.material.userData.uBloomMaskPass ??= { value: 0.0 };
-      mesh.material.userData.uBloomMaskPass.value =
-        pass === MaskPassTypes.Bloom && activeInThisPass ? 1.0 : 0.0;
-
-      // 5b. Set Outline mask pass flag (for shader branch to output white)
-      mesh.material.userData.uOutlineMaskPass ??= { value: 0.0 };
-      mesh.material.userData.uOutlineMaskPass.value =
-        pass === MaskPassTypes.Outline && activeInThisPass ? 1.0 : 0.0;
-
-      // 6. Control depth test/write, colorWrite, and occlusion mode during mask passes
-      mesh.material.userData.uPostEffectOcclusion ??= {
-        value: POST_EFFECT_OCCLUSION_SKIP,
-      };
-
-      if (pass !== MaskPassTypes.None) {
-        if (activeInThisPass) {
-          // This pass is for rendering this object
-          const occlusion = resolvePostEffectOcclusion(registry, layerId);
-          const isSilhouette = occlusion === PostEffectOcclusionMode.Silhouette;
-          mesh.material.depthTest = !isSilhouette;
-          mesh.material.depthWrite = !isSilhouette;
-          mesh.material.colorWrite = true;
-          // Set occlusion mode for shader alpha output (0 = Normal, 2 = Silhouette)
-          mesh.material.userData.uPostEffectOcclusion.value = occlusion;
-        } else {
-          // This pass is not for this object - suppress drawing
-          mesh.material.depthTest = true;
-          mesh.material.depthWrite = true;
-          mesh.material.colorWrite = false;
-          mesh.material.userData.uPostEffectOcclusion.value =
-            POST_EFFECT_OCCLUSION_SKIP;
-        }
-      } else {
-        // Normal rendering
-        mesh.material.depthTest = true;
-        mesh.material.depthWrite = true;
-        mesh.material.colorWrite = true;
-        mesh.material.userData.uPostEffectOcclusion.value =
-          POST_EFFECT_OCCLUSION_SKIP;
-      }
     };
   }
 
   /**
-   * Get postEffectLayerId from PostEffectConfig (type-safe getter)
-   * Note: layerId is stored in userData.postEffectConfig.layerId by PostEffectHelper.link()
+   * Get layer ID for PostEffect handling
    */
   private getPostEffectLayerId(): string | undefined {
-    const config = getPostEffectConfig(this);
-    return config?.layerId;
+    return this._layerId;
   }
 
   private traversePoints(
@@ -814,14 +767,12 @@ export class ModelMesh
       effectIds?: string[];
       [key: string]: unknown;
     };
-    const layerId = this.userData.layerId as string | undefined;
-    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
-      updatePostEffectLinksForObject(
+    if (this._layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      this.viewContext?.postEffectRegistry?.updateLinksForObject(
         this,
-        this.viewContext?.postEffectRegistry,
         material.effectIds ?? [],
         prev.effectIds ?? [],
-        layerId,
+        this._layerId,
       );
       prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
@@ -1000,7 +951,7 @@ export class ModelMesh
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     this.traverseMesh((m) => {
-      viewEvents.emit("_csmMounted", m.material);
+      viewEvents.emit("_csmUnmounted", m.material);
     });
   }
 }

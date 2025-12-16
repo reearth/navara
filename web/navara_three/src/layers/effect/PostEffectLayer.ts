@@ -311,6 +311,31 @@ export abstract class PostEffectLayer<
     this.config = config;
   }
 
+  // ============================================
+  // Public API for Pass classes
+  // ============================================
+
+  /**
+   * Get the ViewContext for accessing camera, scenes, registry, etc.
+   */
+  public get viewContext(): ViewContext {
+    return this.view;
+  }
+
+  /**
+   * Get the layer configuration
+   */
+  public get layerConfig(): Config {
+    return this.config;
+  }
+
+  /**
+   * Get the PostEffect resources (maskRT, options, maskDebug)
+   */
+  public get postEffectResources(): PostEffectResources {
+    return this.resources;
+  }
+
   onCreate(): void {
     // Create post effect resources
     if (!this.view.postEffectRegistry) {
@@ -336,7 +361,7 @@ export abstract class PostEffectLayer<
   /**
    * Render debug mask visualization
    */
-  protected renderDebugMask(): void {
+  public renderDebugMask(): void {
     if (!this.resources.maskDebug) return;
 
     this.resources.maskDebug.render(
@@ -350,7 +375,7 @@ export abstract class PostEffectLayer<
    * Uses allDepthCopyPass.texture which contains the entire scene depth (globe + MRT + opaque)
    * Format: RGBA packed depth, requires unpackRGBAToDepth() in shader
    */
-  protected getBaseDepthTexture(): Texture | null {
+  public getBaseDepthTexture(): Texture | null {
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
     return mrtPass?.raw?.allDepthCopyPass?.texture ?? null;
   }

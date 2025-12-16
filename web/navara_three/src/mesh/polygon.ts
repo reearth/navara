@@ -47,7 +47,6 @@ import {
   type ViewEvents,
 } from "..";
 import type { ViewContext } from "../core";
-import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { arraysEqual, createReplacer } from "../utils";
@@ -78,6 +77,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
     aabbRadius: number; // Horizontal extent radius from AABB
   };
 
+  /** ViewContext for PostEffect handling */
+  private _viewContext?: ViewContext;
+  /** Layer ID for PostEffect handling */
+  private _layerId?: string;
+
   constructor(
     buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
     mat: MeshLambertMaterial = new MeshLambertMaterial(),
@@ -98,8 +102,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.frustumCulled = false;
 
     // Store viewContext and layerId for PostEffect handling
-    this.userData.viewContext = viewContext;
-    this.userData.layerId = layerId;
+    this._viewContext = viewContext;
+    this._layerId = layerId;
 
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
@@ -811,15 +815,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     // PostEffect: effectIds handling
-    const viewContext = this.userData.viewContext as ViewContext | undefined;
-    const layerId = this.userData.layerId as string | undefined;
-    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
-      updatePostEffectLinksForObject(
+    if (this._layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      this._viewContext?.postEffectRegistry?.updateLinksForObject(
         this,
-        viewContext?.postEffectRegistry,
         material.effectIds ?? [],
         prev.effectIds ?? [],
-        layerId,
+        this._layerId,
       );
       prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }

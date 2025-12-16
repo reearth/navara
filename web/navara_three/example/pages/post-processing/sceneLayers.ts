@@ -4,10 +4,10 @@ import ThreeView, {
   LLE,
   degreeToRadian,
   geodeticToVector3,
-  PostEffectOcclusionMode,
   type BoxMeshLayer,
   type LayerHandle,
   type SphereMeshLayer,
+  type PostEffectOcclusion,
   Layer,
 } from "@navara/three";
 import type { FeatureCollection } from "geojson";
@@ -30,7 +30,7 @@ import {
 export const CUBE_CONFIG = {
   emissiveColor: 0xff0000,
   emissiveIntensity: 1.0,
-  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  postEffectOcclusion: "normal" as PostEffectOcclusion,
   bloomEnabled: true,
   outlineEnabled: false,
 } as const;
@@ -41,7 +41,7 @@ export const CUBE_CONFIG = {
 export const SPHERE_CONFIG = {
   emissiveColor: 0x00aaff,
   emissiveIntensity: 1.0,
-  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  postEffectOcclusion: "normal" as PostEffectOcclusion,
   bloomEnabled: true,
   outlineEnabled: false,
 } as const;
@@ -52,7 +52,7 @@ export const SPHERE_CONFIG = {
 export const DRUM_CONFIG = {
   emissiveColor: 0xffffff,
   emissiveIntensity: 0.3,
-  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  postEffectOcclusion: "normal" as PostEffectOcclusion,
   bloomEnabled: false,
   outlineEnabled: false,
 } as const;
@@ -64,7 +64,7 @@ export const SOLDIER_CONFIG = {
   emissiveColor: 0xffffff,
   emissiveIntensity: 0.3,
   animationSpeed: 1.0,
-  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  postEffectOcclusion: "normal" as PostEffectOcclusion,
   bloomEnabled: false,
   outlineEnabled: false,
 } as const;
@@ -76,7 +76,7 @@ export const CHIYODA_CONFIG = {
   baseColor: 0xffffff,
   emissiveColor: 0xffffff,
   emissiveIntensity: 0.3,
-  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  postEffectOcclusion: "normal" as PostEffectOcclusion,
   bloomEnabled: true,
   outlineEnabled: true,
 } as const;
@@ -88,7 +88,7 @@ export const CHUO_CONFIG = {
   baseColor: 0xffffff,
   emissiveColor: 0xffffff,
   emissiveIntensity: 0.3,
-  postEffectOcclusion: PostEffectOcclusionMode.Normal,
+  postEffectOcclusion: "normal" as PostEffectOcclusion,
   bloomEnabled: false,
   outlineEnabled: false,
 } as const;
@@ -110,7 +110,7 @@ export type DrumModelState = {
   color?: number;
   emissiveColor?: number;
   emissiveIntensity?: number;
-  postEffectOcclusion?: number;
+  postEffectOcclusion?: PostEffectOcclusion;
 };
 
 export type SoldierModelState = {
@@ -124,7 +124,7 @@ export type SoldierModelState = {
   color?: number;
   emissiveColor?: number;
   emissiveIntensity?: number;
-  postEffectOcclusion?: number;
+  postEffectOcclusion?: PostEffectOcclusion;
 };
 
 export type SceneLayers = {
@@ -164,7 +164,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       y: cubePosition.y,
       z: cubePosition.z,
     },
-    postEffectOcclusion: PostEffectOcclusionMode.Normal,
+    postEffectOcclusion: "normal",
   });
 
   const sphereLayer = view.addLayer<SphereMeshLayer>({
@@ -183,7 +183,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       y: spherePosition.y,
       z: spherePosition.z,
     },
-    postEffectOcclusion: PostEffectOcclusionMode.Normal,
+    postEffectOcclusion: "normal",
   });
 
   const drumLayer = createGeoJsonModelLayer<DrumModelState>({
@@ -210,7 +210,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       shouldRotateInDefault: true,
       emissiveColor: 0xffffff,
       emissiveIntensity: 0.3,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
+      postEffectOcclusion: "normal",
     },
   });
 
@@ -239,7 +239,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       animationSpeed: 1.0,
       emissiveColor: 0xffffff,
       emissiveIntensity: 0.3,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
+      postEffectOcclusion: "normal",
     },
   });
 
@@ -277,7 +277,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       roughness: 0.1,
       castShadow: true,
       receiveShadow: true,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
+      postEffectOcclusion: "normal",
     },
   });
 
@@ -293,7 +293,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       roughness: 0.1,
       castShadow: true,
       receiveShadow: true,
-      postEffectOcclusion: PostEffectOcclusionMode.Normal,
+      postEffectOcclusion: "normal",
     },
   });
 

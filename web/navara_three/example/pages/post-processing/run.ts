@@ -53,25 +53,25 @@ export const run = async (view: ThreeView) => {
   // Post effects setup
   const postEffectOutline = view.addLayer({
     type: "effect",
-    postEffectOutline: {
+    outline: {
       color: 0xff0000,
       thickness: 2.0,
       edgeStrength: 1.0,
+      debugMask: false,
+      resolutionScale: 1.0,
     },
-    debugMask: false,
-    resolutionScale: 1.0,
   });
 
   const postEffectBloom = view.addLayer({
     type: "effect",
-    postEffectBloom: {
+    bloom: {
       strength: BLOOM_CONFIG.strength,
       radius: BLOOM_CONFIG.radius,
       threshold: BLOOM_CONFIG.threshold,
       debugMode: BLOOM_CONFIG.debugMode,
+      debugMask: BLOOM_CONFIG.debugMask,
+      resolutionScale: BLOOM_CONFIG.resolutionScale,
     },
-    debugMask: BLOOM_CONFIG.debugMask,
-    resolutionScale: BLOOM_CONFIG.resolutionScale,
   });
 
   view.addDefaultEffectLayers();

@@ -1,14 +1,17 @@
 import {
-  DEFAULT_EMISSIVE_INTENSITY,
   PostEffectOcclusionMode,
   type PostEffectHelper,
+  type PostEffectOcclusionValue,
 } from "./PostEffectHelper";
+
+/** Default emissive intensity when Bloom is enabled */
+const DEFAULT_EMISSIVE_INTENSITY = 0.3;
 
 type LayerEffectConfig = {
   effectIds: string[];
   emissiveIntensity: number;
   emissiveColor?: number;
-  postEffectOcclusion: number;
+  postEffectOcclusion: PostEffectOcclusionValue;
 };
 
 type PostEffectManagerOptions = {
@@ -28,7 +31,7 @@ export class PostEffectManager {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectOcclusion?: number,
+    postEffectOcclusion?: PostEffectOcclusionValue,
     emissiveIntensity?: number,
   ): void {
     const config = this.ensureConfig(layerId);
@@ -58,18 +61,7 @@ export class PostEffectManager {
     return config?.effectIds;
   }
 
-  getLayerEmissiveIntensity(layerId: string): number {
-    return (
-      this.layerConfigs.get(layerId)?.emissiveIntensity ??
-      DEFAULT_EMISSIVE_INTENSITY
-    );
-  }
-
-  getLayerEmissiveColor(layerId: string): number | undefined {
-    return this.layerConfigs.get(layerId)?.emissiveColor;
-  }
-
-  getLayerPostEffectOcclusion(layerId: string): number {
+  getLayerPostEffectOcclusion(layerId: string): PostEffectOcclusionValue {
     return (
       this.layerConfigs.get(layerId)?.postEffectOcclusion ??
       PostEffectOcclusionMode.Normal
@@ -91,7 +83,7 @@ export class PostEffectManager {
 
   setLayerPostEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: number,
+    postEffectOcclusion: PostEffectOcclusionValue,
   ): void {
     const config = this.ensureConfig(layerId);
 

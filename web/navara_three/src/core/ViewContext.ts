@@ -8,7 +8,10 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
-import type { PostEffectHelper } from "./PostEffectHelper";
+import type {
+  PostEffectHelper,
+  PostEffectOcclusionValue,
+} from "./PostEffectHelper";
 import { PostEffectManager } from "./PostEffectManager";
 
 export type ViewDebugOptions = {
@@ -64,7 +67,7 @@ export class ViewContext {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectOcclusion?: number,
+    postEffectOcclusion?: PostEffectOcclusionValue,
     emissiveIntensity?: number,
   ): void {
     this.postEffects.registerLayerEffects(
@@ -79,14 +82,6 @@ export class ViewContext {
     return this.postEffects.getLayerEffects(layerId);
   }
 
-  getLayerEmissiveIntensity(layerId: string): number {
-    return this.postEffects.getLayerEmissiveIntensity(layerId);
-  }
-
-  getLayerEmissiveColor(layerId: string): number | undefined {
-    return this.postEffects.getLayerEmissiveColor(layerId);
-  }
-
   setLayerEmissiveColor(
     layerId: string,
     emissiveColor: number | undefined,
@@ -94,13 +89,13 @@ export class ViewContext {
     this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
 
-  getLayerPostEffectOcclusion(layerId: string): number {
+  getLayerPostEffectOcclusion(layerId: string): PostEffectOcclusionValue {
     return this.postEffects.getLayerPostEffectOcclusion(layerId);
   }
 
   setLayerPostEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: number,
+    postEffectOcclusion: PostEffectOcclusionValue,
   ): void {
     this.postEffects.setLayerPostEffectOcclusion(layerId, postEffectOcclusion);
   }

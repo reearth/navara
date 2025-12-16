@@ -1,11 +1,12 @@
-import type {
-  BoxMeshLayer,
-  BoxMeshLayerUpdate,
-  Layer,
-  SphereMeshLayer,
-  SphereMeshLayerUpdate,
+import {
+  Color,
+  type BoxMeshLayer,
+  type BoxMeshLayerUpdate,
+  type Layer,
+  type SphereMeshLayer,
+  type SphereMeshLayerUpdate,
+  type PostEffectOcclusion,
 } from "@navara/three";
-import { Color, PostEffectOcclusionMode } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
 import { TILES_3D_DATASETS } from "../../helpers/constants";
@@ -33,10 +34,10 @@ import {
 /**
  * Occlusion mode options for Tweakpane dropdown
  */
-const OCCLUSION_MODE_OPTIONS = {
-  DepthEnabled: PostEffectOcclusionMode.Normal,
-  Silhouette: PostEffectOcclusionMode.Silhouette,
-} as const;
+const OCCLUSION_MODE_OPTIONS: Record<string, PostEffectOcclusion> = {
+  DepthEnabled: "normal",
+  Silhouette: "silhouette",
+};
 
 // ============================================
 // Helper Functions for Common UI Patterns
@@ -184,7 +185,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        postEffectBloom: {
+        bloom: {
           strength: ev.value,
         },
       });
@@ -199,7 +200,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        postEffectBloom: {
+        bloom: {
           radius: ev.value,
         },
       });
@@ -214,7 +215,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        postEffectBloom: {
+        bloom: {
           threshold: ev.value,
         },
       });
@@ -232,7 +233,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        postEffectBloom: {
+        bloom: {
           debugMode: ev.value,
         },
       });
@@ -241,7 +242,9 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
   folder.addBinding(params, "debugMask").on("change", (ev) => {
     postEffectBloom.update({
       type: "effect",
-      debugMask: ev.value,
+      bloom: {
+        debugMask: ev.value,
+      },
     });
   });
 };
@@ -261,7 +264,7 @@ type MeshFolderOptions = {
     emissiveColor: number;
     emissiveIntensity: number;
     visible: boolean;
-    postEffectOcclusion: number;
+    postEffectOcclusion: PostEffectOcclusion;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
   };
@@ -341,7 +344,7 @@ const buildMeshConfig = (
     emissiveColor?: number;
     emissiveIntensity?: number;
     effectIds?: string[];
-    postEffectOcclusion?: number;
+    postEffectOcclusion?: PostEffectOcclusion;
   },
 ) => {
   if (configKey === "box") {
@@ -360,7 +363,7 @@ type TilesFolderOptions = {
     baseColor: number;
     emissiveColor: number;
     visible: boolean;
-    postEffectOcclusion: number; // 0 = DepthEnabled, 2 = Silhouette
+    postEffectOcclusion: PostEffectOcclusion;
     emissiveIntensity: number;
     bloomEnabled: boolean;
     outlineEnabled: boolean;

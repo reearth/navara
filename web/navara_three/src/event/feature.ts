@@ -8,6 +8,10 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
+import {
+  parsePostEffectOcclusion,
+  type PostEffectOcclusion,
+} from "../core/PostEffectHelper";
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
@@ -202,12 +206,20 @@ export async function processRenderableFeatureAdded(
   }
 
   // Register initial effects from Rust material if not already registered for this layer
-  const material = feature.model?.material ?? feature.polygon?.material;
+  // All 5 material types in appearance.rs have post effect fields
+  const material =
+    feature.model?.material ??
+    feature.polygon?.material ??
+    feature.polyline?.material ??
+    feature.point?.material ??
+    feature.billboard?.material;
   if (material && viewContext.getLayerEffects(featureLayerId) === undefined) {
     viewContext.registerLayerEffects(
       featureLayerId,
       material.effectIds ?? [],
-      material.postEffectOcclusion,
+      parsePostEffectOcclusion(
+        material.postEffectOcclusion as PostEffectOcclusion | undefined,
+      ),
       material.emissiveIntensity,
     );
   }
@@ -253,7 +265,13 @@ export async function processRenderableFeatureChanged(
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
   // Update PostEffect configuration from material (Core is SoT)
-  const material = model?.material ?? polygon?.material;
+  // All 5 material types in appearance.rs have post effect fields
+  const material =
+    model?.material ??
+    polygon?.material ??
+    polyline?.material ??
+    point?.material ??
+    billboard?.material;
   if (material) {
     viewContext.updateLayerEffects(
       layerId,
@@ -266,10 +284,12 @@ export async function processRenderableFeatureChanged(
     }
 
     if (material.postEffectOcclusion !== undefined) {
-      viewContext.setLayerPostEffectOcclusion(
-        layerId,
-        material.postEffectOcclusion,
+      const occlusion = parsePostEffectOcclusion(
+        material.postEffectOcclusion as PostEffectOcclusion,
       );
+      if (occlusion !== undefined) {
+        viewContext.setLayerPostEffectOcclusion(layerId, occlusion);
+      }
     }
   }
 

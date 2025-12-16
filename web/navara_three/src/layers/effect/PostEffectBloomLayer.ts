@@ -38,22 +38,26 @@ import {
 // PostEffect Bloom configuration
 export type PostEffectBloomConfig = {
   postEffect: true;
-  postEffectBloom: {
+  bloom: {
     strength?: number;
     radius?: number;
     threshold?: number;
     debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
+    resolutionScale?: number;
+    debugMask?: boolean;
   };
   resolutionScale?: number;
   debugMask?: boolean;
 } & EffectLayerConfig;
 
 export type PostEffectBloomUpdate = {
-  postEffectBloom?: {
+  bloom?: {
     strength?: number;
     radius?: number;
     threshold?: number;
     debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
+    resolutionScale?: number;
+    debugMask?: boolean;
   };
   resolutionScale?: number;
   debugMask?: boolean;
@@ -66,13 +70,13 @@ const DEFAULT_THRESHOLD = 0.0;
 
 /**
  * Post Effect Bloom Layer
- * Traverses the main scene and renders only objects with Bloom effect enabled
+ * Renders selective bloom using mask-based filtering via renderMaskForMode()
  */
 export class PostEffectBloomLayer extends PostEffectLayer<
   PostEffectBloomConfig,
   PostEffectBloomUpdate
 > {
-  static key = "postEffectBloom";
+  static key = "bloom";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
@@ -89,29 +93,29 @@ export class PostEffectBloomLayer extends PostEffectLayer<
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
     const baseConfig = config as Partial<PostEffectBloomConfig>;
-    const postEffectBloomConfig =
-      "postEffectBloom" in config ? baseConfig.postEffectBloom : undefined;
+    const bloomConfig = "bloom" in config ? baseConfig.bloom : undefined;
 
     const postEffectConfig: PostEffectBloomConfig = {
       ...(config as PostEffectBloomConfig),
       postEffect: true,
-      resolutionScale: baseConfig.resolutionScale ?? 1.0,
-      debugMask: baseConfig.debugMask ?? false,
-      postEffectBloom: {
-        strength: postEffectBloomConfig?.strength ?? DEFAULT_STRENGTH,
-        radius: postEffectBloomConfig?.radius ?? DEFAULT_RADIUS,
-        threshold: postEffectBloomConfig?.threshold ?? DEFAULT_THRESHOLD,
+      resolutionScale: bloomConfig?.resolutionScale ?? 1.0,
+      debugMask: bloomConfig?.debugMask ?? false,
+      bloom: {
+        strength: bloomConfig?.strength ?? DEFAULT_STRENGTH,
+        radius: bloomConfig?.radius ?? DEFAULT_RADIUS,
+        threshold: bloomConfig?.threshold ?? DEFAULT_THRESHOLD,
+        debugMode: bloomConfig?.debugMode ?? 0,
+        resolutionScale: bloomConfig?.resolutionScale ?? 1.0,
+        debugMask: bloomConfig?.debugMask ?? false,
       },
     };
 
     super(view, postEffectConfig);
 
-    this.bloomStrength =
-      this.config.postEffectBloom?.strength ?? DEFAULT_STRENGTH;
-    this.bloomRadius = this.config.postEffectBloom?.radius ?? DEFAULT_RADIUS;
-    this.bloomThreshold =
-      this.config.postEffectBloom?.threshold ?? DEFAULT_THRESHOLD;
-    this.debugMode = this.config.postEffectBloom?.debugMode ?? 0;
+    this.bloomStrength = this.config.bloom?.strength ?? DEFAULT_STRENGTH;
+    this.bloomRadius = this.config.bloom?.radius ?? DEFAULT_RADIUS;
+    this.bloomThreshold = this.config.bloom?.threshold ?? DEFAULT_THRESHOLD;
+    this.debugMode = this.config.bloom?.debugMode ?? 0;
   }
 
   createPass() {
@@ -123,33 +127,52 @@ export class PostEffectBloomLayer extends PostEffectLayer<
   }
 
   onUpdateConfig(updates: PostEffectBloomUpdate): void {
+    // Handle debugMask/resolutionScale from bloom first
+    if (updates.bloom) {
+      const next = updates.bloom;
+      if (next.debugMask !== undefined) {
+        super.onUpdateConfig({ debugMask: next.debugMask });
+      }
+      if (next.resolutionScale !== undefined) {
+        super.onUpdateConfig({ resolutionScale: next.resolutionScale });
+      }
+    }
+
     super.onUpdateConfig(updates);
 
-    if (updates.postEffectBloom) {
-      const next = updates.postEffectBloom;
+    if (updates.bloom) {
+      const next = updates.bloom;
 
-      if (!this.config.postEffectBloom) {
-        this.config.postEffectBloom = {};
+      if (!this.config.bloom) {
+        this.config.bloom = {};
       }
 
       if (next.strength !== undefined) {
         this.bloomStrength = next.strength;
-        this.config.postEffectBloom.strength = next.strength;
+        this.config.bloom.strength = next.strength;
       }
 
       if (next.radius !== undefined) {
         this.bloomRadius = next.radius;
-        this.config.postEffectBloom.radius = next.radius;
+        this.config.bloom.radius = next.radius;
       }
 
       if (next.threshold !== undefined) {
         this.bloomThreshold = next.threshold;
-        this.config.postEffectBloom.threshold = next.threshold;
+        this.config.bloom.threshold = next.threshold;
       }
 
       if (next.debugMode !== undefined) {
         this.debugMode = next.debugMode;
-        this.config.postEffectBloom.debugMode = next.debugMode;
+        this.config.bloom.debugMode = next.debugMode;
+      }
+
+      if (next.debugMask !== undefined) {
+        this.config.bloom.debugMask = next.debugMask;
+      }
+
+      if (next.resolutionScale !== undefined) {
+        this.config.bloom.resolutionScale = next.resolutionScale;
       }
 
       this.bloomPass?.setParameters(
@@ -203,9 +226,9 @@ class PostEffectBloomPass extends PostProcessingPass {
     this.layer = layer;
 
     const renderer =
-      layer["view"].renderPassOrchestrator.effectComposer.getRenderer();
+      layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer["config"].resolutionScale ?? 1.0;
+    const resolutionScale = layer.layerConfig.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -326,7 +349,7 @@ class PostEffectBloomPass extends PostProcessingPass {
         stencilBuffer: true,
       },
     );
-    this.depthEnabledMaskRT.texture.name = `PostEffectMask_postEffectBloom_DepthEnabled_${layer.id}`;
+    this.depthEnabledMaskRT.texture.name = `PostEffectMask_bloom_DepthEnabled_${layer.id}`;
     this.depthEnabledMaskRT.depthTexture = new DepthTexture(
       initialWidth,
       initialHeight,
@@ -347,7 +370,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       depthBuffer: true,
       stencilBuffer: true,
     });
-    this.silhouetteMaskRT.texture.name = `PostEffectMask_postEffectBloom_Silhouette_${layer.id}`;
+    this.silhouetteMaskRT.texture.name = `PostEffectMask_bloom_Silhouette_${layer.id}`;
 
     // Intermediate bloom result render targets
     this.depthEnabledBloomRT = new WebGLRenderTarget(
@@ -433,9 +456,9 @@ class PostEffectBloomPass extends PostProcessingPass {
   ): void {
     renderMaskForMode(
       renderer,
-      this.layer["view"].camera,
-      this.layer["view"].scenes,
-      this.layer["view"].postEffectRegistry,
+      this.layer.viewContext.camera,
+      this.layer.viewContext.scenes,
+      this.layer.viewContext.postEffectRegistry,
       targetMode,
       targetRT,
       hasBloomEffect,
@@ -459,11 +482,8 @@ class PostEffectBloomPass extends PostProcessingPass {
     );
 
     // Get bloom output helper
-    const getBloomOutput = () => {
-      const bloomInternals = this.bloom as unknown as {
-        renderTargetsHorizontal?: WebGLRenderTarget[];
-      };
-      return bloomInternals.renderTargetsHorizontal?.[0];
+    const getBloomOutput = (): WebGLRenderTarget | undefined => {
+      return this.bloom.renderTargetsHorizontal[0];
     };
 
     // ========================================
@@ -484,7 +504,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       this.depthClipScene,
       this.fullscreenCamera,
       this.depthEnabledMaskRT,
-      this.layer["getBaseDepthTexture"](),
+      this.layer.getBaseDepthTexture(),
       this.depthClipRT,
     );
 
@@ -551,7 +571,7 @@ class PostEffectBloomPass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer["config"].debugMask) {
+    if (this.layer.layerConfig.debugMask) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

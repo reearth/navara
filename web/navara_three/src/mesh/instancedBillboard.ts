@@ -1,7 +1,6 @@
 import { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
 import type { ViewContext } from "../core";
-import { updatePostEffectLinksForObject } from "../core/PostEffectHelper";
 import { setTransform, type BufferLoader } from "../event";
 import { applyTextureAspect } from "../texture";
 import { arraysEqual } from "../utils";
@@ -10,6 +9,20 @@ import { BillboardMesh } from "./billboard";
 import { InstancedMesh } from "./instanced";
 
 export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
+  /** ViewContext for PostEffect handling */
+  private _viewContext?: ViewContext;
+  /** Layer ID for PostEffect handling */
+  private _layerId?: string;
+
+  /**
+   * Set PostEffect context (viewContext and layerId)
+   * Called from feature rendering to enable PostEffect handling
+   */
+  setPostEffectContext(viewContext: ViewContext, layerId: string): void {
+    this._viewContext = viewContext;
+    this._layerId = layerId;
+  }
+
   async _init(m: NavaraBillboardMesh, buf: BufferLoader) {
     await this.initMeshes(m, buf);
   }
@@ -94,15 +107,12 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
     this.userData.prev ??= {};
 
     const prev = this.userData.prev as { effectIds?: string[] };
-    const viewContext = this.userData.viewContext as ViewContext | undefined;
-    const layerId = this.userData.layerId as string | undefined;
-    if (layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
-      updatePostEffectLinksForObject(
+    if (this._layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
+      this._viewContext?.postEffectRegistry?.updateLinksForObject(
         this,
-        viewContext?.postEffectRegistry,
         material.effectIds ?? [],
         prev.effectIds ?? [],
-        layerId,
+        this._layerId,
       );
       prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }

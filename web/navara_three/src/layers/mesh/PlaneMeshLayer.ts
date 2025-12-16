@@ -11,6 +11,7 @@ import {
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type ViewContext,
+  type PostEffectOcclusion,
 } from "../../core";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
 
@@ -30,7 +31,7 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    postEffectOcclusion?: number;
+    postEffectOcclusion?: PostEffectOcclusion;
   };
 };
 
