@@ -18,6 +18,7 @@ export interface ModelControlParams {
   cameraFollow?: boolean; // Whether to follow the model with the camera
   modelScale?: number; // Scale factor for the model
   allowUnderground?: boolean; // Whether the model is allowed to move below ground
+  allowFly?: boolean; // Whether the model can move freely in 3D space
 
   dash?: number; // Dash speed multiplier
   height?: number; // height above the ground
@@ -269,11 +270,15 @@ const updateModelTransform = (
     new LLE(curLLE.lat, curLLE.lng, 0),
   );
 
-  if (!params.allowUnderground) {
-    params.height = Math.max(
-      params.height,
-      terrainHeight !== undefined ? terrainHeight : 0,
-    ); // Prevent negative height
+  if (params.allowFly) {
+    if (!params.allowUnderground) {
+      params.height = Math.max(
+        params.height,
+        terrainHeight !== undefined ? terrainHeight : 0,
+      ); // Prevent negative height
+    }
+  } else {
+    params.height = terrainHeight !== undefined ? terrainHeight : 0;
   }
 
   const curTerrainPos = geodeticToVector3(

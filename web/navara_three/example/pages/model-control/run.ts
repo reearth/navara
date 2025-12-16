@@ -31,6 +31,7 @@ const params: ModelControlParams = {
   rotationSpeed: 2,
   modelScale: 1,
   cameraFollow: true,
+  allowFly: false,
 };
 
 export const run = async (view: ThreeView) => {
@@ -185,4 +186,6 @@ export const run = async (view: ThreeView) => {
       view.cameraFollow(false);
     }
   });
+
+  pane.addBinding(params, "allowFly");
 };

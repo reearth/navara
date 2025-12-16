@@ -2,10 +2,12 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
   type GLTFModelLayer,
+  type LayerDescription,
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   LLE,
+  LayerHandle,
 } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -18,6 +20,22 @@ import {
 
 import { Vector3, Quaternion, Euler } from "three";
 import { controlGLTFModel } from "../../helpers/modelControl";
+import { Pane } from "tweakpane";
+
+const SCENES = {
+  ToranomonHillsBIM: {
+    url: TILES_3D_DATASETS.plateauToranomonHillsBIM.url,
+    height: -35,
+    startLLE: [35.666944688585495, 139.74895236744666, 38],
+  },
+  Takanawa: {
+    url: TILES_3D_DATASETS.plateauTakanawa.url,
+    height: -50,
+    startLLE: [35.63517500123948, 139.73968705211848, 30],
+  },
+};
+
+let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -59,42 +77,6 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauToranomonHillsBIM.url,
-      // url: TILES_3D_DATASETS.plateauTakanawa.url,
-    },
-    model: {
-      show: true,
-      castShadow: true,
-      receiveShadow: true,
-      height: -35,
-    },
-  });
-
-  const startLLE = [35.666944688585495, 139.74895236744666, 38];
-
-  const startPos = geodeticToVector3(
-    new LLE(
-      degreeToRadian(startLLE[0]),
-      degreeToRadian(startLLE[1]),
-      startLLE[2],
-    ),
-  );
-
-  const normal = geodeticSurfaceNormal(
-    new LLE(
-      degreeToRadian(startLLE[0]),
-      degreeToRadian(startLLE[1]),
-      startLLE[2],
-    ),
-  );
-  // Calculate rotation to align model with surface normal
-  const up = new Vector3(0, 1, 0);
-  const quaternion = new Quaternion().setFromUnitVectors(up, normal);
-  const euler = new Euler().setFromQuaternion(quaternion);
-
   // Add GLTF model at Mount Fuji summit
   const modelLayer = view.addLayer<GLTFModelLayer>({
     type: "mesh",
@@ -108,16 +90,19 @@ export const run = async (view: ThreeView) => {
       animationCrossfadeDuration: 0.3,
       useRTE: true,
     },
-    position: { x: startPos.x, y: startPos.y, z: startPos.z },
-    rotation: { x: euler.x, y: euler.y, z: euler.z },
   });
 
+  const startLLE = SCENES[gCurSceneName].startLLE;
+
   modelLayer.ref.on("load", () => {
+    updateModelLayerPos(view, modelLayer, startLLE);
+
     controlGLTFModel(view, modelLayer, {
       walkSpeed: 5,
       rotationSpeed: 3,
       cameraFollow: true,
       allowUnderground: true,
+      allowFly: true,
     });
   });
 
@@ -126,9 +111,100 @@ export const run = async (view: ThreeView) => {
     new Vector3(10, 10, 5),
   );
 
+  const pane = new Pane({ title: "Interior Explore" });
+  add3DTilesSceneControl(view, pane, modelLayer);
+
   showAttributions([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauToranomonHillsBIM,
+    TILES_3D_DATASETS.plateauTakanawa,
   ]);
+};
+
+const updateModelLayerPos = (
+  view: ThreeView,
+  modelLayer: LayerHandle<GLTFModelLayer>,
+  lle: number[],
+) => {
+  const startPos = geodeticToVector3(
+    new LLE(degreeToRadian(lle[0]), degreeToRadian(lle[1]), lle[2]),
+  );
+
+  const normal = geodeticSurfaceNormal(
+    new LLE(degreeToRadian(lle[0]), degreeToRadian(lle[1]), lle[2]),
+  );
+  // Calculate rotation to align model with surface normal
+  const up = new Vector3(0, 1, 0);
+  const quaternion = new Quaternion().setFromUnitVectors(up, normal);
+  const euler = new Euler().setFromQuaternion(quaternion);
+
+  modelLayer.update({
+    position: { x: startPos.x, y: startPos.y, z: startPos.z },
+    rotation: { x: euler.x, y: euler.y, z: euler.z },
+  });
+
+  view.cameraFollow(true, new LLE(lle[0], lle[1], lle[2] + 1));
+};
+
+const add3DTilesSceneControl = (
+  view: ThreeView,
+  pane: Pane,
+  modelLayer: LayerHandle<GLTFModelLayer>,
+) => {
+  const PARAMS = {
+    scene: gCurSceneName,
+  };
+
+  // Track current layer
+  let currentLayer: ReturnType<typeof view.addLayer> | null = null;
+
+  // Function to load new scene
+  const loadScene = (sceneName: keyof typeof SCENES) => {
+    // Clear current layer
+    if (currentLayer) {
+      currentLayer.delete();
+    }
+
+    const sceneData = SCENES[sceneName];
+    const description: LayerDescription = {
+      type: "cesium3dtiles",
+      data: {
+        url: sceneData.url,
+      },
+      model: {
+        show: true,
+        castShadow: true,
+        receiveShadow: true,
+        height: sceneData.height,
+      },
+    };
+    currentLayer = view.addLayer(description);
+  };
+
+  // Load initial scene
+  loadScene(PARAMS.scene);
+
+  // Add control to pane
+  const folder = pane.addFolder({
+    title: "3D Tiles Scene",
+    expanded: true,
+  });
+
+  folder
+    .addBinding(PARAMS, "scene", {
+      options: Object.keys(SCENES).reduce(
+        (acc, key) => {
+          acc[key] = key;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
+    })
+    .on("change", (v) => {
+      gCurSceneName = v.value as keyof typeof SCENES;
+      loadScene(gCurSceneName);
+
+      updateModelLayerPos(view, modelLayer, SCENES[gCurSceneName].startLLE);
+    });
 };
