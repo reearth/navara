@@ -193,10 +193,15 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
               gl_FragColor = vec4(pickColor.xyz, 1.0);
             }
-            gl_FragDepth = 0.0;  
+            gl_FragDepth -= 0.2;
             `,
         ).source;
-    };
+      console.log("==============================================");
+      console.log("BillboardShader", shader.vertexShader);
+      console.log("----------------------------------------------");
+      console.log("BillboardShader", shader.fragmentShader);
+      console.log("==============================================");
+      };
 
     this.text = txt;
     this.add(txt);
@@ -323,7 +328,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               gl_FragColor = vec4(nvr_uFillColor, 1.0);
           }
           
-          gl_FragDepth = 0.0;
+          gl_FragDepth -= 0.2;
         `,
         )
         .replace( 
@@ -347,6 +352,12 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         void main() {
           if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;`
         ).source;
+
+      // console.log("==============================================");
+      // console.log("BillboardShader", shader.vertexShader);
+      // console.log("----------------------------------------------");
+      // console.log("BillboardShader", shader.fragmentShader);
+      // console.log("==============================================");
     };
 
     background.onBeforeRender = function (

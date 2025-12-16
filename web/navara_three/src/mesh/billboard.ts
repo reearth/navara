@@ -86,7 +86,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
           gl_FragColor = vec4(pickColor.xyz, 1.0);
         }
-        gl_FragDepth = 0.0;
+        gl_FragDepth -= 0.2;
         `,
         )
         .replace(
@@ -111,11 +111,11 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
         `).source;
 
-      console.log("==============================================");
-      console.log("BillboardShader", shader.vertexShader);
-      console.log("----------------------------------------------");
-      console.log("BillboardShader", shader.fragmentShader);
-      console.log("==============================================");
+      // console.log("==============================================");
+      // console.log("BillboardShader", shader.vertexShader);
+      // console.log("----------------------------------------------");
+      // console.log("BillboardShader", shader.fragmentShader);
+      // console.log("==============================================");
 
     };
 

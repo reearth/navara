@@ -99,7 +99,8 @@ export class PointMesh extends Sprite implements FeatureMesh {
             vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
             gl_FragColor = vec4(pickColor.xyz, 1.0);
           }
-          gl_FragDepth = 0.0;
+          gl_FragDepth -= 0.2;
+
           `,
         )
         .replace(
