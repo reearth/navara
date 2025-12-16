@@ -9,6 +9,6 @@ bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_input.workspace = true
 bevy_log.workspace = true
-rustc_hash.workspace = true
+rustc-hash.workspace = true
 navara_math.workspace = true
 navara_window.workspace = true
