@@ -54,6 +54,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           `
         uniform vec2 center;
         ${HeightParsVertex}
+        out vec3 vWorldPosition;
         `,
         )
         .replace(
@@ -61,6 +62,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           `
           // Offset anchor world position along globe normal by addHeight
           vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          vWorldPosition = worldPosition.xyz;
           vec3 globeNormal = normalize(worldPosition.xyz);
           worldPosition.xyz += globeNormal * uAddHeight;
           vec4 mvPosition = viewMatrix * worldPosition;
@@ -86,11 +88,34 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         }
         gl_FragDepth = 0.0;
         `,
-        ).source;
+        )
+        .replace(
+          "void main() {",
+          `
+        in vec3 vWorldPosition;
 
-      // console.log("==============================================");
-      // console.log("BillboardShader", shader.fragmentShader);
-      // console.log("==============================================");
+        bool nvr_horizon_culled(vec3 worldPos, vec3 cameraPosition) {
+          const vec3 EARTH_RADIUS = vec3(6378137.0, 6378137.0,6356752.3142451793);
+
+          vec3 cameraPositionScaled = cameraPosition / EARTH_RADIUS;
+          vec3 worldPosScaled = worldPos / EARTH_RADIUS;
+
+          vec3 vt = cameraPositionScaled - worldPosScaled;
+          vec3 vc = cameraPositionScaled;
+          float a = dot(vc, vc) - 1.0;
+
+          return  dot(vt, vc) > a;
+        }
+
+        void main() {
+          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
+        `).source;
+
+      console.log("==============================================");
+      console.log("BillboardShader", shader.vertexShader);
+      console.log("----------------------------------------------");
+      console.log("BillboardShader", shader.fragmentShader);
+      console.log("==============================================");
 
     };
 
