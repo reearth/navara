@@ -1,6 +1,7 @@
 import { Material } from "three";
 import invariant from "tiny-invariant";
 
+import { Color } from "../../Color";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
@@ -8,7 +9,6 @@ import {
   type LightLayerUpdate,
 } from "../../core";
 import { SunLight, type SunLightOptions } from "../../lights";
-import { Color } from "../../Color";
 
 type LayerDescription = {
   /**
