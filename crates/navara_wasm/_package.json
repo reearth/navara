@@ -1,0 +1,16 @@
+{
+  "name": "navara_wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "license": "MIT/Apache-2.0",
+  "files": [
+    "navara_wasm_bg.wasm",
+    "navara_wasm.js",
+    "navara_wasm.d.ts"
+  ],
+  "main": "navara_wasm.js",
+  "types": "navara_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

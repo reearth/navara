@@ -1,20 +1,18 @@
 [package]
 name = "navara_mesh"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_event_store = { path = "../navara_event_store" }
-navara_math = { path = "../navara_math" }
-navara_component = { path = "../navara_component" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-navara_material = { path = "../navara_material" }
-navara_geometry = { path = "../navara_geometry" }
-navara_globe = { path = "../navara_globe" }
-navara_core = { path = "../navara_core" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_event_store.workspace = true
+navara_math.workspace = true
+navara_component.workspace = true
+navara_buffer_store.workspace = true
+navara_material.workspace = true
+navara_geometry.workspace = true
+navara_globe.workspace = true
+navara_core.workspace = true

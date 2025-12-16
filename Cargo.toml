@@ -8,34 +8,115 @@ members = [
 
 [workspace.package]
 rust-version = "1.86.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
 
 [workspace.dependencies]
+# --- Bevy ---
 bevy_app = "0.16.1"
 bevy_ecs = { version = "0.16.1", features = ["serialize"] }
 bevy_input = "0.16.1"
 bevy_log = "0.16.1"
 bevy_math = "0.16.1"
 bevy_transform = "0.16.1"
+
+# --- Serialization ---
+serde = { version = "1.0.225", features = ["derive"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "indexmap"] }
+serde_repr = "0.1.20"
+serde-wasm-bindgen = "0.6.5"
+binrw = { version = "0.15.0", default-features = false }
+
+# --- Utility ---
 approx = "0.5.1"
 url = "2.5.7"
-binrw = { version = "0.15.0", default-features = false }
-serde = { version = "1.0.225", features = ["derive"] }
-serde_json = { version = "1.0.145", default-features = false, features = ["alloc"] }
 nanoid = "0.4"
 cfg-if = "1.0.3"
 radians = "0.3.1"
 itertools = "0.14.0"
-geo-types = "0.7.17"
-instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
 fxhash = "0.2.1"
+rustc-hash = "2.1.1"
+num = "0.4.3"
+regex = "1.11.2"
+
+# --- Geo ---
+geo-types = "0.7.17"
+geojson_lib = { package = "geojson", version = "0.24.2" }
+earcutr = "0.5.0"
+
+# --- Time ---
+instant = { version = "0.1.13", features = ["wasm-bindgen", "inaccurate"] }
+
+# --- Random ---
+rand = "0.9.2"
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
 
 # --- WASM ---
-wasm-bindgen = { version = "=0.2.102" }
-
+wasm-bindgen = "=0.2.102"
 js-sys = "0.3.79"
-serde-wasm-bindgen = "0.6.5"
 gloo-utils = { version = "0.2.0", features = ["serde"] }
 web-sys = { version = "0.3.79", features = ["console"] }
+console_error_panic_hook = "0.1.7"
+
+# --- Testing ---
+wasm-bindgen-test = "0.3.52"
+prost = "0.13.5"
+image = { version = "0.25.8", default-features = false, features = ["png"] }
+
+# --- External Git Dependencies ---
+cesiumtiles = { git = "https://github.com/reearth/cesiumtiles-rs.git" }
+mvt-reader = { git = "https://github.com/reearth/mvt-reader.git" }
+
+# --- Internal Crates ---
+martini = { path = "crates/martini" }
+navara_b3dm = { path = "crates/navara_b3dm" }
+navara_bin = { path = "crates/navara_bin" }
+navara_buffer_store = { path = "crates/navara_buffer_store" }
+navara_camera = { path = "crates/navara_camera" }
+navara_cesium3dtiles = { path = "crates/navara_cesium3dtiles" }
+navara_cesiumtiles = { path = "crates/navara_cesiumtiles" }
+navara_component = { path = "crates/navara_component" }
+navara_core = { path = "crates/navara_core" }
+navara_data_requester = { path = "crates/navara_data_requester" }
+navara_ecs = { path = "crates/navara_ecs" }
+navara_event = { path = "crates/navara_event" }
+navara_event_store = { path = "crates/navara_event_store" }
+navara_feature = { path = "crates/navara_feature" }
+navara_feature_component = { path = "crates/navara_feature_component" }
+navara_fog = { path = "crates/navara_fog" }
+navara_frame = { path = "crates/navara_frame" }
+navara_geojson = { path = "crates/navara_geojson" }
+navara_geometry = { path = "crates/navara_geometry" }
+navara_glb = { path = "crates/navara_glb" }
+navara_globe = { path = "crates/navara_globe" }
+navara_input = { path = "crates/navara_input" }
+navara_layer = { path = "crates/navara_layer" }
+navara_layer_event = { path = "crates/navara_layer_event" }
+navara_material = { path = "crates/navara_material" }
+navara_math = { path = "crates/navara_math" }
+navara_mesh = { path = "crates/navara_mesh" }
+navara_mock = { path = "crates/navara_mock" }
+navara_mvt = { path = "crates/navara_mvt" }
+navara_mvt_parser = { path = "crates/navara_mvt_parser" }
+navara_occluder = { path = "crates/navara_occluder" }
+navara_parser = { path = "crates/navara_parser" }
+navara_pnts = { path = "crates/navara_pnts" }
+navara_quadtree = { path = "crates/navara_quadtree" }
+navara_texture_fragment = { path = "crates/navara_texture_fragment" }
+navara_tile = { path = "crates/navara_tile" }
+navara_tile_component = { path = "crates/navara_tile_component" }
+navara_wasm = { path = "crates/navara_wasm" }
+navara_wasm_api = { path = "crates/navara_wasm_api" }
+navara_wasm_transferable = { path = "crates/navara_wasm_transferable" }
+navara_wasm_types = { path = "crates/navara_wasm_types" }
+navara_wasm_utils = { path = "crates/navara_wasm_utils" }
+navara_wasm_worker = { path = "crates/navara_wasm_worker" }
+navara_window = { path = "crates/navara_window" }
+navara_worker = { path = "crates/navara_worker" }
 
 [workspace.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true
+
+[profile.release]
+# Optimize for small code size (for WASM modules)
+opt-level = "s"

@@ -1,7 +1,8 @@
 [package]
 name = "navara_camera"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
@@ -9,12 +10,9 @@ bevy_ecs.workspace = true
 bevy_input.workspace = true
 bevy_log.workspace = true
 approx.workspace = true
-navara_core = { path = "../navara_core" }
-navara_frame = { path = "../navara_frame" }
-navara_math = { path = "../navara_math" }
-navara_event_store = { path = "../navara_event_store" }
-navara_input = { path = "../navara_input" }
-navara_window = { path = "../navara_window" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_core.workspace = true
+navara_frame.workspace = true
+navara_math.workspace = true
+navara_event_store.workspace = true
+navara_input.workspace = true
+navara_window.workspace = true

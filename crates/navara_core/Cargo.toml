@@ -1,16 +1,13 @@
 [package]
 name = "navara_core"
 version = "0.1.0"
-edition = "2021"
-license = "MIT/Apache-2.0"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 radians.workspace = true
 bevy_log.workspace = true
 bevy_ecs.workspace = true
-navara_math = { path = "../navara_math" }
 approx.workspace = true
-regex = "1.11.2"
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+regex.workspace = true
+navara_math.workspace = true

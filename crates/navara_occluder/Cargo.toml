@@ -1,19 +1,17 @@
 [package]
 name = "navara_occluder"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_core = { path = "../navara_core" }
-navara_camera = { path = "../navara_camera" }
-navara_math = { path = "../navara_math" }
-navara_mock = { path = "../navara_mock" }
+navara_core.workspace = true
+navara_camera.workspace = true
+navara_math.workspace = true
+navara_mock.workspace = true
 
 [dev-dependencies]
 approx.workspace = true
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true

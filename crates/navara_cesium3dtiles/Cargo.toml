@@ -1,31 +1,25 @@
 [package]
 name = "navara_cesium3dtiles"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-navara_core = { path = "../navara_core" }
-navara_layer = { path = "../navara_layer" }
-navara_material = { path = "../navara_material" }
-navara_math = { path = "../navara_math" }
-navara_parser = { path = "../navara_parser" }
-navara_feature_component = { path = "../navara_feature_component" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-navara_data_requester = { path = "../navara_data_requester" }
-navara_event_store = { path = "../navara_event_store" }
-navara_geometry = { path = "../navara_geometry" }
-navara_camera = { path = "../navara_camera" }
-navara_window = { path = "../navara_window" }
-navara_component = { path = "../navara_component" }
 url.workspace = true
 serde_json.workspace = true
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_core.workspace = true
+navara_layer.workspace = true
+navara_material.workspace = true
+navara_math.workspace = true
+navara_parser.workspace = true
+navara_feature_component.workspace = true
+navara_buffer_store.workspace = true
+navara_data_requester.workspace = true
+navara_event_store.workspace = true
+navara_geometry.workspace = true
+navara_camera.workspace = true
+navara_window.workspace = true
+navara_component.workspace = true

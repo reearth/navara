@@ -1,16 +1,14 @@
 [package]
 name = "navara_input"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_input.workspace = true
 bevy_log.workspace = true
-navara_math = { path = "../navara_math" }
-navara_window = { path = "../navara_window" }
-rustc-hash = "2.1.1"
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+rustc-hash.workspace = true
+navara_math.workspace = true
+navara_window.workspace = true
