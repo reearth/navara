@@ -1,7 +1,8 @@
 [package]
 name = "navara_worker"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [features]
 default = ["delegated_worker"]
@@ -13,15 +14,12 @@ bevy_ecs.workspace = true
 bevy_log.workspace = true
 cfg-if.workspace = true
 serde.workspace = true
-navara_math = { path = "../navara_math" }
-navara_tile_component = { path = "../navara_tile_component" }
-navara_core = { path = "../navara_core" }
-navara_buffer_store = { path = "../navara_buffer_store" }
-navara_geometry = { path = "../navara_geometry" }
-navara_component = { path = "../navara_component" }
-navara_event_store = { path = "../navara_event_store" }
-navara_feature_component = { path = "../navara_feature_component" }
-navara_material = { path = "../navara_material" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_math.workspace = true
+navara_tile_component.workspace = true
+navara_core.workspace = true
+navara_buffer_store.workspace = true
+navara_geometry.workspace = true
+navara_component.workspace = true
+navara_event_store.workspace = true
+navara_feature_component.workspace = true
+navara_material.workspace = true

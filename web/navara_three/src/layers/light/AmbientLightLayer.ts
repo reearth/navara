@@ -1,3 +1,4 @@
+import { Color } from "../../Color";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
@@ -5,7 +6,6 @@ import {
   type LightLayerUpdate,
 } from "../../core";
 import { AmbientLight, type AmbientLightOptions } from "../../lights";
-import { Color } from "../../Color";
 
 type LayerDescription = {
   ambient?: Omit<AmbientLightOptions, "color"> & {

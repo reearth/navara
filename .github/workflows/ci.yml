@@ -16,9 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.86.0
         with:
-          toolchain: 1.86.0
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
 
@@ -47,8 +46,8 @@ jobs:
       - name: Install cargo-make
         run: cargo install cargo-make --locked
       
-      - name: Install wasm-pack
-        run: cargo install wasm-pack --locked
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.102 --locked
 
       - name: Prepare
         run: cargo make prepare-ci
@@ -72,9 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+      - uses: dtolnay/rust-toolchain@1.86.0
 
       - uses: Swatinem/rust-cache@v2
         with:
