@@ -56,7 +56,8 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           `
         uniform vec2 center;
         ${HeightParsVertex}
-        out vec3 vWorldPosition;
+        flat out int vHorizonCulled;
+        ${HorizonCulling}
         `,
         )
         .replace(
@@ -64,7 +65,17 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           `
           // Offset anchor world position along globe normal by addHeight
           vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          vWorldPosition = worldPosition.xyz;
+
+          bool horizonCulled = nvr_horizon_culled(worldPosition.xyz, cameraPosition);
+          if (horizonCulled) {
+            vHorizonCulled = 1;
+            // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
+            //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
+            gl_Position = vec4(0.0);
+            return;
+          }
+          vHorizonCulled = 0;
+
           vec3 globeNormal = normalize(worldPosition.xyz);
           worldPosition.xyz += globeNormal * uAddHeight;
           vec4 mvPosition = viewMatrix * worldPosition;
@@ -96,11 +107,10 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         .replace(
           "void main() {",
           `
-        in vec3 vWorldPosition;
+        flat in int vHorizonCulled;
         
-        ${HorizonCulling}
         void main() {
-          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
+          if (vHorizonCulled == 1) discard;
         `).source;
     };
 

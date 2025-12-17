@@ -137,7 +137,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             ${HeightParsVertex}
             ${BillboardMatrix}
             ${PixelToWorld}
-            out vec3 vWorldPosition;
+            flat out int vHorizonCulled;
+            ${HorizonCulling}
             `,
         )
         .replace(
@@ -153,7 +154,18 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
             // Anchor with additional height offset along globe normal
             vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-            vWorldPosition = worldAnchor.xyz;
+        
+            // Horizon culling
+            bool horizonCulled = nvr_horizon_culled(worldAnchor.xyz, cameraPosition);
+            if (horizonCulled) {
+              vHorizonCulled = 1;
+              // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
+              //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
+              gl_Position = vec4(0.0);
+              return;
+            }
+            vHorizonCulled = 0;
+            
             vec3 globeNormal = normalize(worldAnchor.xyz);
             worldAnchor.xyz += globeNormal * uAddHeight;
             vec4 anchorMv = viewMatrix * worldAnchor;
@@ -170,11 +182,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           `
       ${BatchDefinitioin}
       ${Pick}
-        in vec3 vWorldPosition;
+        flat in int vHorizonCulled;
         
-        ${HorizonCulling}
         void main() {
-          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
+          if (vHorizonCulled == 1) discard;
             `,
         )
         .replace(
@@ -232,7 +243,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         ${HeightParsVertex}
         ${BillboardMatrix}
         ${PixelToWorld}
-        out vec3 vWorldPosition;
+        flat out int vHorizonCulled;
+        ${HorizonCulling}
         void main() {
           vUv = uv;
         `,
@@ -252,7 +264,18 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
         // Anchor with additional height offset along globe normal
         vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-        vWorldPosition = worldAnchor.xyz;
+
+        // Horizon culling
+        bool horizonCulled = nvr_horizon_culled(worldAnchor.xyz, cameraPosition);
+        if (horizonCulled) {
+          vHorizonCulled = 1;
+          // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
+          //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
+          gl_Position = vec4(0.0);
+          return;
+        }
+        vHorizonCulled = 0;
+
         vec3 globeNormal = normalize(worldAnchor.xyz);
         worldAnchor.xyz += globeNormal * uAddHeight;
         vec4 anchorMv = viewMatrix * worldAnchor;
@@ -324,11 +347,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         .replace( 
           "void main() {",
         `
-        in vec3 vWorldPosition;
+        flat in int vHorizonCulled;
 
-        ${HorizonCulling}
         void main() {
-          if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;`
+          if (vHorizonCulled == 1) discard;`
         ).source;
     };
 
