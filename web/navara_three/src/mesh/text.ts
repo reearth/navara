@@ -3,6 +3,7 @@ import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
+import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
 import SdRoundedBox from "@shaders/glsl/chunks/sdRoundedBox.glsl";
@@ -170,20 +171,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       ${BatchDefinitioin}
       ${Pick}
         in vec3 vWorldPosition;
-
-        bool nvr_horizon_culled(vec3 worldPos, vec3 cameraPosition) {
-          const vec3 EARTH_RADIUS = vec3(6378137.0, 6378137.0,6356752.3142451793);
-
-          vec3 cameraPositionScaled = cameraPosition / EARTH_RADIUS;
-          vec3 worldPosScaled = worldPos / EARTH_RADIUS;
-
-          vec3 vt = cameraPositionScaled - worldPosScaled;
-          vec3 vc = cameraPositionScaled;
-          float a = dot(vc, vc) - 1.0;
-
-          return  dot(vt, vc) > a;
-        }
-
+        
+        ${HorizonCulling}
         void main() {
           if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;
             `,
@@ -195,14 +184,11 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
               gl_FragColor = vec4(pickColor.xyz, 1.0);
             }
+
+            // Offset depth to make sure to be drawn over ellipsoid surface
             gl_FragDepth -= 0.2;
             `,
         ).source;
-      console.log("==============================================");
-      console.log("BillboardShader", shader.vertexShader);
-      console.log("----------------------------------------------");
-      console.log("BillboardShader", shader.fragmentShader);
-      console.log("==============================================");
       };
 
     this.text = txt;
@@ -331,6 +317,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               gl_FragColor = vec4(nvr_uFillColor, 1.0);
           }
           
+          // Offset depth to make sure to be drawn over ellipsoid surface
           gl_FragDepth -= 0.2;
         `,
         )
@@ -339,28 +326,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         `
         in vec3 vWorldPosition;
 
-        bool nvr_horizon_culled(vec3 worldPos, vec3 cameraPosition) {
-          const vec3 EARTH_RADIUS = vec3(6378137.0, 6378137.0,6356752.3142451793);
-
-          vec3 cameraPositionScaled = cameraPosition / EARTH_RADIUS;
-          vec3 worldPosScaled = worldPos / EARTH_RADIUS;
-
-          vec3 vt = cameraPositionScaled - worldPosScaled;
-          vec3 vc = cameraPositionScaled;
-          float a = dot(vc, vc) - 1.0;
-
-          return  dot(vt, vc) > a;
-        }
-
+        ${HorizonCulling}
         void main() {
           if (nvr_horizon_culled(vWorldPosition, cameraPosition)) discard;`
         ).source;
-
-      // console.log("==============================================");
-      // console.log("BillboardShader", shader.vertexShader);
-      // console.log("----------------------------------------------");
-      // console.log("BillboardShader", shader.fragmentShader);
-      // console.log("==============================================");
     };
 
     background.onBeforeRender = function (
