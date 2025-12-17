@@ -14,7 +14,12 @@ import { FeatureMesh } from "./featureMesh";
 export class PointMesh extends Sprite implements FeatureMesh {
   private offsetDepth: boolean;
 
-  constructor(material: NavaraPointMaterial, batchId: number, active: boolean, offsetDepth: boolean) {
+  constructor(
+    material: NavaraPointMaterial,
+    batchId: number,
+    active: boolean,
+    offsetDepth: boolean,
+  ) {
     super(new SpriteMaterial());
 
     this.offsetDepth = offsetDepth;

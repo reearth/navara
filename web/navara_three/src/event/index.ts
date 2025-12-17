@@ -179,7 +179,7 @@ export function processEvent(
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   updatedAt: number,
-  options: Options
+  options: Options,
 ) {
   eventManager.pushEvents(event);
 

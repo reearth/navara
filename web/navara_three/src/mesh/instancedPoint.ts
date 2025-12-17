@@ -17,7 +17,11 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
     this.initMeshes(m, buf, offsetDepth);
   }
 
-  private initMeshes(m: NavaraPointMesh, buf: BufferLoader, offsetDepth: boolean) {
+  private initMeshes(
+    m: NavaraPointMesh,
+    buf: BufferLoader,
+    offsetDepth: boolean,
+  ) {
     const g = m.geometry;
     const positionData = g.position;
     const position = buf.removeF32(positionData.data);

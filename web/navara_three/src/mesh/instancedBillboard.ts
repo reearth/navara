@@ -11,7 +11,11 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
     await this.initMeshes(m, buf, offsetDepth);
   }
 
-  private async initMeshes(m: NavaraBillboardMesh, buf: BufferLoader, offsetDepth: boolean) {
+  private async initMeshes(
+    m: NavaraBillboardMesh,
+    buf: BufferLoader,
+    offsetDepth: boolean,
+  ) {
     const g = m.geometry;
     const positionData = g.position;
     const position = buf.removeF32(positionData.data);

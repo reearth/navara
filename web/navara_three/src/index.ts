@@ -945,7 +945,7 @@ export default class ThreeView<
       this,
       this.layersManager,
       updatedAt,
-      this._options
+      this._options,
     );
     events?.free();
 

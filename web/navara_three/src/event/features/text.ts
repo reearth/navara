@@ -12,8 +12,7 @@ export async function renderText(
   uniforms: CommonUniforms,
   offsetDepth: boolean,
 ) {
-  const textGroup = new InstancedTextMesh(m, buf, uniforms, offsetDepth,
-  {
+  const textGroup = new InstancedTextMesh(m, buf, uniforms, offsetDepth, {
     renderOrder: FEATURE_RENDER_ORDER,
   });
 
