@@ -138,8 +138,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: "/example.png",
     },
   },
-
-    {
+  {
     type: "geojson",
     data: {
       type: "FeatureCollection",
@@ -148,10 +147,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
           type: "Feature",
           properties: {},
           geometry: {
-            coordinates:  [80, 10.0],
+            coordinates: [80, 10.0],
             type: "Point",
           },
-        }
+        },
       ],
     },
     billboard: {
@@ -166,7 +165,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
   },
 
-    {
+  {
     type: "geojson",
     data: {
       type: "FeatureCollection",

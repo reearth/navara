@@ -200,7 +200,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             gl_FragDepth -= 0.2;
             `,
         ).source;
-      };
+    };
 
     this.text = txt;
     this.add(txt);
@@ -344,13 +344,13 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           gl_FragDepth -= 0.2;
         `,
         )
-        .replace( 
+        .replace(
           "void main() {",
-        `
+          `
         flat in int vHorizonCulled;
 
         void main() {
-          if (vHorizonCulled == 1) discard;`
+          if (vHorizonCulled == 1) discard;`,
         ).source;
     };
 

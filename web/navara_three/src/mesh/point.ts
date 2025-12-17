@@ -34,7 +34,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
-    material.depthFunc = LessDepth;  
+    material.depthFunc = LessDepth;
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);
@@ -121,14 +121,13 @@ export class PointMesh extends Sprite implements FeatureMesh {
         )
         .replace(
           `void main() {`,
-        `
+          `
         flat in int vHorizonCulled;
 
         void main() {
           if (vHorizonCulled == 1) discard;
             `,
         ).source;
-
     };
 
     if (meshMaterial.center) {

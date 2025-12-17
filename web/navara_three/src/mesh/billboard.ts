@@ -4,7 +4,7 @@ import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
-import { Color, Sprite, SpriteMaterial, LessDepth} from "three";
+import { Color, Sprite, SpriteMaterial, LessDepth } from "three";
 import invariant from "tiny-invariant";
 
 import { TEXTURE_LOADER } from "../event/loaders";
@@ -48,7 +48,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       // Pass height uniform to shader
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
-      
+
       // Declare uniform in vertex shader and apply to position
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -111,7 +111,8 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         
         void main() {
           if (vHorizonCulled == 1) discard;
-        `).source;
+        `,
+        ).source;
     };
 
     this.userData.batchId = batchId;
