@@ -138,59 +138,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       url: "/example.png",
     },
   },
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [80, 10.0],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    billboard: {
-      color: new Color().setStyle("#ffffff"),
-      size: 0.05,
-      height: 1,
-      scaleByDistance: true,
-      clampToGround: true,
-      depthTest: true,
-      transparent: false,
-      url: "/example.png",
-    },
-  },
-
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [135.7672689034169, 35.011034421881675],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    billboard: {
-      color: new Color().setStyle("#ffffff"),
-      size: 0.05,
-      height: 1,
-      scaleByDistance: true,
-      clampToGround: true,
-      depthTest: true,
-      transparent: false,
-      url: "/example.png",
-    },
-  },
 
   {
     type: "geojson",
