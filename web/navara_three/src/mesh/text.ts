@@ -29,13 +29,17 @@ import type { PickableMesh } from "./pickableMesh";
 export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
   background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  private offsetDepth: boolean;
 
   constructor(
     meshMaterial: NavaraTextMaterial,
     uniforms: CommonUniforms,
     batchId: number,
+    offsetDepth: boolean,
   ) {
     super();
+
+    this.offsetDepth = offsetDepth;
 
     this.text = new Text();
 
@@ -197,7 +201,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             }
 
             // Offset depth to make sure to be drawn over ellipsoid surface
-            gl_FragDepth -= 0.2;
+            ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
             `,
         ).source;
     };
@@ -341,7 +345,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           }
           
           // Offset depth to make sure to be drawn over ellipsoid surface
-          gl_FragDepth -= 0.2;
+          ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
         `,
         )
         .replace(

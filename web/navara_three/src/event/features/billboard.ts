@@ -7,13 +7,14 @@ import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 export async function renderBillboard(
   m: NavaraBillboardMesh,
   buf: BufferLoader,
+  offsetDepth: boolean,
 ) {
   if (!m.material.url) return;
 
   const mesh = new InstancedBillboardMesh({
     renderOrder: FEATURE_RENDER_ORDER,
   });
-  await mesh._init(m, buf);
+  await mesh._init(m, buf, offsetDepth);
 
   return mesh;
 }

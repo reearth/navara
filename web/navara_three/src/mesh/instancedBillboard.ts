@@ -7,11 +7,11 @@ import { BillboardMesh } from "./billboard";
 import { InstancedMesh } from "./instanced";
 
 export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
-  async _init(m: NavaraBillboardMesh, buf: BufferLoader) {
-    await this.initMeshes(m, buf);
+  async _init(m: NavaraBillboardMesh, buf: BufferLoader, offsetDepth: boolean) {
+    await this.initMeshes(m, buf, offsetDepth);
   }
 
-  private async initMeshes(m: NavaraBillboardMesh, buf: BufferLoader) {
+  private async initMeshes(m: NavaraBillboardMesh, buf: BufferLoader, offsetDepth: boolean) {
     const g = m.geometry;
     const positionData = g.position;
     const position = buf.removeF32(positionData.data);
@@ -40,7 +40,7 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       const batchIdIdx = i * batchIdSize;
       const batchId = batchIds[batchIdIdx];
 
-      const mesh = new BillboardMesh();
+      const mesh = new BillboardMesh(offsetDepth);
       mesh.renderOrder = this.renderOrder;
 
       promises.push(

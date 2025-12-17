@@ -11,17 +11,19 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     m: NavaraTextMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
+    offsetDepth: boolean,
     options?: InstancedMeshOptions,
   ) {
     super(options);
 
-    this.initMeshes(m, buf, uniforms);
+    this.initMeshes(m, buf, uniforms, offsetDepth);
   }
 
   private initMeshes(
     m: NavaraTextMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
+    offsetDepth: boolean,
   ) {
     const g = m.geometry;
     const positionData = g.position;
@@ -49,7 +51,7 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
       const batchIdIdx = i * batchIdSize;
       const batchId = batchIds[batchIdIdx];
 
-      const mesh = new TextMesh(material, uniforms, batchId);
+      const mesh = new TextMesh(material, uniforms, batchId, offsetDepth);
       mesh.renderOrder = this.renderOrder;
       mesh._updateTextByMaterial(material, active);
 

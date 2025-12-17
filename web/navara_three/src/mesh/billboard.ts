@@ -13,8 +13,11 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class BillboardMesh extends Sprite implements FeatureMesh {
-  constructor() {
+  private offsetDepth: boolean;
+
+  constructor(offsetDepth: boolean) {
     super(new SpriteMaterial());
+    this.offsetDepth = offsetDepth;
   }
 
   async _init(
@@ -101,7 +104,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         }
 
         // Offset depth to make sure to be drawn over ellipsoid surface
-        gl_FragDepth -= 0.2;
+        ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
         `,
         )
         .replace(

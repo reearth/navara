@@ -7,7 +7,7 @@ import {
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D, Material } from "three";
 
-import type { ViewEvents } from "..";
+import type { Options, ViewEvents } from "..";
 import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
@@ -45,12 +45,13 @@ export function renderFeature(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
+  options: Options,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf);
+    return renderPoint(f.point, buf, !!options.depthOffset);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf);
+    return renderBillboard(f.billboard, buf, !!options.depthOffset);
   }
   if (f.model) {
     return renderModel(f.model, buf, uniforms, viewEvents);
@@ -62,7 +63,7 @@ export function renderFeature(
     return renderPolygon(f.polygon, buf, uniforms, tileHandle, viewEvents);
   }
   if (f.text) {
-    return renderText(f.text, buf, uniforms);
+    return renderText(f.text, buf, uniforms, !!options.depthOffset);
   }
 }
 
@@ -78,6 +79,7 @@ export async function processRenderableFeatureAdded(
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   updatedAt: number,
+  options: Options,
   onConcurrency: (v: number) => void,
 ) {
   const id = generate_id_from_entity(ev);
@@ -102,6 +104,7 @@ export async function processRenderableFeatureAdded(
     uniforms,
     tileHandle,
     viewEvents,
+    options,
   )
     ?.then((r) => {
       const type = (() => {

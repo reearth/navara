@@ -12,9 +12,12 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class PointMesh extends Sprite implements FeatureMesh {
-  constructor(material: NavaraPointMaterial, batchId: number, active: boolean) {
+  private offsetDepth: boolean;
+
+  constructor(material: NavaraPointMaterial, batchId: number, active: boolean, offsetDepth: boolean) {
     super(new SpriteMaterial());
 
+    this.offsetDepth = offsetDepth;
     this.initMaterial(material, batchId, active);
   }
 
@@ -115,7 +118,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
           }
 
           // Offset depth to make sure to be drawn over ellipsoid surface
-          gl_FragDepth -= 0.2;
+          ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
 
           `,
         )
