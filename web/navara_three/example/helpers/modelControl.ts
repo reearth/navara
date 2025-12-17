@@ -191,9 +191,7 @@ const updateModelTransform = (
     new LLE(currentLLE.lat, currentLLE.lng, currentLLE.height),
   );
 
-  params.height =
-    (params.height ?? currentLLE.height) +
-    dir.z * (params.walkSpeed ?? 1) * deltaTime;
+  let height = currentLLE.height + dir.z * (params.walkSpeed ?? 1) * deltaTime;
 
   // Build rotation based on ENU (East-North-Up) frame using WASM API
   const enuMatrix = eastNorthUpToFixedFrame(curPos);
@@ -272,17 +270,17 @@ const updateModelTransform = (
 
   if (params.allowFly) {
     if (!params.allowUnderground) {
-      params.height = Math.max(
-        params.height,
+      height = Math.max(
+        height,
         terrainHeight !== undefined ? terrainHeight : 0,
       ); // Prevent negative height
     }
   } else {
-    params.height = terrainHeight !== undefined ? terrainHeight : 0;
+    height = terrainHeight !== undefined ? terrainHeight : 0;
   }
 
   const curTerrainPos = geodeticToVector3(
-    new LLE(curLLE.lat, curLLE.lng, params.height),
+    new LLE(curLLE.lat, curLLE.lng, height),
   );
 
   modelLayer.update({

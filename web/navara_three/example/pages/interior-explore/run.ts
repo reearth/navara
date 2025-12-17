@@ -30,8 +30,8 @@ const SCENES = {
   },
   Takanawa: {
     url: TILES_3D_DATASETS.plateauTakanawa.url,
-    height: -50,
-    startLLE: [35.63517500123948, 139.73968705211848, 30],
+    height: -35,
+    startLLE: [35.63517500123948, 139.73968705211848, 45],
   },
 };
 
@@ -144,7 +144,11 @@ const updateModelLayerPos = (
     rotation: { x: euler.x, y: euler.y, z: euler.z },
   });
 
-  view.cameraFollow(true, new LLE(lle[0], lle[1], lle[2] + 1));
+  view.cameraFollow(
+    true,
+    new LLE(lle[0], lle[1], lle[2] + 1),
+    new Vector3(10, 10, 5),
+  );
 };
 
 const add3DTilesSceneControl = (
