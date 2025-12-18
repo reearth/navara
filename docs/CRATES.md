@@ -100,11 +100,6 @@ This document provides detailed documentation for all 40+ Rust crates in the Nav
 - **Key Features**: MVT parsing, vector feature extraction
 - **Used by**: Vector tile layers
 
-### **`navara_mvt_parser`**
-- **Purpose**: Low-level MVT parsing utilities
-- **Key Features**: Protobuf parsing, geometry decoding
-- **Used by**: `navara_mvt` for MVT data processing
-
 ### **`navara_geojson`**
 - **Purpose**: GeoJSON format support
 - **Key Features**: GeoJSON parsing, feature collection handling

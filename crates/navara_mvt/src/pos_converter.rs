@@ -35,19 +35,23 @@ impl PosConverter {
         converter
     }
 
-    pub fn project_point(&self, pt: &Coord<f32>) -> (FloatType, FloatType) {
-        let x = (pt.x as f64 + self.x0) * self.scale_x - 180.0;
-        let exp_value = f64::exp((1.0 - (pt.y as f64 + self.y0) * self.scale_y) * PI);
+    // --- f64 versions for geozero compatibility ---
+
+    /// Project a single point from tile coordinates (f64) to geographic coordinates.
+    pub fn project_point(&self, px: f64, py: f64) -> (FloatType, FloatType) {
+        let x = (px + self.x0) * self.scale_x - 180.0;
+        let exp_value = f64::exp((1.0 - (py + self.y0) * self.scale_y) * PI);
         let y = 360.0 / PI * (f64::atan(exp_value)) - 90.0;
 
         (x as FloatType, y as FloatType)
     }
 
-    pub fn project_points(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
-        let mut ret = Vec::new();
+    /// Project a slice of f64 coordinates to geographic coordinates.
+    pub fn project_points(&self, points: &[Coord<f64>]) -> Vec<FloatType> {
+        let mut ret = Vec::with_capacity(points.len() * 3);
 
         for pt in points {
-            let (x, y) = self.project_point(pt);
+            let (x, y) = self.project_point(pt.x, pt.y);
             ret.push(x);
             ret.push(y);
             ret.push(0.0_f64);
@@ -56,9 +60,9 @@ impl PosConverter {
         ret
     }
 
-    /// Construct points based on the extent center.
-    pub fn project_points_on_center(&self, points: &Vec<Coord<f32>>) -> Vec<FloatType> {
-        let half_extent = self.extent / 2.0;
+    /// Construct points based on the extent center (f64 version).
+    pub fn project_points_on_center(&self, points: &[Coord<f64>]) -> Vec<FloatType> {
+        let half_extent = self.extent as f64 / 2.0;
         let mut ret = Vec::with_capacity(points.len() * 3);
 
         for pt in points {
@@ -66,8 +70,8 @@ impl PosConverter {
             let y = -(pt.y - half_extent) / half_extent;
             let z = 0.0;
 
-            ret.push(x as f64);
-            ret.push(y as f64);
+            ret.push(x);
+            ret.push(y);
             ret.push(z);
         }
 
