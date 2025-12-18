@@ -68,12 +68,14 @@ run_task = { name = ["watch-prod", "dev-web"], parallel = true }
 
 [tasks.watch]
 script = ['''
-cargo watch -i .gitignore -i "pkg/*" -s "cargo make build-dev-all" --poll
+cargo watch -i .gitignore -i "pkg/*" --watch "./crates" -s "cargo make build-dev-all" --poll
+cargo watch -i .gitignore -i "pkg/*" --watch "./web" -s "cargo make build-web" --poll
 ''']
 
 [tasks.watch-prod]
 script = ['''
-cargo watch -i .gitignore -i "pkg/*" -s "cargo make build-all" --poll
+cargo watch -i .gitignore -i "pkg/*" --watch "./crates" -s "cargo make build-all" --poll
+cargo watch -i .gitignore -i "pkg/*" --watch "./web" -s "cargo make build-web" --poll
 ''']
 
 # ============================================================================
