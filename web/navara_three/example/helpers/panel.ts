@@ -209,6 +209,7 @@ export const addCtrlPanel = (
     outlineOpacity: 1.0,
     surfaceShow: true,
     pointSize: 0.3,
+    offsetDepth: true,
   };
 
   pane
@@ -458,6 +459,11 @@ export const addCtrlPanel = (
         material.pointSize = paneParams.pointSize;
       }
 
+      if ("offsetDepth" in material) {
+        material.offsetDepth = paneParams.offsetDepth;
+        console.log("offsetDepth set to ", material.offsetDepth);
+      }
+
       view.updateLayerById(layerId, {
         type: layer.type,
         data: layer.data,
@@ -690,6 +696,12 @@ function createParamCtrl(
         changeFunc,
       );
     }
+
+    if ("offsetDepth" in material) {
+      paneParams.offsetDepth = material.offsetDepth;
+      f.addBinding(paneParams, "offsetDepth").on("change", changeFunc);
+    }
+
     return f;
   }
 

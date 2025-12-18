@@ -13,11 +13,9 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class BillboardMesh extends Sprite implements FeatureMesh {
-  private offsetDepth: boolean;
 
-  constructor(offsetDepth: boolean) {
+  constructor() {
     super(new SpriteMaterial());
-    this.offsetDepth = offsetDepth;
   }
 
   async _init(
@@ -45,12 +43,17 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    material.userData.uOffsetDepth = {
+      value: meshMaterial.offsetDepth ?? true,
+    };
+
     material.depthFunc = LessDepth;
     material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uBatchId = { value: batchId };
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       // Pass height uniform to shader
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
+      shader.uniforms.uOffsetDepth = material.userData.uOffsetDepth;
 
       // Declare uniform in vertex shader and apply to position
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -92,6 +95,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         #include <clipping_planes_pars_fragment>
         ${BatchDefinitioin}
         ${Pick}
+        uniform bool uOffsetDepth;  
       `,
         )
         .replace(
@@ -104,7 +108,7 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         }
 
         // Offset depth to make sure to be drawn over ellipsoid surface
-        ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
+        if (uOffsetDepth) { gl_FragDepth -= 0.2; }
         `,
         )
         .replace(
@@ -150,6 +154,12 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     if (prev.depthTest !== nextDepthTest) {
       this.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    const nextOffsetDepth = !!material.offsetDepth;
+    if (prev.offsetDepth !== nextOffsetDepth) {
+      this.material.userData.uOffsetDepth.value = nextOffsetDepth;
+      prev.offsetDepth = nextOffsetDepth;
     }
 
     const nextTransparent = !!material.transparent;

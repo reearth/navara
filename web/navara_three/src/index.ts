@@ -173,8 +173,6 @@ export type Options = {
   shadow?: boolean;
   // Enable mobile device optimizations such as lower pixel ratio.
   mobileOptimization?: boolean;
-  // Enable depth offset for billboards/points/text to avoid z-fighting with the globe
-  depthOffset?: boolean;
 } & GlobeOptions;
 
 export type MapMouseEvent = {
@@ -493,7 +491,6 @@ export default class ThreeView<
     }
 
     this._options = options;
-    this._options.depthOffset = options.depthOffset ?? true;
 
     // Initialize terrain picker
     this._terrainPicker = new TerrainPicker();
@@ -945,7 +942,6 @@ export default class ThreeView<
       this,
       this.layersManager,
       updatedAt,
-      this._options,
     );
     events?.free();
 

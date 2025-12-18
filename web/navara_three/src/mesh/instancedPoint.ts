@@ -9,18 +9,16 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
   constructor(
     m: NavaraPointMesh,
     buf: BufferLoader,
-    offsetDepth: boolean,
     options?: InstancedMeshOptions,
   ) {
     super(options);
 
-    this.initMeshes(m, buf, offsetDepth);
+    this.initMeshes(m, buf);
   }
 
   private initMeshes(
     m: NavaraPointMesh,
     buf: BufferLoader,
-    offsetDepth: boolean,
   ) {
     const g = m.geometry;
     const positionData = g.position;
@@ -48,7 +46,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
       const batchIdIdx = i * batchIdSize;
       const batchId = batchIds[batchIdIdx];
 
-      const mesh = new PointMesh(material, batchId, active, offsetDepth);
+      const mesh = new PointMesh(material, batchId, active);
       mesh.renderOrder = this.renderOrder;
 
       setTransform(mesh, transform);

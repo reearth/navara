@@ -29,17 +29,13 @@ import type { PickableMesh } from "./pickableMesh";
 export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
   background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
-  private offsetDepth: boolean;
 
   constructor(
     meshMaterial: NavaraTextMaterial,
     uniforms: CommonUniforms,
     batchId: number,
-    offsetDepth: boolean,
   ) {
     super();
-
-    this.offsetDepth = offsetDepth;
 
     this.text = new Text();
 
@@ -100,6 +96,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       value: 0.0,
     };
 
+    this.userData.uOffsetDepth = {
+      value: meshMaterial.offsetDepth ?? true,
+    };
+
     this.initText(meshMaterial);
   }
 
@@ -127,6 +127,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
       shader.uniforms.uAddHeight = this.userData.addHeight;
+      shader.uniforms.uOffsetDepth = this.userData.uOffsetDepth;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -187,6 +188,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       ${BatchDefinitioin}
       ${Pick}
         flat in int vHorizonCulled;
+        uniform bool uOffsetDepth;
         
         void main() {
           if (vHorizonCulled == 1) discard;
@@ -201,7 +203,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             }
 
             // Offset depth to make sure to be drawn over ellipsoid surface
-            ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
+            if (uOffsetDepth) { gl_FragDepth -= 0.2; }
             `,
         ).source;
     };
@@ -233,6 +235,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
       shader.uniforms.uAddHeight = this.userData.addHeight;
+      shader.uniforms.uOffsetDepth = this.userData.uOffsetDepth;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -304,6 +307,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         in vec2 vUv;
         ${Pick}
         ${SdRoundedBox}
+        uniform bool uOffsetDepth;
         `,
         )
         .replace(
@@ -345,7 +349,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           }
           
           // Offset depth to make sure to be drawn over ellipsoid surface
-          ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
+          if (uOffsetDepth) { gl_FragDepth -= 0.2; }
         `,
         )
         .replace(
@@ -429,6 +433,12 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     if (nextDepthTest !== prev.depthTest) {
       txt.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    const nextOffsetDepth = material.offsetDepth ?? true;
+    if (nextOffsetDepth !== prev.offsetDepth) {
+      this.userData.uOffsetDepth.value = nextOffsetDepth;
+      prev.offsetDepth = nextOffsetDepth;
     }
 
     if (!nextVisible) return;

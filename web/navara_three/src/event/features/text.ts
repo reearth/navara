@@ -10,9 +10,8 @@ export async function renderText(
   m: NavaraTextMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  offsetDepth: boolean,
 ) {
-  const textGroup = new InstancedTextMesh(m, buf, uniforms, offsetDepth, {
+  const textGroup = new InstancedTextMesh(m, buf, uniforms, {
     renderOrder: FEATURE_RENDER_ORDER,
   });
 

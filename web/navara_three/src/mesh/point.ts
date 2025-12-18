@@ -12,17 +12,13 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class PointMesh extends Sprite implements FeatureMesh {
-  private offsetDepth: boolean;
-
   constructor(
     material: NavaraPointMaterial,
     batchId: number,
     active: boolean,
-    offsetDepth: boolean,
   ) {
     super(new SpriteMaterial());
 
-    this.offsetDepth = offsetDepth;
     this.initMaterial(material, batchId, active);
   }
 
@@ -42,6 +38,10 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    material.userData.uOffsetDepth = {
+      value: meshMaterial.offsetDepth ?? true,
+    }
+
     material.depthFunc = LessDepth;
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
@@ -50,6 +50,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       // Pass height uniform to shader
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
+      shader.uniforms.uOffsetDepth = material.userData.uOffsetDepth;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -101,6 +102,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
           in vec2 sprite_uv;
           ${PointFragShader}
           ${Pick}
+          uniform bool uOffsetDepth;
           `,
         )
         .replace(
@@ -123,7 +125,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
           }
 
           // Offset depth to make sure to be drawn over ellipsoid surface
-          ${this.offsetDepth ? "gl_FragDepth -= 0.2;" : ""}
+          if (uOffsetDepth) { gl_FragDepth -= 0.2; }
 
           `,
         )
@@ -162,6 +164,12 @@ export class PointMesh extends Sprite implements FeatureMesh {
     if (prev.depthTest !== nextDepthTest) {
       this.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    const nextOffsetDepth = material.offsetDepth ?? true;
+    if (nextOffsetDepth !== prev.offsetDepth) {
+      this.material.userData.uOffsetDepth.value = nextOffsetDepth;
+      prev.offsetDepth = nextOffsetDepth;
     }
 
     const nextTransparent = !!material.transparent;

@@ -33,7 +33,7 @@ import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
-import { Layer, type Options, type ViewEvents } from "..";
+import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { LayersManager } from "../layersManager";
@@ -179,7 +179,6 @@ export function processEvent(
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   updatedAt: number,
-  options: Options,
 ) {
   eventManager.pushEvents(event);
 
@@ -339,7 +338,6 @@ export function processEvent(
             viewEvents,
             layersManager,
             updatedAt,
-            options,
             (v) => (RENDERABLE_FEATURE_CONCURRENCY += v),
           );
           break;
