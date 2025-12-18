@@ -46,8 +46,8 @@ jobs:
       - name: Install cargo-make
         run: cargo install cargo-make --locked
       
-      - name: Install wasm-pack
-        run: cargo install wasm-pack --locked
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.102 --locked
 
       - name: Prepare
         run: cargo make prepare-ci

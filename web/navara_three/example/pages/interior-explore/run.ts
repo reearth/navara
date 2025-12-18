@@ -1,11 +1,41 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  Color,
+  type GLTFModelLayer,
+  type LayerDescription,
+  geodeticToVector3,
+  degreeToRadian,
+  geodeticSurfaceNormal,
+  LLE,
+  LayerHandle,
+} from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
+  LOCAL_DATASETS,
 } from "../../helpers/constants";
+
+import { Vector3, Quaternion, Euler } from "three";
+import { controlGLTFModel } from "../../helpers/modelControl";
+import { Pane } from "tweakpane";
+
+const SCENES = {
+  ToranomonHillsBIM: {
+    url: TILES_3D_DATASETS.plateauToranomonHillsBIM.url,
+    height: -35,
+    startLLE: [35.666944688585495, 139.74895236744666, 38],
+  },
+  Takanawa: {
+    url: TILES_3D_DATASETS.plateauTakanawa.url,
+    height: -35,
+    startLLE: [35.63517500123948, 139.73968705211848, 45],
+  },
+};
+
+let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -34,6 +64,7 @@ export const run = async (view: ThreeView) => {
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       castShadow: true,
       receiveShadow: true,
+      skirt: false,
     },
   });
 
@@ -46,43 +77,138 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauToranomonHillsBIM.url,
-      // url: TILES_3D_DATASETS.plateauTakanawa.url,
-    },
-    model: {
-      show: true,
-      castShadow: true,
-      receiveShadow: true,
-      height: -35,
+  // Add GLTF model at Mount Fuji summit
+  const modelLayer = view.addLayer<GLTFModelLayer>({
+    type: "mesh",
+    gltfModel: {
+      url: LOCAL_DATASETS.soldierGLTF.url,
+      animationEnabled: true,
+      animationActiveClip: "Idle",
+      animationSpeed: 1.0,
+      animationLoop: true,
+      animationAutoPlay: true,
+      animationCrossfadeDuration: 0.3,
+      useRTE: true,
     },
   });
 
-  // Toranomon Hills
-  view.setCamera({
-    lng: 139.7460838759,
-    lat: 35.6625239152,
-    height: 295.6,
-    heading: 21.5815985024,
-    pitch: -19,
-    roll: 0,
+  const startLLE = SCENES[gCurSceneName].startLLE;
+
+  modelLayer.ref.on("load", () => {
+    updateModelLayerPos(view, modelLayer, startLLE);
+
+    controlGLTFModel(view, modelLayer, {
+      walkSpeed: 5,
+      rotationSpeed: 3,
+      cameraFollow: true,
+      allowUnderground: true,
+      allowFly: true,
+    });
   });
 
-  // Takanawa
-  // view.setCamera({
-  //   lng: 139.7597808838,
-  //   lat: 35.6186485291,
-  //   height: 1106.74,
-  //   heading: 315.9337768555,
-  //   pitch: -23.1623802185,
-  //   roll: 0.0,
-  // });
+  view.lookAt(
+    new LLE(startLLE[0], startLLE[1], startLLE[2] + 1), // Add 1 to height to look at model center
+    new Vector3(10, 10, 5),
+  );
+
+  const pane = new Pane({ title: "Interior Explore" });
+  add3DTilesSceneControl(view, pane, modelLayer);
 
   showAttributions([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauToranomonHillsBIM,
+    TILES_3D_DATASETS.plateauTakanawa,
   ]);
+};
+
+const updateModelLayerPos = (
+  view: ThreeView,
+  modelLayer: LayerHandle<GLTFModelLayer>,
+  lle: number[],
+) => {
+  const startPos = geodeticToVector3(
+    new LLE(degreeToRadian(lle[0]), degreeToRadian(lle[1]), lle[2]),
+  );
+
+  const normal = geodeticSurfaceNormal(
+    new LLE(degreeToRadian(lle[0]), degreeToRadian(lle[1]), lle[2]),
+  );
+  // Calculate rotation to align model with surface normal
+  const up = new Vector3(0, 1, 0);
+  const quaternion = new Quaternion().setFromUnitVectors(up, normal);
+  const euler = new Euler().setFromQuaternion(quaternion);
+
+  modelLayer.update({
+    position: { x: startPos.x, y: startPos.y, z: startPos.z },
+    rotation: { x: euler.x, y: euler.y, z: euler.z },
+  });
+
+  view.cameraFollow(
+    true,
+    new LLE(lle[0], lle[1], lle[2] + 1),
+    new Vector3(10, 10, 5),
+  );
+};
+
+const add3DTilesSceneControl = (
+  view: ThreeView,
+  pane: Pane,
+  modelLayer: LayerHandle<GLTFModelLayer>,
+) => {
+  const PARAMS = {
+    scene: gCurSceneName,
+  };
+
+  // Track current layer
+  let currentLayer: ReturnType<typeof view.addLayer> | null = null;
+
+  // Function to load new scene
+  const loadScene = (sceneName: keyof typeof SCENES) => {
+    // Clear current layer
+    if (currentLayer) {
+      currentLayer.delete();
+    }
+
+    const sceneData = SCENES[sceneName];
+    const description: LayerDescription = {
+      type: "cesium3dtiles",
+      data: {
+        url: sceneData.url,
+      },
+      model: {
+        show: true,
+        castShadow: true,
+        receiveShadow: true,
+        height: sceneData.height,
+      },
+    };
+    currentLayer = view.addLayer(description);
+  };
+
+  // Load initial scene
+  loadScene(PARAMS.scene);
+
+  // Add control to pane
+  const folder = pane.addFolder({
+    title: "3D Tiles Scene",
+    expanded: true,
+  });
+
+  folder
+    .addBinding(PARAMS, "scene", {
+      options: Object.keys(SCENES).reduce(
+        (acc, key) => {
+          acc[key] = key;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
+    })
+    .on("change", (v) => {
+      gCurSceneName = v.value as keyof typeof SCENES;
+      loadScene(gCurSceneName);
+
+      updateModelLayerPos(view, modelLayer, SCENES[gCurSceneName].startLLE);
+    });
 };
