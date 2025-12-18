@@ -12,11 +12,7 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class PointMesh extends Sprite implements FeatureMesh {
-  constructor(
-    material: NavaraPointMaterial,
-    batchId: number,
-    active: boolean,
-  ) {
+  constructor(material: NavaraPointMaterial, batchId: number, active: boolean) {
     super(new SpriteMaterial());
 
     this.initMaterial(material, batchId, active);
@@ -40,7 +36,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
 
     material.userData.uOffsetDepth = {
       value: meshMaterial.offsetDepth ?? true,
-    }
+    };
 
     material.depthFunc = LessDepth;
     material.onBeforeCompile = (shader) => {

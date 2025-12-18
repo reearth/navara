@@ -13,7 +13,6 @@ import { createReplacer } from "../utils";
 import { FeatureMesh } from "./featureMesh";
 
 export class BillboardMesh extends Sprite implements FeatureMesh {
-
   constructor() {
     super(new SpriteMaterial());
   }
