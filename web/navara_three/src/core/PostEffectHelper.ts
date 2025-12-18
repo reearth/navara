@@ -9,10 +9,20 @@ import {
   MeshPhysicalMaterial,
   MeshLambertMaterial,
   Material,
+  Color,
+  OrthographicCamera,
+  PlaneGeometry,
+  Scene,
+  Group,
+  Sprite,
+  ShaderMaterial,
+  type Camera,
   type WebGLRenderer,
+  type Texture,
 } from "three";
 
 import { BufferView } from "../bufferView";
+import type { Scenes } from "../scene";
 
 // ============================================================================
 // Constants
@@ -339,16 +349,38 @@ export function resolveActiveEffects(
 export class PostEffectHelper {
   private resources = new Map<string, PostEffectResources>();
   private effectKeys = new Map<string, string>(); // effectId -> effectKey (e.g., "bloom")
+  private effectObjectCache = new Map<string, Set<Object3D>>(); // effectKey -> objects
   private width: number;
   private height: number;
-  private layerPostEffectDepthSettings = new Map<
-    string,
-    PostEffectOcclusionValue
-  >();
+  // Occlusion cache (SoT is in PostEffectManager, this is read-only cache)
+  private occlusionCache = new Map<string, PostEffectOcclusionValue>();
 
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
+  }
+
+  /**
+   * Get cached objects for a specific effect key
+   * @param effectKey - Effect key (e.g., "bloom", "outline")
+   * @returns Set of objects with this effect enabled
+   */
+  getObjectsForEffect(effectKey: string): ReadonlySet<Object3D> {
+    return this.effectObjectCache.get(effectKey) ?? new Set();
+  }
+
+  /**
+   * Get all objects that have any effect enabled
+   * @returns Set of all effect-enabled objects
+   */
+  getAllEffectObjects(): ReadonlySet<Object3D> {
+    const all = new Set<Object3D>();
+    for (const objects of this.effectObjectCache.values()) {
+      for (const obj of objects) {
+        all.add(obj);
+      }
+    }
+    return all;
   }
 
   /**
@@ -406,33 +438,21 @@ export class PostEffectHelper {
   }
 
   /**
-   * Register Post Effect Occlusion setting for a layer
+   * Sync occlusion cache from PostEffectManager
+   * Called by Manager when occlusion setting changes
    */
-  registerLayerPostEffectOcclusion(
+  syncOcclusionCache(
     layerId: string,
-    postEffectOcclusion: PostEffectOcclusionValue,
+    occlusion: PostEffectOcclusionValue,
   ): void {
-    this.layerPostEffectDepthSettings.set(layerId, postEffectOcclusion);
+    this.occlusionCache.set(layerId, occlusion);
   }
 
   /**
-   * Get Post Effect Occlusion setting for a layer
+   * Get Post Effect Occlusion setting for a layer (from cache)
    */
   getLayerPostEffectOcclusion(layerId: string): PostEffectOcclusionValue {
-    return (
-      this.layerPostEffectDepthSettings.get(layerId) ??
-      PostEffectOcclusionMode.Normal
-    );
-  }
-
-  /**
-   * Update Post Effect Occlusion for a layer
-   */
-  updateLayerPostEffectOcclusion(
-    layerId: string,
-    postEffectOcclusion: PostEffectOcclusionValue,
-  ): void {
-    this.layerPostEffectDepthSettings.set(layerId, postEffectOcclusion);
+    return this.occlusionCache.get(layerId) ?? PostEffectOcclusionMode.Normal;
   }
 
   /**
@@ -504,6 +524,8 @@ export class PostEffectHelper {
     // Note: postEffectOcclusion is NOT copied to config.
     // SoT is layerPostEffectDepthSettings, accessed via layerId at runtime.
 
+    const effectKey = this.effectKeys.get(effectId);
+
     const linkObject = (obj: Mesh | Points | Line) => {
       // Initialize postEffectConfig if not exists
       if (!obj.userData.postEffectConfig) {
@@ -526,6 +548,16 @@ export class PostEffectHelper {
       if (layerId) {
         config.layerId = layerId;
       }
+
+      // Add to cache (by effectKey)
+      if (effectKey) {
+        let cache = this.effectObjectCache.get(effectKey);
+        if (!cache) {
+          cache = new Set();
+          this.effectObjectCache.set(effectKey, cache);
+        }
+        cache.add(obj);
+      }
     };
 
     this.forEachRenderableObject(sourceObject, linkObject);
@@ -544,6 +576,8 @@ export class PostEffectHelper {
       return;
     }
 
+    const effectKey = this.effectKeys.get(effectId);
+
     const unlinkObject = (obj: Mesh | Points | Line) => {
       // Use type guard to check and narrow type
       if (!hasPostEffectConfig(obj)) {
@@ -554,6 +588,11 @@ export class PostEffectHelper {
 
       // Remove this effectId from the object's effectIds
       config.effectIds = config.effectIds.filter((id) => id !== effectId);
+
+      // Remove from cache (by effectKey)
+      if (effectKey) {
+        this.effectObjectCache.get(effectKey)?.delete(obj);
+      }
     };
 
     this.forEachRenderableObject(sourceObject, unlinkObject);
@@ -617,4 +656,235 @@ export class PostEffectHelper {
       resources.maskDebug.render(renderer, resources.maskRT);
     }
   }
+}
+
+// ============================================================================
+// Shared types and utilities for PostEffect passes
+// (Integrated from PostEffectUtils.ts)
+// ============================================================================
+
+/**
+ * Saved renderer state for restoration after mask rendering
+ */
+export type RendererState = {
+  clearColor: Color;
+  clearAlpha: number;
+  renderTarget: WebGLRenderTarget | null;
+};
+
+/**
+ * Save current renderer state
+ */
+export function saveRendererState(renderer: WebGLRenderer): RendererState {
+  const clearColor = new Color();
+  renderer.getClearColor(clearColor);
+  return {
+    clearColor,
+    clearAlpha: renderer.getClearAlpha(),
+    renderTarget: renderer.getRenderTarget(),
+  };
+}
+
+/**
+ * Restore renderer state
+ */
+export function restoreRendererState(
+  renderer: WebGLRenderer,
+  state: RendererState,
+): void {
+  renderer.setRenderTarget(state.renderTarget);
+  renderer.setClearColor(state.clearColor, state.clearAlpha);
+}
+
+/**
+ * Render mask for a specific occlusion mode
+ * Shared implementation for Bloom and Outline passes
+ *
+ * Uses cached effect objects from PostEffectHelper for efficient filtering.
+ *
+ * @param renderer - WebGL renderer
+ * @param camera - Camera to render with
+ * @param scenes - Scenes to render
+ * @param registry - PostEffectHelper for occlusion lookups and effect object cache
+ * @param targetMode - PostEffectOcclusionMode.Normal or PostEffectOcclusionMode.Silhouette
+ * @param targetRT - Render target to render mask to
+ * @param effectKey - Effect key ("bloom", "outline") or "all" for any effect
+ */
+export function renderMaskForMode(
+  renderer: WebGLRenderer,
+  camera: Camera,
+  scenes: Scenes,
+  registry: PostEffectHelper | undefined,
+  targetMode: PostEffectOcclusionValue,
+  targetRT: WebGLRenderTarget,
+  effectKey: string,
+): void {
+  // Save renderer state
+  const state = saveRendererState(renderer);
+  const visibilityChanges = new Map<Object3D, boolean>();
+
+  // Get cached effect objects
+  const effectObjects =
+    effectKey === "all"
+      ? (registry?.getAllEffectObjects() ?? new Set<Object3D>())
+      : (registry?.getObjectsForEffect(effectKey) ?? new Set<Object3D>());
+
+  // Traverse scenes to filter objects
+  for (const sceneValue of Object.values(scenes)) {
+    if (sceneValue instanceof Scene) {
+      sceneValue.traverse((obj: Object3D) => {
+        // 1. Renderable objects (Mesh, Points, Line)
+        if (
+          obj instanceof Mesh ||
+          obj instanceof Points ||
+          obj instanceof Line
+        ) {
+          // Hide if effect not enabled (not in cache)
+          if (!effectObjects.has(obj)) {
+            if (obj.visible) {
+              visibilityChanges.set(obj, true);
+              obj.visible = false;
+            }
+            return;
+          }
+
+          // Effect enabled - check occlusion mode
+          const config = getPostEffectConfig(obj);
+          const layerId = config?.layerId;
+          const occlusion =
+            registry?.getLayerPostEffectOcclusion(layerId ?? "") ??
+            PostEffectOcclusionMode.Normal;
+
+          // Hide if occlusion mode doesn't match target
+          if (occlusion !== targetMode && obj.visible) {
+            visibilityChanges.set(obj, true);
+            obj.visible = false;
+          }
+          return;
+        }
+
+        // 2. Container objects (Scene, Group): keep visible for child rendering
+        if (obj instanceof Scene || obj instanceof Group) {
+          return;
+        }
+
+        // 3. Sprite: always hide from mask (not supported for post effects)
+        if (obj instanceof Sprite) {
+          if (obj.visible) {
+            visibilityChanges.set(obj, true);
+            obj.visible = false;
+          }
+        }
+      });
+    }
+  }
+
+  // Set up for mask rendering
+  renderer.setRenderTarget(targetRT);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear(true, true, true);
+
+  // Render scenes (only filtered objects are visible)
+  for (const sceneValue of Object.values(scenes)) {
+    if (sceneValue instanceof Scene) {
+      renderer.render(sceneValue, camera);
+    }
+  }
+
+  // Restore visibility
+  for (const [obj, wasVisible] of visibilityChanges) {
+    obj.visible = wasVisible;
+  }
+
+  // Restore renderer state
+  restoreRendererState(renderer, state);
+}
+
+/**
+ * Create depth clip material for clipping mask by base scene depth
+ * Shared between Bloom and Outline passes
+ */
+export function createDepthClipMaterial(): ShaderMaterial {
+  return new ShaderMaterial({
+    uniforms: {
+      tMask: { value: null },
+      tMaskDepth: { value: null },
+      tBaseDepth: { value: null },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      #include <packing>
+
+      uniform sampler2D tMask;
+      uniform sampler2D tMaskDepth;
+      uniform sampler2D tBaseDepth;
+
+      varying vec2 vUv;
+
+      void main() {
+        vec4 maskColor = texture2D(tMask, vUv);
+
+        // Simple depth comparison (pass separation handles occlusion mode)
+        float baseDepth = unpackRGBAToDepth(texture2D(tBaseDepth, vUv));
+        float maskDepth = texture2D(tMaskDepth, vUv).r;
+
+        // If mask is behind Base, clip (output black)
+        if (maskDepth > baseDepth + 0.0001) {
+          gl_FragColor = vec4(0.0);
+          return;
+        }
+
+        // Mask is in front of Base, pass through
+        gl_FragColor = maskColor;
+      }
+    `,
+    depthTest: false,
+    depthWrite: false,
+  });
+}
+
+/**
+ * Create fullscreen rendering infrastructure
+ */
+export function createFullscreenQuad(): {
+  camera: OrthographicCamera;
+  geometry: PlaneGeometry;
+} {
+  return {
+    camera: new OrthographicCamera(-1, 1, 1, -1, 0, 1),
+    geometry: new PlaneGeometry(2, 2),
+  };
+}
+
+/**
+ * Apply depth clip to a mask render target
+ *
+ * @param renderer - WebGL renderer
+ * @param depthClipMaterial - Depth clip shader material
+ * @param depthClipScene - Scene containing the depth clip quad
+ * @param fullscreenCamera - Orthographic camera for fullscreen rendering
+ * @param maskRT - Source mask render target (with depth texture)
+ * @param baseDepthTexture - Base scene depth texture (RGBA packed)
+ * @param outputRT - Output render target for clipped result
+ */
+export function applyDepthClip(
+  renderer: WebGLRenderer,
+  depthClipMaterial: ShaderMaterial,
+  depthClipScene: Scene,
+  fullscreenCamera: OrthographicCamera,
+  maskRT: WebGLRenderTarget,
+  baseDepthTexture: Texture | null,
+  outputRT: WebGLRenderTarget,
+): void {
+  depthClipMaterial.uniforms.tMask.value = maskRT.texture;
+  depthClipMaterial.uniforms.tMaskDepth.value = maskRT.depthTexture;
+  depthClipMaterial.uniforms.tBaseDepth.value = baseDepthTexture;
+  renderer.setRenderTarget(outputRT);
+  renderer.render(depthClipScene, fullscreenCamera);
 }

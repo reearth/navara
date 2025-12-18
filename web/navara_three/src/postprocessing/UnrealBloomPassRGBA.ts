@@ -28,12 +28,44 @@ import {
   WebGLRenderTarget,
   type IUniform,
   type WebGLRenderer,
+  type Texture,
 } from "three";
 import {
   Pass,
   FullScreenQuad,
 } from "three/examples/jsm/postprocessing/Pass.js";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader.js";
+
+// Type-safe uniform interfaces
+type HighPassUniforms = {
+  tDiffuse: IUniform<Texture | null>;
+  luminosityThreshold: IUniform<number>;
+  smoothWidth: IUniform<number>;
+};
+
+type BlurUniforms = {
+  colorTexture: IUniform<Texture | null>;
+  invSize: IUniform<Vector2>;
+  direction: IUniform<Vector2>;
+  gaussianCoefficients: IUniform<number[]>;
+};
+
+type CompositeUniforms = {
+  blurTexture1: IUniform<Texture | null>;
+  blurTexture2: IUniform<Texture | null>;
+  blurTexture3: IUniform<Texture | null>;
+  blurTexture4: IUniform<Texture | null>;
+  blurTexture5: IUniform<Texture | null>;
+  bloomStrength: IUniform<number>;
+  bloomFactors: IUniform<number[] | null>;
+  bloomTintColors: IUniform<Vector3[] | null>;
+  bloomRadius: IUniform<number>;
+};
+
+type CopyUniforms = {
+  tDiffuse: IUniform<Texture | null>;
+  opacity: IUniform<number>;
+};
 
 /**
  * This pass is inspired by the bloom pass of Unreal Engine. It creates a
@@ -55,13 +87,15 @@ export class UnrealBloomPassRGBA extends Pass {
   private nMips = 5;
   private renderTargetBright!: WebGLRenderTarget;
 
-  private highPassUniforms: Record<string, IUniform>;
+  private highPassUniforms!: HighPassUniforms;
   private materialHighPassFilter!: ShaderMaterial;
-  private separableBlurMaterials: ShaderMaterial[] = [];
-  private compositeMaterial!: ShaderMaterial;
+  private separableBlurMaterials: (ShaderMaterial & {
+    uniforms: BlurUniforms;
+  })[] = [];
+  private compositeMaterial!: ShaderMaterial & { uniforms: CompositeUniforms };
   private bloomTintColors: Vector3[] = [];
 
-  private copyUniforms: Record<string, IUniform>;
+  private copyUniforms!: CopyUniforms;
   private blendMaterial!: ShaderMaterial;
 
   private _oldClearColor = new Color();
@@ -125,7 +159,7 @@ export class UnrealBloomPassRGBA extends Pass {
       tDiffuse: { value: null },
       luminosityThreshold: { value: threshold ?? 0.0 }, // Default 0.0 for passthrough
       smoothWidth: { value: 0.01 },
-    };
+    } satisfies HighPassUniforms;
 
     this.materialHighPassFilter = new ShaderMaterial({
       uniforms: this.highPassUniforms,
@@ -163,13 +197,9 @@ export class UnrealBloomPassRGBA extends Pass {
     resy = Math.round(this.resolution.y / 2);
 
     for (let i = 0; i < this.nMips; i++) {
-      this.separableBlurMaterials.push(
-        this._getSeparableBlurMaterial(kernelSizeArray[i]),
-      );
-      this.separableBlurMaterials[i].uniforms["invSize"].value = new Vector2(
-        1 / resx,
-        1 / resy,
-      );
+      const blurMaterial = this._getSeparableBlurMaterial(kernelSizeArray[i]);
+      this.separableBlurMaterials.push(blurMaterial);
+      blurMaterial.uniforms.invSize.value = new Vector2(1 / resx, 1 / resy);
 
       resx = Math.round(resx / 2);
       resy = Math.round(resy / 2);
@@ -177,23 +207,23 @@ export class UnrealBloomPassRGBA extends Pass {
 
     // Composite material
     this.compositeMaterial = this._getCompositeMaterial(this.nMips);
-    this.compositeMaterial.uniforms["blurTexture1"].value =
+    this.compositeMaterial.uniforms.blurTexture1.value =
       this.renderTargetsVertical[0].texture;
-    this.compositeMaterial.uniforms["blurTexture2"].value =
+    this.compositeMaterial.uniforms.blurTexture2.value =
       this.renderTargetsVertical[1].texture;
-    this.compositeMaterial.uniforms["blurTexture3"].value =
+    this.compositeMaterial.uniforms.blurTexture3.value =
       this.renderTargetsVertical[2].texture;
-    this.compositeMaterial.uniforms["blurTexture4"].value =
+    this.compositeMaterial.uniforms.blurTexture4.value =
       this.renderTargetsVertical[3].texture;
-    this.compositeMaterial.uniforms["blurTexture5"].value =
+    this.compositeMaterial.uniforms.blurTexture5.value =
       this.renderTargetsVertical[4].texture;
-    this.compositeMaterial.uniforms["bloomStrength"].value = strength;
-    this.compositeMaterial.uniforms["bloomRadius"].value = 0.1;
+    this.compositeMaterial.uniforms.bloomStrength.value = strength;
+    this.compositeMaterial.uniforms.bloomRadius.value = 0.1;
 
     // Exponentially reduced bloom factors for tighter bloom
     // Average contribution: 0.6 → 0.38 (37% reduction)
     const bloomFactors = [1.0, 0.5, 0.25, 0.1, 0.05];
-    this.compositeMaterial.uniforms["bloomFactors"].value = bloomFactors;
+    this.compositeMaterial.uniforms.bloomFactors.value = bloomFactors;
     this.bloomTintColors = [
       new Vector3(1, 1, 1),
       new Vector3(1, 1, 1),
@@ -201,11 +231,13 @@ export class UnrealBloomPassRGBA extends Pass {
       new Vector3(1, 1, 1),
       new Vector3(1, 1, 1),
     ];
-    this.compositeMaterial.uniforms["bloomTintColors"].value =
+    this.compositeMaterial.uniforms.bloomTintColors.value =
       this.bloomTintColors;
 
     // Blend material
-    this.copyUniforms = UniformsUtils.clone(CopyShader.uniforms);
+    this.copyUniforms = UniformsUtils.clone(
+      CopyShader.uniforms,
+    ) as CopyUniforms;
     this.blendMaterial = new ShaderMaterial({
       uniforms: this.copyUniforms,
       vertexShader: CopyShader.vertexShader,
@@ -248,7 +280,7 @@ export class UnrealBloomPassRGBA extends Pass {
       this.renderTargetsHorizontal[i].setSize(resx, resy);
       this.renderTargetsVertical[i].setSize(resx, resy);
 
-      this.separableBlurMaterials[i].uniforms["invSize"].value = new Vector2(
+      this.separableBlurMaterials[i].uniforms.invSize.value = new Vector2(
         1 / resx,
         1 / resy,
       );
@@ -285,8 +317,8 @@ export class UnrealBloomPassRGBA extends Pass {
     }
 
     // 1. Extract Bright Areas
-    this.highPassUniforms["tDiffuse"].value = readBuffer.texture;
-    this.highPassUniforms["luminosityThreshold"].value = this.threshold;
+    this.highPassUniforms.tDiffuse.value = readBuffer.texture;
+    this.highPassUniforms.luminosityThreshold.value = this.threshold;
     this._fsQuad.material = this.materialHighPassFilter;
 
     renderer.setRenderTarget(this.renderTargetBright);
@@ -297,19 +329,19 @@ export class UnrealBloomPassRGBA extends Pass {
     let inputRenderTarget = this.renderTargetBright;
 
     for (let i = 0; i < this.nMips; i++) {
-      this._fsQuad.material = this.separableBlurMaterials[i];
+      const blurMaterial = this.separableBlurMaterials[i];
+      this._fsQuad.material = blurMaterial;
 
-      this.separableBlurMaterials[i].uniforms["colorTexture"].value =
-        inputRenderTarget.texture;
-      this.separableBlurMaterials[i].uniforms["direction"].value =
+      blurMaterial.uniforms.colorTexture.value = inputRenderTarget.texture;
+      blurMaterial.uniforms.direction.value =
         UnrealBloomPassRGBA.BlurDirectionX;
       renderer.setRenderTarget(this.renderTargetsHorizontal[i]);
       renderer.clear();
       this._fsQuad.render(renderer);
 
-      this.separableBlurMaterials[i].uniforms["colorTexture"].value =
+      blurMaterial.uniforms.colorTexture.value =
         this.renderTargetsHorizontal[i].texture;
-      this.separableBlurMaterials[i].uniforms["direction"].value =
+      blurMaterial.uniforms.direction.value =
         UnrealBloomPassRGBA.BlurDirectionY;
       renderer.setRenderTarget(this.renderTargetsVertical[i]);
       renderer.clear();
@@ -320,9 +352,9 @@ export class UnrealBloomPassRGBA extends Pass {
 
     // Composite All the mips
     this._fsQuad.material = this.compositeMaterial;
-    this.compositeMaterial.uniforms["bloomStrength"].value = this.strength;
-    this.compositeMaterial.uniforms["bloomRadius"].value = this.radius;
-    this.compositeMaterial.uniforms["bloomTintColors"].value =
+    this.compositeMaterial.uniforms.bloomStrength.value = this.strength;
+    this.compositeMaterial.uniforms.bloomRadius.value = this.radius;
+    this.compositeMaterial.uniforms.bloomTintColors.value =
       this.bloomTintColors;
 
     renderer.setRenderTarget(this.renderTargetsHorizontal[0]);
@@ -331,8 +363,7 @@ export class UnrealBloomPassRGBA extends Pass {
 
     // Blend it additively over the input texture
     this._fsQuad.material = this.blendMaterial;
-    this.copyUniforms["tDiffuse"].value =
-      this.renderTargetsHorizontal[0].texture;
+    this.copyUniforms.tDiffuse.value = this.renderTargetsHorizontal[0].texture;
 
     if (maskActive) renderer.state.buffers.stencil.setTest(true);
 
@@ -353,7 +384,9 @@ export class UnrealBloomPassRGBA extends Pass {
    * MODIFIED: Creates Gaussian blur material that preserves alpha channel
    * Original version used vec3 and discarded alpha with gl_FragColor = vec4(rgb, 1.0)
    */
-  private _getSeparableBlurMaterial(kernelRadius: number): ShaderMaterial {
+  private _getSeparableBlurMaterial(
+    kernelRadius: number,
+  ): ShaderMaterial & { uniforms: BlurUniforms } {
     const coefficients: number[] = [];
 
     for (let i = 0; i < kernelRadius; i++) {
@@ -363,18 +396,18 @@ export class UnrealBloomPassRGBA extends Pass {
       );
     }
 
-    return new ShaderMaterial({
+    const uniforms: BlurUniforms = {
+      colorTexture: { value: null },
+      invSize: { value: new Vector2(0.5, 0.5) },
+      direction: { value: new Vector2(0.5, 0.5) },
+      gaussianCoefficients: { value: coefficients },
+    };
+
+    const material = new ShaderMaterial({
       defines: {
         KERNEL_RADIUS: kernelRadius,
       },
-
-      uniforms: {
-        colorTexture: { value: null },
-        invSize: { value: new Vector2(0.5, 0.5) },
-        direction: { value: new Vector2(0.5, 0.5) },
-        gaussianCoefficients: { value: coefficients },
-      },
-
+      uniforms,
       vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -382,7 +415,6 @@ export class UnrealBloomPassRGBA extends Pass {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
-
       fragmentShader: `
         #include <common>
         varying vec2 vUv;
@@ -412,31 +444,35 @@ export class UnrealBloomPassRGBA extends Pass {
           gl_FragColor = vec4(diffuseSum / weightSum, centerSample.a);
         }
       `,
-    });
+    }) as ShaderMaterial & { uniforms: BlurUniforms };
+
+    return material;
   }
 
   /**
    * MODIFIED: Composite material that preserves alpha channel
    * Original version implicitly set alpha to 1.0 through vec4(vec3, 1.0) operations
    */
-  private _getCompositeMaterial(nMips: number): ShaderMaterial {
-    return new ShaderMaterial({
+  private _getCompositeMaterial(
+    nMips: number,
+  ): ShaderMaterial & { uniforms: CompositeUniforms } {
+    const uniforms: CompositeUniforms = {
+      blurTexture1: { value: null },
+      blurTexture2: { value: null },
+      blurTexture3: { value: null },
+      blurTexture4: { value: null },
+      blurTexture5: { value: null },
+      bloomStrength: { value: 1.0 },
+      bloomFactors: { value: null },
+      bloomTintColors: { value: null },
+      bloomRadius: { value: 0.0 },
+    };
+
+    const material = new ShaderMaterial({
       defines: {
         NUM_MIPS: nMips,
       },
-
-      uniforms: {
-        blurTexture1: { value: null },
-        blurTexture2: { value: null },
-        blurTexture3: { value: null },
-        blurTexture4: { value: null },
-        blurTexture5: { value: null },
-        bloomStrength: { value: 1.0 },
-        bloomFactors: { value: null },
-        bloomTintColors: { value: null },
-        bloomRadius: { value: 0.0 },
-      },
-
+      uniforms,
       vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -444,7 +480,6 @@ export class UnrealBloomPassRGBA extends Pass {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
-
       fragmentShader: `
         varying vec2 vUv;
         uniform sampler2D blurTexture1;
@@ -477,6 +512,8 @@ export class UnrealBloomPassRGBA extends Pass {
           gl_FragColor = vec4(bloomRGB, originalAlpha);
         }
       `,
-    });
+    }) as ShaderMaterial & { uniforms: CompositeUniforms };
+
+    return material;
   }
 }

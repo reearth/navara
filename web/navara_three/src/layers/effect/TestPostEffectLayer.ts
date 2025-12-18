@@ -7,36 +7,23 @@ import {
   Pass as PostProcessingPass,
   CopyPass as PostProcessingCopyPass,
 } from "postprocessing";
-import {
-  Color,
-  Mesh,
-  MeshStandardMaterial,
-  MeshPhysicalMaterial,
-  Object3D,
-  Scene,
-  type WebGLRenderer,
-  type WebGLRenderTarget,
-} from "three";
+import { type WebGLRenderer, type WebGLRenderTarget } from "three";
 
 import type { EffectLayerConfig } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import {
-  getPostEffectConfig,
-  ensurePostEffectUserData,
-  POST_EFFECT_OCCLUSION_SKIP,
-  type PostEffectOcclusionValue,
-} from "../../core/PostEffectHelper";
+import { PostEffectOcclusionMode } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
   PostEffectLayer,
-  type PostEffectLayerConfig,
+  renderMaskForMode,
   type PostEffectLayerUpdate,
 } from "./PostEffectLayer";
 
 // Test post effect configuration (uses PostEffect infrastructure)
 export type TestPostEffectConfig = {
+  postEffect: true;
   testPostEffect: {
     debugMask?: boolean;
     resolutionScale?: number;
@@ -48,7 +35,7 @@ export type TestPostEffectConfig = {
  * Renders mask for debugging and passes through the input buffer
  */
 export class TestPostEffectLayer extends PostEffectLayer<
-  PostEffectLayerConfig,
+  TestPostEffectConfig,
   PostEffectLayerUpdate
 > {
   static key = "testPostEffect";
@@ -59,6 +46,14 @@ export class TestPostEffectLayer extends PostEffectLayer<
     return TestPostEffectLayer.key;
   }
 
+  protected getResolutionScale(): number {
+    return this.config.testPostEffect?.resolutionScale ?? 1.0;
+  }
+
+  protected getDebugMask(): boolean {
+    return this.config.testPostEffect?.debugMask ?? false;
+  }
+
   constructor(view: ViewContext, config: EffectLayerConfig) {
     // Extract testPostEffect config
     const testPostEffectConfig =
@@ -66,12 +61,14 @@ export class TestPostEffectLayer extends PostEffectLayer<
         ? (config as TestPostEffectConfig).testPostEffect
         : {};
 
-    // Ensure config has postEffect: true (PostEffectLayerConfig requires this flag)
-    const postEffectConfig: PostEffectLayerConfig = {
-      ...config,
+    // Ensure config has postEffect: true and nested testPostEffect config
+    const postEffectConfig: TestPostEffectConfig = {
+      ...(config as TestPostEffectConfig),
       postEffect: true,
-      resolutionScale: testPostEffectConfig.resolutionScale ?? 1.0,
-      debugMask: testPostEffectConfig.debugMask ?? false,
+      testPostEffect: {
+        resolutionScale: testPostEffectConfig.resolutionScale ?? 1.0,
+        debugMask: testPostEffectConfig.debugMask ?? false,
+      },
     };
 
     super(view, postEffectConfig);
@@ -88,7 +85,7 @@ export class TestPostEffectLayer extends PostEffectLayer<
 
 /**
  * Custom PostProcessing Pass for TestPostEffect
- * Uses mask rendering via scene.traverse
+ * Uses shared renderMaskForMode for mask rendering
  */
 class TestPostEffectPass extends PostProcessingPass {
   private layer: TestPostEffectLayer;
@@ -105,106 +102,23 @@ class TestPostEffectPass extends PostProcessingPass {
   }
 
   /**
-   * Render mask using scene.traverse
-   * This is a simplified version that renders all objects with any post effect enabled
+   * Render mask for all objects with any post effect enabled
+   * Uses shared renderMaskForMode implementation
    */
   private renderMask(renderer: WebGLRenderer): void {
-    const camera = this.layer.viewContext.camera;
-    const scenes = this.layer.viewContext.scenes;
+    const registry = this.layer.viewContext.postEffectRegistry;
     const maskRT = this.layer.postEffectResources.maskRT;
 
-    // Collect materials that need state changes
-    const materialsToModify = new Map<
-      MeshStandardMaterial | MeshPhysicalMaterial,
-      {
-        originalDepthTest: boolean;
-        originalDepthWrite: boolean;
-        originalPostEffectOcclusion:
-          | PostEffectOcclusionValue
-          | typeof POST_EFFECT_OCCLUSION_SKIP;
-      }
-    >();
-
-    // Traverse scenes and collect objects with any post effect enabled
-    for (const sceneKey of Object.keys(scenes)) {
-      const scene = scenes[sceneKey as keyof typeof scenes];
-      if (scene instanceof Scene) {
-        scene.traverse((obj: Object3D) => {
-          if (!(obj instanceof Mesh)) {
-            return;
-          }
-
-          // Get PostEffectState from the object (or its parent)
-          let state = getPostEffectConfig(obj);
-          if (!state && obj.parent) {
-            state = getPostEffectConfig(obj.parent);
-          }
-
-          // Skip if no state or no effects enabled
-          if (!state || !state.effectIds || state.effectIds.length === 0) {
-            return;
-          }
-
-          const materials = Array.isArray(obj.material)
-            ? obj.material
-            : [obj.material];
-
-          for (const material of materials) {
-            if (
-              material instanceof MeshStandardMaterial ||
-              material instanceof MeshPhysicalMaterial
-            ) {
-              if (!materialsToModify.has(material)) {
-                // Ensure uPostEffectOcclusion uniform exists
-                ensurePostEffectUserData(material);
-                materialsToModify.set(material, {
-                  originalDepthTest: material.depthTest,
-                  originalDepthWrite: material.depthWrite,
-                  originalPostEffectOcclusion:
-                    material.userData.uPostEffectOcclusion.value,
-                });
-              }
-            }
-          }
-        });
-      }
-    }
-
-    // Save renderer state
-    const originalClearColor = new Color();
-    renderer.getClearColor(originalClearColor);
-    const originalClearAlpha = renderer.getClearAlpha();
-    const prevRenderTarget = renderer.getRenderTarget();
-
-    // Set up for mask rendering
-    renderer.setRenderTarget(maskRT);
-    renderer.setClearColor(0x000000, 0);
-    renderer.clear(true, true, true);
-
-    // Render all objects with postEffectOcclusion = 0 (Normal)
-    for (const [material] of materialsToModify.entries()) {
-      material.userData.uPostEffectOcclusion.value = 0;
-      material.depthTest = true;
-      material.depthWrite = true;
-    }
-    for (const sceneKey of Object.keys(scenes)) {
-      const scene = scenes[sceneKey as keyof typeof scenes];
-      if (scene instanceof Scene) {
-        renderer.render(scene, camera);
-      }
-    }
-
-    // Restore renderer state
-    renderer.setRenderTarget(prevRenderTarget);
-    renderer.setClearColor(originalClearColor, originalClearAlpha);
-
-    // Restore material states
-    for (const [material, state] of materialsToModify.entries()) {
-      material.userData.uPostEffectOcclusion.value =
-        state.originalPostEffectOcclusion;
-      material.depthTest = state.originalDepthTest;
-      material.depthWrite = state.originalDepthWrite;
-    }
+    // Render mask for Normal occlusion mode (depth-enabled objects)
+    renderMaskForMode(
+      renderer,
+      this.layer.viewContext.camera,
+      this.layer.viewContext.scenes,
+      registry,
+      PostEffectOcclusionMode.Normal,
+      maskRT,
+      "all",
+    );
   }
 
   render(
@@ -216,7 +130,7 @@ class TestPostEffectPass extends PostProcessingPass {
     this.renderMask(renderer);
 
     // Render debug visualization if enabled
-    if (this.layer.layerConfig.debugMask) {
+    if (this.layer.layerConfig.testPostEffect?.debugMask) {
       this.layer.renderDebugMask();
     }
 

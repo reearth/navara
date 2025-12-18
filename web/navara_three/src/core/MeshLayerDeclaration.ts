@@ -125,14 +125,11 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // Register initial postEffectOcclusion
+    // Register initial postEffectOcclusion via ViewContext (Manager is SoT)
     if (this._postEffectOcclusion !== undefined) {
       const occlusion = parsePostEffectOcclusion(this._postEffectOcclusion);
       if (occlusion !== undefined) {
-        this.view.postEffectRegistry?.registerLayerPostEffectOcclusion(
-          this.id,
-          occlusion,
-        );
+        this.view.setLayerPostEffectOcclusion(this.id, occlusion);
       }
     }
 
@@ -202,10 +199,7 @@ export abstract class MeshLayerDeclaration<
       this._postEffectOcclusion = updates.postEffectOcclusion;
       const occlusion = parsePostEffectOcclusion(updates.postEffectOcclusion);
       if (occlusion !== undefined) {
-        this.view.postEffectRegistry?.updateLayerPostEffectOcclusion(
-          this.id,
-          occlusion,
-        );
+        this.view.setLayerPostEffectOcclusion(this.id, occlusion);
       }
     }
 

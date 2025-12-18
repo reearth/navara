@@ -1,5 +1,5 @@
 import type { EventHandler, Globe } from "@navara/core";
-import type { Material, PerspectiveCamera } from "three";
+import type { Material, Object3D, PerspectiveCamera } from "three";
 
 import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
@@ -8,9 +8,10 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
-import type {
-  PostEffectHelper,
-  PostEffectOcclusionValue,
+import {
+  getPostEffectConfig,
+  type PostEffectHelper,
+  type PostEffectOcclusionValue,
 } from "./PostEffectHelper";
 import { PostEffectManager } from "./PostEffectManager";
 
@@ -89,15 +90,12 @@ export class ViewContext {
     this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
 
-  getLayerPostEffectOcclusion(layerId: string): PostEffectOcclusionValue {
-    return this.postEffects.getLayerPostEffectOcclusion(layerId);
-  }
-
   setLayerPostEffectOcclusion(
     layerId: string,
     postEffectOcclusion: PostEffectOcclusionValue,
   ): void {
-    this.postEffects.setLayerPostEffectOcclusion(layerId, postEffectOcclusion);
+    // Delegate to Manager (the single SoT for occlusion)
+    this.postEffects.setLayerOcclusion(layerId, postEffectOcclusion);
   }
 
   unregisterLayerEffects(layerId: string): void {
@@ -110,5 +108,54 @@ export class ViewContext {
     emissiveIntensity?: number,
   ): void {
     this.postEffects.updateLayerEffects(layerId, effectIds, emissiveIntensity);
+  }
+
+  /**
+   * Apply post effects to a specific Object3D.
+   * Useful for pick-based effect application where you have a reference to the object.
+   *
+   * @param object - The Object3D to apply effects to
+   * @param effectIds - Effect IDs to apply (e.g., ["bloom"], ["outline"], ["bloom", "outline"])
+   * @param layerId - Optional layer ID for occlusion resolution.
+   *                  Resolution order: argument > existing config > Normal occlusion
+   */
+  applyEffectToObject(
+    object: Object3D,
+    effectIds: string[],
+    layerId?: string,
+  ): void {
+    // Resolve layerId: argument > existing config > undefined (Normal occlusion)
+    const resolvedLayerId = layerId ?? getPostEffectConfig(object)?.layerId;
+
+    const prevEffectIds = getPostEffectConfig(object)?.effectIds ?? [];
+    this.postEffectRegistry?.updateLinksForObject(
+      object,
+      effectIds,
+      prevEffectIds,
+      resolvedLayerId ?? "",
+    );
+  }
+
+  /**
+   * Remove post effects from a specific Object3D.
+   *
+   * @param object - The Object3D to remove effects from
+   * @param effectIds - Effect IDs to remove. If undefined, removes all effects.
+   */
+  removeEffectFromObject(object: Object3D, effectIds?: string[]): void {
+    const config = getPostEffectConfig(object);
+    if (!config) return;
+
+    const prevEffectIds = config.effectIds;
+    const nextEffectIds = effectIds
+      ? prevEffectIds.filter((id) => !effectIds.includes(id))
+      : [];
+
+    this.postEffectRegistry?.updateLinksForObject(
+      object,
+      nextEffectIds,
+      prevEffectIds,
+      config.layerId ?? "",
+    );
   }
 }

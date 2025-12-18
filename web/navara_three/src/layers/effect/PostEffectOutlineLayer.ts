@@ -21,8 +21,9 @@ import type {
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
 import {
-  hasOutlineEffect,
+  OUTLINE_EFFECT_KEY,
   PostEffectOcclusionMode,
+  type PostEffectOcclusionValue,
 } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
@@ -45,8 +46,6 @@ export type PostEffectOutlineConfig = {
     resolutionScale?: number;
     debugMask?: boolean;
   };
-  resolutionScale?: number;
-  debugMask?: boolean;
 } & EffectLayerConfig;
 
 export type PostEffectOutlineUpdate = {
@@ -57,8 +56,6 @@ export type PostEffectOutlineUpdate = {
     resolutionScale?: number;
     debugMask?: boolean;
   };
-  resolutionScale?: number;
-  debugMask?: boolean;
 } & EffectLayerUpdate;
 
 const DEFAULT_COLOR = 0xffffff;
@@ -77,14 +74,31 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
-  public outlineColor: number;
-  public outlineThickness: number;
-  public outlineEdgeStrength: number;
-
   private outlinePass?: PostEffectOutlinePass;
+
+  // Getters that derive values from config (single source of truth)
+  get outlineColor(): number {
+    return this.config.outline?.color ?? DEFAULT_COLOR;
+  }
+
+  get outlineThickness(): number {
+    return this.config.outline?.thickness ?? DEFAULT_THICKNESS;
+  }
+
+  get outlineEdgeStrength(): number {
+    return this.config.outline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
+  }
 
   protected getEffectKey(): string {
     return PostEffectOutlineLayer.key;
+  }
+
+  protected getResolutionScale(): number {
+    return this.config.outline?.resolutionScale ?? 1.0;
+  }
+
+  protected getDebugMask(): boolean {
+    return this.config.outline?.debugMask ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
@@ -94,8 +108,6 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
     const postEffectConfig: PostEffectOutlineConfig = {
       ...(config as PostEffectOutlineConfig),
       postEffect: true,
-      resolutionScale: outlineConfig?.resolutionScale ?? 1.0,
-      debugMask: outlineConfig?.debugMask ?? false,
       outline: {
         color: outlineConfig?.color ?? DEFAULT_COLOR,
         thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
@@ -106,11 +118,6 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
     };
 
     super(view, postEffectConfig);
-
-    this.outlineColor = this.config.outline?.color ?? DEFAULT_COLOR;
-    this.outlineThickness = this.config.outline?.thickness ?? DEFAULT_THICKNESS;
-    this.outlineEdgeStrength =
-      this.config.outline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
   }
 
   createPass() {
@@ -122,17 +129,6 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
   }
 
   onUpdateConfig(updates: PostEffectOutlineUpdate): void {
-    // Handle debugMask/resolutionScale from outline first
-    if (updates.outline) {
-      const next = updates.outline;
-      if (next.debugMask !== undefined) {
-        super.onUpdateConfig({ debugMask: next.debugMask });
-      }
-      if (next.resolutionScale !== undefined) {
-        super.onUpdateConfig({ resolutionScale: next.resolutionScale });
-      }
-    }
-
     super.onUpdateConfig(updates);
 
     if (updates.outline) {
@@ -142,27 +138,27 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
         this.config.outline = {};
       }
 
+      // Update config only - getters will derive values from config
       if (next.color !== undefined) {
-        this.outlineColor = next.color;
         this.config.outline.color = next.color;
       }
 
       if (next.thickness !== undefined) {
-        this.outlineThickness = next.thickness;
         this.config.outline.thickness = next.thickness;
       }
 
       if (next.edgeStrength !== undefined) {
-        this.outlineEdgeStrength = next.edgeStrength;
         this.config.outline.edgeStrength = next.edgeStrength;
       }
 
       if (next.debugMask !== undefined) {
         this.config.outline.debugMask = next.debugMask;
+        this.updateDebugMask(next.debugMask);
       }
 
       if (next.resolutionScale !== undefined) {
         this.config.outline.resolutionScale = next.resolutionScale;
+        this.updateResolutionScale(next.resolutionScale);
       }
 
       this.outlinePass?.setParameters(
@@ -214,7 +210,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
     const renderer =
       layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer.layerConfig.resolutionScale ?? 1.0;
+    const resolutionScale = layer.layerConfig.outline?.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -466,7 +462,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
    */
   private renderOutlineMaskForMode(
     renderer: WebGLRenderer,
-    targetMode: number,
+    targetMode: PostEffectOcclusionValue,
     targetRT: WebGLRenderTarget,
   ): void {
     renderMaskForMode(
@@ -476,7 +472,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
       this.layer.viewContext.postEffectRegistry,
       targetMode,
       targetRT,
-      hasOutlineEffect,
+      OUTLINE_EFFECT_KEY,
     );
   }
 
@@ -546,7 +542,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.debugMask) {
+    if (this.layer.layerConfig.outline?.debugMask) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

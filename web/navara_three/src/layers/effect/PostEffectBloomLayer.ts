@@ -20,8 +20,9 @@ import type {
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
 import {
-  hasBloomEffect,
+  BLOOM_EFFECT_KEY,
   PostEffectOcclusionMode,
+  type PostEffectOcclusionValue,
 } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
@@ -46,8 +47,6 @@ export type PostEffectBloomConfig = {
     resolutionScale?: number;
     debugMask?: boolean;
   };
-  resolutionScale?: number;
-  debugMask?: boolean;
 } & EffectLayerConfig;
 
 export type PostEffectBloomUpdate = {
@@ -59,8 +58,6 @@ export type PostEffectBloomUpdate = {
     resolutionScale?: number;
     debugMask?: boolean;
   };
-  resolutionScale?: number;
-  debugMask?: boolean;
 } & EffectLayerUpdate;
 
 // Default bloom parameters for mask-based selective bloom
@@ -80,15 +77,35 @@ export class PostEffectBloomLayer extends PostEffectLayer<
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
-  public bloomStrength: number;
-  public bloomRadius: number;
-  public bloomThreshold: number;
-  public debugMode: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
-
   private bloomPass?: PostEffectBloomPass;
+
+  // Getters that derive values from config (single source of truth)
+  get bloomStrength(): number {
+    return this.config.bloom?.strength ?? DEFAULT_STRENGTH;
+  }
+
+  get bloomRadius(): number {
+    return this.config.bloom?.radius ?? DEFAULT_RADIUS;
+  }
+
+  get bloomThreshold(): number {
+    return this.config.bloom?.threshold ?? DEFAULT_THRESHOLD;
+  }
+
+  get debugMode(): number {
+    return this.config.bloom?.debugMode ?? 0;
+  }
 
   protected getEffectKey(): string {
     return PostEffectBloomLayer.key;
+  }
+
+  protected getResolutionScale(): number {
+    return this.config.bloom?.resolutionScale ?? 1.0;
+  }
+
+  protected getDebugMask(): boolean {
+    return this.config.bloom?.debugMask ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
@@ -98,8 +115,6 @@ export class PostEffectBloomLayer extends PostEffectLayer<
     const postEffectConfig: PostEffectBloomConfig = {
       ...(config as PostEffectBloomConfig),
       postEffect: true,
-      resolutionScale: bloomConfig?.resolutionScale ?? 1.0,
-      debugMask: bloomConfig?.debugMask ?? false,
       bloom: {
         strength: bloomConfig?.strength ?? DEFAULT_STRENGTH,
         radius: bloomConfig?.radius ?? DEFAULT_RADIUS,
@@ -111,11 +126,6 @@ export class PostEffectBloomLayer extends PostEffectLayer<
     };
 
     super(view, postEffectConfig);
-
-    this.bloomStrength = this.config.bloom?.strength ?? DEFAULT_STRENGTH;
-    this.bloomRadius = this.config.bloom?.radius ?? DEFAULT_RADIUS;
-    this.bloomThreshold = this.config.bloom?.threshold ?? DEFAULT_THRESHOLD;
-    this.debugMode = this.config.bloom?.debugMode ?? 0;
   }
 
   createPass() {
@@ -127,17 +137,6 @@ export class PostEffectBloomLayer extends PostEffectLayer<
   }
 
   onUpdateConfig(updates: PostEffectBloomUpdate): void {
-    // Handle debugMask/resolutionScale from bloom first
-    if (updates.bloom) {
-      const next = updates.bloom;
-      if (next.debugMask !== undefined) {
-        super.onUpdateConfig({ debugMask: next.debugMask });
-      }
-      if (next.resolutionScale !== undefined) {
-        super.onUpdateConfig({ resolutionScale: next.resolutionScale });
-      }
-    }
-
     super.onUpdateConfig(updates);
 
     if (updates.bloom) {
@@ -147,32 +146,31 @@ export class PostEffectBloomLayer extends PostEffectLayer<
         this.config.bloom = {};
       }
 
+      // Update config only - getters will derive values from config
       if (next.strength !== undefined) {
-        this.bloomStrength = next.strength;
         this.config.bloom.strength = next.strength;
       }
 
       if (next.radius !== undefined) {
-        this.bloomRadius = next.radius;
         this.config.bloom.radius = next.radius;
       }
 
       if (next.threshold !== undefined) {
-        this.bloomThreshold = next.threshold;
         this.config.bloom.threshold = next.threshold;
       }
 
       if (next.debugMode !== undefined) {
-        this.debugMode = next.debugMode;
         this.config.bloom.debugMode = next.debugMode;
       }
 
       if (next.debugMask !== undefined) {
         this.config.bloom.debugMask = next.debugMask;
+        this.updateDebugMask(next.debugMask);
       }
 
       if (next.resolutionScale !== undefined) {
         this.config.bloom.resolutionScale = next.resolutionScale;
+        this.updateResolutionScale(next.resolutionScale);
       }
 
       this.bloomPass?.setParameters(
@@ -228,7 +226,7 @@ class PostEffectBloomPass extends PostProcessingPass {
     const renderer =
       layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer.layerConfig.resolutionScale ?? 1.0;
+    const resolutionScale = layer.layerConfig.bloom?.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -244,7 +242,6 @@ class PostEffectBloomPass extends PostProcessingPass {
         tBase: { value: null },
         tDepthEnabledBloom: { value: null },
         tSilhouetteBloom: { value: null },
-        bloomIntensity: { value: 1.0 },
         debugMode: { value: 0 },
       },
       vertexShader: `
@@ -258,7 +255,6 @@ class PostEffectBloomPass extends PostProcessingPass {
         uniform sampler2D tBase;
         uniform sampler2D tDepthEnabledBloom;
         uniform sampler2D tSilhouetteBloom;
-        uniform float bloomIntensity;
         uniform int debugMode;
 
         varying vec2 vUv;
@@ -287,8 +283,7 @@ class PostEffectBloomPass extends PostProcessingPass {
           }
 
           // Simple additive blend
-          vec3 finalBloom = totalBloom * bloomIntensity;
-          gl_FragColor = vec4(baseColor.rgb + finalBloom, baseColor.a);
+          gl_FragColor = vec4(baseColor.rgb + totalBloom, baseColor.a);
         }
       `,
       depthTest: false,
@@ -451,7 +446,7 @@ class PostEffectBloomPass extends PostProcessingPass {
    */
   private renderBloomMaskForMode(
     renderer: WebGLRenderer,
-    targetMode: number,
+    targetMode: PostEffectOcclusionValue,
     targetRT: WebGLRenderTarget,
   ): void {
     renderMaskForMode(
@@ -461,7 +456,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       this.layer.viewContext.postEffectRegistry,
       targetMode,
       targetRT,
-      hasBloomEffect,
+      BLOOM_EFFECT_KEY,
     );
   }
 
@@ -564,14 +559,13 @@ class PostEffectBloomPass extends PostProcessingPass {
       this.depthEnabledBloomRT.texture;
     this.compositeMaterial.uniforms.tSilhouetteBloom.value =
       this.silhouetteBloomRT.texture;
-    this.compositeMaterial.uniforms.bloomIntensity.value = 1.0;
     this.compositeMaterial.uniforms.debugMode.value = this.layer.debugMode;
 
     renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.debugMask) {
+    if (this.layer.layerConfig.bloom?.debugMask) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

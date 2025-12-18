@@ -62,5 +62,13 @@ export {
   ensurePostEffectUserData,
   applyMaskPassUniforms,
   parsePostEffectOcclusion,
+  // Utility functions (integrated from PostEffectUtils)
+  type RendererState,
+  saveRendererState,
+  restoreRendererState,
+  renderMaskForMode,
+  createDepthClipMaterial,
+  createFullscreenQuad,
+  applyDepthClip,
 } from "./PostEffectHelper";
 export { PostEffectManager } from "./PostEffectManager";

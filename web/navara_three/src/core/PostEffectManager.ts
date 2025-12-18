@@ -1,7 +1,7 @@
 import {
-  PostEffectOcclusionMode,
   type PostEffectHelper,
   type PostEffectOcclusionValue,
+  PostEffectOcclusionMode,
 } from "./PostEffectHelper";
 
 /** Default emissive intensity when Bloom is enabled */
@@ -11,7 +11,7 @@ type LayerEffectConfig = {
   effectIds: string[];
   emissiveIntensity: number;
   emissiveColor?: number;
-  postEffectOcclusion: PostEffectOcclusionValue;
+  occlusion: PostEffectOcclusionValue; // SoT for occlusion setting
 };
 
 type PostEffectManagerOptions = {
@@ -40,16 +40,15 @@ export class PostEffectManager {
     if (emissiveIntensity !== undefined) {
       config.emissiveIntensity = emissiveIntensity;
     }
-    if (postEffectOcclusion !== undefined) {
-      config.postEffectOcclusion = postEffectOcclusion;
-    }
 
-    if (postEffectOcclusion !== undefined && this.options.postEffectRegistry) {
-      this.options.postEffectRegistry.registerLayerPostEffectOcclusion(
-        layerId,
-        postEffectOcclusion,
-      );
+    // Store occlusion in config (SoT) and sync to Helper cache
+    if (postEffectOcclusion !== undefined) {
+      config.occlusion = postEffectOcclusion;
     }
+    this.options.postEffectRegistry?.syncOcclusionCache(
+      layerId,
+      config.occlusion,
+    );
   }
 
   unregisterLayerEffects(layerId: string): void {
@@ -59,13 +58,6 @@ export class PostEffectManager {
   getLayerEffects(layerId: string): string[] | undefined {
     const config = this.layerConfigs.get(layerId);
     return config?.effectIds;
-  }
-
-  getLayerPostEffectOcclusion(layerId: string): PostEffectOcclusionValue {
-    return (
-      this.layerConfigs.get(layerId)?.postEffectOcclusion ??
-      PostEffectOcclusionMode.Normal
-    );
   }
 
   setLayerEmissiveColor(
@@ -79,24 +71,6 @@ export class PostEffectManager {
     }
 
     config.emissiveColor = emissiveColor;
-  }
-
-  setLayerPostEffectOcclusion(
-    layerId: string,
-    postEffectOcclusion: PostEffectOcclusionValue,
-  ): void {
-    const config = this.ensureConfig(layerId);
-
-    if (config.postEffectOcclusion === postEffectOcclusion) {
-      return;
-    }
-
-    config.postEffectOcclusion = postEffectOcclusion;
-
-    this.options.postEffectRegistry?.updateLayerPostEffectOcclusion(
-      layerId,
-      postEffectOcclusion,
-    );
   }
 
   updateLayerEffects(
@@ -114,7 +88,7 @@ export class PostEffectManager {
       config = {
         effectIds: [],
         emissiveIntensity: DEFAULT_EMISSIVE_INTENSITY,
-        postEffectOcclusion: PostEffectOcclusionMode.Normal,
+        occlusion: PostEffectOcclusionMode.Normal,
       };
       this.layerConfigs.set(layerId, config);
     }
@@ -132,5 +106,26 @@ export class PostEffectManager {
     if (emissiveIntensity !== undefined) {
       config.emissiveIntensity = emissiveIntensity;
     }
+  }
+
+  /**
+   * Get occlusion setting for a layer (SoT)
+   */
+  getLayerOcclusion(layerId: string): PostEffectOcclusionValue {
+    const config = this.layerConfigs.get(layerId);
+    return config?.occlusion ?? PostEffectOcclusionMode.Normal;
+  }
+
+  /**
+   * Set occlusion setting for a layer (SoT)
+   */
+  setLayerOcclusion(
+    layerId: string,
+    occlusion: PostEffectOcclusionValue,
+  ): void {
+    const config = this.ensureConfig(layerId);
+    config.occlusion = occlusion;
+    // Sync to Helper cache
+    this.options.postEffectRegistry?.syncOcclusionCache(layerId, occlusion);
   }
 }
