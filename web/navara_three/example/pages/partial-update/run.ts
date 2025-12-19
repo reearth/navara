@@ -1,25 +1,13 @@
 import ThreeView, {
-  Color,
   AmbientLightLayer,
-  GlowGlobeMeshLayer,
-  LayerHandle,
+  Layer
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 
-let gGlowGlobeMeshLayer: LayerHandle<GlowGlobeMeshLayer> | undefined =
-  undefined;
-
-const gPaneParams = {
-  glowRadiusScale: 1.2,
-  glowCoefficient: 0.5,
-  glowExponent: 5.0,
-  glowColor: 0x8cf3ff,
-  glowOpacity: 0.5,
-  visible: true,
-};
+let gTileLayer: Layer;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -29,7 +17,7 @@ export const run = async (view: ThreeView) => {
     ambient: {},
   });
 
-  view.addLayer({
+  gTileLayer = view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
     rasterTile: {
@@ -48,7 +36,11 @@ export const run = async (view: ThreeView) => {
 
 function addPanel(view: ThreeView, pane: Pane) {
 
-//   const folder = pane.addFolder({ title: "Glow Globe Layer" });
+  const tileFolder = pane.addFolder({ title: "update tile layer" });
+    tileFolder.addButton({ title: "update tiles" }).on("click", () => {
+        console.log("updating tile layer to hide raster tiles");
+        gTileLayer.update({ rasterTile: { show: false } });
+    });
 
  
 }

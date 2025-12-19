@@ -7,6 +7,7 @@ use bevy_ecs::{
     system::SystemState,
     world::{EntityRef, Mut},
 };
+use bevy_log::info;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
     get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
@@ -361,6 +362,7 @@ impl App {
             }
             LayerDescription::Tiles(layer) => {
                 if let Some(appearance) = layer.appearance.take() {
+                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
