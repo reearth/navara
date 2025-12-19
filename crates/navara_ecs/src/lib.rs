@@ -516,7 +516,7 @@ impl App {
                     return None;
                 };
 
-                let batch_table_json = in_batch_table.json().unwrap();
+                let batch_table_json = in_batch_table.json().ok()?;
 
                 get_prop_from_batch_table(
                     in_batch_table,
@@ -649,7 +649,7 @@ impl App {
                     BatchProperty::Cesium3dTileset(in_batch_table) => {
                         let batch_length = *batch_length as usize;
 
-                        let batch_table_json = in_batch_table.json().unwrap();
+                        let batch_table_json = in_batch_table.json().ok()?;
 
                         let global_batch_ids_opt = world
                             .get_entity(*feature_id)

@@ -316,6 +316,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
       ],
       lightDataFile: LOCAL_DATASETS.streetLightGeoJSON.url,
+      height: -50,
     },
     Takanawa: {
       tiles: [
@@ -325,6 +326,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
       ],
       lightDataFile: LOCAL_DATASETS.takanawaPointLightGeoJSON.url,
+      height: -35,
     },
   };
 
@@ -360,7 +362,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
           color: new Color().setStyle("#ffffff"),
           metalness: 0.2,
           roughness: 0.8,
-          height: -50,
+          height: sceneData.height,
           castShadow: true,
           receiveShadow: true,
         },
