@@ -90,20 +90,27 @@ pub fn construct_cesium_3d_tiles_tree(
             }
         };
         buf.remove(&req.handle);
-        commands.entity(e).despawn();
+
+        // Root tree's requester should be removed at this time, but other nested tree should preserve the component.
+        // It is removed by each `remove_invisible_rendered_tiles` system.
+        if order.map(|o| o.index).unwrap_or(0) == 0 {
+            commands.entity(e).insert(Deleted);
+        }
 
         let layer = match layers.get(marker.0) {
             Ok(l) => l,
             Err(_) => continue,
         };
         let metadata = Cesium3dTilesMetadata(tileset_json);
-        let tree = match Cesium3dTilesTree::new(&req.url, marker.0, layer, &metadata.0) {
+        let mut tree = match Cesium3dTilesTree::new(&req.url, marker.0, layer, &metadata.0) {
             Ok(t) => t,
             Err(e) => {
                 error!("tileset.json might be incorrect: {}", e);
                 continue;
             }
         };
+
+        tree.root.parent_data_requester_id = Some(e);
 
         let mut entity = commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
 
@@ -278,7 +285,7 @@ pub fn delete_cesium3dtiles_layer(
             if layer_id.0 != d.0 {
                 continue;
             }
-            mark_rendered_tiles_invisible(&mut tree.root, &mut rendered_tiles);
+            mark_rendered_tiles_invisible(&mut commands, &mut tree.root, &mut rendered_tiles);
             commands.entity(e).despawn();
             layer_store.remove(&layer_id.0);
         }
@@ -303,11 +310,11 @@ pub fn remove_invisible_tileset(
 
         let is_root_tree = order.index == 0;
 
-        if tile.state.is_visible || is_root_tree {
+        if !tile.state.removed || is_root_tree {
             continue;
         }
 
-        mark_rendered_tiles_invisible(&mut tree.root, &mut rendered_tiles);
+        mark_rendered_tiles_invisible(&mut commands, &mut tree.root, &mut rendered_tiles);
 
         commands.entity(entity).despawn();
     }

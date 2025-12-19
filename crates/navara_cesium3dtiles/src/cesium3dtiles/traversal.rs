@@ -17,8 +17,9 @@ use url::Url;
 
 use crate::{
     b3dm::RenderedCesium3dTileContentB3dmMarker, glb::RenderedCesium3dTileContentGlbMarker,
-    pnts::RenderedCesium3dTileContentPntsMarker, Cesium3dTilesJsonTileSetStateMap,
-    Cesium3dTilesJsonTileSetStateMapKey, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
+    pnts::RenderedCesium3dTileContentPntsMarker, Cesium3dTileContentDataRequesterMarker,
+    Cesium3dTilesJsonTileSetStateMap, Cesium3dTilesJsonTileSetStateMapKey, Cesium3dTilesTreeOrder,
+    RenderedCesium3dTileContent,
 };
 
 use super::{
@@ -33,9 +34,6 @@ use navara_data_requester::{DataRequester, DataRequesterExtension};
 pub enum TraversalResult {
     Selected,
     ChildrenSelected,
-    TreeSelected,
-    ChildrenSelectedPartially,
-    NotFound,
     Culled,
 }
 
@@ -62,12 +60,27 @@ pub fn select_tiles(
 
     // This is used to keep tracking the order of child trees.
     let next_tree_order = current_tree_order.index;
+    let is_root_tree = current_tree_order.index == 0;
+
+    // Check if parent marked this child tree for removal.
+    if !is_root_tree {
+        let key = Cesium3dTilesJsonTileSetStateMapKey::new(
+            layer_id,
+            tile.parent_data_requester_id.unwrap(),
+        );
+        if sync_json_tilesets.is_marked_for_removal(&key) {
+            // Parent marked this tree for removal
+            tile.state.removed = true;
+            tile.parent_data_requester_id = None;
+            // Notify parent that this tree no longer has rendered tiles.
+            // Don't remove the entry - parent still needs to check has_rendered_tiles.
+            sync_json_tilesets.remove_tileset_state(&key);
+            return;
+        }
+    }
 
     let traversal_result = mark_leaves(
-        commands,
-        buf,
         sync_json_tilesets,
-        base_url,
         layer_id,
         max_sse,
         tile_meta,
@@ -79,22 +92,20 @@ pub fn select_tiles(
         rendered_tiles,
         features,
         renderable_features,
-        next_tree_order,
+        is_root_tree,
     );
 
-    let key = Cesium3dTilesJsonTileSetStateMapKey::from_path(layer_id, base_url.path());
-
-    let is_root_tree = current_tree_order.index == 0;
-
-    let cloned_key = key.clone();
-    let mark_as_ready_tree = |v: bool| {
+    let mut mark_as_ready_tree = |v: bool| {
         if is_root_tree {
             return;
         }
-        if let Some(key) = cloned_key {
-            // Notify the state of this tile to the parent tree.
-            sync_json_tilesets.set_has_rendered_tiles(key, v);
-        }
+
+        let key = Cesium3dTilesJsonTileSetStateMapKey::new(
+            layer_id,
+            tile.parent_data_requester_id.unwrap(),
+        );
+        // Notify the state of this tile to the parent tree.
+        sync_json_tilesets.set_has_rendered_tiles(key, v);
     };
 
     match traversal_result {
@@ -102,10 +113,12 @@ pub fn select_tiles(
             mark_as_ready_tree(tile.is_rendered(rendered_tiles, features, renderable_features));
             tile.state.leaf = true;
         }
-        TraversalResult::ChildrenSelected | TraversalResult::TreeSelected => {
+        TraversalResult::Culled => {
+            mark_as_ready_tree(false);
+        }
+        _ => {
             mark_as_ready_tree(true);
         }
-        _ => {}
     };
     mark_rendered_tiles(
         commands,
@@ -117,15 +130,13 @@ pub fn select_tiles(
         requesters,
         rendered_tiles,
         &mut rendered_tiles_count,
+        next_tree_order,
     );
 }
 
 #[allow(clippy::too_many_arguments)]
 fn mark_leaves(
-    commands: &mut Commands,
-    buf: &mut ResMut<BufferStore>,
     sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
-    base_url: &Url,
     layer_id: Entity,
     max_sse: f32,
     tile_meta: &Cesium3dTileContentMetadata,
@@ -137,16 +148,16 @@ fn mark_leaves(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     features: &Query<&FeatureId>,
     renderable_features: &Query<&RenderableFeature>,
-    next_tree_order: usize,
+    is_root_tree: bool,
 ) -> TraversalResult {
     tile.reset_state();
 
-    let is_visible =
+    let within_frustum =
         matches!(&tile.bounding_volume, Some(aabb) if frustum.intersection_with_aabb(aabb));
 
-    tile.state.is_visible = is_visible;
+    tile.state.is_visible = within_frustum;
 
-    if !is_visible {
+    if !within_frustum {
         return TraversalResult::Culled;
     }
 
@@ -174,30 +185,24 @@ fn mark_leaves(
             None => None,
         };
         data_requester.is_some_and(|d| matches!(d.status, DataRequesterStatus::Success))
-    } else if let Some(key) = Cesium3dTilesJsonTileSetStateMapKey::from_tile(layer_id, tile_meta) {
+    } else if let Some(key) = tile
+        .data_requester_id
+        .map(|id| Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, id))
+    {
         // Check the child tree state.
         let is_loaded = sync_json_tilesets
             .get_tileset_state(&key)
-            .is_some_and(|state| state.has_rendered_tiles);
+            .is_some_and(|state| state.has_rendered_tiles && !state.should_remove);
 
         is_loaded
     } else {
         false
     };
 
-    let next_tree_order = next_tree_order + 1;
-
     tile.state.is_data_loaded = is_data_ready;
-
     tile.state.touched = true;
 
     let meets_sse = sse <= max_sse;
-
-    let is_rendered = if tile.is_renderable_content {
-        tile.state.is_rendered_last_frame
-    } else {
-        tile.state.is_data_loaded
-    };
 
     // filter out empty tiles - no content
     if meets_sse && tile.is_renderable_content {
@@ -210,9 +215,6 @@ fn mark_leaves(
         }
 
         let mut all_children_rendered = true;
-        let mut any_children_selected = false;
-        let mut selected_children = vec![];
-        let mut selected_tree_children = vec![];
         for (i, child_tile_meta) in tile_meta_children.iter().enumerate() {
             match tile.children.as_ref().unwrap().get(i) {
                 Some(_) => {}
@@ -227,10 +229,7 @@ fn mark_leaves(
             let child_tile = tile_children.get_mut(i).unwrap();
 
             match mark_leaves(
-                commands,
-                buf,
                 sync_json_tilesets,
-                base_url,
                 layer_id,
                 max_sse,
                 child_tile_meta,
@@ -242,13 +241,34 @@ fn mark_leaves(
                 rendered_tiles,
                 features,
                 renderable_features,
-                next_tree_order,
+                is_root_tree,
             ) {
                 TraversalResult::Selected => {
-                    selected_children.push(i);
-                    any_children_selected = true;
-                    if !child_tile.is_rendered(rendered_tiles, features, renderable_features) {
-                        all_children_rendered = false;
+                    // Need to ignore root tile, since it might not include any resource.
+                    if tile.state.is_data_loaded || is_root_tree {
+                        child_tile.state.leaf = true;
+                    }
+                    // Check the child tree state.
+                    if child_tile.is_renderable_content {
+                        if !child_tile.is_rendered(rendered_tiles, features, renderable_features) {
+                            all_children_rendered = false;
+                        }
+                    } else {
+                        let is_data_loaded = child_tile
+                            .data_requester_id
+                            .as_ref()
+                            .map(|id| {
+                                let key = Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, *id);
+                                sync_json_tilesets
+                                    .get_tileset_state(&key)
+                                    .is_some_and(|state| {
+                                        state.has_rendered_tiles && !state.should_remove
+                                    })
+                            })
+                            .unwrap_or(false);
+                        if !is_data_loaded {
+                            all_children_rendered = false;
+                        }
                     }
                 }
                 TraversalResult::Culled => {
@@ -257,93 +277,18 @@ fn mark_leaves(
                     // even if the children includes a culled tile.
                     continue;
                 }
-                TraversalResult::NotFound => {
-                    all_children_rendered = false;
-                }
-                TraversalResult::ChildrenSelected => {
-                    any_children_selected = true;
-                }
-                TraversalResult::TreeSelected => {
-                    selected_tree_children.push(i);
-                    any_children_selected = true;
-                }
-                TraversalResult::ChildrenSelectedPartially => {
-                    any_children_selected = true;
-                    all_children_rendered = false;
-                }
+                TraversalResult::ChildrenSelected => {}
             }
         }
 
         tile.state.are_all_children_loaded = all_children_rendered;
 
-        if any_children_selected {
-            for (i, child) in tile.children.as_mut().unwrap().iter_mut().enumerate() {
-                // Render child when all children is ready.
-                let is_selected_child = selected_children.contains(&i);
-                if matches!(child.refine, Refine::Replace)
-                    && is_selected_child
-                    // Children is rendered once the parent tile becomes ready.
-                    && (is_rendered || all_children_rendered)
-                {
-                    child.state.leaf = true;
-                    continue;
-                }
-
-                if matches!(child.refine, Refine::Add) && is_selected_child {
-                    child.state.leaf = true;
-                }
-            }
-
-            if matches!(tile.refine, Refine::Replace) && all_children_rendered {
-                return TraversalResult::ChildrenSelected;
-            }
-
-            if matches!(tile.refine, Refine::Add) {
-                return TraversalResult::ChildrenSelectedPartially;
-            }
-        } else {
-            // tile does not meet sse but no children were selected, use this tile
+        if matches!(tile.refine, Refine::Add) {
             return TraversalResult::Selected;
         }
-    }
 
-    // Handle JSON child tiles
-    if let Some(uri) = &tile_meta
-        .content
-        .as_ref()
-        .map(|c| c.uri.as_ref().unwrap_or_else(|| c.url.as_ref().unwrap()))
-    {
-        if uri.contains(".json") && tile_meta.children.is_none() && tile.data_requester_id.is_none()
-        {
-            // spawn a data requester to load the child tileset json.
-            let url = construct_child_tile_url(base_url, uri.as_str())
-                .as_str()
-                .to_string();
-
-            let e = commands
-                .spawn((
-                    Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-                    Priority::High,
-                    Cesium3dTilesTreeOrder {
-                        index: next_tree_order,
-                        distance: TileOrderByDistance {
-                            distance_from_camera,
-                            sse,
-                        },
-                    },
-                    DataRequester::from_store(url, buf, DataRequesterExtension::Json),
-                ))
-                .id();
-            tile.data_requester_id = Some(e);
-        }
-    }
-
-    if !tile.is_renderable_content {
-        if is_data_ready {
-            return TraversalResult::TreeSelected;
-        } else {
-            // The parent tile should be rendered until this JSON is ready.
-            return TraversalResult::NotFound;
+        if matches!(tile.refine, Refine::Replace) && all_children_rendered {
+            return TraversalResult::ChildrenSelected;
         }
     }
 
@@ -361,9 +306,12 @@ fn mark_rendered_tiles(
     requesters: &Cesium3dTileContentRequesterQuery,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     rendered_tiles_count: &mut u32,
+    next_tree_order: usize,
 ) {
     let touched_last_frame = tile.state.touched_last_frame;
     tile.state.touched_last_frame = tile.state.touched;
+
+    let next_tree_order = next_tree_order + 1;
 
     let state = &tile.state;
 
@@ -373,10 +321,17 @@ fn mark_rendered_tiles(
     let mut is_rendered = touched && state.is_rendered_last_frame;
 
     if tile.is_renderable_content {
-        if touched && (leaf || !state.are_all_children_loaded) {
+        if touched && leaf {
             if state.is_data_loaded {
                 let is_visible = state.is_visible;
-                update_or_spawn_rendered_tile(commands, layer_id, rendered_tiles, tile, is_visible);
+                update_or_spawn_rendered_tile(
+                    commands,
+                    layer_id,
+                    rendered_tiles,
+                    tile,
+                    is_visible,
+                    touched,
+                );
                 if is_visible {
                     *rendered_tiles_count += 1;
                     is_rendered = true;
@@ -388,36 +343,70 @@ fn mark_rendered_tiles(
                     base_url,
                     tile,
                     requesters,
-                    if leaf {
+                    if !state.are_all_children_loaded {
                         Priority::Medium
                     } else {
                         Priority::Low
                     },
                 );
             } else {
-                toggle_rendered_tile_visible(rendered_tiles, tile, false);
+                toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
             }
         } else {
-            toggle_rendered_tile_visible(rendered_tiles, tile, false);
+            toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
         }
-    } else if !touched {
-        // If this tile is out of touch and it is JSON, remove the resource from memory.
+        if !touched {
+            remove_resources_if_no_rendered_tile(commands, tile, rendered_tiles);
+        }
+    } else {
+        if touched && leaf {
+            // Handle JSON child tiles
+            if let Some(uri) = &tile.uri.as_ref() {
+                if tile
+                    .data_requester_id
+                    .and_then(|id| requesters.get(id).ok())
+                    .is_none()
+                {
+                    // spawn a data requester to load the child tileset json.
+                    let url = construct_child_tile_url(base_url, uri.as_str())
+                        .as_str()
+                        .to_string();
 
-        if let Some(id) = tile.data_requester_id.take() {
-            let _ = commands.get_entity(id).as_mut().map(|e| e.insert(Deleted));
+                    let e = commands
+                        .spawn((
+                            Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                            Cesium3dTileContentDataRequesterMarker,
+                            Priority::High,
+                            Cesium3dTilesTreeOrder {
+                                index: next_tree_order,
+                                distance: TileOrderByDistance {
+                                    distance_from_camera: tile.state.distance_from_camera,
+                                    sse: tile.state.sse,
+                                },
+                            },
+                            DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+                        ))
+                        .id();
+                    tile.data_requester_id = Some(e);
+                }
+            }
         }
-        if let Some(key) = tile
-            .uri
-            .as_ref()
-            .and_then(|url| Cesium3dTilesJsonTileSetStateMapKey::from_path(layer_id, url))
-        {
-            sync_json_tilesets.remove_tileset_state(&key);
+
+        if !touched {
+            // Mark child tree for removal using full URL path to match what the child tree uses.
+            if let Some(id) = tile.data_requester_id.as_ref() {
+                let key = Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, *id);
+                sync_json_tilesets.mark_for_removal(key);
+            }
+
+            // If this tile is out of touch and it is JSON, remove the resource from memory.
+            if let Some(id) = tile.data_requester_id.take() {
+                let _ = commands.get_entity(id).as_mut().map(|e| e.insert(Deleted));
+            }
         }
-        tile.state.is_data_loaded = false;
-        tile.state.is_visible = false;
     }
 
-    tile.state.touched = false;
+    tile.reset_state();
     tile.state.is_rendered_last_frame = is_rendered;
 
     let children = match tile.children.as_mut() {
@@ -436,6 +425,7 @@ fn mark_rendered_tiles(
             requesters,
             rendered_tiles,
             rendered_tiles_count,
+            next_tree_order,
         );
     }
 
@@ -445,12 +435,33 @@ fn mark_rendered_tiles(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn mark_rendered_tiles_invisible(
+fn remove_resources_if_no_rendered_tile(
+    commands: &mut Commands,
     tile: &mut Cesium3dTileContent,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
 ) {
-    toggle_rendered_tile_visible(rendered_tiles, tile, false);
+    if tile
+        .rendered_tile_id
+        .and_then(|id| rendered_tiles.get(id).ok())
+        .is_none()
+    {
+        if let Some(data_requester_id) = tile.data_requester_id.take() {
+            let _ = commands
+                .get_entity(data_requester_id)
+                .as_mut()
+                .map(|e| e.insert(Deleted));
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn mark_rendered_tiles_invisible(
+    commands: &mut Commands,
+    tile: &mut Cesium3dTileContent,
+    rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+) {
+    toggle_rendered_tile_visible(rendered_tiles, tile, false, false);
+    remove_resources_if_no_rendered_tile(commands, tile, rendered_tiles);
 
     let children = match &mut tile.children {
         Some(c) => c,
@@ -458,7 +469,7 @@ pub fn mark_rendered_tiles_invisible(
     };
 
     for child_tile in children {
-        mark_rendered_tiles_invisible(child_tile, rendered_tiles);
+        mark_rendered_tiles_invisible(commands, child_tile, rendered_tiles);
     }
 }
 
@@ -466,6 +477,7 @@ fn toggle_rendered_tile_visible(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     tile: &mut Cesium3dTileContent,
     visible: bool,
+    touched: bool,
 ) -> bool {
     let mut rendered_tile = tile
         .rendered_tile_id
@@ -473,6 +485,8 @@ fn toggle_rendered_tile_visible(
     match &mut rendered_tile {
         Some(t) => {
             t.is_visible = visible;
+            // Keep touching if the refine type is `Replace`.
+            t.touched = matches!(tile.refine, Refine::Replace) && touched;
             true
         }
         None => false,
@@ -485,8 +499,9 @@ fn update_or_spawn_rendered_tile(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     tile: &mut Cesium3dTileContent,
     visible: bool,
+    touched: bool,
 ) {
-    if toggle_rendered_tile_visible(rendered_tiles, tile, visible) {
+    if toggle_rendered_tile_visible(rendered_tiles, tile, visible, touched) {
         return;
     }
 
@@ -506,6 +521,7 @@ fn update_or_spawn_rendered_tile(
                             feature_id: None,
                             data_requester_id: tile.data_requester_id.unwrap(),
                             is_visible: true,
+                            touched: true,
                         },
                         TileTransform {
                             transform: tile.transform.unwrap_or_default(),
@@ -528,6 +544,7 @@ fn update_or_spawn_rendered_tile(
                             feature_id: None,
                             data_requester_id: tile.data_requester_id.unwrap(),
                             is_visible: true,
+                            touched: true,
                         },
                     ))
                     .id(),
@@ -546,6 +563,7 @@ fn update_or_spawn_rendered_tile(
                             feature_id: None,
                             data_requester_id: tile.data_requester_id.unwrap(),
                             is_visible: true,
+                            touched: true,
                         },
                     ))
                     .id(),

@@ -11,6 +11,7 @@ use navara_feature_component::{
     batch::{FeatureBatchId, GlobalBatchIds},
     id::FeatureId,
     model::{ModelBin, ModelGeometry},
+    render::RenderableFeature,
 };
 use navara_layer::{Cesium3dTilesLayer, LayerId};
 use navara_material::{Appearance, ModelMaterial};
@@ -84,6 +85,9 @@ pub fn construct_model_by_cesium3dtiles_layer(
     }
 }
 
+/// Remove completely invisible tiles from the scene.
+/// If it is still being touched, it will just be invisible in the scene.
+/// This avoids reconstruction of the mesh.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn remove_invisible_rendered_tiles(
     mut commands: Commands,
@@ -109,26 +113,39 @@ pub fn remove_invisible_rendered_tiles(
             With<Transform>,
         ),
     >,
+    mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     for (entity, tile, _) in &rendered_tiles {
-        if tile.is_visible {
+        if tile.touched {
+            if let Some(id) = tile.feature_id {
+                let mut renderable_feature = match features
+                    .get(id)
+                    .ok()
+                    .and_then(|renderable_feature_id| renderable_feature_id.0)
+                    .and_then(|renderable_feature_id| {
+                        renderable_features.get_mut(renderable_feature_id).ok()
+                    }) {
+                    Some(renderable_feature) => renderable_feature,
+                    None => continue,
+                };
+                if let RenderableFeature::Model { active, .. } = renderable_feature.as_mut() {
+                    *active = tile.is_visible;
+                }
+                continue;
+            }
+        }
+
+        if tile.is_visible || tile.touched {
             continue;
         }
 
         if let Some(feature_id) = tile.feature_id {
-            // Remove feature
+            commands.entity(feature_id).insert(Deleted);
             if let Ok(rendered_feature_id) = features.get(feature_id) {
                 if let Some(rendered_feature_id) = rendered_feature_id.0 {
-                    commands.entity(feature_id).insert(Deleted);
                     commands.entity(rendered_feature_id).insert(Deleted);
-                } else {
-                    continue;
                 }
-            } else {
-                continue;
             }
-        } else {
-            continue;
         }
 
         // Remove data requester

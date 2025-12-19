@@ -374,6 +374,9 @@ fn get_geometry_info_from_b3dm(
     ))
 }
 
+/// Remove completely invisible tiles from the scene.
+/// TODO: Preserve the constructed mesh if it is being touched like `glb::system::remove_invisible_rendered_tiles`,
+///       but it wastes a lot of memory.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn remove_invisible_rendered_tiles(
     mut commands: Commands,
@@ -406,19 +409,12 @@ pub fn remove_invisible_rendered_tiles(
         }
 
         if let Some(feature_id) = tile.feature_id {
-            // Remove feature
+            commands.entity(feature_id).insert(Deleted);
             if let Ok(rendered_feature_id) = features.get(feature_id) {
                 if let Some(rendered_feature_id) = rendered_feature_id.0 {
-                    commands.entity(feature_id).insert(Deleted);
                     commands.entity(rendered_feature_id).insert(Deleted);
-                } else {
-                    continue;
                 }
-            } else {
-                continue;
             }
-        } else {
-            continue;
         }
 
         // Remove data requester

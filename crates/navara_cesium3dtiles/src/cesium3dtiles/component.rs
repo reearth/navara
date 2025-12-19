@@ -62,6 +62,7 @@ pub struct Cesium3dTileContent {
     // This URI might be just path, so keep using string.
     pub uri: Option<String>,
     pub data_requester_id: Option<Entity>,
+    pub parent_data_requester_id: Option<Entity>,
     pub rendered_tile_id: Option<Entity>,
     pub children: Option<Vec<Cesium3dTileContent>>,
     pub refine: Refine,
@@ -144,6 +145,7 @@ impl Cesium3dTileContent {
         Self {
             uri,
             data_requester_id: None,
+            parent_data_requester_id: None,
             rendered_tile_id: None,
             children: None,
             is_renderable_content,
@@ -207,6 +209,7 @@ pub struct Cesium3dTileContentState {
     pub leaf: bool,
     pub touched_last_frame: bool,
     pub is_visible: bool,
+    pub removed: bool,
     /// Whether this content was touched while traversing.
     pub touched: bool,
     pub is_data_loaded: bool,
@@ -219,6 +222,7 @@ pub struct Cesium3dTileContentState {
 impl Cesium3dTileContentState {
     fn reset(&mut self) {
         self.leaf = false;
+        self.removed = false;
         self.is_visible = false;
         self.touched = false;
         self.is_data_loaded = false;
@@ -234,6 +238,7 @@ pub struct RenderedCesium3dTileContent {
     pub feature_id: Option<Entity>,
     pub data_requester_id: Entity,
     pub is_visible: bool,
+    pub touched: bool,
 }
 
 #[derive(Component)]
