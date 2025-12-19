@@ -55,7 +55,7 @@ pub struct Globe {
 impl Default for Globe {
     fn default() -> Self {
         Self {
-            max_sse: 2.0,
+            max_sse: 4.0,
             segments: 10,
             color: 0xffffff,
             hide_underground: true,
