@@ -66,8 +66,8 @@ const constructData = async () => {
     // Get colors based on traffic volume using ColorMap
     const [r, g, b] = PLASMA_COLORMAP.linear(normalizedTraffic);
     const color = new Color().setRGB(r, g, b);
-    const srcColor = color.raw.getHex();
-    const tgtColor = color.raw.getHex();
+    const srcColor = color;
+    const tgtColor = color;
 
     return {
       thickness,
@@ -92,7 +92,7 @@ const constructData = async () => {
 
 export async function run() {
   const view = new ThreeView({
-    backgroundColor: 0x0b0a0d,
+    backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 
   await view.init();
@@ -157,7 +157,7 @@ export async function run() {
       radiusScale: 1.2,
       coefficient: 0.5,
       exponent: 4.0,
-      glowColor: 0x938cff,
+      glowColor: new Color().setStyle("#938cff"),
       opacity: 0.5,
     },
   });

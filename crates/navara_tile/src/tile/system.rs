@@ -5,7 +5,10 @@ use navara_core::{Aabb, TileXYZ, WGS84_64};
 use navara_data_requester::DataRequesterStatus;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
-use navara_geometry::{tile_triangles_flat, uv_transform};
+use navara_geometry::{
+    add_skirt_separate, calculate_skirt_height, make_wgs84_down_dir_fn, tile_triangles_flat,
+    uv_transform,
+};
 use navara_material::RasterTileInternalMaterial;
 use navara_math::{FloatType, Transform};
 
@@ -373,12 +376,31 @@ pub fn transfer_mesh(
                 .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom() >= tile.coords.z)
                 || (!should_upsample_terrain && is_terrain_failed))
         {
-            let (triangles, rtc_translation) = tile_triangles_flat(
+            // TODO: Move these tile construction process to worker.
+            let (mut triangles, rtc_translation) = tile_triangles_flat(
                 WGS84_64,
                 &extent,
                 if is_root { 65 } else { globe.segments },
                 0.,
             );
+
+            // Render the skirt as well if the terrain layer is also used.
+            let (skirt, skirt_exaggeration) = terrain_layer
+                .and_then(|l| l.appearance.as_ref())
+                .map_or((true, 1.0), |appearance| {
+                    (appearance.skirt(), appearance.skirt_exaggeration())
+                });
+            if should_render_terrain && skirt {
+                // Use terrain tile_size if available, otherwise default to 256
+                let skirt_height =
+                    calculate_skirt_height(&WGS84_64, tile.coords.z, skirt_exaggeration);
+                let down_dir_fn = make_wgs84_down_dir_fn(WGS84_64, Some(rtc_translation));
+                add_skirt_separate(&mut triangles, skirt_height, &down_dir_fn);
+            }
+            let v_skirt_handle = triangles.skirt_vertices.map(|b| buf.new_f32(b));
+            let i_skirt_handle = triangles.skirt_indices.map(|b| buf.new_u32(b));
+            let u_skirt_handle = triangles.skirt_uvs.map(|b| buf.new_f32(b));
+            let e_skirt_handle = triangles.skirt_indices_to_edge.map(|b| buf.new_u32(b));
 
             let vhandle = buf.new_f32(triangles.vertices);
             let ihandle = buf.new_u32(triangles.indices);
@@ -414,6 +436,11 @@ pub fn transfer_mesh(
                                 .transform_point(tile_aabb.center),
                             extents: tile_aabb.extents,
                         },
+                        // Flat tiles don't have skirts
+                        skirt_vertices: v_skirt_handle,
+                        skirt_uvs: u_skirt_handle,
+                        skirt_indices: i_skirt_handle,
+                        skirt_indices_to_edge: e_skirt_handle,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -450,6 +477,13 @@ pub fn transfer_mesh(
             terrain_info.max_height = max_height;
         }
 
+        // Get skirt settings from terrain layer
+        let (skirt, skirt_exaggeration) = terrain_layer
+            .and_then(|l| l.appearance.as_ref())
+            .map_or((true, 1.0), |appearance| {
+                (appearance.skirt(), appearance.skirt_exaggeration())
+            });
+
         if should_upsample_terrain {
             let terrain_mesh_upsampler_id = match rendered_tile.terrain_mesh_upsampler {
                 Some(e) => e,
@@ -460,6 +494,8 @@ pub fn transfer_mesh(
                                 UpsampleTerrainMeshMarker,
                                 UpsampleTerrainMeshParameters {
                                     tile_handle: rendered_tile.tile_handle,
+                                    skirt,
+                                    skirt_exaggeration,
                                 },
                             ),
                             order.clone(),
@@ -518,6 +554,12 @@ pub fn transfer_mesh(
                                 .transform_point(tile_aabb.center),
                             extents: tile_aabb.extents,
                         },
+                        skirt_vertices: terrain_mesh_upsampler.geometry.skirt_vertices,
+                        skirt_uvs: terrain_mesh_upsampler.geometry.skirt_uvs,
+                        skirt_indices: terrain_mesh_upsampler.geometry.skirt_indices,
+                        skirt_indices_to_edge: terrain_mesh_upsampler
+                            .geometry
+                            .skirt_indices_to_edge,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -552,6 +594,8 @@ pub fn transfer_mesh(
                                 tile_size: tile_size.unwrap(),
                                 bytes_handle: terrain_req.handle,
                                 tile_handle: rendered_tile.tile_handle,
+                                skirt,
+                                skirt_exaggeration,
                             },
                         ),
                         order.clone(),
@@ -609,6 +653,10 @@ pub fn transfer_mesh(
                             .transform_point(tile_aabb.center),
                         extents: tile_aabb.extents,
                     },
+                    skirt_vertices: terrain_mesh_constructor.geometry.skirt_vertices,
+                    skirt_uvs: terrain_mesh_constructor.geometry.skirt_uvs,
+                    skirt_indices: terrain_mesh_constructor.geometry.skirt_indices,
+                    skirt_indices_to_edge: terrain_mesh_constructor.geometry.skirt_indices_to_edge,
                 },
                 material: appearance,
                 object: ObjectBundle {

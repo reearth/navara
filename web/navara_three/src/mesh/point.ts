@@ -2,9 +2,10 @@ import { Unimplemented } from "@navara/core";
 import { PointMaterial as NavaraPointMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
+import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
-import { Color, Sprite, SpriteMaterial } from "three";
+import { Color, LessDepth, Sprite, SpriteMaterial } from "three";
 
 import { createReplacer } from "../utils";
 
@@ -33,6 +34,11 @@ export class PointMesh extends Sprite implements FeatureMesh {
       value: 0.0,
     };
 
+    material.userData.uOffsetDepth = {
+      value: meshMaterial.offsetDepth ?? true,
+    };
+
+    material.depthFunc = LessDepth;
     material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, material.userData.defines);
@@ -40,6 +46,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
       shader.uniforms.nvr_uPickable = this.userData.uPickable;
       // Pass height uniform to shader
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
+      shader.uniforms.uOffsetDepth = material.userData.uOffsetDepth;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -48,6 +55,8 @@ export class PointMesh extends Sprite implements FeatureMesh {
           uniform vec2 center;
           ${HeightParsVertex}
           out vec2 sprite_uv;
+          flat out int vHorizonCulled;
+          ${HorizonCulling}
           `,
         )
         .replace(
@@ -55,6 +64,18 @@ export class PointMesh extends Sprite implements FeatureMesh {
           `
           // Offset anchor world position along globe normal by addHeight
           vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          
+          // Horizon culling
+          bool horizonCulled = nvr_horizon_culled(worldPosition.xyz, cameraPosition);
+          if (horizonCulled) {
+            vHorizonCulled = 1;
+            // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
+            //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
+            gl_Position = vec4(0.0);
+            return;
+          }
+          vHorizonCulled = 0;
+
           vec3 globeNormal = normalize(worldPosition.xyz);
           worldPosition.xyz += globeNormal * uAddHeight;
           vec4 mvPosition = viewMatrix * worldPosition;
@@ -77,6 +98,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
           in vec2 sprite_uv;
           ${PointFragShader}
           ${Pick}
+          uniform bool uOffsetDepth;
           `,
         )
         .replace(
@@ -97,7 +119,20 @@ export class PointMesh extends Sprite implements FeatureMesh {
             vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
             gl_FragColor = vec4(pickColor.xyz, 1.0);
           }
+
+          // Offset depth to make sure to be drawn over ellipsoid surface
+          if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+
           `,
+        )
+        .replace(
+          `void main() {`,
+          `
+        flat in int vHorizonCulled;
+
+        void main() {
+          if (vHorizonCulled == 1) discard;
+            `,
         ).source;
     };
 
@@ -125,6 +160,12 @@ export class PointMesh extends Sprite implements FeatureMesh {
     if (prev.depthTest !== nextDepthTest) {
       this.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    const nextOffsetDepth = material.offsetDepth ?? true;
+    if (nextOffsetDepth !== prev.offsetDepth) {
+      this.material.userData.uOffsetDepth.value = nextOffsetDepth;
+      prev.offsetDepth = nextOffsetDepth;
     }
 
     const nextTransparent = !!material.transparent;

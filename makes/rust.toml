@@ -1,3 +1,65 @@
+# ============================================================================
+#                               BUILD TASKS
+# ============================================================================
+# Build all WASM crates in a single cargo invocation to share compilation artifacts
+[tasks.build-rust-all-wasm]
+script = ['''
+cargo build --release --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_api
+''']
+
+[tasks.build-dev-rust-all-wasm]
+script = ['''
+cargo build --features debug  --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_api
+''']
+
+# Generate JS bindings for each WASM module
+# Note: wasm-bindgen-cli version must match the wasm-bindgen dependency version (0.2.102)
+# Install with: cargo install wasm-bindgen-cli --version 0.2.102
+# Optional: Install binaryen for wasm-opt optimization: https://github.com/WebAssembly/binaryen
+[tasks.bindgen-rust]
+script = ['''
+#!/usr/bin/env bash
+
+wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web
+if command -v wasm-opt &> /dev/null; then
+    wasm-opt -O4 web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm
+  else 
+    echo "wasm-opt not found, skipping optimization"
+fi
+
+# Generate package.json for pnpm workspace
+cp crates/navara_wasm/_package.json web/wasm/navara_engine/package.json
+''']
+
+[tasks.bindgen-rust.windows]
+script = ['''
+wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web
+where wasm-opt >nul 2>&1 && wasm-opt -O4 web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm || echo "wasm-opt not found, skipping optimization"
+
+REM Generate package.json for pnpm workspace
+copy /Y "crates\navara_wasm\_package.json" "web\wasm\navara_engine\package.json"
+''']
+
+[tasks.bindgen-dev-rust]
+script = ['''
+#!/usr/bin/env bash
+
+wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web --keep-debug
+
+# Generate package.json for pnpm workspace
+cp crates/navara_wasm/_package.json web/wasm/navara_engine/package.json
+''']
+
+[tasks.bindgen-dev-rust.windows]
+script = ['''
+wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web --keep-debug
+
+REM Generate package.json for pnpm workspace
+copy /Y "crates\navara_wasm\_package.json" "web\wasm\navara_engine\package.json"
+''']
+# ============================================================================
+#                               CODE QUALITY TASKS
+# ============================================================================
 [tasks.format-rust]
 script = ['''
 cargo fmt --all
@@ -17,42 +79,6 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 [tasks.test-rust]
 script = ['''
 cargo test --workspace --all-targets --all-features
-''']
-
-[tasks.build-rust]
-script = ['''
-cd crates/navara_wasm
-wasm-pack build --release --target web --out-dir ../../web/wasm/navara_engine
-''']
-
-[tasks.build-dev-rust]
-script = ['''
-cd crates/navara_wasm
-wasm-pack build --dev --target web --out-dir ../../web/wasm/navara_engine
-''']
-
-[tasks.watch-rust]
-script = ['''
-cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
-''']
-
-[tasks.watch-rust.windows]
-script = ['''
-cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir > nul" --poll
-''']
-
-[tasks.watch-release-rust]
-script = ['''
-cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --release --target web --features \"debug\" && cp -r ./pkg/** ../../web/wasm/navara_engine" --poll
-''']
-
-[tasks.watch-release-rust.windows]
-script = ['''
-cd crates/navara_wasm
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --release --target web --features debug && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine /Mir > nul" --poll
 ''']
 
 [tasks.doc-rust]

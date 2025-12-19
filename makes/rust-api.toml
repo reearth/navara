@@ -1,35 +1,45 @@
-[tasks.build-rust-api]
+# ============================================================================
+#                               BUILD TASKS
+# ============================================================================
+# Generate JS bindings for API WASM module
+[tasks.bindgen-rust-api]
 script = ['''
-cd crates/navara_wasm_api
-wasm-pack build --release --target web --out-dir ../../web/wasm/navara_engine_api
+#!/usr/bin/env bash
+
+wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web
+if command -v wasm-opt &> /dev/null; then
+    wasm-opt -O4 web/wasm/navara_engine_api/navara_wasm_api_bg.wasm -o web/wasm/navara_engine_api/navara_wasm_api_bg.wasm
+  else
+    echo "wasm-opt not found, skipping optimization"
+fi
+
+# Generate package.json for pnpm workspace
+cp crates/navara_wasm_api/_package.json web/wasm/navara_engine_api/package.json
 ''']
 
-[tasks.build-dev-rust-api]
+[tasks.bindgen-rust-api.windows]
 script = ['''
-cd crates/navara_wasm_api
-wasm-pack build --dev --target web --out-dir ../../web/wasm/navara_engine_api
+wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web
+where wasm-opt >nul 2>&1 && wasm-opt -O4 web/wasm/navara_engine_api/navara_wasm_api_bg.wasm -o web/wasm/navara_engine_api/navara_wasm_api_bg.wasm || echo "wasm-opt not found, skipping optimization"
+
+ REM Generate package.json for pnpm workspace
+copy /Y "crates\navara_wasm_api\_package.json" "web\wasm\navara_engine_api\package.json"
 ''']
 
-[tasks.watch-rust-api]
+[tasks.bindgen-dev-rust-api]
 script = ['''
-cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_api" --poll
+#!/usr/bin/env bash
+
+wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web --keep-debug
+
+# Generate package.json for pnpm workspace
+cp crates/navara_wasm_api/_package.json web/wasm/navara_engine_api/package.json
 ''']
 
-[tasks.watch-rust-api.windows]
+[tasks.bindgen-dev-rust-api.windows]
 script = ['''
-cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_api /Mir > nul" --poll
-''']
+wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm_api.wasm --out-dir web/wasm/navara_engine_api --target web --keep-debug
 
-[tasks.watch-release-rust-api]
-script = ['''
-cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --release --target web && cp -r ./pkg/** ../../web/wasm/navara_engine_api" --poll
-''']
-
-[tasks.watch-release-rust-api.windows]
-script = ['''
-cd crates/navara_wasm_api
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --release --target web && robocopy .\\pkg\\ ..\\..\\web\\wasm\\navara_engine_api /Mir > nul" --poll
+REM Generate package.json for pnpm workspace
+copy /Y "crates\navara_wasm_api\_package.json" "web\wasm\navara_engine_api\package.json"
 ''']

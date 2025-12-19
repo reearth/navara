@@ -12,17 +12,53 @@ default_to_workspace = false
 [env]
 PROJ_NAME = "navara"
 
+# ============================================================================
+#         BUILD TASKS (cargo + wasm-bindgen, single compilation)
+# ============================================================================
+# Build all WASM crates in one cargo invocation (shared compilation artifacts)
+# Then run wasm-bindgen for each output
+[tasks.build-all]
+description = "Build all WASM modules with shared compilation (release)"
+run_task = { name = ["build-rust-all-wasm", "bindgen-all"], parallel = false }
+
+[tasks.build-dev-all]
+description = "Build all WASM modules with shared compilation (dev)"
+run_task = { name = ["build-dev-rust-all-wasm", "bindgen-dev-all"], parallel = false }
+
+# Run wasm-bindgen for all modules (can be parallel since cargo build is done)
+[tasks.bindgen-all]
+run_task = { name = ["bindgen-rust", "bindgen-rust-worker", "bindgen-rust-api"], parallel = true }
+
+[tasks.bindgen-dev-all]
+run_task = { name = ["bindgen-dev-rust", "bindgen-dev-rust-worker", "bindgen-dev-rust-api"], parallel = true }
+
+# ============================================================================
+#                               MAIN TASKS
+# ============================================================================
 [tasks.prepare]
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
-run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api","install-deps-web"] }
+# Using optimized build by default
+run_task = { name = ["build-dev-all", "install-deps-web"] }
 
 [tasks.prepare-ci]
 # Need to prepare WASM module before running `pnpm i`. To make pnpm recognize WASM modules, these have to be handled as part of pnpm workspace.
-run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api","install-deps-web"] }
+run_task = { name = ["build-all", "install-deps-web"] }
+
+[tasks.build]
+run_task = { name = ["build-all", "build-web"] }
 
 [tasks.build-dev]
-run_task = { name = ["build-dev-rust", "build-dev-rust-worker", "build-dev-rust-api"] }
+run_task = { name = ["build-dev-all", "build-web"] }
 
+[tasks.build-example]
+run_task = { name = ["build-all", "build-web-example"] }
+
+[tasks.test]
+run_task = { name = ["test-rust", "test-web"], parallel = true }
+
+# ============================================================================
+#                         HOT-RELOAD DEVELOPMENT TASKS
+# ============================================================================
 [tasks.dev]
 run_task = { name = ["watch", "dev-web"], parallel = true }
 
@@ -30,9 +66,21 @@ run_task = { name = ["watch", "dev-web"], parallel = true }
 # Build WASM in release mode, but web is built in dev mode to improve development experience on Web.
 run_task = { name = ["watch-prod", "dev-web"], parallel = true }
 
-[tasks.test]
-run_task = { name = ["test-rust", "test-web"], parallel = true }
+[tasks.watch]
+script = ['''
+cargo watch --watch "./crates" -s "cargo make build-dev-all" --poll
+cargo watch --watch "./web" -s "cargo make build-web" --poll
+''']
 
+[tasks.watch-prod]
+script = ['''
+cargo watch --watch "./crates" -s "cargo make build-all" --poll
+cargo watch --watch "./web" -s "cargo make build-web" --poll
+''']
+
+# ============================================================================
+#                            CODE QUALITY TASKS
+# ============================================================================
 [tasks.lint]
 run_task = { name = ["lint-rust", "lint-web"], parallel = true }
 
@@ -44,18 +92,6 @@ run_task = { name = ["format-rust", "format-web"], parallel = true }
 
 [tasks.format-check]
 run_task = { name = ["format-check-rust", "format-check-web"], parallel = true }
-
-[tasks.build-example]
-run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build-web-example"] }
-
-[tasks.build]
-run_task = { name = ["build-rust", "build-rust-worker", "build-rust-api", "build-web"] }
-
-[tasks.watch]
-run_task = { name = ["watch-rust", "watch-rust-worker", "watch-rust-api"], parallel = true }
-
-[tasks.watch-prod]
-run_task = { name = ["watch-release-rust", "watch-release-rust-worker", "watch-release-rust-api"], parallel = true }
 
 [tasks.doc]
 run_task = { name = ["doc-rust"] }

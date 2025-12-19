@@ -1,5 +1,4 @@
-import { Color } from "three";
-
+import { Color } from "../../Color";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
@@ -10,7 +9,7 @@ import { AmbientLight, type AmbientLightOptions } from "../../lights";
 
 type LayerDescription = {
   ambient?: Omit<AmbientLightOptions, "color"> & {
-    color?: number;
+    color?: Color;
   };
 };
 
@@ -39,7 +38,7 @@ export class AmbientLightLayer extends LightLayerDeclaration<
 
     // Handle color conversion
     if (ambientConfig.color !== undefined) {
-      options.color = new Color(ambientConfig.color);
+      options.color = ambientConfig.color.raw;
     }
 
     const light = new AmbientLight(options);
@@ -62,7 +61,7 @@ export class AmbientLightLayer extends LightLayerDeclaration<
 
       // Update color
       if (updates.ambient.color !== undefined) {
-        this._instance.color = new Color(updates.ambient.color);
+        this._instance.color = updates.ambient.color.raw;
       }
     }
   }

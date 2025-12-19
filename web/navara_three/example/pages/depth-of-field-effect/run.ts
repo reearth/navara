@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   DepthOfFieldEffectLayer,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
 } from "@navara/three";
@@ -55,7 +56,7 @@ export const run = async (view: ThreeView) => {
     },
     model: {
       show: true,
-      color: 0xffffff,
+      color: new Color().setStyle("#ffffff"),
       metalness: 0.1,
       roughness: 0.1,
       castShadow: true,

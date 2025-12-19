@@ -27,6 +27,8 @@ pub(crate) fn handle_follow(
             &controller.follow_target_cur.unwrap(),
             &controller.follow_offset.unwrap(),
         );
+        controller.follow_offset = None; // Clear offset after lookAt
+        controller.follow_target_pre = controller.follow_target_cur;
         return;
     }
 

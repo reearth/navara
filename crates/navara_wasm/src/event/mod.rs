@@ -80,6 +80,14 @@ pub struct Mesh {
     pub render_order: i32,
     pub uv_transform: TileUvTransform,
     pub aabb: navara_wasm_types::Aabb,
+    /// Skirt vertices handle (separate from main geometry for shadow/normal handling).
+    pub skirt_vertices: Option<i32>,
+    /// Skirt UVs handle.
+    pub skirt_uvs: Option<i32>,
+    /// Skirt indices handle.
+    pub skirt_indices: Option<i32>,
+    /// Mapping from skirt vertex index to edge vertex index in main geometry.
+    pub skirt_indices_to_edge: Option<i32>,
 }
 
 #[wasm_bindgen]
@@ -338,6 +346,10 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             render_order: m.render_order,
             uv_transform: (&m.uv_transform).into(),
             aabb: m.aabb.clone().into(),
+            skirt_vertices: m.skirt_vertices,
+            skirt_uvs: m.skirt_uvs,
+            skirt_indices: m.skirt_indices,
+            skirt_indices_to_edge: m.skirt_indices_to_edge,
         }
     }
 }

@@ -11,6 +11,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   LLE,
+  Color,
 } from "@navara/three";
 import type { FeatureCollection, Point } from "geojson";
 import * as THREE from "three";
@@ -315,6 +316,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
       ],
       lightDataFile: LOCAL_DATASETS.streetLightGeoJSON.url,
+      height: -50,
     },
     Takanawa: {
       tiles: [
@@ -324,6 +326,7 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
       ],
       lightDataFile: LOCAL_DATASETS.takanawaPointLightGeoJSON.url,
+      height: -35,
     },
   };
 
@@ -356,10 +359,10 @@ const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
         },
         model: {
           show: true,
-          color: 0xffffff,
+          color: new Color().setStyle("#ffffff"),
           metalness: 0.2,
           roughness: 0.8,
-          height: -50,
+          height: sceneData.height,
           castShadow: true,
           receiveShadow: true,
         },

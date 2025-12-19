@@ -6,4 +6,5 @@ export abstract class Color {
   abstract clone(): this;
   abstract srgb(): this;
   abstract toArray(): [r: number, g: number, b: number];
+  abstract toHex(): number;
 }

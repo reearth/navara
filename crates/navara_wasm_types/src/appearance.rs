@@ -21,6 +21,10 @@ pub struct PointMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
+    #[wasm_bindgen(js_name = offsetDepth)]
+    #[serde(rename = "offsetDepth")]
+    pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
 }
 
@@ -36,6 +40,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
         }
     }
@@ -51,6 +56,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
         }
     }
@@ -82,6 +88,10 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
+    #[wasm_bindgen(js_name = offsetDepth)]
+    #[serde(rename = "offsetDepth")]
+    pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
     #[wasm_bindgen(js_name = alphaTest)]
     #[serde(rename = "alphaTest")]
@@ -101,6 +111,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
         }
@@ -118,6 +129,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
         }
@@ -141,6 +153,10 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
+    #[wasm_bindgen(js_name = offsetDepth)]
+    #[serde(rename = "offsetDepth")]
+    pub offset_depth: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
     /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
@@ -192,6 +208,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             text: val.text.unwrap_or(default.text),
             font: val.font.unwrap_or(default.font),
             background_color: val.background_color,
@@ -221,6 +238,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            offset_depth: Some(value.offset_depth),
             text: Some(value.text.clone()),
             font: Some(value.font.clone()),
             background_color: value.background_color,
@@ -1110,6 +1128,14 @@ pub struct RasterTerrainMaterial {
     #[wasm_bindgen(js_name = tileSize)]
     #[serde(rename = "tileSize")]
     pub tile_size: Option<u32>,
+    /// Whether to render skirts along tile boundaries to hide gaps.
+    /// You should disable `skirt` if you want to visualize an underground model.
+    pub skirt: Option<bool>,
+    /// Multiplier for the automatically calculated skirt height.
+    /// A value of 1.0 uses the default calculated height.
+    #[wasm_bindgen(js_name = skirtExaggeration)]
+    #[serde(rename = "skirtExaggeration")]
+    pub skirt_exaggeration: Option<f32>,
 }
 
 impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
@@ -1130,6 +1156,8 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
                 .elevation_decoder
                 .unwrap_or(default.elevation_decoder.into())
                 .into(),
+            skirt: val.skirt.unwrap_or(default.skirt),
+            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
         }
     }
 }
@@ -1155,6 +1183,8 @@ impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMater
                 epsilon: value.elevation_decoder.epsilon,
             }),
             tile_size: Some(value.tile_size),
+            skirt: Some(value.skirt),
+            skirt_exaggeration: Some(value.skirt_exaggeration),
         }
     }
 }

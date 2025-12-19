@@ -10,6 +10,10 @@ pub struct TransferableGeometry {
     pub vertices: Handle,
     pub uvs: Handle,
     pub indices: Handle,
+    pub skirt_vertices: Option<Handle>,
+    pub skirt_uvs: Option<Handle>,
+    pub skirt_indices: Option<Handle>,
+    pub skirt_indices_to_edge: Option<Handle>,
 }
 
 #[wasm_bindgen]
@@ -20,6 +24,10 @@ impl TransferableGeometry {
             vertices,
             uvs,
             indices,
+            skirt_vertices: None,
+            skirt_uvs: None,
+            skirt_indices: None,
+            skirt_indices_to_edge: None,
         }
     }
 }
@@ -30,6 +38,10 @@ impl From<TransferableGeometry> for navara_geometry::TransferableGeometry {
             vertices: val.vertices,
             uvs: val.uvs,
             indices: val.indices,
+            skirt_vertices: val.skirt_vertices,
+            skirt_uvs: val.skirt_uvs,
+            skirt_indices: val.skirt_indices,
+            skirt_indices_to_edge: val.skirt_indices_to_edge,
         }
     }
 }
@@ -39,6 +51,10 @@ impl<'a> From<&'a navara_geometry::TransferableGeometry> for TransferableGeometr
             vertices: val.vertices,
             uvs: val.uvs,
             indices: val.indices,
+            skirt_vertices: val.skirt_vertices,
+            skirt_uvs: val.skirt_uvs,
+            skirt_indices: val.skirt_indices,
+            skirt_indices_to_edge: val.skirt_indices_to_edge,
         }
     }
 }

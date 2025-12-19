@@ -15,6 +15,10 @@ pub struct ConstructTerrainMeshParameters {
     pub tile_size: u32,
     pub bytes_handle: Handle,
     pub tile_handle: TileHandle,
+    /// Whether to render skirts along tile boundaries.
+    pub skirt: bool,
+    /// Multiplier for the automatically calculated skirt height.
+    pub skirt_exaggeration: f32,
 }
 
 #[derive(Component, Clone, Debug, Serialize)]

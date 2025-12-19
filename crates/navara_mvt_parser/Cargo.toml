@@ -1,14 +1,12 @@
 [package]
 name = "navara_mvt_parser"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
-mvt-reader = { git = "https://github.com/reearth/mvt-reader.git" }
+mvt-reader.workspace = true
 geo-types.workspace = true
 
 [dev-dependencies]
-prost = "0.13.5"
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+prost.workspace = true

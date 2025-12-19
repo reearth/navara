@@ -58,7 +58,7 @@ import type {
   Scenes,
   TexturizedSceneByTileCoordinates,
 } from "../scene";
-import { toCreasedNormalsAsync } from "../tasks/toCreasedNormalsAsync";
+import { computeVertexNormalsAsync } from "../tasks/computeVertexNormalsAsync";
 import type { TextureOptions } from "../textures";
 import type { MeshCache, TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
@@ -87,6 +87,9 @@ export class TileMesh
     isRendered: boolean;
     layerId: string;
   }[];
+
+  // Separate mesh for shadow casting (uses terrain-only geometry without skirt)
+  private shadowMesh?: Mesh<BufferGeometry, TileMaterial>;
 
   private texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   // This is used to attach this scene as a texture to the tile.
@@ -333,29 +336,28 @@ export class TileMesh
     uniforms: CommonUniforms,
     globe: Globe,
   ) {
-    let position = buf.f32(mesh.vertices);
-    let indices = buf.u32(mesh.indices);
+    const position = buf.f32(mesh.vertices);
+    const indices = buf.u32(mesh.indices);
     if (!position || !indices) return;
 
-    let geometry = new BufferGeometry();
+    // Create terrain-only geometry (for shadow rendering)
+    // Use .slice() to copy arrays since we need the originals for combined geometry
+    let terrainGeometry = new BufferGeometry();
+    terrainGeometry.setAttribute(
+      "position",
+      new BufferAttribute(position.slice(), 3),
+    );
 
-    geometry.setAttribute("position", new BufferAttribute(position, 3));
-    position.set([]);
-    position = null;
-
-    let uv = buf.f32(mesh.uvs);
+    const uv = buf.f32(mesh.uvs);
     if (uv) {
-      geometry.setAttribute("uv", new BufferAttribute(uv, 2));
-      uv.set([]);
-      uv = null;
+      terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));
     }
 
-    geometry.setIndex(new BufferAttribute(indices, 1));
-    indices.set([]);
-    indices = null;
+    terrainGeometry.setIndex(new BufferAttribute(indices.slice(), 1));
 
+    // Compute normals on terrain-only geometry first
     if (globe.shouldComputeNormalFromVertex) {
-      geometry = await toCreasedNormalsAsync(geometry, Math.PI / 3);
+      terrainGeometry = await computeVertexNormalsAsync(terrainGeometry);
     }
 
     const aabb_center = new Vector3(
@@ -367,6 +369,16 @@ export class TileMesh
       mesh.aabb.extent.x,
       mesh.aabb.extent.y,
       mesh.aabb.extent.z,
+    );
+
+    const geometry = this.createSkirtMesh(
+      globe,
+      mesh,
+      buf,
+      terrainGeometry,
+      position,
+      uv,
+      indices,
     );
 
     geometry.boundingBox = new Box3(
@@ -404,8 +416,26 @@ export class TileMesh
     );
     this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
 
-    this.castShadow = !!mat.castShadow;
-    this.receiveShadow = !!mat.receiveShadow;
+    // Create shadow mesh if we have separate terrain geometry (i.e., skirt exists)
+    // This prevents the skirt from casting unexpected shadows
+    if (geometry !== terrainGeometry) {
+      terrainGeometry.boundingBox = geometry.boundingBox.clone();
+      terrainGeometry.boundingSphere = geometry.boundingSphere.clone();
+
+      // Create shadow mesh using terrain-only geometry (without skirt)
+      this.shadowMesh = new Mesh(terrainGeometry, this.material);
+      this.shadowMesh.castShadow = !!mat.castShadow;
+      this.shadowMesh.receiveShadow = !!mat.receiveShadow;
+      this.add(this.shadowMesh);
+
+      // Main mesh with skirt doesn't cast shadow, but receives it
+      this.castShadow = false;
+      this.receiveShadow = !!mat.receiveShadow;
+    } else {
+      // No skirt - use the main mesh for both rendering and shadow
+      this.castShadow = !!mat.castShadow;
+      this.receiveShadow = !!mat.receiveShadow;
+    }
 
     this.visible = false;
     this.renderOrder = mesh.render_order;
@@ -413,6 +443,128 @@ export class TileMesh
     if (transform) setTransform(this, transform);
     scenes.globe.add(this);
     meshes.set(id, this);
+  }
+
+  // Append the skirt geometry into the mesh after the normal is computed only without the skirt.
+  // Because the skirt geometry should use the same normal as the edge vertex to create a smooth shadow.
+  createSkirtMesh(
+    globe: Globe,
+    mesh: EventMesh,
+    buf: BufferLoader,
+    terrainGeometry: BufferGeometry,
+    position: Float32Array,
+    uv: Float32Array | null,
+    indices: Uint32Array,
+  ) {
+    // Check for separate skirt data
+    const skirtVerticesHandle = mesh.skirt_vertices;
+    const skirtIndicesHandle = mesh.skirt_indices;
+    const skirtUvsHandle = mesh.skirt_uvs;
+    const skirtIndicesToEdgeHandle = mesh.skirt_indices_to_edge;
+
+    const hasSkirt = skirtVerticesHandle != null && skirtIndicesHandle != null;
+    const skirtPosition =
+      skirtVerticesHandle != null ? buf.f32(skirtVerticesHandle) : null;
+    const skirtIndices =
+      skirtIndicesHandle != null ? buf.u32(skirtIndicesHandle) : null;
+    const skirtUv = skirtUvsHandle != null ? buf.f32(skirtUvsHandle) : null;
+    const skirtIndicesToEdge =
+      skirtIndicesToEdgeHandle != null
+        ? buf.u32(skirtIndicesToEdgeHandle)
+        : null;
+
+    // Create combined geometry (terrain + skirt) for main rendering
+    let geometry: BufferGeometry;
+    if (hasSkirt && skirtPosition && skirtIndices) {
+      geometry = new BufferGeometry();
+
+      // Combine vertices: terrain vertices + skirt vertices
+      const terrainVertexCount = position.length / 3;
+      const combinedPosition = new Float32Array(
+        position.length + (skirtPosition?.length ?? 0),
+      );
+      combinedPosition.set(position);
+      combinedPosition.set(skirtPosition, position.length);
+      geometry.setAttribute(
+        "position",
+        new BufferAttribute(combinedPosition, 3),
+      );
+
+      // Combine UVs
+      if (uv) {
+        const combinedUv = new Float32Array(uv.length + (skirtUv?.length ?? 0));
+        combinedUv.set(uv);
+        if (skirtUv) {
+          combinedUv.set(skirtUv, uv.length);
+        }
+        geometry.setAttribute("uv", new BufferAttribute(combinedUv, 2));
+      }
+
+      // Combine indices: terrain indices + skirt indices
+      const combinedIndices = new Uint32Array(
+        indices.length + (skirtIndices?.length ?? 0),
+      );
+      combinedIndices.set(indices);
+      combinedIndices.set(skirtIndices, indices.length);
+      geometry.setIndex(new BufferAttribute(combinedIndices, 1));
+
+      // Copy normals from terrain geometry and add skirt normals
+      if (globe.shouldComputeNormalFromVertex) {
+        const terrainNormals = terrainGeometry.getAttribute("normal");
+        if (skirtIndicesToEdge) {
+          const skirtVertexCount = skirtPosition.length / 3;
+          const combinedNormals = new Float32Array(
+            terrainNormals.array.length + skirtVertexCount * 3,
+          );
+          // Copy terrain normals
+          combinedNormals.set(terrainNormals.array as Float32Array);
+
+          // Copy normals from edge vertices to skirt vertices
+          for (let i = 0; i < skirtIndicesToEdge.length; i++) {
+            const edgeVertexIdx = skirtIndicesToEdge[i];
+            const skirtVertexIdx = terrainVertexCount + i;
+            combinedNormals[skirtVertexIdx * 3] = (
+              terrainNormals.array as Float32Array
+            )[edgeVertexIdx * 3];
+            combinedNormals[skirtVertexIdx * 3 + 1] = (
+              terrainNormals.array as Float32Array
+            )[edgeVertexIdx * 3 + 1];
+            combinedNormals[skirtVertexIdx * 3 + 2] = (
+              terrainNormals.array as Float32Array
+            )[edgeVertexIdx * 3 + 2];
+          }
+
+          geometry.setAttribute(
+            "normal",
+            new BufferAttribute(combinedNormals, 3),
+          );
+        }
+      }
+
+      // Clean up
+      skirtPosition.set([]);
+      skirtIndices.set([]);
+      if (skirtUv) {
+        skirtUv.set([]);
+      }
+      if (skirtIndicesToEdge) {
+        skirtIndicesToEdge.set([]);
+      }
+    } else {
+      // No skirt data - use terrain geometry directly
+      geometry = terrainGeometry;
+      terrainGeometry.dispose();
+    }
+
+    // Clean up original buffers
+    position.set([]);
+    indices.set([]);
+    if (uv) {
+      uv.set([]);
+      uv = null;
+    }
+
+    return geometry;
   }
 
   private initMaterial(
@@ -746,8 +898,21 @@ if (uPickable > 0.) {
       this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
     }
 
-    if (this.castShadow !== changedMaterial.castShadow) {
-      this.castShadow = !!changedMaterial.castShadow;
+    // Update shadow settings
+    // If shadowMesh exists, it handles castShadow while main mesh only receives shadows
+    if (this.shadowMesh) {
+      if (this.shadowMesh.castShadow !== changedMaterial.castShadow) {
+        this.shadowMesh.castShadow = !!changedMaterial.castShadow;
+      }
+      if (this.shadowMesh.receiveShadow !== changedMaterial.receiveShadow) {
+        this.shadowMesh.receiveShadow = !!changedMaterial.receiveShadow;
+      }
+      // Main mesh with skirt never casts shadow
+      this.castShadow = false;
+    } else {
+      if (this.castShadow !== changedMaterial.castShadow) {
+        this.castShadow = !!changedMaterial.castShadow;
+      }
     }
     if (this.receiveShadow !== changedMaterial.receiveShadow) {
       this.receiveShadow = !!changedMaterial.receiveShadow;
@@ -1198,5 +1363,12 @@ if (uPickable > 0.) {
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     viewEvents.emit("_csmUnmounted", this.material);
+
+    // Dispose shadow mesh geometry (it's separate from main geometry)
+    if (this.shadowMesh) {
+      this.shadowMesh.geometry.dispose();
+      this.remove(this.shadowMesh);
+      this.shadowMesh = undefined;
+    }
   }
 }

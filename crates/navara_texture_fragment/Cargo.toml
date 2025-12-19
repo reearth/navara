@@ -1,13 +1,11 @@
 [package]
 name = "navara_texture_fragment"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
-navara_event_store = { path = "../navara_event_store" }
-navara_component = { path = "../navara_component" }
-
-[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
-dwarf-debug-info = true
+navara_event_store.workspace = true
+navara_component.workspace = true

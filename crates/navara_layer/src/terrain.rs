@@ -72,6 +72,22 @@ impl TerrainAppearance {
             TerrainAppearance::Ellipsoid(mat) => mat.show_bounding_box,
         }
     }
+
+    /// Whether to render skirts along tile boundaries to hide gaps.
+    pub fn skirt(&self) -> bool {
+        match self {
+            TerrainAppearance::Raster(mat) => mat.skirt,
+            TerrainAppearance::Ellipsoid(_) => false, // Ellipsoid terrain doesn't need skirts
+        }
+    }
+
+    /// Multiplier for the automatically calculated skirt height.
+    pub fn skirt_exaggeration(&self) -> f32 {
+        match self {
+            TerrainAppearance::Raster(mat) => mat.skirt_exaggeration,
+            TerrainAppearance::Ellipsoid(_) => 1.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]

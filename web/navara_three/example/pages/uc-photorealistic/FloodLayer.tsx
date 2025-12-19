@@ -33,8 +33,8 @@ export type FloodLayerProps = {
   onCurrentDateChange?: (currentDate: Date) => void;
 };
 
-const DEFAULT_POLY_COLOR = 0x72501a;
-const DEFAULT_POINT_COLOR = 0xb30000;
+const DEFAULT_POLY_COLOR = new Color().setStyle("#72501a");
+const DEFAULT_POINT_COLOR = new Color().setStyle("#b30000");
 
 export function FloodLayer({
   url,
@@ -150,7 +150,7 @@ export function FloodLayer({
         // If no availabilities specified, feature is always shown
         if (!availabilities || availabilities.length === 0) {
           return {
-            color: new Color().setHex(color),
+            color,
             show: true,
           };
         }
@@ -179,7 +179,7 @@ export function FloodLayer({
         }
 
         return {
-          color: new Color().setHex(color),
+          color,
           show: true,
         };
       });
