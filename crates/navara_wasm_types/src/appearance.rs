@@ -21,6 +21,7 @@ pub struct PointMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
     #[wasm_bindgen(js_name = offsetDepth)]
     #[serde(rename = "offsetDepth")]
     pub offset_depth: Option<bool>,
@@ -87,6 +88,7 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
     #[wasm_bindgen(js_name = offsetDepth)]
     #[serde(rename = "offsetDepth")]
     pub offset_depth: Option<bool>,
@@ -151,6 +153,7 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
     #[wasm_bindgen(js_name = offsetDepth)]
     #[serde(rename = "offsetDepth")]
     pub offset_depth: Option<bool>,

@@ -1,7 +1,8 @@
 // reference: https://cesium.com/blog/2013/04/25/horizon-culling/
-
+#include "ellipsoid.glsl"
 /**
  * Determines if a point on the ellipsoid is hidden below the horizon from the camera.
+ * Note: Does not account for the cone test.
  *
  * @name nvr_horizon_culled
  * @glslFunction
@@ -11,10 +12,8 @@
  * returns {bool} true if the point lies beyond the ellipsoidal horizon and can be culled.
  */
 bool nvr_horizon_culled(vec3 targetPosition, vec3 cameraPosition) {
-    const vec3 EARTH_RADII_RECEP = 1.0 / vec3(6378137.0, 6378137.0, 6356752.3142451793);
-
-    vec3 cameraPositionScaled = cameraPosition * EARTH_RADII_RECEP;
-    vec3 targetPositionScaled = targetPosition * EARTH_RADII_RECEP;
+    vec3 cameraPositionScaled = cameraPosition * ONE_OVER_RADII;
+    vec3 targetPositionScaled = targetPosition * ONE_OVER_RADII;
 
     vec3 vt = cameraPositionScaled - targetPositionScaled;
     vec3 vc = cameraPositionScaled;

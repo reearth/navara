@@ -461,7 +461,6 @@ export const addCtrlPanel = (
 
       if ("offsetDepth" in material) {
         material.offsetDepth = paneParams.offsetDepth;
-        console.log("offsetDepth set to ", material.offsetDepth);
       }
 
       view.updateLayerById(layerId, {
