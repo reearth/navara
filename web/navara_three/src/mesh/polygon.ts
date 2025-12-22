@@ -41,7 +41,6 @@ import {
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { BufferLoader } from "../event";
-import type { TextureOptions } from "../textures";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -71,7 +70,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     aabbRadius: number; // Horizontal extent radius from AABB
   };
 
-  private _textureOptions?: TextureOptions;
+  private _uniforms?: CommonUniforms;
 
   constructor(
     buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
@@ -86,9 +85,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
-    textureOptions: TextureOptions,
   ) {
-    this._textureOptions = textureOptions;
+    this._uniforms = uniforms;
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
@@ -223,10 +221,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       return;
     }
 
-    // Use shared water texture (must be enabled via Options.waterTexture.enabled)
-    if (this._textureOptions?.sharedWaterTexture) {
+    // Use shared water texture from CommonUniforms (must be enabled via Options.waterTexture.enabled)
+    if (this._uniforms?.waterTexture.value) {
       this.material.userData.waterNormalMap.value =
-        this._textureOptions.sharedWaterTexture;
+        this._uniforms.waterTexture.value;
       this.material.needsUpdate = true;
     }
   }

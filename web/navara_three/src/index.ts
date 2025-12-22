@@ -278,7 +278,6 @@ export default class ThreeView<
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private _tileMapByHandle: TileMapByHandle = new Map();
   private _initialized = false;
-  private _sharedWaterTexture: Texture | null = null;
 
   private _buf: BufferLoader = {
     u8: (handle) => {
@@ -619,6 +618,7 @@ export default class ThreeView<
       screenHeightPx: { value: height },
       time: { value: 0 },
       colorMapTexture: { value: null },
+      waterTexture: { value: null },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
@@ -638,11 +638,18 @@ export default class ThreeView<
     // Load shared water texture if enabled
     if (options.waterTexture?.enabled) {
       const waterUrl = options.waterTexture.url ?? WATER_NORMAL_URL;
-      this._sharedWaterTexture = TEXTURE_LOADER.load(waterUrl, (texture) => {
-        texture.wrapS = RepeatWrapping;
-        texture.wrapT = RepeatWrapping;
-      });
-      this._defaultTextureOptions.sharedWaterTexture = this._sharedWaterTexture;
+      this._uniforms.waterTexture.value = TEXTURE_LOADER.load(
+        waterUrl,
+        (texture) => {
+          texture.wrapS = RepeatWrapping;
+          texture.wrapT = RepeatWrapping;
+        },
+      );
+      // Track additional texture usage
+      this._defaultTextureOptions.additionalTexturesInUse = {
+        ...this._defaultTextureOptions.additionalTexturesInUse,
+        waterTexture: true,
+      };
     }
 
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);

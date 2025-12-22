@@ -338,7 +338,6 @@ export function processEvent(
             viewEvents,
             layersManager,
             updatedAt,
-            textureOptions,
             (v) => (RENDERABLE_FEATURE_CONCURRENCY += v),
           );
           break;

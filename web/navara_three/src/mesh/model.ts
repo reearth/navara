@@ -46,7 +46,6 @@ import {
 import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type { TextureOptions } from "../textures";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -75,7 +74,7 @@ export class ModelMesh
 {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
-  private _textureOptions?: TextureOptions;
+  private _uniforms?: CommonUniforms;
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
@@ -90,12 +89,9 @@ export class ModelMesh
       return null;
     }
 
-    // Use shared water texture if available
-    if (
-      !this.waterNormalMapTexture &&
-      this._textureOptions?.sharedWaterTexture
-    ) {
-      this.waterNormalMapTexture = this._textureOptions.sharedWaterTexture;
+    // Use shared water texture from CommonUniforms if available
+    if (!this.waterNormalMapTexture && this._uniforms?.waterTexture.value) {
+      this.waterNormalMapTexture = this._uniforms.waterTexture.value;
     }
 
     return this.waterNormalMapTexture;
@@ -111,10 +107,9 @@ export class ModelMesh
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
-    textureOptions: TextureOptions,
   ) {
     super();
-    this._textureOptions = textureOptions;
+    this._uniforms = uniforms;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
     this.addEventListener("removedFromWorld", () => {

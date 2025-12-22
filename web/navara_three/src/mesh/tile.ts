@@ -92,7 +92,6 @@ export class TileMesh
   // Next: Resolution should be updated according to `overscaled` value.
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
-  private textureOptions: TextureOptions;
   private warnedExceededTextures = false;
 
   constructor(
@@ -113,7 +112,6 @@ export class TileMesh
     // Initialize the private camera by copying the shared camera
     this.camera.copy(texturizedSceneByTileCoordinates.camera);
 
-    this.textureOptions = textureOptions;
     this.maxTextures = textureOptions.maxTextures;
 
     // Calculate numAdditionalTextures based on which additional textures are in use
@@ -613,10 +611,6 @@ export class TileMesh
       value: 0,
     };
 
-    m.userData.waterTexture = {
-      value: null,
-    };
-
     m.userData.uTime = uniforms.time;
 
     m.userData.defines ??= {};
@@ -651,7 +645,7 @@ export class TileMesh
       shader.uniforms.uApplyWaterNormals = m.userData.applyWaterNormals;
       shader.uniforms.uSpeculars = m.userData.speculars;
       shader.uniforms.uTextures = m.userData.textures;
-      shader.uniforms.uWaterNormalMap = m.userData.waterTexture;
+      shader.uniforms.uWaterNormalMap = uniforms.waterTexture;
       shader.uniforms.uColorMapTexture = uniforms.colorMapTexture;
       shader.uniforms.uIor = { value: 1.33333 };
       shader.uniforms.uTime = m.userData.uTime;
@@ -1056,30 +1050,7 @@ if (uPickable > 0.) {
             mesh.material.userData.applyWaterNormal?.value ?? 0;
           m.userData.speculars.value[lastIdx] =
             mesh.material.userData.specular?.value ?? false;
-          // Load water normal map texture if water is enabled
-          if (mesh.water) {
-            this.loadWaterTexture();
-          }
         }
-      }
-    }
-  }
-
-  // Just one water texture is available, since the maximum number of textures is restricted by GPU.
-  private loadWaterTexture() {
-    if (!this.material.userData.waterTexture.value) {
-      // Track additional texture usage
-      if (!this.textureOptions.additionalTexturesInUse?.waterTexture) {
-        this.textureOptions.additionalTexturesInUse = {
-          ...this.textureOptions.additionalTexturesInUse,
-          waterTexture: true,
-        };
-      }
-
-      // Use shared water texture (must be enabled via Options.waterTexture.enabled)
-      if (this.textureOptions.sharedWaterTexture) {
-        this.material.userData.waterTexture.value =
-          this.textureOptions.sharedWaterTexture;
       }
     }
   }

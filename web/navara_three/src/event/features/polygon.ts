@@ -4,7 +4,6 @@ import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
 import { PolygonMesh } from "../../mesh";
-import type { TextureOptions } from "../../textures";
 import type { CommonUniforms } from "../../uniforms";
 
 export async function renderPolygon(
@@ -13,16 +12,8 @@ export async function renderPolygon(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
-  textureOptions: TextureOptions,
 ) {
-  return new PolygonMesh().init(
-    mesh,
-    buf,
-    uniforms,
-    tileHandle,
-    viewEvents,
-    textureOptions,
-  );
+  return new PolygonMesh().init(mesh, buf, uniforms, tileHandle, viewEvents);
 }
 
 export function processPolygonChanged(

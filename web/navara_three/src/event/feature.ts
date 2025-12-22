@@ -19,7 +19,6 @@ import {
 } from "../mesh";
 import { FEATURE_RENDER_ORDER } from "../renderOrder";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
-import type { TextureOptions } from "../textures";
 import type { MeshCache, RenderFlag } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
@@ -46,7 +45,6 @@ export function renderFeature(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
-  textureOptions: TextureOptions,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf);
@@ -55,20 +53,13 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewEvents, textureOptions);
+    return renderModel(f.model, buf, uniforms, viewEvents);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms, viewEvents);
   }
   if (f.polygon) {
-    return renderPolygon(
-      f.polygon,
-      buf,
-      uniforms,
-      tileHandle,
-      viewEvents,
-      textureOptions,
-    );
+    return renderPolygon(f.polygon, buf, uniforms, tileHandle, viewEvents);
   }
   if (f.text) {
     return renderText(f.text, buf, uniforms);
@@ -87,7 +78,6 @@ export async function processRenderableFeatureAdded(
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   updatedAt: number,
-  textureOptions: TextureOptions,
   onConcurrency: (v: number) => void,
 ) {
   const id = generate_id_from_entity(ev);
@@ -112,7 +102,6 @@ export async function processRenderableFeatureAdded(
     uniforms,
     tileHandle,
     viewEvents,
-    textureOptions,
   )
     ?.then((r) => {
       const type = (() => {
