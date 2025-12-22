@@ -71,8 +71,6 @@ export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
-const NUM_ADDITIONAL_TEXTURES = 3; // For water normal map, color map, etc.
-
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
   implements PickableMesh
@@ -100,6 +98,9 @@ export class TileMesh
   // Next: Resolution should be updated according to `overscaled` value.
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
+  private textureOptions: TextureOptions;
+  private warnedExceededTextures = false;
+
   constructor(
     mesh: MeshAdded,
     texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
@@ -118,9 +119,18 @@ export class TileMesh
     // Initialize the private camera by copying the shared camera
     this.camera.copy(texturizedSceneByTileCoordinates.camera);
 
+    this.textureOptions = textureOptions;
     this.maxTextures = textureOptions.maxTextures;
+
+    // Calculate numAdditionalTextures based on which additional textures are in use
+    const additionalTexturesInUse =
+      textureOptions.additionalTexturesInUse ?? {};
+    let numAdditionalTextures = 0;
+    if (additionalTexturesInUse.waterTexture) numAdditionalTextures++;
+    if (additionalTexturesInUse.colorMapTexture) numAdditionalTextures++;
+
     this.numTexturizedVector =
-      Math.floor(textureOptions.maxTextures / 2) - NUM_ADDITIONAL_TEXTURES;
+      Math.floor(textureOptions.maxTextures / 2) - numAdditionalTextures;
     this.texturizedSceneIndexFrom = this.maxTextures - this.numTexturizedVector;
 
     for (let i = 0; i < this.numTexturizedVector; i++) {
@@ -184,6 +194,21 @@ export class TileMesh
 
     this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
 
+    // Warn if MVT layers exceed available slots
+    const numScenes = this.texturizedScenes.children.length;
+    if (numScenes > this.numTexturizedVector) {
+      if (!this.warnedExceededTextures) {
+        this.warnedExceededTextures = true;
+        console.warn(
+          `[TileMesh] Exceeded maximum MVT texture slots: ${numScenes} layers requested, ` +
+            `but only ${this.numTexturizedVector} slots available. ` +
+            `Some MVT layers will not be rendered.`,
+        );
+      }
+    } else {
+      this.warnedExceededTextures = false;
+    }
+
     let i = -1;
     for (const texturizedScene of this.texturizedScenes.children) {
       i++;
@@ -196,7 +221,13 @@ export class TileMesh
         continue;
       }
 
-      if (!texturizedScene.children.length) continue;
+      if (!texturizedScene.children.length) {
+        this.updateTexturizedSceneTextureVisibility(
+          false,
+          texturizedScene.userData.layerId,
+        );
+        continue;
+      }
 
       this.updateTexturizedSceneTextureVisibility(
         true,
@@ -1043,6 +1074,14 @@ if (uPickable > 0.) {
   // Just one water texture is available, since the maximum number of textures is restricted by GPU.
   private loadWaterTexture() {
     if (!this.material.userData.waterTexture.value) {
+      // Track additional texture usage
+      if (!this.textureOptions.additionalTexturesInUse?.waterTexture) {
+        this.textureOptions.additionalTexturesInUse = {
+          ...this.textureOptions.additionalTexturesInUse,
+          waterTexture: true,
+        };
+      }
+
       // TODO: Get URL from material setting.
       this.material.userData.waterTexture.value = TEXTURE_LOADER.load(
         WATER_NORMAL_URL,
