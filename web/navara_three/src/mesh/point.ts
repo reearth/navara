@@ -5,7 +5,7 @@ import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
-import { Color, LessDepth, Sprite, SpriteMaterial } from "three";
+import { Color, LessDepth, Sprite, SpriteMaterial, Vector3 } from "three";
 
 import { createReplacer } from "../utils";
 
@@ -15,7 +15,14 @@ export class PointMesh extends Sprite implements FeatureMesh {
   constructor(material: NavaraPointMaterial, batchId: number, active: boolean) {
     super(new SpriteMaterial());
 
+    // Initialize RTC offset uniform
+    this.userData.relativeOffset = {
+      value: new Vector3()
+    };
+
     this.initMaterial(material, batchId, active);
+
+    this.frustumCulled = false;
   }
 
   private initMaterial(
@@ -48,12 +55,16 @@ export class PointMesh extends Sprite implements FeatureMesh {
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
       shader.uniforms.uOffsetDepth = material.userData.uOffsetDepth;
 
+      // RTC: Pass relative offset uniform
+      shader.uniforms.relativeOffset = this.userData.relativeOffset;
+
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "uniform vec2 center;",
           `
           uniform vec2 center;
           ${HeightParsVertex}
+          uniform vec3 relativeOffset;
           out vec2 sprite_uv;
           flat out int vHorizonCulled;
           ${HorizonCulling}
@@ -62,11 +73,12 @@ export class PointMesh extends Sprite implements FeatureMesh {
         .replace(
           "vec4 mvPosition = modelViewMatrix[ 3 ];",
           `
-          // Offset anchor world position along globe normal by addHeight
-          vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          
-          // Horizon culling
-          bool horizonCulled = nvr_horizon_culled(worldPosition.xyz, cameraPosition);
+          // RTC: Calculate world position by combining tile center with local offset
+          vec3 tileCenter = modelMatrix[3].xyz;
+          vec3 worldPosition3 = tileCenter + relativeOffset;
+
+          // Horizon culling using the actual point position
+          bool horizonCulled = nvr_horizon_culled(worldPosition3, cameraPosition);
           if (horizonCulled) {
             vHorizonCulled = 1;
             // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
@@ -76,9 +88,12 @@ export class PointMesh extends Sprite implements FeatureMesh {
           }
           vHorizonCulled = 0;
 
-          vec3 globeNormal = normalize(worldPosition.xyz);
-          worldPosition.xyz += globeNormal * uAddHeight;
-          vec4 mvPosition = viewMatrix * worldPosition;
+          // Apply height offset along surface normal
+          vec3 globeNormal = normalize(worldPosition3);
+          worldPosition3 += globeNormal * uAddHeight;
+
+          // Standard Three.js transformation: world space -> camera space
+          vec4 mvPosition = viewMatrix * vec4(worldPosition3, 1.0);
           `,
         )
         .replace(

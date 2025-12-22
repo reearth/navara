@@ -24,6 +24,10 @@ pub struct PointMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePointGeometry,
     pub active: bool,
+    /// RTC (Relative-To-Center) coordinates - tile center in world-space
+    /// Used for positioning the mesh when using RTC rendering
+    #[wasm_bindgen(getter_with_clone)]
+    pub coordinates: Vec3,
 }
 
 #[wasm_bindgen]
@@ -118,6 +122,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
+                coordinates,
                 ..
             } => Self {
                 point: Some(PointMesh {
@@ -125,6 +130,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     geometry: geometry.into(),
                     active: *active,
+                    coordinates: (*coordinates).into(),
                 }),
                 ..Default::default()
             },

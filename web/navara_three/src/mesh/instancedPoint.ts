@@ -36,6 +36,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
     for (let i = 0; i < meshLen; i++) {
       const posIdx = i * positionSize;
+      // x, y, z are relative coordinates (small numbers, maintain precision)
       const x = position[posIdx];
       const y = position[posIdx + 1];
       const z = position[posIdx + 2];
@@ -46,8 +47,10 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
       const mesh = new PointMesh(material, batchId, active);
       mesh.renderOrder = this.renderOrder;
 
+      // RTC: Set mesh position to tile center, store relative offset in uniform
       setTransform(mesh, transform);
-      mesh.position.set(x, y, z);
+      // Update the relative offset uniform for this mesh
+      mesh.userData.relativeOffset.value.set(x, y, z);
 
       this.addWithBatchIndex(mesh, batchIndex[i]);
     }
@@ -66,14 +69,18 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
     for (const mesh of this.meshes()) {
       mesh._update(material, active);
 
+      // RTC: Update transform (tile center)
       setTransform(mesh, transform, true);
 
       if (position) {
         const batchIndex = (mesh.userData.batchIndex as number) * positionSize;
+        // x, y, z are relative coordinates
         const x = position[batchIndex];
         const y = position[batchIndex + 1];
         const z = position[batchIndex + 2];
-        mesh.position.set(x, y, z);
+
+        // Update relative offset uniform
+        mesh.userData.relativeOffset.value.set(x, y, z);
       }
     }
   }
