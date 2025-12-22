@@ -1,3 +1,4 @@
+use bevy_log::info;
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 
@@ -21,7 +22,7 @@ use navara_wasm_types::{
 #[derive(Debug, Clone, Deserialize)]
 pub struct TileLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
+    pub r#type: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     #[serde(skip_deserializing)]
     pub data: JsValue,
@@ -317,13 +318,15 @@ impl LayerDescription {
                         data: JsValue::NULL,
                     });
 
+                info!("js_data: {:?}", js_data);
                 let mut data: Option<LayerDescriptionUrl> = None;
                 if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok();
                 }
 
                 let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
+                info!("layer deserialized: {:?}", layer);
                 // Parse elevation_heatmap config
                 let elevation_heatmap_config =
                     layer.elevation_heatmap.as_ref().and_then(|heatmap| {

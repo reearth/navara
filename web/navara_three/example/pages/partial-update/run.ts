@@ -39,7 +39,7 @@ function addPanel(view: ThreeView, pane: Pane) {
   const tileFolder = pane.addFolder({ title: "update tile layer" });
     tileFolder.addButton({ title: "update tiles" }).on("click", () => {
         console.log("updating tile layer to hide raster tiles");
-        gTileLayer.update({ rasterTile: { show: false } });
+        gTileLayer.update({data: { url: TILE_DATASETS.openstreetmap.url }, rasterTile: { show: false } });
     });
 
  

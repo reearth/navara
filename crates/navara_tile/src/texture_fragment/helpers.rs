@@ -44,7 +44,7 @@ pub(crate) fn request_texture_fragment(
     // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions,
     // since selected tile has multiple layers.
     for (next, _) in tiles.iter().skip(idx) {
-        if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
+        if !next.is_over_min_zoom(leaf.coords.z).unwrap() || next.is_over_max_zoom(leaf.coords.z).unwrap() {
             leaf.texture_fragment_entity_ids
                 .get_or_insert_with(|| Vec::with_capacity(tiles_len))
                 .push(None);
@@ -59,7 +59,7 @@ pub(crate) fn request_texture_fragment(
         return;
     };
 
-    let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
+    let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms.unwrap());
     let url = tile_url(
         next_tile.data.as_ref().unwrap().url.as_str(),
         &leaf.coords,

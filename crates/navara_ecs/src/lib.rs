@@ -304,6 +304,8 @@ impl App {
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
+
+        info!("updating layer: {:?}", desc);
         match &mut desc {
             LayerDescription::GeoJson(layer) => {
                 for appearance in &layer.appearances {
@@ -362,7 +364,6 @@ impl App {
             }
             LayerDescription::Tiles(layer) => {
                 if let Some(appearance) = layer.appearance.take() {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {

@@ -859,28 +859,27 @@ pub struct RasterTileMaterial {
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
     fn from(val: RasterTileMaterial) -> Self {
-        let default = navara_material::RasterTileMaterial::default();
         navara_material::RasterTileMaterial {
-            show: val.show.unwrap_or(default.show),
-            color: val.color.unwrap_or(default.color),
-            opacity: val.opacity.unwrap_or(default.opacity),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            tms: val.tms.unwrap_or(default.tms),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            show: val.show,
+            color: val.color,
+            opacity: val.opacity,
+            max_zoom: val.max_zoom,
+            min_zoom: val.min_zoom,
+            tms: val.tms,
+            show_bounding_box: val.show_bounding_box,
         }
     }
 }
 impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
     fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
         RasterTileMaterial {
-            show: Some(value.show),
-            color: Some(value.color),
-            opacity: Some(value.opacity),
-            max_zoom: Some(value.max_zoom),
-            min_zoom: Some(value.min_zoom),
-            tms: Some(value.tms),
-            show_bounding_box: Some(value.show_bounding_box),
+            show: value.show,
+            color: value.color,
+            opacity: value.opacity,
+            max_zoom: value.max_zoom,
+            min_zoom: value.min_zoom,
+            tms: value.tms,
+            show_bounding_box: value.show_bounding_box,
         }
     }
 }

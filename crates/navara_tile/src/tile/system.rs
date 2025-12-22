@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::*;
+use bevy_log::info;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
 use navara_core::{Aabb, TileXYZ, WGS84_64};
@@ -167,7 +168,7 @@ pub fn update_tiles(
 
     let is_over_min_z = if !tiles.is_empty() {
         tiles.iter().any(|t| {
-            t.0.is_over_min_zoom(qt.qt.get(zero_tile_handle).unwrap().coords.z)
+            t.0.is_over_min_zoom(qt.qt.get(zero_tile_handle).unwrap().coords.z).unwrap()
         })
     } else {
         true
@@ -312,10 +313,10 @@ pub fn transfer_mesh(
                 .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
                 .is_some_and(|(_, tex)| tex.is_succeeded());
             let a = l.appearance().unwrap();
-            shows.push(should_show && a.show);
-            opacities.push(a.opacity.clamp(0., 1.));
-            colors.push(a.color);
-            tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
+            shows.push(should_show && a.show.unwrap());
+            opacities.push(a.opacity.unwrap().clamp(0., 1.));
+            colors.push(a.color.unwrap());
+            tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box.unwrap();
 
             // Mark whether this layer is an elevation heatmap
             if let Some(heatmap_config) = &l.elevation_heatmap_config {
@@ -690,6 +691,7 @@ pub fn update_layer(
                 continue;
             }
 
+            info!("Updating tile layer: {}", layer_id);
             if let Some(a) = &mut layer.appearance {
                 a.set(&u.appearance);
             }
@@ -857,9 +859,9 @@ pub fn update_mesh_material(
                 .is_some_and(|(_, tex)| tex.is_succeeded());
 
             let a = l.appearance().unwrap();
-            let next_show = should_show && a.show;
-            let next_opacity = a.opacity;
-            let next_color = a.color;
+            let next_show = should_show && a.show.unwrap();
+            let next_opacity = a.opacity.unwrap();
+            let next_color = a.color.unwrap();
 
             // Check if this layer is an elevation heatmap
             let is_heatmap = l.elevation_heatmap_config.is_some();
@@ -875,8 +877,8 @@ pub fn update_mesh_material(
             }
 
             shows.push(next_show);
-            opacities.push(a.opacity.clamp(0., 1.));
-            colors.push(a.color);
+            opacities.push(a.opacity.unwrap().clamp(0., 1.));
+            colors.push(a.color.unwrap());
             is_elevation_heatmaps.push(is_heatmap);
 
             // Use the first elevation_heatmap_config we find (they should all be the same)
