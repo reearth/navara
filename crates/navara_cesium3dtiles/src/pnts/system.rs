@@ -1,3 +1,34 @@
+//! PNTS (Point Cloud) Tile Processing
+//!
+//! This module handles loading and rendering of PNTS tiles, which contain
+//! point cloud data with optional Draco compression.
+//!
+//! # PNTS Format
+//!
+//! PNTS files contain:
+//! - Feature table with point positions (and optional colors, normals)
+//! - Optional 3DTILES_draco_point_compression extension for compression
+//! - RTC_CENTER for relative-to-center coordinates
+//!
+//! # Processing Pipeline
+//!
+//! 1. `RenderedCesium3dTileContent` + `RenderedCesium3dTileContentPntsMarker` spawned
+//! 2. `construct_model_by_cesium3dtiles_layer` extracts point data
+//! 3. Draco decompression is handled in the renderer (via `ModelInternalMaterial`)
+//! 4. `navara_feature::model::system::transfer_mesh` creates `RenderableFeature`
+//!
+//! # Draco Compression
+//!
+//! PNTS tiles may use Draco compression for point data. The compressed data
+//! is passed to the renderer which handles decompression. The `draco_compressed`
+//! flag in `ModelInternalMaterial` indicates this.
+//!
+//! # Point Cloud Specifics
+//!
+//! - `point_cloud = true` in `ModelInternalMaterial`
+//! - Positions are in geocentric coordinates (CRS::Geocentric)
+//! - `TileTransform` is applied during rendering (unlike B3DM/GLB)
+
 use bevy_ecs::{
     entity::Entity,
     query::{Added, Changed, With, Without},
@@ -245,6 +276,24 @@ pub fn delete_model_by_pnts_layer(
     }
 }
 
+/// Constructs point cloud entities from PNTS tile data.
+///
+/// Triggered when a `RenderedCesium3dTileContent` with `RenderedCesium3dTileContentPntsMarker`
+/// is added. Extracts point data and handles Draco compression flags.
+///
+/// # Spawned Components
+///
+/// - `LayerId` - Links to parent layer
+/// - `FeatureId` - Unique feature identifier (default)
+/// - `FeatureBatchId(0)` - No batch table
+/// - `GlobalBatchIds` - Empty batch IDs
+/// - `ModelGeometry` - RTC_CENTER position
+/// - `ModelMaterial` with `ModelInternalMaterial`:
+///   - `draco_compressed` - True if Draco encoded
+///   - `point_cloud = true` - Enables point cloud rendering
+/// - `ModelBin` - Handle to point data (compressed or raw)
+/// - `Transform` - Tile transform from tileset.json
+/// - `Aabb` - Bounding box for culling
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn construct_model_by_cesium3dtiles_layer(
     mut commands: Commands,

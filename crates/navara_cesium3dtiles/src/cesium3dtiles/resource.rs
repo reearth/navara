@@ -1,6 +1,15 @@
+//! Resources for Cesium 3D Tiles State Management
+//!
+//! This module contains ECS resources used to track state across the tile
+//! system, particularly for coordinating between parent and child tilesets.
+
 use bevy_ecs::{entity::Entity, resource::Resource};
 use std::collections::{hash_map, HashMap};
 
+/// Key for identifying a nested tileset's state.
+///
+/// Combines the layer ID and the parent tile's data requester ID to
+/// uniquely identify a child tileset's relationship to its parent.
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Cesium3dTilesJsonTileSetStateMapKey {
     layer_id: Entity,
@@ -16,14 +25,42 @@ impl Cesium3dTilesJsonTileSetStateMapKey {
     }
 }
 
+/// State of a nested tileset as seen by its parent.
+///
+/// This enables parent tiles to know when their child tilesets are ready,
+/// which is essential for REPLACE refinement to work correctly.
 #[derive(Default, Debug)]
 pub struct Cesium3dTileSetState {
+    /// True when the child tileset has visible rendered tiles.
     pub has_rendered_tiles: bool,
+    /// Reserved for future use.
     pub renderable: bool,
     /// When true, the child tree should be removed because the parent tile is no longer needed.
     pub should_remove: bool,
 }
 
+/// Global resource for tracking nested tileset state.
+///
+/// When a tile's content is a nested tileset.json (not a B3DM/PNTS/GLB),
+/// the child tileset needs to communicate its state back to the parent.
+/// This resource enables that communication across separate tile trees.
+///
+/// # Use Cases
+///
+/// 1. **Parent waiting for children**: In REPLACE refinement, a parent tile
+///    stays visible until all children are loaded. For nested tilesets,
+///    `has_rendered_tiles` indicates when the child is ready.
+///
+/// 2. **Cleanup coordination**: When a parent tile goes out of view,
+///    `mark_for_removal` signals child trees to clean themselves up.
+///
+/// # Memory Considerations
+///
+/// Entries in this map should be cleaned up when:
+/// - The nested tileset is removed via `remove_tileset_state`
+/// - The parent layer is deleted
+///
+/// Failure to clean up entries would cause a memory leak.
 #[derive(Default, Debug, Resource)]
 pub struct Cesium3dTilesJsonTileSetStateMap {
     tileset_state_map: HashMap<Cesium3dTilesJsonTileSetStateMapKey, Cesium3dTileSetState>,

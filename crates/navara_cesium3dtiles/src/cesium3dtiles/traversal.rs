@@ -1,3 +1,40 @@
+//! Tile Selection and Traversal Module
+//!
+//! This module implements the core tile selection algorithm for Cesium 3D Tiles.
+//! It determines which tiles should be rendered based on camera position, frustum,
+//! and screen-space error (SSE) calculations.
+//!
+//! # Traversal Algorithm
+//!
+//! The traversal uses a two-phase approach:
+//!
+//! 1. **Mark Leaves Phase** ([`mark_leaves`]): Recursively traverses the tile tree,
+//!    calculating SSE and determining which tiles are "leaves" (should be rendered).
+//!
+//! 2. **Mark Rendered Tiles Phase** ([`mark_rendered_tiles`]): Walks the tree again,
+//!    spawning/updating `RenderedCesium3dTileContent` entities for selected tiles
+//!    and requesting data for tiles that need loading.
+//!
+//! # Refinement Strategies
+//!
+//! The algorithm supports two refinement strategies from 3D Tiles spec:
+//!
+//! - **REPLACE**: Parent tile is replaced by children when they're all ready.
+//!   The parent remains visible until all children are loaded.
+//!
+//! - **ADD**: Children are added on top of parent (additive refinement).
+//!   Both parent and children can be visible simultaneously.
+//!
+//! # Screen-Space Error (SSE)
+//!
+//! SSE is calculated as:
+//! ```text
+//! sse = geometric_error / (distance * sse_denominator / window_height)
+//! ```
+//!
+//! When SSE > max_sse, the tile needs more detail (traverse to children).
+//! When SSE <= max_sse, the tile is sufficient detail (render this tile).
+
 use std::collections::HashMap;
 
 use bevy_ecs::{
@@ -30,13 +67,46 @@ use super::{
 
 use navara_data_requester::{DataRequester, DataRequesterExtension};
 
+/// Result of traversing a single tile in the tree.
+///
+/// This enum indicates what happened during the traversal of a tile,
+/// which affects how parent tiles handle their visibility.
 #[derive(Debug, Clone, Copy)]
 pub enum TraversalResult {
+    /// This tile was selected for rendering (it's a leaf node).
+    /// The tile meets SSE requirements or has no suitable children.
     Selected,
+    /// This tile's children were selected instead (REPLACE refinement).
+    /// All children are loaded and ready, so parent can be hidden.
     ChildrenSelected,
+    /// This tile was culled (outside camera frustum).
+    /// The tile may still be preloaded for smooth transitions.
     Culled,
 }
 
+/// Entry point for tile selection algorithm.
+///
+/// This function orchestrates the tile selection process for a single tile tree.
+/// It's called by [`traverse_cesium_3d_tiles_tree`](super::system::traverse_cesium_3d_tiles_tree)
+/// for each active tile tree.
+///
+/// # Algorithm
+///
+/// 1. Check if this tree was marked for removal by parent (for nested tilesets)
+/// 2. Call [`mark_leaves`] to determine which tiles should be rendered
+/// 3. Update nested tileset state via [`Cesium3dTilesJsonTileSetStateMap`]
+/// 4. Call [`mark_rendered_tiles`] to spawn/update rendered tile entities
+///
+/// # Parameters
+///
+/// - `layer_id`: Entity ID of the Cesium3dTilesLayer
+/// - `max_sse`: Maximum screen-space error threshold
+/// - `base_url`: Base URL for resolving relative tile content URLs
+/// - `tile_meta`: Static tile metadata from tileset.json
+/// - `tile`: Mutable tile state (updated during traversal)
+/// - `camera_position`: Current camera position in world coordinates
+/// - `frustum`: Camera frustum for culling
+/// - `current_tree_order`: Priority order for this tree (affects request priority)
 #[allow(clippy::too_many_arguments)]
 pub fn select_tiles(
     commands: &mut Commands,
@@ -134,6 +204,36 @@ pub fn select_tiles(
     );
 }
 
+/// Recursively marks tiles as leaves (to be rendered) based on SSE calculations.
+///
+/// This is the first phase of the traversal algorithm. It determines which tiles
+/// in the hierarchy should be rendered by calculating screen-space error and
+/// checking against the threshold.
+///
+/// # Algorithm
+///
+/// For each tile:
+/// 1. Reset tile state from previous frame
+/// 2. Check frustum visibility
+/// 3. Calculate distance and SSE
+/// 4. If SSE <= max_sse, mark as leaf (Selected)
+/// 5. If SSE > max_sse and has children, recurse into children
+/// 6. Handle REPLACE vs ADD refinement
+///
+/// # Return Value
+///
+/// - `Selected`: This tile should be rendered
+/// - `ChildrenSelected`: Children are selected instead (REPLACE with all children ready)
+/// - `Culled`: Tile is outside frustum (but may be preloaded)
+///
+/// # Children Traversal
+///
+/// Children are only traversed when:
+/// - Parent tile's data is loaded (or it's the root tree)
+/// - SSE exceeds threshold (higher detail needed)
+///
+/// This ensures children aren't loaded until the parent is ready,
+/// preventing gaps in the rendered surface.
 #[allow(clippy::too_many_arguments)]
 fn mark_leaves(
     sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
@@ -295,6 +395,34 @@ fn mark_leaves(
     TraversalResult::Selected
 }
 
+/// Second phase: spawns/updates rendered tile entities and requests tile data.
+///
+/// After [`mark_leaves`] determines which tiles should be rendered, this function
+/// walks the tree and:
+/// 1. Spawns [`RenderedCesium3dTileContent`] entities for visible leaf tiles
+/// 2. Updates visibility state for existing rendered tiles
+/// 3. Requests data for tiles that need loading
+/// 4. Cleans up resources for tiles that are no longer needed
+///
+/// # Entity Spawning
+///
+/// For each visible tile, this spawns an entity with:
+/// - [`RenderedCesium3dTileContent`] - Core rendered tile component
+/// - Format-specific marker (e.g., [`RenderedCesium3dTileContentGlbMarker`])
+/// - [`TileOrderByDistance`] - For render ordering
+/// - [`TileTransform`] and [`Aabb`] (for PNTS tiles)
+///
+/// # Data Requesting
+///
+/// Tiles that need loading get a [`DataRequester`] spawned with appropriate
+/// priority based on their state (leaf vs preload, visible vs culled).
+///
+/// # Cleanup
+///
+/// When a tile is no longer touched (not visited during traversal):
+/// - Its data requester is marked for deletion
+/// - For nested tilesets, the child tree is marked for removal
+/// - Children array is cleared to free memory
 #[allow(clippy::too_many_arguments)]
 fn mark_rendered_tiles(
     commands: &mut Commands,
@@ -431,6 +559,19 @@ fn mark_rendered_tiles(
     }
 }
 
+/// Cleans up tile resources when no rendered tile exists.
+///
+/// Called when a tile is no longer touched during traversal. This function:
+/// 1. Marks the data requester for deletion
+/// 2. For nested tilesets, marks the child tree for removal via
+///    [`Cesium3dTilesJsonTileSetStateMap::mark_for_removal`]
+///
+/// # Memory Leak Prevention
+///
+/// This function is crucial for preventing memory leaks. Without it:
+/// - Data requesters would accumulate for unused tiles
+/// - Nested tileset trees would never be cleaned up
+/// - Buffer data would remain allocated
 fn remove_resources_if_no_rendered_tile(
     commands: &mut Commands,
     tile: &mut Cesium3dTileContent,
@@ -456,6 +597,16 @@ fn remove_resources_if_no_rendered_tile(
     }
 }
 
+/// Recursively marks all rendered tiles in a tree as invisible.
+///
+/// Used when an entire tile tree needs to be hidden, such as:
+/// - Layer deletion
+/// - Nested tileset removal
+///
+/// This triggers the cleanup chain:
+/// 1. `is_visible = false` on rendered tiles
+/// 2. `remove_invisible_rendered_tiles` system marks features as `Deleted`
+/// 3. `remove_batched_feature` system cleans up buffers and batch table entries
 #[allow(clippy::too_many_arguments)]
 pub fn mark_rendered_tiles_invisible(
     commands: &mut Commands,
@@ -489,6 +640,13 @@ pub fn mark_rendered_tiles_invisible(
     }
 }
 
+/// Toggles visibility of an existing rendered tile entity.
+///
+/// Returns `true` if the tile entity exists and was updated, `false` otherwise.
+///
+/// # Parameters
+/// - `visible`: New visibility state
+/// - `touched`: Whether the tile is still being touched (for REPLACE refinement)
 fn toggle_rendered_tile_visible(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     tile: &mut Cesium3dTileContent,
@@ -509,6 +667,20 @@ fn toggle_rendered_tile_visible(
     }
 }
 
+/// Updates an existing rendered tile or spawns a new one.
+///
+/// This is the main function for creating [`RenderedCesium3dTileContent`] entities.
+/// It first tries to update an existing entity; if none exists and the tile
+/// should be visible, it spawns a new entity with the appropriate format marker:
+///
+/// - `.pnts` → [`RenderedCesium3dTileContentPntsMarker`] + [`TileTransform`] + [`Aabb`]
+/// - `.b3dm` → [`RenderedCesium3dTileContentB3dmMarker`]
+/// - `.glb`  → [`RenderedCesium3dTileContentGlbMarker`]
+///
+/// # Important
+///
+/// The spawned `RenderedCesium3dTileContent` entity triggers the corresponding
+/// `construct_model_by_cesium3dtiles_layer` system via the `Added` query filter.
 fn update_or_spawn_rendered_tile(
     commands: &mut Commands,
     layer_id: Entity,
@@ -591,6 +763,10 @@ fn update_or_spawn_rendered_tile(
     }
 }
 
+/// Constructs the full URL for a child tile content.
+///
+/// Handles relative URL resolution and query parameter inheritance from
+/// the parent tileset URL.
 fn construct_child_tile_url(base_url: &Url, child_url: &str) -> Url {
     let mut new_url: Url = base_url.clone().join(child_url).unwrap();
     let base_query = base_url.query_pairs().into_owned();
