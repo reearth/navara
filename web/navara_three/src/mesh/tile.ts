@@ -26,7 +26,6 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
-  RepeatWrapping,
   RGBAFormat,
   SRGBColorSpace,
   LinearSRGBColorSpace,
@@ -44,12 +43,7 @@ import {
   Sphere,
 } from "three";
 
-import {
-  PolygonMesh,
-  TEXTURE_LOADER,
-  WATER_NORMAL_URL,
-  type ViewEvents,
-} from "..";
+import { PolygonMesh, type ViewEvents } from "..";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
 import type { CustomObject3DEventMap } from "../object3DEvent";
@@ -1082,13 +1076,11 @@ if (uPickable > 0.) {
         };
       }
 
-      // TODO: Get URL from material setting.
-      this.material.userData.waterTexture.value = TEXTURE_LOADER.load(
-        WATER_NORMAL_URL,
-        (texture) => {
-          texture.wrapS = texture.wrapT = RepeatWrapping;
-        },
-      );
+      // Use shared water texture (must be enabled via Options.waterTexture.enabled)
+      if (this.textureOptions.sharedWaterTexture) {
+        this.material.userData.waterTexture.value =
+          this.textureOptions.sharedWaterTexture;
+      }
     }
   }
 

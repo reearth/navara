@@ -17,6 +17,7 @@ import {
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
 import { ModelMesh } from "../../mesh/model";
+import type { TextureOptions } from "../../textures";
 import type { CommonUniforms } from "../../uniforms";
 import {
   initializeGltfLoader,
@@ -35,6 +36,7 @@ export async function renderModel(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   viewEvents: EventHandler<ViewEvents>,
+  textureOptions: TextureOptions,
 ) {
   const loader = initializeGltfLoader();
   const dracoLoader = initializeDracoLoader();
@@ -146,7 +148,14 @@ export async function renderModel(
     return;
   }
 
-  const scene = new ModelMesh(rawScene, m, uniforms, buf, viewEvents);
+  const scene = new ModelMesh(
+    rawScene,
+    m,
+    uniforms,
+    buf,
+    viewEvents,
+    textureOptions,
+  );
   return scene;
 }
 

@@ -5,5 +5,6 @@ import { run } from "./run";
 const view = new ThreeView({
   animation: true,
   shadow: true,
+  waterTexture: { enabled: true },
 });
 run(view);

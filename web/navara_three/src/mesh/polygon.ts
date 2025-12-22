@@ -33,20 +33,15 @@ import {
   Material,
   Matrix4,
   MeshLambertMaterial,
-  RepeatWrapping,
   RGBADepthPacking,
   ShaderChunk,
   Vector3,
   Sphere,
 } from "three";
 
-import {
-  PolygonOutlineMesh,
-  TEXTURE_LOADER,
-  WATER_NORMAL_URL,
-  type ViewEvents,
-} from "..";
+import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { BufferLoader } from "../event";
+import type { TextureOptions } from "../textures";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -76,6 +71,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     aabbRadius: number; // Horizontal extent radius from AABB
   };
 
+  private _textureOptions?: TextureOptions;
+
   constructor(
     buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
     mat: MeshLambertMaterial = new MeshLambertMaterial(),
@@ -89,7 +86,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
+    textureOptions: TextureOptions,
   ) {
+    this._textureOptions = textureOptions;
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
@@ -224,14 +223,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
       return;
     }
 
-    const url = this.material.userData.waterNormalUrl ?? WATER_NORMAL_URL;
-    this.material.userData.waterNormalMap.value = TEXTURE_LOADER.load(
-      url,
-      (texture) => {
-        texture.wrapS = texture.wrapT = RepeatWrapping;
-      },
-    );
-    this.material.needsUpdate = true;
+    // Use shared water texture (must be enabled via Options.waterTexture.enabled)
+    if (this._textureOptions?.sharedWaterTexture) {
+      this.material.userData.waterNormalMap.value =
+        this._textureOptions.sharedWaterTexture;
+      this.material.needsUpdate = true;
+    }
   }
 
   private initMaterial(
@@ -365,8 +362,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     material.userData.defines ??= {};
     material.userData.defines.USE_ROUGHNESS = 1;
     this.water = !!meshMaterial.water;
-
-    material.userData.waterNormalUrl = meshMaterial.waterNormalUrl;
 
     this.enableWater();
 

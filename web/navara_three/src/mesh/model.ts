@@ -29,7 +29,6 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
-  RepeatWrapping,
   RGBADepthPacking,
   Texture,
   type NormalBufferAttributes,
@@ -44,9 +43,10 @@ import {
   LoopRepeat,
 } from "three";
 
-import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
+import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
+import type { TextureOptions } from "../textures";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -75,31 +75,27 @@ export class ModelMesh
 {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
+  private _textureOptions?: TextureOptions;
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
 
   /**
-   * Loads the water normal map texture if water is enabled.
-   * Returns the texture if it should be used, or null otherwise.
+   * Returns the shared water normal map texture if water is enabled.
+   * The texture must be enabled via Options.waterTexture.enabled.
    */
-  private enableWaterNormalMap(
-    water: boolean,
-    waterNormalUrl?: string,
-  ): Texture | null {
-    // Only load if water is enabled
+  private enableWaterNormalMap(water: boolean): Texture | null {
+    // Only use if water is enabled
     if (!water) {
       return null;
     }
 
-    // Load texture if not already loaded
-    if (!this.waterNormalMapTexture) {
-      this.waterNormalMapTexture = TEXTURE_LOADER.load(
-        waterNormalUrl ?? WATER_NORMAL_URL,
-        (texture) => {
-          texture.wrapS = texture.wrapT = RepeatWrapping;
-        },
-      );
+    // Use shared water texture if available
+    if (
+      !this.waterNormalMapTexture &&
+      this._textureOptions?.sharedWaterTexture
+    ) {
+      this.waterNormalMapTexture = this._textureOptions.sharedWaterTexture;
     }
 
     return this.waterNormalMapTexture;
@@ -115,8 +111,10 @@ export class ModelMesh
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
+    textureOptions: TextureOptions,
   ) {
     super();
+    this._textureOptions = textureOptions;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
     this.addEventListener("removedFromWorld", () => {
@@ -143,7 +141,6 @@ export class ModelMesh
 
     this.waterNormalMapTexture = this.enableWaterNormalMap(
       !!meshMaterial.water,
-      meshMaterial.waterNormalUrl,
     );
 
     // For Cesium 3D Tiles
@@ -709,7 +706,7 @@ export class ModelMesh
           distMaterial.userData.defines.WATER = 1;
 
           distMaterial.userData.waterNormalMap.value =
-            this.enableWaterNormalMap(next, src.waterNormalUrl);
+            this.enableWaterNormalMap(next);
         } else {
           delete distMaterial.userData.defines.WATER;
           distMaterial.userData.waterNormalMap.value = null;
