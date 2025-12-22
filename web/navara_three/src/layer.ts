@@ -16,11 +16,13 @@ export type FeatureEvaluatorCallback = (evaluator: FeatureEvaluator) => void;
 export class Layer extends EventHandler<LayerEvent> {
   id: string;
   private core: Core;
+  private description?: LayerDescription;
   private featureEvaluators: Map<FeatureId, FeatureEvaluator> = new Map<
     FeatureId,
     FeatureEvaluator
   >();
   private needUpdate = false;
+
   private convertColors?: (obj: unknown) => unknown;
 
   constructor(
@@ -78,6 +80,46 @@ export class Layer extends EventHandler<LayerEvent> {
     return true;
   }
 
+  // TODO : add docs
+  _updateLayerDescription(
+    update: LayerDescription,
+  ): LayerDescription | undefined {
+    if (!this.description) {
+      return undefined;
+    }
+
+    const result: Record<string, unknown> = {
+      ...(this.description as Record<string, unknown>),
+    };
+
+    const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+      value !== null && typeof value === "object" && !Array.isArray(value);
+
+    for (const [key, value] of Object.entries(
+      update as Record<string, unknown>,
+    )) {
+      if (key === "type" || value === undefined) {
+        continue;
+      }
+
+      if (isPlainObject(value) && isPlainObject(result[key])) {
+        result[key] = { ...(result[key] as Record<string, unknown>), ...value };
+        continue;
+      }
+
+      result[key] = value;
+    }
+
+    const merged = result as LayerDescription;
+    this.description = merged;
+    return merged;
+  }
+
+  // TODO : add docs
+  setDescription(description: LayerDescription) {
+    this.description = description;
+  }
+
   forceUpdate() {
     this.needUpdate = true;
   }
@@ -87,7 +129,8 @@ export class Layer extends EventHandler<LayerEvent> {
     const processedLayer = this.convertColors
       ? (this.convertColors(l) as LayerDescription)
       : l;
-    this.core.updateLayer(this.id, processedLayer);
+    const updatedDescription = this._updateLayerDescription(processedLayer);
+    this.core.updateLayer(this.id, updatedDescription || processedLayer);
   }
 
   delete() {

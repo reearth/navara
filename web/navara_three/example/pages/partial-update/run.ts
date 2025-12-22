@@ -1,7 +1,4 @@
-import ThreeView, {
-  AmbientLightLayer,
-  Layer
-} from "@navara/three";
+import ThreeView, { AmbientLightLayer, Color, Layer } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
@@ -35,12 +32,8 @@ export const run = async (view: ThreeView) => {
 };
 
 function addPanel(view: ThreeView, pane: Pane) {
-
   const tileFolder = pane.addFolder({ title: "update tile layer" });
-    tileFolder.addButton({ title: "update tiles" }).on("click", () => {
-        console.log("updating tile layer to hide raster tiles");
-        gTileLayer.update({ rasterTile: { show: false } });
-    });
-
- 
+  tileFolder.addButton({ title: "update tiles" }).on("click", () => {
+    gTileLayer.update({ rasterTile: { color: new Color().setHex(0xff00a0) } });
+  });
 }

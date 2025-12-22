@@ -9,6 +9,8 @@ import ThreeView, {
   LLE,
   LayerHandle,
 } from "@navara/three";
+import { Vector3, Quaternion, Euler } from "three";
+import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
@@ -17,10 +19,8 @@ import {
   TILES_3D_DATASETS,
   LOCAL_DATASETS,
 } from "../../helpers/constants";
-
-import { Vector3, Quaternion, Euler } from "three";
 import { controlGLTFModel } from "../../helpers/modelControl";
-import { Pane } from "tweakpane";
+
 
 const SCENES = {
   ToranomonHillsBIM: {
