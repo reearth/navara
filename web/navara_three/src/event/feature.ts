@@ -232,13 +232,15 @@ export async function processRenderableFeatureAdded(
     featureLayerId,
     ev.bits,
   );
-  handleFeatureUpdatedEventByLayerId(
-    viewEvents,
-    layersManager,
-    featureLayerId,
-    ev.bits,
-    updatedAt,
-  );
+  if (obj.visible) {
+    handleFeatureUpdatedEventByLayerId(
+      viewEvents,
+      layersManager,
+      featureLayerId,
+      ev.bits,
+      updatedAt,
+    );
+  }
 }
 
 export async function processRenderableFeatureChanged(
@@ -367,11 +369,13 @@ export async function processRenderableFeatureChanged(
 
   obj.updateMatrix();
 
-  handleFeatureUpdatedEventByLayerId(
-    viewEvents,
-    layersManager,
-    layerId,
-    ev.bits,
-    updatedAt,
-  );
+  if (obj.visible) {
+    handleFeatureUpdatedEventByLayerId(
+      viewEvents,
+      layersManager,
+      layerId,
+      ev.bits,
+      updatedAt,
+    );
+  }
 }

@@ -70,6 +70,7 @@ pub struct PointMaterial {
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+    pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     // post effect
@@ -91,6 +92,7 @@ impl Default for PointMaterial {
             height: 1.,
             scale_by_distance: true,
             depth_test: true,
+            offset_depth: true,
             transparent: true,
             // post effect
             effect_ids: None,
@@ -130,6 +132,7 @@ pub struct BillboardMaterial {
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+    pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     pub alpha_test: f32,
@@ -153,6 +156,7 @@ impl Default for BillboardMaterial {
             url: "".to_string(),
             scale_by_distance: true,
             depth_test: true,
+            offset_depth: true,
             transparent: false,
             alpha_test: 0.1,
             // post effect
@@ -192,6 +196,7 @@ pub struct TextMaterial {
     pub scale_by_distance: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
+    pub offset_depth: bool,
     pub text: String,
     pub font: String,
     pub background_color: Option<u32>,
@@ -218,6 +223,7 @@ impl Default for TextMaterial {
             height: 1.,
             scale_by_distance: true,
             depth_test: true,
+            offset_depth: true,
             text: "".to_string(),
             font: "".to_string(),
             background_color: None,

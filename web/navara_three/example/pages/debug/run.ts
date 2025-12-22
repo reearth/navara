@@ -44,6 +44,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       transparent: false,
       depthTest: true,
+      offsetDepth: true,
     },
   },
   {
@@ -101,6 +102,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       transparent: false,
       depthTest: true,
+      offsetDepth: false,
     },
   },
 
@@ -136,6 +138,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       depthTest: true,
       transparent: false,
       url: "/example.png",
+      offsetDepth: false,
     },
   },
 
@@ -175,6 +178,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 10,
         y: 0,
       },
+      offsetDepth: true,
     },
   },
 
@@ -219,6 +223,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       outlineOffset: { x: 4, y: 0 }, // px
       outlineOpacity: 1.0,
       outlineWidth: 4, // px
+      offsetDepth: false,
     },
   },
 
@@ -253,6 +258,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
         x: 5,
         y: 0,
       },
+      offsetDepth: false,
     },
   },
 
