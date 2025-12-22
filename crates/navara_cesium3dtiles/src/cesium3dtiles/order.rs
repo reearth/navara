@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use bevy_ecs::component::Component;
 
-#[derive(Component, PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug, Clone, Default)]
 pub struct TileOrderByDistance {
     pub distance_from_camera: f32,
     pub sse: f32,

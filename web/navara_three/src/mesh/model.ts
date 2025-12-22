@@ -36,6 +36,7 @@ import {
   type WebGLProgramParametersWithUniforms,
   ShaderChunk,
   PointsMaterial,
+  Material,
 } from "three";
 import {
   AnimationAction,
@@ -249,6 +250,39 @@ export class ModelMesh
     });
   }
 
+  setupWaterMaterial(
+    mesh: Mesh<BufferGeometry, Material>,
+    meshMaterial: NavaraModelMaterial,
+  ) {
+    mesh.material.userData.reflectivity ??= {
+      value: meshMaterial.reflectivity ?? 0,
+    };
+    mesh.material.userData.waterScaleNormal ??= {
+      value: meshMaterial.waterScaleNormal ?? 0.01,
+    };
+    mesh.material.userData.waterSpeed ??= {
+      value: meshMaterial.waterSpeed ?? 0.0003,
+    };
+    mesh.material.userData.shininess ??= {
+      value: meshMaterial.shininess ?? 30.0,
+    };
+    mesh.material.userData.specularStrength ??= {
+      value: meshMaterial.specularStrength ?? 1.0,
+    };
+    mesh.material.userData.applyWaterNormal ??= {
+      value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
+    };
+    mesh.material.userData.waterNormalMap ??= {
+      value: this.waterNormalMapTexture,
+    };
+    mesh.material.userData.specular ??= {
+      value: meshMaterial.specular ?? false,
+    };
+    mesh.material.userData.ior ??= {
+      value: meshMaterial.ior ?? 1.33333,
+    };
+  }
+
   private overrideCesium3DTilesMaterial(
     meshMaterial: NavaraModelMaterial,
     batchIds: Uint32Array<ArrayBufferLike>,
@@ -291,36 +325,10 @@ export class ModelMesh
       mesh.material.userData.uPickable = {
         value: 0.0,
       };
-      mesh.material.userData.reflectivity = {
-        value: meshMaterial.reflectivity ?? 0,
-      };
       mesh.material.userData.uAddHeight = {
         value: 0.0,
       };
-      mesh.material.userData.waterScaleNormal = {
-        value: meshMaterial.waterScaleNormal ?? 0.01,
-      };
-      mesh.material.userData.waterSpeed = {
-        value: meshMaterial.waterSpeed ?? 0.0003,
-      };
-      mesh.material.userData.shininess = {
-        value: meshMaterial.shininess ?? 30.0,
-      };
-      mesh.material.userData.specularStrength = {
-        value: meshMaterial.specularStrength ?? 1.0,
-      };
-      mesh.material.userData.applyWaterNormal = {
-        value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
-      };
-      mesh.material.userData.waterNormalMap = {
-        value: this.waterNormalMapTexture,
-      };
-      mesh.material.userData.specular = {
-        value: meshMaterial.specular ?? false,
-      };
-      mesh.material.userData.ior = {
-        value: meshMaterial.ior ?? 1.33333,
-      };
+      this.setupWaterMaterial(mesh, meshMaterial);
 
       this.water = !!meshMaterial.water;
       this.setMaterial(meshMaterial, mesh);
@@ -663,6 +671,10 @@ export class ModelMesh
       | Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
   ) {
     const distMaterial = dist.material;
+
+    if (dist instanceof Mesh) {
+      this.setupWaterMaterial(dist, src);
+    }
 
     if (!distMaterial.userData.prev) {
       distMaterial.userData.prev = {};

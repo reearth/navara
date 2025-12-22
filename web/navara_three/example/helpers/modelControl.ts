@@ -8,11 +8,10 @@ import ThreeView, {
   geodeticSurfaceNormal,
   LLE,
 } from "@navara/three";
-
 import { eastNorthUpToFixedFrame } from "@navara/three_api";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
-export interface ModelControlParams {
+export type ModelControlParams = {
   walkSpeed?: number; // Speed when walking forward/backward
   rotationSpeed?: number; // Speed of turning left/right
   cameraFollow?: boolean; // Whether to follow the model with the camera
@@ -22,7 +21,7 @@ export interface ModelControlParams {
 
   dash?: number; // Dash speed multiplier
   height?: number; // height above the ground
-}
+};
 
 export const controlGLTFModel = (
   view: ThreeView,
