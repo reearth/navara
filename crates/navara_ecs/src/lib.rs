@@ -304,9 +304,11 @@ impl App {
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
+        info!("updating layer: new desc{:?}", desc);
         match &mut desc {
             LayerDescription::GeoJson(layer) => {
                 for appearance in &layer.appearances {
+                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -318,6 +320,7 @@ impl App {
             }
             LayerDescription::B3dm(layer) => {
                 for appearance in &layer.appearances {
+                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -329,6 +332,7 @@ impl App {
             }
             LayerDescription::Pnts(layer) => {
                 for appearance in &layer.appearances {
+                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -340,6 +344,7 @@ impl App {
             }
             LayerDescription::Cesium3dTiles(layer) => {
                 for appearance in &layer.appearances {
+                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -351,6 +356,7 @@ impl App {
             }
             LayerDescription::Mvt(layer) => {
                 for appearance in &layer.appearances {
+                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -372,7 +378,7 @@ impl App {
                         });
                 }
             }
-            _ => (),
+            _ => (info!("Layer type not supported for update")),
         }
     }
 

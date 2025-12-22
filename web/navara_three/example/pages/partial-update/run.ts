@@ -73,9 +73,7 @@ export const run = async (view: ThreeView) => {
   gB3dmLayer = view.addLayer(
     {
       type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChiyodaB3DM,
-      },
+      data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
       model: {
         show: true,
         color: new Color().setStyle("#ffffff"),
@@ -120,18 +118,38 @@ export const run = async (view: ThreeView) => {
     expanded: true,
   });
 
-  addCameraControl(view, pane);
+  addCustomCameraControl(view, pane);
   addPanel(view, pane);
 };
 
+
+function addCustomCameraControl(view: ThreeView, pane: Pane) {
+  addCameraControl(view, pane);
+    
+  pane.addButton({ title: "Kakegawa castle view" })
+    .on("click", () => {
+      view.flyTo({
+        lat: 34.7734947205,
+        lng: 138.0163726807,
+        height: 424.66,
+        heading: 326.62109375,
+        pitch: -56.2649879456,
+        roll: 360.0,
+      });
+    });
+}
+
 function addPanel(_view: ThreeView, pane: Pane) {
   addRasterTileFolder(pane);
+  addTerrainLayerFolder(pane);
+  addGeojsonLayerFolder(pane);
+  addB3dmLayerFolder(pane);
+  addPntsLayerFolder(pane);
+  addMvtLayerFolder(pane);
 }
 
 function addRasterTileFolder(pane: Pane) {
   const tileParams = {
-    dataset: TILE_DATASETS.openstreetmap.url,
-    dataUrl: TILE_DATASETS.openstreetmap.url,
     rasterShow: true,
     rasterColor: 0xffffff,
     rasterOpacity: 1,
@@ -151,48 +169,6 @@ function addRasterTileFolder(pane: Pane) {
     expanded: true,
   });
 
-  const getElevationDecoder = () => {
-    switch (tileParams.elevationDecoder) {
-      case "mapbox":
-        return MAPBOX_ELEVATION_DECODER();
-      case "terrarium":
-        return TERRARIUM_ELEVATION_DECODER();
-      case "japanGSI":
-      default:
-        return JAPAN_GSI_ELEVATION_DECODER();
-    }
-  };
-
-  const updateElevationHeatmap = () => {
-    gTileLayer.update({
-      elevationHeatmap: {
-        maxHeight: tileParams.elevationMaxHeight,
-        minHeight: tileParams.elevationMinHeight,
-        elevationDecoder: getElevationDecoder(),
-        logarithmic: tileParams.elevationLogarithmic,
-        logBoundary: tileParams.elevationLogBoundary,
-      },
-    });
-  };
-
-  const dataFolder = tileFolder.addFolder({ title: "Data", expanded: false });
-  const urlBinding = dataFolder.addBinding(tileParams, "dataUrl", { label: "url", });
-
-  urlBinding.on("change", (v) => {
-    gTileLayer.update({ data: { url: v.value } });
-  });
-
-  dataFolder
-    .addBinding(tileParams, "dataset", {
-      options: Object.fromEntries(
-        Object.entries(TILE_DATASETS).map(([key, value]) => [key, value.url]),
-      ),
-    })
-    .on("change", (v) => {
-      tileParams.dataUrl = v.value;
-      urlBinding.refresh();
-      gTileLayer.update({ data: { url: tileParams.dataUrl } });
-    });
 
   const rasterFolder = tileFolder.addFolder({
     title: "Raster Tile",
@@ -246,47 +222,580 @@ function addRasterTileFolder(pane: Pane) {
       label: "showBoundingBox",
     })
     .on("change", (v) => gTileLayer.update({ rasterTile: { showBoundingBox: v.value } }));
+}
 
-  const elevationFolder = tileFolder.addFolder({
-    title: "Elevation Heatmap",
+function addTerrainLayerFolder(pane: Pane) {
+  const terrainParams = {
+    show: true,
+    castShadow: true,
+    receiveShadow: true,
+    showBoundingBox: false,
+    maxZoom: 15,
+    minZoom: 6,
+    overscaledMaxZoom: 24,
+    tileSize: 256,
+    skirt: true,
+    skirtExaggeration: 1,
+  };
+
+  const terrainFolder = pane.addFolder({
+    title: "Terrain Layer",
     expanded: false,
   });
-  elevationFolder
-    .addBinding(tileParams, "elevationDecoder", {
-      label: "decoder",
-      options: {
-        japanGSI: "japanGSI",
-        mapbox: "mapbox",
-        terrarium: "terrarium",
-      },
+
+  const updateRasterTerrain = (update: Record<string, unknown>) => {
+    gTerrainLayer.update({ rasterTerrain: update });
+  };
+
+  const rasterFolder = terrainFolder.addFolder({
+    title: "Raster Terrain",
+    expanded: false,
+  });
+  rasterFolder
+    .addBinding(terrainParams, "show", { label: "show" })
+    .on("change", (v) => updateRasterTerrain({ show: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "castShadow", { label: "castShadow" })
+    .on("change", (v) => updateRasterTerrain({ castShadow: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "receiveShadow", { label: "receiveShadow" })
+    .on("change", (v) => updateRasterTerrain({ receiveShadow: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "showBoundingBox", {
+      label: "showBoundingBox",
     })
-    .on("change", updateElevationHeatmap);
-  elevationFolder
-    .addBinding(tileParams, "elevationMaxHeight", {
-      label: "maxHeight",
+    .on("change", (v) => updateRasterTerrain({ showBoundingBox: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "maxZoom", {
+      label: "maxZoom",
       min: 0,
-      max: 10000,
+      max: 30,
       step: 1,
     })
-    .on("change", updateElevationHeatmap);
-  elevationFolder
-    .addBinding(tileParams, "elevationMinHeight", {
-      label: "minHeight",
+    .on("change", (v) => updateRasterTerrain({ maxZoom: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "minZoom", {
+      label: "minZoom",
+      min: 0,
+      max: 30,
+      step: 1,
+    })
+    .on("change", (v) => updateRasterTerrain({ minZoom: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "overscaledMaxZoom", {
+      label: "overscaledMaxZoom",
+      min: 0,
+      max: 30,
+      step: 1,
+    })
+    .on("change", (v) => updateRasterTerrain({ overscaledMaxZoom: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "tileSize", {
+      label: "tileSize",
+      min: 64,
+      max: 512,
+      step: 1,
+    })
+    .on("change", (v) => updateRasterTerrain({ tileSize: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "skirt", { label: "skirt" })
+    .on("change", (v) => updateRasterTerrain({ skirt: v.value }));
+  rasterFolder
+    .addBinding(terrainParams, "skirtExaggeration", {
+      label: "skirtExaggeration",
+      min: 0,
+      max: 5,
+      step: 0.1,
+    })
+    .on("change", (v) => updateRasterTerrain({ skirtExaggeration: v.value }));
+}
+
+function addGeojsonLayerFolder(pane: Pane) {
+  const geoParams = {
+    show: true,
+    color: 0xffffff,
+    height: 1,
+    extrudedHeight: 0,
+    clampToGround: true,
+    useGroundNormals: false,
+    wireframe: false,
+    opacity: 1,
+    transparent: false,
+    surfaceShow: true,
+    outlineShow: false,
+    outlineColor: 0xffffff,
+    outlineWidth: 1,
+  };
+
+  const geoFolder = pane.addFolder({
+    title: "GeoJSON Layer",
+    expanded: false,
+  });
+
+  const polygonFolder = geoFolder.addFolder({
+    title: "Polygon",
+    expanded: false,
+  });
+
+  polygonFolder
+    .addBinding(geoParams, "show", { label: "show" })
+    .on("change", (v) => gGeojsonLayer.update({ polygon: { show: v.value } }));
+  polygonFolder
+    .addBinding(geoParams, "color", {
+      label: "color",
+      color: { type: "int" },
+    })
+    .on("change", (v) =>
+      gGeojsonLayer.update({
+        polygon: { color: new Color().setHex(v.value) },
+      }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "height", {
+      label: "height",
       min: -1000,
       max: 10000,
       step: 1,
     })
-    .on("change", updateElevationHeatmap);
-  elevationFolder
-    .addBinding(tileParams, "elevationLogarithmic", {
-      label: "logarithmic",
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { height: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "extrudedHeight", {
+      label: "extrudedHeight",
+      min: -1000,
+      max: 10000,
+      step: 1,
     })
-    .on("change", updateElevationHeatmap);
-  elevationFolder
-    .addBinding(tileParams, "elevationLogBoundary", {
-      label: "logBoundary",
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { extrudedHeight: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "clampToGround", { label: "clampToGround" })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { clampToGround: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "useGroundNormals", { label: "useGroundNormals" })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { useGroundNormals: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "wireframe", { label: "wireframe" })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { wireframe: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "opacity", {
+      label: "opacity",
       min: 0,
+      max: 1,
+      step: 0.01,
+    })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { opacity: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "transparent", { label: "transparent" })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { transparent: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "surfaceShow", { label: "surfaceShow" })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { surfaceShow: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "outlineShow", { label: "outlineShow" })
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { outlineShow: v.value } }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "outlineColor", {
+      label: "outlineColor",
+      color: { type: "int" },
+    })
+    .on("change", (v) =>
+      gGeojsonLayer.update({
+        polygon: { outlineColor: new Color().setHex(v.value) },
+      }),
+    );
+  polygonFolder
+    .addBinding(geoParams, "outlineWidth", {
+      label: "outlineWidth",
+      min: 0,
+      max: 10,
       step: 0.1,
     })
-    .on("change", updateElevationHeatmap);
+    .on("change", (v) =>
+      gGeojsonLayer.update({ polygon: { outlineWidth: v.value } }),
+    );
+}
+
+function addB3dmLayerFolder(pane: Pane) {
+  const b3dmParams = {
+    dataset: TILES_3D_DATASETS.plateauChiyodaB3DM.url,
+    dataUrl: TILES_3D_DATASETS.plateauChiyodaB3DM.url,
+    show: true,
+    color: 0xffffff,
+    metalness: 0.1,
+    roughness: 0.1,
+    maxSse: 16,
+    castShadow: false,
+    receiveShadow: false,
+  };
+
+  const b3dmFolder = pane.addFolder({
+    title: "B3DM Layer",
+    expanded: false,
+  });
+
+  const dataFolder = b3dmFolder.addFolder({ title: "Data", expanded: false });
+  const urlBinding = dataFolder.addBinding(b3dmParams, "dataUrl", {
+    label: "url",
+  });
+  urlBinding.on("change", (v) => {
+    gB3dmLayer.update({ data: { url: v.value } });
+  });
+  dataFolder
+    .addBinding(b3dmParams, "dataset", {
+      options: Object.fromEntries(
+        Object.entries(TILES_3D_DATASETS).map(([key, value]) => [
+          key,
+          value.url,
+        ]),
+      ),
+    })
+    .on("change", (v) => {
+      b3dmParams.dataUrl = v.value;
+      urlBinding.refresh();
+      gB3dmLayer.update({ data: { url: b3dmParams.dataUrl } });
+    });
+
+  const modelFolder = b3dmFolder.addFolder({
+    title: "Model",
+    expanded: false,
+  });
+  modelFolder
+    .addBinding(b3dmParams, "show", { label: "show" })
+    .on("change", (v) => gB3dmLayer.update({ model: { show: v.value } }));
+  modelFolder
+    .addBinding(b3dmParams, "color", {
+      label: "color",
+      color: { type: "int" },
+    })
+    .on("change", (v) =>
+      gB3dmLayer.update({
+        model: { color: new Color().setHex(v.value) },
+      }),
+    );
+  modelFolder
+    .addBinding(b3dmParams, "metalness", {
+      label: "metalness",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+    .on("change", (v) =>
+      gB3dmLayer.update({ model: { metalness: v.value } }),
+    );
+  modelFolder
+    .addBinding(b3dmParams, "roughness", {
+      label: "roughness",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+    .on("change", (v) =>
+      gB3dmLayer.update({ model: { roughness: v.value } }),
+    );
+  modelFolder
+    .addBinding(b3dmParams, "maxSse", {
+      label: "maxSse",
+      min: 1,
+      max: 64,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gB3dmLayer.update({ model: { maxSse: v.value } }),
+    );
+  modelFolder
+    .addBinding(b3dmParams, "castShadow", { label: "castShadow" })
+    .on("change", (v) =>
+      gB3dmLayer.update({ model: { castShadow: v.value } }),
+    );
+  modelFolder
+    .addBinding(b3dmParams, "receiveShadow", { label: "receiveShadow" })
+    .on("change", (v) =>
+      gB3dmLayer.update({ model: { receiveShadow: v.value } }),
+    );
+}
+
+function addPntsLayerFolder(pane: Pane) {
+  const pntsParams = {
+    dataset: TILES_3D_DATASETS.plateauKakegawaCastle.url,
+    dataUrl: TILES_3D_DATASETS.plateauKakegawaCastle.url,
+    show: true,
+    pointSize: 0.3,
+    height: 0,
+    maxSse: 16,
+  };
+
+  const pntsFolder = pane.addFolder({
+    title: "PNTS Layer",
+    expanded: false,
+  });
+
+  const dataFolder = pntsFolder.addFolder({ title: "Data", expanded: false });
+  const urlBinding = dataFolder.addBinding(pntsParams, "dataUrl", {
+    label: "url",
+  });
+  urlBinding.on("change", (v) => {
+    gPntsLayer.update({ data: { url: v.value } });
+  });
+  dataFolder
+    .addBinding(pntsParams, "dataset", {
+      options: Object.fromEntries(
+        Object.entries(TILES_3D_DATASETS).map(([key, value]) => [
+          key,
+          value.url,
+        ]),
+      ),
+    })
+    .on("change", (v) => {
+      pntsParams.dataUrl = v.value;
+      urlBinding.refresh();
+      gPntsLayer.update({ data: { url: pntsParams.dataUrl } });
+    });
+
+  const modelFolder = pntsFolder.addFolder({
+    title: "Model",
+    expanded: false,
+  });
+  modelFolder
+    .addBinding(pntsParams, "show", { label: "show" })
+    .on("change", (v) => gPntsLayer.update({ model: { show: v.value } }));
+  modelFolder
+    .addBinding(pntsParams, "pointSize", {
+      label: "pointSize",
+      min: 0.01,
+      max: 10,
+      step: 0.01,
+    })
+    .on("change", (v) =>
+      gPntsLayer.update({ model: { pointSize: v.value } }),
+    );
+  modelFolder
+    .addBinding(pntsParams, "height", {
+      label: "height",
+      min: -1000,
+      max: 10000,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gPntsLayer.update({ model: { height: v.value } }),
+    );
+  modelFolder
+    .addBinding(pntsParams, "maxSse", {
+      label: "maxSse",
+      min: 1,
+      max: 64,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gPntsLayer.update({ model: { maxSse: v.value } }),
+    );
+}
+
+function addMvtLayerFolder(pane: Pane) {
+  const mvtParams = {
+    dataset: MVT_DATASETS.plateauTokyoHeightControl.url,
+    dataUrl: MVT_DATASETS.plateauTokyoHeightControl.url,
+    polygonShow: true,
+    polygonColor: 0x00aaff,
+    polygonHeight: 10,
+    polygonExtrudedHeight: 0,
+    polygonClampToGround: true,
+    polygonUseGroundNormals: true,
+    polygonWireframe: false,
+    polygonOpacity: 1,
+    polygonTransparent: false,
+    polygonOutlineShow: false,
+    polygonOutlineColor: 0xffffff,
+    polygonOutlineWidth: 1,
+    vectorShow: true,
+    vectorMaxZoom: 15,
+    vectorMaxSse: 2,
+    vectorOverscaledMaxZoom: 24,
+    vectorLayers: "HeightControlDistrict",
+  };
+
+  const mvtFolder = pane.addFolder({
+    title: "MVT Layer",
+    expanded: false,
+  });
+
+  const dataFolder = mvtFolder.addFolder({ title: "Data", expanded: false });
+  const urlBinding = dataFolder.addBinding(mvtParams, "dataUrl", {
+    label: "url",
+  });
+  urlBinding.on("change", (v) => {
+    gMvtLayer.update({ data: { url: v.value } });
+  });
+  dataFolder
+    .addBinding(mvtParams, "dataset", {
+      options: Object.fromEntries(
+        Object.entries(MVT_DATASETS).map(([key, value]) => [key, value.url]),
+      ),
+    })
+    .on("change", (v) => {
+      mvtParams.dataUrl = v.value;
+      urlBinding.refresh();
+      gMvtLayer.update({ data: { url: mvtParams.dataUrl } });
+    });
+
+  const polygonFolder = mvtFolder.addFolder({
+    title: "Polygon",
+    expanded: false,
+  });
+  polygonFolder
+    .addBinding(mvtParams, "polygonShow", { label: "show" })
+    .on("change", (v) => gMvtLayer.update({ polygon: { show: v.value } }));
+  polygonFolder
+    .addBinding(mvtParams, "polygonColor", {
+      label: "color",
+      color: { type: "int" },
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({
+        polygon: { color: new Color().setHex(v.value) },
+      }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonHeight", {
+      label: "height",
+      min: -1000,
+      max: 10000,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { height: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonExtrudedHeight", {
+      label: "extrudedHeight",
+      min: -1000,
+      max: 10000,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { extrudedHeight: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonClampToGround", {
+      label: "clampToGround",
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { clampToGround: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonUseGroundNormals", {
+      label: "useGroundNormals",
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { useGroundNormals: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonWireframe", { label: "wireframe" })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { wireframe: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonOpacity", {
+      label: "opacity",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { opacity: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonTransparent", { label: "transparent" })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { transparent: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonOutlineShow", { label: "outlineShow" })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { outlineShow: v.value } }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonOutlineColor", {
+      label: "outlineColor",
+      color: { type: "int" },
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({
+        polygon: { outlineColor: new Color().setHex(v.value) },
+      }),
+    );
+  polygonFolder
+    .addBinding(mvtParams, "polygonOutlineWidth", {
+      label: "outlineWidth",
+      min: 0,
+      max: 10,
+      step: 0.1,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { outlineWidth: v.value } }),
+    );
+
+  const vectorFolder = mvtFolder.addFolder({
+    title: "Vector Tile",
+    expanded: false,
+  });
+  const parseLayers = (value: string) =>
+    value
+      .split(",")
+      .map((layer) => layer.trim())
+      .filter((layer) => layer.length > 0);
+  vectorFolder
+    .addBinding(mvtParams, "vectorShow", { label: "show" })
+    .on("change", (v) => gMvtLayer.update({ vectorTile: { show: v.value } }));
+  vectorFolder
+    .addBinding(mvtParams, "vectorMaxZoom", {
+      label: "maxZoom",
+      min: 0,
+      max: 30,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ vectorTile: { maxZoom: v.value } }),
+    );
+  vectorFolder
+    .addBinding(mvtParams, "vectorMaxSse", {
+      label: "maxSse",
+      min: 0.5,
+      max: 16,
+      step: 0.5,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ vectorTile: { maxSse: v.value } }),
+    );
+  vectorFolder
+    .addBinding(mvtParams, "vectorOverscaledMaxZoom", {
+      label: "overscaledMaxZoom",
+      min: 0,
+      max: 30,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ vectorTile: { overscaledMaxZoom: v.value } }),
+    );
+  vectorFolder
+    .addBinding(mvtParams, "vectorLayers", { label: "layers" })
+    .on("change", (v) =>
+      gMvtLayer.update({ vectorTile: { layers: parseLayers(v.value) } }),
+    );
 }
