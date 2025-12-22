@@ -5,4 +5,9 @@ export type TextureOptions = {
   magFilter: number;
   useMipmaps: boolean;
   maxTextures: number;
+  // Automatically tracked - which additional textures are in use
+  additionalTexturesInUse?: {
+    waterTexture?: boolean;
+    colorMapTexture?: boolean;
+  };
 };

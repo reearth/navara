@@ -432,6 +432,12 @@ export default class ThreeView<
       texture.needsUpdate = true;
 
       this._uniforms.colorMapTexture.value = texture;
+
+      // Track additional texture usage
+      this._defaultTextureOptions.additionalTexturesInUse = {
+        ...this._defaultTextureOptions.additionalTexturesInUse,
+        colorMapTexture: true,
+      };
     },
   };
   private _workerTaskHandler: WorkerTaskHandler = {
