@@ -43,32 +43,39 @@ export {
   type PostEffectConfig,
   type PostEffectOcclusion,
   type PostEffectOcclusionValue,
-  type MaskPassType,
-  type ActiveEffectsResult,
   // Constants
   BLOOM_EFFECT_KEY,
   OUTLINE_EFFECT_KEY,
-  MASK_RT_PREFIX,
   PostEffectOcclusionMode,
-  MaskPassTypes,
   // Common helpers
-  getMaskPassType,
   resolvePostEffectOcclusion,
-  resolveActiveEffects,
   hasBloomEffect,
   hasOutlineEffect,
   getPostEffectConfig,
   hasPostEffectConfig,
   ensurePostEffectUserData,
-  applyMaskPassUniforms,
   parsePostEffectOcclusion,
-  // Utility functions (integrated from PostEffectUtils)
-  type RendererState,
-  saveRendererState,
-  restoreRendererState,
-  renderMaskForMode,
+  // Utility functions
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
 } from "./PostEffectHelper";
 export { PostEffectManager } from "./PostEffectManager";
+export { PostEffectMaskController } from "./PostEffectMaskController";
+export {
+  // Types
+  type MaskPassPhaseType,
+  type MaskPassContext,
+  type MaskPassEvaluation,
+  // Constants
+  MaskPassPhase,
+  // Context management
+  getMaskPassContext,
+  setMaskPassContext,
+  resetMaskPassContext,
+  // Helper functions
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState,
+  applyMaskPassRenderState,
+  restoreMaterialState,
+} from "./PostEffectMaskContext";

@@ -1,5 +1,5 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
-import { Object3D } from "three";
+import { Mesh, Object3D, type Material } from "three";
 
 import type { Scenes } from "../scene";
 import { arraysEqual } from "../utils";
@@ -13,7 +13,16 @@ import {
 import {
   type PostEffectOcclusion,
   parsePostEffectOcclusion,
+  getPostEffectConfig,
 } from "./PostEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState,
+  applyMaskPassRenderState,
+  restoreMaterialState,
+} from "./PostEffectMaskContext";
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
@@ -75,6 +84,10 @@ export abstract class MeshLayerDeclaration<
   }
 
   protected getPassKey(): PassKey {
+    // Meshes with PostEffect (effectIds) need to be in MRT scene for mask rendering
+    if (this._effectIds.length > 0) {
+      return "mrt";
+    }
     return "opaque";
   }
 
@@ -133,7 +146,75 @@ export abstract class MeshLayerDeclaration<
       }
     }
 
+    // Setup onBeforeRender for MaskPass context-based rendering
+    this.setupMeshOnBeforeRender();
+
     this.onPassKeyChange();
+  }
+
+  /**
+   * Setup onBeforeRender callback for MaskPass context-based rendering.
+   * This enables Box, Sphere, and other standard meshes to participate in mask rendering.
+   */
+  private setupMeshOnBeforeRender(): void {
+    const raw = this.raw;
+    if (!raw) return;
+
+    // Store original onBeforeRender if exists
+    const originalOnBeforeRender = raw.onBeforeRender;
+
+    raw.onBeforeRender = (
+      renderer,
+      scene,
+      camera,
+      geometry,
+      material,
+      group,
+    ) => {
+      // Call original if exists
+      if (originalOnBeforeRender) {
+        originalOnBeforeRender.call(
+          raw,
+          renderer,
+          scene,
+          camera,
+          geometry,
+          material,
+          group,
+        );
+      }
+
+      // Check MaskPassContext
+      const ctx = getMaskPassContext();
+
+      // Get material from mesh (use meshMaterial to avoid conflict with callback parameter)
+      if (!(raw instanceof Mesh)) return;
+      const meshMaterial = raw.material as Material;
+      if (!meshMaterial) return;
+
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        // Not in mask pass - restore normal state
+        restoreMaterialState(meshMaterial);
+        return;
+      }
+
+      // Evaluate mask pass participation using shared helper
+      const config = getPostEffectConfig(raw);
+      const registry = ctx.registry ?? this.view.postEffectRegistry;
+      const evaluation = evaluateMaskPassParticipation(
+        config,
+        registry,
+        this.id,
+        ctx,
+      );
+
+      // Apply appropriate render state
+      if (evaluation.shouldRender) {
+        applyMaskPassRenderState(meshMaterial, evaluation.isSilhouette);
+      } else {
+        applyMaskPassSkipState(meshMaterial);
+      }
+    };
   }
 
   removeFromScene(passKey: PassKey) {

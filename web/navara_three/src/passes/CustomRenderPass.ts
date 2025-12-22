@@ -18,11 +18,24 @@ import {
   type WebGLRenderer,
 } from "three";
 
+import type { PostEffectHelper } from "../core/PostEffectHelper";
+import { PostEffectMaskController } from "../core/PostEffectMaskController";
 import { RenderPass } from "../effects";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
 import { AllDepthCopyPass, NormalCopyPass, RenderTargetCopyPass } from ".";
+
+/**
+ * Options for CustomRenderPass
+ */
+export type CustomRenderPassOptions = {
+  debugNormal?: boolean;
+  disableShadow?: boolean;
+  allowTransparent?: boolean;
+  /** PostEffectHelper for mask context (optional for backwards compatibility) */
+  postEffectRegistry?: PostEffectHelper;
+};
 
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
@@ -48,6 +61,10 @@ export class CustomRenderPass extends RenderPass {
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
 
+  // PostEffect context for mask rendering
+  private postEffectRegistry?: PostEffectHelper;
+  private maskController = new PostEffectMaskController();
+
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
@@ -55,11 +72,7 @@ export class CustomRenderPass extends RenderPass {
     drapedFeatureMaterials: Map<string, Material>,
     inputBuffer: WebGLRenderTarget,
     globe: Globe,
-    options?: {
-      debugNormal?: boolean;
-      disableShadow?: boolean;
-      allowTransparent?: boolean;
-    },
+    options?: CustomRenderPassOptions,
   ) {
     super();
 
@@ -88,6 +101,9 @@ export class CustomRenderPass extends RenderPass {
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
+
+    // PostEffect context for mask rendering
+    this.postEffectRegistry = options?.postEffectRegistry;
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -206,6 +222,15 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
+    // Render to maskRTs after main MRT scene rendering
+    // Uses context-based mesh self-determination (no traverse needed)
+    this.maskController.renderMaskPasses(
+      renderer,
+      renderTarget,
+      () => this._renderWithLight(renderer, this._scenes.mrt),
+      this.postEffectRegistry,
+    );
+
     this.debugNormalCopyPass?.render(renderer, null, null);
 
     const finalTarget = this.renderToScreen ? null : inputBuffer;
@@ -291,5 +316,52 @@ export class CustomRenderPass extends RenderPass {
       m.depthTest = false;
       m.stencilWrite = false;
     }
+  }
+
+  // ============================================================================
+  // MaskPassContext Management (delegated to PostEffectMaskController)
+  // ============================================================================
+
+  /**
+   * Set mask render targets for post effect rendering.
+   * Called by PostEffectLayer to register their mask RTs.
+   *
+   * @param effectKey - Effect key (e.g., "bloom", "outline")
+   * @param rt - WebGLRenderTarget for mask rendering
+   */
+  setMaskRenderTarget(effectKey: string, rt: WebGLRenderTarget): void {
+    this.maskController.setMaskRenderTarget(effectKey, rt);
+  }
+
+  /**
+   * Remove mask render target.
+   *
+   * @param effectKey - Effect key to remove
+   */
+  removeMaskRenderTarget(effectKey: string): void {
+    this.maskController.removeMaskRenderTarget(effectKey);
+  }
+
+  /**
+   * Set occlusion mode-specific mask render targets.
+   * Used by effects that need separate Normal and Silhouette masks (bloom, outline).
+   *
+   * @param effectKey - Effect key (e.g., "bloom", "outline")
+   * @param targets - Object with optional normal and silhouette WebGLRenderTargets
+   */
+  setOcclusionMaskRenderTargets(
+    effectKey: string,
+    targets: { normal?: WebGLRenderTarget; silhouette?: WebGLRenderTarget },
+  ): void {
+    this.maskController.setOcclusionMaskRenderTargets(effectKey, targets);
+  }
+
+  /**
+   * Remove occlusion mode-specific mask render targets.
+   *
+   * @param effectKey - Effect key to remove
+   */
+  removeOcclusionMaskRenderTargets(effectKey: string): void {
+    this.maskController.removeOcclusionMaskRenderTargets(effectKey);
   }
 }

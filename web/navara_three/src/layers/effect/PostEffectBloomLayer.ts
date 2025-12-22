@@ -19,18 +19,13 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import {
-  BLOOM_EFFECT_KEY,
-  PostEffectOcclusionMode,
-  type PostEffectOcclusionValue,
-} from "../../core/PostEffectHelper";
+import { BLOOM_EFFECT_KEY } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 import { UnrealBloomPassRGBA } from "../../postprocessing";
 
 import {
   PostEffectLayer,
-  renderMaskForMode,
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
@@ -67,7 +62,8 @@ const DEFAULT_THRESHOLD = 0.0;
 
 /**
  * Post Effect Bloom Layer
- * Renders selective bloom using mask-based filtering via renderMaskForMode()
+ * Renders selective bloom using mask-based filtering.
+ * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
  */
 export class PostEffectBloomLayer extends PostEffectLayer<
   PostEffectBloomConfig,
@@ -134,6 +130,24 @@ export class PostEffectBloomLayer extends PostEffectLayer<
     const pass = new Pass(rawPass, null, { enabled: true });
 
     return pass as Pass<PostEffectBloomPass, null> & BaseInstance;
+  }
+
+  /**
+   * Override: Don't register simple maskRT.
+   * PostEffectBloomPass registers occlusion-specific RTs directly.
+   */
+  protected override registerMaskRenderTarget(): void {
+    // Skip simple registration - PostEffectBloomPass handles occlusion-specific RTs
+  }
+
+  /**
+   * Override: Unregister occlusion-specific RTs.
+   */
+  protected override unregisterMaskRenderTarget(): void {
+    const customRenderPass = this.getCustomRenderPass();
+    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
+      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
+    }
   }
 
   onUpdateConfig(updates: PostEffectBloomUpdate): void {
@@ -400,6 +414,16 @@ class PostEffectBloomPass extends PostProcessingPass {
 
     this.size.set(initialWidth, initialHeight);
 
+    // Register occlusion-specific mask RTs with CustomRenderPass
+    // This enables context-based mask rendering during BaseMRT phase
+    const customRenderPass = layer.getCustomRenderPass();
+    if (customRenderPass?.setOcclusionMaskRenderTargets) {
+      customRenderPass.setOcclusionMaskRenderTargets(BLOOM_EFFECT_KEY, {
+        normal: this.depthEnabledMaskRT,
+        silhouette: this.silhouetteMaskRT,
+      });
+    }
+
     this.needsSwap = true;
   }
 
@@ -440,26 +464,6 @@ class PostEffectBloomPass extends PostProcessingPass {
     this.bloom.setSize(width, height);
   }
 
-  /**
-   * Render Bloom mask for a specific occlusion mode
-   * Uses shared renderMaskForMode implementation
-   */
-  private renderBloomMaskForMode(
-    renderer: WebGLRenderer,
-    targetMode: PostEffectOcclusionValue,
-    targetRT: WebGLRenderTarget,
-  ): void {
-    renderMaskForMode(
-      renderer,
-      this.layer.viewContext.camera,
-      this.layer.viewContext.scenes,
-      this.layer.viewContext.postEffectRegistry,
-      targetMode,
-      targetRT,
-      BLOOM_EFFECT_KEY,
-    );
-  }
-
   render(
     renderer: WebGLRenderer,
     inputBuffer: WebGLRenderTarget,
@@ -484,15 +488,9 @@ class PostEffectBloomPass extends PostProcessingPass {
     // ========================================
     // Pass 1: DepthEnabled objects (with depth clip)
     // ========================================
+    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
-    // Step 2a: Render DepthEnabled mask
-    this.renderBloomMaskForMode(
-      renderer,
-      PostEffectOcclusionMode.Normal,
-      this.depthEnabledMaskRT,
-    );
-
-    // Step 3a: Apply depth clip to DepthEnabled mask (shared implementation)
+    // Apply depth clip to DepthEnabled mask (shared implementation)
     applyDepthClip(
       renderer,
       this.depthClipMaterial,
@@ -527,15 +525,9 @@ class PostEffectBloomPass extends PostProcessingPass {
     // ========================================
     // Pass 2: Silhouette objects (no depth clip)
     // ========================================
+    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
-    // Step 2b: Render Silhouette mask
-    this.renderBloomMaskForMode(
-      renderer,
-      PostEffectOcclusionMode.Silhouette,
-      this.silhouetteMaskRT,
-    );
-
-    // Step 4b: Apply Bloom directly (no depth clip)
+    // Apply Bloom directly (no depth clip)
     // Note: UnrealBloomPassRGBA ignores writeBuffer and uses readBuffer as input
     this.bloom.render(
       renderer,

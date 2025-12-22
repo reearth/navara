@@ -51,12 +51,18 @@ import {
 import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
-  applyMaskPassUniforms,
   ensurePostEffectUserData,
   getPostEffectConfig,
-  getMaskPassType,
-  resolveActiveEffects,
+  POST_EFFECT_OCCLUSION_SKIP,
 } from "../core/PostEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState as applyMaskPassSkipStateBase,
+  applyMaskPassRenderState,
+  restoreMaterialState as restoreMaterialStateBase,
+} from "../core/PostEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -589,32 +595,104 @@ export class ModelMesh
    * Setup onBeforeRender callback for a mesh to handle PostEffect rendering
    *
    * Mesh determines its own depth/mask flags via onBeforeRender.
-   * Mask passes filter visibility externally; depth and mask flags are controlled here.
+   * Uses MaskPassContext for self-determination during BaseMRT phase.
+   *
+   * SoT Flow:
+   * - MaskPassContext provides runtime state (phase, activeEffects)
+   * - PostEffectManager provides layer configuration (occlusion), accessed via registry
+   * - Mesh reads SoT, never modifies it
    */
   private setupMeshOnBeforeRender(
     mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
   ): void {
-    mesh.onBeforeRender = (renderer: WebGLRenderer) => {
-      // 1. Get PostEffectConfig from mesh (link() sets config on child meshes, not parent)
+    mesh.onBeforeRender = () => {
+      // Get MaskPassContext for current rendering state
+      const ctx = getMaskPassContext();
+
+      // Only process during BaseMRT phase (mask pass rendering)
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        // Not in mask pass - restore normal material state
+        this.restoreMaterialState(mesh.material);
+        return;
+      }
+
+      // Get PostEffectConfig from mesh (link() sets config on child meshes, not parent)
       const config = getPostEffectConfig(mesh);
-      const registry = this.viewContext?.postEffectRegistry;
+      const registry = ctx.registry ?? this.viewContext?.postEffectRegistry;
       const layerId = this.getPostEffectLayerId();
 
-      // 2. Determine mask pass type from RenderTarget name
-      const pass = getMaskPassType(renderer.getRenderTarget());
-
-      // 3. Resolve active effects for this pass
-      const { activeInThisPass } = resolveActiveEffects(config, registry, pass);
-
-      // 4. Apply mask pass uniforms and material settings via Adapter helper
-      applyMaskPassUniforms(
-        mesh.material,
-        pass,
-        activeInThisPass,
-        registry,
-        layerId,
-      );
+      // Context-based self-determination during BaseMRT
+      this.applyMaskPassState(mesh, config, registry, layerId, ctx);
     };
+  }
+
+  /**
+   * Apply mask pass state based on MaskPassContext.
+   * Called during BaseMRT phase for context-based self-determination.
+   *
+   * Uses shared helper for evaluation and render state, then applies
+   * model-specific shader uniforms for future custom shader support.
+   */
+  private applyMaskPassState(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    config: ReturnType<typeof getPostEffectConfig>,
+    registry: ReturnType<typeof getMaskPassContext>["registry"],
+    layerId: string | undefined,
+    ctx: ReturnType<typeof getMaskPassContext>,
+  ): void {
+    const material = mesh.material;
+
+    // Initialize uniforms if not present (for future custom shader support)
+    material.userData.uBloomMaskPass ??= { value: 0.0 };
+    material.userData.uOutlineMaskPass ??= { value: 0.0 };
+    material.userData.uPostEffectOcclusion ??= {
+      value: POST_EFFECT_OCCLUSION_SKIP,
+    };
+
+    // Use shared helper for evaluation
+    const evaluation = evaluateMaskPassParticipation(
+      config,
+      registry,
+      layerId,
+      ctx,
+    );
+
+    if (!evaluation.shouldRender) {
+      this.setMaskPassSkipState(material);
+      return;
+    }
+
+    // Set shader uniforms (model-specific, for future custom shader support)
+    material.userData.uBloomMaskPass.value = evaluation.bloomActive ? 1.0 : 0.0;
+    material.userData.uOutlineMaskPass.value = evaluation.outlineActive
+      ? 1.0
+      : 0.0;
+    material.userData.uPostEffectOcclusion.value = evaluation.occlusion;
+
+    // Apply render state using shared helper
+    applyMaskPassRenderState(material, evaluation.isSilhouette);
+  }
+
+  /**
+   * Set material state to skip mask pass rendering.
+   * Used when mesh doesn't contribute to current pass.
+   */
+  private setMaskPassSkipState(material: ModelMaterial): void {
+    // Set shader uniforms to skip values
+    material.userData.uBloomMaskPass.value = 0.0;
+    material.userData.uOutlineMaskPass.value = 0.0;
+    material.userData.uPostEffectOcclusion.value = POST_EFFECT_OCCLUSION_SKIP;
+
+    // Apply render state using shared helper
+    applyMaskPassSkipStateBase(material);
+  }
+
+  /**
+   * Restore material state after mask pass.
+   * Called during normal rendering to ensure mesh is visible.
+   */
+  private restoreMaterialState(material: ModelMaterial): void {
+    restoreMaterialStateBase(material);
   }
 
   /**

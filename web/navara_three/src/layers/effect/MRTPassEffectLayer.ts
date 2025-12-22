@@ -47,7 +47,11 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       this.view._privates.drapedMaterials,
       this.view.renderPassOrchestrator.effectComposer.inputBuffer,
       this.view.globe,
-      { debugNormal: !!this.config.mrt?.debugNormal },
+      {
+        debugNormal: !!this.config.mrt?.debugNormal,
+        // Pass PostEffect infrastructure for mask context
+        postEffectRegistry: this.view.postEffectRegistry,
+      },
     );
 
     return pass;

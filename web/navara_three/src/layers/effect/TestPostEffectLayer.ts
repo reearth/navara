@@ -11,15 +11,10 @@ import { type WebGLRenderer, type WebGLRenderTarget } from "three";
 
 import type { EffectLayerConfig } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { PostEffectOcclusionMode } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
-import {
-  PostEffectLayer,
-  renderMaskForMode,
-  type PostEffectLayerUpdate,
-} from "./PostEffectLayer";
+import { PostEffectLayer, type PostEffectLayerUpdate } from "./PostEffectLayer";
 
 // Test post effect configuration (uses PostEffect infrastructure)
 export type TestPostEffectConfig = {
@@ -85,7 +80,7 @@ export class TestPostEffectLayer extends PostEffectLayer<
 
 /**
  * Custom PostProcessing Pass for TestPostEffect
- * Uses shared renderMaskForMode for mask rendering
+ * Masks are pre-rendered by CustomRenderPass during BaseMRT phase
  */
 class TestPostEffectPass extends PostProcessingPass {
   private layer: TestPostEffectLayer;
@@ -101,33 +96,12 @@ class TestPostEffectPass extends PostProcessingPass {
     this.needsSwap = false;
   }
 
-  /**
-   * Render mask for all objects with any post effect enabled
-   * Uses shared renderMaskForMode implementation
-   */
-  private renderMask(renderer: WebGLRenderer): void {
-    const registry = this.layer.viewContext.postEffectRegistry;
-    const maskRT = this.layer.postEffectResources.maskRT;
-
-    // Render mask for Normal occlusion mode (depth-enabled objects)
-    renderMaskForMode(
-      renderer,
-      this.layer.viewContext.camera,
-      this.layer.viewContext.scenes,
-      registry,
-      PostEffectOcclusionMode.Normal,
-      maskRT,
-      "all",
-    );
-  }
-
   render(
     renderer: WebGLRenderer,
     inputBuffer: WebGLRenderTarget,
     outputBuffer: WebGLRenderTarget | null,
   ) {
-    // Render mask
-    this.renderMask(renderer);
+    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
     // Render debug visualization if enabled
     if (this.layer.layerConfig.testPostEffect?.debugMask) {

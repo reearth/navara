@@ -8,15 +8,12 @@ import {
 } from "../../core/EffectLayerDeclaration";
 import { type PostEffectResources } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
+import type { CustomRenderPass } from "../../passes";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
 // Re-export utilities from PostEffectHelper for backward compatibility
 export {
-  type RendererState,
-  saveRendererState,
-  restoreRendererState,
-  renderMaskForMode,
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
@@ -31,8 +28,10 @@ export type PostEffectLayerConfig = {
 export type PostEffectLayerUpdate = EffectLayerUpdate;
 
 /**
- * Base class for post effect layers
- * Provides mask rendering and debug visualization
+ * Base class for post effect layers.
+ * Provides resource management, mask RT registration with CustomRenderPass,
+ * and debug visualization helpers.
+ * Mask rendering is handled by CustomRenderPass via MaskPassContext.
  */
 export abstract class PostEffectLayer<
   Config extends PostEffectLayerConfig = PostEffectLayerConfig,
@@ -97,7 +96,52 @@ export abstract class PostEffectLayer<
       },
     );
 
+    // Register maskRT with CustomRenderPass for context-based mask rendering
+    this.registerMaskRenderTarget();
+
     super.onCreate();
+  }
+
+  /**
+   * Register this layer's maskRT with CustomRenderPass.
+   * This enables context-based mask rendering during BaseMRT phase.
+   *
+   * Override this method in subclasses that need occlusion mode-specific RTs
+   * (e.g., PostEffectBloomLayer, PostEffectOutlineLayer).
+   */
+  protected registerMaskRenderTarget(): void {
+    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
+
+    if (customRenderPass?.setMaskRenderTarget) {
+      customRenderPass.setMaskRenderTarget(
+        this.getEffectKey(),
+        this.resources.maskRT,
+      );
+    }
+  }
+
+  /**
+   * Unregister this layer's maskRT from CustomRenderPass.
+   *
+   * Override this method in subclasses that need occlusion mode-specific RTs.
+   */
+  protected unregisterMaskRenderTarget(): void {
+    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
+
+    if (customRenderPass?.removeMaskRenderTarget) {
+      customRenderPass.removeMaskRenderTarget(this.getEffectKey());
+    }
+  }
+
+  /**
+   * Get CustomRenderPass for mask registration.
+   * Used by subclasses and Pass classes for occlusion-specific RT registration.
+   */
+  public getCustomRenderPass(): CustomRenderPass | undefined {
+    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    return mrtPass?.raw as CustomRenderPass | undefined;
   }
 
   /**
@@ -162,6 +206,9 @@ export abstract class PostEffectLayer<
   }
 
   onDestroy(): void {
+    // Unregister maskRT from CustomRenderPass
+    this.unregisterMaskRenderTarget();
+
     if (this.view.postEffectRegistry) {
       this.view.postEffectRegistry.destroy(this.id);
     }

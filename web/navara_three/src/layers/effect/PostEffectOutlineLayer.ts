@@ -20,17 +20,12 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import {
-  OUTLINE_EFFECT_KEY,
-  PostEffectOcclusionMode,
-  type PostEffectOcclusionValue,
-} from "../../core/PostEffectHelper";
+import { OUTLINE_EFFECT_KEY } from "../../core/PostEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
   PostEffectLayer,
-  renderMaskForMode,
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
@@ -64,7 +59,8 @@ const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
  * Post Effect Outline Layer
- * Renders selective outline using mask-based filtering via renderMaskForMode()
+ * Renders selective outline using mask-based filtering.
+ * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
  */
 export class PostEffectOutlineLayer extends PostEffectLayer<
   PostEffectOutlineConfig,
@@ -126,6 +122,24 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
     const pass = new Pass(rawPass, null, { enabled: true });
 
     return pass as Pass<PostEffectOutlinePass, null> & BaseInstance;
+  }
+
+  /**
+   * Override: Don't register simple maskRT.
+   * PostEffectOutlinePass registers occlusion-specific RTs directly.
+   */
+  protected override registerMaskRenderTarget(): void {
+    // Skip simple registration - PostEffectOutlinePass handles occlusion-specific RTs
+  }
+
+  /**
+   * Override: Unregister occlusion-specific RTs.
+   */
+  protected override unregisterMaskRenderTarget(): void {
+    const customRenderPass = this.getCustomRenderPass();
+    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
+      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
+    }
   }
 
   onUpdateConfig(updates: PostEffectOutlineUpdate): void {
@@ -419,6 +433,16 @@ class PostEffectOutlinePass extends PostProcessingPass {
 
     this.size.set(initialWidth, initialHeight);
 
+    // Register occlusion-specific mask RTs with CustomRenderPass
+    // This enables context-based mask rendering during BaseMRT phase
+    const customRenderPass = layer.getCustomRenderPass();
+    if (customRenderPass?.setOcclusionMaskRenderTargets) {
+      customRenderPass.setOcclusionMaskRenderTargets(OUTLINE_EFFECT_KEY, {
+        normal: this.depthEnabledMaskRT,
+        silhouette: this.silhouetteMaskRT,
+      });
+    }
+
     this.needsSwap = true;
   }
 
@@ -456,26 +480,6 @@ class PostEffectOutlinePass extends PostProcessingPass {
     this.compositeMaterial.uniforms.resolution.value.set(width, height);
   }
 
-  /**
-   * Render Outline mask for a specific occlusion mode
-   * Uses shared renderMaskForMode implementation
-   */
-  private renderOutlineMaskForMode(
-    renderer: WebGLRenderer,
-    targetMode: PostEffectOcclusionValue,
-    targetRT: WebGLRenderTarget,
-  ): void {
-    renderMaskForMode(
-      renderer,
-      this.layer.viewContext.camera,
-      this.layer.viewContext.scenes,
-      this.layer.viewContext.postEffectRegistry,
-      targetMode,
-      targetRT,
-      OUTLINE_EFFECT_KEY,
-    );
-  }
-
   render(
     renderer: WebGLRenderer,
     inputBuffer: WebGLRenderTarget,
@@ -488,15 +492,9 @@ class PostEffectOutlinePass extends PostProcessingPass {
     // ============================================
     // Pass 1: DepthEnabled objects (with depth clip)
     // ============================================
+    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
-    // Step 2a: Render DepthEnabled mask
-    this.renderOutlineMaskForMode(
-      renderer,
-      PostEffectOcclusionMode.Normal,
-      this.depthEnabledMaskRT,
-    );
-
-    // Step 3a: Apply depth clip (shared implementation)
+    // Apply depth clip to DepthEnabled mask (shared implementation)
     applyDepthClip(
       renderer,
       this.depthClipMaterial,
@@ -515,15 +513,9 @@ class PostEffectOutlinePass extends PostProcessingPass {
     // ============================================
     // Pass 2: Silhouette objects (no depth clip)
     // ============================================
+    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
-    // Step 2b: Render Silhouette mask
-    this.renderOutlineMaskForMode(
-      renderer,
-      PostEffectOcclusionMode.Silhouette,
-      this.silhouetteMaskRT,
-    );
-
-    // Step 4b: Apply edge detection directly (no depth clip for Silhouette)
+    // Apply edge detection directly (no depth clip for Silhouette)
     this.edgeDetectMaterial.uniforms.tMask.value =
       this.silhouetteMaskRT.texture;
     renderer.setRenderTarget(this.silhouetteEdgeRT);
@@ -552,13 +544,13 @@ class PostEffectOutlinePass extends PostProcessingPass {
 
       if (!this.debugView2) {
         this.debugView2 = new BufferView(
-          this.depthEnabledEdgeRT.width,
-          this.depthEnabledEdgeRT.height,
+          this.silhouetteMaskRT.width,
+          this.silhouetteMaskRT.height,
         );
       }
 
       this.debugView1.render(renderer, this.depthEnabledMaskRT);
-      this.debugView2.render(renderer, this.depthEnabledEdgeRT);
+      this.debugView2.render(renderer, this.silhouetteMaskRT);
     }
   }
 
