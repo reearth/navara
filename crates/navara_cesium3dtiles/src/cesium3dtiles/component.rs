@@ -209,6 +209,7 @@ pub struct Cesium3dTileContentState {
     pub leaf: bool,
     pub touched_last_frame: bool,
     pub is_visible: bool,
+    pub should_preload: bool,
     pub removed: bool,
     /// Whether this content was touched while traversing.
     pub touched: bool,
@@ -224,6 +225,7 @@ impl Cesium3dTileContentState {
         self.leaf = false;
         self.removed = false;
         self.is_visible = false;
+        self.should_preload = false;
         self.touched = false;
         self.is_data_loaded = false;
         self.are_all_children_loaded = false;
@@ -260,16 +262,16 @@ impl PartialOrd for Cesium3dTilesTreeOrder {
 
 impl Ord for Cesium3dTilesTreeOrder {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.index < other.index {
-            return Ordering::Less;
-        }
-        if self.index > other.index {
-            return Ordering::Greater;
-        }
         if self.distance < other.distance {
             return Ordering::Less;
         }
         if self.distance > other.distance {
+            return Ordering::Greater;
+        }
+        if self.index < other.index {
+            return Ordering::Less;
+        }
+        if self.index > other.index {
             return Ordering::Greater;
         }
         Ordering::Equal

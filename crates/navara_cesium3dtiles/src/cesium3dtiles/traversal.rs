@@ -157,10 +157,6 @@ fn mark_leaves(
 
     tile.state.is_visible = within_frustum;
 
-    if !within_frustum {
-        return TraversalResult::Culled;
-    }
-
     let (distance_from_camera, sse) = match &tile.bounding_volume {
         Some(aabb) => {
             let distance_from_camera = aabb.distance_to_point(camera_position);
@@ -202,10 +198,14 @@ fn mark_leaves(
     tile.state.is_data_loaded = is_data_ready;
     tile.state.touched = true;
 
+    if !within_frustum {
+        tile.state.should_preload = true;
+        return TraversalResult::Culled;
+    }
+
     let meets_sse = sse <= max_sse;
 
-    // filter out empty tiles - no content
-    if meets_sse && tile.is_renderable_content {
+    if meets_sse {
         return TraversalResult::Selected;
     }
 
@@ -321,7 +321,7 @@ fn mark_rendered_tiles(
     let mut is_rendered = touched && state.is_rendered_last_frame;
 
     if tile.is_renderable_content {
-        if touched && leaf {
+        if touched && (leaf || state.should_preload) {
             if state.is_data_loaded {
                 let is_visible = state.is_visible;
                 update_or_spawn_rendered_tile(
@@ -336,17 +336,17 @@ fn mark_rendered_tiles(
                     *rendered_tiles_count += 1;
                     is_rendered = true;
                 }
-            } else if state.is_visible {
+            } else if state.is_visible || state.should_preload {
                 request_tile_content(
                     commands,
                     buf,
                     base_url,
                     tile,
                     requesters,
-                    if !state.are_all_children_loaded {
+                    if !leaf && !state.should_preload {
                         Priority::Medium
                     } else {
-                        Priority::Low
+                        Priority::VeryLow
                     },
                 );
             } else {
@@ -355,55 +355,51 @@ fn mark_rendered_tiles(
         } else {
             toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
         }
-        if !touched {
-            remove_resources_if_no_rendered_tile(commands, tile, rendered_tiles);
-        }
-    } else {
-        if touched && leaf {
-            // Handle JSON child tiles
-            if let Some(uri) = &tile.uri.as_ref() {
-                if tile
-                    .data_requester_id
-                    .and_then(|id| requesters.get(id).ok())
-                    .is_none()
-                {
-                    // spawn a data requester to load the child tileset json.
-                    let url = construct_child_tile_url(base_url, uri.as_str())
-                        .as_str()
-                        .to_string();
+    } else if touched && (leaf || state.should_preload) {
+        // Handle JSON child tiles
+        if let Some(uri) = &tile.uri.as_ref() {
+            if tile
+                .data_requester_id
+                .and_then(|id| requesters.get(id).ok())
+                .is_none()
+            {
+                // spawn a data requester to load the child tileset json.
+                let url = construct_child_tile_url(base_url, uri.as_str())
+                    .as_str()
+                    .to_string();
 
-                    let e = commands
-                        .spawn((
-                            Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-                            Cesium3dTileContentDataRequesterMarker,
-                            Priority::High,
-                            Cesium3dTilesTreeOrder {
-                                index: next_tree_order,
-                                distance: TileOrderByDistance {
-                                    distance_from_camera: tile.state.distance_from_camera,
-                                    sse: tile.state.sse,
-                                },
+                let e = commands
+                    .spawn((
+                        Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                        Cesium3dTileContentDataRequesterMarker,
+                        if state.should_preload {
+                            Priority::Low
+                        } else {
+                            Priority::High
+                        },
+                        Cesium3dTilesTreeOrder {
+                            index: next_tree_order,
+                            distance: TileOrderByDistance {
+                                distance_from_camera: tile.state.distance_from_camera,
+                                sse: tile.state.sse,
                             },
-                            DataRequester::from_store(url, buf, DataRequesterExtension::Json),
-                        ))
-                        .id();
-                    tile.data_requester_id = Some(e);
-                }
+                        },
+                        DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+                    ))
+                    .id();
+                tile.data_requester_id = Some(e);
             }
         }
+    }
 
-        if !touched {
-            // Mark child tree for removal using full URL path to match what the child tree uses.
-            if let Some(id) = tile.data_requester_id.as_ref() {
-                let key = Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, *id);
-                sync_json_tilesets.mark_for_removal(key);
-            }
-
-            // If this tile is out of touch and it is JSON, remove the resource from memory.
-            if let Some(id) = tile.data_requester_id.take() {
-                let _ = commands.get_entity(id).as_mut().map(|e| e.insert(Deleted));
-            }
-        }
+    if !touched {
+        remove_resources_if_no_rendered_tile(
+            commands,
+            tile,
+            rendered_tiles,
+            sync_json_tilesets,
+            layer_id,
+        );
     }
 
     tile.reset_state();
@@ -439,6 +435,8 @@ fn remove_resources_if_no_rendered_tile(
     commands: &mut Commands,
     tile: &mut Cesium3dTileContent,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
+    layer_id: Entity,
 ) {
     if tile
         .rendered_tile_id
@@ -450,6 +448,10 @@ fn remove_resources_if_no_rendered_tile(
                 .get_entity(data_requester_id)
                 .as_mut()
                 .map(|e| e.insert(Deleted));
+            if !tile.is_renderable_content {
+                let key = Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, data_requester_id);
+                sync_json_tilesets.mark_for_removal(key);
+            }
         }
     }
 }
@@ -459,9 +461,17 @@ pub fn mark_rendered_tiles_invisible(
     commands: &mut Commands,
     tile: &mut Cesium3dTileContent,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
+    layer_id: Entity,
 ) {
     toggle_rendered_tile_visible(rendered_tiles, tile, false, false);
-    remove_resources_if_no_rendered_tile(commands, tile, rendered_tiles);
+    remove_resources_if_no_rendered_tile(
+        commands,
+        tile,
+        rendered_tiles,
+        sync_json_tilesets,
+        layer_id,
+    );
 
     let children = match &mut tile.children {
         Some(c) => c,
@@ -469,7 +479,13 @@ pub fn mark_rendered_tiles_invisible(
     };
 
     for child_tile in children {
-        mark_rendered_tiles_invisible(commands, child_tile, rendered_tiles);
+        mark_rendered_tiles_invisible(
+            commands,
+            child_tile,
+            rendered_tiles,
+            sync_json_tilesets,
+            layer_id,
+        );
     }
 }
 

@@ -275,6 +275,7 @@ pub fn update_cesium3dtiles_layer(
 pub fn delete_cesium3dtiles_layer(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
+    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
     deleted: Query<(Entity, &DeleteCesium3dTilesLayerMarker)>,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
     mut tiles: Query<(Entity, &LayerId, &mut Cesium3dTilesTree)>,
@@ -285,7 +286,14 @@ pub fn delete_cesium3dtiles_layer(
             if layer_id.0 != d.0 {
                 continue;
             }
-            mark_rendered_tiles_invisible(&mut commands, &mut tree.root, &mut rendered_tiles);
+            let layer_id_entity = tree.layer_id;
+            mark_rendered_tiles_invisible(
+                &mut commands,
+                &mut tree.root,
+                &mut rendered_tiles,
+                &mut sync_json_tilesets,
+                layer_id_entity,
+            );
             commands.entity(e).despawn();
             layer_store.remove(&layer_id.0);
         }
@@ -304,6 +312,7 @@ pub fn remove_invisible_tileset(
     mut commands: Commands,
     mut tiles: Query<(Entity, &mut Cesium3dTilesTree, &Cesium3dTilesTreeOrder)>,
     mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
+    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
 ) {
     for (entity, mut tree, order) in &mut tiles {
         let tile = &tree.root;
@@ -314,7 +323,14 @@ pub fn remove_invisible_tileset(
             continue;
         }
 
-        mark_rendered_tiles_invisible(&mut commands, &mut tree.root, &mut rendered_tiles);
+        let layer_id = tree.layer_id;
+        mark_rendered_tiles_invisible(
+            &mut commands,
+            &mut tree.root,
+            &mut rendered_tiles,
+            &mut sync_json_tilesets,
+            layer_id,
+        );
 
         commands.entity(entity).despawn();
     }
