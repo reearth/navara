@@ -8,7 +8,6 @@ mod input;
 mod types;
 mod vector_tile;
 
-use bevy_log::info;
 use entity::ReconstructableEntity;
 use feature::{
     ReturnedTransferablePolygonBatchedFeature, ReturnedTransferablePolylineBatchedFeature,
@@ -211,7 +210,6 @@ impl Core {
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
         let layer_type = self.app.get_layer_type(&layer_id);
-        info!("layer js value: {:?}", layer);
         if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type, layer) {
             self.app.update_layer(layer_id.as_str(), l);
         }

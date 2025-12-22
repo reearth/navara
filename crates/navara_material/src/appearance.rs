@@ -487,25 +487,25 @@ impl Default for VectorTileMaterial {
 
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct RasterTileMaterial {
-    pub show: Option<bool>,
-    pub color: Option<u32>,
-    pub opacity: Option<f32>,
-    pub max_zoom: Option<usize>,
-    pub min_zoom: Option<usize>,
-    pub tms: Option<bool>,
-    pub show_bounding_box: Option<bool>,
+    pub show: bool,
+    pub color: u32,
+    pub opacity: f32,
+    pub max_zoom: usize,
+    pub min_zoom: usize,
+    pub tms: bool,
+    pub show_bounding_box: bool,
 }
 
 impl Default for RasterTileMaterial {
     fn default() -> Self {
         Self {
-            show: None,
-            color: None,
-            opacity: None,
-            max_zoom: None,
-            min_zoom: None,
-            tms: None,
-            show_bounding_box: None,
+            show: true,
+            color: 0xffffff,
+            opacity: 1.,
+            max_zoom: 20,
+            min_zoom: 0,
+            tms: false,
+            show_bounding_box: false,
         }
     }
 }

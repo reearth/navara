@@ -17,12 +17,12 @@ impl TilesLayer {
             _ => None,
         })
     }
-    pub fn is_over_max_zoom(&self, z: usize) -> Option<bool> {
-        self.appearance().and_then(|a| a.max_zoom.map(|max_zoom| z >= max_zoom))
+    pub fn is_over_max_zoom(&self, z: usize) -> bool {
+        z >= self.appearance().unwrap().max_zoom
     }
 
-    pub fn is_over_min_zoom(&self, z: usize) -> Option<bool> {
-        self.appearance().and_then(|a| a.min_zoom.map(|min_zoom| z >= min_zoom))
+    pub fn is_over_min_zoom(&self, z: usize) -> bool {
+        z >= self.appearance().unwrap().min_zoom
     }
 }
 

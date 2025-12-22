@@ -64,7 +64,7 @@ pub fn traverse_tile(
     match qt.qt.get(handle) {
         Some(tile) => {
             let has_no_tile =
-                has_tile_layer && tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z).unwrap());
+                has_tile_layer && tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
             // If tile layer isn't added, check overscaled_max_zoom for terrain layer.
             // The reason why we check `overscaled_max_zoom` is that the terrain is upsampled even if actual tile isn't exist.
             // The terrain is upsampled until it reaches `overscaled_max_zoom`.
@@ -129,7 +129,7 @@ pub fn traverse_tile(
 
     // Check only if terrain is exist.
     let is_over_min_z = if has_tile_layer {
-        tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z).unwrap())
+        tiles.iter().any(|t| t.0.is_over_min_zoom(tile.coords.z))
     } else {
         true
     };
