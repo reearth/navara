@@ -8,11 +8,15 @@ import ThreeView, {
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import { TILE_DATASETS, TERRAIN_DATASETS} from "../../helpers/constants";
+import { TILE_DATASETS, TERRAIN_DATASETS, TILES_3D_DATASETS, MVT_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 
 let gTileLayer: Layer;
 let gTerrainLayer: Layer;
+let gGeojsonLayer: Layer;
+let gB3dmLayer: Layer;
+let gPntsLayer: Layer;
+let gMvtLayer: Layer;
 
 export const run = async (view: ThreeView) => {
   await view.init();
@@ -44,6 +48,73 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+
+  gGeojsonLayer = view.addLayer({
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        coordinates: [
+          [
+            [138.66861922558115, 35.46838056308519],
+            [138.6559918549957, 35.29164005065681],
+            [138.81174182884172, 35.279838616806046],
+            [138.8071009152797, 35.436389815907134],
+            [138.66861922558115, 35.46838056308519],
+          ],
+        ],
+        type: "Polygon",
+      },
+    },
+    polygon: {},
+  });
+
+  gB3dmLayer = view.addLayer(
+    {
+      type: "cesium3dtiles",
+      data: {
+        url: TILES_3D_DATASETS.plateauChiyodaB3DM,
+      },
+      model: {
+        show: true,
+        color: new Color().setStyle("#ffffff"),
+        metalness: 0.1,
+        roughness: 0.1,
+      },
+    });
+
+  gPntsLayer = view.addLayer({
+    type: "cesium3dtiles",
+    data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url },
+    model: {
+      show: true,
+      pointSize: 0.3,
+      height: 0,
+      maxSse: 16,
+    },
+  });
+
+  gMvtLayer = view.addLayer(
+    {
+      type: "mvt",
+      data: {
+        url: MVT_DATASETS.plateauTokyoHeightControl.url,
+      },
+      polygon: {
+        color: new Color().setStyle("#00aaff"),
+        height: 10,
+        extrudedHeight: 0,
+        clampToGround: true,
+        useGroundNormals: true,
+        wireframe: false,
+      },
+      vectorTile: {
+        maxZoom: 15,
+        layers: ["HeightControlDistrict"],
+      },
+    });
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,
@@ -58,7 +129,7 @@ function addPanel(_view: ThreeView, pane: Pane) {
 }
 
 function addRasterTileFolder(pane: Pane) {
-   const tileParams = {
+  const tileParams = {
     dataset: TILE_DATASETS.openstreetmap.url,
     dataUrl: TILE_DATASETS.openstreetmap.url,
     rasterShow: true,
@@ -147,7 +218,7 @@ function addRasterTileFolder(pane: Pane) {
       step: 0.01,
     })
     .on("change", (v) => gTileLayer.update({ rasterTile: { opacity: v.value } }));
-  
+
   rasterFolder
     .addBinding(tileParams, "rasterMaxZoom", {
       label: "maxZoom",
@@ -156,7 +227,7 @@ function addRasterTileFolder(pane: Pane) {
       step: 1,
     })
     .on("change", (v) => gTileLayer.update({ rasterTile: { maxZoom: v.value } }));
-  
+
   rasterFolder
     .addBinding(tileParams, "rasterMinZoom", {
       label: "minZoom",
@@ -165,11 +236,11 @@ function addRasterTileFolder(pane: Pane) {
       step: 1,
     })
     .on("change", (v) => gTileLayer.update({ rasterTile: { minZoom: v.value } }));
-  
+
   rasterFolder
     .addBinding(tileParams, "rasterTms", { label: "tms" })
     .on("change", (v) => gTileLayer.update({ rasterTile: { tms: v.value } }));
-  
+
   rasterFolder
     .addBinding(tileParams, "rasterShowBoundingBox", {
       label: "showBoundingBox",
