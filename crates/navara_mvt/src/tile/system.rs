@@ -109,7 +109,7 @@ pub fn update_tiles(
                 Some(z) => z,
                 None => {
                     qt.qt
-                        .initialize_zero(&|(x, y, z)| VectorTile::new(TileXYZ { x, y, z }, 0.));
+                        .initialize_zero(&|(x, y, z)| VectorTile::new(TileXYZ { x, y, z }, 0., 0.));
                     qt.qt
                         .zero()
                         .expect("Failed to initialize a level zero tile unexpectedly")
