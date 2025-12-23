@@ -6,7 +6,7 @@ import ThreeView, {
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, TILES_3D_DATASETS, MVT_DATASETS } from "../../helpers/constants";
-import { addCameraControl } from "../../helpers/control";
+import { addCameraControl, addDateControl } from "../../helpers/control";
 
 let gTileLayer: Layer;
 let gGeojsonLayer: Layer;
@@ -20,6 +20,13 @@ export const run = async (view: ThreeView) => {
   view.addLayer<AmbientLightLayer>({
     type: "light",
     ambient: {},
+  });
+
+  const atmosphereLayers = view.addDefaultAtmosphereLayers();
+  atmosphereLayers.sun.update({
+    sun: {
+      castShadow: true,
+    },
   });
 
   gTileLayer = view.addLayer({
@@ -100,6 +107,7 @@ export const run = async (view: ThreeView) => {
 
   addCustomCameraControl(view, pane);
   addPanel(view, pane);
+  addDateControl(view, pane);
 };
 
 
