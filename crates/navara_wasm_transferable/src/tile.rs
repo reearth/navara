@@ -1,4 +1,3 @@
-use navara_math::FloatType;
 use navara_tile_component::RasterTile;
 use navara_wasm_types::{CachedMeshHandle, TileXYZ};
 use wasm_bindgen::prelude::wasm_bindgen;
