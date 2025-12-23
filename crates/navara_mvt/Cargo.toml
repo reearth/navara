@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+geozero.workspace = true
+prost.workspace = true
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true

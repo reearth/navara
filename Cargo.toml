@@ -43,6 +43,10 @@ regex = "1.11.2"
 geo-types = "0.7.17"
 geojson_lib = { package = "geojson", version = "0.24.2" }
 earcutr = "0.5.0"
+# geozero = { version = "0.15.1", default-features = false, features = ["with-mvt", "with-geo"] }
+# TODO: Replace to original later
+geozero = { git = "https://github.com/keiya01/geozero.git", branch = "fix/ccw-mvt", default-features = false, features = ["with-mvt", "with-geo"] }
+prost = "0.13.5"
 
 # --- Time ---
 instant = { version = "0.1.13", features = ["wasm-bindgen", "inaccurate"] }
@@ -60,7 +64,6 @@ console_error_panic_hook = "0.1.7"
 
 # --- Testing ---
 wasm-bindgen-test = "0.3.52"
-prost = "0.13.5"
 image = { version = "0.25.8", default-features = false, features = ["png"] }
 
 # --- External Git Dependencies ---
@@ -97,7 +100,6 @@ navara_math = { path = "crates/navara_math" }
 navara_mesh = { path = "crates/navara_mesh" }
 navara_mock = { path = "crates/navara_mock" }
 navara_mvt = { path = "crates/navara_mvt" }
-navara_mvt_parser = { path = "crates/navara_mvt_parser" }
 navara_occluder = { path = "crates/navara_occluder" }
 navara_parser = { path = "crates/navara_parser" }
 navara_pnts = { path = "crates/navara_pnts" }

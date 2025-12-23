@@ -8,7 +8,9 @@ use navara_data_requester::DataRequester;
 
 use crate::{
     b3dm::B3dmDataRequesterMarker, cesium3dtiles::order::TileOrderByDistance,
-    pnts::PntsDataRequesterMarker, Cesium3dTileContentDataRequesterMarker,
+    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker,
+    Cesium3dTileContentDataRequesterMarker, Cesium3dTilesMetadataDataRequesterMarker,
+    Cesium3dTilesTreeOrder,
 };
 
 const MAX_PENDINGS: u32 = 10;
@@ -17,14 +19,21 @@ const MAX_PENDINGS: u32 = 10;
 pub fn filter_requestable_data_requester(
     mut commands: Commands,
     data_requesters: Query<
-        (Entity, &DataRequester, &TileOrderByDistance, &Priority),
+        (
+            Entity,
+            &DataRequester,
+            &Priority,
+            Option<&TileOrderByDistance>,
+            Option<&Cesium3dTilesTreeOrder>,
+        ),
         (
             With<DataRequester>,
             With<Cesium3dTileContentDataRequesterMarker>,
             Or<(
                 With<B3dmDataRequesterMarker>,
                 With<PntsDataRequesterMarker>,
-                // With<GlbDataRequesterMarker>
+                With<GlbDataRequesterMarker>,
+                With<Cesium3dTilesMetadataDataRequesterMarker>,
             )>,
             Added<DataRequester>,
             Without<Deleted>,
@@ -39,7 +48,8 @@ pub fn filter_requestable_data_requester(
             Or<(
                 With<B3dmDataRequesterMarker>,
                 With<PntsDataRequesterMarker>,
-                // With<GlbDataRequesterMarker>
+                With<GlbDataRequesterMarker>,
+                With<Cesium3dTilesMetadataDataRequesterMarker>,
             )>,
             Without<Deleted>,
         ),
@@ -49,9 +59,13 @@ pub fn filter_requestable_data_requester(
     let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
     // Limit the number of requests in this frame
-    for (e, _, _, _) in data_requesters
+    for (e, _, _, _, _) in data_requesters
         .iter()
-        .sort::<(&Priority, &TileOrderByDistance)>()
+        .sort::<(
+            &Priority,
+            Option<&Cesium3dTilesTreeOrder>,
+            Option<&TileOrderByDistance>,
+        )>()
         .skip(num_skip as usize)
     {
         commands.entity(e).insert((Deleted, Ignored));

@@ -73,6 +73,7 @@ pub fn transfer_batched_mesh(
             continue;
         };
 
+        // TODO: Remove this iteration
         for feature_entity in &batched_feature.features {
             let (point_geometry, batch_index) = points.get(*feature_entity).unwrap();
 

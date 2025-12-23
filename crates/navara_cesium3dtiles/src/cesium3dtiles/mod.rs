@@ -1,9 +1,11 @@
 mod component;
 pub(crate) mod data_requester;
 mod order;
+mod resource;
 pub(crate) mod system;
 mod traversal;
 mod types;
 pub use component::*;
 pub use data_requester::helpers::*;
 pub use order::*;
+pub use resource::*;

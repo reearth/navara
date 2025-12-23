@@ -19,5 +19,6 @@ navara_data_requester.workspace = true
 navara_geometry.workspace = true
 navara_feature_component.workspace = true
 navara_layer.workspace = true
+navara_mvt.workspace = true
 navara_worker.workspace = true
 navara_component.workspace = true
