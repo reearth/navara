@@ -266,19 +266,18 @@ pub fn remove_batched_feature(
     for (feature_id, rendered_feature_id, model_bin, feature_batch_id, global_batch_ids) in
         &removed_features
     {
-        let Some(rendered_feature_id) = rendered_feature_id.0 else {
-            continue;
-        };
-        // if a model has batch table, its global batch ids will be removed here.
-        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+        if let Some(rendered_feature_id) = rendered_feature_id.0 {
+            feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+            if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
+                feature.destroy(&mut buf, &mut batch_table_res);
+            }
+        }
+
         if let Some(global_batch_ids) = global_batch_ids {
             buf.remove(&global_batch_ids.handle);
         }
         if let Some(feature_batch_id) = feature_batch_id {
             batch_table_res.remove(&feature_batch_id.0);
-        }
-        if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res);
         }
 
         buf.remove(&model_bin.0);

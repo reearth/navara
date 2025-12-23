@@ -29,7 +29,6 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
-  RepeatWrapping,
   RGBADepthPacking,
   Texture,
   type NormalBufferAttributes,
@@ -37,9 +36,9 @@ import {
   ShaderChunk,
   PointsMaterial,
   Camera,
-  Material,
   Scene,
   WebGLRenderer,
+  Material,
 } from "three";
 import {
   AnimationAction,
@@ -48,7 +47,6 @@ import {
   LoopRepeat,
 } from "three";
 
-import { TEXTURE_LOADER, WATER_NORMAL_URL, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
   ensurePostEffectUserData,
@@ -63,6 +61,7 @@ import {
   applyMaskPassRenderState,
   restoreMaterialState as restoreMaterialStateBase,
 } from "../core/PostEffectMaskContext";
+import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -96,6 +95,7 @@ export class ModelMesh
   private viewContext?: ViewContext;
   /** Layer ID for PostEffect handling */
   private _layerId?: string;
+  private _uniforms?: CommonUniforms;
 
   /**
    * Set layer ID for PostEffect handling
@@ -105,30 +105,23 @@ export class ModelMesh
     this._layerId = layerId;
   }
 
+
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
 
   /**
-   * Loads the water normal map texture if water is enabled.
-   * Returns the texture if it should be used, or null otherwise.
+   * Returns the shared water normal map texture if water is enabled.
+   * The texture must be enabled via Options.waterTexture.enabled.
    */
-  private enableWaterNormalMap(
-    water: boolean,
-    waterNormalUrl?: string,
-  ): Texture | null {
-    // Only load if water is enabled
+  private enableWaterNormalMap(water: boolean): Texture | null {
+    // Only use if water is enabled
     if (!water) {
       return null;
     }
 
-    // Load texture if not already loaded
-    if (!this.waterNormalMapTexture) {
-      this.waterNormalMapTexture = TEXTURE_LOADER.load(
-        waterNormalUrl ?? WATER_NORMAL_URL,
-        (texture) => {
-          texture.wrapS = texture.wrapT = RepeatWrapping;
-        },
-      );
+    // Use shared water texture from CommonUniforms if available
+    if (!this.waterNormalMapTexture && this._uniforms?.waterTexture.value) {
+      this.waterNormalMapTexture = this._uniforms.waterTexture.value;
     }
 
     return this.waterNormalMapTexture;
@@ -148,6 +141,7 @@ export class ModelMesh
   ) {
     super();
     this.viewContext = viewContext;
+    this._uniforms = uniforms;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
     this.addEventListener("removedFromWorld", () => {
@@ -174,7 +168,6 @@ export class ModelMesh
 
     this.waterNormalMapTexture = this.enableWaterNormalMap(
       !!meshMaterial.water,
-      meshMaterial.waterNormalUrl,
     );
 
     // For Cesium 3D Tiles
@@ -280,6 +273,39 @@ export class ModelMesh
     });
   }
 
+  setupWaterMaterial(
+    mesh: Mesh<BufferGeometry, Material>,
+    meshMaterial: NavaraModelMaterial,
+  ) {
+    mesh.material.userData.reflectivity ??= {
+      value: meshMaterial.reflectivity ?? 0,
+    };
+    mesh.material.userData.waterScaleNormal ??= {
+      value: meshMaterial.waterScaleNormal ?? 0.01,
+    };
+    mesh.material.userData.waterSpeed ??= {
+      value: meshMaterial.waterSpeed ?? 0.0003,
+    };
+    mesh.material.userData.shininess ??= {
+      value: meshMaterial.shininess ?? 30.0,
+    };
+    mesh.material.userData.specularStrength ??= {
+      value: meshMaterial.specularStrength ?? 1.0,
+    };
+    mesh.material.userData.applyWaterNormal ??= {
+      value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
+    };
+    mesh.material.userData.waterNormalMap ??= {
+      value: this.waterNormalMapTexture,
+    };
+    mesh.material.userData.specular ??= {
+      value: meshMaterial.specular ?? false,
+    };
+    mesh.material.userData.ior ??= {
+      value: meshMaterial.ior ?? 1.33333,
+    };
+  }
+
   private overrideCesium3DTilesMaterial(
     meshMaterial: NavaraModelMaterial,
     batchIds: Uint32Array<ArrayBufferLike>,
@@ -322,45 +348,13 @@ export class ModelMesh
       mesh.material.userData.uPickable = {
         value: 0.0,
       };
-      mesh.material.userData.reflectivity = {
-        value: meshMaterial.reflectivity ?? 0,
-      };
       mesh.material.userData.uAddHeight = {
         value: 0.0,
       };
-      mesh.material.userData.waterScaleNormal = {
-        value: meshMaterial.waterScaleNormal ?? 0.01,
-      };
-      mesh.material.userData.waterSpeed = {
-        value: meshMaterial.waterSpeed ?? 0.0003,
-      };
-      mesh.material.userData.shininess = {
-        value: meshMaterial.shininess ?? 30.0,
-      };
-      mesh.material.userData.specularStrength = {
-        value: meshMaterial.specularStrength ?? 1.0,
-      };
-      mesh.material.userData.applyWaterNormal = {
-        value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
-      };
-      mesh.material.userData.waterNormalMap = {
-        value: this.waterNormalMapTexture,
-      };
-      mesh.material.userData.specular = {
-        value: meshMaterial.specular ?? false,
-      };
-      mesh.material.userData.ior = {
-        value: meshMaterial.ior ?? 1.33333,
-      };
-      mesh.material.userData.uBloomMaskPass = {
-        value: 0.0,
-      };
-      mesh.material.userData.uOutlineMaskPass = {
-        value: 0.0,
-      };
-
+      
       // Initialize post effect user data (includes uPostEffectOcclusion shader uniform)
       ensurePostEffectUserData(mesh.material);
+      this.setupWaterMaterial(mesh, meshMaterial);
 
       this.water = !!meshMaterial.water;
       this.setMaterial(meshMaterial, mesh);
@@ -864,6 +858,10 @@ export class ModelMesh
   ) {
     const distMaterial = dist.material;
 
+    if (dist instanceof Mesh) {
+      this.setupWaterMaterial(dist, src);
+    }
+
     if (!distMaterial.userData.prev) {
       distMaterial.userData.prev = {};
     }
@@ -909,7 +907,7 @@ export class ModelMesh
           distMaterial.userData.defines.WATER = 1;
 
           distMaterial.userData.waterNormalMap.value =
-            this.enableWaterNormalMap(next, src.waterNormalUrl);
+            this.enableWaterNormalMap(next);
         } else {
           delete distMaterial.userData.defines.WATER;
           distMaterial.userData.waterNormalMap.value = null;

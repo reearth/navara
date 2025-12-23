@@ -24,6 +24,7 @@ import {
   Vector2,
   LinearFilter,
   ClampToEdgeWrapping,
+  RepeatWrapping,
   Group,
   Material,
   PCFSoftShadowMap,
@@ -34,6 +35,7 @@ import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { Color } from "./Color";
 import { MAP_CONCURRENCY } from "./concurrency";
+import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
   ViewContext,
@@ -55,6 +57,7 @@ import {
   type TileHandler,
   type WorkerTaskHandler,
 } from "./event";
+import { TEXTURE_LOADER } from "./event/loaders";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
@@ -180,6 +183,14 @@ export type Options = {
   shadow?: boolean;
   // Enable mobile device optimizations such as lower pixel ratio.
   mobileOptimization?: boolean;
+  // Enable shared water texture. When enabled, a single water normal texture
+  // is loaded once and shared across all meshes that have water effects enabled.
+  // This is more efficient than loading the texture for each mesh independently.
+  waterTexture?: {
+    enabled: boolean;
+    // Custom water normal texture URL (optional, defaults to built-in water normal texture)
+    url?: string;
+  };
 } & GlobeOptions;
 
 export type MapMouseEvent = {
@@ -615,6 +626,7 @@ export default class ThreeView<
       screenHeightPx: { value: height },
       time: { value: 0 },
       colorMapTexture: { value: null },
+      waterTexture: { value: null },
     };
 
     // This is necessary to avoid attaching a texture beyond the max textures capabilities of GPU.
@@ -630,6 +642,23 @@ export default class ThreeView<
         Math.max(this.renderer.capabilities.maxTextures, 8) -
         NUM_CASCADED_SHADOW_MAPS,
     };
+
+    // Load shared water texture if enabled
+    if (options.waterTexture?.enabled) {
+      const waterUrl = options.waterTexture.url ?? WATER_NORMAL_URL;
+      this._uniforms.waterTexture.value = TEXTURE_LOADER.load(
+        waterUrl,
+        (texture) => {
+          texture.wrapS = RepeatWrapping;
+          texture.wrapT = RepeatWrapping;
+        },
+      );
+      // Track additional texture usage
+      this._defaultTextureOptions.additionalTexturesInUse = {
+        ...this._defaultTextureOptions.additionalTexturesInUse,
+        waterTexture: true,
+      };
+    }
 
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("_needsUpdate", this.forceUpdate);

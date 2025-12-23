@@ -525,9 +525,6 @@ pub struct PolygonMaterial {
 
     /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
-    #[wasm_bindgen(getter_with_clone, js_name = waterNormalUrl)]
-    #[serde(rename = "waterNormalUrl")]
-    pub water_normal_url: Option<String>,
     /// Scale water normal. Decreasing this value will make the water surface rough.
     #[wasm_bindgen(js_name = waterScaleNormal)]
     #[serde(rename = "waterScaleNormal")]
@@ -607,7 +604,6 @@ impl PolygonMaterial {
 
             // These are unnecessary for polygon geometry construction.
             water: None,
-            water_normal_url: None,
             water_scale_normal: None,
             water_speed: None,
             shininess: None,
@@ -651,7 +647,6 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             outline_color: val.outline_color.unwrap_or(default.outline_color),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             water: val.water.unwrap_or(default.water),
-            water_normal_url: val.water_normal_url,
             water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
             water_speed: val.water_speed.unwrap_or(default.water_speed),
             shininess: val.shininess.unwrap_or(default.shininess),
@@ -691,7 +686,6 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
             water: Some(value.water),
-            water_normal_url: value.water_normal_url.clone(),
             water_scale_normal: Some(value.water_scale_normal),
             water_speed: Some(value.water_speed),
             shininess: Some(value.shininess),
@@ -731,7 +725,6 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
             water: Some(value.water),
-            water_normal_url: value.water_normal_url.clone(),
             water_scale_normal: Some(value.water_scale_normal),
             water_speed: Some(value.water_speed),
             shininess: Some(value.shininess),
@@ -808,9 +801,6 @@ pub struct ModelMaterial {
     pub reflectivity: Option<f32>,
     /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
-    #[wasm_bindgen(getter_with_clone, js_name = waterNormalUrl)]
-    #[serde(rename = "waterNormalUrl")]
-    pub water_normal_url: Option<String>,
     /// Scale water normal. Decreasing this value will make the water surface rough.
     #[wasm_bindgen(js_name = waterScaleNormal)]
     #[serde(rename = "waterScaleNormal")]
@@ -884,7 +874,6 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             roughness: val.roughness.unwrap_or(default.roughness),
             reflectivity: val.reflectivity.unwrap_or(default.reflectivity),
             water: val.water.unwrap_or(default.water),
-            water_normal_url: val.water_normal_url,
             water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
             water_speed: val.water_speed.unwrap_or(default.water_speed),
             shininess: val.shininess.unwrap_or(default.shininess),
@@ -923,7 +912,6 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             roughness: Some(value.roughness),
             reflectivity: Some(value.reflectivity),
             water: Some(value.water),
-            water_normal_url: value.water_normal_url.clone(),
             water_scale_normal: Some(value.water_scale_normal),
             water_speed: Some(value.water_speed),
             shininess: Some(value.shininess),
