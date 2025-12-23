@@ -5,7 +5,7 @@ import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
-import { Color, LessDepth, Sprite, SpriteMaterial } from "three";
+import { Color, LessDepth, Sprite, SpriteMaterial, Vector3 } from "three";
 
 import { createReplacer } from "../utils";
 
@@ -15,7 +15,12 @@ export class PointMesh extends Sprite implements FeatureMesh {
   constructor(material: NavaraPointMaterial, batchId: number, active: boolean) {
     super(new SpriteMaterial());
 
+    this.userData.rtcPos = {
+      value: new Vector3(),
+    };
+
     this.initMaterial(material, batchId, active);
+    this.frustumCulled = false;
   }
 
   private initMaterial(
@@ -48,12 +53,16 @@ export class PointMesh extends Sprite implements FeatureMesh {
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
       shader.uniforms.uOffsetDepth = material.userData.uOffsetDepth;
 
+      // RTC: Pass relative offset uniform
+      shader.uniforms.rtcPos = this.userData.rtcPos;
+
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "uniform vec2 center;",
           `
           uniform vec2 center;
           ${HeightParsVertex}
+          uniform vec3 rtcPos;
           out vec2 sprite_uv;
           flat out int vHorizonCulled;
           ${HorizonCulling}
@@ -62,23 +71,36 @@ export class PointMesh extends Sprite implements FeatureMesh {
         .replace(
           "vec4 mvPosition = modelViewMatrix[ 3 ];",
           `
-          // Offset anchor world position along globe normal by addHeight
-          vec4 worldPosition = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          
+          mat4 modelViewMatrixNoScale = mat4(
+            normalize(modelViewMatrix[0]),  // Column 1: remove scale
+            normalize(modelViewMatrix[1]),  // Column 2: remove scale
+            normalize(modelViewMatrix[2]),  // Column 3: remove scale
+            modelViewMatrix[3]              // Column 4: keep translation
+          );
+
+          vec4 mvPosition = modelViewMatrixNoScale * vec4(rtcPos, 1.0);
+
+          // Reconstruct high-precision world position from camera space
+          mat3 viewRotation = mat3(viewMatrix);  // Extract 3x3 rotation part
+          vec3 worldPosition3 = transpose(viewRotation) * mvPosition.xyz + cameraPosition;
+
           // Horizon culling
-          bool horizonCulled = nvr_horizon_culled(worldPosition.xyz, cameraPosition);
+          bool horizonCulled = nvr_horizon_culled(worldPosition3, cameraPosition);
           if (horizonCulled) {
             vHorizonCulled = 1;
-            // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
-            //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
             gl_Position = vec4(0.0);
             return;
           }
           vHorizonCulled = 0;
 
-          vec3 globeNormal = normalize(worldPosition.xyz);
-          worldPosition.xyz += globeNormal * uAddHeight;
-          vec4 mvPosition = viewMatrix * worldPosition;
+          // Apply height offset in camera space
+          if (uAddHeight != 0.0) {
+            vec3 globeNormal = normalize(worldPosition3);
+            vec3 heightOffset = globeNormal * uAddHeight;
+            // Transform height offset to camera space and add to mvPosition
+            vec4 mvHeightOffset = viewMatrix * vec4(heightOffset, 0.0);
+            mvPosition += mvHeightOffset;
+          }
           `,
         )
         .replace(

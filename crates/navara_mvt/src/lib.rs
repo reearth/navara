@@ -3,13 +3,14 @@
 use bevy_app::{App, Plugin, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
 
-mod component;
+pub mod component;
 mod data_requester;
 mod geometry;
 mod layer;
 mod pos_converter;
 mod tile;
 
+pub use component::*;
 pub use layer::*;
 
 pub struct MvtPlugin;
