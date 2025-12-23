@@ -483,7 +483,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ff0000"),
-      size: 0.02,
+      size: 0.01,
       height: 1,
       // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
       center: {
@@ -601,19 +601,6 @@ export const run = async (view: ThreeView) => {
   const materialCtrl = pane.addFolder({ title: "material" });
 
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
-
-  view.setCamera({
-    lng: 135.1839341882,
-    lat: 34.0868035843,
-    height: 12712.99,
-    heading: 0,
-    pitch: -36.00000121921312, 
-    roll: 0, 
-  });
-
-  view.camera.options = {
-    autoAdjustNearFar: true,
-  };
 
   showAttributions([
     TERRAIN_DATASETS.gsi,

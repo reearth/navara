@@ -49,8 +49,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
       // RTC: Set mesh position to tile center, store relative offset in uniform
       setTransform(mesh, transform);
-      // Update the relative offset uniform for this mesh
-      mesh.userData.relativeOffset.value.set(x, y, z);
+
+      mesh.userData.rtcPos.value.set(x, y, z);
 
       this.addWithBatchIndex(mesh, batchIndex[i]);
     }
@@ -70,7 +70,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
       mesh._update(material, active);
 
       // RTC: Update transform (tile center)
-      setTransform(mesh, transform, true);
+      setTransform(mesh, transform);
 
       if (position) {
         const batchIndex = (mesh.userData.batchIndex as number) * positionSize;
@@ -80,7 +80,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
         const z = position[batchIndex + 2];
 
         // Update relative offset uniform
-        mesh.userData.relativeOffset.value.set(x, y, z);
+        mesh.userData.rtcPos.value.set(x, y, z);
       }
     }
   }

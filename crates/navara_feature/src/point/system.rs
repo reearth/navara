@@ -199,6 +199,8 @@ pub fn transfer_mesh(
             .crs
             .to_vec3(WGS84_64, geometry.coords, material.height);
 
+        // Use RTC for all points: transform contains absolute world position,
+        // geometry contains relative coordinates (0, 0, 0 for single points)
         let entity = commands
             .spawn((
                 PointMarker,
@@ -220,7 +222,7 @@ pub fn transfer_mesh(
                     },
                     geometry: TransferablePointGeometry::with_buf(
                         &mut buf,
-                        position.as_vec3().to_array().to_vec(),
+                        vec![0.0, 0.0, 0.0], // RTC: relative offset is zero for single points
                         vec![0],
                         vec![batch_id.0],
                     ),
@@ -383,7 +385,8 @@ pub fn update_height_by_terrain(
                 material,
                 feature_id,
                 render_info,
-                geometry: transferable_geometry,
+                geometry: _,
+                transform,
                 ..
             } => {
                 render_info.should_recalculate_height = false;
@@ -407,8 +410,8 @@ pub fn update_height_by_terrain(
                     material.height + render_info.current_terrain_height as f32,
                 );
 
-                transferable_geometry.position.data =
-                    buf.new_f32(position.as_vec3().to_array().to_vec());
+                // RTC: Update transform translation with new position
+                transform.translation = position;
             }
             _ => unreachable!(),
         };
