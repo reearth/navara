@@ -47,6 +47,7 @@ import {
   LoopRepeat,
 } from "three";
 
+import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
   ensurePostEffectUserData,
@@ -61,7 +62,6 @@ import {
   applyMaskPassRenderState,
   restoreMaterialState as restoreMaterialStateBase,
 } from "../core/PostEffectMaskContext";
-import type { ViewEvents } from "..";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -104,7 +104,6 @@ export class ModelMesh
   setLayerId(layerId: string): void {
     this._layerId = layerId;
   }
-
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
@@ -351,7 +350,7 @@ export class ModelMesh
       mesh.material.userData.uAddHeight = {
         value: 0.0,
       };
-      
+
       // Initialize post effect user data (includes uPostEffectOcclusion shader uniform)
       ensurePostEffectUserData(mesh.material);
       this.setupWaterMaterial(mesh, meshMaterial);

@@ -192,14 +192,20 @@ export function getPostEffectConfig(
 }
 
 /**
- * Initialize shader uniform uPostEffectOcclusion on material.userData.
- * Value is SKIP by default, set to Normal/Silhouette during mask passes via onBeforeRender.
+ * Initialize shader uniforms for PostEffect on material.userData.
+ * Values are 0 by default, set during mask passes via onBeforeRender.
  */
 export function ensurePostEffectUserData(
   material: MeshStandardMaterial | MeshPhysicalMaterial | MeshLambertMaterial,
 ): void {
   material.userData.uPostEffectOcclusion ??= {
     value: POST_EFFECT_OCCLUSION_SKIP,
+  };
+  material.userData.uBloomMaskPass ??= {
+    value: 0.0,
+  };
+  material.userData.uOutlineMaskPass ??= {
+    value: 0.0,
   };
 }
 

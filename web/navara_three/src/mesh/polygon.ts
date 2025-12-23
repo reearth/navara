@@ -39,8 +39,8 @@ import {
   Sphere,
 } from "three";
 
-import type { ViewContext } from "../core";
 import { PolygonOutlineMesh, type ViewEvents } from "..";
+import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { arraysEqual, createReplacer } from "../utils";
