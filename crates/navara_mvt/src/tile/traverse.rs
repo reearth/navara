@@ -617,6 +617,7 @@ fn begine_traverse_tile(
     terrain_into: Option<&TerrainInformation>,
 ) {
     tile.set_max_height(terrain_into.map(|t| t.max_height).unwrap_or(0.));
+    tile.set_min_height(terrain_into.map(|t| t.min_height).unwrap_or(0.));
     tile.update_tile_occludee_point(ellipsoid, occluder);
 }
 

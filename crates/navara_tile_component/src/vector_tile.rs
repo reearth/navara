@@ -29,7 +29,8 @@ pub struct VectorTile {
     pub visited_at: usize,
     pub data_requester_entity_id: Option<Entity>,
     pub occludee_point_in_scaled_space: Option<Vec3>,
-    pub max_height: FloatType,
+    pub max_height: f64,
+    pub min_height: f64,
     pub distance_from_camera: FloatType,
     pub sse: FloatType,
     pub were_children_rendered: bool,
@@ -53,6 +54,7 @@ impl Clone for VectorTile {
             data_requester_entity_id: self.data_requester_entity_id,
             occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
             max_height: self.max_height,
+            min_height: self.min_height,
             distance_from_camera: 0.,
             sse: 0.,
             were_children_rendered: false,
@@ -63,13 +65,13 @@ impl Clone for VectorTile {
 }
 
 impl VectorTile {
-    pub fn new(coords: TileXYZ, max_height: FloatType) -> Self {
+    pub fn new(coords: TileXYZ, max_height: f64, min_height: f64) -> Self {
         let extent = coords.extent();
 
         Self {
             coords,
             extent: coords.extent(),
-            aabb: Aabb::from_extent_f64(extent, 0., max_height),
+            aabb: Aabb::from_extent_f64(extent, min_height, max_height),
             bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
             visited_at: 0,
@@ -77,6 +79,7 @@ impl VectorTile {
             occludee_point_in_scaled_space: None,
             children: Vec::with_capacity(4),
             max_height,
+            min_height,
             distance_from_camera: 0.,
             sse: 0.,
             were_children_rendered: false,
@@ -138,12 +141,26 @@ impl Tile for VectorTile {
         self.occludee_point_in_scaled_space = p;
     }
 
-    fn max_height(&self) -> FloatType {
+    fn max_height(&self) -> f64 {
         self.max_height
     }
 
-    fn set_max_height(&mut self, v: FloatType) {
+    fn set_max_height(&mut self, v: f64) {
         self.max_height = v;
+        if let Some(bounding_region) = &mut self.bounding_region {
+            bounding_region.maximum_height = v;
+        }
+    }
+
+    fn min_height(&self) -> f64 {
+        self.min_height
+    }
+
+    fn set_min_height(&mut self, v: f64) {
+        self.min_height = v;
+        if let Some(bounding_region) = &mut self.bounding_region {
+            bounding_region.minimum_height = v;
+        }
     }
 
     fn has_terrain(&self) -> bool {
@@ -162,7 +179,7 @@ impl Tile for VectorTile {
         )
     }
 
-    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: FloatType) -> Self {
-        Self::new(TileXYZ { x, y, z }, max_height)
+    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self {
+        Self::new(TileXYZ { x, y, z }, max_height, min_height)
     }
 }
