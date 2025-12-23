@@ -1,39 +1,249 @@
+use std::sync::Arc;
+
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon};
+use geozero::mvt::{tile, Message, Tile as MvtTile};
+use geozero::ToGeo;
 use navara_buffer_store::BufferStore;
+use navara_core::{Extent, Radians};
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
-    batch::{BatchIndex, BatchTable, FeatureBatchId, GlobalBatchIds},
-    billboard::BillboardGeometry,
-    point::PointGeometry,
-    polygon::PolygonGeometry,
-    polyline::PolylineGeometry,
-    text::TextGeometry,
+    batch::{BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds, MvtLayerData},
+    billboard::{BillboardGeometry, BillboardMarker},
+    id::FeatureId,
+    point::{PointGeometry, PointMarker},
+    polygon::{PolygonGeometry, PolygonMarker},
+    polyline::{PolylineGeometry, PolylineMarker},
+    text::{TextGeometry, TextMarker},
     BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
+use navara_layer::LayerId;
 use navara_material::Appearance;
 use navara_math::{FloatType, Vec3};
-use navara_parser::mvt;
+use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
 
+use crate::component::MVTFeatureMarker;
 use crate::pos_converter::PosConverter;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ConstructedGeometryType {
     Point,
     Polyline,
     Polygon,
 }
 
-pub(crate) struct ConstructedGeometry {
-    pub feature_ids: Vec<Entity>,
-    pub geometry_type: ConstructedGeometryType,
-    pub feature_batch_id: FeatureBatchId,
-    pub global_batch_ids: GlobalBatchIds,
+/// Process a single MVT layer and spawn entities for its features.
+/// Returns the spawned batched feature entity.
+#[allow(clippy::too_many_arguments)]
+fn process_layer(
+    commands: &mut Commands,
+    batch_table: &mut BatchTable,
+    buf: &mut BufferStore,
+    mut layer: tile::Layer,
+    xyz: TileXYZ,
+    appearances: &[Appearance],
+    layer_id: &str,
+) -> Option<Entity> {
+    let extent = layer.extent.unwrap_or(4096);
+    let mut converter = PosConverter::new(xyz, extent);
+
+    // Build MvtLayerData for lazy property parsing
+    // Move keys and values directly - no clone or conversion needed
+    let mvt_layer_data = MvtLayerData {
+        keys: Arc::new(layer.keys),
+        values: Arc::new(layer.values),
+        feature_tags: Vec::with_capacity(layer.features.len()),
+    };
+
+    // Initialize batch with MVT lazy properties
+    let feature_batch_id = batch_table
+        .init_mvt(Some(layer_id.to_owned()), mvt_layer_data)
+        .unwrap_or(0);
+
+    let mut feature_ids: Vec<Entity> = Vec::with_capacity(layer.features.len());
+    let mut global_batch_ids: Vec<u32> = Vec::with_capacity(layer.features.len());
+    let mut geometry_type: Option<ConstructedGeometryType> = None;
+
+    for feature in &mut layer.features {
+        // Parse geometry using geozero's ToGeo trait
+        let geom = match feature.to_geo() {
+            Ok(g) => g,
+            Err(_err) => continue,
+        };
+
+        let batch_idx = BatchIndex(global_batch_ids.len() as u32);
+
+        let mut tags = Vec::with_capacity(feature.tags.len());
+        tags.append(&mut feature.tags);
+
+        // Store feature tags for lazy property parsing
+        batch_table.add_mvt_feature_tags(feature_batch_id, tags);
+
+        let batch_id = batch_table
+            .init_values(Some(layer_id.to_owned()))
+            .unwrap_or(0);
+        global_batch_ids.push(batch_id);
+
+        // Handle the geometry
+        handle_geometry(
+            commands,
+            buf,
+            &mut feature_ids,
+            &mut geometry_type,
+            &geom,
+            &mut converter,
+            &batch_idx,
+            appearances,
+        );
+    }
+
+    if feature_ids.is_empty() {
+        return None;
+    }
+
+    let geometry_type = geometry_type?;
+    let batch_length = global_batch_ids.len();
+
+    let global_batch_ids = GlobalBatchIds {
+        handle: buf.new_u32(global_batch_ids),
+        batch_length: batch_length as u32,
+    };
+    let feature_batch_id = FeatureBatchId(feature_batch_id);
+
+    // Now spawn the batched feature entity with appropriate marker
+    let batched = BatchedFeature {
+        features: feature_ids,
+        ..Default::default()
+    };
+
+    spawn_batched_entity(
+        commands,
+        batched,
+        geometry_type,
+        appearances,
+        layer_id,
+        feature_batch_id,
+        global_batch_ids,
+    )
 }
 
-// TODO: Store the coordinates into BufferStore.
-// TODO: Move this process to worker.
+/// Spawn the batched feature entity with the appropriate marker component
+fn spawn_batched_entity(
+    commands: &mut Commands,
+    batched: BatchedFeature,
+    geometry_type: ConstructedGeometryType,
+    appearances: &[Appearance],
+    layer_id: &str,
+    feature_batch_id: FeatureBatchId,
+    global_batch_ids: GlobalBatchIds,
+) -> Option<Entity> {
+    fn spawn<M: Component, A: Component>(
+        commands: &mut Commands,
+        batched: BatchedFeature,
+        layer_id: String,
+        marker: M,
+        appearance: A,
+        feature_batch_id: FeatureBatchId,
+        global_batch_ids: GlobalBatchIds,
+    ) -> Entity {
+        commands
+            .spawn((
+                marker,
+                batched,
+                FeatureId::default(),
+                MVTFeatureMarker,
+                LayerId(layer_id),
+                appearance,
+                feature_batch_id,
+                global_batch_ids,
+            ))
+            .id()
+    }
+
+    match geometry_type {
+        ConstructedGeometryType::Point => {
+            let appearance = appearances.iter().find(|a| {
+                matches!(
+                    a,
+                    Appearance::Point(_) | Appearance::Billboard(_) | Appearance::Text(_)
+                )
+            })?;
+
+            let entity = match appearance {
+                Appearance::Point(app) => spawn(
+                    commands,
+                    batched,
+                    layer_id.to_string(),
+                    PointMarker,
+                    app.clone(),
+                    feature_batch_id,
+                    global_batch_ids,
+                ),
+                Appearance::Billboard(app) => spawn(
+                    commands,
+                    batched,
+                    layer_id.to_string(),
+                    BillboardMarker,
+                    app.clone(),
+                    feature_batch_id,
+                    global_batch_ids,
+                ),
+                Appearance::Text(app) => spawn(
+                    commands,
+                    batched,
+                    layer_id.to_string(),
+                    TextMarker,
+                    app.clone(),
+                    feature_batch_id,
+                    global_batch_ids,
+                ),
+                _ => return None,
+            };
+            Some(entity)
+        }
+        ConstructedGeometryType::Polyline => {
+            let Appearance::Polyline(app) = appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Polyline(_)))?
+            else {
+                return None;
+            };
+            Some(spawn(
+                commands,
+                batched,
+                layer_id.to_string(),
+                PolylineMarker,
+                app.clone(),
+                feature_batch_id,
+                global_batch_ids,
+            ))
+        }
+        ConstructedGeometryType::Polygon => {
+            let Appearance::Polygon(app) = appearances
+                .iter()
+                .find(|a| matches!(a, Appearance::Polygon(_)))?
+            else {
+                return None;
+            };
+            Some(spawn(
+                commands,
+                batched,
+                layer_id.to_string(),
+                PolygonMarker,
+                app.clone(),
+                feature_batch_id,
+                global_batch_ids,
+            ))
+        }
+    }
+}
+
+/// Main entry point: parse MVT binary and spawn entities for all layers.
+/// Returns the spawned entity IDs.
+///
+/// If `tile_info` is provided, `OverscaledTileHandle` and `TileExtent` components
+/// will be added to each spawned entity.
 #[allow(clippy::too_many_arguments)]
 pub fn construct_geometry(
     commands: &mut Commands,
@@ -44,85 +254,46 @@ pub fn construct_geometry(
     appearances: &[Appearance],
     limit_layers: &Option<Vec<String>>,
     layer_id: &str,
-) -> Option<Vec<ConstructedGeometry>> {
-    let mut result = vec![];
+    tile_info: Option<(TileHandle, Extent<FloatType, Radians>)>,
+) -> Option<Vec<Entity>> {
+    // Decode MVT using prost protobuf decoder
+    let tile = MvtTile::decode(mvt_bin.as_slice()).ok()?;
 
-    let reader = mvt::MvtReader::new(mvt_bin).ok()?;
-    let layer_names = reader.get_layer_names().ok()?;
+    let mut result = Vec::new();
 
-    for (index, name) in layer_names.iter().enumerate() {
-        let extent = reader.get_extent(index);
-        let mut converter = PosConverter::new(xyz, extent);
-        let features = match reader.get_features(index) {
-            Ok(f) => f,
-            Err(_) => continue,
-        };
-
+    for layer in tile.layers {
+        // Check layer filter
         if let Some(ll) = limit_layers {
-            if !ll.contains(name) {
+            if !ll.contains(&layer.name) {
                 continue;
             }
         }
 
-        // Assume a feature has only one type of geometry.
-        let mut geometry_type = Option::None;
-
-        let mut feature_ids = vec![];
-
-        let feature_batch_id = batch_table
-            .init_values(Some(layer_id.to_owned()))
-            .unwrap_or(0);
-        let mut global_batch_ids: Vec<u32> = vec![];
-
-        for feature in features {
-            let geom = feature.get_geometry();
-            let props = feature
-                .properties
-                .as_ref()
-                .and_then(|props| serde_json::to_value(props).ok())
-                .unwrap_or(serde_json::Value::Null);
-
-            let batch_idx = BatchIndex(global_batch_ids.len() as u32);
-
-            let batch_id = batch_table
-                .init_values(Some(layer_id.to_owned()))
-                .unwrap_or(0);
-
-            batch_table.add_values(feature_batch_id, props);
-
-            global_batch_ids.push(batch_id);
-
-            handle_geometry(
-                commands,
-                buf,
-                &mut feature_ids,
-                &mut geometry_type,
-                geom,
-                &mut converter,
-                // For batched feature
-                &batch_idx,
-                appearances,
-            );
+        if let Some(entity) = process_layer(
+            commands,
+            batch_table,
+            buf,
+            layer,
+            xyz,
+            appearances,
+            layer_id,
+        ) {
+            // Add tile-specific components if tile info is provided
+            if let Some((tile_handle, tile_extent)) = tile_info {
+                commands.entity(entity).insert((
+                    OverscaledTileHandle::new(tile_handle),
+                    TileExtent::new(tile_extent),
+                ));
+            }
+            result.push(entity);
         }
-
-        if feature_ids.is_empty() {
-            continue;
-        }
-
-        let batch_length = global_batch_ids.len();
-
-        result.push(ConstructedGeometry {
-            feature_ids,
-            geometry_type: geometry_type.unwrap(),
-            feature_batch_id: FeatureBatchId(feature_batch_id),
-            global_batch_ids: GlobalBatchIds {
-                handle: buf.new_u32(global_batch_ids),
-                batch_length: batch_length as u32,
-            },
-        });
     }
 
-    Some(result)
+    if result.is_empty() {
+        None
+    } else {
+        Some(result)
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -131,7 +302,7 @@ fn handle_geometry(
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
     geometry_type: &mut Option<ConstructedGeometryType>,
-    geom: &Geometry<f32>,
+    geom: &Geometry<f64>,
     converter: &mut PosConverter,
     batch_index: &BatchIndex,
     appearances: &[Appearance],
@@ -148,7 +319,6 @@ fn handle_geometry(
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
             let MultiPolygon(plgs) = v;
-
             let flat = appearance.clamp_to_ground;
 
             construct_polygons_geometry(
@@ -170,14 +340,12 @@ fn handle_geometry(
             };
 
             *geometry_type = Some(ConstructedGeometryType::Polygon);
-
             let flat = appearance.clamp_to_ground;
 
             construct_polygon_geometry(commands, buf, feature_ids, v, batch_index, converter, flat);
         }
         Geometry::MultiPoint(v) => {
             *geometry_type = Some(ConstructedGeometryType::Point);
-
             let MultiPoint(points) = v;
 
             for one_appr in appearances {
@@ -288,9 +456,7 @@ fn handle_geometry(
             };
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
-
             let flat = appearance.clamp_to_ground;
-
             let MultiLineString(lines) = v;
 
             construct_lines_geometry(
@@ -312,7 +478,6 @@ fn handle_geometry(
             };
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
-
             let flat = appearance.clamp_to_ground;
 
             construct_line_geometry(
@@ -347,7 +512,7 @@ fn handle_geometry(
 fn construct_points_geometry<G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
-    points: &[Point<f32>],
+    points: &[Point<f64>],
     converter: &mut PosConverter,
     geometry: F,
     batch_index: &BatchIndex,
@@ -370,15 +535,14 @@ fn construct_points_geometry<G: Component, F>(
 fn construct_point_geometry<G: Component, F>(
     commands: &mut Commands,
     feature_ids: &mut Vec<Entity>,
-    point: &Point<f32>,
+    point: &Point<f64>,
     converter: &mut PosConverter,
     geometry: &F,
     batch_index: &BatchIndex,
 ) where
     F: Fn(FloatType, FloatType) -> G,
 {
-    let Point(pt) = point;
-    let (x, y) = converter.project_point(pt);
+    let (x, y) = converter.project_point(point.x(), point.y());
 
     let e = commands
         .spawn((
@@ -396,7 +560,7 @@ fn construct_lines_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    lines: &[LineString<f32>],
+    lines: &[LineString<f64>],
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
     flat: bool,
@@ -414,7 +578,6 @@ fn construct_lines_geometry(
         );
         count += line.0.len();
     }
-
     count
 }
 
@@ -423,16 +586,15 @@ fn construct_line_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    line: &LineString<f32>,
+    line: &LineString<f64>,
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
     flat: bool,
 ) {
-    let LineString(points) = line;
     let geo_points = if flat {
-        converter.project_points_on_center(points)
+        converter.project_points_on_center(&line.0)
     } else {
-        converter.project_points(points)
+        converter.project_points(&line.0)
     };
 
     if geo_points.is_empty() {
@@ -455,7 +617,7 @@ fn construct_polygons_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    polygons: &[Polygon<f32>],
+    polygons: &[Polygon<f64>],
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
     flat: bool,
@@ -478,29 +640,28 @@ fn construct_polygon_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     feature_ids: &mut Vec<Entity>,
-    polygon: &Polygon<f32>,
+    polygon: &Polygon<f64>,
     batch_index: &BatchIndex,
     converter: &mut PosConverter,
     flat: bool,
 ) {
-    let LineString(outer) = polygon.exterior();
     let outer_vec = if flat {
-        converter.project_points_on_center(outer)
+        converter.project_points_on_center(&polygon.exterior().0)
     } else {
-        converter.project_points(outer)
+        converter.project_points(&polygon.exterior().0)
     };
 
     let interiors = polygon.interiors();
     let mut holes: Vec<Hierarchy> = Vec::new();
 
-    // In the MVT spec, it is mentioned that the outer ring of a polygon is clockwise,
+    // In the MVT spec, the outer ring of a polygon is clockwise,
     // which is based on the origin being at the top-left.
-    for LineString(hole) in interiors {
+    for interior in interiors {
         holes.push(Hierarchy {
             outer_ring: if flat {
-                converter.project_points_on_center(hole)
+                converter.project_points_on_center(&interior.0)
             } else {
-                converter.project_points(hole)
+                converter.project_points(&interior.0)
             },
             holes: None,
             expected_winding_order: if flat {

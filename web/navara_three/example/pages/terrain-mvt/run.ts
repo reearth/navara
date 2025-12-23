@@ -95,6 +95,23 @@ export const run = async (view: ThreeView) => {
     data: {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
+    polygon: {
+      color: new Color().setStyle("#555555"),
+      height: 10,
+      extrudedHeight: 0,
+      clampToGround: true,
+      wireframe: false,
+    },
+    vectorTile: {
+      maxZoom: 16,
+      layers: ["building"],
+    },
+  });
+  view.addLayer({
+    type: "mvt",
+    data: {
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    },
     polyline: {
       show: true,
       color: new Color().setStyle("#c320d8"),

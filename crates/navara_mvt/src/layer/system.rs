@@ -12,9 +12,7 @@ use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
     batch::{BatchId, BatchTable, BatchedFeature},
     id::FeatureId,
-    point::PointMarker,
-    polygon::{PolygonMarker, UpdatePolygon},
-    polyline::PolylineMarker,
+    polygon::UpdatePolygon,
     render::RenderableFeature,
 };
 use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMvtLayerMarker};
@@ -22,9 +20,7 @@ use navara_material::Appearance;
 use navara_tile_component::VectorTileQuadtree;
 
 use crate::{
-    data_requester::SingleMvtDataRequesterMarker,
-    geometry::{construct_geometry, ConstructedGeometryType},
-    tile::RenderedTile,
+    data_requester::SingleMvtDataRequesterMarker, geometry::construct_geometry, tile::RenderedTile,
 };
 
 use super::{resource::LayerResources, tile_cache_manager::TileCacheManager};
@@ -89,7 +85,7 @@ pub fn construct_single_mvt(
         };
 
         // TODO: Move this process to worker.
-        if let Some(geometries) = construct_geometry(
+        if let Some(entity_ids) = construct_geometry(
             &mut commands,
             &mut batch_table,
             &mut buf,
@@ -98,36 +94,13 @@ pub fn construct_single_mvt(
             &layer.appearances,
             limit_layers,
             &layer.layer_id,
+            None, // No tile info for single MVT files
         ) {
-            for v in geometries {
-                let batched = BatchedFeature {
-                    features: v.feature_ids,
-                    ..Default::default()
-                };
-                let e = match v.geometry_type {
-                    ConstructedGeometryType::Point => commands
-                        .spawn((PointMarker, batched, v.feature_batch_id, v.global_batch_ids))
-                        .id(),
-                    ConstructedGeometryType::Polyline => commands
-                        .spawn((
-                            PolylineMarker,
-                            batched,
-                            v.feature_batch_id,
-                            v.global_batch_ids,
-                        ))
-                        .id(),
-                    ConstructedGeometryType::Polygon => commands
-                        .spawn((
-                            PolygonMarker,
-                            batched,
-                            v.feature_batch_id,
-                            v.global_batch_ids,
-                        ))
-                        .id(),
-                };
+            // Store references to spawned entities
+            for entity_id in entity_ids {
                 commands
                     .entity(layer_entity)
-                    .insert(RenderedSingleFeature(e));
+                    .insert(RenderedSingleFeature(entity_id));
             }
         };
 

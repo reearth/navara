@@ -3,33 +3,25 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_64};
 use navara_feature_component::{
-    batch::{BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
-    billboard::BillboardMarker,
+    batch::{BatchTable, BatchedFeature},
     id::FeatureId,
-    point::PointMarker,
-    polygon::PolygonMarker,
-    polyline::PolylineMarker,
     render::RenderableFeature,
-    text::TextMarker,
 };
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_globe::Globe;
-use navara_material::Appearance;
 use navara_math::Transform;
 
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
-use navara_tile_component::{
-    OverscaledTileHandle, TerrainInformationQuadtree, TileExtent, VectorTile, VectorTileQuadtree,
-};
+use navara_tile_component::{TerrainInformationQuadtree, VectorTile, VectorTileQuadtree};
 use navara_window::Window;
 
 use crate::{
     component::MVTFeatureMarker,
     data_requester::{ChangedMvtDataRequesterQuery, MvtDataRequesterQuery},
-    geometry::{construct_geometry, ConstructedGeometryType},
+    geometry::construct_geometry,
     layer::{resource::LayerResources, tile_cache_manager::TileCacheManager},
 };
 
@@ -41,7 +33,7 @@ use super::{
     },
 };
 
-use navara_layer::{LayerId, LayerStore, MvtLayer, TerrainLayer};
+use navara_layer::{LayerStore, MvtLayer, TerrainLayer};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
@@ -260,7 +252,7 @@ pub fn transfer_mesh(
                 .get(tile.data_requester_entity_id.unwrap())
                 .unwrap();
             let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
-            if let Some(result) = construct_geometry(
+            if let Some(feature_ids) = construct_geometry(
                 &mut commands,
                 &mut batch_table,
                 &mut buf,
@@ -269,128 +261,12 @@ pub fn transfer_mesh(
                 &layer.appearances,
                 limit_layers,
                 &layer.layer_id,
+                Some((rendered_tile.tile_handle, tile.extent)),
             ) {
                 if rendered_tile.feature_ids.is_some() {
                     panic!("It should be cleaned before new feature is added");
                 }
-                rendered_tile.feature_ids = Some(Vec::with_capacity(result.len()));
-
-                for v in result {
-                    let batched = BatchedFeature {
-                        features: v.feature_ids,
-                        ..Default::default()
-                    };
-                    let mut e = match v.geometry_type {
-                        ConstructedGeometryType::Point => {
-                            let Some(appearance) = layer.appearances.iter().find(|a| {
-                                matches!(
-                                    a,
-                                    Appearance::Point(_)
-                                        | Appearance::Billboard(_)
-                                        | Appearance::Text(_)
-                                )
-                            }) else {
-                                continue;
-                            };
-
-                            fn spawn<'a, M: Component, A: Component>(
-                                commands: &'a mut Commands,
-                                batched: BatchedFeature,
-                                layer_id: String,
-                                marker: M,
-                                appearance: A,
-                                feature_batch_id: FeatureBatchId,
-                                global_batch_ids: GlobalBatchIds,
-                            ) -> EntityCommands<'a> {
-                                commands.spawn((
-                                    marker,
-                                    batched,
-                                    FeatureId::default(),
-                                    MVTFeatureMarker,
-                                    LayerId(layer_id),
-                                    appearance,
-                                    feature_batch_id,
-                                    global_batch_ids,
-                                ))
-                            }
-                            match appearance {
-                                Appearance::Point(appearance) => spawn(
-                                    &mut commands,
-                                    batched,
-                                    layer.layer_id.clone(),
-                                    PointMarker,
-                                    appearance.clone(),
-                                    v.feature_batch_id,
-                                    v.global_batch_ids,
-                                ),
-                                Appearance::Billboard(appearance) => spawn(
-                                    &mut commands,
-                                    batched,
-                                    layer.layer_id.clone(),
-                                    BillboardMarker,
-                                    appearance.clone(),
-                                    v.feature_batch_id,
-                                    v.global_batch_ids,
-                                ),
-                                Appearance::Text(appearance) => spawn(
-                                    &mut commands,
-                                    batched,
-                                    layer.layer_id.clone(),
-                                    TextMarker,
-                                    appearance.clone(),
-                                    v.feature_batch_id,
-                                    v.global_batch_ids,
-                                ),
-                                _ => continue,
-                            }
-                        }
-                        ConstructedGeometryType::Polyline => {
-                            let Some(Appearance::Polyline(appearance)) = layer
-                                .appearances
-                                .iter()
-                                .find(|a| matches!(a, Appearance::Polyline(_)))
-                            else {
-                                continue;
-                            };
-                            commands.spawn((
-                                PolylineMarker,
-                                batched,
-                                FeatureId::default(),
-                                MVTFeatureMarker,
-                                LayerId(layer.layer_id.clone()),
-                                appearance.clone(),
-                                v.feature_batch_id,
-                                v.global_batch_ids,
-                            ))
-                        }
-                        ConstructedGeometryType::Polygon => {
-                            let Some(Appearance::Polygon(appearance)) = layer
-                                .appearances
-                                .iter()
-                                .find(|a| matches!(a, Appearance::Polygon(_)))
-                            else {
-                                continue;
-                            };
-                            commands.spawn((
-                                PolygonMarker,
-                                batched,
-                                FeatureId::default(),
-                                MVTFeatureMarker,
-                                LayerId(layer.layer_id.clone()),
-                                appearance.clone(),
-                                v.feature_batch_id,
-                                v.global_batch_ids,
-                            ))
-                        }
-                    };
-
-                    e.insert((
-                        OverscaledTileHandle::new(rendered_tile.tile_handle),
-                        TileExtent::new(tile.extent),
-                    ));
-
-                    rendered_tile.feature_ids.as_mut().unwrap().push(e.id());
-                }
+                rendered_tile.feature_ids = Some(feature_ids);
             }
         }
     }
