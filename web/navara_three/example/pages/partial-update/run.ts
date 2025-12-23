@@ -1,11 +1,11 @@
-import ThreeView, {
-  AmbientLightLayer,
-  Color,
-  Layer,
-} from "@navara/three";
+import ThreeView, { AmbientLightLayer, Color, Layer } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import { TILE_DATASETS, TILES_3D_DATASETS, MVT_DATASETS } from "../../helpers/constants";
+import {
+  TILE_DATASETS,
+  TILES_3D_DATASETS,
+  MVT_DATASETS,
+} from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
 let gTileLayer: Layer;
@@ -58,17 +58,16 @@ export const run = async (view: ThreeView) => {
     polygon: {},
   });
 
-  gB3dmLayer = view.addLayer(
-    {
-      type: "cesium3dtiles",
-      data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
-      model: {
-        show: true,
-        color: new Color().setStyle("#ffffff"),
-        metalness: 0.1,
-        roughness: 0.1,
-      },
-    });
+  gB3dmLayer = view.addLayer({
+    type: "cesium3dtiles",
+    data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
+    model: {
+      show: true,
+      color: new Color().setStyle("#ffffff"),
+      metalness: 0.1,
+      roughness: 0.1,
+    },
+  });
 
   gPntsLayer = view.addLayer({
     type: "cesium3dtiles",
@@ -81,24 +80,23 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  gMvtLayer = view.addLayer(
-    {
-      type: "mvt",
-      data: {
-        url: MVT_DATASETS.plateauGifuTran.url,
-      },
-      polyline: {
-        show: true,
-        color: new Color().setStyle("#00ff00"),
-        width: 2,
-        height: 1,
-        clampToGround: true,
-        useGroundNormals: true,
-      },
-      vectorTile: {
-        maxZoom: 16,
-      },
-    });
+  gMvtLayer = view.addLayer({
+    type: "mvt",
+    data: {
+      url: MVT_DATASETS.plateauGifuTran.url,
+    },
+    polyline: {
+      show: true,
+      color: new Color().setStyle("#00ff00"),
+      width: 2,
+      height: 1,
+      clampToGround: true,
+      useGroundNormals: true,
+    },
+    vectorTile: {
+      maxZoom: 16,
+    },
+  });
 
   const pane = new Pane({
     title: "Parameters",
@@ -110,21 +108,19 @@ export const run = async (view: ThreeView) => {
   addDateControl(view, pane);
 };
 
-
 function addCustomCameraControl(view: ThreeView, pane: Pane) {
   addCameraControl(view, pane);
 
-  pane.addButton({ title: "Kakegawa castle view" })
-    .on("click", () => {
-      view.flyTo({
-        lat: 34.7734947205,
-        lng: 138.0163726807,
-        height: 424.66,
-        heading: 326.62109375,
-        pitch: -56.2649879456,
-        roll: 360.0,
-      });
+  pane.addButton({ title: "Kakegawa castle view" }).on("click", () => {
+    view.flyTo({
+      lat: 34.7734947205,
+      lng: 138.0163726807,
+      height: 424.66,
+      heading: 326.62109375,
+      pitch: -56.2649879456,
+      roll: 360.0,
     });
+  });
 }
 
 function addPanel(_view: ThreeView, pane: Pane) {
@@ -156,7 +152,6 @@ function addRasterTileFolder(pane: Pane) {
     expanded: false,
   });
 
-
   const rasterFolder = tileFolder.addFolder({
     title: "Raster Tile",
     expanded: false,
@@ -171,7 +166,9 @@ function addRasterTileFolder(pane: Pane) {
       label: "color",
       color: { type: "int" },
     })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { color: new Color().setHex(v.value) } }));
+    .on("change", (v) =>
+      gTileLayer.update({ rasterTile: { color: new Color().setHex(v.value) } }),
+    );
 
   rasterFolder
     .addBinding(tileParams, "rasterOpacity", {
@@ -180,7 +177,9 @@ function addRasterTileFolder(pane: Pane) {
       max: 1,
       step: 0.01,
     })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { opacity: v.value } }));
+    .on("change", (v) =>
+      gTileLayer.update({ rasterTile: { opacity: v.value } }),
+    );
 
   rasterFolder
     .addBinding(tileParams, "rasterMaxZoom", {
@@ -189,7 +188,9 @@ function addRasterTileFolder(pane: Pane) {
       max: 30,
       step: 1,
     })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { maxZoom: v.value } }));
+    .on("change", (v) =>
+      gTileLayer.update({ rasterTile: { maxZoom: v.value } }),
+    );
 
   rasterFolder
     .addBinding(tileParams, "rasterMinZoom", {
@@ -198,7 +199,9 @@ function addRasterTileFolder(pane: Pane) {
       max: 30,
       step: 1,
     })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { minZoom: v.value } }));
+    .on("change", (v) =>
+      gTileLayer.update({ rasterTile: { minZoom: v.value } }),
+    );
 
   rasterFolder
     .addBinding(tileParams, "rasterTms", { label: "tms" })
@@ -208,7 +211,9 @@ function addRasterTileFolder(pane: Pane) {
     .addBinding(tileParams, "rasterShowBoundingBox", {
       label: "showBoundingBox",
     })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { showBoundingBox: v.value } }));
+    .on("change", (v) =>
+      gTileLayer.update({ rasterTile: { showBoundingBox: v.value } }),
+    );
 }
 
 function addGeojsonLayerFolder(pane: Pane) {
@@ -373,9 +378,7 @@ function addB3dmLayerFolder(pane: Pane) {
       max: 1,
       step: 0.01,
     })
-    .on("change", (v) =>
-      gB3dmLayer.update({ model: { metalness: v.value } }),
-    );
+    .on("change", (v) => gB3dmLayer.update({ model: { metalness: v.value } }));
   modelFolder
     .addBinding(b3dmParams, "roughness", {
       label: "roughness",
@@ -383,9 +386,7 @@ function addB3dmLayerFolder(pane: Pane) {
       max: 1,
       step: 0.01,
     })
-    .on("change", (v) =>
-      gB3dmLayer.update({ model: { roughness: v.value } }),
-    );
+    .on("change", (v) => gB3dmLayer.update({ model: { roughness: v.value } }));
   modelFolder
     .addBinding(b3dmParams, "maxSse", {
       label: "maxSse",
@@ -393,14 +394,10 @@ function addB3dmLayerFolder(pane: Pane) {
       max: 64,
       step: 1,
     })
-    .on("change", (v) =>
-      gB3dmLayer.update({ model: { maxSse: v.value } }),
-    );
+    .on("change", (v) => gB3dmLayer.update({ model: { maxSse: v.value } }));
   modelFolder
     .addBinding(b3dmParams, "castShadow", { label: "castShadow" })
-    .on("change", (v) =>
-      gB3dmLayer.update({ model: { castShadow: v.value } }),
-    );
+    .on("change", (v) => gB3dmLayer.update({ model: { castShadow: v.value } }));
   modelFolder
     .addBinding(b3dmParams, "receiveShadow", { label: "receiveShadow" })
     .on("change", (v) =>
@@ -435,9 +432,7 @@ function addPntsLayerFolder(pane: Pane) {
       max: 10,
       step: 0.01,
     })
-    .on("change", (v) =>
-      gPntsLayer.update({ model: { pointSize: v.value } }),
-    );
+    .on("change", (v) => gPntsLayer.update({ model: { pointSize: v.value } }));
   modelFolder
     .addBinding(pntsParams, "height", {
       label: "height",
@@ -445,9 +440,7 @@ function addPntsLayerFolder(pane: Pane) {
       max: 10000,
       step: 1,
     })
-    .on("change", (v) =>
-      gPntsLayer.update({ model: { height: v.value } }),
-    );
+    .on("change", (v) => gPntsLayer.update({ model: { height: v.value } }));
   modelFolder
     .addBinding(pntsParams, "maxSse", {
       label: "maxSse",
@@ -455,9 +448,7 @@ function addPntsLayerFolder(pane: Pane) {
       max: 64,
       step: 1,
     })
-    .on("change", (v) =>
-      gPntsLayer.update({ model: { maxSse: v.value } }),
-    );
+    .on("change", (v) => gPntsLayer.update({ model: { maxSse: v.value } }));
 }
 
 function addMvtLayerFolder(pane: Pane) {
@@ -482,65 +473,59 @@ function addMvtLayerFolder(pane: Pane) {
     expanded: false,
   });
 
-  PolylineFolder
-    .addBinding(mvtParams, "Show", { label: "show" })
-    .on("change", (v) => gMvtLayer.update({ vectorTile: { show: v.value }, polyline: { show: v.value } }));
-
-  PolylineFolder
-    .addBinding(mvtParams, "Color", {
-      label: "color",
-      color: { type: "int" },
-    })
-    .on("change", (v) =>
+  PolylineFolder.addBinding(mvtParams, "Show", { label: "show" }).on(
+    "change",
+    (v) =>
       gMvtLayer.update({
-        polyline: { color: new Color().setHex(v.value) },
+        vectorTile: { show: v.value },
+        polyline: { show: v.value },
       }),
-    );
+  );
 
-  PolylineFolder
-    .addBinding(mvtParams, "Height", {
-      label: "height",
-      min: -1000,
-      max: 10000,
-      step: 1,
-    })
-    .on("change", (v) =>
-      gMvtLayer.update({ polyline: { height: v.value } }),
-    );
+  PolylineFolder.addBinding(mvtParams, "Color", {
+    label: "color",
+    color: { type: "int" },
+  }).on("change", (v) =>
+    gMvtLayer.update({
+      polyline: { color: new Color().setHex(v.value) },
+    }),
+  );
 
-  PolylineFolder
-    .addBinding(mvtParams, "Width", {
-      label: "width",
-      min: -1000,
-      max: 10000,
-      step: 1,
-    })
-    .on("change", (v) =>
-      gMvtLayer.update({ polyline: { width: v.value } }),
-    );
+  PolylineFolder.addBinding(mvtParams, "Height", {
+    label: "height",
+    min: -1000,
+    max: 10000,
+    step: 1,
+  }).on("change", (v) => gMvtLayer.update({ polyline: { height: v.value } }));
 
-  PolylineFolder
-    .addBinding(mvtParams, "ClampToGround", { label: "clampToGround" })
-    .on("change", (v) =>
-      gMvtLayer.update({ polyline: { clampToGround: v.value } }),
-    );
+  PolylineFolder.addBinding(mvtParams, "Width", {
+    label: "width",
+    min: -1000,
+    max: 10000,
+    step: 1,
+  }).on("change", (v) => gMvtLayer.update({ polyline: { width: v.value } }));
 
-  PolylineFolder
-    .addBinding(mvtParams, "UseGroundNormals", { label: "useGroundNormals" })
-    .on("change", (v) =>
-      gMvtLayer.update({ polyline: { useGroundNormals: v.value } }),
-    );
+  PolylineFolder.addBinding(mvtParams, "ClampToGround", {
+    label: "clampToGround",
+  }).on("change", (v) =>
+    gMvtLayer.update({ polyline: { clampToGround: v.value } }),
+  );
 
-  PolylineFolder
-    .addBinding(mvtParams, "CastShadow", { label: "castShadow" })
-    .on("change", (v) =>
-      gMvtLayer.update({ polyline: { castShadow: v.value } }),
-    );
+  PolylineFolder.addBinding(mvtParams, "UseGroundNormals", {
+    label: "useGroundNormals",
+  }).on("change", (v) =>
+    gMvtLayer.update({ polyline: { useGroundNormals: v.value } }),
+  );
 
-  PolylineFolder
-    .addBinding(mvtParams, "ReceiveShadow", { label: "receiveShadow" })
-    .on("change", (v) =>
-      gMvtLayer.update({ polyline: { receiveShadow: v.value } }),
-    );
+  PolylineFolder.addBinding(mvtParams, "CastShadow", {
+    label: "castShadow",
+  }).on("change", (v) =>
+    gMvtLayer.update({ polyline: { castShadow: v.value } }),
+  );
 
+  PolylineFolder.addBinding(mvtParams, "ReceiveShadow", {
+    label: "receiveShadow",
+  }).on("change", (v) =>
+    gMvtLayer.update({ polyline: { receiveShadow: v.value } }),
+  );
 }

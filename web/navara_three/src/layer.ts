@@ -80,7 +80,11 @@ export class Layer extends EventHandler<LayerEvent> {
     return true;
   }
 
-  // TODO : add docs
+  /**
+   * Merge a partial update into the current description.
+   * Returns the merged description, or undefined if no description is set yet.
+   * @internal Used by update pipeline
+   */
   _updateLayerDescription(
     update: LayerDescription,
   ): LayerDescription | undefined {
@@ -115,7 +119,9 @@ export class Layer extends EventHandler<LayerEvent> {
     return merged;
   }
 
-  // TODO : add docs
+  /**
+   * Set the full layer description without triggering an update.
+   */
   setDescription(description: LayerDescription) {
     this.description = description;
   }
