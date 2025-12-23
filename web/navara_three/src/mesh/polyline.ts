@@ -216,7 +216,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
       this.material.userData.prev = {};
     }
     const prev = this.material.userData.prev;
-    console.log("PolylineMesh _update", material, active);
 
     // Only update material.color if batchTexture color is not being used
     if (prev.color !== material.color) {
@@ -288,7 +287,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureShow(visible: boolean): void {
-    console.log("PolylineMesh _setFeatureShow", visible);
     this.visible = visible;
   }
 

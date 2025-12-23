@@ -7,7 +7,6 @@ use bevy_ecs::{
     system::SystemState,
     world::{EntityRef, Mut},
 };
-use bevy_log::info;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
     get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
@@ -304,11 +303,9 @@ impl App {
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
-        info!("updating layer: new desc{:?}", desc);
         match &mut desc {
             LayerDescription::GeoJson(layer) => {
                 for appearance in &layer.appearances {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -320,7 +317,6 @@ impl App {
             }
             LayerDescription::B3dm(layer) => {
                 for appearance in &layer.appearances {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -332,7 +328,6 @@ impl App {
             }
             LayerDescription::Pnts(layer) => {
                 for appearance in &layer.appearances {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -344,7 +339,6 @@ impl App {
             }
             LayerDescription::Cesium3dTiles(layer) => {
                 for appearance in &layer.appearances {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -356,7 +350,6 @@ impl App {
             }
             LayerDescription::Mvt(layer) => {
                 for appearance in &layer.appearances {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -368,7 +361,6 @@ impl App {
             }
             LayerDescription::Tiles(layer) => {
                 if let Some(appearance) = layer.appearance.take() {
-                    info!("appearance updated: {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -378,7 +370,7 @@ impl App {
                         });
                 }
             }
-            _ => (info!("Layer type not supported for update")),
+            _ => (),
         }
     }
 

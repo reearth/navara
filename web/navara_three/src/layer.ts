@@ -130,8 +130,6 @@ export class Layer extends EventHandler<LayerEvent> {
       ? (this.convertColors(l) as LayerDescription)
       : l;
     const updatedDescription = this._updateLayerDescription(processedLayer);
-    this.forceUpdate();
-    console.log("Updating layer:", updatedDescription);
     this.core.updateLayer(this.id, updatedDescription || processedLayer);
   }
 
