@@ -21,7 +21,7 @@ export type ModelControlParams = {
 
   dash?: number; // Dash speed multiplier
   height?: number; // height above the ground
-}
+};
 
 export const controlGLTFModel = (
   view: ThreeView,

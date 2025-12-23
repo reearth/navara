@@ -21,6 +21,10 @@ pub struct PointMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
+    #[wasm_bindgen(js_name = offsetDepth)]
+    #[serde(rename = "offsetDepth")]
+    pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
 }
 
@@ -36,6 +40,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
         }
     }
@@ -51,6 +56,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
         }
     }
@@ -82,6 +88,10 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
+    #[wasm_bindgen(js_name = offsetDepth)]
+    #[serde(rename = "offsetDepth")]
+    pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
     #[wasm_bindgen(js_name = alphaTest)]
     #[serde(rename = "alphaTest")]
@@ -101,6 +111,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
         }
@@ -118,6 +129,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
         }
@@ -141,6 +153,10 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = depthTest)]
     #[serde(rename = "depthTest")]
     pub depth_test: Option<bool>,
+    /// Avoid overlapping with the globe surface.
+    #[wasm_bindgen(js_name = offsetDepth)]
+    #[serde(rename = "offsetDepth")]
+    pub offset_depth: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
     /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
@@ -192,6 +208,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
+            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             text: val.text.unwrap_or(default.text),
             font: val.font.unwrap_or(default.font),
             background_color: val.background_color,
@@ -221,6 +238,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             scale_by_distance: Some(value.scale_by_distance),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
+            offset_depth: Some(value.offset_depth),
             text: Some(value.text.clone()),
             font: Some(value.font.clone()),
             background_color: value.background_color,
@@ -425,9 +443,6 @@ pub struct PolygonMaterial {
 
     /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
-    #[wasm_bindgen(getter_with_clone, js_name = waterNormalUrl)]
-    #[serde(rename = "waterNormalUrl")]
-    pub water_normal_url: Option<String>,
     /// Scale water normal. Decreasing this value will make the water surface rough.
     #[wasm_bindgen(js_name = waterScaleNormal)]
     #[serde(rename = "waterScaleNormal")]
@@ -490,7 +505,6 @@ impl PolygonMaterial {
 
             // These are unnecessary for polygon geometry construction.
             water: None,
-            water_normal_url: None,
             water_scale_normal: None,
             water_speed: None,
             shininess: None,
@@ -530,7 +544,6 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             outline_color: val.outline_color.unwrap_or(default.outline_color),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             water: val.water.unwrap_or(default.water),
-            water_normal_url: val.water_normal_url,
             water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
             water_speed: val.water_speed.unwrap_or(default.water_speed),
             shininess: val.shininess.unwrap_or(default.shininess),
@@ -566,7 +579,6 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
             water: Some(value.water),
-            water_normal_url: value.water_normal_url.clone(),
             water_scale_normal: Some(value.water_scale_normal),
             water_speed: Some(value.water_speed),
             shininess: Some(value.shininess),
@@ -602,7 +614,6 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
             water: Some(value.water),
-            water_normal_url: value.water_normal_url.clone(),
             water_scale_normal: Some(value.water_scale_normal),
             water_speed: Some(value.water_speed),
             shininess: Some(value.shininess),
@@ -675,9 +686,6 @@ pub struct ModelMaterial {
     pub reflectivity: Option<f32>,
     /// Apply a water material on the polygon. It might slow down the loading of the mesh.
     pub water: Option<bool>,
-    #[wasm_bindgen(getter_with_clone, js_name = waterNormalUrl)]
-    #[serde(rename = "waterNormalUrl")]
-    pub water_normal_url: Option<String>,
     /// Scale water normal. Decreasing this value will make the water surface rough.
     #[wasm_bindgen(js_name = waterScaleNormal)]
     #[serde(rename = "waterScaleNormal")]
@@ -734,7 +742,6 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             roughness: val.roughness.unwrap_or(default.roughness),
             reflectivity: val.reflectivity.unwrap_or(default.reflectivity),
             water: val.water.unwrap_or(default.water),
-            water_normal_url: val.water_normal_url,
             water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
             water_speed: val.water_speed.unwrap_or(default.water_speed),
             shininess: val.shininess.unwrap_or(default.shininess),
@@ -769,7 +776,6 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             roughness: Some(value.roughness),
             reflectivity: Some(value.reflectivity),
             water: Some(value.water),
-            water_normal_url: value.water_normal_url.clone(),
             water_scale_normal: Some(value.water_scale_normal),
             water_speed: Some(value.water_speed),
             shininess: Some(value.shininess),

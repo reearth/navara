@@ -1,3 +1,32 @@
+//! Core Components and Data Structures for Cesium 3D Tiles
+//!
+//! This module defines the core components used throughout the 3D Tiles system.
+//! These components represent the runtime state of tiles and are managed by
+//! the traversal systems.
+//!
+//! # Component Hierarchy
+//!
+//! ```text
+//! Cesium3dTilesLayer (layer definition)
+//!     ↓
+//! Cesium3dTilesTree (root tile tree, attached to entity)
+//!     └── Cesium3dTileContent (recursive tile state, stored in tree)
+//!         ├── data_requester_id → DataRequester entity
+//!         └── rendered_tile_id → RenderedCesium3dTileContent entity
+//!                                     └── feature_id → Model entity
+//! ```
+//!
+//! # Key Concepts
+//!
+//! - **Tree vs Content**: `Cesium3dTilesTree` is an ECS component, while
+//!   `Cesium3dTileContent` is a regular struct stored within the tree.
+//!
+//! - **Entity References**: Tiles store `Entity` IDs to reference related
+//!   entities (data requesters, rendered tiles, features).
+//!
+//! - **State Management**: `Cesium3dTileContentState` tracks traversal state
+//!   that changes every frame (visibility, SSE, loading status).
+
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
 use navara_core::{Aabb, Extent, LngLat};
 use navara_data_requester::DataRequesterExtension;
@@ -6,20 +35,40 @@ use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
+use std::{cmp::Ordering, collections::HashMap};
 use url::{ParseError, Url};
 
+use crate::TileOrderByDistance;
+
+/// Type alias for tile metadata from the tileset.json.
+///
+/// This is the static metadata that doesn't change at runtime.
 pub type Cesium3dTileContentMetadata = navara_parser::cesium3dtiles::tileset::Tile;
 
+/// Parsed tileset.json metadata.
+///
+/// Stores the complete parsed tileset.json file, including geometric error,
+/// asset info, and the root tile definition.
 #[derive(Debug, Component)]
 pub struct Cesium3dTilesMetadata(pub navara_parser::cesium3dtiles::tileset::Tileset);
 
+/// The root of a 3D Tiles tree structure.
+///
+/// This component is attached to entities that represent tile trees.
+/// There can be multiple trees per layer (when using external tilesets).
 #[derive(Debug, Component)]
 pub struct Cesium3dTilesTree {
+    /// Entity ID of the parent [`Cesium3dTilesLayer`]
     pub layer_id: Entity,
+    /// Base URL for resolving relative content URLs
     pub base_url: Url,
+    /// The root tile content (contains the full tree recursively)
     pub root: Cesium3dTileContent,
+    /// Maximum screen-space error threshold for LOD selection
     pub max_sse: f32,
+    /// Maximum number of tiles to render (soft limit)
     pub max_num_rendered_tiles: u32,
+    /// Current count of rendered tiles
     pub num_rendered_tiles: u32,
 }
 
@@ -53,27 +102,58 @@ impl Cesium3dTilesTree {
     }
 }
 
-/// This is a state related to metadata.
+/// Runtime state for a single tile in the hierarchy.
+///
+/// This struct is stored recursively within [`Cesium3dTilesTree`] and represents
+/// the mutable runtime state of a tile. It's not an ECS component itself.
+///
+/// # Content Types
+///
+/// - **Renderable content** (`is_renderable_content = true`): B3DM, PNTS, GLB files
+/// - **Non-renderable content** (`is_renderable_content = false`): Nested tileset.json
+///
+/// # Memory Management
+///
+/// The `children` vector is allocated lazily and cleared when the tile goes
+/// out of view. This prevents memory accumulation for deep tile hierarchies.
 #[derive(Debug)]
 pub struct Cesium3dTileContent {
-    // This URI might be just path, so keep using string.
-    pub uri: String,
+    /// Relative URL to tile content (may be a path, not full URL).
+    pub uri: Option<String>,
+    /// Entity with [`DataRequester`] for this tile's content.
     pub data_requester_id: Option<Entity>,
+    /// For nested tilesets: parent tile's data requester ID.
+    pub parent_data_requester_id: Option<Entity>,
+    /// Entity with [`RenderedCesium3dTileContent`] when tile is rendered.
     pub rendered_tile_id: Option<Entity>,
+    /// Child tiles (lazily allocated, cleared when out of view).
     pub children: Option<Vec<Cesium3dTileContent>>,
+    /// Refinement strategy (REPLACE or ADD).
     pub refine: Refine,
-    // If the content's URI isn't a model file, it's false.
+    /// True for B3DM/PNTS/GLB, false for nested tileset.json.
     pub is_renderable_content: bool,
+    /// Axis-aligned bounding box for frustum culling.
     pub bounding_volume: Option<Aabb>,
+    /// Tile transform (inherited from parent if identity).
     pub transform: Option<Transform>,
+    /// Per-frame traversal state.
     pub state: Cesium3dTileContentState,
 }
 
 impl Cesium3dTileContent {
     pub fn new(tile: &cesium3dtiles::tileset::Tile, parent: Option<&Self>) -> Self {
-        let content = match &tile.content {
-            Some(c) => c,
-            None => unimplemented!("TODO: Support multiple contents"),
+        let (uri, is_renderable_content) = match &tile.content {
+            Some(content) => {
+                let uri = content
+                    .uri
+                    .clone()
+                    .unwrap_or_else(|| content.url.clone().unwrap());
+                (
+                    Some(uri.clone()),
+                    (!uri.contains(".json")) && (!uri.is_empty()),
+                )
+            }
+            None => (None, false),
         };
 
         let mut tile_transform = Transform::from_matrix(Mat4::from_cols_array(
@@ -111,22 +191,28 @@ impl Cesium3dTileContent {
 
                 let center_transformed = tile_transform.transform_point(center);
 
+                let x_transformed = tile_transform.transform_vector(x_axis);
+                let y_transformed = tile_transform.transform_vector(y_axis);
+                let z_transformed = tile_transform.transform_vector(z_axis);
+
+                let extents = Vec3::new(
+                    x_transformed.x.abs() + y_transformed.x.abs() + z_transformed.x.abs(),
+                    x_transformed.y.abs() + y_transformed.y.abs() + z_transformed.y.abs(),
+                    x_transformed.z.abs() + y_transformed.z.abs() + z_transformed.z.abs(),
+                );
+
                 Some(Aabb {
                     center: center_transformed,
-                    extents: Vec3::new(x_axis.length(), y_axis.length(), z_axis.length()),
+                    extents,
                 })
             }
             _ => None,
         };
         let default_refine = Refine::Replace;
-        let uri = content
-            .uri
-            .clone()
-            .unwrap_or_else(|| content.url.clone().unwrap());
-        let is_renderable_content = !uri.ends_with(".json");
         Self {
             uri,
             data_requester_id: None,
+            parent_data_requester_id: None,
             rendered_tile_id: None,
             children: None,
             is_renderable_content,
@@ -148,7 +234,16 @@ impl Cesium3dTileContent {
         &self,
         base_url: &Url,
     ) -> Result<(String, DataRequesterExtension), ParseError> {
-        let url = base_url.join(&self.uri)?;
+        let mut url = base_url.join(self.uri.as_ref().unwrap())?;
+        let base_query = base_url.query_pairs().into_owned();
+        let new_query: HashMap<String, String> = url.query_pairs().into_owned().collect();
+        for (key, value) in base_query {
+            if new_query.contains_key(&key) {
+                continue;
+            }
+            url.query_pairs_mut()
+                .append_pair(key.as_ref(), value.as_ref());
+        }
         let extension = DataRequesterExtension::from_url(&url);
         Ok((url.to_string(), extension))
     }
@@ -176,24 +271,44 @@ impl Cesium3dTileContent {
     }
 }
 
+/// Per-frame traversal state for a tile.
+///
+/// This state is reset at the beginning of each traversal and updated
+/// during the [`mark_leaves`](super::traversal::mark_leaves) phase.
+/// It's used by [`mark_rendered_tiles`](super::traversal::mark_rendered_tiles)
+/// to determine what actions to take for each tile.
 #[derive(Debug, Default)]
 pub struct Cesium3dTileContentState {
+    /// True if this tile is a leaf (should be rendered).
     pub leaf: bool,
+    /// Whether the tile was touched in the previous frame.
     pub touched_last_frame: bool,
+    /// Whether the tile is within camera frustum.
     pub is_visible: bool,
+    /// Whether to preload this culled tile for smooth transitions.
+    pub should_preload: bool,
+    /// Marked for removal (nested tileset cleanup).
+    pub removed: bool,
     /// Whether this content was touched while traversing.
     pub touched: bool,
-    pub meet_sse: bool,
+    /// Whether tile data has been successfully loaded.
     pub is_data_loaded: bool,
+    /// Whether this tile was rendered in the previous frame.
+    pub is_rendered_last_frame: bool,
+    /// For REPLACE refinement: true when all children are loaded.
     pub are_all_children_loaded: bool,
+    /// Distance from camera to tile bounding volume.
     pub distance_from_camera: f32,
+    /// Calculated screen-space error for this tile.
     pub sse: f32,
 }
 
 impl Cesium3dTileContentState {
     fn reset(&mut self) {
         self.leaf = false;
+        self.removed = false;
         self.is_visible = false;
+        self.should_preload = false;
         self.touched = false;
         self.is_data_loaded = false;
         self.are_all_children_loaded = false;
@@ -202,15 +317,80 @@ impl Cesium3dTileContentState {
     }
 }
 
+/// Represents a tile that is currently being rendered.
+///
+/// This component is spawned on an entity when a tile becomes visible.
+/// It's paired with a format-specific marker component:
+/// - [`RenderedCesium3dTileContentB3dmMarker`]
+/// - [`RenderedCesium3dTileContentPntsMarker`]
+/// - [`RenderedCesium3dTileContentGlbMarker`]
+///
+/// # Lifecycle
+///
+/// 1. Spawned by [`update_or_spawn_rendered_tile`](super::traversal)
+/// 2. Triggers `construct_model_by_cesium3dtiles_layer` via `Added` query
+/// 3. `feature_id` is set when model entity is created
+/// 4. Visibility toggled based on traversal results
+/// 5. Despawned by `remove_invisible_rendered_tiles` when no longer needed
 #[derive(Component)]
 pub struct RenderedCesium3dTileContent {
+    /// Parent layer entity.
     pub layer_id: Entity,
+    /// Entity with model components (set after construction).
     pub feature_id: Option<Entity>,
+    /// Entity with DataRequester containing tile data.
     pub data_requester_id: Entity,
+    /// Whether the tile should be visible in the scene.
     pub is_visible: bool,
+    /// Whether the tile was touched during traversal (for REPLACE refinement).
+    pub touched: bool,
 }
 
+/// Transform component for tile content.
+///
+/// Stores the tile's transformation matrix from tileset.json.
+/// Used primarily for PNTS (point cloud) tiles.
 #[derive(Component)]
 pub struct TileTransform {
     pub transform: Transform,
 }
+
+/// Priority ordering for tile trees and requests.
+///
+/// Used to:
+/// 1. Sort trees during traversal (closer/higher SSE = higher priority)
+/// 2. Prioritize data requests
+/// 3. Identify nested tilesets (index > 0)
+#[derive(Component, PartialEq, Debug, Clone)]
+pub struct Cesium3dTilesTreeOrder {
+    /// Tree nesting level. 0 = root tileset, >0 = nested tileset.
+    pub index: usize,
+    /// Distance-based ordering for request prioritization.
+    pub distance: TileOrderByDistance,
+}
+
+impl PartialOrd for Cesium3dTilesTreeOrder {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Cesium3dTilesTreeOrder {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.distance < other.distance {
+            return Ordering::Less;
+        }
+        if self.distance > other.distance {
+            return Ordering::Greater;
+        }
+        if self.index < other.index {
+            return Ordering::Less;
+        }
+        if self.index > other.index {
+            return Ordering::Greater;
+        }
+        Ordering::Equal
+    }
+}
+
+impl Eq for Cesium3dTilesTreeOrder {}

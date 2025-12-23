@@ -3,6 +3,7 @@ import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
+import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
 import SdRoundedBox from "@shaders/glsl/chunks/sdRoundedBox.glsl";
@@ -15,6 +16,7 @@ import {
   PlaneGeometry,
   Vector2,
   Vector3,
+  LessDepth,
 } from "three";
 import { Text } from "troika-three-text";
 
@@ -94,6 +96,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       value: 0.0,
     };
 
+    this.userData.uOffsetDepth = {
+      value: meshMaterial.offsetDepth ?? true,
+    };
+
     this.initText(meshMaterial);
   }
 
@@ -111,6 +117,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     txt.outlineOpacity = meshMaterial.outlineOpacity ?? 1.0;
     txt.outlineWidth = 0.0; // Always start with 0 to prevent sampling size optimization issues
 
+    txt.material.depthFunc = LessDepth;
     (txt.material as Material).onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
@@ -120,6 +127,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
       shader.uniforms.uAddHeight = this.userData.addHeight;
+      shader.uniforms.uOffsetDepth = this.userData.uOffsetDepth;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -134,6 +142,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             ${HeightParsVertex}
             ${BillboardMatrix}
             ${PixelToWorld}
+            flat out int vHorizonCulled;
+            ${HorizonCulling}
             `,
         )
         .replace(
@@ -149,6 +159,18 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
             // Anchor with additional height offset along globe normal
             vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        
+            // Horizon culling
+            bool horizonCulled = nvr_horizon_culled(worldAnchor.xyz, cameraPosition);
+            if (horizonCulled) {
+              vHorizonCulled = 1;
+              // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
+              //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
+              gl_Position = vec4(0.0);
+              return;
+            }
+            vHorizonCulled = 0;
+            
             vec3 globeNormal = normalize(worldAnchor.xyz);
             worldAnchor.xyz += globeNormal * uAddHeight;
             vec4 anchorMv = viewMatrix * worldAnchor;
@@ -165,7 +187,11 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           `
       ${BatchDefinitioin}
       ${Pick}
-      void main() {
+        flat in int vHorizonCulled;
+        uniform bool uOffsetDepth;
+        
+        void main() {
+          if (vHorizonCulled == 1) discard;
             `,
         )
         .replace(
@@ -174,7 +200,11 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             if (nvr_uPickable > 0.0) {
               vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
               gl_FragColor = vec4(pickColor.xyz, 1.0);
-            }`,
+            }
+
+            // Offset depth to make sure to be drawn over ellipsoid surface
+            if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+            `,
         ).source;
     };
 
@@ -190,6 +220,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     const backgroundMaterial = new MeshBasicMaterial();
     const background = new Mesh(new PlaneGeometry(), backgroundMaterial);
 
+    background.material.depthFunc = LessDepth;
     background.material.onBeforeCompile = (shader) => {
       shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
@@ -204,6 +235,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       shader.uniforms.nvr_uFov = this.userData.fov;
       shader.uniforms.nvr_uScreenHeightPx = this.userData.screenHeightPx;
       shader.uniforms.uAddHeight = this.userData.addHeight;
+      shader.uniforms.uOffsetDepth = this.userData.uOffsetDepth;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -218,6 +250,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         ${HeightParsVertex}
         ${BillboardMatrix}
         ${PixelToWorld}
+        flat out int vHorizonCulled;
+        ${HorizonCulling}
         void main() {
           vUv = uv;
         `,
@@ -237,6 +271,18 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
         // Anchor with additional height offset along globe normal
         vec4 worldAnchor = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+
+        // Horizon culling
+        bool horizonCulled = nvr_horizon_culled(worldAnchor.xyz, cameraPosition);
+        if (horizonCulled) {
+          vHorizonCulled = 1;
+          // Optimization: make the mesh verticies collapse to a single point (degenerate triangle),
+          //  so no fragments are generated (zero-area triangle), hence no fragment shader invocations.
+          gl_Position = vec4(0.0);
+          return;
+        }
+        vHorizonCulled = 0;
+
         vec3 globeNormal = normalize(worldAnchor.xyz);
         worldAnchor.xyz += globeNormal * uAddHeight;
         vec4 anchorMv = viewMatrix * worldAnchor;
@@ -261,6 +307,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         in vec2 vUv;
         ${Pick}
         ${SdRoundedBox}
+        uniform bool uOffsetDepth;
         `,
         )
         .replace(
@@ -300,7 +347,18 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               // If inside the inner shape, overwrite with fill color
               gl_FragColor = vec4(nvr_uFillColor, 1.0);
           }
+          
+          // Offset depth to make sure to be drawn over ellipsoid surface
+          if (uOffsetDepth) { gl_FragDepth -= 0.2; }
         `,
+        )
+        .replace(
+          "void main() {",
+          `
+        flat in int vHorizonCulled;
+
+        void main() {
+          if (vHorizonCulled == 1) discard;`,
         ).source;
     };
 
@@ -375,6 +433,12 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     if (nextDepthTest !== prev.depthTest) {
       txt.material.depthTest = nextDepthTest;
       prev.depthTest = nextDepthTest;
+    }
+
+    const nextOffsetDepth = material.offsetDepth ?? true;
+    if (nextOffsetDepth !== prev.offsetDepth) {
+      this.userData.uOffsetDepth.value = nextOffsetDepth;
+      prev.offsetDepth = nextOffsetDepth;
     }
 
     if (!nextVisible) return;

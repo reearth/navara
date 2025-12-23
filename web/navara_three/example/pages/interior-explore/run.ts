@@ -21,7 +21,6 @@ import {
 } from "../../helpers/constants";
 import { controlGLTFModel } from "../../helpers/modelControl";
 
-
 const SCENES = {
   ToranomonHillsBIM: {
     url: TILES_3D_DATASETS.plateauToranomonHillsBIM.url,
