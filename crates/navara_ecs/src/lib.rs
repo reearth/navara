@@ -504,28 +504,11 @@ impl App {
 
         let renderable_feature = query.get(world, entity).ok()?;
 
-        match renderable_feature {
+        let feature_batch_id = match renderable_feature {
             RenderableFeature::Model {
                 feature_batch_id, ..
-            } => batch_table.get(feature_batch_id).and_then(|batch_value| {
-                let Some(batch_prop) = &batch_value.properties else {
-                    return None;
-                };
-
-                let BatchProperty::Cesium3dTileset(in_batch_table) = batch_prop else {
-                    return None;
-                };
-
-                let batch_table_json = in_batch_table.json().ok()?;
-
-                get_prop_from_batch_table(
-                    in_batch_table,
-                    &batch_table_json,
-                    in_batch_len,
-                    in_batch_id,
-                )
-            }),
-            RenderableFeature::Polyline {
+            }
+            | RenderableFeature::Polyline {
                 feature_batch_id, ..
             }
             | RenderableFeature::Polygon {
@@ -539,18 +522,38 @@ impl App {
             }
             | RenderableFeature::Text {
                 feature_batch_id, ..
-            } => {
-                let batch_value = batch_table.get(feature_batch_id)?;
-                let batch_prop = batch_value.properties.as_ref()?;
-                let BatchProperty::Values(values) = batch_prop else {
-                    return None;
-                };
-                let serde_json::Value::Object(map) = values[*in_batch_id].clone() else {
+            } => *feature_batch_id,
+            RenderableFeature::Unknown => return None,
+        };
+
+        let batch_value = batch_table.get(&feature_batch_id)?;
+        let batch_prop = batch_value.properties.as_ref()?;
+
+        match batch_prop {
+            BatchProperty::Cesium3dTileset(in_batch_table) => {
+                let batch_table_json = in_batch_table.json().ok()?;
+                get_prop_from_batch_table(
+                    in_batch_table,
+                    &batch_table_json,
+                    in_batch_len,
+                    in_batch_id,
+                )
+            }
+            BatchProperty::Values(values) => {
+                let serde_json::Value::Object(map) = values.get(*in_batch_id)?.clone() else {
                     return None;
                 };
                 Some(map)
             }
-            _ => None,
+            BatchProperty::Mvt(mvt_layer_data) => {
+                mvt_layer_data.get_properties(*in_batch_id).and_then(|v| {
+                    if let serde_json::Value::Object(map) = v {
+                        Some(map)
+                    } else {
+                        None
+                    }
+                })
+            }
         }
     }
 
@@ -635,124 +638,97 @@ impl App {
 
         let renderable_feature = query.get(world, renderable_feature_entity).ok()?;
 
-        match renderable_feature {
-            RenderableFeature::Model {
-                feature_batch_id,
-                batch_length,
-                feature_id,
-                ..
-            } => {
-                let batch_value = batch_table.get(feature_batch_id)?;
-                let batch_prop = batch_value.properties.as_ref()?;
-
-                match batch_prop {
-                    BatchProperty::Cesium3dTileset(in_batch_table) => {
-                        let batch_length = *batch_length as usize;
-
-                        let batch_table_json = in_batch_table.json().ok()?;
-
-                        let global_batch_ids_opt = world
-                            .get_entity(*feature_id)
-                            .ok()
-                            .and_then(|e| e.get::<GlobalBatchIds>());
-
-                        if let Some(global_batch_ids) = global_batch_ids_opt {
-                            let buffer_store = world.get_resource::<BufferStore>()?;
-                            let global_batch_id_array =
-                                buffer_store.get_u32(&global_batch_ids.handle)?;
-
-                            for batch_idx in 0..batch_length {
-                                let props = get_prop_from_batch_table(
-                                    in_batch_table,
-                                    &batch_table_json,
-                                    &batch_length,
-                                    &batch_idx,
-                                );
-                                let global_batch_id = global_batch_id_array
-                                    .get(batch_idx)
-                                    .copied()
-                                    .unwrap_or(batch_idx as u32);
-                                callback(batch_idx, global_batch_id, props);
-                            }
-                        }
-                    }
-                    BatchProperty::Values(values) => {
-                        let global_batch_ids_opt = world
-                            .get_entity(*feature_id)
-                            .ok()
-                            .and_then(|e| e.get::<GlobalBatchIds>());
-
-                        if let Some(global_batch_ids) = global_batch_ids_opt {
-                            let buffer_store = world.get_resource::<BufferStore>()?;
-                            let global_batch_id_array =
-                                buffer_store.get_u32(&global_batch_ids.handle)?;
-
-                            for (batch_idx, value) in values.iter().enumerate() {
-                                let global_batch_id = global_batch_id_array
-                                    .get(batch_idx)
-                                    .copied()
-                                    .unwrap_or(batch_idx as u32);
-
-                                let serde_json::Value::Object(map) = value.clone() else {
-                                    continue;
-                                };
-                                callback(batch_idx, global_batch_id, Some(map));
-                            }
-                        }
-                    }
+        // Extract feature_batch_id and global_batch_ids_entity based on feature type
+        let (feature_batch_id, global_batch_ids_entity, model_batch_length) =
+            match renderable_feature {
+                RenderableFeature::Model {
+                    feature_batch_id,
+                    batch_length,
+                    feature_id,
+                    ..
+                } => (*feature_batch_id, *feature_id, Some(*batch_length as usize)),
+                RenderableFeature::Polygon {
+                    feature_batch_id, ..
                 }
-            }
-            RenderableFeature::Polygon {
-                feature_batch_id, ..
-            }
-            | RenderableFeature::Polyline {
-                feature_batch_id, ..
-            }
-            | RenderableFeature::Point {
-                feature_batch_id, ..
-            }
-            | RenderableFeature::Billboard {
-                feature_batch_id, ..
-            }
-            | RenderableFeature::Text {
-                feature_batch_id, ..
-            } => {
-                let batch_value = batch_table.get(feature_batch_id)?;
-                let batch_prop = batch_value.properties.as_ref()?;
-                let BatchProperty::Values(values) = batch_prop else {
-                    return None;
+                | RenderableFeature::Polyline {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Point {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Billboard {
+                    feature_batch_id, ..
+                }
+                | RenderableFeature::Text {
+                    feature_batch_id, ..
+                } => (*feature_batch_id, renderable_feature_entity, None),
+                RenderableFeature::Unknown => return Some(()),
+            };
+
+        let batch_value = batch_table.get(&feature_batch_id)?;
+        let batch_prop = batch_value.properties.as_ref()?;
+
+        let global_batch_ids_opt = world
+            .get_entity(global_batch_ids_entity)
+            .ok()
+            .and_then(|e| e.get::<GlobalBatchIds>());
+
+        let global_batch_id_array = global_batch_ids_opt.and_then(|ids| {
+            world
+                .get_resource::<BufferStore>()
+                .and_then(|store| store.get_u32(&ids.handle).map(|arr| arr.to_vec()))
+        });
+
+        match batch_prop {
+            BatchProperty::Cesium3dTileset(in_batch_table) => {
+                let Some(batch_length) = model_batch_length else {
+                    // Cesium3dTileset is only expected for Model features
+                    return Some(());
                 };
+                let batch_table_json = in_batch_table.json().ok()?;
 
-                let global_batch_ids_opt = world
-                    .get_entity(renderable_feature_entity)
-                    .ok()
-                    .and_then(|e| e.get::<GlobalBatchIds>());
-
-                if let Some(global_batch_ids) = global_batch_ids_opt {
-                    let buffer_store = world.get_resource::<BufferStore>()?;
-                    let global_batch_id_array = buffer_store.get_u32(&global_batch_ids.handle)?;
-
-                    for (batch_idx, value) in values.iter().enumerate() {
-                        let global_batch_id = global_batch_id_array
-                            .get(batch_idx)
-                            .copied()
-                            .unwrap_or(batch_idx as u32);
-
-                        let serde_json::Value::Object(map) = value.clone() else {
-                            continue;
-                        };
-                        callback(batch_idx, global_batch_id, Some(map));
-                    }
-                } else {
-                    for (batch_idx, value) in values.iter().enumerate() {
-                        let serde_json::Value::Object(map) = value.clone() else {
-                            continue;
-                        };
-                        callback(batch_idx, *feature_batch_id, Some(map));
-                    }
+                for batch_idx in 0..batch_length {
+                    let props = get_prop_from_batch_table(
+                        in_batch_table,
+                        &batch_table_json,
+                        &batch_length,
+                        &batch_idx,
+                    );
+                    let global_batch_id = global_batch_id_array
+                        .as_ref()
+                        .and_then(|arr| arr.get(batch_idx).copied())
+                        .unwrap_or(batch_idx as u32);
+                    callback(batch_idx, global_batch_id, props);
                 }
             }
-            RenderableFeature::Unknown => {}
+            BatchProperty::Values(values) => {
+                for (batch_idx, value) in values.iter().enumerate() {
+                    let serde_json::Value::Object(map) = value.clone() else {
+                        continue;
+                    };
+                    let global_batch_id = global_batch_id_array
+                        .as_ref()
+                        .and_then(|arr| arr.get(batch_idx).copied())
+                        .unwrap_or(feature_batch_id);
+                    callback(batch_idx, global_batch_id, Some(map));
+                }
+            }
+            BatchProperty::Mvt(mvt_layer_data) => {
+                for batch_idx in 0..mvt_layer_data.feature_tags.len() {
+                    let props = mvt_layer_data.get_properties(batch_idx).and_then(|v| {
+                        if let serde_json::Value::Object(map) = v {
+                            Some(map)
+                        } else {
+                            None
+                        }
+                    });
+                    let global_batch_id = global_batch_id_array
+                        .as_ref()
+                        .and_then(|arr| arr.get(batch_idx).copied())
+                        .unwrap_or(feature_batch_id);
+                    callback(batch_idx, global_batch_id, props);
+                }
+            }
         }
 
         Some(())

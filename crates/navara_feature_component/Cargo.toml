@@ -24,3 +24,5 @@ navara_geometry.workspace = true
 navara_layer.workspace = true
 navara_component.workspace = true
 navara_parser.workspace = true
+geozero.workspace = true
+prost.workspace = true
