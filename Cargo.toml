@@ -44,7 +44,8 @@ geo-types = "0.7.17"
 geojson_lib = { package = "geojson", version = "0.24.2" }
 earcutr = "0.5.0"
 # geozero = { version = "0.15.1", default-features = false, features = ["with-mvt", "with-geo"] }
-geozero = { path = "../geozero/geozero", default-features = false, features = ["with-mvt", "with-geo"] }
+# TODO: Replace to original later
+geozero = { git = "https://github.com/keiya01/geozero.git", branch = "fix/ccw-mvt", default-features = false, features = ["with-mvt", "with-geo"] }
 prost = "0.13.5"
 
 # --- Time ---
