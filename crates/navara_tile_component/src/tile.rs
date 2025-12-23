@@ -24,6 +24,8 @@ pub trait Tile {
     fn aabb(&self) -> &Aabb;
     fn max_height(&self) -> FloatType;
     fn set_max_height(&mut self, v: FloatType);
+    fn min_height(&self) -> FloatType;
+    fn set_min_height(&mut self, _v: FloatType);
     fn has_terrain(&self) -> bool;
 
     /// This is cached children, the children might be removed after the tile is cleared.
@@ -123,7 +125,7 @@ pub trait Tile {
         error / window.pixel_ratio
     }
 
-    fn new_child(coords: Coords<Self::CoordUnit>, max_height: FloatType) -> Self;
+    fn new_child(coords: Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self;
 
     /// This is used to align children, because a child might be removed in quadtree.
     fn traversable_children(
@@ -138,7 +140,8 @@ pub trait Tile {
         let coords = tile.coords();
         let coords = (to_int(coords.x), to_int(coords.y), to_int(coords.z));
         let parent_max_height = tile.max_height();
-        let init = |coords| Self::new_child(coords, parent_max_height);
+        let parent_min_height = tile.min_height();
+        let init = |coords| Self::new_child(coords, parent_max_height, parent_min_height);
         if children.is_empty() {
             let children = qt.qt.initialize_children(coords, &init)?;
             let tile = qt.qt.get_mut(handle).unwrap();
@@ -153,7 +156,8 @@ pub trait Tile {
             let is_tile_some = match qt.qt.get_mut(c) {
                 Some(tile) => {
                     if !tile.has_terrain() {
-                        tile.set_max_height(parent_max_height)
+                        tile.set_max_height(parent_max_height);
+                        tile.set_min_height(parent_min_height);
                     }
                     true
                 }

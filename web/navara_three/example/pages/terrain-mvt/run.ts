@@ -60,6 +60,7 @@ export const run = async (view: ThreeView) => {
       url: TERRAIN_DATASETS.gsi.url,
     },
     rasterTerrain: {
+      overscaledMaxZoom: 16,
       maxZoom: 15,
       minZoom: 5,
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),

@@ -13,6 +13,7 @@ export function toTransferableTile(like: TransferableTileLike) {
   return new TransferableTile(
     toTileXYZ(like.coords),
     like.max_height,
+    like.min_height,
     like.cached_mesh_handle
       ? toCachedMeshHandle(like.cached_mesh_handle)
       : undefined,
