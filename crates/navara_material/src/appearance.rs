@@ -1,6 +1,7 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{calc_transform, ElevationDecoder, CRS};
 use navara_math::{Transform, Vec2, Vec3};
+
 /// Configuration for elevation heatmap rendering.
 /// Shared across all elevation heatmap layers in a tile.
 /// Note: color_map_lut is now stored in Globe.elevation_colormap
