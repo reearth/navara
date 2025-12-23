@@ -60,6 +60,7 @@ export const run = async (view: ThreeView) => {
       url: TERRAIN_DATASETS.gsi.url,
     },
     rasterTerrain: {
+      overscaledMaxZoom: 16,
       maxZoom: 15,
       minZoom: 5,
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
@@ -88,6 +89,23 @@ export const run = async (view: ThreeView) => {
     vectorTile: {
       maxZoom: 16,
       layers: ["waterarea"],
+    },
+  });
+  view.addLayer({
+    type: "mvt",
+    data: {
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    },
+    polygon: {
+      color: new Color().setStyle("#555555"),
+      height: 10,
+      extrudedHeight: 0,
+      clampToGround: true,
+      wireframe: false,
+    },
+    vectorTile: {
+      maxZoom: 16,
+      layers: ["building"],
     },
   });
   view.addLayer({

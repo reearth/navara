@@ -41,7 +41,8 @@ pub struct RasterTile {
     pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
     pub upsampled: bool,
-    pub max_height: FloatType,
+    pub max_height: f64,
+    pub min_height: f64,
     pub distance_from_camera: FloatType,
     pub sse: FloatType,
 }
@@ -64,6 +65,7 @@ impl Clone for RasterTile {
             cached_mesh_handle: self.cached_mesh_handle.clone(),
             upsampled: self.upsampled,
             max_height: self.max_height,
+            min_height: self.min_height,
             distance_from_camera: 0.,
             sse: 0.,
         }
@@ -79,13 +81,13 @@ pub struct ReadyState {
 }
 
 impl RasterTile {
-    pub fn new(coords: TileXYZ, max_height: FloatType) -> Self {
+    pub fn new(coords: TileXYZ, max_height: FloatType, min_height: FloatType) -> Self {
         let extent = coords.extent();
 
         Self {
             coords,
             extent: coords.extent(),
-            aabb: Aabb::from_extent_f64(extent, 0., max_height),
+            aabb: Aabb::from_extent_f64(extent, min_height, max_height),
             bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
             visited_at: 0,
@@ -97,6 +99,7 @@ impl RasterTile {
             children: Vec::with_capacity(4),
             were_children_rendered: false,
             max_height,
+            min_height,
             distance_from_camera: 0.,
             sse: 0.,
         }
@@ -383,14 +386,29 @@ impl Tile for RasterTile {
         self.occludee_point_in_scaled_space = p;
     }
 
-    fn max_height(&self) -> FloatType {
+    fn max_height(&self) -> f64 {
         self.terrain_data
             .as_ref()
             .and_then(|t| t.current_max_height())
             .unwrap_or(self.max_height)
     }
-    fn set_max_height(&mut self, v: FloatType) {
+    fn min_height(&self) -> f64 {
+        self.terrain_data
+            .as_ref()
+            .and_then(|t| t.current_min_height())
+            .unwrap_or(self.min_height)
+    }
+    fn set_max_height(&mut self, v: f64) {
         self.max_height = v;
+        if let Some(bounding_region) = &mut self.bounding_region {
+            bounding_region.maximum_height = v;
+        }
+    }
+    fn set_min_height(&mut self, v: f64) {
+        self.min_height = v;
+        if let Some(bounding_region) = &mut self.bounding_region {
+            bounding_region.minimum_height = v;
+        }
     }
     fn has_terrain(&self) -> bool {
         self.terrain_data.is_some()
@@ -408,8 +426,8 @@ impl Tile for RasterTile {
         )
     }
 
-    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: FloatType) -> Self {
-        Self::new(TileXYZ { x, y, z }, max_height)
+    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self {
+        Self::new(TileXYZ { x, y, z }, max_height, min_height)
     }
 }
 
@@ -577,6 +595,7 @@ mod test {
                     z: v.2,
                 },
                 0.,
+                0.,
             )
         });
         let tile = qt.qt.get_mut(qt.qt.leaf(coords).unwrap().handle()).unwrap();
@@ -594,6 +613,7 @@ mod test {
                     y: v.1,
                     z: v.2,
                 },
+                0.,
                 0.,
             )
         });

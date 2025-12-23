@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub struct TerrainInformation {
     pub max_height: f64,
+    pub min_height: f64,
 }
 
 impl TerrainInformation {
@@ -11,6 +12,9 @@ impl TerrainInformation {
 
 impl Default for TerrainInformation {
     fn default() -> Self {
-        Self { max_height: 0. }
+        Self {
+            max_height: 0.,
+            min_height: 0.,
+        }
     }
 }

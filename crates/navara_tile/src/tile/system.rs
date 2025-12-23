@@ -127,7 +127,7 @@ pub fn update_tiles(
         Some(z) => z,
         None => {
             qt.qt
-                .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0.));
+                .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
             qt.qt
                 .zero()
                 .expect("Failed to initialize a level zero tile unexpectedly")
@@ -470,11 +470,12 @@ pub fn transfer_mesh(
                 .expect("This line is invoked only in the tile has terrain");
             terrain_data.set_current_max_height(max_height);
             terrain_data.set_current_min_height(min_height);
-            tile.max_height = max_height;
-            tile.aabb
-                .update(tile.extent, min_height.min(0.), max_height);
+            tile.set_max_height(max_height);
+            tile.set_min_height(min_height);
+            tile.aabb.update(tile.extent, min_height, max_height);
 
             terrain_info.max_height = max_height;
+            terrain_info.min_height = min_height;
         }
 
         // Get skirt settings from terrain layer

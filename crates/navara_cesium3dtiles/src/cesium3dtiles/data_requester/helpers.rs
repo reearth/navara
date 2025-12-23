@@ -7,7 +7,8 @@ use url::Url;
 
 use crate::{
     b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
-    pnts::PntsDataRequesterMarker, Cesium3dTileContent, TileOrderByDistance,
+    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker, Cesium3dTileContent,
+    TileOrderByDistance,
 };
 
 #[derive(Component)]
@@ -38,7 +39,6 @@ pub(crate) fn request_tile_content(
             return false;
         }
     };
-
     match extension {
         DataRequesterExtension::Pnts => {
             let id = commands
@@ -61,6 +61,22 @@ pub(crate) fn request_tile_content(
                 .spawn((
                     Cesium3dTileContentDataRequesterMarker,
                     B3dmDataRequesterMarker,
+                    priority,
+                    TileOrderByDistance {
+                        distance_from_camera: tile.state.distance_from_camera,
+                        sse: tile.state.sse,
+                    },
+                    DataRequester::from_store(content_url, buf, extension),
+                ))
+                .id();
+            tile.data_requester_id = Some(id);
+            true
+        }
+        DataRequesterExtension::Glb => {
+            let id = commands
+                .spawn((
+                    Cesium3dTileContentDataRequesterMarker,
+                    GlbDataRequesterMarker,
                     priority,
                     TileOrderByDistance {
                         distance_from_camera: tile.state.distance_from_camera,
