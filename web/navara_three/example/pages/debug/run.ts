@@ -494,6 +494,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
     },
+    vectorTile: {
+      maxZoom: 16,
+    },
   },
   {
     type: "mvt",
