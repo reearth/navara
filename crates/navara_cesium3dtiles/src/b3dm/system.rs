@@ -128,7 +128,7 @@ pub fn construct_model_by_b3dm_layer(
             Appearance::Model(m) => m.clone(),
             _ => unimplemented!(),
         };
-        appearance.should_rotate_in_default = false;
+        appearance.should_rotate_in_default = Some(false);
 
         let (center, glb_bin_handle, batch_table, batch_length) =
             match get_geometry_info_from_b3dm(&mut buf, &req.handle) {
@@ -323,8 +323,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
             Appearance::Model(m) => m.clone(),
             _ => unimplemented!(),
         };
-        appearance.should_rotate_in_default = false;
-        appearance.clamp_to_ground = false;
+        appearance.should_rotate_in_default = Some(false);
+        appearance.clamp_to_ground = Some(false);
 
         let (center, glb_bin_handle, batch_table, batch_length) =
             match get_geometry_info_from_b3dm(&mut buf, &req.handle) {

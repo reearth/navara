@@ -304,6 +304,7 @@ pub fn transfer_mesh(
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut shared_heatmap_config = None;
         let mut tile_show_bounding_box = false;
+        let default_tile_material = navara_material::RasterTileMaterial::default();
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let should_show = texture_fragment_entity_ids
@@ -312,10 +313,20 @@ pub fn transfer_mesh(
                 .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
                 .is_some_and(|(_, tex)| tex.is_succeeded());
             let a = l.appearance().unwrap();
-            shows.push(should_show && a.show);
-            opacities.push(a.opacity.clamp(0., 1.));
-            colors.push(a.color);
-            tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
+            let show = a.show.or(default_tile_material.show).unwrap_or(true);
+            let opacity = a
+                .opacity
+                .or(default_tile_material.opacity)
+                .unwrap_or(1.0);
+            let color = a.color.or(default_tile_material.color).unwrap_or(0xffffff);
+            let show_bounding_box = a
+                .show_bounding_box
+                .or(default_tile_material.show_bounding_box)
+                .unwrap_or(false);
+            shows.push(should_show && show);
+            opacities.push(opacity.clamp(0., 1.));
+            colors.push(color);
+            tile_show_bounding_box = tile_show_bounding_box || show_bounding_box;
 
             // Mark whether this layer is an elevation heatmap
             if let Some(heatmap_config) = &l.elevation_heatmap_config {
@@ -850,6 +861,7 @@ pub fn update_mesh_material(
         let mut colors = Vec::with_capacity(tile_layers_len);
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut elevation_heatmap_config = None;
+        let default_tile_material = navara_material::RasterTileMaterial::default();
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // If this tile isn't ready, the remaining tiles aren't ready either.
             let should_show = texture_fragment_entity_ids
@@ -858,9 +870,13 @@ pub fn update_mesh_material(
                 .is_some_and(|(_, tex)| tex.is_succeeded());
 
             let a = l.appearance().unwrap();
-            let next_show = should_show && a.show;
-            let next_opacity = a.opacity;
-            let next_color = a.color;
+            let next_show = should_show
+                && a.show.or(default_tile_material.show).unwrap_or(true);
+            let next_opacity = a
+                .opacity
+                .or(default_tile_material.opacity)
+                .unwrap_or(1.0);
+            let next_color = a.color.or(default_tile_material.color).unwrap_or(0xffffff);
 
             // Check if this layer is an elevation heatmap
             let is_heatmap = l.elevation_heatmap_config.is_some();
@@ -876,8 +892,8 @@ pub fn update_mesh_material(
             }
 
             shows.push(next_show);
-            opacities.push(a.opacity.clamp(0., 1.));
-            colors.push(a.color);
+            opacities.push(next_opacity.clamp(0., 1.));
+            colors.push(next_color);
             is_elevation_heatmaps.push(is_heatmap);
 
             // Use the first elevation_heatmap_config we find (they should all be the same)

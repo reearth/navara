@@ -307,6 +307,9 @@ fn handle_geometry(
     batch_index: &BatchIndex,
     appearances: &[Appearance],
 ) {
+    let default_polygon = navara_material::PolygonMaterial::default();
+    let default_polyline = navara_material::PolylineMaterial::default();
+
     match geom {
         Geometry::MultiPolygon(v) => {
             let Some(Appearance::Polygon(appearance)) = appearances
@@ -319,7 +322,10 @@ fn handle_geometry(
             *geometry_type = Some(ConstructedGeometryType::Polygon);
 
             let MultiPolygon(plgs) = v;
-            let flat = appearance.clamp_to_ground;
+            let flat = appearance
+                .clamp_to_ground
+                .or(default_polygon.clamp_to_ground)
+                .unwrap_or(false);
 
             construct_polygons_geometry(
                 commands,
@@ -340,7 +346,10 @@ fn handle_geometry(
             };
 
             *geometry_type = Some(ConstructedGeometryType::Polygon);
-            let flat = appearance.clamp_to_ground;
+            let flat = appearance
+                .clamp_to_ground
+                .or(default_polygon.clamp_to_ground)
+                .unwrap_or(false);
 
             construct_polygon_geometry(commands, buf, feature_ids, v, batch_index, converter, flat);
         }
@@ -456,7 +465,10 @@ fn handle_geometry(
             };
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
-            let flat = appearance.clamp_to_ground;
+            let flat = appearance
+                .clamp_to_ground
+                .or(default_polyline.clamp_to_ground)
+                .unwrap_or(false);
             let MultiLineString(lines) = v;
 
             construct_lines_geometry(
@@ -478,7 +490,10 @@ fn handle_geometry(
             };
 
             *geometry_type = Some(ConstructedGeometryType::Polyline);
-            let flat = appearance.clamp_to_ground;
+            let flat = appearance
+                .clamp_to_ground
+                .or(default_polyline.clamp_to_ground)
+                .unwrap_or(false);
 
             construct_line_geometry(
                 commands,

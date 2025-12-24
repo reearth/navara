@@ -30,34 +30,33 @@ pub struct PointMaterial {
 
 impl From<PointMaterial> for navara_material::PointMaterial {
     fn from(val: PointMaterial) -> Self {
-        let default = navara_material::PointMaterial::default();
         navara_material::PointMaterial {
-            show: val.show.unwrap_or(default.show),
-            size: val.size.unwrap_or(default.size),
-            color: val.color.unwrap_or(default.color),
-            center: val.center.unwrap_or(default.center.into()).into(),
-            height: val.height.unwrap_or(default.height),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            depth_test: val.depth_test.unwrap_or(default.depth_test),
-            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
-            transparent: val.transparent.unwrap_or(default.transparent),
+            show: val.show,
+            size: val.size,
+            color: val.color,
+            center: val.center.map(Into::into),
+            height: val.height,
+            scale_by_distance: val.scale_by_distance,
+            clamp_to_ground: val.clamp_to_ground,
+            depth_test: val.depth_test,
+            offset_depth: val.offset_depth,
+            transparent: val.transparent,
         }
     }
 }
 impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
     fn from(value: &'a navara_material::PointMaterial) -> PointMaterial {
         PointMaterial {
-            show: Some(value.show),
-            size: Some(value.size),
-            color: Some(value.color),
-            center: Some(value.center.into()),
-            height: Some(value.height),
-            scale_by_distance: Some(value.scale_by_distance),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            depth_test: Some(value.depth_test),
-            offset_depth: Some(value.offset_depth),
-            transparent: Some(value.transparent),
+            show: value.show,
+            size: value.size,
+            color: value.color,
+            center: value.center.map(Into::into),
+            height: value.height,
+            scale_by_distance: value.scale_by_distance,
+            clamp_to_ground: value.clamp_to_ground,
+            depth_test: value.depth_test,
+            offset_depth: value.offset_depth,
+            transparent: value.transparent,
         }
     }
 }
@@ -102,36 +101,36 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
     fn from(val: BillboardMaterial) -> Self {
         let default = navara_material::BillboardMaterial::default();
         navara_material::BillboardMaterial {
-            show: val.show.unwrap_or(default.show),
-            size: val.size.unwrap_or(default.size),
-            color: val.color.unwrap_or(default.color),
-            center: val.center.unwrap_or(default.center.into()).into(),
-            height: val.height.unwrap_or(default.height),
-            url: val.url.unwrap_or(default.url),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            depth_test: val.depth_test.unwrap_or(default.depth_test),
-            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
-            transparent: val.transparent.unwrap_or(default.transparent),
-            alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
+            show: val.show,
+            size: val.size,
+            color: val.color,
+            center: val.center.map(Into::into),
+            height: val.height,
+            url: val.url,
+            scale_by_distance: val.scale_by_distance,
+            clamp_to_ground: val.clamp_to_ground,
+            depth_test: val.depth_test,
+            offset_depth: val.offset_depth,
+            transparent: val.transparent,
+            alpha_test: val.alpha_test,
         }
     }
 }
 impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
     fn from(value: &'a navara_material::BillboardMaterial) -> BillboardMaterial {
         BillboardMaterial {
-            show: Some(value.show),
-            size: Some(value.size),
-            color: Some(value.color),
-            center: Some(value.center.into()),
-            height: Some(value.height),
-            url: Some(value.url.clone()),
-            scale_by_distance: Some(value.scale_by_distance),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            depth_test: Some(value.depth_test),
-            offset_depth: Some(value.offset_depth),
-            transparent: Some(value.transparent),
-            alpha_test: Some(value.alpha_test),
+            show: value.show,
+            size: value.size,
+            color: value.color,
+            center: value.center.map(Into::into),
+            height: value.height,
+            url: value.url.clone(),
+            scale_by_distance: value.scale_by_distance,
+            clamp_to_ground: value.clamp_to_ground,
+            depth_test: value.depth_test,
+            offset_depth: value.offset_depth,
+            transparent: value.transparent,
+            alpha_test: value.alpha_test,
         }
     }
 }
@@ -200,57 +199,57 @@ impl From<TextMaterial> for navara_material::TextMaterial {
     fn from(val: TextMaterial) -> Self {
         let default = navara_material::TextMaterial::default();
         navara_material::TextMaterial {
-            show: val.show.unwrap_or(default.show),
-            size: val.size.unwrap_or(default.size),
-            color: val.color.unwrap_or(default.color),
-            center: val.center.unwrap_or(default.center.into()).into(),
-            height: val.height.unwrap_or(default.height),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            depth_test: val.depth_test.unwrap_or(default.depth_test),
-            offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
-            text: val.text.unwrap_or(default.text),
-            font: val.font.unwrap_or(default.font),
+            show: val.show,
+            size: val.size,
+            color: val.color,
+            center: val.center.map(Into::into),
+            height: val.height,
+            scale_by_distance: val.scale_by_distance,
+            clamp_to_ground: val.clamp_to_ground,
+            depth_test: val.depth_test,
+            offset_depth: val.offset_depth,
+            text: val.text,
+            font: val.font,
             background_color: val.background_color,
-            border_color: val.border_color.unwrap_or(default.border_color),
-            border_width: val.border_width.unwrap_or(default.border_width),
-            corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
-            padding: val.padding.unwrap_or(default.padding.into()).into(),
-            outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
-            outline_color: val.outline_color.unwrap_or(default.outline_color),
+            border_color: val.border_color,
+            border_width: val.border_width,
+            corner_radius: val.corner_radius,
+            padding: val.padding.map(Into::into),
+            outline_blur: val.outline_blur,
+            outline_color: val.outline_color,
             outline_offset: val
                 .outline_offset
-                .unwrap_or(default.outline_offset.into())
-                .into(),
-            outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
-            outline_width: val.outline_width.unwrap_or(default.outline_width),
+                .map(Into::into)
+                ,
+            outline_opacity: val.outline_opacity,
+            outline_width: val.outline_width,
         }
     }
 }
 impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
     fn from(value: &'a navara_material::TextMaterial) -> TextMaterial {
         TextMaterial {
-            show: Some(value.show),
-            size: Some(value.size),
-            color: Some(value.color),
-            center: Some(value.center.into()),
-            height: Some(value.height),
-            scale_by_distance: Some(value.scale_by_distance),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            depth_test: Some(value.depth_test),
-            offset_depth: Some(value.offset_depth),
-            text: Some(value.text.clone()),
-            font: Some(value.font.clone()),
+            show: value.show,
+            size: value.size,
+            color: value.color,
+            center: value.center.map(Into::into),
+            height: value.height,
+            scale_by_distance: value.scale_by_distance,
+            clamp_to_ground: value.clamp_to_ground,
+            depth_test: value.depth_test,
+            offset_depth: value.offset_depth,
+            text: value.text.clone(),
+            font: value.font.clone(),
             background_color: value.background_color,
-            border_color: Some(value.border_color),
-            border_width: Some(value.border_width),
-            corner_radius: Some(value.corner_radius),
-            padding: Some(value.padding.into()),
-            outline_blur: Some(value.outline_blur),
-            outline_color: Some(value.outline_color),
-            outline_offset: Some(value.outline_offset.into()),
-            outline_opacity: Some(value.outline_opacity),
-            outline_width: Some(value.outline_width),
+            border_color: value.border_color,
+            border_width: value.border_width,
+            corner_radius: value.corner_radius,
+            padding: value.padding.map(Into::into),
+            outline_blur: value.outline_blur,
+            outline_color: value.outline_color,
+            outline_offset: value.outline_offset.map(Into::into),
+            outline_opacity: value.outline_opacity,
+            outline_width: value.outline_width,
         }
     }
 }
@@ -311,14 +310,14 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
         let default = navara_material::PolylineMaterial::default();
         navara_material::PolylineMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            color: val.color.unwrap_or(default.color),
-            width: val.width.unwrap_or(default.width),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
-            height: val.height.unwrap_or(default.height),
+            show: val.show,
+            cast_shadow: val.cast_shadow,
+            receive_shadow: val.receive_shadow,
+            color: val.color,
+            width: val.width,
+            clamp_to_ground: val.clamp_to_ground,
+            use_ground_normals: val.use_ground_normals,
+            height: val.height,
             internal: val.__internal__.map(|v| v.into()),
         }
     }
@@ -326,14 +325,14 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
 impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
     fn from(value: &'a navara_material::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            color: Some(value.color),
-            width: Some(value.width),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
-            height: Some(value.height),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            color: value.color,
+            width: value.width,
+            clamp_to_ground: value.clamp_to_ground,
+            use_ground_normals: value.use_ground_normals,
+            height: value.height,
             __internal__: value.internal.as_ref().map(|v| v.into()),
         }
     }
@@ -342,14 +341,14 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
 impl From<navara_material::PolylineMaterial> for PolylineMaterial {
     fn from(value: navara_material::PolylineMaterial) -> PolylineMaterial {
         PolylineMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            color: Some(value.color),
-            width: Some(value.width),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
-            height: Some(value.height),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            color: value.color,
+            width: value.width,
+            clamp_to_ground: value.clamp_to_ground,
+            use_ground_normals: value.use_ground_normals,
+            height: value.height,
             __internal__: value.internal.map(|v| v.into()),
         }
     }
@@ -520,107 +519,107 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
         let default = navara_material::PolygonMaterial::default();
         navara_material::PolygonMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            color: val.color.unwrap_or(default.color),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
-            height: val.height.unwrap_or(default.height),
+            show: val.show,
+            cast_shadow: val.cast_shadow,
+            receive_shadow: val.receive_shadow,
+            color: val.color,
+            clamp_to_ground: val.clamp_to_ground,
+            use_ground_normals: val.use_ground_normals,
+            height: val.height,
             extruded_height: val.extruded_height,
-            wireframe: val.wireframe.unwrap_or(default.wireframe),
-            reflectivity: val.reflectivity.unwrap_or(default.reflectivity),
-            roughness: val.roughness.unwrap_or(default.reflectivity),
+            wireframe: val.wireframe,
+            reflectivity: val.reflectivity,
+            roughness: val.roughness,
             internal: val.__internal__.map(|v| v.into()),
 
             per_position_height: val
                 .per_position_height
-                .unwrap_or(default.per_position_height),
-            opacity: val.opacity.unwrap_or(default.opacity),
-            transparent: val.transparent.unwrap_or(default.transparent),
+                ,
+            opacity: val.opacity,
+            transparent: val.transparent,
 
-            surface_show: val.surface_show.unwrap_or(default.surface_show),
-            outline_show: val.outline_show.unwrap_or(default.outline_show),
-            outline_color: val.outline_color.unwrap_or(default.outline_color),
-            outline_width: val.outline_width.unwrap_or(default.outline_width),
-            water: val.water.unwrap_or(default.water),
-            water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
-            water_speed: val.water_speed.unwrap_or(default.water_speed),
-            shininess: val.shininess.unwrap_or(default.shininess),
-            specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
-            apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
-            specular: val.specular.unwrap_or(default.specular),
-            ior: val.ior.unwrap_or(default.ior),
+            surface_show: val.surface_show,
+            outline_show: val.outline_show,
+            outline_color: val.outline_color,
+            outline_width: val.outline_width,
+            water: val.water,
+            water_scale_normal: val.water_scale_normal,
+            water_speed: val.water_speed,
+            shininess: val.shininess,
+            specular_strength: val.specular_strength,
+            apply_water_normal: val.apply_water_normal,
+            specular: val.specular,
+            ior: val.ior,
         }
     }
 }
 impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
     fn from(value: &'a navara_material::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            color: Some(value.color),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
-            height: Some(value.height),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            color: value.color,
+            clamp_to_ground: value.clamp_to_ground,
+            use_ground_normals: value.use_ground_normals,
+            height: value.height,
             extruded_height: value.extruded_height,
-            wireframe: Some(value.wireframe),
-            reflectivity: Some(value.reflectivity),
-            roughness: Some(value.roughness),
+            wireframe: value.wireframe,
+            reflectivity: value.reflectivity,
+            roughness: value.roughness,
             __internal__: value.internal.as_ref().map(|v| v.into()),
 
-            per_position_height: Some(value.per_position_height),
-            opacity: Some(value.opacity),
-            transparent: Some(value.transparent),
+            per_position_height: value.per_position_height,
+            opacity: value.opacity,
+            transparent: value.transparent,
 
-            surface_show: Some(value.surface_show),
-            outline_show: Some(value.outline_show),
-            outline_color: Some(value.outline_color),
-            outline_width: Some(value.outline_width),
-            water: Some(value.water),
-            water_scale_normal: Some(value.water_scale_normal),
-            water_speed: Some(value.water_speed),
-            shininess: Some(value.shininess),
-            specular_strength: Some(value.specular_strength),
-            apply_water_normal: Some(value.apply_water_normal),
-            specular: Some(value.specular),
-            ior: Some(value.ior),
+            surface_show: value.surface_show,
+            outline_show: value.outline_show,
+            outline_color: value.outline_color,
+            outline_width: value.outline_width,
+            water: value.water,
+            water_scale_normal: value.water_scale_normal,
+            water_speed: value.water_speed,
+            shininess: value.shininess,
+            specular_strength: value.specular_strength,
+            apply_water_normal: value.apply_water_normal,
+            specular: value.specular,
+            ior: value.ior,
         }
     }
 }
 impl From<navara_material::PolygonMaterial> for PolygonMaterial {
     fn from(value: navara_material::PolygonMaterial) -> PolygonMaterial {
         PolygonMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            color: Some(value.color),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
-            height: Some(value.height),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            color: value.color,
+            clamp_to_ground: value.clamp_to_ground,
+            use_ground_normals: value.use_ground_normals,
+            height: value.height,
             extruded_height: value.extruded_height,
-            wireframe: Some(value.wireframe),
-            reflectivity: Some(value.reflectivity),
-            roughness: Some(value.roughness),
+            wireframe: value.wireframe,
+            reflectivity: value.reflectivity,
+            roughness: value.roughness,
             __internal__: value.internal.map(|v| v.into()),
 
-            per_position_height: Some(value.per_position_height),
-            opacity: Some(value.opacity),
-            transparent: Some(value.transparent),
+            per_position_height: value.per_position_height,
+            opacity: value.opacity,
+            transparent: value.transparent,
 
-            surface_show: Some(value.surface_show),
-            outline_show: Some(value.outline_show),
-            outline_color: Some(value.outline_color),
-            outline_width: Some(value.outline_width),
-            water: Some(value.water),
-            water_scale_normal: Some(value.water_scale_normal),
-            water_speed: Some(value.water_speed),
-            shininess: Some(value.shininess),
-            specular_strength: Some(value.specular_strength),
-            apply_water_normal: Some(value.apply_water_normal),
-            specular: Some(value.specular),
-            ior: Some(value.ior),
+            surface_show: value.surface_show,
+            outline_show: value.outline_show,
+            outline_color: value.outline_color,
+            outline_width: value.outline_width,
+            water: value.water,
+            water_scale_normal: value.water_scale_normal,
+            water_speed: value.water_speed,
+            shininess: value.shininess,
+            specular_strength: value.specular_strength,
+            apply_water_normal: value.apply_water_normal,
+            specular: value.specular,
+            ior: value.ior,
         }
     }
 }
@@ -726,34 +725,34 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
         let default = navara_material::ModelMaterial::default();
         navara_material::ModelMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            url: val.url.unwrap_or(default.url),
-            size: val.size.unwrap_or(default.size),
-            height: val.height.unwrap_or(default.height),
-            max_sse: val.max_sse.unwrap_or(default.max_sse),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
+            show: val.show,
+            cast_shadow: val.cast_shadow,
+            receive_shadow: val.receive_shadow,
+            url: val.url,
+            size: val.size,
+            height: val.height,
+            max_sse: val.max_sse,
+            clamp_to_ground: val.clamp_to_ground,
             should_rotate_in_default: val
                 .should_rotate_in_default
-                .unwrap_or(default.should_rotate_in_default),
-            color: val.color.unwrap_or(default.color),
-            metalness: val.metalness.unwrap_or(default.metalness),
-            roughness: val.roughness.unwrap_or(default.roughness),
-            reflectivity: val.reflectivity.unwrap_or(default.reflectivity),
-            water: val.water.unwrap_or(default.water),
-            water_scale_normal: val.water_scale_normal.unwrap_or(default.water_scale_normal),
-            water_speed: val.water_speed.unwrap_or(default.water_speed),
-            shininess: val.shininess.unwrap_or(default.shininess),
-            specular_strength: val.specular_strength.unwrap_or(default.specular_strength),
-            apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
-            specular: val.specular.unwrap_or(default.specular),
-            ior: val.ior.unwrap_or(default.ior),
+                ,
+            color: val.color,
+            metalness: val.metalness,
+            roughness: val.roughness,
+            reflectivity: val.reflectivity,
+            water: val.water,
+            water_scale_normal: val.water_scale_normal,
+            water_speed: val.water_speed,
+            shininess: val.shininess,
+            specular_strength: val.specular_strength,
+            apply_water_normal: val.apply_water_normal,
+            specular: val.specular,
+            ior: val.ior,
             // animation
             animation_active_clip: val.animation_active_clip,
             animation_speed: val.animation_speed,
-            point_size: val.point_size.unwrap_or(default.point_size),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            point_size: val.point_size,
+            show_bounding_box: val.show_bounding_box,
             internal: val.__internal__.clone().map(|v| v.into()),
         }
     }
@@ -762,32 +761,32 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
 impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
     fn from(value: &'a navara_material::ModelMaterial) -> ModelMaterial {
         ModelMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            url: Some(value.url.clone()),
-            size: Some(value.size),
-            height: Some(value.height),
-            max_sse: Some(value.max_sse),
-            clamp_to_ground: Some(value.clamp_to_ground),
-            should_rotate_in_default: Some(value.should_rotate_in_default),
-            color: Some(value.color),
-            metalness: Some(value.metalness),
-            roughness: Some(value.roughness),
-            reflectivity: Some(value.reflectivity),
-            water: Some(value.water),
-            water_scale_normal: Some(value.water_scale_normal),
-            water_speed: Some(value.water_speed),
-            shininess: Some(value.shininess),
-            specular_strength: Some(value.specular_strength),
-            apply_water_normal: Some(value.apply_water_normal),
-            specular: Some(value.specular),
-            ior: Some(value.ior),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            url: value.url.clone(),
+            size: value.size,
+            height: value.height,
+            max_sse: value.max_sse,
+            clamp_to_ground: value.clamp_to_ground,
+            should_rotate_in_default: value.should_rotate_in_default,
+            color: value.color,
+            metalness: value.metalness,
+            roughness: value.roughness,
+            reflectivity: value.reflectivity,
+            water: value.water,
+            water_scale_normal: value.water_scale_normal,
+            water_speed: value.water_speed,
+            shininess: value.shininess,
+            specular_strength: value.specular_strength,
+            apply_water_normal: value.apply_water_normal,
+            specular: value.specular,
+            ior: value.ior,
             // animation
             animation_active_clip: value.animation_active_clip.clone(),
             animation_speed: value.animation_speed,
-            point_size: Some(value.point_size),
-            show_bounding_box: Some(value.show_bounding_box),
+            point_size: value.point_size,
+            show_bounding_box: value.show_bounding_box,
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
         }
     }
@@ -849,26 +848,26 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
     fn from(val: RasterTileMaterial) -> Self {
         let default = navara_material::RasterTileMaterial::default();
         navara_material::RasterTileMaterial {
-            show: val.show.unwrap_or(default.show),
-            color: val.color.unwrap_or(default.color),
-            opacity: val.opacity.unwrap_or(default.opacity),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            tms: val.tms.unwrap_or(default.tms),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            show: val.show,
+            color: val.color,
+            opacity: val.opacity,
+            max_zoom: val.max_zoom,
+            min_zoom: val.min_zoom,
+            tms: val.tms,
+            show_bounding_box: val.show_bounding_box,
         }
     }
 }
 impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
     fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
         RasterTileMaterial {
-            show: Some(value.show),
-            color: Some(value.color),
-            opacity: Some(value.opacity),
-            max_zoom: Some(value.max_zoom),
-            min_zoom: Some(value.min_zoom),
-            tms: Some(value.tms),
-            show_bounding_box: Some(value.show_bounding_box),
+            show: value.show,
+            color: value.color,
+            opacity: value.opacity,
+            max_zoom: value.max_zoom,
+            min_zoom: value.min_zoom,
+            tms: value.tms,
+            show_bounding_box: value.show_bounding_box,
         }
     }
 }
@@ -1061,28 +1060,28 @@ impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
     fn from(val: VectorTileMaterial) -> Self {
         let default = navara_material::VectorTileMaterial::default();
         navara_material::VectorTileMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            max_sse: val.max_sse.unwrap_or(default.max_sse),
+            show: val.show,
+            cast_shadow: val.cast_shadow,
+            receive_shadow: val.receive_shadow,
+            max_zoom: val.max_zoom,
+            max_sse: val.max_sse,
             layers: val.layers.clone(),
             overscaled_max_zoom: val
                 .overscaled_max_zoom
-                .unwrap_or(default.overscaled_max_zoom),
+                ,
         }
     }
 }
 impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
     fn from(value: &'a navara_material::VectorTileMaterial) -> VectorTileMaterial {
         VectorTileMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            max_zoom: Some(value.max_zoom),
-            max_sse: Some(value.max_sse),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            max_zoom: value.max_zoom,
+            max_sse: value.max_sse,
             layers: value.layers.clone(),
-            overscaled_max_zoom: Some(value.overscaled_max_zoom),
+            overscaled_max_zoom: value.overscaled_max_zoom,
         }
     }
 }
@@ -1130,22 +1129,22 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
     fn from(val: RasterTerrainMaterial) -> Self {
         let default = navara_material::RasterTerrainMaterial::default();
         navara_material::RasterTerrainMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            show: val.show,
+            cast_shadow: val.cast_shadow,
+            receive_shadow: val.receive_shadow,
+            show_bounding_box: val.show_bounding_box,
+            max_zoom: val.max_zoom,
             overscaled_max_zoom: val
                 .overscaled_max_zoom
-                .unwrap_or(default.overscaled_max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            tile_size: val.tile_size.unwrap_or(default.tile_size),
+                ,
+            min_zoom: val.min_zoom,
+            tile_size: val.tile_size,
             elevation_decoder: val
                 .elevation_decoder
-                .unwrap_or(default.elevation_decoder.into())
-                .into(),
-            skirt: val.skirt.unwrap_or(default.skirt),
-            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
+                .map(Into::into)
+                ,
+            skirt: val.skirt,
+            skirt_exaggeration: val.skirt_exaggeration,
         }
     }
 }
@@ -1153,26 +1152,17 @@ impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
 impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMaterial {
     fn from(value: &'a navara_material::RasterTerrainMaterial) -> RasterTerrainMaterial {
         RasterTerrainMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: Some(value.max_zoom),
-            overscaled_max_zoom: Some(value.overscaled_max_zoom),
-            min_zoom: Some(value.min_zoom),
-            elevation_decoder: Some(ElevationDecoder {
-                r_scaler: value.elevation_decoder.r_scaler,
-                g_scaler: value.elevation_decoder.g_scaler,
-                b_scaler: value.elevation_decoder.b_scaler,
-                offset: value.elevation_decoder.offset,
-                max_offset: value.elevation_decoder.max_offset,
-                min_offset: value.elevation_decoder.min_offset,
-                boundary: value.elevation_decoder.boundary,
-                epsilon: value.elevation_decoder.epsilon,
-            }),
-            tile_size: Some(value.tile_size),
-            skirt: Some(value.skirt),
-            skirt_exaggeration: Some(value.skirt_exaggeration),
+            show: value.show,
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            show_bounding_box: value.show_bounding_box,
+            max_zoom: value.max_zoom,
+            overscaled_max_zoom: value.overscaled_max_zoom,
+            min_zoom: value.min_zoom,
+            elevation_decoder: value.elevation_decoder.map(Into::into),
+            tile_size: value.tile_size,
+            skirt: value.skirt,
+            skirt_exaggeration: value.skirt_exaggeration,
         }
     }
 }
@@ -1219,11 +1209,11 @@ impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMateria
     fn from(val: EllipsoidTerrainMaterial) -> Self {
         let default = navara_material::EllipsoidTerrainMaterial::default();
         navara_material::EllipsoidTerrainMaterial {
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
+            cast_shadow: val.cast_shadow,
+            receive_shadow: val.receive_shadow,
+            show_bounding_box: val.show_bounding_box,
+            max_zoom: val.max_zoom,
+            min_zoom: val.min_zoom,
         }
     }
 }
@@ -1231,11 +1221,11 @@ impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMateria
 impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrainMaterial {
     fn from(value: &'a navara_material::EllipsoidTerrainMaterial) -> EllipsoidTerrainMaterial {
         EllipsoidTerrainMaterial {
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: Some(value.max_zoom),
-            min_zoom: Some(value.min_zoom),
+            cast_shadow: value.cast_shadow,
+            receive_shadow: value.receive_shadow,
+            show_bounding_box: value.show_bounding_box,
+            max_zoom: value.max_zoom,
+            min_zoom: value.min_zoom,
         }
     }
 }

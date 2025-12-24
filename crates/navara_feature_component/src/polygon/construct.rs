@@ -13,6 +13,21 @@ pub fn construct_polygon_feature(
     polygon_resource: &mut PolygonResource,
     use_rte: bool,
 ) -> (Option<Extent<f64, Radians>>, Option<PolygonGeometryResult>) {
+    let default = PolygonMaterial::default();
+    let height = material.height.or(default.height).unwrap_or(1.0);
+    let clamp_to_ground = material
+        .clamp_to_ground
+        .or(default.clamp_to_ground)
+        .unwrap_or(false);
+    let per_position_height = material
+        .per_position_height
+        .or(default.per_position_height)
+        .unwrap_or(false);
+    let extruded_height = material
+        .extruded_height
+        .or(default.extruded_height)
+        .unwrap_or(0.0);
+
     let mut lnglats = vec![];
 
     let mut hierarchy = HierarchyDVec3 {
@@ -23,7 +38,7 @@ pub fn construct_polygon_feature(
     for i in 0..(ring.len() / 3) {
         let i = i * 3;
         let v = Vec3::new(ring[i], ring[i + 1], ring[i + 2]);
-        let converted = crs.to_vec3(WGS84_64, v, material.height);
+        let converted = crs.to_vec3(WGS84_64, v, height);
         hierarchy
             .outer_ring
             .push(Vec3::new(converted.x, converted.y, converted.z));
@@ -42,7 +57,7 @@ pub fn construct_polygon_feature(
                         let converted = crs.to_vec3(
                             WGS84_64,
                             Vec3::new(ring[i], ring[i + 1], ring[i + 2]),
-                            material.height,
+                            height,
                         );
                         outer_ring.push(Vec3::new(converted.x, converted.y, converted.z));
                     }
@@ -69,10 +84,10 @@ pub fn construct_polygon_feature(
     let polygon_result = create_polygon_geometry(
         PolygonGeometryOptions {
             hierarchy,
-            clamp_to_ground: material.clamp_to_ground,
-            height: material.height,
-            extruded_height: material.extruded_height.unwrap_or_default(),
-            per_position_height: material.per_position_height,
+            clamp_to_ground,
+            height,
+            extruded_height,
+            per_position_height,
             use_rte,
             ..Default::default()
         },
@@ -88,6 +103,17 @@ pub fn construct_flat_polygon_feature(
     polygon_resource: &mut PolygonResource,
     use_rte: bool,
 ) -> Option<PolygonGeometryResult> {
+    let default = PolygonMaterial::default();
+    let height = material.height.or(default.height).unwrap_or(1.0);
+    let clamp_to_ground = material
+        .clamp_to_ground
+        .or(default.clamp_to_ground)
+        .unwrap_or(false);
+    let extruded_height = material
+        .extruded_height
+        .or(default.extruded_height)
+        .unwrap_or(0.0);
+
     let mut hierarchy = HierarchyDVec3 {
         expected_winding_order: geometry_hierarchy.expected_winding_order,
         ..Default::default()
@@ -132,9 +158,9 @@ pub fn construct_flat_polygon_feature(
     create_flat_polygon_geometry(
         PolygonGeometryOptions {
             hierarchy,
-            clamp_to_ground: material.clamp_to_ground,
-            height: material.height,
-            extruded_height: material.extruded_height.unwrap_or_default(),
+            clamp_to_ground,
+            height,
+            extruded_height,
             use_rte,
             ..Default::default()
         },

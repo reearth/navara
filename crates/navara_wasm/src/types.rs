@@ -21,7 +21,7 @@ use navara_wasm_types::{
 #[derive(Debug, Clone, Deserialize)]
 pub struct TileLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
+    pub r#type: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     #[serde(skip_deserializing)]
     pub data: JsValue,
@@ -47,7 +47,7 @@ impl TileLayerDescription {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TerrainLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
-    pub r#type: String,
+    pub r#type: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     #[serde(skip_deserializing)]
     pub data: JsValue,
@@ -351,7 +351,7 @@ impl LayerDescription {
 
                 let mut data: Option<LayerDescriptionUrl> = None;
                 if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok();
+                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
                 }
 
                 let mut layer: TerrainLayerDescription =

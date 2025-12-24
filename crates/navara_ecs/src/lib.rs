@@ -7,6 +7,7 @@ use bevy_ecs::{
     system::SystemState,
     world::{EntityRef, Mut},
 };
+use bevy_log::info;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
     get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
@@ -302,6 +303,20 @@ impl App {
         layer_type
     }
 
+    pub fn get_layer_description(&mut self, layer_id: &String) -> Option<&navara_layer::LayerDescription> {
+        self.app
+            .world()
+            .get_resource::<LayerDescStore>()
+            .and_then(|store| store.map.get(layer_id))
+    }
+
+    pub fn set_layer_description(&mut self, layer_id: &String, desc: &navara_layer::LayerDescription) {
+        self.app
+            .world_mut()
+            .get_resource_mut::<LayerDescStore>()
+            .and_then(|mut store| store.map.insert(layer_id.to_owned(), desc.clone()));
+    }
+
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
         match &mut desc {
             LayerDescription::GeoJson(layer) => {
@@ -361,6 +376,7 @@ impl App {
             }
             LayerDescription::Tiles(layer) => {
                 if let Some(appearance) = layer.appearance.take() {
+                    info!("Updating tile appearance {:?}", appearance);
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {

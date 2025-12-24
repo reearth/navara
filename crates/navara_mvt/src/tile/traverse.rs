@@ -69,14 +69,40 @@ pub fn traverse_tile(
     tile.is_rendered = false;
 
     // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
+    let default_polygon = navara_material::PolygonMaterial::default();
+    let default_polyline = navara_material::PolylineMaterial::default();
     let is_texturized = layer.appearances.iter().any(|a| {
-        matches!(a, Appearance::Polygon(p) if p.clamp_to_ground)
-            || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
+        matches!(
+            a,
+            Appearance::Polygon(p)
+                if p.clamp_to_ground
+                    .or(default_polygon.clamp_to_ground)
+                    .unwrap_or(false)
+        ) || matches!(
+            a,
+            Appearance::Polyline(p)
+                if p.clamp_to_ground
+                    .or(default_polyline.clamp_to_ground)
+                    .unwrap_or(false)
+        )
     });
 
     // TODO: Fix unnecessary clone
     let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
-    if tile.coords.z > vector_tile_appearance.max_zoom && !is_texturized {
+    let default_vector_tile = navara_material::VectorTileMaterial::default();
+    let max_zoom = vector_tile_appearance
+        .max_zoom
+        .or(default_vector_tile.max_zoom)
+        .unwrap_or(0);
+    let overscaled_max_zoom = vector_tile_appearance
+        .overscaled_max_zoom
+        .or(default_vector_tile.overscaled_max_zoom)
+        .unwrap_or(max_zoom);
+    let max_sse = vector_tile_appearance
+        .max_sse
+        .or(default_vector_tile.max_sse)
+        .unwrap_or(2.);
+    if tile.coords.z > max_zoom && !is_texturized {
         return TraversalResult::NotFound;
     }
 
@@ -106,10 +132,10 @@ pub fn traverse_tile(
     }
 
     let is_overscaled = ready_parent_tile_handle.is_some()
-        && tile.coords.z > vector_tile_appearance.max_zoom
-        && tile.coords.z <= vector_tile_appearance.overscaled_max_zoom;
+        && tile.coords.z > max_zoom
+        && tile.coords.z <= overscaled_max_zoom;
 
-    if tile.coords.z > vector_tile_appearance.max_zoom && !is_overscaled {
+    if tile.coords.z > max_zoom && !is_overscaled {
         return TraversalResult::NotFound;
     }
 
@@ -144,7 +170,7 @@ pub fn traverse_tile(
     let max_sse = if is_texturized {
         globe.max_sse
     } else {
-        vector_tile_appearance.max_sse
+        max_sse
     } as f64;
     let meets_sse = sse <= max_sse;
 

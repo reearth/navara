@@ -8,6 +8,7 @@ mod input;
 mod types;
 mod vector_tile;
 
+use bevy_log::info;
 use entity::ReconstructableEntity;
 use feature::{
     ReturnedTransferablePolygonBatchedFeature, ReturnedTransferablePolylineBatchedFeature,
@@ -209,8 +210,19 @@ impl Core {
 
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
-        let layer_type = self.app.get_layer_type(&layer_id);
-        if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type, layer) {
+        let layer_type = self.app.get_layer_type(&layer_id).to_string();
+        let old_layer_desc = self.app.get_layer_description(&layer_id).cloned();
+        info!("Old layer description for {}: {:?}", layer_id.as_str(), old_layer_desc);
+        if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type.as_str(), layer) {
+            // merge old and new layer description, and pass the merged one to update_layer
+            info!("New layer description for {}: {:?}", layer_id.as_str(), l);
+            let l = if let Some(old) = old_layer_desc {
+                old.merge(&l)
+            } else {
+                l
+            };
+            info!("merged layer description for {}: {:?}", layer_id.as_str(), l);
+            self.app.set_layer_description(&layer_id, &l);
             self.app.update_layer(layer_id.as_str(), l);
         }
     }

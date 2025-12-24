@@ -99,8 +99,8 @@ pub fn construct_model_by_cesium3dtiles_layer(
             Appearance::Model(m) => m.clone(),
             _ => unimplemented!(),
         };
-        appearance.should_rotate_in_default = false;
-        appearance.clamp_to_ground = false;
+        appearance.should_rotate_in_default = Some(false);
+        appearance.clamp_to_ground = Some(false);
 
         let entity = commands.spawn((
             LayerId(layer.layer_id.to_owned()),

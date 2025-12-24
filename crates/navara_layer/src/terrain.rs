@@ -12,71 +12,119 @@ pub enum TerrainAppearance {
 impl TerrainAppearance {
     pub fn max_zoom(&self) -> usize {
         match self {
-            TerrainAppearance::Raster(mat) => mat.max_zoom,
-            TerrainAppearance::Ellipsoid(mat) => mat.max_zoom,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.max_zoom.or(default.max_zoom).unwrap_or(0)
+            }
+            TerrainAppearance::Ellipsoid(mat) => {
+                let default = EllipsoidTerrainMaterial::default();
+                mat.max_zoom.or(default.max_zoom).unwrap_or(0)
+            }
         }
     }
 
     pub fn min_zoom(&self) -> usize {
         match self {
-            TerrainAppearance::Raster(mat) => mat.min_zoom,
-            TerrainAppearance::Ellipsoid(mat) => mat.min_zoom,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.min_zoom.or(default.min_zoom).unwrap_or(0)
+            }
+            TerrainAppearance::Ellipsoid(mat) => {
+                let default = EllipsoidTerrainMaterial::default();
+                mat.min_zoom.or(default.min_zoom).unwrap_or(0)
+            }
         }
     }
 
     pub fn overscaled_max_zoom(&self) -> usize {
         match self {
-            TerrainAppearance::Raster(mat) => mat.overscaled_max_zoom,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.overscaled_max_zoom
+                    .or(default.overscaled_max_zoom)
+                    .unwrap_or(0)
+            }
             TerrainAppearance::Ellipsoid(_) => 30, // Ellipsoid has no max zoom limit
         }
     }
 
     pub fn elevation_decoder(&self) -> Option<&ElevationDecoder> {
         match self {
-            TerrainAppearance::Raster(mat) => Some(&mat.elevation_decoder),
+            TerrainAppearance::Raster(mat) => mat.elevation_decoder.as_ref(),
             TerrainAppearance::Ellipsoid(_) => None,
         }
     }
 
     pub fn tile_size(&self) -> u32 {
         match self {
-            TerrainAppearance::Raster(mat) => mat.tile_size,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.tile_size.or(default.tile_size).unwrap_or(256)
+            }
             TerrainAppearance::Ellipsoid(_) => 256,
         }
     }
 
     pub fn cast_shadow(&self) -> bool {
         match self {
-            TerrainAppearance::Raster(mat) => mat.cast_shadow,
-            TerrainAppearance::Ellipsoid(mat) => mat.cast_shadow,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.cast_shadow.or(default.cast_shadow).unwrap_or(false)
+            }
+            TerrainAppearance::Ellipsoid(mat) => {
+                let default = EllipsoidTerrainMaterial::default();
+                mat.cast_shadow.or(default.cast_shadow).unwrap_or(false)
+            }
         }
     }
 
     pub fn receive_shadow(&self) -> bool {
         match self {
-            TerrainAppearance::Raster(mat) => mat.receive_shadow,
-            TerrainAppearance::Ellipsoid(mat) => mat.receive_shadow,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.receive_shadow.or(default.receive_shadow).unwrap_or(false)
+            }
+            TerrainAppearance::Ellipsoid(mat) => {
+                let default = EllipsoidTerrainMaterial::default();
+                mat.receive_shadow.or(default.receive_shadow).unwrap_or(false)
+            }
         }
     }
 
     pub fn show(&self) -> bool {
         match self {
-            TerrainAppearance::Raster(mat) => mat.show,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.show.or(default.show).unwrap_or(true)
+            }
             TerrainAppearance::Ellipsoid(_) => true,
         }
     }
 
     pub fn show_bounding_box(&self) -> bool {
         match self {
-            TerrainAppearance::Raster(mat) => mat.show_bounding_box,
-            TerrainAppearance::Ellipsoid(mat) => mat.show_bounding_box,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.show_bounding_box
+                    .or(default.show_bounding_box)
+                    .unwrap_or(false)
+            }
+            TerrainAppearance::Ellipsoid(mat) => {
+                let default = EllipsoidTerrainMaterial::default();
+                mat.show_bounding_box
+                    .or(default.show_bounding_box)
+                    .unwrap_or(false)
+            }
         }
     }
 
     /// Whether to render skirts along tile boundaries to hide gaps.
     pub fn skirt(&self) -> bool {
         match self {
-            TerrainAppearance::Raster(mat) => mat.skirt,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.skirt.or(default.skirt).unwrap_or(true)
+            }
             TerrainAppearance::Ellipsoid(_) => false, // Ellipsoid terrain doesn't need skirts
         }
     }
@@ -84,7 +132,12 @@ impl TerrainAppearance {
     /// Multiplier for the automatically calculated skirt height.
     pub fn skirt_exaggeration(&self) -> f32 {
         match self {
-            TerrainAppearance::Raster(mat) => mat.skirt_exaggeration,
+            TerrainAppearance::Raster(mat) => {
+                let default = RasterTerrainMaterial::default();
+                mat.skirt_exaggeration
+                    .or(default.skirt_exaggeration)
+                    .unwrap_or(1.0)
+            }
             TerrainAppearance::Ellipsoid(_) => 1.0,
         }
     }
@@ -126,6 +179,30 @@ impl TerrainLayer {
                 .appearance
                 .as_ref()
                 .is_some_and(|app| z >= app.min_zoom()),
+        }
+    }
+
+    pub fn merge(&self, other: &TerrainLayer) -> TerrainLayer {
+        TerrainLayer {
+            layer_id: self.layer_id.clone(),
+            data: other.data.clone().or_else(|| self.data.clone()),
+            terrain_type: match other.terrain_type {
+                TerrainDataType::Unknown => self.terrain_type.clone(),
+                _ => other.terrain_type.clone(),
+            },
+            appearance: other.appearance.as_ref().and_then(|other_appearance| {
+                self.appearance.as_ref().map(|self_appearance| {
+                    match (other_appearance, self_appearance) {
+                        (TerrainAppearance::Raster(dist), TerrainAppearance::Raster(src)) => {
+                            TerrainAppearance::Raster(dist.merge(src))
+                        }
+                        (TerrainAppearance::Ellipsoid(dist), TerrainAppearance::Ellipsoid(src)) => {
+                            TerrainAppearance::Ellipsoid(dist.merge(src))
+                        }
+                        _ => other_appearance.clone(),
+                    }
+                })
+            }),
         }
     }
 }

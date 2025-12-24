@@ -345,8 +345,8 @@ pub fn update_cesium3dtiles_layer(
                     let mut new_mat = u.material.clone();
                     new_mat.internal = mat.internal.clone();
                     *mat = new_mat;
-                    mat.should_rotate_in_default = false;
-                    mat.clamp_to_ground = false;
+                    mat.should_rotate_in_default = Some(false);
+                    mat.clamp_to_ground = Some(false);
                 }
             }
         }
@@ -360,8 +360,8 @@ pub fn update_cesium3dtiles_layer(
                     let mut new_mat = u.material.clone();
                     new_mat.internal = material.internal.clone();
                     *material = new_mat;
-                    material.should_rotate_in_default = false;
-                    material.clamp_to_ground = false;
+                    material.should_rotate_in_default = Some(false);
+                    material.clamp_to_ground = Some(false);
                 }
             }
         }
@@ -376,8 +376,8 @@ pub fn update_cesium3dtiles_layer(
                 let mut new_mat = u.material.clone();
                 new_mat.internal = mat.internal.clone();
                 *mat = new_mat;
-                mat.should_rotate_in_default = false;
-                mat.clamp_to_ground = false;
+                mat.should_rotate_in_default = Some(false);
+                mat.clamp_to_ground = Some(false);
             }
         }
         commands.entity(e).despawn();

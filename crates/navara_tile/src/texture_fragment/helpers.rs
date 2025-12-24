@@ -1,3 +1,5 @@
+use std::default;
+
 use bevy_ecs::system::{Commands, Query};
 
 use navara_component::{Order, OrderByDistance, Priority};
@@ -59,7 +61,11 @@ pub(crate) fn request_texture_fragment(
         return;
     };
 
-    let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
+    let default_material = navara_material::RasterTileMaterial::default();
+    let tms = matches!(
+        next_tile.appearance.as_ref(),
+        Some(Appearance::RasterTile(m)) if m.tms.or(default_material.tms).unwrap_or(false)
+    );
     let url = tile_url(
         next_tile.data.as_ref().unwrap().url.as_str(),
         &leaf.coords,

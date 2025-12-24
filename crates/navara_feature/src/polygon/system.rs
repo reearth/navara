@@ -59,6 +59,7 @@ pub fn transfer_batched_mesh(
         Without<Deleted>,
     >,
 ) {
+    let default_material = PolygonMaterial::default();
     for (
         batched_feature_entity,
         layer_id,
@@ -71,6 +72,11 @@ pub fn transfer_batched_mesh(
         tile_extent_component,
     ) in &mut batched_features
     {
+        let clamp_to_ground = material
+            .clamp_to_ground
+            .or(default_material.clamp_to_ground)
+            .unwrap_or(false);
+
         let needs_update = batched_feature.is_added()
             || batched_feature
                 .construct_polygon_feature
@@ -89,7 +95,7 @@ pub fn transfer_batched_mesh(
                     ConstructPolygonBatchedFeatureParameters {
                         batched_feature: batched_feature_entity,
                         // If it uses `clamp_to_ground` and it is tile, it should be flat.
-                        flat: material.clamp_to_ground && tile_coordinates.is_some(),
+                        flat: clamp_to_ground && tile_coordinates.is_some(),
                         tile_extent: tile_extent_component.map(|t| t.extent),
                     },
                 ))
@@ -130,7 +136,6 @@ pub fn transfer_batched_mesh(
         // This positions the mesh at the tile center in world space
         let translation = rtc_translation.unwrap_or(Vec3::new(0., 0., 0.));
 
-        let clamp_to_ground = material.clamp_to_ground;
         let mut entity_cmd = commands.spawn((
             PolygonMarker,
             layer_id.clone(),
@@ -193,6 +198,7 @@ pub fn transfer_mesh(
     mut polygon_resource: ResMut<PolygonResource>,
     mut layer_store: ResMut<LayerStore>,
 ) {
+    let default_material = PolygonMaterial::default();
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polygon {
         let geometry_hierarchy =
             Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
@@ -209,11 +215,23 @@ pub fn transfer_mesh(
             let surface_point = WGS84_64.scale_to_geodetic_surface(aabb.center);
 
             let mut material = material.clone();
+            let clamp_to_ground = material
+                .clamp_to_ground
+                .or(default_material.clamp_to_ground)
+                .unwrap_or(false);
+            let height = material
+                .height
+                .or(default_material.height)
+                .unwrap_or(1.0);
+            let extruded_height = material
+                .extruded_height
+                .or(default_material.extruded_height)
+                .unwrap_or(0.0);
             material.internal = Some(PolygonInternalMaterial {
                 min_max_heights: calc_min_max_height(
-                    material.height as f64,
-                    material.extruded_height.unwrap_or(0.) as FloatType,
-                    material.clamp_to_ground,
+                    height as f64,
+                    extruded_height as FloatType,
+                    clamp_to_ground,
                     -aabb.center.distance(surface_point.unwrap()),
                 ),
             });
@@ -239,7 +257,6 @@ pub fn transfer_mesh(
             polygon_result.geometry.attributes.batch_ids =
                 Some(FloatAttribute::new(batch_id_vec, 1));
 
-            let clamp_to_ground = material.clamp_to_ground;
             // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
             let entity = commands
                 .spawn((
@@ -334,6 +351,7 @@ pub fn update_height_by_terrain(
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
 ) {
     let is_tile_meshes_empty = tile_meshes.is_empty();
+    let default_material = PolygonMaterial::default();
 
     for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
@@ -343,14 +361,20 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty
-                    || !material.clamp_to_ground
-                    || render_info.should_be_texturized)
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let show = material
+                    .show
+                    .or(default_material.show)
+                    .unwrap_or(true);
+                if (is_tile_meshes_empty || !clamp_to_ground || render_info.should_be_texturized)
                     && !render_info.should_recalculate_height
                 {
                     continue;
                 }
-                if !material.show || !active {
+                if !show || !active {
                     continue;
                 }
             }
@@ -365,6 +389,18 @@ pub fn update_height_by_terrain(
                 ..
             } => {
                 render_info.should_recalculate_height = false;
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let height = material
+                    .height
+                    .or(default_material.height)
+                    .unwrap_or(1.0);
+                let extruded_height = material
+                    .extruded_height
+                    .or(default_material.extruded_height)
+                    .unwrap_or(0.0);
 
                 let Some(distance_to_center_from_ellipsoid_surface) =
                     render_info.distance_to_center_from_ellipsoid_surface
@@ -375,21 +411,18 @@ pub fn update_height_by_terrain(
                     continue;
                 };
 
-                let (min_height, max_height) = if material.clamp_to_ground {
+                let (min_height, max_height) = if clamp_to_ground {
                     let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
                     (min, max)
                 } else {
-                    (
-                        material.height as f64,
-                        material.extruded_height.unwrap_or(0.) as f64,
-                    )
+                    (height as f64, extruded_height as f64)
                 };
 
                 let internal = material.internal.as_mut().unwrap();
                 internal.min_max_heights = calc_min_max_height(
                     min_height,
                     max_height,
-                    material.clamp_to_ground,
+                    clamp_to_ground,
                     distance_to_center_from_ellipsoid_surface,
                 );
 

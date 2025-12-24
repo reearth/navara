@@ -87,7 +87,7 @@ impl Cesium3dTilesTree {
             .iter()
             .find(|a| matches!(a, Appearance::Model(_)));
         let max_sse = match appearance {
-            Some(Appearance::Model(m)) => m.max_sse,
+            Some(Appearance::Model(m)) => m.max_sse.unwrap_or(2.),
             _ => 2.,
         };
 

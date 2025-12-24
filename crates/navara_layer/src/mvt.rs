@@ -27,6 +27,17 @@ impl MvtLayer {
                 _ => None,
             })
     }
+
+    pub fn merge(&self, other: &MvtLayer) -> MvtLayer {
+        MvtLayer {
+            layer_id: self.layer_id.clone(),
+            data: other.data.clone().or_else(|| self.data.clone()),
+            appearances: self.appearances.clone().into_iter().enumerate().map(|(i, self_appearance)| {
+                other.appearances.get(i).map(|other_appearance| other_appearance.merge(&self_appearance)).unwrap_or(self_appearance)
+            }).collect(),
+            crs: other.crs.clone().or_else(|| self.crs.clone()),
+        }
+    }
 }
 
 #[derive(Debug, Component)]

@@ -55,6 +55,7 @@ pub fn transfer_batched_mesh(
         Without<Deleted>,
     >,
 ) {
+    let default_material = PolylineMaterial::default();
     for (
         batched_feature_entity,
         layer_id,
@@ -67,6 +68,11 @@ pub fn transfer_batched_mesh(
         tile_extent_component,
     ) in &mut batched_features
     {
+        let clamp_to_ground = material
+            .clamp_to_ground
+            .or(default_material.clamp_to_ground)
+            .unwrap_or(false);
+
         let needs_update = batched_feature.is_added()
             || batched_feature.construct_polyline_feature.is_some_and(|c| {
                 construct_polyline_feature_tasks.contains(c)
@@ -83,7 +89,7 @@ pub fn transfer_batched_mesh(
                     ConstructPolylineBatchedFeatureParameters {
                         batched_feature: batched_feature_entity,
                         // If it uses `clamp_to_ground` and it is tile, it should be flat.
-                        flat: material.clamp_to_ground && tile_coordinates.is_some(),
+                        flat: clamp_to_ground && tile_coordinates.is_some(),
                         tile_extent: tile_extent_component.map(|t| t.extent),
                     },
                 ))
@@ -102,7 +108,6 @@ pub fn transfer_batched_mesh(
             min_max_heights: vec![0., 0.],
         });
 
-        let clamp_to_ground = material.clamp_to_ground;
         let mut entity_cmd = commands.spawn((
             PolylineMarker,
             layer_id.clone(),
@@ -161,6 +166,7 @@ pub fn transfer_mesh(
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
+    let default_material = PolylineMaterial::default();
     for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polylines {
         // `coords` has a lifetime for sure.
         let constructed_feature = {
@@ -180,7 +186,10 @@ pub fn transfer_mesh(
 
             geometry.attributes.batch_ids = Some(FloatAttribute::new(batch_id_vec, 1));
 
-            let clamp_to_ground = material.clamp_to_ground;
+            let clamp_to_ground = material
+                .clamp_to_ground
+                .or(default_material.clamp_to_ground)
+                .unwrap_or(false);
             let entity = commands
                 .spawn((
                     PolylineMarker,
@@ -225,6 +234,7 @@ pub fn update_height_by_terrain(
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
 ) {
     let is_tile_meshes_empty = tile_meshes.is_empty();
+    let default_material = PolylineMaterial::default();
 
     for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
@@ -234,14 +244,20 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty
-                    || !material.clamp_to_ground
-                    || render_info.should_be_texturized)
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let show = material
+                    .show
+                    .or(default_material.show)
+                    .unwrap_or(true);
+                if (is_tile_meshes_empty || !clamp_to_ground || render_info.should_be_texturized)
                     && !render_info.should_recalculate_height
                 {
                     continue;
                 }
-                if !material.show || !active {
+                if !show || !active {
                     continue;
                 }
             }
@@ -256,7 +272,11 @@ pub fn update_height_by_terrain(
             } => {
                 render_info.should_recalculate_height = false;
 
-                let (min_height, max_height) = if material.clamp_to_ground {
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let (min_height, max_height) = if clamp_to_ground {
                     let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
                     (min, max)
                 } else {

@@ -11,13 +11,20 @@ pub fn construct_polyline_feature(
     coords: Vec<f64>,
     crs: &CRS,
 ) -> Option<(Extent<f64, Radians>, navara_geometry::PolylineGeometry)> {
+    let default = PolylineMaterial::default();
+    let height = material.height.or(default.height).unwrap_or(1.0);
+    let clamp_to_ground = material
+        .clamp_to_ground
+        .or(default.clamp_to_ground)
+        .unwrap_or(false);
+
     let mut latlngs = vec![];
     let mut positions = vec![];
     for i in 0..coords.len() / 3 {
         let i = i * 3;
         let vec3 = Vec3::new(coords[i], coords[i + 1], coords[i + 2]);
         latlngs.push(crs.to_lng_lat(WGS84_64, vec3));
-        positions.push(crs.to_lle(WGS84_64, vec3, material.height));
+        positions.push(crs.to_lle(WGS84_64, vec3, height));
     }
 
     let extent = Extent::from_points(&latlngs);
@@ -26,7 +33,7 @@ pub fn construct_polyline_feature(
         WGS84_64,
         PolylineGeometryOptions {
             positions,
-            clamp_to_ground: material.clamp_to_ground,
+            clamp_to_ground,
             ..Default::default()
         },
     )
@@ -39,6 +46,9 @@ pub fn construct_flat_polyline_feature(
     coords: Vec<f64>,
     material: &PolylineMaterial,
 ) -> Option<navara_geometry::PolylineGeometry> {
+    let default = PolylineMaterial::default();
+    let width = material.width.or(default.width).unwrap_or(1.0);
+
     let mut positions = vec![];
     for i in 0..coords.len() / 3 {
         let i = i * 3;
@@ -47,6 +57,6 @@ pub fn construct_flat_polyline_feature(
 
     create_flat_polyline_geometry(FlatPolylineGeometryOptions {
         positions,
-        width: material.width,
+        width,
     })
 }

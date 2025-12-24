@@ -46,6 +46,7 @@ pub fn transfer_batched_mesh(
     mut layer_store: ResMut<LayerStore>,
     mut buf: ResMut<BufferStore>,
 ) {
+    let default_material = TextMaterial::default();
     for (
         batched_feature_entity,
         layer_id,
@@ -56,6 +57,12 @@ pub fn transfer_batched_mesh(
         mut feature_id,
     ) in &mut batched_features
     {
+        let height = material
+            .height
+            .or(default_material.height)
+            .unwrap_or(1.0);
+        let size = material.size.or(default_material.size).unwrap_or(1.0);
+
         // Extract all point geometries and create batch indices and IDs in a single loop
         let feature_len = batched_feature.features.len();
         let mut all_coords = Vec::with_capacity(feature_len * 3);
@@ -81,7 +88,7 @@ pub fn transfer_batched_mesh(
             let transformed_pos =
                 point_geometry
                     .crs
-                    .to_vec3(WGS84_64, point_geometry.coords, material.height);
+                    .to_vec3(WGS84_64, point_geometry.coords, height);
 
             all_coords.push(transformed_pos.x as f32);
             all_coords.push(transformed_pos.y as f32);
@@ -107,9 +114,9 @@ pub fn transfer_batched_mesh(
                     crs,
                     material: material.clone(),
                     transform: Transform::from_scale(Vec3::new(
-                        material.size as f64,
-                        material.size as f64,
-                        material.size as f64,
+                        size as f64,
+                        size as f64,
+                        size as f64,
                     )),
                     feature_id: batched_feature_entity,
                     render_info: RenderInformation {
@@ -156,10 +163,21 @@ pub fn transfer_mesh(
     >,
     mut layer_store: ResMut<LayerStore>,
 ) {
+    let default_material = TextMaterial::default();
     for (entity, layer_id, batch_id, feature_id, geometry, material, lod_marker) in &mut texts {
+        let height = material
+            .height
+            .or(default_material.height)
+            .unwrap_or(1.0);
+        let size = material.size.or(default_material.size).unwrap_or(1.0);
+        let clamp_to_ground = material
+            .clamp_to_ground
+            .or(default_material.clamp_to_ground)
+            .unwrap_or(false);
+
         let position = geometry
             .crs
-            .to_vec3(WGS84_64, geometry.coords, material.height);
+            .to_vec3(WGS84_64, geometry.coords, height);
 
         let entity = commands
             .spawn((
@@ -170,15 +188,15 @@ pub fn transfer_mesh(
                     crs: geometry.crs.clone(),
                     material: material.clone(),
                     transform: Transform::from_translation(position).with_scale(Vec3::new(
-                        material.size as f64,
-                        material.size as f64,
-                        material.size as f64,
+                        size as f64,
+                        size as f64,
+                        size as f64,
                     )),
                     feature_id: entity,
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
                         is_rendered: false,
-                        should_recalculate_height: material.clamp_to_ground,
+                        should_recalculate_height: clamp_to_ground,
                     },
                     geometry: TransferablePointGeometry::with_buf(
                         &mut buf,
@@ -218,6 +236,7 @@ pub fn update_height_by_terrain_for_batched(
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
     let is_tile_meshes_empty = tile_meshes.is_empty();
+    let default_material = TextMaterial::default();
 
     for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
@@ -227,12 +246,20 @@ pub fn update_height_by_terrain_for_batched(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty || !material.clamp_to_ground)
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let show = material
+                    .show
+                    .or(default_material.show)
+                    .unwrap_or(true);
+                if (is_tile_meshes_empty || !clamp_to_ground)
                     && !render_info.should_recalculate_height
                 {
                     continue;
                 }
-                if !material.show || !active {
+                if !show || !active {
                     continue;
                 }
             }
@@ -253,13 +280,21 @@ pub fn update_height_by_terrain_for_batched(
                 let Ok(batched_feature) = batched_features.get(*feature_id) else {
                     continue;
                 };
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let height = material
+                    .height
+                    .or(default_material.height)
+                    .unwrap_or(1.0);
 
                 let feature_len = batched_feature.features.len();
                 let mut all_coords = Vec::with_capacity(feature_len * 3);
 
                 for feature_id in &batched_feature.features {
                     let geometry = geometries.get(*feature_id).unwrap();
-                    if material.clamp_to_ground {
+                    if clamp_to_ground {
                         // TODO: Avoid computing terrain height one by one. We can calculate it all together.
                         let terrain_height = compute_terrain_height_at_point(
                             &mut qt,
@@ -276,7 +311,7 @@ pub fn update_height_by_terrain_for_batched(
                     let position = geometry.crs.to_vec3(
                         WGS84_64,
                         geometry.coords,
-                        material.height + render_info.current_terrain_height as f32,
+                        height + render_info.current_terrain_height as f32,
                     );
 
                     all_coords.push(position.x as f32);
@@ -309,6 +344,7 @@ pub fn update_height_by_terrain(
     terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
     let is_tile_meshes_empty = tile_meshes.is_empty();
+    let default_material = TextMaterial::default();
 
     for (_, mut feature) in &mut renderable_features {
         match feature.as_ref() {
@@ -321,7 +357,11 @@ pub fn update_height_by_terrain(
                 if is_tile_meshes_empty && !render_info.should_recalculate_height {
                     continue;
                 }
-                if !material.show || !active {
+                let show = material
+                    .show
+                    .or(default_material.show)
+                    .unwrap_or(true);
+                if !show || !active {
                     continue;
                 }
             }
@@ -340,7 +380,15 @@ pub fn update_height_by_terrain(
             } => {
                 render_info.should_recalculate_height = false;
                 let geometry = geometries.get(*feature_id).unwrap();
-                if material.clamp_to_ground {
+                let clamp_to_ground = material
+                    .clamp_to_ground
+                    .or(default_material.clamp_to_ground)
+                    .unwrap_or(false);
+                let height = material
+                    .height
+                    .or(default_material.height)
+                    .unwrap_or(1.0);
+                if clamp_to_ground {
                     let terrain_height = compute_terrain_height_at_point(
                         &mut qt,
                         &mut buf,
@@ -356,7 +404,7 @@ pub fn update_height_by_terrain(
                 let position = geometry.crs.to_vec3(
                     WGS84_64,
                     geometry.coords,
-                    material.height + render_info.current_terrain_height as f32,
+                    height + render_info.current_terrain_height as f32,
                 );
 
                 transferable_geometry.position.data =
