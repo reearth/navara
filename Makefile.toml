@@ -21,6 +21,10 @@ PROJ_NAME = "navara"
 description = "Build all WASM modules with shared compilation (release)"
 run_task = { name = ["build-rust-all-wasm", "bindgen-all"], parallel = false }
 
+[tasks.build-debug-all]
+description = "Build all WASM modules with shared compilation (release + debug)"
+run_task = { name = ["build-debug-rust-all-wasm", "bindgen-all"], parallel = false }
+
 [tasks.build-dev-all]
 description = "Build all WASM modules with shared compilation (dev)"
 run_task = { name = ["build-dev-rust-all-wasm", "bindgen-dev-all"], parallel = false }
@@ -64,11 +68,17 @@ run_task = { name = ["watch", "dev-web"], parallel = true }
 
 [tasks.web]
 # Build WASM in release mode, but web is built in dev mode to improve development experience on Web.
-run_task = { name = ["watch-prod", "dev-web"], parallel = true }
+run_task = { name = ["watch-debug", "dev-web"], parallel = true }
 
 [tasks.watch]
 script = ['''
 cargo watch --watch "./crates" -s "cargo make build-dev-all" --poll
+cargo watch --watch "./web" -s "cargo make build-web" --poll
+''']
+
+[tasks.watch-debug]
+script = ['''
+cargo watch --watch "./crates" -s "cargo make build-debug-all" --poll
 cargo watch --watch "./web" -s "cargo make build-web" --poll
 ''']
 
