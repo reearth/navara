@@ -16,7 +16,6 @@ export type FeatureEvaluatorCallback = (evaluator: FeatureEvaluator) => void;
 export class Layer extends EventHandler<LayerEvent> {
   id: string;
   private core: Core;
-  private description?: LayerDescription;
   private featureEvaluators: Map<FeatureId, FeatureEvaluator> = new Map<
     FeatureId,
     FeatureEvaluator
@@ -80,53 +79,7 @@ export class Layer extends EventHandler<LayerEvent> {
     return true;
   }
 
-  /**
-   * Merge a partial update into the current description.
-   * Returns the merged description, or undefined if no description is set yet.
-   * @internal Used by update pipeline
-   */
-  _updateLayerDescription(
-    update: LayerDescription,
-  ): LayerDescription | undefined {
-    if (!this.description) {
-      return undefined;
-    }
-
-    const result: Record<string, unknown> = {
-      ...(this.description as Record<string, unknown>),
-    };
-
-    const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-      value !== null && typeof value === "object" && !Array.isArray(value);
-
-    for (const [key, value] of Object.entries(
-      update as Record<string, unknown>,
-    )) {
-      if (key === "type" || value === undefined) {
-        continue;
-      }
-
-      if (isPlainObject(value) && isPlainObject(result[key])) {
-        result[key] = { ...(result[key] as Record<string, unknown>), ...value };
-        continue;
-      }
-
-      result[key] = value;
-    }
-
-    const merged = result as LayerDescription;
-    this.description = merged;
-    return merged;
-  }
-
-  /**
-   * Set the full layer description without triggering an update.
-   */
-  setDescription(description: LayerDescription) {
-    this.description = description;
-  }
-
-  forceUpdate() {
+   forceUpdate() {
     this.needUpdate = true;
   }
 
@@ -135,8 +88,7 @@ export class Layer extends EventHandler<LayerEvent> {
     const processedLayer = this.convertColors
       ? (this.convertColors(l) as LayerDescription)
       : l;
-    const updatedDescription = this._updateLayerDescription(processedLayer);
-    this.core.updateLayer(this.id, updatedDescription || processedLayer);
+    this.core.updateLayer(this.id, processedLayer);
   }
 
   delete() {

@@ -1085,8 +1085,6 @@ export default class ThreeView<
       this._convertColorsToNumbers.bind(this),
     );
 
-    layer.setDescription(processedLayer);
-
     this.layersManager.add(layer);
 
     return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
