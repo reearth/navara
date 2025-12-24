@@ -31,10 +31,10 @@ import {
   applyDepthClip,
 } from "./SelectiveEffectLayer";
 
-// PostEffect Outline configuration
+// Selective Outline configuration
 export type SelectiveOutlineEffectConfig = {
   selectiveEffect: true;
-  outline: {
+  selectiveOutline: {
     color?: number;
     thickness?: number;
     edgeStrength?: number;
@@ -44,7 +44,7 @@ export type SelectiveOutlineEffectConfig = {
 } & EffectLayerConfig;
 
 export type SelectiveOutlineEffectUpdate = {
-  outline?: {
+  selectiveOutline?: {
     color?: number;
     thickness?: number;
     edgeStrength?: number;
@@ -66,7 +66,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   SelectiveOutlineEffectConfig,
   SelectiveOutlineEffectUpdate
 > {
-  static key = "outline";
+  static key = "selectiveOutline";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
@@ -74,15 +74,15 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 
   // Getters that derive values from config (single source of truth)
   get outlineColor(): number {
-    return this.config.outline?.color ?? DEFAULT_COLOR;
+    return this.config.selectiveOutline?.color ?? DEFAULT_COLOR;
   }
 
   get outlineThickness(): number {
-    return this.config.outline?.thickness ?? DEFAULT_THICKNESS;
+    return this.config.selectiveOutline?.thickness ?? DEFAULT_THICKNESS;
   }
 
   get outlineEdgeStrength(): number {
-    return this.config.outline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
+    return this.config.selectiveOutline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
   }
 
   protected getEffectKey(): string {
@@ -90,21 +90,22 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getResolutionScale(): number {
-    return this.config.outline?.resolutionScale ?? 1.0;
+    return this.config.selectiveOutline?.resolutionScale ?? 1.0;
   }
 
   protected getDebugViews(): boolean {
-    return this.config.outline?.debugViews ?? false;
+    return this.config.selectiveOutline?.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
     const baseConfig = config as Partial<SelectiveOutlineEffectConfig>;
-    const outlineConfig = "outline" in config ? baseConfig.outline : undefined;
+    const outlineConfig =
+      "selectiveOutline" in config ? baseConfig.selectiveOutline : undefined;
 
     const postEffectConfig: SelectiveOutlineEffectConfig = {
       ...(config as SelectiveOutlineEffectConfig),
       selectiveEffect: true,
-      outline: {
+      selectiveOutline: {
         color: outlineConfig?.color ?? DEFAULT_COLOR,
         thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
         edgeStrength: outlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
@@ -145,33 +146,33 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (updates.outline) {
-      const next = updates.outline;
+    if (updates.selectiveOutline) {
+      const next = updates.selectiveOutline;
 
-      if (!this.config.outline) {
-        this.config.outline = {};
+      if (!this.config.selectiveOutline) {
+        this.config.selectiveOutline = {};
       }
 
       // Update config only - getters will derive values from config
       if (next.color !== undefined) {
-        this.config.outline.color = next.color;
+        this.config.selectiveOutline.color = next.color;
       }
 
       if (next.thickness !== undefined) {
-        this.config.outline.thickness = next.thickness;
+        this.config.selectiveOutline.thickness = next.thickness;
       }
 
       if (next.edgeStrength !== undefined) {
-        this.config.outline.edgeStrength = next.edgeStrength;
+        this.config.selectiveOutline.edgeStrength = next.edgeStrength;
       }
 
       if (next.debugViews !== undefined) {
-        this.config.outline.debugViews = next.debugViews;
+        this.config.selectiveOutline.debugViews = next.debugViews;
         this.updateDebugViews(next.debugViews);
       }
 
       if (next.resolutionScale !== undefined) {
-        this.config.outline.resolutionScale = next.resolutionScale;
+        this.config.selectiveOutline.resolutionScale = next.resolutionScale;
         this.updateResolutionScale(next.resolutionScale);
       }
 
@@ -224,7 +225,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
     const renderer =
       layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer.layerConfig.outline?.resolutionScale ?? 1.0;
+    const resolutionScale =
+      layer.layerConfig.selectiveOutline?.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -534,7 +536,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.outline?.debugViews) {
+    if (this.layer.layerConfig.selectiveOutline?.debugViews) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

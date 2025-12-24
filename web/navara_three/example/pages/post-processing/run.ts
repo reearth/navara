@@ -53,7 +53,7 @@ export const run = async (view: ThreeView) => {
   // Post effects setup
   const postEffectOutline = view.addLayer({
     type: "effect",
-    outline: {
+    selectiveOutline: {
       color: 0xff0000,
       thickness: 2.0,
       edgeStrength: 1.0,
@@ -64,7 +64,7 @@ export const run = async (view: ThreeView) => {
 
   const postEffectBloom = view.addLayer({
     type: "effect",
-    bloom: {
+    selectiveBloom: {
       strength: BLOOM_CONFIG.strength,
       radius: BLOOM_CONFIG.radius,
       threshold: BLOOM_CONFIG.threshold,

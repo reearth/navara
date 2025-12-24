@@ -232,7 +232,7 @@ export function resolveSelectiveEffectOcclusion(
  */
 export class SelectiveEffectHelper {
   private resources = new Map<string, SelectiveEffectResources>();
-  private effectKeys = new Map<string, string>(); // effectId -> effectKey (e.g., "bloom")
+  private effectKeys = new Map<string, string>(); // effectId -> effectKey (e.g., "selectiveBloom")
   private effectObjectCache = new Map<string, Set<Object3D>>(); // effectKey -> objects
   private width: number;
   private height: number;
@@ -246,7 +246,7 @@ export class SelectiveEffectHelper {
 
   /**
    * Get cached objects for a specific effect key
-   * @param effectKey - Effect key (e.g., "bloom", "outline")
+   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
    * @returns Set of objects with this effect enabled
    */
   getObjectsForEffect(effectKey: string): ReadonlySet<Object3D> {
@@ -308,7 +308,7 @@ export class SelectiveEffectHelper {
   }
 
   /**
-   * Get effect key (e.g., "bloom") for an effect ID
+   * Get effect key (e.g., "selectiveBloom") for an effect ID
    */
   getEffectKey(effectId: string): string | undefined {
     return this.effectKeys.get(effectId);

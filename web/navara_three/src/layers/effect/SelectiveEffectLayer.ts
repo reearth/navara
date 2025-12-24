@@ -176,7 +176,7 @@ export abstract class SelectiveEffectLayer<
 
   /**
    * Helper method for subclasses to update resolution scale
-   * Call this when effect-specific resolutionScale changes (e.g., updates.bloom.resolutionScale)
+   * Call this when effect-specific resolutionScale changes (e.g., updates.selectiveBloom.resolutionScale)
    */
   protected updateResolutionScale(resolutionScale: number): void {
     if (!this.view.selectiveEffectRegistry) return;
@@ -190,7 +190,7 @@ export abstract class SelectiveEffectLayer<
 
   /**
    * Helper method for subclasses to update debug views
-   * Call this when effect-specific debugViews changes (e.g., updates.bloom.debugViews)
+   * Call this when effect-specific debugViews changes (e.g., updates.selectiveBloom.debugViews)
    */
   protected updateDebugViews(debugViews: boolean): void {
     this.resources.options.debugViews = debugViews;

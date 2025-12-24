@@ -326,7 +326,7 @@ export class CustomRenderPass extends RenderPass {
    * Set mask render targets for selective effect rendering.
    * Called by SelectiveEffectLayer to register their mask RTs.
    *
-   * @param effectKey - Effect key (e.g., "bloom", "outline")
+   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
    * @param rt - WebGLRenderTarget for mask rendering
    */
   setMaskRenderTarget(effectKey: string, rt: WebGLRenderTarget): void {
@@ -344,9 +344,9 @@ export class CustomRenderPass extends RenderPass {
 
   /**
    * Set occlusion mode-specific mask render targets.
-   * Used by effects that need separate Normal and Silhouette masks (bloom, outline).
+   * Used by effects that need separate Normal and Silhouette masks (selectiveBloom, selectiveOutline).
    *
-   * @param effectKey - Effect key (e.g., "bloom", "outline")
+   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
    * @param targets - Object with optional normal and silhouette WebGLRenderTargets
    */
   setOcclusionMaskRenderTargets(

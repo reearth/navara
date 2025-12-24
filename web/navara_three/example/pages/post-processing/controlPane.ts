@@ -185,7 +185,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        bloom: {
+        selectiveBloom: {
           strength: ev.value,
         },
       });
@@ -200,7 +200,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        bloom: {
+        selectiveBloom: {
           radius: ev.value,
         },
       });
@@ -215,7 +215,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        bloom: {
+        selectiveBloom: {
           threshold: ev.value,
         },
       });
@@ -233,7 +233,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     .on("change", (ev) => {
       postEffectBloom.update({
         type: "effect",
-        bloom: {
+        selectiveBloom: {
           debugMode: ev.value,
         },
       });
@@ -242,7 +242,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
   folder.addBinding(params, "debugViews").on("change", (ev) => {
     postEffectBloom.update({
       type: "effect",
-      bloom: {
+      selectiveBloom: {
         debugViews: ev.value,
       },
     });

@@ -1175,8 +1175,8 @@ export default class ThreeView<
 
     // SelectiveEffect effects
     this.registerEffect("testSelectiveEffect", TestSelectiveEffectLayer);
-    this.registerEffect("bloom", SelectiveBloomEffectLayer);
-    this.registerEffect("outline", SelectiveOutlineEffectLayer);
+    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
+    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);

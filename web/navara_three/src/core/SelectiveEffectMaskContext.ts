@@ -47,7 +47,7 @@ export type MaskPassContext = {
   /** Current mask pass phase */
   phase: MaskPassPhaseType;
 
-  /** Active effect keys for this mask pass (e.g., ["bloom", "outline"]) */
+  /** Active effect keys for this mask pass (e.g., ["selectiveBloom", "selectiveOutline"]) */
   activeEffects: readonly string[];
 
   /** Current occlusion mode filter (Normal, Silhouette, or undefined for all) */
