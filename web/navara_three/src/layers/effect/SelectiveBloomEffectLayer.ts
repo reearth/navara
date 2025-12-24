@@ -93,7 +93,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getEffectKey(): string {
-    return SelectiveBloomEffectLayer.key;
+    return BLOOM_EFFECT_KEY;
   }
 
   protected getResolutionScale(): number {

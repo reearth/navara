@@ -86,7 +86,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getEffectKey(): string {
-    return SelectiveOutlineEffectLayer.key;
+    return OUTLINE_EFFECT_KEY;
   }
 
   protected getResolutionScale(): number {
