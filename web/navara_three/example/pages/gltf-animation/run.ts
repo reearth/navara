@@ -12,7 +12,7 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
-import { addHidePaneKeyShortcut } from "../../helpers/control";
+import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 
 import { OSAKA_GEOJSON } from "./constants";
 import {
@@ -176,4 +176,5 @@ export const run = async (view: ThreeView) => {
   animate();
 
   showAttributions([TILE_DATASETS.openstreetmap]);
+  addDateControl(view, pane);
 };

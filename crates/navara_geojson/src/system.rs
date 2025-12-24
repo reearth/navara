@@ -631,7 +631,7 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -642,7 +642,7 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -731,7 +731,7 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -742,7 +742,7 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -836,7 +836,7 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -847,7 +847,7 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -936,7 +936,7 @@ mod test {
                     lng: Angle::new(139.75227193360223),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),
@@ -947,7 +947,7 @@ mod test {
                     lng: Angle::new(139.77250531915263),
                     #[allow(clippy::excessive_precision)]
                     lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
+                    height: Meters::new(0. + material.height.unwrap() as f64),
                 }
                 .rad()
                 .to_xyz(WGS84_64),

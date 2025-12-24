@@ -1,3 +1,5 @@
+use std::default;
+
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{calc_transform, ElevationDecoder, CRS};
 use navara_math::{Transform, Vec2, Vec3};
@@ -134,7 +136,8 @@ impl PointMaterial {
         *self = from.clone();
 
         if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height.unwrap(), self.size.unwrap(), false);
+            let default = PointMaterial::default();
+            *transform = calc_transform(coordinates, crs, self.height.or(default.height).unwrap(), self.size.or(default.size).unwrap(), false);
         }
     }
 
@@ -204,7 +207,8 @@ impl BillboardMaterial {
         *self = from.clone();
 
         if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height.unwrap(), self.size.unwrap(), false);
+            let default = BillboardMaterial::default();
+            *transform = calc_transform(coordinates, crs, self.height.or(default.height).unwrap(), self.size.or(default.size).unwrap(), false);
         }
     }
 
@@ -294,7 +298,8 @@ impl TextMaterial {
         *self = from.clone();
 
         if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height.unwrap(), self.size.unwrap(), false);
+            let default = TextMaterial::default();
+            *transform = calc_transform(coordinates, crs, self.height.or(default.height).unwrap(), self.size.or(default.size).unwrap(), false);
         }
     }
 
@@ -574,12 +579,13 @@ impl ModelMaterial {
         *self = from.clone();
 
         if should_update_transform {
+            let default = ModelMaterial::default();
             *transform = calc_transform(
                 coordinates,
                 crs,
-                self.height.unwrap(),
-                self.size.unwrap(),
-                self.should_rotate_in_default.unwrap(),
+                self.height.or(default.height).unwrap(),
+                self.size.or(default.size).unwrap(),
+                self.should_rotate_in_default.or(default.should_rotate_in_default).unwrap(),
             );
         }
     }

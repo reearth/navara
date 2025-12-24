@@ -75,7 +75,7 @@ pub fn transfer_batched_mesh(
         let clamp_to_ground = material
             .clamp_to_ground
             .or(default_material.clamp_to_ground)
-            .unwrap_or(false);
+            .unwrap_or(true);
 
         let needs_update = batched_feature.is_added()
             || batched_feature
@@ -218,7 +218,7 @@ pub fn transfer_mesh(
             let clamp_to_ground = material
                 .clamp_to_ground
                 .or(default_material.clamp_to_ground)
-                .unwrap_or(false);
+                .unwrap_or(true);
             let height = material
                 .height
                 .or(default_material.height)
@@ -364,7 +364,7 @@ pub fn update_height_by_terrain(
                 let clamp_to_ground = material
                     .clamp_to_ground
                     .or(default_material.clamp_to_ground)
-                    .unwrap_or(false);
+                    .unwrap_or(true);
                 let show = material
                     .show
                     .or(default_material.show)
@@ -392,7 +392,7 @@ pub fn update_height_by_terrain(
                 let clamp_to_ground = material
                     .clamp_to_ground
                     .or(default_material.clamp_to_ground)
-                    .unwrap_or(false);
+                    .unwrap_or(true);
                 let height = material
                     .height
                     .or(default_material.height)

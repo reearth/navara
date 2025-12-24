@@ -99,7 +99,6 @@ pub struct BillboardMaterial {
 
 impl From<BillboardMaterial> for navara_material::BillboardMaterial {
     fn from(val: BillboardMaterial) -> Self {
-        let default = navara_material::BillboardMaterial::default();
         navara_material::BillboardMaterial {
             show: val.show,
             size: val.size,
@@ -197,7 +196,6 @@ pub struct TextMaterial {
 
 impl From<TextMaterial> for navara_material::TextMaterial {
     fn from(val: TextMaterial) -> Self {
-        let default = navara_material::TextMaterial::default();
         navara_material::TextMaterial {
             show: val.show,
             size: val.size,
@@ -308,7 +306,6 @@ impl PolylineMaterial {
 
 impl From<PolylineMaterial> for navara_material::PolylineMaterial {
     fn from(val: PolylineMaterial) -> Self {
-        let default = navara_material::PolylineMaterial::default();
         navara_material::PolylineMaterial {
             show: val.show,
             cast_shadow: val.cast_shadow,
@@ -517,7 +514,6 @@ impl PolygonMaterial {
 
 impl From<PolygonMaterial> for navara_material::PolygonMaterial {
     fn from(val: PolygonMaterial) -> Self {
-        let default = navara_material::PolygonMaterial::default();
         navara_material::PolygonMaterial {
             show: val.show,
             cast_shadow: val.cast_shadow,
@@ -723,7 +719,6 @@ pub struct ModelMaterial {
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
     fn from(val: ModelMaterial) -> Self {
-        let default = navara_material::ModelMaterial::default();
         navara_material::ModelMaterial {
             show: val.show,
             cast_shadow: val.cast_shadow,
@@ -846,7 +841,6 @@ pub struct RasterTileMaterial {
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
     fn from(val: RasterTileMaterial) -> Self {
-        let default = navara_material::RasterTileMaterial::default();
         navara_material::RasterTileMaterial {
             show: val.show,
             color: val.color,
@@ -1058,7 +1052,6 @@ pub struct VectorTileMaterial {
 
 impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
     fn from(val: VectorTileMaterial) -> Self {
-        let default = navara_material::VectorTileMaterial::default();
         navara_material::VectorTileMaterial {
             show: val.show,
             cast_shadow: val.cast_shadow,
@@ -1127,7 +1120,6 @@ pub struct RasterTerrainMaterial {
 
 impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
     fn from(val: RasterTerrainMaterial) -> Self {
-        let default = navara_material::RasterTerrainMaterial::default();
         navara_material::RasterTerrainMaterial {
             show: val.show,
             cast_shadow: val.cast_shadow,

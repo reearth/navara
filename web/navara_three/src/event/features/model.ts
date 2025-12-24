@@ -54,6 +54,7 @@ export async function renderModel(
           sizeAttenuation: false,
         });
 
+        console.log("point cloud material", m.material);
         if (m.material.__internal__?.dracoCompressed) {
           geometry = await decompressDraco(
             bin.buffer as ArrayBuffer,

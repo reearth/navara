@@ -46,7 +46,7 @@ use bevy_ecs::{
     system::{Commands, ParamSet, Query, Res, ResMut},
     world::Ref,
 };
-use bevy_log::error;
+use bevy_log::{error, info};
 use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
@@ -347,6 +347,7 @@ pub fn update_cesium3dtiles_layer(
                     *mat = new_mat;
                     mat.should_rotate_in_default = Some(false);
                     mat.clamp_to_ground = Some(false);
+                    info!("Updated Cesium3dTilesLayer material {:?}", mat);
                 }
             }
         }
@@ -362,6 +363,7 @@ pub fn update_cesium3dtiles_layer(
                     *material = new_mat;
                     material.should_rotate_in_default = Some(false);
                     material.clamp_to_ground = Some(false);
+                    info!("Updated RenderableFeature material {:?}", material);
                 }
             }
         }
@@ -378,6 +380,7 @@ pub fn update_cesium3dtiles_layer(
                 *mat = new_mat;
                 mat.should_rotate_in_default = Some(false);
                 mat.clamp_to_ground = Some(false);
+                info!("Updated Tile ModelMaterial {:?}", mat);
             }
         }
         commands.entity(e).despawn();
