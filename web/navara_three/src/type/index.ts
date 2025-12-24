@@ -48,7 +48,6 @@ import type {
   SMAAConfig,
   SSAOConfig,
   SSRConfig,
-  TestPostEffectConfig,
   ToneMappingConfig,
   TransparentPassConfig,
   DepthOfFieldConfig,
@@ -102,7 +101,6 @@ export type EffectLayerDeclarationDescription =
   | SMAAConfig
   | SSAOConfig
   | SSRConfig
-  | TestPostEffectConfig
   | ToneMappingConfig
   | TransparentPassConfig
   | DepthOfFieldConfig;

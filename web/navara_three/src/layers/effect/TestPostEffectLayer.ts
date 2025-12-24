@@ -17,9 +17,10 @@ import { Pass } from "../../effects";
 import { PostEffectLayer, type PostEffectLayerUpdate } from "./PostEffectLayer";
 
 // Test post effect configuration (uses PostEffect infrastructure)
-export type TestPostEffectConfig = {
+// Internal only - not exported as public API
+type TestPostEffectConfig = {
   postEffect: true;
-  testPostEffect: {
+  _selectiveTest: {
     debugViews?: boolean;
     resolutionScale?: number;
   };
@@ -33,7 +34,7 @@ export class TestPostEffectLayer extends PostEffectLayer<
   TestPostEffectConfig,
   PostEffectLayerUpdate
 > {
-  static key = "testPostEffect";
+  static key = "_selectiveTest";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
@@ -42,27 +43,27 @@ export class TestPostEffectLayer extends PostEffectLayer<
   }
 
   protected getResolutionScale(): number {
-    return this.config.testPostEffect?.resolutionScale ?? 1.0;
+    return this.config._selectiveTest?.resolutionScale ?? 1.0;
   }
 
   protected getDebugViews(): boolean {
-    return this.config.testPostEffect?.debugViews ?? false;
+    return this.config._selectiveTest?.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    // Extract testPostEffect config
-    const testPostEffectConfig =
-      "testPostEffect" in config
-        ? (config as TestPostEffectConfig).testPostEffect
+    // Extract _selectiveTest config
+    const selectiveTestConfig =
+      "_selectiveTest" in config
+        ? (config as TestPostEffectConfig)._selectiveTest
         : {};
 
-    // Ensure config has postEffect: true and nested testPostEffect config
+    // Ensure config has postEffect: true and nested _selectiveTest config
     const postEffectConfig: TestPostEffectConfig = {
       ...(config as TestPostEffectConfig),
       postEffect: true,
-      testPostEffect: {
-        resolutionScale: testPostEffectConfig.resolutionScale ?? 1.0,
-        debugViews: testPostEffectConfig.debugViews ?? false,
+      _selectiveTest: {
+        resolutionScale: selectiveTestConfig.resolutionScale ?? 1.0,
+        debugViews: selectiveTestConfig.debugViews ?? false,
       },
     };
 
@@ -104,7 +105,7 @@ class TestPostEffectPass extends PostProcessingPass {
     // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
     // Render debug visualization if enabled
-    if (this.layer.layerConfig.testPostEffect?.debugViews) {
+    if (this.layer.layerConfig._selectiveTest?.debugViews) {
       this.layer.renderDebugMask();
     }
 
