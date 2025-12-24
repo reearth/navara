@@ -20,7 +20,7 @@ import { PostEffectLayer, type PostEffectLayerUpdate } from "./PostEffectLayer";
 export type TestPostEffectConfig = {
   postEffect: true;
   testPostEffect: {
-    debugMask?: boolean;
+    debugViews?: boolean;
     resolutionScale?: number;
   };
 } & EffectLayerConfig;
@@ -45,8 +45,8 @@ export class TestPostEffectLayer extends PostEffectLayer<
     return this.config.testPostEffect?.resolutionScale ?? 1.0;
   }
 
-  protected getDebugMask(): boolean {
-    return this.config.testPostEffect?.debugMask ?? false;
+  protected getDebugViews(): boolean {
+    return this.config.testPostEffect?.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
@@ -62,7 +62,7 @@ export class TestPostEffectLayer extends PostEffectLayer<
       postEffect: true,
       testPostEffect: {
         resolutionScale: testPostEffectConfig.resolutionScale ?? 1.0,
-        debugMask: testPostEffectConfig.debugMask ?? false,
+        debugViews: testPostEffectConfig.debugViews ?? false,
       },
     };
 
@@ -104,7 +104,7 @@ class TestPostEffectPass extends PostProcessingPass {
     // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
 
     // Render debug visualization if enabled
-    if (this.layer.layerConfig.testPostEffect?.debugMask) {
+    if (this.layer.layerConfig.testPostEffect?.debugViews) {
       this.layer.renderDebugMask();
     }
 

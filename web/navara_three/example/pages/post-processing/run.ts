@@ -16,7 +16,7 @@ export const BLOOM_CONFIG = {
   radius: 0.5,
   threshold: 0.0,
   debugMode: 0,
-  debugMask: true,
+  debugViews: true,
   resolutionScale: 1.0,
 } as const;
 
@@ -57,7 +57,7 @@ export const run = async (view: ThreeView) => {
       color: 0xff0000,
       thickness: 2.0,
       edgeStrength: 1.0,
-      debugMask: false,
+      debugViews: false,
       resolutionScale: 1.0,
     },
   });
@@ -69,7 +69,7 @@ export const run = async (view: ThreeView) => {
       radius: BLOOM_CONFIG.radius,
       threshold: BLOOM_CONFIG.threshold,
       debugMode: BLOOM_CONFIG.debugMode,
-      debugMask: BLOOM_CONFIG.debugMask,
+      debugViews: BLOOM_CONFIG.debugViews,
       resolutionScale: BLOOM_CONFIG.resolutionScale,
     },
   });

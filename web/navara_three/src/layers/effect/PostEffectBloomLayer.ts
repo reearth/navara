@@ -40,7 +40,7 @@ export type PostEffectBloomConfig = {
     threshold?: number;
     debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
     resolutionScale?: number;
-    debugMask?: boolean;
+    debugViews?: boolean;
   };
 } & EffectLayerConfig;
 
@@ -51,7 +51,7 @@ export type PostEffectBloomUpdate = {
     threshold?: number;
     debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
     resolutionScale?: number;
-    debugMask?: boolean;
+    debugViews?: boolean;
   };
 } & EffectLayerUpdate;
 
@@ -100,8 +100,8 @@ export class PostEffectBloomLayer extends PostEffectLayer<
     return this.config.bloom?.resolutionScale ?? 1.0;
   }
 
-  protected getDebugMask(): boolean {
-    return this.config.bloom?.debugMask ?? false;
+  protected getDebugViews(): boolean {
+    return this.config.bloom?.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
@@ -117,7 +117,7 @@ export class PostEffectBloomLayer extends PostEffectLayer<
         threshold: bloomConfig?.threshold ?? DEFAULT_THRESHOLD,
         debugMode: bloomConfig?.debugMode ?? 0,
         resolutionScale: bloomConfig?.resolutionScale ?? 1.0,
-        debugMask: bloomConfig?.debugMask ?? false,
+        debugViews: bloomConfig?.debugViews ?? false,
       },
     };
 
@@ -177,9 +177,9 @@ export class PostEffectBloomLayer extends PostEffectLayer<
         this.config.bloom.debugMode = next.debugMode;
       }
 
-      if (next.debugMask !== undefined) {
-        this.config.bloom.debugMask = next.debugMask;
-        this.updateDebugMask(next.debugMask);
+      if (next.debugViews !== undefined) {
+        this.config.bloom.debugViews = next.debugViews;
+        this.updateDebugViews(next.debugViews);
       }
 
       if (next.resolutionScale !== undefined) {
@@ -557,7 +557,7 @@ class PostEffectBloomPass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.bloom?.debugMask) {
+    if (this.layer.layerConfig.bloom?.debugViews) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,
@@ -574,6 +574,16 @@ class PostEffectBloomPass extends PostProcessingPass {
 
       this.debugView1.render(renderer, this.depthEnabledMaskRT);
       this.debugView2.render(renderer, this.silhouetteMaskRT);
+    } else {
+      // Dispose debug views when debugViews is disabled
+      if (this.debugView1) {
+        this.debugView1.dispose();
+        this.debugView1 = undefined;
+      }
+      if (this.debugView2) {
+        this.debugView2.dispose();
+        this.debugView2 = undefined;
+      }
     }
   }
 

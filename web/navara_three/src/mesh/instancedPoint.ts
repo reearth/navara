@@ -7,27 +7,27 @@ import { arraysEqual } from "../utils";
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { PointMesh } from "./point";
 
+/** UserData type for InstancedPointMesh */
+type InstancedPointUserData = {
+  prev?: {
+    effectIds?: string[];
+  };
+};
+
 export class InstancedPointMesh extends InstancedMesh<PointMesh> {
   /** ViewContext for PostEffect handling */
-  private _viewContext?: ViewContext;
+  private _viewContext: ViewContext;
   /** Layer ID for PostEffect handling */
-  private _layerId?: string;
-
-  /**
-   * Set PostEffect context (viewContext and layerId)
-   * Called from feature rendering to enable PostEffect handling
-   */
-  setPostEffectContext(viewContext: ViewContext, layerId: string): void {
-    this._viewContext = viewContext;
-    this._layerId = layerId;
-  }
+  private _layerId: string;
 
   constructor(
     m: NavaraPointMesh,
     buf: BufferLoader,
-    options?: InstancedMeshOptions,
+    options: InstancedMeshOptions,
   ) {
     super(options);
+    this._viewContext = options.viewContext;
+    this._layerId = options.layerId;
 
     this.initMeshes(m, buf);
   }
@@ -102,16 +102,16 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
     // PostEffect: effectIds handling at container level
     // SpriteMaterial doesn't support emissive, so only effectIds is handled
-    this.userData.prev ??= {};
-    const prev = this.userData.prev as { effectIds?: string[] };
-    if (this._layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
-      this._viewContext?.postEffectRegistry?.updateLinksForObject(
+    const ud = this.userData as InstancedPointUserData;
+    ud.prev ??= {};
+    if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
+      this._viewContext.postEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        prev.effectIds ?? [],
+        ud.prev.effectIds ?? [],
         this._layerId,
       );
-      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+      ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 }

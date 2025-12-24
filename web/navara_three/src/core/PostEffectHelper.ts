@@ -83,7 +83,7 @@ export const POST_EFFECT_OCCLUSION_SKIP = -1 as const;
 
 export type PostEffectOptions = {
   resolutionScale?: number;
-  debugMask?: boolean;
+  debugViews?: boolean;
 };
 
 export type PostEffectResources = {
@@ -291,7 +291,7 @@ export class PostEffectHelper {
     maskRT.texture.name = `PostEffectMask_${effectKey}`;
 
     let maskDebug: BufferView | undefined;
-    if (options.debugMask) {
+    if (options.debugViews) {
       maskDebug = new BufferView(width, height);
     }
 
@@ -497,7 +497,7 @@ export class PostEffectHelper {
       resources.maskRT.setSize(w, h);
 
       // Recreate debug view if enabled
-      if (resources.options.debugMask) {
+      if (resources.options.debugViews) {
         resources.maskDebug?.dispose();
         resources.maskDebug = new BufferView(w, h);
       }
@@ -538,6 +538,26 @@ export class PostEffectHelper {
     for (const resources of this.resources.values()) {
       if (!resources.maskDebug) continue;
       resources.maskDebug.render(renderer, resources.maskRT);
+    }
+  }
+
+  /**
+   * Enable/disable debug views for all effects
+   * When enabled, creates BufferView for effects that don't have one
+   * When disabled, disposes all BufferViews and removes canvas from DOM
+   */
+  setDebugViewsAll(enabled: boolean): void {
+    for (const resources of this.resources.values()) {
+      resources.options.debugViews = enabled;
+      if (enabled && !resources.maskDebug) {
+        resources.maskDebug = new BufferView(
+          resources.maskRT.width,
+          resources.maskRT.height,
+        );
+      } else if (!enabled && resources.maskDebug) {
+        resources.maskDebug.dispose();
+        resources.maskDebug = undefined;
+      }
     }
   }
 }

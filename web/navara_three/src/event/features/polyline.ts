@@ -15,8 +15,14 @@ export async function renderPolyline(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  const polylineMesh = new PolylineMesh(mesh, buf, uniforms, viewEvents);
-  polylineMesh.setPostEffectContext(viewContext, layerId);
+  const polylineMesh = new PolylineMesh(
+    mesh,
+    buf,
+    uniforms,
+    viewEvents,
+    viewContext,
+    layerId,
+  );
   return polylineMesh;
 }
 

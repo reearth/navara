@@ -15,8 +15,9 @@ export async function renderBillboard(
 
   const mesh = new InstancedBillboardMesh({
     renderOrder: FEATURE_RENDER_ORDER,
+    viewContext,
+    layerId,
   });
-  mesh.setPostEffectContext(viewContext, layerId);
   await mesh._init(m, buf);
 
   return mesh;

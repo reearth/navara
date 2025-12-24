@@ -169,7 +169,7 @@ export type Options = {
   backgroundColor?: CoreColor;
   picking?: Picking;
   postEffects?: {
-    debugMask?: boolean;
+    debugViews?: boolean;
   };
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
   animation?: boolean;
@@ -680,7 +680,7 @@ export default class ThreeView<
       this,
       this.postEffectHelper,
       {
-        postEffectMask: this._options.postEffects?.debugMask,
+        postEffectMask: this._options.postEffects?.debugViews,
       },
     );
     this.registries = new Registries(this.viewContext);
@@ -1033,7 +1033,7 @@ export default class ThreeView<
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
-    if (this._options.postEffects?.debugMask) {
+    if (this._options.postEffects?.debugViews) {
       this.postEffectHelper.renderDebugViews(
         this.renderPassOrchestrator.effectComposer.getRenderer(),
       );
@@ -1311,9 +1311,6 @@ export default class ThreeView<
     this.registries.effect.register(name, effectClass);
   }
 
-  // Track materials that have been set up with CSM to prevent duplicate shader injection
-  private _csmSetupMaterials = new WeakMap<Material, boolean>();
-
   /**
    * Find the sun light layer in the current layers
    */
@@ -1331,40 +1328,24 @@ export default class ThreeView<
 
   /**
    * Setup CSM for a single material
-   * Prevents duplicate shader injection by tracking setup state
    */
   private setupCSMForMaterial(material: Material): void {
-    // Check if CSM is already set up for this material
-    if (this._csmSetupMaterials.has(material)) {
-      return;
-    }
-
     const sunLightLayer = this.findSunLightLayer();
     if (!sunLightLayer) {
       return;
     }
-
     sunLightLayer.setupMaterialForShadows(material);
-    this._csmSetupMaterials.set(material, true);
   }
 
   /**
    * Remove CSM for a single material
-   * Only removes if CSM was previously set up
    */
   private removeCSMForMaterial(material: Material): void {
-    // Only rollback if CSM was set up
-    if (!this._csmSetupMaterials.has(material)) {
-      return;
-    }
-
     const sunLightLayer = this.findSunLightLayer();
     if (!sunLightLayer) {
       return;
     }
-
     sunLightLayer.removeMaterialFromShadows(material);
-    this._csmSetupMaterials.delete(material);
   }
 
   // TODO: Handle this in plugin system.
@@ -1671,6 +1652,16 @@ export default class ThreeView<
   }
   set shadowMapViewersEnabled(v: boolean) {
     this.shadowMapViewers.enabled = v;
+  }
+
+  /**
+   * Enable/disable post effect debug views rendering
+   * When disabled, disposes all debug view canvas elements
+   */
+  setPostEffectDebugViews(enabled: boolean): void {
+    this._options.postEffects ??= {};
+    this._options.postEffects.debugViews = enabled;
+    this.postEffectHelper.setDebugViewsAll(enabled);
   }
 
   pickTerrainPosition(x: number, y: number): Nullable<Vector3> {

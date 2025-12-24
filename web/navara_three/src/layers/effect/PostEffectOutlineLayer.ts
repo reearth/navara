@@ -39,7 +39,7 @@ export type PostEffectOutlineConfig = {
     thickness?: number;
     edgeStrength?: number;
     resolutionScale?: number;
-    debugMask?: boolean;
+    debugViews?: boolean;
   };
 } & EffectLayerConfig;
 
@@ -49,7 +49,7 @@ export type PostEffectOutlineUpdate = {
     thickness?: number;
     edgeStrength?: number;
     resolutionScale?: number;
-    debugMask?: boolean;
+    debugViews?: boolean;
   };
 } & EffectLayerUpdate;
 
@@ -93,8 +93,8 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
     return this.config.outline?.resolutionScale ?? 1.0;
   }
 
-  protected getDebugMask(): boolean {
-    return this.config.outline?.debugMask ?? false;
+  protected getDebugViews(): boolean {
+    return this.config.outline?.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
@@ -109,7 +109,7 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
         thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
         edgeStrength: outlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
         resolutionScale: outlineConfig?.resolutionScale ?? 1.0,
-        debugMask: outlineConfig?.debugMask ?? false,
+        debugViews: outlineConfig?.debugViews ?? false,
       },
     };
 
@@ -165,9 +165,9 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
         this.config.outline.edgeStrength = next.edgeStrength;
       }
 
-      if (next.debugMask !== undefined) {
-        this.config.outline.debugMask = next.debugMask;
-        this.updateDebugMask(next.debugMask);
+      if (next.debugViews !== undefined) {
+        this.config.outline.debugViews = next.debugViews;
+        this.updateDebugViews(next.debugViews);
       }
 
       if (next.resolutionScale !== undefined) {
@@ -534,7 +534,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.outline?.debugMask) {
+    if (this.layer.layerConfig.outline?.debugViews) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,
@@ -551,6 +551,16 @@ class PostEffectOutlinePass extends PostProcessingPass {
 
       this.debugView1.render(renderer, this.depthEnabledMaskRT);
       this.debugView2.render(renderer, this.silhouetteMaskRT);
+    } else {
+      // Dispose debug views when debugViews is disabled
+      if (this.debugView1) {
+        this.debugView1.dispose();
+        this.debugView1 = undefined;
+      }
+      if (this.debugView2) {
+        this.debugView2.dispose();
+        this.debugView2 = undefined;
+      }
     }
   }
 

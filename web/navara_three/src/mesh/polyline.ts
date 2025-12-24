@@ -29,6 +29,26 @@ import {
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
 
+/** Prev cache for PolylineMesh material (diff detection) */
+type PolylineMaterialPrev = {
+  color?: number;
+  useGroundNormals?: boolean;
+  minHeight?: number;
+  maxHeight?: number;
+  width?: number;
+  visible?: boolean;
+  effectIds?: string[];
+};
+
+/** UserData type for PolylineMesh material */
+type PolylineMaterialUserData = {
+  prev?: PolylineMaterialPrev;
+  _batchColorTouched?: boolean;
+  uPickable?: { value: number };
+  defines?: Record<string, unknown>;
+  batchDataTexture?: { value: unknown };
+};
+
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
   start: BufferAttribute;
@@ -45,26 +65,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
   ShaderMaterial
 > {
   /** ViewContext for PostEffect handling */
-  private _viewContext?: ViewContext;
+  private _viewContext: ViewContext;
   /** Layer ID for PostEffect handling */
-  private _layerId?: string;
-
-  /**
-   * Set PostEffect context (viewContext and layerId)
-   * Called from feature rendering to enable PostEffect handling
-   */
-  setPostEffectContext(viewContext: ViewContext, layerId: string): void {
-    this._viewContext = viewContext;
-    this._layerId = layerId;
-  }
+  private _layerId: string;
 
   constructor(
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
     viewEvents: EventHandler<ViewEvents>,
+    viewContext: ViewContext,
+    layerId: string,
   ) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
+    this._viewContext = viewContext;
+    this._layerId = layerId;
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, viewEvents);
 
@@ -209,14 +224,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
     // Disable lighting for texturized rendering - the texture will be applied to the lit tile
     this.material.lights = !isTexturized;
     this.material.vertexColors = false;
-    this.material.userData.uPickable = uPickable;
 
+    const matUserData = this.material.userData as PolylineMaterialUserData;
+    matUserData.uPickable = uPickable;
     this.material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
-      Object.assign(shader.defines, this.material.userData.defines);
-      if (this.material.userData.batchDataTexture) {
-        shader.uniforms.batchDataTexture =
-          this.material.userData.batchDataTexture;
+      Object.assign(shader.defines, matUserData.defines ?? {});
+      if (matUserData.batchDataTexture) {
+        shader.uniforms.batchDataTexture = matUserData.batchDataTexture;
       }
     };
     viewEvents.emit("_csmMounted", this.material);
@@ -227,25 +242,23 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _update(material: PolylineMaterial, active: boolean) {
-    if (!this.material.userData.prev) {
-      this.material.userData.prev = {};
-    }
-    const prev = this.material.userData.prev;
+    const ud = this.material.userData as PolylineMaterialUserData;
+    ud.prev ??= {};
 
     // Only update material.color if batchTexture color is not being used
-    if (prev.color !== material.color) {
+    if (ud.prev.color !== material.color) {
       const next = material.color ?? 0;
       // If batchTexture color is not enabled, update material.color directly
-      if (!this.material.userData._batchColorTouched) {
+      if (!ud._batchColorTouched) {
         this.material.uniforms.color.value.set(material.color);
       }
-      prev.color = next;
+      ud.prev.color = next;
     }
 
-    if (prev.useGroundNormals !== material.useGroundNormals) {
+    if (ud.prev.useGroundNormals !== material.useGroundNormals) {
       this.material.uniforms.useGroundNormals.value =
         !!material.useGroundNormals;
-      prev.useGroundNormals = !!material.useGroundNormals;
+      ud.prev.useGroundNormals = !!material.useGroundNormals;
     }
 
     const [minHeight, maxHeight] = material.__internal__?.minMaxHeights ?? [
@@ -253,24 +266,24 @@ export class PolylineMesh extends BatchedFeatureMesh<
     ];
     const width = material.width;
     if (
-      prev.minHeight !== minHeight ||
-      prev.maxHeight !== maxHeight ||
-      prev.width !== width
+      ud.prev.minHeight !== minHeight ||
+      ud.prev.maxHeight !== maxHeight ||
+      ud.prev.width !== width
     ) {
       this.material.uniforms.minMaxHeightAndWidth.value = [
         minHeight,
         maxHeight,
         width,
       ];
-      prev.minHeight = minHeight;
-      prev.maxHeight = maxHeight;
-      prev.width = width;
+      ud.prev.minHeight = minHeight;
+      ud.prev.maxHeight = maxHeight;
+      ud.prev.width = width;
     }
 
     const next = (material.show ?? true) && active;
-    if (prev.visible !== next) {
+    if (ud.prev.visible !== next) {
       this.visible = next;
-      prev.visible = next;
+      ud.prev.visible = next;
     }
 
     if (this.castShadow !== material.castShadow) {
@@ -282,14 +295,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     // PostEffect: effectIds handling
     // ShaderMaterial doesn't have built-in emissive, so only effectIds is handled
-    if (this._layerId && !arraysEqual(prev.effectIds, material.effectIds)) {
-      this._viewContext?.postEffectRegistry?.updateLinksForObject(
+    if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
+      this._viewContext.postEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        prev.effectIds ?? [],
+        ud.prev.effectIds ?? [],
         this._layerId,
       );
-      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+      ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 

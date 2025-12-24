@@ -13,8 +13,9 @@ export async function renderPoint(
 ) {
   const mesh = new InstancedPointMesh(m, buf, {
     renderOrder: FEATURE_RENDER_ORDER,
+    viewContext,
+    layerId,
   });
-  mesh.setPostEffectContext(viewContext, layerId);
   return mesh;
 }
 

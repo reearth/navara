@@ -91,7 +91,7 @@ export function renderFeature(
     );
   }
   if (f.text) {
-    return renderText(f.text, buf, uniforms);
+    return renderText(f.text, buf, uniforms, viewContext, layerId);
   }
 }
 

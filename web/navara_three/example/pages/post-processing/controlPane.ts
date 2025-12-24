@@ -171,7 +171,7 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
     radius: BLOOM_CONFIG.radius,
     threshold: BLOOM_CONFIG.threshold,
     debugMode: BLOOM_CONFIG.debugMode,
-    debugMask: BLOOM_CONFIG.debugMask,
+    debugViews: BLOOM_CONFIG.debugViews,
   };
 
   const folder = pane.addFolder({ title: "Bloom Settings" });
@@ -239,11 +239,11 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
       });
     });
 
-  folder.addBinding(params, "debugMask").on("change", (ev) => {
+  folder.addBinding(params, "debugViews").on("change", (ev) => {
     postEffectBloom.update({
       type: "effect",
       bloom: {
-        debugMask: ev.value,
+        debugViews: ev.value,
       },
     });
   });

@@ -20,7 +20,7 @@ export {
 } from "../../core/PostEffectHelper";
 
 // Base configuration for post effect layers
-// Note: resolutionScale and debugMask are defined in each effect-specific config (e.g., bloom, outline)
+// Note: resolutionScale and debugViews are defined in each effect-specific config (e.g., bloom, outline)
 export type PostEffectLayerConfig = {
   postEffect: true;
 } & EffectLayerConfig;
@@ -44,8 +44,8 @@ export abstract class PostEffectLayer<
   /** Get resolution scale from effect-specific config (e.g., bloom.resolutionScale) */
   protected abstract getResolutionScale(): number;
 
-  /** Get debug mask flag from effect-specific config (e.g., bloom.debugMask) */
-  protected abstract getDebugMask(): boolean;
+  /** Get debug views flag from effect-specific config (e.g., bloom.debugViews) */
+  protected abstract getDebugViews(): boolean;
 
   constructor(view: ViewContext, config: Config) {
     super(view, config);
@@ -84,15 +84,15 @@ export abstract class PostEffectLayer<
     }
 
     // Get values from effect-specific config via abstract methods
-    const debugMask =
-      this.getDebugMask() || this.view.debugOptions.postEffectMask || false;
+    const debugViews =
+      this.getDebugViews() || this.view.debugOptions.postEffectMask || false;
 
     this.resources = this.view.postEffectRegistry.create(
       this.id,
       this.getEffectKey(),
       {
         resolutionScale: this.getResolutionScale(),
-        debugMask,
+        debugViews,
       },
     );
 
@@ -168,8 +168,8 @@ export abstract class PostEffectLayer<
 
   onUpdateConfig(updates: UpdateConfig): void {
     super.onUpdateConfig(updates);
-    // Note: resolutionScale and debugMask updates are handled by subclasses
-    // via updateResolutionScale() and updateDebugMask() helper methods
+    // Note: resolutionScale and debugViews updates are handled by subclasses
+    // via updateResolutionScale() and updateDebugViews() helper methods
   }
 
   /**
@@ -187,19 +187,19 @@ export abstract class PostEffectLayer<
   }
 
   /**
-   * Helper method for subclasses to update debug mask
-   * Call this when effect-specific debugMask changes (e.g., updates.bloom.debugMask)
+   * Helper method for subclasses to update debug views
+   * Call this when effect-specific debugViews changes (e.g., updates.bloom.debugViews)
    */
-  protected updateDebugMask(debugMask: boolean): void {
-    this.resources.options.debugMask = debugMask;
+  protected updateDebugViews(debugViews: boolean): void {
+    this.resources.options.debugViews = debugViews;
 
     // Recreate debug view if needed
-    if (debugMask && !this.resources.maskDebug) {
+    if (debugViews && !this.resources.maskDebug) {
       this.resources.maskDebug = new BufferView(
         this.resources.maskRT.width,
         this.resources.maskRT.height,
       );
-    } else if (!debugMask && this.resources.maskDebug) {
+    } else if (!debugViews && this.resources.maskDebug) {
       this.resources.maskDebug.dispose();
       this.resources.maskDebug = undefined;
     }
