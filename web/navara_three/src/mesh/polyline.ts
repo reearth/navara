@@ -64,9 +64,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
   BufferGeometry<Attributes>,
   ShaderMaterial
 > {
-  /** ViewContext for PostEffect handling */
+  /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
-  /** Layer ID for PostEffect handling */
+  /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
 
   constructor(
@@ -293,10 +293,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
       this.receiveShadow = !!material.receiveShadow;
     }
 
-    // PostEffect: effectIds handling
+    // SelectiveEffect: effectIds handling
     // ShaderMaterial doesn't have built-in emissive, so only effectIds is handled
     if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
-      this._viewContext.postEffectRegistry?.updateLinksForObject(
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         ud.prev.effectIds ?? [],

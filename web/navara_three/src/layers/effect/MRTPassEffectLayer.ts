@@ -49,8 +49,8 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,
-        // Pass PostEffect infrastructure for mask context
-        postEffectRegistry: this.view.postEffectRegistry,
+        // Pass SelectiveEffect infrastructure for mask context
+        selectiveEffectRegistry: this.view.selectiveEffectRegistry,
       },
     );
 

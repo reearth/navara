@@ -1,5 +1,5 @@
 /**
- * Debug-only / internal test layer for PostEffect development.
+ * Debug-only / internal test layer for SelectiveEffect development.
  * Not intended for production use.
  */
 
@@ -14,12 +14,15 @@ import type { BaseInstance } from "../../core/LayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
-import { PostEffectLayer, type PostEffectLayerUpdate } from "./PostEffectLayer";
+import {
+  SelectiveEffectLayer,
+  type SelectiveEffectLayerUpdate,
+} from "./SelectiveEffectLayer";
 
-// Test post effect configuration (uses PostEffect infrastructure)
+// Test selective effect configuration (uses PostEffect infrastructure)
 // Internal only - not exported as public API
-type TestPostEffectConfig = {
-  postEffect: true;
+type TestSelectiveEffectConfig = {
+  selectiveEffect: true;
   _selectiveTest: {
     debugViews?: boolean;
     resolutionScale?: number;
@@ -27,19 +30,19 @@ type TestPostEffectConfig = {
 } & EffectLayerConfig;
 
 /**
- * Test layer for post effect
+ * Test layer for selective effect
  * Renders mask for debugging and passes through the input buffer
  */
-export class TestPostEffectLayer extends PostEffectLayer<
-  TestPostEffectConfig,
-  PostEffectLayerUpdate
+export class TestSelectiveEffectLayer extends SelectiveEffectLayer<
+  TestSelectiveEffectConfig,
+  SelectiveEffectLayerUpdate
 > {
   static key = "_selectiveTest";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
   protected getEffectKey(): string {
-    return TestPostEffectLayer.key;
+    return TestSelectiveEffectLayer.key;
   }
 
   protected getResolutionScale(): number {
@@ -54,13 +57,13 @@ export class TestPostEffectLayer extends PostEffectLayer<
     // Extract _selectiveTest config
     const selectiveTestConfig =
       "_selectiveTest" in config
-        ? (config as TestPostEffectConfig)._selectiveTest
+        ? (config as TestSelectiveEffectConfig)._selectiveTest
         : {};
 
-    // Ensure config has postEffect: true and nested _selectiveTest config
-    const postEffectConfig: TestPostEffectConfig = {
-      ...(config as TestPostEffectConfig),
-      postEffect: true,
+    // Ensure config has selectiveEffect: true and nested _selectiveTest config
+    const postEffectConfig: TestSelectiveEffectConfig = {
+      ...(config as TestSelectiveEffectConfig),
+      selectiveEffect: true,
       _selectiveTest: {
         resolutionScale: selectiveTestConfig.resolutionScale ?? 1.0,
         debugViews: selectiveTestConfig.debugViews ?? false,
@@ -72,10 +75,10 @@ export class TestPostEffectLayer extends PostEffectLayer<
 
   createPass() {
     // Create custom pass (follows SSAO pattern)
-    const rawPass = new TestPostEffectPass(this);
+    const rawPass = new TestSelectivePass(this);
     const pass = new Pass(rawPass, null, { enabled: true });
 
-    return pass as Pass<TestPostEffectPass, null> & BaseInstance;
+    return pass as Pass<TestSelectivePass, null> & BaseInstance;
   }
 }
 
@@ -83,12 +86,12 @@ export class TestPostEffectLayer extends PostEffectLayer<
  * Custom PostProcessing Pass for TestPostEffect
  * Masks are pre-rendered by CustomRenderPass during BaseMRT phase
  */
-class TestPostEffectPass extends PostProcessingPass {
-  private layer: TestPostEffectLayer;
+class TestSelectivePass extends PostProcessingPass {
+  private layer: TestSelectiveEffectLayer;
   private copyPass: PostProcessingCopyPass;
 
-  constructor(layer: TestPostEffectLayer) {
-    super("TestPostEffectPass");
+  constructor(layer: TestSelectiveEffectLayer) {
+    super("TestSelectivePass");
     this.layer = layer;
 
     // Create CopyPass for copying input to output

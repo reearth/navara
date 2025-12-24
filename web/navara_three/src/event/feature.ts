@@ -9,9 +9,9 @@ import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
 import {
-  parsePostEffectOcclusion,
-  type PostEffectOcclusion,
-} from "../core/PostEffectHelper";
+  parseSelectiveEffectOcclusion,
+  type SelectiveEffectOcclusion,
+} from "../core/SelectiveEffectHelper";
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
@@ -217,8 +217,10 @@ export async function processRenderableFeatureAdded(
     viewContext.registerLayerEffects(
       featureLayerId,
       material.effectIds ?? [],
-      parsePostEffectOcclusion(
-        material.postEffectOcclusion as PostEffectOcclusion | undefined,
+      parseSelectiveEffectOcclusion(
+        material.selectiveEffectOcclusion as
+          | SelectiveEffectOcclusion
+          | undefined,
       ),
       material.emissiveIntensity,
     );
@@ -266,8 +268,8 @@ export async function processRenderableFeatureChanged(
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
-  // Update PostEffect configuration from material (Core is SoT)
-  // All 5 material types in appearance.rs have post effect fields
+  // Update SelectiveEffect configuration from material (Core is SoT)
+  // All 5 material types in appearance.rs have selective effect fields
   const material =
     model?.material ??
     polygon?.material ??
@@ -285,12 +287,12 @@ export async function processRenderableFeatureChanged(
       viewContext.setLayerEmissiveColor(layerId, material.emissiveColor);
     }
 
-    if (material.postEffectOcclusion !== undefined) {
-      const occlusion = parsePostEffectOcclusion(
-        material.postEffectOcclusion as PostEffectOcclusion,
+    if (material.selectiveEffectOcclusion !== undefined) {
+      const occlusion = parseSelectiveEffectOcclusion(
+        material.selectiveEffectOcclusion as SelectiveEffectOcclusion,
       );
       if (occlusion !== undefined) {
-        viewContext.setLayerPostEffectOcclusion(layerId, occlusion);
+        viewContext.setLayerSelectiveEffectOcclusion(layerId, occlusion);
       }
     }
   }

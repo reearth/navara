@@ -19,21 +19,21 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { BLOOM_EFFECT_KEY } from "../../core/PostEffectHelper";
+import { BLOOM_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 import { UnrealBloomPassRGBA } from "../../postprocessing";
 
 import {
-  PostEffectLayer,
+  SelectiveEffectLayer,
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
-} from "./PostEffectLayer";
+} from "./SelectiveEffectLayer";
 
 // PostEffect Bloom configuration
-export type PostEffectBloomConfig = {
-  postEffect: true;
+export type SelectiveBloomEffectConfig = {
+  selectiveEffect: true;
   bloom: {
     strength?: number;
     radius?: number;
@@ -44,7 +44,7 @@ export type PostEffectBloomConfig = {
   };
 } & EffectLayerConfig;
 
-export type PostEffectBloomUpdate = {
+export type SelectiveBloomEffectUpdate = {
   bloom?: {
     strength?: number;
     radius?: number;
@@ -61,19 +61,19 @@ const DEFAULT_RADIUS = 0.2;
 const DEFAULT_THRESHOLD = 0.0;
 
 /**
- * Post Effect Bloom Layer
+ * Selective Bloom Effect Layer
  * Renders selective bloom using mask-based filtering.
  * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
  */
-export class PostEffectBloomLayer extends PostEffectLayer<
-  PostEffectBloomConfig,
-  PostEffectBloomUpdate
+export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
+  SelectiveBloomEffectConfig,
+  SelectiveBloomEffectUpdate
 > {
   static key = "bloom";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
-  private bloomPass?: PostEffectBloomPass;
+  private bloomPass?: SelectiveBloomPass;
 
   // Getters that derive values from config (single source of truth)
   get bloomStrength(): number {
@@ -93,7 +93,7 @@ export class PostEffectBloomLayer extends PostEffectLayer<
   }
 
   protected getEffectKey(): string {
-    return PostEffectBloomLayer.key;
+    return SelectiveBloomEffectLayer.key;
   }
 
   protected getResolutionScale(): number {
@@ -105,12 +105,12 @@ export class PostEffectBloomLayer extends PostEffectLayer<
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const baseConfig = config as Partial<PostEffectBloomConfig>;
+    const baseConfig = config as Partial<SelectiveBloomEffectConfig>;
     const bloomConfig = "bloom" in config ? baseConfig.bloom : undefined;
 
-    const postEffectConfig: PostEffectBloomConfig = {
-      ...(config as PostEffectBloomConfig),
-      postEffect: true,
+    const postEffectConfig: SelectiveBloomEffectConfig = {
+      ...(config as SelectiveBloomEffectConfig),
+      selectiveEffect: true,
       bloom: {
         strength: bloomConfig?.strength ?? DEFAULT_STRENGTH,
         radius: bloomConfig?.radius ?? DEFAULT_RADIUS,
@@ -125,19 +125,19 @@ export class PostEffectBloomLayer extends PostEffectLayer<
   }
 
   createPass() {
-    const rawPass = new PostEffectBloomPass(this);
+    const rawPass = new SelectiveBloomPass(this);
     this.bloomPass = rawPass;
     const pass = new Pass(rawPass, null, { enabled: true });
 
-    return pass as Pass<PostEffectBloomPass, null> & BaseInstance;
+    return pass as Pass<SelectiveBloomPass, null> & BaseInstance;
   }
 
   /**
    * Override: Don't register simple maskRT.
-   * PostEffectBloomPass registers occlusion-specific RTs directly.
+   * SelectiveBloomPass registers occlusion-specific RTs directly.
    */
   protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - PostEffectBloomPass handles occlusion-specific RTs
+    // Skip simple registration - SelectiveBloomPass handles occlusion-specific RTs
   }
 
   /**
@@ -150,7 +150,7 @@ export class PostEffectBloomLayer extends PostEffectLayer<
     }
   }
 
-  onUpdateConfig(updates: PostEffectBloomUpdate): void {
+  onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {
     super.onUpdateConfig(updates);
 
     if (updates.bloom) {
@@ -200,8 +200,8 @@ export class PostEffectBloomLayer extends PostEffectLayer<
  * Custom PostProcessing Pass for PostEffect Bloom
  * Renders only objects with Bloom effect enabled
  */
-class PostEffectBloomPass extends PostProcessingPass {
-  private layer: PostEffectBloomLayer;
+class SelectiveBloomPass extends PostProcessingPass {
+  private layer: SelectiveBloomEffectLayer;
   private bloom: UnrealBloomPassRGBA;
 
   // DepthEnabled pass render targets
@@ -233,8 +233,8 @@ class PostEffectBloomPass extends PostProcessingPass {
   private debugView1?: BufferView;
   private debugView2?: BufferView;
 
-  constructor(layer: PostEffectBloomLayer) {
-    super("PostEffectBloomPass");
+  constructor(layer: SelectiveBloomEffectLayer) {
+    super("SelectiveBloomPass");
     this.layer = layer;
 
     const renderer =
@@ -358,7 +358,7 @@ class PostEffectBloomPass extends PostProcessingPass {
         stencilBuffer: true,
       },
     );
-    this.depthEnabledMaskRT.texture.name = `PostEffectMask_bloom_DepthEnabled_${layer.id}`;
+    this.depthEnabledMaskRT.texture.name = `SelectiveEffectMask_selectiveBloom_DepthEnabled_${layer.id}`;
     this.depthEnabledMaskRT.depthTexture = new DepthTexture(
       initialWidth,
       initialHeight,
@@ -371,7 +371,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.depthClipRT.texture.name = `PostEffectBloom_DepthClip_${layer.id}`;
+    this.depthClipRT.texture.name = `SelectiveBloom_DepthClip_${layer.id}`;
 
     // Render target for Silhouette mask (no depth clip needed)
     this.silhouetteMaskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
@@ -379,7 +379,7 @@ class PostEffectBloomPass extends PostProcessingPass {
       depthBuffer: true,
       stencilBuffer: true,
     });
-    this.silhouetteMaskRT.texture.name = `PostEffectMask_bloom_Silhouette_${layer.id}`;
+    this.silhouetteMaskRT.texture.name = `SelectiveEffectMask_selectiveBloom_Silhouette_${layer.id}`;
 
     // Intermediate bloom result render targets
     this.depthEnabledBloomRT = new WebGLRenderTarget(
@@ -391,7 +391,7 @@ class PostEffectBloomPass extends PostProcessingPass {
         stencilBuffer: false,
       },
     );
-    this.depthEnabledBloomRT.texture.name = `PostEffectBloom_DepthEnabledResult_${layer.id}`;
+    this.depthEnabledBloomRT.texture.name = `SelectiveBloom_DepthEnabledResult_${layer.id}`;
 
     this.silhouetteBloomRT = new WebGLRenderTarget(
       initialWidth,
@@ -402,7 +402,7 @@ class PostEffectBloomPass extends PostProcessingPass {
         stencilBuffer: false,
       },
     );
-    this.silhouetteBloomRT.texture.name = `PostEffectBloom_SilhouetteResult_${layer.id}`;
+    this.silhouetteBloomRT.texture.name = `SelectiveBloom_SilhouetteResult_${layer.id}`;
 
     this.bloom = new UnrealBloomPassRGBA(
       new Vector2(initialWidth, initialHeight),

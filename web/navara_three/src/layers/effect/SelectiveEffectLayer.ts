@@ -6,38 +6,38 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
-import { type PostEffectResources } from "../../core/PostEffectHelper";
+import { type SelectiveEffectResources } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import type { CustomRenderPass } from "../../passes";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
-// Re-export utilities from PostEffectHelper for backward compatibility
+// Re-export utilities from SelectiveEffectHelper for backward compatibility
 export {
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
-} from "../../core/PostEffectHelper";
+} from "../../core/SelectiveEffectHelper";
 
-// Base configuration for post effect layers
+// Base configuration for selective effect layers
 // Note: resolutionScale and debugViews are defined in each effect-specific config (e.g., bloom, outline)
-export type PostEffectLayerConfig = {
-  postEffect: true;
+export type SelectiveEffectLayerConfig = {
+  selectiveEffect: true;
 } & EffectLayerConfig;
 
-export type PostEffectLayerUpdate = EffectLayerUpdate;
+export type SelectiveEffectLayerUpdate = EffectLayerUpdate;
 
 /**
- * Base class for post effect layers.
+ * Base class for selective effect layers.
  * Provides resource management, mask RT registration with CustomRenderPass,
  * and debug visualization helpers.
  * Mask rendering is handled by CustomRenderPass via MaskPassContext.
  */
-export abstract class PostEffectLayer<
-  Config extends PostEffectLayerConfig = PostEffectLayerConfig,
-  UpdateConfig extends PostEffectLayerUpdate = PostEffectLayerUpdate,
+export abstract class SelectiveEffectLayer<
+  Config extends SelectiveEffectLayerConfig = SelectiveEffectLayerConfig,
+  UpdateConfig extends SelectiveEffectLayerUpdate = SelectiveEffectLayerUpdate,
 > extends EffectLayerDeclaration<Config, UpdateConfig> {
-  protected resources!: PostEffectResources;
+  protected resources!: SelectiveEffectResources;
   protected config: Config;
   protected abstract getEffectKey(): string;
 
@@ -73,21 +73,23 @@ export abstract class PostEffectLayer<
   /**
    * Get the PostEffect resources (maskRT, options, maskDebug)
    */
-  public get postEffectResources(): PostEffectResources {
+  public get selectiveEffectResources(): SelectiveEffectResources {
     return this.resources;
   }
 
   onCreate(): void {
-    // Create post effect resources
-    if (!this.view.postEffectRegistry) {
-      throw new Error("PostEffectRegistry not initialized");
+    // Create selective effect resources
+    if (!this.view.selectiveEffectRegistry) {
+      throw new Error("SelectiveEffectRegistry not initialized");
     }
 
     // Get values from effect-specific config via abstract methods
     const debugViews =
-      this.getDebugViews() || this.view.debugOptions.postEffectMask || false;
+      this.getDebugViews() ||
+      this.view.debugOptions.selectiveEffectMask ||
+      false;
 
-    this.resources = this.view.postEffectRegistry.create(
+    this.resources = this.view.selectiveEffectRegistry.create(
       this.id,
       this.getEffectKey(),
       {
@@ -177,13 +179,13 @@ export abstract class PostEffectLayer<
    * Call this when effect-specific resolutionScale changes (e.g., updates.bloom.resolutionScale)
    */
   protected updateResolutionScale(resolutionScale: number): void {
-    if (!this.view.postEffectRegistry) return;
+    if (!this.view.selectiveEffectRegistry) return;
 
     this.resources.options.resolutionScale = resolutionScale;
     const renderer =
       this.view.renderPassOrchestrator.effectComposer.getRenderer();
     const size = renderer.getSize(new Vector2());
-    this.view.postEffectRegistry.setSize(size.x, size.y);
+    this.view.selectiveEffectRegistry.setSize(size.x, size.y);
   }
 
   /**
@@ -209,8 +211,8 @@ export abstract class PostEffectLayer<
     // Unregister maskRT from CustomRenderPass
     this.unregisterMaskRenderTarget();
 
-    if (this.view.postEffectRegistry) {
-      this.view.postEffectRegistry.destroy(this.id);
+    if (this.view.selectiveEffectRegistry) {
+      this.view.selectiveEffectRegistry.destroy(this.id);
     }
     super.onDestroy();
   }

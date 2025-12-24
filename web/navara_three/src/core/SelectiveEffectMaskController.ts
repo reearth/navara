@@ -1,24 +1,24 @@
 import { Color, type WebGLRenderer, type WebGLRenderTarget } from "three";
 
 import {
-  PostEffectOcclusionMode,
-  type PostEffectHelper,
-} from "./PostEffectHelper";
+  SelectiveEffectOcclusionMode,
+  type SelectiveEffectHelper,
+} from "./SelectiveEffectHelper";
 import {
   MaskPassPhase,
   setMaskPassContext,
   resetMaskPassContext,
-} from "./PostEffectMaskContext";
+} from "./SelectiveEffectMaskContext";
 
 /**
- * Controller for PostEffect mask rendering.
+ * Controller for SelectiveEffect mask rendering.
  * Manages mask render targets and orchestrates mask pass rendering.
  *
- * This separates PostEffect-specific logic from CustomRenderPass,
+ * This separates SelectiveEffect-specific logic from CustomRenderPass,
  * keeping CustomRenderPass focused on BaseMRT rendering while
- * PostEffectMaskController handles effect-specific knowledge.
+ * SelectiveEffectMaskController handles effect-specific knowledge.
  */
-export class PostEffectMaskController {
+export class SelectiveEffectMaskController {
   // Simple mask RTs (single RT per effect, both occlusion modes to same RT)
   private maskRenderTargets = new Map<string, WebGLRenderTarget>();
 
@@ -33,8 +33,8 @@ export class PostEffectMaskController {
   // ============================================================================
 
   /**
-   * Set mask render target for post effect rendering.
-   * Called by PostEffectLayer to register their mask RTs.
+   * Set mask render target for selective effect rendering.
+   * Called by SelectiveEffectLayer to register their mask RTs.
    *
    * @param effectKey - Effect key (e.g., "bloom", "outline")
    * @param rt - WebGLRenderTarget for mask rendering
@@ -93,15 +93,15 @@ export class PostEffectMaskController {
    * @param renderer - WebGL renderer
    * @param baseRT - Base render target to restore after mask passes
    * @param renderFn - Function to render the MRT scene (delegate from CustomRenderPass)
-   * @param registry - PostEffectHelper for context
+   * @param registry - SelectiveEffectHelper for context
    */
   renderMaskPasses(
     renderer: WebGLRenderer,
     baseRT: WebGLRenderTarget,
     renderFn: () => void,
-    registry?: PostEffectHelper,
+    registry?: SelectiveEffectHelper,
   ): void {
-    // Skip if no PostEffect infrastructure
+    // Skip if no SelectiveEffect infrastructure
     if (!registry) {
       return;
     }
@@ -132,7 +132,7 @@ export class PostEffectMaskController {
           renderer,
           effectKey,
           targets.normal,
-          PostEffectOcclusionMode.Normal,
+          SelectiveEffectOcclusionMode.Normal,
           renderFn,
           registry,
         );
@@ -144,7 +144,7 @@ export class PostEffectMaskController {
           renderer,
           effectKey,
           targets.silhouette,
-          PostEffectOcclusionMode.Silhouette,
+          SelectiveEffectOcclusionMode.Silhouette,
           renderFn,
           registry,
         );
@@ -171,8 +171,8 @@ export class PostEffectMaskController {
 
       // Render both occlusion modes to same RT
       for (const occlusionMode of [
-        PostEffectOcclusionMode.Normal,
-        PostEffectOcclusionMode.Silhouette,
+        SelectiveEffectOcclusionMode.Normal,
+        SelectiveEffectOcclusionMode.Silhouette,
       ]) {
         setMaskPassContext({
           phase: MaskPassPhase.BaseMRT,
@@ -201,9 +201,9 @@ export class PostEffectMaskController {
     renderer: WebGLRenderer,
     effectKey: string,
     maskRT: WebGLRenderTarget,
-    occlusionMode: (typeof PostEffectOcclusionMode)[keyof typeof PostEffectOcclusionMode],
+    occlusionMode: (typeof SelectiveEffectOcclusionMode)[keyof typeof SelectiveEffectOcclusionMode],
     renderFn: () => void,
-    registry?: PostEffectHelper,
+    registry?: SelectiveEffectHelper,
   ): void {
     // Set render target and clear
     renderer.setRenderTarget(maskRT);

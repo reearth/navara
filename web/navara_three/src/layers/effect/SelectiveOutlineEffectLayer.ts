@@ -20,20 +20,20 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { OUTLINE_EFFECT_KEY } from "../../core/PostEffectHelper";
+import { OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
-  PostEffectLayer,
+  SelectiveEffectLayer,
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
-} from "./PostEffectLayer";
+} from "./SelectiveEffectLayer";
 
 // PostEffect Outline configuration
-export type PostEffectOutlineConfig = {
-  postEffect: true;
+export type SelectiveOutlineEffectConfig = {
+  selectiveEffect: true;
   outline: {
     color?: number;
     thickness?: number;
@@ -43,7 +43,7 @@ export type PostEffectOutlineConfig = {
   };
 } & EffectLayerConfig;
 
-export type PostEffectOutlineUpdate = {
+export type SelectiveOutlineEffectUpdate = {
   outline?: {
     color?: number;
     thickness?: number;
@@ -58,19 +58,19 @@ const DEFAULT_THICKNESS = 1.0;
 const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
- * Post Effect Outline Layer
+ * Selective Outline Effect Layer
  * Renders selective outline using mask-based filtering.
  * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
  */
-export class PostEffectOutlineLayer extends PostEffectLayer<
-  PostEffectOutlineConfig,
-  PostEffectOutlineUpdate
+export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
+  SelectiveOutlineEffectConfig,
+  SelectiveOutlineEffectUpdate
 > {
   static key = "outline";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
-  private outlinePass?: PostEffectOutlinePass;
+  private outlinePass?: SelectiveOutlinePass;
 
   // Getters that derive values from config (single source of truth)
   get outlineColor(): number {
@@ -86,7 +86,7 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
   }
 
   protected getEffectKey(): string {
-    return PostEffectOutlineLayer.key;
+    return SelectiveOutlineEffectLayer.key;
   }
 
   protected getResolutionScale(): number {
@@ -98,12 +98,12 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const baseConfig = config as Partial<PostEffectOutlineConfig>;
+    const baseConfig = config as Partial<SelectiveOutlineEffectConfig>;
     const outlineConfig = "outline" in config ? baseConfig.outline : undefined;
 
-    const postEffectConfig: PostEffectOutlineConfig = {
-      ...(config as PostEffectOutlineConfig),
-      postEffect: true,
+    const postEffectConfig: SelectiveOutlineEffectConfig = {
+      ...(config as SelectiveOutlineEffectConfig),
+      selectiveEffect: true,
       outline: {
         color: outlineConfig?.color ?? DEFAULT_COLOR,
         thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
@@ -117,19 +117,19 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
   }
 
   createPass() {
-    const rawPass = new PostEffectOutlinePass(this);
+    const rawPass = new SelectiveOutlinePass(this);
     this.outlinePass = rawPass;
     const pass = new Pass(rawPass, null, { enabled: true });
 
-    return pass as Pass<PostEffectOutlinePass, null> & BaseInstance;
+    return pass as Pass<SelectiveOutlinePass, null> & BaseInstance;
   }
 
   /**
    * Override: Don't register simple maskRT.
-   * PostEffectOutlinePass registers occlusion-specific RTs directly.
+   * SelectiveOutlinePass registers occlusion-specific RTs directly.
    */
   protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - PostEffectOutlinePass handles occlusion-specific RTs
+    // Skip simple registration - SelectiveOutlinePass handles occlusion-specific RTs
   }
 
   /**
@@ -142,7 +142,7 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
     }
   }
 
-  onUpdateConfig(updates: PostEffectOutlineUpdate): void {
+  onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
     super.onUpdateConfig(updates);
 
     if (updates.outline) {
@@ -188,8 +188,8 @@ export class PostEffectOutlineLayer extends PostEffectLayer<
  * Custom PostProcessing Pass for PostEffect Outline
  * Implements pass separation for per-object occlusion handling
  */
-class PostEffectOutlinePass extends PostProcessingPass {
-  private layer: PostEffectOutlineLayer;
+class SelectiveOutlinePass extends PostProcessingPass {
+  private layer: SelectiveOutlineEffectLayer;
 
   // Pass separation: separate render targets for DepthEnabled and Silhouette
   private depthEnabledMaskRT: WebGLRenderTarget;
@@ -217,8 +217,8 @@ class PostEffectOutlinePass extends PostProcessingPass {
   private debugView1?: BufferView;
   private debugView2?: BufferView;
 
-  constructor(layer: PostEffectOutlineLayer) {
-    super("PostEffectOutlinePass");
+  constructor(layer: SelectiveOutlineEffectLayer) {
+    super("SelectiveOutlinePass");
     this.layer = layer;
 
     const renderer =
@@ -388,7 +388,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
         stencilBuffer: true,
       },
     );
-    this.depthEnabledMaskRT.texture.name = `PostEffectMask_outline_DepthEnabled_${layer.id}`;
+    this.depthEnabledMaskRT.texture.name = `SelectiveEffectMask_selectiveOutline_DepthEnabled_${layer.id}`;
     this.depthEnabledMaskRT.depthTexture = new DepthTexture(
       initialWidth,
       initialHeight,
@@ -401,7 +401,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
       depthBuffer: true,
       stencilBuffer: true,
     });
-    this.silhouetteMaskRT.texture.name = `PostEffectMask_outline_Silhouette_${layer.id}`;
+    this.silhouetteMaskRT.texture.name = `SelectiveEffectMask_selectiveOutline_Silhouette_${layer.id}`;
 
     // DepthEnabled edge detection result
     this.depthEnabledEdgeRT = new WebGLRenderTarget(
@@ -413,7 +413,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
         stencilBuffer: false,
       },
     );
-    this.depthEnabledEdgeRT.texture.name = `PostEffectOutline_DepthEnabledEdge_${layer.id}`;
+    this.depthEnabledEdgeRT.texture.name = `SelectiveOutline_DepthEnabledEdge_${layer.id}`;
 
     // Silhouette edge detection result
     this.silhouetteEdgeRT = new WebGLRenderTarget(initialWidth, initialHeight, {
@@ -421,7 +421,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.silhouetteEdgeRT.texture.name = `PostEffectOutline_SilhouetteEdge_${layer.id}`;
+    this.silhouetteEdgeRT.texture.name = `SelectiveOutline_SilhouetteEdge_${layer.id}`;
 
     // Render target for depth-clipped mask (DepthEnabled only)
     this.depthClipRT = new WebGLRenderTarget(initialWidth, initialHeight, {
@@ -429,7 +429,7 @@ class PostEffectOutlinePass extends PostProcessingPass {
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.depthClipRT.texture.name = `PostEffectOutline_DepthClip_${layer.id}`;
+    this.depthClipRT.texture.name = `SelectiveOutline_DepthClip_${layer.id}`;
 
     this.size.set(initialWidth, initialHeight);
 

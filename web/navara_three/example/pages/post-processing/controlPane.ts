@@ -5,7 +5,7 @@ import {
   type Layer,
   type SphereMeshLayer,
   type SphereMeshLayerUpdate,
-  type PostEffectOcclusion,
+  type SelectiveEffectOcclusion,
 } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
@@ -34,7 +34,7 @@ import {
 /**
  * Occlusion mode options for Tweakpane dropdown
  */
-const OCCLUSION_MODE_OPTIONS: Record<string, PostEffectOcclusion> = {
+const OCCLUSION_MODE_OPTIONS: Record<string, SelectiveEffectOcclusion> = {
   DepthEnabled: "normal",
   Silhouette: "silhouette",
 };
@@ -264,7 +264,7 @@ type MeshFolderOptions = {
     emissiveColor: number;
     emissiveIntensity: number;
     visible: boolean;
-    postEffectOcclusion: PostEffectOcclusion;
+    selectiveEffectOcclusion: SelectiveEffectOcclusion;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
   };
@@ -285,7 +285,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
           bloomId,
           outlineId,
         ),
-        postEffectOcclusion: params.postEffectOcclusion,
+        selectiveEffectOcclusion: params.selectiveEffectOcclusion,
       }),
     });
   };
@@ -315,7 +315,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   );
 
   folder
-    .addBinding(params, "postEffectOcclusion", {
+    .addBinding(params, "selectiveEffectOcclusion", {
       label: "Occlusion Mode",
       options: OCCLUSION_MODE_OPTIONS,
     })
@@ -344,7 +344,7 @@ const buildMeshConfig = (
     emissiveColor?: number;
     emissiveIntensity?: number;
     effectIds?: string[];
-    postEffectOcclusion?: PostEffectOcclusion;
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   },
 ) => {
   if (configKey === "box") {
@@ -363,7 +363,7 @@ type TilesFolderOptions = {
     baseColor: number;
     emissiveColor: number;
     visible: boolean;
-    postEffectOcclusion: PostEffectOcclusion;
+    selectiveEffectOcclusion: SelectiveEffectOcclusion;
     emissiveIntensity: number;
     bloomEnabled: boolean;
     outlineEnabled: boolean;
@@ -405,7 +405,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
         ),
         emissiveColor: new Color().setHex(params.emissiveColor),
         emissiveIntensity: params.emissiveIntensity,
-        postEffectOcclusion: params.postEffectOcclusion,
+        selectiveEffectOcclusion: params.selectiveEffectOcclusion,
       },
     });
   };
@@ -433,7 +433,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
   });
 
   folder
-    .addBinding(params, "postEffectOcclusion", {
+    .addBinding(params, "selectiveEffectOcclusion", {
       label: "Occlusion Mode",
       options: OCCLUSION_MODE_OPTIONS,
     })
@@ -487,7 +487,7 @@ const setupDrumFolder = (
       ),
       emissiveColor: params.emissiveColor,
       emissiveIntensity: params.emissiveIntensity,
-      postEffectOcclusion: params.postEffectOcclusion,
+      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
     } as Partial<DrumModelState>);
   };
 
@@ -496,7 +496,7 @@ const setupDrumFolder = (
   });
 
   folder
-    .addBinding(params, "postEffectOcclusion", {
+    .addBinding(params, "selectiveEffectOcclusion", {
       label: "Occlusion Mode",
       options: OCCLUSION_MODE_OPTIONS,
     })
@@ -560,7 +560,7 @@ const setupSoldierFolder = (
       ),
       emissiveColor: params.emissiveColor,
       emissiveIntensity: params.emissiveIntensity,
-      postEffectOcclusion: params.postEffectOcclusion,
+      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
     } as Partial<SoldierModelState>);
   };
 
@@ -569,7 +569,7 @@ const setupSoldierFolder = (
   });
 
   folder
-    .addBinding(params, "postEffectOcclusion", {
+    .addBinding(params, "selectiveEffectOcclusion", {
       label: "Occlusion Mode",
       options: OCCLUSION_MODE_OPTIONS,
     })

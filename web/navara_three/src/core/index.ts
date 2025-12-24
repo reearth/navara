@@ -36,32 +36,32 @@ export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
 export {
   // Helper class
-  PostEffectHelper,
+  SelectiveEffectHelper,
   // Types
-  type PostEffectOptions,
-  type PostEffectResources,
-  type PostEffectConfig,
-  type PostEffectOcclusion,
-  type PostEffectOcclusionValue,
+  type SelectiveEffectOptions,
+  type SelectiveEffectResources,
+  type SelectiveEffectConfig,
+  type SelectiveEffectOcclusion,
+  type SelectiveEffectOcclusionValue,
   // Constants
   BLOOM_EFFECT_KEY,
   OUTLINE_EFFECT_KEY,
-  PostEffectOcclusionMode,
+  SelectiveEffectOcclusionMode,
   // Common helpers
-  resolvePostEffectOcclusion,
-  hasBloomEffect,
-  hasOutlineEffect,
-  getPostEffectConfig,
-  hasPostEffectConfig,
-  ensurePostEffectUserData,
-  parsePostEffectOcclusion,
+  resolveSelectiveEffectOcclusion,
+  hasSelectiveBloomEffect,
+  hasSelectiveOutlineEffect,
+  getSelectiveEffectConfig,
+  hasSelectiveEffectConfig,
+  ensureSelectiveEffectUserData,
+  parseSelectiveEffectOcclusion,
   // Utility functions
   createDepthClipMaterial,
   createFullscreenQuad,
   applyDepthClip,
-} from "./PostEffectHelper";
-export { PostEffectManager } from "./PostEffectManager";
-export { PostEffectMaskController } from "./PostEffectMaskController";
+} from "./SelectiveEffectHelper";
+export { SelectiveEffectManager } from "./SelectiveEffectManager";
+export { SelectiveEffectMaskController } from "./SelectiveEffectMaskController";
 export {
   // Types
   type MaskPassPhaseType,
@@ -78,4 +78,4 @@ export {
   applyMaskPassSkipState,
   applyMaskPassRenderState,
   restoreMaterialState,
-} from "./PostEffectMaskContext";
+} from "./SelectiveEffectMaskContext";

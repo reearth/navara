@@ -1,8 +1,8 @@
 import {
-  type PostEffectHelper,
-  type PostEffectOcclusionValue,
-  PostEffectOcclusionMode,
-} from "./PostEffectHelper";
+  type SelectiveEffectHelper,
+  type SelectiveEffectOcclusionValue,
+  SelectiveEffectOcclusionMode,
+} from "./SelectiveEffectHelper";
 
 /** Default emissive intensity when Bloom is enabled */
 const DEFAULT_EMISSIVE_INTENSITY = 0.3;
@@ -11,14 +11,14 @@ type LayerEffectConfig = {
   effectIds: string[];
   emissiveIntensity: number;
   emissiveColor?: number;
-  occlusion: PostEffectOcclusionValue; // SoT for occlusion setting
+  occlusion: SelectiveEffectOcclusionValue; // SoT for occlusion setting
 };
 
-type PostEffectManagerOptions = {
-  postEffectRegistry?: PostEffectHelper;
+type SelectiveEffectManagerOptions = {
+  selectiveEffectRegistry?: SelectiveEffectHelper;
 };
 
-export class PostEffectManager {
+export class SelectiveEffectManager {
   private readonly layerConfigs = new Map<string, LayerEffectConfig>();
 
   /**
@@ -26,12 +26,12 @@ export class PostEffectManager {
    * PostEffectRegistry only consumes these layer settings; no per-object overrides are applied here.
    */
 
-  constructor(private readonly options: PostEffectManagerOptions) {}
+  constructor(private readonly options: SelectiveEffectManagerOptions) {}
 
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectOcclusion?: PostEffectOcclusionValue,
+    selectiveEffectOcclusion?: SelectiveEffectOcclusionValue,
     emissiveIntensity?: number,
   ): void {
     const config = this.ensureConfig(layerId);
@@ -42,10 +42,10 @@ export class PostEffectManager {
     }
 
     // Store occlusion in config (SoT) and sync to Helper cache
-    if (postEffectOcclusion !== undefined) {
-      config.occlusion = postEffectOcclusion;
+    if (selectiveEffectOcclusion !== undefined) {
+      config.occlusion = selectiveEffectOcclusion;
     }
-    this.options.postEffectRegistry?.syncOcclusionCache(
+    this.options.selectiveEffectRegistry?.syncOcclusionCache(
       layerId,
       config.occlusion,
     );
@@ -88,7 +88,7 @@ export class PostEffectManager {
       config = {
         effectIds: [],
         emissiveIntensity: DEFAULT_EMISSIVE_INTENSITY,
-        occlusion: PostEffectOcclusionMode.Normal,
+        occlusion: SelectiveEffectOcclusionMode.Normal,
       };
       this.layerConfigs.set(layerId, config);
     }
@@ -111,9 +111,9 @@ export class PostEffectManager {
   /**
    * Get occlusion setting for a layer (SoT)
    */
-  getLayerOcclusion(layerId: string): PostEffectOcclusionValue {
+  getLayerOcclusion(layerId: string): SelectiveEffectOcclusionValue {
     const config = this.layerConfigs.get(layerId);
-    return config?.occlusion ?? PostEffectOcclusionMode.Normal;
+    return config?.occlusion ?? SelectiveEffectOcclusionMode.Normal;
   }
 
   /**
@@ -121,11 +121,14 @@ export class PostEffectManager {
    */
   setLayerOcclusion(
     layerId: string,
-    occlusion: PostEffectOcclusionValue,
+    occlusion: SelectiveEffectOcclusionValue,
   ): void {
     const config = this.ensureConfig(layerId);
     config.occlusion = occlusion;
     // Sync to Helper cache
-    this.options.postEffectRegistry?.syncOcclusionCache(layerId, occlusion);
+    this.options.selectiveEffectRegistry?.syncOcclusionCache(
+      layerId,
+      occlusion,
+    );
   }
 }

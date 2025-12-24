@@ -13,7 +13,7 @@ import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
-  type PostEffectOcclusion,
+  type SelectiveEffectOcclusion,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
@@ -36,7 +36,7 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    postEffectOcclusion?: PostEffectOcclusion;
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -52,12 +52,12 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
   private config: TubeMeshLayerConfig;
 
   constructor(view: ViewContext, config: TubeMeshLayerConfig) {
-    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
+    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
     if (config.tube?.effectIds) {
       config.effectIds = config.tube.effectIds;
     }
-    if (config.tube?.postEffectOcclusion !== undefined) {
-      config.postEffectOcclusion = config.tube.postEffectOcclusion;
+    if (config.tube?.selectiveEffectOcclusion !== undefined) {
+      config.selectiveEffectOcclusion = config.tube.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -182,12 +182,12 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/postEffectOcclusion to base MeshLayer
+      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.postEffectOcclusion !== undefined) {
-        updates.postEffectOcclusion = cfg.postEffectOcclusion;
+      if (cfg.selectiveEffectOcclusion !== undefined) {
+        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("_needsUpdate");

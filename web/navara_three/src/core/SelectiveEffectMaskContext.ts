@@ -3,14 +3,14 @@ import type { Material, WebGLRenderTarget } from "three";
 import {
   BLOOM_EFFECT_KEY,
   OUTLINE_EFFECT_KEY,
-  PostEffectOcclusionMode,
-  hasBloomEffect,
-  hasOutlineEffect,
-  resolvePostEffectOcclusion,
-  type PostEffectConfig,
-  type PostEffectHelper,
-  type PostEffectOcclusionValue,
-} from "./PostEffectHelper";
+  SelectiveEffectOcclusionMode,
+  hasSelectiveBloomEffect,
+  hasSelectiveOutlineEffect,
+  resolveSelectiveEffectOcclusion,
+  type SelectiveEffectConfig,
+  type SelectiveEffectHelper,
+  type SelectiveEffectOcclusionValue,
+} from "./SelectiveEffectHelper";
 
 // ============================================================================
 // Mask Pass Phase
@@ -39,8 +39,8 @@ export type MaskPassPhaseType =
  * their rendering behavior during mask passes.
  *
  * SoT Hierarchy:
- * - PostEffectManager: Source of truth for layer configurations
- * - PostEffectHelper: Resource management (maskRTs) and object cache
+ * - SelectiveEffectManager: Source of truth for layer configurations
+ * - SelectiveEffectHelper: Resource management (maskRTs) and object cache
  * - MaskPassContext: Runtime state for current frame's mask rendering
  */
 export type MaskPassContext = {
@@ -51,13 +51,13 @@ export type MaskPassContext = {
   activeEffects: readonly string[];
 
   /** Current occlusion mode filter (Normal, Silhouette, or undefined for all) */
-  currentOcclusionMode: PostEffectOcclusionValue | undefined;
+  currentOcclusionMode: SelectiveEffectOcclusionValue | undefined;
 
   /** Mask render targets by effect key */
   maskRenderTargets: ReadonlyMap<string, WebGLRenderTarget>;
 
-  /** PostEffectHelper reference for occlusion lookups and effect checks */
-  registry: PostEffectHelper | undefined;
+  /** SelectiveEffectHelper reference for occlusion lookups and effect checks */
+  registry: SelectiveEffectHelper | undefined;
 };
 
 /**
@@ -125,7 +125,7 @@ export type MaskPassEvaluation = {
   /** Whether this mesh uses Silhouette occlusion mode */
   isSilhouette: boolean;
   /** Resolved occlusion value (Normal or Silhouette) */
-  occlusion: PostEffectOcclusionValue;
+  occlusion: SelectiveEffectOcclusionValue;
   /** Whether bloom effect is active for this mesh in this pass */
   bloomActive: boolean;
   /** Whether outline effect is active for this mesh in this pass */
@@ -136,23 +136,23 @@ export type MaskPassEvaluation = {
  * Evaluate mask pass participation for a mesh.
  *
  * This function determines whether a mesh should render to the current mask pass
- * based on its PostEffectConfig, the active effects in the context, and occlusion mode.
+ * based on its SelectiveEffectConfig, the active effects in the context, and occlusion mode.
  *
- * @param config - PostEffectConfig from the mesh (or undefined)
- * @param registry - PostEffectHelper for effect lookups
+ * @param config - SelectiveEffectConfig from the mesh (or undefined)
+ * @param registry - SelectiveEffectHelper for effect lookups
  * @param layerId - Layer ID for occlusion mode lookup
  * @param ctx - Current MaskPassContext
  * @returns Evaluation result with render decisions
  */
 export function evaluateMaskPassParticipation(
-  config: PostEffectConfig | undefined,
-  registry: PostEffectHelper | undefined,
+  config: SelectiveEffectConfig | undefined,
+  registry: SelectiveEffectHelper | undefined,
   layerId: string | undefined,
   ctx: MaskPassContext,
 ): MaskPassEvaluation {
   // Check if this mesh has any active effects
-  const hasBloom = hasBloomEffect(config, registry);
-  const hasOutline = hasOutlineEffect(config, registry);
+  const hasBloom = hasSelectiveBloomEffect(config, registry);
+  const hasOutline = hasSelectiveOutlineEffect(config, registry);
 
   // Check if this mesh should render to the current mask pass
   const bloomActive = hasBloom && ctx.activeEffects.includes(BLOOM_EFFECT_KEY);
@@ -164,14 +164,14 @@ export function evaluateMaskPassParticipation(
     return {
       shouldRender: false,
       isSilhouette: false,
-      occlusion: PostEffectOcclusionMode.Normal,
+      occlusion: SelectiveEffectOcclusionMode.Normal,
       bloomActive: false,
       outlineActive: false,
     };
   }
 
-  // Resolve occlusion mode from SoT (PostEffectManager via registry)
-  const occlusion = resolvePostEffectOcclusion(registry, layerId);
+  // Resolve occlusion mode from SoT (SelectiveEffectManager via registry)
+  const occlusion = resolveSelectiveEffectOcclusion(registry, layerId);
 
   // Check if this mesh's occlusion mode matches the current pass
   if (
@@ -181,14 +181,14 @@ export function evaluateMaskPassParticipation(
     // Occlusion mode doesn't match - skip this mesh in this pass
     return {
       shouldRender: false,
-      isSilhouette: occlusion === PostEffectOcclusionMode.Silhouette,
+      isSilhouette: occlusion === SelectiveEffectOcclusionMode.Silhouette,
       occlusion,
       bloomActive,
       outlineActive,
     };
   }
 
-  const isSilhouette = occlusion === PostEffectOcclusionMode.Silhouette;
+  const isSilhouette = occlusion === SelectiveEffectOcclusionMode.Silhouette;
 
   return {
     shouldRender: true,

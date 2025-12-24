@@ -16,9 +16,9 @@ type InstancedBillboardUserData = {
 };
 
 export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
-  /** ViewContext for PostEffect handling */
+  /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
-  /** Layer ID for PostEffect handling */
+  /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
 
   constructor(options: InstancedMeshOptions) {
@@ -106,12 +106,12 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       }),
     );
 
-    // PostEffect: effectIds handling at container level
+    // SelectiveEffect: effectIds handling at container level
     // SpriteMaterial doesn't support emissive, so only effectIds is handled
     const ud = this.userData as InstancedBillboardUserData;
     ud.prev ??= {};
     if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
-      this._viewContext.postEffectRegistry?.updateLinksForObject(
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         ud.prev.effectIds ?? [],

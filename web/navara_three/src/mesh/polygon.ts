@@ -125,9 +125,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     aabbRadius: number; // Horizontal extent radius from AABB
   };
 
-  /** ViewContext for PostEffect handling */
+  /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
-  /** Layer ID for PostEffect handling */
+  /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
   private _uniforms?: CommonUniforms;
 
@@ -154,7 +154,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
-    // Store viewContext and layerId for PostEffect handling
+    // Store viewContext and layerId for SelectiveEffect handling
     this._viewContext = viewContext;
     this._layerId = layerId;
 
@@ -868,9 +868,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
       ud.prev.ior = nextIor;
     }
 
-    // PostEffect: effectIds handling
+    // SelectiveEffect: effectIds handling
     if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
-      this._viewContext.postEffectRegistry?.updateLinksForObject(
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         ud.prev.effectIds ?? [],
@@ -879,13 +879,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
       ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
 
-    // PostEffect: emissiveColor handling
+    // SelectiveEffect: emissiveColor handling
     if (ud.prev.emissiveColor !== material.emissiveColor) {
       this.material.emissive.set(material.emissiveColor ?? 0);
       ud.prev.emissiveColor = material.emissiveColor;
     }
 
-    // PostEffect: emissiveIntensity handling
+    // SelectiveEffect: emissiveIntensity handling
     if (ud.prev.emissiveIntensity !== material.emissiveIntensity) {
       this.material.emissiveIntensity = material.emissiveIntensity ?? 0;
       ud.prev.emissiveIntensity = material.emissiveIntensity;

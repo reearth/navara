@@ -11,7 +11,7 @@ import {
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type ViewContext,
-  type PostEffectOcclusion,
+  type SelectiveEffectOcclusion,
 } from "../../core";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
 
@@ -35,7 +35,7 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    postEffectOcclusion?: PostEffectOcclusion;
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -51,12 +51,13 @@ export class CylinderMeshLayer extends MeshLayerDeclaration<
   private config: CylinderMeshLayerConfig;
 
   constructor(view: ViewContext, config: CylinderMeshLayerConfig) {
-    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
+    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;
     }
-    if (config.cylinder?.postEffectOcclusion !== undefined) {
-      config.postEffectOcclusion = config.cylinder.postEffectOcclusion;
+    if (config.cylinder?.selectiveEffectOcclusion !== undefined) {
+      config.selectiveEffectOcclusion =
+        config.cylinder.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -170,12 +171,12 @@ export class CylinderMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/postEffectOcclusion to base MeshLayer
+      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.postEffectOcclusion !== undefined) {
-        updates.postEffectOcclusion = cfg.postEffectOcclusion;
+      if (cfg.selectiveEffectOcclusion !== undefined) {
+        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("_needsUpdate");

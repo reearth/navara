@@ -11,10 +11,10 @@ import {
   type LayerDeclarationConfigUpdate,
 } from "./LayerDeclaration";
 import {
-  type PostEffectOcclusion,
-  parsePostEffectOcclusion,
-  getPostEffectConfig,
-} from "./PostEffectHelper";
+  type SelectiveEffectOcclusion,
+  parseSelectiveEffectOcclusion,
+  getSelectiveEffectConfig,
+} from "./SelectiveEffectHelper";
 import {
   getMaskPassContext,
   MaskPassPhase,
@@ -22,7 +22,7 @@ import {
   applyMaskPassSkipState,
   applyMaskPassRenderState,
   restoreMaterialState,
-} from "./PostEffectMaskContext";
+} from "./SelectiveEffectMaskContext";
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
@@ -31,7 +31,7 @@ export type MeshLayerConfig = {
   scale?: XYZ;
   rotation?: XYZ;
   effectIds?: string[];
-  postEffectOcclusion?: PostEffectOcclusion;
+  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
@@ -40,7 +40,7 @@ export type MeshLayerUpdate = Pick<
 > &
   LayerDeclarationConfigUpdate & {
     effectIds?: string[];
-    postEffectOcclusion?: PostEffectOcclusion;
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 
 type PassKey = keyof Pick<
@@ -72,7 +72,7 @@ export abstract class MeshLayerDeclaration<
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
   private _effectIds: string[] = [];
-  private _postEffectOcclusion?: PostEffectOcclusion;
+  private _selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
@@ -80,11 +80,11 @@ export abstract class MeshLayerDeclaration<
     this.scale = config.scale;
     this.rotation = config.rotation;
     this._effectIds = config.effectIds ?? [];
-    this._postEffectOcclusion = config.postEffectOcclusion;
+    this._selectiveEffectOcclusion = config.selectiveEffectOcclusion;
   }
 
   protected getPassKey(): PassKey {
-    // Meshes with PostEffect (effectIds) need to be in MRT scene for mask rendering
+    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for mask rendering
     if (this._effectIds.length > 0) {
       return "mrt";
     }
@@ -127,10 +127,10 @@ export abstract class MeshLayerDeclaration<
     this._instance.visible = this.visible;
 
     // ----------------------------------------------------------------------------
-    // PostEffect: effectIds / occlusion wiring
+    // SelectiveEffect: effectIds / occlusion wiring
     // ----------------------------------------------------------------------------
     if (this._effectIds.length > 0 && this.raw) {
-      this.view.postEffectRegistry?.updateLinksForObject(
+      this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         this._effectIds,
         [],
@@ -138,11 +138,13 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
-    // Register initial postEffectOcclusion via ViewContext (Manager is SoT)
-    if (this._postEffectOcclusion !== undefined) {
-      const occlusion = parsePostEffectOcclusion(this._postEffectOcclusion);
+    // Register initial selectiveEffectOcclusion via ViewContext (Manager is SoT)
+    if (this._selectiveEffectOcclusion !== undefined) {
+      const occlusion = parseSelectiveEffectOcclusion(
+        this._selectiveEffectOcclusion,
+      );
       if (occlusion !== undefined) {
-        this.view.setLayerPostEffectOcclusion(this.id, occlusion);
+        this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
       }
     }
 
@@ -199,8 +201,8 @@ export abstract class MeshLayerDeclaration<
       }
 
       // Evaluate mask pass participation using shared helper
-      const config = getPostEffectConfig(raw);
-      const registry = ctx.registry ?? this.view.postEffectRegistry;
+      const config = getSelectiveEffectConfig(raw);
+      const registry = ctx.registry ?? this.view.selectiveEffectRegistry;
       const evaluation = evaluateMaskPassParticipation(
         config,
         registry,
@@ -258,14 +260,14 @@ export abstract class MeshLayerDeclaration<
     }
 
     // ----------------------------------------------------------------------------
-    // PostEffect: effectIds / occlusion wiring
+    // SelectiveEffect: effectIds / occlusion wiring
     // ----------------------------------------------------------------------------
     if (updates.effectIds !== undefined && this.raw) {
       const prevEffectIds = this._effectIds;
       const nextEffectIds = updates.effectIds ?? [];
 
       if (!arraysEqual(prevEffectIds, nextEffectIds)) {
-        this.view.postEffectRegistry?.updateLinksForObject(
+        this.view.selectiveEffectRegistry?.updateLinksForObject(
           this.raw,
           nextEffectIds,
           prevEffectIds,
@@ -275,12 +277,14 @@ export abstract class MeshLayerDeclaration<
       }
     }
 
-    // Update postEffectOcclusion
-    if (updates.postEffectOcclusion !== undefined) {
-      this._postEffectOcclusion = updates.postEffectOcclusion;
-      const occlusion = parsePostEffectOcclusion(updates.postEffectOcclusion);
+    // Update selectiveEffectOcclusion
+    if (updates.selectiveEffectOcclusion !== undefined) {
+      this._selectiveEffectOcclusion = updates.selectiveEffectOcclusion;
+      const occlusion = parseSelectiveEffectOcclusion(
+        updates.selectiveEffectOcclusion,
+      );
       if (occlusion !== undefined) {
-        this.view.setLayerPostEffectOcclusion(this.id, occlusion);
+        this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
       }
     }
 
@@ -299,10 +303,10 @@ export abstract class MeshLayerDeclaration<
 
   onDestroy(): void {
     // ----------------------------------------------------------------------------
-    // PostEffect: effectIds cleanup
+    // SelectiveEffect: effectIds cleanup
     // ----------------------------------------------------------------------------
     if (this._effectIds.length > 0 && this.raw) {
-      this.view.postEffectRegistry?.updateLinksForObject(
+      this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         [],
         this._effectIds,

@@ -42,8 +42,8 @@ import type {
   LensFlareConfig,
   MRTPassConfig,
   RainDropConfig,
-  PostEffectBloomConfig,
-  PostEffectOutlineConfig,
+  SelectiveBloomEffectConfig,
+  SelectiveOutlineEffectConfig,
   SkyEnvMapPassConfig,
   SMAAConfig,
   SSAOConfig,
@@ -96,8 +96,8 @@ export type EffectLayerDeclarationDescription =
   | MRTPassConfig
   | SkyEnvMapPassConfig
   | RainDropConfig
-  | PostEffectBloomConfig
-  | PostEffectOutlineConfig
+  | SelectiveBloomEffectConfig
+  | SelectiveOutlineEffectConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig

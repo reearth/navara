@@ -18,8 +18,8 @@ import {
   type WebGLRenderer,
 } from "three";
 
-import type { PostEffectHelper } from "../core/PostEffectHelper";
-import { PostEffectMaskController } from "../core/PostEffectMaskController";
+import type { SelectiveEffectHelper } from "../core/SelectiveEffectHelper";
+import { SelectiveEffectMaskController } from "../core/SelectiveEffectMaskController";
 import { RenderPass } from "../effects";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
@@ -33,8 +33,8 @@ export type CustomRenderPassOptions = {
   debugNormal?: boolean;
   disableShadow?: boolean;
   allowTransparent?: boolean;
-  /** PostEffectHelper for mask context (optional for backwards compatibility) */
-  postEffectRegistry?: PostEffectHelper;
+  /** SelectiveEffectHelper for mask context (optional for backwards compatibility) */
+  selectiveEffectRegistry?: SelectiveEffectHelper;
 };
 
 export class CustomRenderPass extends RenderPass {
@@ -61,9 +61,9 @@ export class CustomRenderPass extends RenderPass {
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
 
-  // PostEffect context for mask rendering
-  private postEffectRegistry?: PostEffectHelper;
-  private maskController = new PostEffectMaskController();
+  // SelectiveEffect context for mask rendering
+  private selectiveEffectRegistry?: SelectiveEffectHelper;
+  private maskController = new SelectiveEffectMaskController();
 
   constructor(
     scenes: Scenes,
@@ -102,8 +102,8 @@ export class CustomRenderPass extends RenderPass {
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
 
-    // PostEffect context for mask rendering
-    this.postEffectRegistry = options?.postEffectRegistry;
+    // SelectiveEffect context for mask rendering
+    this.selectiveEffectRegistry = options?.selectiveEffectRegistry;
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -228,7 +228,7 @@ export class CustomRenderPass extends RenderPass {
       renderer,
       renderTarget,
       () => this._renderWithLight(renderer, this._scenes.mrt),
-      this.postEffectRegistry,
+      this.selectiveEffectRegistry,
     );
 
     this.debugNormalCopyPass?.render(renderer, null, null);
@@ -319,12 +319,12 @@ export class CustomRenderPass extends RenderPass {
   }
 
   // ============================================================================
-  // MaskPassContext Management (delegated to PostEffectMaskController)
+  // MaskPassContext Management (delegated to SelectiveEffectMaskController)
   // ============================================================================
 
   /**
-   * Set mask render targets for post effect rendering.
-   * Called by PostEffectLayer to register their mask RTs.
+   * Set mask render targets for selective effect rendering.
+   * Called by SelectiveEffectLayer to register their mask RTs.
    *
    * @param effectKey - Effect key (e.g., "bloom", "outline")
    * @param rt - WebGLRenderTarget for mask rendering

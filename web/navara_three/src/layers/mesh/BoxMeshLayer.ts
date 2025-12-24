@@ -11,7 +11,7 @@ import {
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type ViewContext,
-  type PostEffectOcclusion,
+  type SelectiveEffectOcclusion,
 } from "../../core";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
 
@@ -33,7 +33,7 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    postEffectOcclusion?: PostEffectOcclusion;
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -49,12 +49,12 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
   private config: BoxMeshLayerConfig;
 
   constructor(view: ViewContext, config: BoxMeshLayerConfig) {
-    // Propagate initial effectIds/postEffectOcclusion to base MeshLayer
+    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
     if (config.box?.effectIds) {
       config.effectIds = config.box.effectIds;
     }
-    if (config.box?.postEffectOcclusion !== undefined) {
-      config.postEffectOcclusion = config.box.postEffectOcclusion;
+    if (config.box?.selectiveEffectOcclusion !== undefined) {
+      config.selectiveEffectOcclusion = config.box.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -163,12 +163,12 @@ export class BoxMeshLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/postEffectOcclusion to base MeshLayer
+      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.postEffectOcclusion !== undefined) {
-        updates.postEffectOcclusion = cfg.postEffectOcclusion;
+      if (cfg.selectiveEffectOcclusion !== undefined) {
+        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("_needsUpdate");

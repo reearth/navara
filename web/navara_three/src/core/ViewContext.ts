@@ -9,14 +9,14 @@ import type { Scenes } from "../scene";
 import type { DrapedMaterialCache, MeshCache } from "../type";
 
 import {
-  getPostEffectConfig,
-  type PostEffectHelper,
-  type PostEffectOcclusionValue,
-} from "./PostEffectHelper";
-import { PostEffectManager } from "./PostEffectManager";
+  getSelectiveEffectConfig,
+  type SelectiveEffectHelper,
+  type SelectiveEffectOcclusionValue,
+} from "./SelectiveEffectHelper";
+import { SelectiveEffectManager } from "./SelectiveEffectManager";
 
 export type ViewDebugOptions = {
-  postEffectMask?: boolean;
+  selectiveEffectMask?: boolean;
 };
 
 type Private = {
@@ -27,11 +27,11 @@ type Private = {
 // Restrict public API for a layer declaration.
 export class ViewContext {
   private eventHandler?: EventHandler<ViewEvents>;
-  public postEffectRegistry?: PostEffectHelper;
+  public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
 
-  private readonly postEffects: PostEffectManager;
+  private readonly selectiveEffects: SelectiveEffectManager;
 
   constructor(
     public scenes: Scenes,
@@ -41,15 +41,15 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public _privates: Private,
     eventHandler?: EventHandler<ViewEvents>,
-    postEffectHelper?: PostEffectHelper,
+    selectiveEffectHelper?: SelectiveEffectHelper,
     debugOptions?: ViewDebugOptions,
   ) {
     this.eventHandler = eventHandler;
-    this.postEffectRegistry = postEffectHelper;
+    this.selectiveEffectRegistry = selectiveEffectHelper;
     this.debugOptions = debugOptions ?? {};
 
-    this.postEffects = new PostEffectManager({
-      postEffectRegistry: this.postEffectRegistry,
+    this.selectiveEffects = new SelectiveEffectManager({
+      selectiveEffectRegistry: this.selectiveEffectRegistry,
     });
   }
 
@@ -68,38 +68,38 @@ export class ViewContext {
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    postEffectOcclusion?: PostEffectOcclusionValue,
+    selectiveEffectOcclusion?: SelectiveEffectOcclusionValue,
     emissiveIntensity?: number,
   ): void {
-    this.postEffects.registerLayerEffects(
+    this.selectiveEffects.registerLayerEffects(
       layerId,
       effectIds,
-      postEffectOcclusion,
+      selectiveEffectOcclusion,
       emissiveIntensity,
     );
   }
 
   getLayerEffects(layerId: string): string[] | undefined {
-    return this.postEffects.getLayerEffects(layerId);
+    return this.selectiveEffects.getLayerEffects(layerId);
   }
 
   setLayerEmissiveColor(
     layerId: string,
     emissiveColor: number | undefined,
   ): void {
-    this.postEffects.setLayerEmissiveColor(layerId, emissiveColor);
+    this.selectiveEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
 
-  setLayerPostEffectOcclusion(
+  setLayerSelectiveEffectOcclusion(
     layerId: string,
-    postEffectOcclusion: PostEffectOcclusionValue,
+    selectiveEffectOcclusion: SelectiveEffectOcclusionValue,
   ): void {
     // Delegate to Manager (the single SoT for occlusion)
-    this.postEffects.setLayerOcclusion(layerId, postEffectOcclusion);
+    this.selectiveEffects.setLayerOcclusion(layerId, selectiveEffectOcclusion);
   }
 
   unregisterLayerEffects(layerId: string): void {
-    this.postEffects.unregisterLayerEffects(layerId);
+    this.selectiveEffects.unregisterLayerEffects(layerId);
   }
 
   updateLayerEffects(
@@ -107,15 +107,19 @@ export class ViewContext {
     effectIds: string[] | undefined,
     emissiveIntensity?: number,
   ): void {
-    this.postEffects.updateLayerEffects(layerId, effectIds, emissiveIntensity);
+    this.selectiveEffects.updateLayerEffects(
+      layerId,
+      effectIds,
+      emissiveIntensity,
+    );
   }
 
   /**
-   * Apply post effects to a specific Object3D.
+   * Apply selective effects to a specific Object3D.
    * Useful for pick-based effect application where you have a reference to the object.
    *
    * @param object - The Object3D to apply effects to
-   * @param effectIds - Effect IDs to apply (e.g., ["bloom"], ["outline"], ["bloom", "outline"])
+   * @param effectIds - Effect IDs to apply (e.g., ["selectiveBloom"], ["selectiveOutline"], ["selectiveBloom", "selectiveOutline"])
    * @param layerId - Optional layer ID for occlusion resolution.
    *                  Resolution order: argument > existing config > Normal occlusion
    */
@@ -125,10 +129,11 @@ export class ViewContext {
     layerId?: string,
   ): void {
     // Resolve layerId: argument > existing config > undefined (Normal occlusion)
-    const resolvedLayerId = layerId ?? getPostEffectConfig(object)?.layerId;
+    const resolvedLayerId =
+      layerId ?? getSelectiveEffectConfig(object)?.layerId;
 
-    const prevEffectIds = getPostEffectConfig(object)?.effectIds ?? [];
-    this.postEffectRegistry?.updateLinksForObject(
+    const prevEffectIds = getSelectiveEffectConfig(object)?.effectIds ?? [];
+    this.selectiveEffectRegistry?.updateLinksForObject(
       object,
       effectIds,
       prevEffectIds,
@@ -137,13 +142,13 @@ export class ViewContext {
   }
 
   /**
-   * Remove post effects from a specific Object3D.
+   * Remove selective effects from a specific Object3D.
    *
    * @param object - The Object3D to remove effects from
    * @param effectIds - Effect IDs to remove. If undefined, removes all effects.
    */
   removeEffectFromObject(object: Object3D, effectIds?: string[]): void {
-    const config = getPostEffectConfig(object);
+    const config = getSelectiveEffectConfig(object);
     if (!config) return;
 
     const prevEffectIds = config.effectIds;
@@ -151,7 +156,7 @@ export class ViewContext {
       ? prevEffectIds.filter((id) => !effectIds.includes(id))
       : [];
 
-    this.postEffectRegistry?.updateLinksForObject(
+    this.selectiveEffectRegistry?.updateLinksForObject(
       object,
       nextEffectIds,
       prevEffectIds,

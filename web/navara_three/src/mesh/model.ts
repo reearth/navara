@@ -47,10 +47,10 @@ import {
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
-  ensurePostEffectUserData,
-  getPostEffectConfig,
-  POST_EFFECT_OCCLUSION_SKIP,
-} from "../core/PostEffectHelper";
+  ensureSelectiveEffectUserData,
+  getSelectiveEffectConfig,
+  SELECTIVE_EFFECT_OCCLUSION_SKIP,
+} from "../core/SelectiveEffectHelper";
 import {
   getMaskPassContext,
   MaskPassPhase,
@@ -58,7 +58,7 @@ import {
   applyMaskPassSkipState as applyMaskPassSkipStateBase,
   applyMaskPassRenderState,
   restoreMaterialState as restoreMaterialStateBase,
-} from "../core/PostEffectMaskContext";
+} from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -114,7 +114,7 @@ type ModelMaterialUserData = {
   uAddHeight?: { value: number };
   uBloomMaskPass?: { value: number };
   uOutlineMaskPass?: { value: number };
-  uPostEffectOcclusion?: { value: number };
+  uSelectiveEffectOcclusion?: { value: number };
   reflectivity?: { value: number };
   waterNormalMap?: { value: Texture | null };
   waterScaleNormal?: { value: number };
@@ -144,7 +144,7 @@ export class ModelMesh
   water = false;
   private waterNormalMapTexture: Texture | null = null;
   private viewContext: ViewContext;
-  /** Layer ID for PostEffect handling */
+  /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
   private _uniforms?: CommonUniforms;
 
@@ -397,8 +397,8 @@ export class ModelMesh
         value: 0.0,
       };
 
-      // Initialize post effect user data (includes uPostEffectOcclusion shader uniform)
-      ensurePostEffectUserData(mesh.material);
+      // Initialize post effect user data (includes uSelectiveEffectOcclusion shader uniform)
+      ensureSelectiveEffectUserData(mesh.material);
       this.setupWaterMaterial(mesh, meshMaterial);
 
       this.water = !!meshMaterial.water;
@@ -443,8 +443,8 @@ export class ModelMesh
         shader.uniforms.uBloomMaskPass = mesh.material.userData.uBloomMaskPass;
         shader.uniforms.uOutlineMaskPass =
           mesh.material.userData.uOutlineMaskPass;
-        shader.uniforms.uPostEffectOcclusion =
-          mesh.material.userData.uPostEffectOcclusion;
+        shader.uniforms.uSelectiveEffectOcclusion =
+          mesh.material.userData.uSelectiveEffectOcclusion;
 
         if (mesh.material.userData.batchDataTexture) {
           shader.uniforms.batchDataTexture =
@@ -514,7 +514,7 @@ export class ModelMesh
                   // uniform float reflectivity;
                   uniform float uBloomMaskPass;
                   uniform float uOutlineMaskPass;
-                  uniform float uPostEffectOcclusion;
+                  uniform float uSelectiveEffectOcclusion;
                   in float nvr_vBatchId;
 
                   ${ShowParsFragment}
@@ -614,7 +614,7 @@ export class ModelMesh
 
       this.initDepthMaterial(mesh);
 
-      // Setup onBeforeRender for PostEffect state handling
+      // Setup onBeforeRender for SelectiveEffect state handling
       this.setupMeshOnBeforeRender(mesh);
 
       viewEvents.emit("_csmMounted", mesh.material);
@@ -622,14 +622,14 @@ export class ModelMesh
   }
 
   /**
-   * Setup onBeforeRender callback for a mesh to handle PostEffect rendering
+   * Setup onBeforeRender callback for a mesh to handle SelectiveEffect rendering
    *
    * Mesh determines its own depth/mask flags via onBeforeRender.
    * Uses MaskPassContext for self-determination during BaseMRT phase.
    *
    * SoT Flow:
    * - MaskPassContext provides runtime state (phase, activeEffects)
-   * - PostEffectManager provides layer configuration (occlusion), accessed via registry
+   * - SelectiveEffectManager provides layer configuration (occlusion), accessed via registry
    * - Mesh reads SoT, never modifies it
    */
   private setupMeshOnBeforeRender(
@@ -646,9 +646,10 @@ export class ModelMesh
         return;
       }
 
-      // Get PostEffectConfig from mesh (link() sets config on child meshes, not parent)
-      const config = getPostEffectConfig(mesh);
-      const registry = ctx.registry ?? this.viewContext?.postEffectRegistry;
+      // Get SelectiveEffectConfig from mesh (link() sets config on child meshes, not parent)
+      const config = getSelectiveEffectConfig(mesh);
+      const registry =
+        ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
       const layerId = this._layerId;
 
       // Context-based self-determination during BaseMRT
@@ -665,7 +666,7 @@ export class ModelMesh
    */
   private applyMaskPassState(
     mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-    config: ReturnType<typeof getPostEffectConfig>,
+    config: ReturnType<typeof getSelectiveEffectConfig>,
     registry: ReturnType<typeof getMaskPassContext>["registry"],
     layerId: string | undefined,
     ctx: ReturnType<typeof getMaskPassContext>,
@@ -675,8 +676,8 @@ export class ModelMesh
     // Initialize uniforms if not present (for future custom shader support)
     material.userData.uBloomMaskPass ??= { value: 0.0 };
     material.userData.uOutlineMaskPass ??= { value: 0.0 };
-    material.userData.uPostEffectOcclusion ??= {
-      value: POST_EFFECT_OCCLUSION_SKIP,
+    material.userData.uSelectiveEffectOcclusion ??= {
+      value: SELECTIVE_EFFECT_OCCLUSION_SKIP,
     };
 
     // Use shared helper for evaluation
@@ -697,7 +698,7 @@ export class ModelMesh
     material.userData.uOutlineMaskPass.value = evaluation.outlineActive
       ? 1.0
       : 0.0;
-    material.userData.uPostEffectOcclusion.value = evaluation.occlusion;
+    material.userData.uSelectiveEffectOcclusion.value = evaluation.occlusion;
 
     // Apply render state using shared helper
     applyMaskPassRenderState(material, evaluation.isSilhouette);
@@ -711,7 +712,8 @@ export class ModelMesh
     // Set shader uniforms to skip values
     material.userData.uBloomMaskPass.value = 0.0;
     material.userData.uOutlineMaskPass.value = 0.0;
-    material.userData.uPostEffectOcclusion.value = POST_EFFECT_OCCLUSION_SKIP;
+    material.userData.uSelectiveEffectOcclusion.value =
+      SELECTIVE_EFFECT_OCCLUSION_SKIP;
 
     // Apply render state using shared helper
     applyMaskPassSkipStateBase(material);
@@ -856,9 +858,9 @@ export class ModelMesh
       }
     }
 
-    // PostEffect: effectIds handling at ModelMesh level
+    // SelectiveEffect: effectIds handling at ModelMesh level
     if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
-      this.viewContext.postEffectRegistry?.updateLinksForObject(
+      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         ud.prev.effectIds ?? [],
@@ -972,13 +974,13 @@ export class ModelMesh
         dist.receiveShadow = !!src.receiveShadow;
       }
 
-      // PostEffect: emissiveColor handling
+      // SelectiveEffect: emissiveColor handling
       if (ud.prev.emissiveColor !== src.emissiveColor) {
         distMaterial.emissive.set(src.emissiveColor ?? 0);
         ud.prev.emissiveColor = src.emissiveColor;
       }
 
-      // PostEffect: emissiveIntensity handling
+      // SelectiveEffect: emissiveIntensity handling
       if (ud.prev.emissiveIntensity !== src.emissiveIntensity) {
         distMaterial.emissiveIntensity = src.emissiveIntensity ?? 0;
         ud.prev.emissiveIntensity = src.emissiveIntensity;
