@@ -62,6 +62,26 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
     }
 }
 
+impl PointMaterial {
+    pub fn merge(&self, other: &navara_material::PointMaterial) -> navara_material::PointMaterial {
+        navara_material::PointMaterial {
+            show: self.show.unwrap_or(other.show),
+            size: self.size.unwrap_or(other.size),
+            color: self.color.unwrap_or(other.color),
+            center: self
+                .center
+                .unwrap_or(other.center.into())
+                .into(),
+            height: self.height.unwrap_or(other.height),
+            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
+            depth_test: self.depth_test.unwrap_or(other.depth_test),
+            offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
+            transparent: self.transparent.unwrap_or(other.transparent),
+        }
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NearFar {
@@ -132,6 +152,28 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
+        }
+    }
+}
+
+impl BillboardMaterial {
+    pub fn merge( &self, other: &navara_material::BillboardMaterial) -> navara_material::BillboardMaterial {
+        navara_material::BillboardMaterial {
+            show: self.show.unwrap_or(other.show),
+            size: self.size.unwrap_or(other.size),
+            color: self.color.unwrap_or(other.color),
+            center: self
+                .center
+                .unwrap_or(other.center.into())
+                .into(),
+            height: self.height.unwrap_or(other.height),
+            url: self.url.clone().unwrap_or(other.url.clone()),
+            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
+            depth_test: self.depth_test.unwrap_or(other.depth_test),
+            offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
+            transparent: self.transparent.unwrap_or(other.transparent),
+            alpha_test: self.alpha_test.unwrap_or(other.alpha_test),
         }
     }
 }
@@ -255,6 +297,40 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
     }
 }
 
+impl TextMaterial {
+    pub fn merge(&self, other: &navara_material::TextMaterial) -> navara_material::TextMaterial {
+        navara_material::TextMaterial {
+            show: self.show.unwrap_or(other.show),
+            size: self.size.unwrap_or(other.size),
+            color: self.color.unwrap_or(other.color),
+            center: self
+                .center
+                .unwrap_or(other.center.into())
+                .into(),
+            height: self.height.unwrap_or(other.height),
+            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
+            depth_test: self.depth_test.unwrap_or(other.depth_test),
+            offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
+            text: self.text.clone().unwrap_or(other.text.clone()),
+            font: self.font.clone().unwrap_or(other.font.clone()),
+            background_color: self.background_color.or(other.background_color),
+            border_color: self.border_color.unwrap_or(other.border_color),
+            border_width: self.border_width.unwrap_or(other.border_width),
+            corner_radius: self.corner_radius.unwrap_or(other.corner_radius),
+            padding: self.padding.unwrap_or(other.padding.into()).into(),
+            outline_blur: self.outline_blur.unwrap_or(other.outline_blur),
+            outline_color: self.outline_color.unwrap_or(other.outline_color),
+            outline_offset: self
+                .outline_offset
+                .unwrap_or(other.outline_offset.into())
+                .into(),
+            outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
+            outline_width: self.outline_width.unwrap_or(other.outline_width),
+        }
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolylineMaterial {
@@ -303,6 +379,22 @@ impl PolylineMaterial {
             height,
             width,
             __internal__,
+        }
+    }
+}
+
+impl PolylineMaterial {
+    pub fn merge(&self, other: &navara_material::PolylineMaterial) -> navara_material::PolylineMaterial {
+        navara_material::PolylineMaterial {
+            show: self.show.unwrap_or(other.show),
+            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
+            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            color: self.color.unwrap_or(other.color),
+            width: self.width.unwrap_or(other.width),
+            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
+            use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
+            height: self.height.unwrap_or(other.height),
+            internal: self.__internal__.as_ref().map(|v| v.to_owned().into()).or_else(|| other.internal.clone()),
         }
     }
 }
@@ -514,6 +606,48 @@ impl PolygonMaterial {
             ior: None,
         }
     }
+}
+
+impl PolygonMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::PolygonMaterial,
+    ) -> navara_material::PolygonMaterial {
+        navara_material::PolygonMaterial {
+            show: self.show.unwrap_or(other.show),
+            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
+            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            color: self.color.unwrap_or(other.color),
+            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
+            use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
+            height: self.height.unwrap_or(other.height),
+            extruded_height: self.extruded_height.or(other.extruded_height),
+            wireframe: self.wireframe.unwrap_or(other.wireframe),
+            reflectivity: self.reflectivity.unwrap_or(other.reflectivity),
+            roughness: self.roughness.unwrap_or(other.roughness),
+            internal: self.__internal__.as_ref().map(|v| v.to_owned().into()).or_else(|| other.internal.clone()),
+
+            per_position_height: self
+                .per_position_height
+                .unwrap_or(other.per_position_height),
+            opacity: self.opacity.unwrap_or(other.opacity),
+            transparent: self.transparent.unwrap_or(other.transparent),
+
+            surface_show: self.surface_show.unwrap_or(other.surface_show),
+            outline_show: self.outline_show.unwrap_or(other.outline_show),
+            outline_color: self.outline_color.unwrap_or(other.outline_color),
+            outline_width: self.outline_width.unwrap_or(other.outline_width),
+            water: self.water.unwrap_or(other.water),
+            water_scale_normal: self.water_scale_normal.unwrap_or(other.water_scale_normal),
+            water_speed: self.water_speed.unwrap_or(other.water_speed),
+            shininess: self.shininess.unwrap_or(other.shininess),
+            specular_strength: self.specular_strength.unwrap_or(other.specular_strength),
+            apply_water_normal: self.apply_water_normal.unwrap_or(other.apply_water_normal),
+            specular: self.specular.unwrap_or(other.specular),
+            ior: self.ior.unwrap_or(other.ior),
+        }
+    }
+
 }
 
 impl From<PolygonMaterial> for navara_material::PolygonMaterial {
@@ -793,6 +927,46 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
     }
 }
 
+impl ModelMaterial {
+    pub fn merge(&self, other: &navara_material::ModelMaterial) -> navara_material::ModelMaterial {
+        navara_material::ModelMaterial {
+            show: self.show.unwrap_or(other.show),
+            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
+            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            url: self.url.clone().unwrap_or_else(|| other.url.clone()),
+            size: self.size.unwrap_or(other.size),
+            height: self.height.unwrap_or(other.height),
+            max_sse: self.max_sse.unwrap_or(other.max_sse),
+            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
+            should_rotate_in_default: self
+                .should_rotate_in_default
+                .unwrap_or(other.should_rotate_in_default),
+            color: self.color.unwrap_or(other.color),
+            metalness: self.metalness.unwrap_or(other.metalness),
+            roughness: self.roughness.unwrap_or(other.roughness),
+            reflectivity: self.reflectivity.unwrap_or(other.reflectivity),
+            water: self.water.unwrap_or(other.water),
+            water_scale_normal: self.water_scale_normal.unwrap_or(other.water_scale_normal),
+            water_speed: self.water_speed.unwrap_or(other.water_speed),
+            shininess: self.shininess.unwrap_or(other.shininess),
+            specular_strength: self.specular_strength.unwrap_or(other.specular_strength),
+            apply_water_normal: self.apply_water_normal.unwrap_or(other.apply_water_normal),
+            specular: self.specular.unwrap_or(other.specular),
+            ior: self.ior.unwrap_or(other.ior),
+            // animation
+            animation_active_clip: self
+                .animation_active_clip
+                .clone()
+                .or_else(|| other.animation_active_clip.clone()),
+            animation_speed: self.animation_speed.or(other.animation_speed),
+            point_size: self.point_size.unwrap_or(other.point_size),
+            show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
+            internal: other.internal.clone(),
+        }
+    }
+}
+
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInternalMaterial {
@@ -869,6 +1043,22 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             min_zoom: Some(value.min_zoom),
             tms: Some(value.tms),
             show_bounding_box: Some(value.show_bounding_box),
+        }
+    }
+}
+
+impl RasterTileMaterial {
+    pub fn merge(&self, other: &navara_material::RasterTileMaterial) -> navara_material::RasterTileMaterial {
+        navara_material::RasterTileMaterial {
+            show: self.show.unwrap_or(other.show),
+            color: self.color.unwrap_or(other.color),
+            opacity: self.opacity.unwrap_or(other.opacity),
+            max_zoom: self.max_zoom.unwrap_or(other.max_zoom),
+            min_zoom: self.min_zoom.unwrap_or(other.min_zoom),
+            tms: self.tms.unwrap_or(other.tms),
+            show_bounding_box: self
+                .show_bounding_box
+                .unwrap_or(other.show_bounding_box),
         }
     }
 }
@@ -1083,6 +1273,22 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
             max_sse: Some(value.max_sse),
             layers: value.layers.clone(),
             overscaled_max_zoom: Some(value.overscaled_max_zoom),
+        }
+    }
+}
+
+impl VectorTileMaterial {
+    pub fn merge(&self, other: &navara_material::VectorTileMaterial) -> navara_material::VectorTileMaterial {
+        navara_material::VectorTileMaterial {
+            show: self.show.unwrap_or(other.show),
+            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
+            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            max_zoom: self.max_zoom.unwrap_or(other.max_zoom),
+            max_sse: self.max_sse.unwrap_or(other.max_sse),
+            layers: self.layers.clone().or_else(|| other.layers.clone()),
+            overscaled_max_zoom: self
+                .overscaled_max_zoom
+                .unwrap_or(other.overscaled_max_zoom),
         }
     }
 }

@@ -270,20 +270,14 @@ impl App {
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {
-        if let Some(mut layer_desc_store) =
-            self.app.world_mut().get_resource_mut::<LayerDescStore>()
-        {
-            layer_desc_store
-                .map
-                .insert(layer_id.to_owned(), desc.clone());
-        }
+        self.set_layer_description(layer_id, desc.clone());
 
         self.app
             .world_mut()
             .send_event(navara_layer_event::AddLayerEvent(desc));
     }
 
-    pub fn get_layer_type(&mut self, layer_id: &String) -> &str {
+    pub fn get_layer_type(&self, layer_id: &String) -> &str {
         let mut layer_type = "";
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
             if let Some(desc) = layer_desc_store.map.get(layer_id) {
@@ -300,6 +294,26 @@ impl App {
         }
 
         layer_type
+    }
+
+    pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
+            if let Some(desc) = layer_desc_store.map.get(layer_id) {
+                return Some(desc.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn set_layer_description(&mut self, layer_id: &str, desc: LayerDescription) {
+        if let Some(mut layer_desc_store) =
+            self.app.world_mut().get_resource_mut::<LayerDescStore>()
+        {
+            layer_desc_store
+                .map
+                .insert(layer_id.to_owned(), desc.clone());
+        }
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
@@ -360,7 +374,7 @@ impl App {
                 }
             }
             LayerDescription::Tiles(layer) => {
-                if let Some(appearance) = layer.appearance.take() {
+                if let Some(appearance) = layer.appearance.clone() {
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -370,8 +384,10 @@ impl App {
                         });
                 }
             }
-            _ => (),
+            _ => { return; },
         }
+
+        self.set_layer_description(layer_id, desc);
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {
