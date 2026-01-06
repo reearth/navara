@@ -68,10 +68,7 @@ impl PointMaterial {
             show: self.show.unwrap_or(other.show),
             size: self.size.unwrap_or(other.size),
             color: self.color.unwrap_or(other.color),
-            center: self
-                .center
-                .unwrap_or(other.center.into())
-                .into(),
+            center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
             scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
@@ -157,15 +154,15 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
 }
 
 impl BillboardMaterial {
-    pub fn merge( &self, other: &navara_material::BillboardMaterial) -> navara_material::BillboardMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::BillboardMaterial,
+    ) -> navara_material::BillboardMaterial {
         navara_material::BillboardMaterial {
             show: self.show.unwrap_or(other.show),
             size: self.size.unwrap_or(other.size),
             color: self.color.unwrap_or(other.color),
-            center: self
-                .center
-                .unwrap_or(other.center.into())
-                .into(),
+            center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
             url: self.url.clone().unwrap_or(other.url.clone()),
             scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
@@ -303,10 +300,7 @@ impl TextMaterial {
             show: self.show.unwrap_or(other.show),
             size: self.size.unwrap_or(other.size),
             color: self.color.unwrap_or(other.color),
-            center: self
-                .center
-                .unwrap_or(other.center.into())
-                .into(),
+            center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
             scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
@@ -384,7 +378,10 @@ impl PolylineMaterial {
 }
 
 impl PolylineMaterial {
-    pub fn merge(&self, other: &navara_material::PolylineMaterial) -> navara_material::PolylineMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::PolylineMaterial,
+    ) -> navara_material::PolylineMaterial {
         navara_material::PolylineMaterial {
             show: self.show.unwrap_or(other.show),
             cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
@@ -394,7 +391,11 @@ impl PolylineMaterial {
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
             height: self.height.unwrap_or(other.height),
-            internal: self.__internal__.as_ref().map(|v| v.to_owned().into()).or_else(|| other.internal.clone()),
+            internal: self
+                .__internal__
+                .as_ref()
+                .map(|v| v.to_owned().into())
+                .or_else(|| other.internal.clone()),
         }
     }
 }
@@ -625,7 +626,11 @@ impl PolygonMaterial {
             wireframe: self.wireframe.unwrap_or(other.wireframe),
             reflectivity: self.reflectivity.unwrap_or(other.reflectivity),
             roughness: self.roughness.unwrap_or(other.roughness),
-            internal: self.__internal__.as_ref().map(|v| v.to_owned().into()).or_else(|| other.internal.clone()),
+            internal: self
+                .__internal__
+                .as_ref()
+                .map(|v| v.to_owned().into())
+                .or_else(|| other.internal.clone()),
 
             per_position_height: self
                 .per_position_height
@@ -647,7 +652,6 @@ impl PolygonMaterial {
             ior: self.ior.unwrap_or(other.ior),
         }
     }
-
 }
 
 impl From<PolygonMaterial> for navara_material::PolygonMaterial {
@@ -966,7 +970,6 @@ impl ModelMaterial {
     }
 }
 
-
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInternalMaterial {
@@ -1048,7 +1051,10 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
 }
 
 impl RasterTileMaterial {
-    pub fn merge(&self, other: &navara_material::RasterTileMaterial) -> navara_material::RasterTileMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::RasterTileMaterial,
+    ) -> navara_material::RasterTileMaterial {
         navara_material::RasterTileMaterial {
             show: self.show.unwrap_or(other.show),
             color: self.color.unwrap_or(other.color),
@@ -1056,9 +1062,7 @@ impl RasterTileMaterial {
             max_zoom: self.max_zoom.unwrap_or(other.max_zoom),
             min_zoom: self.min_zoom.unwrap_or(other.min_zoom),
             tms: self.tms.unwrap_or(other.tms),
-            show_bounding_box: self
-                .show_bounding_box
-                .unwrap_or(other.show_bounding_box),
+            show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
         }
     }
 }
@@ -1278,7 +1282,10 @@ impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
 }
 
 impl VectorTileMaterial {
-    pub fn merge(&self, other: &navara_material::VectorTileMaterial) -> navara_material::VectorTileMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::VectorTileMaterial,
+    ) -> navara_material::VectorTileMaterial {
         navara_material::VectorTileMaterial {
             show: self.show.unwrap_or(other.show),
             cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),

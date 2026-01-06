@@ -41,10 +41,11 @@ impl TileLayerDescription {
     ) -> Option<navara_material::Appearance> {
         // Merge with old appearance if exists
         if let Some(navara_layer::LayerDescription::Tiles(old_layer)) = old_desc {
-            if let Some(old_appearance) = old_layer.appearance.as_ref() {
+            if let (Some(new_tile_material), Some(old_appearance)) =
+                (self.raster_tile.take(), old_layer.appearance.as_ref())
+            {
                 match old_appearance {
                     navara_material::Appearance::RasterTile(old_tile_material) => {
-                        let new_tile_material = self.raster_tile.take().unwrap();
                         let updated_tile_material = new_tile_material.merge(old_tile_material);
                         return Some(Appearance::RasterTile(updated_tile_material));
                     }
@@ -297,10 +298,11 @@ impl B3dmLayerDescription {
         let mut result = vec![];
         // Merge with old appearance if exists
         if let Some(navara_layer::LayerDescription::B3dm(old_layer)) = old_desc {
-            if let Some(old_appearance) = old_layer.appearances.first() {
+            if let (Some(new_model_material), Some(old_appearance)) =
+                (self.model.take(), old_layer.appearances.first())
+            {
                 match old_appearance {
                     navara_material::Appearance::Model(old_model_material) => {
-                        let new_model_material = self.model.take().unwrap();
                         let updated_model_material = new_model_material.merge(old_model_material);
                         result.push(Appearance::Model(updated_model_material));
                         return result;
@@ -345,10 +347,11 @@ impl PntsLayerDescription {
         let mut result = vec![];
         // Merge with old appearance if exists
         if let Some(navara_layer::LayerDescription::Pnts(old_layer)) = old_desc {
-            if let Some(old_appearance) = old_layer.appearances.first() {
+            if let (Some(new_model_material), Some(old_appearance)) =
+                (self.model.take(), old_layer.appearances.first())
+            {
                 match old_appearance {
                     navara_material::Appearance::Model(old_model_material) => {
-                        let new_model_material = self.model.take().unwrap();
                         let updated_model_material = new_model_material.merge(old_model_material);
                         result.push(Appearance::Model(updated_model_material));
                         return result;
@@ -393,10 +396,11 @@ impl Cesium3dTilesLayerDescription {
         let mut result = vec![];
         // Merge with old appearance if exists
         if let Some(navara_layer::LayerDescription::Cesium3dTiles(old_layer)) = old_desc {
-            if let Some(old_appearance) = old_layer.appearances.first() {
+            if let (Some(new_model_material), Some(old_appearance)) =
+                (self.model.take(), old_layer.appearances.first())
+            {
                 match old_appearance {
                     navara_material::Appearance::Model(old_model_material) => {
-                        let new_model_material = self.model.take().unwrap();
                         let updated_model_material = new_model_material.merge(old_model_material);
                         result.push(Appearance::Model(updated_model_material));
                         return result;

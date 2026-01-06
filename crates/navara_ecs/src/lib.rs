@@ -277,18 +277,18 @@ impl App {
             .send_event(navara_layer_event::AddLayerEvent(desc));
     }
 
-    pub fn get_layer_type(&self, layer_id: &String) -> &str {
-        let mut layer_type = "";
+    pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
+        let mut layer_type = None;
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
             if let Some(desc) = layer_desc_store.map.get(layer_id) {
                 layer_type = match desc {
-                    LayerDescription::Tiles(_) => "tiles",
-                    LayerDescription::Terrain(_) => "terrain",
-                    LayerDescription::GeoJson(_) => "geojson",
-                    LayerDescription::B3dm(_) => "b3dm",
-                    LayerDescription::Pnts(_) => "pnts",
-                    LayerDescription::Mvt(_) => "mvt",
-                    LayerDescription::Cesium3dTiles(_) => "cesium3dtiles",
+                    LayerDescription::Tiles(_) => Some("tiles"),
+                    LayerDescription::Terrain(_) => Some("terrain"),
+                    LayerDescription::GeoJson(_) => Some("geojson"),
+                    LayerDescription::B3dm(_) => Some("b3dm"),
+                    LayerDescription::Pnts(_) => Some("pnts"),
+                    LayerDescription::Mvt(_) => Some("mvt"),
+                    LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
                 };
             }
         }
@@ -384,7 +384,9 @@ impl App {
                         });
                 }
             }
-            _ => { return; },
+            _ => {
+                return;
+            }
         }
 
         self.set_layer_description(layer_id, desc);
