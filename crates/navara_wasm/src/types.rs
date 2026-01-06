@@ -1,4 +1,3 @@
-use bevy_log::info;
 use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 
@@ -36,7 +35,24 @@ pub struct TileLayerDescription {
 }
 
 impl TileLayerDescription {
-    pub fn appearance(&mut self) -> Option<navara_material::Appearance> {
+    pub fn appearance(
+        &mut self,
+        old_desc: Option<navara_layer::LayerDescription>,
+    ) -> Option<navara_material::Appearance> {
+        // Merge with old appearance if exists
+        if let Some(navara_layer::LayerDescription::Tiles(old_layer)) = old_desc {
+            if let Some(old_appearance) = old_layer.appearance.as_ref() {
+                match old_appearance {
+                    navara_material::Appearance::RasterTile(old_tile_material) => {
+                        let new_tile_material = self.raster_tile.take().unwrap();
+                        let updated_tile_material = new_tile_material.merge(old_tile_material);
+                        return Some(Appearance::RasterTile(updated_tile_material));
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+        // Otherwise, return new appearance
         self.raster_tile
             .take()
             .map(|v| v.into())
@@ -104,27 +120,151 @@ pub struct GeoJsonLayerDescription {
 }
 
 impl GeoJsonLayerDescription {
-    pub fn appearances(&mut self) -> Vec<Appearance> {
-        let mut result = vec![];
-        if let Some(v) = self.point.take() {
-            result.push(Appearance::Point(v.into()));
-        }
-        if let Some(v) = self.billboard.take() {
-            result.push(Appearance::Billboard(v.into()));
-        }
-        if let Some(v) = self.text.take() {
-            result.push(Appearance::Text(v.into()));
-        }
-        if let Some(v) = self.polyline.take() {
-            result.push(Appearance::Polyline(v.into()));
-        }
-        if let Some(v) = self.polygon.take() {
-            result.push(Appearance::Polygon(v.into()));
-        }
-        if let Some(v) = self.model.take() {
-            result.push(Appearance::Model(v.into()));
-        }
-        result
+    pub fn appearances(
+        &mut self,
+        old_desc: Option<navara_layer::LayerDescription>,
+    ) -> Vec<Appearance> {
+        // Merge with old appearances if exists
+        let appearances = if let Some(navara_layer::LayerDescription::GeoJson(old_layer)) = old_desc
+        {
+            let mut result = old_layer.appearances.clone();
+            if let Some(new_point_material) = self.point.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Point(_)))
+                {
+                    if let Appearance::Point(old_point_material) = old_appearance {
+                        let updated_point_material = new_point_material.merge(old_point_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Point(_)));
+                        result.push(Appearance::Point(updated_point_material));
+                    }
+                } else {
+                    result.push(Appearance::Point(new_point_material.into()));
+                }
+            }
+
+            if let Some(new_billboard_material) = self.billboard.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Billboard(_)))
+                {
+                    if let Appearance::Billboard(old_billboard_material) = old_appearance {
+                        let updated_billboard_material =
+                            new_billboard_material.merge(old_billboard_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Billboard(_)));
+                        result.push(Appearance::Billboard(updated_billboard_material));
+                    }
+                } else {
+                    result.push(Appearance::Billboard(
+                        new_billboard_material.to_owned().into(),
+                    ));
+                }
+            }
+
+            if let Some(new_text_material) = self.text.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Text(_)))
+                {
+                    if let Appearance::Text(old_text_material) = old_appearance {
+                        let updated_text_material = new_text_material.merge(old_text_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Text(_)));
+                        result.push(Appearance::Text(updated_text_material));
+                    }
+                } else {
+                    result.push(Appearance::Text(new_text_material.into()));
+                }
+            }
+
+            if let Some(new_polyline_material) = self.polyline.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Polyline(_)))
+                {
+                    if let Appearance::Polyline(old_polyline_material) = old_appearance {
+                        let updated_polyline_material =
+                            new_polyline_material.merge(old_polyline_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Polyline(_)));
+                        result.push(Appearance::Polyline(updated_polyline_material));
+                    }
+                } else {
+                    result.push(Appearance::Polyline(new_polyline_material.into()));
+                }
+            }
+
+            if let Some(new_polygon_material) = self.polygon.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Polygon(_)))
+                {
+                    if let Appearance::Polygon(old_polygon_material) = old_appearance {
+                        let updated_polygon_material =
+                            new_polygon_material.merge(old_polygon_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Polygon(_)));
+                        result.push(Appearance::Polygon(updated_polygon_material));
+                    }
+                } else {
+                    result.push(Appearance::Polygon(new_polygon_material.into()));
+                }
+            }
+
+            if let Some(new_model_material) = self.model.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Model(_)))
+                {
+                    if let Appearance::Model(old_model_material) = old_appearance {
+                        let updated_model_material = new_model_material.merge(old_model_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Model(_)));
+                        result.push(Appearance::Model(updated_model_material));
+                    }
+                } else {
+                    result.push(Appearance::Model(new_model_material.into()));
+                }
+            }
+            result
+        } else {
+            // Otherwise, return new appearances
+            let mut result = vec![];
+            if let Some(v) = self.point.take() {
+                result.push(Appearance::Point(v.into()));
+            }
+            if let Some(v) = self.billboard.take() {
+                result.push(Appearance::Billboard(v.into()));
+            }
+            if let Some(v) = self.text.take() {
+                result.push(Appearance::Text(v.into()));
+            }
+            if let Some(v) = self.polyline.take() {
+                result.push(Appearance::Polyline(v.into()));
+            }
+            if let Some(v) = self.polygon.take() {
+                result.push(Appearance::Polygon(v.into()));
+            }
+            if let Some(v) = self.model.take() {
+                result.push(Appearance::Model(v.into()));
+            }
+            result
+        };
+        appearances
     }
 
     pub fn crs(&self) -> Option<navara_core::CRS> {
@@ -150,8 +290,26 @@ pub struct B3dmLayerDescription {
 }
 
 impl B3dmLayerDescription {
-    pub fn appearances(&mut self) -> Vec<Appearance> {
+    pub fn appearances(
+        &mut self,
+        old_desc: Option<navara_layer::LayerDescription>,
+    ) -> Vec<Appearance> {
         let mut result = vec![];
+        // Merge with old appearance if exists
+        if let Some(navara_layer::LayerDescription::B3dm(old_layer)) = old_desc {
+            if let Some(old_appearance) = old_layer.appearances.first() {
+                match old_appearance {
+                    navara_material::Appearance::Model(old_model_material) => {
+                        let new_model_material = self.model.take().unwrap();
+                        let updated_model_material = new_model_material.merge(old_model_material);
+                        result.push(Appearance::Model(updated_model_material));
+                        return result;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+        // Otherwise, return new appearance
         if let Some(v) = self.model.take() {
             result.push(Appearance::Model(v.into()));
         }
@@ -180,8 +338,26 @@ pub struct PntsLayerDescription {
 }
 
 impl PntsLayerDescription {
-    pub fn appearances(&mut self) -> Vec<Appearance> {
+    pub fn appearances(
+        &mut self,
+        old_desc: Option<navara_layer::LayerDescription>,
+    ) -> Vec<Appearance> {
         let mut result = vec![];
+        // Merge with old appearance if exists
+        if let Some(navara_layer::LayerDescription::Pnts(old_layer)) = old_desc {
+            if let Some(old_appearance) = old_layer.appearances.first() {
+                match old_appearance {
+                    navara_material::Appearance::Model(old_model_material) => {
+                        let new_model_material = self.model.take().unwrap();
+                        let updated_model_material = new_model_material.merge(old_model_material);
+                        result.push(Appearance::Model(updated_model_material));
+                        return result;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+        // Otherwise, return new appearance
         if let Some(v) = self.model.take() {
             result.push(Appearance::Model(v.into()));
         }
@@ -210,8 +386,26 @@ pub struct Cesium3dTilesLayerDescription {
 }
 
 impl Cesium3dTilesLayerDescription {
-    pub fn appearances(&mut self) -> Vec<Appearance> {
+    pub fn appearances(
+        &mut self,
+        old_desc: Option<navara_layer::LayerDescription>,
+    ) -> Vec<Appearance> {
         let mut result = vec![];
+        // Merge with old appearance if exists
+        if let Some(navara_layer::LayerDescription::Cesium3dTiles(old_layer)) = old_desc {
+            if let Some(old_appearance) = old_layer.appearances.first() {
+                match old_appearance {
+                    navara_material::Appearance::Model(old_model_material) => {
+                        let new_model_material = self.model.take().unwrap();
+                        let updated_model_material = new_model_material.merge(old_model_material);
+                        result.push(Appearance::Model(updated_model_material));
+                        return result;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+        // Otherwise, return new appearance
         if let Some(v) = self.model.take() {
             result.push(Appearance::Model(v.into()));
         }
@@ -251,27 +445,151 @@ pub struct MvtLayerDescription {
 }
 
 impl MvtLayerDescription {
-    pub fn appearances(&mut self) -> Vec<Appearance> {
-        let mut result = vec![];
-        if let Some(v) = self.point.take() {
-            result.push(Appearance::Point(v.into()));
-        }
-        if let Some(v) = self.billboard.take() {
-            result.push(Appearance::Billboard(v.into()));
-        }
-        if let Some(v) = self.text.take() {
-            result.push(Appearance::Text(v.into()));
-        }
-        if let Some(v) = self.polyline.take() {
-            result.push(Appearance::Polyline(v.into()));
-        }
-        if let Some(v) = self.polygon.take() {
-            result.push(Appearance::Polygon(v.into()));
-        }
-        if let Some(v) = self.vector_tile.take() {
-            result.push(Appearance::VectorTile(v.into()));
-        }
-        result
+    pub fn appearances(
+        &mut self,
+        old_desc: Option<navara_layer::LayerDescription>,
+    ) -> Vec<Appearance> {
+        // Merge with old appearances if exists
+        let appearances = if let Some(navara_layer::LayerDescription::Mvt(old_layer)) = old_desc {
+            let mut result = old_layer.appearances.clone();
+            if let Some(new_point_material) = self.point.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Point(_)))
+                {
+                    if let Appearance::Point(old_point_material) = old_appearance {
+                        let updated_point_material = new_point_material.merge(old_point_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Point(_)));
+                        result.push(Appearance::Point(updated_point_material));
+                    }
+                } else {
+                    result.push(Appearance::Point(new_point_material.into()));
+                }
+            }
+
+            if let Some(new_billboard_material) = self.billboard.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Billboard(_)))
+                {
+                    if let Appearance::Billboard(old_billboard_material) = old_appearance {
+                        let updated_billboard_material =
+                            new_billboard_material.merge(old_billboard_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Billboard(_)));
+                        result.push(Appearance::Billboard(updated_billboard_material));
+                    }
+                } else {
+                    result.push(Appearance::Billboard(
+                        new_billboard_material.to_owned().into(),
+                    ));
+                }
+            }
+
+            if let Some(new_text_material) = self.text.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Text(_)))
+                {
+                    if let Appearance::Text(old_text_material) = old_appearance {
+                        let updated_text_material = new_text_material.merge(old_text_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Text(_)));
+                        result.push(Appearance::Text(updated_text_material));
+                    }
+                } else {
+                    result.push(Appearance::Text(new_text_material.into()));
+                }
+            }
+
+            if let Some(new_polyline_material) = self.polyline.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Polyline(_)))
+                {
+                    if let Appearance::Polyline(old_polyline_material) = old_appearance {
+                        let updated_polyline_material =
+                            new_polyline_material.merge(old_polyline_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Polyline(_)));
+                        result.push(Appearance::Polyline(updated_polyline_material));
+                    }
+                } else {
+                    result.push(Appearance::Polyline(new_polyline_material.into()));
+                }
+            }
+
+            if let Some(new_polygon_material) = self.polygon.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::Polygon(_)))
+                {
+                    if let Appearance::Polygon(old_polygon_material) = old_appearance {
+                        let updated_polygon_material =
+                            new_polygon_material.merge(old_polygon_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::Polygon(_)));
+                        result.push(Appearance::Polygon(updated_polygon_material));
+                    }
+                } else {
+                    result.push(Appearance::Polygon(new_polygon_material.into()));
+                }
+            }
+
+            if let Some(new_vector_tile_material) = self.vector_tile.take() {
+                // Merge with the old material if exists.
+                if let Some(old_appearance) = old_layer
+                    .appearances
+                    .iter()
+                    .find(|a| matches!(a, Appearance::VectorTile(_)))
+                {
+                    if let Appearance::VectorTile(old_vector_tile_material) = old_appearance {
+                        let updated_vector_tile_material =
+                            new_vector_tile_material.merge(old_vector_tile_material);
+                        // Replace the old appearance with the updated one.
+                        result.retain(|a| !matches!(a, Appearance::VectorTile(_)));
+                        result.push(Appearance::VectorTile(updated_vector_tile_material));
+                    }
+                } else {
+                    result.push(Appearance::VectorTile(new_vector_tile_material.into()));
+                }
+            }
+            result
+        } else {
+            // Otherwise, return new appearances
+            let mut result = vec![];
+            if let Some(v) = self.point.take() {
+                result.push(Appearance::Point(v.into()));
+            }
+            if let Some(v) = self.billboard.take() {
+                result.push(Appearance::Billboard(v.into()));
+            }
+            if let Some(v) = self.text.take() {
+                result.push(Appearance::Text(v.into()));
+            }
+            if let Some(v) = self.polyline.take() {
+                result.push(Appearance::Polyline(v.into()));
+            }
+            if let Some(v) = self.polygon.take() {
+                result.push(Appearance::Polygon(v.into()));
+            }
+            if let Some(v) = self.vector_tile.take() {
+                result.push(Appearance::VectorTile(v.into()));
+            }
+            result
+        };
+        appearances
     }
 
     pub fn crs(&self) -> Option<navara_core::CRS> {
@@ -338,29 +656,10 @@ impl LayerDescription {
                         })
                     });
 
-                let new_tile_material = layer.raster_tile.as_ref().unwrap();
-                info!("old_desc: {:?}", old_desc);
-                let appearance = match old_desc {
-                    Some(navara_layer::LayerDescription::Tiles(old_layer)) => {
-                        if let Some(old_appearance) = old_layer.appearance.as_ref() {
-                            match old_appearance {
-                                navara_material::Appearance::RasterTile(old_tile_material) => {            
-                                    let updated_tile_material = new_tile_material.merge(old_tile_material);
-                                    Some(Appearance::RasterTile(updated_tile_material))
-                                }
-                                _ => unreachable!(),
-                            }
-                        } else {
-                            layer.appearance()
-                        }
-                    }
-                    _ => layer.appearance(),
-                };
-
                 Some(navara_layer::LayerDescription::Tiles(TilesLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
-                    appearance,
+                    appearance: layer.appearance(old_desc),
                     elevation_heatmap_config,
                 }))
             }
@@ -436,103 +735,10 @@ impl LayerDescription {
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
-
-                let appearances = if let Some(navara_layer::LayerDescription::GeoJson(old_layer)) = old_desc {
-                    let mut result = old_layer.appearances.clone();
-                    if let Some(new_point_material) = layer.point.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Point(_))) {
-                            if let Appearance::Point(old_point_material) = old_appearance {
-                                let updated_point_material = new_point_material.merge(old_point_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Point(_)));
-                                result.push(Appearance::Point(updated_point_material));
-                            }
-                        } else {
-                            result.push(Appearance::Point(new_point_material.to_owned().into()));
-                        }
-                        
-                    }
-
-                    if let Some(new_billboard_material) = layer.billboard.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Billboard(_))) {
-                            if let Appearance::Billboard(old_billboard_material) = old_appearance {
-                                let updated_billboard_material = new_billboard_material.merge(old_billboard_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Billboard(_)));
-                                result.push(Appearance::Billboard(updated_billboard_material));
-                            }
-                        } else {
-                            result.push(Appearance::Billboard(new_billboard_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_text_material) = layer.text.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Text(_))) {
-                            if let Appearance::Text(old_text_material) = old_appearance {
-                                let updated_text_material = new_text_material.merge(old_text_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Text(_)));
-                                result.push(Appearance::Text(updated_text_material));
-                            }
-                        } else {
-                            result.push(Appearance::Text(new_text_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_polyline_material) = layer.polyline.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Polyline(_))) {
-                            if let Appearance::Polyline(old_polyline_material) = old_appearance {
-                                let updated_polyline_material = new_polyline_material.merge(old_polyline_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Polyline(_)));
-                                result.push(Appearance::Polyline(updated_polyline_material));
-                            }
-                        } else {
-                            result.push(Appearance::Polyline(new_polyline_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_polygon_material) = layer.polygon.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Polygon(_))) {
-                            if let Appearance::Polygon(old_polygon_material) = old_appearance {
-                                let updated_polygon_material = new_polygon_material.merge(old_polygon_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Polygon(_)));
-                                result.push(Appearance::Polygon(updated_polygon_material));
-                            }
-                        } else {
-                            result.push(Appearance::Polygon(new_polygon_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_model_material) = layer.model.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Model(_))) {
-                            if let Appearance::Model(old_model_material) = old_appearance {
-                                let updated_model_material = new_model_material.merge(old_model_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Model(_)));
-                                result.push(Appearance::Model(updated_model_material));
-                            }
-                        } else {
-                            result.push(Appearance::Model(new_model_material.to_owned().into()));
-                        }
-                    }
-
-                    result
-                } else {
-                    layer.appearances()
-                };
-
                 Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
                     layer_id: layer_id.to_string(),
                     data: geo_data,
-                    appearances,
+                    appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 }))
             }
@@ -549,28 +755,10 @@ impl LayerDescription {
 
                 let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-                let new_model_material = layer.model.as_ref().unwrap();
-                info!("old_desc: {:?}", old_desc);
-                let appearances = match old_desc {
-                    Some(navara_layer::LayerDescription::B3dm(old_layer)) => {
-                        let old_appearance = old_layer.appearances.first().unwrap();
-                         
-                        match old_appearance {
-                            navara_material::Appearance::Model(old_model_material) => {            
-                                let updated_model_material = new_model_material.merge(old_model_material);
-                                vec![Appearance::Model(updated_model_material)]
-                            }
-                            _ => unreachable!(),
-                        }
-                    }
-                    _ => layer.appearances(),
-                };
-
-
                 Some(navara_layer::LayerDescription::B3dm(B3dmLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
-                    appearances,
+                    appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 }))
             }
@@ -587,27 +775,10 @@ impl LayerDescription {
 
                 let mut layer: PntsLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-                let new_model_material = layer.model.as_ref().unwrap();
-                info!("old_desc: {:?}", old_desc);
-                let appearances = match old_desc {
-                    Some(navara_layer::LayerDescription::Pnts(old_layer)) => {
-                        let old_appearance = old_layer.appearances.first().unwrap();
-                         
-                        match old_appearance {
-                            navara_material::Appearance::Model(old_model_material) => {            
-                                let updated_model_material = new_model_material.merge(old_model_material);
-                                vec![Appearance::Model(updated_model_material)]
-                            }
-                            _ => unreachable!(),
-                        }
-                    }
-                    _ => layer.appearances(),
-                };
-
                 Some(navara_layer::LayerDescription::Pnts(PntsLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
-                    appearances,
+                    appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 }))
             }
@@ -624,102 +795,10 @@ impl LayerDescription {
 
                 let mut layer: MvtLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-                let appearances = if let Some(navara_layer::LayerDescription::Mvt(old_layer)) = old_desc {
-                    let mut result = old_layer.appearances.clone();
-                    if let Some(new_point_material) = layer.point.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Point(_))) {
-                            if let Appearance::Point(old_point_material) = old_appearance {
-                                let updated_point_material = new_point_material.merge(old_point_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Point(_)));
-                                result.push(Appearance::Point(updated_point_material));
-                            }
-                        } else {
-                            result.push(Appearance::Point(new_point_material.to_owned().into()));
-                        }
-                        
-                    }
-
-                    if let Some(new_billboard_material) = layer.billboard.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Billboard(_))) {
-                            if let Appearance::Billboard(old_billboard_material) = old_appearance {
-                                let updated_billboard_material = new_billboard_material.merge(old_billboard_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Billboard(_)));
-                                result.push(Appearance::Billboard(updated_billboard_material));
-                            }
-                        } else {
-                            result.push(Appearance::Billboard(new_billboard_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_text_material) = layer.text.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Text(_))) {
-                            if let Appearance::Text(old_text_material) = old_appearance {
-                                let updated_text_material = new_text_material.merge(old_text_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Text(_)));
-                                result.push(Appearance::Text(updated_text_material));
-                            }
-                        } else {
-                            result.push(Appearance::Text(new_text_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_polyline_material) = layer.polyline.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Polyline(_))) {
-                            if let Appearance::Polyline(old_polyline_material) = old_appearance {
-                                let updated_polyline_material = new_polyline_material.merge(old_polyline_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Polyline(_)));
-                                result.push(Appearance::Polyline(updated_polyline_material));
-                            }
-                        } else {
-                            result.push(Appearance::Polyline(new_polyline_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_polygon_material) = layer.polygon.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::Polygon(_))) {
-                            if let Appearance::Polygon(old_polygon_material) = old_appearance {
-                                let updated_polygon_material = new_polygon_material.merge(old_polygon_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::Polygon(_)));
-                                result.push(Appearance::Polygon(updated_polygon_material));
-                            }
-                        } else {
-                            result.push(Appearance::Polygon(new_polygon_material.to_owned().into()));
-                        }
-                    }
-
-                    if let Some(new_vector_tile_material) = layer.vector_tile.as_ref() {
-                        // Merge with the old material if exists.
-                        if let Some(old_appearance) = old_layer.appearances.iter().find(|a| matches!(a, Appearance::VectorTile(_))) {
-                            if let Appearance::VectorTile(old_vector_tile_material) = old_appearance {
-                                let updated_vector_tile_material = new_vector_tile_material.merge(old_vector_tile_material);
-                                // Replace the old appearance with the updated one.
-                                result.retain(|a| !matches!(a, Appearance::VectorTile(_)));
-                                result.push(Appearance::VectorTile(updated_vector_tile_material));
-                            }
-                        } else {
-                            result.push(Appearance::VectorTile(new_vector_tile_material.to_owned().into()));
-                        }
-                    }
-
-                    result
-                } else {
-                    layer.appearances()
-                };
-
                 Some(navara_layer::LayerDescription::Mvt(MvtLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
-                    appearances,
+                    appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 }))
             }
@@ -737,28 +816,11 @@ impl LayerDescription {
                 let mut layer: Cesium3dTilesLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
-                let new_model_material = layer.model.as_ref().unwrap();
-                info!("old_desc: {:?}", old_desc);
-                let appearances = match old_desc {
-                    Some(navara_layer::LayerDescription::Cesium3dTiles(old_layer)) => {
-                        let old_appearance = old_layer.appearances.first().unwrap();
-                         
-                        match old_appearance {
-                            navara_material::Appearance::Model(old_model_material) => {            
-                                let updated_model_material = new_model_material.merge(old_model_material);
-                                vec![Appearance::Model(updated_model_material)]
-                            }
-                            _ => unreachable!(),
-                        }
-                    }
-                    _ => layer.appearances(),
-                };
-                
                 Some(navara_layer::LayerDescription::Cesium3dTiles(
                     Cesium3dTilesLayer {
                         layer_id: layer_id.to_string(),
                         data: data.map(|d| LayerData { url: d.url }),
-                        appearances,
+                        appearances: layer.appearances(old_desc),
                         crs: layer.crs(),
                     },
                 ))
