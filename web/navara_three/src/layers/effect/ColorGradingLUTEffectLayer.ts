@@ -47,58 +47,80 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
   private loadLUT(url: string, pass: ColorGradingLUT) {
     if (url.length === 0) return;
 
-    const extension = url.split('.').pop()?.toLowerCase();
+    const extension = url.split(".").pop()?.toLowerCase();
 
-    if (extension === 'cube') {
-      if (!ColorGradingLUTEffectLayer.lutCubeLoader) { ColorGradingLUTEffectLayer.lutCubeLoader = new LUTCubeLoader(); }
-      ColorGradingLUTEffectLayer.lutCubeLoader.load(url, (t) => {
-        const lut = new LookupTexture(t.texture3D.image.data, t.size);
-        lut.type = t.texture3D.type;
-        lut.generateMipmaps = false;
-        pass.lut = lut;
-        this.emit("_needsUpdate");
-      }, undefined, (err) => {
-        console.error(`Failed to load LUT from ${url}:`, err);
-      });
+    if (extension === "cube") {
+      if (!ColorGradingLUTEffectLayer.lutCubeLoader) {
+        ColorGradingLUTEffectLayer.lutCubeLoader = new LUTCubeLoader();
+      }
+      ColorGradingLUTEffectLayer.lutCubeLoader.load(
+        url,
+        (t) => {
+          const lut = new LookupTexture(t.texture3D.image.data, t.size);
+          lut.type = t.texture3D.type;
+          lut.generateMipmaps = false;
+          pass.lut = lut;
+          this.emit("_needsUpdate");
+        },
+        undefined,
+        (err) => {
+          console.error(`Failed to load LUT from ${url}:`, err);
+        },
+      );
+    } else if (extension === "3dl") {
+      if (!ColorGradingLUTEffectLayer.lut3dlLoader) {
+        ColorGradingLUTEffectLayer.lut3dlLoader = new LUT3dlLoader();
+      }
+      ColorGradingLUTEffectLayer.lut3dlLoader.load(
+        url,
+        (t) => {
+          const lut = new LookupTexture(t.texture3D.image.data, t.size);
+          lut.type = t.texture3D.type;
+          lut.generateMipmaps = false;
+          pass.lut = lut;
+          this.emit("_needsUpdate");
+        },
+        undefined,
+        (err) => {
+          console.error(`Failed to load LUT from ${url}:`, err);
+        },
+      );
+    } else if (
+      extension === "png" ||
+      extension === "jpg" ||
+      extension === "jpeg"
+    ) {
+      if (!ColorGradingLUTEffectLayer.textureLoader) {
+        ColorGradingLUTEffectLayer.textureLoader = new TextureLoader();
+      }
+      ColorGradingLUTEffectLayer.textureLoader.load(
+        url,
+        (t) => {
+          const { width, height } = t.image;
+          // LUT size is cube root of pixel count
+          // Image pixels = N^3 (one pixel per LUT entry)
+          // Image is square, so: width * height = width^2 = N^3
+          const size = Math.cbrt(width * height);
 
-    } else if (extension === '3dl') {
-      if (!ColorGradingLUTEffectLayer.lut3dlLoader) { ColorGradingLUTEffectLayer.lut3dlLoader = new LUT3dlLoader(); }
-      ColorGradingLUTEffectLayer.lut3dlLoader.load(url, (t) => {
-        const lut = new LookupTexture(t.texture3D.image.data, t.size);
-        lut.type = t.texture3D.type;
-        lut.generateMipmaps = false;
-        pass.lut = lut;
-        this.emit("_needsUpdate");
-      }, undefined, (err) => {
-        console.error(`Failed to load LUT from ${url}:`, err);
-      });
+          // lut size must be integer to be valid
+          if (Number.isInteger(size) === false) {
+            console.error(`Invalid LUT texture size: ${width}x${height}`);
+            return;
+          }
 
-    } else if (extension === 'png' || extension === 'jpg' || extension === 'jpeg') {
-      if (!ColorGradingLUTEffectLayer.textureLoader) { ColorGradingLUTEffectLayer.textureLoader = new TextureLoader(); }
-      ColorGradingLUTEffectLayer.textureLoader.load(url, (t) => {
-        const { width, height } = t.image;
-        // LUT size is cube root of pixel count
-        // Image pixels = N^3 (one pixel per LUT entry)
-        // Image is square, so: width * height = width^2 = N^3
-        const size = Math.cbrt(width * height);
+          const { data } = RawImageData.from(t.image);
 
-        // lut size must be integer to be valid
-        if (Number.isInteger(size) === false) {
-          console.error(`Invalid LUT texture size: ${width}x${height}`);
-          return;
-        }
-
-        const { data } = RawImageData.from(t.image);
-
-        const lut = new LookupTexture(data, size);
-        lut.type = t.type;
-        lut.generateMipmaps = false;
-        pass.lut = lut;
-        this.emit("_needsUpdate");
-      }, undefined, (err) => {
-        console.error(`Failed to load LUT from ${url}:`, err);
-      });
-
+          const lut = new LookupTexture(data, size);
+          lut.type = t.type;
+          lut.generateMipmaps = false;
+          pass.lut = lut;
+          this.emit("_needsUpdate");
+        },
+        undefined,
+        (err) => {
+          console.error(`Failed to load LUT from ${url}:`, err);
+        },
+      );
     } else {
       console.warn(`Unsupported LUT file format: ${extension}`);
       return;
@@ -106,10 +128,14 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
   }
 
   createPass() {
-    const pass = new ColorGradingLUT(this.view.camera, LookupTexture.createNeutral(8), {
-      ...this.config.colorGradingLUT,
-      enabled: this.config.visible ?? true,
-    });
+    const pass = new ColorGradingLUT(
+      this.view.camera,
+      LookupTexture.createNeutral(8),
+      {
+        ...this.config.colorGradingLUT,
+        enabled: this.config.visible ?? true,
+      },
+    );
 
     this.loadLUT(this.config.colorGradingLUT?.url || "", pass);
 
@@ -137,5 +163,4 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
       this._instance.opacity = config.opacity;
     }
   }
-
 }
