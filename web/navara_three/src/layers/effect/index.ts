@@ -13,3 +13,4 @@ export * from "./SSREffectLayer";
 export * from "./ToneMappingEffectLayer";
 export * from "./TransparentPassEffectLayer";
 export * from "./DepthOfFieldEffectLayer";
+export * from "./ColorGradingLUTEffectLayer";
