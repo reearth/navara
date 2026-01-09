@@ -46,6 +46,13 @@ export class ColorGradingLUT extends Effect<LUT3DEffect, ColorGradingLUTOptions>
         this.emit("_needsUpdate");
     }
 
+    dispose() {
+        if (this.rawEffect && this.rawEffect.lut) {
+            this.rawEffect.lut.dispose();
+        }
+        super.dispose();
+    }
+
     protected onMounted(): void {
         if (!this.rawEffect) return;
         this.rawEffect.blendMode.blendFunction = blendFunction(this.options?.blendMode ?? "src");

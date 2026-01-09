@@ -35,9 +35,9 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
 
   private config: ColorGradingLUTConfig;
 
-  private lutCubeLoader: LUTCubeLoader | undefined;
-  private lut3dlLoader: LUT3dlLoader | undefined;
-  private textureLoader: TextureLoader | undefined;
+  private static lutCubeLoader: LUTCubeLoader | undefined;
+  private static lut3dlLoader: LUT3dlLoader | undefined;
+  private static textureLoader: TextureLoader | undefined;
 
   constructor(view: ViewContext, config: ColorGradingLUTConfig) {
     super(view, config);
@@ -50,39 +50,53 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
     const extension = url.split('.').pop()?.toLowerCase();
 
     if (extension === 'cube') {
-      if (!this.lutCubeLoader) { this.lutCubeLoader = new LUTCubeLoader(); }
-      this.lutCubeLoader.load(url, (t) => {
+      if (!ColorGradingLUTEffectLayer.lutCubeLoader) { ColorGradingLUTEffectLayer.lutCubeLoader = new LUTCubeLoader(); }
+      ColorGradingLUTEffectLayer.lutCubeLoader.load(url, (t) => {
         const lut = new LookupTexture(t.texture3D.image.data, t.size);
         lut.type = t.texture3D.type;
         lut.generateMipmaps = false;
         pass.lut = lut;
-        console.log('Loaded LUT from image:', url);
         this.emit("_needsUpdate");
+      }, undefined, (err) => {
+        console.error(`Failed to load LUT from ${url}:`, err);
       });
 
     } else if (extension === '3dl') {
-      if (!this.lut3dlLoader) { this.lut3dlLoader = new LUT3dlLoader(); }
-      this.lut3dlLoader.load(url, (t) => {
+      if (!ColorGradingLUTEffectLayer.lut3dlLoader) { ColorGradingLUTEffectLayer.lut3dlLoader = new LUT3dlLoader(); }
+      ColorGradingLUTEffectLayer.lut3dlLoader.load(url, (t) => {
         const lut = new LookupTexture(t.texture3D.image.data, t.size);
         lut.type = t.texture3D.type;
         lut.generateMipmaps = false;
         pass.lut = lut;
-        console.log('Loaded LUT from image:', url);
         this.emit("_needsUpdate");
+      }, undefined, (err) => {
+        console.error(`Failed to load LUT from ${url}:`, err);
       });
 
     } else if (extension === 'png' || extension === 'jpg' || extension === 'jpeg') {
-      if (!this.textureLoader) { this.textureLoader = new TextureLoader(); }
-      this.textureLoader.load(url, (t) => {
-        const size = Math.cbrt(t.image.width * t.image.height);
+      if (!ColorGradingLUTEffectLayer.textureLoader) { ColorGradingLUTEffectLayer.textureLoader = new TextureLoader(); }
+      ColorGradingLUTEffectLayer.textureLoader.load(url, (t) => {
+        const { width, height } = t.image;
+        // LUT size is cube root of pixel count
+        // Image pixels = N^3 (one pixel per LUT entry)
+        // Image is square, so: width * height = width^2 = N^3
+        const size = Math.cbrt(width * height);
+
+        // lut size must be integer to be valid
+        if (Number.isInteger(size) === false) {
+          console.error(`Invalid LUT texture size: ${width}x${height}`);
+          return;
+        }
+
         const { data } = RawImageData.from(t.image);
 
         const lut = new LookupTexture(data, size);
         lut.type = t.type;
         lut.generateMipmaps = false;
         pass.lut = lut;
-        console.log('Loaded LUT from image:', url);
         this.emit("_needsUpdate");
+      }, undefined, (err) => {
+        console.error(`Failed to load LUT from ${url}:`, err);
       });
 
     } else {

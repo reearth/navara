@@ -104,5 +104,5 @@ export const run = async (view: ThreeView) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  showAttributions([TILE_DATASETS.gsiSeamlessphoto]);
+  showAttributions([TILE_DATASETS.openstreetmap]);
 };
