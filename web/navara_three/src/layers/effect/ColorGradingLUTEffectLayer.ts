@@ -58,8 +58,11 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
         (t) => {
           const lut = new LookupTexture(t.texture3D.image.data, t.size);
           lut.type = t.texture3D.type;
+          lut.colorSpace = t.texture3D.colorSpace;
           lut.generateMipmaps = false;
+
           pass.lut = lut;
+          t.texture3D.dispose();
           this.emit("_needsUpdate");
         },
         undefined,
@@ -76,8 +79,11 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
         (t) => {
           const lut = new LookupTexture(t.texture3D.image.data, t.size);
           lut.type = t.texture3D.type;
+          lut.colorSpace = t.texture3D.colorSpace;
           lut.generateMipmaps = false;
+
           pass.lut = lut;
+          t.texture3D.dispose();
           this.emit("_needsUpdate");
         },
         undefined,
@@ -112,8 +118,11 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
 
           const lut = new LookupTexture(data, size);
           lut.type = t.type;
+          lut.colorSpace = t.colorSpace;
           lut.generateMipmaps = false;
+
           pass.lut = lut;
+          t.dispose();
           this.emit("_needsUpdate");
         },
         undefined,
