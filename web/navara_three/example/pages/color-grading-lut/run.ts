@@ -33,8 +33,8 @@ export const run = async (view: ThreeView) => {
 
   const colorGradingLUTDefaults = {
     url: LUT_DATASETS.presetproCinematic3dl.url,
-    blendMode: "src" as navaraBlendMode,
-    opacity: 1.0,
+    blendMode: "colorBurn" as navaraBlendMode,
+    opacity: 0.78,
   };
 
   gColorGradingLUTLayer = view.addLayer<ColorGradingLUTEffectLayer>({
