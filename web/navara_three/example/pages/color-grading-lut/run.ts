@@ -3,6 +3,7 @@ import ThreeView, {
   ColorGradingLUTEffectLayer,
   type navaraBlendMode,
   LayerHandle,
+  DEFAULT_COLOR_GRADING_LUT_OPTIONS,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
@@ -31,15 +32,9 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  const colorGradingLUTDefaults = {
-    url: LUT_DATASETS.presetproCinematic3dl.url,
-    blendMode: "colorBurn" as navaraBlendMode,
-    opacity: 0.78,
-  };
-
   gColorGradingLUTLayer = view.addLayer<ColorGradingLUTEffectLayer>({
     type: "effect",
-    colorGradingLUT: { ...colorGradingLUTDefaults },
+    colorGradingLUT: { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS },
     visible: true,
   });
 
@@ -73,7 +68,7 @@ export const run = async (view: ThreeView) => {
 
   addHidePaneKeyShortcut(pane);
 
-  const params = { ...colorGradingLUTDefaults, show: true };
+  const params = { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS, show: true };
 
   pane
     .addBinding(params, "url", {

@@ -8,7 +8,7 @@ import { Effect, type EffectOptions } from "./effect";
 export type ColorGradingLUTOptions = {
   /** Blend mode of the effect. */
   blendMode?: navaraBlendMode;
-  /** Opacity of the effect, only used when blendMode is "add". */
+  /** Opacity of the effect. */
   opacity?: number;
 } & EffectOptions;
 

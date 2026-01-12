@@ -3,6 +3,7 @@ import { TextureLoader } from "three";
 import { LUT3dlLoader } from "three/examples/jsm/loaders/LUT3dlLoader.js";
 import { LUTCubeLoader } from "three/examples/jsm/loaders/LUTCubeLoader.js";
 
+import { LUT_DATASETS } from "../../../example/helpers/constants";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -16,9 +17,9 @@ type LayerDescription = {
 };
 
 export const DEFAULT_COLOR_GRADING_LUT_OPTIONS = {
-  url: "",
-  blendMode: "src" as const,
-  opacity: 1.0,
+  url: LUT_DATASETS.presetproCinematic3dl.url,
+  blendMode: "colorBurn" as const,
+  opacity: 0.78,
 };
 
 export type ColorGradingLUTConfig = LayerDescription & EffectLayerConfig;
