@@ -3,7 +3,6 @@ import { TextureLoader } from "three";
 import { LUT3dlLoader } from "three/examples/jsm/loaders/LUT3dlLoader.js";
 import { LUTCubeLoader } from "three/examples/jsm/loaders/LUTCubeLoader.js";
 
-import { LUT_DATASETS } from "../../../example/helpers/constants";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -16,8 +15,11 @@ type LayerDescription = {
   colorGradingLUT?: ColorGradingLUTOptions & { url?: string };
 };
 
+const DEFAULT_LUT_URL =
+  "https://raw.githubusercontent.com/pmndrs/postprocessing/refs/heads/main/demo/static/textures/lut/3dl/presetpro-cinematic.3dl";
+
 export const DEFAULT_COLOR_GRADING_LUT_OPTIONS = {
-  url: LUT_DATASETS.presetproCinematic3dl.url,
+  url: DEFAULT_LUT_URL,
   blendMode: "colorBurn" as const,
   opacity: 0.78,
 };
