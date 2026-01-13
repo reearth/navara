@@ -454,9 +454,9 @@ function addPntsLayerFolder(pane: Pane) {
 function addMvtLayerFolder(pane: Pane) {
   const mvtParams = {
     Show: true,
-    Color: 0x00aaff,
-    Height: 10,
-    Width: 10,
+    Color: 0x00ff00,
+    Height: 1,
+    Width: 2,
     ClampToGround: true,
     UseGroundNormals: true,
     CastShadow: true,
