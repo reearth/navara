@@ -5,6 +5,7 @@
 // ===============================================================================
 
 in vec3 vNormal;
+in vec3 vPos;
 
 uniform float coefficient;
 uniform float exponent;
@@ -14,10 +15,13 @@ void main() {
     // Normalize the interpolated normal
     vec3 N = normalize(vNormal);
 
+    // view ddirection in world space
+    vec3 viewDir = cameraPosition - vPos;
+
     // Optimization: In View Space, the view vector is effectively (0,0,1).
     // Instead of a dot product, we just take the Z component.
     // Ideally, use: float facing_ratio = dot(N, normalize(viewVector)); if not in View Space.
-    float facing_ratio = N.z;
+    float facing_ratio = dot(N, normalize(-viewDir));
 
     // 'max(..., 0.0)' clamps negative results to 0.0 to prevent visual artifacts 
     // and undefined behavior in the pow() function.
