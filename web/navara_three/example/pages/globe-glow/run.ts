@@ -14,8 +14,8 @@ let gGlowGlobeMeshLayer: LayerHandle<GlowGlobeMeshLayer> | undefined =
 
 const gPaneParams = {
   glowRadiusScale: 1.2,
-  glowCoefficient: 0.5,
-  glowExponent: 5.0,
+  glowCoefficient: 0.3,
+  glowExponent: 8.0,
   glowColor: 0x8cf3ff,
   glowOpacity: 0.5,
   visible: true,

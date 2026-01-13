@@ -7,9 +7,8 @@ out vec3 vNormal; // world space
 out vec3 vPos; // world space
 
 void main() {
-    //mat4 modelViewMatrixNormal = transpose(inverse(modelViewMatrix));
-    vNormal = normalize( normalMatrix * normal);
-    vec4 worldPos = (modelMatrix * vec4( position, 1.0));
-    vPos = (worldPos / worldPos.w).xyz;
+    vNormal = normalize( mat3(modelMatrix) * normal );
+    vec4 worldPos = modelMatrix * vec4( position, 1.0);
+    vPos = worldPos.xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 }
