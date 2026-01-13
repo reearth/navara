@@ -25,8 +25,8 @@ pub struct PointMaterial {
     #[serde(rename = "offsetDepth")]
     pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
-    // post effect
-    /// IDs of post effects to apply (e.g., "bloom", "outline")
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
@@ -122,8 +122,8 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = alphaTest)]
     #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
-    // post effect
-    /// IDs of post effects to apply (e.g., "bloom", "outline")
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
@@ -329,8 +329,8 @@ pub struct PolylineMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
-    // post effect
-    /// IDs of post effects to apply (e.g., "bloom", "outline")
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
@@ -549,8 +549,8 @@ pub struct PolygonMaterial {
     /// Enabling this value allows using `shininess` and `specular_strength`.
     pub specular: Option<bool>,
     pub ior: Option<f32>,
-    // post effect
-    /// IDs of post effects to apply (e.g., "bloom", "outline")
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
@@ -843,8 +843,8 @@ pub struct ModelMaterial {
     pub show_bounding_box: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
-    // post effect
-    /// IDs of post effects to apply (e.g., "bloom", "outline")
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
     #[serde(rename = "effectIds")]
     pub effect_ids: Option<Vec<String>>,
