@@ -295,7 +295,11 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonOutlineGe
 #[derive(Debug, Clone, Serialize)]
 pub struct TransferablePointGeometry {
     #[wasm_bindgen(getter_with_clone)]
-    pub position: TransferableFloatAttribute,
+    pub position: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub position_3d_high: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub position_3d_low: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub batch_ids: TransferableFloatAttribute,
     #[wasm_bindgen(getter_with_clone)]
@@ -307,7 +311,9 @@ impl From<TransferablePointGeometry>
 {
     fn from(val: TransferablePointGeometry) -> Self {
         navara_feature_component::render::TransferablePointGeometry {
-            position: val.position.into(),
+            position: val.position.map(|p| p.into()),
+            position_3d_high: val.position_3d_high.map(|p| p.into()),
+            position_3d_low: val.position_3d_low.map(|p| p.into()),
             batch_ids: val.batch_ids.into(),
             batch_index: val.batch_index.into(),
         }
@@ -319,7 +325,9 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePointGeometry>
 {
     fn from(val: &'a navara_feature_component::render::TransferablePointGeometry) -> Self {
         TransferablePointGeometry {
-            position: (&val.position).into(),
+            position: val.position.as_ref().map(|p| p.into()),
+            position_3d_high: val.position_3d_high.as_ref().map(|p| p.into()),
+            position_3d_low: val.position_3d_low.as_ref().map(|p| p.into()),
             batch_ids: (&val.batch_ids).into(),
             batch_index: (&val.batch_index).into(),
         }

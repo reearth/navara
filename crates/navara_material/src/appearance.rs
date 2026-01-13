@@ -96,16 +96,14 @@ impl PointMaterial {
     pub fn update(
         &mut self,
         from: &PointMaterial,
-        coordinates: &Vec3,
-        crs: &CRS,
+        _coordinates: &Vec3,
+        _crs: &CRS,
         transform: &mut Transform,
     ) {
-        let should_update_transform = self.height != from.height || self.size != from.size;
-        *self = from.clone();
-
-        if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
+        if self.size != from.size {
+            transform.scale = Vec3::splat(from.size as f64);
         }
+        *self = from.clone();
     }
 }
 
@@ -150,16 +148,14 @@ impl BillboardMaterial {
     pub fn update(
         &mut self,
         from: &BillboardMaterial,
-        coordinates: &Vec3,
-        crs: &CRS,
+        _coordinates: &Vec3,
+        _crs: &CRS,
         transform: &mut Transform,
     ) {
-        let should_update_transform = self.height != from.height || self.size != from.size;
-        *self = from.clone();
-
-        if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
+        if self.size != from.size {
+            transform.scale = Vec3::splat(from.size as f64);
         }
+        *self = from.clone();
     }
 }
 
@@ -222,16 +218,11 @@ impl TextMaterial {
     pub fn update(
         &mut self,
         from: &TextMaterial,
-        coordinates: &Vec3,
-        crs: &CRS,
-        transform: &mut Transform,
+        _coordinates: &Vec3,
+        _crs: &CRS,
+        _transform: &mut Transform,
     ) {
-        let should_update_transform = self.height != from.height;
         *self = from.clone();
-
-        if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
-        }
     }
 }
 

@@ -362,6 +362,7 @@ pub fn update_geo_json_layer(
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateGeoJsonLayerMarker)>,
     mut features: Query<&mut RenderableFeature>,
+    mut buf: ResMut<BufferStore>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
@@ -379,11 +380,15 @@ pub fn update_geo_json_layer(
                         material,
                         transform,
                         render_info,
+                        geometry,
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
                             material.update(mat, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
+
+                            // Update RTE geometry position
+                            geometry.update_rte_position(&mut buf, transform.translation);
                         }
                     }
                     RenderableFeature::Text {
@@ -392,11 +397,15 @@ pub fn update_geo_json_layer(
                         material,
                         transform,
                         render_info,
+                        geometry,
                         ..
                     } => {
                         if let Appearance::Text(mat) = &u.appearance {
                             material.update(mat, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
+
+                            // Update RTE geometry position
+                            geometry.update_rte_position(&mut buf, transform.translation);
                         }
                     }
                     RenderableFeature::Point {
@@ -405,11 +414,15 @@ pub fn update_geo_json_layer(
                         material,
                         transform,
                         render_info,
+                        geometry,
                         ..
                     } => {
                         if let Appearance::Point(mat) = &u.appearance {
                             material.update(mat, coordinates, crs, transform);
                             render_info.should_recalculate_height = true;
+
+                            // Update RTE geometry position
+                            geometry.update_rte_position(&mut buf, transform.translation);
                         }
                     }
                     RenderableFeature::Model {
@@ -550,10 +563,17 @@ mod test {
     use navara_layer::{GeoJsonLayer, LayerStore};
     use navara_material::Appearance;
     use navara_material::{BillboardMaterial, PointMaterial};
+    use navara_math::Vec3;
     use navara_parser::geojson::GeoJson;
     use navara_tile_component::RasterTileQuadtree;
 
     use super::construct_feature;
+
+    /// Helper function to compare two Vec3 with epsilon tolerance
+    /// Returns true if the difference in each component is within epsilon
+    fn vec3_approx_eq(a: Vec3, b: Vec3, epsilon: f64) -> bool {
+        (a.x - b.x).abs() < epsilon && (a.y - b.y).abs() < epsilon && (a.z - b.z).abs() < epsilon
+    }
 
     fn initialize_app() -> App {
         let mut app = App::new();
@@ -624,6 +644,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -649,37 +671,80 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Point 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Point 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 
@@ -724,6 +789,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -749,37 +816,80 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Point 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Point 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 
@@ -829,6 +939,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -854,37 +966,80 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Billboard 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Billboard 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 
@@ -929,6 +1084,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -954,37 +1111,80 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Billboard 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => {
+                if let (Some(high_attr), Some(low_attr)) =
+                    (&geometry.position_3d_high, &geometry.position_3d_low)
+                {
+                    if let (Some(high), Some(low)) =
+                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+                    {
+                        Some(Vec3::new(
+                            (high[0] + low[0]) as f64,
+                            (high[1] + low[1]) as f64,
+                            (high[2] + low[2]) as f64,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Billboard 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 }

@@ -6,7 +6,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::WGS84_64;
+use navara_core::{Aabb, WGS84_64};
 use navara_feature_component::{
     batch::{
         BatchId, BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap,
@@ -19,8 +19,9 @@ use navara_feature_component::{
 use navara_layer::{LayerId, LayerStore};
 use navara_material::TextMaterial;
 use navara_math::{Transform, Vec3};
+use navara_mvt::MVTFeatureMarker;
 use navara_tile_component::{
-    compute_terrain_height_at_point, RasterTileQuadtree, TileMeshMarker,
+    compute_terrain_height_at_point, RasterTileQuadtree, TileExtent, TileMeshMarker,
     TileTerrainDataRequesterQuery,
 };
 
@@ -39,8 +40,10 @@ pub fn transfer_batched_mesh(
             &FeatureBatchId,
             &GlobalBatchIds,
             &mut FeatureId,
+            Option<&TileExtent>,
+            Option<&MVTFeatureMarker>,
         ),
-        (With<TextMarker>, Added<BatchedFeature>, Without<Deleted>),
+        (With<TextMarker>, Without<Deleted>),
     >,
     points: Query<(&TextGeometry, &BatchIndex)>,
     mut layer_store: ResMut<LayerStore>,
@@ -54,8 +57,20 @@ pub fn transfer_batched_mesh(
         feature_batch_id,
         global_batch_ids,
         mut feature_id,
+        tile_extent_component,
+        mvt_marker,
     ) in &mut batched_features
     {
+        // Skip if already processed
+        if feature_id.0.is_some() {
+            continue;
+        }
+
+        if mvt_marker.is_some() && tile_extent_component.is_none() {
+            // MVT tile but TileExtent not yet applied, wait for next frame
+            continue;
+        }
+
         // Extract all point geometries and create batch indices and IDs in a single loop
         let feature_len = batched_feature.features.len();
         let mut all_coords = Vec::with_capacity(feature_len * 3);
@@ -67,6 +82,11 @@ pub fn transfer_batched_mesh(
         let Some(global_ids) = buf.get_u32(&global_batch_ids.handle) else {
             continue;
         };
+
+        let rtc_center = tile_extent_component.map(|extent_component| {
+            let aabb = Aabb::from_extent_f64(extent_component.extent, 0., 1.);
+            aabb.center
+        });
 
         // TODO: Remove this iteration
         for feature_entity in &batched_feature.features {
@@ -83,9 +103,19 @@ pub fn transfer_batched_mesh(
                     .crs
                     .to_vec3(WGS84_64, point_geometry.coords, material.height);
 
-            all_coords.push(transformed_pos.x as f32);
-            all_coords.push(transformed_pos.y as f32);
-            all_coords.push(transformed_pos.z as f32);
+            let local_pos = if let Some(center) = rtc_center {
+                Vec3::new(
+                    transformed_pos.x - center.x,
+                    transformed_pos.y - center.y,
+                    transformed_pos.z - center.z,
+                )
+            } else {
+                transformed_pos
+            };
+
+            all_coords.push(local_pos.x as f32);
+            all_coords.push(local_pos.y as f32);
+            all_coords.push(local_pos.z as f32);
 
             // Add batch index
             batch_indices.push(batch_index.0);
@@ -95,6 +125,20 @@ pub fn transfer_batched_mesh(
         }
 
         let crs = crs.unwrap();
+
+        let transform = if let Some(center) = rtc_center {
+            Transform::from_translation(center).with_scale(Vec3::new(
+                material.size as f64,
+                material.size as f64,
+                material.size as f64,
+            ))
+        } else {
+            Transform::from_scale(Vec3::new(
+                material.size as f64,
+                material.size as f64,
+                material.size as f64,
+            ))
+        };
 
         // Create the renderable feature entity
         let entity = commands
@@ -106,18 +150,14 @@ pub fn transfer_batched_mesh(
                     coordinates: Vec3::ZERO, // Not used for batched features
                     crs,
                     material: material.clone(),
-                    transform: Transform::from_scale(Vec3::new(
-                        material.size as f64,
-                        material.size as f64,
-                        material.size as f64,
-                    )),
+                    transform,
                     feature_id: batched_feature_entity,
                     render_info: RenderInformation {
                         current_terrain_height: 0.,
                         is_rendered: false,
                         should_recalculate_height: true,
                     },
-                    geometry: TransferablePointGeometry::with_buf(
+                    geometry: TransferablePointGeometry::with_buf_rtc(
                         &mut buf,
                         all_coords,
                         batch_indices,
@@ -161,6 +201,8 @@ pub fn transfer_mesh(
             .crs
             .to_vec3(WGS84_64, geometry.coords, material.height);
 
+        // Use RTC for all texts: transform contains absolute world position,
+        // geometry contains relative coordinates (0, 0, 0 for single texts)
         let entity = commands
             .spawn((
                 TextMarker,
@@ -169,7 +211,7 @@ pub fn transfer_mesh(
                     coordinates: geometry.coords,
                     crs: geometry.crs.clone(),
                     material: material.clone(),
-                    transform: Transform::from_translation(position).with_scale(Vec3::new(
+                    transform: Transform::from_scale(Vec3::new(
                         material.size as f64,
                         material.size as f64,
                         material.size as f64,
@@ -180,9 +222,9 @@ pub fn transfer_mesh(
                         is_rendered: false,
                         should_recalculate_height: material.clamp_to_ground,
                     },
-                    geometry: TransferablePointGeometry::with_buf(
+                    geometry: TransferablePointGeometry::with_buf_rte(
                         &mut buf,
-                        position.as_vec3().to_array().to_vec(),
+                        vec![position.x, position.y, position.z], // RTC: relative offset is zero for single texts
                         vec![0],
                         vec![batch_id.0],
                     ),
@@ -247,6 +289,7 @@ pub fn update_height_by_terrain_for_batched(
                 feature_id,
                 render_info,
                 geometry,
+                transform,
                 ..
             } => {
                 render_info.should_recalculate_height = false;
@@ -256,6 +299,9 @@ pub fn update_height_by_terrain_for_batched(
 
                 let feature_len = batched_feature.features.len();
                 let mut all_coords = Vec::with_capacity(feature_len * 3);
+
+                // Get RTC center from transform translation
+                let rtc_center = transform.translation;
 
                 for feature_id in &batched_feature.features {
                     let geometry = geometries.get(*feature_id).unwrap();
@@ -279,14 +325,22 @@ pub fn update_height_by_terrain_for_batched(
                         material.height + render_info.current_terrain_height as f32,
                     );
 
-                    all_coords.push(position.x as f32);
-                    all_coords.push(position.y as f32);
-                    all_coords.push(position.z as f32);
+                    // Convert to RTC coordinates (relative to tile center)
+                    let local_pos = Vec3::new(
+                        position.x - rtc_center.x,
+                        position.y - rtc_center.y,
+                        position.z - rtc_center.z,
+                    );
+
+                    all_coords.push(local_pos.x as f32);
+                    all_coords.push(local_pos.y as f32);
+                    all_coords.push(local_pos.z as f32);
                 }
 
-                buf.remove(&geometry.position.data);
-
-                geometry.position.data = buf.new_f32(all_coords);
+                if let Some(position) = &mut geometry.position {
+                    buf.remove(&position.data);
+                    position.data = buf.new_f32(all_coords);
+                }
             }
             _ => unreachable!(),
         };
@@ -359,8 +413,8 @@ pub fn update_height_by_terrain(
                     material.height + render_info.current_terrain_height as f32,
                 );
 
-                transferable_geometry.position.data =
-                    buf.new_f32(position.as_vec3().to_array().to_vec());
+                // Update RTE geometry position
+                transferable_geometry.update_rte_position(&mut buf, position);
             }
             _ => unreachable!(),
         };
