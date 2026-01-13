@@ -44,8 +44,8 @@ export {
   type SelectiveEffectOcclusion,
   type SelectiveEffectOcclusionValue,
   // Constants
-  BLOOM_EFFECT_KEY,
-  OUTLINE_EFFECT_KEY,
+  SELECTIVE_BLOOM_EFFECT_KEY,
+  SELECTIVE_OUTLINE_EFFECT_KEY,
   SelectiveEffectOcclusionMode,
   // Common helpers
   resolveSelectiveEffectOcclusion,

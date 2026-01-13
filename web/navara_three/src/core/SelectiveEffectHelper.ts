@@ -23,10 +23,10 @@ import { BufferView } from "../bufferView";
 // ============================================================================
 
 /** Effect key for Bloom selective effect */
-export const BLOOM_EFFECT_KEY = "selectiveBloom" as const;
+export const SELECTIVE_BLOOM_EFFECT_KEY = "selectiveBloom" as const;
 
 /** Effect key for Outline selective effect */
-export const OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
+export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
 
 // ============================================================================
 // Occlusion Mode
@@ -166,7 +166,7 @@ export function hasSelectiveBloomEffect(
   config: SelectiveEffectConfig | undefined,
   registry?: SelectiveEffectHelper,
 ): boolean {
-  return hasEffectOfKey(config, BLOOM_EFFECT_KEY, registry);
+  return hasEffectOfKey(config, SELECTIVE_BLOOM_EFFECT_KEY, registry);
 }
 
 /**
@@ -176,7 +176,7 @@ export function hasSelectiveOutlineEffect(
   config: SelectiveEffectConfig | undefined,
   registry?: SelectiveEffectHelper,
 ): boolean {
-  return hasEffectOfKey(config, OUTLINE_EFFECT_KEY, registry);
+  return hasEffectOfKey(config, SELECTIVE_OUTLINE_EFFECT_KEY, registry);
 }
 
 /**

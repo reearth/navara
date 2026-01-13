@@ -20,7 +20,7 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
+import { SELECTIVE_OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
@@ -86,7 +86,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getEffectKey(): string {
-    return OUTLINE_EFFECT_KEY;
+    return SELECTIVE_OUTLINE_EFFECT_KEY;
   }
 
   protected getResolutionScale(): number {
@@ -439,10 +439,13 @@ class SelectiveOutlinePass extends PostProcessingPass {
     // This enables context-based mask rendering during BaseMRT phase
     const customRenderPass = layer.getCustomRenderPass();
     if (customRenderPass?.setOcclusionMaskRenderTargets) {
-      customRenderPass.setOcclusionMaskRenderTargets(OUTLINE_EFFECT_KEY, {
-        normal: this.depthEnabledMaskRT,
-        silhouette: this.silhouetteMaskRT,
-      });
+      customRenderPass.setOcclusionMaskRenderTargets(
+        SELECTIVE_OUTLINE_EFFECT_KEY,
+        {
+          normal: this.depthEnabledMaskRT,
+          silhouette: this.silhouetteMaskRT,
+        },
+      );
     }
 
     this.needsSwap = true;

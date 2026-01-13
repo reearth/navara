@@ -1,8 +1,8 @@
 import type { Material, WebGLRenderTarget } from "three";
 
 import {
-  BLOOM_EFFECT_KEY,
-  OUTLINE_EFFECT_KEY,
+  SELECTIVE_BLOOM_EFFECT_KEY,
+  SELECTIVE_OUTLINE_EFFECT_KEY,
   SelectiveEffectOcclusionMode,
   hasSelectiveBloomEffect,
   hasSelectiveOutlineEffect,
@@ -155,9 +155,10 @@ export function evaluateMaskPassParticipation(
   const hasOutline = hasSelectiveOutlineEffect(config, registry);
 
   // Check if this mesh should render to the current mask pass
-  const bloomActive = hasBloom && ctx.activeEffects.includes(BLOOM_EFFECT_KEY);
+  const bloomActive =
+    hasBloom && ctx.activeEffects.includes(SELECTIVE_BLOOM_EFFECT_KEY);
   const outlineActive =
-    hasOutline && ctx.activeEffects.includes(OUTLINE_EFFECT_KEY);
+    hasOutline && ctx.activeEffects.includes(SELECTIVE_OUTLINE_EFFECT_KEY);
   const shouldRenderToMask = bloomActive || outlineActive;
 
   if (!shouldRenderToMask) {

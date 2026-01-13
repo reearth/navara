@@ -19,7 +19,7 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { BLOOM_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
+import { SELECTIVE_BLOOM_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 import { UnrealBloomPassRGBA } from "../../postprocessing";
@@ -93,7 +93,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getEffectKey(): string {
-    return BLOOM_EFFECT_KEY;
+    return SELECTIVE_BLOOM_EFFECT_KEY;
   }
 
   protected getResolutionScale(): number {
@@ -420,10 +420,13 @@ class SelectiveBloomPass extends PostProcessingPass {
     // This enables context-based mask rendering during BaseMRT phase
     const customRenderPass = layer.getCustomRenderPass();
     if (customRenderPass?.setOcclusionMaskRenderTargets) {
-      customRenderPass.setOcclusionMaskRenderTargets(BLOOM_EFFECT_KEY, {
-        normal: this.depthEnabledMaskRT,
-        silhouette: this.silhouetteMaskRT,
-      });
+      customRenderPass.setOcclusionMaskRenderTargets(
+        SELECTIVE_BLOOM_EFFECT_KEY,
+        {
+          normal: this.depthEnabledMaskRT,
+          silhouette: this.silhouetteMaskRT,
+        },
+      );
     }
 
     this.needsSwap = true;
