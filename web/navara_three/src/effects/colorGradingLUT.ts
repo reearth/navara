@@ -39,7 +39,8 @@ export class ColorGradingLUT extends Effect<
   private loadLUT(url: string, effect: LUT3DEffect) {
     if (url.length === 0) return;
 
-    const extension = url.split(".").pop()?.toLowerCase();
+    const urlPath = new URL(url).pathname;
+    const extension = urlPath.split(".").pop()?.toLowerCase();
 
     if (extension === "cube") {
       if (!ColorGradingLUT.lutCubeLoader) {
@@ -113,6 +114,7 @@ export class ColorGradingLUT extends Effect<
           // lut size must be integer to be valid
           if (Number.isInteger(size) === false) {
             console.error(`Invalid LUT texture size: ${width}x${height}`);
+            t.dispose();
             return;
           }
 
