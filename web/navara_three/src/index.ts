@@ -147,7 +147,7 @@ export {
   getDevicePixelRatio,
   type DevicePixelRatioOptions,
 } from "./device";
-export { type navaraBlendMode } from "./utils/blendModes";
+export { type BlendMode } from "./utils/blendModes";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";

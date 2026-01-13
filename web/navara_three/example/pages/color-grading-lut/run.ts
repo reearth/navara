@@ -1,7 +1,7 @@
 import ThreeView, {
   Color,
   ColorGradingLUTEffectLayer,
-  type navaraBlendMode,
+  type BlendMode,
   LayerHandle,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
 } from "@navara/three";
@@ -135,7 +135,7 @@ export const run = async (view: ThreeView) => {
     })
     .on("change", (ev) => {
       gColorGradingLUTLayer.update({
-        colorGradingLUT: { blendMode: ev.value as navaraBlendMode },
+        colorGradingLUT: { blendMode: ev.value as BlendMode },
       });
     });
 

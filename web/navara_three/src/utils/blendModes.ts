@@ -1,6 +1,6 @@
 import { BlendFunction } from "postprocessing";
 
-export type navaraBlendMode =
+export type BlendMode =
   | "skip"
   | "set"
   | "add"
@@ -37,7 +37,7 @@ export type navaraBlendMode =
   | "subtract"
   | "vividLight";
 
-const BLEND_MAP: Record<navaraBlendMode, BlendFunction> = {
+const BLEND_MAP: Record<BlendMode, BlendFunction> = {
   skip: BlendFunction.SKIP,
   set: BlendFunction.SET,
   add: BlendFunction.ADD,
@@ -75,6 +75,6 @@ const BLEND_MAP: Record<navaraBlendMode, BlendFunction> = {
   vividLight: BlendFunction.VIVID_LIGHT,
 };
 
-export function blendFunction(mode: navaraBlendMode): BlendFunction {
+export function blendFunction(mode: BlendMode): BlendFunction {
   return BLEND_MAP[mode] ?? BlendFunction.SRC;
 }
