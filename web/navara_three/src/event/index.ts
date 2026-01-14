@@ -517,18 +517,24 @@ function processObjectRemoved(
 
 function disposeObject3D(model: Object3D): void {
   model.traverse((object: Object3D) => {
-    // model, polyline, polygon
     if (object instanceof Mesh) {
       const mesh = object as Mesh;
 
-      // Dispose geometry
-      if (mesh.geometry) {
-        mesh.geometry.dispose();
-        // Prevent GC overhead
-        mesh.geometry.deleteAttribute("position");
-        mesh.geometry.deleteAttribute("uv");
-        mesh.geometry.deleteAttribute("normal");
-        mesh.geometry.index = null;
+      // Dispose geometry and aggressively drop all attributes
+      const g = mesh.geometry;
+      if (g) {
+        g.dispose?.();
+
+        // Remove every BufferAttribute (handles polyline/polygon custom attrs)
+        if (g.attributes) {
+          for (const key of Object.keys(g.attributes)) {
+            g.deleteAttribute(key);
+          }
+        }
+
+        g.index = null;
+        g.boundingBox = null;
+        g.boundingSphere = null;
       }
 
       // Dispose material(s)
