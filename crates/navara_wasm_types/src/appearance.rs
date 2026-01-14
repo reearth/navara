@@ -1146,9 +1146,9 @@ impl ModelMaterial {
             internal: other.internal.clone(),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             selective_effect_occlusion: self
-            .selective_effect_occlusion
-            .clone()
-            .or_else(|| other.selective_effect_occlusion.clone()),
+                .selective_effect_occlusion
+                .clone()
+                .or_else(|| other.selective_effect_occlusion.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
         }

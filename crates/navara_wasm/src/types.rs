@@ -660,7 +660,6 @@ impl LayerDescription {
                         })
                     });
 
-
                 Some(navara_layer::LayerDescription::Tiles(Box::new(
                     TilesLayer {
                         layer_id: layer_id.to_string(),
@@ -743,7 +742,6 @@ impl LayerDescription {
 
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
-
 
                 Some(navara_layer::LayerDescription::GeoJson(Box::new(
                     GeoJsonLayer {
