@@ -63,3 +63,8 @@ export {
   type SmoothLineMeshLayerConfig,
   type SmoothLineMeshLayerUpdate,
 } from "./SmoothLineMeshLayer";
+export {
+  SkyBoxMeshLayer,
+  type SkyBoxMeshLayerConfig,
+  type SkyBoxMeshLayerUpdate,
+} from "./SkyBoxMeshLayer";
