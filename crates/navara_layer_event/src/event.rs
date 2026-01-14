@@ -27,16 +27,16 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
         let AddLayerEvent(desc) = ev;
         match desc {
             LayerDescription::Tiles(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::Terrain(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::GeoJson(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::B3dm(t) => {
-                commands.spawn(t.clone());
+                commands.spawn(*t.clone());
             }
             LayerDescription::Pnts(t) => {
                 commands.spawn(t.clone());

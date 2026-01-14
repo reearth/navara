@@ -41,6 +41,9 @@ export class BufferView {
     const ctx = this.canvas.getContext("2d");
     if (!ctx) return;
 
+    // Clear canvas before drawing (fix for stale content from previous frames)
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
     const imageData = ctx.createImageData(width, height);
     imageData.data.set(pixelBuffer);
 

@@ -45,7 +45,10 @@ export function Layer<L = NavaraLayer>({
   useEffect(() => {
     // Update when config changes
     if (handleRef.current) {
-      handleRef.current.update(config);
+      // Type assertion needed because LH<L> is a conditional type that TypeScript
+      // can't fully resolve for generic L. Both LayerHandle and NavaraLayer have
+      // compatible update methods at runtime.
+      (handleRef.current as NavaraLayer).update(config);
     }
   }, [config]);
 

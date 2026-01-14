@@ -660,12 +660,15 @@ impl LayerDescription {
                         })
                     });
 
-                Some(navara_layer::LayerDescription::Tiles(TilesLayer {
-                    layer_id: layer_id.to_string(),
-                    data: data.map(|d| LayerData { url: d.url }),
-                    appearance: layer.appearance(old_desc),
-                    elevation_heatmap_config,
-                }))
+
+                Some(navara_layer::LayerDescription::Tiles(Box::new(
+                    TilesLayer {
+                        layer_id: layer_id.to_string(),
+                        data: data.map(|d| LayerData { url: d.url }),
+                        appearance: layer.appearance(old_desc),
+                        elevation_heatmap_config,
+                    },
+                )))
             }
             "terrain" => {
                 let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
@@ -707,12 +710,14 @@ impl LayerDescription {
                     TerrainMaterial::Ellipsoid(e) => navara_layer::TerrainAppearance::Ellipsoid(e),
                 });
 
-                Some(navara_layer::LayerDescription::Terrain(TerrainLayer {
-                    layer_id: layer_id.to_string(),
-                    data: layer_data,
-                    appearance: terrain_appearance,
-                    terrain_type,
-                }))
+                Some(navara_layer::LayerDescription::Terrain(Box::new(
+                    TerrainLayer {
+                        layer_id: layer_id.to_string(),
+                        data: layer_data,
+                        appearance: terrain_appearance,
+                        terrain_type,
+                    },
+                )))
             }
             "geojson" => {
                 let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
@@ -739,12 +744,15 @@ impl LayerDescription {
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
-                Some(navara_layer::LayerDescription::GeoJson(GeoJsonLayer {
-                    layer_id: layer_id.to_string(),
-                    data: geo_data,
-                    appearances: layer.appearances(old_desc),
-                    crs: layer.crs(),
-                }))
+
+                Some(navara_layer::LayerDescription::GeoJson(Box::new(
+                    GeoJsonLayer {
+                        layer_id: layer_id.to_string(),
+                        data: geo_data,
+                        appearances: layer.appearances(old_desc),
+                        crs: layer.crs(),
+                    },
+                )))
             }
             "b3dm" => {
                 let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
@@ -759,12 +767,12 @@ impl LayerDescription {
 
                 let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-                Some(navara_layer::LayerDescription::B3dm(B3dmLayer {
+                Some(navara_layer::LayerDescription::B3dm(Box::new(B3dmLayer {
                     layer_id: layer_id.to_string(),
                     data: data.map(|d| LayerData { url: d.url }),
                     appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
-                }))
+                })))
             }
             "pnts" => {
                 let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())

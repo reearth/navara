@@ -388,7 +388,7 @@ impl Core {
 
         let mut buf_store = self.app.get_buffer_store_mut()?;
         for (coords, batch_index) in coords_handle {
-            let mut points = buf_store.remove_f64(&coords)?.to_vec();
+            let mut points = buf_store.remove_f64(&coords)?;
 
             transferable.add(&mut points, batch_index);
         }
