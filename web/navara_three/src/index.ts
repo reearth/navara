@@ -39,6 +39,7 @@ import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
   ViewContext,
+  SelectiveEffectHelper,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
@@ -70,6 +71,9 @@ import {
   SMAAEffectLayer,
   SSAOEffectLayer,
   SSREffectLayer,
+  SelectiveBloomEffectLayer,
+  SelectiveOutlineEffectLayer,
+  TestSelectiveEffectLayer,
   ToneMappingEffectLayer,
   RainDropEffectLayer,
   TransparentPassEffectLayer,
@@ -166,6 +170,9 @@ export type Options = {
   atmosphere?: AtmosphereOptions;
   backgroundColor?: CoreColor;
   picking?: Picking;
+  selectiveEffects?: {
+    debugViews?: boolean;
+  };
   // The main loop runs every frame if it's true. Otherwise, it runs whenever a change occurs or `forceUpdate` is invoked.
   animation?: boolean;
   // The number of samples for MSAA.
@@ -485,10 +492,11 @@ export default class ThreeView<
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
   private shadowMapViewers: ShadowMapViewers;
-  private viewContext: ViewContext;
 
   // Registry support
   private registries: Registries;
+  public selectiveEffectHelper: SelectiveEffectHelper;
+  private viewContext!: ViewContext;
 
   constructor(options: Options = {}) {
     super();
@@ -657,6 +665,9 @@ export default class ThreeView<
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("_needsUpdate", this.forceUpdate);
 
+    // Initialize SelectiveEffectHelper
+    this.selectiveEffectHelper = new SelectiveEffectHelper(width, height);
+
     // Set up Registry
     this.viewContext = new ViewContext(
       this._scenes,
@@ -669,6 +680,10 @@ export default class ThreeView<
         drapedMaterials: this._drapedFeatureMaterials,
       },
       this,
+      this.selectiveEffectHelper,
+      {
+        selectiveEffectMask: this._options.selectiveEffects?.debugViews,
+      },
     );
     this.registries = new Registries(this.viewContext);
 
@@ -879,6 +894,9 @@ export default class ThreeView<
       this._terrainPicker.dispose();
     }
 
+    // Dispose SelectiveEffectHelper
+    this.selectiveEffectHelper.dispose();
+
     this.renderer.setAnimationLoop(null);
     if (
       "dispose" in this.renderer &&
@@ -903,6 +921,9 @@ export default class ThreeView<
     if (this._options.pixelRatio == null && pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
+
+    // Update SelectiveEffectHelper
+    this.selectiveEffectHelper.setSize(w, h);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
@@ -978,6 +999,7 @@ export default class ThreeView<
       this._renderFlag,
       this,
       this.layersManager,
+      this.viewContext,
       updatedAt,
     );
     events?.free();
@@ -1013,6 +1035,11 @@ export default class ThreeView<
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
+    if (this._options.selectiveEffects?.debugViews) {
+      this.selectiveEffectHelper.renderDebugViews(
+        this.renderPassOrchestrator.effectComposer.getRenderer(),
+      );
+    }
     this._pickHelper?.renderDebugCanvas();
 
     this.shadowMapViewers.render(this.renderer);
@@ -1148,6 +1175,11 @@ export default class ThreeView<
     this.registerEffect("ssr", SSREffectLayer);
     this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
     this.registerEffect("colorGradingLUT", ColorGradingLUTEffectLayer);
+
+    // SelectiveEffect effects
+    this.registerEffect("testSelectiveEffect", TestSelectiveEffectLayer);
+    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
+    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);
@@ -1305,7 +1337,6 @@ export default class ThreeView<
     if (!sunLightLayer) {
       return;
     }
-
     sunLightLayer.setupMaterialForShadows(material);
   }
 
@@ -1317,7 +1348,6 @@ export default class ThreeView<
     if (!sunLightLayer) {
       return;
     }
-
     sunLightLayer.removeMaterialFromShadows(material);
   }
 
@@ -1625,6 +1655,16 @@ export default class ThreeView<
   }
   set shadowMapViewersEnabled(v: boolean) {
     this.shadowMapViewers.enabled = v;
+  }
+
+  /**
+   * Enable/disable post effect debug views rendering
+   * When disabled, disposes all debug view canvas elements
+   */
+  setSelectiveEffectDebugViews(enabled: boolean): void {
+    this._options.selectiveEffects ??= {};
+    this._options.selectiveEffects.debugViews = enabled;
+    this.selectiveEffectHelper.setDebugViewsAll(enabled);
   }
 
   pickTerrainPosition(x: number, y: number): Nullable<Vector3> {

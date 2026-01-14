@@ -45,10 +45,24 @@ import {
 } from "three";
 
 import type { ViewEvents } from "..";
+import type { ViewContext } from "../core";
+import {
+  ensureSelectiveEffectUserData,
+  getSelectiveEffectConfig,
+  SELECTIVE_EFFECT_OCCLUSION_SKIP,
+} from "../core/SelectiveEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState as applyMaskPassSkipStateBase,
+  applyMaskPassRenderState,
+  restoreMaterialState as restoreMaterialStateBase,
+} from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { createReplacer } from "../utils";
+import { arraysEqual, createReplacer } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -75,6 +89,9 @@ export class ModelMesh
 {
   water = false;
   private waterNormalMapTexture: Texture | null = null;
+  private viewContext: ViewContext;
+  /** Layer ID for SelectiveEffect handling */
+  private _layerId: string;
   private _uniforms?: CommonUniforms;
 
   // Minimal animation support (clip + speed)
@@ -108,8 +125,12 @@ export class ModelMesh
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
+    viewContext: ViewContext,
+    layerId: string,
   ) {
     super();
+    this.viewContext = viewContext;
+    this._layerId = layerId;
     this._uniforms = uniforms;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
@@ -320,6 +341,9 @@ export class ModelMesh
       mesh.material.userData.uAddHeight = {
         value: 0.0,
       };
+
+      // Initialize post effect user data (includes uSelectiveEffectOcclusion shader uniform)
+      ensureSelectiveEffectUserData(mesh.material);
       this.setupWaterMaterial(mesh, meshMaterial);
 
       this.water = !!meshMaterial.water;
@@ -361,6 +385,11 @@ export class ModelMesh
         shader.uniforms.uIor = mesh.material.userData.ior;
         shader.uniforms.uTime = uniforms.time;
         shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
+        shader.uniforms.uBloomMaskPass = mesh.material.userData.uBloomMaskPass;
+        shader.uniforms.uOutlineMaskPass =
+          mesh.material.userData.uOutlineMaskPass;
+        shader.uniforms.uSelectiveEffectOcclusion =
+          mesh.material.userData.uSelectiveEffectOcclusion;
 
         if (mesh.material.userData.batchDataTexture) {
           shader.uniforms.batchDataTexture =
@@ -428,6 +457,9 @@ export class ModelMesh
                   uniform float uIor;
                   uniform float uTime;
                   // uniform float reflectivity;
+                  uniform float uBloomMaskPass;
+                  uniform float uOutlineMaskPass;
+                  uniform float uSelectiveEffectOcclusion;
                   in float nvr_vBatchId;
 
                   ${ShowParsFragment}
@@ -483,6 +515,20 @@ export class ModelMesh
           .replace(
             "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
             `
+            // Bloom mask pass: output only emissive radiance
+            // Pass separation handles occlusion mode
+            if (uBloomMaskPass > 0.5) {
+              gl_FragColor = vec4(totalEmissiveRadiance, 1.0);
+              return;
+            }
+
+            // Outline mask pass: output white
+            // Uses original material to ensure depthTexture is written correctly
+            if (uOutlineMaskPass > 0.5) {
+              gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+              return;
+            }
+
             vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
             #if defined(WATER) && defined(USE_SKY_ENVMAP)
               vec3 envColor = getSkyEnv(geometryNormal, tSkyEnvMap, vPosition);
@@ -513,8 +559,109 @@ export class ModelMesh
 
       this.initDepthMaterial(mesh);
 
+      // Setup onBeforeRender for SelectiveEffect state handling
+      this.setupMeshOnBeforeRender(mesh);
+
       viewEvents.emit("_csmMounted", mesh.material);
     });
+  }
+
+  /**
+   * Setup onBeforeRender callback for a mesh to handle SelectiveEffect rendering
+   *
+   * Mesh determines its own depth/mask flags via onBeforeRender.
+   * Uses MaskPassContext for self-determination during BaseMRT phase.
+   *
+   * SoT Flow:
+   * - MaskPassContext provides runtime state (phase, activeEffects)
+   * - SelectiveEffectManager provides layer configuration (occlusion), accessed via registry
+   * - Mesh reads SoT, never modifies it
+   */
+  private setupMeshOnBeforeRender(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+  ): void {
+    mesh.onBeforeRender = () => {
+      // Get MaskPassContext for current rendering state
+      const ctx = getMaskPassContext();
+
+      // Only process during BaseMRT phase (mask pass rendering)
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        // Not in mask pass - restore normal material state
+        restoreMaterialStateBase(mesh.material);
+        return;
+      }
+
+      // Get SelectiveEffectConfig from mesh (link() sets config on child meshes, not parent)
+      const config = getSelectiveEffectConfig(mesh);
+      const registry =
+        ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
+      const layerId = this._layerId;
+
+      // Context-based self-determination during BaseMRT
+      this.applyMaskPassState(mesh, config, registry, layerId, ctx);
+    };
+  }
+
+  /**
+   * Apply mask pass state based on MaskPassContext.
+   * Called during BaseMRT phase for context-based self-determination.
+   *
+   * Uses shared helper for evaluation and render state, then applies
+   * model-specific shader uniforms for future custom shader support.
+   */
+  private applyMaskPassState(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    config: ReturnType<typeof getSelectiveEffectConfig>,
+    registry: ReturnType<typeof getMaskPassContext>["registry"],
+    layerId: string | undefined,
+    ctx: ReturnType<typeof getMaskPassContext>,
+  ): void {
+    const material = mesh.material;
+
+    // Initialize uniforms if not present (for future custom shader support)
+    material.userData.uBloomMaskPass ??= { value: 0.0 };
+    material.userData.uOutlineMaskPass ??= { value: 0.0 };
+    material.userData.uSelectiveEffectOcclusion ??= {
+      value: SELECTIVE_EFFECT_OCCLUSION_SKIP,
+    };
+
+    // Use shared helper for evaluation
+    const evaluation = evaluateMaskPassParticipation(
+      config,
+      registry,
+      layerId,
+      ctx,
+    );
+
+    if (!evaluation.shouldRender) {
+      this.setMaskPassSkipState(material);
+      return;
+    }
+
+    // Set shader uniforms (model-specific, for future custom shader support)
+    material.userData.uBloomMaskPass.value = evaluation.bloomActive ? 1.0 : 0.0;
+    material.userData.uOutlineMaskPass.value = evaluation.outlineActive
+      ? 1.0
+      : 0.0;
+    material.userData.uSelectiveEffectOcclusion.value = evaluation.occlusion;
+
+    // Apply render state using shared helper
+    applyMaskPassRenderState(material, evaluation.isSilhouette);
+  }
+
+  /**
+   * Set material state to skip mask pass rendering.
+   * Used when mesh doesn't contribute to current pass.
+   */
+  private setMaskPassSkipState(material: ModelMaterial): void {
+    // Set shader uniforms to skip values
+    material.userData.uBloomMaskPass.value = 0.0;
+    material.userData.uOutlineMaskPass.value = 0.0;
+    material.userData.uSelectiveEffectOcclusion.value =
+      SELECTIVE_EFFECT_OCCLUSION_SKIP;
+
+    // Apply render state using shared helper
+    applyMaskPassSkipStateBase(material);
   }
 
   private traversePoints(
@@ -654,6 +801,19 @@ export class ModelMesh
         }
       }
     }
+
+    // SelectiveEffect: effectIds handling at ModelMesh level
+    if (!arraysEqual(this.userData.prev.effectIds, material.effectIds)) {
+      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        material.effectIds ?? [],
+        this.userData.prev.effectIds ?? [],
+        this._layerId,
+      );
+      this.userData.prev.effectIds = material.effectIds
+        ? [...material.effectIds]
+        : [];
+    }
   }
 
   private setMaterial(
@@ -767,6 +927,20 @@ export class ModelMesh
       if (dist.receiveShadow !== src.receiveShadow) {
         dist.receiveShadow = !!src.receiveShadow;
       }
+
+      // SelectiveEffect: emissiveColor handling
+      if (distMaterial.userData.prev.emissiveColor !== src.emissiveColor) {
+        distMaterial.emissive.set(src.emissiveColor ?? 0);
+        distMaterial.userData.prev.emissiveColor = src.emissiveColor;
+      }
+
+      // SelectiveEffect: emissiveIntensity handling
+      if (
+        distMaterial.userData.prev.emissiveIntensity !== src.emissiveIntensity
+      ) {
+        distMaterial.emissiveIntensity = src.emissiveIntensity ?? 0;
+        distMaterial.userData.prev.emissiveIntensity = src.emissiveIntensity;
+      }
     }
   }
 
@@ -819,7 +993,7 @@ export class ModelMesh
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     this.traverseMesh((m) => {
-      viewEvents.emit("_csmMounted", m.material);
+      viewEvents.emit("_csmUnmounted", m.material);
     });
   }
 }

@@ -17,9 +17,11 @@ import {
 } from "three";
 
 import type { ViewEvents } from "..";
+import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
+import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -42,13 +44,22 @@ export class PolylineMesh extends BatchedFeatureMesh<
   BufferGeometry<Attributes>,
   ShaderMaterial
 > {
+  /** ViewContext for SelectiveEffect handling */
+  private _viewContext: ViewContext;
+  /** Layer ID for SelectiveEffect handling */
+  private _layerId: string;
+
   constructor(
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
     viewEvents: EventHandler<ViewEvents>,
+    viewContext: ViewContext,
+    layerId: string,
   ) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
+    this._viewContext = viewContext;
+    this._layerId = layerId;
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, viewEvents);
 
@@ -194,8 +205,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
     // Disable lighting for texturized rendering - the texture will be applied to the lit tile
     this.material.lights = !isTexturized;
     this.material.vertexColors = false;
-    this.material.userData.uPickable = uPickable;
 
+    this.material.userData.uPickable = uPickable;
     this.material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, this.material.userData.defines);
@@ -263,6 +274,18 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
     if (this.receiveShadow !== material.receiveShadow) {
       this.receiveShadow = !!material.receiveShadow;
+    }
+
+    // SelectiveEffect: effectIds handling
+    // ShaderMaterial doesn't have built-in emissive, so only effectIds is handled
+    if (!arraysEqual(prev.effectIds, material.effectIds)) {
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        material.effectIds ?? [],
+        prev.effectIds ?? [],
+        this._layerId,
+      );
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 

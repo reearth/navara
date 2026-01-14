@@ -1,7 +1,8 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
-import { Object3D } from "three";
+import { Mesh, Object3D, type Material } from "three";
 
 import type { Scenes } from "../scene";
+import { arraysEqual } from "../utils";
 
 import {
   LayerDeclaration,
@@ -9,6 +10,19 @@ import {
   type LayerDeclarationConfig,
   type LayerDeclarationConfigUpdate,
 } from "./LayerDeclaration";
+import {
+  type SelectiveEffectOcclusion,
+  parseSelectiveEffectOcclusion,
+  getSelectiveEffectConfig,
+} from "./SelectiveEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState,
+  applyMaskPassRenderState,
+  restoreMaterialState,
+} from "./SelectiveEffectMaskContext";
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
@@ -16,13 +30,18 @@ export type MeshLayerConfig = {
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
+  effectIds?: string[];
+  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
   "position" | "scale" | "rotation"
 > &
-  LayerDeclarationConfigUpdate;
+  LayerDeclarationConfigUpdate & {
+    effectIds?: string[];
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
+  };
 
 type PassKey = keyof Pick<
   Scenes,
@@ -52,15 +71,23 @@ export abstract class MeshLayerDeclaration<
   public scale?: XYZ;
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
+  private _effectIds: string[] = [];
+  private _selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
     this.position = config.position;
     this.scale = config.scale;
     this.rotation = config.rotation;
+    this._effectIds = config.effectIds ?? [];
+    this._selectiveEffectOcclusion = config.selectiveEffectOcclusion;
   }
 
   protected getPassKey(): PassKey {
+    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for mask rendering
+    if (this._effectIds.length > 0) {
+      return "mrt";
+    }
     return "opaque";
   }
 
@@ -99,7 +126,97 @@ export abstract class MeshLayerDeclaration<
 
     this._instance.visible = this.visible;
 
+    // ----------------------------------------------------------------------------
+    // SelectiveEffect: effectIds / occlusion wiring
+    // ----------------------------------------------------------------------------
+    if (this._effectIds.length > 0 && this.raw) {
+      this.view.selectiveEffectRegistry?.updateLinksForObject(
+        this.raw,
+        this._effectIds,
+        [],
+        this.id,
+      );
+    }
+
+    // Register initial selectiveEffectOcclusion via ViewContext (Manager is SoT)
+    if (this._selectiveEffectOcclusion !== undefined) {
+      const occlusion = parseSelectiveEffectOcclusion(
+        this._selectiveEffectOcclusion,
+      );
+      if (occlusion !== undefined) {
+        this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
+      }
+    }
+
+    // Setup onBeforeRender for MaskPass context-based rendering
+    this.setupMeshOnBeforeRender();
+
     this.onPassKeyChange();
+  }
+
+  /**
+   * Setup onBeforeRender callback for MaskPass context-based rendering.
+   * This enables Box, Sphere, and other standard meshes to participate in mask rendering.
+   */
+  private setupMeshOnBeforeRender(): void {
+    const raw = this.raw;
+    if (!raw) return;
+
+    // Store original onBeforeRender if exists
+    const originalOnBeforeRender = raw.onBeforeRender;
+
+    raw.onBeforeRender = (
+      renderer,
+      scene,
+      camera,
+      geometry,
+      material,
+      group,
+    ) => {
+      // Call original if exists
+      if (originalOnBeforeRender) {
+        originalOnBeforeRender.call(
+          raw,
+          renderer,
+          scene,
+          camera,
+          geometry,
+          material,
+          group,
+        );
+      }
+
+      // Check MaskPassContext
+      const ctx = getMaskPassContext();
+
+      // Get material from mesh (use meshMaterial to avoid conflict with callback parameter)
+      if (!(raw instanceof Mesh)) return;
+      const meshMaterial = raw.material as Material;
+      if (!meshMaterial) return;
+
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        // Not in mask pass - restore normal state
+        restoreMaterialState(meshMaterial);
+        return;
+      }
+
+      // Evaluate mask pass participation using shared helper
+      const config = getSelectiveEffectConfig(raw);
+      const registry = ctx.registry ?? this.view.selectiveEffectRegistry;
+      const evaluation = evaluateMaskPassParticipation(
+        config,
+        registry,
+        this.id,
+        ctx,
+      );
+
+      // Apply appropriate render state
+      if (evaluation.shouldRender) {
+        applyMaskPassRenderState(meshMaterial, evaluation.isSilhouette);
+      } else {
+        applyMaskPassSkipState(meshMaterial);
+      }
+    };
   }
 
   removeFromScene(passKey: PassKey) {
@@ -142,6 +259,35 @@ export abstract class MeshLayerDeclaration<
       );
     }
 
+    // ----------------------------------------------------------------------------
+    // SelectiveEffect: effectIds / occlusion wiring
+    // ----------------------------------------------------------------------------
+    if (updates.effectIds !== undefined && this.raw) {
+      const prevEffectIds = this._effectIds;
+      const nextEffectIds = updates.effectIds ?? [];
+
+      if (!arraysEqual(prevEffectIds, nextEffectIds)) {
+        this.view.selectiveEffectRegistry?.updateLinksForObject(
+          this.raw,
+          nextEffectIds,
+          prevEffectIds,
+          this.id,
+        );
+        this._effectIds = [...nextEffectIds];
+      }
+    }
+
+    // Update selectiveEffectOcclusion
+    if (updates.selectiveEffectOcclusion !== undefined) {
+      this._selectiveEffectOcclusion = updates.selectiveEffectOcclusion;
+      const occlusion = parseSelectiveEffectOcclusion(
+        updates.selectiveEffectOcclusion,
+      );
+      if (occlusion !== undefined) {
+        this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
+      }
+    }
+
     this.onPassKeyChange();
   }
 
@@ -156,6 +302,19 @@ export abstract class MeshLayerDeclaration<
   }
 
   onDestroy(): void {
+    // ----------------------------------------------------------------------------
+    // SelectiveEffect: effectIds cleanup
+    // ----------------------------------------------------------------------------
+    if (this._effectIds.length > 0 && this.raw) {
+      this.view.selectiveEffectRegistry?.updateLinksForObject(
+        this.raw,
+        [],
+        this._effectIds,
+        this.id,
+      );
+      this._effectIds = [];
+    }
+
     if (this.raw && this.raw.parent) {
       this.raw.parent.remove(this.raw);
     }

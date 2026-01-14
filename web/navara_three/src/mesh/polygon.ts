@@ -40,9 +40,10 @@ import {
 } from "three";
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
+import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
-import { createReplacer } from "../utils";
+import { arraysEqual, createReplacer } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -70,6 +71,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
     aabbRadius: number; // Horizontal extent radius from AABB
   };
 
+  /** ViewContext for SelectiveEffect handling */
+  private _viewContext: ViewContext;
+  /** Layer ID for SelectiveEffect handling */
+  private _layerId: string;
   private _uniforms?: CommonUniforms;
 
   constructor(
@@ -77,6 +82,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     mat: MeshLambertMaterial = new MeshLambertMaterial(),
   ) {
     super(buf, mat);
+    // Initialize with dummy values - will be set in init()
+    this._viewContext = undefined as unknown as ViewContext;
+    this._layerId = "";
   }
 
   init(
@@ -85,10 +93,16 @@ export class PolygonMesh extends BatchedFeatureMesh<
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
     viewEvents: EventHandler<ViewEvents>,
+    viewContext: ViewContext,
+    layerId: string,
   ) {
     this._uniforms = uniforms;
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
+
+    // Store viewContext and layerId for SelectiveEffect handling
+    this._viewContext = viewContext;
+    this._layerId = layerId;
 
     this.initGeometry(mesh, buf);
     this.initMaterial(mesh, uniforms, tileHandle, viewEvents);
@@ -793,6 +807,29 @@ export class PolygonMesh extends BatchedFeatureMesh<
       const next = material.ior ?? 1.33333;
       this.material.userData.ior.value = next;
       prev.ior = next;
+    }
+
+    // SelectiveEffect: effectIds handling
+    if (!arraysEqual(prev.effectIds, material.effectIds)) {
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        material.effectIds ?? [],
+        prev.effectIds ?? [],
+        this._layerId,
+      );
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+    }
+
+    // SelectiveEffect: emissiveColor handling
+    if (prev.emissiveColor !== material.emissiveColor) {
+      this.material.emissive.set(material.emissiveColor ?? 0);
+      prev.emissiveColor = material.emissiveColor;
+    }
+
+    // SelectiveEffect: emissiveIntensity handling
+    if (prev.emissiveIntensity !== material.emissiveIntensity) {
+      this.material.emissiveIntensity = material.emissiveIntensity ?? 0;
+      prev.emissiveIntensity = material.emissiveIntensity;
     }
   }
 

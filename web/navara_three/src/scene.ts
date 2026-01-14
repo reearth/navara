@@ -129,7 +129,17 @@ export class TexturizedSceneByTileCoordinates {
       ?.children.find((c) => c.userData.layerId === layerId);
     if (!scene) return;
     scene.userData.removed = true;
-    scene.remove(...scene.children);
+
+    scene.clear();
+  }
+
+  delete(handle: TileHandle) {
+    const sceneGroup = this.map.get(handle);
+    if (!sceneGroup) return;
+
+    sceneGroup.clear();
+
+    this.map.delete(handle);
   }
 
   getNeedsUpdate(handle: TileHandle) {

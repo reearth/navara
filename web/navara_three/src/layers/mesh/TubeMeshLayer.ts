@@ -5,6 +5,7 @@ import {
   MeshLambertMaterial,
   TubeGeometry,
   Vector3,
+  type Object3DEventMap,
 } from "three";
 
 import { Color } from "../../Color";
@@ -12,8 +13,12 @@ import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
+  type SelectiveEffectOcclusion,
 } from "../../core";
 import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+
+type TubeMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
   tube?: {
@@ -24,12 +29,14 @@ type LayerDescription = {
     closed?: boolean;
     tension?: number;
     color?: Color;
-    emissive?: number;
+    emissiveColor?: number;
     emissiveIntensity?: number;
     opacity?: number;
     transparent?: boolean;
     castShadow?: boolean;
     receiveShadow?: boolean;
+    effectIds?: string[];
+    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -40,11 +47,18 @@ export type TubeMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export class TubeMeshLayer extends MeshLayerDeclaration<
   TubeMeshLayerConfig,
   TubeMeshLayerUpdate,
-  Mesh<TubeGeometry, MeshLambertMaterial>
+  Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>
 > {
   private config: TubeMeshLayerConfig;
 
   constructor(view: ViewContext, config: TubeMeshLayerConfig) {
+    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
+    if (config.tube?.effectIds) {
+      config.effectIds = config.tube.effectIds;
+    }
+    if (config.tube?.selectiveEffectOcclusion !== undefined) {
+      config.selectiveEffectOcclusion = config.tube.selectiveEffectOcclusion;
+    }
     super(view, config);
     this.config = config;
   }
@@ -76,13 +90,16 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: cfg.emissive ?? 0,
+      emissive: cfg.emissiveColor ?? 0,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
 
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>(
+      geometry,
+      material,
+    );
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
@@ -137,7 +154,7 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
       // Update material if material properties changed
       if (
         cfg.color !== undefined ||
-        cfg.emissive !== undefined ||
+        cfg.emissiveColor !== undefined ||
         cfg.emissiveIntensity !== undefined ||
         cfg.opacity !== undefined ||
         cfg.transparent !== undefined
@@ -147,7 +164,8 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
           const colorValue = cfg.color.raw;
           material.color.set(colorValue);
         }
-        if (cfg.emissive !== undefined) material.emissive.set(cfg.emissive);
+        if (cfg.emissiveColor !== undefined)
+          material.emissive.set(cfg.emissiveColor);
         if (cfg.emissiveIntensity !== undefined)
           material.emissiveIntensity = cfg.emissiveIntensity;
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
@@ -162,6 +180,14 @@ export class TubeMeshLayer extends MeshLayerDeclaration<
 
       if (cfg.receiveShadow !== undefined) {
         this._instance.receiveShadow = cfg.receiveShadow;
+      }
+
+      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      if (cfg.effectIds !== undefined) {
+        updates.effectIds = cfg.effectIds;
+      }
+      if (cfg.selectiveEffectOcclusion !== undefined) {
+        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("_needsUpdate");

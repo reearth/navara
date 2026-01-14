@@ -1,5 +1,5 @@
 import type { EventHandler, FeatureId } from "@navara/core";
-import { type Object3D } from "three";
+import type { Object3D } from "three";
 
 import type { ViewEvents } from "..";
 import { FeatureEvaluator } from "../evaluations";

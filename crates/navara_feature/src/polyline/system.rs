@@ -5,7 +5,7 @@ use bevy_ecs::{
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
-use navara_component::Deleted;
+use navara_component::{Deleted, OrderByDistance};
 use navara_core::CRS;
 use navara_feature_component::{
     batch::{
@@ -46,8 +46,9 @@ pub fn transfer_batched_mesh(
             Option<&mut FeatureId>,
             Option<&OverscaledTileHandle>,
             Option<&TileExtent>,
+            &OrderByDistance,
         ),
-        With<PolylineMarker>,
+        (With<PolylineMarker>, Without<Deleted>),
     >,
     mut layer_store: ResMut<LayerStore>,
     construct_polyline_feature_tasks: Query<
@@ -65,6 +66,7 @@ pub fn transfer_batched_mesh(
         feature_id,
         tile_coordinates,
         tile_extent_component,
+        order,
     ) in &mut batched_features
     {
         let needs_update = batched_feature.is_added()
@@ -78,14 +80,17 @@ pub fn transfer_batched_mesh(
 
         if batched_feature.construct_polyline_feature.is_none() {
             let task_entity = commands
-                .spawn(ConstructPolylineBatchedFeatureWorkerTaskBundle::new(
-                    ConstructPolylineBatchedFeatureMarker,
-                    ConstructPolylineBatchedFeatureParameters {
-                        batched_feature: batched_feature_entity,
-                        // If it uses `clamp_to_ground` and it is tile, it should be flat.
-                        flat: material.clamp_to_ground && tile_coordinates.is_some(),
-                        tile_extent: tile_extent_component.map(|t| t.extent),
-                    },
+                .spawn((
+                    ConstructPolylineBatchedFeatureWorkerTaskBundle::new(
+                        ConstructPolylineBatchedFeatureMarker,
+                        ConstructPolylineBatchedFeatureParameters {
+                            batched_feature: batched_feature_entity,
+                            // If it uses `clamp_to_ground` and it is tile, it should be flat.
+                            flat: material.clamp_to_ground && tile_coordinates.is_some(),
+                            tile_extent: tile_extent_component.map(|t| t.extent),
+                        },
+                    ),
+                    order.clone(),
                 ))
                 .id();
             batched_feature.construct_polyline_feature = Some(task_entity);
@@ -272,28 +277,50 @@ pub fn update_height_by_terrain(
 }
 
 #[allow(clippy::type_complexity)]
-#[allow(clippy::type_complexity)]
 pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &GlobalBatchIds),
-        (With<BatchedFeature>, With<PolylineMarker>, With<Deleted>),
+        (Entity, &FeatureId, &BatchedFeature, &GlobalBatchIds),
+        (With<PolylineMarker>, With<Deleted>),
     >,
+    worker_task_results: Query<&ConstructPolylineBatchedFeatureResult>,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, global_batch_ids) in &removed_features {
-        let Some(rendered_feature_id) = rendered_feature_id.0 else {
-            continue;
-        };
-        if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res);
+    for (feature_id, rendered_feature_id, batched_feature, global_batch_ids) in &removed_features {
+        // Clean up RenderableFeature if it exists (tessellation completed and transferred)
+        if let Some(rendered_feature_id) = rendered_feature_id.0 {
+            if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
+                feature.destroy(&mut buf, &mut batch_table_res);
+            }
+            feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+            // Mark RenderableFeature as Deleted so event::despawn will clean it up
+            commands.entity(rendered_feature_id).insert(Deleted);
+        } else if let Some(task_entity) = batched_feature.construct_polyline_feature {
+            // RenderableFeature wasn't created yet, but worker task might have completed.
+            // Clean up the task result's geometry handles to prevent memory leak.
+            if let Ok(result) = worker_task_results.get(task_entity) {
+                let mut geometry = result.geometry.clone();
+                geometry.remove_from_buf(&mut buf, &mut batch_table_res);
+            }
         }
-        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
-        buf.remove(&global_batch_ids.handle);
 
+        // Always clean up GlobalBatchIds and despawn the BatchedFeature entity
+        buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn cleanup_deleted_batched_children(
+    mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
+    deleted: Query<(Entity, &PolylineGeometry), (With<BatchedFeatureMarker>, With<Deleted>)>,
+) {
+    for (entity, geometry) in &deleted {
+        geometry.remove_from_buf(&mut buf);
+        commands.entity(entity).despawn();
     }
 }

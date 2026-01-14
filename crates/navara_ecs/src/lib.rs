@@ -270,6 +270,43 @@ impl App {
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {
+        self.set_layer_description(layer_id, desc.clone());
+
+        self.app
+            .world_mut()
+            .send_event(navara_layer_event::AddLayerEvent(desc));
+    }
+
+    pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
+        let mut layer_type = None;
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
+            if let Some(desc) = layer_desc_store.map.get(layer_id) {
+                layer_type = match desc {
+                    LayerDescription::Tiles(_) => Some("tiles"),
+                    LayerDescription::Terrain(_) => Some("terrain"),
+                    LayerDescription::GeoJson(_) => Some("geojson"),
+                    LayerDescription::B3dm(_) => Some("b3dm"),
+                    LayerDescription::Pnts(_) => Some("pnts"),
+                    LayerDescription::Mvt(_) => Some("mvt"),
+                    LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
+                };
+            }
+        }
+
+        layer_type
+    }
+
+    pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
+            if let Some(desc) = layer_desc_store.map.get(layer_id) {
+                return Some(desc.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn set_layer_description(&mut self, layer_id: &str, desc: LayerDescription) {
         if let Some(mut layer_desc_store) =
             self.app.world_mut().get_resource_mut::<LayerDescStore>()
         {
@@ -277,29 +314,6 @@ impl App {
                 .map
                 .insert(layer_id.to_owned(), desc.clone());
         }
-
-        self.app
-            .world_mut()
-            .send_event(navara_layer_event::AddLayerEvent(desc));
-    }
-
-    pub fn get_layer_type(&mut self, layer_id: &String) -> &str {
-        let mut layer_type = "";
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                layer_type = match desc {
-                    LayerDescription::Tiles(_) => "tiles",
-                    LayerDescription::Terrain(_) => "terrain",
-                    LayerDescription::GeoJson(_) => "geojson",
-                    LayerDescription::B3dm(_) => "b3dm",
-                    LayerDescription::Pnts(_) => "pnts",
-                    LayerDescription::Mvt(_) => "mvt",
-                    LayerDescription::Cesium3dTiles(_) => "cesium3dtiles",
-                };
-            }
-        }
-
-        layer_type
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
@@ -360,7 +374,7 @@ impl App {
                 }
             }
             LayerDescription::Tiles(layer) => {
-                if let Some(appearance) = layer.appearance.take() {
+                if let Some(appearance) = layer.appearance.clone() {
                     self.app
                         .world_mut()
                         .send_event(navara_layer_event::UpdateLayerEvent {
@@ -370,8 +384,12 @@ impl App {
                         });
                 }
             }
-            _ => (),
+            _ => {
+                return;
+            }
         }
+
+        self.set_layer_description(layer_id, desc);
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {

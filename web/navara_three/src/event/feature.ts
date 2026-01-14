@@ -8,6 +8,11 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
+import {
+  parseSelectiveEffectOcclusion,
+  type SelectiveEffectOcclusion,
+} from "../core/SelectiveEffectHelper";
+import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
@@ -45,24 +50,48 @@ export function renderFeature(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
+  viewContext: ViewContext,
+  layerId: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf);
+    return renderPoint(f.point, buf, viewContext, layerId);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf);
+    return renderBillboard(f.billboard, buf, viewContext, layerId);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewEvents);
+    return renderModel(
+      f.model,
+      buf,
+      uniforms,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.polyline) {
-    return renderPolyline(f.polyline, buf, uniforms, viewEvents);
+    return renderPolyline(
+      f.polyline,
+      buf,
+      uniforms,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.polygon) {
-    return renderPolygon(f.polygon, buf, uniforms, tileHandle, viewEvents);
+    return renderPolygon(
+      f.polygon,
+      buf,
+      uniforms,
+      tileHandle,
+      viewEvents,
+      viewContext,
+      layerId,
+    );
   }
   if (f.text) {
-    return renderText(f.text, buf, uniforms);
+    return renderText(f.text, buf, uniforms, viewContext, layerId);
   }
 }
 
@@ -77,6 +106,7 @@ export async function processRenderableFeatureAdded(
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
   onConcurrency: (v: number) => void,
 ) {
@@ -88,6 +118,8 @@ export async function processRenderableFeatureAdded(
   const overscaledTileHandle = ev.overscaled_tile_handle;
 
   const tileHandle = overscaledTileHandle?.handle;
+
+  const featureLayerId = ev.layer_id;
 
   const useParallel = !!model;
 
@@ -102,6 +134,8 @@ export async function processRenderableFeatureAdded(
     uniforms,
     tileHandle,
     viewEvents,
+    viewContext,
+    featureLayerId,
   )
     ?.then((r) => {
       const type = (() => {
@@ -123,8 +157,6 @@ export async function processRenderableFeatureAdded(
     });
 
   if (!obj) return;
-
-  const featureLayerId = ev.layer_id;
 
   // Sprite should be handled by mesh itself.
   const transform = (polyline ?? polygon ?? model)?.transform;
@@ -173,6 +205,27 @@ export async function processRenderableFeatureAdded(
     });
   }
 
+  // Register initial effects from Rust material if not already registered for this layer
+  // All 5 material types in appearance.rs have post effect fields
+  const material =
+    feature.model?.material ??
+    feature.polygon?.material ??
+    feature.polyline?.material ??
+    feature.point?.material ??
+    feature.billboard?.material;
+  if (material && viewContext.getLayerEffects(featureLayerId) === undefined) {
+    viewContext.registerLayerEffects(
+      featureLayerId,
+      material.effectIds ?? [],
+      parseSelectiveEffectOcclusion(
+        material.selectiveEffectOcclusion as
+          | SelectiveEffectOcclusion
+          | undefined,
+      ),
+      material.emissiveIntensity,
+    );
+  }
+
   handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
@@ -192,7 +245,6 @@ export async function processRenderableFeatureAdded(
   }
 }
 
-// TODO: Update material in this function.
 export async function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
@@ -202,6 +254,7 @@ export async function processRenderableFeatureChanged(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
+  viewContext: ViewContext,
   updatedAt: number,
 ) {
   const id = generate_id_from_entity(ev);
@@ -214,6 +267,35 @@ export async function processRenderableFeatureChanged(
   const tileHandle = overscaledTileHandle?.handle;
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
+
+  // Update SelectiveEffect configuration from material (Core is SoT)
+  // All 5 material types in appearance.rs have selective effect fields
+  const material =
+    model?.material ??
+    polygon?.material ??
+    polyline?.material ??
+    point?.material ??
+    billboard?.material;
+  if (material) {
+    viewContext.updateLayerEffects(
+      layerId,
+      material.effectIds,
+      material.emissiveIntensity,
+    );
+
+    if (material.emissiveColor !== undefined) {
+      viewContext.setLayerEmissiveColor(layerId, material.emissiveColor);
+    }
+
+    if (material.selectiveEffectOcclusion !== undefined) {
+      const occlusion = parseSelectiveEffectOcclusion(
+        material.selectiveEffectOcclusion as SelectiveEffectOcclusion,
+      );
+      if (occlusion !== undefined) {
+        viewContext.setLayerSelectiveEffectOcclusion(layerId, occlusion);
+      }
+    }
+  }
 
   const active =
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??

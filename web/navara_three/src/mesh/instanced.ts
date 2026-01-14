@@ -1,10 +1,14 @@
 import { Color, Mesh, Object3D } from "three";
 
+import type { ViewContext } from "../core";
+
 import { isFeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
 
 export type InstancedMeshOptions = {
   renderOrder?: number;
+  viewContext: ViewContext;
+  layerId: string;
 };
 
 // This is used for point related mesh like point, billboard and text.
@@ -12,9 +16,9 @@ export class InstancedMesh<M extends Object3D>
   extends Mesh
   implements PickableMesh
 {
-  constructor(options?: InstancedMeshOptions) {
+  constructor(options: InstancedMeshOptions) {
     super();
-    this.renderOrder = options?.renderOrder ?? this.renderOrder;
+    this.renderOrder = options.renderOrder ?? this.renderOrder;
   }
 
   addWithBatchIndex(m: M, batchIndex: number) {

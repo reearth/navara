@@ -17,11 +17,21 @@ pub struct BatchedFeature {
 }
 
 impl BatchedFeature {
+    /// Marks all child feature entities as `Deleted` for cleanup by dedicated systems.
+    ///
+    /// This method does NOT directly despawn entities because child entities may hold
+    /// BufferStore handles (e.g., `PolylineGeometry.coords`, `PolygonGeometry.hierarchy`)
+    /// that must be properly removed before despawning to avoid memory leaks.
+    ///
+    /// Cleanup systems will:
+    /// 1. Query for entities with geometry components and `Deleted` marker
+    /// 2. Remove buffer handles via `remove_from_buf` methods
+    /// 3. Despawn the entities
     #[allow(clippy::too_many_arguments)]
     pub fn despawn_recursively(&self, commands: &mut Commands) {
         for f in &self.features {
             if let Ok(mut e) = commands.get_entity(*f) {
-                e.despawn();
+                e.insert(Deleted);
             }
         }
         if let Some(e) = self.construct_polyline_feature {

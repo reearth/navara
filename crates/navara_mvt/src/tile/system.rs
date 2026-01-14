@@ -21,8 +21,9 @@ use navara_window::Window;
 use crate::{
     component::MVTFeatureMarker,
     data_requester::{ChangedMvtDataRequesterQuery, MvtDataRequesterQuery},
-    geometry::construct_geometry,
+    geometry::{construct_geometry_multi_layer, MatchedLayerInfo},
     layer::{resource::LayerResources, tile_cache_manager::TileCacheManager},
+    MvtSourceResources,
 };
 
 use super::{
@@ -33,8 +34,14 @@ use super::{
     },
 };
 
-use navara_layer::{LayerStore, MvtLayer, TerrainLayer};
+use navara_layer::{LayerId, LayerStore, MvtLayer, TerrainLayer};
 
+/// Updates tiles by iterating over shared sources instead of individual layers.
+///
+/// This optimization ensures that when multiple layers share the same source URL,
+/// the quadtree traversal happens only once per source, not once per layer.
+/// We iterate through layers and deduplicate by source entity to avoid
+/// exceeding Bevy's system parameter limit.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
@@ -44,7 +51,7 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    tiles: Query<(&MvtLayer, Ref<LayerResources>)>,
+    source_query: Query<Ref<MvtSourceResources>>,
     mut camera_set: ParamSet<(
         Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
         Query<&Fog>,
@@ -81,11 +88,11 @@ pub fn update_tiles(
     let mvt_data_requester = mvt_data_requester.p0();
     let features = features.p0();
 
-    for (layer, resources) in &tiles {
-        let Ok(mut qt) = qts.get_mut(resources.quadtree) else {
+    for source in &source_query {
+        let Ok(mut qt) = qts.get_mut(source.quadtree) else {
             continue;
         };
-        let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) else {
+        let Ok(mut tc) = tcs.get_mut(source.tile_cache_manager) else {
             continue;
         };
 
@@ -96,7 +103,7 @@ pub fn update_tiles(
                 || camera.is_changed()
                 || are_features_changed
                 || are_renderable_features_rendered
-                || resources.is_added()
+                || source.is_added()
                 || terrain_qt.is_changed();
             if !needs_update {
                 continue;
@@ -131,7 +138,7 @@ pub fn update_tiles(
 
             match traverse_tile(
                 &mut commands,
-                layer,
+                &source.source_id,
                 zero_tile_handle,
                 &mut qt,
                 &mut tc,
@@ -177,7 +184,7 @@ pub fn update_tiles(
                         &mut commands,
                         qt.qt.get_mut(zero_tile_handle).unwrap(),
                         &mut buf,
-                        layer,
+                        source.url(),
                         zero_tile_handle,
                         &mut tc,
                         &mvt_data_requester,
@@ -204,6 +211,20 @@ fn attach_rendered(commands: &mut Commands, e: Entity) {
     commands.entity(e).insert(Rendered);
 }
 
+/// Per-source data collected during layer grouping.
+/// Stores resource references and all layers sharing the source.
+struct SourceData<'a> {
+    quadtree: Entity,
+    tile_cache_manager: Entity,
+    layers: Vec<(Entity, &'a MvtLayer)>,
+}
+
+/// Transfers mesh data from downloaded MVT tiles to rendered features.
+///
+/// This system iterates by source to ensure each tile is processed once,
+/// even when multiple layers share the same source URL. It collects all
+/// layers sharing a source and processes them together using multi-layer
+/// geometry construction.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn transfer_mesh(
     mut commands: Commands,
@@ -211,15 +232,32 @@ pub fn transfer_mesh(
     mut buf: ResMut<BufferStore>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
-    layers: Query<(&MvtLayer, &LayerResources)>,
+    layers: Query<(Entity, &MvtLayer, &LayerResources)>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance), Without<Rendered>>,
     mvt_data_requester: MvtDataRequesterQuery,
 ) {
-    for (layer, resources) in &layers {
-        let Ok(qt) = qts.get_mut(resources.quadtree) else {
+    // Group layers by source entity, storing resource info for direct iteration
+    let mut sources: std::collections::HashMap<Entity, SourceData> =
+        std::collections::HashMap::new();
+
+    for (layer_entity, layer, resources) in &layers {
+        sources
+            .entry(resources.source)
+            .or_insert_with(|| SourceData {
+                quadtree: resources.quadtree,
+                tile_cache_manager: resources.tile_cache_manager,
+                layers: Vec::new(),
+            })
+            .layers
+            .push((layer_entity, layer));
+    }
+
+    // Iterate directly over unique sources - no second loop needed
+    for source_data in sources.values() {
+        let Ok(qt) = qts.get_mut(source_data.quadtree) else {
             continue;
         };
-        let Ok(tc) = tcs.get_mut(resources.tile_cache_manager) else {
+        let Ok(tc) = tcs.get_mut(source_data.tile_cache_manager) else {
             continue;
         };
 
@@ -227,12 +265,7 @@ pub fn transfer_mesh(
             continue;
         }
 
-        let limit_layers = layer
-            .vector_tile_appearance()
-            .map(|vt| &vt.layers)
-            .unwrap_or(&None);
-
-        for (rendered_tile_id, mut rendered_tile, _) in
+        for (rendered_tile_id, mut rendered_tile, order) in
             rendered_tiles.iter_mut().sort::<&OrderByDistance>()
         {
             let needs_update = rendered_tile.is_added();
@@ -252,16 +285,34 @@ pub fn transfer_mesh(
                 .get(tile.data_requester_entity_id.unwrap())
                 .unwrap();
             let mvt_bin = buf.remove_u8(&data_requester.handle).unwrap();
-            if let Some(feature_ids) = construct_geometry(
+
+            // Build matched layers info for multi-layer processing
+            let matched_layers: Vec<MatchedLayerInfo> = source_data
+                .layers
+                .iter()
+                .map(|(_, layer)| {
+                    let limit_layers = layer
+                        .vector_tile_appearance()
+                        .map(|vt| &vt.layers)
+                        .unwrap_or(&None);
+                    MatchedLayerInfo {
+                        layer_id: &layer.layer_id,
+                        appearances: &layer.appearances,
+                        limit_layers,
+                    }
+                })
+                .collect();
+
+            // Parse MVT once and spawn features for all matched layers
+            if let Some(feature_ids) = construct_geometry_multi_layer(
                 &mut commands,
                 &mut batch_table,
                 &mut buf,
                 mvt_bin,
                 tile.coords,
-                &layer.appearances,
-                limit_layers,
-                &layer.layer_id,
+                &matched_layers,
                 Some((rendered_tile.tile_handle, tile.extent)),
+                order,
             ) {
                 if rendered_tile.feature_ids.is_some() {
                     panic!("It should be cleaned before new feature is added");
@@ -272,6 +323,12 @@ pub fn transfer_mesh(
     }
 }
 
+/// Clears tile caches for tiles that are no longer visible.
+///
+/// This system iterates by source to ensure each tile cache is processed once,
+/// even when multiple layers share the same source URL.
+/// We iterate through layers and deduplicate by source entity to avoid
+/// exceeding Bevy's system parameter limit.
 #[allow(clippy::too_many_arguments)]
 pub fn clear_caches(
     mut commands: Commands,
@@ -281,23 +338,32 @@ pub fn clear_caches(
     layers: Query<(&MvtLayer, &LayerResources)>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
     batched_features: Query<&BatchedFeature>,
-    features: Query<&FeatureId>,
+    features: Query<(&FeatureId, &LayerId)>,
 ) {
-    for (rendered_tile_entity_id, mut rendered_tile, _) in
-        rendered_tiles.iter_mut().sort::<&OrderByDistance>().rev()
-    {
-        for (layer, resources) in &layers {
-            let Ok(mut qt) = qts.get_mut(resources.quadtree) else {
-                continue;
-            };
-            let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) else {
-                continue;
-            };
+    // Track which sources we've already processed to avoid duplicate work.
+    let mut processed_sources = std::collections::HashSet::new();
 
-            if !tc.is_updated_in_this_frame {
-                continue;
-            }
+    for (_layer, resources) in &layers {
+        // Skip if we've already processed this source
+        if !processed_sources.insert(resources.source) {
+            continue;
+        }
 
+        let Ok(mut qt) = qts.get_mut(resources.quadtree) else {
+            continue;
+        };
+        let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) else {
+            continue;
+        };
+
+        if !tc.is_updated_in_this_frame {
+            continue;
+        }
+
+        // Clean up rendered tiles that are no longer visited
+        for (rendered_tile_entity_id, mut rendered_tile, _) in
+            rendered_tiles.iter_mut().sort::<&OrderByDistance>().rev()
+        {
             if !tc.has_same_rendered_tile(&rendered_tile.tile_handle, &rendered_tile_entity_id) {
                 continue;
             }
@@ -315,28 +381,20 @@ pub fn clear_caches(
             tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
             tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
-            let removed_features =
+            let removed_by_layer =
                 rendered_tile.destroy(&mut commands, &features, &batched_features);
             qt.qt
                 .remove(rendered_tile.tile_handle)
                 .unwrap()
                 .destroy(&mut commands);
-            layer_store.remove_features(&layer.layer_id, &removed_features);
-        }
-    }
 
-    for (_, resources) in &layers {
-        let Ok(mut qt) = qts.get_mut(resources.quadtree) else {
-            continue;
-        };
-        let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) else {
-            continue;
-        };
-
-        if !tc.is_updated_in_this_frame {
-            continue;
+            // Remove features from each layer's store
+            for (layer_id, removed_features) in removed_by_layer {
+                layer_store.remove_features(&layer_id, &removed_features);
+            }
         }
 
+        // Clean up requested tiles that are no longer visited
         let mut removed_handles = vec![];
         for (handle, _requested) in tc.requested_tile_caches.iter() {
             let tile_handle = *handle;
@@ -360,10 +418,14 @@ pub fn clear_caches(
         }
     }
 
+    // Reset the update flag for all sources - need to iterate again since
+    // we may have skipped some sources above due to !is_updated_in_this_frame
+    let mut reset_sources = std::collections::HashSet::new();
     for (_, resources) in &layers {
-        let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) else {
-            continue;
-        };
-        tc.is_updated_in_this_frame = false;
+        if reset_sources.insert(resources.source) {
+            if let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) {
+                tc.is_updated_in_this_frame = false;
+            }
+        }
     }
 }

@@ -187,6 +187,19 @@ pub struct TransferableHierarchy {
     pub expected_winding_order: WindingOrder,
 }
 
+impl TransferableHierarchy {
+    /// Removes all buffer handles from BufferStore recursively.
+    /// Must be called before despawning the entity to avoid memory leaks.
+    pub fn remove_from_buf(&self, buf: &mut BufferStore) {
+        buf.remove(&self.outer_ring);
+        if let Some(holes) = &self.holes {
+            for hole in holes {
+                hole.remove_from_buf(buf);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use navara_math::Vec3;

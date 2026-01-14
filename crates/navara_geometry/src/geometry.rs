@@ -47,6 +47,16 @@ impl TransferableGeometry {
             skirt_indices_to_edge: geo.skirt_indices_to_edge.map(|v| buf.new_u32(v)),
         }
     }
+
+    pub fn remove_from_buf(&self, buf: &mut BufferStore) {
+        buf.remove(&self.vertices);
+        buf.remove(&self.uvs);
+        buf.remove(&self.indices);
+        let _ = self.skirt_vertices.map(|i| buf.remove(&i));
+        let _ = self.skirt_uvs.map(|i| buf.remove(&i));
+        let _ = self.skirt_indices.map(|i| buf.remove(&i));
+        let _ = self.skirt_indices_to_edge.map(|i| buf.remove(&i));
+    }
 }
 
 pub struct ReturnedConstructedTerrainMesh {
