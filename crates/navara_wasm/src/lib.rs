@@ -198,7 +198,7 @@ impl Core {
         // TODO: Improve an undesirable cloning the layer.
         if let Some(ld) = LayerDescription::from(layer.clone()) {
             if let Some(layer_type) = ld.r#type {
-                if let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer) {
+                if let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer, None) {
                     self.app.add_layer(layer_id.as_str(), l);
                 }
             }
@@ -209,8 +209,10 @@ impl Core {
 
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
-        let layer_type = self.app.get_layer_type(&layer_id);
-        if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type, layer) {
+        let layer_type = self.app.get_layer_type(&layer_id).unwrap_or("");
+        let old_layer_desc = self.app.get_layer_description(&layer_id);
+        if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type, layer, old_layer_desc)
+        {
             self.app.update_layer(layer_id.as_str(), l);
         }
     }
