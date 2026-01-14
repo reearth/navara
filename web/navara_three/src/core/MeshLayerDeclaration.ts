@@ -2,7 +2,13 @@ import type { BaseEventMap, XYZ } from "@navara/core";
 import { Mesh, Object3D, type Material } from "three";
 
 import type { Scenes } from "../scene";
-import { arraysEqual } from "../utils";
+
+function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 import {
   LayerDeclaration,

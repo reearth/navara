@@ -391,7 +391,9 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     active: boolean,
     needRender?: () => void,
   ) {
-    this.userData.prev ??= {};
+    if (!this.userData.prev) {
+      this.userData.prev = {};
+    }
     const prev = this.userData.prev;
 
     const txt = this.text;

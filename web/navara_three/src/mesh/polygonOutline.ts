@@ -225,7 +225,9 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   }
 
   _update(material: PolygonMaterial, active: boolean) {
-    this.userData.prev ??= {};
+    if (!this.userData.prev) {
+      this.userData.prev = {};
+    }
     const prev = this.userData.prev;
     const lineMaterial = this.material;
 

@@ -62,7 +62,14 @@ import {
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual, createReplacer } from "../utils";
+import { createReplacer } from "../utils";
+
+function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 import {
   getBatchDataTexture,
@@ -864,16 +871,16 @@ export class ModelMesh
         distMaterial.userData.prev.roughness = next;
       }
       if (distMaterial.userData.prev.water !== src.water) {
-        const nextWater = !!src.water;
-        this.water = nextWater;
-        distMaterial.userData.prev.water = nextWater;
+        const next = !!src.water;
+        this.water = next;
+        distMaterial.userData.prev.water = next;
         // Update water define
         distMaterial.userData.defines = distMaterial.userData.defines || {};
-        if (nextWater) {
+        if (next) {
           distMaterial.userData.defines.WATER = 1;
 
           distMaterial.userData.waterNormalMap.value =
-            this.enableWaterNormalMap(nextWater);
+            this.enableWaterNormalMap(next);
         } else {
           delete distMaterial.userData.defines.WATER;
           distMaterial.userData.waterNormalMap.value = null;
@@ -921,13 +928,11 @@ export class ModelMesh
         distMaterial.userData.specular.value = next;
         distMaterial.userData.prev.specular = next;
       }
-      const nextCastShadow = !!src.castShadow;
-      if (dist.castShadow !== nextCastShadow) {
-        dist.castShadow = nextCastShadow;
+      if (dist.castShadow !== src.castShadow) {
+        dist.castShadow = !!src.castShadow;
       }
-      const nextReceiveShadow = !!src.receiveShadow;
-      if (dist.receiveShadow !== nextReceiveShadow) {
-        dist.receiveShadow = nextReceiveShadow;
+      if (dist.receiveShadow !== src.receiveShadow) {
+        dist.receiveShadow = !!src.receiveShadow;
       }
 
       // SelectiveEffect: emissiveColor handling

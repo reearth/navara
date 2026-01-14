@@ -21,7 +21,13 @@ import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
+
+function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 import {
   BatchedFeatureMesh,
@@ -143,6 +149,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
 
     geometry.setIndex(new BufferAttribute(indices, 1));
+    // geometry.computeVertexNormals();
 
     this.userData.batchIds = batchIds;
     this.userData.batchIdSize = batchIdSize;
@@ -208,7 +215,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.userData.uPickable = uPickable;
     this.material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
-      Object.assign(shader.defines, this.material.userData.defines ?? {});
+      Object.assign(shader.defines, this.material.userData.defines);
       if (this.material.userData.batchDataTexture) {
         shader.uniforms.batchDataTexture =
           this.material.userData.batchDataTexture;
@@ -238,9 +245,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
 
     if (prev.useGroundNormals !== material.useGroundNormals) {
-      const nextUseGroundNormals = !!material.useGroundNormals;
-      this.material.uniforms.useGroundNormals.value = nextUseGroundNormals;
-      prev.useGroundNormals = nextUseGroundNormals;
+      this.material.uniforms.useGroundNormals.value =
+        !!material.useGroundNormals;
+      prev.useGroundNormals = !!material.useGroundNormals;
     }
 
     const [minHeight, maxHeight] = material.__internal__?.minMaxHeights ?? [

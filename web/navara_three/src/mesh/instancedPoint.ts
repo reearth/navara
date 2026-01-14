@@ -2,7 +2,13 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
 import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader } from "../event";
-import { arraysEqual } from "../utils";
+
+function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { PointMesh } from "./point";

@@ -35,15 +35,22 @@ import {
   MeshLambertMaterial,
   RGBADepthPacking,
   ShaderChunk,
-  Sphere,
   Vector3,
+  Sphere,
 } from "three";
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual, createReplacer } from "../utils";
+import { createReplacer } from "../utils";
+
+function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 import {
   BatchedFeatureMesh,
@@ -751,9 +758,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       prev.roughness = next;
     }
 
-    const nextClampToGround = !!material.clampToGround;
-    if (this.material.userData.uClampToGround.value !== nextClampToGround) {
-      this.material.userData.uClampToGround.value = nextClampToGround;
+    if (
+      this.material.userData.uClampToGround.value !== material.clampToGround
+    ) {
+      this.material.userData.uClampToGround.value = material.clampToGround;
 
       this._recalculateBoundingSphere();
     }
@@ -791,14 +799,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     if (prev.applyWaterNormal !== material.applyWaterNormal) {
-      const next =
-        typeof material.applyWaterNormal === "number"
-          ? material.applyWaterNormal
-          : material.applyWaterNormal
-            ? 1
-            : 0;
+      const next = material.applyWaterNormal ?? 0;
       this.material.userData.applyWaterNormal.value = next;
-      prev.applyWaterNormal = material.applyWaterNormal;
+      prev.applyWaterNormal = next;
     }
 
     if (prev.specular !== material.specular) {
