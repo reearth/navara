@@ -78,6 +78,7 @@ import {
   RainDropEffectLayer,
   TransparentPassEffectLayer,
   DepthOfFieldEffectLayer,
+  ColorGradingLUTEffectLayer,
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
@@ -150,6 +151,7 @@ export {
   getDevicePixelRatio,
   type DevicePixelRatioOptions,
 } from "./device";
+export { type BlendMode } from "./utils/blendModes";
 
 // CSM exports for advanced users
 export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
@@ -1172,6 +1174,7 @@ export default class ThreeView<
     this.registerEffect("ssao", SSAOEffectLayer);
     this.registerEffect("ssr", SSREffectLayer);
     this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
+    this.registerEffect("colorGradingLUT", ColorGradingLUTEffectLayer);
 
     // SelectiveEffect effects
     this.registerEffect("testSelectiveEffect", TestSelectiveEffectLayer);
