@@ -18,4 +18,10 @@ impl PolylineGeometry {
             crs,
         }
     }
+
+    /// Removes the buffer handle from BufferStore.
+    /// Must be called before despawning the entity to avoid memory leaks.
+    pub fn remove_from_buf(&self, buf: &mut BufferStore) {
+        buf.remove(&self.coords);
+    }
 }

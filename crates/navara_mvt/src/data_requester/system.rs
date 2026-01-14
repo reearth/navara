@@ -9,7 +9,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::MvtLayer;
 use navara_tile_component::VectorTileQuadtree;
 
-use crate::layer::{resource::LayerResources, tile_cache_manager::TileCacheManager};
+use crate::{layer::tile_cache_manager::TileCacheManager, MvtSourceResources};
 
 use super::{MvtDataRequesterMarker, SingleMvtDataRequesterMarker};
 
@@ -41,7 +41,7 @@ const MAX_PENDINGS: u32 = 10;
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_data_requester(
     mut commands: Commands,
-    layers: Query<&LayerResources, With<MvtLayer>>,
+    layers: Query<&MvtSourceResources>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     data_requesters: Query<

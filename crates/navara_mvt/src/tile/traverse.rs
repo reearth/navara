@@ -9,10 +9,9 @@ use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_globe::Globe;
-use navara_material::Appearance;
 use navara_math::{FloatType, Transform};
 
-use navara_layer::{MvtLayer, TerrainLayer};
+use navara_layer::TerrainLayer;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_tile_component::{
     TerrainInformation, TerrainInformationQuadtree, Tile, TileHandle, VectorTile,
@@ -24,6 +23,7 @@ use crate::{
     component::MVTFeatureMarker,
     data_requester::{request_mvt_data, MvtDataRequesterQuery},
     layer::tile_cache_manager::TileCacheManager,
+    SourceId,
 };
 
 use super::render::RenderedTile;
@@ -41,7 +41,7 @@ use super::render::RenderedTile;
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_tile(
     command: &mut Commands,
-    layer: &MvtLayer,
+    source_id: &SourceId,
     handle: TileHandle,
     qt: &mut VectorTileQuadtree,
     tc: &mut TileCacheManager,
@@ -68,15 +68,12 @@ pub fn traverse_tile(
     tile.ready_parent_tile_handle = ready_parent_tile_handle;
     tile.is_rendered = false;
 
-    // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
-    let is_texturized = layer.appearances.iter().any(|a| {
-        matches!(a, Appearance::Polygon(p) if p.clamp_to_ground)
-            || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
-    });
+    let traversal_config = &source_id.traversal_config;
 
-    // TODO: Fix unnecessary clone
-    let vector_tile_appearance = layer.vector_tile_appearance().cloned().unwrap_or_default();
-    if tile.coords.z > vector_tile_appearance.max_zoom && !is_texturized {
+    // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
+    let is_texturized = traversal_config.has_clamp_to_ground;
+
+    if tile.coords.z > traversal_config.max_zoom && !is_texturized {
         return TraversalResult::NotFound;
     }
 
@@ -106,10 +103,10 @@ pub fn traverse_tile(
     }
 
     let is_overscaled = ready_parent_tile_handle.is_some()
-        && tile.coords.z > vector_tile_appearance.max_zoom
-        && tile.coords.z <= vector_tile_appearance.overscaled_max_zoom;
+        && tile.coords.z > traversal_config.max_zoom
+        && tile.coords.z <= traversal_config.overscaled_max_zoom;
 
-    if tile.coords.z > vector_tile_appearance.max_zoom && !is_overscaled {
+    if tile.coords.z > traversal_config.max_zoom && !is_overscaled {
         return TraversalResult::NotFound;
     }
 
@@ -144,7 +141,7 @@ pub fn traverse_tile(
     let max_sse = if is_texturized {
         globe.max_sse
     } else {
-        vector_tile_appearance.max_sse
+        traversal_config.max_sse()
     } as f64;
     let meets_sse = sse <= max_sse;
 
@@ -183,7 +180,7 @@ pub fn traverse_tile(
                 command,
                 tile,
                 buf,
-                layer,
+                &source_id.url,
                 handle,
                 tc,
                 mvt_data_requester,
@@ -236,7 +233,7 @@ pub fn traverse_tile(
         for (i, child) in children.iter().enumerate() {
             let traversal_result = traverse_tile(
                 command,
-                layer,
+                source_id,
                 *child,
                 qt,
                 tc,
@@ -441,7 +438,7 @@ pub fn traverse_tile(
             command,
             tile,
             buf,
-            layer,
+            &source_id.url,
             handle,
             tc,
             mvt_data_requester,
@@ -586,21 +583,14 @@ pub fn prepare_tile_resource(
     commands: &mut Commands,
     tile: &mut VectorTile,
     buf: &mut BufferStore,
-    layer: &MvtLayer,
+    url: &str,
     handle: TileHandle,
     tc: &mut TileCacheManager,
     data_requesters: &MvtDataRequesterQuery,
     priority: Priority,
 ) -> bool {
-    let requested_mvt = request_mvt_data(
-        commands,
-        tile,
-        buf,
-        layer,
-        handle,
-        data_requesters,
-        priority,
-    );
+    let requested_mvt =
+        request_mvt_data(commands, tile, buf, url, handle, data_requesters, priority);
 
     if let Some(e) = requested_mvt {
         tc.requested_tile_caches.insert(handle, e);
