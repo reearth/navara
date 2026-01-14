@@ -43,14 +43,7 @@ import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
-import { createReplacer } from "../utils";
-
-function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-  return a.every((v, i) => v === b[i]);
-}
+import { arraysEqual, createReplacer } from "../utils";
 
 import {
   BatchedFeatureMesh,
