@@ -43,6 +43,10 @@ export async function processMeshAdded(
     viewEvents,
     uniforms,
   );
+
+  m.addEventListener("removedFromWorld", () => {
+    m.dispose(viewEvents, tileMapByHandle);
+  });
 }
 
 export function processMeshChanged(

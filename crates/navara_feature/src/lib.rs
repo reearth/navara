@@ -72,6 +72,7 @@ impl Plugin for FeaturePlugin {
                     polyline::system::transfer_batched_mesh,
                     polyline::system::update_height_by_terrain,
                     polyline::system::remove_batched_feature,
+                    polyline::system::cleanup_deleted_batched_children,
                 )
                     .chain(),
             )
@@ -83,6 +84,7 @@ impl Plugin for FeaturePlugin {
                     polygon::system::update_polygon,
                     polygon::system::update_height_by_terrain,
                     polygon::system::remove_batched_feature,
+                    polygon::system::cleanup_deleted_batched_children,
                 )
                     .chain(),
             )

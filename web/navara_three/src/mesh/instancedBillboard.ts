@@ -1,12 +1,32 @@
 import { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
+import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader } from "../event";
 import { applyTextureAspect } from "../texture";
+import { arraysEqual } from "../utils";
 
 import { BillboardMesh } from "./billboard";
-import { InstancedMesh } from "./instanced";
+import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
+
+/** UserData type for InstancedBillboardMesh */
+type InstancedBillboardUserData = {
+  prev?: {
+    effectIds?: string[];
+  };
+};
 
 export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
+  /** ViewContext for SelectiveEffect handling */
+  private _viewContext: ViewContext;
+  /** Layer ID for SelectiveEffect handling */
+  private _layerId: string;
+
+  constructor(options: InstancedMeshOptions) {
+    super(options);
+    this._viewContext = options.viewContext;
+    this._layerId = options.layerId;
+  }
+
   async _init(m: NavaraBillboardMesh, buf: BufferLoader) {
     await this.initMeshes(m, buf);
   }
@@ -85,5 +105,19 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
         }
       }),
     );
+
+    // SelectiveEffect: effectIds handling at container level
+    // SpriteMaterial doesn't support emissive, so only effectIds is handled
+    const ud = this.userData as InstancedBillboardUserData;
+    ud.prev ??= {};
+    if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        material.effectIds ?? [],
+        ud.prev.effectIds ?? [],
+        this._layerId,
+      );
+      ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+    }
   }
 }

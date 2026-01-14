@@ -6,5 +6,15 @@ export default defineConfig((env) => {
   const common = commonConfig("NavaraThreeCSM", env);
   return {
     ...common,
+    build: {
+      ...common?.build,
+      rollupOptions: {
+        ...common?.build?.rollupOptions,
+        external: [
+          ...(common.build?.rollupOptions?.external as string[]),
+          "three",
+        ],
+      },
+    },
   };
 });

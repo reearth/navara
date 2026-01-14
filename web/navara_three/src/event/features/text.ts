@@ -1,6 +1,7 @@
 import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
+import type { ViewContext } from "../../core";
 import { InstancedTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
@@ -10,9 +11,13 @@ export async function renderText(
   m: NavaraTextMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
+  viewContext: ViewContext,
+  layerId: string,
 ) {
   const textGroup = new InstancedTextMesh(m, buf, uniforms, {
     renderOrder: FEATURE_RENDER_ORDER,
+    viewContext,
+    layerId,
   });
 
   return textGroup;

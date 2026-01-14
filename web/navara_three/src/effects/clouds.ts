@@ -104,7 +104,7 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
   shadows: true,
   shadowCascadeCount: 3,
   shadowMapSize: new Vector2(512, 512),
-  shadowFarScale: 0.0025,
+  shadowFarScale: 0.05,
 
   haze: true,
   hazeDensityScale: 3e-5,

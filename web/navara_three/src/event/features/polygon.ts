@@ -3,6 +3,7 @@ import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
+import type { ViewContext } from "../../core";
 import { PolygonMesh } from "../../mesh";
 import type { CommonUniforms } from "../../uniforms";
 
@@ -12,8 +13,18 @@ export async function renderPolygon(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewEvents: EventHandler<ViewEvents>,
+  viewContext: ViewContext,
+  layerId: string,
 ) {
-  return new PolygonMesh().init(mesh, buf, uniforms, tileHandle, viewEvents);
+  return new PolygonMesh().init(
+    mesh,
+    buf,
+    uniforms,
+    tileHandle,
+    viewEvents,
+    viewContext,
+    layerId,
+  );
 }
 
 export function processPolygonChanged(
