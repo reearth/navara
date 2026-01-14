@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
-
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
@@ -26,6 +25,23 @@ pub struct PointMaterial {
     #[serde(rename = "offsetDepth")]
     pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = selectiveEffectOcclusion)]
+    #[serde(rename = "selectiveEffectOcclusion")]
+    pub selective_effect_occlusion: Option<String>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
+    pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
+    pub emissive_color: Option<u32>,
 }
 
 impl From<PointMaterial> for navara_material::PointMaterial {
@@ -42,6 +58,12 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
+            effect_ids: val.effect_ids.or(default.effect_ids),
+            selective_effect_occlusion: val
+                .selective_effect_occlusion
+                .or(default.selective_effect_occlusion),
+            emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
+            emissive_color: val.emissive_color.or(default.emissive_color),
         }
     }
 }
@@ -58,6 +80,10 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion.clone(),
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }
@@ -96,6 +122,23 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = alphaTest)]
     #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = selectiveEffectOcclusion)]
+    #[serde(rename = "selectiveEffectOcclusion")]
+    pub selective_effect_occlusion: Option<String>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
+    pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
+    pub emissive_color: Option<u32>,
 }
 
 impl From<BillboardMaterial> for navara_material::BillboardMaterial {
@@ -114,6 +157,12 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
+            effect_ids: val.effect_ids.or(default.effect_ids),
+            selective_effect_occlusion: val
+                .selective_effect_occlusion
+                .or(default.selective_effect_occlusion),
+            emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
+            emissive_color: val.emissive_color.or(default.emissive_color),
         }
     }
 }
@@ -132,6 +181,10 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
             alpha_test: Some(value.alpha_test),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion.clone(),
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }
@@ -276,6 +329,23 @@ pub struct PolylineMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = selectiveEffectOcclusion)]
+    #[serde(rename = "selectiveEffectOcclusion")]
+    pub selective_effect_occlusion: Option<String>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
+    pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
+    pub emissive_color: Option<u32>,
 }
 
 #[wasm_bindgen]
@@ -303,6 +373,10 @@ impl PolylineMaterial {
             height,
             width,
             __internal__,
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -320,6 +394,12 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
+            effect_ids: val.effect_ids.or(default.effect_ids),
+            selective_effect_occlusion: val
+                .selective_effect_occlusion
+                .or(default.selective_effect_occlusion),
+            emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
+            emissive_color: val.emissive_color.or(default.emissive_color),
         }
     }
 }
@@ -335,6 +415,10 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion.clone(),
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }
@@ -351,6 +435,10 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.map(|v| v.into()),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion,
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }
@@ -461,6 +549,23 @@ pub struct PolygonMaterial {
     /// Enabling this value allows using `shininess` and `specular_strength`.
     pub specular: Option<bool>,
     pub ior: Option<f32>,
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = selectiveEffectOcclusion)]
+    #[serde(rename = "selectiveEffectOcclusion")]
+    pub selective_effect_occlusion: Option<String>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
+    pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
+    pub emissive_color: Option<u32>,
 }
 
 #[wasm_bindgen]
@@ -512,6 +617,10 @@ impl PolygonMaterial {
             apply_water_normal: None,
             specular: None,
             ior: None,
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -551,6 +660,12 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             apply_water_normal: val.apply_water_normal.unwrap_or(default.apply_water_normal),
             specular: val.specular.unwrap_or(default.specular),
             ior: val.ior.unwrap_or(default.ior),
+            effect_ids: val.effect_ids.or(default.effect_ids),
+            selective_effect_occlusion: val
+                .selective_effect_occlusion
+                .or(default.selective_effect_occlusion),
+            emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
+            emissive_color: val.emissive_color.or(default.emissive_color),
         }
     }
 }
@@ -586,6 +701,10 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             apply_water_normal: Some(value.apply_water_normal),
             specular: Some(value.specular),
             ior: Some(value.ior),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion.clone(),
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }
@@ -621,6 +740,10 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             apply_water_normal: Some(value.apply_water_normal),
             specular: Some(value.specular),
             ior: Some(value.ior),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion,
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }
@@ -720,6 +843,23 @@ pub struct ModelMaterial {
     pub show_bounding_box: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
+    // SelectiveEffect
+    /// IDs of selective effects to apply (e.g., "bloom", "outline")
+    #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
+    #[serde(rename = "effectIds")]
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    #[wasm_bindgen(getter_with_clone, js_name = selectiveEffectOcclusion)]
+    #[serde(rename = "selectiveEffectOcclusion")]
+    pub selective_effect_occlusion: Option<String>,
+    /// Emissive glow intensity (default: 0.3 when Bloom enabled)
+    #[wasm_bindgen(js_name = emissiveIntensity)]
+    #[serde(rename = "emissiveIntensity")]
+    pub emissive_intensity: Option<f32>,
+    /// Emissive glow color in 0xRRGGBB format
+    #[wasm_bindgen(js_name = emissiveColor)]
+    #[serde(rename = "emissiveColor")]
+    pub emissive_color: Option<u32>,
 }
 
 impl From<ModelMaterial> for navara_material::ModelMaterial {
@@ -755,6 +895,12 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             point_size: val.point_size.unwrap_or(default.point_size),
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
             internal: val.__internal__.clone().map(|v| v.into()),
+            effect_ids: val.effect_ids.or(default.effect_ids),
+            selective_effect_occlusion: val
+                .selective_effect_occlusion
+                .or(default.selective_effect_occlusion),
+            emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
+            emissive_color: val.emissive_color.or(default.emissive_color),
         }
     }
 }
@@ -789,6 +935,10 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             point_size: Some(value.point_size),
             show_bounding_box: Some(value.show_bounding_box),
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
+            effect_ids: value.effect_ids.clone(),
+            selective_effect_occlusion: value.selective_effect_occlusion.clone(),
+            emissive_intensity: value.emissive_intensity,
+            emissive_color: value.emissive_color,
         }
     }
 }

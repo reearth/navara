@@ -3,6 +3,7 @@ import { PolylineMesh as NavaraPolylineMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
 import type { ViewEvents } from "../..";
+import type { ViewContext } from "../../core";
 import { PolylineMesh } from "../../mesh";
 import type { CommonUniforms } from "../../uniforms";
 
@@ -11,8 +12,18 @@ export async function renderPolyline(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   viewEvents: EventHandler<ViewEvents>,
+  viewContext: ViewContext,
+  layerId: string,
 ) {
-  return new PolylineMesh(mesh, buf, uniforms, viewEvents);
+  const polylineMesh = new PolylineMesh(
+    mesh,
+    buf,
+    uniforms,
+    viewEvents,
+    viewContext,
+    layerId,
+  );
+  return polylineMesh;
 }
 
 export function processPolylineChanged(

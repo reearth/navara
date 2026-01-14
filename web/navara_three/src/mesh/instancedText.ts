@@ -11,7 +11,7 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     m: NavaraTextMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
-    options?: InstancedMeshOptions,
+    options: InstancedMeshOptions,
   ) {
     super(options);
 
