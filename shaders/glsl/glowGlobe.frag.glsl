@@ -5,6 +5,7 @@
 // ===============================================================================
 
 in vec3 vNormal;
+in vec3 vPos;
 
 uniform float coefficient;
 uniform float exponent;
@@ -14,14 +15,14 @@ void main() {
     // Normalize the interpolated normal
     vec3 N = normalize(vNormal);
 
-    // Optimization: In View Space, the view vector is effectively (0,0,1).
-    // Instead of a dot product, we just take the Z component.
-    // Ideally, use: float facing_ratio = dot(N, normalize(viewVector)); if not in View Space.
-    float facing_ratio = N.z;
+    // view direction in world space - from fragment to camera
+    vec3 viewDir = normalize(cameraPosition - vPos);
+
+    float facing_ratio = dot(N, viewDir);
 
     // 'max(..., 0.0)' clamps negative results to 0.0 to prevent visual artifacts 
     // and undefined behavior in the pow() function.
     float intensity = pow( max(coefficient - facing_ratio, 0.0), exponent );
 
-    gl_FragColor = glowColor * intensity;
+    gl_FragColor = vec4(glowColor.rgb, glowColor.a * intensity);
 }
