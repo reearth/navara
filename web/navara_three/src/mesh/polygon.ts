@@ -36,7 +36,6 @@ import {
   RGBADepthPacking,
   ShaderChunk,
   Sphere,
-  Texture,
   Vector3,
 } from "three";
 
@@ -51,59 +50,6 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
-
-/** Prev cache for PolygonMesh material (diff detection) */
-type PolygonMaterialPrev = {
-  color?: number;
-  visible?: boolean;
-  wireframe?: boolean;
-  transparent?: boolean;
-  opacity?: number;
-  reflectivity?: number;
-  min?: number;
-  max?: number;
-  useGroundNormals?: boolean;
-  roughness?: number;
-  water?: boolean;
-  waterScaleNormal?: number;
-  waterSpeed?: number;
-  shininess?: number;
-  specularStrength?: number;
-  applyWaterNormal?: boolean | number;
-  specular?: boolean;
-  ior?: number;
-  effectIds?: string[];
-  emissiveColor?: number;
-  emissiveIntensity?: number;
-};
-
-/** UserData type for PolygonMesh material */
-type PolygonMaterialUserData = {
-  prev?: PolygonMaterialPrev;
-  _batchColorTouched?: boolean;
-  uMinMaxHeight?: { value: [number, number] | undefined };
-  uAddExtrudedHeight?: { value: number };
-  uAddHeight?: { value: number };
-  uClampToGround?: { value: boolean };
-  useGroundNormals?: { value: boolean };
-  uPickable?: { value: number };
-  uIsTexturized?: { value: boolean };
-  reflectivity?: { value: number };
-  roughness?: { value: number };
-  waterScaleNormal?: { value: number };
-  waterSpeed?: { value: number };
-  shininess?: { value: number };
-  specularStrength?: { value: number };
-  applyWaterNormal?: { value: number };
-  waterNormalMap?: { value: Texture | null };
-  specular?: { value: boolean };
-  ior?: { value: number };
-  defines?: Record<string, unknown>;
-  modelViewMatrixRTE?: { value: Matrix4 };
-  cameraPositionHigh?: { value: Vector3 };
-  cameraPositionLow?: { value: Vector3 };
-  batchDataTexture?: { value: unknown };
-};
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
@@ -725,43 +671,45 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   _update(material: PolygonMaterial, active: boolean, isTexturized: boolean) {
-    const ud = this.material.userData as PolygonMaterialUserData;
-    ud.prev ??= {};
+    if (!this.material.userData.prev) {
+      this.material.userData.prev = {};
+    }
+    const prev = this.material.userData.prev;
 
     // Only update material.color if batchTexture color is not being used
-    if (ud.prev.color !== material.color) {
+    if (prev.color !== material.color) {
       const next = material.color ?? 0;
       // If batchTexture color is not enabled, update material.color directly
-      if (!ud._batchColorTouched) {
+      if (!this.material.userData._batchColorTouched) {
         this.material.color.set(next);
       }
-      ud.prev.color = next;
+      prev.color = next;
     }
 
     const next =
       (material.show ?? true) && (material.surfaceShow ?? true) && active;
-    if (ud.prev.visible !== next) {
+    if (prev.visible !== next) {
       this.visible = next;
-      ud.prev.visible = next;
+      prev.visible = next;
       this.enableWater();
     }
 
-    if (ud.prev.wireframe !== material.wireframe) {
-      const nextWireframe = !!material.wireframe;
-      this.material.wireframe = nextWireframe;
-      ud.prev.wireframe = nextWireframe;
+    if (prev.wireframe !== material.wireframe) {
+      const next = !!material.wireframe;
+      this.material.wireframe = next;
+      prev.wireframe = next;
     }
 
-    if (ud.prev.transparent !== material.transparent) {
-      const nextTransparent = !!material.transparent;
-      this.material.transparent = nextTransparent;
-      ud.prev.transparent = nextTransparent;
+    if (prev.transparent !== material.transparent) {
+      const next = !!material.transparent;
+      this.material.transparent = next;
+      prev.transparent = next;
     }
 
-    if (ud.prev.opacity !== material.opacity) {
-      const nextOpacity = material.opacity ?? 1.0;
-      this.material.opacity = nextOpacity;
-      ud.prev.opacity = nextOpacity;
+    if (prev.opacity !== material.opacity) {
+      const next = material.opacity ?? 1.0;
+      this.material.opacity = next;
+      prev.opacity = next;
     }
 
     if (this.castShadow !== material.castShadow) {
@@ -771,124 +719,121 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.receiveShadow = !!material.receiveShadow;
     }
 
-    if (ud.prev.reflectivity !== material.reflectivity) {
-      const nextReflectivity = material.reflectivity ?? 0;
-      if (ud.reflectivity) ud.reflectivity.value = nextReflectivity;
-      this.material.reflectivity = nextReflectivity;
-      ud.prev.reflectivity = nextReflectivity;
+    if (prev.reflectivity !== material.reflectivity) {
+      const next = material.reflectivity ?? 0;
+      this.material.userData.reflectivity.value = next;
+      this.material.reflectivity = next;
+      prev.reflectivity = next;
     }
 
     const [min, max] = material.__internal__?.minMaxHeights ?? [];
-    if (ud.prev.min !== min || ud.prev.max !== max) {
-      if (ud.uMinMaxHeight) ud.uMinMaxHeight.value = [min, max];
-      ud.prev.min = min;
-      ud.prev.max = max;
+    if (prev.min !== min || prev.max !== max) {
+      this.material.userData.uMinMaxHeight.value = [min, max];
+      prev.min = min;
+      prev.max = max;
 
       this._recalculateBoundingSphere();
     }
 
-    if (ud.uIsTexturized && ud.uIsTexturized.value !== isTexturized) {
-      ud.uIsTexturized.value = isTexturized;
+    if (this.material.userData.uIsTexturized.value !== isTexturized) {
+      this.material.userData.uIsTexturized.value = isTexturized;
     }
 
-    if (ud.prev.useGroundNormals !== material.useGroundNormals) {
-      const nextUseGroundNormals = !!material.useGroundNormals;
-      if (ud.useGroundNormals)
-        ud.useGroundNormals.value = !isTexturized && nextUseGroundNormals;
-      ud.prev.useGroundNormals = nextUseGroundNormals;
+    if (prev.useGroundNormals !== material.useGroundNormals) {
+      const next = !!material.useGroundNormals;
+      this.material.userData.useGroundNormals.value = !isTexturized && next;
+      prev.useGroundNormals = next;
     }
 
-    if (ud.prev.roughness !== material.roughness) {
-      const nextRoughness = material.roughness ?? 0;
-      if (ud.roughness) ud.roughness.value = nextRoughness;
-      ud.prev.roughness = nextRoughness;
+    if (prev.roughness !== material.roughness) {
+      const next = material.roughness ?? 0;
+      this.material.userData.roughness.value = next;
+      prev.roughness = next;
     }
 
-    if (
-      ud.uClampToGround &&
-      ud.uClampToGround.value !== !!material.clampToGround
-    ) {
-      ud.uClampToGround.value = !!material.clampToGround;
+    const nextClampToGround = !!material.clampToGround;
+    if (this.material.userData.uClampToGround.value !== nextClampToGround) {
+      this.material.userData.uClampToGround.value = nextClampToGround;
 
       this._recalculateBoundingSphere();
     }
     this.userData.draped = material.clampToGround;
 
-    if (ud.prev.water !== material.water) {
-      const nextWater = !!material.water;
-      this.water = nextWater;
-      ud.prev.water = nextWater;
+    if (prev.water !== material.water) {
+      const next = !!material.water;
+      this.water = next;
+      prev.water = next;
       this.enableWater();
     }
 
-    if (ud.prev.waterScaleNormal !== material.waterScaleNormal) {
-      const nextWaterScaleNormal = material.waterScaleNormal ?? 0;
-      if (ud.waterScaleNormal) ud.waterScaleNormal.value = nextWaterScaleNormal;
-      ud.prev.waterScaleNormal = nextWaterScaleNormal;
+    if (prev.waterScaleNormal !== material.waterScaleNormal) {
+      const next = material.waterScaleNormal ?? 0;
+      this.material.userData.waterScaleNormal.value = next;
+      prev.waterScaleNormal = next;
     }
 
-    if (ud.prev.waterSpeed !== material.waterSpeed) {
-      const nextWaterSpeed = material.waterSpeed ?? 0;
-      if (ud.waterSpeed) ud.waterSpeed.value = nextWaterSpeed;
-      ud.prev.waterSpeed = nextWaterSpeed;
+    if (prev.waterSpeed !== material.waterSpeed) {
+      const next = material.waterSpeed ?? 0;
+      this.material.userData.waterSpeed.value = next;
+      prev.waterSpeed = next;
     }
 
-    if (ud.prev.shininess !== material.shininess) {
-      const nextShininess = material.shininess ?? 0;
-      if (ud.shininess) ud.shininess.value = nextShininess;
-      ud.prev.shininess = nextShininess;
+    if (prev.shininess !== material.shininess) {
+      const next = material.shininess ?? 0;
+      this.material.userData.shininess.value = next;
+      prev.shininess = next;
     }
 
-    if (ud.prev.specularStrength !== material.specularStrength) {
-      const nextSpecularStrength = material.specularStrength ?? 0;
-      if (ud.specularStrength) ud.specularStrength.value = nextSpecularStrength;
-      ud.prev.specularStrength = nextSpecularStrength;
+    if (prev.specularStrength !== material.specularStrength) {
+      const next = material.specularStrength ?? 0;
+      this.material.userData.specularStrength.value = next;
+      prev.specularStrength = next;
     }
 
-    if (ud.prev.applyWaterNormal !== material.applyWaterNormal) {
-      const nextApplyWaterNormal =
+    if (prev.applyWaterNormal !== material.applyWaterNormal) {
+      const next =
         typeof material.applyWaterNormal === "number"
           ? material.applyWaterNormal
           : material.applyWaterNormal
             ? 1
             : 0;
-      if (ud.applyWaterNormal) ud.applyWaterNormal.value = nextApplyWaterNormal;
-      ud.prev.applyWaterNormal = material.applyWaterNormal;
+      this.material.userData.applyWaterNormal.value = next;
+      prev.applyWaterNormal = material.applyWaterNormal;
     }
 
-    if (ud.prev.specular !== material.specular) {
-      const nextSpecular = material.specular ?? false;
-      if (ud.specular) ud.specular.value = nextSpecular;
-      ud.prev.specular = nextSpecular;
+    if (prev.specular !== material.specular) {
+      const next = material.specular ?? false;
+      this.material.userData.specular.value = next;
+      prev.specular = next;
     }
 
-    if (ud.prev.ior !== material.ior) {
-      const nextIor = material.ior ?? 1.33333;
-      if (ud.ior) ud.ior.value = nextIor;
-      ud.prev.ior = nextIor;
+    if (prev.ior !== material.ior) {
+      const next = material.ior ?? 1.33333;
+      this.material.userData.ior.value = next;
+      prev.ior = next;
     }
 
     // SelectiveEffect: effectIds handling
-    if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
+    if (!arraysEqual(prev.effectIds, material.effectIds)) {
       this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        ud.prev.effectIds ?? [],
+        prev.effectIds ?? [],
         this._layerId,
       );
-      ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
 
     // SelectiveEffect: emissiveColor handling
-    if (ud.prev.emissiveColor !== material.emissiveColor) {
+    if (prev.emissiveColor !== material.emissiveColor) {
       this.material.emissive.set(material.emissiveColor ?? 0);
-      ud.prev.emissiveColor = material.emissiveColor;
+      prev.emissiveColor = material.emissiveColor;
     }
 
     // SelectiveEffect: emissiveIntensity handling
-    if (ud.prev.emissiveIntensity !== material.emissiveIntensity) {
+    if (prev.emissiveIntensity !== material.emissiveIntensity) {
       this.material.emissiveIntensity = material.emissiveIntensity ?? 0;
-      ud.prev.emissiveIntensity = material.emissiveIntensity;
+      prev.emissiveIntensity = material.emissiveIntensity;
     }
   }
 

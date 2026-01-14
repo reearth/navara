@@ -74,60 +74,6 @@ import {
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
 
-/** Prev cache for ModelMesh (diff detection) */
-type ModelPrev = {
-  visible?: boolean;
-  effectIds?: string[];
-};
-
-/** UserData type for ModelMesh */
-type ModelUserData = {
-  prev: ModelPrev;
-  batchIds?: Uint32Array;
-  dataSize?: number;
-};
-
-/** Prev cache for ModelMesh material (diff detection) */
-type ModelMaterialPrev = {
-  color?: number;
-  pointSize?: number;
-  uAddHeight?: number;
-  metalness?: number;
-  roughness?: number;
-  water?: boolean;
-  reflectivity?: number;
-  waterScaleNormal?: number;
-  waterSpeed?: number;
-  shininess?: number;
-  specularStrength?: number;
-  applyWaterNormal?: boolean | number;
-  specular?: boolean;
-  emissiveColor?: number;
-  emissiveIntensity?: number;
-};
-
-/** UserData type for ModelMesh material */
-type ModelMaterialUserData = {
-  prev?: ModelMaterialPrev;
-  color?: number;
-  uPickable?: { value: number };
-  uAddHeight?: { value: number };
-  uBloomMaskPass?: { value: number };
-  uOutlineMaskPass?: { value: number };
-  uSelectiveEffectOcclusion?: { value: number };
-  reflectivity?: { value: number };
-  waterNormalMap?: { value: Texture | null };
-  waterScaleNormal?: { value: number };
-  waterSpeed?: { value: number };
-  shininess?: { value: number };
-  specularStrength?: { value: number };
-  applyWaterNormal?: { value: number };
-  specular?: { value: boolean };
-  ior?: { value: number };
-  batchDataTexture?: { value: unknown };
-  defines?: Record<string, unknown>;
-};
-
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
 export type ModelBatchedAttributeName = "color" | "show" | "height";
@@ -230,10 +176,9 @@ export class ModelMesh
       this.overridePntsMaterial(meshMaterial);
     }
 
-    const ud = this.userData as ModelUserData;
-    ud.prev = {};
+    this.userData.prev = {};
     this.visible = meshMaterial.show ?? true;
-    ud.prev.visible = this.visible;
+    this.userData.prev.visible = this.visible;
 
     // Initialize minimal animation features if GLTF animations exist on the scene
     const gltfAnimations: AnimationClip[] | undefined = (
@@ -815,11 +760,10 @@ export class ModelMesh
   }
 
   _update(material: NavaraModelMaterial, active: boolean) {
-    const ud = this.userData as ModelUserData;
     const next = (material.show ?? true) && active;
-    if (ud.prev.visible !== next) {
+    if (this.userData.prev.visible !== next) {
       this.visible = next;
-      ud.prev.visible = next;
+      this.userData.prev.visible = next;
     }
 
     if (!material.__internal__?.pointCloud) {
@@ -859,14 +803,16 @@ export class ModelMesh
     }
 
     // SelectiveEffect: effectIds handling at ModelMesh level
-    if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
+    if (!arraysEqual(this.userData.prev.effectIds, material.effectIds)) {
       this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        ud.prev.effectIds ?? [],
+        this.userData.prev.effectIds ?? [],
         this._layerId,
       );
-      ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+      this.userData.prev.effectIds = material.effectIds
+        ? [...material.effectIds]
+        : [];
     }
   }
 
@@ -882,22 +828,24 @@ export class ModelMesh
       this.setupWaterMaterial(dist, src);
     }
 
-    const ud = distMaterial.userData as ModelMaterialUserData;
-    ud.prev ??= {};
-    if (ud.prev.color !== src.color) {
+    if (!distMaterial.userData.prev) {
+      distMaterial.userData.prev = {};
+    }
+    if (distMaterial.userData.prev.color !== src.color) {
       const next = src.color ?? 0;
       distMaterial.color.set(next);
-      ud.prev.color = next;
+      distMaterial.userData.prev.color = next;
     }
     if (distMaterial instanceof PointsMaterial) {
-      if (ud.prev.pointSize !== src.pointSize) {
+      if (distMaterial.userData.prev.pointSize !== src.pointSize) {
         const next = src.pointSize ?? 0;
-        ud.prev.pointSize = distMaterial.size;
+        distMaterial.userData.prev.pointSize = distMaterial.size;
         distMaterial.size = next;
       }
-      if (ud.prev.uAddHeight !== src.height) {
+      if (distMaterial.userData.prev.uAddHeight !== src.height) {
         const next = src.height ?? 0;
-        ud.prev.uAddHeight = distMaterial.userData.uAddHeight.value;
+        distMaterial.userData.prev.uAddHeight =
+          distMaterial.userData.uAddHeight.value;
         distMaterial.userData.uAddHeight.value = next;
       }
     }
@@ -905,85 +853,95 @@ export class ModelMesh
       distMaterial instanceof MeshStandardMaterial ||
       distMaterial instanceof MeshPhysicalMaterial
     ) {
-      if (ud.prev.metalness !== src.metalness) {
+      if (distMaterial.userData.prev.metalness !== src.metalness) {
         const next = src.metalness ?? 0;
         distMaterial.metalness = next;
-        ud.prev.metalness = next;
+        distMaterial.userData.prev.metalness = next;
       }
-      if (ud.prev.roughness !== src.roughness) {
+      if (distMaterial.userData.prev.roughness !== src.roughness) {
         const next = src.roughness ?? 0;
         distMaterial.roughness = next;
-        ud.prev.roughness = next;
+        distMaterial.userData.prev.roughness = next;
       }
-      if (ud.prev.water !== src.water) {
-        const next = !!src.water;
-        this.water = next;
-        ud.prev.water = next;
+      if (distMaterial.userData.prev.water !== src.water) {
+        const nextWater = !!src.water;
+        this.water = nextWater;
+        distMaterial.userData.prev.water = nextWater;
         // Update water define
         distMaterial.userData.defines = distMaterial.userData.defines || {};
-        if (next) {
+        if (nextWater) {
           distMaterial.userData.defines.WATER = 1;
 
           distMaterial.userData.waterNormalMap.value =
-            this.enableWaterNormalMap(next);
+            this.enableWaterNormalMap(nextWater);
         } else {
           delete distMaterial.userData.defines.WATER;
           distMaterial.userData.waterNormalMap.value = null;
         }
         distMaterial.needsUpdate = true;
       }
-      if (ud.prev.reflectivity !== src.reflectivity) {
+      if (distMaterial.userData.prev.reflectivity !== src.reflectivity) {
         const next = src.reflectivity ?? 0;
         distMaterial.userData.reflectivity.value = next;
-        ud.prev.reflectivity = next;
+        distMaterial.userData.prev.reflectivity = next;
       }
-      if (ud.prev.waterScaleNormal !== src.waterScaleNormal) {
+      if (
+        distMaterial.userData.prev.waterScaleNormal !== src.waterScaleNormal
+      ) {
         const next = src.waterScaleNormal ?? 0.01;
         distMaterial.userData.waterScaleNormal.value = next;
-        ud.prev.waterScaleNormal = next;
+        distMaterial.userData.prev.waterScaleNormal = next;
       }
-      if (ud.prev.waterSpeed !== src.waterSpeed) {
+      if (distMaterial.userData.prev.waterSpeed !== src.waterSpeed) {
         const next = src.waterSpeed ?? 0.0003;
         distMaterial.userData.waterSpeed.value = next;
-        ud.prev.waterSpeed = next;
+        distMaterial.userData.prev.waterSpeed = next;
       }
-      if (ud.prev.shininess !== src.shininess) {
+      if (distMaterial.userData.prev.shininess !== src.shininess) {
         const next = src.shininess ?? 0;
         distMaterial.userData.shininess.value = next;
-        ud.prev.shininess = next;
+        distMaterial.userData.prev.shininess = next;
       }
-      if (ud.prev.specularStrength !== src.specularStrength) {
+      if (
+        distMaterial.userData.prev.specularStrength !== src.specularStrength
+      ) {
         const next = src.specularStrength ?? 0;
         distMaterial.userData.specularStrength.value = next;
-        ud.prev.specularStrength = next;
+        distMaterial.userData.prev.specularStrength = next;
       }
-      if (ud.prev.applyWaterNormal !== src.applyWaterNormal) {
+      if (
+        distMaterial.userData.prev.applyWaterNormal !== src.applyWaterNormal
+      ) {
         const next = src.applyWaterNormal ?? 0;
         distMaterial.userData.applyWaterNormal.value = next;
-        ud.prev.applyWaterNormal = next;
+        distMaterial.userData.prev.applyWaterNormal = next;
       }
-      if (ud.prev.specular !== src.specular) {
+      if (distMaterial.userData.prev.specular !== src.specular) {
         const next = src.specular ?? false;
         distMaterial.userData.specular.value = next;
-        ud.prev.specular = next;
+        distMaterial.userData.prev.specular = next;
       }
-      if (dist.castShadow !== src.castShadow) {
-        dist.castShadow = !!src.castShadow;
+      const nextCastShadow = !!src.castShadow;
+      if (dist.castShadow !== nextCastShadow) {
+        dist.castShadow = nextCastShadow;
       }
-      if (dist.receiveShadow !== src.receiveShadow) {
-        dist.receiveShadow = !!src.receiveShadow;
+      const nextReceiveShadow = !!src.receiveShadow;
+      if (dist.receiveShadow !== nextReceiveShadow) {
+        dist.receiveShadow = nextReceiveShadow;
       }
 
       // SelectiveEffect: emissiveColor handling
-      if (ud.prev.emissiveColor !== src.emissiveColor) {
+      if (distMaterial.userData.prev.emissiveColor !== src.emissiveColor) {
         distMaterial.emissive.set(src.emissiveColor ?? 0);
-        ud.prev.emissiveColor = src.emissiveColor;
+        distMaterial.userData.prev.emissiveColor = src.emissiveColor;
       }
 
       // SelectiveEffect: emissiveIntensity handling
-      if (ud.prev.emissiveIntensity !== src.emissiveIntensity) {
+      if (
+        distMaterial.userData.prev.emissiveIntensity !== src.emissiveIntensity
+      ) {
         distMaterial.emissiveIntensity = src.emissiveIntensity ?? 0;
-        ud.prev.emissiveIntensity = src.emissiveIntensity;
+        distMaterial.userData.prev.emissiveIntensity = src.emissiveIntensity;
       }
     }
   }
