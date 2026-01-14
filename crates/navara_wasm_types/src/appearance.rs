@@ -101,6 +101,13 @@ impl PointMaterial {
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
             transparent: self.transparent.unwrap_or(other.transparent),
+            effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
+            selective_effect_occlusion: self
+                .selective_effect_occlusion
+                .clone()
+                .or_else(|| other.selective_effect_occlusion.clone()),
+            emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
+            emissive_color: self.emissive_color.or(other.emissive_color),
         }
     }
 }
@@ -224,6 +231,13 @@ impl BillboardMaterial {
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
             transparent: self.transparent.unwrap_or(other.transparent),
             alpha_test: self.alpha_test.unwrap_or(other.alpha_test),
+            effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
+            selective_effect_occlusion: self
+                .selective_effect_occlusion
+                .clone()
+                .or_else(|| other.selective_effect_occlusion.clone()),
+            emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
+            emissive_color: self.emissive_color.or(other.emissive_color),
         }
     }
 }
@@ -470,6 +484,13 @@ impl PolylineMaterial {
                 .as_ref()
                 .map(|v| v.to_owned().into())
                 .or_else(|| other.internal.clone()),
+            effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
+            selective_effect_occlusion: self
+                .selective_effect_occlusion
+                .clone()
+                .or_else(|| other.selective_effect_occlusion.clone()),
+            emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
+            emissive_color: self.emissive_color.or(other.emissive_color),
         }
     }
 }
@@ -759,6 +780,13 @@ impl PolygonMaterial {
             apply_water_normal: self.apply_water_normal.unwrap_or(other.apply_water_normal),
             specular: self.specular.unwrap_or(other.specular),
             ior: self.ior.unwrap_or(other.ior),
+            effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
+            selective_effect_occlusion: self
+                .selective_effect_occlusion
+                .clone()
+                .or_else(|| other.selective_effect_occlusion.clone()),
+            emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
+            emissive_color: self.emissive_color.or(other.emissive_color),
         }
     }
 }
@@ -1116,6 +1144,13 @@ impl ModelMaterial {
             point_size: self.point_size.unwrap_or(other.point_size),
             show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
             internal: other.internal.clone(),
+            effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
+            selective_effect_occlusion: self
+            .selective_effect_occlusion
+            .clone()
+            .or_else(|| other.selective_effect_occlusion.clone()),
+            emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
+            emissive_color: self.emissive_color.or(other.emissive_color),
         }
     }
 }
