@@ -339,7 +339,7 @@ export class TileMesh
     );
 
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
+      this.dispose(viewEvents, tileMapByHandle);
     });
   }
 
@@ -1363,7 +1363,10 @@ if (uPickable > 0.) {
     }
   }
 
-  dispose(viewEvents: EventHandler<ViewEvents>) {
+  dispose(
+    viewEvents: EventHandler<ViewEvents>,
+    tileMapByHandle?: TileMapByHandle,
+  ) {
     viewEvents.emit("_csmUnmounted", this.material);
 
     // Dispose shadow mesh geometry (it's separate from main geometry)
@@ -1372,5 +1375,39 @@ if (uPickable > 0.) {
       this.remove(this.shadowMesh);
       this.shadowMesh = undefined;
     }
+
+    // Detach any observers we attached on texturized scenes
+    if (this.texturizedScenes?.userData?.childrenObserver) {
+      this.texturizedScenes.removeEventListener(
+        "childadded",
+        this.texturizedScenes.userData.childrenObserver,
+      );
+      this.texturizedScenes.removeEventListener(
+        "childremoved",
+        this.texturizedScenes.userData.childrenObserver,
+      );
+      this.texturizedScenes.userData.childrenObserver = undefined;
+    }
+    for (const s of this.texturizedScenes?.children ?? []) {
+      if (s.userData?.childrenObserver) {
+        s.removeEventListener("childadded", s.userData.childrenObserver);
+        s.removeEventListener("childremoved", s.userData.childrenObserver);
+        s.userData.childrenObserver = undefined;
+      }
+    }
+
+    // Dispose WebGLRenderTargets to free GPU memory
+    for (const renderTarget of this.texturizedSceneRenderTargets) {
+      renderTarget.dispose();
+    }
+    this.texturizedSceneRenderTargets.length = 0;
+
+    // Clean up from tileMapByHandle
+    if (tileMapByHandle) {
+      tileMapByHandle.delete(this.handle);
+    }
+
+    // Clean up from texturizedSceneByTileCoordinates
+    this.texturizedSceneByTileCoordinates.delete(this.handle);
   }
 }
