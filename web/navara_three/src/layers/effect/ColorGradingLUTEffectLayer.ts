@@ -44,6 +44,9 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
       enabled: this.config.visible ?? true,
     });
 
+    // Listen for internal updates from the effect and propagate them
+    pass.on("_needsUpdate", () => this.emit("_needsUpdate"));
+
     return pass;
   }
 

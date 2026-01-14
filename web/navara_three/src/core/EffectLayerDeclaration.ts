@@ -100,11 +100,6 @@ export abstract class EffectLayerDeclaration<
       this._instance.visible = this.visible;
     }
 
-    const raw = this.raw;
-    if (raw instanceof Pass) {
-      raw.on("_needsUpdate", () => this.emit("_needsUpdate"));
-    }
-
     // Insert the pass with proper ordering
     if (this.raw) {
       this.insertPass();
