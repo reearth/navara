@@ -21,5 +21,5 @@ if (rootEl) {
 
 console.log("Navara React integration test loaded successfully!");
 console.log(
-  "If you can see the 3D globe with buildings, the React library is working correctly."
+  "If you can see the 3D globe with buildings, the React library is working correctly.",
 );

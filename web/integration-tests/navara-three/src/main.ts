@@ -75,7 +75,7 @@ async function main() {
   // Log success message
   console.log("Navara integration test loaded successfully!");
   console.log(
-    "If you can see the 3D globe with a rotating sphere, the library is working correctly."
+    "If you can see the 3D globe with a rotating sphere, the library is working correctly.",
   );
 }
 
@@ -133,7 +133,7 @@ function addRotatingSphere(view: ThreeView) {
 
     // Convert geodetic coordinates to 3D position
     const position = geodeticToVector3(
-      new LLE(degreeToRadian(lat), degreeToRadian(lng), altitude)
+      new LLE(degreeToRadian(lat), degreeToRadian(lng), altitude),
     );
 
     // Update sphere position

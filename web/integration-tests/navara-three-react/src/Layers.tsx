@@ -22,7 +22,7 @@ export const Layers: FC = () => {
       },
       rasterTile: { minZoom: 2, maxZoom: 18 },
     }),
-    []
+    [],
   );
 
   const terrain = useMemo<LayerDescription>(
@@ -39,7 +39,7 @@ export const Layers: FC = () => {
         receiveShadow: true,
       },
     }),
-    []
+    [],
   );
 
   const chiyoda3d = useMemo<LayerDescription>(
@@ -58,7 +58,7 @@ export const Layers: FC = () => {
         height: -50,
       },
     }),
-    []
+    [],
   );
 
   const chuo3d = useMemo<LayerDescription>(
@@ -77,7 +77,7 @@ export const Layers: FC = () => {
         height: -50,
       },
     }),
-    []
+    [],
   );
 
   const cloudsEffect = useMemo<LayerDescription>(
@@ -85,7 +85,7 @@ export const Layers: FC = () => {
       type: "effect",
       clouds: {},
     }),
-    []
+    [],
   );
 
   return (
