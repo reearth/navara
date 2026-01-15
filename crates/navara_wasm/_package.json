@@ -1,5 +1,5 @@
 {
-  "name": "navara_wasm",
+  "name": "@navara/engine",
   "type": "module",
   "version": "0.1.0",
   "license": "MIT/Apache-2.0",
