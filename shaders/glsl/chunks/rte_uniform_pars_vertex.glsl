@@ -1,12 +1,12 @@
 // RTE (Relative-To-Eye) Parameter Declarations for Uniforms
 //
 // This chunk declares uniforms needed for GPU RTE rendering when position
-// is passed as uniforms rather than attributes (e.g., for Sprites or single-point geometries).
+// is passed as uniforms rather than attributes (e.g., for Sprites, single-point geometries, or GLTF models).
 // It should be included in the vertex shader before the main() function.
 //
 // Difference from rte_pars_vertex.glsl:
 // - Uses uniforms (rtePosHigh/rtePosLow) instead of attributes (position_3d_high/position_3d_low)
-// - Suitable for Sprite and single-vertex geometries
+// - Suitable for Sprite, single-vertex geometries, and GLTF models
 
 // Camera position encoded as high/low components
 uniform vec3 u_cameraPositionHigh;

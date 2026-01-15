@@ -1,7 +1,7 @@
 import { encodePosition } from "@navara/engine-api";
 import { calcModelMatrixRTE } from "@navara/three_api";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
-import RteModelParsVertex from "@shaders/glsl/chunks/rte_model_pars_vertex.glsl";
+import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import {
   Group,
   Mesh,
@@ -346,11 +346,9 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
           material.userData.u_cameraPositionHigh;
         shader.uniforms.u_cameraPositionLow =
           material.userData.u_cameraPositionLow;
-        shader.uniforms.u_modelPositionHigh =
-          material.userData.u_modelPositionHigh;
-        shader.uniforms.u_modelPositionLow =
-          material.userData.u_modelPositionLow;
-        shader.uniforms.viewMatrixRTE = material.userData.viewMatrixRTE;
+        shader.uniforms.rtePosHigh = material.userData.u_modelPositionHigh;
+        shader.uniforms.rtePosLow = material.userData.u_modelPositionLow;
+        shader.uniforms.modelViewMatrixRTE = material.userData.viewMatrixRTE;
 
         // Modify vertex shader with RTE chunks
         let vertexShader = shader.vertexShader;
@@ -360,7 +358,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
             "#include <common>",
             `
             #include <common>
-            ${RteModelParsVertex}
+            ${RteUniformParsVertex}
             `,
           )
           .replace("#include <project_vertex>", ProjectVertexRteModel).source;

@@ -222,10 +222,7 @@ pub fn transfer_mesh(
                         should_recalculate_height: material.clamp_to_ground,
                     },
                     geometry: TransferablePointGeometry::with_buf_rte(
-                        &mut buf,
-                        vec![position.x, position.y, position.z],
-                        vec![0],
-                        vec![batch_id.0],
+                        &mut buf, position, 0, batch_id.0,
                     ),
                     active: lod_marker.is_none(),
                     feature_batch_id: batch_id.0 as u32,

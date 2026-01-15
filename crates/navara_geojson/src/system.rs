@@ -575,6 +575,31 @@ mod test {
         (a.x - b.x).abs() < epsilon && (a.y - b.y).abs() < epsilon && (a.z - b.z).abs() < epsilon
     }
 
+    /// Helper function to extract position from RTE geometry
+    /// Returns the decoded position by adding high and low components
+    fn get_rte_position(
+        buf: &BufferStore,
+        geometry: &navara_feature_component::render::TransferablePointGeometry,
+    ) -> Option<Vec3> {
+        if let (Some(high_attr), Some(low_attr)) =
+            (&geometry.position_3d_high, &geometry.position_3d_low)
+        {
+            if let (Some(high), Some(low)) =
+                (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+            {
+                Some(Vec3::new(
+                    (high[0] + low[0]) as f64,
+                    (high[1] + low[1]) as f64,
+                    (high[2] + low[2]) as f64,
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     fn initialize_app() -> App {
         let mut app = App::new();
 
@@ -681,25 +706,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -719,25 +726,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -826,25 +815,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -864,25 +835,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -976,25 +929,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -1014,25 +949,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -1121,25 +1038,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(
@@ -1159,25 +1058,7 @@ mod test {
                 render_info: _,
                 geometry,
                 ..
-            } => {
-                if let (Some(high_attr), Some(low_attr)) =
-                    (&geometry.position_3d_high, &geometry.position_3d_low)
-                {
-                    if let (Some(high), Some(low)) =
-                        (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-                    {
-                        Some(Vec3::new(
-                            (high[0] + low[0]) as f64,
-                            (high[1] + low[1]) as f64,
-                            (high[2] + low[2]) as f64,
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
+            } => get_rte_position(buf, geometry),
             _ => None,
         };
         assert!(

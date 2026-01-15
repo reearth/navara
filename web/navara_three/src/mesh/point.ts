@@ -3,12 +3,16 @@ import { PointMaterial as NavaraPointMaterial } from "@navara/engine";
 import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
-import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
+import HorizonCullingParsVertex from "@shaders/glsl/chunks/horizon_culling_pars_vertex.glsl";
+import HorizonCullingVertex from "@shaders/glsl/chunks/horizon_culling_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ProjectUniformVertexRte from "@shaders/glsl/chunks/project_uniform_vertex_rte.glsl";
 import PointFragShader from "@shaders/glsl/point.frag.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import RteUniformVertex from "@shaders/glsl/chunks/rte_uniform_vertex.glsl";
+import SpriteHeightParsVertex from "@shaders/glsl/chunks/sprite_height_pars_vertex.glsl";
+import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
+import RtcSpriteVertex from "@shaders/glsl/chunks/rtc_sprite_vertex.glsl";
 import {
   Camera,
   Color,
@@ -141,71 +145,31 @@ export class PointMesh extends Sprite implements FeatureMesh {
           uniform bool useRTE;
           ${RteUniformParsVertex}
           out vec2 sprite_uv;
-          flat out int vHorizonCulled;
-          ${HorizonCulling}
+          ${HorizonCullingParsVertex}
+          ${SpriteHeightParsVertex}
+          ${BillboardMatrix}
           `,
         )
         .replace(
           "vec4 mvPosition = modelViewMatrix[ 3 ];",
           `
           mat4 modelViewMatrixNoScale;
-          vec3 finalPos;
           vec4 mvPosition;
 
           if (useRTE) {
-            // RTE mode: decode absolute world position and camera-relative position
             ${RteUniformVertex}
-
-            // Use RTE model-view matrix for projection
             ${ProjectUniformVertexRte}
 
-            // Use absolute world position for horizon culling
-            bool horizonCulled = nvr_horizon_culled(absTransformed, cameraPosition);
-            if (horizonCulled) {
-              vHorizonCulled = 1;
-              gl_Position = vec4(0.0);
-              return;
-            }
-            vHorizonCulled = 0;
+            ${HorizonCullingVertex}
 
             // Apply height offset
-            if (uAddHeight != 0.0) {
-              vec3 globeNormal = normalize(absTransformed);
-              vec3 heightOffset = globeNormal * uAddHeight;
-              vec4 mvHeightOffset = viewMatrix * vec4(heightOffset, 0.0);
-              mvPosition += mvHeightOffset;
-            }
+            mvPosition += mvr_getMvHeightOffset(absTransformed, uAddHeight);
           } else {
-            // RTC mode: use relative position
-            modelViewMatrixNoScale = mat4(
-              normalize(modelViewMatrix[0]),
-              normalize(modelViewMatrix[1]),
-              normalize(modelViewMatrix[2]),
-              modelViewMatrix[3]
-            );
-
-            finalPos = rtcPos;
-            mvPosition = modelViewMatrixNoScale * vec4(finalPos, 1.0);
-
-            // Reconstruct world position for horizon culling
-            mat3 viewRotation = mat3(viewMatrix);
-            vec3 worldPosition3 = transpose(viewRotation) * mvPosition.xyz + cameraPosition;
-
-            bool horizonCulled = nvr_horizon_culled(worldPosition3, cameraPosition);
-            if (horizonCulled) {
-              vHorizonCulled = 1;
-              gl_Position = vec4(0.0);
-              return;
-            }
-            vHorizonCulled = 0;
+            ${RtcSpriteVertex}
+            ${HorizonCullingVertex}
 
             // Apply height offset
-            if (uAddHeight != 0.0) {
-              vec3 globeNormal = normalize(worldPosition3);
-              vec3 heightOffset = globeNormal * uAddHeight;
-              vec4 mvHeightOffset = viewMatrix * vec4(heightOffset, 0.0);
-              mvPosition += mvHeightOffset;
-            }
+            mvPosition = posMv + mvr_getMvHeightOffset(absTransformed, uAddHeight);
           }
           `,
         )

@@ -4,11 +4,15 @@ import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
-import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
+import HorizonCullingParsVertex from "@shaders/glsl/chunks/horizon_culling_pars_vertex.glsl";
+import HorizonCullingVertex from "@shaders/glsl/chunks/horizon_culling_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import SdRoundedBox from "@shaders/glsl/chunks/sdRoundedBox.glsl";
+import SpriteHeightParsVertex from "@shaders/glsl/chunks/sprite_height_pars_vertex.glsl";
+import CalcLogDepthParsVertex from "@shaders/glsl/chunks/calc_log_depth_pars_vertex.glsl";
+import RtcSpriteVertex from "@shaders/glsl/chunks/rtc_sprite_vertex.glsl";
 import {
   Color,
   Group,
@@ -192,9 +196,9 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             ${HeightParsVertex}
             ${BillboardMatrix}
             ${PixelToWorld}
-            flat out int vHorizonCulled;
-            out float vFragDepthManual;
-            ${HorizonCulling}
+            ${HorizonCullingParsVertex}
+            ${SpriteHeightParsVertex}
+            ${CalcLogDepthParsVertex}
             `,
         )
         .replace(
@@ -207,9 +211,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               // RTE mode: Decode anchor position without overwriting 'transformed'
               // Keep original 'transformed' for text vertices
               vec3 absTransformed = rtePosHigh + rtePosLow;
-              vec3 highDiff = rtePosHigh - u_cameraPositionHigh;
-              vec3 lowDiff = rtePosLow - u_cameraPositionLow;
-              vec3 anchorCameraRelative = highDiff + lowDiff;
+              vec3 anchorCameraRelative = (rtePosHigh - u_cameraPositionHigh) + (rtePosLow - u_cameraPositionLow);
 
               // Calculate scale using world position approximation
               if (nvr_uScaleByDistance > 0.0) {
@@ -217,26 +219,13 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
                 scaleFactor = worldSize / nvr_uFontSizeWorld;
               }
 
-              // Horizon culling
-              bool horizonCulled = nvr_horizon_culled(absTransformed, cameraPosition);
-              if (horizonCulled) {
-                vHorizonCulled = 1;
-                gl_Position = vec4(0.0);
-                return;
-              }
-              vHorizonCulled = 0;
+              ${HorizonCullingVertex}
 
               // Convert high-precision camera-relative anchor position to view space
               anchorMv = modelViewMatrixRTE * vec4(anchorCameraRelative, 1.0);
 
               // Apply height offset
-              if (uAddHeight != 0.0) {
-                vec3 globeNormal = normalize(absTransformed);
-                vec3 heightOffset = globeNormal * uAddHeight;
-                mat3 viewRotation = mat3(viewMatrix);
-                vec3 mvHeightOffset = viewRotation * heightOffset;
-                anchorMv.xyz += mvHeightOffset;
-              }
+              anchorMv.xyz += mvr_getMvHeightOffset(absTransformed, uAddHeight).xyz;
 
               // Create billboard matrix for screen-aligned rendering
               mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
@@ -247,47 +236,29 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               gl_Position = projectionMatrix * newMvPosition;
 
               // Calculate correct fragDepth for logarithmic depth buffer
-              // Based on real world position, not modified gl_Position
-              vec4 viewPosForDepth = viewMatrix * vec4(absTransformed, 1.0);
-              vec4 projPosForDepth = projectionMatrix * viewPosForDepth;
-              vFragDepthManual = 1.0 + projPosForDepth.w;
+              vFragDepthManual = nvr_calcLogDepth(vec4(absTransformed, 1.0));
             } else {
-              // RTC mode
-              mat4 modelMatrixNoScale = mat4(
-                normalize(modelMatrix[0]),
-                normalize(modelMatrix[1]),
-                normalize(modelMatrix[2]),
-                modelMatrix[3]
-              );
-              vec4 worldAnchor = modelMatrixNoScale * vec4(rtcPos, 1.0);
+              ${RtcSpriteVertex}
 
               if (nvr_uScaleByDistance > 0.0) {
-                float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldAnchor.xyz, cameraPosition);
+                float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, absTransformed, cameraPosition);
                 scaleFactor = worldSize / nvr_uFontSizeWorld;
               }
-
               mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
 
               // Horizon culling
-              bool horizonCulled = nvr_horizon_culled(worldAnchor.xyz, cameraPosition);
-              if (horizonCulled) {
-                vHorizonCulled = 1;
-                gl_Position = vec4(0.0);
-                return;
-              }
-              vHorizonCulled = 0;
+              ${HorizonCullingVertex}
 
-              vec3 globeNormal = normalize(worldAnchor.xyz);
-              worldAnchor.xyz += globeNormal * uAddHeight;
-              anchorMv = viewMatrix * worldAnchor;
+              // Apply height offset
+              anchorMv = posMv + mvr_getMvHeightOffset(absTransformed, uAddHeight);
+
+              // Apply billboard transform to text vertices
               vec4 delta = billboardMatrix * vec4(transformed, 0.0);
               vec4 newMvPosition = anchorMv + delta;
               gl_Position = projectionMatrix * newMvPosition;
 
               // Calculate correct fragDepth for logarithmic depth buffer
-              vec4 viewPosForDepth = viewMatrix * worldAnchor;
-              vec4 projPosForDepth = projectionMatrix * viewPosForDepth;
-              vFragDepthManual = 1.0 + projPosForDepth.w;
+              vFragDepthManual = nvr_calcLogDepth(vec4(absTransformed, 1.0));
             }
             `,
         ).source;
@@ -316,8 +287,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
             // Manual logarithmic depth calculation for RTE/RTC mode
             #if defined( USE_LOGDEPTHBUF )
-              // Apply relative offset in linear space before log, for consistent effect at all distances
-              float depthMultiplier = uOffsetDepth ? 0.8 : 1.0; // 0.01% closer when offsetDepth is true
+              float depthMultiplier = uOffsetDepth ? 0.8 : 1.0;
               gl_FragDepth = vIsPerspective == 0.0 ? gl_FragCoord.z : log2( vFragDepthManual * depthMultiplier ) * logDepthBufFC * 0.5;
             #endif
             `,
@@ -392,9 +362,9 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         ${HeightParsVertex}
         ${BillboardMatrix}
         ${PixelToWorld}
-        flat out int vHorizonCulled;
-        out float vFragDepthManual;
-        ${HorizonCulling}
+        ${HorizonCullingParsVertex}
+        ${SpriteHeightParsVertex}
+        ${CalcLogDepthParsVertex}
         void main() {
           vUv = uv;
         `,
@@ -420,26 +390,13 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             scaleFactor = worldSize / nvr_uFontSizeWorld;
           }
 
-          // Horizon culling
-          bool horizonCulled = nvr_horizon_culled(absTransformed, cameraPosition);
-          if (horizonCulled) {
-            vHorizonCulled = 1;
-            gl_Position = vec4(0.0);
-            return;
-          }
-          vHorizonCulled = 0;
+          ${HorizonCullingVertex}
 
           // Convert high-precision camera-relative anchor position to view space
           anchorMv = modelViewMatrixRTE * vec4(anchorCameraRelative, 1.0);
 
           // Apply height offset
-          if (uAddHeight != 0.0) {
-            vec3 globeNormal = normalize(absTransformed);
-            vec3 heightOffset = globeNormal * uAddHeight;
-            mat3 viewRotation = mat3(viewMatrix);
-            vec3 mvHeightOffset = viewRotation * heightOffset;
-            anchorMv.xyz += mvHeightOffset;
-          }
+          anchorMv.xyz += mvr_getMvHeightOffset(absTransformed, uAddHeight).xyz;
 
           // Create billboard matrix for screen-aligned rendering
           mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
@@ -450,49 +407,30 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           gl_Position = projectionMatrix * newMvPosition;
 
           // Calculate correct fragDepth for logarithmic depth buffer
-          // Based on real world position, not modified gl_Position
-          vec4 viewPosForDepth = viewMatrix * vec4(absTransformed, 1.0);
-          vec4 projPosForDepth = projectionMatrix * viewPosForDepth;
-          vFragDepthManual = 1.0 + projPosForDepth.w;
+          vFragDepthManual = nvr_calcLogDepth(vec4(absTransformed, 1.0));
         } else {
-          // RTC mode: start from the RTC center position
-          mat4 modelMatrixNoScale = mat4(
-            normalize(modelMatrix[0]),
-            normalize(modelMatrix[1]),
-            normalize(modelMatrix[2]),
-            modelMatrix[3]
-          );
-          vec4 worldPos = modelMatrixNoScale * vec4(rtcPos, 1.0);
+          ${RtcSpriteVertex}
 
           if (nvr_uScaleByDistance > 0.0) {
-            float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, worldPos.xyz, cameraPosition);
+            float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, absTransformed, cameraPosition);
             scaleFactor = worldSize / nvr_uFontSizeWorld;
           }
 
           mat4 billboardMatrix = nvr_getBillboardMat(scaleFactor);
 
           // Horizon culling
-          bool horizonCulled = nvr_horizon_culled(worldPos.xyz, cameraPosition);
-          if (horizonCulled) {
-            vHorizonCulled = 1;
-            gl_Position = vec4(0.0);
-            return;
-          }
-          vHorizonCulled = 0;
+          ${HorizonCullingVertex}
 
           // Apply height offset
-          vec3 globeNormal = normalize(worldPos.xyz);
-          worldPos.xyz += globeNormal * uAddHeight;
-          anchorMv = viewMatrix * worldPos;
+          anchorMv = posMv + mvr_getMvHeightOffset(absTransformed, uAddHeight);
+
           vec4 delta = billboardMatrix * vec4(transformed, 0.0);
           vec4 newMvPosition = anchorMv + delta;
 
           gl_Position = projectionMatrix * newMvPosition;
 
           // Calculate correct fragDepth for logarithmic depth buffer
-          vec4 viewPosForDepth = viewMatrix * worldPos;
-          vec4 projPosForDepth = projectionMatrix * viewPosForDepth;
-          vFragDepthManual = 1.0 + projPosForDepth.w;
+          vFragDepthManual = nvr_calcLogDepth(vec4(absTransformed, 1.0));
         }
         `,
         ).source;
@@ -556,9 +494,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           // Manual logarithmic depth calculation for RTE/RTC mode
           // Background should be behind text, use relative offset for consistent separation at all distances
           #if defined( USE_LOGDEPTHBUF )
-            // Combine two offsets: background is further (1.001x), and optionally closer when offsetDepth is true
             float backgroundOffset = 1.001; // 0.1% further than text
-            float depthMultiplier = uOffsetDepth ? (backgroundOffset * 0.8) : backgroundOffset; // Additional 0.01% closer when offsetDepth is true
+            float depthMultiplier = uOffsetDepth ? (backgroundOffset * 0.8) : backgroundOffset;
             gl_FragDepth = vIsPerspective == 0.0 ? gl_FragCoord.z : log2( vFragDepthManual * depthMultiplier ) * logDepthBufFC * 0.5;
           #endif
         `,
@@ -585,16 +522,6 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         const result = calcCameraPosition(camera.position, identityMatrix);
         this.userData.cameraPositionHigh.value = result.high;
         this.userData.cameraPositionLow.value = result.low;
-      } else {
-        // RTC mode: position background slightly behind text
-        if (background?.parent) {
-          const worldPosition = new Vector3();
-          background.parent.getWorldPosition(worldPosition);
-
-          const direction = new Vector3();
-          direction.subVectors(worldPosition, camera.position).normalize();
-          background.position.copy(direction.multiplyScalar(10));
-        }
       }
     };
 

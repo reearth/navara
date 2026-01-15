@@ -530,30 +530,30 @@ impl TransferablePointGeometry {
         }
     }
 
-    /// Create TransferablePointGeometry with RTE (Relative To Eye) positions
-    /// Used for GeoJSON points with absolute world coordinates
-    /// Positions are encoded into high/low components for GPU precision
+    /// Create TransferablePointGeometry with RTE (Relative To Eye) position
+    /// Used for GeoJSON single point with absolute world coordinates
+    /// Position is encoded into high/low components for GPU precision
     pub fn with_buf_rte(
         buf: &mut BufferStore,
-        positions: Vec<f64>,
-        batch_indices: Vec<u32>,
-        batch_ids: Vec<f32>,
+        position: Vec3,
+        batch_index: u32,
+        batch_id: f32,
     ) -> Self {
         use navara_core::EncodedVec3;
 
-        let mut positions_high = Vec::with_capacity(positions.len());
-        let mut positions_low = Vec::with_capacity(positions.len());
+        // Encode the Vec3 position into high/low components
+        let encoded = EncodedVec3::encode_xyz(position.x, position.y, position.z);
 
-        // Encode each Vec3 position into high/low components
-        for chunk in positions.chunks_exact(3) {
-            let encoded = EncodedVec3::encode_xyz(chunk[0], chunk[1], chunk[2]);
-            positions_high.push(encoded.high.x as f32);
-            positions_high.push(encoded.high.y as f32);
-            positions_high.push(encoded.high.z as f32);
-            positions_low.push(encoded.low.x as f32);
-            positions_low.push(encoded.low.y as f32);
-            positions_low.push(encoded.low.z as f32);
-        }
+        let positions_high = vec![
+            encoded.high.x as f32,
+            encoded.high.y as f32,
+            encoded.high.z as f32,
+        ];
+        let positions_low = vec![
+            encoded.low.x as f32,
+            encoded.low.y as f32,
+            encoded.low.z as f32,
+        ];
 
         Self {
             position: None,
@@ -566,11 +566,11 @@ impl TransferablePointGeometry {
                 size: 3,
             }),
             batch_ids: TransferableFloatAttribute {
-                data: buf.new_f32(batch_ids),
+                data: buf.new_f32(vec![batch_id]),
                 size: 1,
             },
             batch_index: TransferableUintAttribute {
-                data: buf.new_u32(batch_indices),
+                data: buf.new_u32(vec![batch_index]),
                 size: 1,
             },
         }

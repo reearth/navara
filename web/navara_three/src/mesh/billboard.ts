@@ -3,10 +3,14 @@ import { BillboardMaterial as NavaraBillboardMaterial } from "@navara/engine";
 import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
-import HorizonCulling from "@shaders/glsl/chunks/horizon_culling.glsl";
+import HorizonCullingParsVertex from "@shaders/glsl/chunks/horizon_culling_pars_vertex.glsl";
+import HorizonCullingVertex from "@shaders/glsl/chunks/horizon_culling_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import RteUniformVertex from "@shaders/glsl/chunks/rte_uniform_vertex.glsl";
+import SpriteHeightParsVertex from "@shaders/glsl/chunks/sprite_height_pars_vertex.glsl";
+import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
+import RtcSpriteVertex from "@shaders/glsl/chunks/rtc_sprite_vertex.glsl";
 import {
   Camera,
   Color,
@@ -141,8 +145,9 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
         uniform vec3 rtcPos;
         uniform bool useRTE;
         ${RteUniformParsVertex}
-        flat out int vHorizonCulled;
-        ${HorizonCulling}
+        ${HorizonCullingParsVertex}
+        ${SpriteHeightParsVertex}
+        ${BillboardMatrix}
         `,
         )
         .replace(
@@ -155,61 +160,19 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
             ${RteUniformVertex}
 
             // Remove scale from modelViewMatrixRTE to avoid scaling the anchor position
-            // The sprite quad will still be scaled by Three.js (extracts scale from modelMatrix)
-            mat4 modelViewMatrixRTENoScale = mat4(
-              normalize(modelViewMatrixRTE[0]),
-              normalize(modelViewMatrixRTE[1]),
-              normalize(modelViewMatrixRTE[2]),
-              modelViewMatrixRTE[3]
-            );
+            mat4 modelViewMatrixRTENoScale = nvr_removeScaleFromMat4(modelViewMatrixRTE);
             mvPosition = modelViewMatrixRTENoScale * vec4(transformed, 1.0);
 
-            // Use absolute world position for horizon culling
-            bool horizonCulled = nvr_horizon_culled(absTransformed, cameraPosition);
-            if (horizonCulled) {
-              vHorizonCulled = 1;
-              gl_Position = vec4(0.0);
-              return;
-            }
-            vHorizonCulled = 0;
+            ${HorizonCullingVertex}
 
             // Apply height offset
-            if (uAddHeight != 0.0) {
-              vec3 globeNormal = normalize(absTransformed);
-              vec3 heightOffset = globeNormal * uAddHeight;
-              vec4 mvHeightOffset = viewMatrix * vec4(heightOffset, 0.0);
-              mvPosition += mvHeightOffset;
-            }
+            mvPosition += mvr_getMvHeightOffset(absTransformed, uAddHeight);
           } else {
-            // RTC mode: use relative position
-            mat4 modelViewMatrixNoScale = mat4(
-              normalize(modelViewMatrix[0]),
-              normalize(modelViewMatrix[1]),
-              normalize(modelViewMatrix[2]),
-              modelViewMatrix[3]
-            );
-
-            mvPosition = modelViewMatrixNoScale * vec4(rtcPos, 1.0);
-
-            // Reconstruct world position for horizon culling
-            mat3 viewRotation = mat3(viewMatrix);
-            vec3 worldPosition3 = transpose(viewRotation) * mvPosition.xyz + cameraPosition;
-
-            bool horizonCulled = nvr_horizon_culled(worldPosition3, cameraPosition);
-            if (horizonCulled) {
-              vHorizonCulled = 1;
-              gl_Position = vec4(0.0);
-              return;
-            }
-            vHorizonCulled = 0;
+            ${RtcSpriteVertex}
+            ${HorizonCullingVertex}
 
             // Apply height offset
-            if (uAddHeight != 0.0) {
-              vec3 globeNormal = normalize(worldPosition3);
-              vec3 heightOffset = globeNormal * uAddHeight;
-              vec4 mvHeightOffset = viewMatrix * vec4(heightOffset, 0.0);
-              mvPosition += mvHeightOffset;
-            }
+            mvPosition = posMv + mvr_getMvHeightOffset(absTransformed, uAddHeight);
           }
           `,
         ).source;
