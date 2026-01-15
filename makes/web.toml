@@ -18,6 +18,20 @@ pnpm build:example
 ''']
 dependencies = ["install-deps-web"]
 
+[tasks.build-web-integration]
+description = "Build integration test examples (tests library from user perspective)"
+script = ['''
+pnpm build:integration
+''']
+dependencies = ["install-deps-web"]
+
+[tasks.dev-web-integration]
+description = "Run integration test examples in dev mode"
+script = ['''
+pnpm dev:integration
+''']
+dependencies = ["install-deps-web"]
+
 [tasks.build-web]
 script = ['''
 pnpm build

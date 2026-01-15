@@ -1,0 +1,28 @@
+{
+  "name": "@navara/integration-test-three",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Integration test for @navara/three - uses built library files",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write --ignore-path ../../../.gitignore .",
+    "format:check": "prettier --check --ignore-path ../../../.gitignore .",
+    "test": "echo 'No tests yet'"
+  },
+  "license": "MIT OR Apache-2.0",
+  "dependencies": {
+    "@navara/three": "workspace:*",
+    "@navara/engine": "workspace:*",
+    "@navara/engine-api": "workspace:*",
+    "@navara/engine-worker": "workspace:*",
+    "three": "^0.178.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.178.0"
+  }
+}
