@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - uses: dtolnay/rust-toolchain@1.86.0
         with:
           targets: wasm32-unknown-unknown
@@ -32,7 +32,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           run_install: false
-      
+
       - uses: actions/setup-node@v5
         with:
           cache: "pnpm"
@@ -45,24 +45,30 @@ jobs:
       # Install cargo tools (these will be cached by rust-cache)
       - name: Install cargo-make
         run: cargo install cargo-make --locked
-      
+
       - name: Install wasm-bindgen-cli
         run: cargo install wasm-bindgen-cli --version 0.2.102 --locked
 
       - name: Prepare
         run: cargo make prepare-ci
-      
+
       - name: Run Build Example
         run: pnpm build:example
-      
+
+      - name: Run Build library
+        run: pnpm build:example
+
+      - name: Build Integration Tests
+        run: pnpm build:integration
+
       - name: Run Test
         run: cargo make test
         env:
           RUST_BACKTRACE: 1
-      
+
       - name: Cargo format
         run: cargo make format-check
-      
+
       - name: Lint
         run: cargo make lint-check
 
@@ -70,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - uses: dtolnay/rust-toolchain@1.86.0
 
       - uses: Swatinem/rust-cache@v2

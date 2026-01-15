@@ -110,7 +110,7 @@ import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
-  type LayerDescription as ActualLayerDescription,
+  type LayerDescription as _ActualLayerDescription,
   type MeshCache,
   type PickedFeature,
   type WorkerPoolPromises,
@@ -239,6 +239,9 @@ export type ViewEvents = {
   mouseup: (event: MapMouseEvent) => void;
   click: (event: MapMouseEvent) => void;
 };
+
+// Need an assignment to tell TypeScript compiler that this is being renamed...
+type ActualLayerDescription = _ActualLayerDescription;
 
 export default class ThreeView<
   CustomLayerDescriptions extends

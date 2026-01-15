@@ -1,5 +1,6 @@
 import path from "path";
 
+import dts from "unplugin-dts/vite";
 import { defineConfig, normalizePath } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
@@ -17,6 +18,14 @@ export default defineConfig((env) => {
     plugins: [
       tsconfig({ configNames: ["tsconfig.build.json"] }),
       glsl(),
+      dts({
+        tsconfigPath: "./tsconfig.build.json",
+        bundleTypes: {
+          // TODO: Remove this once we publish these modules on NPM,
+          // since these modules should be loaded automatically by package manager.
+          bundledPackages: ["@navara/core", "@navara/three_api"],
+        },
+      }),
       viteStaticCopy({
         targets: [
           {
