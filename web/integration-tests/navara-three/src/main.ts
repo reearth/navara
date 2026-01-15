@@ -5,6 +5,7 @@ import ThreeView, {
   LLE,
   type SphereMeshLayer,
   ToneMappingMode,
+  JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 
 async function main() {
@@ -46,12 +47,7 @@ async function main() {
     rasterTerrain: {
       maxZoom: 15,
       minZoom: 6,
-      elevationDecoder: {
-        rScaler: 6553.6,
-        gScaler: 25.6,
-        bScaler: 0.1,
-        offset: 0,
-      },
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       skirt: false,
     },
   });
