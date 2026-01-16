@@ -1,5 +1,3 @@
-#include "chunks/geographic.glsl"
-
 const float ATMOSPHERE_CUTOFF_ALTITUDE_LOW = 100000.0; // 100 km
 const float ATMOSPHERE_CUTOFF_ALTITUDE_HIGH = ATMOSPHERE_CUTOFF_ALTITUDE_LOW + 90000.0; // 90 km transition
 
@@ -10,6 +8,7 @@ uniform vec3 sunDirection;
 const vec3 sunsetColor = vec3(1.0, 0.8666666666666667, 0.6823529411764706); // 0xFFDDAE
 
 in vec2 v_uv;
+in vec3 v_cameraPositionLLA;
 
 // High-frequency pseudo-random noise
 float dither(vec2 uv) {
@@ -17,18 +16,17 @@ float dither(vec2 uv) {
 }
 
 void main() {
-    vec3 cameraPositionLLA = ecefToLonLat(cameraPosition);
-    
-    if (cameraPositionLLA.z >= ATMOSPHERE_CUTOFF_ALTITUDE_HIGH) {
-        discard;
+    if (v_cameraPositionLLA.z >= ATMOSPHERE_CUTOFF_ALTITUDE_HIGH) {
+        gl_FragColor = vec4(0.0);
+        return;
     }
 
-    float cameraAltitudeFactor = clamp((cameraPositionLLA.z - ATMOSPHERE_CUTOFF_ALTITUDE_LOW) / (ATMOSPHERE_CUTOFF_ALTITUDE_HIGH - ATMOSPHERE_CUTOFF_ALTITUDE_LOW), 0.0, 1.0);
+    float cameraAltitudeFactor = clamp((v_cameraPositionLLA.z - ATMOSPHERE_CUTOFF_ALTITUDE_LOW) / (ATMOSPHERE_CUTOFF_ALTITUDE_HIGH - ATMOSPHERE_CUTOFF_ALTITUDE_LOW), 0.0, 1.0);
 
     vec3 cameraDir = normalize(cameraPosition);
-    vec3 lightDir = normalize(sunDirection);
+    vec3 sunDir = normalize(sunDirection);
 
-    float sunBlendFactor = dot(cameraDir, lightDir) * 0.5 + 0.5;
+    float sunBlendFactor = dot(cameraDir, sunDir) * 0.5 + 0.5;
 
     vec3 dayColorFinal = mix(sunsetColor, dayColor, pow(v_uv.y, 2.5));
 
