@@ -129,7 +129,8 @@ export abstract class MeshLayerDeclaration<
     // ----------------------------------------------------------------------------
     // SelectiveEffect: effectIds / occlusion wiring
     // ----------------------------------------------------------------------------
-    if (this._effectIds.length > 0 && this.raw) {
+    const useSelectiveEffect = this._effectIds.length > 0;
+    if (useSelectiveEffect && this.raw) {
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         this._effectIds,
@@ -148,8 +149,10 @@ export abstract class MeshLayerDeclaration<
       }
     }
 
-    // Setup onBeforeRender for MaskPass context-based rendering
-    this.setupMeshOnBeforeRender();
+    if (useSelectiveEffect) {
+      // Setup onBeforeRender for MaskPass context-based rendering
+      this.setupMeshOnBeforeRender();
+    }
 
     this.onPassKeyChange();
   }
