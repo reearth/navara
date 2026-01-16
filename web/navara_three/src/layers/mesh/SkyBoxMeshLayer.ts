@@ -24,7 +24,6 @@ export type SkyBoxMeshLayerConfig = MeshLayerConfig & LayerDescription;
 export type SkyBoxMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
 export const DEFAULT_SKY_BOX_OPTIONS: Required<NonNullable<LayerDescription["skyBox"]>> = {
-    // dayColor: new Color().setHex(0x87ceeb), // light blue
     dayColor: new Color().setHex(0x88c7fc), // light blue
     nightColor: new Color().setHex(0x000033), // dark blue
     sunsetColor: new Color().setHex(0xFFDDAE), // light orange
@@ -82,7 +81,6 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
             },
         };
 
-        // this.view.emit("_csmMounted", material);
         const mesh = new Mesh(geometry, material);
         mesh.frustumCulled = false;
         return mesh;
@@ -132,7 +130,6 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
     protected disposeMesh(): void {
         if (this._instance) {
-            // this.view.emit("_csmUnmounted", this._instance.material);
             this._instance.geometry.dispose();
             this._instance.material.dispose();
 
