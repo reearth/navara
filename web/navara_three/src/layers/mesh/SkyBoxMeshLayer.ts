@@ -1,6 +1,8 @@
 import SkyBoxFS from "@shaders/glsl/skyBox.frag.glsl";
 import SkyBoxVS from "@shaders/glsl/skyBox.vert.glsl";
-import { BufferGeometry, BufferAttribute, Mesh, ShaderMaterial, Color, Vector3 } from "three";
+import { BufferGeometry, BufferAttribute, Mesh, ShaderMaterial, Vector3 } from "three";
+
+import { Color } from "../../Color";
 
 import {
     MeshLayerDeclaration,
@@ -63,16 +65,16 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
         material.fragmentShader = SkyBoxFS;
         material.transparent = true;
 
-        const dayColor = cfg.dayColor;
-        const nightColor = cfg.nightColor
+        const dayColor = cfg.dayColor.toArray();
+        const nightColor = cfg.nightColor.toArray();
         const sunDirection = this.view.atmosphere.sunDirection;
 
         material.uniforms = {
             dayColor: {
-                value: new Vector3(dayColor.r, dayColor.g, dayColor.b),
+                value: new Vector3(dayColor[0], dayColor[1], dayColor[2]),
             },
             nightColor: {
-                value: new Vector3(nightColor.r, nightColor.g, nightColor.b),
+                value: new Vector3(nightColor[0], nightColor[1], nightColor[2]),
             },
             sunDirection: {
                 value: sunDirection,
@@ -93,11 +95,13 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
             const material = this._instance.material as ShaderMaterial;
             if (cfg.dayColor !== undefined) {
-                material.uniforms["dayColor"].value = new Vector3(cfg.dayColor.r, cfg.dayColor.g, cfg.dayColor.b);
+                const dayColorArray = cfg.dayColor.toArray();
+                material.uniforms["dayColor"].value = new Vector3(dayColorArray[0], dayColorArray[1], dayColorArray[2]);
             }
 
             if (cfg.nightColor !== undefined) {
-                material.uniforms["nightColor"].value = new Vector3(cfg.nightColor.r, cfg.nightColor.g, cfg.nightColor.b);
+                const nightColorArray = cfg.nightColor.toArray();
+                material.uniforms["nightColor"].value = new Vector3(nightColorArray[0], nightColorArray[1], nightColorArray[2]);
             }
 
             // Update the stored config with the new values
@@ -109,6 +113,16 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
         }
 
         super.onUpdateConfig(updates);
+    }
+
+    update(time: number): void {
+        if (!this._instance) return;
+
+        // Update sun direction uniform
+        const material = this._instance.material as ShaderMaterial;
+        material.uniforms["sunDirection"].value = this.view.atmosphere.sunDirection;
+
+        this.emit("_needsUpdate");
     }
 
     protected disposeMesh(): void {
