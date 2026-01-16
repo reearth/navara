@@ -45,16 +45,11 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
         // Create geometry from parameters
         const geometry = new BufferGeometry();
 
-        // vector positions for a plane in clip space
-        // TODO: use indexed geometry, or, better yet, a single triangle that covers the screen
+        // vector positions for a single large triangle filling clip space
         const vertices = new Float32Array([
             -1.0, -1.0, 1.0, // v0
-            1.0, -1.0, 1.0, // v1
-            -1.0, 1.0, 1.0, // v2
-
-            1.0, -1.0, 1.0, // v3
-            1.0, 1.0, 1.0, // v4
-            -1.0, 1.0, 1.0, // v5
+            3.0, -1.0, 1.0, // v1
+            -1.0, 3.0, 1.0, // v2
         ]);
 
         geometry.setAttribute('position', new BufferAttribute(vertices, 3));
