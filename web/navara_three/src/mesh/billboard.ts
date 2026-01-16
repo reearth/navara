@@ -1,6 +1,5 @@
 import { Unimplemented } from "@navara/core";
 import { BillboardMaterial as NavaraBillboardMaterial } from "@navara/engine";
-import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HorizonCullingParsVertex from "@shaders/glsl/chunks/horizon_culling_pars_vertex.glsl";
@@ -12,10 +11,8 @@ import SpriteHeightParsVertex from "@shaders/glsl/chunks/sprite_height_pars_vert
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import RtcSpriteVertex from "@shaders/glsl/chunks/rtc_sprite_vertex.glsl";
 import {
-  Camera,
   Color,
   LessDepth,
-  Material,
   Matrix4,
   Sprite,
   SpriteMaterial,
@@ -27,6 +24,7 @@ import { TEXTURE_LOADER } from "../event/loaders";
 import { createReplacer } from "../utils";
 
 import { FeatureMesh } from "./featureMesh";
+import { setupRTEMesh } from "./rteHelper";
 
 export class BillboardMesh extends Sprite implements FeatureMesh {
   constructor(useRTE = false) {
@@ -79,32 +77,27 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     // Set up RTE uniforms if using RTE (matching point.ts)
     const useRTE = this.userData.useRTE || false;
     if (useRTE) {
-      material.userData.modelViewMatrixRTE = {
+      this.userData.modelViewMatrixRTE = {
         value: new Matrix4(),
       };
-      material.userData.cameraPositionHigh = {
+      this.userData.cameraPositionHigh = {
         value: new Vector3(),
       };
-      material.userData.cameraPositionLow = {
+      this.userData.cameraPositionLow = {
         value: new Vector3(),
       };
 
-      const handleBeforeRender = (camera: Camera, mat: Material) => {
-        calcModelMatrixRTE(
-          this.matrixWorld,
-          camera.matrixWorldInverse,
-          mat.userData.modelViewMatrixRTE.value,
-        );
-        // Camera position should also be in world space, not transformed
-        const identityMatrix = new Matrix4(); // identity
-        const result = calcCameraPosition(camera.position, identityMatrix);
-        mat.userData.cameraPositionHigh.value = result.high;
-        mat.userData.cameraPositionLow.value = result.low;
-      };
-
-      this.onBeforeRender = (_renderer, _scene, camera, _geometry, mat) => {
-        handleBeforeRender(camera, mat);
-      };
+      // Billboard uses identity matrix for camera position (world space)
+      const identityMatrix = new Matrix4();
+      const callback = setupRTEMesh(
+        this,
+        this.userData,
+        undefined,
+        identityMatrix,
+      );
+      if (callback) {
+        this.onBeforeRender = callback;
+      }
     }
 
     material.depthFunc = LessDepth;
@@ -122,12 +115,9 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
       shader.uniforms.useRTE = { value: useRTE };
 
       if (useRTE) {
-        shader.uniforms.u_cameraPositionHigh =
-          material.userData.cameraPositionHigh;
-        shader.uniforms.u_cameraPositionLow =
-          material.userData.cameraPositionLow;
-        shader.uniforms.modelViewMatrixRTE =
-          material.userData.modelViewMatrixRTE;
+        shader.uniforms.u_cameraPositionHigh = this.userData.cameraPositionHigh;
+        shader.uniforms.u_cameraPositionLow = this.userData.cameraPositionLow;
+        shader.uniforms.modelViewMatrixRTE = this.userData.modelViewMatrixRTE;
       } else {
         // Set default values for non-RTE mode
         shader.uniforms.u_cameraPositionHigh = { value: new Vector3() };

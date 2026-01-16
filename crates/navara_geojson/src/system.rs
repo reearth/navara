@@ -375,8 +375,6 @@ pub fn update_geo_json_layer(
 
                 match &mut *f {
                     RenderableFeature::Billboard {
-                        coordinates,
-                        crs,
                         material,
                         transform,
                         render_info,
@@ -384,7 +382,7 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
+                            material.update(mat, transform);
                             render_info.should_recalculate_height = true;
 
                             // Update RTE geometry position
@@ -392,8 +390,6 @@ pub fn update_geo_json_layer(
                         }
                     }
                     RenderableFeature::Text {
-                        coordinates,
-                        crs,
                         material,
                         transform,
                         render_info,
@@ -401,7 +397,7 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Text(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
+                            material.update(mat);
                             render_info.should_recalculate_height = true;
 
                             // Update RTE geometry position
@@ -409,8 +405,6 @@ pub fn update_geo_json_layer(
                         }
                     }
                     RenderableFeature::Point {
-                        coordinates,
-                        crs,
                         material,
                         transform,
                         render_info,
@@ -418,7 +412,7 @@ pub fn update_geo_json_layer(
                         ..
                     } => {
                         if let Appearance::Point(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
+                            material.update(mat, transform);
                             render_info.should_recalculate_height = true;
 
                             // Update RTE geometry position

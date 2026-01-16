@@ -18,7 +18,7 @@ use navara_feature_component::{
 use navara_layer::{LayerId, LayerStore};
 use navara_material::PointMaterial;
 use navara_math::{Transform, Vec3};
-use navara_mvt::MVTFeatureMarker;
+
 use navara_tile_component::{
     compute_terrain_height_at_point, RasterTileQuadtree, TileExtent, TileMeshMarker,
     TileTerrainDataRequesterQuery,
@@ -40,9 +40,8 @@ pub fn transfer_batched_mesh(
             &GlobalBatchIds,
             &mut FeatureId,
             Option<&TileExtent>,
-            Option<&MVTFeatureMarker>,
         ),
-        (With<PointMarker>, Without<Deleted>),
+        (With<PointMarker>, Added<BatchedFeature>, Without<Deleted>),
     >,
     points: Query<(&PointGeometry, &BatchIndex)>,
     mut layer_store: ResMut<LayerStore>,
@@ -57,19 +56,8 @@ pub fn transfer_batched_mesh(
         global_batch_ids,
         mut feature_id,
         tile_extent_component,
-        mvt_marker,
     ) in &mut batched_features
     {
-        // Skip if already processed
-        if feature_id.0.is_some() {
-            continue;
-        }
-
-        if mvt_marker.is_some() && tile_extent_component.is_none() {
-            // MVT tile but TileExtent not yet applied, wait for next frame
-            continue;
-        }
-
         // Extract all point geometries and create batch indices and IDs in a single loop
         let feature_len = batched_feature.features.len();
         let mut all_coords = Vec::with_capacity(feature_len * 3);

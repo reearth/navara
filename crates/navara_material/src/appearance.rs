@@ -93,13 +93,7 @@ impl Default for PointMaterial {
 }
 
 impl PointMaterial {
-    pub fn update(
-        &mut self,
-        from: &PointMaterial,
-        _coordinates: &Vec3,
-        _crs: &CRS,
-        transform: &mut Transform,
-    ) {
+    pub fn update(&mut self, from: &PointMaterial, transform: &mut Transform) {
         if self.size != from.size {
             transform.scale = Vec3::splat(from.size as f64);
         }
@@ -145,13 +139,7 @@ impl Default for BillboardMaterial {
 }
 
 impl BillboardMaterial {
-    pub fn update(
-        &mut self,
-        from: &BillboardMaterial,
-        _coordinates: &Vec3,
-        _crs: &CRS,
-        transform: &mut Transform,
-    ) {
+    pub fn update(&mut self, from: &BillboardMaterial, transform: &mut Transform) {
         if self.size != from.size {
             transform.scale = Vec3::splat(from.size as f64);
         }
@@ -215,13 +203,7 @@ impl Default for TextMaterial {
 }
 
 impl TextMaterial {
-    pub fn update(
-        &mut self,
-        from: &TextMaterial,
-        _coordinates: &Vec3,
-        _crs: &CRS,
-        _transform: &mut Transform,
-    ) {
+    pub fn update(&mut self, from: &TextMaterial) {
         *self = from.clone();
     }
 }

@@ -1,6 +1,5 @@
 import { Unimplemented } from "@navara/core";
 import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
-import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
@@ -32,6 +31,7 @@ import { createReplacer } from "../utils";
 
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
+import { setupRTEMesh } from "./rteHelper";
 
 export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
@@ -510,20 +510,19 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         ).source;
     };
 
-    background.onBeforeRender = (_renderer, _scene, camera) => {
-      // Update RTE uniforms in RTE mode
-      if (useRTE) {
-        calcModelMatrixRTE(
-          this.matrixWorld,
-          camera.matrixWorldInverse,
-          this.userData.modelViewMatrixRTE.value,
-        );
-        const identityMatrix = new Matrix4();
-        const result = calcCameraPosition(camera.position, identityMatrix);
-        this.userData.cameraPositionHigh.value = result.high;
-        this.userData.cameraPositionLow.value = result.low;
+    if (useRTE) {
+      // Text uses identity matrix for camera position (world space)
+      const identityMatrix = new Matrix4();
+      const callback = setupRTEMesh(
+        this,
+        this.userData,
+        undefined,
+        identityMatrix,
+      );
+      if (callback) {
+        background.onBeforeRender = callback;
       }
-    };
+    }
 
     this.background = background;
     this.add(background);

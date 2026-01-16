@@ -3,7 +3,6 @@ import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
-import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
@@ -28,9 +27,7 @@ import {
   AddOperation,
   BufferAttribute,
   BufferGeometry,
-  Camera,
   Color,
-  Material,
   Matrix4,
   MeshLambertMaterial,
   RGBADepthPacking,
@@ -49,6 +46,7 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
+import { setupRTEMesh } from "./rteHelper";
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
@@ -325,36 +323,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
         value: new Vector3(),
       };
 
-      const handleBeforeRender = (camera: Camera, material: Material) => {
-        calcModelMatrixRTE(
-          this.matrixWorld,
-          camera.matrixWorldInverse,
-          material.userData.modelViewMatrixRTE.value,
-        );
-        const result = calcCameraPosition(camera.position, this.matrixWorld);
-        material.userData.cameraPositionHigh.value = result.high;
-        material.userData.cameraPositionLow.value = result.low;
-      };
-
-      this.onBeforeRender = (
-        _renderer,
-        _scene,
-        camera,
-        _geometry,
-        material,
-      ) => {
-        handleBeforeRender(camera, material);
-      };
-      this.onBeforeShadow = (
-        _renderer,
-        _scene,
-        _camera,
-        shadowCamera,
-        _geometry,
-        material,
-      ) => {
-        handleBeforeRender(shadowCamera, material);
-      };
+      const callback = setupRTEMesh(this, material.userData);
+      if (callback) {
+        this.onBeforeRender = callback;
+        this.onBeforeShadow = callback;
+      }
     }
 
     material.userData.defines ??= {};
