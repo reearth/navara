@@ -802,7 +802,7 @@ export default class ThreeView<
     for (let i = 0; i < MAP_CONCURRENCY; i++) {
       warmUpPromises.push(workerPool().exec("warmUp", []));
     }
-    
+
     await initCore();
     await initNavaraApi();
 
