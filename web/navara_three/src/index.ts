@@ -15,7 +15,7 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
-import { initializeWorkerPool } from "@navara/worker";
+import { initializeWorkerPool, workerPool } from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -797,6 +797,12 @@ export default class ThreeView<
 
     initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
 
+    // Pre-warm all workers with WASM initialization
+    const warmUpPromises: Promise<unknown>[] = [];
+    for (let i = 0; i < MAP_CONCURRENCY; i++) {
+      warmUpPromises.push(workerPool().exec("warmUp", []));
+    }
+    
     await initCore();
     await initNavaraApi();
 

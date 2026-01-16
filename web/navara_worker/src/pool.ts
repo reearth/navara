@@ -16,6 +16,7 @@ export const initializeWorkerPool = (
   pool ??
   (pool = workerpool.pool(url, {
     maxWorkers: concurrency,
+    minWorkers: concurrency, // Keep all workers alive to preserve WASM cache
     workerOpts: {
       type: import.meta.env.PROD ? undefined : "module",
     },
