@@ -3,11 +3,14 @@ import ThreeView, {
   AmbientLightLayer,
   SkyBoxMeshLayer,
   LayerHandle,
+  SunLightLayer,
+  StarsLayer,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
+import type { at } from "vitest/dist/chunks/reporters.d.BFLkQcL6.js";
 
 let gSkyBoxMeshLayer: LayerHandle<SkyBoxMeshLayer> | undefined =
   undefined;
@@ -19,10 +22,32 @@ const gPaneParams = {
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.addLayer<AmbientLightLayer>({
+  // view.addLayer<AmbientLightLayer>({
+  //   type: "light",
+  //   ambient: {},
+  // });
+
+  // const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  // defaultAtmospheres.sun.update({
+  //   sun: {
+  //     intensity: 1,
+  //     // castShadow: true,
+  //   },
+  // });
+
+  view.addLayer<SunLightLayer>({
     type: "light",
-    ambient: {},
+    sun: {
+      intensity: 1.0,
+      // castShadow: true,
+    },
   });
+
+  view.addLayer<StarsLayer>({
+    type: "mesh",
+    stars: {},
+  });
+
 
   gSkyBoxMeshLayer = view.addLayer<SkyBoxMeshLayer>({
     type: "mesh",
@@ -45,6 +70,7 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addPanel(view, pane);
+  // view.camera.options.autoAdjustNearFar = false;
 };
 
 function addPanel(view: ThreeView, pane: Pane) {

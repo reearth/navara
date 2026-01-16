@@ -1,6 +1,6 @@
 import SkyBoxFS from "@shaders/glsl/skyBox.frag.glsl";
 import SkyBoxVS from "@shaders/glsl/skyBox.vert.glsl";
-import { BufferGeometry, BufferAttribute, Mesh, ShaderMaterial } from "three";
+import { BufferGeometry, BufferAttribute, Mesh, ShaderMaterial, Color, Vector3 } from "three";
 
 import {
     MeshLayerDeclaration,
@@ -11,13 +11,20 @@ import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 
 type LayerDescription = {
     skyBox?: {
-        // No parameters for now
+        dayColor?: Color;
+        nightColor?: Color;
     };
 };
 
 export type SkyBoxMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
 export type SkyBoxMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+
+export const DEFAULT_SKY_BOX_OPTIONS: Required<NonNullable<LayerDescription["skyBox"]>> = {
+    // dayColor: new Color().setHex(0x87ceeb), // light blue
+    dayColor: new Color().setHex(0x88c7fc), // light blue
+    nightColor: new Color().setHex(0x000033), // dark blue
+};
 
 export class SkyBoxMeshLayer extends MeshLayerDeclaration<
     SkyBoxMeshLayerConfig,
@@ -31,37 +38,52 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
     }
 
     createMesh() {
-        // const cfg = { ...DEFAULT_GLOW_GLOBE_OPTIONS, ...this.config.skyBox };
+        const cfg = { ...DEFAULT_SKY_BOX_OPTIONS, ...this.config.skyBox };
 
         // Create geometry from parameters
         const geometry = new BufferGeometry();
 
         // vector positions for a plane in clip space
-        // TODO: use indexed geometry
+        // TODO: use indexed geometry, or, better yet, a single triangle that covers the screen
         const vertices = new Float32Array([
-            -1.0, -1.0, 0.99, // v0
-             1.0, -1.0, 0.99, // v1
-            -1.0,  1.0, 0.99, // v2
+            -1.0, -1.0, 1.0, // v0
+            1.0, -1.0, 1.0, // v1
+            -1.0, 1.0, 1.0, // v2
 
-             1.0, -1.0, 0.99, // v3
-             1.0,  1.0, 0.99, // v4
-            -1.0,  1.0, 0.99, // v5
+            1.0, -1.0, 1.0, // v3
+            1.0, 1.0, 1.0, // v4
+            -1.0, 1.0, 1.0, // v5
         ]);
 
-        // itemSize = 3 because there are 3 values (components) per vertex
         geometry.setAttribute('position', new BufferAttribute(vertices, 3));
 
         // Create material from properties
         const material = new ShaderMaterial();
         material.vertexShader = SkyBoxVS;
         material.fragmentShader = SkyBoxFS;
+        material.transparent = true;
+
+        const dayColor = cfg.dayColor;
+        const nightColor = cfg.nightColor
+        const sunDirection = this.view.atmosphere.sunDirection;
 
         material.uniforms = {
-            // exponent: { value: cfg.exponent },
+            dayColor: {
+                value: new Vector3(dayColor.r, dayColor.g, dayColor.b),
+            },
+            nightColor: {
+                value: new Vector3(nightColor.r, nightColor.g, nightColor.b),
+            },
+            sunDirection: {
+                value: sunDirection,
+            },
         };
 
         this.view.emit("_csmMounted", material);
-        return new Mesh(geometry, material);
+        const mesh = new Mesh(geometry, material);
+        mesh.frustumCulled = false;
+        // mesh.renderOrder = 0xFFFF; // Render last
+        return mesh;
     }
 
     onUpdateConfig(updates: SkyBoxMeshLayerUpdate): void {
@@ -69,27 +91,14 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
             const cfg = updates.skyBox;
             const origin = this.config.skyBox;
 
-            // // Update geometry if dimensions changed
-            // if (cfg.radiusScale !== undefined) {
-            //     this._instance.geometry.dispose();
-            //     const new_geometry = new SphereGeometry(
-            //         cfg.radiusScale * getWGS84SemiMajorAxis(),
-            //         64,
-            //         32,
-            //         0,
-            //         Math.PI * 2,
-            //         0,
-            //         Math.PI,
-            //     );
-            //     new_geometry.scale(1, 1, 1 - getWGS84Flattening());
-            //     this._instance.geometry = new_geometry;
-            // }
+            const material = this._instance.material as ShaderMaterial;
+            if (cfg.dayColor !== undefined) {
+                material.uniforms["dayColor"].value = new Vector3(cfg.dayColor.r, cfg.dayColor.g, cfg.dayColor.b);
+            }
 
-            // const material = this._instance.material as ShaderMaterial;
-            // if (cfg.coefficient !== undefined) {
-            //     material.uniforms["coefficient"].value = cfg.coefficient;
-            // }
-
+            if (cfg.nightColor !== undefined) {
+                material.uniforms["nightColor"].value = new Vector3(cfg.nightColor.r, cfg.nightColor.g, cfg.nightColor.b);
+            }
 
             // Update the stored config with the new values
             if (origin) {
