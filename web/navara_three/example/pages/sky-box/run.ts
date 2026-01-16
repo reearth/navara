@@ -4,6 +4,7 @@ import ThreeView, {
   LayerHandle,
   SunLightLayer,
   StarsLayer,
+  AmbientLightLayer,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 import { TILE_DATASETS } from "../../helpers/constants";
@@ -20,6 +21,13 @@ const gPaneParams = {
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  view.addLayer<AmbientLightLayer>({
+    type: "light",
+    ambient: {
+      intensity: 0.1,
+    },
+  });
 
   view.addLayer<SunLightLayer>({
     type: "light",
