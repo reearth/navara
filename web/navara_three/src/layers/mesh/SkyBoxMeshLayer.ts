@@ -15,6 +15,7 @@ type LayerDescription = {
     skyBox?: {
         dayColor?: Color;
         nightColor?: Color;
+        sunsetColor?: Color;
     };
 };
 
@@ -26,6 +27,7 @@ export const DEFAULT_SKY_BOX_OPTIONS: Required<NonNullable<LayerDescription["sky
     // dayColor: new Color().setHex(0x87ceeb), // light blue
     dayColor: new Color().setHex(0x88c7fc), // light blue
     nightColor: new Color().setHex(0x000033), // dark blue
+    sunsetColor: new Color().setHex(0xFFDDAE), // light orange
 };
 
 export class SkyBoxMeshLayer extends MeshLayerDeclaration<
@@ -62,24 +64,27 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
         const dayColor = cfg.dayColor.toArray();
         const nightColor = cfg.nightColor.toArray();
+        const sunsetColor = cfg.sunsetColor.toArray();
         const sunDirection = this.view.atmosphere.sunDirection;
 
         material.uniforms = {
-            dayColor: {
+            uDayColor: {
                 value: new Vector3(dayColor[0], dayColor[1], dayColor[2]),
             },
-            nightColor: {
+            uNightColor: {
                 value: new Vector3(nightColor[0], nightColor[1], nightColor[2]),
             },
-            sunDirection: {
+            uSunsetColor: {
+                value: new Vector3(sunsetColor[0], sunsetColor[1], sunsetColor[2]),
+            },
+            uSunDirection: {
                 value: sunDirection,
             },
         };
 
-        this.view.emit("_csmMounted", material);
+        // this.view.emit("_csmMounted", material);
         const mesh = new Mesh(geometry, material);
         mesh.frustumCulled = false;
-        // mesh.renderOrder = 0xFFFF; // Render last
         return mesh;
     }
 
@@ -91,12 +96,17 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
             const material = this._instance.material as ShaderMaterial;
             if (cfg.dayColor !== undefined) {
                 const dayColorArray = cfg.dayColor.toArray();
-                material.uniforms["dayColor"].value = new Vector3(dayColorArray[0], dayColorArray[1], dayColorArray[2]);
+                material.uniforms["uDayColor"].value = new Vector3(dayColorArray[0], dayColorArray[1], dayColorArray[2]);
             }
 
             if (cfg.nightColor !== undefined) {
                 const nightColorArray = cfg.nightColor.toArray();
-                material.uniforms["nightColor"].value = new Vector3(nightColorArray[0], nightColorArray[1], nightColorArray[2]);
+                material.uniforms["uNightColor"].value = new Vector3(nightColorArray[0], nightColorArray[1], nightColorArray[2]);
+            }
+
+            if (cfg.sunsetColor !== undefined) {
+                const sunsetColorArray = cfg.sunsetColor.toArray();
+                material.uniforms["uSunsetColor"].value = new Vector3(sunsetColorArray[0], sunsetColorArray[1], sunsetColorArray[2]);
             }
 
             // Update the stored config with the new values
@@ -115,14 +125,14 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
         // Update sun direction uniform
         const material = this._instance.material as ShaderMaterial;
-        material.uniforms["sunDirection"].value = this.view.atmosphere.sunDirection;
+        material.uniforms["uSunDirection"].value = this.view.atmosphere.sunDirection;
 
         this.emit("_needsUpdate");
     }
 
     protected disposeMesh(): void {
         if (this._instance) {
-            this.view.emit("_csmUnmounted", this._instance.material);
+            // this.view.emit("_csmUnmounted", this._instance.material);
             this._instance.geometry.dispose();
             this._instance.material.dispose();
 

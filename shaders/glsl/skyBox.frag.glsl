@@ -1,11 +1,10 @@
 const float ATMOSPHERE_CUTOFF_ALTITUDE_LOW = 100000.0; // 100 km
 const float ATMOSPHERE_CUTOFF_ALTITUDE_HIGH = ATMOSPHERE_CUTOFF_ALTITUDE_LOW + 90000.0; // 90 km transition
 
-uniform vec3 dayColor;
-uniform vec3 nightColor;
-uniform vec3 sunDirection;
-
-const vec3 sunsetColor = vec3(1.0, 0.8666666666666667, 0.6823529411764706); // 0xFFDDAE
+uniform vec3 uDayColor;
+uniform vec3 uNightColor;
+uniform vec3 uSunsetColor;
+uniform vec3 uSunDirection;
 
 in vec2 v_uv;
 in vec3 v_cameraPositionLLA;
@@ -24,12 +23,12 @@ void main() {
     float cameraAltitudeFactor = clamp((v_cameraPositionLLA.z - ATMOSPHERE_CUTOFF_ALTITUDE_LOW) / (ATMOSPHERE_CUTOFF_ALTITUDE_HIGH - ATMOSPHERE_CUTOFF_ALTITUDE_LOW), 0.0, 1.0);
 
     vec3 cameraDir = normalize(cameraPosition);
-    vec3 sunDir = normalize(sunDirection);
+    vec3 sunDir = normalize(uSunDirection);
 
     float sunBlendFactor = dot(cameraDir, sunDir) * 0.5 + 0.5;
 
-    vec3 dayColorFinal = mix(sunsetColor, dayColor, pow(v_uv.y, 2.5));
+    vec3 dayColorFinal = mix(uSunsetColor, uDayColor, pow(v_uv.y, 2.5));
 
-    vec4 color = vec4(mix(nightColor, dayColorFinal, sunBlendFactor), 0.4);
+    vec4 color = vec4(mix(uNightColor, dayColorFinal, sunBlendFactor), 0.4);
     gl_FragColor = mix(color, vec4(0.0), cameraAltitudeFactor) + ((dither(v_uv) - 0.5) * (1.0 / 255.0));
 }
