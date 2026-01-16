@@ -4,8 +4,10 @@ use bevy_ecs::{
     query::{Added, Or, With, Without},
     system::{Commands, Query, ResMut},
 };
+use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_event_store::EventStore;
+use navara_feature_component::batch::BatchTable;
 
 use crate::{
     component::WorkerTaskMarker, DelegatedWorkerTask, DelegatedWorkerTaskMarker,
@@ -30,6 +32,8 @@ pub fn commit(
 pub fn handle_completed_event(
     mut commands: Commands,
     mut loaded_ev: EventReader<WorkerTaskCompletedEvent>,
+    mut buf: ResMut<BufferStore>,
+    mut batch_table: ResMut<BatchTable>,
     constructors: Query<
         Entity,
         (
@@ -46,6 +50,9 @@ pub fn handle_completed_event(
                 value,
             }) => {
                 if !constructors.contains(*delegator_id) {
+                    // Task was deleted before completion - clean up geometry handles to prevent memory leak
+                    let geometry = value.geometry.clone();
+                    geometry.remove_from_buf(&mut buf);
                     continue;
                 }
                 commands
@@ -57,6 +64,9 @@ pub fn handle_completed_event(
                 value,
             }) => {
                 if !constructors.contains(*delegator_id) {
+                    // Task was deleted before completion - clean up geometry handles to prevent memory leak
+                    let geometry = value.geometry.clone();
+                    geometry.remove_from_buf(&mut buf);
                     continue;
                 }
                 commands
@@ -68,6 +78,9 @@ pub fn handle_completed_event(
                 value,
             }) => {
                 if !constructors.contains(*delegator_id) {
+                    // Task was deleted before completion - clean up geometry handles to prevent memory leak
+                    let mut geometry = value.geometry.clone();
+                    geometry.remove_from_buf(&mut buf, &mut batch_table);
                     continue;
                 }
                 commands
@@ -79,6 +92,9 @@ pub fn handle_completed_event(
                 value,
             }) => {
                 if !constructors.contains(*delegator_id) {
+                    // Task was deleted before completion - clean up geometry handles to prevent memory leak
+                    let mut geometry = value.geometry.clone();
+                    geometry.remove_from_buf(&mut buf, &mut batch_table);
                     continue;
                 }
                 commands

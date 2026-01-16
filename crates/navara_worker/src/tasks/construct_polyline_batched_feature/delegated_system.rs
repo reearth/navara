@@ -17,7 +17,11 @@ const MAX_PENDINGS: usize = 10;
 pub(crate) fn construct_polyline_batched_feature(
     mut commands: Commands,
     constructors: Query<
-        (Entity, &ConstructPolylineBatchedFeatureParameters),
+        (
+            Entity,
+            &ConstructPolylineBatchedFeatureParameters,
+            &OrderByDistance,
+        ),
         (With<WorkerTaskMarker>, Without<Requested>, Without<Deleted>),
     >,
     requested_constructors: Query<
@@ -37,9 +41,9 @@ pub(crate) fn construct_polyline_batched_feature(
     let pendings = requested_constructors.iter().count();
     let num_take = (MAX_PENDINGS as i32 - pendings as i32).max(0) as usize;
 
-    for (e, constructor) in constructors
+    for (e, constructor, _) in constructors
         .iter()
-        // .sort::<&OrderByDistance>()
+        .sort::<&OrderByDistance>()
         .take(num_take)
     {
         let delegatee_id = commands

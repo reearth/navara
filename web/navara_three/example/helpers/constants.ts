@@ -235,3 +235,57 @@ export const LOCAL_DATASETS = {
     url: "/interior.geojson",
   },
 } satisfies Record<string, Dataset>;
+
+/**
+ * LUT datasets
+ */
+export const LUT_DATASETS = {
+  presetproCinematic3dl: {
+    url: "https://raw.githubusercontent.com/pmndrs/postprocessing/refs/heads/main/demo/static/textures/lut/3dl/presetpro-cinematic.3dl",
+    attribution: "(C) Copyright 2018 https://www.presetpro.com and Tim Martin",
+    attributionUrl: "https://www.presetpro.com",
+  },
+  djangoCube: {
+    url: "https://raw.githubusercontent.com/pmndrs/postprocessing/refs/heads/main/demo/static/textures/lut/cube/django-25.cube",
+    attribution: "(C) Copyright 2017 RocketStock",
+  },
+  Blackmagic4_6KFilmtoExtendedVideov4Cube: {
+    url: "https://raw.githubusercontent.com/imnz730/LUTs/refs/heads/master/Blackmagic%20Design/Blackmagic%204.6K%20Film%20to%20Extended%20Video%20v4.cube",
+    attribution: "(C) 2018 Blackmagic Design",
+  },
+  fuji160cPNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Fuji/Fuji%20160C%202.png",
+    attribution: "Fuji 160C - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+  fuji800Z3PNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Fuji/Fuji%20800Z%203%20%2B.png",
+    attribution: "Fuji 800Z 3 + - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+  fujiFP100C7PNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Fuji/Fuji%20FP-100c%207%20%2B%2B%20Alt.png",
+    attribution: "Fuji FP-100C 7 - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+  KodakE100GXEktachrome100PNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Kodak/Kodak%20E-100%20GX%20Ektachrome%20100.png",
+    attribution: "Kodak E-100 GX Ektachrome 100 - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+  agfaVista200PNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Agfa/Agfa%20Vista%20200.png",
+    attribution: "Agfa Vista 200 - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+  agfaPrecisa100PNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Agfa/Agfa%20Precisa%20100.png",
+    attribution: "Agfa Precisa 100 - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+  agfaColorUltra100PNG: {
+    url: "https://media.githubusercontent.com/media/takram-design-engineering/three-geospatial/1a932c055ea624b14816f40fc321e95a3a98dfce/storybook/assets/clut/Agfa/Agfa%20Ultra%20Color%20100.png",
+    attribution: "Agfacolor Ultra 100 - RawTherapee",
+    attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
+  },
+} satisfies Record<string, Dataset>;

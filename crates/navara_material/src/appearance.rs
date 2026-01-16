@@ -73,6 +73,12 @@ pub struct PointMaterial {
     pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    pub selective_effect_occlusion: Option<String>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for PointMaterial {
@@ -88,6 +94,11 @@ impl Default for PointMaterial {
             depth_test: true,
             offset_depth: true,
             transparent: true,
+            // post effect
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -117,6 +128,12 @@ pub struct BillboardMaterial {
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     pub alpha_test: f32,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    pub selective_effect_occlusion: Option<String>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for BillboardMaterial {
@@ -134,6 +151,11 @@ impl Default for BillboardMaterial {
             offset_depth: true,
             transparent: false,
             alpha_test: 0.1,
+            // post effect
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -219,6 +241,12 @@ pub struct PolylineMaterial {
     pub use_ground_normals: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    pub selective_effect_occlusion: Option<String>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for PolylineMaterial {
@@ -233,6 +261,11 @@ impl Default for PolylineMaterial {
             use_ground_normals: false,
             height: 1.,
             internal: None,
+            // post effect
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -281,6 +314,12 @@ pub struct PolygonMaterial {
     pub apply_water_normal: bool,
     pub specular: bool,
     pub ior: f32,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    pub selective_effect_occlusion: Option<String>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for PolygonMaterial {
@@ -315,6 +354,12 @@ impl Default for PolygonMaterial {
             apply_water_normal: false,
             specular: false,
             ior: 1.33333,
+
+            // post effect
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }
@@ -361,6 +406,12 @@ pub struct ModelMaterial {
     pub point_size: f32,
     pub show_bounding_box: bool,
     pub internal: Option<ModelInternalMaterial>,
+    // post effect
+    pub effect_ids: Option<Vec<String>>,
+    /// Depth behavior for selective effect mask passes: "normal" or "silhouette"
+    pub selective_effect_occlusion: Option<String>,
+    pub emissive_intensity: Option<f32>,
+    pub emissive_color: Option<u32>,
 }
 
 impl Default for ModelMaterial {
@@ -393,6 +444,11 @@ impl Default for ModelMaterial {
             point_size: 0.3,
             show_bounding_box: false,
             internal: None,
+            // post effect
+            effect_ids: None,
+            selective_effect_occlusion: None,
+            emissive_intensity: None,
+            emissive_color: None,
         }
     }
 }

@@ -42,6 +42,8 @@ import type {
   LensFlareConfig,
   MRTPassConfig,
   RainDropConfig,
+  SelectiveBloomEffectConfig,
+  SelectiveOutlineEffectConfig,
   SkyEnvMapPassConfig,
   SMAAConfig,
   SSAOConfig,
@@ -49,6 +51,7 @@ import type {
   ToneMappingConfig,
   TransparentPassConfig,
   DepthOfFieldConfig,
+  ColorGradingLUTConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
@@ -56,13 +59,7 @@ export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
 export type LayerDescription =
   // | MVTLayer
-  | TilesLayer
-  | TerrainLayer
-  | GeoJsonLayer
-  | B3dmLayer
-  | PntsLayer
-  | Cesium3dTilesLayer
-  | MvtLayer
+  | ResourceLayerDescription
   | MeshLayerDeclarationDescription
   | LightLayerDeclarationDescription
   | EffectLayerDeclarationDescription;
@@ -100,12 +97,15 @@ export type EffectLayerDeclarationDescription =
   | MRTPassConfig
   | SkyEnvMapPassConfig
   | RainDropConfig
+  | SelectiveBloomEffectConfig
+  | SelectiveOutlineEffectConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig
   | ToneMappingConfig
   | TransparentPassConfig
-  | DepthOfFieldConfig;
+  | DepthOfFieldConfig
+  | ColorGradingLUTConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";
@@ -175,6 +175,15 @@ export type Cesium3dTilesLayer = WithColorSupport<
 export type MvtLayer = WithColorSupport<
   Layer<MvtLayerDescription & { type: "mvt" }>
 >;
+
+export type ResourceLayerDescription =
+  | TilesLayer
+  | TerrainLayer
+  | GeoJsonLayer
+  | B3dmLayer
+  | PntsLayer
+  | Cesium3dTilesLayer
+  | MvtLayer;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 export type DrapedMaterialCache = Map<string, Material>;

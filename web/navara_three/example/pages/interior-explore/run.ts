@@ -87,7 +87,6 @@ export const run = async (view: ThreeView) => {
       animationLoop: true,
       animationAutoPlay: true,
       animationCrossfadeDuration: 0.3,
-      useRTE: true,
     },
   });
 

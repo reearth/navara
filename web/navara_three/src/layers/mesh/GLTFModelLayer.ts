@@ -43,6 +43,16 @@ type LayerDescription = {
   };
 };
 
+export const DEFAULT_GLTF_MODEL_DESCRIPTION: NonNullable<
+  LayerDescription["gltfModel"]
+> = {
+  url: "",
+  useRTE: true,
+  animationSpeed: 1,
+  animationLoop: true,
+  animationCrossfadeDuration: 0.3,
+};
+
 export type GLTFModelLayerConfig = MeshLayerConfig & LayerDescription;
 
 export type GLTFModelLayerUpdate = MeshLayerUpdate & LayerDescription;
@@ -118,7 +128,13 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
   constructor(view: ViewContext, config: GLTFModelLayerConfig) {
     super(view, config);
-    this.config = config;
+    this.config = {
+      ...config,
+      gltfModel: {
+        ...DEFAULT_GLTF_MODEL_DESCRIPTION,
+        ...config.gltfModel,
+      },
+    };
     this.loader = new GLTFLoader();
   }
 

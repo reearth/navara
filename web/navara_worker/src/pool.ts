@@ -6,14 +6,17 @@ import { type CommonTasks } from "./worker";
 
 export type { Promise } from "workerpool";
 
+const DEFAULT_CONCURRENCY = navigator.hardwareConcurrency - 1;
+
 let pool: Pool;
 export const initializeWorkerPool = (
   url: string,
-  concurrency = navigator.hardwareConcurrency - 1,
+  concurrency = DEFAULT_CONCURRENCY,
 ): Pool =>
   pool ??
   (pool = workerpool.pool(url, {
     maxWorkers: concurrency,
+    minWorkers: concurrency, // Keep all workers alive to preserve WASM cache
     workerOpts: {
       type: import.meta.env.PROD ? undefined : "module",
     },
@@ -23,7 +26,7 @@ export const workerPool = (): Pool => pool;
 
 export const canWorkerProcessImmediately = () => {
   const stats = workerPool().stats();
-  return stats.pendingTasks === 0;
+  return stats.busyWorkers < (workerPool().maxWorkers ?? DEFAULT_CONCURRENCY);
 };
 
 export type { ExecOptions } from "workerpool/types/types";

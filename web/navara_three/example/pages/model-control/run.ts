@@ -150,7 +150,6 @@ export const run = async (view: ThreeView) => {
       animationLoop: true,
       animationAutoPlay: true,
       animationCrossfadeDuration: 0.3,
-      useRTE: true,
     },
     position: { x: startPos.x, y: startPos.y, z: startPos.z },
     rotation: { x: euler.x, y: euler.y, z: euler.z },

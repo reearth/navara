@@ -11,3 +11,4 @@ export * from "./ssr";
 export * from "./fogLight";
 export * from "./rainDropEffect";
 export * from "./depthOfField";
+export * from "./colorGradingLUT";

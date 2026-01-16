@@ -259,7 +259,7 @@ const placeOneBall = (
       sphere: {
         radius: 1,
         color: new Color().setHex(color),
-        emissive: 0x072534,
+        emissiveColor: 0x072534,
       },
       position: { x: pos.x, y: pos.y, z: pos.z },
     });

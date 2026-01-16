@@ -1,17 +1,33 @@
 import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
+import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader } from "../event";
+import { arraysEqual } from "../utils";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import { PointMesh } from "./point";
 
+/** UserData type for InstancedPointMesh */
+type InstancedPointUserData = {
+  prev?: {
+    effectIds?: string[];
+  };
+};
+
 export class InstancedPointMesh extends InstancedMesh<PointMesh> {
+  /** ViewContext for SelectiveEffect handling */
+  private _viewContext: ViewContext;
+  /** Layer ID for SelectiveEffect handling */
+  private _layerId: string;
+
   constructor(
     m: NavaraPointMesh,
     buf: BufferLoader,
-    options?: InstancedMeshOptions,
+    options: InstancedMeshOptions,
   ) {
     super(options);
+    this._viewContext = options.viewContext;
+    this._layerId = options.layerId;
 
     this.initMeshes(m, buf);
   }
@@ -170,6 +186,20 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
           );
         }
       }
+    }
+
+    // SelectiveEffect: effectIds handling at container level
+    // SpriteMaterial doesn't support emissive, so only effectIds is handled
+    const ud = this.userData as InstancedPointUserData;
+    ud.prev ??= {};
+    if (!arraysEqual(ud.prev.effectIds, material.effectIds)) {
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        material.effectIds ?? [],
+        ud.prev.effectIds ?? [],
+        this._layerId,
+      );
+      ud.prev.effectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 }

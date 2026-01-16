@@ -5,6 +5,7 @@ use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon,
 use geozero::mvt::{tile, Message, Tile as MvtTile};
 use geozero::ToGeo;
 use navara_buffer_store::BufferStore;
+use navara_component::OrderByDistance;
 use navara_core::{Extent, Radians};
 use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
@@ -244,6 +245,7 @@ fn spawn_batched_entity(
 ///
 /// If `tile_info` is provided, `OverscaledTileHandle` and `TileExtent` components
 /// will be added to each spawned entity.
+/// TODO: This function is used by single MVT rendering, but we should use [`construct_geometry_multi_layer`].
 #[allow(clippy::too_many_arguments)]
 pub fn construct_geometry(
     commands: &mut Commands,
@@ -695,4 +697,183 @@ fn construct_polygon_geometry(
     ));
 
     feature_ids.push(entity.id());
+}
+
+// ============================================================================
+// Multi-layer support: Parse MVT once, spawn features for multiple layers
+// ============================================================================
+
+/// Information about a matched layer for multi-layer processing.
+pub struct MatchedLayerInfo<'a> {
+    /// The layer ID
+    pub layer_id: &'a str,
+    /// The layer's appearances
+    pub appearances: &'a [Appearance],
+    /// Optional layer filter for MVT sublayers
+    pub limit_layers: &'a Option<Vec<String>>,
+}
+
+/// Main entry point for multi-layer MVT processing.
+/// Parses MVT binary once and spawns entities for all matched layers.
+///
+/// This is more efficient than calling `construct_geometry` multiple times
+/// when multiple layers share the same source URL.
+#[allow(clippy::too_many_arguments)]
+pub fn construct_geometry_multi_layer(
+    commands: &mut Commands,
+    batch_table: &mut BatchTable,
+    buf: &mut BufferStore,
+    mvt_bin: Vec<u8>,
+    xyz: TileXYZ,
+    matched_layers: &[MatchedLayerInfo],
+    tile_info: Option<(TileHandle, Extent<FloatType, Radians>)>,
+    order: &OrderByDistance,
+) -> Option<Vec<Entity>> {
+    if matched_layers.is_empty() {
+        return None;
+    }
+
+    // Decode MVT once
+    let tile = MvtTile::decode(mvt_bin.as_slice()).ok()?;
+
+    let mut result = Vec::new();
+
+    // Process each MVT sublayer
+    for mvt_layer in tile.layers {
+        // Process this MVT sublayer for all matched navara layers
+        let entities = process_layer_multi(
+            commands,
+            batch_table,
+            buf,
+            mvt_layer,
+            xyz,
+            matched_layers,
+            tile_info,
+            order,
+        );
+        result.extend(entities);
+    }
+
+    if result.is_empty() {
+        None
+    } else {
+        Some(result)
+    }
+}
+
+/// Process a single MVT sublayer for the last matching target layer.
+/// Uses only the last matched layer since rendering the same features multiple times
+/// for different layers with the same source provides no visual benefit.
+#[allow(clippy::too_many_arguments)]
+fn process_layer_multi(
+    commands: &mut Commands,
+    batch_table: &mut BatchTable,
+    buf: &mut BufferStore,
+    mut mvt_layer: tile::Layer,
+    xyz: TileXYZ,
+    matched_layers: &[MatchedLayerInfo],
+    tile_info: Option<(TileHandle, Extent<FloatType, Radians>)>,
+    order: &OrderByDistance,
+) -> Vec<Entity> {
+    let extent = mvt_layer.extent.unwrap_or(4096);
+    let mut converter = PosConverter::new(xyz, extent);
+
+    // Use the last layer that wants this MVT sublayer.
+    // No need to render the same features multiple times for different layers sharing the source.
+    let target_layer = matched_layers.iter().rev().find(|ml| {
+        ml.limit_layers
+            .as_ref()
+            .map(|ll| ll.contains(&mvt_layer.name))
+            .unwrap_or(true)
+    });
+
+    let Some(target_layer) = target_layer else {
+        return Vec::new();
+    };
+
+    let mvt_layer_data = MvtLayerData {
+        keys: Arc::new(std::mem::take(&mut mvt_layer.keys)),
+        values: Arc::new(std::mem::take(&mut mvt_layer.values)),
+        feature_tags: Vec::with_capacity(mvt_layer.features.len()),
+    };
+
+    let feature_batch_id = batch_table
+        .init_mvt(Some(target_layer.layer_id.to_owned()), mvt_layer_data)
+        .unwrap_or(0);
+
+    let mut feature_ids = Vec::with_capacity(mvt_layer.features.len());
+    let mut geometry_type = None;
+    let mut global_batch_ids: Vec<u32> = Vec::with_capacity(mvt_layer.features.len());
+
+    // Process each feature ONCE
+    for feature in &mut mvt_layer.features {
+        // Heavy operation: parse geometry (done once per feature)
+        let geom = match feature.to_geo() {
+            Ok(g) => g,
+            Err(_) => continue,
+        };
+
+        let batch_idx = BatchIndex(global_batch_ids.len() as u32);
+
+        // Move tags directly (no clone needed)
+        let tags = std::mem::take(&mut feature.tags);
+        batch_table.add_mvt_feature_tags(feature_batch_id, tags);
+
+        let batch_id = batch_table.init_values(None).unwrap_or(0);
+        global_batch_ids.push(batch_id);
+
+        // Reuse existing handle_geometry for single layer
+        handle_geometry(
+            commands,
+            buf,
+            &mut feature_ids,
+            &mut geometry_type,
+            &geom,
+            &mut converter,
+            &batch_idx,
+            target_layer.appearances,
+        );
+    }
+
+    if feature_ids.is_empty() {
+        return Vec::new();
+    }
+
+    let Some(geometry_type) = geometry_type else {
+        return Vec::new();
+    };
+
+    let batch_length = global_batch_ids.len() as u32;
+    let global_batch_ids_copy = GlobalBatchIds {
+        handle: buf.new_u32(global_batch_ids),
+        batch_length,
+    };
+
+    let batched = BatchedFeature {
+        features: feature_ids,
+        ..Default::default()
+    };
+
+    let mut result = Vec::new();
+    if let Some(entity) = spawn_batched_entity(
+        commands,
+        batched,
+        geometry_type,
+        target_layer.appearances,
+        target_layer.layer_id,
+        FeatureBatchId(feature_batch_id),
+        global_batch_ids_copy,
+    ) {
+        if let Some((tile_handle, tile_extent)) = tile_info {
+            commands.entity(entity).insert((
+                OverscaledTileHandle::new(tile_handle),
+                TileExtent::new(tile_extent),
+            ));
+        }
+        commands.entity(entity).insert(order.clone());
+
+        result.push(entity);
+    }
+
+    result
 }
