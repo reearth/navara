@@ -5,10 +5,12 @@ import ThreeView, {
   SunLightLayer,
   StarsLayer,
   AmbientLightLayer,
+  ColorGradingLUTEffectLayer,
+  type BlendMode,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import { TILE_DATASETS } from "../../helpers/constants";
+import { TILE_DATASETS, LUT_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
 let gSkyBoxMeshLayer: LayerHandle<SkyBoxMeshLayer> | undefined = undefined;
@@ -48,6 +50,17 @@ export const run = async (view: ThreeView) => {
       dayColor: new Color().setHex(gPaneParams.dayColor),
       nightColor: new Color().setHex(gPaneParams.nightColor),
     },
+  });
+
+  // adding color grading for better visuals
+  view.addLayer<ColorGradingLUTEffectLayer>({
+    type: "effect",
+    colorGradingLUT: {
+      url: LUT_DATASETS.Blackmagic4_6KFilmtoExtendedVideov4Cube.url,
+      blendMode: "normal" as BlendMode,
+      opacity: 1.0,
+    },
+    visible: true,
   });
 
   view.addLayer({
