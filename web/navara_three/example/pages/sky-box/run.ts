@@ -7,17 +7,17 @@ import ThreeView, {
   AmbientLightLayer,
 } from "@navara/three";
 import { Pane } from "tweakpane";
+
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
-let gSkyBoxMeshLayer: LayerHandle<SkyBoxMeshLayer> | undefined =
-  undefined;
+let gSkyBoxMeshLayer: LayerHandle<SkyBoxMeshLayer> | undefined = undefined;
 
 const gPaneParams = {
   visible: true,
   dayColor: 0x87ceeb,
   nightColor: 0x000033,
-  sunsetColor: 0xFFDDAE,
+  sunsetColor: 0xffddae,
 };
 
 export const run = async (view: ThreeView) => {
@@ -64,11 +64,11 @@ export const run = async (view: ThreeView) => {
   });
 
   addCameraControl(view, pane);
-  addPanel(view, pane);
+  addPanel(pane);
   addDateControl(view, pane);
 };
 
-function addPanel(view: ThreeView, pane: Pane) {
+function addPanel(pane: Pane) {
   if (!gSkyBoxMeshLayer) return;
 
   const folder = pane.addFolder({ title: "Sky Box Layer" });
@@ -76,39 +76,44 @@ function addPanel(view: ThreeView, pane: Pane) {
   folder
     .addBinding(gPaneParams, "visible", { label: "Visible", view: "boolean" })
     .on("change", (ev) => {
-        gSkyBoxMeshLayer?.update({
-          visible: ev.value,
-        });
+      gSkyBoxMeshLayer?.update({
+        visible: ev.value,
+      });
     });
 
   folder
     .addBinding(gPaneParams, "dayColor", { label: "Day Color", view: "color" })
     .on("change", (ev) => {
-        gSkyBoxMeshLayer?.update({
-          skyBox: {
-            dayColor: new Color().setHex(ev.value),
-          },
-        });
+      gSkyBoxMeshLayer?.update({
+        skyBox: {
+          dayColor: new Color().setHex(ev.value),
+        },
+      });
     });
 
   folder
-    .addBinding(gPaneParams, "nightColor", { label: "Night Color", view: "color" })
+    .addBinding(gPaneParams, "nightColor", {
+      label: "Night Color",
+      view: "color",
+    })
     .on("change", (ev) => {
-        gSkyBoxMeshLayer?.update({
-          skyBox: {
-            nightColor: new Color().setHex(ev.value),
-          },
-        });
+      gSkyBoxMeshLayer?.update({
+        skyBox: {
+          nightColor: new Color().setHex(ev.value),
+        },
+      });
     });
 
   folder
-    .addBinding(gPaneParams, "sunsetColor", { label: "Sunset Color", view: "color" })
+    .addBinding(gPaneParams, "sunsetColor", {
+      label: "Sunset Color",
+      view: "color",
+    })
     .on("change", (ev) => {
-        gSkyBoxMeshLayer?.update({
-          skyBox: {
-            sunsetColor: new Color().setHex(ev.value),
-          },
-        });
+      gSkyBoxMeshLayer?.update({
+        skyBox: {
+          sunsetColor: new Color().setHex(ev.value),
+        },
+      });
     });
-
 }
