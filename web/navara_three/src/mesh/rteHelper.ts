@@ -28,14 +28,7 @@ export function setupRTEMesh(
   userData: RTEUserData,
   modelMatrix?: Matrix4,
   cameraPosMatrix?: Matrix4,
-):
-  | ((
-      renderer: unknown,
-      scene: unknown,
-      camera: Camera,
-      shadowCameraOrGeometry?: Camera | unknown,
-    ) => void)
-  | null {
+): (Object3D["onBeforeRender"] & Object3D["onBeforeShadow"]) | null {
   const modelMatrixToUse =
     modelMatrix !== undefined ? modelMatrix : mesh.matrixWorld;
   const cameraPosMatrixToUse =
