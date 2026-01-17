@@ -18,7 +18,7 @@ use navara_feature_component::{
 use navara_layer::{LayerId, LayerStore};
 use navara_material::PointMaterial;
 use navara_math::{Transform, Vec3};
-use navara_mvt::MVTFeatureMarker;
+
 use navara_tile_component::{
     compute_terrain_height_at_point, RasterTileQuadtree, TileExtent, TileMeshMarker,
     TileTerrainDataRequesterQuery,
@@ -40,9 +40,8 @@ pub fn transfer_batched_mesh(
             &GlobalBatchIds,
             &mut FeatureId,
             Option<&TileExtent>,
-            Option<&MVTFeatureMarker>,
         ),
-        (With<PointMarker>, Without<Deleted>),
+        (With<PointMarker>, Added<BatchedFeature>, Without<Deleted>),
     >,
     points: Query<(&PointGeometry, &BatchIndex)>,
     mut layer_store: ResMut<LayerStore>,
@@ -57,19 +56,8 @@ pub fn transfer_batched_mesh(
         global_batch_ids,
         mut feature_id,
         tile_extent_component,
-        mvt_marker,
     ) in &mut batched_features
     {
-        // Skip if already processed
-        if feature_id.0.is_some() {
-            continue;
-        }
-
-        if mvt_marker.is_some() && tile_extent_component.is_none() {
-            // MVT tile but TileExtent not yet applied, wait for next frame
-            continue;
-        }
-
         // Extract all point geometries and create batch indices and IDs in a single loop
         let feature_len = batched_feature.features.len();
         let mut all_coords = Vec::with_capacity(feature_len * 3);
@@ -156,7 +144,7 @@ pub fn transfer_batched_mesh(
                         is_rendered: false,
                         should_recalculate_height: true,
                     },
-                    geometry: TransferablePointGeometry::with_buf(
+                    geometry: TransferablePointGeometry::with_buf_rtc(
                         &mut buf,
                         all_coords,
                         batch_indices,
@@ -210,7 +198,7 @@ pub fn transfer_mesh(
                     coordinates: geometry.coords,
                     crs: geometry.crs.clone(),
                     material: material.clone(),
-                    transform: Transform::from_translation(position).with_scale(Vec3::new(
+                    transform: Transform::from_scale(Vec3::new(
                         material.size as f64,
                         material.size as f64,
                         material.size as f64,
@@ -221,11 +209,8 @@ pub fn transfer_mesh(
                         is_rendered: false,
                         should_recalculate_height: material.clamp_to_ground,
                     },
-                    geometry: TransferablePointGeometry::with_buf(
-                        &mut buf,
-                        vec![0.0, 0.0, 0.0], // RTC: relative offset is zero for single points
-                        vec![0],
-                        vec![batch_id.0],
+                    geometry: TransferablePointGeometry::with_buf_rte(
+                        &mut buf, position, 0, batch_id.0,
                     ),
                     active: lod_marker.is_none(),
                     feature_batch_id: batch_id.0 as u32,
@@ -335,9 +320,10 @@ pub fn update_height_by_terrain_for_batched(
                     all_coords.push(local_pos.z as f32);
                 }
 
-                buf.remove(&geometry.position.data);
-
-                geometry.position.data = buf.new_f32(all_coords);
+                if let Some(position) = &mut geometry.position {
+                    buf.remove(&position.data);
+                    position.data = buf.new_f32(all_coords);
+                }
             }
             _ => unreachable!(),
         };
@@ -386,8 +372,7 @@ pub fn update_height_by_terrain(
                 material,
                 feature_id,
                 render_info,
-                geometry: _,
-                transform,
+                geometry: transferable_geometry,
                 ..
             } => {
                 render_info.should_recalculate_height = false;
@@ -411,8 +396,8 @@ pub fn update_height_by_terrain(
                     material.height + render_info.current_terrain_height as f32,
                 );
 
-                // RTC: Update transform translation with new position
-                transform.translation = position;
+                // Update RTE geometry position
+                transferable_geometry.update_rte_position(&mut buf, position);
             }
             _ => unreachable!(),
         };

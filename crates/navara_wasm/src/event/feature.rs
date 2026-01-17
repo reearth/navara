@@ -12,7 +12,7 @@ use crate::{
 use navara_wasm_types::{
     polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature, Aabb,
     BillboardMaterial, BoundingSphere, ModelMaterial, PointMaterial, PolygonMaterial,
-    PolylineMaterial, TextMaterial, Vec3, CRS,
+    PolylineMaterial, TextMaterial, CRS,
 };
 
 #[wasm_bindgen]
@@ -24,10 +24,6 @@ pub struct PointMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePointGeometry,
     pub active: bool,
-    /// RTC (Relative-To-Center) coordinates - tile center in world-space
-    /// Used for positioning the mesh when using RTC rendering
-    #[wasm_bindgen(getter_with_clone)]
-    pub coordinates: Vec3,
 }
 
 #[wasm_bindgen]
@@ -76,10 +72,6 @@ pub struct PolygonMesh {
     pub outline_geometry: Option<TransferablePolygonOutlineGeometry>,
     pub transform: Transform,
     pub active: bool,
-    /// RTC (Relative-To-Center) coordinates - tile center in world-space
-    /// Used for positioning the mesh when using RTC rendering
-    #[wasm_bindgen(getter_with_clone)]
-    pub coordinates: Vec3,
     #[wasm_bindgen(getter_with_clone)]
     pub bounding_sphere: Option<BoundingSphere>,
 }
@@ -122,7 +114,6 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
-                coordinates,
                 ..
             } => Self {
                 point: Some(PointMesh {
@@ -130,7 +121,6 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     geometry: geometry.into(),
                     active: *active,
-                    coordinates: (*coordinates).into(),
                 }),
                 ..Default::default()
             },
@@ -187,7 +177,6 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 outline_geometry,
                 transform,
                 active,
-                coordinates,
                 bounding_sphere,
                 ..
             } => Self {
@@ -197,7 +186,6 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     outline_geometry: outline_geometry.as_ref().map(|og| og.into()),
                     transform: transform.into(),
                     active: *active,
-                    coordinates: (*coordinates).into(),
                     bounding_sphere: bounding_sphere.as_ref().map(|bs| (*bs).into()),
                 }),
                 ..Default::default()

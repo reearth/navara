@@ -216,43 +216,36 @@ pub fn update_mvt_layer(
                 match &u.appearance {
                     Appearance::Point(pt) => {
                         if let RenderableFeature::Point {
-                            coordinates,
-                            crs,
                             material,
                             transform,
                             render_info,
                             ..
                         } = f.as_mut()
                         {
-                            material.update(pt, coordinates, crs, transform);
+                            material.update(pt, transform);
                             render_info.should_recalculate_height = true;
                         }
                     }
                     Appearance::Billboard(pt) => {
                         if let RenderableFeature::Billboard {
-                            coordinates,
-                            crs,
                             material,
                             transform,
                             render_info,
                             ..
                         } = f.as_mut()
                         {
-                            material.update(pt, coordinates, crs, transform);
+                            material.update(pt, transform);
                             render_info.should_recalculate_height = true;
                         }
                     }
                     Appearance::Text(pt) => {
                         if let RenderableFeature::Text {
-                            coordinates,
-                            crs,
                             material,
-                            transform,
                             render_info,
                             ..
                         } = f.as_mut()
                         {
-                            material.update(pt, coordinates, crs, transform);
+                            material.update(pt);
                             render_info.should_recalculate_height = true;
                         }
                     }

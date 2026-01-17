@@ -21,3 +21,4 @@ export * from "./arcLine";
 export * from "./smoothLine";
 export * from "./spherePoints";
 export * from "./pickableMesh";
+export * from "./rteHelper";

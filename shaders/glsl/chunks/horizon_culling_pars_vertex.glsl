@@ -11,6 +11,8 @@
  * param {vec3} cameraPosition World position of the camera in the same space.
  * returns {bool} true if the point lies beyond the ellipsoidal horizon and can be culled.
  */
+flat out int vHorizonCulled;
+
 bool nvr_horizon_culled(vec3 targetPosition, vec3 cameraPosition) {
     vec3 cameraPositionScaled = cameraPosition * ONE_OVER_RADII;
     vec3 targetPositionScaled = targetPosition * ONE_OVER_RADII;
