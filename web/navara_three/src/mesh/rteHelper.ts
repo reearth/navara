@@ -4,11 +4,11 @@ import { Camera, Matrix4, Object3D, Vector3 } from "three";
 /**
  * Interface for objects that need RTE (Relative-To-Eye) rendering support
  */
-export interface RTEUserData {
+export type RTEUserData = {
   modelViewMatrixRTE?: { value: Matrix4 };
   cameraPositionHigh?: { value: Vector3 };
   cameraPositionLow?: { value: Vector3 };
-}
+};
 
 /**
  * Setup onBeforeRender/onBeforeShadow callback for RTE rendering

@@ -58,6 +58,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
     const active = m.active;
     const transform = m.transform;
 
+    this.setActive(active);
+
     this.userData.useRTE =
       g.position_3d_high !== undefined && g.position_3d_high.size > 0;
 
@@ -124,6 +126,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
   }
 
   _update(m: NavaraPointMesh, buf: BufferLoader, active: boolean) {
+    this.setActive(active);
+
     const material = m.material;
     const g = m.geometry;
     const transform = m.transform;
@@ -141,6 +145,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
       for (const mesh of this.meshes()) {
         mesh._update(material, active);
+
+        this.markVisibility(mesh);
 
         // RTE: Only update scale (for sprite size), not position/rotation
         mesh.scale.set(transform.sx, transform.sy, transform.sz);
@@ -172,6 +178,9 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
       for (const mesh of this.meshes()) {
         mesh._update(material, active);
+
+        this.markVisibility(mesh);
+
         setTransform(mesh, transform);
 
         if (position) {

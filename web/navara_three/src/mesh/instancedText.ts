@@ -48,6 +48,8 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     const active = m.active;
     const transform = m.transform;
 
+    this.setActive(active);
+
     this.userData.useRTE =
       g.position_3d_high !== undefined && g.position_3d_high.size > 0;
 
@@ -112,6 +114,8 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     active: boolean,
     needRender?: () => void,
   ) {
+    this.setActive(active);
+
     const material = m.material;
     const g = m.geometry;
     const transform = m.transform;
@@ -129,6 +133,8 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
 
       for (const mesh of this.meshes()) {
         mesh._updateTextByMaterial(material, active, needRender);
+
+        this.markVisibility(mesh);
 
         if (positionHigh && positionLow) {
           const batchIndex = mesh.userData.batchIndex as number;
@@ -158,6 +164,8 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
       for (const mesh of this.meshes()) {
         mesh._updateTextByMaterial(material, active, needRender);
 
+        this.markVisibility(mesh);
+
         setTransform(mesh, transform);
 
         if (position) {
@@ -175,7 +183,7 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     }
   }
 
-  setTextByNatchIndex(batchIndex: number, text: string) {
-    this.getMeshByBatchIndex(batchIndex).setText(text);
+  setTextByBatchIndex(batchIndex: number, text: string) {
+    this.getMeshByBatchIndex(batchIndex)?.setText(text);
   }
 }

@@ -57,6 +57,8 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
     const active = m.active;
     const transform = m.transform;
 
+    this.setActive(active);
+
     this.userData.useRTE =
       g.position_3d_high !== undefined && g.position_3d_high.size > 0;
 
@@ -127,6 +129,8 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
   }
 
   async _update(m: NavaraBillboardMesh, buf: BufferLoader, active: boolean) {
+    this.setActive(active);
+
     const material = m.material;
     const g = m.geometry;
     const transform = m.transform;
@@ -155,6 +159,8 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       this.meshes().map(async (mesh) => {
         await mesh._update(material, active);
 
+        this.markVisibility(mesh);
+
         const batchIdx = mesh.userData.batchIndex as number;
         const posIdx = batchIdx * positionSize;
 
@@ -177,7 +183,11 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
           }
         } else {
           setTransform(mesh, transform);
+
+          this.markVisibility(mesh);
+
           applyTextureAspect(mesh);
+
           if (position) {
             mesh.userData.rtcPos.value.set(
               position[posIdx],
