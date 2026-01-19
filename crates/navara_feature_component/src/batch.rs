@@ -220,6 +220,10 @@ impl BatchTable {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
     pub fn add(&mut self, value: Option<BatchTableValue>) -> Option<u32> {
         let mut rng = rand::rng();
         let mut key = rng.random_range(1..0xffffff);

@@ -226,7 +226,7 @@ export class FeatureEvaluator {
             for (let i = 0; i < target.array.length; i++) {
               const v = target.array[i];
 
-              m.setTextByNatchIndex(i, v as string);
+              m.setTextByBatchIndex(i, v as string);
             }
             continue;
           }

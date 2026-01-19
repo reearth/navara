@@ -12,7 +12,7 @@ use navara_component::Deleted;
 use navara_core::get_tile_pos_from_url;
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_feature_component::{
-    batch::{BatchId, BatchTable, BatchedFeature},
+    batch::{BatchTable, BatchedFeature},
     id::FeatureId,
     polygon::UpdatePolygon,
     render::RenderableFeature,
@@ -284,25 +284,12 @@ pub fn delete_mvt_layer(
     feature_ids: Query<(&FeatureId, &LayerId)>,
     batched_features: Query<&BatchedFeature>,
     mut rendered_tiles: Query<&mut RenderedTile>,
-    entities_with_layerid: Query<(Entity, &LayerId)>,
     mut qts: Query<&mut VectorTileQuadtree>,
     tc: Query<&TileCacheManager>,
-    mut batch_table: ResMut<BatchTable>,
-    batch_id: Query<&BatchId>,
     mut sources: Query<&mut MvtSourceResources>,
     mut source_cache: ResMut<MvtSourceCache>,
 ) {
     for (e, d) in &deleted {
-        // delete all entities with this layer id
-        for (entity, l_id) in entities_with_layerid.iter() {
-            if l_id.0 == d.0 {
-                if batch_id.get(entity).is_ok() {
-                    batch_table.remove(&(batch_id.get(entity).unwrap().0 as u32));
-                }
-                commands.entity(entity).insert(Deleted);
-            }
-        }
-
         // delete stored layer id
         layer_store.remove(&d.0);
 
