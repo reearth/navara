@@ -22,8 +22,8 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
-import { createReplacer } from "../../utils";
 import { setupRTEMesh, type RTEUserData } from "../../mesh/rteHelper";
+import { createReplacer } from "../../utils";
 
 type LayerDescription = {
   gltfModel?: {

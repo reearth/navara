@@ -130,7 +130,7 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
 
   async _update(m: NavaraBillboardMesh, buf: BufferLoader, active: boolean) {
     this.setActive(active);
-    
+
     const material = m.material;
     const g = m.geometry;
     const transform = m.transform;

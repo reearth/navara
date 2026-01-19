@@ -438,7 +438,14 @@ pub fn remove_batched_feature(
 #[allow(clippy::type_complexity)]
 pub fn cleanup_deleted_batched_children(
     mut commands: Commands,
-    deleted: Query<Entity, (With<BillboardGeometry>, With<BatchedFeatureMarker>, With<Deleted>)>,
+    deleted: Query<
+        Entity,
+        (
+            With<BillboardGeometry>,
+            With<BatchedFeatureMarker>,
+            With<Deleted>,
+        ),
+    >,
 ) {
     for entity in &deleted {
         commands.entity(entity).despawn();
