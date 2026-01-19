@@ -159,6 +159,8 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       this.meshes().map(async (mesh) => {
         await mesh._update(material, active);
 
+        this.markVisibility(mesh);
+
         const batchIdx = mesh.userData.batchIndex as number;
         const posIdx = batchIdx * positionSize;
 
@@ -181,7 +183,11 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
           }
         } else {
           setTransform(mesh, transform);
+
+          this.markVisibility(mesh);
+
           applyTextureAspect(mesh);
+
           if (position) {
             mesh.userData.rtcPos.value.set(
               position[posIdx],

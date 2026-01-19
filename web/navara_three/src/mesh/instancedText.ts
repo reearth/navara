@@ -134,6 +134,8 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
       for (const mesh of this.meshes()) {
         mesh._updateTextByMaterial(material, active, needRender);
 
+        this.markVisibility(mesh);
+
         if (positionHigh && positionLow) {
           const batchIndex = mesh.userData.batchIndex as number;
           const posIdx = batchIndex * positionSize;
@@ -161,6 +163,8 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
 
       for (const mesh of this.meshes()) {
         mesh._updateTextByMaterial(material, active, needRender);
+
+        this.markVisibility(mesh);
 
         setTransform(mesh, transform);
 

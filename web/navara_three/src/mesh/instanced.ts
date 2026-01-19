@@ -17,7 +17,7 @@ export class InstancedMesh<M extends Object3D>
   implements PickableMesh
 {
   visibleMeshes = new Set();
-  allMeshes = new Object3D();
+  allMeshes: M[] = [];
   active = false;
 
   constructor(options: InstancedMeshOptions) {
@@ -35,15 +35,25 @@ export class InstancedMesh<M extends Object3D>
     m.userData.batchIndex = batchIndex;
 
     // Manage `mesh` manually, since Three.js traverses all children.
-    this.allMeshes.add(m);
-    if (m.visible) {
+    this.allMeshes.push(m);
+
+    this.markVisibility(m);
+  }
+
+  markVisibility(m: M) {
+    // Avoid adding this mesh to `Mesh.children` if the mesh is invisible,
+    // since Three.js traverses all `Mesh.children` on every frame to decide whether the mesh is rendered or not.
+    if (m.visible && !this.visibleMeshes.has(m.id)) {
       this.add(m);
       this.visibleMeshes.add(m.id);
+    } else if (!m.visible && this.visibleMeshes.has(m.id)) {
+      this.remove(m);
+      this.visibleMeshes.delete(m.id);
     }
   }
 
   meshes() {
-    return this.allMeshes.children as M[];
+    return this.allMeshes;
   }
 
   getMeshByBatchIndex(batchIndex: number) {
@@ -70,15 +80,7 @@ export class InstancedMesh<M extends Object3D>
 
     mesh._setFeatureShow(visible);
 
-    // Avoid adding this mesh to `Mesh.children` if the mesh is invisible,
-    // since Three.js traverses all `Mesh.children` on every frame to decide whether the mesh is rendered or not.
-    if (mesh.visible && !this.visibleMeshes.has(mesh.id)) {
-      this.add(mesh);
-      this.visibleMeshes.add(mesh.id);
-    } else if (!mesh.visible && this.visibleMeshes.has(mesh.id)) {
-      this.remove(mesh);
-      this.visibleMeshes.delete(mesh.id);
-    }
+    this.markVisibility(mesh);
   }
 
   setFeatureHeightByBatchIndex(batchIndex: number, height: number) {

@@ -146,6 +146,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
       for (const mesh of this.meshes()) {
         mesh._update(material, active);
 
+        this.markVisibility(mesh);
+
         // RTE: Only update scale (for sprite size), not position/rotation
         mesh.scale.set(transform.sx, transform.sy, transform.sz);
 
@@ -176,6 +178,9 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
       for (const mesh of this.meshes()) {
         mesh._update(material, active);
+
+        this.markVisibility(mesh);
+
         setTransform(mesh, transform);
 
         if (position) {

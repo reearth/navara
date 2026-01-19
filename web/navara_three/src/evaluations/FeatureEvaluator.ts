@@ -249,9 +249,12 @@ export class FeatureEvaluator {
           case "show": {
             const len = target.array.length / target.itemSize;
             for (let i = 0; i < len; i++) {
+              const value = target.array[i * target.itemSize];
               const visible =
-                (target.array[i * target.itemSize] as number) >= 0.5;
-              m.setFeatureShowByBatchIndex(i, visible);
+                value != null && typeof value === "number"
+                  ? value >= 0.5
+                  : undefined;
+              m.setFeatureShowByBatchIndex(i, visible ?? true);
             }
             continue;
           }
