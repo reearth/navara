@@ -25,6 +25,7 @@ export class InstancedMesh<M extends Object3D>
     this.renderOrder = options.renderOrder ?? this.renderOrder;
   }
 
+  // This is used to keep rendering the parent tile while the child tiles are being prepared.
   setActive(active: boolean) {
     this.active = active;
     this.visible = active;
@@ -33,7 +34,7 @@ export class InstancedMesh<M extends Object3D>
   addWithBatchIndex(m: M, batchIndex: number) {
     m.userData.batchIndex = batchIndex;
 
-    // Manage `mesh` manually, since Three.js check all children. It is inefficient.
+    // Manage `mesh` manually, since Three.js traverses all children.
     this.allMeshes.add(m);
     if (m.visible) {
       this.add(m);
@@ -69,6 +70,8 @@ export class InstancedMesh<M extends Object3D>
 
     mesh._setFeatureShow(visible);
 
+    // Avoid adding this mesh to `Mesh.children` if the mesh is invisible,
+    // since Three.js traverses all `Mesh.children` on every frame to decide whether the mesh is rendered or not.
     if (mesh.visible && !this.visibleMeshes.has(mesh.id)) {
       this.add(mesh);
       this.visibleMeshes.add(mesh.id);
