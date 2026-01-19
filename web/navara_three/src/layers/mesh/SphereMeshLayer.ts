@@ -7,12 +7,12 @@ import {
 
 import { Color } from "../../Color";
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type SelectiveEffectOcclusion,
 } from "../../core";
-import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
 
 type SphereMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
@@ -38,11 +38,13 @@ type LayerDescription = {
   };
 };
 
-export type SphereMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type SphereMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type SphereMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type SphereMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-export class SphereMeshLayer extends MeshLayerDeclaration<
+export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   SphereMeshLayerConfig,
   SphereMeshLayerUpdate,
   Mesh<SphereGeometry, MeshLambertMaterial, SphereMeshEventMap>
