@@ -5,16 +5,16 @@ import type {
 } from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
+import CalcLogDepthParsVertex from "@shaders/glsl/chunks/calc_log_depth_pars_vertex.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HorizonCullingParsVertex from "@shaders/glsl/chunks/horizon_culling_pars_vertex.glsl";
 import HorizonCullingVertex from "@shaders/glsl/chunks/horizon_culling_vertex.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import PixelToWorld from "@shaders/glsl/chunks/pixelToWorld.glsl";
+import RtcSpriteVertex from "@shaders/glsl/chunks/rtc_sprite_vertex.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import SdRoundedBox from "@shaders/glsl/chunks/sdRoundedBox.glsl";
 import SpriteHeightParsVertex from "@shaders/glsl/chunks/sprite_height_pars_vertex.glsl";
-import CalcLogDepthParsVertex from "@shaders/glsl/chunks/calc_log_depth_pars_vertex.glsl";
-import RtcSpriteVertex from "@shaders/glsl/chunks/rtc_sprite_vertex.glsl";
 import {
   Color,
   Group,

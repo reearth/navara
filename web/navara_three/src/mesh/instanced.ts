@@ -16,18 +16,44 @@ export class InstancedMesh<M extends Object3D>
   extends Mesh
   implements PickableMesh
 {
+  visibleMeshes = new Set();
+  allMeshes: M[] = [];
+  active = false;
+
   constructor(options: InstancedMeshOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
   }
 
+  // This is used to keep rendering the parent tile while the child tiles are being prepared.
+  setActive(active: boolean) {
+    this.active = active;
+    this.visible = active;
+  }
+
   addWithBatchIndex(m: M, batchIndex: number) {
     m.userData.batchIndex = batchIndex;
-    this.add(m);
+
+    // Manage `mesh` manually, since Three.js traverses all children.
+    this.allMeshes.push(m);
+
+    this.markVisibility(m);
+  }
+
+  markVisibility(m: M) {
+    // Avoid adding this mesh to `Mesh.children` if the mesh is invisible,
+    // since Three.js traverses all `Mesh.children` on every frame to decide whether the mesh is rendered or not.
+    if (m.visible && !this.visibleMeshes.has(m.id)) {
+      this.add(m);
+      this.visibleMeshes.add(m.id);
+    } else if (!m.visible && this.visibleMeshes.has(m.id)) {
+      this.remove(m);
+      this.visibleMeshes.delete(m.id);
+    }
   }
 
   meshes() {
-    return this.children as M[];
+    return this.allMeshes;
   }
 
   getMeshByBatchIndex(batchIndex: number) {
@@ -36,6 +62,7 @@ export class InstancedMesh<M extends Object3D>
 
   setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
     const mesh = this.getMeshByBatchIndex(batchIndex);
+    if (!mesh) return;
 
     if (!isFeatureMesh(mesh))
       throw new Error(`Mesh doesn't support FeatureMesh`);
@@ -43,17 +70,22 @@ export class InstancedMesh<M extends Object3D>
     mesh._setFeatureColor(color);
   }
 
-  setFeatureShowByBatchIndex(batchIndex: number, visible: boolean) {
+  setFeatureShowByBatchIndex(batchIndex: number, rawVisible: boolean) {
+    const visible = this.active && rawVisible;
     const mesh = this.getMeshByBatchIndex(batchIndex);
+    if (!mesh) return;
 
     if (!isFeatureMesh(mesh))
       throw new Error(`Mesh doesn't support FeatureMesh`);
 
     mesh._setFeatureShow(visible);
+
+    this.markVisibility(mesh);
   }
 
   setFeatureHeightByBatchIndex(batchIndex: number, height: number) {
     const mesh = this.getMeshByBatchIndex(batchIndex);
+    if (!mesh) return;
 
     if (!isFeatureMesh(mesh))
       throw new Error(`Mesh doesn't support FeatureMesh`);

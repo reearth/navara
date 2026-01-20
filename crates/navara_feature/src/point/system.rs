@@ -417,14 +417,35 @@ pub fn remove_batched_feature(
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
     for (feature_id, rendered_feature_id, global_batch_ids) in &removed_features {
-        let Some(rendered_feature_id) = rendered_feature_id.0 else {
-            unreachable!();
-        };
-        if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
-            feature.destroy(&mut buf, &mut batch_table_res);
+        // Clean up RenderableFeature if it exists
+        if let Some(rendered_feature_id) = rendered_feature_id.0 {
+            if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
+                feature.destroy(&mut buf, &mut batch_table_res);
+            }
+            feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+            // Mark RenderableFeature as Deleted so event::despawn will clean it up
+            commands.entity(rendered_feature_id).insert(Deleted);
         }
-        feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
+
+        // Always clean up GlobalBatchIds and despawn the BatchedFeature entity
         buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn cleanup_deleted_batched_children(
+    mut commands: Commands,
+    deleted: Query<
+        Entity,
+        (
+            With<PointGeometry>,
+            With<BatchedFeatureMarker>,
+            With<Deleted>,
+        ),
+    >,
+) {
+    for entity in &deleted {
+        commands.entity(entity).despawn();
     }
 }

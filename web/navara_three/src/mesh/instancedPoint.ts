@@ -58,6 +58,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
     const active = m.active;
     const transform = m.transform;
 
+    this.setActive(active);
+
     this.userData.useRTE =
       g.position_3d_high !== undefined && g.position_3d_high.size > 0;
 
@@ -101,6 +103,8 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
   }
 
   _update(m: NavaraPointMesh, buf: BufferLoader, active: boolean) {
+    this.setActive(active);
+
     const material = m.material;
     const g = m.geometry;
     const transform = m.transform;
@@ -127,6 +131,7 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
     for (const mesh of this.meshes()) {
       mesh._update(material, active);
+      this.markVisibility(mesh);
 
       const posIdx = mesh.userData.batchIndex * positionSize;
       mesh.setPosition(
