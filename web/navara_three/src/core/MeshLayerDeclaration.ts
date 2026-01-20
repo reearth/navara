@@ -157,10 +157,8 @@ export abstract class MeshLayerDeclaration<
   }
 
   onDestroy(): void {
-    // Use removeFromScene for consistent cleanup
-    if (this.prevPassKey) {
-      this.removeFromScene(this.prevPassKey);
-      this.prevPassKey = undefined;
+    if (this.raw && this.raw.parent) {
+      this.raw.parent.remove(this.raw);
     }
 
     super.onDestroy();
