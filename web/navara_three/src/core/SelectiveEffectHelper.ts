@@ -333,6 +333,14 @@ export class SelectiveEffectHelper {
   }
 
   /**
+   * Clear occlusion cache for a layer
+   * Called by Manager when layer is unregistered
+   */
+  clearOcclusionCache(layerId: string): void {
+    this.occlusionCache.delete(layerId);
+  }
+
+  /**
    * Get Post Effect Occlusion setting for a layer (from cache)
    */
   getLayerSelectiveEffectOcclusion(

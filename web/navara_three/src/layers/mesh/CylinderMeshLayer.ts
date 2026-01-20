@@ -7,9 +7,9 @@ import {
 
 import { Color } from "../../Color";
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type SelectiveEffectOcclusion,
 } from "../../core";
@@ -39,11 +39,13 @@ type LayerDescription = {
   };
 };
 
-export type CylinderMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type CylinderMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type CylinderMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type CylinderMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-export class CylinderMeshLayer extends MeshLayerDeclaration<
+export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   CylinderMeshLayerConfig,
   CylinderMeshLayerUpdate,
   Mesh<CylinderGeometry, MeshLambertMaterial, CylinderMeshEventMap>

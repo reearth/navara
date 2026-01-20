@@ -98,6 +98,10 @@ export class ViewContext {
     this.selectiveEffects.setLayerOcclusion(layerId, selectiveEffectOcclusion);
   }
 
+  clearLayerSelectiveEffectOcclusion(layerId: string): void {
+    this.selectiveEffects.clearLayerOcclusion(layerId);
+  }
+
   unregisterLayerEffects(layerId: string): void {
     this.selectiveEffects.unregisterLayerEffects(layerId);
   }

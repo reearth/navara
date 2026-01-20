@@ -7,9 +7,9 @@ import {
 
 import { Color } from "../../Color";
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type SelectiveEffectOcclusion,
 } from "../../core";
@@ -35,11 +35,13 @@ type LayerDescription = {
   };
 };
 
-export type PlaneMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type PlaneMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type PlaneMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type PlaneMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-export class PlaneMeshLayer extends MeshLayerDeclaration<
+export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   PlaneMeshLayerConfig,
   PlaneMeshLayerUpdate,
   Mesh<PlaneGeometry, MeshLambertMaterial, PlaneMeshEventMap>

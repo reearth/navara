@@ -10,12 +10,12 @@ import {
 
 import { Color } from "../../Color";
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type SelectiveEffectOcclusion,
 } from "../../core";
-import type { MeshLayerUpdate } from "../../core/MeshLayerDeclaration";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
 
 type TubeMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
@@ -40,11 +40,13 @@ type LayerDescription = {
   };
 };
 
-export type TubeMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type TubeMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type TubeMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type TubeMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-export class TubeMeshLayer extends MeshLayerDeclaration<
+export class TubeMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   TubeMeshLayerConfig,
   TubeMeshLayerUpdate,
   Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>
