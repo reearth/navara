@@ -893,6 +893,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     text: {
+      lang: "ja",
       color: new Color().setStyle("#ffffff"),
       scaleByDistance: true,
       clampToGround: false,

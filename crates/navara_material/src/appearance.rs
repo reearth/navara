@@ -194,6 +194,7 @@ pub struct TextMaterial {
     pub outline_offset: Vec2, // outlineOffset Default: (0,0)
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
+    pub lang: String,
 }
 
 impl Default for TextMaterial {
@@ -220,6 +221,7 @@ impl Default for TextMaterial {
             outline_offset: Vec2::new(0.0, 0.0),
             outline_opacity: 1.0,
             outline_width: 0.0,
+            lang: "".to_string(),
         }
     }
 }

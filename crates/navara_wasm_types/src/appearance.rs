@@ -266,6 +266,7 @@ pub struct TextMaterial {
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
     /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
+    /// Please note that this API might be replaced with another API in the future, since it loads a large font file at once.
     #[wasm_bindgen(getter_with_clone)]
     pub font: Option<String>,
     #[wasm_bindgen(js_name = backgroundColor)]
@@ -300,6 +301,9 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = outlineWidth)]
     #[serde(rename = "outlineWidth")]
     pub outline_width: Option<f32>,
+    /// Language code for text shaping (e.g., "en", "ja", "ar"). Used for proper text rendering.
+    #[wasm_bindgen(getter_with_clone)]
+    pub lang: Option<String>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -330,6 +334,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
                 .into(),
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
+            lang: val.lang.unwrap_or(default.lang),
         }
     }
 }
@@ -357,6 +362,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             outline_offset: Some(value.outline_offset.into()),
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
+            lang: Some(value.lang.clone()),
         }
     }
 }
@@ -388,6 +394,7 @@ impl TextMaterial {
                 .into(),
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
+            lang: self.lang.clone().unwrap_or(other.lang.clone()),
         }
     }
 }
