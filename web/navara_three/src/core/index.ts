@@ -11,6 +11,11 @@ export {
   type MeshLayerConfig,
 } from "./MeshLayerDeclaration";
 export {
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+} from "./MeshLayerDeclarationForSelectiveEffect";
+export {
   MeshLayerRegistry,
   type MeshLayerConstructor,
 } from "./MeshLayerRegistry";
