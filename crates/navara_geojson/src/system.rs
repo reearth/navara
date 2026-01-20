@@ -362,7 +362,6 @@ pub fn update_geo_json_layer(
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateGeoJsonLayerMarker)>,
     mut features: Query<&mut RenderableFeature>,
-    mut buf: ResMut<BufferStore>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
@@ -378,45 +377,32 @@ pub fn update_geo_json_layer(
                         material,
                         transform,
                         render_info,
-                        geometry,
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
                             material.update(mat, transform);
                             render_info.should_recalculate_height = true;
-
-                            // Update RTE geometry position
-                            geometry.update_rte_position(&mut buf, transform.translation);
                         }
                     }
                     RenderableFeature::Text {
                         material,
-                        transform,
                         render_info,
-                        geometry,
                         ..
                     } => {
                         if let Appearance::Text(mat) = &u.appearance {
                             material.update(mat);
                             render_info.should_recalculate_height = true;
-
-                            // Update RTE geometry position
-                            geometry.update_rte_position(&mut buf, transform.translation);
                         }
                     }
                     RenderableFeature::Point {
                         material,
                         transform,
                         render_info,
-                        geometry,
                         ..
                     } => {
                         if let Appearance::Point(mat) = &u.appearance {
                             material.update(mat, transform);
                             render_info.should_recalculate_height = true;
-
-                            // Update RTE geometry position
-                            geometry.update_rte_position(&mut buf, transform.translation);
                         }
                     }
                     RenderableFeature::Model {

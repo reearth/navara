@@ -1,7 +1,7 @@
 import { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
 import type { ViewContext } from "../core";
-import { setTransform, type BufferLoader } from "../event";
+import { type BufferLoader } from "../event";
 import { applyTextureAspect } from "../texture";
 import { arraysEqual } from "../utils";
 
@@ -87,34 +87,15 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
       promises.push(
         mesh._init(material, batchId, active).then(() => {
           const posIdx = i * positionSize;
-          if (this.userData.useRTE) {
-            if (positionHigh && positionLow) {
-              // RTE: Only set scale (for sprite size), not position/rotation
-              // Position is encoded in rtePosHigh/Low (absolute world coordinates)
-              // Rotation/quaternion would affect matrixWorld and break RTE calculations
-              mesh.scale.set(transform.sx, transform.sy, transform.sz);
 
-              mesh.userData.rtePosHigh.value.set(
-                positionHigh[posIdx],
-                positionHigh[posIdx + 1],
-                positionHigh[posIdx + 2],
-              );
-              mesh.userData.rtePosLow.value.set(
-                positionLow[posIdx],
-                positionLow[posIdx + 1],
-                positionLow[posIdx + 2],
-              );
-            }
-          } else if (position) {
-            // RTC: Set mesh position to tile center, store relative offset in uniform
-            setTransform(mesh, transform);
-
-            mesh.userData.rtcPos.value.set(
-              position[posIdx],
-              position[posIdx + 1],
-              position[posIdx + 2],
-            );
-          }
+          mesh.setPosition(
+            this.userData.useRTE,
+            position,
+            positionHigh,
+            positionLow,
+            posIdx,
+            transform,
+          );
 
           applyTextureAspect(mesh);
 
@@ -158,34 +139,16 @@ export class InstancedBillboardMesh extends InstancedMesh<BillboardMesh> {
         const batchIdx = mesh.userData.batchIndex as number;
         const posIdx = batchIdx * positionSize;
 
-        if (this.userData.useRTE) {
-          // RTE: Only update scale (for sprite size), not position/rotation
-          mesh.scale.set(transform.sx, transform.sy, transform.sz);
-          applyTextureAspect(mesh);
+        mesh.setPosition(
+          this.userData.useRTE,
+          position,
+          positionHigh,
+          positionLow,
+          posIdx,
+          transform,
+        );
 
-          if (positionHigh && positionLow) {
-            mesh.userData.rtePosHigh.value.set(
-              positionHigh[posIdx],
-              positionHigh[posIdx + 1],
-              positionHigh[posIdx + 2],
-            );
-            mesh.userData.rtePosLow.value.set(
-              positionLow[posIdx],
-              positionLow[posIdx + 1],
-              positionLow[posIdx + 2],
-            );
-          }
-        } else {
-          setTransform(mesh, transform);
-          applyTextureAspect(mesh);
-          if (position) {
-            mesh.userData.rtcPos.value.set(
-              position[posIdx],
-              position[posIdx + 1],
-              position[posIdx + 2],
-            );
-          }
-        }
+        applyTextureAspect(mesh);
       }),
     );
 
