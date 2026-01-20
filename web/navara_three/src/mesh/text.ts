@@ -148,6 +148,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     txt.outlineOffsetY = 0.0;
     txt.outlineOpacity = meshMaterial.outlineOpacity ?? 1.0;
     txt.outlineWidth = 0.0; // Always start with 0 to prevent sampling size optimization issues
+    txt.lang = meshMaterial.lang ?? "";
 
     const useRTE = this.userData.useRTE || false;
 
@@ -613,6 +614,13 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     if (material.font !== prev.font) {
       txt.font = nextFont;
       prev.font = nextFont;
+      bNeedUpdateBg = true;
+    }
+
+    const nextLang = material.lang ?? "";
+    if (nextLang !== prev.lang) {
+      txt.lang = nextLang;
+      prev.lang = nextLang;
       bNeedUpdateBg = true;
     }
 
