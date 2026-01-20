@@ -187,7 +187,7 @@ export const run = async (view: ThreeView<VignetteEffectConfig>) => {
 
   // Register the custom effect layer
   view.registerEffect("vignette", VignetteEffectLayer);
-  
+
   // Add default atmosphere layers
   view.addDefaultEffectLayers();
   const defaultAtmospheres = view.addDefaultAtmosphereLayers();
