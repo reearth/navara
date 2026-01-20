@@ -53,16 +53,35 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   CustomEvent,
   Instance
 > {
+  private readonly _initialSelectiveEffectOcclusion?: SelectiveEffectOcclusion | null;
   private _effectIds: string[] = [];
-  private _selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   private _hasSetupOnBeforeRender = false;
   private _originalOnBeforeRender?: Object3D["onBeforeRender"];
 
-  constructor(view: ViewContext, config: Config = {} as Config) {
-    super(view, config);
-    this._effectIds = config.effectIds ?? [];
-    // Convert null to undefined (null is a sentinel for "clear")
-    this._selectiveEffectOcclusion = config.selectiveEffectOcclusion ?? undefined;
+  /**
+   * Helper to apply a function to single or array of materials.
+   */
+  private forEachMaterial(fn: (m: Material) => void): void {
+    const raw = this.raw;
+    if (!(raw instanceof Mesh)) return;
+    const mat = raw.material;
+    if (!mat) return;
+
+    if (Array.isArray(mat)) {
+      for (const m of mat) {
+        fn(m);
+      }
+    } else {
+      fn(mat);
+    }
+  }
+
+  constructor(view: ViewContext, config?: Config) {
+    const resolvedConfig = config ?? ({} as Config);
+    super(view, resolvedConfig);
+    this._effectIds = resolvedConfig.effectIds ?? [];
+    this._initialSelectiveEffectOcclusion =
+      resolvedConfig.selectiveEffectOcclusion;
   }
 
   protected override getPassKey(): PassKey {
@@ -81,6 +100,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // ----------------------------------------------------------------------------
     const useSelectiveEffect = this._effectIds.length > 0;
     if (useSelectiveEffect && this.raw) {
+      // Update Helper links for mask pass rendering
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         this._effectIds,
@@ -89,14 +109,14 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       );
     }
 
-    // Register initial selectiveEffectOcclusion via ViewContext (Manager is SoT)
-    if (this._selectiveEffectOcclusion !== undefined) {
-      const occlusion = parseSelectiveEffectOcclusion(
-        this._selectiveEffectOcclusion,
-      );
-      if (occlusion !== undefined) {
-        this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
-      }
+    // Register with Manager (SoT) if effectIds or occlusion is specified
+    const initialOcclusion = this._initialSelectiveEffectOcclusion;
+    if (useSelectiveEffect || initialOcclusion !== undefined) {
+      const parsedOcclusion =
+        initialOcclusion !== undefined && initialOcclusion !== null
+          ? parseSelectiveEffectOcclusion(initialOcclusion)
+          : undefined;
+      this.view.registerLayerEffects(this.id, this._effectIds, parsedOcclusion);
     }
 
     if (useSelectiveEffect) {
@@ -143,25 +163,9 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       // Check MaskPassContext
       const ctx = getMaskPassContext();
 
-      // Get material from mesh
-      if (!(raw instanceof Mesh)) return;
-      const mat = raw.material;
-      if (!mat) return;
-
-      // Helper to apply function to single or array of materials
-      const forEachMaterial = (fn: (m: Material) => void) => {
-        if (Array.isArray(mat)) {
-          for (const m of mat) {
-            fn(m);
-          }
-        } else {
-          fn(mat);
-        }
-      };
-
       if (ctx.phase !== MaskPassPhase.BaseMRT) {
         // Not in mask pass - restore normal state
-        forEachMaterial(restoreMaterialState);
+        this.forEachMaterial(restoreMaterialState);
         return;
       }
 
@@ -177,11 +181,11 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
 
       // Apply appropriate render state
       if (evaluation.shouldRender) {
-        forEachMaterial((m) =>
+        this.forEachMaterial((m) =>
           applyMaskPassRenderState(m, evaluation.isSilhouette),
         );
       } else {
-        forEachMaterial(applyMaskPassSkipState);
+        this.forEachMaterial(applyMaskPassSkipState);
       }
     };
 
@@ -197,17 +201,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     if (!raw || !this._hasSetupOnBeforeRender) return;
 
     // Restore material state before removing callback
-    // (material may have been modified during mask pass)
-    if (raw instanceof Mesh) {
-      const mat = raw.material;
-      if (Array.isArray(mat)) {
-        for (const m of mat) {
-          restoreMaterialState(m);
-        }
-      } else if (mat) {
-        restoreMaterialState(mat);
-      }
-    }
+    this.forEachMaterial(restoreMaterialState);
 
     // Restore original onBeforeRender or noop (Three.js expects function)
     raw.onBeforeRender = this._originalOnBeforeRender ?? (() => {});
@@ -241,12 +235,16 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // SelectiveEffect: registry update (requires this.raw)
     // ----------------------------------------------------------------------------
     if (effectIdsChanged && this.raw) {
+      // Update Helper links for mask pass rendering
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         this._effectIds,
         prevEffectIds,
         this.id,
       );
+
+      // Update Manager (SoT) with new effectIds
+      this.view.updateLayerEffects(this.id, this._effectIds);
 
       const hadNoEffects = prevEffectIds.length === 0;
       const nowHasEffects = this._effectIds.length > 0;
@@ -262,14 +260,12 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       }
     }
 
-    // Update selectiveEffectOcclusion
+    // Update selectiveEffectOcclusion (SoT is SelectiveEffectManager via ViewContext)
     if (updates.selectiveEffectOcclusion !== undefined) {
       if (updates.selectiveEffectOcclusion === null) {
         // Clear occlusion setting (reset to Normal)
-        this._selectiveEffectOcclusion = undefined;
         this.view.clearLayerSelectiveEffectOcclusion(this.id);
       } else {
-        this._selectiveEffectOcclusion = updates.selectiveEffectOcclusion;
         const occlusion = parseSelectiveEffectOcclusion(
           updates.selectiveEffectOcclusion,
         );

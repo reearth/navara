@@ -53,11 +53,12 @@ export abstract class MeshLayerDeclaration<
   public rotation?: XYZ;
   private prevPassKey?: PassKey;
 
-  constructor(view: ViewContext, config: Config = {} as Config) {
-    super(view, config);
-    this.position = config.position;
-    this.scale = config.scale;
-    this.rotation = config.rotation;
+  constructor(view: ViewContext, config?: Config) {
+    const resolvedConfig = config ?? ({} as Config);
+    super(view, resolvedConfig);
+    this.position = resolvedConfig.position;
+    this.scale = resolvedConfig.scale;
+    this.rotation = resolvedConfig.rotation;
   }
 
   protected getPassKey(): PassKey {
