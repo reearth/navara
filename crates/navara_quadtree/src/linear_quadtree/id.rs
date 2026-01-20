@@ -12,20 +12,18 @@ pub struct LinearQuadleafId<U: PrimInt + Default> {
     pub key: LinearQuadleafIdKey,
 }
 
-// Max depth is 27 for now, this should be enough resolution for now.
+// Max depth is 29 for now, this should be enough resolution for now.
 // When we need to support more depth in the future, we need to look for other way.
-const MAX_DEPTH: u64 = 27;
+const MAX_DEPTH: u64 = 29;
 
 pub struct LinearQuadleafIdParams {
     xy_bits: u64,
-    z_bits: u64,
 }
 
 impl LinearQuadleafIdParams {
     pub fn new() -> Self {
         let xy_bits = MAX_DEPTH;
-        let z_bits = ((MAX_DEPTH as f32).log2().ceil() as u8).max(1) as u64;
-        Self { xy_bits, z_bits }
+        Self { xy_bits }
     }
 }
 
@@ -43,13 +41,12 @@ impl<U: PrimInt + Default> LinearQuadleafId<U> {
         }
 
         let xy_bits = params.xy_bits;
-        let z_bits = params.z_bits;
 
         let x = x.to_u64()?;
         let y = y.to_u64()?;
         let z = z.to_u64()?;
 
-        let z_part = z << (2 * xy_bits + z_bits);
+        let z_part = z << (2 * xy_bits);
         let x_part = x << xy_bits;
         let y_part = y;
 
@@ -59,9 +56,8 @@ impl<U: PrimInt + Default> LinearQuadleafId<U> {
     #[allow(unused)]
     pub fn decode_key(key: LinearQuadleafIdKey, params: &LinearQuadleafIdParams) -> Coords<U> {
         let xy_bits = params.xy_bits;
-        let z_bits = params.z_bits;
 
-        let z = U::from(key >> (2 * xy_bits + z_bits)).unwrap();
+        let z = U::from(key >> (2 * xy_bits)).unwrap();
         let x = U::from((key >> xy_bits) & ((1 << xy_bits) - 1)).unwrap();
         let y = U::from(key & ((1 << xy_bits) - 1)).unwrap();
 
@@ -95,7 +91,7 @@ mod test {
 
     #[test]
     fn it_should_get_key_from_coords() {
-        let depth = 27;
+        let depth = 29;
 
         let max_z = depth - 1;
         let expects: Vec<Coords<u32>> = vec![
