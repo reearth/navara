@@ -1,7 +1,6 @@
 import type { BaseEventMap } from "@navara/core";
 import { Mesh, Object3D, type Material } from "three";
 
-import type { Scenes } from "../scene";
 import { arraysEqual } from "../utils";
 
 import {
@@ -9,6 +8,7 @@ import {
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type MeshBaseInstance,
+  type PassKey,
 } from "./MeshLayerDeclaration";
 import {
   type SelectiveEffectOcclusion,
@@ -24,11 +24,6 @@ import {
   restoreMaterialState,
 } from "./SelectiveEffectMaskContext";
 import type { ViewContext } from "./ViewContext";
-
-type PassKey = keyof Pick<
-  Scenes,
-  "opaque" | "transparent" | "mrt" | "skyEnvMap"
->;
 
 export type MeshLayerConfigWithSelectiveEffect = MeshLayerConfig & {
   effectIds?: string[];
@@ -61,6 +56,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   private _effectIds: string[] = [];
   private _selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   private _hasSetupOnBeforeRender = false;
+  private _originalOnBeforeRender?: Object3D["onBeforeRender"];
 
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
@@ -119,8 +115,8 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // Guard: Only setup once to avoid multi-wrapping
     if (this._hasSetupOnBeforeRender) return;
 
-    // Store original onBeforeRender if exists
-    const originalOnBeforeRender = raw.onBeforeRender;
+    // Store original onBeforeRender in instance property for later restoration
+    this._originalOnBeforeRender = raw.onBeforeRender;
 
     raw.onBeforeRender = (
       renderer,
@@ -131,8 +127,8 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       group,
     ) => {
       // Call original if exists
-      if (originalOnBeforeRender) {
-        originalOnBeforeRender.call(
+      if (this._originalOnBeforeRender) {
+        this._originalOnBeforeRender.call(
           raw,
           renderer,
           scene,
@@ -178,32 +174,63 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     this._hasSetupOnBeforeRender = true;
   }
 
-  override onUpdateConfig(updates: UpdateConfig): void {
-    super.onUpdateConfig(updates);
+  /**
+   * Restore original onBeforeRender callback.
+   * Called when effectIds becomes empty or on destroy.
+   */
+  private restoreOnBeforeRender(): void {
+    const raw = this.raw;
+    if (!raw || !this._hasSetupOnBeforeRender) return;
 
+    raw.onBeforeRender = this._originalOnBeforeRender ?? (() => {});
+    this._originalOnBeforeRender = undefined;
+    this._hasSetupOnBeforeRender = false;
+  }
+
+  override onUpdateConfig(updates: UpdateConfig): void {
     // ----------------------------------------------------------------------------
-    // SelectiveEffect: effectIds / occlusion wiring
+    // SelectiveEffect: effectIds update
+    // Update _effectIds BEFORE super.onUpdateConfig() so getPassKey() returns correct value
     // ----------------------------------------------------------------------------
-    if (updates.effectIds !== undefined && this.raw) {
-      const prevEffectIds = this._effectIds;
+    let effectIdsChanged = false;
+    let prevEffectIds: string[] = [];
+
+    if (updates.effectIds !== undefined) {
+      prevEffectIds = this._effectIds;
       const nextEffectIds = updates.effectIds ?? [];
 
       if (!arraysEqual(prevEffectIds, nextEffectIds)) {
-        this.view.selectiveEffectRegistry?.updateLinksForObject(
-          this.raw,
-          nextEffectIds,
-          prevEffectIds,
-          this.id,
-        );
-
-        // If transitioning from no effects to having effects, set up the callback
-        const hadNoEffects = prevEffectIds.length === 0;
-        const nowHasEffects = nextEffectIds.length > 0;
-        if (hadNoEffects && nowHasEffects) {
-          this.setupMeshOnBeforeRender();
-        }
-
+        // Update local cache first (used by getPassKey())
         this._effectIds = [...nextEffectIds];
+        effectIdsChanged = true;
+      }
+    }
+
+    // super.onUpdateConfig() calls onPassKeyChange() internally
+    super.onUpdateConfig(updates);
+
+    // ----------------------------------------------------------------------------
+    // SelectiveEffect: registry update (requires this.raw)
+    // ----------------------------------------------------------------------------
+    if (effectIdsChanged && this.raw) {
+      this.view.selectiveEffectRegistry?.updateLinksForObject(
+        this.raw,
+        this._effectIds,
+        prevEffectIds,
+        this.id,
+      );
+
+      const hadNoEffects = prevEffectIds.length === 0;
+      const nowHasEffects = this._effectIds.length > 0;
+
+      // If transitioning from no effects to having effects, set up the callback
+      if (hadNoEffects && nowHasEffects) {
+        this.setupMeshOnBeforeRender();
+      }
+
+      // If transitioning from having effects to no effects, restore original callback
+      if (!hadNoEffects && !nowHasEffects) {
+        this.restoreOnBeforeRender();
       }
     }
 
@@ -218,13 +245,16 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       }
     }
 
-    this.onPassKeyChange();
+    // Note: onPassKeyChange() is already called by super.onUpdateConfig()
   }
 
   override onDestroy(): void {
     // ----------------------------------------------------------------------------
-    // SelectiveEffect: effectIds cleanup
+    // SelectiveEffect: cleanup
     // ----------------------------------------------------------------------------
+    // Restore original onBeforeRender before destroying
+    this.restoreOnBeforeRender();
+
     if (this._effectIds.length > 0 && this.raw) {
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,

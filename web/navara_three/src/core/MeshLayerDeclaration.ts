@@ -24,7 +24,7 @@ export type MeshLayerUpdate = Pick<
 > &
   LayerDeclarationConfigUpdate;
 
-type PassKey = keyof Pick<
+export type PassKey = keyof Pick<
   Scenes,
   "opaque" | "transparent" | "mrt" | "skyEnvMap"
 >;
@@ -156,8 +156,10 @@ export abstract class MeshLayerDeclaration<
   }
 
   onDestroy(): void {
-    if (this.raw && this.raw.parent) {
-      this.raw.parent.remove(this.raw);
+    // Use removeFromScene for consistent cleanup
+    if (this.prevPassKey) {
+      this.removeFromScene(this.prevPassKey);
+      this.prevPassKey = undefined;
     }
 
     super.onDestroy();
