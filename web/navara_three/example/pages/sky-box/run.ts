@@ -25,6 +25,14 @@ const gPaneParams = {
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TILE_DATASETS.openstreetmap.url },
+    rasterTile: {
+      maxZoom: 23,
+    },
+  });
+
   view.addLayer<AmbientLightLayer>({
     type: "light",
     ambient: {
@@ -50,8 +58,8 @@ export const run = async (view: ThreeView) => {
       dayColor: new Color().setHex(gPaneParams.dayColor),
       nightColor: new Color().setHex(gPaneParams.nightColor),
     },
-  });
-
+  });  
+  
   // adding color grading for better visuals
   view.addLayer<ColorGradingLUTEffectLayer>({
     type: "effect",
@@ -61,14 +69,6 @@ export const run = async (view: ThreeView) => {
       opacity: 1.0,
     },
     visible: true,
-  });
-
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
   });
 
   const pane = new Pane({
