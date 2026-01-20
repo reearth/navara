@@ -22,8 +22,12 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
-import { setupRTEMesh, type RTEUserData } from "../../mesh/rteHelper";
+
 import { createReplacer } from "../../utils";
+import {
+  setupRTEBeforeRender,
+  type RTEUserData,
+} from "../../mesh/rtcRteHelper";
 
 type LayerDescription = {
   gltfModel?: {
@@ -241,7 +245,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
           // Set RTE callback only once for the first mesh (shared RTE uniforms)
           if (!setRteCbk) {
-            const rteCallback = setupRTEMesh(
+            const rteCallback = setupRTEBeforeRender(
               child,
               this.rteUserData,
               IDENTITY_MATRIX,

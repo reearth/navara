@@ -1,5 +1,8 @@
 import { Unimplemented } from "@navara/core";
-import { PointMaterial as NavaraPointMaterial } from "@navara/engine";
+import {
+  PointMaterial as NavaraPointMaterial,
+  type Transform,
+} from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
@@ -24,7 +27,11 @@ import {
 import { createReplacer } from "../utils";
 
 import { FeatureMesh } from "./featureMesh";
-import { setupRTEMesh } from "./rteHelper";
+import {
+  setupRTEBeforeRender,
+  setRTEPosition,
+  setRTCPosition,
+} from "./rtcRteHelper";
 
 export class PointMesh extends Sprite implements FeatureMesh {
   constructor(
@@ -87,7 +94,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
 
       // Point uses identity matrix for camera position (world space)
       const identityMatrix = new Matrix4();
-      const callback = setupRTEMesh(
+      const callback = setupRTEBeforeRender(
         this,
         this.userData,
         undefined,
@@ -225,6 +232,21 @@ export class PointMesh extends Sprite implements FeatureMesh {
     this.userData.batchId = batchId;
 
     this._update(meshMaterial, active);
+  }
+
+  setPosition(
+    useRTE: boolean,
+    position: Float32Array<ArrayBufferLike> | null | undefined,
+    positionHigh: Float32Array<ArrayBufferLike> | null | undefined,
+    positionLow: Float32Array<ArrayBufferLike> | null | undefined,
+    posIdx: number,
+    transform: Transform,
+  ): void {
+    if (useRTE) {
+      setRTEPosition(this, positionHigh, positionLow, posIdx, transform);
+    } else {
+      setRTCPosition(this, position, posIdx, transform);
+    }
   }
 
   _update(material: NavaraPointMaterial, active: boolean) {

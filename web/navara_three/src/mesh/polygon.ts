@@ -47,7 +47,7 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
-import { setupRTEMesh } from "./rteHelper";
+import { setupRTEBeforeRender } from "./rtcRteHelper";
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
@@ -337,7 +337,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         value: new Vector3(),
       };
 
-      const callback = setupRTEMesh(this, material.userData);
+      const callback = setupRTEBeforeRender(this, material.userData);
       if (callback) {
         this.onBeforeRender = callback;
         this.onBeforeShadow = callback;

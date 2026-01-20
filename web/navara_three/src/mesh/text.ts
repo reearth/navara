@@ -1,5 +1,8 @@
 import { Unimplemented } from "@navara/core";
-import type { TextMaterial as NavaraTextMaterial } from "@navara/engine";
+import type {
+  TextMaterial as NavaraTextMaterial,
+  Transform,
+} from "@navara/engine";
 import BatchDefinitioin from "@shaders/glsl/chunks/batch_definition.glsl";
 import BillboardMatrix from "@shaders/glsl/chunks/billboardMat.glsl";
 import CalcLogDepthParsVertex from "@shaders/glsl/chunks/calc_log_depth_pars_vertex.glsl";
@@ -31,7 +34,11 @@ import { createReplacer } from "../utils";
 
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
-import { setupRTEMesh } from "./rteHelper";
+import {
+  setupRTEBeforeRender,
+  setRTEPosition,
+  setRTCPosition,
+} from "./rtcRteHelper";
 
 export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
@@ -514,7 +521,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     if (useRTE) {
       // Text uses identity matrix for camera position (world space)
       const identityMatrix = new Matrix4();
-      const callback = setupRTEMesh(
+      const callback = setupRTEBeforeRender(
         this,
         this.userData,
         undefined,
@@ -534,6 +541,22 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     }
 
     return this.background;
+  }
+
+  setPosition(
+    useRTE: boolean,
+    position: Float32Array<ArrayBufferLike> | null | undefined,
+    positionHigh: Float32Array<ArrayBufferLike> | null | undefined,
+    positionLow: Float32Array<ArrayBufferLike> | null | undefined,
+    posIdx: number,
+    transform: Transform,
+  ): void {
+    if (useRTE) {
+      setRTEPosition(this, positionHigh, positionLow, posIdx, transform);
+      this.scale.set(1, 1, 1); // instead of this, set text size by fontSizePx uniform
+    } else {
+      setRTCPosition(this, position, posIdx, transform);
+    }
   }
 
   _updateTextByMaterial(
