@@ -53,6 +53,8 @@ export class SelectiveEffectManager {
 
   unregisterLayerEffects(layerId: string): void {
     this.layerConfigs.delete(layerId);
+    // Also clear occlusion cache in Helper
+    this.options.selectiveEffectRegistry?.clearOcclusionCache(layerId);
   }
 
   getLayerEffects(layerId: string): string[] | undefined {
@@ -130,5 +132,22 @@ export class SelectiveEffectManager {
       layerId,
       occlusion,
     );
+  }
+
+  /**
+   * Clear occlusion setting for a layer (reset to Normal).
+   * Also syncs to Helper cache to maintain SoT consistency.
+   */
+  clearLayerOcclusion(layerId: string): void {
+    const config = this.layerConfigs.get(layerId);
+    if (config) {
+      // Reset to default (Normal)
+      config.occlusion = SelectiveEffectOcclusionMode.Normal;
+      // Sync to Helper cache (SoT: Manager → Helper)
+      this.options.selectiveEffectRegistry?.syncOcclusionCache(
+        layerId,
+        config.occlusion,
+      );
+    }
   }
 }

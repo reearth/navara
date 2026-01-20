@@ -27,12 +27,12 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfigWithSelectiveEffect = MeshLayerConfig & {
   effectIds?: string[];
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
+  selectiveEffectOcclusion?: SelectiveEffectOcclusion | null;
 };
 
 export type MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdate & {
   effectIds?: string[];
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
+  selectiveEffectOcclusion?: SelectiveEffectOcclusion | null;
 };
 
 export abstract class MeshLayerDeclarationForSelectiveEffect<
@@ -61,7 +61,8 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   constructor(view: ViewContext, config: Config = {} as Config) {
     super(view, config);
     this._effectIds = config.effectIds ?? [];
-    this._selectiveEffectOcclusion = config.selectiveEffectOcclusion;
+    // Convert null to undefined (null is a sentinel for "clear")
+    this._selectiveEffectOcclusion = config.selectiveEffectOcclusion ?? undefined;
   }
 
   protected override getPassKey(): PassKey {
@@ -142,14 +143,25 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       // Check MaskPassContext
       const ctx = getMaskPassContext();
 
-      // Get material from mesh (use meshMaterial to avoid conflict with callback parameter)
+      // Get material from mesh
       if (!(raw instanceof Mesh)) return;
-      const meshMaterial = raw.material as Material;
-      if (!meshMaterial) return;
+      const mat = raw.material;
+      if (!mat) return;
+
+      // Helper to apply function to single or array of materials
+      const forEachMaterial = (fn: (m: Material) => void) => {
+        if (Array.isArray(mat)) {
+          for (const m of mat) {
+            fn(m);
+          }
+        } else {
+          fn(mat);
+        }
+      };
 
       if (ctx.phase !== MaskPassPhase.BaseMRT) {
         // Not in mask pass - restore normal state
-        restoreMaterialState(meshMaterial);
+        forEachMaterial(restoreMaterialState);
         return;
       }
 
@@ -165,9 +177,11 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
 
       // Apply appropriate render state
       if (evaluation.shouldRender) {
-        applyMaskPassRenderState(meshMaterial, evaluation.isSilhouette);
+        forEachMaterial((m) =>
+          applyMaskPassRenderState(m, evaluation.isSilhouette),
+        );
       } else {
-        applyMaskPassSkipState(meshMaterial);
+        forEachMaterial(applyMaskPassSkipState);
       }
     };
 
@@ -182,6 +196,20 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     const raw = this.raw;
     if (!raw || !this._hasSetupOnBeforeRender) return;
 
+    // Restore material state before removing callback
+    // (material may have been modified during mask pass)
+    if (raw instanceof Mesh) {
+      const mat = raw.material;
+      if (Array.isArray(mat)) {
+        for (const m of mat) {
+          restoreMaterialState(m);
+        }
+      } else if (mat) {
+        restoreMaterialState(mat);
+      }
+    }
+
+    // Restore original onBeforeRender or noop (Three.js expects function)
     raw.onBeforeRender = this._originalOnBeforeRender ?? (() => {});
     this._originalOnBeforeRender = undefined;
     this._hasSetupOnBeforeRender = false;
@@ -236,12 +264,18 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
 
     // Update selectiveEffectOcclusion
     if (updates.selectiveEffectOcclusion !== undefined) {
-      this._selectiveEffectOcclusion = updates.selectiveEffectOcclusion;
-      const occlusion = parseSelectiveEffectOcclusion(
-        updates.selectiveEffectOcclusion,
-      );
-      if (occlusion !== undefined) {
-        this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
+      if (updates.selectiveEffectOcclusion === null) {
+        // Clear occlusion setting (reset to Normal)
+        this._selectiveEffectOcclusion = undefined;
+        this.view.clearLayerSelectiveEffectOcclusion(this.id);
+      } else {
+        this._selectiveEffectOcclusion = updates.selectiveEffectOcclusion;
+        const occlusion = parseSelectiveEffectOcclusion(
+          updates.selectiveEffectOcclusion,
+        );
+        if (occlusion !== undefined) {
+          this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
+        }
       }
     }
 
@@ -264,6 +298,9 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       );
       this._effectIds = [];
     }
+
+    // Unregister layer effects (clears layerConfigs and occlusionCache)
+    this.view.unregisterLayerEffects(this.id);
 
     super.onDestroy();
   }
