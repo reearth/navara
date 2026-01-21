@@ -7,8 +7,8 @@ uniform vec3 uSunColor;
 uniform vec3 uSunDirView;
 
 in vec2 v_uv;
-in vec3 v_cameraPositionLLA;
 in vec3 v_posView;
+flat in vec3 v_cameraPositionLLA;
 flat in float v_dayNightFactor;
 
 // High-frequency pseudo-random noise

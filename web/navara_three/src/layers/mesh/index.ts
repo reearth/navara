@@ -32,6 +32,7 @@ export {
   GlowGlobeMeshLayer,
   type GlowGlobeMeshLayerConfig,
   type GlowGlobeMeshLayerUpdate,
+  DEFAULT_GLOW_GLOBE_OPTIONS,
 } from "./GlowGlobeMeshLayer";
 export {
   CylinderMeshLayer,
@@ -67,4 +68,5 @@ export {
   SkyBoxMeshLayer,
   type SkyBoxMeshLayerConfig,
   type SkyBoxMeshLayerUpdate,
+  DEFAULT_SKY_BOX_OPTIONS,
 } from "./SkyBoxMeshLayer";

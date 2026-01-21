@@ -6,6 +6,7 @@ import ThreeView, {
   StarsLayer,
   AmbientLightLayer,
   ColorGradingLUTEffectLayer,
+  DEFAULT_SKY_BOX_OPTIONS,
   type BlendMode,
 } from "@navara/three";
 import { Pane } from "tweakpane";
@@ -17,9 +18,9 @@ let gSkyBoxMeshLayer: LayerHandle<SkyBoxMeshLayer> | undefined = undefined;
 
 const gPaneParams = {
   visible: true,
-  dayColor: 0x87ceeb,
-  nightColor: 0x000033,
-  sunColor: 0xffddae,
+  dayColor: DEFAULT_SKY_BOX_OPTIONS.dayColor.toHex(),
+  nightColor: DEFAULT_SKY_BOX_OPTIONS.nightColor.toHex(),
+  sunColor: DEFAULT_SKY_BOX_OPTIONS.sunColor.toHex(),
 };
 
 export const run = async (view: ThreeView) => {
@@ -57,6 +58,7 @@ export const run = async (view: ThreeView) => {
     skyBox: {
       dayColor: new Color().setHex(gPaneParams.dayColor),
       nightColor: new Color().setHex(gPaneParams.nightColor),
+      sunColor: new Color().setHex(gPaneParams.sunColor),
     },
   });  
   

@@ -32,7 +32,7 @@ export type SkyBoxMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 export const DEFAULT_SKY_BOX_OPTIONS: Required<
   NonNullable<LayerDescription["skyBox"]>
 > = {
-  dayColor: new Color().setHex(0x88c7fc), // light blue
+  dayColor: new Color().setHex(0x92c1ff), // light blue
   nightColor: new Color().setHex(0x000033), // dark blue
   sunColor: new Color().setHex(0xffddae), // light orange
 };
