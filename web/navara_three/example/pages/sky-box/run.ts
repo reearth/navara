@@ -19,7 +19,7 @@ const gPaneParams = {
   visible: true,
   dayColor: 0x87ceeb,
   nightColor: 0x000033,
-  sunsetColor: 0xffddae,
+  sunColor: 0xffddae,
 };
 
 export const run = async (view: ThreeView) => {
@@ -118,14 +118,14 @@ function addPanel(pane: Pane) {
     });
 
   folder
-    .addBinding(gPaneParams, "sunsetColor", {
-      label: "Sunset Color",
+    .addBinding(gPaneParams, "sunColor", {
+      label: "Sun Color",
       view: "color",
     })
     .on("change", (ev) => {
       gSkyBoxMeshLayer?.update({
         skyBox: {
-          sunsetColor: new Color().setHex(ev.value),
+          sunColor: new Color().setHex(ev.value),
         },
       });
     });

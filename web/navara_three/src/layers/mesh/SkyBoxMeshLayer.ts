@@ -21,7 +21,7 @@ type LayerDescription = {
   skyBox?: {
     dayColor?: Color;
     nightColor?: Color;
-    sunsetColor?: Color;
+    sunColor?: Color;
   };
 };
 
@@ -34,7 +34,7 @@ export const DEFAULT_SKY_BOX_OPTIONS: Required<
 > = {
   dayColor: new Color().setHex(0x88c7fc), // light blue
   nightColor: new Color().setHex(0x000033), // dark blue
-  sunsetColor: new Color().setHex(0xffddae), // light orange
+  sunColor: new Color().setHex(0xffddae), // light orange
 };
 
 export class SkyBoxMeshLayer extends MeshLayerDeclaration<
@@ -75,7 +75,7 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
     const dayColor = cfg.dayColor.toArray();
     const nightColor = cfg.nightColor.toArray();
-    const sunsetColor = cfg.sunsetColor.toArray();
+    const sunColor = cfg.sunColor.toArray();
     const sunDirection = this.view.atmosphere.sunDirection;
     const sunDirView =  new Vector4(sunDirection.x, sunDirection.y, sunDirection.z, 0).applyMatrix4(this.view.camera.matrixWorldInverse);
 
@@ -86,8 +86,8 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
       uNightColor: {
         value: new Vector3(nightColor[0], nightColor[1], nightColor[2]),
       },
-      uSunsetColor: {
-        value: new Vector3(sunsetColor[0], sunsetColor[1], sunsetColor[2]),
+      uSunColor: {
+        value: new Vector3(sunColor[0], sunColor[1], sunColor[2]),
       },
       uSunDirection: {
         value: sunDirection,
@@ -126,12 +126,12 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
         );
       }
 
-      if (cfg.sunsetColor !== undefined) {
-        const sunsetColorArray = cfg.sunsetColor.toArray();
-        material.uniforms["uSunsetColor"].value = new Vector3(
-          sunsetColorArray[0],
-          sunsetColorArray[1],
-          sunsetColorArray[2],
+      if (cfg.sunColor !== undefined) {
+        const sunColorArray = cfg.sunColor.toArray();
+        material.uniforms["uSunColor"].value = new Vector3(
+          sunColorArray[0],
+          sunColorArray[1],
+          sunColorArray[2],
         );
       }
 
