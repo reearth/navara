@@ -56,13 +56,15 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
     // vector positions for a single large triangle filling clip space
     const vertices = new Float32Array([
-            -1.0, -1.0, 1.0, // v0
-            1.0, -1.0, 1.0, // v1
-            -1.0, 1.0, 1.0, // v2
-
-            1.0, -1.0, 1.0, // v3
-            1.0, 1.0, 1.0, // v4
-            -1.0, 1.0, 1.0, // v5
+      -1.0,
+      -1.0,
+      1.0, // v0
+      3.0,
+      -1.0,
+      1.0, // v1
+      -1.0,
+      3.0,
+      1.0, // v2
     ]);
 
     geometry.setAttribute("position", new BufferAttribute(vertices, 3));
@@ -77,7 +79,12 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
     const nightColor = cfg.nightColor.toArray();
     const sunColor = cfg.sunColor.toArray();
     const sunDirection = this.view.atmosphere.sunDirection;
-    const sunDirView =  new Vector4(sunDirection.x, sunDirection.y, sunDirection.z, 0).applyMatrix4(this.view.camera.matrixWorldInverse);
+    const sunDirView = new Vector4(
+      sunDirection.x,
+      sunDirection.y,
+      sunDirection.z,
+      0,
+    ).applyMatrix4(this.view.camera.matrixWorldInverse);
 
     material.uniforms = {
       uDayColor: {
@@ -155,9 +162,9 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
       this.view.atmosphere.sunDirection.x,
       this.view.atmosphere.sunDirection.y,
       this.view.atmosphere.sunDirection.z,
-      0
+      0,
     ).applyMatrix4(this.view.camera.matrixWorldInverse);
-    
+
     material.uniforms["uSunDirView"].value = new Vector3(v.x, v.y, v.z);
 
     this.emit("_needsUpdate");

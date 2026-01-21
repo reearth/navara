@@ -60,8 +60,8 @@ export const run = async (view: ThreeView) => {
       nightColor: new Color().setHex(gPaneParams.nightColor),
       sunColor: new Color().setHex(gPaneParams.sunColor),
     },
-  });  
-  
+  });
+
   // adding color grading for better visuals
   view.addLayer<ColorGradingLUTEffectLayer>({
     type: "effect",
