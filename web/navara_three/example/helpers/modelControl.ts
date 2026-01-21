@@ -7,8 +7,8 @@ import ThreeView, {
   radianToDegree,
   geodeticSurfaceNormal,
   LLE,
+  eastNorthUpToFixedFrame,
 } from "@navara/three";
-import { eastNorthUpToFixedFrame } from "@navara/three_api";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 export type ModelControlParams = {
