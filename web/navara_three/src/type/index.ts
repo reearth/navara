@@ -16,6 +16,7 @@ import type {
   RainMeshLayerConfig,
   SnowMeshLayerConfig,
   SkyMeshLayerConfig,
+  SkyBoxMeshLayerConfig,
   StarsLayerConfig,
   BoxMeshLayerConfig,
   SphereMeshLayerConfig,
@@ -68,6 +69,7 @@ export type MeshLayerDeclarationDescription =
   | RainMeshLayerConfig
   | SnowMeshLayerConfig
   | SkyMeshLayerConfig
+  | SkyBoxMeshLayerConfig
   | StarsLayerConfig
   | BoxMeshLayerConfig
   | SphereMeshLayerConfig

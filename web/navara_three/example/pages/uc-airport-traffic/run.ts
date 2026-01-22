@@ -155,7 +155,7 @@ export async function run() {
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
-      exponent: 50.0,
+      exponent: 40.0,
       glowColor: new Color().setStyle("#938cff"),
       opacity: 0.5,
     },

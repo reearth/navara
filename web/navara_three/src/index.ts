@@ -94,6 +94,7 @@ import { GlowGlobeMeshLayer } from "./layers/mesh/GlowGlobeMeshLayer";
 import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
 import { PlaneMeshLayer } from "./layers/mesh/PlaneMeshLayer";
 import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
+import { SkyBoxMeshLayer } from "./layers/mesh/SkyBoxMeshLayer";
 import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
 import { SmoothLineMeshLayer } from "./layers/mesh/SmoothLineMeshLayer";
 import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
@@ -1208,6 +1209,7 @@ export default class ThreeView<
     this.registerMesh("rain", RainMeshLayer);
     this.registerMesh("snow", SnowMeshLayer);
     this.registerMesh("sky", SkyMeshLayer);
+    this.registerMesh("skyBox", SkyBoxMeshLayer);
     this.registerMesh("stars", StarsLayer);
     this.registerMesh("box", BoxMeshLayer);
     this.registerMesh("sphere", SphereMeshLayer);
