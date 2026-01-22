@@ -10,7 +10,10 @@
 // Constants
 const float DEG_TO_RAD = 0.017453292519943295;
 const float RAD_TO_DEG = 57.29577951308232;
-const float PI = 3.141592653589793;
+
+#ifndef PI
+  #define PI 3.141592653589793
+#endif
 
 // Rotate vector v around arbitrary axis
 vec3 rotateAroundAxis(vec3 v, vec3 axis, float angle) {
