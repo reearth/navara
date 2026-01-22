@@ -1562,12 +1562,14 @@ export default class ThreeView<
   }
 
   rotateAroundAxis(axis: Vector3, angle: number) {
-    const isZero = axis.x === 0 && axis.y === 0 && axis.z === 0;
-
     this._core?.rotateAroundAxis(
-      isZero ? undefined : new Float64Array([axis.x, axis.y, axis.z]),
+      new Float64Array([axis.x, axis.y, axis.z]),
       angle,
     );
+  }
+
+  rotateAround(angle: number) {
+    this._core?.rotateAroundAxis(null, angle);
   }
 
   private _startMainLoop() {

@@ -11,7 +11,7 @@ import ThreeView, {
   geodeticToVector3,
   Color,
 } from "@navara/three";
-import { Vector2, Vector3 } from "three";
+import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -257,7 +257,7 @@ const addCameraControl = (view: ThreeView, pane: Pane) => {
     }
 
     const animateFunc = () => {
-      view.rotateAroundAxis(new Vector3(0, 0, 0), 0.002);
+      view.rotateAround(0.002);
       frameId = requestAnimationFrame(animateFunc);
     };
     animateFunc();

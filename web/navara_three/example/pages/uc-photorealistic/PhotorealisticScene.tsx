@@ -1,6 +1,5 @@
 import { useViewContext } from "@navara/three_react";
 import { useEffect, useState } from "react";
-import { Vector3 } from "three";
 
 import { AttributionPanel, type Attribution } from "./AttributionPanel";
 import type { BuildingColorAttribute } from "./BuildingLayer";
@@ -104,10 +103,9 @@ export const PhotorealisticScene = () => {
     if (!view || !autoRotate) return;
 
     const f = () => {
-      view.rotateAroundAxis(axis, 0.002);
+      view.rotateAround(0.002);
     };
 
-    const axis = new Vector3(0, 0, 0);
     view.on("postRender", f);
 
     return () => view.off("postRender", f);

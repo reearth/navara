@@ -9,6 +9,7 @@ import ThreeView, {
   type Nullable,
   type XYZ,
   type MapMouseEvent,
+  type Window,
   geodeticToVector3,
   vector3ToGeodetic,
   degreeToRadian,
@@ -23,8 +24,6 @@ import ThreeView, {
   getHeightFromEllipsoid,
   getPickRay,
   getRayPlaneIntersection,
-  Window as NavaraWindow,
-  LLE,
   EllipsoidGeodesic,
   Color,
 } from "@navara/three";
@@ -572,7 +571,7 @@ const testRayPlane = (view: ThreeView) => {
     const pixelRatio = view.pixelRatio;
 
     if (center && normal && !radius) {
-      const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+      const win: Window = { width: screenSize.x, height: screenSize.y, pixel_ratio: pixelRatio };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
 
       const btmPlane = getPlaneFromPointNormal(center, normal);
@@ -587,13 +586,9 @@ const testRayPlane = (view: ThreeView) => {
     }
 
     if (center && normal && radius) {
-      const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+      const win: Window = { width: screenSize.x, height: screenSize.y, pixel_ratio: pixelRatio };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
-      const rayDir = new Vector3(
-        ray.direction.x,
-        ray.direction.y,
-        ray.direction.z,
-      );
+      const rayDir = ray.direction.clone();
       const planeNormal = rayDir.cross(normal).cross(normal).normalize();
       const plane = getPlaneFromPointNormal(center, planeNormal);
       const intersectPt = getRayPlaneIntersection(ray, plane);
@@ -669,26 +664,23 @@ const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
 };
 
 const onDistPosChange = () => {
-  const ellipGeo = new EllipsoidGeodesic(
-    new LLE(
-      degreeToRadian(gPaneParams.latStart),
-      degreeToRadian(gPaneParams.lngStart),
-      0,
-    ),
-    new LLE(
-      degreeToRadian(gPaneParams.latEnd),
-      degreeToRadian(gPaneParams.lngEnd),
-      0,
-    ),
-  );
+  const start = {
+    lat: degreeToRadian(gPaneParams.latStart),
+    lng: degreeToRadian(gPaneParams.lngStart),
+    height: 0,
+  };
+  const end = {
+    lat: degreeToRadian(gPaneParams.latEnd),
+    lng: degreeToRadian(gPaneParams.lngEnd),
+    height: 0,
+  };
 
-  gPaneParams.distance = ellipGeo.distance;
+  const geodesic = new EllipsoidGeodesic(start, end);
+  gPaneParams.distance = geodesic.distance;
 
   gFolderDist?.refresh();
 
-  const points = ellipGeo.interpolateGeodeticPoints(
-    gPaneParams.distance * 0.01,
-  );
+  const points = geodesic.interpolatePoints(gPaneParams.distance * 0.01);
 
   // Update polyline mesh
   if (gPolylineLayer) {
@@ -710,11 +702,13 @@ const onDistPosChange = () => {
 
       // update interpolated point
       const interDist = gPaneParams.distance * gPaneParams.interpolate;
-      const interPoint = ellipGeo.interpolateDistance(interDist);
+      const interPoint = geodesic.interpolateDistance(interDist);
       const pos = geodeticToVector3({ lat: interPoint.lat, lng: interPoint.lng, height: 1000 });
       gInterBall?.position.set(pos.x, pos.y, pos.z);
     }
   }
+
+  geodesic.dispose();
 };
 
 const updatePolylineMesh = (view: ThreeView, curvePoints: XYZ[]) => {
@@ -912,7 +906,7 @@ const updatePopup = () => {
     const screenSize = gView.screenSize;
     const pixelRatio = gView.pixelRatio;
 
-    const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+    const win: Window = { width: screenSize.x, height: screenSize.y, pixel_ratio: pixelRatio };
     const screenPos = convertWorldToScreen(win, gView.camera.raw, gPickedPos);
 
     if (screenPos) {
