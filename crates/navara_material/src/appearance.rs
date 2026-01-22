@@ -104,19 +104,11 @@ impl Default for PointMaterial {
 }
 
 impl PointMaterial {
-    pub fn update(
-        &mut self,
-        from: &PointMaterial,
-        coordinates: &Vec3,
-        crs: &CRS,
-        transform: &mut Transform,
-    ) {
-        let should_update_transform = self.height != from.height || self.size != from.size;
-        *self = from.clone();
-
-        if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
+    pub fn update(&mut self, from: &PointMaterial, transform: &mut Transform) {
+        if self.size != from.size {
+            transform.scale = Vec3::splat(from.size as f64);
         }
+        *self = from.clone();
     }
 }
 
@@ -169,19 +161,11 @@ impl Default for BillboardMaterial {
 }
 
 impl BillboardMaterial {
-    pub fn update(
-        &mut self,
-        from: &BillboardMaterial,
-        coordinates: &Vec3,
-        crs: &CRS,
-        transform: &mut Transform,
-    ) {
-        let should_update_transform = self.height != from.height || self.size != from.size;
-        *self = from.clone();
-
-        if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
+    pub fn update(&mut self, from: &BillboardMaterial, transform: &mut Transform) {
+        if self.size != from.size {
+            transform.scale = Vec3::splat(from.size as f64);
         }
+        *self = from.clone();
     }
 }
 
@@ -210,6 +194,7 @@ pub struct TextMaterial {
     pub outline_offset: Vec2, // outlineOffset Default: (0,0)
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
+    pub lang: String,
 }
 
 impl Default for TextMaterial {
@@ -236,24 +221,14 @@ impl Default for TextMaterial {
             outline_offset: Vec2::new(0.0, 0.0),
             outline_opacity: 1.0,
             outline_width: 0.0,
+            lang: "".to_string(),
         }
     }
 }
 
 impl TextMaterial {
-    pub fn update(
-        &mut self,
-        from: &TextMaterial,
-        coordinates: &Vec3,
-        crs: &CRS,
-        transform: &mut Transform,
-    ) {
-        let should_update_transform = self.height != from.height;
+    pub fn update(&mut self, from: &TextMaterial) {
         *self = from.clone();
-
-        if should_update_transform {
-            *transform = calc_transform(coordinates, crs, self.height, self.size, false);
-        }
     }
 }
 

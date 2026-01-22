@@ -1,6 +1,6 @@
 import { TextMesh as NavaraTextMesh } from "@navara/engine";
 
-import { setTransform, type BufferLoader } from "../event";
+import { type BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
@@ -24,37 +24,67 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     uniforms: CommonUniforms,
   ) {
     const g = m.geometry;
-    const positionData = g.position;
-    const position = buf.removeF32(positionData.data);
-    const positionSize = positionData.size;
     const batchIdsData = g.batch_ids;
     const batchIds = buf.removeF32(batchIdsData.data);
     const batchIdSize = batchIdsData.size;
     const batchIndexData = g.batch_index;
     const batchIndex = buf.removeU32(batchIndexData.data);
-    if (!position || !batchIds || !batchIndex) return;
+    if (!batchIds || !batchIndex) return;
+
+    const positionHighData = g.position_3d_high;
+    const positionLowData = g.position_3d_low;
+    const positionHigh = positionHighData
+      ? buf.removeF32(positionHighData.data)
+      : undefined;
+    const positionLow = positionLowData
+      ? buf.removeF32(positionLowData.data)
+      : undefined;
+    const positionData = g.position;
+    const position = positionData
+      ? buf.removeF32(positionData.data)
+      : undefined;
 
     const material = m.material;
     const active = m.active;
     const transform = m.transform;
 
-    const meshLen = position.length / positionSize;
+    this.setActive(active);
+
+    this.userData.useRTE =
+      g.position_3d_high !== undefined && g.position_3d_high.size > 0;
+
+    let meshLen = 0;
+    let positionSize = 0;
+    if (positionHigh && positionHighData) {
+      positionSize = positionHighData.size;
+      meshLen = positionHigh.length / positionSize;
+    } else if (position && positionData) {
+      positionSize = positionData.size;
+      meshLen = position.length / positionSize;
+    }
 
     for (let i = 0; i < meshLen; i++) {
-      const posIdx = i * positionSize;
-      const x = position[posIdx];
-      const y = position[posIdx + 1];
-      const z = position[posIdx + 2];
-
       const batchIdIdx = i * batchIdSize;
       const batchId = batchIds[batchIdIdx];
+      const posIdx = i * positionSize;
 
-      const mesh = new TextMesh(material, uniforms, batchId);
+      const mesh = new TextMesh(
+        material,
+        uniforms,
+        batchId,
+        this.userData.useRTE,
+      );
       mesh.renderOrder = this.renderOrder;
       mesh._updateTextByMaterial(material, active);
 
-      setTransform(mesh, transform);
-      mesh.position.set(x, y, z);
+      mesh.setPosition(
+        this.userData.useRTE,
+        position,
+        positionHigh,
+        positionLow,
+        posIdx,
+        transform,
+      );
 
       this.addWithBatchIndex(mesh, batchIndex[i]);
     }
@@ -66,31 +96,51 @@ export class InstancedTextMesh extends InstancedMesh<TextMesh> {
     active: boolean,
     needRender?: () => void,
   ) {
+    this.setActive(active);
+
     const material = m.material;
-
     const g = m.geometry;
-    const positionData = g.position;
-    const position = buf.removeF32(positionData.data);
-    const positionSize = positionData.size;
-
     const transform = m.transform;
+
+    const positionHighData = g.position_3d_high;
+    const positionLowData = g.position_3d_low;
+    const positionData = g.position;
+    const positionHigh = positionHighData
+      ? buf.removeF32(positionHighData.data)
+      : undefined;
+    const positionLow = positionLowData
+      ? buf.removeF32(positionLowData.data)
+      : undefined;
+    const position = positionData
+      ? buf.removeF32(positionData.data)
+      : undefined;
+
+    let positionSize = 0;
+    if (positionHighData) {
+      positionSize = positionHighData.size;
+    } else if (positionData) {
+      positionSize = positionData.size;
+    }
 
     for (const mesh of this.meshes()) {
       mesh._updateTextByMaterial(material, active, needRender);
+      this.markVisibility(mesh);
 
-      setTransform(mesh, transform, true);
+      const batchIndex = mesh.userData.batchIndex as number;
+      const posIdx = batchIndex * positionSize;
 
-      if (position) {
-        const batchIndex = (mesh.userData.batchIndex as number) * positionSize;
-        const x = position[batchIndex];
-        const y = position[batchIndex + 1];
-        const z = position[batchIndex + 2];
-        mesh.position.set(x, y, z);
-      }
+      mesh.setPosition(
+        this.userData.useRTE,
+        position,
+        positionHigh,
+        positionLow,
+        posIdx,
+        transform,
+      );
     }
   }
 
-  setTextByNatchIndex(batchIndex: number, text: string) {
-    this.getMeshByBatchIndex(batchIndex).setText(text);
+  setTextByBatchIndex(batchIndex: number, text: string) {
+    this.getMeshByBatchIndex(batchIndex)?.setText(text);
   }
 }

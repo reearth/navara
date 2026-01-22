@@ -259,7 +259,9 @@ fn mark_leaves(
 
     let (distance_from_camera, sse) = match &tile.bounding_volume {
         Some(aabb) => {
-            let distance_from_camera = aabb.distance_to_point(camera_position);
+            // Use a minimum distance to avoid division by zero when camera is inside the AABB.
+            // When camera is inside the bounding box, distance_to_point returns 0.
+            let distance_from_camera = aabb.distance_to_point(camera_position).max(1.0);
             let sse = (tile_meta.geometric_error)
                 / (distance_from_camera * (frustum.sse_denominator / window.height));
             (distance_from_camera as f32, sse as f32)

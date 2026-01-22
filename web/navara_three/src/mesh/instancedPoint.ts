@@ -1,7 +1,7 @@
 import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
 import type { ViewContext } from "../core";
-import { setTransform, type BufferLoader } from "../event";
+import { type BufferLoader } from "../event";
 import { arraysEqual } from "../utils";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
@@ -34,70 +34,114 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
 
   private initMeshes(m: NavaraPointMesh, buf: BufferLoader) {
     const g = m.geometry;
-    const positionData = g.position;
-    const position = buf.removeF32(positionData.data);
-    const positionSize = positionData.size;
     const batchIdsData = g.batch_ids;
     const batchIds = buf.removeF32(batchIdsData.data);
     const batchIdSize = batchIdsData.size;
     const batchIndexData = g.batch_index;
     const batchIndex = buf.removeU32(batchIndexData.data);
-    if (!position || !batchIds || !batchIndex) return;
+    if (!batchIds || !batchIndex) return;
+
+    const positionHighData = g.position_3d_high;
+    const positionLowData = g.position_3d_low;
+    const positionHigh = positionHighData
+      ? buf.removeF32(positionHighData.data)
+      : undefined;
+    const positionLow = positionLowData
+      ? buf.removeF32(positionLowData.data)
+      : undefined;
+    const positionData = g.position;
+    const position = positionData
+      ? buf.removeF32(positionData.data)
+      : undefined;
 
     const material = m.material;
     const active = m.active;
     const transform = m.transform;
 
-    const meshLen = position.length / positionSize;
+    this.setActive(active);
+
+    this.userData.useRTE =
+      g.position_3d_high !== undefined && g.position_3d_high.size > 0;
+
+    let meshLen = 0;
+    let positionSize = 0;
+
+    if (this.userData.useRTE) {
+      if (!positionHigh || !positionLow || !positionHighData) return;
+      positionSize = positionHighData.size;
+
+      meshLen = positionHigh.length / positionSize;
+    } else {
+      if (!position || !positionData) return;
+      positionSize = positionData.size;
+
+      meshLen = position.length / positionSize;
+    }
 
     for (let i = 0; i < meshLen; i++) {
       const posIdx = i * positionSize;
-      // x, y, z are relative coordinates (small numbers, maintain precision)
-      const x = position[posIdx];
-      const y = position[posIdx + 1];
-      const z = position[posIdx + 2];
-
       const batchIdIdx = i * batchIdSize;
       const batchId = batchIds[batchIdIdx];
 
-      const mesh = new PointMesh(material, batchId, active);
+      const mesh = new PointMesh(
+        material,
+        batchId,
+        active,
+        this.userData.useRTE,
+      );
       mesh.renderOrder = this.renderOrder;
-
-      // RTC: Set mesh position to tile center, store relative offset in uniform
-      setTransform(mesh, transform);
-
-      mesh.userData.rtcPos.value.set(x, y, z);
-
+      mesh.setPosition(
+        this.userData.useRTE,
+        position,
+        positionHigh,
+        positionLow,
+        posIdx,
+        transform,
+      );
       this.addWithBatchIndex(mesh, batchIndex[i]);
     }
   }
 
   _update(m: NavaraPointMesh, buf: BufferLoader, active: boolean) {
+    this.setActive(active);
+
     const material = m.material;
-
     const g = m.geometry;
-    const positionData = g.position;
-    const position = buf.removeF32(positionData.data);
-    const positionSize = positionData.size;
-
     const transform = m.transform;
+
+    const positionHighData = g.position_3d_high;
+    const positionLowData = g.position_3d_low;
+    const positionHigh = positionHighData
+      ? buf.removeF32(positionHighData.data)
+      : undefined;
+    const positionLow = positionLowData
+      ? buf.removeF32(positionLowData.data)
+      : undefined;
+    const positionData = g.position;
+    const position = positionData
+      ? buf.removeF32(positionData.data)
+      : undefined;
+
+    let positionSize = 0;
+    if (positionHighData) {
+      positionSize = positionHighData.size;
+    } else if (positionData) {
+      positionSize = positionData.size;
+    }
 
     for (const mesh of this.meshes()) {
       mesh._update(material, active);
+      this.markVisibility(mesh);
 
-      // RTC: Update transform (tile center)
-      setTransform(mesh, transform);
-
-      if (position) {
-        const batchIndex = (mesh.userData.batchIndex as number) * positionSize;
-        // x, y, z are relative coordinates
-        const x = position[batchIndex];
-        const y = position[batchIndex + 1];
-        const z = position[batchIndex + 2];
-
-        // Update relative offset uniform
-        mesh.userData.rtcPos.value.set(x, y, z);
-      }
+      const posIdx = mesh.userData.batchIndex * positionSize;
+      mesh.setPosition(
+        this.userData.useRTE,
+        position,
+        positionHigh,
+        positionLow,
+        posIdx,
+        transform,
+      );
     }
 
     // SelectiveEffect: effectIds handling at container level

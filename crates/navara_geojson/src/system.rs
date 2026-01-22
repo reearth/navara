@@ -374,41 +374,34 @@ pub fn update_geo_json_layer(
 
                 match &mut *f {
                     RenderableFeature::Billboard {
-                        coordinates,
-                        crs,
                         material,
                         transform,
                         render_info,
                         ..
                     } => {
                         if let Appearance::Billboard(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
+                            material.update(mat, transform);
                             render_info.should_recalculate_height = true;
                         }
                     }
                     RenderableFeature::Text {
-                        coordinates,
-                        crs,
                         material,
-                        transform,
                         render_info,
                         ..
                     } => {
                         if let Appearance::Text(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
+                            material.update(mat);
                             render_info.should_recalculate_height = true;
                         }
                     }
                     RenderableFeature::Point {
-                        coordinates,
-                        crs,
                         material,
                         transform,
                         render_info,
                         ..
                     } => {
                         if let Appearance::Point(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
+                            material.update(mat, transform);
                             render_info.should_recalculate_height = true;
                         }
                     }
@@ -550,10 +543,42 @@ mod test {
     use navara_layer::{GeoJsonLayer, LayerStore};
     use navara_material::Appearance;
     use navara_material::{BillboardMaterial, PointMaterial};
+    use navara_math::Vec3;
     use navara_parser::geojson::GeoJson;
     use navara_tile_component::RasterTileQuadtree;
 
     use super::construct_feature;
+
+    /// Helper function to compare two Vec3 with epsilon tolerance
+    /// Returns true if the difference in each component is within epsilon
+    fn vec3_approx_eq(a: Vec3, b: Vec3, epsilon: f64) -> bool {
+        (a.x - b.x).abs() < epsilon && (a.y - b.y).abs() < epsilon && (a.z - b.z).abs() < epsilon
+    }
+
+    /// Helper function to extract position from RTE geometry
+    /// Returns the decoded position by adding high and low components
+    fn get_rte_position(
+        buf: &BufferStore,
+        geometry: &navara_feature_component::render::TransferablePointGeometry,
+    ) -> Option<Vec3> {
+        if let (Some(high_attr), Some(low_attr)) =
+            (&geometry.position_3d_high, &geometry.position_3d_low)
+        {
+            if let (Some(high), Some(low)) =
+                (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
+            {
+                Some(Vec3::new(
+                    (high[0] + low[0]) as f64,
+                    (high[1] + low[1]) as f64,
+                    (high[2] + low[2]) as f64,
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 
     fn initialize_app() -> App {
         let mut app = App::new();
@@ -624,6 +649,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -649,37 +676,44 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Point 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Point 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 
@@ -724,6 +758,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -749,37 +785,44 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Point 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Point {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Point {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Point 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 
@@ -829,6 +872,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -854,37 +899,44 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Billboard 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Billboard 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 
@@ -929,6 +981,8 @@ mod test {
 
         let mut iter = renderable_features.iter(app.world());
 
+        let buf = app.world().resource::<BufferStore>();
+
         let expects = [
             xyz_to_vec3(
                 LLE {
@@ -954,37 +1008,44 @@ mod test {
             ),
         ];
 
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[0])
+        let result1 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
+            "Billboard 1 position mismatch: expected {:?}, got {:?}",
+            expects[0],
+            result1
         );
-        assert_eq!(
-            match iter.next().unwrap() {
-                RenderableFeature::Billboard {
-                    coordinates: _,
-                    crs: _,
-                    material: _,
-                    transform,
-                    feature_id: _,
-                    render_info: _,
-                    geometry: _,
-                    ..
-                } => Some(transform.translation),
-                _ => None,
-            },
-            Some(expects[1])
+
+        let result2 = match iter.next().unwrap() {
+            RenderableFeature::Billboard {
+                coordinates: _,
+                crs: _,
+                material: _,
+                transform: _,
+                feature_id: _,
+                render_info: _,
+                geometry,
+                ..
+            } => get_rte_position(buf, geometry),
+            _ => None,
+        };
+        assert!(
+            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
+            "Billboard 2 position mismatch: expected {:?}, got {:?}",
+            expects[1],
+            result2
         );
     }
 }

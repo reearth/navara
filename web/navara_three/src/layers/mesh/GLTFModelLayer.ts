@@ -1,7 +1,6 @@
 import { encodePosition } from "@navara/engine-api";
-import { calcModelMatrixRTE } from "@navara/three_api";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
-import RteModelParsVertex from "@shaders/glsl/chunks/rte_model_pars_vertex.glsl";
+import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import {
   Group,
   Mesh,
@@ -10,7 +9,6 @@ import {
   AnimationClip,
   LoopRepeat,
   LoopOnce,
-  Camera,
   Material,
   Matrix4,
   Vector3,
@@ -24,7 +22,12 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
+
 import { createReplacer } from "../../utils";
+import {
+  setupRTEBeforeRender,
+  type RTEUserData,
+} from "../../mesh/rtcRteHelper";
 
 type LayerDescription = {
   gltfModel?: {
@@ -42,6 +45,16 @@ type LayerDescription = {
     animationCrossfadeDuration?: number; // default: 0.3
     animationAutoPlay?: boolean; // default: false
   };
+};
+
+export const DEFAULT_GLTF_MODEL_DESCRIPTION: NonNullable<
+  LayerDescription["gltfModel"]
+> = {
+  url: "",
+  useRTE: true,
+  animationSpeed: 1,
+  animationLoop: true,
+  animationCrossfadeDuration: 0.3,
 };
 
 export type GLTFModelLayerConfig = MeshLayerConfig & LayerDescription;
@@ -110,9 +123,22 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
   private modelPositionHigh: Vector3 = new Vector3();
   private modelPositionLow: Vector3 = new Vector3();
 
+  // Shared RTE uniforms for all materials in this model
+  private rteUserData: RTEUserData = {
+    modelViewMatrixRTE: { value: new Matrix4() },
+    cameraPositionHigh: { value: new Vector3() },
+    cameraPositionLow: { value: new Vector3() },
+  };
+
   constructor(view: ViewContext, config: GLTFModelLayerConfig) {
     super(view, config);
-    this.config = config;
+    this.config = {
+      ...config,
+      gltfModel: {
+        ...DEFAULT_GLTF_MODEL_DESCRIPTION,
+        ...config.gltfModel,
+      },
+    };
     this.loader = new GLTFLoader();
   }
 
@@ -204,6 +230,9 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       }
     }
 
+    let setRteCbk = false;
+    const IDENTITY_MATRIX = new Matrix4();
+
     // Setup shadows and CSM
     model.traverse((child) => {
       if (child instanceof Mesh) {
@@ -213,6 +242,20 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         if (useRTE) {
           child.frustumCulled = false;
           this.setupRTEShadersForMesh(child);
+
+          // Set RTE callback only once for the first mesh (shared RTE uniforms)
+          if (!setRteCbk) {
+            const rteCallback = setupRTEBeforeRender(
+              child,
+              this.rteUserData,
+              IDENTITY_MATRIX,
+            );
+            if (rteCallback) {
+              child.onBeforeRender = rteCallback;
+              child.onBeforeShadow = rteCallback;
+            }
+            setRteCbk = true;
+          }
         }
 
         // Setup CSM for materials if shadows are enabled
@@ -253,81 +296,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       ? mesh.material
       : [mesh.material];
 
-    materials.forEach((material) => {
-      // Initialize RTE uniforms in material userData
-      material.userData.viewMatrixRTE = {
-        value: new Matrix4(),
-      };
-      material.userData.u_cameraPositionHigh = {
-        value: new Vector3(),
-      };
-      material.userData.u_cameraPositionLow = {
-        value: new Vector3(),
-      };
-      material.userData.u_modelPositionHigh = {
-        value: this.modelPositionHigh,
-      };
-      material.userData.u_modelPositionLow = {
-        value: this.modelPositionLow,
-      };
-      material.userData.useRTE = true;
-    });
-
     // Setup shader modifications BEFORE triggering recompilation
     this.modifyMaterialForRTE(materials);
-
-    // Identity matrix for viewMatrixRTE calculation (reused each frame)
-    const IDENTITY_MATRIX = new Matrix4();
-
-    // Setup onBeforeRender callback to update camera uniforms each frame
-    const handleBeforeRender = (camera: Camera, material: Material) => {
-      if (!material.userData.useRTE) return;
-
-      // Calculate view matrix with zeroed translation (rotation only)
-      // Using calcModelMatrixRTE with Identity gives us: camera.matrixWorldInverse with translation zeroed
-      calcModelMatrixRTE(
-        IDENTITY_MATRIX,
-        camera.matrixWorldInverse,
-        material.userData.viewMatrixRTE.value,
-      );
-
-      // Encode camera position as high/low components
-      const encoded = encodePosition(
-        camera.position.x,
-        camera.position.y,
-        camera.position.z,
-      );
-
-      material.userData.u_cameraPositionHigh.value.set(
-        encoded.high.x,
-        encoded.high.y,
-        encoded.high.z,
-      );
-      material.userData.u_cameraPositionLow.value.set(
-        encoded.low.x,
-        encoded.low.y,
-        encoded.low.z,
-      );
-
-      encoded.free();
-    };
-
-    // Set onBeforeRender for main rendering
-    mesh.onBeforeRender = (_renderer, _scene, camera, _geometry, material) => {
-      handleBeforeRender(camera, material);
-    };
-
-    // Set onBeforeShadow for shadow rendering
-    mesh.onBeforeShadow = (
-      _renderer,
-      _scene,
-      _camera,
-      shadowCamera,
-      _geometry,
-      material,
-    ) => {
-      handleBeforeRender(shadowCamera, material);
-    };
   }
 
   private modifyMaterialForRTE(materials: Material[]): void {
@@ -342,15 +312,14 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         }
 
         // Add RTE uniforms to shader
-        shader.uniforms.u_cameraPositionHigh =
-          material.userData.u_cameraPositionHigh;
-        shader.uniforms.u_cameraPositionLow =
-          material.userData.u_cameraPositionLow;
-        shader.uniforms.u_modelPositionHigh =
-          material.userData.u_modelPositionHigh;
-        shader.uniforms.u_modelPositionLow =
-          material.userData.u_modelPositionLow;
-        shader.uniforms.viewMatrixRTE = material.userData.viewMatrixRTE;
+        shader.uniforms.u_cameraPositionHigh = this.rteUserData
+          .cameraPositionHigh || { value: new Vector3() };
+        shader.uniforms.u_cameraPositionLow = this.rteUserData
+          .cameraPositionLow || { value: new Vector3() };
+        shader.uniforms.rtePosHigh = { value: this.modelPositionHigh };
+        shader.uniforms.rtePosLow = { value: this.modelPositionLow };
+        shader.uniforms.modelViewMatrixRTE = this.rteUserData
+          .modelViewMatrixRTE || { value: new Matrix4() };
 
         // Modify vertex shader with RTE chunks
         let vertexShader = shader.vertexShader;
@@ -360,7 +329,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
             "#include <common>",
             `
             #include <common>
-            ${RteModelParsVertex}
+            ${RteUniformParsVertex}
             `,
           )
           .replace("#include <project_vertex>", ProjectVertexRteModel).source;

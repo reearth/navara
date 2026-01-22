@@ -893,6 +893,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     text: {
+      lang: "ja",
       color: new Color().setStyle("#ffffff"),
       scaleByDistance: true,
       clampToGround: false,
@@ -935,14 +936,15 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
           !ALLOWED_FT_CODE.includes(ftCode) ||
           (annoCtg && !ALLOWED_ANNO_CTG.includes(annoCtg))
         )
-          return { text: "" };
+          return { text: "", show: false };
 
-        if (uniqueLabels.has(text)) return { text: "" };
+        if (uniqueLabels.has(text)) return { text: "", show: false };
 
         uniqueLabels.add(text);
 
         return {
           text,
+          show: !!text,
         };
       });
     });

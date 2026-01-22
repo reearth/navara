@@ -23,3 +23,12 @@ mat4 nvr_getBillboardMat(float scaleFactor) {
 
     return billboardMatrix;
 }
+
+mat4 nvr_removeScaleFromMat4(mat4 inputMat) {
+    return mat4(
+        normalize(inputMat[0]),
+        normalize(inputMat[1]),
+        normalize(inputMat[2]),
+        inputMat[3]
+    );
+}

@@ -25,6 +25,7 @@ declare module "troika-three-text" {
     maxWidth: number;
     lineHeight: number;
     letterSpacing: number;
+    lang: string;
     textAlign: "left" | "right" | "center" | "justify";
     material: MeshBasicMaterial | MeshStandardMaterial;
     anchorX: "left" | "center" | "right" | string;

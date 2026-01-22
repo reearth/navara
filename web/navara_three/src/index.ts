@@ -15,7 +15,7 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
-import { initializeWorkerPool } from "@navara/worker";
+import { initializeWorkerPool, workerPool } from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -111,7 +111,7 @@ import { RendererStats } from "./stats";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
-  type LayerDescription as ActualLayerDescription,
+  type LayerDescription as _ActualLayerDescription,
   type MeshCache,
   type PickedFeature,
   type WorkerPoolPromises,
@@ -240,6 +240,9 @@ export type ViewEvents = {
   mouseup: (event: MapMouseEvent) => void;
   click: (event: MapMouseEvent) => void;
 };
+
+// Need an assignment to tell TypeScript compiler that this is being renamed...
+type ActualLayerDescription = _ActualLayerDescription;
 
 export default class ThreeView<
   CustomLayerDescriptions extends
@@ -794,6 +797,12 @@ export default class ThreeView<
     this._initialized = true;
 
     initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
+
+    // Pre-warm all workers with WASM initialization
+    const warmUpPromises: Promise<unknown>[] = [];
+    for (let i = 0; i < MAP_CONCURRENCY; i++) {
+      warmUpPromises.push(workerPool().exec("warmUp", []));
+    }
 
     await initCore();
     await initNavaraApi();

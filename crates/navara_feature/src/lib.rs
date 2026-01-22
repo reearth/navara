@@ -31,6 +31,7 @@ impl Plugin for FeaturePlugin {
                     point::system::update_height_by_terrain_for_batched,
                     point::system::update_height_by_terrain,
                     point::system::remove_batched_feature,
+                    point::system::cleanup_deleted_batched_children,
                 )
                     .chain(),
             )
@@ -42,6 +43,7 @@ impl Plugin for FeaturePlugin {
                     billboard::system::update_height_by_terrain_for_batched,
                     billboard::system::update_height_by_terrain,
                     billboard::system::remove_batched_feature,
+                    billboard::system::cleanup_deleted_batched_children,
                 )
                     .chain(),
             )
@@ -53,6 +55,7 @@ impl Plugin for FeaturePlugin {
                     text::system::update_height_by_terrain_for_batched,
                     text::system::update_height_by_terrain,
                     text::system::remove_batched_feature,
+                    text::system::cleanup_deleted_batched_children,
                 )
                     .chain(),
             )

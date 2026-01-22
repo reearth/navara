@@ -7,9 +7,9 @@ import {
 
 import { Color } from "../../Color";
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type SelectiveEffectOcclusion,
 } from "../../core";
@@ -37,11 +37,13 @@ type LayerDescription = {
   };
 };
 
-export type BoxMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type BoxMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type BoxMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type BoxMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-export class BoxMeshLayer extends MeshLayerDeclaration<
+export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   BoxMeshLayerConfig,
   BoxMeshLayerUpdate,
   Mesh<BoxGeometry, MeshLambertMaterial, BoxMeshEventMap>

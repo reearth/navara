@@ -88,7 +88,11 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
   get orientation() {
     const orientation = this._core?.getCameraOrientation();
     invariant(orientation);
-    return orientation;
+    return {
+      heading: orientation.heading,
+      pitch: orientation.pitch,
+      roll: orientation.roll,
+    };
   }
 
   get fovy(): number | undefined {
