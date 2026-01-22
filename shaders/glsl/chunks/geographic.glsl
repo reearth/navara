@@ -5,9 +5,12 @@
  * across various shaders that work with Earth coordinates.
  *******************************************************/
 
+#include "ellipsoid.glsl"
+
 // Constants
 const float DEG_TO_RAD = 0.017453292519943295;
 const float RAD_TO_DEG = 57.29577951308232;
+const float PI = 3.141592653589793;
 
 // Rotate vector v around arbitrary axis
 vec3 rotateAroundAxis(vec3 v, vec3 axis, float angle) {
@@ -30,6 +33,25 @@ vec3 lonLatToEllipsoid(float lon, float lat, float a, float e2) {
   float z = N * (1.0 - e2) * sinLat;
 
   return vec3(x, y, z);
+}
+
+// Convert ECEF Cartesian coordinates to lon/lat/alt (degrees, meters)
+vec3 ecefToLonLat(vec3 ecef) {
+  float x = ecef.x;
+  float y = ecef.y;
+  float z = ecef.z;
+
+  float lon = atan(y, x) * RAD_TO_DEG;
+
+  float p = sqrt(x * x + y * y);
+  float theta = atan(z * WGS84_A, p * WGS84_B);
+  float lat = atan(z + WGS84_E2_SECOND * WGS84_B * pow(sin(theta), 3.0),
+                    p - WGS84_E2 * WGS84_A * pow(cos(theta), 3.0)) * RAD_TO_DEG;
+  
+  float N = WGS84_A / sqrt(1.0 - WGS84_E2 * sin(lat * DEG_TO_RAD) * sin(lat * DEG_TO_RAD));
+  float alt = p / cos(lat * DEG_TO_RAD) - N;
+
+  return vec3(lon, lat, alt);
 }
 
 // Geodesic interpolation on ellipsoid (spherical interpolation + ellipsoid projection)
