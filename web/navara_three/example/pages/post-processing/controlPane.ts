@@ -2,9 +2,15 @@ import {
   Color,
   type BoxMeshLayer,
   type BoxMeshLayerUpdate,
+  type CylinderMeshLayer,
+  type CylinderMeshLayerUpdate,
   type Layer,
+  type PlaneMeshLayer,
+  type PlaneMeshLayerUpdate,
   type SphereMeshLayer,
   type SphereMeshLayerUpdate,
+  type TubeMeshLayer,
+  type TubeMeshLayerUpdate,
   type SelectiveEffectOcclusion,
 } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
@@ -14,6 +20,9 @@ import { TILES_3D_DATASETS } from "../../helpers/constants";
 import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
   GeoJsonModelLayer,
+  GeoJsonPolygonLayer,
+  GeoJsonPointLayer,
+  GeoJsonPolylineLayer,
   SceneLayers,
   DrumModelState,
   SoldierModelState,
@@ -21,10 +30,16 @@ import type {
 import {
   CUBE_CONFIG,
   SPHERE_CONFIG,
+  CYLINDER_CONFIG,
+  TUBE_CONFIG,
+  PLANE_CONFIG,
   DRUM_CONFIG,
   SOLDIER_CONFIG,
   CHIYODA_CONFIG,
   CHUO_CONFIG,
+  POLYGON_CONFIG,
+  POINT_CONFIG,
+  POLYLINE_CONFIG,
 } from "./sceneLayers";
 
 // ============================================
@@ -91,13 +106,19 @@ type PaneDependencies = SceneLayers &
   };
 
 export const createControlPane = ({
-  paneTitle = "PostEffect Bloom Parameters",
+  paneTitle = "Selective Effect Parameters",
   postEffectBloom,
   postEffectOutline,
   cubeLayer,
   sphereLayer,
+  cylinderLayer,
+  tubeLayer,
+  planeLayer,
   drumLayer,
   soldierLayer,
+  polygonLayer,
+  pointLayer,
+  polylineLayer,
   chiyodaLayer,
   chuoLayer,
 }: PaneDependencies): Pane => {
@@ -110,7 +131,10 @@ export const createControlPane = ({
   pane.element.style.right = "0px";
 
   setupBloomFolder(pane, postEffectBloom);
-  setupMeshFolder(pane, {
+
+  // Mesh Layer カテゴリ
+  const meshLayerFolder = pane.addFolder({ title: "Mesh Layer" });
+  setupMeshFolder(meshLayerFolder, {
     title: "Cube (Red)",
     layer: cubeLayer,
     configKey: "box",
@@ -121,7 +145,7 @@ export const createControlPane = ({
       visible: true,
     },
   });
-  setupMeshFolder(pane, {
+  setupMeshFolder(meshLayerFolder, {
     title: "Sphere (Blue)",
     layer: sphereLayer,
     configKey: "sphere",
@@ -132,14 +156,76 @@ export const createControlPane = ({
       visible: true,
     },
   });
-  setupDrumFolder(pane, drumLayer, postEffectBloom.id, postEffectOutline.id);
+  setupMeshFolder(meshLayerFolder, {
+    title: "Cylinder (Green - Shinjuku)",
+    layer: cylinderLayer,
+    configKey: "cylinder",
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+    params: {
+      ...CYLINDER_CONFIG,
+      visible: true,
+    },
+  });
+  setupMeshFolder(meshLayerFolder, {
+    title: "Tube (Yellow - Shibuya)",
+    layer: tubeLayer,
+    configKey: "tube",
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+    params: {
+      ...TUBE_CONFIG,
+      visible: true,
+    },
+  });
+  setupMeshFolder(meshLayerFolder, {
+    title: "Plane (Magenta - Akihabara)",
+    layer: planeLayer,
+    configKey: "plane",
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+    params: {
+      ...PLANE_CONFIG,
+      visible: true,
+    },
+  });
+
+  // GeoJson カテゴリ
+  const geoJsonFolder = pane.addFolder({ title: "GeoJson" });
+  setupDrumFolder(
+    geoJsonFolder,
+    drumLayer,
+    postEffectBloom.id,
+    postEffectOutline.id,
+  );
   setupSoldierFolder(
-    pane,
+    geoJsonFolder,
     soldierLayer,
     postEffectBloom.id,
     postEffectOutline.id,
   );
-  setupTilesFolder(pane, {
+  setupPolygonFolder(
+    geoJsonFolder,
+    polygonLayer,
+    postEffectBloom.id,
+    postEffectOutline.id,
+  );
+  setupPointFolder(
+    geoJsonFolder,
+    pointLayer,
+    postEffectBloom.id,
+    postEffectOutline.id,
+  );
+  setupPolylineFolder(
+    geoJsonFolder,
+    polylineLayer,
+    postEffectBloom.id,
+    postEffectOutline.id,
+  );
+
+  // 3D Tiles カテゴリ
+  const tiles3DFolder = pane.addFolder({ title: "3D Tiles" });
+  setupTilesFolder(tiles3DFolder, {
     title: "Chiyoda Buildings",
     layer: chiyodaLayer,
     datasetUrl: TILES_3D_DATASETS.plateauChiyoda.url,
@@ -150,7 +236,7 @@ export const createControlPane = ({
       visible: true,
     },
   });
-  setupTilesFolder(pane, {
+  setupTilesFolder(tiles3DFolder, {
     title: "Chuo Buildings",
     layer: chuoLayer,
     datasetUrl: TILES_3D_DATASETS.plateauChuo.url,
@@ -250,14 +336,26 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
 };
 
 type MeshLayerHandle = {
-  ref: BoxMeshLayer | SphereMeshLayer;
-  update: (updates: BoxMeshLayerUpdate | SphereMeshLayerUpdate) => void;
+  ref:
+    | BoxMeshLayer
+    | SphereMeshLayer
+    | CylinderMeshLayer
+    | TubeMeshLayer
+    | PlaneMeshLayer;
+  update: (
+    updates:
+      | BoxMeshLayerUpdate
+      | SphereMeshLayerUpdate
+      | CylinderMeshLayerUpdate
+      | TubeMeshLayerUpdate
+      | PlaneMeshLayerUpdate,
+  ) => void;
 };
 
 type MeshFolderOptions = {
   title: string;
   layer: MeshLayerHandle;
-  configKey: "box" | "sphere";
+  configKey: "box" | "sphere" | "cylinder" | "tube" | "plane";
   bloomId: string;
   outlineId: string;
   params: {
@@ -270,7 +368,10 @@ type MeshFolderOptions = {
   };
 };
 
-const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
+const setupMeshFolder = (
+  parent: Pane | FolderApi,
+  options: MeshFolderOptions,
+) => {
   const { title, layer, configKey, bloomId, outlineId } = options;
   const params = { ...options.params };
 
@@ -290,7 +391,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
     });
   };
 
-  const folder = pane.addFolder({ title });
+  const folder = parent.addFolder({ title });
 
   folder.addBinding(params, "visible").on("change", (ev) => {
     layer.update({ visible: ev.value });
@@ -339,7 +440,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
 };
 
 const buildMeshConfig = (
-  configKey: "box" | "sphere",
+  configKey: "box" | "sphere" | "cylinder" | "tube" | "plane",
   config: {
     emissiveColor?: number;
     emissiveIntensity?: number;
@@ -349,6 +450,15 @@ const buildMeshConfig = (
 ) => {
   if (configKey === "box") {
     return { box: config };
+  }
+  if (configKey === "cylinder") {
+    return { cylinder: config };
+  }
+  if (configKey === "tube") {
+    return { tube: config };
+  }
+  if (configKey === "plane") {
+    return { plane: config };
   }
   return { sphere: config };
 };
@@ -370,7 +480,10 @@ type TilesFolderOptions = {
   };
 };
 
-const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
+const setupTilesFolder = (
+  parent: Pane | FolderApi,
+  options: TilesFolderOptions,
+) => {
   const {
     title,
     layer,
@@ -382,7 +495,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
 
   const params = { ...initialParams };
 
-  const folder = pane.addFolder({ title });
+  const folder = parent.addFolder({ title });
 
   const updateTilesState = () => {
     layer.update({
@@ -462,7 +575,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
 };
 
 const setupDrumFolder = (
-  pane: Pane,
+  parent: Pane | FolderApi,
   drumLayer: GeoJsonModelLayer<DrumModelState>,
   bloomId: string,
   outlineId: string,
@@ -473,7 +586,7 @@ const setupDrumFolder = (
     baseColor: 0xffffff,
   };
 
-  const folder = pane.addFolder({ title: "Drum Model" });
+  const folder = parent.addFolder({ title: "Drum Model" });
 
   const updateDrumState = () => {
     drumLayer.updateModel({
@@ -534,7 +647,7 @@ const setupDrumFolder = (
 };
 
 const setupSoldierFolder = (
-  pane: Pane,
+  parent: Pane | FolderApi,
   soldierLayer: GeoJsonModelLayer<SoldierModelState>,
   bloomId: string,
   outlineId: string,
@@ -545,7 +658,7 @@ const setupSoldierFolder = (
     baseColor: 0xffffff,
   };
 
-  const folder = pane.addFolder({ title: "Soldier Model" });
+  const folder = parent.addFolder({ title: "Soldier Model" });
 
   const updateSoldierState = () => {
     soldierLayer.updateModel({
@@ -614,4 +727,231 @@ const setupSoldierFolder = (
 
   // Apply initial state
   updateSoldierState();
+};
+
+/**
+ * Setup Polygon folder (お台場)
+ */
+const setupPolygonFolder = (
+  parent: Pane | FolderApi,
+  polygonLayer: GeoJsonPolygonLayer,
+  bloomId: string,
+  outlineId: string,
+) => {
+  const params = {
+    ...POLYGON_CONFIG,
+    visible: true,
+  };
+
+  const folder = parent.addFolder({ title: "Polygon (Odaiba)" });
+
+  const updatePolygonState = () => {
+    const effectIds = getEffectIds(
+      params.bloomEnabled,
+      params.outlineEnabled,
+      bloomId,
+      outlineId,
+    );
+
+    polygonLayer.updatePolygon({
+      show: params.visible,
+      effectIds,
+      emissiveColor: new Color().setHex(params.emissiveColor),
+      emissiveIntensity: params.emissiveIntensity,
+      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
+    });
+  };
+
+  folder.addBinding(params, "visible").on("change", () => updatePolygonState());
+
+  folder
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
+    })
+    .on("change", () => {
+      updatePolygonState();
+    });
+
+  folder
+    .addBinding(params, "selectiveEffectOcclusion", {
+      label: "Occlusion Mode",
+      options: OCCLUSION_MODE_OPTIONS,
+    })
+    .on("change", () => {
+      updatePolygonState();
+    });
+
+  addLayerEmissiveIntensityControl(folder, params, () => {
+    updatePolygonState();
+  });
+
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updatePolygonState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updatePolygonState();
+    });
+
+  // Apply initial state after a frame to ensure mesh is ready
+  requestAnimationFrame(() => {
+    updatePolygonState();
+  });
+};
+
+/**
+ * Setup Point folder (上野〜浅草)
+ */
+const setupPointFolder = (
+  parent: Pane | FolderApi,
+  pointLayer: GeoJsonPointLayer,
+  bloomId: string,
+  outlineId: string,
+) => {
+  const params = {
+    ...POINT_CONFIG,
+    visible: true,
+  };
+
+  const folder = parent.addFolder({ title: "Point (Ueno-Asakusa)" });
+
+  const updatePointState = () => {
+    const effectIds = getEffectIds(
+      params.bloomEnabled,
+      params.outlineEnabled,
+      bloomId,
+      outlineId,
+    );
+
+    pointLayer.updatePoint({
+      show: params.visible,
+      effectIds,
+      emissiveColor: new Color().setHex(params.emissiveColor),
+      emissiveIntensity: params.emissiveIntensity,
+      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
+    });
+  };
+
+  folder.addBinding(params, "visible").on("change", () => updatePointState());
+
+  folder
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
+    })
+    .on("change", () => {
+      updatePointState();
+    });
+
+  folder
+    .addBinding(params, "selectiveEffectOcclusion", {
+      label: "Occlusion Mode",
+      options: OCCLUSION_MODE_OPTIONS,
+    })
+    .on("change", () => {
+      updatePointState();
+    });
+
+  addLayerEmissiveIntensityControl(folder, params, () => {
+    updatePointState();
+  });
+
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updatePointState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updatePointState();
+    });
+
+  // Apply initial state after a frame to ensure mesh is ready
+  requestAnimationFrame(() => {
+    updatePointState();
+  });
+};
+
+/**
+ * Setup Polyline folder (六本木)
+ */
+const setupPolylineFolder = (
+  parent: Pane | FolderApi,
+  polylineLayer: GeoJsonPolylineLayer,
+  bloomId: string,
+  outlineId: string,
+) => {
+  const params = {
+    ...POLYLINE_CONFIG,
+    visible: true,
+  };
+
+  const folder = parent.addFolder({ title: "Polyline (Roppongi)" });
+
+  const updatePolylineState = () => {
+    const effectIds = getEffectIds(
+      params.bloomEnabled,
+      params.outlineEnabled,
+      bloomId,
+      outlineId,
+    );
+
+    polylineLayer.updatePolyline({
+      show: params.visible,
+      effectIds,
+      emissiveColor: new Color().setHex(params.emissiveColor),
+      emissiveIntensity: params.emissiveIntensity,
+      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
+    });
+  };
+
+  folder
+    .addBinding(params, "visible")
+    .on("change", () => updatePolylineState());
+
+  folder
+    .addBinding(params, "emissiveColor", {
+      color: { type: "int" },
+      label: "Emissive Color",
+    })
+    .on("change", () => {
+      updatePolylineState();
+    });
+
+  folder
+    .addBinding(params, "selectiveEffectOcclusion", {
+      label: "Occlusion Mode",
+      options: OCCLUSION_MODE_OPTIONS,
+    })
+    .on("change", () => {
+      updatePolylineState();
+    });
+
+  addLayerEmissiveIntensityControl(folder, params, () => {
+    updatePolylineState();
+  });
+
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updatePolylineState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updatePolylineState();
+    });
+
+  // Apply initial state after a frame to ensure mesh is ready
+  requestAnimationFrame(() => {
+    updatePolylineState();
+  });
 };

@@ -38,6 +38,20 @@ import {
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
+import {
+  ensureSelectiveEffectUserData,
+  getSelectiveEffectConfig,
+  parseSelectiveEffectOcclusion,
+  type SelectiveEffectOcclusion,
+} from "../core/SelectiveEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState,
+  applyMaskPassRenderState,
+  restoreMaterialState,
+} from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { CommonUniforms } from "../uniforms";
 import { arraysEqual, createReplacer } from "../utils";
@@ -324,8 +338,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
       value: meshMaterial.ior ?? 1.33333,
     };
 
+    // Initialize shader uniforms for SelectiveEffect
+    ensureSelectiveEffectUserData(material);
+
     // Only set up RTE uniforms if using RTE
     const useRTE = this.userData.useRTE;
+    let rteCallback: ReturnType<typeof setupRTEBeforeRender> = null;
+
     if (useRTE) {
       material.userData.modelViewMatrixRTE = {
         value: new Matrix4(),
@@ -337,12 +356,50 @@ export class PolygonMesh extends BatchedFeatureMesh<
         value: new Vector3(),
       };
 
-      const callback = setupRTEBeforeRender(this, material.userData);
-      if (callback) {
-        this.onBeforeRender = callback;
-        this.onBeforeShadow = callback;
+      rteCallback = setupRTEBeforeRender(this, material.userData);
+      // onBeforeShadow is RTE-only
+      if (rteCallback) {
+        this.onBeforeShadow = rteCallback;
       }
     }
+
+    // Always setup onBeforeRender for RTE + MaskPass handling
+    this.onBeforeRender = (
+      renderer,
+      scene,
+      camera,
+      geometry,
+      _material,
+      group,
+    ) => {
+      // 1. RTE processing (only when RTE is enabled)
+      if (rteCallback) {
+        rteCallback(renderer, scene, camera, geometry, _material, group);
+      }
+
+      // 2. MaskPass processing
+      const ctx = getMaskPassContext();
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        restoreMaterialState(this.material);
+        return;
+      }
+
+      const config = getSelectiveEffectConfig(this);
+      const registry =
+        ctx.registry ?? this._viewContext?.selectiveEffectRegistry;
+      const evaluation = evaluateMaskPassParticipation(
+        config,
+        registry,
+        this._layerId,
+        ctx,
+      );
+
+      if (evaluation.shouldRender) {
+        applyMaskPassRenderState(this.material, evaluation.isSilhouette);
+      } else {
+        applyMaskPassSkipState(this.material);
+      }
+    };
 
     material.userData.defines ??= {};
     material.userData.defines.USE_ROUGHNESS = 1;
@@ -803,6 +860,27 @@ export class PolygonMesh extends BatchedFeatureMesh<
     if (prev.emissiveIntensity !== material.emissiveIntensity) {
       this.material.emissiveIntensity = material.emissiveIntensity ?? 0;
       prev.emissiveIntensity = material.emissiveIntensity;
+    }
+
+    // SelectiveEffect: selectiveEffectOcclusion handling
+    if (prev.selectiveEffectOcclusion !== material.selectiveEffectOcclusion) {
+      if (
+        this._viewContext &&
+        material.selectiveEffectOcclusion !== undefined
+      ) {
+        const occlusion = parseSelectiveEffectOcclusion(
+          material.selectiveEffectOcclusion as
+            | SelectiveEffectOcclusion
+            | undefined,
+        );
+        if (occlusion !== undefined) {
+          this._viewContext.setLayerSelectiveEffectOcclusion(
+            this._layerId,
+            occlusion,
+          );
+        }
+      }
+      prev.selectiveEffectOcclusion = material.selectiveEffectOcclusion;
     }
   }
 

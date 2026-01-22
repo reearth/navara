@@ -1,6 +1,15 @@
 import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
 import type { ViewContext } from "../core";
+import { getSelectiveEffectConfig } from "../core/SelectiveEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState,
+  applyMaskPassRenderState,
+  restoreMaterialState,
+} from "../core/SelectiveEffectMaskContext";
 import { type BufferLoader } from "../event";
 import { arraysEqual } from "../utils";
 
@@ -98,8 +107,66 @@ export class InstancedPointMesh extends InstancedMesh<PointMesh> {
         posIdx,
         transform,
       );
+
+      // Setup MaskPass handling for this point
+      this.setupPointMaskPass(mesh);
+
       this.addWithBatchIndex(mesh, batchIndex[i]);
     }
+  }
+
+  /**
+   * Setup MaskPass handling for a PointMesh.
+   * Wraps existing onBeforeRender (RTE handling) with MaskPass logic.
+   */
+  private setupPointMaskPass(mesh: PointMesh): void {
+    const originalOnBeforeRender = mesh.onBeforeRender;
+
+    mesh.onBeforeRender = (
+      renderer,
+      scene,
+      camera,
+      geometry,
+      material,
+      group,
+    ) => {
+      // 1. Call original onBeforeRender (RTE handling)
+      if (originalOnBeforeRender) {
+        originalOnBeforeRender.call(
+          mesh,
+          renderer,
+          scene,
+          camera,
+          geometry,
+          material,
+          group,
+        );
+      }
+
+      // 2. MaskPass processing
+      const ctx = getMaskPassContext();
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        restoreMaterialState(mesh.material);
+        return;
+      }
+
+      // Use container (this) for config since effectIds are at container level
+      const config = getSelectiveEffectConfig(this);
+      const registry =
+        ctx.registry ?? this._viewContext?.selectiveEffectRegistry;
+      const evaluation = evaluateMaskPassParticipation(
+        config,
+        registry,
+        this._layerId,
+        ctx,
+      );
+
+      if (evaluation.shouldRender) {
+        applyMaskPassRenderState(mesh.material, evaluation.isSilhouette);
+      } else {
+        applyMaskPassSkipState(mesh.material);
+      }
+    };
   }
 
   _update(m: NavaraPointMesh, buf: BufferLoader, active: boolean) {
