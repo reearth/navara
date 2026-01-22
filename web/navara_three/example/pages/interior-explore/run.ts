@@ -6,7 +6,6 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-  LLE,
   LayerHandle,
 } from "@navara/three";
 import { Vector3, Quaternion, Euler } from "three";
@@ -105,7 +104,7 @@ export const run = async (view: ThreeView) => {
   });
 
   view.lookAt(
-    new LLE(startLLE[0], startLLE[1], startLLE[2] + 1), // Add 1 to height to look at model center
+    { lat: startLLE[0], lng: startLLE[1], height: startLLE[2] + 1 }, // Add 1 to height to look at model center
     new Vector3(10, 10, 5),
   );
 
@@ -125,13 +124,17 @@ const updateModelLayerPos = (
   modelLayer: LayerHandle<GLTFModelLayer>,
   lle: number[],
 ) => {
-  const startPos = geodeticToVector3(
-    new LLE(degreeToRadian(lle[0]), degreeToRadian(lle[1]), lle[2]),
-  );
+  const startPos = geodeticToVector3({
+    lat: degreeToRadian(lle[0]),
+    lng: degreeToRadian(lle[1]),
+    height: lle[2],
+  });
 
-  const normal = geodeticSurfaceNormal(
-    new LLE(degreeToRadian(lle[0]), degreeToRadian(lle[1]), lle[2]),
-  );
+  const normal = geodeticSurfaceNormal({
+    lat: degreeToRadian(lle[0]),
+    lng: degreeToRadian(lle[1]),
+    height: lle[2],
+  });
   // Calculate rotation to align model with surface normal
   const up = new Vector3(0, 1, 0);
   const quaternion = new Quaternion().setFromUnitVectors(up, normal);
@@ -144,7 +147,7 @@ const updateModelLayerPos = (
 
   view.cameraFollow(
     true,
-    new LLE(lle[0], lle[1], lle[2] + 1),
+    { lat: lle[0], lng: lle[1], height: lle[2] + 1 },
     new Vector3(10, 10, 5),
   );
 };

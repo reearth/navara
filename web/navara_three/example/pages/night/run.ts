@@ -10,7 +10,6 @@ import ThreeView, {
   type FogLightDefinition,
   degreeToRadian,
   geodeticToVector3,
-  LLE,
   Color,
 } from "@navara/three";
 import type { FeatureCollection, Point } from "geojson";
@@ -426,8 +425,11 @@ const loadGeoJSONLights = async (
       const [lon, lat] = feature.geometry.coordinates;
       const altitude = feature.properties?.height || 10;
 
-      const lle = new LLE(degreeToRadian(lat), degreeToRadian(lon), altitude);
-      const position = geodeticToVector3(lle);
+      const position = geodeticToVector3({
+        lat: degreeToRadian(lat),
+        lng: degreeToRadian(lon),
+        height: altitude,
+      });
 
       return {
         position: { x: position.x, y: position.y, z: position.z },

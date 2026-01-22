@@ -9,10 +9,9 @@ import ThreeView, {
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
-  LLE,
   Color,
 } from "@navara/three";
-import { Vector2, Vector3 } from "three";
+import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -258,7 +257,7 @@ const addCameraControl = (view: ThreeView, pane: Pane) => {
     }
 
     const animateFunc = () => {
-      view.rotateAroundAxis(new Vector3(0, 0, 0), 0.002);
+      view.rotateAround(0.002);
       frameId = requestAnimationFrame(animateFunc);
     };
     animateFunc();
@@ -270,13 +269,11 @@ const addWeatherControl = (
   pane: Pane,
   rainDropEffect: LayerHandle<RainDropEffectLayer>,
 ) => {
-  const position = geodeticToVector3(
-    new LLE(
-      degreeToRadian(35.67564356091717),
-      degreeToRadian(139.74511454748298),
-      10,
-    ),
-  );
+  const position = geodeticToVector3({
+    lat: degreeToRadian(35.67564356091717),
+    lng: degreeToRadian(139.74511454748298),
+    height: 10,
+  });
 
   const rain = view.addLayer<RainMeshLayer>({
     type: "mesh",

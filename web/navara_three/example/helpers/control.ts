@@ -1,5 +1,4 @@
 import type ThreeView from "@navara/three";
-import { Vector3 } from "three";
 import type { InputBindingApi, Pane } from "tweakpane";
 
 export const addDateControl = (
@@ -148,7 +147,7 @@ export const addCameraControl = (
     }
 
     const animateFunc = () => {
-      view.rotateAroundAxis(new Vector3(0, 0, 0), 0.002);
+      view.rotateAround(0.002);
       rotationAnimationId = requestAnimationFrame(animateFunc);
     };
     animateFunc();

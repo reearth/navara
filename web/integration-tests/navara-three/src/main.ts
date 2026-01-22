@@ -2,7 +2,6 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-  LLE,
   type SphereMeshLayer,
   ToneMappingMode,
   JAPAN_GSI_ELEVATION_DECODER,
@@ -128,9 +127,11 @@ function addRotatingSphere(view: ThreeView) {
     }
 
     // Convert geodetic coordinates to 3D position
-    const position = geodeticToVector3(
-      new LLE(degreeToRadian(lat), degreeToRadian(lng), altitude),
-    );
+    const position = geodeticToVector3({
+      lat: degreeToRadian(lat),
+      lng: degreeToRadian(lng),
+      height: altitude,
+    });
 
     // Update sphere position
     sphere.position.set(position.x, position.y, position.z);

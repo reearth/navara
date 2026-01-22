@@ -1,16 +1,17 @@
+import type { Transform } from "@navara/engine";
 import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import { Camera, Matrix4, Object3D, Vector3 } from "three";
-import type { Transform } from "@navara/engine";
+
 import { setTransform } from "../event";
 
 /**
  * Interface for objects that need RTE (Relative-To-Eye) rendering support
  */
-export interface RTEUserData {
+export type RTEUserData = {
   modelViewMatrixRTE?: { value: Matrix4 };
   cameraPositionHigh?: { value: Vector3 };
   cameraPositionLow?: { value: Vector3 };
-}
+};
 
 /**
  * Setup onBeforeRender/onBeforeShadow callback for RTE rendering

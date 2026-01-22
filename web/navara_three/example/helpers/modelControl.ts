@@ -6,7 +6,6 @@ import ThreeView, {
   degreeToRadian,
   radianToDegree,
   geodeticSurfaceNormal,
-  LLE,
   eastNorthUpToFixedFrame,
 } from "@navara/three";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
@@ -38,14 +37,11 @@ export const controlGLTFModel = (
     const curPos = modelLayer.ref.getWorldPosition();
     if (curPos) {
       const curLLE = vector3ToGeodetic(curPos);
-      view.cameraFollow(
-        true,
-        new LLE(
-          radianToDegree(curLLE.lat),
-          radianToDegree(curLLE.lng),
-          curLLE.height + (params.modelScale ?? 1),
-        ),
-      );
+      view.cameraFollow(true, {
+        lat: radianToDegree(curLLE.lat),
+        lng: radianToDegree(curLLE.lng),
+        height: curLLE.height + (params.modelScale ?? 1),
+      });
     }
   }
 
@@ -186,9 +182,7 @@ const updateModelTransform = (
 
   // Get current position in geodetic coordinates to calculate surface normal
   const currentLLE = vector3ToGeodetic(curPos);
-  const surfaceNormal = geodeticSurfaceNormal(
-    new LLE(currentLLE.lat, currentLLE.lng, currentLLE.height),
-  );
+  const surfaceNormal = geodeticSurfaceNormal(currentLLE);
 
   let height = currentLLE.height + dir.z * (params.walkSpeed ?? 1) * deltaTime;
 
@@ -263,9 +257,11 @@ const updateModelTransform = (
   const finalEuler = new Euler().setFromQuaternion(finalQuaternion);
 
   const curLLE = vector3ToGeodetic(curPos);
-  const terrainHeight = view.sampleTerrainHeight(
-    new LLE(curLLE.lat, curLLE.lng, 0),
-  );
+  const terrainHeight = view.sampleTerrainHeight({
+    lat: curLLE.lat,
+    lng: curLLE.lng,
+    height: 0,
+  });
 
   if (params.allowFly) {
     if (!params.allowUnderground) {
@@ -278,9 +274,11 @@ const updateModelTransform = (
     height = terrainHeight !== undefined ? terrainHeight : 0;
   }
 
-  const curTerrainPos = geodeticToVector3(
-    new LLE(curLLE.lat, curLLE.lng, height),
-  );
+  const curTerrainPos = geodeticToVector3({
+    lat: curLLE.lat,
+    lng: curLLE.lng,
+    height,
+  });
 
   modelLayer.update({
     position: { x: curTerrainPos.x, y: curTerrainPos.y, z: curTerrainPos.z },
@@ -304,12 +302,9 @@ const updateCameraFollow = (
 
   const curLLE = vector3ToGeodetic(curPos);
 
-  view.cameraFollow(
-    params.cameraFollow,
-    new LLE(
-      radianToDegree(curLLE.lat),
-      radianToDegree(curLLE.lng),
-      curLLE.height + (params.modelScale ?? 1), // Add modelScale to keep camera looking at model center height
-    ),
-  );
+  view.cameraFollow(params.cameraFollow, {
+    lat: radianToDegree(curLLE.lat),
+    lng: radianToDegree(curLLE.lng),
+    height: curLLE.height + (params.modelScale ?? 1), // Add modelScale to keep camera looking at model center height
+  });
 };

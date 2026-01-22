@@ -1,4 +1,11 @@
+import type { LatLngHeight, Window as WindowObject } from "@navara/core";
 import initApi, {
+  Window,
+  LLE,
+  Vec3,
+  Vec2,
+  Transform,
+  CameraFrustum,
   geodeticToXyz,
   xyzToGeodetic,
   angleToRadian,
@@ -10,12 +17,6 @@ import initApi, {
   northEastDownToFixedFrame as nvNorthEastDownToFixedFrame,
   northUpEastToFixedFrame as nvNorthUpEastToFixedFrame,
   northWestUpToFixedFrame as nvNorthWestUpToFixedFrame,
-  LLE,
-  Vec3,
-  Vec2,
-  Window,
-  Transform,
-  CameraFrustum,
   getWGS84SemiMajorAxis as nvGetWGS84SemiMajorAxis,
   getWGS84SemiMinorAxis as nvGetWGS84SemiMinorAxis,
   getWGS84EccentricitySquared as nvGetWGS84EccentricitySquared,
@@ -24,32 +25,38 @@ import initApi, {
 } from "@navara/engine-api";
 import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
-export {
-  LLE,
+export type { LatLngHeight, LatLng } from "@navara/core";
+export type {
+  Window,
   Transform,
   CameraFrustum,
-  Window,
   Plane,
-  EllipsoidGeodesic,
-} from "@navara/engine-api";
+  Ray,
+  Vec2,
+  Vec3,
+} from "@navara/core";
 
 export * from "./intersection";
 export * from "./rte";
+export * from "./ellipsoidGeodesic";
 
 export async function initNavaraApi() {
   await initApi();
 }
 
-export function geodeticToVector3(lle: LLE): Vector3 {
-  const pos = geodeticToXyz(lle);
+export function geodeticToVector3(lle: LatLngHeight): Vector3 {
+  const pos = geodeticToXyz(new LLE(lle.lat, lle.lng, lle.height));
   const result = new Vector3(pos.x, pos.y, pos.z);
   pos.free();
   return result;
 }
 
-export function vector3ToGeodetic(xyz: Vector3): LLE {
+export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
-  return xyzToGeodetic(vec3);
+  const lle = xyzToGeodetic(vec3);
+  const result = { lat: lle.lat, lng: lle.lng, height: lle.height };
+  lle.free();
+  return result;
 }
 
 export function degreeToRadian(degree: number): number {
@@ -61,10 +68,15 @@ export function radianToDegree(radian: number): number {
 }
 
 export function convertScreenToWorld(
-  window: Window,
+  windowObject: WindowObject,
   camera: PerspectiveCamera,
   vec2: Vector2,
 ): Vector3 | undefined {
+  const window = new Window(
+    windowObject.width,
+    windowObject.height,
+    windowObject.pixel_ratio,
+  );
   window.width = window.width * window.pixel_ratio;
   window.height = window.height * window.pixel_ratio;
 
@@ -104,8 +116,8 @@ export function convertScreenToWorld(
   return result;
 }
 
-export function geodeticSurfaceNormal(lle: LLE): Vector3 {
-  const pos = nvGeodeticSurfaceNormal(lle);
+export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
+  const pos = nvGeodeticSurfaceNormal(new LLE(lle.lat, lle.lng, lle.height));
   const result = new Vector3(pos.x, pos.y, pos.z);
   pos.free();
   return result;
@@ -140,10 +152,15 @@ export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
 }
 
 export function convertWorldToScreen(
-  window: Window,
+  windowObject: WindowObject,
   camera: PerspectiveCamera,
   worldPos: Vector3,
 ): Vector2 | undefined {
+  const window = new Window(
+    windowObject.width,
+    windowObject.height,
+    windowObject.pixel_ratio,
+  );
   window.width = window.width * window.pixel_ratio;
   window.height = window.height * window.pixel_ratio;
 

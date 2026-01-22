@@ -1,5 +1,5 @@
-import type { LngLatHeight } from "@navara/core";
-import { geodeticToVector3, degreeToRadian, LLE } from "@navara/three_api";
+import type { LatLngHeight } from "@navara/core";
+import { geodeticToVector3, degreeToRadian } from "@navara/three_api";
 import { Object3D, CatmullRomCurve3, Vector3 } from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
@@ -22,7 +22,7 @@ export type SmoothLineConfig = {
   showPoints: boolean; // Whether to display the sample points along the line
   pointSize: number; // Size of the point markers
   pointColor: number; // Point color as a hex integer (e.g., 0x00ff00)
-  points: LngLatHeight[]; // Source positions as [lng, lat, height]
+  points: LatLngHeight[]; // Source positions as [lng, lat, height]
 };
 
 export const DefaultSmoothLineConfig: SmoothLineConfig = {
@@ -65,12 +65,11 @@ export class SmoothLine extends Object3D {
   private updatePointsData(): void {
     this._pointsData = this._config.map((cfg) => {
       return cfg.points.map((point) => {
-        const lle = new LLE(
-          degreeToRadian(point.lat),
-          degreeToRadian(point.lng),
-          point.height || 0,
-        );
-        return geodeticToVector3(lle);
+        return geodeticToVector3({
+          lat: degreeToRadian(point.lat),
+          lng: degreeToRadian(point.lng),
+          height: point.height || 0,
+        });
       });
     });
   }

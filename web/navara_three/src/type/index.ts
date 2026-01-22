@@ -1,4 +1,4 @@
-import type { Nullable, TileHandle } from "@navara/core";
+import type { NormalizeWASMClass, Nullable, TileHandle } from "@navara/core";
 import type {
   B3dmLayerDescription,
   PntsLayerDescription,
@@ -117,20 +117,7 @@ export type EffectLayerDeclarationDescription =
 //   color?: number;
 // };
 
-export type RemoveFreeRecursively<T> = T extends { free: any }
-  ? Omit<{ [K in keyof T]: RemoveFreeRecursively<T[K]> }, "free">
-  : T;
-
-// wasm-bindgen generate a getter and setter, so need to extract it as a property.
-export type ExtractProperties<T> = {
-  [K in keyof T]?: T[K] extends (...args: any) => any
-    ? ReturnType<T[K]> extends (...args: any) => any
-      ? ExtractProperties<ReturnType<T[K]>>
-      : ReturnType<T[K]>
-    : Partial<T[K]>;
-};
-
-type Layer<LD> = ExtractProperties<RemoveFreeRecursively<LD>>;
+type Layer<LD> = NormalizeWASMClass<LD>;
 
 /**
  * Helper type to add Navara Color object support to color-related number fields.
