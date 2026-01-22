@@ -11,7 +11,7 @@ export type RTEUserData = {
   modelViewMatrixRTE?: { value: Matrix4 };
   cameraPositionHigh?: { value: Vector3 };
   cameraPositionLow?: { value: Vector3 };
-}
+};
 
 /**
  * Setup onBeforeRender/onBeforeShadow callback for RTE rendering
