@@ -1539,7 +1539,10 @@ export default class ThreeView<
     return this._core?.sampleTerrainHeight(lle);
   }
 
-  observeTerrainHeightAt(pos: LatLng, cb: (height: number) => void): () => void {
+  observeTerrainHeightAt(
+    pos: LatLng,
+    cb: (height: number) => void,
+  ): () => void {
     if (!this._core) {
       return () => {};
     }

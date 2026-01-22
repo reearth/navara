@@ -72,7 +72,11 @@ export function convertScreenToWorld(
   camera: PerspectiveCamera,
   vec2: Vector2,
 ): Vector3 | undefined {
-  const window = new Window(windowObject.width, windowObject.height, windowObject.pixel_ratio);
+  const window = new Window(
+    windowObject.width,
+    windowObject.height,
+    windowObject.pixel_ratio,
+  );
   window.width = window.width * window.pixel_ratio;
   window.height = window.height * window.pixel_ratio;
 
@@ -152,7 +156,11 @@ export function convertWorldToScreen(
   camera: PerspectiveCamera,
   worldPos: Vector3,
 ): Vector2 | undefined {
-  const window = new Window(windowObject.width, windowObject.height, windowObject.pixel_ratio);
+  const window = new Window(
+    windowObject.width,
+    windowObject.height,
+    windowObject.pixel_ratio,
+  );
   window.width = window.width * window.pixel_ratio;
   window.height = window.height * window.pixel_ratio;
 

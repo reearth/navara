@@ -1,4 +1,10 @@
-import { EventHandler, type CameraOrientation, type LatLngHeight, type NormalizeWASMClass, type XYZ } from "@navara/core";
+import {
+  EventHandler,
+  type CameraOrientation,
+  type LatLngHeight,
+  type NormalizeWASMClass,
+  type XYZ,
+} from "@navara/core";
 import {
   Core,
   CameraStatus,

@@ -145,7 +145,11 @@ const updateModelLayerPos = (
     rotation: { x: euler.x, y: euler.y, z: euler.z },
   });
 
-  view.cameraFollow(true, { lat: lle[0], lng: lle[1], height: lle[2] + 1 }, new Vector3(10, 10, 5));
+  view.cameraFollow(
+    true,
+    { lat: lle[0], lng: lle[1], height: lle[2] + 1 },
+    new Vector3(10, 10, 5),
+  );
 };
 
 const add3DTilesSceneControl = (

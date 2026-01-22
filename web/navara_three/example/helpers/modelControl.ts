@@ -37,14 +37,11 @@ export const controlGLTFModel = (
     const curPos = modelLayer.ref.getWorldPosition();
     if (curPos) {
       const curLLE = vector3ToGeodetic(curPos);
-      view.cameraFollow(
-        true,
-        {
-          lat: radianToDegree(curLLE.lat),
-          lng: radianToDegree(curLLE.lng),
-          height: curLLE.height + (params.modelScale ?? 1),
-        },
-      );
+      view.cameraFollow(true, {
+        lat: radianToDegree(curLLE.lat),
+        lng: radianToDegree(curLLE.lng),
+        height: curLLE.height + (params.modelScale ?? 1),
+      });
     }
   }
 

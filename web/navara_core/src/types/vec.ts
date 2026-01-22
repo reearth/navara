@@ -1,4 +1,7 @@
-import type { Vec2 as EngineVec2, Vec3 as EngineVec3 } from "@navara/engine-api";
+import type {
+  Vec2 as EngineVec2,
+  Vec3 as EngineVec3,
+} from "@navara/engine-api";
 
 import type { NormalizeWASMClass } from "./utils";
 

@@ -571,7 +571,11 @@ const testRayPlane = (view: ThreeView) => {
     const pixelRatio = view.pixelRatio;
 
     if (center && normal && !radius) {
-      const win: Window = { width: screenSize.x, height: screenSize.y, pixel_ratio: pixelRatio };
+      const win: Window = {
+        width: screenSize.x,
+        height: screenSize.y,
+        pixel_ratio: pixelRatio,
+      };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
 
       const btmPlane = getPlaneFromPointNormal(center, normal);
@@ -586,7 +590,11 @@ const testRayPlane = (view: ThreeView) => {
     }
 
     if (center && normal && radius) {
-      const win: Window = { width: screenSize.x, height: screenSize.y, pixel_ratio: pixelRatio };
+      const win: Window = {
+        width: screenSize.x,
+        height: screenSize.y,
+        pixel_ratio: pixelRatio,
+      };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
       const rayDir = ray.direction.clone();
       const planeNormal = rayDir.cross(normal).cross(normal).normalize();
@@ -687,7 +695,11 @@ const onDistPosChange = () => {
     const curvePoints: XYZ[] = [];
     for (const point of points) {
       if (point) {
-        const pos = geodeticToVector3({ lat: point.lat, lng: point.lng, height: 1000 });
+        const pos = geodeticToVector3({
+          lat: point.lat,
+          lng: point.lng,
+          height: 1000,
+        });
         curvePoints.push(pos);
       }
     }
@@ -703,7 +715,11 @@ const onDistPosChange = () => {
       // update interpolated point
       const interDist = gPaneParams.distance * gPaneParams.interpolate;
       const interPoint = geodesic.interpolateDistance(interDist);
-      const pos = geodeticToVector3({ lat: interPoint.lat, lng: interPoint.lng, height: 1000 });
+      const pos = geodeticToVector3({
+        lat: interPoint.lat,
+        lng: interPoint.lng,
+        height: 1000,
+      });
       gInterBall?.position.set(pos.x, pos.y, pos.z);
     }
   }
@@ -906,7 +922,11 @@ const updatePopup = () => {
     const screenSize = gView.screenSize;
     const pixelRatio = gView.pixelRatio;
 
-    const win: Window = { width: screenSize.x, height: screenSize.y, pixel_ratio: pixelRatio };
+    const win: Window = {
+      width: screenSize.x,
+      height: screenSize.y,
+      pixel_ratio: pixelRatio,
+    };
     const screenPos = convertWorldToScreen(win, gView.camera.raw, gPickedPos);
 
     if (screenPos) {

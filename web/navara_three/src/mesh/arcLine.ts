@@ -405,11 +405,13 @@ export class ArcLine extends Object3D {
         // The top of the arc is calculated in the shader, and the calculation method
         // here is not accurate—it's only used to estimate the bounding box.
         const peakHeight = cfg.height + dist * cfg.arcHeightScale;
-        box.expandByPoint(geodeticToVector3({
-          lat: degreeToRadian(midLat),
-          lng: degreeToRadian(midLng),
-          height: peakHeight,
-        }));
+        box.expandByPoint(
+          geodeticToVector3({
+            lat: degreeToRadian(midLat),
+            lng: degreeToRadian(midLng),
+            height: peakHeight,
+          }),
+        );
       }
     });
 

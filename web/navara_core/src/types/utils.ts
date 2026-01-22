@@ -11,6 +11,6 @@ export type ExtractProperties<T> = {
       ? ExtractProperties<ReturnType<T[K]>>
       : ReturnType<T[K]>
     : Partial<T[K]>;
-}
+};
 
 export type NormalizeWASMClass<C> = ExtractProperties<RemoveFreeRecursively<C>>;
