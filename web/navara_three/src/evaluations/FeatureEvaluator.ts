@@ -1,4 +1,4 @@
-import { type FeatureId } from "@navara/core";
+import { type ExtractProperties, type FeatureId } from "@navara/core";
 import type {
   ModelMaterial as NavaraModelMaterial,
   PointMaterial,
@@ -22,7 +22,6 @@ import {
   type ModelBatchedAttributeName,
   type BatchedAttributeName,
 } from "../mesh";
-import type { ExtractProperties } from "../type";
 
 type AvailableMaterialProperty = ExtractProperties<
   PointMaterial &

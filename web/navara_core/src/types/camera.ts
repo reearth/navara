@@ -1,9 +1,10 @@
-import type { LngLatHeight } from "./unit";
+import type { CameraOrientation as EngineCameraOrientation } from "@navara/engine";
 
-export type CameraOrientation = {
-  pitch?: number;
-  heading?: number;
-  roll?: number;
-};
+import type { LatLngHeight } from "./unit";
+import type { NormalizeWASMClass } from "./utils";
 
-export type CameraPosition = Partial<LngLatHeight> & CameraOrientation;
+export type CameraOrientation = Partial<
+  NormalizeWASMClass<EngineCameraOrientation>
+>;
+
+export type CameraPosition = Partial<LatLngHeight> & CameraOrientation;
