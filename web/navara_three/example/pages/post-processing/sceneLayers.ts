@@ -141,32 +141,6 @@ export const POLYGON_CONFIG = {
   outlineEnabled: false,
 } as const;
 
-/**
- * GeoJSON Point initial configuration (上野〜浅草)
- */
-export const POINT_CONFIG = {
-  color: 0x00ffff,
-  size: 0.01,
-  emissiveColor: 0x00ffff,
-  emissiveIntensity: 0.5,
-  selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
-  bloomEnabled: true,
-  outlineEnabled: false,
-} as const;
-
-/**
- * GeoJSON Polyline initial configuration (六本木)
- */
-export const POLYLINE_CONFIG = {
-  color: 0xff00ff,
-  width: 10,
-  emissiveColor: 0xff00ff,
-  emissiveIntensity: 0.5,
-  selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
-  bloomEnabled: true,
-  outlineEnabled: false,
-} as const;
-
 type GeoJsonModelState = Record<string, unknown>;
 
 export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
@@ -217,38 +191,6 @@ export type GeoJsonPolygonLayer = {
   updatePolygon: (overrides: Partial<GeoJsonPolygonState>) => void;
 };
 
-export type GeoJsonPointState = {
-  show: boolean;
-  color: Color;
-  size: number;
-  clampToGround?: boolean;
-  effectIds?: string[];
-  emissiveColor?: Color;
-  emissiveIntensity?: number;
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
-};
-
-export type GeoJsonPointLayer = {
-  layer: Layer;
-  updatePoint: (overrides: Partial<GeoJsonPointState>) => void;
-};
-
-export type GeoJsonPolylineState = {
-  show: boolean;
-  color: Color;
-  width: number;
-  clampToGround?: boolean;
-  effectIds?: string[];
-  emissiveColor?: Color;
-  emissiveIntensity?: number;
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
-};
-
-export type GeoJsonPolylineLayer = {
-  layer: Layer;
-  updatePolyline: (overrides: Partial<GeoJsonPolylineState>) => void;
-};
-
 export type SceneLayers = {
   cubeLayer: LayerHandle<BoxMeshLayer>;
   sphereLayer: LayerHandle<SphereMeshLayer>;
@@ -258,8 +200,6 @@ export type SceneLayers = {
   drumLayer: GeoJsonModelLayer<DrumModelState>;
   soldierLayer: GeoJsonModelLayer<SoldierModelState>;
   polygonLayer: GeoJsonPolygonLayer;
-  pointLayer: GeoJsonPointLayer;
-  polylineLayer: GeoJsonPolylineLayer;
   chiyodaLayer: Layer;
   chuoLayer: Layer;
 };
@@ -517,92 +457,6 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     },
   });
 
-  // GeoJSON Point at Ueno-Asakusa area (上野〜浅草)
-  const uenoAsakusaFeature: FeatureCollection = {
-    type: "FeatureCollection",
-    features: [
-      // Ueno Station
-      {
-        type: "Feature",
-        properties: { name: "Ueno Station" },
-        geometry: { type: "Point", coordinates: [139.7745, 35.7141] },
-      },
-      // Ueno Park
-      {
-        type: "Feature",
-        properties: { name: "Ueno Park" },
-        geometry: { type: "Point", coordinates: [139.7744, 35.7171] },
-      },
-      // Kaminarimon
-      {
-        type: "Feature",
-        properties: { name: "Kaminarimon" },
-        geometry: { type: "Point", coordinates: [139.7966, 35.7108] },
-      },
-      // Senso-ji Temple
-      {
-        type: "Feature",
-        properties: { name: "Senso-ji" },
-        geometry: { type: "Point", coordinates: [139.7966, 35.7148] },
-      },
-      // Tokyo Skytree
-      {
-        type: "Feature",
-        properties: { name: "Skytree" },
-        geometry: { type: "Point", coordinates: [139.8107, 35.7101] },
-      },
-    ],
-  };
-
-  const pointLayer = createGeoJsonPointLayer({
-    view,
-    feature: uenoAsakusaFeature,
-    point: {
-      show: true,
-      color: new Color().setHex(POINT_CONFIG.color),
-      size: POINT_CONFIG.size,
-      clampToGround: false, // Required for SelectiveEffect (MRT scene)
-      emissiveColor: new Color().setHex(POINT_CONFIG.emissiveColor),
-      emissiveIntensity: POINT_CONFIG.emissiveIntensity,
-      selectiveEffectOcclusion: POINT_CONFIG.selectiveEffectOcclusion,
-    },
-  });
-
-  // GeoJSON Polyline at Roppongi (六本木)
-  const roppongiFeature: FeatureCollection = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: { name: "Roppongi Line" },
-        geometry: {
-          type: "LineString",
-          coordinates: [
-            [139.7292, 35.6628], // Roppongi Station
-            [139.7315, 35.6652], // Roppongi Hills
-            [139.7263, 35.6602], // Midtown
-            [139.7305, 35.668], // National Art Center
-            [139.735, 35.6665], // Tokyo Tower direction
-          ],
-        },
-      },
-    ],
-  };
-
-  const polylineLayer = createGeoJsonPolylineLayer({
-    view,
-    feature: roppongiFeature,
-    polyline: {
-      show: true,
-      color: new Color().setHex(POLYLINE_CONFIG.color),
-      width: POLYLINE_CONFIG.width,
-      clampToGround: false, // Required for SelectiveEffect (MRT scene)
-      emissiveColor: new Color().setHex(POLYLINE_CONFIG.emissiveColor),
-      emissiveIntensity: POLYLINE_CONFIG.emissiveIntensity,
-      selectiveEffectOcclusion: POLYLINE_CONFIG.selectiveEffectOcclusion,
-    },
-  });
-
   view.addLayer({
     type: "terrain",
     data: {
@@ -666,8 +520,6 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     drumLayer,
     soldierLayer,
     polygonLayer,
-    pointLayer,
-    polylineLayer,
     chiyodaLayer,
     chuoLayer,
   };
@@ -738,73 +590,5 @@ const createGeoJsonPolygonLayer = ({
   return {
     layer,
     updatePolygon,
-  };
-};
-
-type CreateGeoJsonPointLayerOptions = {
-  view: ThreeView;
-  feature: FeatureCollection;
-  point: GeoJsonPointState;
-};
-
-const createGeoJsonPointLayer = ({
-  view,
-  feature,
-  point,
-}: CreateGeoJsonPointLayerOptions): GeoJsonPointLayer => {
-  const currentState = { ...point };
-
-  const layer = view.addLayer({
-    type: "geojson",
-    data: feature,
-    point: currentState,
-  });
-
-  const updatePoint = (overrides: Partial<GeoJsonPointState>) => {
-    Object.assign(currentState, overrides);
-    layer.update({
-      type: "geojson",
-      data: feature,
-      point: { ...currentState },
-    });
-  };
-
-  return {
-    layer,
-    updatePoint,
-  };
-};
-
-type CreateGeoJsonPolylineLayerOptions = {
-  view: ThreeView;
-  feature: FeatureCollection;
-  polyline: GeoJsonPolylineState;
-};
-
-const createGeoJsonPolylineLayer = ({
-  view,
-  feature,
-  polyline,
-}: CreateGeoJsonPolylineLayerOptions): GeoJsonPolylineLayer => {
-  const currentState = { ...polyline };
-
-  const layer = view.addLayer({
-    type: "geojson",
-    data: feature,
-    polyline: currentState,
-  });
-
-  const updatePolyline = (overrides: Partial<GeoJsonPolylineState>) => {
-    Object.assign(currentState, overrides);
-    layer.update({
-      type: "geojson",
-      data: feature,
-      polyline: { ...currentState },
-    });
-  };
-
-  return {
-    layer,
-    updatePolyline,
   };
 };

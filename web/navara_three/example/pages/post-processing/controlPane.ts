@@ -21,8 +21,6 @@ import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
   GeoJsonModelLayer,
   GeoJsonPolygonLayer,
-  GeoJsonPointLayer,
-  GeoJsonPolylineLayer,
   SceneLayers,
   DrumModelState,
   SoldierModelState,
@@ -38,8 +36,6 @@ import {
   CHIYODA_CONFIG,
   CHUO_CONFIG,
   POLYGON_CONFIG,
-  POINT_CONFIG,
-  POLYLINE_CONFIG,
 } from "./sceneLayers";
 
 // ============================================
@@ -117,8 +113,6 @@ export const createControlPane = ({
   drumLayer,
   soldierLayer,
   polygonLayer,
-  pointLayer,
-  polylineLayer,
   chiyodaLayer,
   chuoLayer,
 }: PaneDependencies): Pane => {
@@ -129,6 +123,8 @@ export const createControlPane = ({
   pane.element.style.position = "absolute";
   pane.element.style.width = "340px";
   pane.element.style.right = "0px";
+  pane.element.style.maxHeight = "90vh";
+  pane.element.style.overflowY = "auto";
 
   setupBloomFolder(pane, postEffectBloom);
 
@@ -207,18 +203,6 @@ export const createControlPane = ({
   setupPolygonFolder(
     geoJsonFolder,
     polygonLayer,
-    postEffectBloom.id,
-    postEffectOutline.id,
-  );
-  setupPointFolder(
-    geoJsonFolder,
-    pointLayer,
-    postEffectBloom.id,
-    postEffectOutline.id,
-  );
-  setupPolylineFolder(
-    geoJsonFolder,
-    polylineLayer,
     postEffectBloom.id,
     postEffectOutline.id,
   );
@@ -801,157 +785,5 @@ const setupPolygonFolder = (
   // Apply initial state after a frame to ensure mesh is ready
   requestAnimationFrame(() => {
     updatePolygonState();
-  });
-};
-
-/**
- * Setup Point folder (上野〜浅草)
- */
-const setupPointFolder = (
-  parent: Pane | FolderApi,
-  pointLayer: GeoJsonPointLayer,
-  bloomId: string,
-  outlineId: string,
-) => {
-  const params = {
-    ...POINT_CONFIG,
-    visible: true,
-  };
-
-  const folder = parent.addFolder({ title: "Point (Ueno-Asakusa)" });
-
-  const updatePointState = () => {
-    const effectIds = getEffectIds(
-      params.bloomEnabled,
-      params.outlineEnabled,
-      bloomId,
-      outlineId,
-    );
-
-    pointLayer.updatePoint({
-      show: params.visible,
-      effectIds,
-      emissiveColor: new Color().setHex(params.emissiveColor),
-      emissiveIntensity: params.emissiveIntensity,
-      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
-    });
-  };
-
-  folder.addBinding(params, "visible").on("change", () => updatePointState());
-
-  folder
-    .addBinding(params, "emissiveColor", {
-      color: { type: "int" },
-      label: "Emissive Color",
-    })
-    .on("change", () => {
-      updatePointState();
-    });
-
-  folder
-    .addBinding(params, "selectiveEffectOcclusion", {
-      label: "Occlusion Mode",
-      options: OCCLUSION_MODE_OPTIONS,
-    })
-    .on("change", () => {
-      updatePointState();
-    });
-
-  addLayerEmissiveIntensityControl(folder, params, () => {
-    updatePointState();
-  });
-
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", () => {
-      updatePointState();
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", () => {
-      updatePointState();
-    });
-
-  // Apply initial state after a frame to ensure mesh is ready
-  requestAnimationFrame(() => {
-    updatePointState();
-  });
-};
-
-/**
- * Setup Polyline folder (六本木)
- */
-const setupPolylineFolder = (
-  parent: Pane | FolderApi,
-  polylineLayer: GeoJsonPolylineLayer,
-  bloomId: string,
-  outlineId: string,
-) => {
-  const params = {
-    ...POLYLINE_CONFIG,
-    visible: true,
-  };
-
-  const folder = parent.addFolder({ title: "Polyline (Roppongi)" });
-
-  const updatePolylineState = () => {
-    const effectIds = getEffectIds(
-      params.bloomEnabled,
-      params.outlineEnabled,
-      bloomId,
-      outlineId,
-    );
-
-    polylineLayer.updatePolyline({
-      show: params.visible,
-      effectIds,
-      emissiveColor: new Color().setHex(params.emissiveColor),
-      emissiveIntensity: params.emissiveIntensity,
-      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
-    });
-  };
-
-  folder
-    .addBinding(params, "visible")
-    .on("change", () => updatePolylineState());
-
-  folder
-    .addBinding(params, "emissiveColor", {
-      color: { type: "int" },
-      label: "Emissive Color",
-    })
-    .on("change", () => {
-      updatePolylineState();
-    });
-
-  folder
-    .addBinding(params, "selectiveEffectOcclusion", {
-      label: "Occlusion Mode",
-      options: OCCLUSION_MODE_OPTIONS,
-    })
-    .on("change", () => {
-      updatePolylineState();
-    });
-
-  addLayerEmissiveIntensityControl(folder, params, () => {
-    updatePolylineState();
-  });
-
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", () => {
-      updatePolylineState();
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", () => {
-      updatePolylineState();
-    });
-
-  // Apply initial state after a frame to ensure mesh is ready
-  requestAnimationFrame(() => {
-    updatePolylineState();
   });
 };
