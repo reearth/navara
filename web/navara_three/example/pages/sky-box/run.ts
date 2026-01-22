@@ -26,6 +26,15 @@ const gPaneParams = {
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.setCamera({
+    lng: 139.920126569,
+    lat: 35.778502146,
+    height: 3791.96,
+    heading: 231.9780466055,
+    pitch: -11.97506891,
+    roll: 360.0,
+  });
+
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
