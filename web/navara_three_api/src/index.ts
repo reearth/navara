@@ -1,3 +1,4 @@
+import type { LatLngHeight } from "@navara/core";
 import initApi, {
   geodeticToXyz,
   xyzToGeodetic,
@@ -24,6 +25,8 @@ import initApi, {
 } from "@navara/engine-api";
 import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
+export type { LatLngHeight, LatLng } from "@navara/core";
+
 export {
   LLE,
   Transform,
@@ -40,16 +43,19 @@ export async function initNavaraApi() {
   await initApi();
 }
 
-export function geodeticToVector3(lle: LLE): Vector3 {
-  const pos = geodeticToXyz(lle);
+export function geodeticToVector3(lle: LatLngHeight): Vector3 {
+  const pos = geodeticToXyz(new LLE(lle.lat, lle.lng, lle.height));
   const result = new Vector3(pos.x, pos.y, pos.z);
   pos.free();
   return result;
 }
 
-export function vector3ToGeodetic(xyz: Vector3): LLE {
+export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
-  return xyzToGeodetic(vec3);
+  const lle = xyzToGeodetic(vec3);
+  const result = { lat: lle.lat, lng: lle.lng, height: lle.height };
+  lle.free();
+  return result;
 }
 
 export function degreeToRadian(degree: number): number {
@@ -104,8 +110,8 @@ export function convertScreenToWorld(
   return result;
 }
 
-export function geodeticSurfaceNormal(lle: LLE): Vector3 {
-  const pos = nvGeodeticSurfaceNormal(lle);
+export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
+  const pos = nvGeodeticSurfaceNormal(new LLE(lle.lat, lle.lng, lle.height));
   const result = new Vector3(pos.x, pos.y, pos.z);
   pos.free();
   return result;

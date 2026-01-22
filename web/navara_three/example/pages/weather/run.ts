@@ -9,7 +9,6 @@ import ThreeView, {
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
-  LLE,
   Color,
 } from "@navara/three";
 import { Vector2, Vector3 } from "three";
@@ -270,13 +269,11 @@ const addWeatherControl = (
   pane: Pane,
   rainDropEffect: LayerHandle<RainDropEffectLayer>,
 ) => {
-  const position = geodeticToVector3(
-    new LLE(
-      degreeToRadian(35.67564356091717),
-      degreeToRadian(139.74511454748298),
-      10,
-    ),
-  );
+  const position = geodeticToVector3({
+    lat: degreeToRadian(35.67564356091717),
+    lng: degreeToRadian(139.74511454748298),
+    height: 10,
+  });
 
   const rain = view.addLayer<RainMeshLayer>({
     type: "mesh",

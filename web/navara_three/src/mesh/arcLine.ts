@@ -1,4 +1,4 @@
-import type { LngLat } from "@navara/core";
+import type { LatLng } from "@navara/core";
 import {
   getWGS84SemiMajorAxis,
   getWGS84EccentricitySquared,
@@ -38,7 +38,7 @@ export type ArcLineConfig = {
   dashSize: number; // Length of each dash (in world units)
   gapSize: number; // Length of gap between dashes (in world units)
   dashOffset: number; // Offset for dash pattern (in world units)
-  geometry: LngLat[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
+  geometry: LatLng[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
 };
 
 export const DefaultArcLineConfig: ArcLineConfig = {
@@ -166,8 +166,8 @@ export class ArcLine extends Object3D {
    * - Arc length: L = R * θ
    */
   private calculateArcLength(
-    point1: LngLat,
-    point2: LngLat,
+    point1: LatLng,
+    point2: LatLng,
     arcHeight: number,
   ): number {
     const WGS84_A = getWGS84SemiMajorAxis();

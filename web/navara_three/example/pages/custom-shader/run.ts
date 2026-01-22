@@ -7,7 +7,6 @@ import ThreeView, {
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
-  LLE,
 } from "@navara/three";
 import {
   Color,
@@ -196,13 +195,11 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
     new Color("#000"),
   );
 
-  const position = geodeticToVector3(
-    new LLE(
-      degreeToRadian(35.67564356091717),
-      degreeToRadian(139.75711454748298),
-      1000,
-    ),
-  );
+  const position = geodeticToVector3({
+    lat: degreeToRadian(35.67564356091717),
+    lng: degreeToRadian(139.75711454748298),
+    height: 1000,
+  });
 
   const matrix = eastNorthUpToFixedFrame(position);
 

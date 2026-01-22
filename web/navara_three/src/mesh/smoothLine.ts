@@ -1,4 +1,4 @@
-import type { LngLatHeight } from "@navara/core";
+import type { LatLngHeight } from "@navara/core";
 import { geodeticToVector3, degreeToRadian, LLE } from "@navara/three_api";
 import { Object3D, CatmullRomCurve3, Vector3 } from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
@@ -22,7 +22,7 @@ export type SmoothLineConfig = {
   showPoints: boolean; // Whether to display the sample points along the line
   pointSize: number; // Size of the point markers
   pointColor: number; // Point color as a hex integer (e.g., 0x00ff00)
-  points: LngLatHeight[]; // Source positions as [lng, lat, height]
+  points: LatLngHeight[]; // Source positions as [lng, lat, height]
 };
 
 export const DefaultSmoothLineConfig: SmoothLineConfig = {

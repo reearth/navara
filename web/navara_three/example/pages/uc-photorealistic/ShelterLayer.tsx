@@ -1,7 +1,6 @@
 import {
   degreeToRadian,
   geodeticToVector3,
-  LLE,
   Color,
   type FogLightDefinition,
   type Layer as NavaraLayer,
@@ -49,8 +48,11 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       if (f?.geometry?.type !== "Point") continue;
       const [lon, lat] = f.geometry.coordinates as [number, number, number?];
       const altitude = 20;
-      const lle = new LLE(degreeToRadian(lat), degreeToRadian(lon), altitude);
-      const p = geodeticToVector3(lle);
+      const p = geodeticToVector3({
+        lat: degreeToRadian(lat),
+        lng: degreeToRadian(lon),
+        height: altitude,
+      });
       lights.push({
         position: { x: p.x, y: p.y, z: p.z },
         color: 0xffd580,

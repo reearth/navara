@@ -6,6 +6,8 @@ import type {
   Nullable,
   XYZ,
   Color as CoreColor,
+  LatLngHeight,
+  LatLng,
 } from "@navara/core";
 import initCore, {
   Core,
@@ -14,7 +16,7 @@ import initCore, {
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
-import { initNavaraApi, LLE as ApiLLE } from "@navara/three_api";
+import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool, workerPool } from "@navara/worker";
 import {
   Scene,
@@ -130,7 +132,7 @@ import WorkerURL from "./worker?url&worker";
 export type { CameraOptions, CameraEvent } from "./camera";
 
 export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
-export type { Nullable, XYZ, LngLat, LngLatHeight } from "@navara/core";
+export type { Nullable, XYZ, LatLng, LatLngHeight } from "@navara/core";
 export * from "./type";
 export * from "./constants";
 export * from "./light";
@@ -1514,14 +1516,14 @@ export default class ThreeView<
     );
   }
 
-  lookAt(target: ApiLLE, offset: Vector3) {
+  lookAt(target: LatLngHeight, offset: Vector3) {
     this._core?.lookAt(
       new Float64Array([target.lng, target.lat, target.height]),
       new Float64Array([offset.x, offset.y, offset.z]),
     );
   }
 
-  cameraFollow(enabled: boolean, target?: ApiLLE, offset?: Vector3) {
+  cameraFollow(enabled: boolean, target?: LatLngHeight, offset?: Vector3) {
     const targetArray = target
       ? new Float64Array([target.lng, target.lat, target.height])
       : undefined;
@@ -1532,12 +1534,12 @@ export default class ThreeView<
     this._core?.cameraFollow(enabled, targetArray, offsetArray);
   }
 
-  sampleTerrainHeight(pos: ApiLLE): number | undefined {
+  sampleTerrainHeight(pos: LatLngHeight): number | undefined {
     const lle = new LLE(pos.lat, pos.lng, 0);
     return this._core?.sampleTerrainHeight(lle);
   }
 
-  addTerrainHeightEvent(pos: ApiLLE, cb: (height: number) => void): () => void {
+  observeTerrainHeightAt(pos: LatLng, cb: (height: number) => void): () => void {
     if (!this._core) {
       return () => {};
     }

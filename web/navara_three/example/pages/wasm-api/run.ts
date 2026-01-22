@@ -216,9 +216,11 @@ const addRunningObject = (view: ThreeView) => {
       latStep = -latStep;
     }
 
-    const pos = geodeticToVector3(
-      new LLE(degreeToRadian(lat), degreeToRadian(lng), 1000000),
-    );
+    const pos = geodeticToVector3({
+      lat: degreeToRadian(lat),
+      lng: degreeToRadian(lng),
+      height: 1000000,
+    });
     sphere.position.set(pos.x, pos.y, pos.z);
 
     view.forceUpdate();
@@ -270,12 +272,16 @@ const placeOneBall = (
 };
 
 const addTestModelForNormal = (view: ThreeView) => {
-  const pos = geodeticToVector3(
-    new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
-  );
-  const normal = geodeticSurfaceNormal(
-    new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
-  );
+  const pos = geodeticToVector3({
+    lat: degreeToRadian(43.0618),
+    lng: degreeToRadian(141.3545),
+    height: 0,
+  });
+  const normal = geodeticSurfaceNormal({
+    lat: degreeToRadian(43.0618),
+    lng: degreeToRadian(141.3545),
+    height: 0,
+  });
 
   // Add GLTF model using GLTFModelLayer with URL
   const modelLayer = view.addLayer<GLTFModelLayer>({
@@ -320,9 +326,11 @@ const addTestModelForNormal = (view: ThreeView) => {
 };
 
 const addTestModelForTerrainHeight = (view: ThreeView) => {
-  const pos = geodeticToVector3(
-    new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
-  );
+  const pos = geodeticToVector3({
+    lat: degreeToRadian(gFujiPos[0]),
+    lng: degreeToRadian(gFujiPos[1]),
+    height: 0,
+  });
 
   const transformMatrix = northUpEastToFixedFrame(pos);
 
@@ -687,7 +695,7 @@ const onDistPosChange = () => {
     const curvePoints: XYZ[] = [];
     for (const point of points) {
       if (point) {
-        const pos = geodeticToVector3(new LLE(point.lat, point.lng, 1000));
+        const pos = geodeticToVector3({ lat: point.lat, lng: point.lng, height: 1000 });
         curvePoints.push(pos);
       }
     }
@@ -703,9 +711,7 @@ const onDistPosChange = () => {
       // update interpolated point
       const interDist = gPaneParams.distance * gPaneParams.interpolate;
       const interPoint = ellipGeo.interpolateDistance(interDist);
-      const pos = geodeticToVector3(
-        new LLE(interPoint.lat, interPoint.lng, 1000),
-      );
+      const pos = geodeticToVector3({ lat: interPoint.lat, lng: interPoint.lng, height: 1000 });
       gInterBall?.position.set(pos.x, pos.y, pos.z);
     }
   }
@@ -829,8 +835,8 @@ const onRegisterChange = () => {
   }
 
   if (gPaneParams.fujiRegistered) {
-    gFujiUnregister = gView?.addTerrainHeightEvent(
-      new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
+    gFujiUnregister = gView?.observeTerrainHeightAt(
+      { lat: degreeToRadian(gFujiPos[0]), lng: degreeToRadian(gFujiPos[1]) },
       (height) => {
         gPaneParams.fujiHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -842,13 +848,11 @@ const onRegisterChange = () => {
             rotation: { x: 0, y: 0, z: 0 },
           });
 
-          const pos = geodeticToVector3(
-            new LLE(
-              degreeToRadian(gFujiPos[0]),
-              degreeToRadian(gFujiPos[1]),
-              gPaneParams.fujiHeight,
-            ),
-          );
+          const pos = geodeticToVector3({
+            lat: degreeToRadian(gFujiPos[0]),
+            lng: degreeToRadian(gFujiPos[1]),
+            height: gPaneParams.fujiHeight,
+          });
           const transformMatrix = northUpEastToFixedFrame(pos);
           gModelFujiHandle.ref.raw.applyMatrix4(transformMatrix);
         }
@@ -857,8 +861,8 @@ const onRegisterChange = () => {
   }
 
   if (gPaneParams.kitaRegistered) {
-    gKitaUnregister = gView?.addTerrainHeightEvent(
-      new LLE(degreeToRadian(gKitaPos[0]), degreeToRadian(gKitaPos[1]), 0),
+    gKitaUnregister = gView?.observeTerrainHeightAt(
+      { lat: degreeToRadian(gKitaPos[0]), lng: degreeToRadian(gKitaPos[1]) },
       (height) => {
         gPaneParams.kitaHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -891,9 +895,11 @@ const testShowModelInfo = (view: ThreeView) => {
       return;
     }
 
-    gPickedPos = geodeticToVector3(
-      new LLE(degreeToRadian(y), degreeToRadian(x), z),
-    );
+    gPickedPos = geodeticToVector3({
+      lat: degreeToRadian(y),
+      lng: degreeToRadian(x),
+      height: z,
+    });
 
     gPickedFeature = info;
 

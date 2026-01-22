@@ -5,7 +5,6 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-  LLE,
   Color,
 } from "@navara/three";
 import { Vector3, Quaternion, Euler } from "three";
@@ -119,21 +118,17 @@ export const run = async (view: ThreeView) => {
 
   const startLLE = [35.69127684, 139.75865163, 7];
 
-  const startPos = geodeticToVector3(
-    new LLE(
-      degreeToRadian(startLLE[0]),
-      degreeToRadian(startLLE[1]),
-      startLLE[2],
-    ),
-  );
+  const startPos = geodeticToVector3({
+    lat: degreeToRadian(startLLE[0]),
+    lng: degreeToRadian(startLLE[1]),
+    height: startLLE[2],
+  });
 
-  const normal = geodeticSurfaceNormal(
-    new LLE(
-      degreeToRadian(startLLE[0]),
-      degreeToRadian(startLLE[1]),
-      startLLE[2],
-    ),
-  );
+  const normal = geodeticSurfaceNormal({
+    lat: degreeToRadian(startLLE[0]),
+    lng: degreeToRadian(startLLE[1]),
+    height: startLLE[2],
+  });
   // Calculate rotation to align model with surface normal
   const up = new Vector3(0, 1, 0);
   const quaternion = new Quaternion().setFromUnitVectors(up, normal);
@@ -160,7 +155,7 @@ export const run = async (view: ThreeView) => {
   });
 
   view.lookAt(
-    new LLE(startLLE[0], startLLE[1], startLLE[2] + 1), // Add 1 to height to look at model center
+    { lat: startLLE[0], lng: startLLE[1], height: startLLE[2] + 1 }, // Add 1 to height to look at model center
     new Vector3(10, 10, 5),
   );
 
