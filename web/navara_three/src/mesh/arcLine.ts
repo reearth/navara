@@ -43,7 +43,6 @@ export type ArcLineConfig = {
   dashSize: number; // Length of each dash (in world units)
   gapSize: number; // Length of gap between dashes (in world units)
   dashOffset: number; // Offset for dash pattern (in world units)
-  useRTE: boolean; // Use RTE (Relative-To-Eye) rendering for higher precision
   geometry: LngLat[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
 };
 
@@ -61,17 +60,19 @@ export const DefaultArcLineConfig: ArcLineConfig = {
   dashSize: 1,
   gapSize: 1,
   dashOffset: 0,
-  useRTE: false,
   geometry: [],
 };
 
 /**
  * ArcLine - Geodesic arc line renderer for 3D globe visualization
  *
- * Renders arc lines between geographic coordinates on a WGS84 ellipsoid.
- * Supports two rendering modes:
- * - RTE (Relative-To-Eye): High precision mode using CPU-side ECEF encoding
- * - Non-RTE: Standard mode using GPU-side lon/lat to ECEF conversion
+ * Renders arc lines between geographic coordinates on a WGS84 ellipsoid using
+ * RTE (Relative-To-Eye) rendering for high precision.
+ *
+ * **Implementation:**
+ * - ECEF coordinates are calculated on CPU side and encoded as high/low precision components
+ * - Shader applies RTE transformation to maintain precision near the camera
+ * - Geodesic interpolation is performed in absolute coordinates before RTE transformation
  *
  * **Precision Limitations:**
  * Due to floating-point precision constraints in the current implementation,
@@ -134,41 +135,33 @@ export class ArcLine extends Object3D {
       return new Mesh(geo, new ShaderMaterial());
     }
 
+    // RTE mode: ECEF coordinates with high/low precision encoding
+    const instanceSourceHigh = new Float32Array(numInstances * 3);
+    const instanceSourceLow = new Float32Array(numInstances * 3);
+    const instanceTargetHigh = new Float32Array(numInstances * 3);
+    const instanceTargetLow = new Float32Array(numInstances * 3);
     const instanceParams1 = new Float32Array(numInstances * 4);
     const instanceParams2 = new Float32Array(numInstances * 3);
     const instanceDash = new Float32Array(numInstances * 4);
     const instanceSrcColor = new Float32Array(numInstances * 3);
     const instanceTgtColor = new Float32Array(numInstances * 3);
 
-    if (config.useRTE) {
-      const instanceSourceHigh = new Float32Array(numInstances * 3);
-      const instanceSourceLow = new Float32Array(numInstances * 3);
-      const instanceTargetHigh = new Float32Array(numInstances * 3);
-      const instanceTargetLow = new Float32Array(numInstances * 3);
-
-      geo.setAttribute(
-        "aInstanceSourceHigh",
-        new InstancedBufferAttribute(instanceSourceHigh, 3),
-      );
-      geo.setAttribute(
-        "aInstanceSourceLow",
-        new InstancedBufferAttribute(instanceSourceLow, 3),
-      );
-      geo.setAttribute(
-        "aInstanceTargetHigh",
-        new InstancedBufferAttribute(instanceTargetHigh, 3),
-      );
-      geo.setAttribute(
-        "aInstanceTargetLow",
-        new InstancedBufferAttribute(instanceTargetLow, 3),
-      );
-    } else {
-      const instanceSourceTarget = new Float32Array(numInstances * 4);
-      geo.setAttribute(
-        "aInstanceSourceTarget",
-        new InstancedBufferAttribute(instanceSourceTarget, 4),
-      );
-    }
+    geo.setAttribute(
+      "aInstanceSourceHigh",
+      new InstancedBufferAttribute(instanceSourceHigh, 3),
+    );
+    geo.setAttribute(
+      "aInstanceSourceLow",
+      new InstancedBufferAttribute(instanceSourceLow, 3),
+    );
+    geo.setAttribute(
+      "aInstanceTargetHigh",
+      new InstancedBufferAttribute(instanceTargetHigh, 3),
+    );
+    geo.setAttribute(
+      "aInstanceTargetLow",
+      new InstancedBufferAttribute(instanceTargetLow, 3),
+    );
 
     geo.setAttribute(
       "aInstanceParams1",
@@ -195,26 +188,24 @@ export class ArcLine extends Object3D {
     this.fillSingleConfigInstanceData(config, geo);
 
     // Create material
-    const material = this.createMaterial(config.useRTE);
+    const material = this.createMaterial();
     material.transparent = config.transparent;
 
     const mesh = new Mesh(geo, material);
 
-    if (config.useRTE) {
-      mesh.userData.modelViewMatrixRTE = material.uniforms.modelViewMatrixRTE;
-      mesh.userData.cameraPositionHigh = material.uniforms.u_cameraPositionHigh;
-      mesh.userData.cameraPositionLow = material.uniforms.u_cameraPositionLow;
+    mesh.userData.modelViewMatrixRTE = material.uniforms.modelViewMatrixRTE;
+    mesh.userData.cameraPositionHigh = material.uniforms.u_cameraPositionHigh;
+    mesh.userData.cameraPositionLow = material.uniforms.u_cameraPositionLow;
 
-      const identityMatrix = new Matrix4();
-      const callback = setupRTEBeforeRender(
-        mesh,
-        mesh.userData,
-        identityMatrix,
-        identityMatrix,
-      );
-      if (callback) {
-        mesh.onBeforeRender = callback;
-      }
+    const identityMatrix = new Matrix4();
+    const callback = setupRTEBeforeRender(
+      mesh,
+      mesh.userData,
+      identityMatrix,
+      identityMatrix,
+    );
+    if (callback) {
+      mesh.onBeforeRender = callback;
     }
 
     return mesh;
@@ -463,67 +454,6 @@ export class ArcLine extends Object3D {
     instanceTargetLow.needsUpdate = true;
   }
 
-  /**
-   * Fill instance data for non-RTE mode (lon/lat coordinates)
-   */
-  private fillInstanceDataNonRTE(
-    config: ArcLineConfig,
-    numInstances: number,
-    segments: number,
-    geo: InstancedBufferGeometry,
-  ): void {
-    const instanceSourceTarget = geo.getAttribute("aInstanceSourceTarget");
-    const instanceParams1 = geo.getAttribute("aInstanceParams1");
-    const instanceParams2 = geo.getAttribute("aInstanceParams2");
-    const instanceDash = geo.getAttribute("aInstanceDash");
-    const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
-    const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
-
-    for (let i = 0; i < numInstances; i++) {
-      const geom1 = config.geometry[i * 2];
-      const geom2 = config.geometry[i * 2 + 1];
-
-      const lle1 = new LLE(
-        degreeToRadian(geom1.lat),
-        degreeToRadian(geom1.lng),
-        0,
-      );
-      const lle2 = new LLE(
-        degreeToRadian(geom2.lat),
-        degreeToRadian(geom2.lng),
-        0,
-      );
-
-      const pos1 = geodeticToVector3(lle1);
-      const pos2 = geodeticToVector3(lle2);
-      const dist = pos1.distanceTo(pos2);
-
-      instanceSourceTarget.setXYZW(
-        i,
-        geom1.lng,
-        geom1.lat,
-        geom2.lng,
-        geom2.lat,
-      );
-
-      this.fillInstanceCommonData(
-        i,
-        config,
-        geom1,
-        geom2,
-        dist,
-        segments,
-        instanceParams1,
-        instanceParams2,
-        instanceDash,
-        instanceSrcColor,
-        instanceTgtColor,
-      );
-    }
-
-    instanceSourceTarget.needsUpdate = true;
-  }
-
   private fillSingleConfigInstanceData(
     config: ArcLineConfig,
     geo: InstancedBufferGeometry,
@@ -535,11 +465,7 @@ export class ArcLine extends Object3D {
 
     const segments = Math.max(2, Math.floor(config.segments));
 
-    if (config.useRTE) {
-      this.fillInstanceDataRTE(config, numInstances, segments, geo);
-    } else {
-      this.fillInstanceDataNonRTE(config, numInstances, segments, geo);
-    }
+    this.fillInstanceDataRTE(config, numInstances, segments, geo);
 
     // Mark common attributes as updated
     const instanceParams1 = geo.getAttribute("aInstanceParams1");
@@ -555,7 +481,7 @@ export class ArcLine extends Object3D {
     instanceTgtColor.needsUpdate = true;
   }
 
-  private createMaterial(useRTE: boolean): ShaderMaterial {
+  private createMaterial(): ShaderMaterial {
     const WGS84_A = getWGS84SemiMajorAxis();
     const WGS84_E2 = getWGS84EccentricitySquared();
 
@@ -567,7 +493,6 @@ export class ArcLine extends Object3D {
       uViewport: { value: new Vector2(1920, 1080) },
       uA: { value: WGS84_A },
       uE2: { value: WGS84_E2 },
-      useRTE: { value: useRTE },
       u_cameraPositionHigh: { value: new Vector3() },
       u_cameraPositionLow: { value: new Vector3() },
       modelViewMatrixRTE: { value: new Matrix4() },
