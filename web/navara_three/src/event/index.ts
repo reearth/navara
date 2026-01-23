@@ -347,9 +347,10 @@ export function processEvent(
         case "remove":
           {
             const removed = event as RenderableFeatureRemovedEvent;
-            (
-              layersManager.get(removed.layer_id) as Layer
-            )?._unregisterFeatureEvaluator(removed.bits);
+            const layer = layersManager.get(removed.layer_id);
+            if (!layer || !(layer instanceof Layer)) return;
+            layer._unregisterFeatureEvaluator(removed.bits);
+            layer.emit("featureRemoved", { id: removed.bits });
 
             processObjectRemoved(scenes.mrt, meshes, event);
           }

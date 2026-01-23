@@ -4,9 +4,21 @@ import type { Core } from "@navara/engine";
 import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
+export type FeatureCreatedParams = {
+  id: FeatureId,
+  evaluator: FeatureEvaluator,
+  credit?: string,
+};
+
+export type FeatureRemovedParams = {
+  id: FeatureId,
+  credit?: string,
+};
+
 export type LayerEvent = {
-  featureCreated: (evaluator: FeatureEvaluator) => void;
+  featureCreated: (params: FeatureCreatedParams) => void;
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
+  featureRemoved: (params: FeatureRemovedParams) => void;
   afterFeatureUpdated: () => void;
   deleted: () => void;
 };

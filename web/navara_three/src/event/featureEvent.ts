@@ -1,7 +1,7 @@
 import type { EventHandler, FeatureId } from "@navara/core";
 import type { Object3D } from "three";
 
-import type { ViewEvents } from "..";
+import { ModelMesh, type ViewEvents } from "..";
 import { FeatureEvaluator } from "../evaluations";
 import { Layer } from "../layer";
 import { LayersManager } from "../layersManager";
@@ -26,8 +26,16 @@ export const handleFeatureCreatedEventByLayerId = (
     layer._registerFeatureEvaluator(featureId, evaluator);
   }
 
+  let credit = undefined;
+  if (obj instanceof ModelMesh) {
+    let userData = obj.children[0].userData as { credit?: string };
+    if (userData.credit) {
+      credit = userData.credit;
+    }
+  }
+
   // Emit the evaluator
-  viewEvents.emit("layer", "featureCreated", layerId, evaluator);
+  viewEvents.emit("layer", "featureCreated", layerId, {id: featureId, evaluator, credit});
 
   return layer;
 };

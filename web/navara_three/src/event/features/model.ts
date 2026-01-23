@@ -28,6 +28,7 @@ import {
 // Type-safe interface for scene userData
 type SceneUserData = {
   gltfAnimations?: AnimationClip[];
+  credit?: string;
   [key: string]: unknown;
 };
 
@@ -121,6 +122,12 @@ export async function renderModel(
       // Attach animations to the scene for downstream access
       const userData = model.scene.userData as SceneUserData;
       userData.gltfAnimations = model.animations;
+
+      // Attach credit information
+      if (model.asset.copyright) {
+        userData.credit = model.asset.copyright;
+      }
+
       return model.scene;
     } else {
       if (!m.material.url) {
@@ -158,7 +165,7 @@ export async function renderModel(
     viewContext,
     layerId,
   );
-
+  
   return scene;
 }
 
