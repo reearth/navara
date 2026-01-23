@@ -30,19 +30,21 @@ export const run = async (view: ThreeView) => {
 
   // Helper to update the attribution display
   const updateAttributions = () => {
-    const visibleCredits = new Set<string>();
+    const visibleCredits = new Map<string, number>();
     for (const id of visibleFeatures) {
       const credit = featureCredits.get(id);
       if (credit) {
         // Split multiple credits separated by semicolon
-        credit.split(";").forEach((c) => visibleCredits.add(c.trim()));
+        credit.split(";").forEach((c) => {
+          visibleCredits.set(c.trim(), (visibleCredits.get(c.trim()) ?? 0) + 1);
+        });
       }
     }
     const attrib = document.getElementById("navara-attributions-content");
     if (attrib) {
-      attrib.innerHTML = Array.from(visibleCredits).join("<br>");
+      const sorted = Array.from(visibleCredits.entries()).sort((a, b) => b[1] - a[1]);
+      attrib.innerHTML = sorted.map(([credit, _]) => `${credit}`).join("<br>");
     }
-    console.log("Visible attributions:", Array.from(visibleCredits));
   };
 
   layer.on("featureCreated", ({ id, credit }) => {

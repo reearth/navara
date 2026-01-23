@@ -304,7 +304,7 @@ export async function processRenderableFeatureChanged(
 
   // Track previous active state from Rust to detect visibility changes
   // We store this in userData since obj.visible is managed internally by the mesh
-  const prevActive = (obj.userData._navaraActive as boolean | undefined) ?? true;
+  const prevActive = (obj.userData._active as boolean | undefined) ?? true;
 
   if (obj instanceof InstancedPointMesh && point) {
     processPointChanged(obj, point, buf, active);
@@ -331,7 +331,7 @@ export async function processRenderableFeatureChanged(
 
   // Emit visibility changed event if active state changed
   if (prevActive !== active) {
-    obj.userData._navaraActive = active;
+    obj.userData._active = active;
     handleFeatureVisibilityChangedEventByLayerId(
       layersManager,
       layerId,
