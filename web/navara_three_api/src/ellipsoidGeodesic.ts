@@ -72,14 +72,15 @@ export class EllipsoidGeodesic {
   interpolatePoints(granularity?: number): LatLngHeight[] {
     const wasmPoints = this._raw.interpolateGeodeticPoints(granularity ?? null);
 
-    const results: LatLngHeight[] = wasmPoints.map((lle) => ({
-      lat: lle.lat,
-      lng: lle.lng,
-      height: lle.height,
-    }));
-
-    // Free WASM LLE objects
-    wasmPoints.forEach((lle) => lle.free());
+    const results: LatLngHeight[] = [];
+    for (const point of wasmPoints) {
+      results.push({
+        lat: point.lat,
+        lng: point.lng,
+        height: point.height,
+      });
+      point.free();
+    }
 
     return results;
   }
