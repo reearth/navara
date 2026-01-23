@@ -85,7 +85,7 @@ function addRotatingSphere(view: ThreeView) {
     sphere: {
       radius: 1,
       color: new Color().setHex(0xff6600), // Orange color
-      emissiveColor: 0x331100,
+      emissiveColor: new Color().setHex(0x331100),
     },
     position: { x: 0, y: 0, z: 0 },
   });
