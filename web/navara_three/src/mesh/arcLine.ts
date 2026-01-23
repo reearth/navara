@@ -129,6 +129,12 @@ export class ArcLine extends Object3D {
       this.add(subMesh);
     });
 
+    // Setup shared RTE callback for all sub-meshes
+    // All sub-meshes share the same RTE uniforms and can use the same modelViewMatrixRTE because:
+    // 1. All sub-meshes are at origin (no local transforms)
+    // 2. Real world positions are encoded in ECEF coordinates (per-instance attributes)
+    // 3. modelViewMatrixRTE = identityMatrix * camera.matrixWorldInverse (rotation-only view matrix)
+    // Only the first sub-mesh needs onBeforeRender/onBeforeShadow callbacks to update shared uniforms
     if (this._subMeshes.length > 0) {
       const identityMatrix = new Matrix4();
       const callback = setupRTEBeforeRender(
