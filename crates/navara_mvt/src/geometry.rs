@@ -791,6 +791,8 @@ fn process_layer_multi(
         return Vec::new();
     };
 
+    let layer_id = target_layer.layer_id;
+
     let mvt_layer_data = MvtLayerData {
         keys: Arc::new(std::mem::take(&mut mvt_layer.keys)),
         values: Arc::new(std::mem::take(&mut mvt_layer.values)),
@@ -798,7 +800,7 @@ fn process_layer_multi(
     };
 
     let feature_batch_id = batch_table
-        .init_mvt(Some(target_layer.layer_id.to_owned()), mvt_layer_data)
+        .init_mvt(Some(layer_id.to_owned()), mvt_layer_data)
         .unwrap_or(0);
 
     let mut feature_ids = Vec::with_capacity(mvt_layer.features.len());
@@ -819,7 +821,7 @@ fn process_layer_multi(
         let tags = std::mem::take(&mut feature.tags);
         batch_table.add_mvt_feature_tags(feature_batch_id, tags);
 
-        let batch_id = batch_table.init_values(None).unwrap_or(0);
+        let batch_id = batch_table.init_values(Some(layer_id.to_owned())).unwrap_or(0);
         global_batch_ids.push(batch_id);
 
         // Reuse existing handle_geometry for single layer
