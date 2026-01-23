@@ -3,6 +3,7 @@ import type { Material, Object3D, PerspectiveCamera } from "three";
 
 import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
+import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
@@ -85,7 +86,7 @@ export class ViewContext {
 
   setLayerEmissiveColor(
     layerId: string,
-    emissiveColor: import("../Color").Color | undefined,
+    emissiveColor: Color | undefined,
   ): void {
     this.selectiveEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }
