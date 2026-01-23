@@ -1,6 +1,6 @@
-import { BlendFunction } from "postprocessing";
 import type { Camera, Texture } from "three";
 
+import type { BlendMode } from "../../utils";
 import { Effect, type EffectOptions } from "../effect";
 
 import {
@@ -34,7 +34,7 @@ export type SSROptions = {
   /** Amount of random jitter to reduce artifact */
   jitter?: number;
   /** Blend function for compositing reflections with the scene */
-  blendFunction?: BlendFunction;
+  blendMode?: BlendMode;
   /** Gaussian blur kernel size. Should be an odd number in the range [3, 1020]. */
   kernelSize?: number;
   /** Enable cone tracing that improves visual quality, but it might take a cost. */
@@ -64,7 +64,7 @@ export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
   eyeFadeStart: 0,
   eyeFadeEnd: 1,
   jitter: 1,
-  blendFunction: BlendFunction.NORMAL,
+  blendMode: "normal",
   kernelSize: 5,
   useConeTracing: true,
   coneTracingFadeStart: ssrEffectOptionsDefaults.coneTracingFadeStart,
@@ -90,7 +90,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
       eyeFadeStart: options.eyeFadeStart,
       eyeFadeEnd: options.eyeFadeEnd,
       jitter: options.jitter,
-      blendFunction: options.blendFunction,
+      blendMode: options.blendMode,
       kernelSize: options.kernelSize,
       useConeTracing: options.useConeTracing,
       coneTracingFadeStart: options.coneTracingFadeStart,
