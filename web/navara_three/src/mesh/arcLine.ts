@@ -95,9 +95,6 @@ export class ArcLine extends Object3D {
     cameraPositionLow: { value: new Vector3() },
   };
 
-  // Frame counter to ensure RTE is only updated once per frame
-  private _lastRTEUpdateFrame = -1;
-
   constructor(config: Partial<ArcLineConfig>[] = []) {
     super();
 
