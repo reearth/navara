@@ -1,8 +1,7 @@
 import type { CameraOrientation } from "@navara/core";
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  LLE,
-  type LngLatHeight,
+  type LatLngHeight,
 } from "@navara/three";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -267,11 +266,11 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
 
   const clickFunc = () => {
     view.lookAt(
-      new LLE(
-        cameraParams.latitude,
-        cameraParams.longitude,
-        cameraParams.altitude,
-      ),
+      {
+        lat: cameraParams.latitude,
+        lng: cameraParams.longitude,
+        height: cameraParams.altitude,
+      },
       new Vector3(
         cameraParams.offset_x,
         cameraParams.offset_y,
@@ -459,7 +458,7 @@ const addToggleButton = (
 };
 
 const updateCameraParamsToPane = (
-  position: (LngLatHeight & CameraOrientation) | undefined,
+  position: (LatLngHeight & CameraOrientation) | undefined,
 ) => {
   const cameraParams = gCameraParams;
 

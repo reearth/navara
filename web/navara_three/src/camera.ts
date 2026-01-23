@@ -1,4 +1,10 @@
-import { EventHandler, type LngLatHeight, type XYZ } from "@navara/core";
+import {
+  EventHandler,
+  type CameraOrientation,
+  type LatLngHeight,
+  type NormalizeWASMClass,
+  type XYZ,
+} from "@navara/core";
 import {
   Core,
   CameraStatus,
@@ -8,8 +14,6 @@ import {
 import { PerspectiveCamera } from "three";
 import invariant from "tiny-invariant";
 
-import type { ExtractProperties, RemoveFreeRecursively } from "./type";
-
 export type CameraEvent = {
   movestart: () => void;
   move: () => void;
@@ -17,9 +21,7 @@ export type CameraEvent = {
   frustumChanged: () => void;
 };
 
-export type CameraOptions = ExtractProperties<
-  RemoveFreeRecursively<CameraControlUpdateEvent>
->;
+export type CameraOptions = NormalizeWASMClass<CameraControlUpdateEvent>;
 
 export class ThreeViewCamera extends EventHandler<CameraEvent> {
   raw: PerspectiveCamera;
@@ -75,7 +77,7 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     };
   }
 
-  get positionGeographic(): LngLatHeight {
+  get positionGeographic(): LatLngHeight {
     const pos = this._core?.getCameraPositionLLE();
     invariant(pos);
     return {
@@ -85,7 +87,7 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     };
   }
 
-  get orientation() {
+  get orientation(): CameraOrientation {
     const orientation = this._core?.getCameraOrientation();
     invariant(orientation);
     return {

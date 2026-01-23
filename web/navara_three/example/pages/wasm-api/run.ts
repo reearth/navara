@@ -9,6 +9,7 @@ import ThreeView, {
   type Nullable,
   type XYZ,
   type MapMouseEvent,
+  type Window,
   geodeticToVector3,
   vector3ToGeodetic,
   degreeToRadian,
@@ -23,8 +24,6 @@ import ThreeView, {
   getHeightFromEllipsoid,
   getPickRay,
   getRayPlaneIntersection,
-  Window as NavaraWindow,
-  LLE,
   EllipsoidGeodesic,
   Color,
 } from "@navara/three";
@@ -216,9 +215,11 @@ const addRunningObject = (view: ThreeView) => {
       latStep = -latStep;
     }
 
-    const pos = geodeticToVector3(
-      new LLE(degreeToRadian(lat), degreeToRadian(lng), 1000000),
-    );
+    const pos = geodeticToVector3({
+      lat: degreeToRadian(lat),
+      lng: degreeToRadian(lng),
+      height: 1000000,
+    });
     sphere.position.set(pos.x, pos.y, pos.z);
 
     view.forceUpdate();
@@ -270,12 +271,16 @@ const placeOneBall = (
 };
 
 const addTestModelForNormal = (view: ThreeView) => {
-  const pos = geodeticToVector3(
-    new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
-  );
-  const normal = geodeticSurfaceNormal(
-    new LLE(degreeToRadian(43.0618), degreeToRadian(141.3545), 0),
-  );
+  const pos = geodeticToVector3({
+    lat: degreeToRadian(43.0618),
+    lng: degreeToRadian(141.3545),
+    height: 0,
+  });
+  const normal = geodeticSurfaceNormal({
+    lat: degreeToRadian(43.0618),
+    lng: degreeToRadian(141.3545),
+    height: 0,
+  });
 
   // Add GLTF model using GLTFModelLayer with URL
   const modelLayer = view.addLayer<GLTFModelLayer>({
@@ -320,9 +325,11 @@ const addTestModelForNormal = (view: ThreeView) => {
 };
 
 const addTestModelForTerrainHeight = (view: ThreeView) => {
-  const pos = geodeticToVector3(
-    new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
-  );
+  const pos = geodeticToVector3({
+    lat: degreeToRadian(gFujiPos[0]),
+    lng: degreeToRadian(gFujiPos[1]),
+    height: 0,
+  });
 
   const transformMatrix = northUpEastToFixedFrame(pos);
 
@@ -564,7 +571,11 @@ const testRayPlane = (view: ThreeView) => {
     const pixelRatio = view.pixelRatio;
 
     if (center && normal && !radius) {
-      const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+      const win: Window = {
+        width: screenSize.x,
+        height: screenSize.y,
+        pixel_ratio: pixelRatio,
+      };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
 
       const btmPlane = getPlaneFromPointNormal(center, normal);
@@ -579,13 +590,13 @@ const testRayPlane = (view: ThreeView) => {
     }
 
     if (center && normal && radius) {
-      const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+      const win: Window = {
+        width: screenSize.x,
+        height: screenSize.y,
+        pixel_ratio: pixelRatio,
+      };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
-      const rayDir = new Vector3(
-        ray.direction.x,
-        ray.direction.y,
-        ray.direction.z,
-      );
+      const rayDir = ray.direction.clone();
       const planeNormal = rayDir.cross(normal).cross(normal).normalize();
       const plane = getPlaneFromPointNormal(center, planeNormal);
       const intersectPt = getRayPlaneIntersection(ray, plane);
@@ -661,35 +672,34 @@ const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
 };
 
 const onDistPosChange = () => {
-  const ellipGeo = new EllipsoidGeodesic(
-    new LLE(
-      degreeToRadian(gPaneParams.latStart),
-      degreeToRadian(gPaneParams.lngStart),
-      0,
-    ),
-    new LLE(
-      degreeToRadian(gPaneParams.latEnd),
-      degreeToRadian(gPaneParams.lngEnd),
-      0,
-    ),
-  );
+  const start = {
+    lat: degreeToRadian(gPaneParams.latStart),
+    lng: degreeToRadian(gPaneParams.lngStart),
+    height: 0,
+  };
+  const end = {
+    lat: degreeToRadian(gPaneParams.latEnd),
+    lng: degreeToRadian(gPaneParams.lngEnd),
+    height: 0,
+  };
 
-  gPaneParams.distance = ellipGeo.distance;
+  const geodesic = new EllipsoidGeodesic(start, end);
+  gPaneParams.distance = geodesic.distance;
 
   gFolderDist?.refresh();
 
-  const points = ellipGeo.interpolateGeodeticPoints(
-    gPaneParams.distance * 0.01,
-  );
+  const points = geodesic.interpolatePoints(gPaneParams.distance * 0.01);
 
   // Update polyline mesh
   if (gPolylineLayer) {
     const curvePoints: XYZ[] = [];
     for (const point of points) {
-      if (point) {
-        const pos = geodeticToVector3(new LLE(point.lat, point.lng, 1000));
-        curvePoints.push(pos);
-      }
+      const pos = geodeticToVector3({
+        lat: point.lat,
+        lng: point.lng,
+        height: 1000,
+      });
+      curvePoints.push(pos);
     }
 
     // Store points and update geometry
@@ -702,13 +712,17 @@ const onDistPosChange = () => {
 
       // update interpolated point
       const interDist = gPaneParams.distance * gPaneParams.interpolate;
-      const interPoint = ellipGeo.interpolateDistance(interDist);
-      const pos = geodeticToVector3(
-        new LLE(interPoint.lat, interPoint.lng, 1000),
-      );
+      const interPoint = geodesic.interpolateDistance(interDist);
+      const pos = geodeticToVector3({
+        lat: interPoint.lat,
+        lng: interPoint.lng,
+        height: 1000,
+      });
       gInterBall?.position.set(pos.x, pos.y, pos.z);
     }
   }
+
+  geodesic.dispose();
 };
 
 const updatePolylineMesh = (view: ThreeView, curvePoints: XYZ[]) => {
@@ -829,8 +843,8 @@ const onRegisterChange = () => {
   }
 
   if (gPaneParams.fujiRegistered) {
-    gFujiUnregister = gView?.addTerrainHeightEvent(
-      new LLE(degreeToRadian(gFujiPos[0]), degreeToRadian(gFujiPos[1]), 0),
+    gFujiUnregister = gView?.observeTerrainHeightAt(
+      { lat: degreeToRadian(gFujiPos[0]), lng: degreeToRadian(gFujiPos[1]) },
       (height) => {
         gPaneParams.fujiHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -842,13 +856,11 @@ const onRegisterChange = () => {
             rotation: { x: 0, y: 0, z: 0 },
           });
 
-          const pos = geodeticToVector3(
-            new LLE(
-              degreeToRadian(gFujiPos[0]),
-              degreeToRadian(gFujiPos[1]),
-              gPaneParams.fujiHeight,
-            ),
-          );
+          const pos = geodeticToVector3({
+            lat: degreeToRadian(gFujiPos[0]),
+            lng: degreeToRadian(gFujiPos[1]),
+            height: gPaneParams.fujiHeight,
+          });
           const transformMatrix = northUpEastToFixedFrame(pos);
           gModelFujiHandle.ref.raw.applyMatrix4(transformMatrix);
         }
@@ -857,8 +869,8 @@ const onRegisterChange = () => {
   }
 
   if (gPaneParams.kitaRegistered) {
-    gKitaUnregister = gView?.addTerrainHeightEvent(
-      new LLE(degreeToRadian(gKitaPos[0]), degreeToRadian(gKitaPos[1]), 0),
+    gKitaUnregister = gView?.observeTerrainHeightAt(
+      { lat: degreeToRadian(gKitaPos[0]), lng: degreeToRadian(gKitaPos[1]) },
       (height) => {
         gPaneParams.kitaHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -891,9 +903,11 @@ const testShowModelInfo = (view: ThreeView) => {
       return;
     }
 
-    gPickedPos = geodeticToVector3(
-      new LLE(degreeToRadian(y), degreeToRadian(x), z),
-    );
+    gPickedPos = geodeticToVector3({
+      lat: degreeToRadian(y),
+      lng: degreeToRadian(x),
+      height: z,
+    });
 
     gPickedFeature = info;
 
@@ -906,7 +920,11 @@ const updatePopup = () => {
     const screenSize = gView.screenSize;
     const pixelRatio = gView.pixelRatio;
 
-    const win = new NavaraWindow(screenSize.x, screenSize.y, pixelRatio);
+    const win: Window = {
+      width: screenSize.x,
+      height: screenSize.y,
+      pixel_ratio: pixelRatio,
+    };
     const screenPos = convertWorldToScreen(win, gView.camera.raw, gPickedPos);
 
     if (screenPos) {

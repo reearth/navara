@@ -1,7 +1,6 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  LLE,
   degreeToRadian,
   geodeticToVector3,
   type BoxMeshLayer,
@@ -137,9 +136,11 @@ export type SceneLayers = {
 };
 
 export const createSceneLayers = (view: ThreeView): SceneLayers => {
-  const tokyoStationPosition = geodeticToVector3(
-    new LLE(degreeToRadian(35.681236), degreeToRadian(139.767125), 200),
-  );
+  const tokyoStationPosition = geodeticToVector3({
+    lat: degreeToRadian(35.681236),
+    lng: degreeToRadian(139.767125),
+    height: 200,
+  });
 
   const cubePosition = tokyoStationPosition.clone().add(new Vector3(0, 0, 0));
   const spherePosition = tokyoStationPosition
