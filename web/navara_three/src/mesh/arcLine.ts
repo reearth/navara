@@ -128,6 +128,21 @@ export class ArcLine extends Object3D {
       this._subMeshes.push(subMesh);
       this.add(subMesh);
     });
+
+    if (this._subMeshes.length > 0) {
+      const identityMatrix = new Matrix4();
+      const callback = setupRTEBeforeRender(
+        this,
+        this._sharedRTEUniforms,
+        identityMatrix,
+        identityMatrix,
+      );
+
+      if (callback) {
+        this._subMeshes[0].onBeforeRender = callback;
+        this._subMeshes[0].onBeforeShadow = callback;
+      }
+    }
   }
 
   private createSubMesh(
@@ -209,31 +224,6 @@ export class ArcLine extends Object3D {
       this._sharedRTEUniforms.cameraPositionHigh;
     material.uniforms.u_cameraPositionLow =
       this._sharedRTEUniforms.cameraPositionLow;
-
-    const identityMatrix = new Matrix4();
-    const callback = setupRTEBeforeRender(
-      this,
-      this._sharedRTEUniforms,
-      identityMatrix,
-      identityMatrix,
-    );
-
-    if (callback) {
-      mesh.onBeforeRender = (
-        renderer,
-        scene,
-        camera,
-        geometry,
-        material,
-        group,
-      ) => {
-        const currentFrame = renderer.info.render.frame;
-        if (this._lastRTEUpdateFrame !== currentFrame) {
-          this._lastRTEUpdateFrame = currentFrame;
-          callback(renderer, scene, camera, geometry, material, group);
-        }
-      };
-    }
 
     return mesh;
   }
