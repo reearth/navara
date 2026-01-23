@@ -694,14 +694,12 @@ const onDistPosChange = () => {
   if (gPolylineLayer) {
     const curvePoints: XYZ[] = [];
     for (const point of points) {
-      if (point) {
-        const pos = geodeticToVector3({
-          lat: point.lat,
-          lng: point.lng,
-          height: 1000,
-        });
-        curvePoints.push(pos);
-      }
+      const pos = geodeticToVector3({
+        lat: point.lat,
+        lng: point.lng,
+        height: 1000,
+      });
+      curvePoints.push(pos);
     }
 
     // Store points and update geometry
