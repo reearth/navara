@@ -1,5 +1,6 @@
 import type { CameraOrientation } from "@navara/core";
 import ThreeView, {
+  CameraDirection,
   JAPAN_GSI_ELEVATION_DECODER,
   type LatLngHeight,
 } from "@navara/three";
@@ -149,29 +150,29 @@ const addMoveCameraOption = (pane: Pane, view: ThreeView) => {
     expanded: false,
   });
 
-  const clickFunc = (move: string) => {
+  const clickFunc = (move: CameraDirection) => {
     view.moveCamera(move, cameraParams.amount);
   };
 
   folder.addBinding(cameraParams, "amount");
 
   folder.addButton({ title: "Forward", label: "" }).on("click", () => {
-    clickFunc("Forward");
+    clickFunc(CameraDirection.Forward);
   });
   folder.addButton({ title: "Backward", label: "" }).on("click", () => {
-    clickFunc("Backward");
+    clickFunc(CameraDirection.Backward);
   });
   folder.addButton({ title: "Up", label: "" }).on("click", () => {
-    clickFunc("Up");
+    clickFunc(CameraDirection.Up);
   });
   folder.addButton({ title: "Down", label: "" }).on("click", () => {
-    clickFunc("Down");
+    clickFunc(CameraDirection.Down);
   });
   folder.addButton({ title: "Left", label: "" }).on("click", () => {
-    clickFunc("Left");
+    clickFunc(CameraDirection.Left);
   });
   folder.addButton({ title: "Right", label: "" }).on("click", () => {
-    clickFunc("Right");
+    clickFunc(CameraDirection.Right);
   });
 };
 

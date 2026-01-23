@@ -49,7 +49,7 @@ export async function initNavaraApi() {
 
 /**
  * Converts geodetic coordinates (longitude, latitude, height) to a Cartesian Vector3 in ECEF coordinates.
- * @param lle - Geodetic coordinates (lng, lat, height in meters)
+ * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
  * @returns Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
  */
 export function geodeticToVector3(lle: LatLngHeight): Vector3 {
@@ -62,7 +62,7 @@ export function geodeticToVector3(lle: LatLngHeight): Vector3 {
 /**
  * Converts a Cartesian Vector3 in ECEF coordinates to geodetic coordinates.
  * @param xyz - Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
- * @returns Geodetic coordinates (lng, lat, height in meters)
+ * @returns Geodetic coordinates (lng in radians, lat in radians, height in meters)
  */
 export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
@@ -148,7 +148,7 @@ export function convertScreenToWorld(
 
 /**
  * Computes the surface normal vector at a geodetic position on the WGS84 ellipsoid.
- * @param lle - Geodetic coordinates (lng, lat, height)
+ * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
  * @returns Unit normal vector pointing outward from the ellipsoid surface
  */
 export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
