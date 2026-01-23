@@ -236,13 +236,13 @@ export type ViewEvents = {
     layerId: string,
     ...args: Parameters<LayerEvent[K]>
   ) => void;
-  /** Emitted before an update process happens. Receives timestamp in milliseconds. */
+  /** Emitted before an update process happens. Receives `DOMHighResTimeStamp` as a timestamp. */
   preUpdate: (t: number) => void;
-  /** Emitted after an update process when state changes occurred. Receives timestamp in milliseconds. */
+  /** Emitted after an update process when state changes occurred. Receives `DOMHighResTimeStamp` as a timestamp. */
   postUpdate: (t: number) => void;
-  /** Emitted before rendering. With `animation: true`, fires every frame. Receives timestamp in milliseconds. */
+  /** Emitted before rendering. With `animation: true`, fires every frame. Receives `DOMHighResTimeStamp` as a timestamp. */
   preRender: (t: number) => void;
-  /** Emitted after rendering. With `animation: true`, fires every frame. Receives timestamp in milliseconds. */
+  /** Emitted after rendering. With `animation: true`, fires every frame. Receives `DOMHighResTimeStamp` as a timestamp. */
   postRender: (t: number) => void;
   /** @private Emitted when terrain height sampling completes. */
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
