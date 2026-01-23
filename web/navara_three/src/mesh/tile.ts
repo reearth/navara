@@ -58,7 +58,6 @@ import type { MeshCache, TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
-import { BatchedFeatureMesh } from "./batchedFeature";
 import type { PickableMesh } from "./pickableMesh";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
@@ -1353,14 +1352,6 @@ if (uPickable > 0.) {
       this.material.color.setHex(this.userData.tileOrigColor);
     }
     this.material.userData.uPickable.value = pickable ? 1 : 0;
-
-    for (const texturizedScene of this.texturizedScenes.children) {
-      texturizedScene.traverse((obj) => {
-        if (obj instanceof BatchedFeatureMesh) {
-          obj._setPickable(pickable);
-        }
-      });
-    }
   }
 
   dispose(
