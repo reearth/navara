@@ -106,7 +106,7 @@ export type DrumModelState = {
   clampToGround: boolean;
   url: string;
   shouldRotateInDefault: boolean;
-  color?: number;
+  color?: Color;
   emissiveColor?: Color;
   emissiveIntensity?: number;
   selectiveEffectOcclusion?: SelectiveEffectOcclusion;
@@ -120,7 +120,7 @@ export type SoldierModelState = {
   url: string;
   animationActiveClip?: string;
   animationSpeed?: number;
-  color?: number;
+  color?: Color;
   emissiveColor?: Color;
   emissiveIntensity?: number;
   selectiveEffectOcclusion?: SelectiveEffectOcclusion;

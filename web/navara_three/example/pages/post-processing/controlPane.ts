@@ -485,7 +485,7 @@ const setupDrumFolder = (
   const updateDrumState = () => {
     drumLayer.updateModel({
       show: params.visible,
-      color: params.baseColor,
+      color: new Color().setHex(params.baseColor),
       effectIds: getEffectIds(
         params.bloomEnabled,
         params.outlineEnabled,
@@ -559,7 +559,7 @@ const setupSoldierFolder = (
     soldierLayer.updateModel({
       show: params.visible,
       animationSpeed: params.animationSpeed,
-      color: params.baseColor,
+      color: new Color().setHex(params.baseColor),
       effectIds: getEffectIds(
         params.bloomEnabled,
         params.outlineEnabled,
