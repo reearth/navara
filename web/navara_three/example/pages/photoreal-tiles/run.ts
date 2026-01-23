@@ -1,4 +1,5 @@
 import ThreeView from "@navara/three";
+import type { Layer } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -23,7 +24,14 @@ export const run = async (view: ThreeView) => {
     },
   });
 
-  // Track credits for all loaded features
+  addCameraControl(view, pane);
+  addDateControl(view, pane);
+  showAttributions([TILES_3D_DATASETS.googlePhotorealTiles]);
+  trackAttributions(layer);
+};
+
+// Track credits for all loaded features
+function trackAttributions(layer: Layer) {
   const featureCredits = new Map<bigint, string>();
   // Track which features are currently visible
   const visibleFeatures = new Set<bigint>();
@@ -72,8 +80,4 @@ export const run = async (view: ThreeView) => {
     }
     updateAttributions();
   });
-
-  addCameraControl(view, pane);
-  addDateControl(view, pane);
-  showAttributions([TILES_3D_DATASETS.googlePhotorealTiles]);
-};
+}
