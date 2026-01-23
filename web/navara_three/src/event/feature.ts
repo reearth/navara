@@ -8,6 +8,7 @@ import {
 import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
+import { Color } from "../Color";
 import {
   parseSelectiveEffectOcclusion,
   type SelectiveEffectOcclusion,
@@ -284,7 +285,10 @@ export async function processRenderableFeatureChanged(
     );
 
     if (material.emissiveColor !== undefined) {
-      viewContext.setLayerEmissiveColor(layerId, material.emissiveColor);
+      viewContext.setLayerEmissiveColor(
+        layerId,
+        new Color().setHex(material.emissiveColor),
+      );
     }
 
     if (material.selectiveEffectOcclusion !== undefined) {

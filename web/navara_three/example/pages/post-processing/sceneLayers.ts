@@ -27,7 +27,7 @@ import {
  * Cube mesh initial configuration
  */
 export const CUBE_CONFIG = {
-  emissiveColor: 0xff0000,
+  emissiveColor: new Color().setHex(0xff0000),
   emissiveIntensity: 1.0,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -38,7 +38,7 @@ export const CUBE_CONFIG = {
  * Sphere mesh initial configuration
  */
 export const SPHERE_CONFIG = {
-  emissiveColor: 0x00aaff,
+  emissiveColor: new Color().setHex(0x00aaff),
   emissiveIntensity: 1.0,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -49,7 +49,7 @@ export const SPHERE_CONFIG = {
  * Drum model initial configuration
  */
 export const DRUM_CONFIG = {
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: false,
@@ -60,7 +60,7 @@ export const DRUM_CONFIG = {
  * Soldier model initial configuration
  */
 export const SOLDIER_CONFIG = {
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   animationSpeed: 1.0,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
@@ -73,7 +73,7 @@ export const SOLDIER_CONFIG = {
  */
 export const CHIYODA_CONFIG = {
   baseColor: 0xffffff,
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -85,7 +85,7 @@ export const CHIYODA_CONFIG = {
  */
 export const CHUO_CONFIG = {
   baseColor: 0xffffff,
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: false,
@@ -106,8 +106,8 @@ export type DrumModelState = {
   clampToGround: boolean;
   url: string;
   shouldRotateInDefault: boolean;
-  color?: number;
-  emissiveColor?: number;
+  color?: Color;
+  emissiveColor?: Color;
   emissiveIntensity?: number;
   selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 };
@@ -120,8 +120,8 @@ export type SoldierModelState = {
   url: string;
   animationActiveClip?: string;
   animationSpeed?: number;
-  color?: number;
-  emissiveColor?: number;
+  color?: Color;
+  emissiveColor?: Color;
   emissiveIntensity?: number;
   selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 };
@@ -209,7 +209,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       clampToGround: true,
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       shouldRotateInDefault: true,
-      emissiveColor: 0xffffff,
+      emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.3,
       selectiveEffectOcclusion: "normal",
     },
@@ -238,7 +238,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       url: LOCAL_DATASETS.soldierGLTF.url,
       animationActiveClip: "Walk",
       animationSpeed: 1.0,
-      emissiveColor: 0xffffff,
+      emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.3,
       selectiveEffectOcclusion: "normal",
     },
