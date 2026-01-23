@@ -5,19 +5,19 @@ import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
 export type FeatureCreatedParams = {
-  id: FeatureId,
-  evaluator: FeatureEvaluator,
-  credit?: string,
+  id: FeatureId;
+  evaluator: FeatureEvaluator;
+  credit?: string;
 };
 
 export type FeatureRemovedParams = {
-  id: FeatureId,
-  credit?: string,
+  id: FeatureId;
+  credit?: string;
 };
 
 export type FeatureVisibilityChangedParams = {
-  id: FeatureId,
-  visible: boolean,
+  id: FeatureId;
+  visible: boolean;
 };
 
 export type LayerEvent = {

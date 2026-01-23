@@ -165,7 +165,7 @@ export async function renderModel(
     viewContext,
     layerId,
   );
-  
+
   return scene;
 }
 

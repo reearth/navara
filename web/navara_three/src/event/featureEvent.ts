@@ -35,7 +35,11 @@ export const handleFeatureCreatedEventByLayerId = (
   }
 
   // Emit the evaluator
-  viewEvents.emit("layer", "featureCreated", layerId, {id: featureId, evaluator, credit});
+  viewEvents.emit("layer", "featureCreated", layerId, {
+    id: featureId,
+    evaluator,
+    credit,
+  });
 
   return layer;
 };

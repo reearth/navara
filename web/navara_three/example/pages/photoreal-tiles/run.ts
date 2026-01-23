@@ -42,7 +42,9 @@ export const run = async (view: ThreeView) => {
     }
     const attrib = document.getElementById("navara-attributions-content");
     if (attrib) {
-      const sorted = Array.from(visibleCredits.entries()).sort((a, b) => b[1] - a[1]);
+      const sorted = Array.from(visibleCredits.entries()).sort(
+        (a, b) => b[1] - a[1],
+      );
       attrib.innerHTML = sorted.map(([credit, _]) => `${credit}`).join("<br>");
     }
   };

@@ -220,8 +220,8 @@ export async function processRenderableFeatureAdded(
       material.effectIds ?? [],
       parseSelectiveEffectOcclusion(
         material.selectiveEffectOcclusion as
-        | SelectiveEffectOcclusion
-        | undefined,
+          | SelectiveEffectOcclusion
+          | undefined,
       ),
       material.emissiveIntensity,
     );
