@@ -15,10 +15,16 @@ export type FeatureRemovedParams = {
   credit?: string,
 };
 
+export type FeatureVisibilityChangedParams = {
+  id: FeatureId,
+  visible: boolean,
+};
+
 export type LayerEvent = {
   featureCreated: (params: FeatureCreatedParams) => void;
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
   featureRemoved: (params: FeatureRemovedParams) => void;
+  featureVisibilityChanged: (params: FeatureVisibilityChangedParams) => void;
   afterFeatureUpdated: () => void;
   deleted: () => void;
 };

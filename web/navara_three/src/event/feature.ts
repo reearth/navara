@@ -30,6 +30,7 @@ import type { CommonUniforms } from "../uniforms";
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
+  handleFeatureVisibilityChangedEventByLayerId,
 } from "./featureEvent";
 import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
@@ -301,6 +302,10 @@ export async function processRenderableFeatureChanged(
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
     true;
 
+  // Track previous active state from Rust to detect visibility changes
+  // We store this in userData since obj.visible is managed internally by the mesh
+  const prevActive = (obj.userData._navaraActive as boolean | undefined) ?? true;
+
   if (obj instanceof InstancedPointMesh && point) {
     processPointChanged(obj, point, buf, active);
   }
@@ -322,6 +327,17 @@ export async function processRenderableFeatureChanged(
     if (obj.outline) {
       processPolygonOutlineChanged(obj.outline, polygon, active);
     }
+  }
+
+  // Emit visibility changed event if active state changed
+  if (prevActive !== active) {
+    obj.userData._navaraActive = active;
+    handleFeatureVisibilityChangedEventByLayerId(
+      layersManager,
+      layerId,
+      ev.bits,
+      active,
+    );
   }
 
   // Handle a draped polygon mesh and polyline mesh

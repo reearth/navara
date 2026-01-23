@@ -28,7 +28,7 @@ export const handleFeatureCreatedEventByLayerId = (
 
   let credit = undefined;
   if (obj instanceof ModelMesh) {
-    let userData = obj.children[0].userData as { credit?: string };
+    const userData = obj.children[0].userData as { credit?: string };
     if (userData.credit) {
       credit = userData.credit;
     }
@@ -58,4 +58,19 @@ export const handleFeatureUpdatedEventByLayerId = (
 
   // Emit the event with the evaluator
   viewEvents.emit("layer", "featureUpdated", layerId, evaluator, updatedAt);
+};
+
+export const handleFeatureVisibilityChangedEventByLayerId = (
+  layersManager: LayersManager,
+  layerId: string,
+  featureId: FeatureId,
+  visible: boolean,
+) => {
+  const layer = layersManager.get(layerId);
+
+  if (!layer) return;
+  if (!(layer instanceof Layer)) return;
+
+  // Emit the visibility changed event
+  layer.emit("featureVisibilityChanged", { id: featureId, visible });
 };
