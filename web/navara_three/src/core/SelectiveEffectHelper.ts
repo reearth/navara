@@ -104,7 +104,7 @@ export type SelectiveEffectResources = {
 export type SelectiveEffectConfig = {
   effectIds: string[]; // Always initialized as empty array
   emissiveIntensity?: number;
-  emissiveColor?: number;
+  emissiveColor?: import("../Color").Color;
   layerId?: string; // Layer ID for registry lookup (SoT access)
 };
 

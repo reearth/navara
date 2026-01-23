@@ -85,7 +85,7 @@ export class ViewContext {
 
   setLayerEmissiveColor(
     layerId: string,
-    emissiveColor: number | undefined,
+    emissiveColor: import("../Color").Color | undefined,
   ): void {
     this.selectiveEffects.setLayerEmissiveColor(layerId, emissiveColor);
   }

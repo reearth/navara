@@ -118,6 +118,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CUBE_CONFIG,
+      emissiveColor: CUBE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -129,6 +130,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...SPHERE_CONFIG,
+      emissiveColor: SPHERE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -147,6 +149,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CHIYODA_CONFIG,
+      emissiveColor: CHIYODA_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -158,6 +161,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CHUO_CONFIG,
+      emissiveColor: CHUO_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -260,6 +264,7 @@ type MeshFolderOptions = {
   configKey: "box" | "sphere";
   bloomId: string;
   outlineId: string;
+  // emissiveColor uses number for Tweakpane, converted to Color when updating layer
   params: {
     emissiveColor: number;
     emissiveIntensity: number;
@@ -277,7 +282,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
   const applyMeshState = () => {
     layer.update({
       ...buildMeshConfig(configKey, {
-        emissiveColor: params.emissiveColor,
+        emissiveColor: new Color().setHex(params.emissiveColor),
         emissiveIntensity: params.emissiveIntensity,
         effectIds: getEffectIds(
           params.bloomEnabled,
@@ -341,7 +346,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
 const buildMeshConfig = (
   configKey: "box" | "sphere",
   config: {
-    emissiveColor?: number;
+    emissiveColor?: Color;
     emissiveIntensity?: number;
     effectIds?: string[];
     selectiveEffectOcclusion?: SelectiveEffectOcclusion;
@@ -359,6 +364,7 @@ type TilesFolderOptions = {
   datasetUrl: string;
   bloomId: string;
   outlineId: string;
+  // baseColor and emissiveColor use number for Tweakpane, converted to Color when updating layer
   params: {
     baseColor: number;
     emissiveColor: number;
@@ -469,6 +475,7 @@ const setupDrumFolder = (
 ) => {
   const params = {
     ...DRUM_CONFIG,
+    emissiveColor: DRUM_CONFIG.emissiveColor.toHex(),
     visible: true,
     baseColor: 0xffffff,
   };
@@ -485,7 +492,7 @@ const setupDrumFolder = (
         bloomId,
         outlineId,
       ),
-      emissiveColor: params.emissiveColor,
+      emissiveColor: new Color().setHex(params.emissiveColor),
       emissiveIntensity: params.emissiveIntensity,
       selectiveEffectOcclusion: params.selectiveEffectOcclusion,
     } as Partial<DrumModelState>);
@@ -541,6 +548,7 @@ const setupSoldierFolder = (
 ) => {
   const params = {
     ...SOLDIER_CONFIG,
+    emissiveColor: SOLDIER_CONFIG.emissiveColor.toHex(),
     visible: true,
     baseColor: 0xffffff,
   };
@@ -558,7 +566,7 @@ const setupSoldierFolder = (
         bloomId,
         outlineId,
       ),
-      emissiveColor: params.emissiveColor,
+      emissiveColor: new Color().setHex(params.emissiveColor),
       emissiveIntensity: params.emissiveIntensity,
       selectiveEffectOcclusion: params.selectiveEffectOcclusion,
     } as Partial<SoldierModelState>);
