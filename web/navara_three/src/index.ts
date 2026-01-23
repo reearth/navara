@@ -246,6 +246,16 @@ export type ViewEvents = {
 // Need an assignment to tell TypeScript compiler that this is being renamed...
 type ActualLayerDescription = _ActualLayerDescription;
 
+/**
+ * The main 3D globe view class that manages rendering, layers, camera, and user interaction.
+ * Create an instance and call `init()` to start the engine.
+ *
+ * @example
+ * ```typescript
+ * const view = new ThreeView();
+ * await view.init();
+ * ```
+ */
 export default class ThreeView<
   CustomLayerDescriptions extends
     | Record<string, unknown>
@@ -731,7 +741,7 @@ export default class ThreeView<
     return null;
   }
 
-  async initializeRenderPass() {
+  private async initializeRenderPass() {
     // Initialize atmosphere
     await this.atmosphere.init();
 
@@ -769,30 +779,52 @@ export default class ThreeView<
     return instance;
   }
 
+  /**
+   * Gets the tone mapping exposure value.
+   */
   get toneMappingExposure() {
     return this.renderer.toneMappingExposure;
   }
+  /**
+   * Sets the tone mapping exposure value for HDR rendering.
+   */
   set toneMappingExposure(v: number) {
     this.renderer.toneMappingExposure = v;
     this.forceUpdate();
   }
 
+  /**
+   * Gets the globe depth texture for post-processing effects.
+   */
   get globeDepthTexture() {
     return this.renderPass.globeDepthCopyPass.texture;
   }
 
+  /**
+   * Gets the globe normal texture for post-processing effects.
+   */
   get globeNormalTexture() {
     return this.renderPass.globeNormalCopyPass.texture;
   }
 
+  /**
+   * Gets the scene normal texture from the G-buffer.
+   */
   get normalTexture() {
     return this.renderPass.gbufferRenderTarget.textures[1];
   }
 
+  /**
+   * Forces an immediate re-render of the scene on the next frame.
+   */
   forceUpdate = () => {
     this._renderFlag.forceUpdate = true;
   };
 
+  /**
+   * Initializes the 3D engine, WASM modules, and starts the main render loop.
+   * Must be called before using the view.
+   */
   async init() {
     if (this._core || this._initialized) return;
 
@@ -890,6 +922,10 @@ export default class ThreeView<
     });
   }
 
+  /**
+   * Disposes all resources and stops the render loop.
+   * Call this when the view is no longer needed.
+   */
   dispose() {
     this._disposed = true;
     if (!isWorker()) window.removeEventListener("resize", this._handleResize);
@@ -918,6 +954,12 @@ export default class ThreeView<
     }
   }
 
+  /**
+   * Resizes the renderer and updates the camera aspect ratio.
+   * @param width - New width in pixels (uses canvas size if omitted)
+   * @param height - New height in pixels (uses canvas size if omitted)
+   * @param pixelRatio - Device pixel ratio
+   */
   resize = (width?: number, height?: number, pixelRatio?: number) => {
     if (this._disposed) return;
 
@@ -1088,6 +1130,11 @@ export default class ThreeView<
     return result;
   }
 
+  /**
+   * Adds a new layer to the scene.
+   * @param l - Layer configuration object specifying type and options
+   * @returns A Layer or LayerHandle for controlling the added layer
+   */
   addLayer<L = unknown>(
     l: LayerDescription,
   ): L extends LayerDeclaration ? LayerHandle<L> : Layer {
@@ -1130,6 +1177,11 @@ export default class ThreeView<
     return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
   }
 
+  /**
+   * Updates an existing layer's configuration by its ID.
+   * @param layerId - The unique identifier of the layer to update
+   * @param l - New layer configuration
+   */
   updateLayerById(layerId: string, l: LayerDescription) {
     invariant(this._core);
     // Convert all Color objects to numbers before updating
@@ -1137,6 +1189,10 @@ export default class ThreeView<
     this.layersManager.get(layerId)?.update(processedLayer);
   }
 
+  /**
+   * Deletes a layer from the scene by its ID.
+   * @param layerId - The unique identifier of the layer to delete
+   */
   deleteLayerById(layerId: string) {
     invariant(this._core);
 
@@ -1315,14 +1371,29 @@ export default class ThreeView<
     return l;
   }
 
+  /**
+   * Registers a custom mesh layer type for use with addLayer().
+   * @param name - Unique name to identify this mesh type in layer configurations
+   * @param meshClass - The mesh layer class constructor
+   */
   registerMesh(name: string, meshClass: MeshLayerConstructor): void {
     this.registries.mesh.register(name, meshClass);
   }
 
+  /**
+   * Registers a custom light layer type for use with addLayer().
+   * @param name - Unique name to identify this light type in layer configurations
+   * @param lightClass - The light layer class constructor
+   */
   registerLight(name: string, lightClass: LightLayerConstructor): void {
     this.registries.light.register(name, lightClass);
   }
 
+  /**
+   * Registers a custom post-processing effect layer type for use with addLayer().
+   * @param name - Unique name to identify this effect type in layer configurations
+   * @param effectClass - The effect layer class constructor
+   */
   registerEffect(name: string, effectClass: EffectLayerConstructor): void {
     this.registries.effect.register(name, effectClass);
   }
@@ -1364,6 +1435,10 @@ export default class ThreeView<
     sunLightLayer.removeMaterialFromShadows(material);
   }
 
+  /**
+   * Adds the default atmosphere layers including sky, stars, and sun lighting.
+   * @returns Handles to the created sky, skyEnv, stars, skyLightProbe, and sun layers
+   */
   // TODO: Handle this in plugin system.
   addDefaultAtmosphereLayers() {
     return {
@@ -1394,8 +1469,9 @@ export default class ThreeView<
   }
 
   /**
-   * Adds default effect layers for rendering.
+   * Adds default post-processing effect layers including aerial perspective, tone mapping, and anti-aliasing.
    * On mobile devices (when mobileOptimization is enabled), uses lighter-weight effects.
+   * @returns Handles to the created aerialPerspective, lensFlare, toneMapping, and antialiasing layers
    */
   addDefaultEffectLayers(): {
     aerialPerspective: LayerHandle<AerialPerspectiveEffectLayer>;
@@ -1442,11 +1518,18 @@ export default class ThreeView<
     };
   }
 
-  // Debug helper to see effect pass order
+  /**
+   * Returns the current order of effect passes for debugging purposes.
+   * @returns Array of effect pass names in execution order
+   */
   getEffectOrder(): string[] {
     return this.renderPassOrchestrator.getPassNames();
   }
 
+  /**
+   * Sets the camera position and orientation instantly.
+   * @param camPos - Camera position with lng, lat, height (meters), and optional pitch, heading, roll (degrees)
+   */
   setCamera(camPos: CameraPosition) {
     function checkFinite(value: number | undefined): value is number {
       return Number.isFinite(value) && value != null;
@@ -1467,6 +1550,11 @@ export default class ThreeView<
     );
   }
 
+  /**
+   * Moves the camera in a specified direction.
+   * @param move - Direction: "Forward", "Backward", "Up", "Down", "Left", or "Right"
+   * @param amount - Distance to move in meters
+   */
   moveCamera(move: string, amount: number) {
     switch (move) {
       case "Forward":
@@ -1492,6 +1580,11 @@ export default class ThreeView<
     }
   }
 
+  /**
+   * Moves the camera along a custom direction vector.
+   * @param dir - Direction vector as [x, y, z] array
+   * @param amount - Distance to move in meters
+   */
   moveCameraWithDirection(dir: number[], amount: number) {
     if (dir.length !== 3) {
       return;
@@ -1500,6 +1593,12 @@ export default class ThreeView<
     this._core?.moveCameraWithDirection(new Float64Array(dir), amount);
   }
 
+  /**
+   * Animates the camera to fly to a target position.
+   * @param camPos - Target position with required lng, lat, height (meters), and optional pitch, heading, roll (degrees)
+   * @param duration - Animation duration in milliseconds
+   * @param maxHeight - Maximum height during the flight arc in meters
+   */
   flyTo(
     camPos: CameraPosition &
       Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
@@ -1518,6 +1617,11 @@ export default class ThreeView<
     );
   }
 
+  /**
+   * Makes the camera look at a target position with an offset.
+   * @param target - Target geodetic position (lng, lat, height)
+   * @param offset - Offset from the target in East-North-Up (ENU) coordinates
+   */
   lookAt(target: LatLngHeight, offset: Vector3) {
     this._core?.lookAt(
       new Float64Array([target.lng, target.lat, target.height]),
@@ -1525,6 +1629,12 @@ export default class ThreeView<
     );
   }
 
+  /**
+   * Enables or disables camera following mode.
+   * @param enabled - Whether to enable camera following
+   * @param target - Target geodetic position to follow (lng, lat, height in meters)
+   * @param offset - Offset from the target in East-North-Up (ENU) coordinates
+   */
   cameraFollow(enabled: boolean, target?: LatLngHeight, offset?: Vector3) {
     const targetArray = target
       ? new Float64Array([target.lng, target.lat, target.height])
@@ -1536,11 +1646,22 @@ export default class ThreeView<
     this._core?.cameraFollow(enabled, targetArray, offsetArray);
   }
 
+  /**
+   * Samples the terrain height at a given geodetic position synchronously.
+   * @param pos - Geodetic position (lat, lng used; height is ignored)
+   * @returns Terrain height in meters, or undefined if terrain data not loaded
+   */
   sampleTerrainHeight(pos: LatLngHeight): number | undefined {
     const lle = new LLE(pos.lat, pos.lng, 0);
     return this._core?.sampleTerrainHeight(lle);
   }
 
+  /**
+   * Observes terrain height changes at a position. Callback is invoked each time terrain data updates.
+   * @param pos - Geodetic position to observe (lat, lng)
+   * @param cb - Callback function receiving the terrain height in meters
+   * @returns Cleanup function to stop observing
+   */
   observeTerrainHeightAt(
     pos: LatLng,
     cb: (height: number) => void,
@@ -1566,6 +1687,11 @@ export default class ThreeView<
     };
   }
 
+  /**
+   * Rotates the camera around an axis.
+   * @param axis - Axis to rotate around (zero vector uses default)
+   * @param angle - Rotation angle in radians
+   */
   rotateAroundAxis(axis: Vector3, angle: number) {
     this._core?.rotateAroundAxis(
       new Float64Array([axis.x, axis.y, axis.z]),
@@ -1573,6 +1699,10 @@ export default class ThreeView<
     );
   }
 
+  /**
+   * Rotates the camera around the current look-at point or center of view.
+   * @param angle - Rotation angle in radians
+   */
   rotateAround(angle: number) {
     this._core?.rotateAroundAxis(null, angle);
   }
@@ -1623,6 +1753,10 @@ export default class ThreeView<
     this.resize(width, height, pixelRatio);
   };
 
+  /**
+   * Handles pick events and emits the picked feature information.
+   * @param pickArr - Array of picked batch IDs
+   */
   onPick(pickArr: number[]) {
     this._renderFlag.forceUpdate = true;
 
@@ -1648,36 +1782,52 @@ export default class ThreeView<
     }
   }
 
+  /**
+   * Gets whether continuous animation mode is enabled.
+   */
   get animation() {
     return this._renderFlag.animation;
   }
+  /**
+   * Sets whether to render every frame continuously (true) or only on changes (false).
+   */
   set animation(v: boolean) {
     this._renderFlag.animation = v;
   }
 
+  /**
+   * Gets the current screen size in pixels.
+   */
   get screenSize() {
     const size = new Vector2();
     this.renderer.getSize(size);
     return size;
   }
 
+  /**
+   * Gets the current device pixel ratio.
+   */
   get pixelRatio() {
     return this.renderer.getPixelRatio();
   }
 
   /**
-   * Display shadow map on the left side of your screen.
+   * Gets whether shadow map debug viewers are displayed.
    */
   get shadowMapViewersEnabled() {
     return this.shadowMapViewers.enabled;
   }
+  /**
+   * Enables or disables shadow map debug viewers on screen.
+   */
   set shadowMapViewersEnabled(v: boolean) {
     this.shadowMapViewers.enabled = v;
   }
 
   /**
-   * Enable/disable post effect debug views rendering
-   * When disabled, disposes all debug view canvas elements
+   * Enables or disables debug views for selective post-processing effects.
+   * When disabled, disposes all debug view canvas elements.
+   * @param enabled - Whether to enable debug views
    */
   setSelectiveEffectDebugViews(enabled: boolean): void {
     this._options.selectiveEffects ??= {};
@@ -1685,6 +1835,12 @@ export default class ThreeView<
     this.selectiveEffectHelper.setDebugViewsAll(enabled);
   }
 
+  /**
+   * Picks the terrain position at screen coordinates.
+   * @param x - Screen X coordinate in CSS pixels (same as MouseEvent.clientX)
+   * @param y - Screen Y coordinate in CSS pixels (same as MouseEvent.clientY)
+   * @returns World position Vector3 in ECEF coordinates, or null if no terrain is hit
+   */
   pickTerrainPosition(x: number, y: number): Nullable<Vector3> {
     return this._terrainPicker.pick(
       x,
