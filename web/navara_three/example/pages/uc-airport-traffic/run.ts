@@ -4,7 +4,6 @@ import ThreeView, {
   type GlowGlobeMeshLayer,
   Color,
   geodeticToVector3,
-  LLE,
   degreeToRadian,
 } from "@navara/three";
 import type { FeatureCollection, MultiLineString } from "geojson";
@@ -43,16 +42,16 @@ const constructData = async () => {
     const destination = { lng: coords[1][0], lat: coords[1][1] };
 
     // Calculate distance between src and dest using Vector3
-    const srcVec = geodeticToVector3(
-      new LLE(degreeToRadian(source.lat), degreeToRadian(source.lng), 0),
-    );
-    const destVec = geodeticToVector3(
-      new LLE(
-        degreeToRadian(destination.lat),
-        degreeToRadian(destination.lng),
-        0,
-      ),
-    );
+    const srcVec = geodeticToVector3({
+      lat: degreeToRadian(source.lat),
+      lng: degreeToRadian(source.lng),
+      height: 0,
+    });
+    const destVec = geodeticToVector3({
+      lat: degreeToRadian(destination.lat),
+      lng: degreeToRadian(destination.lng),
+      height: 0,
+    });
     const distance = srcVec.distanceTo(destVec);
 
     const trafficVolume = feature.properties.S10b_006;
@@ -156,7 +155,7 @@ export async function run() {
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
-      exponent: 50.0,
+      exponent: 40.0,
       glowColor: new Color().setStyle("#938cff"),
       opacity: 0.5,
     },

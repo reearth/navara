@@ -5,7 +5,6 @@ import {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-  LLE,
 } from "@navara/three_api";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
@@ -115,14 +114,18 @@ export const run = async (view: ThreeView) => {
     }
 
     // Calculate new position
-    const pos = geodeticToVector3(
-      new LLE(degreeToRadian(latitude), degreeToRadian(longitude), altitude),
-    );
+    const pos = geodeticToVector3({
+      lat: degreeToRadian(latitude),
+      lng: degreeToRadian(longitude),
+      height: altitude,
+    });
 
     // Calculate surface normal at new position
-    const normal = geodeticSurfaceNormal(
-      new LLE(degreeToRadian(latitude), degreeToRadian(longitude), altitude),
-    );
+    const normal = geodeticSurfaceNormal({
+      lat: degreeToRadian(latitude),
+      lng: degreeToRadian(longitude),
+      height: altitude,
+    });
 
     // Calculate direction of movement
     let direction: Vector3;
@@ -132,13 +135,11 @@ export const run = async (view: ThreeView) => {
       // For first frame, calculate direction from next position
       const nextLongitude =
         longitude + runningModelParams.movementSpeed * speedMultiplier;
-      const nextPos = geodeticToVector3(
-        new LLE(
-          degreeToRadian(latitude),
-          degreeToRadian(nextLongitude),
-          altitude,
-        ),
-      );
+      const nextPos = geodeticToVector3({
+        lat: degreeToRadian(latitude),
+        lng: degreeToRadian(nextLongitude),
+        height: altitude,
+      });
       direction = new Vector3().subVectors(nextPos, pos).normalize();
     }
 

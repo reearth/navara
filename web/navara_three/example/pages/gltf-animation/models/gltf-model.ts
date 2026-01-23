@@ -6,7 +6,6 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-  LLE,
   Color,
 } from "@navara/three";
 import { Vector3, Quaternion, Euler } from "three";
@@ -45,20 +44,16 @@ const SAPPORO_COORDINATES = getCoordinatesFromGeoJSON(SAPPORO_GEOJSON);
 export const addTestModelForNormal = (
   view: ThreeView,
 ): LayerHandle<GLTFModelLayer> => {
-  const pos = geodeticToVector3(
-    new LLE(
-      degreeToRadian(SAPPORO_COORDINATES.latitude),
-      degreeToRadian(SAPPORO_COORDINATES.longitude),
-      SAPPORO_COORDINATES.altitude,
-    ),
-  );
-  const normal = geodeticSurfaceNormal(
-    new LLE(
-      degreeToRadian(SAPPORO_COORDINATES.latitude),
-      degreeToRadian(SAPPORO_COORDINATES.longitude),
-      SAPPORO_COORDINATES.altitude,
-    ),
-  );
+  const pos = geodeticToVector3({
+    lat: degreeToRadian(SAPPORO_COORDINATES.latitude),
+    lng: degreeToRadian(SAPPORO_COORDINATES.longitude),
+    height: SAPPORO_COORDINATES.altitude,
+  });
+  const normal = geodeticSurfaceNormal({
+    lat: degreeToRadian(SAPPORO_COORDINATES.latitude),
+    lng: degreeToRadian(SAPPORO_COORDINATES.longitude),
+    height: SAPPORO_COORDINATES.altitude,
+  });
 
   // Calculate rotation to align model with surface normal
   const up = new Vector3(0, 1, 0);
@@ -477,20 +472,16 @@ export const addRunningModelAroundEarth = (
 ): LayerHandle<GLTFModelLayer> => {
   const OSAKA_COORDINATES = getCoordinatesFromGeoJSON(OSAKA_GEOJSON);
 
-  const pos = geodeticToVector3(
-    new LLE(
-      degreeToRadian(OSAKA_COORDINATES.latitude),
-      degreeToRadian(OSAKA_COORDINATES.longitude),
-      OSAKA_COORDINATES.altitude,
-    ),
-  );
-  const normal = geodeticSurfaceNormal(
-    new LLE(
-      degreeToRadian(OSAKA_COORDINATES.latitude),
-      degreeToRadian(OSAKA_COORDINATES.longitude),
-      OSAKA_COORDINATES.altitude,
-    ),
-  );
+  const pos = geodeticToVector3({
+    lat: degreeToRadian(OSAKA_COORDINATES.latitude),
+    lng: degreeToRadian(OSAKA_COORDINATES.longitude),
+    height: OSAKA_COORDINATES.altitude,
+  });
+  const normal = geodeticSurfaceNormal({
+    lat: degreeToRadian(OSAKA_COORDINATES.latitude),
+    lng: degreeToRadian(OSAKA_COORDINATES.longitude),
+    height: OSAKA_COORDINATES.altitude,
+  });
 
   // Calculate rotation to align model with surface normal
   const up = new Vector3(0, 1, 0);

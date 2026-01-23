@@ -1,10 +1,9 @@
-import type { LngLat } from "@navara/core";
+import type { LatLng } from "@navara/core";
 import {
   getWGS84SemiMajorAxis,
   getWGS84EccentricitySquared,
   geodeticToVector3,
   degreeToRadian,
-  LLE,
 } from "@navara/three_api";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
@@ -38,7 +37,7 @@ export type ArcLineConfig = {
   dashSize: number; // Length of each dash (in world units)
   gapSize: number; // Length of gap between dashes (in world units)
   dashOffset: number; // Offset for dash pattern (in world units)
-  geometry: LngLat[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
+  geometry: LatLng[]; // Array of points in [lng, lat] pairs; each pair defines one arc line
 };
 
 export const DefaultArcLineConfig: ArcLineConfig = {
@@ -166,8 +165,8 @@ export class ArcLine extends Object3D {
    * - Arc length: L = R * θ
    */
   private calculateArcLength(
-    point1: LngLat,
-    point2: LngLat,
+    point1: LatLng,
+    point2: LatLng,
     arcHeight: number,
   ): number {
     const WGS84_A = getWGS84SemiMajorAxis();
@@ -283,16 +282,16 @@ export class ArcLine extends Object3D {
       const geom1 = config.geometry[i * 2];
       const geom2 = config.geometry[i * 2 + 1];
 
-      const lle1 = new LLE(
-        degreeToRadian(geom1.lat),
-        degreeToRadian(geom1.lng),
-        0,
-      );
-      const lle2 = new LLE(
-        degreeToRadian(geom2.lat),
-        degreeToRadian(geom2.lng),
-        0,
-      );
+      const lle1 = {
+        lat: degreeToRadian(geom1.lat),
+        lng: degreeToRadian(geom1.lng),
+        height: 0,
+      };
+      const lle2 = {
+        lat: degreeToRadian(geom2.lat),
+        lng: degreeToRadian(geom2.lng),
+        height: 0,
+      };
 
       const pos1 = geodeticToVector3(lle1);
       const pos2 = geodeticToVector3(lle2);
@@ -383,20 +382,16 @@ export class ArcLine extends Object3D {
         const point1 = cfg.geometry[i];
         const point2 = cfg.geometry[i + 1];
 
-        const pos1 = geodeticToVector3(
-          new LLE(
-            degreeToRadian(point1.lat),
-            degreeToRadian(point1.lng),
-            cfg.height,
-          ),
-        );
-        const pos2 = geodeticToVector3(
-          new LLE(
-            degreeToRadian(point2.lat),
-            degreeToRadian(point2.lng),
-            cfg.height,
-          ),
-        );
+        const pos1 = geodeticToVector3({
+          lat: degreeToRadian(point1.lat),
+          lng: degreeToRadian(point1.lng),
+          height: cfg.height,
+        });
+        const pos2 = geodeticToVector3({
+          lat: degreeToRadian(point2.lat),
+          lng: degreeToRadian(point2.lng),
+          height: cfg.height,
+        });
 
         box.expandByPoint(pos1);
         box.expandByPoint(pos2);
@@ -410,12 +405,13 @@ export class ArcLine extends Object3D {
         // The top of the arc is calculated in the shader, and the calculation method
         // here is not accurate—it's only used to estimate the bounding box.
         const peakHeight = cfg.height + dist * cfg.arcHeightScale;
-        const peakLLE = new LLE(
-          degreeToRadian(midLat),
-          degreeToRadian(midLng),
-          peakHeight,
+        box.expandByPoint(
+          geodeticToVector3({
+            lat: degreeToRadian(midLat),
+            lng: degreeToRadian(midLng),
+            height: peakHeight,
+          }),
         );
-        box.expandByPoint(geodeticToVector3(peakLLE));
       }
     });
 
