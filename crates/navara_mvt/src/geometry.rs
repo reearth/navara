@@ -821,7 +821,9 @@ fn process_layer_multi(
         let tags = std::mem::take(&mut feature.tags);
         batch_table.add_mvt_feature_tags(feature_batch_id, tags);
 
-        let batch_id = batch_table.init_values(Some(layer_id.to_owned())).unwrap_or(0);
+        let batch_id = batch_table
+            .init_values(Some(layer_id.to_owned()))
+            .unwrap_or(0);
         global_batch_ids.push(batch_id);
 
         // Reuse existing handle_geometry for single layer
